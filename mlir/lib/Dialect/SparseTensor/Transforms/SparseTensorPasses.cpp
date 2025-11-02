@@ -67,12 +67,13 @@ struct SparseReinterpretMap
   SparseReinterpretMap(const SparseReinterpretMap &pass) = default;
   SparseReinterpretMap(const SparseReinterpretMapOptions &options) {
     scope = options.scope;
+    loopOrderingStrategy = options.loopOrderingStrategy;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseReinterpretMap(patterns, scope);
+    populateSparseReinterpretMap(patterns, scope, loopOrderingStrategy);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -172,11 +173,16 @@ struct LowerSparseIterationToSCFPass
     ConversionTarget target(*ctx);
 
     // The actual conversion.
-    target.addIllegalOp<ExtractIterSpaceOp, IterateOp>();
+    target.addLegalDialect<arith::ArithDialect, linalg::LinalgDialect,
+                           memref::MemRefDialect, scf::SCFDialect,
+                           sparse_tensor::SparseTensorDialect>();
+    target.addIllegalOp<CoIterateOp, ExtractIterSpaceOp, ExtractValOp,
+                        IterateOp>();
+    target.addLegalOp<UnrealizedConversionCastOp>();
     populateLowerSparseIterationToSCFPatterns(converter, patterns);
 
-    if (failed(applyPartialOneToNConversion(getOperation(), converter,
-                                            std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };
@@ -430,6 +436,14 @@ std::unique_ptr<Pass>
 mlir::createSparseReinterpretMapPass(ReinterpretMapScope scope) {
   SparseReinterpretMapOptions options;
   options.scope = scope;
+  return std::make_unique<SparseReinterpretMap>(options);
+}
+
+std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass(
+    ReinterpretMapScope scope, sparse_tensor::LoopOrderingStrategy strategy) {
+  SparseReinterpretMapOptions options;
+  options.scope = scope;
+  options.loopOrderingStrategy = strategy;
   return std::make_unique<SparseReinterpretMap>(options);
 }
 

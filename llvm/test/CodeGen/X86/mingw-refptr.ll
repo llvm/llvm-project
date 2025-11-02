@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-w64-mingw32 | FileCheck %s -check-prefix=CHECK-X64
+; RUN: llc < %s -mtriple=x86_64-pc-cygwin | FileCheck %s -check-prefix=CHECK-X64
 ; RUN: llc < %s -mtriple=i686-w64-mingw32 | FileCheck %s -check-prefix=CHECK-X86
 ; RUN: llc < %s -mtriple=i686-w64-mingw32-none-elf | FileCheck %s -check-prefix=CHECK-X86-ELF
 

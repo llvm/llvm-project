@@ -46,6 +46,10 @@ static const unsigned NVPTXAddrSpaceMap[] = {
     0, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+    0, // hlsl_constant
+    0, // hlsl_private
+    0, // hlsl_device
+    0, // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -74,7 +78,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 
@@ -167,6 +171,8 @@ public:
     Opts["cl_khr_global_int32_extended_atomics"] = true;
     Opts["cl_khr_local_int32_base_atomics"] = true;
     Opts["cl_khr_local_int32_extended_atomics"] = true;
+
+    Opts["__opencl_c_generic_address_space"] = true;
   }
 
   const llvm::omp::GV &getGridValue() const override {
@@ -194,7 +200,7 @@ public:
     // a host function.
     if (HostTarget)
       return HostTarget->checkCallingConvention(CC);
-    return CCCR_Warning;
+    return CC == CC_DeviceKernel ? CCCR_OK : CCCR_Warning;
   }
 
   bool hasBitIntType() const override { return true; }

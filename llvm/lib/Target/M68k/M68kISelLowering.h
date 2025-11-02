@@ -25,77 +25,6 @@
 #include <deque>
 
 namespace llvm {
-namespace M68kISD {
-
-/// M68k Specific DAG nodes
-enum NodeType {
-  /// Start the numbering from where ISD NodeType finishes.
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-
-  CALL,
-  RET,
-  TAIL_CALL,
-  TC_RETURN,
-
-  /// M68k compare and logical compare instructions. Subtracts the source
-  /// operand from the destination data register and sets the condition
-  /// codes according to the result. Immediate always goes first.
-  CMP,
-
-  /// M68k bit-test instructions.
-  BTST,
-
-  /// M68k Select
-  SELECT,
-
-  /// M68k SetCC. Operand 0 is condition code, and operand 1 is the CCR
-  /// operand, usually produced by a CMP instruction.
-  SETCC,
-
-  // Same as SETCC except it's materialized with a subx and the value is all
-  // one's or all zero's.
-  SETCC_CARRY, // R = carry_bit ? ~0 : 0
-
-  /// M68k conditional moves. Operand 0 and operand 1 are the two values
-  /// to select from. Operand 2 is the condition code, and operand 3 is the
-  /// flag operand produced by a CMP or TEST instruction. It also writes a
-  /// flag result.
-  CMOV,
-
-  /// M68k conditional branches. Operand 0 is the chain operand, operand 1
-  /// is the block to branch if condition is true, operand 2 is the
-  /// condition code, and operand 3 is the flag operand produced by a CMP
-  /// or TEST instruction.
-  BRCOND,
-
-  // Arithmetic operations with CCR results.
-  ADD,
-  SUB,
-  ADDX,
-  SUBX,
-  SMUL,
-  UMUL,
-  OR,
-  XOR,
-  AND,
-
-  // GlobalBaseReg,
-  GLOBAL_BASE_REG,
-
-  /// A wrapper node for TargetConstantPool,
-  /// TargetExternalSymbol, and TargetGlobalAddress.
-  Wrapper,
-
-  /// Special wrapper used under M68k PIC mode for PC
-  /// relative displacements.
-  WrapperPC,
-
-  // For allocating variable amounts of stack space when using
-  // segmented stacks. Check if the current stacklet has enough space, and
-  // falls back to heap allocation if not.
-  SEG_ALLOCA,
-};
-} // namespace M68kISD
 
 /// Define some predicates that are used for node matching.
 namespace M68k {
@@ -123,8 +52,6 @@ public:
 
   static const M68kTargetLowering *create(const M68kTargetMachine &TM,
                                           const M68kSubtarget &STI);
-
-  const char *getTargetNodeName(unsigned Opcode) const override;
 
   /// Return the value type to use for ISD::SETCC.
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -189,6 +116,10 @@ public:
 
   InlineAsm::ConstraintCode
   getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
+
+  // We need this for DAGCombiner to eliminate as many ISD::SELECT as possible.
+  // Otherwise we might end up with M68kISD::CMOV.
+  bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
 
 private:
   unsigned GetAlignedArgumentStackSize(unsigned StackSize,
@@ -271,7 +202,7 @@ private:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   /// Lower the result values of a call into the
   /// appropriate copies out of appropriate physical registers.

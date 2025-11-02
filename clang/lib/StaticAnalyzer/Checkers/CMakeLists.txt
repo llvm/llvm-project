@@ -8,7 +8,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   AnalysisOrderChecker.cpp
   AnalyzerStatsChecker.cpp
   ArrayBoundChecker.cpp
-  ArrayBoundCheckerV2.cpp
+  AssumeModeling.cpp
   BasicObjCFoundationChecks.cpp
   BitwiseShiftChecker.cpp
   BlockInCriticalSectionChecker.cpp
@@ -17,7 +17,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   CStringChecker.cpp
   CStringSyntaxChecker.cpp
   CallAndMessageChecker.cpp
-  CastSizeChecker.cpp
   CastToStructChecker.cpp
   CastValueChecker.cpp
   CheckObjCDealloc.cpp
@@ -104,6 +103,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   SmartPtrChecker.cpp
   SmartPtrModeling.cpp
   StackAddrEscapeChecker.cpp
+  StoreToImmutableChecker.cpp
   StdLibraryFunctionsChecker.cpp
   StdVariantChecker.cpp
   STLAlgorithmModeling.cpp
@@ -127,16 +127,18 @@ add_clang_library(clangStaticAnalyzerCheckers
   UnreachableCodeChecker.cpp
   VforkChecker.cpp
   VLASizeChecker.cpp
-  ValistChecker.cpp
+  VAListChecker.cpp
   VirtualCallChecker.cpp
-  WebKit/RawPtrRefMemberChecker.cpp
   WebKit/ASTUtils.cpp
+  WebKit/ForwardDeclChecker.cpp
   WebKit/MemoryUnsafeCastChecker.cpp
   WebKit/PtrTypesSemantics.cpp
   WebKit/RefCntblBaseVirtualDtorChecker.cpp
+  WebKit/RetainPtrCtorAdoptChecker.cpp
   WebKit/RawPtrRefCallArgsChecker.cpp
-  WebKit/UncountedLambdaCapturesChecker.cpp
+  WebKit/RawPtrRefLambdaCapturesChecker.cpp
   WebKit/RawPtrRefLocalVarsChecker.cpp
+  WebKit/RawPtrRefMemberChecker.cpp
 
   LINK_LIBS
   clangAST

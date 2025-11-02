@@ -4,8 +4,7 @@
 
 include "APIDefs.td"
 
-def : Function {
-    let name = "FunctionA";
+def FunctionA : Function {
     let desc = "Function A description";
     let details = [ "Function A detailed information" ];
     let params = [
@@ -20,18 +19,18 @@ def : Function {
 
 // The validation function should call the implementation function
 // CHECK: FunctionA_val
-// CHECK: return FunctionA_impl(ParamA, ParamB);
+// CHECK: return llvm::offload::FunctionA_impl(ParamA, ParamB);
 
 // CHECK: ol_result_t{{.*}} FunctionA(
 
 // The entry point should print tracing output if enabled
-// CHECK: if (offloadConfig().TracingEnabled) {
+// CHECK: if (llvm::offload::isTracingEnabled()) {
 // CHECK-NEXT: "---> FunctionA";
 
-// CHECK: Result = FunctionA_val(ParamA, ParamB);
+// CHECK: Result = llvmErrorToOffloadError(FunctionA_val(ParamA, ParamB));
 
 // Tracing should construct a param struct for printing
-// CHECK: if (offloadConfig().TracingEnabled) {
+// CHECK: if (llvm::offload::isTracingEnabled()) {
 // CHECK: function_a_params_t Params = {&ParamA, &ParamB};
 
 // CHECK: return Result;

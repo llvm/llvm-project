@@ -89,6 +89,11 @@ else()
   set(COMPILER_RT_TEST_COMPILER_ID GNU)
 endif()
 
+# AppleClang expects 'Clang' as compiler-rt test compiler ID.
+if ("${COMPILER_RT_TEST_COMPILER_ID}" STREQUAL "AppleClang")
+  set(COMPILER_RT_TEST_COMPILER_ID Clang)
+endif()
+
 if(NOT DEFINED COMPILER_RT_OS_DIR)
   if(ANDROID)
     # The CMAKE_SYSTEM_NAME for Android is Android, but the OS is Linux and the

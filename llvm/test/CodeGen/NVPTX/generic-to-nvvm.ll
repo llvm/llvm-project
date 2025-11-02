@@ -12,19 +12,15 @@ target triple = "nvptx-nvidia-cuda"
 @myconst = internal constant i32 420, align 4
 
 
-define void @foo(ptr %a, ptr %b) {
+define ptx_kernel void @foo(ptr %a, ptr %b) {
 ; Expect one load -- @myconst isn't loaded from, because we know its value
 ; statically.
-; CHECK: ld.global.u32
-; CHECK: st.global.u32
-; CHECK: st.global.u32
+; CHECK: ld.global.b32
+; CHECK: st.global.b32
+; CHECK: st.global.b32
   %ld1 = load i32, ptr @myglobal
   %ld2 = load i32, ptr @myconst
   store i32 %ld1, ptr %a
   store i32 %ld2, ptr %b
   ret void
 }
-
-
-!nvvm.annotations = !{!0}
-!0 = !{ptr @foo, !"kernel", i32 1}

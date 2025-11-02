@@ -34,7 +34,7 @@ using namespace mlir::vector;
 class DecomposeDifferentRankInsertStridedSlice
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern<InsertStridedSliceOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -53,15 +53,15 @@ public:
     int64_t rankRest = dstType.getRank() - rankDiff;
     // Extract / insert the subvector of matching rank and InsertStridedSlice
     // on it.
-    Value extracted = rewriter.create<ExtractOp>(
-        loc, op.getDest(),
-        getI64SubArray(op.getOffsets(), /*dropFront=*/0,
-                       /*dropBack=*/rankRest));
+    Value extracted =
+        ExtractOp::create(rewriter, loc, op.getDest(),
+                          getI64SubArray(op.getOffsets(), /*dropFront=*/0,
+                                         /*dropBack=*/rankRest));
 
     // A different pattern will kick in for InsertStridedSlice with matching
     // ranks.
-    auto stridedSliceInnerOp = rewriter.create<InsertStridedSliceOp>(
-        loc, op.getSource(), extracted,
+    auto stridedSliceInnerOp = InsertStridedSliceOp::create(
+        rewriter, loc, op.getValueToStore(), extracted,
         getI64SubArray(op.getOffsets(), /*dropFront=*/rankDiff),
         getI64SubArray(op.getStrides(), /*dropFront=*/0));
 
@@ -84,7 +84,7 @@ public:
 class ConvertSameRankInsertStridedSliceIntoShuffle
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern<InsertStridedSliceOp>::OpRewritePattern;
+  using Base::Base;
 
   void initialize() {
     // This pattern creates recursive InsertStridedSliceOp, but the recursion is
@@ -96,18 +96,22 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto srcType = op.getSourceVectorType();
     auto dstType = op.getDestVectorType();
+    int64_t srcRank = srcType.getRank();
+
+    // Scalable vectors are not supported by vector shuffle.
+    if ((srcType.isScalable() || dstType.isScalable()) && srcRank == 1)
+      return failure();
 
     if (op.getOffsets().getValue().empty())
       return failure();
 
-    int64_t srcRank = srcType.getRank();
     int64_t dstRank = dstType.getRank();
     assert(dstRank >= srcRank);
     if (dstRank != srcRank)
       return failure();
 
     if (srcType == dstType) {
-      rewriter.replaceOp(op, op.getSource());
+      rewriter.replaceOp(op, op.getValueToStore());
       return success();
     }
 
@@ -127,8 +131,8 @@ public:
       SmallVector<int64_t> offsets(nDest, 0);
       for (int64_t i = 0; i < nSrc; ++i)
         offsets[i] = i;
-      Value scaledSource = rewriter.create<ShuffleOp>(loc, op.getSource(),
-                                                      op.getSource(), offsets);
+      Value scaledSource = ShuffleOp::create(
+          rewriter, loc, op.getValueToStore(), op.getValueToStore(), offsets);
 
       // 2. Create a mask where we take the value from scaledSource of dest
       // depending on the offset.
@@ -152,21 +156,21 @@ public:
          off += stride, ++idx) {
       // 1. extract the proper subvector (or element) from source
       Value extractedSource =
-          rewriter.create<ExtractOp>(loc, op.getSource(), idx);
+          ExtractOp::create(rewriter, loc, op.getValueToStore(), idx);
       if (isa<VectorType>(extractedSource.getType())) {
         // 2. If we have a vector, extract the proper subvector from destination
         // Otherwise we are at the element level and no need to recurse.
         Value extractedDest =
-            rewriter.create<ExtractOp>(loc, op.getDest(), off);
+            ExtractOp::create(rewriter, loc, op.getDest(), off);
         // 3. Reduce the problem to lowering a new InsertStridedSlice op with
         // smaller rank.
-        extractedSource = rewriter.create<InsertStridedSliceOp>(
-            loc, extractedSource, extractedDest,
+        extractedSource = InsertStridedSliceOp::create(
+            rewriter, loc, extractedSource, extractedDest,
             getI64SubArray(op.getOffsets(), /* dropFront=*/1),
             getI64SubArray(op.getStrides(), /* dropFront=*/1));
       }
       // 4. Insert the extractedSource into the res vector.
-      res = rewriter.create<InsertOp>(loc, extractedSource, res, off);
+      res = InsertOp::create(rewriter, loc, extractedSource, res, off);
     }
 
     rewriter.replaceOp(op, res);
@@ -179,11 +183,16 @@ public:
 class Convert1DExtractStridedSliceIntoShuffle
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
     auto dstType = op.getType();
+    auto srcType = op.getSourceVectorType();
+
+    // Scalable vectors are not supported by vector shuffle.
+    if (dstType.isScalable() || srcType.isScalable())
+      return failure();
 
     assert(!op.getOffsets().getValue().empty() && "Unexpected empty offsets");
 
@@ -204,8 +213,8 @@ public:
     for (int64_t off = offset, e = offset + size * stride; off < e;
          off += stride)
       offsets.push_back(off);
-    rewriter.replaceOpWithNewOp<ShuffleOp>(op, dstType, op.getVector(),
-                                           op.getVector(), offsets);
+    rewriter.replaceOpWithNewOp<ShuffleOp>(op, dstType, op.getSource(),
+                                           op.getSource(), offsets);
     return success();
   }
 };
@@ -241,12 +250,12 @@ public:
     SmallVector<Value> elements;
     elements.reserve(size);
     for (int64_t i = offset, e = offset + size * stride; i < e; i += stride)
-      elements.push_back(rewriter.create<ExtractOp>(loc, op.getVector(), i));
+      elements.push_back(ExtractOp::create(rewriter, loc, op.getSource(), i));
 
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getZeroAttr(op.getType()));
+    Value result = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getZeroAttr(op.getType()));
     for (int64_t i = 0; i < size; ++i)
-      result = rewriter.create<InsertOp>(loc, elements[i], result, i);
+      result = InsertOp::create(rewriter, loc, elements[i], result, i);
 
     rewriter.replaceOp(op, result);
     return success();
@@ -262,7 +271,7 @@ private:
 class DecomposeNDExtractStridedSlice
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+  using Base::Base;
 
   void initialize() {
     // This pattern creates recursive ExtractStridedSliceOp, but the recursion
@@ -292,22 +301,24 @@ public:
       return failure();
 
     // Extract/insert on a lower ranked extract strided slice op.
-    Value zero = rewriter.create<arith::ConstantOp>(
-        loc, elemType, rewriter.getZeroAttr(elemType));
-    Value res = rewriter.create<SplatOp>(loc, dstType, zero);
+    Value zero = arith::ConstantOp::create(rewriter, loc, elemType,
+                                           rewriter.getZeroAttr(elemType));
+    Value res = BroadcastOp::create(rewriter, loc, dstType, zero);
     for (int64_t off = offset, e = offset + size * stride, idx = 0; off < e;
          off += stride, ++idx) {
-      Value one = rewriter.create<ExtractOp>(loc, op.getVector(), off);
-      Value extracted = rewriter.create<ExtractStridedSliceOp>(
-          loc, one, getI64SubArray(op.getOffsets(), /* dropFront=*/1),
+      Value one = ExtractOp::create(rewriter, loc, op.getSource(), off);
+      Value extracted = ExtractStridedSliceOp::create(
+          rewriter, loc, one, getI64SubArray(op.getOffsets(), /* dropFront=*/1),
           getI64SubArray(op.getSizes(), /* dropFront=*/1),
           getI64SubArray(op.getStrides(), /* dropFront=*/1));
-      res = rewriter.create<InsertOp>(loc, extracted, res, idx);
+      res = InsertOp::create(rewriter, loc, extracted, res, idx);
     }
     rewriter.replaceOp(op, res);
     return success();
   }
 };
+
+// TODO: Make sure these `populate*` patterns are tested in isolation.
 
 void vector::populateVectorInsertExtractStridedSliceDecompositionPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
@@ -331,4 +342,14 @@ void vector::populateVectorInsertExtractStridedSliceTransforms(
   patterns.add<ConvertSameRankInsertStridedSliceIntoShuffle,
                Convert1DExtractStridedSliceIntoShuffle>(patterns.getContext(),
                                                         benefit);
+  // Generate chains of extract/insert ops for scalable vectors only as they
+  // can't be lowered to vector shuffles.
+  populateVectorExtractStridedSliceToExtractInsertChainPatterns(
+      patterns,
+      /*controlFn=*/
+      [](ExtractStridedSliceOp op) {
+        return op.getType().isScalable() ||
+               op.getSourceVectorType().isScalable();
+      },
+      benefit);
 }

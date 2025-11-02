@@ -692,22 +692,26 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
   case XCOFF::C_BLOCK:
     return "Value (RelocatableAddress)";
   case XCOFF::C_FILE:
+  case XCOFF::C_BSTAT:
     return "Value (SymbolTableIndex)";
   case XCOFF::C_DWARF:
     return "Value (OffsetInDWARF)";
   case XCOFF::C_FUN:
   case XCOFF::C_STSYM:
+    return "Value (OffsetInCSect)";
   case XCOFF::C_BINCL:
   case XCOFF::C_EINCL:
+    return "Value (OffsetInFile)";
   case XCOFF::C_INFO:
-  case XCOFF::C_BSTAT:
+    return "Value (OffsetInCommentSection)";
   case XCOFF::C_LSYM:
   case XCOFF::C_PSYM:
+    return "Value (OffsetRelToStackFrame)";
   case XCOFF::C_RPSYM:
   case XCOFF::C_RSYM:
+    return "Value (RegisterNumber)";
   case XCOFF::C_ECOML:
-    assert(false && "This StorageClass for the symbol is not yet implemented.");
-    return "";
+    return "Value (OffsetInCommBlock)";
   default:
     return "Value";
   }

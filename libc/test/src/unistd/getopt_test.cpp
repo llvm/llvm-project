@@ -79,7 +79,7 @@ struct LlvmLibcGetoptTest : public LIBC_NAMESPACE::testing::Test {
 
 // This is safe because getopt doesn't currently permute argv like GNU's getopt
 // does so this just helps silence warnings.
-char *operator"" _c(const char *c, size_t) { return const_cast<char *>(c); }
+char *operator""_c(const char *c, size_t) { return const_cast<char *>(c); }
 
 TEST_F(LlvmLibcGetoptTest, NoMatch) {
   array<char *, 3> argv{"prog"_c, "arg1"_c, nullptr};
@@ -155,7 +155,7 @@ TEST_F(LlvmLibcGetoptTest, ParseArgInNext) {
   EXPECT_EQ(test_globals::optind, 3);
 }
 
-TEST_F(LlvmLibcGetoptTest, ParseMutliInOne) {
+TEST_F(LlvmLibcGetoptTest, ParseMultiInOne) {
   array<char *, 3> argv{"prog"_c, "-abc"_c, nullptr};
 
   EXPECT_EQ(LIBC_NAMESPACE::getopt(2, argv.data(), "abc"), (int)'a');

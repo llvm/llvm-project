@@ -10,8 +10,4 @@
 
 #include "src/complex/cimagf16.h"
 
-#if defined(LIBC_TYPES_HAS_CFLOAT16)
-
 LIST_CIMAG_TESTS(cfloat16, float16, LIBC_NAMESPACE::cimagf16)
-
-#endif // LIBC_TYPES_HAS_CFLOAT16

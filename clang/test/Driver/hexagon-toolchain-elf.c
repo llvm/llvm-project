@@ -166,6 +166,13 @@
 // CHECK250: "-cc1" {{.*}} "-target-cpu" "hexagonv79"
 // CHECK250: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v79/crt0
 
+// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv81 -fuse-ld=hexagon-link \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK260 %s
+// CHECK260: "-cc1" {{.*}} "-target-cpu" "hexagonv81"
+// CHECK260: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v81/crt0
+
 // -----------------------------------------------------------------------------
 // Test Linker related args
 // -----------------------------------------------------------------------------
@@ -555,6 +562,7 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld %s 2>&1 | FileCheck -check-prefix=CHECK382 %s
+// CHECK382:          "--eh-frame-hdr
 // CHECK382-NOT:      "-march=
 // CHECK382-NOT:      "-mcpu=
 // -----------------------------------------------------------------------------

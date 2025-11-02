@@ -174,8 +174,20 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
 
 void ThreadPlanCallFunction::DoTakedown(bool success) {
   Log *log = GetLog(LLDBLog::Step);
+  Thread &thread = GetThread();
 
   if (!m_valid) {
+    // If ConstructorSetup was succesfull but PrepareTrivialCall was not,
+    // we will have a saved register state and potentially modified registers.
+    // Restore those.
+    if (m_stored_thread_state.register_backup_sp)
+      if (!thread.RestoreRegisterStateFromCheckpoint(m_stored_thread_state))
+        LLDB_LOGF(
+            log,
+            "ThreadPlanCallFunction(%p): Failed to restore register state from "
+            "invalid plan that contained a saved register state.",
+            static_cast<void *>(this));
+
     // Don't call DoTakedown if we were never valid to begin with.
     LLDB_LOGF(log,
               "ThreadPlanCallFunction(%p): Log called on "
@@ -185,7 +197,6 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
   }
 
   if (!m_takedown_done) {
-    Thread &thread = GetThread();
     if (success) {
       SetReturnValue();
     }

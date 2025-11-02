@@ -47,7 +47,7 @@ struct C {
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-5]]:3)':'struct C::(unnamed at {{.*}}:[[@LINE-5]]:3)'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-5]]:3)'
 
   union {
     // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+5]]:3> line:[[@LINE-1]]:3 union definition
@@ -58,10 +58,10 @@ struct C {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:3> col:3 implicit 'union C::(anonymous at {{.*}}:[[@LINE-7]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:9> col:9 implicit c 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'union C::(anonymous at {{.*}}:[[@LINE-9]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'union C::(anonymous at {{.*}}:[[@LINE-9]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'c' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:11> col:11 implicit d 'float'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'union C::(anonymous at {{.*}}:[[@LINE-12]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'union C::(anonymous at {{.*}}:[[@LINE-12]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'd' 'float'
 
   struct {
@@ -72,10 +72,10 @@ struct C {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:3> col:3 implicit 'struct C::(anonymous at {{.*}}:[[@LINE-6]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:9> col:9 implicit e 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'struct C::(anonymous at {{.*}}:[[@LINE-8]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'struct C::(anonymous at {{.*}}:[[@LINE-8]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'e' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <col:12> col:12 implicit f 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'struct C::(anonymous at {{.*}}:[[@LINE-11]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'struct C::(anonymous at {{.*}}:[[@LINE-11]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'f' 'int'
 };
 
@@ -122,15 +122,13 @@ union E {
 };
 
 union G {
-  // CHECK: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+38]]:1> line:[[@LINE-1]]:7 union G definition
+  // CHECK: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+36]]:1> line:[[@LINE-1]]:7 union G definition
   struct {
     // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+3]]:3> line:[[@LINE-1]]:3 struct definition
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // FIXME: note that it talks about 'struct G' below; the same happens in
-  // other cases with union G as well.
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:3, line:[[@LINE-3]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-7]]:3)':'struct G::(unnamed at {{.*}}:[[@LINE-7]]:3)'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-5]]:3)'
 
   union {
     // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+5]]:3> line:[[@LINE-1]]:3 union definition
@@ -141,10 +139,10 @@ union G {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:3> col:3 implicit 'union G::(anonymous at {{.*}}:[[@LINE-7]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:9> col:9 implicit c 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'union G::(anonymous at {{.*}}:[[@LINE-9]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'union G::(anonymous at {{.*}}:[[@LINE-9]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'c' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:11> col:11 implicit d 'float'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'union G::(anonymous at {{.*}}:[[@LINE-12]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'union G::(anonymous at {{.*}}:[[@LINE-12]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'd' 'float'
 
   struct {
@@ -155,10 +153,10 @@ union G {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:3> col:3 implicit 'struct G::(anonymous at {{.*}}:[[@LINE-6]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:9> col:9 implicit e 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'struct G::(anonymous at {{.*}}:[[@LINE-8]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'struct G::(anonymous at {{.*}}:[[@LINE-8]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'e' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <col:12> col:12 implicit f 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'struct G::(anonymous at {{.*}}:[[@LINE-11]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'struct G::(anonymous at {{.*}}:[[@LINE-11]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'f' 'int'
 };
 

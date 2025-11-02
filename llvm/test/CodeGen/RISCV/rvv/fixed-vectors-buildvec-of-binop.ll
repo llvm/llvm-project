@@ -439,7 +439,7 @@ define void @buggy(i32 %0) #0 {
 ; RV32-LABEL: buggy:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vmv.s.x v8, a0
 ; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    vor.vi v8, v8, 1
 ; RV32-NEXT:    vrgather.vi v9, v8, 0
@@ -450,7 +450,7 @@ define void @buggy(i32 %0) #0 {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    vor.vi v8, v8, 1
 ; RV64-NEXT:    vrgather.vi v9, v8, 0
 ; RV64-NEXT:    vse32.v v9, (zero)
@@ -578,7 +578,7 @@ define <8 x i32> @add_constant_rhs_8xi32_partial(<8 x i32> %vin, i32 %a, i32 %b,
 ; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %vadd = add <8 x i32> %vin, <i32 1, i32 2, i32 3, i32 5, i32 undef, i32 undef, i32 undef, i32 undef>
+  %vadd = add <8 x i32> %vin, <i32 1, i32 2, i32 3, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
   %e0 = add i32 %a, 23
   %e1 = add i32 %b, 25
   %e2 = add i32 %c, 1

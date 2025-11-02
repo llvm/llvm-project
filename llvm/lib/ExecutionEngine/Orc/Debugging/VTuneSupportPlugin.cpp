@@ -63,7 +63,7 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
     if (!EmitDebugInfo)
       continue;
 
-    auto &Section = Sym->getBlock().getSection();
+    auto &Section = Sym->getSection();
     auto Addr = Sym->getAddress();
     auto SAddr =
         object::SectionedAddress{Addr.getValue(), Section.getOrdinal()};
@@ -71,7 +71,8 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
         SAddr, Sym->getSize(),
         DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath);
     Method.SourceFileSI = Batch.Strings.size();
-    Batch.Strings.push_back(DC->getLineInfoForAddress(SAddr).FileName);
+    Batch.Strings.push_back(
+        DC->getLineInfoForAddress(SAddr).value_or(DILineInfo()).FileName);
     for (auto &LInfo : LinesInfo) {
       Method.LineTable.push_back(
           std::pair<unsigned, unsigned>{/*unsigned*/ Sym->getOffset(),
@@ -161,7 +162,7 @@ void VTuneSupportPlugin::notifyTransferringResources(JITDylib &JD,
     return;
 
   auto &Dest = LoadedMethodIDs[DstKey];
-  Dest.insert(Dest.end(), I->second.begin(), I->second.end());
+  llvm::append_range(Dest, I->second);
   LoadedMethodIDs.erase(SrcKey);
 }
 

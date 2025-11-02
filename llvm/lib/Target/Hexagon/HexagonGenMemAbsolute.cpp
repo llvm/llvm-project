@@ -31,23 +31,16 @@ STATISTIC(HexagonNumLoadAbsConversions,
 STATISTIC(HexagonNumStoreAbsConversions,
           "Number of Store instructions converted to absolute-set form");
 
-namespace llvm {
-FunctionPass *createHexagonGenMemAbsolute();
-void initializeHexagonGenMemAbsolutePass(PassRegistry &Registry);
-} // namespace llvm
-
 namespace {
 
 class HexagonGenMemAbsolute : public MachineFunctionPass {
-  const HexagonInstrInfo *TII;
-  MachineRegisterInfo *MRI;
-  const TargetRegisterInfo *TRI;
+  const HexagonInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
 public:
   static char ID;
-  HexagonGenMemAbsolute() : MachineFunctionPass(ID), TII(0), MRI(0), TRI(0) {
-    initializeHexagonGenMemAbsolutePass(*PassRegistry::getPassRegistry());
-  }
+  HexagonGenMemAbsolute() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Hexagon Generate Load/Store Set Absolute Address Instruction";

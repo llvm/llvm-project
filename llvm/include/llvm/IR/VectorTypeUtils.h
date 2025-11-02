@@ -10,6 +10,7 @@
 #define LLVM_IR_VECTORTYPEUTILS_H
 
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -30,15 +31,19 @@ inline Type *toVectorTy(Type *Scalar, unsigned VF) {
 /// Note:
 ///   - If \p EC is scalar, \p StructTy is returned unchanged
 ///   - Only unpacked literal struct types are supported
-Type *toVectorizedStructTy(StructType *StructTy, ElementCount EC);
+LLVM_ABI Type *toVectorizedStructTy(StructType *StructTy, ElementCount EC);
 
 /// A helper for converting structs of vector types to structs of scalar types.
 /// Note: Only unpacked literal struct types are supported.
-Type *toScalarizedStructTy(StructType *StructTy);
+LLVM_ABI Type *toScalarizedStructTy(StructType *StructTy);
 
 /// Returns true if `StructTy` is an unpacked literal struct where all elements
 /// are vectors of matching element count. This does not include empty structs.
-bool isVectorizedStructTy(StructType *StructTy);
+LLVM_ABI bool isVectorizedStructTy(StructType *StructTy);
+
+/// Returns true if `StructTy` is an unpacked literal struct where all elements
+/// are scalars that can be used as vector element types.
+LLVM_ABI bool canVectorizeStructTy(StructType *StructTy);
 
 /// A helper for converting to vectorized types. For scalar types, this is
 /// equivalent to calling `toVectorTy`. For struct types, this returns a new
@@ -69,6 +74,18 @@ inline bool isVectorizedTy(Type *Ty) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
     return isVectorizedStructTy(StructTy);
   return Ty->isVectorTy();
+}
+
+/// Returns true if `Ty` is a valid vector element type, void, or an unpacked
+/// literal struct where all elements are valid vector element types.
+/// Note: Even if a type can be vectorized that does not mean it is valid to do
+/// so in all cases. For example, a vectorized struct (as returned by
+/// toVectorizedTy) does not perform (de)interleaving, so it can't be used for
+/// vectorizing loads/stores.
+inline bool canVectorizeTy(Type *Ty) {
+  if (StructType *StructTy = dyn_cast<StructType>(Ty))
+    return canVectorizeStructTy(StructTy);
+  return Ty->isVoidTy() || VectorType::isValidElementType(Ty);
 }
 
 /// Returns the types contained in `Ty`. For struct types, it returns the

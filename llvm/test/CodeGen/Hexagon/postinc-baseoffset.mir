@@ -2,11 +2,11 @@
 
 # Check that we don't packetize these two instructions together. It happened
 # earlier because "offset" in the post-increment instruction was taken to be 8.
+# If they are packetized together, make sure "mem_noshuf" attribute is set.
 
 # CHECK: memw(r0+#0) = #-1
-# CHECK: }
-# CHECK: {
 # CHECK: r1 = memw(r0++#8)
+# CHECK: :mem_noshuf
 
 --- |
   define void @fred(ptr %a) { ret void }

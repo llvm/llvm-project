@@ -286,7 +286,7 @@ declare <3 x half> @llvm.dx.nclamp.v3f16(<3 x half>, <3 x half>, <3 x half>)
 declare <4 x float> @llvm.dx.nclamp.v4f32(<4 x float>, <4 x float>, <4 x float>)
 declare <2 x double> @llvm.dx.nclamp.v2f64(<2 x double>, <2 x double>, <2 x double>)
 declare <4 x i32> @llvm.dx.sclamp.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
-declare <3 x i16> @llvm.dx.uclamp.v3i32(<3 x i16>, <3 x i32>, <3 x i16>)
+declare <3 x i16> @llvm.dx.uclamp.v3i16(<3 x i16>, <3 x i16>, <3 x i16>)
 declare <4 x i32> @llvm.dx.uclamp.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 declare <2 x i64> @llvm.dx.uclamp.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
 

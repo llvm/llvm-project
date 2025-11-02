@@ -11,8 +11,8 @@ define amdgpu_gs void @f(i32 inreg %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v0
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    v_mov_b32_e32 v5, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v5, 1
 ; CHECK-NEXT:  .LBB0_3: ; %bb4
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    s_mov_b32 s1, s0

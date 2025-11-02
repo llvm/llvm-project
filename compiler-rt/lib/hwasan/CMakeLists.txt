@@ -219,6 +219,7 @@ function(add_hwasan_runtimes arch use_aliases)
             RTSanitizerCommonSymbolizerInternal
             RTLSanCommon
             RTUbsan
+            RTUbsan_cxx
             # The only purpose of RTHWAsan_dynamic_version_script_dummy is to
             # carry a dependency of the shared runtime on the version script.
             # Replacing it with a straightforward

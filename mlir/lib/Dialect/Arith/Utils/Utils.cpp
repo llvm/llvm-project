@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include <numeric>
 
@@ -68,8 +67,8 @@ mlir::inferExpandShapeOutputShape(OpBuilder &b, Location loc,
     // dynamism.
     Value indexGroupSize = cast<Value>(inputShape[inputIndex]);
     Value indexGroupStaticSizesProduct =
-        b.create<arith::ConstantIndexOp>(loc, indexGroupStaticSizesProductInt);
-    Value dynamicDimSize = b.createOrFold<arith::DivUIOp>(
+        arith::ConstantIndexOp::create(b, loc, indexGroupStaticSizesProductInt);
+    Value dynamicDimSize = b.createOrFold<arith::DivSIOp>(
         loc, indexGroupSize, indexGroupStaticSizesProduct);
     outputShapeValues.push_back(dynamicDimSize);
   }
@@ -105,8 +104,8 @@ Value mlir::getValueOrCreateConstantIntOp(OpBuilder &b, Location loc,
   if (auto value = dyn_cast_if_present<Value>(ofr))
     return value;
   auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
-  return b.create<arith::ConstantOp>(
-      loc, b.getIntegerAttr(attr.getType(), attr.getValue().getSExtValue()));
+  return arith::ConstantOp::create(
+      b, loc, b.getIntegerAttr(attr.getType(), attr.getValue().getSExtValue()));
 }
 
 Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
@@ -114,7 +113,7 @@ Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
   if (auto value = dyn_cast_if_present<Value>(ofr))
     return value;
   auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
-  return b.create<arith::ConstantIndexOp>(loc, attr.getValue().getSExtValue());
+  return arith::ConstantIndexOp::create(b, loc, attr.getValue().getSExtValue());
 }
 
 Value mlir::getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
@@ -125,7 +124,7 @@ Value mlir::getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
   bool targetIsIndex = targetType.isIndex();
   bool valueIsIndex = value.getType().isIndex();
   if (targetIsIndex ^ valueIsIndex)
-    return b.create<arith::IndexCastOp>(loc, targetType, value);
+    return arith::IndexCastOp::create(b, loc, targetType, value);
 
   auto targetIntegerType = dyn_cast<IntegerType>(targetType);
   auto valueIntegerType = dyn_cast<IntegerType>(value.getType());
@@ -134,8 +133,8 @@ Value mlir::getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
   assert(targetIntegerType.getSignedness() == valueIntegerType.getSignedness());
 
   if (targetIntegerType.getWidth() > valueIntegerType.getWidth())
-    return b.create<arith::ExtSIOp>(loc, targetIntegerType, value);
-  return b.create<arith::TruncIOp>(loc, targetIntegerType, value);
+    return arith::ExtSIOp::create(b, loc, targetIntegerType, value);
+  return arith::TruncIOp::create(b, loc, targetIntegerType, value);
 }
 
 static Value convertScalarToIntDtype(ImplicitLocOpBuilder &b, Value operand,
@@ -143,21 +142,21 @@ static Value convertScalarToIntDtype(ImplicitLocOpBuilder &b, Value operand,
   // If operand is floating point, cast directly to the int type.
   if (isa<FloatType>(operand.getType())) {
     if (isUnsigned)
-      return b.create<arith::FPToUIOp>(toType, operand);
-    return b.create<arith::FPToSIOp>(toType, operand);
+      return arith::FPToUIOp::create(b, toType, operand);
+    return arith::FPToSIOp::create(b, toType, operand);
   }
   // Cast index operands directly to the int type.
   if (operand.getType().isIndex())
-    return b.create<arith::IndexCastOp>(toType, operand);
+    return arith::IndexCastOp::create(b, toType, operand);
   if (auto fromIntType = dyn_cast<IntegerType>(operand.getType())) {
     // Either extend or truncate.
     if (toType.getWidth() > fromIntType.getWidth()) {
       if (isUnsigned)
-        return b.create<arith::ExtUIOp>(toType, operand);
-      return b.create<arith::ExtSIOp>(toType, operand);
+        return arith::ExtUIOp::create(b, toType, operand);
+      return arith::ExtSIOp::create(b, toType, operand);
     }
     if (toType.getWidth() < fromIntType.getWidth())
-      return b.create<arith::TruncIOp>(toType, operand);
+      return arith::TruncIOp::create(b, toType, operand);
     return operand;
   }
 
@@ -170,14 +169,14 @@ static Value convertScalarToFpDtype(ImplicitLocOpBuilder &b, Value operand,
   // Note that it is unclear how to cast from BF16<->FP16.
   if (isa<IntegerType>(operand.getType())) {
     if (isUnsigned)
-      return b.create<arith::UIToFPOp>(toType, operand);
-    return b.create<arith::SIToFPOp>(toType, operand);
+      return arith::UIToFPOp::create(b, toType, operand);
+    return arith::SIToFPOp::create(b, toType, operand);
   }
   if (auto fromFpTy = dyn_cast<FloatType>(operand.getType())) {
     if (toType.getWidth() > fromFpTy.getWidth())
-      return b.create<arith::ExtFOp>(toType, operand);
+      return arith::ExtFOp::create(b, toType, operand);
     if (toType.getWidth() < fromFpTy.getWidth())
-      return b.create<arith::TruncFOp>(toType, operand);
+      return arith::TruncFOp::create(b, toType, operand);
     return operand;
   }
 
@@ -190,47 +189,47 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
   if (auto fromComplexType = dyn_cast<ComplexType>(operand.getType())) {
     if (isa<FloatType>(targetType.getElementType()) &&
         isa<FloatType>(fromComplexType.getElementType())) {
-      Value real = b.create<complex::ReOp>(operand);
-      Value imag = b.create<complex::ImOp>(operand);
+      Value real = complex::ReOp::create(b, operand);
+      Value imag = complex::ImOp::create(b, operand);
       Type targetETy = targetType.getElementType();
       if (targetType.getElementType().getIntOrFloatBitWidth() <
           fromComplexType.getElementType().getIntOrFloatBitWidth()) {
-        real = b.create<arith::TruncFOp>(targetETy, real);
-        imag = b.create<arith::TruncFOp>(targetETy, imag);
+        real = arith::TruncFOp::create(b, targetETy, real);
+        imag = arith::TruncFOp::create(b, targetETy, imag);
       } else {
-        real = b.create<arith::ExtFOp>(targetETy, real);
-        imag = b.create<arith::ExtFOp>(targetETy, imag);
+        real = arith::ExtFOp::create(b, targetETy, real);
+        imag = arith::ExtFOp::create(b, targetETy, imag);
       }
-      return b.create<complex::CreateOp>(targetType, real, imag);
+      return complex::CreateOp::create(b, targetType, real, imag);
     }
   }
 
-  if (dyn_cast<FloatType>(operand.getType())) {
+  if (isa<FloatType>(operand.getType())) {
     FloatType toFpTy = cast<FloatType>(targetType.getElementType());
     auto toBitwidth = toFpTy.getIntOrFloatBitWidth();
     Value from = operand;
     if (from.getType().getIntOrFloatBitWidth() < toBitwidth) {
-      from = b.create<arith::ExtFOp>(toFpTy, from);
+      from = arith::ExtFOp::create(b, toFpTy, from);
     }
     if (from.getType().getIntOrFloatBitWidth() > toBitwidth) {
-      from = b.create<arith::TruncFOp>(toFpTy, from);
+      from = arith::TruncFOp::create(b, toFpTy, from);
     }
-    Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
-    return b.create<complex::CreateOp>(targetType, from, zero);
+    Value zero = mlir::arith::ConstantFloatOp::create(
+        b, toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
+    return complex::CreateOp::create(b, targetType, from, zero);
   }
 
-  if (dyn_cast<IntegerType>(operand.getType())) {
+  if (isa<IntegerType>(operand.getType())) {
     FloatType toFpTy = cast<FloatType>(targetType.getElementType());
     Value from = operand;
     if (isUnsigned) {
-      from = b.create<arith::UIToFPOp>(toFpTy, from);
+      from = arith::UIToFPOp::create(b, toFpTy, from);
     } else {
-      from = b.create<arith::SIToFPOp>(toFpTy, from);
+      from = arith::SIToFPOp::create(b, toFpTy, from);
     }
-    Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
-    return b.create<complex::CreateOp>(targetType, from, zero);
+    Value zero = mlir::arith::ConstantFloatOp::create(
+        b, toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
+    return complex::CreateOp::create(b, targetType, from, zero);
   }
 
   return {};
@@ -278,7 +277,7 @@ Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
     attr = SplatElementsAttr::get(vecTy, value);
   }
 
-  return builder.create<arith::ConstantOp>(loc, attr);
+  return arith::ConstantOp::create(builder, loc, attr);
 }
 
 Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
@@ -310,35 +309,35 @@ Type mlir::getType(OpFoldResult ofr) {
 }
 
 Value ArithBuilder::_and(Value lhs, Value rhs) {
-  return b.create<arith::AndIOp>(loc, lhs, rhs);
+  return arith::AndIOp::create(b, loc, lhs, rhs);
 }
 Value ArithBuilder::add(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
-    return b.create<arith::AddFOp>(loc, lhs, rhs);
-  return b.create<arith::AddIOp>(loc, lhs, rhs);
+    return arith::AddFOp::create(b, loc, lhs, rhs);
+  return arith::AddIOp::create(b, loc, lhs, rhs, ovf);
 }
 Value ArithBuilder::sub(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
-    return b.create<arith::SubFOp>(loc, lhs, rhs);
-  return b.create<arith::SubIOp>(loc, lhs, rhs);
+    return arith::SubFOp::create(b, loc, lhs, rhs);
+  return arith::SubIOp::create(b, loc, lhs, rhs, ovf);
 }
 Value ArithBuilder::mul(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
-    return b.create<arith::MulFOp>(loc, lhs, rhs);
-  return b.create<arith::MulIOp>(loc, lhs, rhs);
+    return arith::MulFOp::create(b, loc, lhs, rhs);
+  return arith::MulIOp::create(b, loc, lhs, rhs, ovf);
 }
 Value ArithBuilder::sgt(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
-    return b.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGT, lhs, rhs);
-  return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, lhs, rhs);
+    return arith::CmpFOp::create(b, loc, arith::CmpFPredicate::OGT, lhs, rhs);
+  return arith::CmpIOp::create(b, loc, arith::CmpIPredicate::sgt, lhs, rhs);
 }
 Value ArithBuilder::slt(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
-    return b.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT, lhs, rhs);
-  return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, lhs, rhs);
+    return arith::CmpFOp::create(b, loc, arith::CmpFPredicate::OLT, lhs, rhs);
+  return arith::CmpIOp::create(b, loc, arith::CmpIPredicate::slt, lhs, rhs);
 }
 Value ArithBuilder::select(Value cmp, Value lhs, Value rhs) {
-  return b.create<arith::SelectOp>(loc, cmp, lhs, rhs);
+  return arith::SelectOp::create(b, loc, cmp, lhs, rhs);
 }
 
 namespace mlir::arith {
@@ -349,34 +348,34 @@ Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values) {
 
 Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
                     Type resultType) {
-  Value one = builder.create<ConstantOp>(loc, resultType,
-                                         builder.getOneAttr(resultType));
+  Value one = ConstantOp::create(builder, loc, resultType,
+                                 builder.getOneAttr(resultType));
   ArithBuilder arithBuilder(builder, loc);
-  return std::accumulate(
-      values.begin(), values.end(), one,
-      [&arithBuilder](Value acc, Value v) { return arithBuilder.mul(acc, v); });
+  return llvm::accumulate(values, one, [&arithBuilder](Value acc, Value v) {
+    return arithBuilder.mul(acc, v);
+  });
 }
 
 /// Map strings to float types.
 std::optional<FloatType> parseFloatType(MLIRContext *ctx, StringRef name) {
   Builder b(ctx);
   return llvm::StringSwitch<std::optional<FloatType>>(name)
-      .Case("f4E2M1FN", b.getFloat4E2M1FNType())
-      .Case("f6E2M3FN", b.getFloat6E2M3FNType())
-      .Case("f6E3M2FN", b.getFloat6E3M2FNType())
-      .Case("f8E5M2", b.getFloat8E5M2Type())
-      .Case("f8E4M3", b.getFloat8E4M3Type())
-      .Case("f8E4M3FN", b.getFloat8E4M3FNType())
-      .Case("f8E5M2FNUZ", b.getFloat8E5M2FNUZType())
-      .Case("f8E4M3FNUZ", b.getFloat8E4M3FNUZType())
-      .Case("f8E3M4", b.getFloat8E3M4Type())
-      .Case("f8E8M0FNU", b.getFloat8E8M0FNUType())
-      .Case("bf16", b.getBF16Type())
-      .Case("f16", b.getF16Type())
-      .Case("f32", b.getF32Type())
-      .Case("f64", b.getF64Type())
-      .Case("f80", b.getF80Type())
-      .Case("f128", b.getF128Type())
+      .Case("f4E2M1FN", b.getType<Float4E2M1FNType>())
+      .Case("f6E2M3FN", b.getType<Float6E2M3FNType>())
+      .Case("f6E3M2FN", b.getType<Float6E3M2FNType>())
+      .Case("f8E5M2", b.getType<Float8E5M2Type>())
+      .Case("f8E4M3", b.getType<Float8E4M3Type>())
+      .Case("f8E4M3FN", b.getType<Float8E4M3FNType>())
+      .Case("f8E5M2FNUZ", b.getType<Float8E5M2FNUZType>())
+      .Case("f8E4M3FNUZ", b.getType<Float8E4M3FNUZType>())
+      .Case("f8E3M4", b.getType<Float8E3M4Type>())
+      .Case("f8E8M0FNU", b.getType<Float8E8M0FNUType>())
+      .Case("bf16", b.getType<BFloat16Type>())
+      .Case("f16", b.getType<Float16Type>())
+      .Case("f32", b.getType<Float32Type>())
+      .Case("f64", b.getType<Float64Type>())
+      .Case("f80", b.getType<Float80Type>())
+      .Case("f128", b.getType<Float128Type>())
       .Default(std::nullopt);
 }
 

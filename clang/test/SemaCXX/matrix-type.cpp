@@ -14,6 +14,7 @@ void matrix_var_dimensions(int Rows, unsigned Columns, char C) {
   using matrix7_t = int __attribute__((matrix_type(1, 0)));       // expected-error{{zero matrix size}}
   using matrix7_t = int __attribute__((matrix_type(char, 0)));    // expected-error{{expected '(' for function-style cast or type construction}}
   using matrix8_t = int __attribute__((matrix_type(1048576, 1))); // expected-error{{matrix row size too large}}
+  using matrix8_t = int __attribute__((matrix_type(1048576, 1048576))); // expected-error{{matrix row and column size too large}}
 }
 
 struct S1 {};
@@ -31,8 +32,7 @@ void matrix_unsupported_element_type() {
 }
 
 void matrix_unsupported_bit_int() {
-  using m1 = _BitInt(2) __attribute__((matrix_type(4, 4))); // expected-error{{'_BitInt' matrix element width must be at least as wide as 'CHAR_BIT'}}
-  using m2 = _BitInt(7) __attribute__((matrix_type(4, 4))); // expected-error{{'_BitInt' matrix element width must be at least as wide as 'CHAR_BIT'}}
+  using m2 = _BitInt(7) __attribute__((matrix_type(4, 4))); // expected-error{{'_BitInt' matrix element width must be a power of 2}}
   using m3 = _BitInt(9) __attribute__((matrix_type(4, 4))); // expected-error{{'_BitInt' matrix element width must be a power of 2}}
   using m4 = _BitInt(12) __attribute__((matrix_type(4, 4))); // expected-error{{'_BitInt' matrix element width must be a power of 2}}
   using m5 = _BitInt(8) __attribute__((matrix_type(4, 4)));

@@ -34,7 +34,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-reg-info"
 
-MipsSERegisterInfo::MipsSERegisterInfo() = default;
+MipsSERegisterInfo::MipsSERegisterInfo(const MipsSubtarget &STI)
+    : MipsRegisterInfo(STI) {}
 
 bool MipsSERegisterInfo::
 requiresRegisterScavenging(const MachineFunction &MF) const {

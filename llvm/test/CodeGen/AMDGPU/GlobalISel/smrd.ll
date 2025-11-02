@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=SI,GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=CI,GCN,SICIVI %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=VI,GCN,SICIVI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti -show-mc-encoding -global-isel -new-reg-bank-select | FileCheck --check-prefixes=SI,GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding -global-isel -new-reg-bank-select | FileCheck --check-prefixes=CI,GCN,SICIVI %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -show-mc-encoding -global-isel -new-reg-bank-select | FileCheck --check-prefixes=VI,GCN,SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -show-mc-encoding -global-isel -new-reg-bank-select < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -show-mc-encoding -global-isel -new-reg-bank-select < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
 
 ; SMRD load with an immediate offset.
 ; GCN-LABEL: {{^}}smrd0:
@@ -12,7 +12,7 @@ define amdgpu_kernel void @smrd0(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 1
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -24,7 +24,7 @@ define amdgpu_kernel void @smrd1(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 255
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -39,7 +39,7 @@ define amdgpu_kernel void @smrd2(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 256
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -54,7 +54,7 @@ define amdgpu_kernel void @smrd3(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 4294967296 ; 2 ^ 32
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -70,7 +70,7 @@ define amdgpu_kernel void @smrd4(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 262143
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -84,7 +84,7 @@ define amdgpu_kernel void @smrd5(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 262144
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 

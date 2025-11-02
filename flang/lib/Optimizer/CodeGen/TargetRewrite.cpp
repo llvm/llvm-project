@@ -107,7 +107,7 @@ public:
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
     if (!dl) {
       mlir::emitError(mod.getLoc(),
                       "module operation must carry a data layout attribute "
@@ -143,7 +143,8 @@ public:
         llvm::SmallVector<mlir::Type> operandsTypes;
         for (auto arg : gpuLaunchFunc.getKernelOperands())
           operandsTypes.push_back(arg.getType());
-        auto fctTy = mlir::FunctionType::get(&context, operandsTypes, {});
+        auto fctTy = mlir::FunctionType::get(&context, operandsTypes,
+                                             gpuLaunchFunc.getResultTypes());
         if (!hasPortableSignature(fctTy, op))
           convertCallOp(gpuLaunchFunc, fctTy);
       } else if (auto addr = mlir::dyn_cast<fir::AddrOfOp>(op)) {
@@ -178,13 +179,13 @@ public:
       if (!savedStackPtr)
         savedStackPtr = genStackSave(loc);
       mlir::Value stack =
-          rewriter->create<fir::AllocaOp>(loc, fir::dyn_cast_ptrEleTy(resTy));
+          fir::AllocaOp::create(*rewriter, loc, fir::dyn_cast_ptrEleTy(resTy));
       newInTyAndAttrs.push_back(m[0]);
       newOpers.push_back(stack);
       return [=](mlir::Operation *) -> mlir::Value {
         auto memTy = fir::ReferenceType::get(originalResTy);
-        auto cast = rewriter->create<fir::ConvertOp>(loc, memTy, stack);
-        return rewriter->create<fir::LoadOp>(loc, cast);
+        auto cast = fir::ConvertOp::create(*rewriter, loc, memTy, stack);
+        return fir::LoadOp::create(*rewriter, loc, cast);
       };
     }
     newResTys.push_back(resTy);
@@ -238,10 +239,10 @@ public:
     if (!savedStackPtr)
       savedStackPtr = genStackSave(loc);
     if (attr.isByVal()) {
-      mlir::Value mem = rewriter->create<fir::AllocaOp>(loc, oldType);
-      rewriter->create<fir::StoreOp>(loc, oper, mem);
+      mlir::Value mem = fir::AllocaOp::create(*rewriter, loc, oldType);
+      fir::StoreOp::create(*rewriter, loc, oper, mem);
       if (mem.getType() != resTy)
-        mem = rewriter->create<fir::ConvertOp>(loc, resTy, mem);
+        mem = fir::ConvertOp::create(*rewriter, loc, resTy, mem);
       newOpers.push_back(mem);
     } else {
       mlir::Value bitcast =
@@ -261,16 +262,16 @@ public:
                                    mlir::Type newType, bool inputMayBeBigger) {
     if (inputMayBeBigger) {
       auto newRefTy = fir::ReferenceType::get(newType);
-      auto mem = rewriter->create<fir::AllocaOp>(loc, value.getType());
-      rewriter->create<fir::StoreOp>(loc, value, mem);
-      auto cast = rewriter->create<fir::ConvertOp>(loc, newRefTy, mem);
-      return rewriter->create<fir::LoadOp>(loc, cast);
+      auto mem = fir::AllocaOp::create(*rewriter, loc, value.getType());
+      fir::StoreOp::create(*rewriter, loc, value, mem);
+      auto cast = fir::ConvertOp::create(*rewriter, loc, newRefTy, mem);
+      return fir::LoadOp::create(*rewriter, loc, cast);
     } else {
       auto oldRefTy = fir::ReferenceType::get(value.getType());
-      auto mem = rewriter->create<fir::AllocaOp>(loc, newType);
-      auto cast = rewriter->create<fir::ConvertOp>(loc, oldRefTy, mem);
-      rewriter->create<fir::StoreOp>(loc, value, cast);
-      return rewriter->create<fir::LoadOp>(loc, mem);
+      auto mem = fir::AllocaOp::create(*rewriter, loc, newType);
+      auto cast = fir::ConvertOp::create(*rewriter, loc, oldRefTy, mem);
+      fir::StoreOp::create(*rewriter, loc, value, cast);
+      return fir::LoadOp::create(*rewriter, loc, mem);
     }
   }
 
@@ -299,8 +300,8 @@ public:
       auto ty = std::get<mlir::Type>(tup);
       auto index = e.index();
       auto idx = rewriter->getIntegerAttr(iTy, index);
-      auto val = rewriter->create<fir::ExtractValueOp>(
-          loc, ty, oper, rewriter->getArrayAttr(idx));
+      auto val = fir::ExtractValueOp::create(*rewriter, loc, ty, oper,
+                                             rewriter->getArrayAttr(idx));
       newOpers.push_back(val);
     }
   }
@@ -437,9 +438,9 @@ public:
               TODO(loc, "ABI of fir.dispatch with character arguments");
             }
             auto m = specifics->boxcharArgumentType(boxTy.getEleTy());
-            auto unbox = rewriter->create<fir::UnboxCharOp>(
-                loc, std::get<mlir::Type>(m[0]), std::get<mlir::Type>(m[1]),
-                oper);
+            auto unbox = fir::UnboxCharOp::create(
+                *rewriter, loc, std::get<mlir::Type>(m[0]),
+                std::get<mlir::Type>(m[1]), oper);
             // unboxed CHARACTER arguments
             for (auto e : llvm::enumerate(m)) {
               unsigned idx = e.index();
@@ -518,11 +519,16 @@ public:
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
 
     llvm::SmallVector<mlir::Value, 1> newCallResults;
+    // TODO propagate/update call argument and result attributes.
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>) {
-      auto newCall = rewriter->create<A>(
-          loc, callOp.getKernel(), callOp.getGridSizeOperandValues(),
-          callOp.getBlockSizeOperandValues(),
-          callOp.getDynamicSharedMemorySize(), newOpers);
+      mlir::Value asyncToken = callOp.getAsyncToken();
+      auto newCall = A::create(*rewriter, loc, callOp.getKernel(),
+                               callOp.getGridSizeOperandValues(),
+                               callOp.getBlockSizeOperandValues(),
+                               callOp.getDynamicSharedMemorySize(), newOpers,
+                               asyncToken ? asyncToken.getType() : nullptr,
+                               callOp.getAsyncDependencies(),
+                               /*clusterSize=*/std::nullopt);
       if (callOp.getClusterSizeX())
         newCall.getClusterSizeXMutable().assign(callOp.getClusterSizeX());
       if (callOp.getClusterSizeY())
@@ -530,22 +536,53 @@ public:
       if (callOp.getClusterSizeZ())
         newCall.getClusterSizeZMutable().assign(callOp.getClusterSizeZ());
       newCallResults.append(newCall.result_begin(), newCall.result_end());
+      if (auto cudaProcAttr =
+              callOp->template getAttrOfType<cuf::ProcAttributeAttr>(
+                  cuf::getProcAttrName())) {
+        newCall->setAttr(cuf::getProcAttrName(), cudaProcAttr);
+      }
     } else if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
       if (callOp.getCallee()) {
-        newCall =
-            rewriter->create<A>(loc, *callOp.getCallee(), newResTys, newOpers);
+        newCall = fir::CallOp::create(*rewriter, loc, *callOp.getCallee(),
+                                      newResTys, newOpers);
       } else {
-        // TODO: llvm dialect must be updated to propagate argument on
-        // attributes for indirect calls. See:
-        // https://discourse.llvm.org/t/should-llvm-callop-be-able-to-carry-argument-attributes-for-indirect-calls/75431
-        if (hasByValOrSRetArgs(newInTyAndAttrs))
-          TODO(loc,
-               "passing argument or result on the stack in indirect calls");
         newOpers[0].setType(mlir::FunctionType::get(
             callOp.getContext(),
             mlir::TypeRange{newInTypes}.drop_front(dropFront), newResTys));
-        newCall = rewriter->create<A>(loc, newResTys, newOpers);
+        newCall = fir::CallOp::create(*rewriter, loc, newResTys, newOpers);
+      }
+      newCall.setFastmathAttr(callOp.getFastmathAttr());
+      // Always set ABI argument attributes on call operations, even when
+      // direct, as required by
+      // https://llvm.org/docs/LangRef.html#parameter-attributes.
+      if (hasByValOrSRetArgs(newInTyAndAttrs)) {
+        llvm::SmallVector<mlir::Attribute> argAttrsArray;
+        for (const auto &arg :
+             llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(newInTyAndAttrs)
+                 .drop_front(dropFront)) {
+          mlir::NamedAttrList argAttrs;
+          const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
+          if (attr.isByVal()) {
+            mlir::Type elemType =
+                fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
+            argAttrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
+                         mlir::TypeAttr::get(elemType));
+          } else if (attr.isSRet()) {
+            mlir::Type elemType =
+                fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
+            argAttrs.set(mlir::LLVM::LLVMDialect::getStructRetAttrName(),
+                         mlir::TypeAttr::get(elemType));
+          }
+          if (auto align = attr.getAlignment()) {
+            argAttrs.set(
+                mlir::LLVM::LLVMDialect::getAlignAttrName(),
+                rewriter->getIntegerAttr(rewriter->getIntegerType(32), align));
+          }
+          argAttrsArray.emplace_back(
+              argAttrs.getDictionary(rewriter->getContext()));
+        }
+        newCall.setArgAttrsAttr(rewriter->getArrayAttr(argAttrsArray));
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
       if (wrap)
@@ -553,10 +590,12 @@ public:
       else
         newCallResults.append(newCall.result_begin(), newCall.result_end());
     } else {
-      fir::DispatchOp dispatchOp = rewriter->create<A>(
-          loc, newResTys, rewriter->getStringAttr(callOp.getMethod()),
-          callOp.getOperands()[0], newOpers,
+      fir::DispatchOp dispatchOp = A::create(
+          *rewriter, loc, newResTys,
+          rewriter->getStringAttr(callOp.getMethod()), callOp.getOperands()[0],
+          newOpers,
           rewriter->getI32IntegerAttr(*callOp.getPassArgPos() + passArgShift),
+          /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
           callOp.getProcedureAttrsAttr());
       if (wrap)
         newCallResults.push_back((*wrap)(dispatchOp.getOperation()));
@@ -721,8 +760,8 @@ public:
                       trailingInTys.end());
     // replace this op with a new one with the updated signature
     auto newTy = rewriter->getFunctionType(newInTypes, newResTys);
-    auto newOp = rewriter->create<fir::AddrOfOp>(addrOp.getLoc(), newTy,
-                                                 addrOp.getSymbol());
+    auto newOp = fir::AddrOfOp::create(*rewriter, addrOp.getLoc(), newTy,
+                                       addrOp.getSymbol());
     replaceOp(addrOp, newOp.getResult());
   }
 
@@ -838,6 +877,14 @@ public:
       }
     }
 
+    // Count the number of arguments that have to stay in place at the end of
+    // the argument list.
+    unsigned trailingArgs = 0;
+    if constexpr (std::is_same_v<FuncOpTy, mlir::gpu::GPUFuncOp>) {
+      trailingArgs =
+          func.getNumWorkgroupAttributions() + func.getNumPrivateAttributions();
+    }
+
     // Convert return value(s)
     for (auto ty : funcTy.getResults())
       llvm::TypeSwitch<mlir::Type>(ty)
@@ -947,6 +994,16 @@ public:
       }
     }
 
+    // Add the argument at the end if the number of trailing arguments is 0,
+    // otherwise insert the argument at the appropriate index.
+    auto addOrInsertArgument = [&](mlir::Type ty, mlir::Location loc) {
+      unsigned inputIndex = func.front().getArguments().size() - trailingArgs;
+      auto newArg = trailingArgs == 0
+                        ? func.front().addArgument(ty, loc)
+                        : func.front().insertArgument(inputIndex, ty, loc);
+      return newArg;
+    };
+
     if (!func.empty()) {
       // If the function has a body, then apply the fixups to the arguments and
       // return ops as required. These fixups are done in place.
@@ -969,8 +1026,8 @@ public:
           rewriter->setInsertionPointToStart(&func.front());
           auto oldArgTy =
               fir::ReferenceType::get(oldArgTys[fixup.index - offset]);
-          auto cast = rewriter->create<fir::ConvertOp>(loc, oldArgTy, newArg);
-          auto load = rewriter->create<fir::LoadOp>(loc, cast);
+          auto cast = fir::ConvertOp::create(*rewriter, loc, oldArgTy, newArg);
+          auto load = fir::LoadOp::create(*rewriter, loc, cast);
           func.getArgument(fixup.index + 1).replaceAllUsesWith(load);
           func.front().eraseArgument(fixup.index + 1);
         } break;
@@ -1002,8 +1059,9 @@ public:
           if (fixup.second == 1) {
             rewriter->setInsertionPointToStart(&func.front());
             auto boxTy = oldArgTys[fixup.index - offset - fixup.second];
-            auto box = rewriter->create<fir::EmboxCharOp>(
-                loc, boxTy, func.front().getArgument(fixup.index - 1), newArg);
+            auto box = fir::EmboxCharOp::create(
+                *rewriter, loc, boxTy,
+                func.front().getArgument(fixup.index - 1), newArg);
             func.getArgument(fixup.index + 1).replaceAllUsesWith(box);
             func.front().eraseArgument(fixup.index + 1);
             offset++;
@@ -1020,9 +1078,9 @@ public:
             auto oldOper = ret.getOperand(0);
             auto oldOperTy = fir::ReferenceType::get(oldOper.getType());
             auto cast =
-                rewriter->create<fir::ConvertOp>(loc, oldOperTy, newArg);
-            rewriter->create<fir::StoreOp>(loc, oldOper, cast);
-            rewriter->create<ReturnOpTy>(loc);
+                fir::ConvertOp::create(*rewriter, loc, oldOperTy, newArg);
+            fir::StoreOp::create(*rewriter, loc, oldOper, cast);
+            ReturnOpTy::create(*rewriter, loc);
             ret.erase();
           });
         } break;
@@ -1035,7 +1093,7 @@ public:
             mlir::Value bitcast =
                 convertValueInMemory(loc, oldOper, newResTys[fixup.index],
                                      /*inputMayBeBigger=*/false);
-            rewriter->create<ReturnOpTy>(loc, bitcast);
+            ReturnOpTy::create(*rewriter, loc, bitcast);
             ret.erase();
           });
         } break;
@@ -1056,14 +1114,16 @@ public:
                   originalTy.getContext(),
                   mlir::TypeRange{firstArg.getType(), newArg.getType()});
             }
-            auto undef = rewriter->create<fir::UndefOp>(loc, pairTy);
+            auto undef = fir::UndefOp::create(*rewriter, loc, pairTy);
             auto iTy = rewriter->getIntegerType(32);
             auto zero = rewriter->getIntegerAttr(iTy, 0);
             auto one = rewriter->getIntegerAttr(iTy, 1);
-            mlir::Value pair1 = rewriter->create<fir::InsertValueOp>(
-                loc, pairTy, undef, firstArg, rewriter->getArrayAttr(zero));
-            mlir::Value pair = rewriter->create<fir::InsertValueOp>(
-                loc, pairTy, pair1, newArg, rewriter->getArrayAttr(one));
+            mlir::Value pair1 = fir::InsertValueOp::create(
+                *rewriter, loc, pairTy, undef, firstArg,
+                rewriter->getArrayAttr(zero));
+            mlir::Value pair =
+                fir::InsertValueOp::create(*rewriter, loc, pairTy, pair1,
+                                           newArg, rewriter->getArrayAttr(one));
             // Cast local argument tuple to original type via memory if needed.
             if (pairTy != originalTy)
               pair = convertValueInMemory(loc, pair, originalTy,
@@ -1080,12 +1140,11 @@ public:
           // original arguments. (Boxchar arguments.)
           auto newBufArg =
               func.front().insertArgument(fixup.index, fixupType, loc);
-          auto newLenArg =
-              func.front().addArgument(trailingTys[fixup.second], loc);
+          auto newLenArg = addOrInsertArgument(trailingTys[fixup.second], loc);
           auto boxTy = oldArgTys[fixup.index - offset];
           rewriter->setInsertionPointToStart(&func.front());
-          auto box = rewriter->create<fir::EmboxCharOp>(loc, boxTy, newBufArg,
-                                                        newLenArg);
+          auto box = fir::EmboxCharOp::create(*rewriter, loc, boxTy, newBufArg,
+                                              newLenArg);
           func.getArgument(fixup.index + 1).replaceAllUsesWith(box);
           func.front().eraseArgument(fixup.index + 1);
         } break;
@@ -1096,8 +1155,7 @@ public:
           // appended after all the original arguments.
           auto newProcPointerArg =
               func.front().insertArgument(fixup.index, fixupType, loc);
-          auto newLenArg =
-              func.front().addArgument(trailingTys[fixup.second], loc);
+          auto newLenArg = addOrInsertArgument(trailingTys[fixup.second], loc);
           auto tupleType = oldArgTys[fixup.index - offset];
           rewriter->setInsertionPointToStart(&func.front());
           fir::FirOpBuilder builder(*rewriter, getModule());
@@ -1299,7 +1357,15 @@ public:
 private:
   // Replace `op` and remove it.
   void replaceOp(mlir::Operation *op, mlir::ValueRange newValues) {
-    op->replaceAllUsesWith(newValues);
+    llvm::SmallVector<mlir::Value> casts;
+    for (auto [oldValue, newValue] : llvm::zip(op->getResults(), newValues)) {
+      if (oldValue.getType() == newValue.getType())
+        casts.push_back(newValue);
+      else
+        casts.push_back(fir::ConvertOp::create(*rewriter, op->getLoc(),
+                                               oldValue.getType(), newValue));
+    }
+    op->replaceAllUsesWith(casts);
     op->dropAllReferences();
     op->erase();
   }

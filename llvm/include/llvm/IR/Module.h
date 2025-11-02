@@ -31,6 +31,8 @@
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -189,8 +191,10 @@ private:
   std::string ModuleID;           ///< Human readable identifier for the module
   std::string SourceFileName;     ///< Original source file name for module,
                                   ///< recorded in bitcode.
-  std::string TargetTriple;       ///< Platform target triple Module compiled on
-                                  ///< Format: (arch)(sub)-(vendor)-(sys0-(abi)
+  /// Platform target triple Module compiled on
+  /// Format: (arch)(sub)-(vendor)-(sys)-(abi)
+  // FIXME: Default construction is not the same as empty triple :(
+  Triple TargetTriple = Triple("");
   NamedMDSymTabType NamedMDSymTab;  ///< NamedMDNode names.
   DataLayout DL;                  ///< DataLayout associated with the module
   StringMap<unsigned>
@@ -211,11 +215,6 @@ private:
 /// @name Constructors
 /// @{
 public:
-  /// Is this Module using intrinsics to record the position of debugging
-  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
-  /// \ref BasicBlock.
-  bool IsNewDbgInfoFormat;
-
   /// Used when printing this module in the new debug info format; removes all
   /// declarations of debug intrinsics that are replaced by non-intrinsic
   /// records in the new format.
@@ -226,7 +225,6 @@ public:
     for (auto &F : *this) {
       F.convertToNewDbgValues();
     }
-    IsNewDbgInfoFormat = true;
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
@@ -234,20 +232,6 @@ public:
     for (auto &F : *this) {
       F.convertFromNewDbgValues();
     }
-    IsNewDbgInfoFormat = false;
-  }
-
-  void setIsNewDbgInfoFormat(bool UseNewFormat) {
-    if (UseNewFormat && !IsNewDbgInfoFormat)
-      convertToNewDbgValues();
-    else if (!UseNewFormat && IsNewDbgInfoFormat)
-      convertFromNewDbgValues();
-  }
-  void setNewDbgInfoFormatFlag(bool NewFlag) {
-    for (auto &F : *this) {
-      F.setNewDbgInfoFormatFlag(NewFlag);
-    }
-    IsNewDbgInfoFormat = NewFlag;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -294,8 +278,7 @@ public:
   const DataLayout &getDataLayout() const { return DL; }
 
   /// Get the target triple which is a string describing the target host.
-  /// @returns a string containing the target triple.
-  const std::string &getTargetTriple() const { return TargetTriple; }
+  const Triple &getTargetTriple() const { return TargetTriple; }
 
   /// Get the global data context.
   /// @returns LLVMContext - a container for LLVM's global information
@@ -338,7 +321,7 @@ public:
   void setDataLayout(const DataLayout &Other);
 
   /// Set the target triple.
-  void setTargetTriple(StringRef T) { TargetTriple = std::string(T); }
+  void setTargetTriple(Triple T) { TargetTriple = std::move(T); }
 
   /// Set the module-scope inline assembly blocks.
   /// A trailing newline is added if the input doesn't have one.
@@ -469,15 +452,14 @@ public:
 
   /// Look up the specified global in the module symbol table.
   /// If it does not exist, invoke a callback to create a declaration of the
-  /// global and return it. The global is constantexpr casted to the expected
-  /// type if necessary.
-  Constant *
+  /// global and return it.
+  GlobalVariable *
   getOrInsertGlobal(StringRef Name, Type *Ty,
                     function_ref<GlobalVariable *()> CreateGlobalCallback);
 
   /// Look up the specified global in the module symbol table. If required, this
   /// overload constructs the global variable using its constructor's defaults.
-  Constant *getOrInsertGlobal(StringRef Name, Type *Ty);
+  GlobalVariable *getOrInsertGlobal(StringRef Name, Type *Ty);
 
 /// @}
 /// @name Global Alias Accessors
@@ -816,7 +798,7 @@ public:
     NamedMDNode *CUs;
     unsigned Idx;
 
-    void SkipNoDebugCUs();
+    LLVM_ABI void SkipNoDebugCUs();
 
   public:
     using iterator_category = std::input_iterator_tag;
@@ -850,8 +832,8 @@ public:
       return Idx != I.Idx;
     }
 
-    DICompileUnit *operator*() const;
-    DICompileUnit *operator->() const;
+    LLVM_ABI DICompileUnit *operator*() const;
+    LLVM_ABI DICompileUnit *operator->() const;
   };
 
   debug_compile_units_iterator debug_compile_units_begin() const {
@@ -874,15 +856,6 @@ public:
         debug_compile_units_iterator(CUs, CUs ? CUs->getNumOperands() : 0));
   }
 /// @}
-
-  /// Destroy ConstantArrays in LLVMContext if they are not used.
-  /// ConstantArrays constructed during linking can cause quadratic memory
-  /// explosion. Releasing all unused constants can cause a 20% LTO compile-time
-  /// slowdown for a large application.
-  ///
-  /// NOTE: Constants are currently owned by LLVMContext. This can then only
-  /// be called where all uses of the LLVMContext are understood.
-  void dropTriviallyDeadConstantArrays();
 
 /// @name Utility functions for printing and dumping Module objects
 /// @{
@@ -961,10 +934,10 @@ public:
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 
-  /// Returns the code model (tiny, small, kernel, medium or large model)
+  /// Returns the large data threshold.
   std::optional<uint64_t> getLargeDataThreshold() const;
 
-  /// Set the code model (tiny, small, kernel, medium or large)
+  /// Set the large data threshold.
   void setLargeDataThreshold(uint64_t Threshold);
   /// @}
 
@@ -1065,14 +1038,21 @@ public:
 
   /// Set the target variant version build SDK version metadata.
   void setDarwinTargetVariantSDKVersion(VersionTuple Version);
+
+  /// Returns target-abi from MDString, null if target-abi is absent.
+  StringRef getTargetABIFromMD();
+
+  /// Get how unwind v2 (epilog) information should be generated for x64
+  /// Windows.
+  WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
 /// initializer elements of that global in a SmallVector and return the global
 /// itself.
-GlobalVariable *collectUsedGlobalVariables(const Module &M,
-                                           SmallVectorImpl<GlobalValue *> &Vec,
-                                           bool CompilerUsed);
+LLVM_ABI GlobalVariable *
+collectUsedGlobalVariables(const Module &M, SmallVectorImpl<GlobalValue *> &Vec,
+                           bool CompilerUsed);
 
 /// An raw_ostream inserter for modules.
 inline raw_ostream &operator<<(raw_ostream &O, const Module &M) {

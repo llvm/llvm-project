@@ -11,30 +11,47 @@
 
 include "mlir/Pass/PassBase.td"
 
-def GpuLaunchSinkIndexComputations : Pass<"gpu-launch-sink-index-computations"> {
+def GpuLaunchSinkIndexComputationsPass
+    : Pass<"gpu-launch-sink-index-computations"> {
   let summary = "Sink index computations into gpu.launch body";
-  let constructor = "mlir::createGpuLauchSinkIndexComputationsPass()";
   let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
-def GpuKernelOutlining : Pass<"gpu-kernel-outlining", "ModuleOp"> {
+def GpuKernelOutliningPass : Pass<"gpu-kernel-outlining", "ModuleOp"> {
   let summary = "Outline gpu.launch bodies to kernel functions";
-  let constructor = "mlir::createGpuKernelOutliningPass()";
   let dependentDialects = ["mlir::DLTIDialect", "cf::ControlFlowDialect"];
+  let options = [Option<"dataLayoutStr", "data-layout-str", "std::string",
+                        /*default=*/"",
+                        "String description of the data layout">];
 }
 
 def GpuAsyncRegionPass : Pass<"gpu-async-region", "func::FuncOp"> {
   let summary = "Make GPU ops async";
-  let constructor = "mlir::createGpuAsyncRegionPass()";
   let dependentDialects = ["async::AsyncDialect"];
 }
 
 def GpuMapParallelLoopsPass
     : Pass<"gpu-map-parallel-loops", "mlir::func::FuncOp"> {
   let summary = "Greedily maps loops to GPU hardware dimensions.";
-  let constructor = "mlir::createGpuMapParallelLoopsPass()";
-  let description = "Greedily maps loops to GPU hardware dimensions.";
+  let description = [{
+    Maps the parallel loops found in the given function to workgroups. The first
+    loop encountered will be mapped to the global workgroup and the second loop
+    encountered to the local workgroup. Within each mapping, the first three
+    dimensions are mapped to x/y/z hardware ids and all following dimensions are
+    mapped to sequential loops.
+
+    Ordering of the loop mapping against the different dimensions is controlled
+    by the `mapping-policy` option.
+    Two policies are supported:
+       1. `outermost-first` (default): the outermost loop maps to X, then Y
+          and finally Z.
+       2. `innermost-first`: the innermost loop maps to X, then Y and finally Z.
+  }];
   let dependentDialects = ["mlir::gpu::GPUDialect"];
+  let options = [Option<"mappingPolicyStr", "mapping-policy", "std::string",
+                        /*default=*/"\"outermost-first\"",
+                        "Policy outlining how to assign loops to GPU dimensions."
+                        "Supported values are `outermost-first` and `innermost-first`.">];
 }
 
 def GpuEliminateBarriers
@@ -66,7 +83,6 @@ def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
     and sizes/strides for dynamically-sized memrefs are not available inside
     `gpu.launch`.
   }];
-  let constructor = "mlir::createGpuDecomposeMemrefsPass()";
   let dependentDialects = [
     "mlir::gpu::GPUDialect", "mlir::memref::MemRefDialect",
     "mlir::affine::AffineDialect"
@@ -143,6 +159,9 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            "Enable flush to zero for denormals.">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
+    Option<"cmdOptions", "ptxas-cmd-options", "std::string",
+           /*default=*/ [{""}],
+           "Command line options passed to downstream compiler">,
   ];
 }
 
@@ -178,7 +197,7 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
            /*default=*/"\"\"",
            "Target features.">,
     Option<"abiVersion", "abi", "std::string",
-           /*default=*/"\"500\"",
+           /*default=*/"\"600\"",
            "ABI version.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
@@ -250,4 +269,38 @@ def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
   ];
 }
 
+def GpuXeVMAttachTarget : Pass<"xevm-attach-target", ""> {
+  let summary = "Attaches a XeVM target attribute to a GPU Module.";
+  let description = [{
+    This pass searches for all GPU Modules in the immediate regions and attaches
+    a XeVM target if the module matches the name specified by the `module` argument.
+
+    Example:
+    ```
+    // File: in.mlir:
+    gpu.module @nvvm_module_1 {...}
+    gpu.module @rocdl_module_2 {...}
+    gpu.module @xevm_module_3 {...}
+    // mlir-opt --xevm-attach-target="module=xevm.* chip=pvc" in.mlir
+    gpu.module @nvvm_module_1 {...}
+    gpu.module @rocdl_module_2 {...}
+    gpu.module @xevm_module_3 [#xevm.target<chip = "pvc">] {...}
+    ```
+  }];
+  let options =
+      [Option<"moduleMatcher", "module", "std::string",
+              /*default=*/[{""}],
+              "Regex used to identify the modules to attach the target to.">,
+       Option<"triple", "triple", "std::string",
+              /*default=*/"\"spirv64-unknown-unknown\"", "Target triple.">,
+       Option<"chip", "chip", "std::string",
+              /*default=*/"\"bmg\"", "Target chip.">,
+       Option<"optLevel", "O", "unsigned",
+              /*default=*/"2", "Optimization level.">,
+       ListOption<"linkLibs", "l", "std::string",
+                  "Extra bitcode libraries paths to link to.">,
+       Option<"cmdOptions", "cmd-options", "std::string",
+              /*default=*/[{""}],
+              "Command line options passed to downstream compiler">];
+}
 #endif // MLIR_DIALECT_GPU_PASSES

@@ -1,0 +1,20 @@
+# This test diffs the various headers synced by cp-to-llvm.sh
+# between libcxxabi and LLVM to ensure that they are the same.
+
+# RUN: tail -n +3 %{libcxxabi}/src/demangle/ItaniumDemangle.h > %t.libcxxabi_demangle
+# RUN: tail -n +3 %{llvm}/include/llvm/Demangle/ItaniumDemangle.h > %t.llvm_demangle
+# RUN: diff %t.libcxxabi_demangle %t.llvm_demangle
+
+# RUN: tail -n +3 %{libcxxabi}/src/demangle/ItaniumNodes.def > %t.libcxxabi_nodes
+# RUN: tail -n +3 %{llvm}/include/llvm/Demangle/ItaniumNodes.def > %t.llvm_nodes
+# RUN: diff %t.libcxxabi_nodes %t.llvm_nodes
+
+# RUN: tail -n +3 %{libcxxabi}/src/demangle/StringViewExtras.h > %t.libcxxabi_extras
+# RUN: tail -n +3 %{llvm}/include/llvm/Demangle/StringViewExtras.h > %t.llvm_extras
+# RUN: diff %t.libcxxabi_extras %t.llvm_extras
+
+# RUN: tail -n +3 %{libcxxabi}/src/demangle/Utility.h > %t.libcxxabi_utility
+# RUN: tail -n +3 %{llvm}/include/llvm/Demangle/Utility.h > %t.llvm_utility
+# RUN: diff %t.libcxxabi_utility %t.llvm_utility
+
+# RUN: diff %{libcxxabi}/test/DemangleTestCases.inc %{llvm}/include/llvm/Testing/Demangle/DemangleTestCases.inc

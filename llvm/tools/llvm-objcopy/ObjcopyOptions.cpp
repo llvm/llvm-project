@@ -308,6 +308,8 @@ static const StringMap<MachineInfo> TargetMap{
     // RISC-V
     {"elf32-littleriscv", {ELF::EM_RISCV, false, true}},
     {"elf64-littleriscv", {ELF::EM_RISCV, true, true}},
+    {"elf32-bigriscv", {ELF::EM_RISCV, false, false}},
+    {"elf64-bigriscv", {ELF::EM_RISCV, true, false}},
     // PowerPC
     {"elf32-powerpc", {ELF::EM_PPC, false, false}},
     {"elf32-powerpcle", {ELF::EM_PPC, false, true}},
@@ -536,6 +538,38 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
                              join(UnsupportedFlags, "', '").c_str());
 
   return SI;
+}
+
+static Expected<RemoveNoteInfo> parseRemoveNoteInfo(StringRef FlagValue) {
+  // Parse value given with --remove-note option. The format is:
+  //
+  // [name/]type_id
+  //
+  // where:
+  // <name>    - optional note name. If not given, all notes with the specified
+  //             <type_id> are removed.
+  // <type_id> - note type value, can be decimal or hexadecimal number prefixed
+  //             with 0x.
+  RemoveNoteInfo NI;
+  StringRef TypeIdStr;
+  if (auto Idx = FlagValue.find('/'); Idx != StringRef::npos) {
+    if (Idx == 0)
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --remove-note, note name is empty");
+    NI.Name = FlagValue.slice(0, Idx);
+    TypeIdStr = FlagValue.substr(Idx + 1);
+  } else {
+    TypeIdStr = FlagValue;
+  }
+  if (TypeIdStr.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for --remove-note, missing type_id");
+  if (TypeIdStr.getAsInteger(0, NI.TypeId))
+    return createStringError(errc::invalid_argument,
+                             "bad note type_id for --remove-note: '%s'",
+                             TypeIdStr.str().c_str());
+  return NI;
 }
 
 // Parse input option \p ArgValue and load section data. This function
@@ -777,12 +811,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
             .Case("boot_application",
                   COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
             .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
-            .Cases("efi_application", "efi-app",
+            .Cases({"efi_application", "efi-app"},
                    COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
-            .Cases("efi_boot_service_driver", "efi-bsd",
+            .Cases({"efi_boot_service_driver", "efi-bsd"},
                    COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
             .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
-            .Cases("efi_runtime_driver", "efi-rtd",
+            .Cases({"efi_runtime_driver", "efi-rtd"},
                    COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
@@ -1048,6 +1082,14 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           "bad format for --dump-section, expected section=file");
     Config.DumpSection.push_back(Value);
   }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_extract_section)) {
+    StringRef Value(Arg->getValue());
+    if (Value.split('=').second.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --extract-section, expected section=file");
+    Config.ExtractSection.push_back(Value);
+  }
   Config.StripAll = InputArgs.hasArg(OBJCOPY_strip_all);
   Config.StripAllGNU = InputArgs.hasArg(OBJCOPY_strip_all_gnu);
   Config.StripDebug = InputArgs.hasArg(OBJCOPY_strip_debug);
@@ -1220,6 +1262,29 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
         return Expr(EAddr) + *EIncr;
       };
     }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_remove_note)) {
+    Expected<RemoveNoteInfo> NoteInfo = parseRemoveNoteInfo(Arg->getValue());
+    if (!NoteInfo)
+      return NoteInfo.takeError();
+
+    ELFConfig.NotesToRemove.push_back(*NoteInfo);
+  }
+
+  if (!ELFConfig.NotesToRemove.empty()) {
+    if (!Config.ToRemove.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --remove-section");
+    if (!Config.AddSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --add-section");
+    if (!Config.UpdateSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --update-section");
+  }
 
   if (Config.DecompressDebugSections &&
       Config.CompressionType != DebugCompressionType::None) {

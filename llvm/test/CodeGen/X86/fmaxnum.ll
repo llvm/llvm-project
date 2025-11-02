@@ -22,17 +22,26 @@ declare <8 x double> @llvm.maxnum.v8f64(<8 x double>, <8 x double>)
 ; FIXME: As the vector tests show, the SSE run shouldn't need this many moves.
 
 define float @test_fmaxf(float %x, float %y) {
-; SSE-LABEL: test_fmaxf:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm3
-; SSE-NEXT:    andps %xmm1, %xmm3
-; SSE-NEXT:    maxss %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm1, %xmm2
-; SSE-NEXT:    orps %xmm3, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_fmaxf:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    cmpunordss %xmm0, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    maxss %xmm0, %xmm1
+; SSE2-NEXT:    andnps %xmm1, %xmm2
+; SSE2-NEXT:    orps %xmm3, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_fmaxf:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movaps %xmm1, %xmm2
+; SSE4-NEXT:    maxss %xmm0, %xmm2
+; SSE4-NEXT:    cmpunordss %xmm0, %xmm0
+; SSE4-NEXT:    blendvps %xmm0, %xmm1, %xmm2
+; SSE4-NEXT:    movaps %xmm2, %xmm0
+; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmaxf:
 ; AVX1:       # %bb.0:
@@ -63,17 +72,26 @@ define float @test_fmaxf_minsize(float %x, float %y) minsize {
 ; FIXME: As the vector tests show, the SSE run shouldn't need this many moves.
 
 define double @test_fmax(double %x, double %y) {
-; SSE-LABEL: test_fmax:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpunordsd %xmm0, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm3
-; SSE-NEXT:    andpd %xmm1, %xmm3
-; SSE-NEXT:    maxsd %xmm0, %xmm1
-; SSE-NEXT:    andnpd %xmm1, %xmm2
-; SSE-NEXT:    orpd %xmm3, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_fmax:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd %xmm0, %xmm2
+; SSE2-NEXT:    cmpunordsd %xmm0, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm3
+; SSE2-NEXT:    andpd %xmm1, %xmm3
+; SSE2-NEXT:    maxsd %xmm0, %xmm1
+; SSE2-NEXT:    andnpd %xmm1, %xmm2
+; SSE2-NEXT:    orpd %xmm3, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_fmax:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movapd %xmm1, %xmm2
+; SSE4-NEXT:    maxsd %xmm0, %xmm2
+; SSE4-NEXT:    cmpunordsd %xmm0, %xmm0
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE4-NEXT:    movapd %xmm2, %xmm0
+; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmax:
 ; AVX1:       # %bb.0:
@@ -111,17 +129,26 @@ define x86_fp80 @test_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 }
 
 define float @test_intrinsic_fmaxf(float %x, float %y) {
-; SSE-LABEL: test_intrinsic_fmaxf:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm3
-; SSE-NEXT:    andps %xmm1, %xmm3
-; SSE-NEXT:    maxss %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm1, %xmm2
-; SSE-NEXT:    orps %xmm3, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_intrinsic_fmaxf:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    cmpunordss %xmm0, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    maxss %xmm0, %xmm1
+; SSE2-NEXT:    andnps %xmm1, %xmm2
+; SSE2-NEXT:    orps %xmm3, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_intrinsic_fmaxf:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movaps %xmm1, %xmm2
+; SSE4-NEXT:    maxss %xmm0, %xmm2
+; SSE4-NEXT:    cmpunordss %xmm0, %xmm0
+; SSE4-NEXT:    blendvps %xmm0, %xmm1, %xmm2
+; SSE4-NEXT:    movaps %xmm2, %xmm0
+; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_intrinsic_fmaxf:
 ; AVX1:       # %bb.0:
@@ -142,17 +169,26 @@ define float @test_intrinsic_fmaxf(float %x, float %y) {
 }
 
 define double @test_intrinsic_fmax(double %x, double %y) {
-; SSE-LABEL: test_intrinsic_fmax:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpunordsd %xmm0, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm3
-; SSE-NEXT:    andpd %xmm1, %xmm3
-; SSE-NEXT:    maxsd %xmm0, %xmm1
-; SSE-NEXT:    andnpd %xmm1, %xmm2
-; SSE-NEXT:    orpd %xmm3, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_intrinsic_fmax:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd %xmm0, %xmm2
+; SSE2-NEXT:    cmpunordsd %xmm0, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm3
+; SSE2-NEXT:    andpd %xmm1, %xmm3
+; SSE2-NEXT:    maxsd %xmm0, %xmm1
+; SSE2-NEXT:    andnpd %xmm1, %xmm2
+; SSE2-NEXT:    orpd %xmm3, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_intrinsic_fmax:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movapd %xmm1, %xmm2
+; SSE4-NEXT:    maxsd %xmm0, %xmm2
+; SSE4-NEXT:    cmpunordsd %xmm0, %xmm0
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE4-NEXT:    movapd %xmm2, %xmm0
+; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_intrinsic_fmax:
 ; AVX1:       # %bb.0:
@@ -609,11 +645,47 @@ define float @test_maxnum_const_op2(float %x) {
   ret float %r
 }
 
-define float @test_maxnum_const_nan(float %x) {
-; CHECK-LABEL: test_maxnum_const_nan:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %r = call float @llvm.maxnum.f32(float %x, float 0x7fff000000000000)
+define float @test_maxnum_const_nan(float %x, float %y) {
+; SSE-LABEL: test_maxnum_const_nan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_maxnum_const_nan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %r = call float @llvm.maxnum.f32(float %y, float 0x7fff000000000000)
+  ret float %r
+}
+
+; nnan maxnum(Y, -inf) -> Y
+define float @test_maxnum_neg_inf_nnan(float %x, float %y) nounwind {
+; SSE-LABEL: test_maxnum_neg_inf_nnan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_maxnum_neg_inf_nnan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %r = call nnan float @llvm.maxnum.f32(float %y, float 0xfff0000000000000)
+  ret float %r
+}
+
+; Test SNaN quieting
+define float @test_maxnum_snan(float %x) {
+; SSE-LABEL: test_maxnum_snan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_maxnum_snan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    retq
+  %r = call float @llvm.maxnum.f32(float 0x7ff4000000000000, float %x)
   ret float %r
 }
 

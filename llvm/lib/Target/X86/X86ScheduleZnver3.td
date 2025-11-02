@@ -992,14 +992,14 @@ def Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr : SchedWriteRes<[Zn3FPFMisc0]> {
 def : InstRW<[Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr], (instrs VEXTRACTF128rri, VEXTRACTI128rri)>;
 
 def Zn3WriteVEXTRACTI128mr : SchedWriteRes<[Zn3FPFMisc0, Zn3FPSt, Zn3Store]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
+  let Latency = !add(Znver3Model.VecLoadLatency, Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
   let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = !add(Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.NumMicroOps, 1);
 }
 def : InstRW<[Zn3WriteVEXTRACTI128mr], (instrs VEXTRACTI128mri, VEXTRACTF128mri)>;
 
 def Zn3WriteVINSERTF128rmr : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPFMisc0]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
+  let Latency = !add(Znver3Model.VecLoadLatency, Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
   let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = !add(Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.NumMicroOps, 0);
 }
@@ -1221,7 +1221,7 @@ def Zn3WriteSHA1MSG1rr : SchedWriteRes<[Zn3FPU0123]> {
 def : InstRW<[Zn3WriteSHA1MSG1rr], (instrs SHA1MSG1rr)>;
 
 def Zn3WriteSHA1MSG1rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPU0123]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteSHA1MSG1rr.Latency);
+  let Latency = !add(Znver3Model.VecLoadLatency, Zn3WriteSHA1MSG1rr.Latency);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = !add(Zn3WriteSHA1MSG1rr.NumMicroOps, 0);
 }
@@ -1235,7 +1235,7 @@ def Zn3WriteSHA1MSG2rr_SHA1NEXTErr : SchedWriteRes<[Zn3FPU0123]> {
 def : InstRW<[Zn3WriteSHA1MSG2rr_SHA1NEXTErr], (instrs SHA1MSG2rr, SHA1NEXTErr)>;
 
 def Zn3Writerm_SHA1MSG2rm_SHA1NEXTErm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPU0123]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteSHA1MSG2rr_SHA1NEXTErr.Latency);
+  let Latency = !add(Znver3Model.VecLoadLatency, Zn3WriteSHA1MSG2rr_SHA1NEXTErr.Latency);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = !add(Zn3WriteSHA1MSG2rr_SHA1NEXTErr.NumMicroOps, 0);
 }
@@ -1249,7 +1249,7 @@ def Zn3WriteSHA256MSG1rr : SchedWriteRes<[Zn3FPU0123]> {
 def : InstRW<[Zn3WriteSHA256MSG1rr], (instrs SHA256MSG1rr)>;
 
 def Zn3Writerm_SHA256MSG1rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPU0123]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteSHA256MSG1rr.Latency);
+  let Latency = !add(Znver3Model.VecLoadLatency, Zn3WriteSHA256MSG1rr.Latency);
   let ReleaseAtCycles = [1, 1, 3];
   let NumMicroOps = !add(Zn3WriteSHA256MSG1rr.NumMicroOps, 0);
 }
@@ -1263,7 +1263,7 @@ def Zn3WriteSHA256MSG2rr : SchedWriteRes<[Zn3FPU0123]> {
 def : InstRW<[Zn3WriteSHA256MSG2rr], (instrs SHA256MSG2rr)>;
 
 def Zn3WriteSHA256MSG2rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPU0123]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteSHA256MSG2rr.Latency);
+  let Latency = !add(Znver3Model.VecLoadLatency, Zn3WriteSHA256MSG2rr.Latency);
   let ReleaseAtCycles = [1, 1, 8];
   let NumMicroOps = !add(Zn3WriteSHA256MSG2rr.NumMicroOps, 1);
 }
@@ -1338,14 +1338,14 @@ def Zn3WriteVPERM2I128rr_VPERM2F128rr : SchedWriteRes<[Zn3FPVShuf]> {
 def : InstRW<[Zn3WriteVPERM2I128rr_VPERM2F128rr], (instrs VPERM2I128rri, VPERM2F128rri)>;
 
 def Zn3WriteVPERM2F128rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVPERM2I128rr_VPERM2F128rr.Latency);
+  let Latency = !add(Znver3Model.VecLoadLatency, Zn3WriteVPERM2I128rr_VPERM2F128rr.Latency);
   let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = !add(Zn3WriteVPERM2I128rr_VPERM2F128rr.NumMicroOps, 0);
 }
 def : InstRW<[Zn3WriteVPERM2F128rm], (instrs VPERM2F128rmi)>;
 
 def Zn3WriteVPERMPSYrm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
-  let Latency = !add(Znver3Model.LoadLatency, 7);
+  let Latency = !add(Znver3Model.VecLoadLatency, 7);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = 3;
 }
@@ -1359,14 +1359,14 @@ def Zn3WriteVPERMYri : SchedWriteRes<[Zn3FPVShuf]> {
 def : InstRW<[Zn3WriteVPERMYri], (instrs VPERMPDYri, VPERMQYri)>;
 
 def Zn3WriteVPERMPDYmi : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVPERMYri.Latency);
+  let Latency = !add(Znver3Model.VecLoadLatency, Zn3WriteVPERMYri.Latency);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = !add(Zn3WriteVPERMYri.NumMicroOps, 1);
 }
 def : InstRW<[Zn3WriteVPERMPDYmi], (instrs VPERMPDYmi)>;
 
 def Zn3WriteVPERMDYm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
-  let Latency = !add(Znver3Model.LoadLatency, 5);
+  let Latency = !add(Znver3Model.VecLoadLatency, 5);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = 2;
 }

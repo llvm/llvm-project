@@ -728,9 +728,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    store ptr [[ARGV_ADDR]], ptr [[GEP_ARGV_ADDR]], align 8
 // CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @main..omp_par, ptr [[STRUCTARG]])
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK3:       omp.par.outlined.exit:
-// CHECK3-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK3:       omp.par.exit.split:
+// CHECK3:       omp.par.exit:
 // CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_PREHEADER:%.*]]
 // CHECK3:       omp_section_loop.preheader:
 // CHECK3-NEXT:    store i32 0, ptr [[P_LOWERBOUND]], align 4
@@ -998,7 +996,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
 // CHECK3:       .split:
 // CHECK3-NEXT:    br label [[TMP4]]
-// CHECK3:       omp.par.outlined.exit.exitStub:
+// CHECK3:       omp.par.exit.exitStub:
 // CHECK3-NEXT:    ret void
 //
 //

@@ -9,9 +9,9 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 
+#include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "SystemZMCInstLower.h"
 #include "SystemZTargetMachine.h"
-#include "SystemZTargetStreamer.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -24,6 +24,9 @@ class Module;
 class raw_ostream;
 
 class LLVM_LIBRARY_VISIBILITY SystemZAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
+
 private:
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
   MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
@@ -97,7 +100,7 @@ private:
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), CurrentFnPPA1Sym(nullptr),
+      : AsmPrinter(TM, std::move(Streamer), ID), CurrentFnPPA1Sym(nullptr),
         CurrentFnEPMarkerSym(nullptr), PPA2Sym(nullptr),
         ADATable(TM.getPointerSize(0)) {}
 

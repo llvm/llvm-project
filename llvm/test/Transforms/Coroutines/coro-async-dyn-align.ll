@@ -27,8 +27,8 @@ declare void @llvm.coro.async.context.dealloc(ptr)
 declare ptr @llvm.coro.async.resume()
 declare token @llvm.coro.id.async(i32, i32, i32, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end.async(ptr, i1, ...)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end.async(ptr, i1, ...)
+declare void @llvm.coro.end(ptr, i1, token)
 declare swiftcc void @asyncReturn(ptr)
 declare swiftcc void @asyncSuspend(ptr)
 declare {ptr} @llvm.coro.suspend.async(i32, ptr, ptr, ...)
@@ -91,6 +91,6 @@ entry:
   call void @opaque(ptr %tmp4)
   call void @llvm.coro.async.context.dealloc(ptr %callee_context)
   tail call swiftcc void @asyncReturn(ptr %async.ctxt)
-  call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 }

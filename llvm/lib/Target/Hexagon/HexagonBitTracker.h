@@ -11,7 +11,6 @@
 
 #include "BitTracker.h"
 #include "llvm/ADT/DenseMap.h"
-#include <cstdint>
 
 namespace llvm {
 

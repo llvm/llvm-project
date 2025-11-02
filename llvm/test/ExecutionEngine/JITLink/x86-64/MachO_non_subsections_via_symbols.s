@@ -4,7 +4,8 @@
 #
 # REQUIRES: asserts
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t %s
-# RUN: llvm-jitlink -debug-only=jitlink -noexec %t 2>&1 | FileCheck %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec %t 2>&1 \
+# RUN:              | FileCheck %s
 
 # CHECK:        Creating graph symbols...
 # CHECK:          Graphifying regular section __DATA,__data...

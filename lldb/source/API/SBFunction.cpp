@@ -79,6 +79,15 @@ const char *SBFunction::GetMangledName() const {
   return nullptr;
 }
 
+const char *SBFunction::GetBaseName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_ptr)
+    return nullptr;
+
+  return m_opaque_ptr->GetMangled().GetBaseName().AsCString();
+}
+
 bool SBFunction::operator==(const SBFunction &rhs) const {
   LLDB_INSTRUMENT_VA(this, rhs);
 
@@ -120,15 +129,14 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
   if (m_opaque_ptr) {
     TargetSP target_sp(target.GetSP());
     std::unique_lock<std::recursive_mutex> lock;
-    ModuleSP module_sp(
-        m_opaque_ptr->GetAddressRange().GetBaseAddress().GetModule());
+    ModuleSP module_sp(m_opaque_ptr->GetAddress().GetModule());
     if (target_sp && module_sp) {
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
       const bool force_live_memory = true;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
           module_sp->GetArchitecture(), nullptr, flavor,
           target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
-          *target_sp, m_opaque_ptr->GetAddressRange(), force_live_memory));
+          *target_sp, m_opaque_ptr->GetAddressRanges(), force_live_memory));
     }
   }
   return sb_instructions;
@@ -145,7 +153,7 @@ SBAddress SBFunction::GetStartAddress() {
 
   SBAddress addr;
   if (m_opaque_ptr)
-    addr.SetAddress(m_opaque_ptr->GetAddressRange().GetBaseAddress());
+    addr.SetAddress(m_opaque_ptr->GetAddress());
   return addr;
 }
 

@@ -5,12 +5,12 @@
 ; However, if the call to @streaming_callee requires a streaming-mode change, it should always inline the call because the streaming-mode change is more expensive.
 target triple = "aarch64"
 
-declare void @streaming_compatible_f() "aarch64_pstate_sm_compatible"
+declare void @streaming_compatible_f() #0 "aarch64_pstate_sm_compatible"
 
-; Function @streaming_callee doesn't contain any operations that may use ZA
+; Function @non_streaming_callee doesn't contain any operations that may use ZA
 ; state and therefore can be legally inlined into a normal function.
-define void @streaming_callee() "aarch64_pstate_sm_enabled" {
-; CHECK-LABEL: define void @streaming_callee
+define void @non_streaming_callee() #0 {
+; CHECK-LABEL: define void @non_streaming_callee
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    call void @streaming_compatible_f()
 ; CHECK-NEXT:    call void @streaming_compatible_f()
@@ -21,25 +21,27 @@ define void @streaming_callee() "aarch64_pstate_sm_enabled" {
   ret void
 }
 
-; Inline call to @streaming_callee to remove a streaming mode change.
-define void @non_streaming_caller_inline() {
-; CHECK-LABEL: define void @non_streaming_caller_inline
+; Inline call to @non_streaming_callee to remove a streaming mode change.
+define void @streaming_caller_inline() #0 "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @streaming_caller_inline
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    call void @streaming_compatible_f()
 ; CHECK-NEXT:    call void @streaming_compatible_f()
 ; CHECK-NEXT:    ret void
 ;
-  call void @streaming_callee()
+  call void @non_streaming_callee()
   ret void
 }
 
-; Don't inline call to @streaming_callee when the inline-threshold is set to 1, because it does not eliminate a streaming-mode change.
-define void @streaming_caller_dont_inline() "aarch64_pstate_sm_enabled" {
-; CHECK-LABEL: define void @streaming_caller_dont_inline
+; Don't inline call to @non_streaming_callee when the inline-threshold is set to 1, because it does not eliminate a streaming-mode change.
+define void @non_streaming_caller_dont_inline() #0 {
+; CHECK-LABEL: define void @non_streaming_caller_dont_inline
 ; CHECK-SAME: () #[[ATTR1]] {
-; CHECK-NEXT:    call void @streaming_callee()
+; CHECK-NEXT:    call void @non_streaming_callee()
 ; CHECK-NEXT:    ret void
 ;
-  call void @streaming_callee()
+  call void @non_streaming_callee()
   ret void
 }
+
+attributes #0 = { "target-features"="+sve,+sme" }

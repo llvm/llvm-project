@@ -71,6 +71,10 @@ public:
     const Stmt *findReferenceMutation(const Expr *Exp);
     const Stmt *findFunctionArgMutation(const Expr *Exp);
 
+    const Stmt *findPointeeValueMutation(const Expr *Exp);
+    const Stmt *findPointeeMemberMutation(const Expr *Exp);
+    const Stmt *findPointeeToNonConst(const Expr *Exp);
+
     const Stmt &Stm;
     ASTContext &Context;
     Memoized &Memorized;

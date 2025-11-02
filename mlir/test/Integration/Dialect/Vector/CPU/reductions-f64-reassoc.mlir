@@ -2,7 +2,7 @@
 // RUN:             -convert-vector-to-llvm='reassociate-fp-reductions' \
 // RUN:             -convert-func-to-llvm -convert-arith-to-llvm \
 // RUN:             -convert-cf-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 

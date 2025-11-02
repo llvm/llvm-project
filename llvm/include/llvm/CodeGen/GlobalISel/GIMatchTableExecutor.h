@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <bitset>
 #include <cstddef>
@@ -41,7 +42,7 @@ class MachineBasicBlock;
 class ProfileSummaryInfo;
 class APInt;
 class APFloat;
-class GISelKnownBits;
+class GISelValueTracking;
 class MachineInstr;
 class MachineIRBuilder;
 class MachineInstrBuilder;
@@ -159,6 +160,12 @@ enum {
   /// - OpIdx(ULEB128) - Operand index
   /// - Pred(2) - The predicate to test
   GIM_CheckImmOperandPredicate,
+
+  /// Check a leaf predicate on the specified instruction.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Pred(2) - The predicate to test
+  GIM_CheckLeafOperandPredicate,
 
   /// Check a memory operation has the specified atomic ordering.
   /// - InsnID(ULEB128) - Instruction ID
@@ -588,7 +595,7 @@ public:
   virtual ~GIMatchTableExecutor() = default;
 
   CodeGenCoverage *CoverageInfo = nullptr;
-  GISelKnownBits *KB = nullptr;
+  GISelValueTracking *VT = nullptr;
   MachineFunction *MF = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
@@ -598,12 +605,12 @@ public:
   virtual void setupGeneratedPerFunctionState(MachineFunction &MF) = 0;
 
   /// Setup per-MF executor state.
-  virtual void setupMF(MachineFunction &mf, GISelKnownBits *kb,
+  virtual void setupMF(MachineFunction &mf, GISelValueTracking *vt,
                        CodeGenCoverage *covinfo = nullptr,
                        ProfileSummaryInfo *psi = nullptr,
                        BlockFrequencyInfo *bfi = nullptr) {
     CoverageInfo = covinfo;
-    KB = kb;
+    VT = vt;
     MF = &mf;
     PSI = psi;
     BFI = bfi;
@@ -620,7 +627,7 @@ protected:
   struct MatcherState {
     std::vector<ComplexRendererFns::value_type> Renderers;
     RecordedMIVector MIs;
-    DenseMap<unsigned, unsigned> TempRegisters;
+    DenseMap<unsigned, Register> TempRegisters;
     /// Named operands that predicate with 'let PredicateCodeUsesOperands = 1'
     /// referenced in its argument list. Operands are inserted at index set by
     /// emitter, it corresponds to the order in which names appear in argument
@@ -631,7 +638,7 @@ protected:
     /// Whenever a type index is negative, we look here instead.
     SmallVector<LLT, 4> RecordedTypes;
 
-    MatcherState(unsigned MaxRenderers);
+    LLVM_ABI MatcherState(unsigned MaxRenderers);
   };
 
   bool shouldOptForSize(const MachineFunction *MF) const {
@@ -668,7 +675,7 @@ public:
   };
 
 protected:
-  GIMatchTableExecutor();
+  LLVM_ABI GIMatchTableExecutor();
 
   /// Execute a given matcher table and return true if the match was successful
   /// and false otherwise.
@@ -706,6 +713,12 @@ protected:
         "Subclasses must override this with a tablegen-erated function");
   }
 
+  virtual bool testMOPredicate_MO(unsigned, const MachineOperand &,
+                                  const MatcherState &State) const {
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
+  }
+
   virtual bool testSimplePredicate(unsigned) const {
     llvm_unreachable("Subclass does not implement testSimplePredicate!");
   }
@@ -715,20 +728,21 @@ protected:
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
 
-  bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
-                         const MachineRegisterInfo &MRI,
-                         bool Splat = false) const;
+  LLVM_ABI bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
+                                  const MachineRegisterInfo &MRI,
+                                  bool Splat = false) const;
 
   /// Return true if the specified operand is a G_PTR_ADD with a G_CONSTANT on
   /// the right-hand side. GlobalISel's separation of pointer and integer types
   /// means that we don't need to worry about G_OR with equivalent semantics.
-  bool isBaseWithConstantOffset(const MachineOperand &Root,
-                                const MachineRegisterInfo &MRI) const;
+  LLVM_ABI bool isBaseWithConstantOffset(const MachineOperand &Root,
+                                         const MachineRegisterInfo &MRI) const;
 
   /// Return true if MI can obviously be folded into IntoMI.
   /// MI and IntoMI do not need to be in the same basic blocks, but MI must
   /// preceed IntoMI.
-  bool isObviouslySafeToFold(MachineInstr &MI, MachineInstr &IntoMI) const;
+  LLVM_ABI bool isObviouslySafeToFold(MachineInstr &MI,
+                                      MachineInstr &IntoMI) const;
 
   template <typename Ty> static Ty readBytesAs(const uint8_t *MatchTable) {
     Ty Ret;

@@ -15,6 +15,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <string>
@@ -22,9 +23,7 @@
 namespace llvm {
 
 class TargetMachine;
-struct MachineSchedContext;
 class PassConfigImpl;
-class ScheduleDAGInstrs;
 class CSEConfigBase;
 class PassInstrumentationCallbacks;
 
@@ -82,7 +81,7 @@ public:
 ///
 /// This is an ImmutablePass solely for the purpose of exposing CodeGen options
 /// to the internals of other CodeGen passes.
-class TargetPassConfig : public ImmutablePass {
+class LLVM_ABI TargetPassConfig : public ImmutablePass {
 private:
   PassManagerBase *PM = nullptr;
   AnalysisID StartBefore = nullptr;
@@ -300,27 +299,6 @@ public:
   /// Fully developed targets will not generally override this.
   virtual void addMachinePasses();
 
-  /// Create an instance of ScheduleDAGInstrs to be run within the standard
-  /// MachineScheduler pass for this function and target at the current
-  /// optimization level.
-  ///
-  /// This can also be used to plug a new MachineSchedStrategy into an instance
-  /// of the standard ScheduleDAGMI:
-  ///   return new ScheduleDAGMI(C, std::make_unique<MyStrategy>(C), /*RemoveKillFlags=*/false)
-  ///
-  /// Return NULL to select the default (generic) machine scheduler.
-  virtual ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const {
-    return nullptr;
-  }
-
-  /// Similar to createMachineScheduler but used when postRA machine scheduling
-  /// is enabled.
-  virtual ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const {
-    return nullptr;
-  }
-
   /// printAndVerify - Add a pass to dump then verify the machine function, if
   /// those steps are enabled.
   void printAndVerify(const std::string &Banner);
@@ -497,8 +475,8 @@ protected:
   virtual bool addRegAssignAndRewriteOptimized();
 };
 
-void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
-                             TargetMachine &);
+LLVM_ABI void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
+                                      TargetMachine &);
 
 } // end namespace llvm
 

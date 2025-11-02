@@ -18,7 +18,7 @@ static int finalTarget() { return 53; }
 
 class JITLinkRedirectionManagerTest : public testing::Test {
 public:
-  ~JITLinkRedirectionManagerTest() {
+  ~JITLinkRedirectionManagerTest() override {
     if (ES)
       if (auto Err = ES->endSession())
         ES->reportError(std::move(Err));
@@ -48,12 +48,18 @@ protected:
     if (Triple.isPPC())
       GTEST_SKIP();
 
+    auto PageSize = sys::Process::getPageSize();
+    if (!PageSize) {
+      consumeError(PageSize.takeError());
+      GTEST_SKIP();
+    }
+
     ES = std::make_unique<ExecutionSession>(
         std::make_unique<UnsupportedExecutorProcessControl>(
-            nullptr, nullptr, JTMB->getTargetTriple().getTriple()));
+            nullptr, nullptr, JTMB->getTargetTriple().getTriple(), *PageSize));
     JD = &ES->createBareJITDylib("main");
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(16384));
+        *ES, std::make_unique<InProcessMemoryManager>(*PageSize));
     DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
   }
   JITDylib *JD{nullptr};

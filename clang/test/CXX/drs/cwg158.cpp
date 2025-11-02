@@ -1,7 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++98 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck --check-prefixes=CHECK %s
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++11 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck --check-prefixes=CHECK %s
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++14 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck --check-prefixes=CHECK %s
-// RUN: %clang_cc1 -triple x86_64-linux -std=c++1z %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple x86_64-linux -std=c++17 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple x86_64-linux -std=c++20 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple x86_64-linux -std=c++23 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple x86_64-linux -std=c++2c %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck --check-prefixes=CHECK %s
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++1z %s -O3 -pointer-tbaa -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck --check-prefixes=CHECK,POINTER-TBAA %s
 
 // cwg158: yes
@@ -39,5 +42,6 @@ const int * h(const int * (*p)[10],  int *(*q)[9]) {
 }
 
 // POINTER-TBAA: [[PTRARRAY_TBAA]] = !{[[PTRARRAY_TY:!.+]], [[PTRARRAY_TY]], i64 0}
-// POINTER-TBAA: [[PTRARRAY_TY]] = !{!"p2 int", [[ANYPTR:!.+]], i64 0}
+// POINTER-TBAA: [[PTRARRAY_TY]] = !{!"p2 int", [[ANYP2PTR:!.+]], i64 0}
+// POINTER-TBAA: [[ANYP2PTR]] = !{!"any p2 pointer", [[ANYPTR:!.+]],
 // POINTER-TBAA: [[ANYPTR]] = !{!"any pointer"

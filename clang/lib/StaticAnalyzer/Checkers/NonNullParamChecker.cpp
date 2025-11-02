@@ -18,7 +18,6 @@
 #include "clang/Analysis/AnyCall.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -149,7 +148,8 @@ void NonNullParamChecker::checkPreCall(const CallEvent &Call,
 
       QualType T = ArgE->getType();
       const RecordType *UT = T->getAsUnionType();
-      if (!UT || !UT->getDecl()->hasAttr<TransparentUnionAttr>())
+      if (!UT ||
+          !UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>())
         continue;
 
       auto CSV = DV->getAs<nonloc::CompoundVal>();

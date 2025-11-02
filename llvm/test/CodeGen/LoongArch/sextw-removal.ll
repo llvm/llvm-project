@@ -16,7 +16,8 @@ define void @test1(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:  .LBB0_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    move $a0, $s0
-; CHECK-NEXT:    bl %plt(bar)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    sll.w $s0, $s0, $fp
 ; CHECK-NEXT:    bnez $a0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
@@ -38,7 +39,8 @@ define void @test1(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:  .LBB0_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $s0, 0
-; NORMV-NEXT:    bl %plt(bar)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(bar)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    sll.w $s0, $s0, $fp
 ; NORMV-NEXT:    bnez $a0, .LBB0_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
@@ -149,7 +151,8 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:  .LBB4_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi.w $a0, $a1, 0
-; CHECK-NEXT:    bl %plt(bar)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    bstrpick.d $a1, $a0, 31, 0
 ; CHECK-NEXT:    vldi $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a1, 0
@@ -170,7 +173,8 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:  .LBB4_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $a1, 0
-; NORMV-NEXT:    bl %plt(bar)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(bar)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    bstrpick.d $a1, $a0, 31, 0
 ; NORMV-NEXT:    vldi $vr0, 0
 ; NORMV-NEXT:    vinsgr2vr.d $vr0, $a1, 0
@@ -209,7 +213,8 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB5_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    bl %plt(baz)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(baz)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ftintrz.w.s $fa1, $fa0
 ; CHECK-NEXT:    fcmp.cune.s $fcc0, $fa0, $fs0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa1
@@ -231,7 +236,8 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:  .LBB5_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
-; NORMV-NEXT:    bl %plt(baz)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(baz)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    ftintrz.w.s $fa1, $fa0
 ; NORMV-NEXT:    fcmp.cune.s $fcc0, $fa0, $fs0
 ; NORMV-NEXT:    movfr2gr.s $a0, $fa1
@@ -267,7 +273,8 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:  .LBB6_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
-; CHECK-NEXT:    bl %plt(foo)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(foo)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    vldi $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; CHECK-NEXT:    vpcnt.d $vr0, $vr0
@@ -287,7 +294,8 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:  .LBB6_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
-; NORMV-NEXT:    bl %plt(foo)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(foo)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    vldi $vr0, 0
 ; NORMV-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; NORMV-NEXT:    vpcnt.d $vr0, $vr0
@@ -327,7 +335,8 @@ define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:  .LBB7_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
-; CHECK-NEXT:    bl %plt(foo)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(foo)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    or $a0, $a0, $fp
 ; CHECK-NEXT:    bnez $a0, .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
@@ -347,7 +356,8 @@ define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:  .LBB7_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
-; NORMV-NEXT:    bl %plt(foo)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(foo)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    or $a0, $a0, $fp
 ; NORMV-NEXT:    bnez $a0, .LBB7_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
@@ -384,7 +394,8 @@ define void @test9(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB8_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    bl %plt(bar)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    move $a1, $a0
 ; CHECK-NEXT:    slti $a0, $a0, 255
 ; CHECK-NEXT:    blt $fp, $a1, .LBB8_1
@@ -405,7 +416,8 @@ define void @test9(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:  .LBB8_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $a1, 0
-; NORMV-NEXT:    bl %plt(bar)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(bar)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    slti $a1, $a0, 255
 ; NORMV-NEXT:    blt $fp, $a0, .LBB8_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
@@ -440,7 +452,8 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB9_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    bl %plt(baz)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(baz)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    fcmp.cune.s $fcc0, $fa0, $fs0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    bcnez $fcc0, .LBB9_1
@@ -461,7 +474,8 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:  .LBB9_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
-; NORMV-NEXT:    bl %plt(baz)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(baz)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    fcmp.cune.s $fcc0, $fa0, $fs0
 ; NORMV-NEXT:    movfr2gr.s $a0, $fa0
 ; NORMV-NEXT:    bcnez $fcc0, .LBB9_1
@@ -1103,13 +1117,15 @@ define void @test16(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    move $fp, $a1
-; CHECK-NEXT:    bl %plt(bar)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    move $s0, $a0
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB19_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    move $a0, $s0
-; CHECK-NEXT:    bl %plt(bar)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    sll.w $s0, $s0, $fp
 ; CHECK-NEXT:    bnez $a0, .LBB19_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
@@ -1126,13 +1142,15 @@ define void @test16(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; NORMV-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; NORMV-NEXT:    move $fp, $a1
-; NORMV-NEXT:    bl %plt(bar)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(bar)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    move $s0, $a0
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB19_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $s0, 0
-; NORMV-NEXT:    bl %plt(bar)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(bar)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    sll.w $s0, $s0, $fp
 ; NORMV-NEXT:    bnez $a0, .LBB19_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
@@ -1164,13 +1182,15 @@ define void @test17(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    move $fp, $a1
-; CHECK-NEXT:    bl %plt(bat)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bat)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    move $s0, $a0
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB20_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    move $a0, $s0
-; CHECK-NEXT:    bl %plt(bar)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    sll.w $s0, $s0, $fp
 ; CHECK-NEXT:    bnez $a0, .LBB20_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
@@ -1187,13 +1207,15 @@ define void @test17(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; NORMV-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; NORMV-NEXT:    move $fp, $a1
-; NORMV-NEXT:    bl %plt(bat)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(bat)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    move $s0, $a0
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB20_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $s0, 0
-; NORMV-NEXT:    bl %plt(bar)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(bar)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    sll.w $s0, $s0, $fp
 ; NORMV-NEXT:    bnez $a0, .LBB20_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
@@ -1266,10 +1288,12 @@ define signext i32 @test19(i64 %arg, i1 zeroext %c1, i1 zeroext %c2, ptr %p) nou
 ; CHECK-NEXT:    beqz $a2, .LBB22_2
 ; CHECK-NEXT:  # %bb.1: # %bb2
 ; CHECK-NEXT:    move $a0, $zero
-; CHECK-NEXT:    bl %plt(bar)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    move $fp, $a0
 ; CHECK-NEXT:  .LBB22_2: # %bb7
-; CHECK-NEXT:    bl %plt(side_effect)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(side_effect)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    addi.w $a0, $fp, 0
 ; CHECK-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -1288,10 +1312,12 @@ define signext i32 @test19(i64 %arg, i1 zeroext %c1, i1 zeroext %c2, ptr %p) nou
 ; NORMV-NEXT:    beqz $a2, .LBB22_2
 ; NORMV-NEXT:  # %bb.1: # %bb2
 ; NORMV-NEXT:    move $a0, $zero
-; NORMV-NEXT:    bl %plt(bar)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(bar)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    move $fp, $a0
 ; NORMV-NEXT:  .LBB22_2: # %bb7
-; NORMV-NEXT:    bl %plt(side_effect)
+; NORMV-NEXT:    pcaddu18i $ra, %call36(side_effect)
+; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    addi.w $a0, $fp, 0
 ; NORMV-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; NORMV-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload

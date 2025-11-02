@@ -87,11 +87,12 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {lldb::eTypeCategoryNameCompletion,
        CommandCompletions::TypeCategoryNames},
       {lldb::eThreadIDCompletion, CommandCompletions::ThreadIDs},
+      {lldb::eManagedPluginCompletion, CommandCompletions::ManagedPlugins},
       {lldb::eTerminatorCompletion,
        nullptr} // This one has to be last in the list.
   };
 
-  for (int i = 0;; i++) {
+  for (int i = 0; request.ShouldAddCompletions(); i++) {
     if (common_completions[i].type == lldb::eTerminatorCompletion)
       break;
     else if ((common_completions[i].type & completion_mask) ==
@@ -167,7 +168,9 @@ public:
         m_matching_files.AppendIfUnique(context.comp_unit->GetPrimaryFile());
       }
     }
-    return Searcher::eCallbackReturnContinue;
+    return m_matching_files.GetSize() >= m_request.GetMaxNumberOfCompletionsToAdd()
+               ? Searcher::eCallbackReturnStop
+               : Searcher::eCallbackReturnContinue;
   }
 
   void DoCompletion(SearchFilter *filter) override {
@@ -230,6 +233,9 @@ public:
 
       // Now add the functions & symbols to the list - only add if unique:
       for (const SymbolContext &sc : sc_list) {
+        if (m_match_set.size() >= m_request.GetMaxNumberOfCompletionsToAdd())
+          break;
+
         ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
         // Ensure that the function name matches the regex. This is more than
         // a sanity check. It is possible that the demangled function name
@@ -239,7 +245,9 @@ public:
           m_match_set.insert(func_name);
       }
     }
-    return Searcher::eCallbackReturnContinue;
+    return m_match_set.size() >= m_request.GetMaxNumberOfCompletionsToAdd()
+               ? Searcher::eCallbackReturnStop
+               : Searcher::eCallbackReturnContinue;
   }
 
   void DoCompletion(SearchFilter *filter) override {
@@ -305,7 +313,8 @@ public:
           m_request.AddCompletion(cur_file_name);
       }
     }
-    return Searcher::eCallbackReturnContinue;
+    return m_request.ShouldAddCompletions() ? Searcher::eCallbackReturnContinue
+                                            : Searcher::eCallbackReturnStop;
   }
 
   void DoCompletion(SearchFilter *filter) override { filter->Search(*this); }
@@ -429,7 +438,8 @@ static void DiskFilesOrDirectories(const llvm::Twine &partial_name,
   std::error_code EC;
   llvm::vfs::directory_iterator Iter = fs.DirBegin(SearchDir, EC);
   llvm::vfs::directory_iterator End;
-  for (; Iter != End && !EC; Iter.increment(EC)) {
+  for (; Iter != End && !EC && request.ShouldAddCompletions();
+       Iter.increment(EC)) {
     auto &Entry = *Iter;
     llvm::ErrorOr<llvm::vfs::Status> Status = fs.GetStatus(Entry.path());
 
@@ -561,7 +571,7 @@ void CommandCompletions::ModuleUUIDs(CommandInterpreter &interpreter,
                                lldb::eDescriptionLevelInitial);
         request.TryCompleteCurrentArg(module->GetUUID().GetAsString(),
                                       strm.GetString());
-        return true;
+        return IterationAction::Continue;
       });
 }
 
@@ -767,13 +777,11 @@ void CommandCompletions::StopHookIDs(CommandInterpreter &interpreter,
   if (!target_sp)
     return;
 
-  const size_t num = target_sp->GetNumStopHooks();
-  for (size_t idx = 0; idx < num; ++idx) {
+  for (auto &stophook_sp : target_sp->GetStopHooks()) {
     StreamString strm;
     // The value 11 is an offset to make the completion description looks
     // neater.
     strm.SetIndentLevel(11);
-    const Target::StopHookSP stophook_sp = target_sp->GetStopHookAtIndex(idx);
     stophook_sp->GetDescription(strm, lldb::eDescriptionLevelInitial);
     request.TryCompleteCurrentArg(std::to_string(stophook_sp->GetID()),
                                   strm.GetString());
@@ -839,6 +847,13 @@ void CommandCompletions::ThreadIDs(CommandInterpreter &interpreter,
     request.TryCompleteCurrentArg(std::to_string(thread_sp->GetID()),
                                   strm.GetString());
   }
+}
+
+void CommandCompletions::ManagedPlugins(CommandInterpreter &interpreter,
+                                        CompletionRequest &request,
+                                        SearchFilter *searcher) {
+  PluginManager::AutoCompletePluginName(request.GetCursorArgumentPrefix(),
+                                        request);
 }
 
 void CommandCompletions::CompleteModifiableCmdPathArgs(

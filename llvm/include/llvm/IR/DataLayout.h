@@ -68,7 +68,7 @@ public:
     Align ABIAlign;
     Align PrefAlign;
 
-    bool operator==(const PrimitiveSpec &Other) const;
+    LLVM_ABI bool operator==(const PrimitiveSpec &Other) const;
   };
 
   /// Pointer type specification.
@@ -77,13 +77,22 @@ public:
     uint32_t BitWidth;
     Align ABIAlign;
     Align PrefAlign;
+    /// The index bit width also defines the address size in this address space.
+    /// If the index width is less than the representation bit width, the
+    /// pointer is non-integral and bits beyond the index width could be used
+    /// for additional metadata (e.g. AMDGPU buffer fat pointers with bounds
+    /// and other flags or CHERI capabilities that contain bounds+permissions).
     uint32_t IndexBitWidth;
     /// Pointers in this address space don't have a well-defined bitwise
-    /// representation (e.g. may be relocated by a copying garbage collector).
-    /// Additionally, they may also be non-integral (i.e. containing additional
-    /// metadata such as bounds information/permissions).
-    bool IsNonIntegral;
-    bool operator==(const PointerSpec &Other) const;
+    /// representation (e.g. they may be relocated by a copying garbage
+    /// collector and thus have different addresses at different times).
+    bool HasUnstableRepresentation;
+    /// Pointers in this address space have additional state bits that are
+    /// located at a target-defined location when stored in memory. An example
+    /// of this would be CHERI capabilities where the validity bit is stored
+    /// separately from the pointer address+bounds information.
+    bool HasExternalState;
+    LLVM_ABI bool operator==(const PointerSpec &Other) const;
   };
 
   enum class FunctionPtrAlignType {
@@ -92,6 +101,7 @@ public:
     /// The function pointer alignment is a multiple of the function alignment.
     MultipleOfFunctionAlign,
   };
+
 private:
   bool BigEndian = false;
 
@@ -143,15 +153,15 @@ private:
 
   /// Searches for a pointer specification that matches the given address space.
   /// Returns the default address space specification if not found.
-  const PointerSpec &getPointerSpec(uint32_t AddrSpace) const;
+  LLVM_ABI const PointerSpec &getPointerSpec(uint32_t AddrSpace) const;
 
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
-                      bool IsNonIntegral);
+                      bool HasUnstableRepr, bool HasExternalState);
 
   /// Internal helper to get alignment for integer of given bitwidth.
-  Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
+  LLVM_ABI Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
 
   /// Internal helper method that returns requested alignment for type.
   Align getAlignment(Type *Ty, bool abi_or_pref) const;
@@ -174,24 +184,24 @@ private:
 
 public:
   /// Constructs a DataLayout with default values.
-  DataLayout();
+  LLVM_ABI DataLayout();
 
   /// Constructs a DataLayout from a specification string.
   /// WARNING: Aborts execution if the string is malformed. Use parse() instead.
-  explicit DataLayout(StringRef LayoutString);
+  LLVM_ABI explicit DataLayout(StringRef LayoutString);
 
   DataLayout(const DataLayout &DL) { *this = DL; }
 
-  ~DataLayout(); // Not virtual, do not subclass this class
+  LLVM_ABI ~DataLayout(); // Not virtual, do not subclass this class
 
-  DataLayout &operator=(const DataLayout &Other);
+  LLVM_ABI DataLayout &operator=(const DataLayout &Other);
 
-  bool operator==(const DataLayout &Other) const;
+  LLVM_ABI bool operator==(const DataLayout &Other) const;
   bool operator!=(const DataLayout &Other) const { return !(*this == Other); }
 
   /// Parse a data layout string and return the layout. Return an error
   /// description on failure.
-  static Expected<DataLayout> parse(StringRef LayoutString);
+  LLVM_ABI static Expected<DataLayout> parse(StringRef LayoutString);
 
   /// Layout endianness...
   bool isLittleEndian() const { return !BigEndian; }
@@ -302,8 +312,6 @@ public:
     llvm_unreachable("invalid mangling mode");
   }
 
-  static const char *getManglingComponent(const Triple &T);
-
   /// Returns true if the specified type fits in a native integer type
   /// supported by the CPU.
   ///
@@ -317,36 +325,130 @@ public:
   }
 
   /// Layout pointer alignment
-  Align getPointerABIAlignment(unsigned AS) const;
+  LLVM_ABI Align getPointerABIAlignment(unsigned AS) const;
 
   /// Return target's alignment for stack-based pointers
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
-  Align getPointerPrefAlignment(unsigned AS = 0) const;
+  LLVM_ABI Align getPointerPrefAlignment(unsigned AS = 0) const;
 
-  /// Layout pointer size in bytes, rounded up to a whole
-  /// number of bytes.
+  /// The pointer representation size in bytes, rounded up to a whole number of
+  /// bytes. The difference between this function and getAddressSize() is that
+  /// this one returns the size of the entire pointer representation (including
+  /// metadata bits for fat pointers) and the latter only returns the number of
+  /// address bits.
+  /// \sa DataLayout::getAddressSizeInBits
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
-  unsigned getPointerSize(unsigned AS = 0) const;
+  LLVM_ABI unsigned getPointerSize(unsigned AS = 0) const;
 
-  // Index size in bytes used for address calculation,
-  /// rounded up to a whole number of bytes.
-  unsigned getIndexSize(unsigned AS) const;
+  /// The index size in bytes used for address calculation, rounded up to a
+  /// whole number of bytes. This not only defines the size used in
+  /// getelementptr operations, but also the size of addresses in this \p AS.
+  /// For example, a 64-bit CHERI-enabled target has 128-bit pointers of which
+  /// only 64 are used to represent the address and the remaining ones are used
+  /// for metadata such as bounds and access permissions. In this case
+  /// getPointerSize() returns 16, but getIndexSize() returns 8.
+  /// To help with code understanding, the alias getAddressSize() can be used
+  /// instead of getIndexSize() to clarify that an address width is needed.
+  LLVM_ABI unsigned getIndexSize(unsigned AS) const;
 
-  /// Return the address spaces containing non-integral pointers.  Pointers in
-  /// this address space don't have a well-defined bitwise representation.
-  SmallVector<unsigned, 8> getNonIntegralAddressSpaces() const {
+  /// The integral size of a pointer in a given address space in bytes, which
+  /// is defined to be the same as getIndexSize(). This exists as a separate
+  /// function to make it clearer when reading code that the size of an address
+  /// is being requested. While targets exist where index size and the
+  /// underlying address width are not identical (e.g. AMDGPU fat pointers with
+  /// 48-bit addresses and 32-bit offsets indexing), there is currently no need
+  /// to differentiate these properties in LLVM.
+  /// \sa DataLayout::getIndexSize
+  /// \sa DataLayout::getAddressSizeInBits
+  unsigned getAddressSize(unsigned AS) const { return getIndexSize(AS); }
+
+  /// Return the address spaces with special pointer semantics (such as being
+  /// unstable or non-integral).
+  SmallVector<unsigned, 8> getNonStandardAddressSpaces() const {
     SmallVector<unsigned, 8> AddrSpaces;
     for (const PointerSpec &PS : PointerSpecs) {
-      if (PS.IsNonIntegral)
+      if (PS.HasUnstableRepresentation || PS.HasExternalState ||
+          PS.BitWidth != PS.IndexBitWidth)
         AddrSpaces.push_back(PS.AddrSpace);
     }
     return AddrSpaces;
   }
 
+  /// Returns whether this address space has a non-integral pointer
+  /// representation, i.e. the pointer is not just an integer address but some
+  /// other bitwise representation. When true, passes cannot assume that all
+  /// bits of the representation map directly to the allocation address.
+  /// NOTE: This also returns true for "unstable" pointers where the
+  /// representation may be just an address, but this value can change at any
+  /// given time (e.g. due to copying garbage collection).
+  /// Examples include AMDGPU buffer descriptors with a 128-bit fat pointer
+  /// and a 32-bit offset or CHERI capabilities that contain bounds, permissions
+  /// and an out-of-band validity bit.
+  ///
+  /// In general, more specialized functions such as mustNotIntroduceIntToPtr(),
+  /// mustNotIntroducePtrToInt(), or hasExternalState() should be
+  /// preferred over this one when reasoning about the behavior of IR
+  /// analysis/transforms.
+  /// TODO: should remove/deprecate this once all uses have migrated.
   bool isNonIntegralAddressSpace(unsigned AddrSpace) const {
-    return getPointerSpec(AddrSpace).IsNonIntegral;
+    const auto &PS = getPointerSpec(AddrSpace);
+    return PS.BitWidth != PS.IndexBitWidth || PS.HasUnstableRepresentation ||
+           PS.HasExternalState;
+  }
+
+  /// Returns whether this address space has an "unstable" pointer
+  /// representation. The bitwise pattern of such pointers is allowed to change
+  /// in a target-specific way. For example, this could be used for copying
+  /// garbage collection where the garbage collector could update the pointer
+  /// value as part of the collection sweep.
+  bool hasUnstableRepresentation(unsigned AddrSpace) const {
+    return getPointerSpec(AddrSpace).HasUnstableRepresentation;
+  }
+  bool hasUnstableRepresentation(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && hasUnstableRepresentation(PTy->getPointerAddressSpace());
+  }
+
+  /// Returns whether this address space has external state (implies having
+  /// a non-integral pointer representation).
+  /// These pointer types must be loaded and stored using appropriate
+  /// instructions and cannot use integer loads/stores as this would not
+  /// propagate the out-of-band state. An example of such a pointer type is a
+  /// CHERI capability that contain bounds, permissions and an out-of-band
+  /// validity bit that is invalidated whenever an integer/FP store is performed
+  /// to the associated memory location.
+  bool hasExternalState(unsigned AddrSpace) const {
+    return getPointerSpec(AddrSpace).HasExternalState;
+  }
+  bool hasExternalState(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && hasExternalState(PTy->getPointerAddressSpace());
+  }
+
+  /// Returns whether passes must avoid introducing `inttoptr` instructions
+  /// for this address space (unless they have target-specific knowledge).
+  ///
+  /// This is currently the case for non-integral pointer representations with
+  /// external state (hasExternalState()) since `inttoptr` cannot recreate the
+  /// external state bits.
+  /// New `inttoptr` instructions should also be avoided for "unstable" bitwise
+  /// representations (hasUnstableRepresentation()) unless the pass knows it is
+  /// within a critical section that retains the current representation.
+  bool mustNotIntroduceIntToPtr(unsigned AddrSpace) const {
+    return hasUnstableRepresentation(AddrSpace) || hasExternalState(AddrSpace);
+  }
+
+  /// Returns whether passes must avoid introducing `ptrtoint` instructions
+  /// for this address space (unless they have target-specific knowledge).
+  ///
+  /// This is currently the case for pointer address spaces that have an
+  /// "unstable" representation (hasUnstableRepresentation()) since the
+  /// bitwise pattern of such pointers could change unless the pass knows it is
+  /// within a critical section that retains the current representation.
+  bool mustNotIntroducePtrToInt(unsigned AddrSpace) const {
+    return hasUnstableRepresentation(AddrSpace);
   }
 
   bool isNonIntegralPointerType(PointerType *PT) const {
@@ -354,32 +456,66 @@ public:
   }
 
   bool isNonIntegralPointerType(Type *Ty) const {
-    auto *PTy = dyn_cast<PointerType>(Ty);
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
     return PTy && isNonIntegralPointerType(PTy);
   }
 
-  /// Layout pointer size, in bits
+  bool mustNotIntroducePtrToInt(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && mustNotIntroducePtrToInt(PTy->getPointerAddressSpace());
+  }
+
+  bool mustNotIntroduceIntToPtr(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && mustNotIntroduceIntToPtr(PTy->getPointerAddressSpace());
+  }
+
+  /// The size in bits of the pointer representation in a given address space.
+  /// This is not necessarily the same as the integer address of a pointer (e.g.
+  /// for fat pointers).
+  /// \sa DataLayout::getAddressSizeInBits()
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
     return getPointerSpec(AS).BitWidth;
   }
 
-  /// Size in bits of index used for address calculation in getelementptr.
+  /// The size in bits of indices used for address calculation in getelementptr
+  /// and for addresses in the given AS. See getIndexSize() for more
+  /// information.
+  /// \sa DataLayout::getAddressSizeInBits()
   unsigned getIndexSizeInBits(unsigned AS) const {
     return getPointerSpec(AS).IndexBitWidth;
   }
 
-  /// Layout pointer size, in bits, based on the type.  If this function is
+  /// The size in bits of an address in for the given AS. This is defined to
+  /// return the same value as getIndexSizeInBits() since there is currently no
+  /// target that requires these two properties to have different values. See
+  /// getIndexSize() for more information.
+  /// \sa DataLayout::getIndexSizeInBits()
+  unsigned getAddressSizeInBits(unsigned AS) const {
+    return getIndexSizeInBits(AS);
+  }
+
+  /// The pointer representation size in bits for this type. If this function is
   /// called with a pointer type, then the type size of the pointer is returned.
   /// If this function is called with a vector of pointers, then the type size
   /// of the pointer is returned.  This should only be called with a pointer or
   /// vector of pointers.
-  unsigned getPointerTypeSizeInBits(Type *) const;
+  LLVM_ABI unsigned getPointerTypeSizeInBits(Type *) const;
 
-  /// Layout size of the index used in GEP calculation.
+  /// The size in bits of the index used in GEP calculation for this type.
   /// The function should be called with pointer or vector of pointers type.
-  unsigned getIndexTypeSizeInBits(Type *Ty) const;
+  /// This is defined to return the same value as getAddressSizeInBits(),
+  /// but separate functions exist for code clarity.
+  LLVM_ABI unsigned getIndexTypeSizeInBits(Type *Ty) const;
+
+  /// The size in bits of an address for this type.
+  /// This is defined to return the same value as getIndexTypeSizeInBits(),
+  /// but separate functions exist for code clarity.
+  unsigned getAddressSizeInBits(Type *Ty) const {
+    return getIndexTypeSizeInBits(Ty);
+  }
 
   unsigned getPointerTypeSize(Type *Ty) const {
     return getPointerTypeSizeInBits(Ty) / 8;
@@ -454,10 +590,7 @@ public:
   ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 12 or 16 for x86_fp80, depending on alignment.
-  TypeSize getTypeAllocSize(Type *Ty) const {
-    // Round up to the next alignment boundary.
-    return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
-  }
+  LLVM_ABI TypeSize getTypeAllocSize(Type *Ty) const;
 
   /// Returns the offset in bits between successive objects of the
   /// specified type, including alignment padding; always a multiple of 8.
@@ -472,7 +605,7 @@ public:
   }
 
   /// Returns the minimum ABI-required alignment for the specified type.
-  Align getABITypeAlign(Type *Ty) const;
+  LLVM_ABI Align getABITypeAlign(Type *Ty) const;
 
   /// Helper function to return `Alignment` if it's set or the result of
   /// `getABITypeAlign(Ty)`, in any case the result is a valid alignment.
@@ -491,19 +624,21 @@ public:
   /// type.
   ///
   /// This is always at least as good as the ABI alignment.
-  Align getPrefTypeAlign(Type *Ty) const;
+  LLVM_ABI Align getPrefTypeAlign(Type *Ty) const;
 
   /// Returns an integer type with size at least as big as that of a
   /// pointer in the given address space.
-  IntegerType *getIntPtrType(LLVMContext &C, unsigned AddressSpace = 0) const;
+  LLVM_ABI IntegerType *getIntPtrType(LLVMContext &C,
+                                      unsigned AddressSpace = 0) const;
 
   /// Returns an integer (vector of integer) type with size at least as
   /// big as that of a pointer of the given pointer (vector of pointer) type.
-  Type *getIntPtrType(Type *) const;
+  LLVM_ABI Type *getIntPtrType(Type *) const;
 
   /// Returns the smallest integer type with size at least as big as
   /// Width bits.
-  Type *getSmallestLegalIntType(LLVMContext &C, unsigned Width = 0) const;
+  LLVM_ABI Type *getSmallestLegalIntType(LLVMContext &C,
+                                         unsigned Width = 0) const;
 
   /// Returns the largest legal integer type, or null if none are set.
   Type *getLargestLegalIntType(LLVMContext &C) const {
@@ -513,45 +648,55 @@ public:
 
   /// Returns the size of largest legal integer type size, or 0 if none
   /// are set.
-  unsigned getLargestLegalIntTypeSizeInBits() const;
+  LLVM_ABI unsigned getLargestLegalIntTypeSizeInBits() const;
 
-  /// Returns the type of a GEP index in AddressSpace.
+  /// Returns the type of a GEP index in \p AddressSpace.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.
-  IntegerType *getIndexType(LLVMContext &C, unsigned AddressSpace) const;
+  LLVM_ABI IntegerType *getIndexType(LLVMContext &C,
+                                     unsigned AddressSpace) const;
+  /// Returns the type of an address in \p AddressSpace
+  IntegerType *getAddressType(LLVMContext &C, unsigned AddressSpace) const {
+    return getIndexType(C, AddressSpace);
+  }
 
   /// Returns the type of a GEP index.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.
-  Type *getIndexType(Type *PtrTy) const;
+  LLVM_ABI Type *getIndexType(Type *PtrTy) const;
+  /// Returns the type of an address in \p AddressSpace
+  Type *getAddressType(Type *PtrTy) const { return getIndexType(PtrTy); }
 
   /// Returns the offset from the beginning of the type for the specified
   /// indices.
   ///
   /// Note that this takes the element type, not the pointer type.
   /// This is used to implement getelementptr.
-  int64_t getIndexedOffsetInType(Type *ElemTy, ArrayRef<Value *> Indices) const;
+  LLVM_ABI int64_t getIndexedOffsetInType(Type *ElemTy,
+                                          ArrayRef<Value *> Indices) const;
 
   /// Get GEP indices to access Offset inside ElemTy. ElemTy is updated to be
   /// the result element type and Offset to be the residual offset.
-  SmallVector<APInt> getGEPIndicesForOffset(Type *&ElemTy, APInt &Offset) const;
+  LLVM_ABI SmallVector<APInt> getGEPIndicesForOffset(Type *&ElemTy,
+                                                     APInt &Offset) const;
 
   /// Get single GEP index to access Offset inside ElemTy. Returns std::nullopt
   /// if index cannot be computed, e.g. because the type is not an aggregate.
   /// ElemTy is updated to be the result element type and Offset to be the
   /// residual offset.
-  std::optional<APInt> getGEPIndexForOffset(Type *&ElemTy, APInt &Offset) const;
+  LLVM_ABI std::optional<APInt> getGEPIndexForOffset(Type *&ElemTy,
+                                                     APInt &Offset) const;
 
   /// Returns a StructLayout object, indicating the alignment of the
   /// struct, its size, and the offsets of its fields.
   ///
   /// Note that this information is lazily cached.
-  const StructLayout *getStructLayout(StructType *Ty) const;
+  LLVM_ABI const StructLayout *getStructLayout(StructType *Ty) const;
 
   /// Returns the preferred alignment of the specified global.
   ///
   /// This includes an explicitly requested alignment (if the global has one).
-  Align getPreferredAlign(const GlobalVariable *GV) const;
+  LLVM_ABI Align getPreferredAlign(const GlobalVariable *GV) const;
 };
 
 inline DataLayout *unwrap(LLVMTargetDataRef P) {
@@ -564,7 +709,9 @@ inline LLVMTargetDataRef wrap(const DataLayout *P) {
 
 /// Used to lazily calculate structure layout information for a target machine,
 /// based on the DataLayout structure.
-class StructLayout final : public TrailingObjects<StructLayout, TypeSize> {
+class StructLayout final : private TrailingObjects<StructLayout, TypeSize> {
+  friend TrailingObjects;
+
   TypeSize StructSize;
   Align StructAlignment;
   unsigned IsPadded : 1;
@@ -583,14 +730,14 @@ public:
 
   /// Given a valid byte offset into the structure, returns the structure
   /// index that contains it.
-  unsigned getElementContainingOffset(uint64_t FixedOffset) const;
+  LLVM_ABI unsigned getElementContainingOffset(uint64_t FixedOffset) const;
 
   MutableArrayRef<TypeSize> getMemberOffsets() {
-    return llvm::MutableArrayRef(getTrailingObjects<TypeSize>(), NumElements);
+    return getTrailingObjects(NumElements);
   }
 
   ArrayRef<TypeSize> getMemberOffsets() const {
-    return llvm::ArrayRef(getTrailingObjects<TypeSize>(), NumElements);
+    return getTrailingObjects(NumElements);
   }
 
   TypeSize getElementOffset(unsigned Idx) const {
@@ -606,10 +753,6 @@ private:
   friend class DataLayout; // Only DataLayout can create this class
 
   StructLayout(StructType *ST, const DataLayout &DL);
-
-  size_t numTrailingObjects(OverloadToken<TypeSize>) const {
-    return NumElements;
-  }
 };
 
 // The implementation of this method is provided inline as it is particularly

@@ -18,18 +18,13 @@
 
 using namespace llvm;
 
-INITIALIZE_PASS_BEGIN(MachineBranchProbabilityInfoWrapperPass,
-                      "machine-branch-prob",
-                      "Machine Branch Probability Analysis", false, true)
-INITIALIZE_PASS_END(MachineBranchProbabilityInfoWrapperPass,
-                    "machine-branch-prob",
-                    "Machine Branch Probability Analysis", false, true)
-
+INITIALIZE_PASS(MachineBranchProbabilityInfoWrapperPass, "machine-branch-prob",
+                "Machine Branch Probability Analysis", false, true)
 namespace llvm {
 cl::opt<unsigned>
     StaticLikelyProb("static-likely-prob",
                      cl::desc("branch probability threshold in percentage"
-                              "to be considered very likely"),
+                              " to be considered very likely"),
                      cl::init(80), cl::Hidden);
 
 cl::opt<unsigned> ProfileLikelyProb(

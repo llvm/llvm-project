@@ -68,12 +68,23 @@ public:
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
-    // Addrspacecasts are always noops.
-    return true;
+    return getPointerSize(SrcAS) == getPointerSize(DestAS);
   }
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
+
+  size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const override;
+
+  /// Returns true if the new SME ABI lowering should be used.
+  bool useNewSMEABILowering() const { return UseNewSMEABILowering; }
 
 private:
   bool isLittle;
+  bool UseNewSMEABILowering;
 };
 
 // AArch64 little endian target machine.

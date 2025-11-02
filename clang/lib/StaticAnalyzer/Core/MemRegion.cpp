@@ -28,7 +28,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -49,7 +48,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -60,6 +58,9 @@ using namespace clang;
 using namespace ento;
 
 #define DEBUG_TYPE "MemRegion"
+
+REGISTER_MAP_WITH_PROGRAMSTATE(MemSpacesMap, const MemRegion *,
+                               const MemSpaceRegion *)
 
 //===----------------------------------------------------------------------===//
 // MemRegion Construction.
@@ -163,20 +164,20 @@ MemRegionManager &SubRegion::getMemRegionManager() const {
 }
 
 const StackFrameContext *VarRegion::getStackFrame() const {
-  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
 const StackFrameContext *
 CXXLifetimeExtendedObjectRegion::getStackFrame() const {
-  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
 const StackFrameContext *CXXTempObjectRegion::getStackFrame() const {
-  assert(isa<StackSpaceRegion>(getMemorySpace()) &&
+  assert(isa<StackSpaceRegion>(getRawMemorySpace()) &&
          "A temporary object can only be allocated on the stack");
-  return cast<StackSpaceRegion>(getMemorySpace())->getStackFrame();
+  return cast<StackSpaceRegion>(getRawMemorySpace())->getStackFrame();
 }
 
 ObjCIvarRegion::ObjCIvarRegion(const ObjCIvarDecl *ivd, const SubRegion *sReg)
@@ -191,11 +192,11 @@ QualType ObjCIvarRegion::getValueType() const {
 }
 
 QualType CXXBaseObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType CXXDerivedObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType ParamVarRegion::getValueType() const {
@@ -811,7 +812,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
   switch (SR->getKind()) {
   case MemRegion::AllocaRegionKind:
   case MemRegion::SymbolicRegionKind:
-    return nonloc::SymbolVal(SymMgr.getExtentSymbol(SR));
+    return nonloc::SymbolVal(SymMgr.acquire<SymbolExtent>(SR));
   case MemRegion::StringRegionKind:
     return SVB.makeIntVal(
         cast<StringRegion>(SR)->getStringLiteral()->getByteLength() + 1,
@@ -829,7 +830,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
   case MemRegion::ObjCStringRegionKind: {
     QualType Ty = cast<TypedValueRegion>(SR)->getDesugaredValueType(Ctx);
     if (isa<VariableArrayType>(Ty))
-      return nonloc::SymbolVal(SymMgr.getExtentSymbol(SR));
+      return nonloc::SymbolVal(SymMgr.acquire<SymbolExtent>(SR));
 
     if (Ty->isIncompleteType())
       return UnknownVal();
@@ -891,13 +892,12 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
 
     return Size;
   }
-    // FIXME: The following are being used in 'SimpleSValBuilder' and in
-    // 'ArrayBoundChecker::checkLocation' because there is no symbol to
-    // represent the regions more appropriately.
+    // FIXME: The following are being used in 'SimpleSValBuilder' because there
+    // is no symbol to represent the regions more appropriately.
   case MemRegion::BlockDataRegionKind:
   case MemRegion::BlockCodeRegionKind:
   case MemRegion::FunctionCodeRegionKind:
-    return nonloc::SymbolVal(SymMgr.getExtentSymbol(SR));
+    return nonloc::SymbolVal(SymMgr.acquire<SymbolExtent>(SR));
   default:
     llvm_unreachable("Unhandled region");
   }
@@ -1022,6 +1022,22 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
   return (const StackFrameContext *)nullptr;
 }
 
+static bool isStdStreamVar(const VarDecl *D) {
+  const IdentifierInfo *II = D->getIdentifier();
+  if (!II)
+    return false;
+  if (!D->getDeclContext()->isTranslationUnit())
+    return false;
+  StringRef N = II->getName();
+  QualType FILETy = D->getASTContext().getFILEType();
+  if (FILETy.isNull())
+    return false;
+  FILETy = FILETy.getCanonicalType();
+  QualType Ty = D->getType().getCanonicalType();
+  return Ty->isPointerType() && Ty->getPointeeType() == FILETy &&
+         (N == "stdin" || N == "stdout" || N == "stderr");
+}
+
 const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const LocationContext *LC) {
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
@@ -1054,10 +1070,18 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     assert(!Ty.isNull());
     if (Ty.isConstQualified()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
-    } else if (Ctx.getSourceManager().isInSystemHeader(D->getLocation())) {
-      sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
     } else {
-      sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      // Pointer value of C standard streams is usually not modified by calls
+      // to functions declared in system headers. This means that they should
+      // not get invalidated by calls to functions declared in system headers,
+      // so they are placed in the global internal space, which is not
+      // invalidated by calls to functions declared in system headers.
+      if (Ctx.getSourceManager().isInSystemHeader(D->getLocation()) &&
+          !isStdStreamVar(D)) {
+        sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
+      } else {
+        sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      }
     }
 
   // Finally handle static locals.
@@ -1195,6 +1219,16 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
                                    const ASTContext &Ctx) {
   QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
 
+  // The address space must be preserved because some target-specific address
+  // spaces influence the size of the pointer value which is represented by the
+  // element region.
+  LangAS AS = elementType.getAddressSpace();
+  if (AS != LangAS::Default) {
+    Qualifiers Quals;
+    Quals.setAddressSpace(AS);
+    T = Ctx.getQualifiedType(T, Quals);
+  }
+
   llvm::FoldingSetNodeID ID;
   ElementRegion::ProfileRegion(ID, T, Idx, superRegion);
 
@@ -1234,10 +1268,10 @@ const SymbolicRegion *MemRegionManager::getSymbolicHeapRegion(SymbolRef Sym) {
   return getSubRegion<SymbolicRegion>(Sym, getHeapRegion());
 }
 
-const FieldRegion*
-MemRegionManager::getFieldRegion(const FieldDecl *d,
-                                 const SubRegion* superRegion){
-  return getSubRegion<FieldRegion>(d, superRegion);
+const FieldRegion *
+MemRegionManager::getFieldRegion(const FieldDecl *FD,
+                                 const SubRegion *SuperRegion) {
+  return getSubRegion<FieldRegion>(FD->getCanonicalDecl(), SuperRegion);
 }
 
 const ObjCIvarRegion*
@@ -1348,7 +1382,7 @@ MemRegionManager::getAllocaRegion(const Expr *E, unsigned cnt,
   return getSubRegion<AllocaRegion>(E, cnt, getStackLocalsRegion(STC));
 }
 
-const MemSpaceRegion *MemRegion::getMemorySpace() const {
+const MemSpaceRegion *MemRegion::getRawMemorySpace() const {
   const MemRegion *R = this;
   const auto *SR = dyn_cast<SubRegion>(this);
 
@@ -1360,16 +1394,27 @@ const MemSpaceRegion *MemRegion::getMemorySpace() const {
   return cast<MemSpaceRegion>(R);
 }
 
-bool MemRegion::hasStackStorage() const {
-  return isa<StackSpaceRegion>(getMemorySpace());
+const MemSpaceRegion *MemRegion::getMemorySpace(ProgramStateRef State) const {
+  const MemRegion *MR = getBaseRegion();
+
+  const MemSpaceRegion *RawSpace = MR->getRawMemorySpace();
+  if (!isa<UnknownSpaceRegion>(RawSpace))
+    return RawSpace;
+
+  const MemSpaceRegion *const *AssociatedSpace = State->get<MemSpacesMap>(MR);
+  return AssociatedSpace ? *AssociatedSpace : RawSpace;
 }
 
-bool MemRegion::hasStackNonParametersStorage() const {
-  return isa<StackLocalsSpaceRegion>(getMemorySpace());
-}
+ProgramStateRef MemRegion::setMemorySpace(ProgramStateRef State,
+                                          const MemSpaceRegion *Space) const {
+  const MemRegion *Base = getBaseRegion();
 
-bool MemRegion::hasStackParametersStorage() const {
-  return isa<StackArgumentsSpaceRegion>(getMemorySpace());
+  // Shouldn't set unknown space.
+  assert(!isa<UnknownSpaceRegion>(Space));
+
+  // Currently, it we should have no accurate memspace for this region.
+  assert(Base->hasMemorySpace<UnknownSpaceRegion>(State));
+  return State->set<MemSpacesMap>(Base, Space);
 }
 
 // Strips away all elements and fields.
@@ -1659,16 +1704,23 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       if (SymbolicOffsetBase)
         continue;
 
-      // Get the field number.
-      unsigned idx = 0;
-      for (RecordDecl::field_iterator FI = RD->field_begin(),
-             FE = RD->field_end(); FI != FE; ++FI, ++idx) {
-        if (FR->getDecl() == *FI)
-          break;
+      assert(FR->getDecl()->getCanonicalDecl() == FR->getDecl());
+      auto MaybeFieldIdx = [FR, RD]() -> std::optional<unsigned> {
+        for (auto [Idx, Field] : llvm::enumerate(RD->fields())) {
+          if (FR->getDecl() == Field->getCanonicalDecl())
+            return Idx;
+        }
+        return std::nullopt;
+      }();
+
+      if (!MaybeFieldIdx.has_value()) {
+        assert(false && "Field not found");
+        goto Finish; // Invalid offset.
       }
+
       const ASTRecordLayout &Layout = R->getContext().getASTRecordLayout(RD);
       // This is offset in bits.
-      Offset += Layout.getFieldOffset(idx);
+      Offset += Layout.getFieldOffset(MaybeFieldIdx.value());
       break;
     }
     }

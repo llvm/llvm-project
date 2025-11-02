@@ -116,8 +116,6 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
   if (!frame_sp)
     return StructuredData::ObjectSP();
 
-  StreamFileSP Stream = target.GetDebugger().GetOutputStreamSP();
-
   EvaluateExpressionOptions options;
   options.SetUnwindOnError(true);
   options.SetTryAllThreads(true);
@@ -326,9 +324,9 @@ InstrumentationRuntimeUBSan::GetBacktracesFromExtendedStopInfo(
 
   // We gather symbolication addresses above, so no need for HistoryThread to
   // try to infer the call addresses.
-  bool pcs_are_call_addresses = true;
-  ThreadSP new_thread_sp = std::make_shared<HistoryThread>(
-      *process_sp, tid, PCs, pcs_are_call_addresses);
+  auto pc_type = HistoryPCType::Calls;
+  ThreadSP new_thread_sp =
+      std::make_shared<HistoryThread>(*process_sp, tid, PCs, pc_type);
   std::string stop_reason_description = GetStopReasonDescription(info);
   new_thread_sp->SetName(stop_reason_description.c_str());
 

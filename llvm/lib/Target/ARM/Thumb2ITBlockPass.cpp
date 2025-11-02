@@ -52,8 +52,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override {
@@ -96,8 +95,7 @@ static void TrackDefUses(MachineInstr *MI, RegisterSet &Defs, RegisterSet &Uses,
 
   auto InsertUsesDefs = [&](RegList &Regs, RegisterSet &UsesDefs) {
     for (unsigned Reg : Regs)
-      for (MCPhysReg Subreg : TRI->subregs_inclusive(Reg))
-        UsesDefs.insert(Subreg);
+      UsesDefs.insert_range(TRI->subregs_inclusive(Reg));
   };
 
   InsertUsesDefs(LocalDefs, Defs);

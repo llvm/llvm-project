@@ -43,7 +43,7 @@ arguments automatically.
   $> cd build
   $> cmake ../llvm -G Ninja                                                 \
      -DLLVM_ENABLE_PROJECTS="clang;lld"                                     \
-     -DLLVM_ENABLE_RUNTIMES="openmp"                                        \
+     -DLLVM_ENABLE_RUNTIMES="openmp;offload"                                \
      -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
      -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where the libraries will live
      -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc               \
@@ -58,7 +58,8 @@ OpenMP support. We then set ``RUNTIMES_<triple>_LLVM_ENABLE_RUNTIMES`` to enable
 ``libc`` for the GPU targets. The ``LLVM_RUNTIME_TARGETS`` sets the enabled
 targets to build, in this case we want the default target and the GPU targets.
 Note that if ``libc`` were included in ``LLVM_ENABLE_RUNTIMES`` it would build
-targeting the default host environment as well.
+targeting the default host environment as well. Alternatively, you can point
+your build towards the ``libc/cmake/caches/gpu.cmake`` cache file with ``-C``.
 
 Runtimes cross build
 --------------------

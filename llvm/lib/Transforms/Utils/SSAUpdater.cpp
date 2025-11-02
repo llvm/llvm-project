@@ -173,8 +173,8 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
 
   // Set the DebugLoc of the inserted PHI, if available.
   DebugLoc DL;
-  if (const Instruction *I = BB->getFirstNonPHI())
-      DL = I->getDebugLoc();
+  if (BasicBlock::iterator It = BB->getFirstNonPHIIt(); It != BB->end())
+    DL = It->getDebugLoc();
   InsertedPHI->setDebugLoc(DL);
 
   // If the client wants to know about all new instructions, tell it.
@@ -197,25 +197,12 @@ void SSAUpdater::RewriteUse(Use &U) {
 }
 
 void SSAUpdater::UpdateDebugValues(Instruction *I) {
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
-  for (auto &DbgValue : DbgValues) {
-    if (DbgValue->getParent() == I->getParent())
-      continue;
-    UpdateDebugValue(I, DbgValue);
-  }
+  llvm::findDbgValues(I, DbgVariableRecords);
   for (auto &DVR : DbgVariableRecords) {
     if (DVR->getParent() == I->getParent())
       continue;
     UpdateDebugValue(I, DVR);
-  }
-}
-
-void SSAUpdater::UpdateDebugValues(Instruction *I,
-                                   SmallVectorImpl<DbgValueInst *> &DbgValues) {
-  for (auto &DbgValue : DbgValues) {
-    UpdateDebugValue(I, DbgValue);
   }
 }
 
@@ -224,15 +211,6 @@ void SSAUpdater::UpdateDebugValues(
   for (auto &DVR : DbgVariableRecords) {
     UpdateDebugValue(I, DVR);
   }
-}
-
-void SSAUpdater::UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue) {
-  BasicBlock *UserBB = DbgValue->getParent();
-  if (HasValueForBlock(UserBB)) {
-    Value *NewVal = GetValueAtEndOfBlock(UserBB);
-    DbgValue->replaceVariableLocationOp(I, NewVal);
-  } else
-    DbgValue->setKillLocation();
 }
 
 void SSAUpdater::UpdateDebugValue(Instruction *I, DbgVariableRecord *DVR) {
@@ -318,6 +296,11 @@ public:
                                SSAUpdater *Updater) {
     PHINode *PHI =
         PHINode::Create(Updater->ProtoType, NumPreds, Updater->ProtoName);
+    // FIXME: Ordinarily we don't care about or try to assign DebugLocs to PHI
+    // nodes, but loop optimizations may try to use a PHI node as a DebugLoc
+    // source (e.g. if this is an induction variable), and it's not clear what
+    // location we could attach here, so mark this unknown for now.
+    PHI->setDebugLoc(DebugLoc::getUnknown());
     PHI->insertBefore(BB->begin());
     return PHI;
   }
@@ -432,9 +415,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       }
     }
 
-    // If so, we can queue them all as live in loads.  We don't have an
-    // efficient way to tell which on is first in the block and don't want to
-    // scan large blocks, so just add all loads as live ins.
+    // If so, we can queue them all as live in loads.
     if (!HasStore) {
       for (Instruction *I : BlockUses)
         LiveInLoads.push_back(cast<LoadInst>(I));
@@ -442,17 +423,20 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       continue;
     }
 
+    // Sort all of the interesting instructions in the block so that we don't
+    // have to scan a large block just to find a few instructions.
+    llvm::sort(
+        BlockUses.begin(), BlockUses.end(),
+        [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
+
     // Otherwise, we have mixed loads and stores (or just a bunch of stores).
     // Since SSAUpdater is purely for cross-block values, we need to determine
     // the order of these instructions in the block.  If the first use in the
     // block is a load, then it uses the live in value.  The last store defines
-    // the live out value.  We handle this by doing a linear scan of the block.
+    // the live out value.
     Value *StoredValue = nullptr;
-    for (Instruction &I : *BB) {
-      if (LoadInst *L = dyn_cast<LoadInst>(&I)) {
-        // If this is a load from an unrelated pointer, ignore it.
-        if (!isInstInList(L, Insts)) continue;
-
+    for (Instruction *I : BlockUses) {
+      if (LoadInst *L = dyn_cast<LoadInst>(I)) {
         // If we haven't seen a store yet, this is a live in use, otherwise
         // use the stored value.
         if (StoredValue) {
@@ -465,18 +449,14 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
         continue;
       }
 
-      if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-        // If this is a store to an unrelated pointer, ignore it.
-        if (!isInstInList(SI, Insts)) continue;
+      if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
         updateDebugInfo(SI);
 
         // Remember that this is the active value in the block.
         StoredValue = SI->getOperand(0);
-      } else if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+      } else if (auto *AI = dyn_cast<AllocaInst>(I)) {
         // Check if this an alloca, in which case we treat it as a store of
         // getValueToUseForAlloca.
-        if (!isInstInList(AI, Insts))
-          continue;
         StoredValue = getValueToUseForAlloca(AI);
       }
     }
@@ -532,11 +512,4 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     instructionDeleted(User);
     User->eraseFromParent();
   }
-}
-
-bool
-LoadAndStorePromoter::isInstInList(Instruction *I,
-                                   const SmallVectorImpl<Instruction *> &Insts)
-                                   const {
-  return is_contained(Insts, I);
 }

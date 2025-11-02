@@ -14,7 +14,11 @@ LLVM and API reference documentation.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
+   CalleeTypeMetadata
+   CallGraphSection
+   CIBestPractices
    CommandGuide/index
+   ContentAddressableStorage
    ConvergenceAndUniformity
    ConvergentOperations
    Coroutines
@@ -30,6 +34,7 @@ LLVM and API reference documentation.
    HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
    InAlloca
+   InterfaceExportAnnotations
    LangRef
    LibFuzzer
    MarkedUpDisassembly
@@ -38,9 +43,11 @@ LLVM and API reference documentation.
    PCSectionsMetadata
    PDB/index
    PointerAuth
+   MLGO
    ScudoHardenedAllocator
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
+   QualGroup
    Security
    SecurityTransparencyReports
    SegmentedStacks
@@ -236,3 +243,14 @@ Additional Topics
 :doc:`ConvergenceAndUniformity`
    A description of uniformity analysis in the presence of irreducible
    control flow, and its implementation.
+
+:doc:`MLGO`
+   Facilities for ML-Guided Optimization, such as collecting IR corpora from a
+   build, interfacing with ML models, an exposing features for training.
+
+:doc:`ContentAddressableStorage`
+   A reference guide for using LLVM's CAS library.
+
+:doc:`CIBestPractices`
+   A list of guidelines and best practices to use when working on LLVM's
+   CI systems.

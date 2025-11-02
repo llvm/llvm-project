@@ -177,8 +177,9 @@ def Q15 : ARMReg<15, "q15", [D30, D31]>;
 }
 
 // Current Program Status Register.
-// We model fpscr with two registers: FPSCR models the control bits and will be
-// reserved. FPSCR_NZCV models the flag bits and will be unreserved. APSR_NZCV
+// We model fpscr with three registers. FPSCR models the control bits and will be
+// reserved. FPSCR_RM models rounding mode control bits and will be reserved.
+// FPSCR_NZCV models the flag bits and will be unreserved. APSR_NZCV
 // models the APSR when it's accessed by some special instructions. In such cases
 // it has the same encoding as PC.
 def CPSR       : ARMReg<0,  "cpsr">;
@@ -187,6 +188,9 @@ def APSR_NZCV  : ARMReg<15, "apsr_nzcv">;
 def SPSR       : ARMReg<2,  "spsr">;
 def FPSCR      : ARMReg<3,  "fpscr">;
 def FPSCR_NZCV : ARMReg<3,  "fpscr_nzcv"> {
+  let Aliases = [FPSCR];
+}
+def FPSCR_RM : ARMReg<3,  "fpscr_rm"> {
   let Aliases = [FPSCR];
 }
 def ITSTATE    : ARMReg<4, "itstate">;
@@ -415,6 +419,13 @@ def VCCR : RegisterClass<"ARM", [i32, v16i1, v8i1, v4i1, v2i1], 32, (add VPR)> {
 // output to an instruction such as MVE VADC.
 def cl_FPSCR_NZCV : RegisterClass<"ARM", [i32], 32, (add FPSCR_NZCV)> {
   let CopyCost = -1;
+}
+
+// This RegisterClass is required to add FPSCR and FPEXC into a calling
+// convention.
+def FP_STATUS_REGS : RegisterClass<"ARM", [i32], 32, (add FPSCR, FPEXC)> {
+  let CopyCost = -1;  // Don't allow copying of status registers.
+  let isAllocatable = 0;
 }
 
 // Scalar single precision floating point register class..

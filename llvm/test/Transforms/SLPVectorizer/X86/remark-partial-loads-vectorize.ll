@@ -20,7 +20,8 @@ define <4 x float> @test(ptr %x, float %v, float %a) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[V]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP5]], <2 x float> [[TMP1]], i64 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    ret <4 x float> [[TMP8]]
 ;

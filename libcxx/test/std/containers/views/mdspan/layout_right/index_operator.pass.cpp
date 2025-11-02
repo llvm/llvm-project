@@ -27,29 +27,26 @@
 #include <cstddef>
 #include <cstdint>
 #include <mdspan>
-#include <span> // dynamic_extent
 #include <type_traits>
 
 #include "test_macros.h"
 
 #include "../ConvertibleToIntegral.h"
 
-template<class Mapping, class ... Indices>
-concept operator_constraints = requires(Mapping m, Indices ... idxs) {
-  {std::is_same_v<decltype(m(idxs...)), typename Mapping::index_type>};
+template <class Mapping, class... Indices>
+concept operator_constraints = requires(Mapping m, Indices... idxs) {
+  { std::is_same_v<decltype(m(idxs...)), typename Mapping::index_type> };
 };
 
-template<class Mapping, class ... Indices>
-  requires(
-    operator_constraints<Mapping, Indices...>
-  )
-constexpr bool check_operator_constraints(Mapping m, Indices ... idxs) {
-  (void) m(idxs...);
+template <class Mapping, class... Indices>
+  requires(operator_constraints<Mapping, Indices...>)
+constexpr bool check_operator_constraints(Mapping m, Indices... idxs) {
+  (void)m(idxs...);
   return true;
 }
 
-template<class Mapping, class ... Indices>
-constexpr bool check_operator_constraints(Mapping, Indices ...) {
+template <class Mapping, class... Indices>
+constexpr bool check_operator_constraints(Mapping, Indices...) {
   return false;
 }
 
@@ -86,15 +83,20 @@ constexpr bool test() {
   test_iteration<std::extents<signed char, D, D, D, D>>(1, 1, 1, 1);
 
   // Check operator constraint for number of arguments
-  static_assert(check_operator_constraints(std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(1)), 0));
-  static_assert(!check_operator_constraints(std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(1)), 0, 0));
+  static_assert(
+      check_operator_constraints(std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(1)), 0));
+  static_assert(
+      !check_operator_constraints(std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(1)), 0, 0));
 
   // Check operator constraint for convertibility of arguments to index_type
-  static_assert(check_operator_constraints(std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(1)), IntType(0)));
-  static_assert(!check_operator_constraints(std::layout_right::mapping<std::extents<unsigned, D>>(std::extents<unsigned, D>(1)), IntType(0)));
+  static_assert(check_operator_constraints(
+      std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(1)), IntType(0)));
+  static_assert(!check_operator_constraints(
+      std::layout_right::mapping<std::extents<unsigned, D>>(std::extents<unsigned, D>(1)), IntType(0)));
 
   // Check operator constraint for no-throw-constructibility of index_type from arguments
-  static_assert(!check_operator_constraints(std::layout_right::mapping<std::extents<unsigned char, D>>(std::extents<unsigned char, D>(1)), IntType(0)));
+  static_assert(!check_operator_constraints(
+      std::layout_right::mapping<std::extents<unsigned char, D>>(std::extents<unsigned char, D>(1)), IntType(0)));
 
   return true;
 }

@@ -49,6 +49,11 @@ module cstd [system] [no_undeclared_includes] {
     export *
   }
 
+  module stdcountof {
+    header "stdcountof.h"
+    export *
+  }
+
   module stddef {
     header "stddef.h"
     export *

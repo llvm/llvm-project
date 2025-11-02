@@ -17,6 +17,6 @@ int main()
   returnValue = __builtin_ldexpl(1.0L, 1);
 }
 
-// CHECK: %call = call double @modf(double noundef 1.000000e+00, ptr noundef %DummyLongDouble) #3
+// CHECK: %{{.+}} = call { double, double } @llvm.modf.f64(double 1.000000e+00)
 // CHECK: %{{.+}} = call { double, i32 } @llvm.frexp.f64.i32(double 0.000000e+00)
 // CHECK: %{{.+}} = call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 1)

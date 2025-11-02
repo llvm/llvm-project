@@ -235,10 +235,10 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
   return FuncInfoOffset;
 }
 
-llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
-                                                  const GsymReader &GR,
-                                                  uint64_t FuncAddr,
-                                                  uint64_t Addr) {
+llvm::Expected<LookupResult>
+FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
+                     uint64_t FuncAddr, uint64_t Addr,
+                     std::optional<DataExtractor> *MergedFuncsData) {
   LookupResult LR;
   LR.LookupAddr = Addr;
   uint64_t Offset = 0;
@@ -289,10 +289,34 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
           return ExpectedLE.takeError();
         break;
 
+      case InfoType::MergedFunctionsInfo:
+        // Store the merged functions data for later parsing, if needed.
+        if (MergedFuncsData)
+          *MergedFuncsData = InfoData;
+        break;
+
       case InfoType::InlineInfo:
         // We will parse the inline info after our line table, but only if
         // we have a line entry.
         InlineInfoData = InfoData;
+        break;
+
+      case InfoType::CallSiteInfo:
+        if (auto CSIC = CallSiteInfoCollection::decode(InfoData)) {
+          // Find matching call site based on relative offset
+          for (const auto &CS : CSIC->CallSites) {
+            // Check if the call site matches the lookup address
+            if (CS.ReturnOffset == Addr - FuncAddr) {
+              // Get regex patterns
+              for (uint32_t RegexOffset : CS.MatchRegex) {
+                LR.CallSiteFuncRegex.push_back(GR.getString(RegexOffset));
+              }
+              break;
+            }
+          }
+        } else {
+          return CSIC.takeError();
+        }
         break;
 
       default:

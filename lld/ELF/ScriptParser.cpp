@@ -21,7 +21,6 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -34,7 +33,6 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cassert>
-#include <limits>
 #include <optional>
 #include <vector>
 
@@ -289,7 +287,7 @@ void ScriptParser::readLinkerScript() {
 void ScriptParser::readDefsym() {
   if (errCount(ctx))
     return;
-  inExpr = true;
+  SaveAndRestore saved(lexState, State::Expr);
   StringRef name = readName();
   expect("=");
   Expr e = readExpr();
@@ -452,7 +450,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf64-powerpc", {ELF64BEKind, EM_PPC64})
       .Case("elf64-powerpcle", {ELF64LEKind, EM_PPC64})
       .Case("elf64-x86-64", {ELF64LEKind, EM_X86_64})
-      .Cases("elf32-tradbigmips", "elf32-bigmips", {ELF32BEKind, EM_MIPS})
+      .Cases({"elf32-tradbigmips", "elf32-bigmips"}, {ELF32BEKind, EM_MIPS})
       .Case("elf32-ntradbigmips", {ELF32BEKind, EM_MIPS})
       .Case("elf32-tradlittlemips", {ELF32LEKind, EM_MIPS})
       .Case("elf32-ntradlittlemips", {ELF32LEKind, EM_MIPS})
@@ -465,7 +463,8 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf32-loongarch", {ELF32LEKind, EM_LOONGARCH})
       .Case("elf64-loongarch", {ELF64LEKind, EM_LOONGARCH})
       .Case("elf64-s390", {ELF64BEKind, EM_S390})
-      .Cases("elf32-hexagon", "elf32-littlehexagon", {ELF32LEKind, EM_HEXAGON})
+      .Cases({"elf32-hexagon", "elf32-littlehexagon"},
+             {ELF32LEKind, EM_HEXAGON})
       .Default({ELFNoneKind, EM_NONE});
 }
 
@@ -561,36 +560,46 @@ void ScriptParser::readSearchDir() {
 // https://sourceware.org/binutils/docs/ld/Overlay-Description.html#Overlay-Description
 SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   Expr addrExpr;
-  if (consume(":")) {
-    addrExpr = [s = ctx.script] { return s->getDot(); };
-  } else {
+  if (!consume(":")) {
     addrExpr = readExpr();
     expect(":");
   }
-  // When AT is omitted, LMA should equal VMA. script->getDot() when evaluating
-  // lmaExpr will ensure this, even if the start address is specified.
-  Expr lmaExpr = consume("AT") ? readParenExpr()
-                               : [s = ctx.script] { return s->getDot(); };
+  bool noCrossRefs = consume("NOCROSSREFS");
+  Expr lmaExpr = consume("AT") ? readParenExpr() : Expr{};
   expect("{");
 
   SmallVector<SectionCommand *, 0> v;
   OutputSection *prev = nullptr;
   while (!errCount(ctx) && !consume("}")) {
     // VA is the same for all sections. The LMAs are consecutive in memory
-    // starting from the base load address specified.
+    // starting from the base load address.
     OutputDesc *osd = readOverlaySectionDescription();
     osd->osec.addrExpr = addrExpr;
     if (prev) {
       osd->osec.lmaExpr = [=] { return prev->getLMA() + prev->size; };
     } else {
       osd->osec.lmaExpr = lmaExpr;
-      // Use first section address for subsequent sections as initial addrExpr
-      // can be DOT. Ensure the first section, even if empty, is not discarded.
+      // Use first section address for subsequent sections. Ensure the first
+      // section, even if empty, is not discarded.
       osd->osec.usedInExpression = true;
       addrExpr = [=]() -> ExprValue { return {&osd->osec, false, 0, ""}; };
     }
     v.push_back(osd);
     prev = &osd->osec;
+  }
+  if (!v.empty())
+    static_cast<OutputDesc *>(v.front())->osec.firstInOverlay = true;
+  if (consume(">")) {
+    StringRef regionName = readName();
+    for (SectionCommand *od : v)
+      static_cast<OutputDesc *>(od)->osec.memoryRegionName =
+          std::string(regionName);
+  }
+  if (noCrossRefs) {
+    NoCrossRefCommand cmd;
+    for (SectionCommand *od : v)
+      cmd.outputSections.push_back(static_cast<OutputDesc *>(od)->osec.name);
+    ctx.script->noCrossRefs.push_back(std::move(cmd));
   }
 
   // According to the specification, at the end of the overlay, the location
@@ -713,11 +722,11 @@ void ScriptParser::readTarget() {
 
 static int precedence(StringRef op) {
   return StringSwitch<int>(op)
-      .Cases("*", "/", "%", 11)
-      .Cases("+", "-", 10)
-      .Cases("<<", ">>", 9)
-      .Cases("<", "<=", ">", ">=", 8)
-      .Cases("==", "!=", 7)
+      .Cases({"*", "/", "%"}, 11)
+      .Cases({"+", "-"}, 10)
+      .Cases({"<<", ">>"}, 9)
+      .Cases({"<", "<=", ">", ">="}, 8)
+      .Cases({"==", "!="}, 7)
       .Case("&", 6)
       .Case("^", 5)
       .Case("|", 4)
@@ -737,7 +746,7 @@ StringMatcher ScriptParser::readFilePatterns() {
 SortSectionPolicy ScriptParser::peekSortKind() {
   return StringSwitch<SortSectionPolicy>(peek())
       .Case("REVERSE", SortSectionPolicy::Reverse)
-      .Cases("SORT", "SORT_BY_NAME", SortSectionPolicy::Name)
+      .Cases({"SORT", "SORT_BY_NAME"}, SortSectionPolicy::Name)
       .Case("SORT_BY_ALIGNMENT", SortSectionPolicy::Alignment)
       .Case("SORT_BY_INIT_PRIORITY", SortSectionPolicy::Priority)
       .Case("SORT_NONE", SortSectionPolicy::None)
@@ -892,9 +901,9 @@ Expr ScriptParser::readAssert() {
   StringRef msg = readName();
   expect(")");
 
-  return [=, s = ctx.script, &ctx = ctx]() -> ExprValue {
+  return [=, s = ctx.script]() -> ExprValue {
     if (!e().getValue())
-      Err(ctx) << msg;
+      s->recordError(msg);
     return s->getDot();
   };
 }
@@ -954,8 +963,8 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok) {
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
 void ScriptParser::readSectionAddressType(OutputSection *cmd) {
   if (consume("(")) {
-    // Temporarily set inExpr to support TYPE=<value> without spaces.
-    SaveAndRestore saved(inExpr, true);
+    // Temporarily set lexState to support TYPE=<value> without spaces.
+    SaveAndRestore saved(lexState, State::Expr);
     if (readSectionDirective(cmd, peek()))
       return;
     cmd->addrExpr = readExpr();
@@ -965,7 +974,7 @@ void ScriptParser::readSectionAddressType(OutputSection *cmd) {
   }
 
   if (consume("(")) {
-    SaveAndRestore saved(inExpr, true);
+    SaveAndRestore saved(lexState, State::Expr);
     StringRef tok = peek();
     if (!readSectionDirective(cmd, tok))
       setError("unknown section directive: " + tok);
@@ -988,20 +997,8 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
       ctx.script->createOutputSection(readName(), getCurrentLocation());
   osd->osec.inOverlay = true;
   expect("{");
-  while (auto tok = till("}")) {
-    uint64_t withFlags = 0;
-    uint64_t withoutFlags = 0;
-    if (tok == "INPUT_SECTION_FLAGS") {
-      std::tie(withFlags, withoutFlags) = readInputSectionFlags();
-      tok = till("");
-    }
-    if (tok == "CLASS")
-      osd->osec.commands.push_back(make<InputSectionDescription>(
-          StringRef{}, withFlags, withoutFlags, readSectionClassName()));
-    else
-      osd->osec.commands.push_back(
-          readInputSectionRules(tok, withFlags, withoutFlags));
-  }
+  while (auto tok = till("}"))
+    osd->osec.commands.push_back(readInputSectionDescription(tok));
   osd->osec.phdrs = readOutputSectionPhdrs();
   return osd;
 }
@@ -1087,10 +1084,10 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   osec->phdrs = readOutputSectionPhdrs();
 
   if (peek() == "=" || peek().starts_with("=")) {
-    inExpr = true;
+    lexState = State::Expr;
     consume("=");
     osec->filler = readFill();
-    inExpr = false;
+    lexState = State::Script;
   }
 
   // Consume optional comma following output section command.
@@ -1162,7 +1159,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   bool savedSeenRelroEnd = ctx.script->seenRelroEnd;
   const StringRef op = peek();
   {
-    SaveAndRestore saved(inExpr, true);
+    SaveAndRestore saved(lexState, State::Expr);
     if (op.starts_with("=")) {
       // Support = followed by an expression without whitespace.
       cmd = readSymbolAssignment(unquote(tok));
@@ -1233,9 +1230,11 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
 // This is an operator-precedence parser to parse a linker
 // script expression.
 Expr ScriptParser::readExpr() {
+  if (atEOF())
+    return []() { return 0; };
   // Our lexer is context-aware. Set the in-expression bit so that
   // they apply different tokenization rules.
-  SaveAndRestore saved(inExpr, true);
+  SaveAndRestore saved(lexState, State::Expr);
   Expr e = readExpr1(readPrimary(), 0);
   return e;
 }
@@ -1411,6 +1410,7 @@ static std::optional<uint64_t> parseFlag(StringRef tok) {
       .Case(CASE_ENT(SHF_COMPRESSED))
       .Case(CASE_ENT(SHF_EXCLUDE))
       .Case(CASE_ENT(SHF_ARM_PURECODE))
+      .Case(CASE_ENT(SHF_AARCH64_PURECODE))
       .Default(std::nullopt);
 #undef CASE_ENT
 }
@@ -1452,12 +1452,11 @@ std::pair<uint64_t, uint64_t> ScriptParser::readInputSectionFlags() {
 
 StringRef ScriptParser::readParenName() {
   expect("(");
-  bool orig = inExpr;
-  inExpr = false;
-  StringRef tok = readName();
-  inExpr = orig;
+  auto saved = std::exchange(lexState, State::Script);
+  StringRef name = readName();
+  lexState = saved;
   expect(")");
-  return tok;
+  return name;
 }
 
 static void checkIfExists(LinkerScript &script, const OutputSection &osec,
@@ -1489,6 +1488,8 @@ Expr ScriptParser::readPrimary() {
     Expr e = readPrimary();
     return [=] { return -e().getValue(); };
   }
+  if (consume("+"))
+    return readPrimary();
 
   StringRef tok = next();
   std::string location = getCurrentLocation();

@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include <map>
-#include <optional>
 #include <utility>
 
 using namespace mlir;
@@ -103,7 +101,7 @@ computeTransposeBroadcast(AffineMap &map) {
 
   // If dims are not monotonically increasing then transpose is present.
   SmallVector<int64_t> sortedResMap(minorResult);
-  std::sort(sortedResMap.begin(), sortedResMap.end());
+  llvm::sort(sortedResMap);
   bool hasTranspose = !std::equal(minorResult.begin(), minorResult.end(),
                                   sortedResMap.begin(), sortedResMap.end());
 
@@ -200,22 +198,22 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
         transposedShape[i] = inputRTType.getShape()[permutation[i]];
 
       Value emptyTensor =
-          rewriter.create<tensor::EmptyOp>(loc, transposedShape, elType);
+          tensor::EmptyOp::create(rewriter, loc, transposedShape, elType);
 
-      auto transposeOp = rewriter.create<TransposeOp>(loc, newInitValues[i],
-                                                      emptyTensor, permutation);
+      auto transposeOp = TransposeOp::create(rewriter, loc, newInitValues[i],
+                                             emptyTensor, permutation);
       newInitValues[i] = transposeOp->getResult(0);
       isChanged = true;
     }
 
     // Does it require broadcast?
     if (!broadcastedDims.empty()) {
-      assert(broadcastedDims.size() && "should have non size broadcast");
-      Value emptyTensor = rewriter.create<tensor::EmptyOp>(
-          loc, outputShape, inputRTType.getElementType());
+      assert(!broadcastedDims.empty() && "should have non size broadcast");
+      Value emptyTensor = tensor::EmptyOp::create(rewriter, loc, outputShape,
+                                                  inputRTType.getElementType());
 
-      auto broadcastOp = rewriter.create<linalg::BroadcastOp>(
-          loc, newInitValues[i], emptyTensor, broadcastedDims);
+      auto broadcastOp = linalg::BroadcastOp::create(
+          rewriter, loc, newInitValues[i], emptyTensor, broadcastedDims);
 
       newInitValues[i] = broadcastOp->getResult(0);
       isChanged = true;
@@ -223,21 +221,22 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
     newMap[i] = rewriter.getMultiDimIdentityMap(map.getNumDims());
   }
 
-  if (isChanged) {
-    SmallVector<Value> operands = op->getOperands();
-    ValueRange operandsRef(operands);
+  if (!isChanged)
+    return failure();
 
-    auto newOp = rewriter.create<linalg::GenericOp>(
-        /*location=*/op.getLoc(),
-        /*resultTensorTypes=*/op->getResultTypes(),
-        /*inputs=*/newInitValues,
-        /*outputs=*/operandsRef.drop_front(op.getNumDpsInputs()),
-        /*indexingMaps=*/newMap,
-        /*iteratorTypes=*/op.getIteratorTypesArray());
+  SmallVector<Value> operands = op->getOperands();
+  ValueRange operandsRef(operands);
 
-    newOp.getRegion().takeBody(op->getRegion(0));
-    rewriter.replaceOp(op, newOp->getResults());
-  }
+  auto newOp = linalg::GenericOp::create(
+      rewriter,
+      /*location=*/op.getLoc(),
+      /*resultTensorTypes=*/op->getResultTypes(),
+      /*inputs=*/newInitValues,
+      /*outputs=*/operandsRef.drop_front(op.getNumDpsInputs()),
+      /*indexingMaps=*/newMap,
+      /*iteratorTypes=*/op.getIteratorTypesArray());
+  newOp.getRegion().takeBody(op->getRegion(0));
+  rewriter.replaceOp(op, newOp->getResults());
   return success();
 }
 

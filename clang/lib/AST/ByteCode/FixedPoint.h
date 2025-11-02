@@ -91,6 +91,32 @@ public:
     return ComparisonCategoryResult::Greater;
   }
 
+  size_t bytesToSerialize() const {
+    return sizeof(uint32_t) + (V.getValue().getBitWidth() / CHAR_BIT);
+  }
+
+  void serialize(std::byte *Buff) const {
+    // Semantics followed by APInt.
+    uint32_t SemI = V.getSemantics().toOpaqueInt();
+    std::memcpy(Buff, &SemI, sizeof(SemI));
+
+    llvm::APInt API = V.getValue();
+    llvm::StoreIntToMemory(API, (uint8_t *)(Buff + sizeof(SemI)),
+                           bitWidth() / 8);
+  }
+
+  static FixedPoint deserialize(const std::byte *Buff) {
+    auto Sem = llvm::FixedPointSemantics::getFromOpaqueInt(
+        *reinterpret_cast<const uint32_t *>(Buff));
+    unsigned BitWidth = Sem.getWidth();
+    APInt I(BitWidth, 0ull, !Sem.isSigned());
+    llvm::LoadIntFromMemory(
+        I, reinterpret_cast<const uint8_t *>(Buff + sizeof(uint32_t)),
+        BitWidth / CHAR_BIT);
+
+    return FixedPoint(I, Sem);
+  }
+
   static bool neg(const FixedPoint &A, FixedPoint *R) {
     bool Overflow = false;
     *R = FixedPoint(A.V.negate(&Overflow));

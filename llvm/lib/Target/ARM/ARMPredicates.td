@@ -167,16 +167,12 @@ def IsARM            : Predicate<"!Subtarget->isThumb()">,
                                  AssemblerPredicate<(all_of (not ModeThumb)), "arm-mode">;
 def IsMachO          : Predicate<"Subtarget->isTargetMachO()">;
 def IsNotMachO       : Predicate<"!Subtarget->isTargetMachO()">;
-def IsNaCl           : Predicate<"Subtarget->isTargetNaCl()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
 def IsNotWindows     : Predicate<"!Subtarget->isTargetWindows()">;
 def IsReadTPTPIDRURW : Predicate<"Subtarget->isReadTPTPIDRURW()">;
 def IsReadTPTPIDRURO : Predicate<"Subtarget->isReadTPTPIDRURO()">;
 def IsReadTPTPIDRPRW : Predicate<"Subtarget->isReadTPTPIDRPRW()">;
 def IsReadTPSoft     : Predicate<"Subtarget->isReadTPSoft()">;
-def UseNaClTrap      : Predicate<"Subtarget->useNaClTrap()">,
-                                 AssemblerPredicate<(all_of FeatureNaClTrap), "NaCl">;
-def DontUseNaClTrap  : Predicate<"!Subtarget->useNaClTrap()">;
 
 def UseNegativeImmediates :
   Predicate<"false">,

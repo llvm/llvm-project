@@ -35,6 +35,9 @@ public:
   /// If given, the name of the target CPU to tune code for.
   std::string cpuToTuneFor;
 
+  /// If given, the name of the target ABI to use.
+  std::string abi;
+
   /// The list of target specific features to enable or disable, as written on
   /// the command line.
   std::vector<std::string> featuresAsWritten;
@@ -47,6 +50,14 @@ public:
 
   /// Extended Altivec ABI on AIX
   bool EnableAIXExtendedAltivecABI;
+
+  /// Print verbose assembly
+  bool asmVerbose = false;
+
+  /// Atomic control options
+  bool atomicIgnoreDenormalMode = false;
+  bool atomicRemoteMemory = false;
+  bool atomicFineGrainedMemory = false;
 };
 
 } // end namespace Fortran::frontend

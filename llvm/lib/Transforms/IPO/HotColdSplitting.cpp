@@ -199,7 +199,7 @@ static bool markFunctionCold(Function &F, bool UpdateEntryCount = false) {
     F.addFnAttr(Attribute::Cold);
     Changed = true;
   }
-  if (!F.hasFnAttribute(Attribute::MinSize)) {
+  if (!F.hasMinSize()) {
     F.addFnAttr(Attribute::MinSize);
     Changed = true;
   }
@@ -733,7 +733,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             none_of(SubRegion, [&](BasicBlock *Block) {
               return ColdBlocks.contains(Block);
             })) {
-          ColdBlocks.insert(SubRegion.begin(), SubRegion.end());
+          ColdBlocks.insert_range(SubRegion);
 
           LLVM_DEBUG({
             for (auto *Block : SubRegion)

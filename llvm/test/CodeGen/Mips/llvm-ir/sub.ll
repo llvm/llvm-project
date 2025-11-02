@@ -33,14 +33,9 @@ define signext i1 @sub_i1(i1 signext %a, i1 signext %b) {
 entry:
 ; ALL-LABEL: sub_i1:
 
-  ; NOT-MM:         subu    $[[T0:[0-9]+]], $4, $5
-  ; NOT-MM:         andi    $[[T0]], $[[T0]], 1
-  ; NOT-MM:         negu    $2, $[[T0]]
+  ; NOT-MM:         xor     $[[T0:[0-9]+]], $4, $5
 
-  ; MM:             subu16  $[[T0:[0-9]+]], $4, $5
-  ; MM:             andi16  $[[T0]], $[[T0]], 1
-  ; MM:             li16    $[[T1:[0-9]+]], 0
-  ; MM:             subu16  $2, $[[T1]], $[[T0]]
+  ; MM:             xor16   $[[T0:[0-9]+]], $4, $5
 
   %r = sub i1 %a, %b
   ret i1 %r

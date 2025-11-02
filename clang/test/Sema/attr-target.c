@@ -33,6 +33,8 @@ void __attribute__((target("x86-64"))) baseline(void) {}
 //expected-warning@+1 {{unsupported 'x86-64-v2' in the 'target' attribute string}}
 void __attribute__((target("x86-64-v2"))) v2(void) {}
 
+int __attribute__((target("sha"))) good_target_but_not_for_fmv() { return 5; }
+
 #elifdef __aarch64__
 
 int __attribute__((target("sve,arch=armv8-a"))) foo(void) { return 4; }

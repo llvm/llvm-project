@@ -35,7 +35,7 @@ if(LIBOMPTARGET_DEP_LIBFFI_FOUND)
   set(LIBOMPTARGET_TESTED_PLUGINS
       "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()
-  message(STATUS "Not generating ${tmachine_name} tests. LibFFI not found.")
+  message(STATUS "Not generating ${machine} tests. LibFFI not found.")
 endif()
 
 # Define the target specific triples and ELF machine values.

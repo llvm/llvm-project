@@ -38,7 +38,7 @@ define amdgpu_kernel void @loop_subregion_misordered(ptr addrspace(1) %arg0) #0 
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 1
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[BB62:%.*]], label [[FLOW:%.*]]
 ; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[INC_I:%.*]], [[INCREMENT_I:%.*]] ], [ undef, [[BB62]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[INC_I:%.*]], [[INCREMENT_I:%.*]] ], [ poison, [[BB62]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[INCREMENT_I]] ], [ true, [[BB62]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ true, [[INCREMENT_I]] ], [ false, [[BB62]] ]
 ; CHECK-NEXT:    br label [[FLOW]]
@@ -74,7 +74,7 @@ define amdgpu_kernel void @loop_subregion_misordered(ptr addrspace(1) %arg0) #0 
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 42", "~{memory}"() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP6]] = phi i32 [ [[TMP0]], [[FLOW1]] ], [ undef, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[TMP6]] = phi i32 [ [[TMP0]], [[FLOW1]] ], [ poison, [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[TMP7]] = phi i1 [ [[TMP1]], [[FLOW1]] ], [ false, [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[TMP8]] = phi i1 [ [[TMP2]], [[FLOW1]] ], [ false, [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi i1 [ false, [[FLOW1]] ], [ true, [[LOOP_HEADER]] ]

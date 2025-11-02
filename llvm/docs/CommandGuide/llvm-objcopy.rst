@@ -57,9 +57,10 @@ multiple file formats.
 
 .. option:: --discard-all, -x
 
- Remove most local symbols from the output. Different file formats may limit
- this to a subset of the local symbols. For example, file and section symbols in
- ELF objects will not be discarded. Additionally, remove all debug sections.
+ Remove most local symbols not referenced by relocations from the output.
+ Different file formats may limit this to a subset of the local symbols. For
+ example, file and section symbols in ELF objects will not be discarded.
+ Additionally, remove all debug sections.
 
 .. option:: --dump-section <section>=<file>
 
@@ -77,6 +78,15 @@ multiple file formats.
 
  Enable deterministic mode when copying archives, i.e. use 0 for archive member
  header UIDs, GIDs and timestamp fields. On by default.
+
+.. option:: --extract-section <section>=<file>
+
+ Extract the specified section ``<section>`` into the file ``<file>`` as a
+ seperate object. Can be specified multiple times to extract multiple sections.
+ ``<file>`` is unrelated to the input and output files provided to
+ :program:`llvm-objcopy` and as such the normal copying and editing
+ operations will still be performed. No operations are performed on the sections
+ prior to dumping them.
 
 .. option:: --globalize-symbol <symbol>
 
@@ -386,7 +396,7 @@ them.
 
 .. option:: --discard-locals, -X
 
- Remove local symbols starting with ".L" from the output.
+ Remove local symbols starting with ".L" not referenced by relocations from the output.
 
 .. option:: --extract-dwo
 
@@ -476,6 +486,11 @@ them.
 .. option:: --preserve-dates, -p
 
  Preserve access and modification timestamps in the output.
+
+.. option:: --remove-note [<name>/]<type>
+
+ Remove notes of integer type ``<type>`` and name ``<name>`` from SHT_NOTE
+ sections that are not in a segment. Can be specified multiple times.
 
 .. option:: --rename-section <old>=<new>[,<flag>,...]
 
@@ -600,7 +615,7 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
 - `elf64-loongarch`
 - `elf64-s390`
 
-The following formats are suppoprted by :program:`llvm-objcopy` for the
+The following formats are supported by :program:`llvm-objcopy` for the
 :option:`--output-target` only:
 
 - `srec`

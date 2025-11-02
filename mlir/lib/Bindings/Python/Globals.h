@@ -10,20 +10,26 @@
 #define MLIR_BINDINGS_PYTHON_GLOBALS_H
 
 #include <optional>
+#include <regex>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "NanobindUtils.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 #include "mlir/CAPI/Support.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Regex.h"
 
 namespace mlir {
 namespace python {
 
 /// Globals that are always accessible once the extension has been initialized.
+/// Methods of this class are thread-safe.
 class PyGlobals {
 public:
   PyGlobals();
@@ -37,11 +43,17 @@ public:
 
   /// Get and set the list of parent modules to search for dialect
   /// implementation classes.
-  std::vector<std::string> &getDialectSearchPrefixes() {
+  std::vector<std::string> getDialectSearchPrefixes() {
+    nanobind::ft_lock_guard lock(mutex);
     return dialectSearchPrefixes;
   }
   void setDialectSearchPrefixes(std::vector<std::string> newValues) {
+    nanobind::ft_lock_guard lock(mutex);
     dialectSearchPrefixes.swap(newValues);
+  }
+  void addDialectSearchPrefix(std::string value) {
+    nanobind::ft_lock_guard lock(mutex);
+    dialectSearchPrefixes.push_back(std::move(value));
   }
 
   /// Loads a python module corresponding to the given dialect namespace.
@@ -107,8 +119,67 @@ public:
   std::optional<nanobind::object>
   lookupOperationClass(llvm::StringRef operationName);
 
+  class TracebackLoc {
+  public:
+    bool locTracebacksEnabled();
+
+    void setLocTracebacksEnabled(bool value);
+
+    size_t locTracebackFramesLimit();
+
+    void setLocTracebackFramesLimit(size_t value);
+
+    void registerTracebackFileInclusion(const std::string &file);
+
+    void registerTracebackFileExclusion(const std::string &file);
+
+    bool isUserTracebackFilename(llvm::StringRef file);
+
+    static constexpr size_t kMaxFrames = 512;
+
+  private:
+    nanobind::ft_mutex mutex;
+    bool locTracebackEnabled_ = false;
+    size_t locTracebackFramesLimit_ = 10;
+    std::unordered_set<std::string> userTracebackIncludeFiles;
+    std::unordered_set<std::string> userTracebackExcludeFiles;
+    std::regex userTracebackIncludeRegex;
+    bool rebuildUserTracebackIncludeRegex = false;
+    std::regex userTracebackExcludeRegex;
+    bool rebuildUserTracebackExcludeRegex = false;
+    llvm::StringMap<bool> isUserTracebackFilenameCache;
+  };
+
+  TracebackLoc &getTracebackLoc() { return tracebackLoc; }
+
+  class TypeIDAllocator {
+  public:
+    TypeIDAllocator() : allocator(mlirTypeIDAllocatorCreate()) {}
+    ~TypeIDAllocator() {
+      if (allocator.ptr)
+        mlirTypeIDAllocatorDestroy(allocator);
+    }
+    TypeIDAllocator(const TypeIDAllocator &) = delete;
+    TypeIDAllocator(TypeIDAllocator &&other) : allocator(other.allocator) {
+      other.allocator.ptr = nullptr;
+    }
+
+    MlirTypeIDAllocator get() { return allocator; }
+    MlirTypeID allocate() {
+      return mlirTypeIDAllocatorAllocateTypeID(allocator);
+    }
+
+  private:
+    MlirTypeIDAllocator allocator;
+  };
+
+  MlirTypeID allocateTypeID() { return typeIDAllocator.allocate(); }
+
 private:
   static PyGlobals *instance;
+
+  nanobind::ft_mutex mutex;
+
   /// Module name prefixes to search under for dialect implementation modules.
   std::vector<std::string> dialectSearchPrefixes;
   /// Map of dialect namespace to external dialect class object.
@@ -124,6 +195,9 @@ private:
   /// Set of dialect namespaces that we have attempted to import implementation
   /// modules for.
   llvm::StringSet<> loadedDialectModules;
+
+  TracebackLoc tracebackLoc;
+  TypeIDAllocator typeIDAllocator;
 };
 
 } // namespace python

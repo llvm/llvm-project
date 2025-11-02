@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wno-c++26-extensions -verify %s
+// RUN: %clang_cc1 -std=c++2c -Wno-c++26-extensions -verify %s
+
 
 static constexpr int PRIMARY = 0;
 static constexpr int SPECIALIZATION_CONCEPT = 1;
@@ -722,6 +724,34 @@ template struct d<int, int>;
 
 } // namespace GH115098
 
+namespace GH123441 {
+
+struct buf {
+  constexpr buf(auto&&... initList) requires (sizeof...(initList) <= 8);
+};
+
+constexpr buf::buf(auto&&... initList) requires (sizeof...(initList) <= 8) {}
+
+template <class>
+struct buffer {
+  constexpr buffer(auto&&... initList) requires (sizeof...(initList) <= 8);
+};
+
+template <class T>
+constexpr buffer<T>::buffer(auto&&... initList) requires (sizeof...(initList) <= 8) {}
+
+template <class...>
+struct foo { // expected-note {{foo defined here}}
+  constexpr foo(auto&&... initList)
+    requires (sizeof...(initList) <= 8);
+};
+
+template <class... T>
+constexpr foo<T...>::foo(auto&&... initList) // expected-error {{does not match any declaration}}
+  requires (sizeof...(T) <= 8) {}
+
+} // namespace GH123441
+
 namespace GH114685 {
 
 template <typename T> struct ptr {
@@ -737,3 +767,129 @@ ptr<U> make_item(auto &&args)
 ptr<char> p;
 
 } // namespace GH114685
+
+namespace GH123472 {
+
+consteval bool fn() { return true; }
+
+struct S {
+  template <typename T>
+  static consteval void mfn() requires (bool(&fn));
+};
+
+template <typename T>
+consteval void S::mfn() requires (bool(&fn)) {}
+
+}
+
+
+namespace GH138255 {
+
+template <typename... T>
+concept C = true;
+
+struct Func {
+  template<typename... Ts>
+  requires C<Ts...[0]>
+  static auto buggy() -> void;
+
+  template<typename... Ts>
+  requires C<Ts...[0]>
+  friend auto fr() -> void;
+
+  template<typename... Ts>
+  requires C<Ts...[0]>
+  friend auto fr2() -> void{}; // expected-note{{previous definition is here}}
+};
+
+template<typename... Ts>
+requires C<Ts...[0]>
+auto Func::buggy() -> void {}
+
+template<typename... Ts>
+requires C<Ts...[0]>
+auto fr() -> void {}
+
+template<typename... Ts>
+requires C<Ts...[0]>
+auto fr2() -> void {} // expected-error{{redefinition of 'fr2'}}
+
+
+template <typename... Ts>
+requires C<Ts...[0]>
+struct Class;
+
+template <typename... Ts>
+requires C<Ts...[0]>
+struct Class;
+
+
+template <typename...>
+struct TplClass {
+  template<typename... Ts>
+  requires C<Ts...[0]>
+  static auto buggy() -> void;
+};
+
+template<>
+template<typename... Ts>
+requires C<Ts...[0]>
+auto TplClass<int>::buggy() -> void {}
+
+}
+
+namespace PackIndexExpr {
+template <int... T>
+concept C = true;
+
+template <typename...> struct TplClass {
+  template <int... Ts>
+  requires C<Ts...[0]>
+  static auto buggy() -> void;
+};
+
+template <>
+template <int... Ts>
+requires C<Ts...[0]>
+auto TplClass<int>::buggy() -> void {}
+}
+
+namespace GH139476 {
+
+namespace moo {
+  template <typename T>
+  constexpr bool baa = true;
+
+  template <typename T> requires baa<T>
+  void caw();
+}
+
+template <typename T> requires moo::baa<T>
+void moo::caw() {}
+
+}
+
+namespace GH145521 {
+
+template <typename X>
+concept is_valid = true;
+
+template<typename T>
+class Nesting
+{
+public:
+    template<typename Q> requires is_valid<Q>
+    class Inner;
+
+    template<typename Q> requires is_valid<Q>
+    friend class Inner2;
+};
+
+template<typename T>
+template<typename Q> requires is_valid<Q>
+class Nesting<T>::Inner {};
+
+template<typename Q> requires is_valid<Q>
+class Inner2 {};
+
+}

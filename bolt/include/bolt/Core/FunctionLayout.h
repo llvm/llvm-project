@@ -232,19 +232,30 @@ public:
     return Blocks[Index];
   }
 
+  /// Return the basic block after the given basic block iterator in the layout
+  /// or nullptr if the last basic block iterator is given.
+  const BinaryBasicBlock *getBasicBlockAfter(block_const_iterator BlockIt,
+                                             bool IgnoreSplits = true) const;
+
   /// Returns the basic block after the given basic block in the layout or
   /// nullptr if the last basic block is given.
+  ///
+  /// Note: prefer the version that takes the iterator as this function uses
+  /// linear basic block lookup.
+  const BinaryBasicBlock *getBasicBlockAfter(const BinaryBasicBlock *BB,
+                                             bool IgnoreSplits = true) const;
+
+  /// Returns the basic block after the given basic block in the layout or
+  /// nullptr if the last basic block is given.
+  ///
+  /// Note: prefer the version that takes the iterator as this function uses
+  /// linear basic block lookup.
   BinaryBasicBlock *getBasicBlockAfter(const BinaryBasicBlock *const BB,
                                        const bool IgnoreSplits = true) {
     return const_cast<BinaryBasicBlock *>(
         static_cast<const FunctionLayout &>(*this).getBasicBlockAfter(
             BB, IgnoreSplits));
   }
-
-  /// Returns the basic block after the given basic block in the layout or
-  /// nullptr if the last basic block is given.
-  const BinaryBasicBlock *getBasicBlockAfter(const BinaryBasicBlock *BB,
-                                             bool IgnoreSplits = true) const;
 
   /// True if the layout contains at least two non-empty fragments.
   bool isSplit() const;

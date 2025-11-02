@@ -281,7 +281,7 @@ TEST(VETest, VLIndex) {
   LLVMInitializeVETarget();
   LLVMInitializeVETargetMC();
 
-  auto TT(Triple::normalize("ve-unknown-linux-gnu"));
+  Triple TT("ve-unknown-linux-gnu");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {

@@ -13,7 +13,7 @@ macro(add_lld_library name)
   llvm_add_library(${name} ${ARG_ENABLE_SHARED} ${ARG_UNPARSED_ARGUMENTS})
 
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-    get_target_export_arg(${name} LLD export_to_lldtargets)
+    get_target_export_arg(${name} LLD export_to_lldtargets UMBRELLA lld-libraries)
     install(TARGETS ${name}
       COMPONENT ${name}
       ${export_to_lldtargets}
@@ -21,11 +21,12 @@ macro(add_lld_library name)
       ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
       RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
-    if (${ARG_SHARED} AND NOT CMAKE_CONFIGURATION_TYPES)
+    if (NOT CMAKE_CONFIGURATION_TYPES)
       add_llvm_install_targets(install-${name}
         DEPENDS ${name}
         COMPONENT ${name})
     endif()
+    set_property(GLOBAL APPEND PROPERTY LLD_ALL_LIBS ${name})
     set_property(GLOBAL APPEND PROPERTY LLD_EXPORTS ${name})
   endif()
 endmacro(add_lld_library)
@@ -56,6 +57,10 @@ macro(add_lld_tool name)
         ${export_to_lldtargets}
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         COMPONENT ${name})
+
+      if (LLVM_ENABLE_PDB)
+        install(FILES $<TARGET_PDB_FILE:${name}> DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name} OPTIONAL)
+      endif()
 
       if(NOT CMAKE_CONFIGURATION_TYPES)
         add_llvm_install_targets(install-${name}

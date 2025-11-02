@@ -10,8 +10,6 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -119,7 +117,7 @@ bool Block::verifyOpOrder() {
   if (!isOpOrderValid())
     return false;
   // The order is valid if there are less than 2 operations.
-  if (operations.empty() || std::next(operations.begin()) == operations.end())
+  if (operations.empty() || llvm::hasSingleElement(operations))
     return false;
 
   Operation *prev = nullptr;
@@ -251,6 +249,16 @@ Operation *Block::getTerminator() {
 /// Check whether this block might have a terminator.
 bool Block::mightHaveTerminator() {
   return !empty() && back().mightHaveTrait<OpTrait::IsTerminator>();
+}
+
+iterator_range<Block::iterator> Block::without_terminator_impl() {
+  // Note: When the op is unregistered, we do not know for sure if the last
+  // op is a terminator. In that case, we include it in `without_terminator`,
+  // but that decision is somewhat arbitrary.
+  if (!back().hasTrait<OpTrait::IsTerminator>())
+    return {begin(), end()};
+  auto endIt = --end();
+  return {begin(), endIt};
 }
 
 // Indexed successor access.

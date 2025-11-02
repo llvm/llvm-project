@@ -138,6 +138,73 @@ Symbols:
       - Type:    AUX_SYM
         LineNum: 3
 
+  - Name:               bstat
+    Value:              0x0
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_BSTAT
+
+  - Name:               cfun
+    Value:              0x0
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_FUN
+
+  - Name:               stsym
+    Value:              0x05
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_STSYM
+
+  - Name:               bincl
+    Value:              0x06
+    Section:            .text
+    Type:               0x00
+    StorageClass:       C_BINCL
+
+  - Name:               eincl
+    Value:              0x06
+    Section:            .text
+    Type:               0x00
+    StorageClass:       C_EINCL
+
+  - Name:               lsym
+    Value:              0x07
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_LSYM
+
+  - Name:               psym
+    Value:              0x07
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_PSYM
+
+  - Name:               rsym
+    Value:              0x08
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_RSYM
+
+  - Name:               rpsym
+    Value:              0x08
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_RPSYM
+
+  - Name:               ecoml
+    Value:              0x09
+    Section:            .text
+    Type:               0x00
+    StorageClass:       C_ECOML
+
+  - Name:               cinfo
+    Value:              0x02
+    Section:            .text
+    Type:               0x00
+    StorageClass:       C_INFO
+
+
 # SYMBOL64:      Symbols [
 # SYMBOL64-NEXT:   Symbol {
 # SYMBOL64-NEXT:     Index: 0
@@ -325,5 +392,104 @@ Symbols:
 # SYMBOL64-NEXT:       LineNumber: 0x3
 # SYMBOL64-NEXT:       Auxiliary Type: AUX_SYM (0xFD)
 # SYMBOL64-NEXT:     }
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 23
+# SYMBOL64-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL64-NEXT:     Value (SymbolTableIndex): 0x0
+# SYMBOL64-NEXT:     Section: N_DEBUG
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_BSTAT (0x8F)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 24
+# SYMBOL64-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL64-NEXT:     Value (OffsetInCSect): 0x0
+# SYMBOL64-NEXT:     Section: N_DEBUG
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_FUN (0x8E)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 25
+# SYMBOL64-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL64-NEXT:     Value (OffsetInCSect): 0x5
+# SYMBOL64-NEXT:     Section: N_DEBUG
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_STSYM (0x85)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 26
+# SYMBOL64-NEXT:     Name: bincl
+# SYMBOL64-NEXT:     Value (OffsetInFile): 0x6
+# SYMBOL64-NEXT:     Section: .text
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_BINCL (0x6C)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 27
+# SYMBOL64-NEXT:     Name: eincl
+# SYMBOL64-NEXT:     Value (OffsetInFile): 0x6
+# SYMBOL64-NEXT:     Section: .text
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_EINCL (0x6D)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 28
+# SYMBOL64-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL64-NEXT:     Value (OffsetRelToStackFrame): 0x7
+# SYMBOL64-NEXT:     Section: N_DEBUG
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_LSYM (0x81)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 29
+# SYMBOL64-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL64-NEXT:     Value (OffsetRelToStackFrame): 0x7
+# SYMBOL64-NEXT:     Section: N_DEBUG
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_PSYM (0x82)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 30
+# SYMBOL64-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL64-NEXT:     Value (RegisterNumber): 0x8
+# SYMBOL64-NEXT:     Section: N_DEBUG
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_RSYM (0x83)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 31
+# SYMBOL64-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL64-NEXT:     Value (RegisterNumber): 0x8
+# SYMBOL64-NEXT:     Section: N_DEBUG
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_RPSYM (0x84)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 32
+# SYMBOL64-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL64-NEXT:     Value (OffsetInCommBlock): 0x9
+# SYMBOL64-NEXT:     Section: .text
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_ECOML (0x88)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 33
+# SYMBOL64-NEXT:     Name: cinfo
+# SYMBOL64-NEXT:     Value (OffsetInCommentSection): 0x2
+# SYMBOL64-NEXT:     Section: .text
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_INFO (0x6E)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 0
 # SYMBOL64-NEXT:   }
 # SYMBOL64-NEXT: ]

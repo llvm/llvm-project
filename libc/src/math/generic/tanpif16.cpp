@@ -9,16 +9,17 @@
 #include "src/math/tanpif16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "sincosf16_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/sincosf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 constexpr size_t N_EXCEPTS = 21;
 
 constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANPIF16_EXCEPTS{{
@@ -35,8 +36,10 @@ constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANPIF16_EXCEPTS{{
     {0x4135, 0xc1ee, 0, 1, 0}, {0x42cb, 0x41ee, 1, 0, 0},
     {0x4335, 0xc1ee, 0, 1, 0},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
+  using namespace sincosf16_internal;
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
 
@@ -48,16 +51,24 @@ LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
     if (LIBC_UNLIKELY(x_abs == 0U))
       return x;
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     bool x_sign = x_u >> 15;
+
     if (auto r = TANPIF16_EXCEPTS.lookup_odd(x_abs, x_sign);
         LIBC_UNLIKELY(r.has_value()))
       return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   }
 
   // Numbers greater or equal to 2^10 are integers, or infinity, or NaN
   if (LIBC_UNLIKELY(x_abs >= 0x6400)) {
     // Check for NaN or infinity values
     if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      // is inf
       if (x_abs == 0x7c00) {
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
@@ -79,7 +90,7 @@ LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
   //   k = round(x * 32)
   //   y = x * 32 - k
   //
-  // Once k and y are computed, we then deduce the answer by tthe formula:
+  // Once k and y are computed, we then deduce the answer by the formula:
   // tan(x) = sin(x) / cos(x)
   //        = (sin_y * cos_k + cos_y * sin_k) / (cos_y * cos_k - sin_y * sin_k)
   float xf = x;

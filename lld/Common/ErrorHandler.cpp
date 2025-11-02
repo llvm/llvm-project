@@ -8,8 +8,6 @@
 
 #include "lld/Common/ErrorHandler.h"
 
-#include "llvm/Support/Parallel.h"
-
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -289,7 +287,7 @@ void ErrorHandler::error(const Twine &msg) {
 
 void ErrorHandler::error(const Twine &msg, ErrorTag tag,
                          ArrayRef<StringRef> args) {
-  if (errorHandlingScript.empty()) {
+  if (errorHandlingScript.empty() || disableOutput) {
     error(msg);
     return;
   }

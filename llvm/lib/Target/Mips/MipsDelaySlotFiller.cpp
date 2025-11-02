@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MipsMCNaCl.h"
 #include "Mips.h"
 #include "MipsInstrInfo.h"
 #include "MipsSubtarget.h"
@@ -41,7 +40,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -208,9 +206,7 @@ namespace {
 
   class MipsDelaySlotFiller : public MachineFunctionPass {
   public:
-    MipsDelaySlotFiller() : MachineFunctionPass(ID) {
-      initializeMipsDelaySlotFillerPass(*PassRegistry::getPassRegistry());
-    }
+    MipsDelaySlotFiller() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override { return "Mips Delay Slot Filler"; }
 
@@ -230,8 +226,7 @@ namespace {
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -402,7 +397,7 @@ void RegDefsUses::addLiveOut(const MachineBasicBlock &MBB,
   for (const MachineBasicBlock *S : MBB.successors())
     if (S != &SuccBB)
       for (const auto &LI : S->liveins())
-        Uses.set(LI.PhysReg);
+        Uses.set(LI.PhysReg.id());
 }
 
 bool RegDefsUses::update(const MachineInstr &MI, unsigned Begin, unsigned End) {
@@ -563,9 +558,10 @@ Iter MipsDelaySlotFiller::replaceWithCompactBranch(MachineBasicBlock &MBB,
   Branch = TII->genInstrWithNewOpc(NewOpcode, Branch);
 
   auto *ToErase = cast<MachineInstr>(&*std::next(Branch));
-  // Update call site info for the Branch.
-  if (ToErase->shouldUpdateCallSiteInfo())
-    ToErase->getMF()->moveCallSiteInfo(ToErase, cast<MachineInstr>(&*Branch));
+  // Update call info for the Branch.
+  if (ToErase->shouldUpdateAdditionalCallInfo())
+    ToErase->getMF()->moveAdditionalCallInfo(ToErase,
+                                             cast<MachineInstr>(&*Branch));
   ToErase->eraseFromParent();
   return Branch;
 }
@@ -695,8 +691,10 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
     IterTy CurrI = I;
     ++I;
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": checking instruction: "; CurrI->dump());
-    // skip debug value
-    if (CurrI->isDebugInstr()) {
+    // Skip debug value.
+    // Instruction TargetOpcode::JUMP_TABLE_DEBUG_INFO is only used to note
+    // jump table debug info.
+    if (CurrI->isDebugInstr() || CurrI->isJumpTableDebugInfo()) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE ": ignoring debug instruction: ";
                  CurrI->dump());
       continue;
@@ -728,18 +726,6 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
       continue;
 
     const MipsSubtarget &STI = MBB.getParent()->getSubtarget<MipsSubtarget>();
-    if (STI.isTargetNaCl()) {
-      // In NaCl, instructions that must be masked are forbidden in delay slots.
-      // We only check for loads, stores and SP changes.  Calls, returns and
-      // branches are not checked because non-NaCl targets never put them in
-      // delay slots.
-      unsigned AddrIdx;
-      if ((isBasePlusOffsetMemoryAccess(CurrI->getOpcode(), &AddrIdx) &&
-           baseRegNeedsLoadStoreMask(CurrI->getOperand(AddrIdx).getReg())) ||
-          CurrI->modifiesRegister(Mips::SP, STI.getRegisterInfo()))
-        continue;
-    }
-
     bool InMicroMipsMode = STI.inMicroMipsMode();
     const MipsInstrInfo *TII = STI.getInstrInfo();
     unsigned Opcode = (*Slot).getOpcode();
@@ -878,9 +864,9 @@ MipsDelaySlotFiller::selectSuccBB(MachineBasicBlock &B) const {
 
   // Select the successor with the larget edge weight.
   auto &Prob = getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  MachineBasicBlock *S = *std::max_element(
-      B.succ_begin(), B.succ_end(),
-      [&](const MachineBasicBlock *Dst0, const MachineBasicBlock *Dst1) {
+  MachineBasicBlock *S =
+      *llvm::max_element(B.successors(), [&](const MachineBasicBlock *Dst0,
+                                             const MachineBasicBlock *Dst1) {
         return Prob.getEdgeProbability(&B, Dst0) <
                Prob.getEdgeProbability(&B, Dst1);
       });

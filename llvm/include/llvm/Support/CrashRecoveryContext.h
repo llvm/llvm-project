@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_CRASHRECOVERYCONTEXT_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class CrashRecoveryContextCleanup;
@@ -48,28 +49,28 @@ class CrashRecoveryContext {
   CrashRecoveryContextCleanup *head = nullptr;
 
 public:
-  CrashRecoveryContext();
-  ~CrashRecoveryContext();
+  LLVM_ABI CrashRecoveryContext();
+  LLVM_ABI ~CrashRecoveryContext();
 
   /// Register cleanup handler, which is used when the recovery context is
   /// finished.
   /// The recovery context owns the handler.
-  void registerCleanup(CrashRecoveryContextCleanup *cleanup);
+  LLVM_ABI void registerCleanup(CrashRecoveryContextCleanup *cleanup);
 
-  void unregisterCleanup(CrashRecoveryContextCleanup *cleanup);
+  LLVM_ABI void unregisterCleanup(CrashRecoveryContextCleanup *cleanup);
 
   /// Enable crash recovery.
-  static void Enable();
+  LLVM_ABI static void Enable();
 
   /// Disable crash recovery.
-  static void Disable();
+  LLVM_ABI static void Disable();
 
   /// Return the active context, if the code is currently executing in a
   /// thread which is in a protected context.
-  static CrashRecoveryContext *GetCurrent();
+  LLVM_ABI static CrashRecoveryContext *GetCurrent();
 
   /// Return true if the current thread is recovering from a crash.
-  static bool isRecoveringFromCrash();
+  LLVM_ABI static bool isRecoveringFromCrash();
 
   /// Execute the provided callback function (with the given arguments) in
   /// a protected context.
@@ -78,10 +79,7 @@ public:
   /// function crashed (or HandleCrash was called explicitly). Clients should
   /// make as little assumptions as possible about the program state when
   /// RunSafely has returned false.
-  bool RunSafely(function_ref<void()> Fn);
-  bool RunSafely(void (*Fn)(void*), void *UserData) {
-    return RunSafely([&]() { Fn(UserData); });
-  }
+  LLVM_ABI bool RunSafely(function_ref<void()> Fn);
 
   /// Execute the provide callback function (with the given arguments) in
   /// a protected context which is run in another thread (optionally with a
@@ -91,22 +89,22 @@ public:
   ///
   /// On Darwin, if PRIO_DARWIN_BG is set on the calling thread, it will be
   /// propagated to the new thread as well.
-  bool RunSafelyOnThread(function_ref<void()>, unsigned RequestedStackSize = 0);
-  bool RunSafelyOnThread(void (*Fn)(void*), void *UserData,
-                         unsigned RequestedStackSize = 0) {
-    return RunSafelyOnThread([&]() { Fn(UserData); }, RequestedStackSize);
-  }
+  LLVM_ABI bool RunSafelyOnThread(function_ref<void()>,
+                                  unsigned RequestedStackSize = 0);
+
+  LLVM_ABI bool RunSafelyOnNewStack(function_ref<void()>,
+                                    unsigned RequestedStackSize = 0);
 
   /// Explicitly trigger a crash recovery in the current process, and
   /// return failure from RunSafely(). This function does not return.
-  [[noreturn]] void HandleExit(int RetCode);
+  [[noreturn]] LLVM_ABI void HandleExit(int RetCode);
 
   /// Return true if RetCode indicates that a signal or an exception occurred.
-  static bool isCrash(int RetCode);
+  LLVM_ABI static bool isCrash(int RetCode);
 
   /// Throw again a signal or an exception, after it was catched once by a
   /// CrashRecoveryContext.
-  static bool throwIfCrash(int RetCode);
+  LLVM_ABI static bool throwIfCrash(int RetCode);
 
   /// In case of a crash, this is the crash identifier.
   int RetCode = 0;
@@ -124,7 +122,7 @@ public:
 ///
 /// Cleanup handlers are stored in a double list, which is owned and managed by
 /// a crash recovery context.
-class CrashRecoveryContextCleanup {
+class LLVM_ABI CrashRecoveryContextCleanup {
 protected:
   CrashRecoveryContext *context = nullptr;
   CrashRecoveryContextCleanup(CrashRecoveryContext *context)

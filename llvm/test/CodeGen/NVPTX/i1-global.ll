@@ -8,13 +8,9 @@ target triple = "nvptx-nvidia-cuda"
 @mypred = addrspace(1) global i1 true, align 1
 
 
-define void @foo(i1 %p, ptr %out) {
+define ptx_kernel void @foo(i1 %p, ptr %out) {
   %ld = load i1, ptr addrspace(1) @mypred
   %val = zext i1 %ld to i32
   store i32 %val, ptr %out
   ret void
 }
-
-
-!nvvm.annotations = !{!0}
-!0 = !{ptr @foo, !"kernel", i32 1}

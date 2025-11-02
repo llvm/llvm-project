@@ -18,9 +18,9 @@ void uses() {
 #pragma acc init
 #pragma acc init if (getI() < getS())
 #pragma acc init device_num(getI())
-#pragma acc init device_type(SOMETHING) device_num(getI())
-#pragma acc init device_type(SOMETHING) if (getI() < getS())
-#pragma acc init device_type(SOMETHING) device_num(getI()) if (getI() < getS())
+#pragma acc init device_type(host) device_num(getI())
+#pragma acc init device_type(nvidia) if (getI() < getS())
+#pragma acc init device_type(multicore) device_num(getI()) if (getI() < getS())
 
   // expected-error@+1{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
 #pragma acc init if (NC)
@@ -34,6 +34,12 @@ void uses() {
   // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc init device_num(Explicit)
+
+  // expected-error@+1{{OpenACC 'device_type' clause on a 'init' construct only permits one architecture}}
+#pragma acc init device_type(nvidia, radeon)
+
+  // expected-error@+1{{OpenACC 'device_type' clause on a 'init' construct only permits one architecture}}
+#pragma acc init  device_type(nonsense, nvidia, radeon)
 }
 
 template<typename T>
@@ -41,8 +47,14 @@ void TestInst() {
   T t;
 #pragma acc init
 #pragma acc init if (T::value < T{})
-#pragma acc init device_type(SOMETHING) device_num(getI()) if (getI() < getS())
-#pragma acc init device_type(SOMETHING) device_type(T) device_num(t) if (t < T::value) device_num(getI()) if (getI() < getS())
+#pragma acc init device_type(radeon) device_num(getI()) if (getI() < getS())
+  // expected-error@+2{{OpenACC 'device_num' clause cannot appear more than once on a 'init' directive}}
+  // expected-note@+1{{previous 'device_num' clause is here}}
+#pragma acc init device_type(multicore) device_type(host) device_num(t) if (t < T::value) device_num(getI()) 
+
+  // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'init' directive}}
+  // expected-note@+1{{previous 'if' clause is here}}
+#pragma acc init if(t < T::value) if (getI() < getS())
 
   // expected-error@+1{{value of type 'const NotConvertible' is not contextually convertible to 'bool'}}
 #pragma acc init if (T::NCValue)

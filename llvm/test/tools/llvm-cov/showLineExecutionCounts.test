@@ -3,6 +3,7 @@
 // RUN: llvm-profdata merge %S/Inputs/lineExecutionCounts.proftext -o %t.profdata
 
 // RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck -check-prefixes=TEXT,WHOLE-FILE -D#C=999 -DC16K2=16.2k -DC16K1=16.1k %S/Inputs/showLineExecutionCounts.cpp
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -binary-counters -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck -check-prefixes=TEXT,WHOLE-FILE -D#C=1 -DC16K2=1 -DC16K1=1 %S/Inputs/showLineExecutionCounts.cpp
 // RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs -name=main | FileCheck -check-prefixes=TEXT,FILTER -D#C=999 -DC16K2=16.2k -DC16K1=16.1k %S/Inputs/showLineExecutionCounts.cpp
 
 // Test -output-dir.
@@ -16,8 +17,10 @@
 //
 // Test html output.
 // RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.dir/html -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.dir/html.binary -binary-counters -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs
 // RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.dir/html.filtered -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs -name=main
 // RUN: FileCheck -check-prefixes=HTML,HTML-WHOLE-FILE -input-file %t.dir/html/coverage/tmp/showLineExecutionCounts.cpp.html %S/Inputs/showLineExecutionCounts.cpp
+// RUN: FileCheck -check-prefixes=HTML-BINARY,HTML-WHOLE-FILE -input-file %t.dir/html.binary/coverage/tmp/showLineExecutionCounts.cpp.html %S/Inputs/showLineExecutionCounts.cpp
 // RUN: FileCheck -check-prefixes=HTML,HTML-FILTER -input-file %t.dir/html.filtered/coverage/tmp/showLineExecutionCounts.cpp.html %S/Inputs/showLineExecutionCounts.cpp
 //
 // Test index creation.

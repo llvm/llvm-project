@@ -36,8 +36,8 @@ namespace llvm {
 /// a function_ref.
 template<typename Fn> class function_ref;
 
-template<typename Ret, typename ...Params>
-class function_ref<Ret(Params...)> {
+template <typename Ret, typename... Params>
+class LLVM_GSL_POINTER function_ref<Ret(Params...)> {
   Ret (*callback)(intptr_t callable, Params ...params) = nullptr;
   intptr_t callable;
 

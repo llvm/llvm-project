@@ -176,8 +176,8 @@ void LoopRules() {
   for(int f;;);
 
 #pragma acc kernels loop
-  // expected-error@+6 2{{OpenACC 'kernels loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'kernels loop' construct is here}}
+  // expected-error@+6{{OpenACC 'kernels loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
+  // expected-note@-2{{'kernels loop' construct is here}}
   // expected-error@+4{{OpenACC 'kernels loop' construct must have a terminating condition}}
   // expected-note@-4{{'kernels loop' construct is here}}
   // expected-error@+2{{OpenACC 'kernels loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
@@ -255,8 +255,8 @@ void LoopRules() {
   for( i = 0;;);
 
 #pragma acc kernels loop
-  // expected-error@+6 2{{OpenACC 'kernels loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'kernels loop' construct is here}}
+  // expected-error@+6{{OpenACC 'kernels loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
+  // expected-note@-2{{'kernels loop' construct is here}}
   // expected-error@+4{{OpenACC 'kernels loop' construct must have a terminating condition}}
   // expected-note@-4{{'kernels loop' construct is here}}
   // expected-error@+2{{OpenACC 'kernels loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
@@ -273,8 +273,8 @@ void LoopRules() {
   for( int j ;;);
 
 #pragma acc serial loop
-  // expected-error@+6 2{{OpenACC 'serial loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'serial loop' construct is here}}
+  // expected-error@+6{{OpenACC 'serial loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
+  // expected-note@-2{{'serial loop' construct is here}}
   // expected-error@+4{{OpenACC 'serial loop' construct must have a terminating condition}}
   // expected-note@-4{{'serial loop' construct is here}}
   // expected-error@+2{{OpenACC 'serial loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
@@ -342,8 +342,8 @@ void LoopRules() {
   for(auto X : Array);
 
 #pragma acc kernels loop
-  // expected-error@+2 2{{loop variable of loop associated with an OpenACC 'kernels loop' construct must be of integer, pointer, or random-access-iterator type (is 'SomeIterator')}}
-  // expected-note@-2 2{{'kernels loop' construct is here}}
+  // expected-error@+2{{loop variable of loop associated with an OpenACC 'kernels loop' construct must be of integer, pointer, or random-access-iterator type (is 'SomeIterator')}}
+  // expected-note@-2{{'kernels loop' construct is here}}
   for(auto X : HasIteratorCollection{});
 
 #pragma acc serial loop
@@ -355,8 +355,8 @@ void LoopRules() {
 
   RandAccessIterator f;
 #pragma acc serial loop
-  // expected-error@+2 2{{OpenACC 'serial loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'serial loop' construct is here}}
+  // expected-error@+2{{OpenACC 'serial loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
+  // expected-note@-2{{'serial loop' construct is here}}
   for(f;f != end;f++);
 
 #pragma acc kernels loop
