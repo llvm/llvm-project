@@ -70,6 +70,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/BasicBlockMatchingAndInference.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -81,6 +82,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/CodeLayout.h"
 #include <optional>
 
 using namespace llvm;
@@ -173,6 +175,77 @@ updateBranches(MachineFunction &MF,
       continue;
     MBB.updateTerminator(FTMBB);
   }
+}
+
+// This function generates the machine basic block clusters of "hot" blocks.
+// Currently, only support one cluster creation.
+// TODO: Support multi-cluster creation and path cloning.
+static std::pair<bool, SmallVector<BBClusterInfo>>
+createBBClusterInfoForFunction(const MachineFunction &MF,
+                               BasicBlockMatchingAndInference *BMI) {
+  unsigned CurrentCluster = 0;
+  auto OptWeightInfo = BMI->getWeightInfo(MF.getName());
+  if (!OptWeightInfo)
+    return std::pair(false, SmallVector<BBClusterInfo>{});
+  auto BlockWeights = OptWeightInfo->BlockWeights;
+  auto EdgeWeights = OptWeightInfo->EdgeWeights;
+
+  SmallVector<const MachineBasicBlock *, 4> HotMBBs;
+  if (MF.size() <= 2) {
+    for (auto &MBB : MF) {
+      if (MBB.isEntryBlock() || BlockWeights[&MBB] > 0) {
+        HotMBBs.push_back(&MBB);
+      }
+    }
+  } else {
+    SmallVector<uint64_t, 0> BlockSizes(MF.size());
+    SmallVector<uint64_t, 0> BlockCounts(MF.size());
+    std::vector<const MachineBasicBlock *> OrigOrder;
+    OrigOrder.reserve(MF.size());
+    SmallVector<codelayout::EdgeCount, 0> JumpCounts;
+
+    // Init the MBB size and count.
+    for (auto &MBB : MF) {
+      auto NonDbgInsts =
+          instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end());
+      int NumInsts = std::distance(NonDbgInsts.begin(), NonDbgInsts.end());
+      BlockSizes[MBB.getNumber()] = 4 * NumInsts;
+      BlockCounts[MBB.getNumber()] = BlockWeights[&MBB];
+      OrigOrder.push_back(&MBB);
+    }
+
+    // Init the edge count.
+    for (auto &MBB : MF) {
+      for (auto *Succ : MBB.successors()) {
+        auto EdgeWeight = EdgeWeights[std::make_pair(&MBB, Succ)];
+        JumpCounts.push_back({static_cast<uint64_t>(MBB.getNumber()),
+                              static_cast<uint64_t>(Succ->getNumber()),
+                              EdgeWeight});
+      }
+    }
+
+    // Run the layout algorithm.
+    auto Result = computeExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
+    for (uint64_t R : Result) {
+      auto Block = OrigOrder[R];
+      if (Block->isEntryBlock() || BlockWeights[Block] > 0)
+        HotMBBs.push_back(Block);
+    }
+  }
+
+  // Generate the "hot" basic block cluster.
+  if (!HotMBBs.empty()) {
+    SmallVector<BBClusterInfo, 4> BBClusterInfos;
+    unsigned CurrentPosition = 0;
+    for (auto &MBB : HotMBBs) {
+      if (MBB->getBBID()) {
+        BBClusterInfos.push_back(
+            {*(MBB->getBBID()), CurrentCluster, CurrentPosition++});
+      }
+    }
+    return std::pair(true, std::move(BBClusterInfos));
+  }
+  return std::pair(false, SmallVector<BBClusterInfo>{});
 }
 
 // This function sorts basic blocks according to the cluster's information.
@@ -314,12 +387,16 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
 
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
   if (BBSectionsType == BasicBlockSection::List) {
-    auto [HasProfile, ClusterInfo] =
-        getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
-            .getClusterInfoForFunction(MF.getName());
-    if (!HasProfile)
+    std::pair<bool, SmallVector<BBClusterInfo>> ExpClusterInfo;
+    if (auto *BMI = getAnalysisIfAvailable<BasicBlockMatchingAndInference>()) {
+      ExpClusterInfo = createBBClusterInfoForFunction(MF, BMI);
+    } else {
+      ExpClusterInfo = getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
+                           .getClusterInfoForFunction(MF.getName());
+    }
+    if (!ExpClusterInfo.first)
       return false;
-    for (auto &BBClusterInfo : ClusterInfo) {
+    for (auto &BBClusterInfo : ExpClusterInfo.second) {
       FuncClusterInfo.try_emplace(BBClusterInfo.BBID, BBClusterInfo);
     }
   }
@@ -402,6 +479,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
+  AU.addUsedIfAvailable<BasicBlockMatchingAndInference>();
   AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
   AU.addUsedIfAvailable<MachinePostDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
