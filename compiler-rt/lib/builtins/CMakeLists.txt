@@ -64,7 +64,7 @@ include(CMakePushCheckState)
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
 
-include_directories(../../../third-party/siphash/include)
+include_directories(${LLVM_THIRD_PARTY_DIR}/siphash/include)
 
 # TODO: Need to add a mechanism for logging errors when builtin source files are
 # added to a sub-directory and not this CMakeLists file.
