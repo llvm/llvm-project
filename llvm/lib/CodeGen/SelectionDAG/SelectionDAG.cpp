@@ -8426,6 +8426,20 @@ static SDValue getMemsetValue(SDValue Value, EVT VT, SelectionDAG &DAG,
   if (!IntVT.isInteger())
     IntVT = EVT::getIntegerVT(*DAG.getContext(), IntVT.getSizeInBits());
 
+  // For repeated-byte patterns, generate a vector splat instead of MUL to
+  // enable efficient lowering to DUP on targets like AArch64.
+  // Only do this on AArch64 targets to avoid breaking other architectures.
+  const TargetMachine &TM = DAG.getTarget();
+  if (NumBits > 8 && VT.isInteger() && !VT.isVector() &&
+      (NumBits == 32 || NumBits == 64) &&
+      TM.getTargetTriple().getArch() == Triple::aarch64) {
+    // Generate a vector of bytes: v4i8 for i32, v8i8 for i64
+    EVT ByteVecTy = EVT::getVectorVT(*DAG.getContext(), MVT::i8, NumBits / 8);
+    SDValue VecSplat = DAG.getSplatBuildVector(ByteVecTy, dl, Value);
+    // Bitcast back to the target integer type
+    return DAG.getNode(ISD::BITCAST, dl, IntVT, VecSplat);
+  }
+
   Value = DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, Value);
   if (NumBits > 8) {
     // Use a multiplication with 0x010101... to extend the input to the

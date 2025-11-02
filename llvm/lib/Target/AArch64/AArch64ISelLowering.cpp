@@ -18447,10 +18447,11 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
   bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
   bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
   bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
-  // Only use AdvSIMD to implement memset of 32-byte and above. It would have
+  // For zero memset, only use AdvSIMD for 32-byte and above. It would have
   // taken one instruction to materialize the v2i64 zero and one store (with
   // restrictive addressing mode). Just do i64 stores.
-  bool IsSmallMemset = Op.isMemset() && Op.size() < 32;
+  // For non-zero memset, use NEON even for smaller sizes as dup is efficient.
+  bool IsSmallZeroMemset = Op.isMemset() && Op.size() < 32 && Op.isZeroMemset();
   auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
     if (Op.isAligned(AlignCheck))
       return true;
@@ -18460,10 +18461,12 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
            Fast;
   };
 
-  if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
-      AlignmentIsAcceptable(MVT::v16i8, Align(16)))
+  // For non-zero memset, use NEON even for smaller sizes as dup + scalar store
+  // is efficient
+  if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset)
     return MVT::v16i8;
-  if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
+  if (CanUseFP && !IsSmallZeroMemset &&
+      AlignmentIsAcceptable(MVT::f128, Align(16)))
     return MVT::f128;
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
     return MVT::i64;
@@ -18477,10 +18480,11 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
   bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
   bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
   bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
-  // Only use AdvSIMD to implement memset of 32-byte and above. It would have
+  // For zero memset, only use AdvSIMD for 32-byte and above. It would have
   // taken one instruction to materialize the v2i64 zero and one store (with
   // restrictive addressing mode). Just do i64 stores.
-  bool IsSmallMemset = Op.isMemset() && Op.size() < 32;
+  // For non-zero memset, use NEON even for smaller sizes as dup is efficient.
+  bool IsSmallZeroMemset = Op.isMemset() && Op.size() < 32 && Op.isZeroMemset();
   auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
     if (Op.isAligned(AlignCheck))
       return true;
@@ -18490,10 +18494,12 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
            Fast;
   };
 
-  if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
-      AlignmentIsAcceptable(MVT::v2i64, Align(16)))
+  // For non-zero memset, use NEON for all sizes where it's beneficial.
+  // NEON dup + scalar store works for any alignment and is efficient.
+  if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset)
     return LLT::fixed_vector(2, 64);
-  if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
+  if (CanUseFP && !IsSmallZeroMemset &&
+      AlignmentIsAcceptable(MVT::f128, Align(16)))
     return LLT::scalar(128);
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
     return LLT::scalar(64);
@@ -29872,6 +29878,31 @@ AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
       .addReg(Target.getReg())
       .addImm(MBBI->getCFIType())
       .getInstr();
+}
+
+bool AArch64TargetLowering::shallExtractConstSplatVectorElementToStore(
+    Type *VectorTy, unsigned ElemSizeInBits, unsigned &Index) const {
+  // On AArch64, we can efficiently extract a scalar from a splat vector using
+  // str s/d/q0 which extracts 32/64/128 bits from the vector register.
+  // This is useful for memset where we generate a v16i8 splat and need to store
+  // a smaller scalar (e.g., i32 for a 4-byte memset).
+  if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(VectorTy)) {
+    // Only handle v16i8 splat (128 bits total, 16 elements of 8 bits each)
+    if (VTy->getNumElements() == 16 && VTy->getElementType()->isIntegerTy(8)) {
+      // Check if we're extracting a 32-bit or 64-bit element
+      if (ElemSizeInBits == 32) {
+        // Extract element 0 of the 128-bit vector as a 32-bit scalar
+        Index = 0;
+        return true;
+      }
+      if (ElemSizeInBits == 64) {
+        // Extract elements 0-7 as a 64-bit scalar
+        Index = 0;
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 bool AArch64TargetLowering::enableAggressiveFMAFusion(EVT VT) const {
