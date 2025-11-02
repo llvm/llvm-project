@@ -13,15 +13,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatTokenLexer.h"
+#include "BreakableToken.h"
 #include "FormatToken.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Regex.h"
 
 namespace clang {
 namespace format {
+
+namespace {
+
+CommentKind classifyBlockComment(StringRef Text) {
+  if (Text.starts_with("/**") || Text.starts_with("/*!"))
+    return CommentKind::DocString;
+  const StringRef Content = Text.drop_front(2).drop_back(2).trim();
+  if (Content.empty())
+    return CommentKind::Plain;
+
+  if (Content.ends_with('='))
+    return CommentKind::Parameter;
+  return CommentKind::Plain;
+}
+} // namespace
 
 FormatTokenLexer::FormatTokenLexer(
     const SourceManager &SourceMgr, FileID ID, unsigned Column,
@@ -1387,6 +1404,21 @@ FormatToken *FormatTokenLexer::getNextToken() {
     StringRef UntrimmedText = FormatTok->TokenText;
     FormatTok->TokenText = FormatTok->TokenText.rtrim(" \t\v\f");
     TrailingWhitespace = UntrimmedText.size() - FormatTok->TokenText.size();
+
+    if (isWellFormedBlockCommentText(FormatTok->TokenText)) {
+      FormatTok->setBlockCommentKind(
+          classifyBlockComment(FormatTok->TokenText));
+      const StringRef Content =
+          FormatTok->TokenText.drop_front(2).drop_back(2).rtrim("\r\n");
+      if (!Content.empty()) {
+        const auto LastChar = static_cast<unsigned char>(Content.back());
+        if (!isHorizontalWhitespace(LastChar)) {
+          FormatTok->NeedsSpaceBeforeClosingBlockComment = true;
+          FormatTok->SpaceBeforeClosingBlockCommentOffset =
+              FormatTok->TokenText.size() - 2;
+        }
+      }
+    }
   } else if (FormatTok->is(tok::raw_identifier)) {
     IdentifierInfo &Info = IdentTable.get(FormatTok->TokenText);
     FormatTok->Tok.setIdentifierInfo(&Info);
