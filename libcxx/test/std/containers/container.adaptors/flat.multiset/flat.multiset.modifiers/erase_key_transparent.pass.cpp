@@ -38,10 +38,10 @@ static_assert(!CanErase<const NonTransparentSet>);
 
 template <class Key, class It>
 struct HeterogeneousKey {
-  explicit HeterogeneousKey(Key key, It it) : key_(key), it_(it) {}
-  operator It() && { return it_; }
-  auto operator<=>(Key key) const { return key_ <=> key; }
-  friend bool operator<(const HeterogeneousKey&, const HeterogeneousKey&) {
+  constexpr explicit HeterogeneousKey(Key key, It it) : key_(key), it_(it) {}
+  constexpr operator It() && { return it_; }
+  constexpr auto operator<=>(Key key) const { return key_ <=> key; }
+  constexpr friend bool operator<(const HeterogeneousKey&, const HeterogeneousKey&) {
     assert(false);
     return false;
   }
@@ -50,7 +50,7 @@ struct HeterogeneousKey {
 };
 
 template <class KeyContainer>
-void test_one() {
+constexpr void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_multiset<Key, std::less<Key>, KeyContainer>;
 
@@ -70,7 +70,7 @@ void test_one() {
 }
 
 template <class KeyContainer>
-void test_transparent_comparator() {
+constexpr void test_transparent_comparator() {
   using M = std::flat_multiset<std::string, TransparentComparator, KeyContainer>;
   {
     M m = {"alpha", "beta", "beta", "epsilon", "epsilon", "epsilon", "eta", "eta", "gamma"};
@@ -95,14 +95,20 @@ void test_transparent_comparator() {
   }
 }
 
-void test() {
+constexpr bool test() {
   test_one<std::vector<int>>();
-  test_one<std::deque<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();
   test_one<std::vector<int, min_allocator<int>>>();
 
   test_transparent_comparator<std::vector<std::string>>();
-  test_transparent_comparator<std::deque<std::string>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test_transparent_comparator<std::deque<std::string>>();
   test_transparent_comparator<MinSequenceContainer<std::string>>();
   test_transparent_comparator<std::vector<std::string, min_allocator<std::string>>>();
 
@@ -146,6 +152,8 @@ void test() {
     assert(n == 2);
     assert((m == M{"alpha", "epsilon", "eta", "gamma"}));
   }
+
+  return true;
 }
 
 void test_exception() {
@@ -159,6 +167,9 @@ void test_exception() {
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   test_exception();
 
   return 0;

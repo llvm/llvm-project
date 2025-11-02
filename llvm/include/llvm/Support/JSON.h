@@ -154,7 +154,7 @@ public:
   LLVM_ABI const json::Array *getArray(StringRef K) const;
   LLVM_ABI json::Array *getArray(StringRef K);
 
-  friend bool operator==(const Object &LHS, const Object &RHS);
+  friend LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
 };
 LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
 inline bool operator!=(const Object &LHS, const Object &RHS) {
@@ -318,7 +318,7 @@ public:
   Value(std::string V) : Type(T_String) {
     if (LLVM_UNLIKELY(!isUTF8(V))) {
       assert(false && "Invalid UTF-8 in value used as JSON");
-      V = fixUTF8(std::move(V));
+      V = fixUTF8(V);
     }
     create<std::string>(std::move(V));
   }
@@ -591,7 +591,7 @@ public:
   ObjectKey(std::string S) : Owned(new std::string(std::move(S))) {
     if (LLVM_UNLIKELY(!isUTF8(*Owned))) {
       assert(false && "Invalid UTF-8 in value used as JSON");
-      *Owned = fixUTF8(std::move(*Owned));
+      *Owned = fixUTF8(*Owned);
     }
     Data = *Owned;
   }
