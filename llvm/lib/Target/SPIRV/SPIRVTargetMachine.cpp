@@ -181,7 +181,9 @@ void SPIRVPassConfig::addISelPrepare() {
     // If an address space cast is not removed while targeting Vulkan, lowering
     // will fail during MIR lowering.
     addPass(createInferAddressSpacesPass());
+  }
 
+  if (TM.getSubtargetImpl()->isShader() || TM.getSubtargetImpl()->isKernel()) {
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
     //  - loops have a single entry edge (pre-header to loop header).
