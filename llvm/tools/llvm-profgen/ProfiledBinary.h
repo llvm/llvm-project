@@ -76,6 +76,7 @@ struct BinaryFunction {
   StringRef FuncName;
   // End of range is an exclusive bound.
   RangesTy Ranges;
+  bool FromSymtab = false;
 
   uint64_t getFuncSize() {
     uint64_t Sum = 0;
@@ -355,6 +356,9 @@ class ProfiledBinary {
 
   // Create symbol to its start address mapping.
   void populateSymbolAddressList(const object::ObjectFile *O);
+
+  // Load functions from its symbol table (when DWARF info is missing).
+  void loadSymbolsFromSymtab(const object::ObjectFile *O);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start a function range is the real entry of the

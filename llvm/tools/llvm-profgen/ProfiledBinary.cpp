@@ -66,6 +66,13 @@ static cl::list<std::string> DisassembleFunctions(
     cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
+    LoadFunctionFromSymbol("load-function-from-symbol", cl::init(true),
+                           cl::desc("Gather additional binary function info "
+                                    "from symbols (e.g. .symtab) in case "
+                                    "dwarf info is incomplete."),
+                           cl::cat(ProfGenCategory));
+
+static cl::opt<bool>
     KernelBinary("kernel",
                  cl::desc("Generate the profile for Linux kernel binary."),
                  cl::cat(ProfGenCategory));
@@ -256,6 +263,9 @@ void ProfiledBinary::load() {
 
   if (ShowDisassemblyOnly)
     decodePseudoProbe(Obj);
+
+  if (LoadFunctionFromSymbol && UsePseudoProbes)
+    loadSymbolsFromSymtab(Obj);
 
   // Disassemble the text sections.
   disassemble(Obj);
@@ -604,13 +614,13 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       // Record potential call targets for tail frame inference later-on.
       if (InferMissingFrames && FRange) {
         uint64_t Target = 0;
-        MIA->evaluateBranch(Inst, Address, Size, Target);
+        bool Err = MIA->evaluateBranch(Inst, Address, Size, Target);
         if (MCDesc.isCall()) {
           // Indirect call targets are unknown at this point. Recording the
           // unknown target (zero) for further LBR-based refinement.
           MissingContextInferrer->CallEdges[Address].insert(Target);
         } else if (MCDesc.isUnconditionalBranch()) {
-          assert(Target &&
+          assert(Err &&
                  "target should be known for unconditional direct branch");
           // Any inter-function unconditional jump is considered tail call at
           // this point. This is not 100% accurate and could further be
@@ -817,6 +827,65 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
     uint64_t GUID = Function::getGUIDAssumingExternalLinkage(Name);
     SymbolStartAddrs[GUID] = Addr;
     StartAddrToSymMap.emplace(Addr, GUID);
+  }
+}
+
+void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
+  // Load binary functions from symbol table when Debug info is incomplete.
+  // Strip the internal suffixes which are not reflected in the DWARF info.
+  const SmallVector<StringRef, 10> Suffixes(
+      {// Internal suffixes from CoroSplit pass
+       ".cleanup", ".destroy", ".resume",
+       // Internal suffixes from Bolt
+       ".cold", ".warm",
+       // Compiler/LTO internal
+       ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."});
+  StringRef FileName = Obj->getFileName();
+  for (const SymbolRef &Symbol : Obj->symbols()) {
+    const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
+    const uint64_t StartAddr = unwrapOrError(Symbol.getAddress(), FileName);
+    const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
+    uint64_t Size = 0;
+    if (isa<ELFObjectFileBase>(Symbol.getObject())) {
+      ELFSymbolRef ElfSymbol(Symbol);
+      Size = ElfSymbol.getSize();
+    }
+
+    if (Size == 0 || Type != SymbolRef::ST_Function)
+      continue;
+
+    const StringRef SymName =
+        FunctionSamples::getCanonicalFnName(Name, Suffixes);
+
+    auto Range = findFuncRange(StartAddr);
+    if (!Range || Range->StartAddress != StartAddr) {
+      // Function from symbol table not found previously in DWARF, store ranges.
+      auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
+      auto &Func = Ret.first->second;
+      if (Ret.second) {
+        Func.FuncName = Ret.first->first;
+        HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
+      }
+
+      Func.FromSymtab = true;
+      Func.Ranges.emplace_back(StartAddr, StartAddr + Size);
+
+      auto R = StartAddrToFuncRangeMap.emplace(StartAddr, FuncRange());
+      FuncRange &FRange = R.first->second;
+
+      FRange.Func = &Func;
+      FRange.StartAddress = StartAddr;
+      FRange.EndAddress = StartAddr + Size;
+
+    } else if (SymName != Range->getFuncName() && ShowDetailedWarning) {
+      // Function already found from DWARF, check consistency between symbol
+      // table and DWARF.
+      WithColor::warning() << "Conflicting name for symbol" << Name
+                           << " at address " << format("%8" PRIx64, StartAddr)
+                           << ", but the DWARF symbol " << Range->getFuncName()
+                           << " indicates a starting address at "
+                           << format("%8" PRIx64, Range->StartAddress) << "\n";
+    }
   }
 }
 
