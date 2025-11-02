@@ -816,7 +816,7 @@ parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
   Params.consume_front("strategy=");
   auto Result = StringSwitch<std::optional<ScanOptions>>(Params)
                     .Case("dpp", ScanOptions::DPP)
-                    .Cases("iterative", "", ScanOptions::Iterative)
+                    .Cases({"iterative", ""}, ScanOptions::Iterative)
                     .Case("none", ScanOptions::None)
                     .Default(std::nullopt);
   if (Result)

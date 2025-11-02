@@ -2702,7 +2702,7 @@ static bool isSpecialLLVMGlobalArrayToSkip(const GlobalVariable *GV) {
 
 static bool isSpecialLLVMGlobalArrayForStaticInit(const GlobalVariable *GV) {
   return StringSwitch<bool>(GV->getName())
-      .Cases("llvm.global_ctors", "llvm.global_dtors", true)
+      .Cases({"llvm.global_ctors", "llvm.global_dtors"}, true)
       .Default(false);
 }
 
