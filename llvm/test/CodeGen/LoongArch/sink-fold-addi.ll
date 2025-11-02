@@ -25,14 +25,13 @@ define void @sink_fold_i64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a1, $a0, 4
 ; LA32-NEXT:    alsl.w $a0, $a0, $a1, 3
-; LA32-NEXT:    add.w $a0, $a4, $a0
 ; LA32-NEXT:    sltui $a1, $a3, 1
 ; LA32-NEXT:    slti $a2, $a3, 0
 ; LA32-NEXT:    masknez $a2, $a2, $a1
 ; LA32-NEXT:    sltui $a3, $s1, 1
 ; LA32-NEXT:    maskeqz $a1, $a3, $a1
 ; LA32-NEXT:    or $a1, $a1, $a2
-; LA32-NEXT:    addi.w $s2, $a0, 8
+; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB0_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
@@ -45,8 +44,8 @@ define void @sink_fold_i64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl f
-; LA32-NEXT:    ld.w $a0, $s2, 4
-; LA32-NEXT:    ld.w $a1, $s2, 0
+; LA32-NEXT:    ld.w $a0, $s2, 12
+; LA32-NEXT:    ld.w $a1, $s2, 8
 ; LA32-NEXT:    add.w $a0, $a0, $s6
 ; LA32-NEXT:    add.w $s3, $a1, $s3
 ; LA32-NEXT:    sltu $a1, $s3, $a1
@@ -63,8 +62,8 @@ define void @sink_fold_i64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    move $s3, $zero
 ; LA32-NEXT:    move $s6, $zero
 ; LA32-NEXT:  .LBB0_4: # %for.cond.cleanup
-; LA32-NEXT:    st.w $s3, $s2, 0
-; LA32-NEXT:    st.w $s6, $s2, 4
+; LA32-NEXT:    st.w $s3, $s2, 8
+; LA32-NEXT:    st.w $s6, $s2, 12
 ; LA32-NEXT:    ld.w $s6, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s5, $sp, 16 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s4, $sp, 20 # 4-byte Folded Reload
@@ -88,8 +87,7 @@ define void @sink_fold_i64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $s0, $a1
 ; LA64-NEXT:    slli.d $a1, $a0, 4
 ; LA64-NEXT:    alsl.d $a0, $a0, $a1, 3
-; LA64-NEXT:    add.d $a0, $a2, $a0
-; LA64-NEXT:    addi.d $s1, $a0, 8
+; LA64-NEXT:    add.d $s1, $a2, $a0
 ; LA64-NEXT:    blez $s0, .LBB0_3
 ; LA64-NEXT:  # %bb.1: # %for.body.preheader
 ; LA64-NEXT:    move $fp, $a2
@@ -100,7 +98,7 @@ define void @sink_fold_i64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    ld.d $a0, $s1, 0
+; LA64-NEXT:    ld.d $a0, $s1, 8
 ; LA64-NEXT:    addi.d $s0, $s0, -1
 ; LA64-NEXT:    add.d $s2, $a0, $s2
 ; LA64-NEXT:    bnez $s0, .LBB0_2
@@ -108,7 +106,7 @@ define void @sink_fold_i64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:  .LBB0_3:
 ; LA64-NEXT:    move $s2, $zero
 ; LA64-NEXT:  .LBB0_4: # %for.cond.cleanup
-; LA64-NEXT:    st.d $s2, $s1, 0
+; LA64-NEXT:    st.d $s2, $s1, 8
 ; LA64-NEXT:    ld.d $s2, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s1, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s0, $sp, 24 # 8-byte Folded Reload
@@ -153,14 +151,13 @@ define void @sink_fold_f32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a1, $a0, 4
 ; LA32-NEXT:    alsl.w $a0, $a0, $a1, 3
-; LA32-NEXT:    add.w $a0, $a4, $a0
 ; LA32-NEXT:    sltui $a1, $a3, 1
 ; LA32-NEXT:    slti $a2, $a3, 0
 ; LA32-NEXT:    masknez $a2, $a2, $a1
 ; LA32-NEXT:    sltui $a3, $s1, 1
 ; LA32-NEXT:    maskeqz $a1, $a3, $a1
 ; LA32-NEXT:    or $a1, $a1, $a2
-; LA32-NEXT:    addi.w $s2, $a0, 16
+; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB1_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
@@ -172,7 +169,7 @@ define void @sink_fold_f32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl f
-; LA32-NEXT:    fld.s $fa0, $s2, 0
+; LA32-NEXT:    fld.s $fa0, $s2, 16
 ; LA32-NEXT:    addi.w $s3, $s3, 1
 ; LA32-NEXT:    sltui $a0, $s3, 1
 ; LA32-NEXT:    add.w $s4, $s4, $a0
@@ -185,7 +182,7 @@ define void @sink_fold_f32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:  .LBB1_3:
 ; LA32-NEXT:    movgr2fr.w $fs0, $zero
 ; LA32-NEXT:  .LBB1_4: # %for.cond.cleanup
-; LA32-NEXT:    fst.s $fs0, $s2, 0
+; LA32-NEXT:    fst.s $fs0, $s2, 16
 ; LA32-NEXT:    fld.d $fs0, $sp, 8 # 8-byte Folded Reload
 ; LA32-NEXT:    ld.w $s4, $sp, 20 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s3, $sp, 24 # 4-byte Folded Reload
@@ -208,8 +205,7 @@ define void @sink_fold_f32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $s0, $a1
 ; LA64-NEXT:    slli.d $a1, $a0, 4
 ; LA64-NEXT:    alsl.d $a0, $a0, $a1, 3
-; LA64-NEXT:    add.d $a0, $a2, $a0
-; LA64-NEXT:    addi.d $s1, $a0, 16
+; LA64-NEXT:    add.d $s1, $a2, $a0
 ; LA64-NEXT:    blez $s0, .LBB1_3
 ; LA64-NEXT:  # %bb.1: # %for.body.preheader
 ; LA64-NEXT:    move $fp, $a2
@@ -220,7 +216,7 @@ define void @sink_fold_f32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    fld.s $fa0, $s1, 0
+; LA64-NEXT:    fld.s $fa0, $s1, 16
 ; LA64-NEXT:    addi.d $s0, $s0, -1
 ; LA64-NEXT:    fadd.s $fs0, $fa0, $fs0
 ; LA64-NEXT:    bnez $s0, .LBB1_2
@@ -228,7 +224,7 @@ define void @sink_fold_f32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:  .LBB1_3:
 ; LA64-NEXT:    movgr2fr.w $fs0, $zero
 ; LA64-NEXT:  .LBB1_4: # %for.cond.cleanup
-; LA64-NEXT:    fst.s $fs0, $s1, 0
+; LA64-NEXT:    fst.s $fs0, $s1, 16
 ; LA64-NEXT:    fld.d $fs0, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s1, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s0, $sp, 24 # 8-byte Folded Reload
@@ -271,14 +267,13 @@ define void @sink_fold_v4i32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a0, $a0, 6
-; LA32-NEXT:    add.w $a0, $a4, $a0
 ; LA32-NEXT:    sltui $a1, $a3, 1
 ; LA32-NEXT:    slti $a2, $a3, 0
 ; LA32-NEXT:    masknez $a2, $a2, $a1
 ; LA32-NEXT:    sltui $a3, $s1, 1
 ; LA32-NEXT:    maskeqz $a1, $a3, $a1
 ; LA32-NEXT:    or $a1, $a1, $a2
-; LA32-NEXT:    addi.w $s2, $a0, 16
+; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB2_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
@@ -291,7 +286,7 @@ define void @sink_fold_v4i32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl f
-; LA32-NEXT:    vld $vr0, $s2, 0
+; LA32-NEXT:    vld $vr0, $s2, 16
 ; LA32-NEXT:    addi.w $s3, $s3, 1
 ; LA32-NEXT:    sltui $a0, $s3, 1
 ; LA32-NEXT:    add.w $s4, $s4, $a0
@@ -307,7 +302,7 @@ define void @sink_fold_v4i32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:  .LBB2_3:
 ; LA32-NEXT:    vrepli.b $vr0, 0
 ; LA32-NEXT:  .LBB2_4: # %for.cond.cleanup
-; LA32-NEXT:    vst $vr0, $s2, 0
+; LA32-NEXT:    vst $vr0, $s2, 16
 ; LA32-NEXT:    ld.w $s4, $sp, 20 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s3, $sp, 24 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s2, $sp, 28 # 4-byte Folded Reload
@@ -326,8 +321,7 @@ define void @sink_fold_v4i32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    st.d $s0, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s1, $sp, 16 # 8-byte Folded Spill
 ; LA64-NEXT:    slli.d $a0, $a0, 6
-; LA64-NEXT:    add.d $a0, $a2, $a0
-; LA64-NEXT:    addi.d $s1, $a0, 16
+; LA64-NEXT:    add.d $s1, $a2, $a0
 ; LA64-NEXT:    blez $a1, .LBB2_3
 ; LA64-NEXT:  # %bb.1: # %for.body.preheader
 ; LA64-NEXT:    move $fp, $a2
@@ -340,7 +334,7 @@ define void @sink_fold_v4i32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    vld $vr0, $s1, 0
+; LA64-NEXT:    vld $vr0, $s1, 16
 ; LA64-NEXT:    addi.d $s0, $s0, -1
 ; LA64-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
 ; LA64-NEXT:    vadd.w $vr1, $vr0, $vr1
@@ -351,7 +345,7 @@ define void @sink_fold_v4i32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:  .LBB2_3:
 ; LA64-NEXT:    vrepli.b $vr0, 0
 ; LA64-NEXT:  .LBB2_4: # %for.cond.cleanup
-; LA64-NEXT:    vst $vr0, $s1, 0
+; LA64-NEXT:    vst $vr0, $s1, 16
 ; LA64-NEXT:    ld.d $s1, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s0, $sp, 24 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
@@ -393,14 +387,13 @@ define void @sink_fold_v16i16(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a0, $a0, 6
-; LA32-NEXT:    add.w $a0, $a4, $a0
 ; LA32-NEXT:    sltui $a1, $a3, 1
 ; LA32-NEXT:    slti $a2, $a3, 0
 ; LA32-NEXT:    masknez $a2, $a2, $a1
 ; LA32-NEXT:    sltui $a3, $s1, 1
 ; LA32-NEXT:    maskeqz $a1, $a3, $a1
 ; LA32-NEXT:    or $a1, $a1, $a2
-; LA32-NEXT:    addi.w $s2, $a0, 32
+; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB3_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
@@ -413,7 +406,7 @@ define void @sink_fold_v16i16(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    xvst $xr0, $sp, 16 # 32-byte Folded Spill
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl f
-; LA32-NEXT:    xvld $xr0, $s2, 0
+; LA32-NEXT:    xvld $xr0, $s2, 32
 ; LA32-NEXT:    addi.w $s3, $s3, 1
 ; LA32-NEXT:    sltui $a0, $s3, 1
 ; LA32-NEXT:    add.w $s4, $s4, $a0
@@ -429,7 +422,7 @@ define void @sink_fold_v16i16(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:  .LBB3_3:
 ; LA32-NEXT:    xvrepli.b $xr0, 0
 ; LA32-NEXT:  .LBB3_4: # %for.cond.cleanup
-; LA32-NEXT:    xvst $xr0, $s2, 0
+; LA32-NEXT:    xvst $xr0, $s2, 32
 ; LA32-NEXT:    ld.w $s4, $sp, 52 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s3, $sp, 56 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s2, $sp, 60 # 4-byte Folded Reload
@@ -448,8 +441,7 @@ define void @sink_fold_v16i16(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
 ; LA64-NEXT:    slli.d $a0, $a0, 6
-; LA64-NEXT:    add.d $a0, $a2, $a0
-; LA64-NEXT:    addi.d $s1, $a0, 32
+; LA64-NEXT:    add.d $s1, $a2, $a0
 ; LA64-NEXT:    blez $a1, .LBB3_3
 ; LA64-NEXT:  # %bb.1: # %for.body.preheader
 ; LA64-NEXT:    move $fp, $a2
@@ -462,7 +454,7 @@ define void @sink_fold_v16i16(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    xvld $xr0, $s1, 0
+; LA64-NEXT:    xvld $xr0, $s1, 32
 ; LA64-NEXT:    addi.d $s0, $s0, -1
 ; LA64-NEXT:    xvld $xr1, $sp, 16 # 32-byte Folded Reload
 ; LA64-NEXT:    xvadd.h $xr1, $xr0, $xr1
@@ -473,7 +465,7 @@ define void @sink_fold_v16i16(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:  .LBB3_3:
 ; LA64-NEXT:    xvrepli.b $xr0, 0
 ; LA64-NEXT:  .LBB3_4: # %for.cond.cleanup
-; LA64-NEXT:    xvst $xr0, $s1, 0
+; LA64-NEXT:    xvst $xr0, $s1, 32
 ; LA64-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
@@ -516,14 +508,13 @@ define void @sink_fold_extracti8(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a1, $a0, 4
 ; LA32-NEXT:    alsl.w $a0, $a0, $a1, 3
-; LA32-NEXT:    add.w $a0, $a4, $a0
 ; LA32-NEXT:    sltui $a1, $a3, 1
 ; LA32-NEXT:    slti $a2, $a3, 0
 ; LA32-NEXT:    masknez $a2, $a2, $a1
 ; LA32-NEXT:    sltui $a3, $s1, 1
 ; LA32-NEXT:    maskeqz $a1, $a3, $a1
 ; LA32-NEXT:    or $a1, $a1, $a2
-; LA32-NEXT:    addi.w $s2, $a0, 16
+; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB4_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
@@ -536,7 +527,7 @@ define void @sink_fold_extracti8(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl f
-; LA32-NEXT:    vldrepl.b $vr0, $s2, 0
+; LA32-NEXT:    vldrepl.b $vr0, $s2, 16
 ; LA32-NEXT:    addi.w $s3, $s3, 1
 ; LA32-NEXT:    sltui $a0, $s3, 1
 ; LA32-NEXT:    add.w $s4, $s4, $a0
@@ -552,7 +543,7 @@ define void @sink_fold_extracti8(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:  .LBB4_3:
 ; LA32-NEXT:    vrepli.b $vr0, 0
 ; LA32-NEXT:  .LBB4_4: # %for.cond.cleanup
-; LA32-NEXT:    vstelm.b $vr0, $s2, 0, 1
+; LA32-NEXT:    vstelm.b $vr0, $s2, 16, 1
 ; LA32-NEXT:    ld.w $s4, $sp, 20 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s3, $sp, 24 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s2, $sp, 28 # 4-byte Folded Reload
@@ -573,8 +564,7 @@ define void @sink_fold_extracti8(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $s0, $a1
 ; LA64-NEXT:    slli.d $a1, $a0, 4
 ; LA64-NEXT:    alsl.d $a0, $a0, $a1, 3
-; LA64-NEXT:    add.d $a0, $a2, $a0
-; LA64-NEXT:    addi.d $s1, $a0, 16
+; LA64-NEXT:    add.d $s1, $a2, $a0
 ; LA64-NEXT:    blez $s0, .LBB4_3
 ; LA64-NEXT:  # %bb.1: # %for.body.preheader
 ; LA64-NEXT:    move $fp, $a2
@@ -586,7 +576,7 @@ define void @sink_fold_extracti8(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    vldrepl.b $vr0, $s1, 0
+; LA64-NEXT:    vldrepl.b $vr0, $s1, 16
 ; LA64-NEXT:    addi.d $s0, $s0, -1
 ; LA64-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
 ; LA64-NEXT:    vadd.b $vr1, $vr0, $vr1
@@ -597,7 +587,7 @@ define void @sink_fold_extracti8(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:  .LBB4_3:
 ; LA64-NEXT:    vrepli.b $vr0, 0
 ; LA64-NEXT:  .LBB4_4: # %for.cond.cleanup
-; LA64-NEXT:    vstelm.b $vr0, $s1, 0, 1
+; LA64-NEXT:    vstelm.b $vr0, $s1, 16, 1
 ; LA64-NEXT:    ld.d $s1, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s0, $sp, 24 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
@@ -643,14 +633,13 @@ define void @sink_fold_extractf64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a1, $a0, 4
 ; LA32-NEXT:    alsl.w $a0, $a0, $a1, 3
-; LA32-NEXT:    add.w $a0, $a4, $a0
 ; LA32-NEXT:    sltui $a1, $a3, 1
 ; LA32-NEXT:    slti $a2, $a3, 0
 ; LA32-NEXT:    masknez $a2, $a2, $a1
 ; LA32-NEXT:    sltui $a3, $s1, 1
 ; LA32-NEXT:    maskeqz $a1, $a3, $a1
 ; LA32-NEXT:    or $a1, $a1, $a2
-; LA32-NEXT:    addi.w $s2, $a0, 8
+; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB5_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
@@ -663,7 +652,7 @@ define void @sink_fold_extractf64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    xvst $xr0, $sp, 16 # 32-byte Folded Spill
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl f
-; LA32-NEXT:    xvldrepl.d $xr0, $s2, 0
+; LA32-NEXT:    xvldrepl.d $xr0, $s2, 8
 ; LA32-NEXT:    addi.w $s3, $s3, 1
 ; LA32-NEXT:    sltui $a0, $s3, 1
 ; LA32-NEXT:    add.w $s4, $s4, $a0
@@ -679,7 +668,7 @@ define void @sink_fold_extractf64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:  .LBB5_3:
 ; LA32-NEXT:    xvrepli.b $xr0, 0
 ; LA32-NEXT:  .LBB5_4: # %for.cond.cleanup
-; LA32-NEXT:    xvstelm.d $xr0, $s2, 0, 1
+; LA32-NEXT:    xvstelm.d $xr0, $s2, 8, 1
 ; LA32-NEXT:    ld.w $s4, $sp, 52 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s3, $sp, 56 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s2, $sp, 60 # 4-byte Folded Reload
@@ -700,8 +689,7 @@ define void @sink_fold_extractf64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $s0, $a1
 ; LA64-NEXT:    slli.d $a1, $a0, 4
 ; LA64-NEXT:    alsl.d $a0, $a0, $a1, 3
-; LA64-NEXT:    add.d $a0, $a2, $a0
-; LA64-NEXT:    addi.d $s1, $a0, 8
+; LA64-NEXT:    add.d $s1, $a2, $a0
 ; LA64-NEXT:    blez $s0, .LBB5_3
 ; LA64-NEXT:  # %bb.1: # %for.body.preheader
 ; LA64-NEXT:    move $fp, $a2
@@ -713,7 +701,7 @@ define void @sink_fold_extractf64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    xvldrepl.d $xr0, $s1, 0
+; LA64-NEXT:    xvldrepl.d $xr0, $s1, 8
 ; LA64-NEXT:    addi.d $s0, $s0, -1
 ; LA64-NEXT:    xvld $xr1, $sp, 16 # 32-byte Folded Reload
 ; LA64-NEXT:    xvfadd.d $xr1, $xr0, $xr1
@@ -724,7 +712,7 @@ define void @sink_fold_extractf64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA64-NEXT:  .LBB5_3:
 ; LA64-NEXT:    xvrepli.b $xr0, 0
 ; LA64-NEXT:  .LBB5_4: # %for.cond.cleanup
-; LA64-NEXT:    xvstelm.d $xr0, $s1, 0, 1
+; LA64-NEXT:    xvstelm.d $xr0, $s1, 8, 1
 ; LA64-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
