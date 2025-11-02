@@ -16,6 +16,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
+#include "clang/CIR/Dialect/IR/FPEnv.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -29,6 +30,9 @@ class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
   llvm::StringMap<unsigned> recordNames;
   llvm::StringMap<unsigned> globalsVersioning;
+  bool isFpConstrained = false;
+  cir::fp::ExceptionBehavior defaultConstrainedExcept = cir::fp::ebStrict;
+  llvm::RoundingMode defaultConstrainedRounding = llvm::RoundingMode::Dynamic;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
@@ -65,6 +69,56 @@ public:
   cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
                                     cir::ArrayType arrayTy) const {
     return cir::ConstArrayAttr::get(arrayTy, attrs);
+  }
+  //
+  // Floating point specific helpers
+  // -------------------------------
+  //
+
+  /// Enable/Disable use of constrained floating point math. When enabled the
+  /// CreateF<op>() calls instead create constrained floating point intrinsic
+  /// calls. Fast math flags are unaffected by this setting.
+  void setIsFPConstrained(bool isCon) {
+    if (isCon)
+      llvm_unreachable("Constrained FP NYI");
+    isFpConstrained = isCon;
+  }
+
+  /// Query for the use of constrained floating point math
+  bool getIsFPConstrained() {
+    if (isFpConstrained)
+      llvm_unreachable("Constrained FP NYI");
+    return isFpConstrained;
+  }
+  ///
+  /// Set the exception handling to be used with constrained floating point
+  void setDefaultConstrainedExcept(cir::fp::ExceptionBehavior newExcept) {
+#ifndef NDEBUG
+    std::optional<llvm::StringRef> exceptStr =
+        cir::convertExceptionBehaviorToStr(newExcept);
+    assert(exceptStr && "Garbage strict exception behavior!");
+#endif
+    defaultConstrainedExcept = newExcept;
+  }
+
+  /// Set the rounding mode handling to be used with constrained floating point
+  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
+#ifndef NDEBUG
+    std::optional<llvm::StringRef> roundingStr =
+        cir::convertRoundingModeToStr(newRounding);
+    assert(roundingStr && "Garbage strict rounding mode!");
+#endif
+    defaultConstrainedRounding = newRounding;
+  }
+
+  /// Get the exception handling used with constrained floating point
+  cir::fp::ExceptionBehavior getDefaultConstrainedExcept() {
+    return defaultConstrainedExcept;
+  }
+
+  /// Get the rounding mode handling used with constrained floating point
+  llvm::RoundingMode getDefaultConstrainedRounding() {
+    return defaultConstrainedRounding;
   }
 
   mlir::Attribute getConstRecordOrZeroAttr(mlir::ArrayAttr arrayAttr,
@@ -332,6 +386,11 @@ public:
     }
 
     llvm_unreachable("negation for the given type is NYI");
+  }
+
+  cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
+                                   unsigned flags) {
+    return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast

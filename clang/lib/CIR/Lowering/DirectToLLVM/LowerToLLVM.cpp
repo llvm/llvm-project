@@ -670,6 +670,17 @@ mlir::LogicalResult CIRToLLVMASinOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMIsFPClassOpLowering::matchAndRewrite(
+    cir::IsFPClassOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto src = adaptor.getSrc();
+  auto flags = adaptor.getFlags();
+  auto retTy = rewriter.getI1Type();
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::IsFPClass>(op, retTy, src, flags);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

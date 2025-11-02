@@ -4018,6 +4018,39 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
   let hasFolder = 1;
 }
 
+def CIR_IsFPClassOp : CIR_Op<"is_fp_class"> {
+  let summary = "Corresponding to the `__builtin_fpclassify` builtin function in clang";
+
+  let description = [{
+    The `cir.is_fp_class` operation takes a floating-point value as its first
+    argument and a bitfield of flags as its second argument. The operation
+    returns a boolean value indicating whether the floating-point value
+    satisfies the given flags.
+
+    The flags must be a compile time constant and the values are:
+
+    | Bit # | floating-point class |
+    | -------- | ------- |
+    | 0 | Signaling NaN      |
+    | 1 | Quiet NaN          |
+    | 2 | Negative infinity  |
+    | 3 | Negative normal    |
+    | 4 | Negative subnormal |
+    | 5 | Negative zero      |
+    | 6 | Positive zero      |
+    | 7 | Positive subnormal |
+    | 8 | Positive normal    |
+    | 9 | Positive infinity  |
+  }];
+
+  let arguments = (ins CIR_AnyFloatType:$src,
+                       I32Attr:$flags);
+  let results = (outs CIR_BoolType:$result);
+  let assemblyFormat = [{
+    $src `,` $flags `:` functional-type($src, $result) attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Assume Operations
 //===----------------------------------------------------------------------===//

@@ -834,6 +834,22 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 }
 
+// Map the LangOption for exception behavior into the corresponding enum in
+// the IR.
+static cir::fp::ExceptionBehavior
+toConstrainedExceptMd(LangOptions::FPExceptionModeKind kind) {
+  switch (kind) {
+  case LangOptions::FPE_Ignore:
+    return cir::fp::ebIgnore;
+  case LangOptions::FPE_MayTrap:
+    return cir::fp::ebMayTrap;
+  case LangOptions::FPE_Strict:
+    return cir::fp::ebStrict;
+  default:
+    llvm_unreachable("Unsupported FP Exception Behavior");
+  }
+}
+
 /// Given a value of type T* that may not be to a complete object, construct
 /// an l-vlaue withi the natural pointee alignment of T.
 LValue CIRGenFunction::makeNaturalAlignPointeeAddrLValue(mlir::Value val,
@@ -1016,6 +1032,59 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
   builder.createStore(loc, zeroValue, destPtr);
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,
+                                                         const clang::Expr *e)
+    : cgf(cgf) {
+  constructorHelper(e->getFPFeaturesInEffect(cgf.getLangOpts()));
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,
+                                                         FPOptions fpFeatures)
+    : cgf(cgf) {
+  constructorHelper(fpFeatures);
+}
+
+void CIRGenFunction::CIRGenFPOptionsRAII::constructorHelper(
+    FPOptions fpFeatures) {
+  oldFpFeatures = cgf.curFpFeatures;
+  cgf.curFpFeatures = fpFeatures;
+
+  oldExcept = cgf.builder.getDefaultConstrainedExcept();
+  oldRounding = cgf.builder.getDefaultConstrainedRounding();
+
+  if (oldFpFeatures == fpFeatures)
+    return;
+
+  // TODO(cir): create guard to restore fast math configurations.
+  assert(!cir::MissingFeatures::fastMathGuard());
+
+  llvm::RoundingMode newRoundingBehavior = fpFeatures.getRoundingMode();
+  // TODO(cir): override rounding behaviour once FM configs are guarded.
+  auto newExceptionBehavior =
+      toConstrainedExceptMd(static_cast<LangOptions::FPExceptionModeKind>(
+          fpFeatures.getExceptionMode()));
+  // TODO(cir): override exception behaviour once FM configs are guarded.
+
+  // TODO(cir): override FP flags once FM configs are guarded.
+  assert(!cir::MissingFeatures::fastMathFlags());
+
+  assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
+          isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
+          isa<CXXDestructorDecl>(cgf.curFuncDecl) ||
+          (newExceptionBehavior == cir::fp::ebIgnore &&
+           newRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
+         "FPConstrained should be enabled on entire function");
+
+  // TODO(cir): mark CIR function with fast math attributes.
+  assert(!cir::MissingFeatures::fastMathFuncAttributes());
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
+  cgf.curFpFeatures = oldFpFeatures;
+  cgf.builder.setDefaultConstrainedExcept(oldExcept);
+  cgf.builder.setDefaultConstrainedRounding(oldRounding);
 }
 
 // TODO(cir): should be shared with LLVM codegen.
