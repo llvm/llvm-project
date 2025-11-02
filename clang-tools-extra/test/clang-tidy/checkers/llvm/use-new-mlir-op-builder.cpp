@@ -55,6 +55,13 @@ public:
     // CHECK-FIXES: return mlir::NamedOp::create(*this, name);
     return create<mlir::NamedOp>(name);
   }
+
+  mlir::NamedOp g(const char *name) {
+    using mlir::NamedOp;
+    // CHECK-MESSAGES: :[[@LINE+2]]:12: warning: use 'OpType::create(builder, ...)'
+    // CHECK-FIXES: return NamedOp::create(*this, name);
+    return create<NamedOp>(name);
+  }
 };
 
 void f() {
@@ -100,11 +107,12 @@ void f() {
 
   CustomBuilder cb;
   cb.f("faz");
+  cb.g("gaz");
 
-  // CHECK-MESSAGES: :[[@LINE+4]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
-  // CHECK-FIXES: OperandOp::create(builder, builder.getUnknownLoc(),
-  // CHECK-MESSAGES: :[[@LINE+3]]:5: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
-  // CHECK-FIXES: NamedOp::create(builder, builder.getUnknownLoc(), "gaz").getResult());
+  // CHECK-FIXES:      OperandOp::create(builder, builder.getUnknownLoc(),
+  // CHECK-FIXES-NEXT:   NamedOp::create(builder, builder.getUnknownLoc(), "gaz").getResult());
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
+  // CHECK-MESSAGES: :[[@LINE+2]]:5: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
   builder.create<OperandOp>(builder.getUnknownLoc(),
-    builder.create<NamedOp>(builder.getUnknownLoc(), "gaz").getResult());
+    builder.create<NamedOp>(builder.getUnknownLoc(), "haz").getResult());
 }
