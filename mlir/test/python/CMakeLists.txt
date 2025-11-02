@@ -12,6 +12,8 @@ add_public_tablegen_target(MLIRPythonTestIncGen)
 add_subdirectory(lib)
 
 set(MLIR_PYTHON_TEST_DEPENDS MLIRPythonModules mlir-runner)
+# These two targets are required by ExecutionEngine test cases.
+list(APPEND MLIR_PYTHON_TEST_DEPENDS mlir_c_runner_utils mlir_runner_utils)
 if(NOT MLIR_STANDALONE_BUILD)
   list(APPEND MLIR_PYTHON_TEST_DEPENDS FileCheck count not)
 endif()
