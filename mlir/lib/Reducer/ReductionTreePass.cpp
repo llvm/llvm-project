@@ -182,6 +182,24 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+// Reduction Pattern With Tester Interface Collection
+//===----------------------------------------------------------------------===//
+
+class ReductionPatternWithTesterInterfaceCollection
+    : public DialectInterfaceCollection<
+          DialectReductionPatternWithTesterInterface> {
+public:
+  using Base::Base;
+
+  // Collect the reduce patterns defined by each dialect.
+  void populateReductionPatterns(RewritePatternSet &pattern,
+                                 Tester &tester) const {
+    for (const DialectReductionPatternWithTesterInterface &interface : *this)
+      interface.populateReductionPatterns(pattern, tester);
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ReductionTreePass
 //===----------------------------------------------------------------------===//
 
@@ -201,15 +219,25 @@ public:
 private:
   LogicalResult reduceOp(ModuleOp module, Region &region);
 
+  Tester tester;
   FrozenRewritePatternSet reducerPatterns;
 };
 
 } // namespace
 
 LogicalResult ReductionTreePass::initialize(MLIRContext *context) {
+  tester.setTestScript(testerName);
+  tester.setTestScriptArgs(testerArgs);
+
   RewritePatternSet patterns(context);
+
   ReductionPatternInterfaceCollection reducePatternCollection(context);
   reducePatternCollection.populateReductionPatterns(patterns);
+
+  ReductionPatternWithTesterInterfaceCollection
+      reducePatternWithTesterCollection(context);
+  reducePatternWithTesterCollection.populateReductionPatterns(patterns, tester);
+
   reducerPatterns = std::move(patterns);
   return success();
 }
@@ -244,11 +272,10 @@ void ReductionTreePass::runOnOperation() {
 }
 
 LogicalResult ReductionTreePass::reduceOp(ModuleOp module, Region &region) {
-  Tester test(testerName, testerArgs);
   switch (traversalModeId) {
   case TraversalMode::SinglePath:
     return findOptimal<ReductionNode::iterator<TraversalMode::SinglePath>>(
-        module, region, reducerPatterns, test);
+        module, region, reducerPatterns, tester);
   default:
     return module.emitError() << "unsupported traversal mode detected";
   }

@@ -10,6 +10,7 @@
 #define MLIR_REDUCER_REDUCTIONPATTERNINTERFACE_H
 
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/Reducer/Tester.h"
 
 namespace mlir {
 
@@ -49,6 +50,31 @@ public:
 
 protected:
   DialectReductionPatternInterface(Dialect *dialect) : Base(dialect) {}
+};
+
+/// This interface extends the `dialectreductionpatterninterface` by allowing
+/// reduction patterns to use a `Tester` instance. Some reduction patterns may
+/// need to run tester to determine whether certain transformations preserve the
+/// "interesting" behavior of the program. This is mostly useful when pattern
+/// should choose between multiple modifications.
+/// Implementation follows the same logic as the
+/// `dialectreductionpatterninterface`.
+///
+/// Example:
+///   MyDialectReductionPatternWithTester::populateReductionPatterns(
+///       RewritePatternSet &patterns, Tester &tester) {
+///       patterns.add<PatternWithTester>(patterns.getContext(), tester);
+///   }
+class DialectReductionPatternWithTesterInterface
+    : public DialectInterface::Base<
+          DialectReductionPatternWithTesterInterface> {
+public:
+  virtual void populateReductionPatterns(RewritePatternSet &patterns,
+                                         Tester &tester) const = 0;
+
+protected:
+  DialectReductionPatternWithTesterInterface(Dialect *dialect)
+      : Base(dialect) {}
 };
 
 } // namespace mlir
