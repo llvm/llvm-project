@@ -3120,7 +3120,8 @@ void OpEmitter::genBuilder() {
     auto properties = body ? Method::Static : Method::StaticDeclaration;
     auto *method = opClass.addMethod("void", "build", properties, arguments);
 
-    ERROR_IF_PRUNED(method, "build", op);
+    if (body)
+      ERROR_IF_PRUNED(method, "build", op);
 
     if (method)
       method->setDeprecated(builder.getDeprecatedMessage());
