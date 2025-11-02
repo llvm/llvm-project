@@ -311,6 +311,15 @@ TEST(SelectionTest, CommonAncestor) {
       {"[[void foo^()]];", "FunctionProtoTypeLoc"},
       {"[[^void foo^()]];", "FunctionDecl"},
       {"[[void ^foo()]];", "FunctionDecl"},
+      // Tricky case: with function attributes, the AttributedTypeLoc's range
+      // includes the function name, but we want the name to be associated with
+      // the CXXMethodDecl.
+      {"struct X { [[const int* ^Get() const <:[clang::lifetimebound]:> "
+       "{return nullptr;}]]; };",
+       "CXXMethodDecl"},
+      {"struct X { const [[int* Foo() const <:[clang::life^timebound]:>]] "
+       "{return nullptr;}; };",
+       "AttributedTypeLoc"},
       // Tricky case: two VarDecls share a specifier.
       {"[[int ^a]], b;", "VarDecl"},
       {"[[int a, ^b]];", "VarDecl"},
