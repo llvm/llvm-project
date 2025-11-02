@@ -129,6 +129,7 @@ Clang-Tidy Checks
    :doc:`bugprone-parent-virtual-call <bugprone/parent-virtual-call>`, "Yes"
    :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
+   :doc:`bugprone-raw-memory-call-on-non-trivial-type <bugprone/raw-memory-call-on-non-trivial-type>`,
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
    :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
@@ -180,7 +181,6 @@ Clang-Tidy Checks
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`,
    :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
    :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
-   :doc:`cert-oop57-cpp <cert/oop57-cpp>`,
    :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
@@ -442,8 +442,8 @@ Check aliases
    :doc:`cert-dcl51-cpp <cert/dcl51-cpp>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
    :doc:`cert-dcl54-cpp <cert/dcl54-cpp>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
-   :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-env33-c <cert/env33-c>`, :doc:`bugprone-command-processor <bugprone/command-processor>`,
+   :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`, :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`, :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
@@ -459,6 +459,7 @@ Check aliases
    :doc:`cert-msc54-cpp <cert/msc54-cpp>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`cert-oop11-cpp <cert/oop11-cpp>`, :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
    :doc:`cert-oop54-cpp <cert/oop54-cpp>`, :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
+   :doc:`cert-oop57-cpp <cert/oop57-cpp>`, :doc:`bugprone-raw-memory-call-on-non-trivial-type <bugprone/raw-memory-call-on-non-trivial-type>`,
    :doc:`cert-pos44-c <cert/pos44-c>`, :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
    :doc:`cert-pos47-c <cert/pos47-c>`, :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
    :doc:`cert-sig30-c <cert/sig30-c>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
