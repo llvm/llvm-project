@@ -17697,7 +17697,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
         static_cast<OpenMPScheduleClauseKind>(Argument[ScheduleKind]), Expr,
         StartLoc, LParenLoc, ArgumentLoc[Modifier1], ArgumentLoc[Modifier2],
         ArgumentLoc[ScheduleKind], DelimLoc, EndLoc);
-  } break;
+    break;
+  }
   case OMPC_if:
     assert(Argument.size() == 1 && ArgumentLoc.size() == 1);
     Res = ActOnOpenMPIfClause(static_cast<OpenMPDirectiveKind>(Argument.back()),
@@ -17756,14 +17757,17 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_dyn_groupprivate: {
     enum { Modifier1, Modifier2, NumberOfElements };
     assert(Argument.size() == NumberOfElements &&
-           ArgumentLoc.size() == NumberOfElements);
+           ArgumentLoc.size() == NumberOfElements &&
+           "Modifiers for dyn_groupprivate clause and their locations are "
+           "expected.");
     Res = ActOnOpenMPDynGroupprivateClause(
         static_cast<OpenMPDynGroupprivateClauseModifier>(Argument[Modifier1]),
         static_cast<OpenMPDynGroupprivateClauseFallbackModifier>(
             Argument[Modifier2]),
         Expr, StartLoc, LParenLoc, ArgumentLoc[Modifier1],
         ArgumentLoc[Modifier2], EndLoc);
-  } break;
+    break;
+  }
   case OMPC_num_threads:
     assert(Argument.size() == 1 && ArgumentLoc.size() == 1 &&
            "Modifier for num_threads clause and its location are expected.");
