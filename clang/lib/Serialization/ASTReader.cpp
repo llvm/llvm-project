@@ -12729,10 +12729,9 @@ void OMPClauseReader::VisitOMPDynGroupprivateClause(
     OMPDynGroupprivateClause *C) {
   VisitOMPClauseWithPreInit(C);
   C->setDynGroupprivateModifier(
-      static_cast<OpenMPDynGroupprivateClauseModifier>(Record.readInt()));
+      Record.readEnum<OpenMPDynGroupprivateClauseModifier>());
   C->setDynGroupprivateFallbackModifier(
-      static_cast<OpenMPDynGroupprivateClauseFallbackModifier>(
-          Record.readInt()));
+      Record.readEnum<OpenMPDynGroupprivateClauseFallbackModifier>());
   C->setSize(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
   C->setDynGroupprivateModifierLoc(Record.readSourceLocation());
