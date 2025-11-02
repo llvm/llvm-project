@@ -699,8 +699,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         continue;
 
       const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-      VPValue *StartV =
-          Plan.getOrAddLiveIn(ConstantInt::get(ID.getStep()->getType(), 0));
+      VPValue *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
       VPValue *StepV = PtrIV->getOperand(1);
       VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
           Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
@@ -820,7 +819,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
   // Calculate the final index.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *CanonicalIV = LoopRegion->getCanonicalIV();
-  Type *CanonicalIVType = CanonicalIV->getScalarType();
+  Type *CanonicalIVType = LoopRegion->getCanonicalIVType();
   VPBuilder B(cast<VPBasicBlock>(PredVPBB));
 
   DebugLoc DL = cast<VPInstruction>(Op)->getDebugLoc();
@@ -836,7 +835,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
   // changed it means the exit is using the incremented value, so we need to
   // add the step.
   if (Incoming != WideIV) {
-    VPValue *One = Plan.getOrAddLiveIn(ConstantInt::get(CanonicalIVType, 1));
+    VPValue *One = Plan.getConstantInt(CanonicalIVType, 1);
     EndValue = B.createNaryOp(Instruction::Add, {EndValue, One}, DL);
   }
 
@@ -882,7 +881,7 @@ static VPValue *optimizeLatchExitInductionUser(
     return B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
   if (ScalarTy->isPointerTy()) {
     Type *StepTy = TypeInfo.inferScalarType(Step);
-    auto *Zero = Plan.getOrAddLiveIn(ConstantInt::get(StepTy, 0));
+    auto *Zero = Plan.getConstantInt(StepTy, 0);
     return B.createPtrAdd(EndValue,
                           B.createNaryOp(Instruction::Sub, {Zero, Step}),
                           DebugLoc::getUnknown(), "ind.escape");
@@ -1282,6 +1281,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(Def, m_BuildVector()) && all_equal(R.operands())) {
+    Def->replaceAllUsesWith(
+        Builder.createNaryOp(VPInstruction::Broadcast, Def->getOperand(0)));
+    return;
+  }
+
   if (auto *Phi = dyn_cast<VPPhi>(Def)) {
     if (Phi->getNumOperands() == 1)
       Phi->replaceAllUsesWith(Phi->getOperand(0));
@@ -1574,9 +1579,9 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
-    auto *NewStart = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 0));
+    auto *NewStart = Plan.getConstantInt(NewIVTy, 0);
     WideIV->setStartValue(NewStart);
-    auto *NewStep = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 1));
+    auto *NewStep = Plan.getConstantInt(NewIVTy, 1);
     WideIV->setStepValue(NewStep);
 
     auto *NewBTC = new VPWidenCastRecipe(
@@ -1695,8 +1700,7 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
 
   // When using wide lane masks, the return type of the get.active.lane.mask
   // intrinsic is VF x UF (last operand).
-  VPValue *ALMMultiplier =
-      Plan.getOrAddLiveIn(ConstantInt::get(IntegerType::getInt64Ty(Ctx), UF));
+  VPValue *ALMMultiplier = Plan.getConstantInt(64, UF);
   EntryALM->setOperand(2, ALMMultiplier);
   LoopALM->setOperand(2, ALMMultiplier);
 
@@ -2402,8 +2406,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
       "index.part.next");
 
   // Create the active lane mask instruction in the VPlan preheader.
-  VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
-      ConstantInt::get(TopRegion->getCanonicalIV()->getScalarType(), 1));
+  VPValue *ALMMultiplier =
+      Plan.getConstantInt(TopRegion->getCanonicalIVType(), 1);
   auto *EntryALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
                                         {EntryIncrement, TC, ALMMultiplier}, DL,
                                         "active.lane.mask.entry");
@@ -2503,7 +2507,7 @@ void VPlanTransforms::addActiveLaneMask(
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
     VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
-        ConstantInt::get(LoopRegion->getCanonicalIV()->getScalarType(), 1));
+        ConstantInt::get(LoopRegion->getCanonicalIVType(), 1));
     LaneMask =
         B.createNaryOp(VPInstruction::ActiveLaneMask,
                        {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier},
@@ -2775,7 +2779,7 @@ void VPlanTransforms::addExplicitVectorLength(
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
   auto *CanonicalIVPHI = LoopRegion->getCanonicalIV();
-  auto *CanIVTy = CanonicalIVPHI->getScalarType();
+  auto *CanIVTy = LoopRegion->getCanonicalIVType();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
@@ -2790,8 +2794,7 @@ void VPlanTransforms::addExplicitVectorLength(
 
   if (MaxSafeElements) {
     // Support for MaxSafeDist for correct loop emission.
-    VPValue *AVLSafe =
-        Plan.getOrAddLiveIn(ConstantInt::get(CanIVTy, *MaxSafeElements));
+    VPValue *AVLSafe = Plan.getConstantInt(CanIVTy, *MaxSafeElements);
     VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, AVLSafe);
     AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc::getUnknown(),
                                "safe_avl");
@@ -2904,9 +2907,8 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
   VPBuilder Builder(LatchExitingBr);
-  VPValue *Cmp =
-      Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
-                         Plan.getOrAddLiveIn(ConstantInt::getNullValue(AVLTy)));
+  VPValue *Cmp = Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
+                                    Plan.getConstantInt(AVLTy, 0));
   Builder.createNaryOp(VPInstruction::BranchOnCond, Cmp);
   LatchExitingBr->eraseFromParent();
 }
@@ -2930,8 +2932,7 @@ void VPlanTransforms::replaceSymbolicStrides(
       // Only handle constant strides for now.
       continue;
 
-    auto *CI =
-        Plan.getOrAddLiveIn(ConstantInt::get(Stride->getType(), *StrideConst));
+    auto *CI = Plan.getConstantInt(*StrideConst);
     if (VPValue *StrideVPV = Plan.getLiveIn(StrideV))
       StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
 
@@ -2946,7 +2947,7 @@ void VPlanTransforms::replaceSymbolicStrides(
       unsigned BW = U->getType()->getScalarSizeInBits();
       APInt C =
           isa<SExtInst>(U) ? StrideConst->sext(BW) : StrideConst->zext(BW);
-      VPValue *CI = Plan.getOrAddLiveIn(ConstantInt::get(U->getType(), C));
+      VPValue *CI = Plan.getConstantInt(C);
       StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
     }
     RewriteMap[StrideV] = PSE.getSCEV(StrideV);
@@ -3125,8 +3126,7 @@ void VPlanTransforms::createInterleaveGroups(
                    DL.getTypeAllocSize(getLoadStoreType(IRInsertPos)) *
                        IG->getIndex(IRInsertPos),
                    /*IsSigned=*/true);
-      VPValue *OffsetVPV =
-          Plan.getOrAddLiveIn(ConstantInt::get(Plan.getContext(), -Offset));
+      VPValue *OffsetVPV = Plan.getConstantInt(-Offset);
       VPBuilder B(InsertPos);
       Addr = B.createNoWrapPtrAdd(InsertPos->getAddr(), OffsetVPV, NW);
     }
@@ -3867,8 +3867,7 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   VPBuilder Builder(VectorPH, VectorPH->begin());
   auto *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   auto *TCMO = Builder.createNaryOp(
-      Instruction::Sub,
-      {Plan.getTripCount(), Plan.getOrAddLiveIn(ConstantInt::get(TCTy, 1))},
+      Instruction::Sub, {Plan.getTripCount(), Plan.getConstantInt(TCTy, 1)},
       DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
   BTC->replaceAllUsesWith(TCMO);
 }
@@ -3993,9 +3992,8 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   if (TailByMasking) {
     TC = Builder.createNaryOp(
         Instruction::Add,
-        {TC, Builder.createNaryOp(
-                 Instruction::Sub,
-                 {Step, Plan.getOrAddLiveIn(ConstantInt::get(TCTy, 1))})},
+        {TC, Builder.createNaryOp(Instruction::Sub,
+                                  {Step, Plan.getConstantInt(TCTy, 1)})},
         DebugLoc::getCompilerGenerated(), "n.rnd.up");
   }
 
@@ -4017,8 +4015,8 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   if (RequiresScalarEpilogue) {
     assert(!TailByMasking &&
            "requiring scalar epilogue is not supported with fail folding");
-    VPValue *IsZero = Builder.createICmp(
-        CmpInst::ICMP_EQ, R, Plan.getOrAddLiveIn(ConstantInt::get(TCTy, 0)));
+    VPValue *IsZero =
+        Builder.createICmp(CmpInst::ICMP_EQ, R, Plan.getConstantInt(TCTy, 0));
     R = Builder.createSelect(IsZero, Step, R);
   }
 
@@ -4056,7 +4054,7 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
-  VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
+  VPValue *UF = Plan.getConstantInt(TCTy, Plan.getUF());
   VPValue *MulByUF = Builder.createNaryOp(Instruction::Mul, {RuntimeVF, UF});
   VFxUF.replaceAllUsesWith(MulByUF);
 }
@@ -4336,17 +4334,17 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   VPBuilder PHBuilder(Plan.getVectorPreheader());
 
   VPValue *UF = Plan.getOrAddLiveIn(
-      ConstantInt::get(CanIV->getScalarType(), 1 * Plan.getUF()));
+      ConstantInt::get(VectorLoop->getCanonicalIVType(), 1 * Plan.getUF()));
   if (VF.isScalable()) {
     VPValue *VScale = PHBuilder.createElementCount(
-        CanIV->getScalarType(), ElementCount::getScalable(1));
+        VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
     VPValue *VScaleUF = PHBuilder.createNaryOp(Instruction::Mul, {VScale, UF});
     Inc->setOperand(1, VScaleUF);
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
     Inc->setOperand(1, UF);
     Plan.getVF().replaceAllUsesWith(
-        Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
+        Plan.getConstantInt(CanIV->getScalarType(), 1));
   }
   removeDeadRecipes(Plan);
 }
