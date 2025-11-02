@@ -2227,7 +2227,7 @@ static std::optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
   return std::nullopt;
 }
 
-template <Intrinsic::ID MulOpc, typename Intrinsic::ID FuseOpc>
+template <Intrinsic::ID MulOpc, Intrinsic::ID FuseOpc>
 static std::optional<Instruction *>
 instCombineSVEVectorFuseMulAddSub(InstCombiner &IC, IntrinsicInst &II,
                                   bool MergeIntoAddendOp) {
