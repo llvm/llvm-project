@@ -1443,6 +1443,12 @@ defm : PatXrXr<sra, "XVSRA">;
 defm : PatShiftXrXr<sra, "XVSRA">;
 defm : PatShiftXrSplatUimm<sra, "XVSRAI">;
 
+// XVCLO_{B/H/W/D}
+def : Pat<(ctlz (vnot v32i8:$xj)), (XVCLO_B v32i8:$xj)>;
+def : Pat<(ctlz (vnot v16i16:$xj)), (XVCLO_H v16i16:$xj)>;
+def : Pat<(ctlz (vnot v8i32:$xj)), (XVCLO_W v8i32:$xj)>;
+def : Pat<(ctlz (vnot v4i64:$xj)), (XVCLO_D v4i64:$xj)>;
+
 // XVCLZ_{B/H/W/D}
 defm : PatXr<ctlz, "XVCLZ">;
 
