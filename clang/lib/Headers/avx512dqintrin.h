@@ -60,14 +60,12 @@ _kxor_mask8(__mmask8 __A, __mmask8 __B) {
 }
 
 static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
-_kortestc_mask8_u8(__mmask8 __A, __mmask8 __B)
-{
+_kortestc_mask8_u8(__mmask8 __A, __mmask8 __B) {
   return (unsigned char)__builtin_ia32_kortestcqi(__A, __B);
 }
 
 static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
-_kortestz_mask8_u8(__mmask8 __A, __mmask8 __B)
-{
+_kortestz_mask8_u8(__mmask8 __A, __mmask8 __B) {
   return (unsigned char)__builtin_ia32_kortestzqi(__A, __B);
 }
 
@@ -78,14 +76,12 @@ _kortest_mask8_u8(__mmask8 __A, __mmask8 __B, unsigned char *__C) {
 }
 
 static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
-_ktestc_mask8_u8(__mmask8 __A, __mmask8 __B)
-{
+_ktestc_mask8_u8(__mmask8 __A, __mmask8 __B) {
   return (unsigned char)__builtin_ia32_ktestcqi(__A, __B);
 }
 
 static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
-_ktestz_mask8_u8(__mmask8 __A, __mmask8 __B)
-{
+_ktestz_mask8_u8(__mmask8 __A, __mmask8 __B) {
   return (unsigned char)__builtin_ia32_ktestzqi(__A, __B);
 }
 
@@ -96,14 +92,12 @@ _ktest_mask8_u8(__mmask8 __A, __mmask8 __B, unsigned char *__C) {
 }
 
 static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
-_ktestc_mask16_u8(__mmask16 __A, __mmask16 __B)
-{
+_ktestc_mask16_u8(__mmask16 __A, __mmask16 __B) {
   return (unsigned char)__builtin_ia32_ktestchi(__A, __B);
 }
 
 static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
-_ktestz_mask16_u8(__mmask16 __A, __mmask16 __B)
-{
+_ktestz_mask16_u8(__mmask16 __A, __mmask16 __B) {
   return (unsigned char)__builtin_ia32_ktestzhi(__A, __B);
 }
 
