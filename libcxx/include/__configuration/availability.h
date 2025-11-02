@@ -251,7 +251,7 @@
 #endif
 
 // This controls the availability of new implementation of std::atomic's
-// wait, notify_one and notify all. The new implementation uses
+// wait, notify_one and notify_all. The new implementation uses
 // the native atomic wait/notify operations on platforms that support them
 // based on the size of the atomic type, instead of the type itself.
 #define _LIBCPP_AVAILABILITY_HAS_NEW_SYNC _LIBCPP_INTRODUCED_IN_LLVM_22
