@@ -92,8 +92,8 @@ int main(int argc, char **argv) {
   B *b = new B;
   break_optimization(b);
 
-  // FAIL: 1
-  // PASS: 1
+  // FAIL: {{^1$}}
+  // PASS: {{^1$}}
   fprintf(stderr, "1\n");
 
   A a;
