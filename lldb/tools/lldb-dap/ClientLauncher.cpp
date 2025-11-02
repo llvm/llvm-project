@@ -29,10 +29,10 @@ ClientLauncher::GetLauncher(ClientLauncher::Client client) {
   return nullptr;
 }
 
-static std::string URLEncode(llvm::StringRef in) {
+std::string VSCodeLauncher::URLEncode(llvm::StringRef str) {
   std::string out;
   llvm::raw_string_ostream os(out);
-  for (char c : in) {
+  for (char c : str) {
     if (std::isalnum(c) || llvm::StringRef("-_.~").contains(c))
       os << c;
     else

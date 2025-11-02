@@ -46,3 +46,26 @@ TEST(ClientLauncherTest, GetClientFromEmptyString) {
       ClientLauncher::GetClientFrom("");
   EXPECT_FALSE(result.has_value());
 }
+
+TEST(ClientLauncherTest, URLEncode) {
+  EXPECT_EQ("", VSCodeLauncher::URLEncode(""));
+  EXPECT_EQ(
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.~",
+      VSCodeLauncher::URLEncode("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST"
+                                "UVWXYZ0123456789-_.~"));
+  EXPECT_EQ("hello%20world", VSCodeLauncher::URLEncode("hello world"));
+  EXPECT_EQ("hello%21%40%23%24", VSCodeLauncher::URLEncode("hello!@#$"));
+  EXPECT_EQ("%2Fpath%2Fto%2Ffile", VSCodeLauncher::URLEncode("/path/to/file"));
+  EXPECT_EQ("key%3Dvalue%26key2%3Dvalue2",
+            VSCodeLauncher::URLEncode("key=value&key2=value2"));
+  EXPECT_EQ("100%25complete", VSCodeLauncher::URLEncode("100%complete"));
+  EXPECT_EQ("file_name%20with%20spaces%20%26%20special%21.txt",
+            VSCodeLauncher::URLEncode("file_name with spaces & special!.txt"));
+  EXPECT_EQ("%00%01%02",
+            VSCodeLauncher::URLEncode(llvm::StringRef("\x00\x01\x02", 3)));
+  EXPECT_EQ("test-file_name.txt~",
+            VSCodeLauncher::URLEncode("test-file_name.txt~"));
+
+  // UTF-8 encoded characters should be percent-encoded byte by byte.
+  EXPECT_EQ("%C3%A9", VSCodeLauncher::URLEncode("é"));
+}

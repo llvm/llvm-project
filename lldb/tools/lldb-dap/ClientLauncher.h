@@ -33,6 +33,7 @@ public:
   using ClientLauncher::ClientLauncher;
 
   llvm::Error Launch(const std::vector<llvm::StringRef> args) override;
+  static std::string URLEncode(llvm::StringRef str);
 };
 
 } // namespace lldb_dap
