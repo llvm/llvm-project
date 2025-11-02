@@ -173,6 +173,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
+   * - ``SPV_INTEL_bfloat16_arithmetic``
+     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
@@ -226,9 +228,9 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
    * - ``SPV_INTEL_fp_max_error``
      - Adds the ability to specify the maximum error for floating-point operations.
    * - ``SPV_INTEL_ternary_bitwise_function``
-     - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
+     - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform.
    * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
-     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
+     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix.
    * - ``SPV_INTEL_int4``
      - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
    * - ``SPV_KHR_float_controls2``
