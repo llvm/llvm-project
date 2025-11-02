@@ -112,8 +112,7 @@ void DbgValueHistoryMap::Entry::endEntry(EntryIndex Index) {
 /// to the first intersecting scope range if one exists.
 static std::optional<ArrayRef<InsnRange>::iterator>
 intersects(const MachineInstr *StartMI, const MachineInstr *EndMI,
-           const ArrayRef<InsnRange> &Ranges,
-           const InstructionOrdering &Ordering) {
+           ArrayRef<InsnRange> Ranges, const InstructionOrdering &Ordering) {
   for (auto RangesI = Ranges.begin(), RangesE = Ranges.end();
        RangesI != RangesE; ++RangesI) {
     if (EndMI && Ordering.isBefore(EndMI, RangesI->first))
