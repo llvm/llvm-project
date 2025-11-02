@@ -1761,6 +1761,11 @@ LogicalResult tosa::ConcatOp::verify() {
       }
     }
 
+    const ShapeAdaptor outputShape(outType);
+    if (outputShape.hasRank() && outputShape.getRank() != firstInputRank)
+      return emitOpError("expect output rank to match inputs rank, got ")
+             << outputShape.getRank() << " vs " << firstInputRank;
+
     // ERROR_IF(axis_sum != shape[axis]);
     int64_t axisSum = 0;
     for (const auto &input : inputList) {
@@ -1772,7 +1777,7 @@ LogicalResult tosa::ConcatOp::verify() {
       }
       axisSum += inputShape.getDimSize(axis);
     }
-    const ShapeAdaptor outputShape(outType);
+
     if (axisSum >= 0 && outputShape.hasRank() &&
         !outputShape.isDynamicDim(axis) &&
         axisSum != outputShape.getDimSize(axis))
