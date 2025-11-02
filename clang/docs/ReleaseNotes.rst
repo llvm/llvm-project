@@ -432,6 +432,7 @@ Bug Fixes in This Version
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
 - Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
+- Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
