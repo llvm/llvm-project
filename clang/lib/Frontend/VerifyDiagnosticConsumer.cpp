@@ -106,8 +106,8 @@ public:
     if (!FullMatchRequired) {
       return DiagnosticMatchResult::Match;
     }
-    return S == Text ? DiagnosticMatchResult::Match
-                     : DiagnosticMatchResult::PartialMatch;
+    return S.trim() == Text ? DiagnosticMatchResult::Match
+                            : DiagnosticMatchResult::PartialMatch;
   }
 };
 
@@ -133,7 +133,7 @@ public:
     }
 
     llvm::SmallVector<StringRef, 4> Matches;
-    Regex.match(S, &Matches);
+    Regex.match(S.trim(), &Matches);
     if (Matches.empty()) {
       return DiagnosticMatchResult::NoMatch;
     }
