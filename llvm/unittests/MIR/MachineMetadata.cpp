@@ -33,7 +33,7 @@ using namespace llvm;
 
 class MachineMetadataTest : public testing::Test {
 public:
-  MachineMetadataTest() {}
+  MachineMetadataTest() = default;
 
 protected:
   LLVMContext Context;
