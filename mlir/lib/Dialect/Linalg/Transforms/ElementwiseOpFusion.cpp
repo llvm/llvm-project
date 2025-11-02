@@ -77,11 +77,11 @@ static AffineMap getIndexingMapOfProducerOperandsInCoordinatesOfFusedOp(
 // of the fused producer & consumer after the fusion can still compute the
 // bounds of the op.
 static bool isOpOperandCanBeDroppedAfterFusedLinalgs(
-    GenericOp producer, GenericOp consumer,
+    LinalgOp producer, LinalgOp consumer,
     ArrayRef<OpOperand *> opOperandsToIgnore) {
   SmallVector<AffineMap> indexingMaps;
 
-  SmallVector<GenericOp> ops = {producer, consumer};
+  SmallVector<LinalgOp> ops = {producer, consumer};
   for (auto &op : ops) {
     for (auto &opOperand : op->getOpOperands()) {
       if (llvm::is_contained(opOperandsToIgnore, &opOperand)) {
@@ -109,8 +109,9 @@ static bool isOpOperandCanBeDroppedAfterFusedLinalgs(
 /// * There is a chance that the implementation of the transformation does not
 /// agree with the result of this method. This function gives a prediction based
 /// on an optimized fusion.
-llvm::SmallDenseSet<int> mlir::linalg::getPreservedProducerResults(
-    GenericOp producer, GenericOp consumer, OpOperand *fusedOperand) {
+llvm::SmallDenseSet<int>
+mlir::linalg::getPreservedProducerResults(LinalgOp producer, LinalgOp consumer,
+                                          OpOperand *fusedOperand) {
   llvm::SmallDenseSet<int> preservedProducerResults;
   llvm::SmallVector<OpOperand *> opOperandsToIgnore;
 
@@ -140,8 +141,8 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   if (!fusedOperand)
     return false;
 
-  auto producer = fusedOperand->get().getDefiningOp<GenericOp>();
-  auto consumer = dyn_cast<GenericOp>(fusedOperand->getOwner());
+  auto producer = fusedOperand->get().getDefiningOp<LinalgOp>();
+  auto consumer = dyn_cast<LinalgOp>(fusedOperand->getOwner());
 
   // Check producer and consumer are generic ops.
   if (!producer || !consumer)
@@ -216,16 +217,17 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
 /// Generate the region of the fused tensor operation. The region of the fused
 /// op must be empty.
 static void generateFusedElementwiseOpRegion(
-    RewriterBase &rewriter, GenericOp fusedOp,
+    RewriterBase &rewriter, LinalgOp fusedOp,
     AffineMap consumerToProducerLoopsMap, OpOperand *fusedOperand,
     unsigned nloops, llvm::SmallDenseSet<int> &preservedProducerResults) {
-  auto producer = cast<GenericOp>(fusedOperand->get().getDefiningOp());
-  auto consumer = cast<GenericOp>(fusedOperand->getOwner());
+  auto producer = cast<LinalgOp>(fusedOperand->get().getDefiningOp());
+  auto consumer = cast<LinalgOp>(fusedOperand->getOwner());
   // Build the region of the fused op.
+
   Block &producerBlock = producer->getRegion(0).front();
   Block &consumerBlock = consumer->getRegion(0).front();
   OpBuilder::InsertionGuard guard(rewriter);
-  Block *fusedBlock = rewriter.createBlock(&fusedOp.getRegion());
+  Block *fusedBlock = rewriter.createBlock(&fusedOp->getRegion(0));
   IRMapping mapper;
 
   // 2. Add an index operation for every fused loop dimension and use the
@@ -331,7 +333,7 @@ static void generateFusedElementwiseOpRegion(
   YieldOp::create(rewriter, fusedOp.getLoc(), fusedYieldValues);
 
   // Sanity checks.
-  assert(fusedBlock->getNumArguments() == fusedOp.getNumOperands() &&
+  assert(fusedBlock->getNumArguments() == fusedOp->getNumOperands() &&
          "Ill-formed GenericOp region");
 }
 
@@ -341,8 +343,8 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   assert(areElementwiseOpsFusable(fusedOperand) &&
          "expected elementwise operation pre-conditions to pass");
   auto producerResult = cast<OpResult>(fusedOperand->get());
-  auto producer = cast<GenericOp>(producerResult.getOwner());
-  auto consumer = cast<GenericOp>(fusedOperand->getOwner());
+  auto producer = cast<LinalgOp>(producerResult.getOwner());
+  auto consumer = cast<LinalgOp>(fusedOperand->getOwner());
   // TODO: allow fusing the producer of an output operand.
   assert(consumer.isDpsInput(fusedOperand) &&
          "expected producer of input operand");
@@ -419,10 +421,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   // Generate the fused op.
   auto fusedOp = GenericOp::create(
       rewriter, consumer.getLoc(), fusedResultTypes, fusedInputOperands,
-      fusedOutputOperands, rewriter.getAffineMapArrayAttr(fusedIndexMaps),
-      consumer.getIteratorTypes(),
-      /*doc=*/nullptr,
-      /*library_call=*/nullptr);
+      fusedOutputOperands, fusedIndexMaps, consumer.getIteratorTypesArray());
   if (!fusedOp.getShapesToLoopsMap()) {
     // Fused op has invalid indexing maps. Typically this means something is off
     // in the input, but going ahead here would result in verification errors.
@@ -461,14 +460,14 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
 
 namespace {
 /// Patterns to fuse a generic op, with the producer of its operands.
-class FuseElementwiseOps : public OpRewritePattern<GenericOp> {
+class FuseElementwiseOps : public OpInterfaceRewritePattern<LinalgOp> {
 public:
   FuseElementwiseOps(MLIRContext *context, ControlFusionFn fun,
                      PatternBenefit benefit = 1)
-      : OpRewritePattern<GenericOp>(context, benefit),
+      : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
         controlFn(std::move(fun)) {}
 
-  LogicalResult matchAndRewrite(GenericOp genericOp,
+  LogicalResult matchAndRewrite(LinalgOp genericOp,
                                 PatternRewriter &rewriter) const override {
     // Find the first operand that is defined by another generic op on tensors.
     for (OpOperand &opOperand : genericOp->getOpOperands()) {
@@ -495,7 +494,7 @@ public:
       rewriter.eraseOp(genericOp);
       return success();
     }
-    return failure();
+    return rewriter.notifyMatchFailure(genericOp, "no fusable operands");
   }
 
 private:
