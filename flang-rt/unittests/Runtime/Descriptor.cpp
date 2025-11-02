@@ -32,8 +32,8 @@ TEST(Descriptor, FixedStride) {
   extent[0] = 8;
   descriptor.Establish(integer, four, data, 1, extent);
   ASSERT_EQ(descriptor.rank(), 1);
-  ASSERT_EQ(descriptor.Elements(), 8);
-  ASSERT_EQ(descriptor.ElementBytes(), four);
+  ASSERT_EQ(descriptor.Elements(), 8u);
+  ASSERT_EQ(descriptor.ElementBytes(), static_cast<unsigned>(four));
   ASSERT_EQ(descriptor.GetDimension(0).LowerBound(), 0);
   ASSERT_EQ(descriptor.GetDimension(0).ByteStride(), four);
   ASSERT_EQ(descriptor.GetDimension(0).Extent(), 8);

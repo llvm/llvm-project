@@ -242,6 +242,14 @@ endif()
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
 
+# Make GTest available to all runtimes
+if (LLVM_INCLUDE_TESTS)
+  include(AddGTest)
+  build_gtest(runtimes_gtest)
+  add_library(default_gtest ALIAS runtimes_gtest)
+  add_library(default_gtest_main ALIAS runtimes_gtest_main)
+endif ()
+
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
 
