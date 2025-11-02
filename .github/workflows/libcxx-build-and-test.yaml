@@ -294,7 +294,7 @@ jobs:
     runs-on: llvm-premerge-libcxx-next-runners
     steps:
       - name: Trigger Buildkite pipeline
-        uses: buildkite/trigger-pipeline-action@v2.4.0
+        uses: buildkite/trigger-pipeline-action@f0dcd5ae74452a8d17d473227c9d212dcc1eb8f9 # v2.4.0
         with:
           buildkite_api_access_token: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
           pipeline: llvm-project/libcxx-ci
