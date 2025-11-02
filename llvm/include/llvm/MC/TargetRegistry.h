@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -49,7 +50,6 @@ class MCInstrInfo;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCRelocationInfo;
-class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbolizer;
 class MCTargetAsmParser;
@@ -65,7 +65,6 @@ class InstrumentManager;
 struct SourceMgr;
 } // namespace mca
 
-LLVM_ABI MCStreamer *createNullStreamer(MCContext &Ctx);
 // Takes ownership of \p TAB and \p CE.
 
 /// Create a machine code streamer which will print out assembly for the native
