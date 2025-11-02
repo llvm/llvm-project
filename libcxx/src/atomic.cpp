@@ -41,6 +41,11 @@
 // OpenBSD has no indirect syscalls
 #  define _LIBCPP_FUTEX(...) futex(__VA_ARGS__)
 
+#elif defined(_WIN32)
+
+#  include <windows.h>
+#  include <memory>
+
 #else // <- Add other operating systems here
 
 // Baseline needs no new headers
@@ -99,6 +104,64 @@ __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __pt
 
 static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
   _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, nullptr, nullptr);
+}
+
+#elif defined(_WIN32)
+
+static void* win32_get_synch_api_function(const char* function_name) {
+  // Attempt to load the API set. Note that HMODULE is documented as being a pointer type, which means we can safely use
+  // std::unique_ptr here as a wrapper for the handle, with a destructor freeing the handle when this module is
+  // unloaded.
+  // https://learn.microsoft.com/en-us/windows/win32/winprog/windows-data-types
+  // https://devblogs.microsoft.com/oldnewthing/20180307-00/?p=98175
+  static auto module_handle = std::unique_ptr<std::remove_pointer<HMODULE>::type, decltype(&FreeLibrary)>(
+      LoadLibraryW(L"api-ms-win-core-synch-l1-2-0.dll"), &FreeLibrary);
+  if (!module_handle) {
+    return nullptr;
+  }
+
+  // Attempt to locate the function in the API and return the result to the caller. Note that the NULL return from this
+  // method is documented as being interchangeable with nullptr.
+  // https://devblogs.microsoft.com/oldnewthing/20180307-00/?p=98175
+  return GetProcAddress(module_handle.get(), function_name);
+}
+
+static void
+__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
+  // WaitOnAddress was added in Windows 8 (build 9200)
+  static auto wait_on_address = reinterpret_cast<BOOL(WINAPI*)(volatile void*, PVOID, SIZE_T, DWORD)>(
+      win32_get_synch_api_function("WaitOnAddress"));
+  if (wait_on_address != nullptr) {
+    wait_on_address(const_cast<__cxx_atomic_contention_t*>(__ptr), &__val, sizeof(__val), INFINITE);
+  } else {
+    __libcpp_thread_poll_with_backoff(
+        [=]() -> bool { return !__cxx_nonatomic_compare_equal(__cxx_atomic_load(__ptr, memory_order_relaxed), __val); },
+        __libcpp_timed_backoff_policy());
+  }
+}
+
+static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
+  if (__notify_one) {
+    // WakeByAddressSingle was added in Windows 8 (build 9200)
+    static auto wake_by_address_single =
+        reinterpret_cast<void(WINAPI*)(PVOID)>(win32_get_synch_api_function("WakeByAddressSingle"));
+    if (wake_by_address_single != nullptr) {
+      wake_by_address_single(const_cast<__cxx_atomic_contention_t*>(__ptr));
+    } else {
+      // The fallback implementation of waking does nothing, as the fallback wait implementation just does polling, so
+      // there's nothing to do here.
+    }
+  } else {
+    // WakeByAddressAll was added in Windows 8 (build 9200)
+    static auto wake_by_address_all =
+        reinterpret_cast<void(WINAPI*)(PVOID)>(win32_get_synch_api_function("WakeByAddressAll"));
+    if (wake_by_address_all != nullptr) {
+      wake_by_address_all(const_cast<__cxx_atomic_contention_t*>(__ptr));
+    } else {
+      // The fallback implementation of waking does nothing, as the fallback wait implementation just does polling, so
+      // there's nothing to do here.
+    }
+  }
 }
 
 #else // <- Add other operating systems here
