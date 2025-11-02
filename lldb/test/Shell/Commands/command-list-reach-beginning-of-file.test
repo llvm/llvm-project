@@ -1,6 +1,4 @@
-# Source uses unistd.h.
-# UNSUPPORTED: system-windows
-# RUN: %clang_host -g -O0 %S/Inputs/sigchld.c -o %t.out
+# RUN: %clang_host -g -O0 %S/Inputs/cross_platform.c -o %t.out
 # RUN: %lldb %t.out -b -s %s 2>&1 | FileCheck %s
 
 list
@@ -12,14 +10,8 @@ b main
 r
 # CHECK: int main()
 
-list
-# CHECK: if (child_pid == 0)
-
 list -
-# CHECK: int main()
-
-list -10
-# CHECK: #include <assert.h>
+# CHECK: #include <stdio.h>
 
 list -
 # CHECK: note: Reached beginning of the file, no more to page
@@ -28,4 +20,4 @@ list -
 # CHECK: note: Reached beginning of the file, no more to page
 
 list
-# CHECK: int main()
+# CHECK: doNothing();
