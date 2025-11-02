@@ -32,6 +32,9 @@
 #ifndef CPU_TYPE_ARM64
 #define CPU_TYPE_ARM64        (CPU_TYPE_ARM | CPU_ARCH_ABI64)
 #endif
+#ifndef CPU_SUBTYPE_ARM64E
+#define CPU_SUBTYPE_ARM64E   ((cpu_subtype_t)2)
+#endif
 
 namespace __sanitizer {
 
@@ -323,6 +326,7 @@ ModuleArch ModuleArchFromCpuType(cpu_type_t cputype, cpu_subtype_t cpusubtype) {
       CHECK(0 && "Invalid subtype of ARM");
       return kModuleArchUnknown;
     case CPU_TYPE_ARM64:
+      if (cpusubtype == CPU_SUBTYPE_ARM64E) return kModuleArchARM64E;
       return kModuleArchARM64;
     default:
       CHECK(0 && "Invalid CPU type");
