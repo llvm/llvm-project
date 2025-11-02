@@ -20,9 +20,6 @@
 
 namespace llvm{
 namespace exegesis {
-
-void InitializePowerPCExegesisTarget();
-
 namespace {
 
 using testing::NotNull;
