@@ -91,7 +91,6 @@ __libcpp_atomic_notify_all_global_table(void const volatile*) _NOEXCEPT;
 
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
-
 __libcpp_atomic_wait_native(void const volatile* __address, void const* __old_value) _NOEXCEPT;
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
