@@ -53,9 +53,6 @@ bool operator==(const MCInst &a, const MCInst &b) {
 
 namespace llvm {
 namespace exegesis {
-
-void InitializeX86ExegesisTarget();
-
 namespace {
 
 using testing::AllOf;
