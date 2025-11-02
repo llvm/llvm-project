@@ -21,12 +21,53 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/types.h"
-#include "src/__support/math/expxf16_utils.h"
+#include "src/__support/math/exp10f_utils.h"
+#include "src/math/generic/common_constants.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 namespace {
+static inline double exp2_range_reduced(double x) {
+  // k = round(x * 32)  => (hi + mid) * 2^5
+  double kf = fputil::nearest_integer(x * 32.0);
+  int k = static_cast<int>(kf);
+  // dx = lo = x - (hi + mid) = x - k * 2^(-5)
+  double dx = fputil::multiply_add(-0x1.0p-5, kf, x); // -2^-5 * k + x
 
+  // hi = k >> MID_BITS
+  // exp_hi = hi shifted into double exponent field
+  int64_t hi = static_cast<int64_t>(k >> ExpBase::MID_BITS);
+  int64_t exp_hi = static_cast<int64_t>(
+      static_cast<uint64_t>(hi) << fputil::FPBits<double>::FRACTION_LEN);
+
+  // mh_bits = bits for 2^hi * 2^mid  (lookup contains base bits for 2^mid)
+  int tab_index = k & ExpBase::MID_MASK; // mid index in [0, 31]
+  int64_t mh_bits = ExpBase::EXP_2_MID[tab_index] + exp_hi;
+
+  // mh = 2^(hi + mid)
+  double mh = fputil::FPBits<double>(static_cast<uint64_t>(mh_bits)).get_val();
+
+  // Degree-5 polynomial approximating (2^x - 1)/x generating by Sollya with:
+  // > P = fpminimax((2^x - 1)/x, 5, [|D...|], [-1/32. 1/32]);
+  constexpr double COEFFS[5] = {0x1.62e42fefa39efp-1, 0x1.ebfbdff8131c4p-3,
+                                0x1.c6b08d7061695p-5, 0x1.3b2b1bee74b2ap-7,
+                                0x1.5d88091198529p-10};
+
+  double dx_sq = dx * dx;
+  double c1 = fputil::multiply_add(dx, COEFFS[0], 1.0); // 1 + ln2*dx
+  double c2 =
+      fputil::multiply_add(dx, COEFFS[2], COEFFS[1]); // COEFF1 + COEFF2*dx
+  double c3 =
+      fputil::multiply_add(dx, COEFFS[4], COEFFS[3]); // COEFF3 + COEFF4*dx
+  double p = fputil::multiply_add(dx_sq, c3, c2);     // c2 + c3*dx^2
+
+  // 2^x = 2^(hi+mid) * 2^dx
+  //     ≈ mh * (1 + dx * P(dx))
+  //     = mh + (mh * dx) * P(dx)
+  double result = fputil::multiply_add(p, dx_sq * mh, c1 * mh);
+
+  return result;
+}
 bool is_odd_integer(float16 x) {
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
@@ -66,6 +107,7 @@ LLVM_LIBC_FUNCTION(float16, powf16, (float16 x, float16 y)) {
   uint16_t x_u = xbits.uintval();
   uint16_t x_a = x_abs.uintval();
   uint16_t y_a = y_abs.uintval();
+  uint16_t y_u = ybits.uintval();
   bool result_sign = false;
 
   ///////// BEGIN - Check exceptional cases ////////////////////////////////////
@@ -74,57 +116,106 @@ LLVM_LIBC_FUNCTION(float16, powf16, (float16 x, float16 y)) {
     fputil::raise_except_if_required(FE_INVALID);
     return FPBits::quiet_nan().get_val();
   }
-
-  //
-  if (LIBC_UNLIKELY(ybits.is_zero() || x_u == FPBits::one().uintval() ||
-                    x_u >= FPBits::inf().uintval() ||
-                    x_u < FPBits::min_normal().uintval())) {
+  if (LIBC_UNLIKELY(
+          ybits.is_zero() || x_u == FPBits::one().uintval() || xbits.is_nan() ||
+          ybits.is_nan() || x_u == FPBits::one().uintval() ||
+          x_u == FPBits::zero().uintval() || x_u >= FPBits::inf().uintval() ||
+          y_u >= FPBits::inf().uintval() ||
+          x_u < FPBits::min_normal().uintval() || y_a == 0x3400U ||
+          y_a == 0x3800U || y_a == 0x3A00U || y_a == 0x3800U ||
+          y_a == 0x3800U || y_a == 0x3D00U || y_a == 0x3E00U ||
+          y_a == 0x4100U || y_a == 0x4300U || y_a == 0x3c00U ||
+          y_a == 0x4000U || is_integer(y))) {
     // pow(x, 0) = 1
     if (ybits.is_zero()) {
-      return fputil::cast<float16>(1.0f);
+      return 1.0f16;
     }
 
     // pow(1, Y) = 1
     if (x_u == FPBits::one().uintval()) {
-      return fputil::cast<float16>(1.0f);
+      return 1.0f16;
     }
-
+    // 4. Handle remaining NaNs
+    // pow(NaN, y) = NaN (for y != 0)
+    if (xbits.is_nan()) {
+      return x;
+    }
+    // pow(x, NaN) = NaN (for x != 1)
+    if (ybits.is_nan()) {
+      return y;
+    }
     switch (y_a) {
-
-    case 0x3800U: { // y = +-0.5
-      if (LIBC_UNLIKELY(
-              (x == 0.0 || x_u == FPBits::inf(Sign::NEG).uintval()))) {
-        // pow(-0, 1/2) = +0
-        // pow(-inf, 1/2) = +inf
-        // Make sure it works correctly for FTZ/DAZ.
-        return fputil::cast<float16>(y_sign ? (1.0 / (x * x)) : (x * x));
+    case 0x3400U: // y = ±0.25 (1/4)
+    case 0x3800U: // y = ±0.5 (1/2)
+    case 0x3A00U: // y = ±0.75 (3/4)
+    case 0x3D00U: // y = ±1.25 (5/4)
+    case 0x3E00U: // y = ±1.5 (3/2)
+    case 0x4100U: // y = ±2.5 (5/2)
+    case 0x4300U: // y = ±3.5 (7/2)
+    {
+      if (xbits.is_zero()) {
+        if (y_sign) {
+          // pow(±0, negative) handled below
+          break;
+        } else {
+          // pow(±0, positive_fractional) = +0
+          return FPBits::zero(Sign::POS).get_val();
+        }
       }
-      return fputil::cast<float16>(y_sign ? (1.0 / fputil::sqrt<float16>(x))
-                                          : fputil::sqrt<float16>(x));
+
+      if (x_sign && !xbits.is_zero()) {
+        break; // pow(negative, non-integer) = NaN
+      }
+
+      double x_d = static_cast<double>(x);
+      double sqrt_x = fputil::sqrt<double>(x_d);
+      double fourth_root = fputil::sqrt<double>(sqrt_x);
+      double result_d;
+
+      // Compute based on exponent value
+      switch (y_a) {
+      case 0x3400U: // 0.25 = x^(1/4)
+        result_d = fourth_root;
+        break;
+      case 0x3800U: // 0.5 = x^(1/2)
+        result_d = sqrt_x;
+        break;
+      case 0x3A00U: // 0.75 = x^(1/2) * x^(1/4)
+        result_d = sqrt_x * fourth_root;
+        break;
+      case 0x3D00U: // 1.25 = x * x^(1/4)
+        result_d = x_d * fourth_root;
+        break;
+      case 0x3E00U: // 1.5 = x * x^(1/2)
+        result_d = x_d * sqrt_x;
+        break;
+      case 0x4100U: // 2.5 = x^2 * x^(1/2)
+        result_d = x_d * x_d * sqrt_x;
+        break;
+      case 0x4300U: // 3.5 = x^3 * x^(1/2)
+        result_d = x_d * x_d * x_d * sqrt_x;
+        break;
+      }
+
+      result_d = y_sign ? (1.0 / result_d) : result_d;
+      return fputil::cast<float16>(result_d);
     }
     case 0x3c00U: // y = +-1.0
       return fputil::cast<float16>(y_sign ? (1.0 / x) : x);
 
     case 0x4000U: // y = +-2.0
-      return fputil::cast<float16>(y_sign ? (1.0 / (x * x)) : (x * x));
+      double result_d = static_cast<double>(x) * static_cast<double>(x);
+      return fputil::cast<float16>(y_sign ? (1.0 / (result_d)) : (result_d));
     }
     // TODO: Speed things up with pow(2, y) = exp2(y) and pow(10, y) = exp10(y).
-
-    // Propagate remaining quiet NaNs.
-    if (xbits.is_quiet_nan()) {
-      return x;
-    }
-    if (ybits.is_quiet_nan()) {
-      return y;
-    }
-
-    // x = -1: special case for integer exponents
+    //
+    // pow(-1, y) for integer y
     if (x_u == FPBits::one(Sign::NEG).uintval()) {
       if (is_integer(y)) {
         if (is_odd_integer(y)) {
-          return fputil::cast<float16>(-1.0f);
+          return -1.0f16;
         } else {
-          return fputil::cast<float16>(1.0f);
+          return 1.0f16;
         }
       }
       // pow(-1, non-integer) = NaN
@@ -133,7 +224,7 @@ LLVM_LIBC_FUNCTION(float16, powf16, (float16 x, float16 y)) {
       return FPBits::quiet_nan().get_val();
     }
 
-    // x = 0 cases
+    // pow(±0, y) cases
     if (xbits.is_zero()) {
       if (y_sign) {
         // pow(+-0, negative) = +-inf and raise FE_DIVBYZERO
@@ -163,9 +254,13 @@ LLVM_LIBC_FUNCTION(float16, powf16, (float16 x, float16 y)) {
       bool x_abs_less_than_one = x_a < FPBits::one().uintval();
       if ((x_abs_less_than_one && !y_sign) ||
           (!x_abs_less_than_one && y_sign)) {
-        return fputil::cast<float16>(0.0f);
+        // |x| < 1 and y = +inf => 0.0
+        // |x| > 1 and y = -inf => 0.0
+        return 0.0f;
       } else {
-        return FPBits::inf().get_val();
+        // |x| > 1 and y = +inf => +inf
+        // |x| < 1 and y = -inf => +inf
+        return FPBits::inf(Sign::POS).get_val();
       }
     }
 
@@ -176,121 +271,119 @@ LLVM_LIBC_FUNCTION(float16, powf16, (float16 x, float16 y)) {
       return FPBits::quiet_nan().get_val();
     }
 
-    // For negative x with integer y, compute pow(|x|, y) and adjust sign
-    if (x_sign) {
-      x = -x;
-      if (is_odd_integer(y)) {
-        result_sign = true;
+    bool result_sign = false;
+    if (x_sign && is_integer(y)) {
+      result_sign = is_odd_integer(y);
+    }
+
+    if (is_integer(y)) {
+      double base = x_abs.get_val();
+      double res = 1.0;
+      int yi = static_cast<int>(y_abs.get_val());
+
+      // Fast exponentiation by squaring
+      while (yi > 0) {
+        if (yi & 1)
+          res *= base;
+        base *= base;
+        yi = yi >> 1;
       }
+
+      if (y_sign) {
+        res = 1.0 / res;
+      }
+
+      if (result_sign) {
+        res = -res;
+      }
+
+      if (FPBits(fputil::cast<float16>(res)).is_inf()) {
+        fputil::raise_except_if_required(FE_OVERFLOW);
+        res = result_sign ? -0x1.0p20 : 0x1.0p20;
+      }
+
+      float16 final_res = fputil::cast<float16>(res);
+      return final_res;
     }
   }
+
   ///////// END - Check exceptional cases //////////////////////////////////////
 
-  // x^y = 2^( y * log2(x) )
-  //     = 2^( y * ( e_x + log2(m_x) ) )
-  // First we compute log2(x) = e_x + log2(m_x)
+  // Core computation: x^y = 2^( y * log2(x) )
+  // We compute log2(x) = log(x) / log(2) using a polynomial approximation.
 
-  using namespace math::expxf16_internal;
+  // The exponent part (m) is added later to get the final log(x).
   FPBits x_bits(x);
-
   uint16_t x_u_log = x_bits.uintval();
 
   // Extract exponent field of x.
-  int m = -FPBits::EXP_BIAS;
+  int m = x_bits.get_exponent();
 
-  // When x is subnormal, normalize it by multiplying by 2^FRACTION_LEN.
-  if ((x_u_log & FPBits::EXP_MASK) == 0U) { // Subnormal x
-    constexpr double NORMALIZE_EXP = 1.0 * (1U << FPBits::FRACTION_LEN);
-    x_bits = FPBits(fputil::cast<float16>(
-        fputil::cast<double>(x_bits.get_val()) * NORMALIZE_EXP));
-    x_u_log = x_bits.uintval();
-    m -= FPBits::FRACTION_LEN;
+  // When x is subnormal, normalize it by adjusting m.
+  if ((x_u_log & FPBits::EXP_MASK) == 0U) {
+    unsigned leading_zeros =
+        cpp::countl_zero(static_cast<uint32_t>(x_u_log)) - (32 - 16);
+
+    constexpr unsigned SUBNORMAL_SHIFT_CORRECTION = 5;
+    unsigned shift = leading_zeros - SUBNORMAL_SHIFT_CORRECTION;
+
+    x_bits.set_mantissa(static_cast<uint16_t>(x_u_log << shift));
+
+    m = 1 - FPBits::EXP_BIAS - static_cast<int>(shift);
   }
+
   // Extract the mantissa and index into small lookup tables.
   uint16_t mant = x_bits.get_mantissa();
-  // Use the highest 5 fractional bits of the mantissa as the index f.
-  int f = mant >> 5;
+  // Use the highest 7 fractional bits of the mantissa as the index f.
+  int f = mant >> (FPBits::FRACTION_LEN - 7);
 
-  m += (x_u_log >> FPBits::FRACTION_LEN);
-
-  // Add the hidden bit to the mantissa.
-  // 1 <= m_x < 2
+  // Reconstruct the mantissa value m_x so it's in the range [1.0, 2.0).
   x_bits.set_biased_exponent(FPBits::EXP_BIAS);
   double mant_d = x_bits.get_val();
 
-  // Range reduction for log2(m_x):
-  //   v = r * m_x - 1, where r is a power of 2 from a lookup table.
-  // The computation is exact for half-precision, and -2^-5 <= v < 2^-4.
-  // Then m_x = (1 + v) / r, and log2(m_x) = log2(1 + v) - log2(r).
+  double v = fputil::multiply_add<double>(mant_d, RD[f], -1.0);
+  double extra_factor = static_cast<double>(m) + LOG2_R[f];
 
-  double v =
-      fputil::multiply_add(mant_d, fputil::cast<double>(ONE_OVER_F_F[f]), -1.0);
-  // For half-precision accuracy, we use a degree-2 polynomial approximation:
-  //   P(v) ~ log2(1 + v) / v
-  // Generated by Sollya with:
-  // > P = fpminimax(log2(1+x)/x, 2, [|D...|], [-2^-5, 2^-4]);
-  // The coefficients are rounded from the Sollya output.
+  // Degree-5 polynomial approximation of log2 generated by Sollya with:
+  // > P = fpminimax(log2(1 + x)/x, 4, [|1, D...|], [-2^-8, 2^-7]);
+  constexpr double COEFFS[5] = {0x1.71547652b8133p0, -0x1.71547652d1e33p-1,
+                                0x1.ec70a098473dep-2, -0x1.7154c5ccdf121p-2,
+                                0x1.2514fd90a130ap-2};
 
-  double log2p1_d_over_f =
-      v * fputil::polyeval(v, 0x1.715476p+0, -0x1.71771ap-1, 0x1.ecb38ep-2);
+  double vsq = v * v;
+  double c0 = fputil::multiply_add(v, COEFFS[0], 0);
+  double c1 = fputil::multiply_add(v, COEFFS[2], COEFFS[1]);
+  double c2 = fputil::multiply_add(v, COEFFS[4], COEFFS[3]);
 
-  // log2(1.mant) = log2(f) + log2(1 + v)
-  double log2_1_mant = LOG2F_F[f] + log2p1_d_over_f;
+  double log2_x = fputil::polyeval(vsq, c0, c1, c2);
 
-  // Complete log2(x) = e_x + log2(m_x)
-  double log2_x = static_cast<double>(m) + log2_1_mant;
+  double y_d = fputil::cast<double>(y);
+  double z = fputil::multiply_add(y_d, log2_x, y_d * extra_factor);
 
-  // z = y * log2(x)
-  // Now compute 2^z = 2^(n + r), with n integer and r in [-0.5, 0.5].
-  double z = fputil::cast<double>(y) * log2_x;
-
-  // Check for overflow/underflow for half-precision.
-  // Half-precision range is approximately 2^-24 to 2^15.
-  //
-  if (z < -24.0) {
+  // Check for underflow
+  // Float16 min normal is 2^-14, smallest subnormal is 2^-24
+  if (LIBC_UNLIKELY(z < -25.0)) {
     fputil::raise_except_if_required(FE_UNDERFLOW);
-    return fputil::cast<float16>(0.0f);
+    return result_sign ? FPBits::zero(Sign::NEG).get_val()
+                       : FPBits::zero(Sign::POS).get_val();
   }
 
-  double n = fputil::nearest_integer(z);
-  double r = z - n;
-
-  // Compute 2^r using a degree-7 polynomial for r in [-0.5, 0.5].
-  // Generated by Sollya with:
-  // > P = fpminimax(2^x, 7, [|D...|], [-0.5, 0.5]);
-  // The polynomial coefficients are rounded from the Sollya output.
-  constexpr double EXP2_COEFFS[] = {
-      0x1p+0,                // 1.0
-      0x1.62e42fefa39efp-1,  // ln(2)
-      0x1.ebfbdff82c58fp-3,  // ln(2)^2 / 2
-      0x1.c6b08d704a0c0p-5,  // ln(2)^3 / 6
-      0x1.3b2ab6fba4e77p-7,  // ln(2)^4 / 24
-      0x1.5d87fe78a6737p-10, // ln(2)^5 / 120
-      0x1.430912f86a805p-13, // ln(2)^6 / 720
-      0x1.10e4104ac8015p-17  // ln(2)^7 / 5040
-  };
-
-  double exp2_r = fputil::polyeval(
-      r, EXP2_COEFFS[0], EXP2_COEFFS[1], EXP2_COEFFS[2], EXP2_COEFFS[3],
-      EXP2_COEFFS[4], EXP2_COEFFS[5], EXP2_COEFFS[6], EXP2_COEFFS[7]);
-
-  // Compute 2^n by direct bit manipulation.
-  int n_int = static_cast<int>(n);
-  uint64_t exp_bits = static_cast<uint64_t>(n_int + 1023) << 52;
-  double pow2_n = cpp::bit_cast<double>(exp_bits);
-
-
-  double result_d = (pow2_n * exp2_r);
-  float16 result = fputil::cast<float16>(result_d);
-  if(result_d==65504.0)
-    return (65504.f16);
+  // Check for overflow
+  // Float16 max is ~2^16
+  double result_d;
+  if (LIBC_UNLIKELY(z > 16.0)) {
+    fputil::raise_except_if_required(FE_OVERFLOW);
+    result_d = result_sign ? -0x1.0p20 : 0x1.0p20;
+  } else {
+    result_d = exp2_range_reduced(z);
+  }
 
   if (result_sign) {
-    FPBits result_bits(result);
-    result_bits.set_sign(Sign::NEG);
-    result = result_bits.get_val();
+
+    result_d = -result_d;
   }
 
+  float16 result = fputil::cast<float16>((result_d));
   return result;
 }
 
