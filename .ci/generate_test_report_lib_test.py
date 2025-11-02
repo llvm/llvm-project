@@ -407,7 +407,6 @@ class TestReports(unittest.TestCase):
                 ]
             ],
         )
-        print(test)
         self.assertEqual(
             generate_test_report_lib.generate_report(
                 "Foo",

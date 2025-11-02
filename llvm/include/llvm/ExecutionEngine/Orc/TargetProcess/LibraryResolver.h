@@ -100,7 +100,7 @@ public:
   class FilteredView {
   public:
     using Map = StringMap<std::shared_ptr<LibraryInfo>>;
-    using Iterator = typename Map::const_iterator;
+    using Iterator = Map::const_iterator;
     class FilterIterator {
     public:
       FilterIterator(Iterator it_, Iterator end_, LibState S, PathType K)

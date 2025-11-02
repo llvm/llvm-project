@@ -162,8 +162,12 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
     return false;
-  case VPInstructionSC:
-    return mayWriteToMemory();
+  case VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(this);
+    return mayWriteToMemory() ||
+           VPI->getOpcode() == VPInstruction::BranchOnCount ||
+           VPI->getOpcode() == VPInstruction::BranchOnCond;
+  }
   case VPWidenCallSC: {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
@@ -1241,6 +1245,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::Select:
   case Instruction::PHI:
   case VPInstruction::AnyOf:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnCount:
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
