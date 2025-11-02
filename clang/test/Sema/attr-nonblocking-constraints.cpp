@@ -236,9 +236,22 @@ void nb13() [[clang::nonblocking]] { nb12(); }
 struct PTMFTester {
 	typedef void (PTMFTester::*ConvertFunction)() [[clang::nonblocking]];
 
+	ConvertFunction mConvertFunc;
+
 	void convert() [[clang::nonblocking]];
 
-	ConvertFunction mConvertFunc;
+	template <typename T>
+	struct Holder {
+		T value;
+		
+		T& operator*() { return value; }
+	};
+
+
+	void ptmfInExpr(Holder<ConvertFunction>& holder) [[clang::nonblocking]]
+	{
+		(this->*(*holder))(); // This should not generate a warning.
+	}
 };
 
 void PTMFTester::convert() [[clang::nonblocking]]
