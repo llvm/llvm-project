@@ -841,18 +841,18 @@ static PlatformVersion parsePlatformVersion(const Arg *arg) {
   // TODO(compnerd) see if we can generate this case list via XMACROS
   platformVersion.platform =
       StringSwitch<PlatformType>(lowerDash(platformStr))
-          .Cases("macos", "1", PLATFORM_MACOS)
-          .Cases("ios", "2", PLATFORM_IOS)
-          .Cases("tvos", "3", PLATFORM_TVOS)
-          .Cases("watchos", "4", PLATFORM_WATCHOS)
-          .Cases("bridgeos", "5", PLATFORM_BRIDGEOS)
-          .Cases("mac-catalyst", "6", PLATFORM_MACCATALYST)
-          .Cases("ios-simulator", "7", PLATFORM_IOSSIMULATOR)
-          .Cases("tvos-simulator", "8", PLATFORM_TVOSSIMULATOR)
-          .Cases("watchos-simulator", "9", PLATFORM_WATCHOSSIMULATOR)
-          .Cases("driverkit", "10", PLATFORM_DRIVERKIT)
-          .Cases("xros", "11", PLATFORM_XROS)
-          .Cases("xros-simulator", "12", PLATFORM_XROS_SIMULATOR)
+          .Cases({"macos", "1"}, PLATFORM_MACOS)
+          .Cases({"ios", "2"}, PLATFORM_IOS)
+          .Cases({"tvos", "3"}, PLATFORM_TVOS)
+          .Cases({"watchos", "4"}, PLATFORM_WATCHOS)
+          .Cases({"bridgeos", "5"}, PLATFORM_BRIDGEOS)
+          .Cases({"mac-catalyst", "6"}, PLATFORM_MACCATALYST)
+          .Cases({"ios-simulator", "7"}, PLATFORM_IOSSIMULATOR)
+          .Cases({"tvos-simulator", "8"}, PLATFORM_TVOSSIMULATOR)
+          .Cases({"watchos-simulator", "9"}, PLATFORM_WATCHOSSIMULATOR)
+          .Cases({"driverkit", "10"}, PLATFORM_DRIVERKIT)
+          .Cases({"xros", "11"}, PLATFORM_XROS)
+          .Cases({"xros-simulator", "12"}, PLATFORM_XROS_SIMULATOR)
           .Default(PLATFORM_UNKNOWN);
   if (platformVersion.platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
@@ -948,7 +948,7 @@ getUndefinedSymbolTreatment(const ArgList &args) {
   StringRef treatmentStr = args.getLastArgValue(OPT_undefined);
   auto treatment =
       StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
-          .Cases("error", "", UndefinedSymbolTreatment::error)
+          .Cases({"error", ""}, UndefinedSymbolTreatment::error)
           .Case("warning", UndefinedSymbolTreatment::warning)
           .Case("suppress", UndefinedSymbolTreatment::suppress)
           .Case("dynamic_lookup", UndefinedSymbolTreatment::dynamic_lookup)
@@ -972,7 +972,7 @@ getUndefinedSymbolTreatment(const ArgList &args) {
 static ICFLevel getICFLevel(const ArgList &args) {
   StringRef icfLevelStr = args.getLastArgValue(OPT_icf_eq);
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
-                      .Cases("none", "", ICFLevel::none)
+                      .Cases({"none", ""}, ICFLevel::none)
                       .Case("safe", ICFLevel::safe)
                       .Case("safe_thunks", ICFLevel::safe_thunks)
                       .Case("all", ICFLevel::all)

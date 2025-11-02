@@ -1035,12 +1035,12 @@ static const char *ArmMachOArchName(StringRef Arch) {
       .Case("xscale", "xscale")
       .Case("armv4t", "armv4t")
       .Case("armv7", "armv7")
-      .Cases("armv7a", "armv7-a", "armv7")
-      .Cases("armv7r", "armv7-r", "armv7")
-      .Cases("armv7em", "armv7e-m", "armv7em")
-      .Cases("armv7k", "armv7-k", "armv7k")
-      .Cases("armv7m", "armv7-m", "armv7m")
-      .Cases("armv7s", "armv7-s", "armv7s")
+      .Cases({"armv7a", "armv7-a"}, "armv7")
+      .Cases({"armv7r", "armv7-r"}, "armv7")
+      .Cases({"armv7em", "armv7e-m"}, "armv7em")
+      .Cases({"armv7k", "armv7-k"}, "armv7k")
+      .Cases({"armv7m", "armv7-m"}, "armv7m")
+      .Cases({"armv7s", "armv7-s"}, "armv7s")
       .Default(nullptr);
 }
 

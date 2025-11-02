@@ -350,7 +350,7 @@ void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   //       See `test/ClangScanDeps/diagnostic-pragmas.c` for an example.
   llvm::erase_if(DiagOpts.Warnings, [](StringRef Warning) {
     return llvm::StringSwitch<bool>(Warning)
-        .Cases("pch-vfs-diff", "error=pch-vfs-diff", false)
+        .Cases({"pch-vfs-diff", "error=pch-vfs-diff"}, false)
         .StartsWith("no-error=", false)
         .Default(true);
   });

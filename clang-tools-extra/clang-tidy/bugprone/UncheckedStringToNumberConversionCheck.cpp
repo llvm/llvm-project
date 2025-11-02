@@ -51,7 +51,7 @@ enum class ConversionKind {
 
 static ConversionKind classifyConversionFunc(const FunctionDecl *FD) {
   return llvm::StringSwitch<ConversionKind>(FD->getName())
-      .Cases("atoi", "atol", ConversionKind::ToInt)
+      .Cases({"atoi", "atol"}, ConversionKind::ToInt)
       .Case("atoll", ConversionKind::ToLongInt)
       .Case("atof", ConversionKind::ToDouble)
       .Default(ConversionKind::None);

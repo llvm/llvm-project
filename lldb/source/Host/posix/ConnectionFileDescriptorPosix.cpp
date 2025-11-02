@@ -149,11 +149,11 @@ ConnectionFileDescriptor::Connect(llvm::StringRef path,
         llvm::StringSwitch<ConnectionStatus (ConnectionFileDescriptor::*)(
             llvm::StringRef, socket_id_callback_type, Status *)>(scheme)
             .Case("listen", &ConnectionFileDescriptor::AcceptTCP)
-            .Cases("accept", "unix-accept",
+            .Cases({"accept", "unix-accept"},
                    &ConnectionFileDescriptor::AcceptNamedSocket)
             .Case("unix-abstract-accept",
                   &ConnectionFileDescriptor::AcceptAbstractSocket)
-            .Cases("connect", "tcp-connect",
+            .Cases({"connect", "tcp-connect"},
                    &ConnectionFileDescriptor::ConnectTCP)
             .Case("udp", &ConnectionFileDescriptor::ConnectUDP)
             .Case("unix-connect", &ConnectionFileDescriptor::ConnectNamedSocket)
