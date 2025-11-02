@@ -1289,6 +1289,13 @@ public:
   /// ResourceTracker is removed.
   virtual Error notifyRemoving(ResourceTracker &RT) = 0;
 
+  /// This method will be called when materialization fails for symbols managed
+  /// by the given MaterializationResponsibility. Platforms can override this to
+  /// clean up internal bookkeeping (e.g., init/deinit symbol tracking).
+  virtual Error notifyFailed(MaterializationResponsibility &MR) {
+    return Error::success();
+  }
+
   /// A utility function for looking up initializer symbols. Performs a blocking
   /// lookup for the given symbols in each of the given JITDylibs.
   ///

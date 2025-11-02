@@ -3162,6 +3162,10 @@ void ExecutionSession::OL_notifyFailed(MaterializationResponsibility &MR) {
   if (MR.SymbolFlags.empty())
     return;
 
+  // Notify the platform to clean up any failed-symbol bookkeeping.
+  if (auto *Plat = getPlatform())
+    cantFail(Plat->notifyFailed(MR));
+
   SymbolNameVector SymbolsToFail;
   for (auto &[Name, Flags] : MR.SymbolFlags)
     SymbolsToFail.push_back(Name);
