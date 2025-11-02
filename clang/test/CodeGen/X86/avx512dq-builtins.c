@@ -117,6 +117,10 @@ unsigned char test_kortestz_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m5
                             _mm512_cmpneq_epu64_mask(__C, __D));
 }
 
+TEST_CONSTEXPR(_kortestz_mask8_u8(0x00, 0x00) == 1);
+TEST_CONSTEXPR(_kortestz_mask8_u8(0x00, 0x80) == 0);
+TEST_CONSTEXPR(_kortestz_mask8_u8(0x01, 0xFE) == 0);
+
 unsigned char test_kortestc_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_kortestc_mask8_u8
   // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -129,6 +133,10 @@ unsigned char test_kortestc_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m5
   return _kortestc_mask8_u8(_mm512_cmpneq_epu64_mask(__A, __B),
                             _mm512_cmpneq_epu64_mask(__C, __D));
 }
+
+TEST_CONSTEXPR(_kortestc_mask8_u8(0x00, 0x00) == 0);
+TEST_CONSTEXPR(_kortestc_mask8_u8(0x00, 0x80) == 0);
+TEST_CONSTEXPR(_kortestc_mask8_u8(0x01, 0xFE) == 1);
 
 unsigned char test_kortest_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, unsigned char *CF) {
   // CHECK-LABEL: test_kortest_mask8_u8
@@ -150,6 +158,16 @@ unsigned char test_kortest_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m51
                            _mm512_cmpneq_epu64_mask(__C, __D), CF);
 }
 
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_kortest_mask8_u8() {
+  unsigned char all_ones = 0;
+  return (_kortest_mask8_u8(0x00, 0x00, &all_ones) == 1) && (all_ones == 0)
+      && (_kortest_mask8_u8(0x00, 0x80, &all_ones) == 0) && (all_ones == 0)
+      && (_kortest_mask8_u8(0x01, 0xFE, &all_ones) == 0) && (all_ones == 1)
+      ;
+}
+#endif
+
 unsigned char test_ktestz_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_ktestz_mask8_u8
   // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -160,6 +178,11 @@ unsigned char test_ktestz_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512
                           _mm512_cmpneq_epu64_mask(__C, __D));
 }
 
+TEST_CONSTEXPR(_ktestz_mask8_u8(0x00, 0x00) == 1);
+TEST_CONSTEXPR(_ktestz_mask8_u8(0x00, 0x80) == 1);
+TEST_CONSTEXPR(_ktestz_mask8_u8(0xF0, 0x80) == 0);
+TEST_CONSTEXPR(_ktestz_mask8_u8(0x01, 0x01) == 0);
+
 unsigned char test_ktestc_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_ktestc_mask8_u8
   // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -169,6 +192,11 @@ unsigned char test_ktestc_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512
   return _ktestc_mask8_u8(_mm512_cmpneq_epu64_mask(__A, __B),
                           _mm512_cmpneq_epu64_mask(__C, __D));
 }
+
+TEST_CONSTEXPR(_ktestc_mask8_u8(0x00, 0x00) == 1);
+TEST_CONSTEXPR(_ktestc_mask8_u8(0x00, 0x80) == 0);
+TEST_CONSTEXPR(_ktestc_mask8_u8(0xF0, 0x80) == 1);
+TEST_CONSTEXPR(_ktestc_mask8_u8(0x01, 0x01) == 1);
 
 unsigned char test_ktest_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, unsigned char *CF) {
   // CHECK-LABEL: test_ktest_mask8_u8
@@ -184,6 +212,17 @@ unsigned char test_ktest_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i
                          _mm512_cmpneq_epu64_mask(__C, __D), CF);
 }
 
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_ktest_mask8_u8() {
+  unsigned char and_not = 0;
+  return (_ktest_mask8_u8(0x00, 0x00, &and_not) == 1) && (and_not == 1)
+      && (_ktest_mask8_u8(0x00, 0x80, &and_not) == 1) && (and_not == 0)
+      && (_ktest_mask8_u8(0xF0, 0x80, &and_not) == 0) && (and_not == 1)
+      && (_ktest_mask8_u8(0x01, 0x01, &and_not) == 0) && (and_not == 1)
+      ;
+}
+#endif
+
 unsigned char test_ktestz_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_ktestz_mask16_u8
   // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
@@ -194,6 +233,11 @@ unsigned char test_ktestz_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m51
                            _mm512_cmpneq_epu32_mask(__C, __D));
 }
 
+TEST_CONSTEXPR(_ktestz_mask16_u8(0x0000, 0x0000) == 1);
+TEST_CONSTEXPR(_ktestz_mask16_u8(0x0000, 0x8000) == 1);
+TEST_CONSTEXPR(_ktestz_mask16_u8(0xF000, 0x8000) == 0);
+TEST_CONSTEXPR(_ktestz_mask16_u8(0x0123, 0x0123) == 0);
+
 unsigned char test_ktestc_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_ktestc_mask16_u8
   // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
@@ -203,6 +247,11 @@ unsigned char test_ktestc_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m51
   return _ktestc_mask16_u8(_mm512_cmpneq_epu32_mask(__A, __B),
                            _mm512_cmpneq_epu32_mask(__C, __D));
 }
+
+TEST_CONSTEXPR(_ktestc_mask16_u8(0x0000, 0x0000) == 1);
+TEST_CONSTEXPR(_ktestc_mask16_u8(0x0000, 0x8000) == 0);
+TEST_CONSTEXPR(_ktestc_mask16_u8(0xF000, 0x8000) == 1);
+TEST_CONSTEXPR(_ktestc_mask16_u8(0x0123, 0x0123) == 1);
 
 unsigned char test_ktest_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, unsigned char *CF) {
   // CHECK-LABEL: test_ktest_mask16_u8
@@ -217,6 +266,17 @@ unsigned char test_ktest_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m512
   return _ktest_mask16_u8(_mm512_cmpneq_epu32_mask(__A, __B),
                           _mm512_cmpneq_epu32_mask(__C, __D), CF);
 }
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_ktest_mask16_u8() {
+  unsigned char and_not = 0;
+  return (_ktest_mask16_u8(0x0000, 0x0000, &and_not) == 1) && (and_not == 1)
+      && (_ktest_mask16_u8(0x0000, 0x8000, &and_not) == 1) && (and_not == 0)
+      && (_ktest_mask16_u8(0xF000, 0x8000, &and_not) == 0) && (and_not == 1)
+      && (_ktest_mask16_u8(0x0123, 0x0123, &and_not) == 0) && (and_not == 1)
+      ;
+}
+#endif
 
 __mmask8 test_kadd_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kadd_mask8

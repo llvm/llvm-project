@@ -209,6 +209,10 @@ unsigned char test_kortestz_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m
                              _mm512_cmpneq_epu16_mask(__C, __D));
 }
 
+TEST_CONSTEXPR(_kortestz_mask32_u8(0x0000'0000, 0x0000'0000) == 1);
+TEST_CONSTEXPR(_kortestz_mask32_u8(0x0000'0000, 0x8000'0000) == 0);
+TEST_CONSTEXPR(_kortestz_mask32_u8(0x0123'4567, 0xFEDC'BA98) == 0);
+
 unsigned char test_kortestc_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_kortestc_mask32_u8
   // CHECK: [[LHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
@@ -221,6 +225,10 @@ unsigned char test_kortestc_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m
   return _kortestc_mask32_u8(_mm512_cmpneq_epu16_mask(__A, __B),
                              _mm512_cmpneq_epu16_mask(__C, __D));
 }
+
+TEST_CONSTEXPR(_kortestc_mask32_u8(0x0000'0000, 0x0000'0000) == 0);
+TEST_CONSTEXPR(_kortestc_mask32_u8(0x0000'0000, 0x8000'0000) == 0);
+TEST_CONSTEXPR(_kortestc_mask32_u8(0x0123'4567, 0xFEDC'BA98) == 1);
 
 unsigned char test_kortest_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, unsigned char *CF) {
   // CHECK-LABEL: test_kortest_mask32_u8
@@ -242,6 +250,16 @@ unsigned char test_kortest_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m5
                             _mm512_cmpneq_epu16_mask(__C, __D), CF);
 }
 
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_kortest_mask32_u8() {
+  unsigned char all_ones = 0;
+  return (_kortest_mask32_u8(0x0000'0000, 0x0000'0000, &all_ones) == 1) && (all_ones == 0)
+      && (_kortest_mask32_u8(0x0000'0000, 0x8000'0000, &all_ones) == 0) && (all_ones == 0)
+      && (_kortest_mask32_u8(0x0123'4567, 0xFEDC'BA98, &all_ones) == 0) && (all_ones == 1)
+      ;
+}
+#endif
+
 unsigned char test_kortestz_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_kortestz_mask64_u8
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
@@ -255,6 +273,10 @@ unsigned char test_kortestz_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m
                              _mm512_cmpneq_epu8_mask(__C, __D));
 }
 
+TEST_CONSTEXPR(_kortestz_mask64_u8(0x0000'0000'0000'0000, 0x0000'0000'0000'0000) == 1);
+TEST_CONSTEXPR(_kortestz_mask64_u8(0x0000'0000'0000'0000, 0x8000'0000'0000'0000) == 0);
+TEST_CONSTEXPR(_kortestz_mask64_u8(0x0123'4567'89AB'CDEF, 0xFEDC'BA98'7654'3210) == 0);
+
 unsigned char test_kortestc_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_kortestc_mask64_u8
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
@@ -267,6 +289,10 @@ unsigned char test_kortestc_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m
   return _kortestc_mask64_u8(_mm512_cmpneq_epu8_mask(__A, __B),
                              _mm512_cmpneq_epu8_mask(__C, __D));
 }
+
+TEST_CONSTEXPR(_kortestc_mask64_u8(0x0000'0000'0000'0000, 0x0000'0000'0000'0000) == 0);
+TEST_CONSTEXPR(_kortestc_mask64_u8(0x0023'4567'89AB'CDEF, 0xFEDC'BA98'7654'3210) == 0);
+TEST_CONSTEXPR(_kortestc_mask64_u8(0x0123'4567'89AB'CDEF, 0xFEDC'BA98'7654'3210) == 1);
 
 unsigned char test_kortest_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, unsigned char *CF) {
   // CHECK-LABEL: test_kortest_mask64_u8
@@ -288,6 +314,16 @@ unsigned char test_kortest_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m5
                             _mm512_cmpneq_epu8_mask(__C, __D), CF);
 }
 
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_kortest_mask64_u8() {
+  unsigned char all_ones = 0;
+  return (_kortest_mask64_u8(0x0000'0000'0000'0000, 0x0000'0000'0000'0000, &all_ones) == 1) && (all_ones == 0)
+      && (_kortest_mask64_u8(0x0000'0000'0000'0000, 0x8000'0000'0000'0000, &all_ones) == 0) && (all_ones == 0)
+      && (_kortest_mask64_u8(0x0123'4567'89AB'CDEF, 0xFEDC'BA98'7654'3210, &all_ones) == 0) && (all_ones == 1)
+      ;
+}
+#endif
+
 unsigned char test_ktestz_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_ktestz_mask32_u8
   // CHECK: [[LHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
@@ -298,6 +334,11 @@ unsigned char test_ktestz_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m51
                            _mm512_cmpneq_epu16_mask(__C, __D));
 }
 
+TEST_CONSTEXPR(_ktestz_mask32_u8(0x0000'0000, 0x0000'0000) == 1);
+TEST_CONSTEXPR(_ktestz_mask32_u8(0x0000'0000, 0x8000'0000) == 1);
+TEST_CONSTEXPR(_ktestz_mask32_u8(0xF000'0000, 0x8000'0000) == 0);
+TEST_CONSTEXPR(_ktestz_mask32_u8(0x0123'4567, 0x0123'4567) == 0);
+
 unsigned char test_ktestc_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_ktestc_mask32_u8
   // CHECK: [[LHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
@@ -307,6 +348,11 @@ unsigned char test_ktestc_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m51
   return _ktestc_mask32_u8(_mm512_cmpneq_epu16_mask(__A, __B),
                            _mm512_cmpneq_epu16_mask(__C, __D));
 }
+
+TEST_CONSTEXPR(_ktestc_mask32_u8(0x0000'0000, 0x0000'0000) == 1);
+TEST_CONSTEXPR(_ktestc_mask32_u8(0x0000'0000, 0x8000'0000) == 0);
+TEST_CONSTEXPR(_ktestc_mask32_u8(0xF000'0000, 0x8000'0000) == 1);
+TEST_CONSTEXPR(_ktestc_mask32_u8(0x0123'4567, 0x0123'4567) == 1);
 
 unsigned char test_ktest_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, unsigned char *CF) {
   // CHECK-LABEL: test_ktest_mask32_u8
@@ -322,6 +368,17 @@ unsigned char test_ktest_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m512
                           _mm512_cmpneq_epu16_mask(__C, __D), CF);
 }
 
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_ktest_mask32_u8() {
+  unsigned char and_not = 0;
+  return (_ktest_mask32_u8(0x0000'0000, 0x0000'0000, &and_not) == 1) && (and_not == 1)
+      && (_ktest_mask32_u8(0x0000'0000, 0x8000'0000, &and_not) == 1) && (and_not == 0)
+      && (_ktest_mask32_u8(0xF000'0000, 0x8000'0000, &and_not) == 0) && (and_not == 1)
+      && (_ktest_mask32_u8(0x0123'4567, 0x0123'4567, &and_not) == 0) && (and_not == 1)
+      ;
+}
+#endif
+
 unsigned char test_ktestz_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_ktestz_mask64_u8
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
@@ -332,6 +389,11 @@ unsigned char test_ktestz_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m51
                            _mm512_cmpneq_epu8_mask(__C, __D));
 }
 
+TEST_CONSTEXPR(_ktestz_mask64_u8(0x0000'0000'0000'0000, 0x0000'0000'0000'0000) == 1);
+TEST_CONSTEXPR(_ktestz_mask64_u8(0x0000'0000'0000'0000, 0x8000'0000'0000'0000) == 1);
+TEST_CONSTEXPR(_ktestz_mask64_u8(0xF000'0000'0000'0000, 0x8000'0000'0000'0000) == 0);
+TEST_CONSTEXPR(_ktestz_mask64_u8(0x0123'4567'89AB'CDEF, 0x0123'4567'89AB'CDEF) == 0);
+
 unsigned char test_ktestc_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_ktestc_mask64_u8
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
@@ -341,6 +403,11 @@ unsigned char test_ktestc_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m51
   return _ktestc_mask64_u8(_mm512_cmpneq_epu8_mask(__A, __B),
                            _mm512_cmpneq_epu8_mask(__C, __D));
 }
+
+TEST_CONSTEXPR(_ktestc_mask64_u8(0x0000'0000'0000'0000, 0x0000'0000'0000'0000) == 1);
+TEST_CONSTEXPR(_ktestc_mask64_u8(0x0000'0000'0000'0000, 0x8000'0000'0000'0000) == 0);
+TEST_CONSTEXPR(_ktestc_mask64_u8(0xF000'0000'0000'0000, 0x8000'0000'0000'0000) == 1);
+TEST_CONSTEXPR(_ktestc_mask64_u8(0x0123'4567'89AB'CDEF, 0x0123'4567'89AB'CDEF) == 1);
 
 unsigned char test_ktest_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, unsigned char *CF) {
   // CHECK-LABEL: test_ktest_mask64_u8
@@ -355,6 +422,17 @@ unsigned char test_ktest_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m512
   return _ktest_mask64_u8(_mm512_cmpneq_epu8_mask(__A, __B),
                           _mm512_cmpneq_epu8_mask(__C, __D), CF);
 }
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_ktest_mask64_u8() {
+  unsigned char and_not = 0;
+  return (_ktest_mask64_u8(0x0000'0000'0000'0000, 0x0000'0000'0000'0000, &and_not) == 1) && (and_not == 1)
+      && (_ktest_mask64_u8(0x0000'0000'0000'0000, 0x8000'0000'0000'0000, &and_not) == 1) && (and_not == 0)
+      && (_ktest_mask64_u8(0xF000'0000'0000'0000, 0x8000'0000'0000'0000, &and_not) == 0) && (and_not == 1)
+      && (_ktest_mask64_u8(0x0123'4567'89AB'CDEF, 0x0123'4567'89AB'CDEF, &and_not) == 0) && (and_not == 1)
+      ;
+}
+#endif
 
 __mmask32 test_kadd_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kadd_mask32
