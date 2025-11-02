@@ -23,6 +23,7 @@ add_llvm_component_library(LLVMTransformUtils
   DebugSSAUpdater.cpp
   DeclareRuntimeLibcalls.cpp
   DemoteRegToStack.cpp
+  EmitChangedFuncDebugInfo.cpp
   DXILUpgrade.cpp
   EntryExitInstrumenter.cpp
   EscapeEnumerator.cpp
