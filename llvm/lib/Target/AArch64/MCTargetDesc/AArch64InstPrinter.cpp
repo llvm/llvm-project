@@ -1114,7 +1114,6 @@ bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
   } else
     return false;
 
-  std::string Str;
   llvm::transform(Name, Name.begin(), ::tolower);
 
   O << '\t' << Ins << '\t' << Reg.str() << ", " << Name;

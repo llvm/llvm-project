@@ -46,7 +46,7 @@ static bool isZeroConstant(Value val) {
           [](auto floatAttr) { return floatAttr.getValue().isZero(); })
       .Case<IntegerAttr>(
           [](auto intAttr) { return intAttr.getValue().isZero(); })
-      .Default([](auto) { return false; });
+      .Default(false);
 }
 
 static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,

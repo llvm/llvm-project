@@ -98,7 +98,7 @@ bool OmpStructureChecker::Enter(const parser::BlockData &x) {
   } else {
     for (const Scope &scope : context_.globalScope().children()) {
       if (scope.kind() == Scope::Kind::BlockData) {
-        if (scope.symbol()->name().empty()) {
+        if (auto *s{scope.symbol()}; !s || s->name().empty()) {
           scopeStack_.push_back(&scope);
           break;
         }
@@ -3390,6 +3390,7 @@ CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
 CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
 CHECK_SIMPLE_CLAUSE(Groupprivate, OMPC_groupprivate)
 CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
+CHECK_SIMPLE_CLAUSE(Threadset, OMPC_threadset)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
 CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
 CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
