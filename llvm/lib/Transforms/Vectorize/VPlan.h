@@ -968,6 +968,9 @@ public:
   /// Intersect this VPIRMetada object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
+
+  /// Print metadata with node IDs.
+  void print(raw_ostream &O, const Module &M) const;
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -4281,6 +4284,11 @@ public:
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
   VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
+
+  /// Return the Module from the scalar header.
+  const Module &getModule() const {
+    return *ScalarHeader->getIRBasicBlock()->getModule();
+  }
 
   /// Return an ArrayRef containing VPIRBasicBlocks wrapping the exit blocks of
   /// the original scalar loop.

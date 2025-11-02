@@ -7,11 +7,11 @@ define void @test_widen_metadata(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK:      <x1> vector loop: {
 ; CHECK:        vector.body:
-; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}>
-; CHECK:          WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float
-; CHECK:          WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00>
+; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}> (!tbaa !{{[0-9]+}})
+; CHECK:          WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float (!fpmath !{{[0-9]+}})
+; CHECK:          WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00> (!fpmath !{{[0-9]+}})
 ; CHECK:          WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
-; CHECK:          WIDEN store vp<{{.*}}>, ir<%conv.back>
+; CHECK:          WIDEN store vp<{{.*}}>, ir<%conv.back> (!tbaa !{{[0-9]+}})
 ;
 entry:
   br label %loop
@@ -40,9 +40,9 @@ define void @test_intrinsic_with_metadata(ptr noalias %A, ptr noalias %B, i32 %n
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK:      <x1> vector loop: {
 ; CHECK:        vector.body:
-; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}>
-; CHECK:          WIDEN-INTRINSIC ir<%sqrt> = call llvm.sqrt(ir<%lv>)
-; CHECK:          WIDEN store vp<{{.*}}>, ir<%sqrt>
+; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}> (!tbaa !{{[0-9]+}})
+; CHECK:          WIDEN-INTRINSIC ir<%sqrt> = call llvm.sqrt(ir<%lv>) (!fpmath !{{[0-9]+}})
+; CHECK:          WIDEN store vp<{{.*}}>, ir<%sqrt> (!tbaa !{{[0-9]+}})
 ;
 entry:
   br label %loop
@@ -67,11 +67,11 @@ define void @test_widen_with_multiple_metadata(ptr noalias %A, ptr noalias %B, i
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK:      <x1> vector loop: {
 ; CHECK:        vector.body:
-; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}>
+; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}> (!tbaa !{{[0-9]+}})
 ; CHECK:          WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float
 ; CHECK:          WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00>
 ; CHECK:          WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
-; CHECK:          WIDEN store vp<{{.*}}>, ir<%conv.back>
+; CHECK:          WIDEN store vp<{{.*}}>, ir<%conv.back> (!tbaa !{{[0-9]+}})
 ;
 entry:
   br label %loop
