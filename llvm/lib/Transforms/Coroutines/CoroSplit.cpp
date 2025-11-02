@@ -1988,6 +1988,91 @@ void coro::SwitchABI::splitCoroutine(Function &F, coro::Shape &Shape,
   SwitchCoroutineSplitter::split(F, Shape, Clones, TTI);
 }
 
+// Dominance issue fixer for each predecessor satisfying predicate function
+static void
+remapPredecessorIfPredicate(BasicBlock *InitialBlock,
+                            BasicBlock *ReplacementBlock,
+                            std::function<bool(BasicBlock *)> Predicate) {
+
+  SmallVector<BasicBlock *> InitialBlockDominanceViolatingPredecessors;
+
+  auto Predecessors = predecessors(InitialBlock);
+  std::copy_if(Predecessors.begin(), Predecessors.end(),
+               std::back_inserter(InitialBlockDominanceViolatingPredecessors),
+               Predicate);
+
+  // Tailor the predecessor terminator - redirect it to ReplacementBlock.
+  for (auto *InitialBlockDominanceViolatingPredecessor :
+       InitialBlockDominanceViolatingPredecessors) {
+    auto *Terminator =
+        InitialBlockDominanceViolatingPredecessor->getTerminator();
+    if (auto *TerminatorIsInvoke = dyn_cast<InvokeInst>(Terminator)) {
+      if (InitialBlock == TerminatorIsInvoke->getUnwindDest()) {
+        TerminatorIsInvoke->setUnwindDest(ReplacementBlock);
+      } else {
+        TerminatorIsInvoke->setNormalDest(ReplacementBlock);
+      }
+    } else if (auto *TerminatorIsBranch = dyn_cast<BranchInst>(Terminator)) {
+      for (unsigned int SuccessorIdx = 0;
+           SuccessorIdx < TerminatorIsBranch->getNumSuccessors();
+           ++SuccessorIdx) {
+        if (InitialBlock == TerminatorIsBranch->getSuccessor(SuccessorIdx)) {
+          TerminatorIsBranch->setSuccessor(SuccessorIdx, ReplacementBlock);
+        }
+      }
+    } else if (auto *TerminatorIsCleanupReturn =
+                   dyn_cast<CleanupReturnInst>(Terminator)) {
+      TerminatorIsCleanupReturn->setUnwindDest(ReplacementBlock);
+    } else {
+      Terminator->print(dbgs());
+      report_fatal_error("Terminator is not implemented");
+    }
+  }
+}
+
+// Fixer for the "Instruction does not dominate all uses!" bug
+// The fix consists of mapping dominance violating paths (where CoroBegin does
+// not dominate cleanup nodes), duplicating them and setup 2 flows - the one
+// that insertSpills intended to create (using the spill) and another one,
+// preserving the logics of pre-splitting, which would be executed if unwinding
+// happened before CoroBegin
+static void enforceDominationByCoroBegin(Function &F,
+                                         const coro::Shape &Shape) {
+  DominatorTree DT(F);
+  BasicBlock *CoroBeginNode = Shape.CoroBegin->getParent();
+
+  // Run is in reversed post order, to enforce visiting predecessors before
+  // successors
+  for (BasicBlock *CurrentBlock :
+       ReversePostOrderTraversal<BasicBlock *>(CoroBeginNode)) {
+    if (DT.dominates(CoroBeginNode, CurrentBlock)) {
+      continue;
+    }
+
+    // The duplicate will become the unspilled alternative
+    ValueToValueMapTy VMap;
+    auto *UnspilledAlternativeBlock =
+        CloneBasicBlock(CurrentBlock, VMap, ".unspilled_alternative", &F);
+
+    // Remap node instructions
+    for (Instruction &UnspilledAlternativeBlockInstruction :
+         *UnspilledAlternativeBlock) {
+      RemapInstruction(&UnspilledAlternativeBlockInstruction, VMap,
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    }
+
+    // Clone only if predecessor breaks dominance against CoroBegin
+    remapPredecessorIfPredicate(
+        CurrentBlock, UnspilledAlternativeBlock,
+        [&DT, &CoroBeginNode](BasicBlock *PredecessorNode) {
+          return !DT.dominates(CoroBeginNode, PredecessorNode);
+        });
+
+    // We changed dominance tree, so recalculate it
+    DT.recalculate(F);
+  }
+}
+
 static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
                              coro::BaseABI &ABI, TargetTransformInfo &TTI,
                              bool OptimizeFrame) {
@@ -2239,6 +2324,8 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     coro::Shape Shape(F);
     if (!Shape.CoroBegin)
       continue;
+
+    enforceDominationByCoroBegin(F, Shape);
 
     F.setSplittedCoroutine();
 

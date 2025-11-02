@@ -17,7 +17,6 @@
 
 #include "CoroInternal.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/IR/DIBuilder.h"
@@ -36,7 +35,6 @@
 #include "llvm/Transforms/Coroutines/SpillUtils.h"
 #include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
@@ -975,112 +973,6 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
-// Dominance issue fixer for each predecessor satisfying predicate function
-static void
-remapPredecessorIfPredicate(BasicBlock *InitialBlock,
-                            BasicBlock *ReplacementBlock,
-                            std::function<bool(BasicBlock *)> Predicate) {
-
-  SmallVector<BasicBlock *> InitialBlockDominanceViolatingPredecessors;
-
-  auto Predecessors = predecessors(InitialBlock);
-  std::copy_if(Predecessors.begin(), Predecessors.end(),
-               std::back_inserter(InitialBlockDominanceViolatingPredecessors),
-               Predicate);
-
-  // Tailor the predecessor terminator - redirect it to ReplacementBlock.
-  for (auto *InitialBlockDominanceViolatingPredecessor :
-       InitialBlockDominanceViolatingPredecessors) {
-    auto *Terminator =
-        InitialBlockDominanceViolatingPredecessor->getTerminator();
-    if (auto *TerminatorIsInvoke = dyn_cast<InvokeInst>(Terminator)) {
-      if (InitialBlock == TerminatorIsInvoke->getUnwindDest()) {
-        TerminatorIsInvoke->setUnwindDest(ReplacementBlock);
-      } else {
-        TerminatorIsInvoke->setNormalDest(ReplacementBlock);
-      }
-    } else if (auto *TerminatorIsBranch = dyn_cast<BranchInst>(Terminator)) {
-      for (unsigned int SuccessorIdx = 0;
-           SuccessorIdx < TerminatorIsBranch->getNumSuccessors();
-           ++SuccessorIdx) {
-        if (InitialBlock == TerminatorIsBranch->getSuccessor(SuccessorIdx)) {
-          TerminatorIsBranch->setSuccessor(SuccessorIdx, ReplacementBlock);
-        }
-      }
-    } else if (auto *TerminatorIsCleanupReturn =
-                   dyn_cast<CleanupReturnInst>(Terminator)) {
-      TerminatorIsCleanupReturn->setUnwindDest(ReplacementBlock);
-    } else {
-      Terminator->print(dbgs());
-      report_fatal_error("Terminator is not implemented");
-    }
-  }
-}
-
-// Fixer for the "Instruction does not dominate all uses!" bug
-// The fix consists of mapping dominance violating paths (where CoroBegin does
-// not dominate cleanup nodes), duplicating them and setup 2 flows - the one
-// that insertSpills intended to create (using the spill) and another one,
-// preserving the logics of pre-splitting, which would be executed if unwinding
-// happened before CoroBegin
-static void enforceDominationByCoroBegin(const FrameDataInfo &FrameData,
-                                         const coro::Shape &Shape, Function *F,
-                                         DominatorTree &DT) {
-  SmallPtrSet<BasicBlock *, 3> SpillUserDominanceViolatingBlocksSet;
-
-  // Prepare the node set, logics will be run only on those nodes
-  for (const auto &E : FrameData.Spills) {
-    for (auto *U : E.second) {
-      auto *CurrentBlock = U->getParent();
-      if (!DT.dominates(Shape.CoroBegin, CurrentBlock)) {
-        SpillUserDominanceViolatingBlocksSet.insert(CurrentBlock);
-      }
-    }
-  }
-
-  if (SpillUserDominanceViolatingBlocksSet.empty()) {
-    return;
-  }
-
-  // Run is in reversed post order, to enforce visiting predecessors before
-  // successors
-  for (BasicBlock *CurrentBlock : ReversePostOrderTraversal<Function *>(F)) {
-    if (!SpillUserDominanceViolatingBlocksSet.contains(CurrentBlock)) {
-      continue;
-    }
-    SpillUserDominanceViolatingBlocksSet.erase(CurrentBlock);
-
-    // The duplicate will become the unspilled alternative
-    ValueToValueMapTy VMap;
-    auto *UnspilledAlternativeBlock =
-        CloneBasicBlock(CurrentBlock, VMap, ".unspilled_alternative", F);
-
-    // Remap node instructions
-    for (Instruction &UnspilledAlternativeBlockInstruction :
-         *UnspilledAlternativeBlock) {
-      RemapInstruction(&UnspilledAlternativeBlockInstruction, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    }
-
-    // Clone only if predecessor breaks dominance against CoroBegin
-    remapPredecessorIfPredicate(CurrentBlock, UnspilledAlternativeBlock,
-                                [&DT, &Shape](BasicBlock *PredecessorNode) {
-                                  return !DT.dominates(Shape.CoroBegin,
-                                                       PredecessorNode);
-                                });
-
-    // We changed dominance tree, so recalculate it
-    DT.recalculate(*F);
-
-    if (SpillUserDominanceViolatingBlocksSet.empty()) {
-      return;
-    }
-  }
-
-  assert(SpillUserDominanceViolatingBlocksSet.empty() &&
-         "Graph is corrupted by SpillUserBlocksSet");
-}
-
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -1159,8 +1051,6 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     }
     return GEP;
   };
-
-  enforceDominationByCoroBegin(FrameData, Shape, F, DT);
 
   for (auto const &E : FrameData.Spills) {
     Value *Def = E.first;
