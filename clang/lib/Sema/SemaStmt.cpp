@@ -3315,6 +3315,8 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
                                    LabelDecl *Target, SourceLocation LabelLoc) {
   Scope *S;
   if (Target) {
+    MarkAnyDeclReferenced(Target->getLocation(), Target,
+                          /*MightBeOdrUse=*/false);
     S = FindLabeledBreakContinueScope(*this, CurScope, ContinueLoc, Target,
                                       LabelLoc,
                                       /*IsContinue=*/true);
@@ -3352,6 +3354,8 @@ StmtResult Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
                                 LabelDecl *Target, SourceLocation LabelLoc) {
   Scope *S;
   if (Target) {
+    MarkAnyDeclReferenced(Target->getLocation(), Target,
+                          /*MightBeOdrUse=*/false);
     S = FindLabeledBreakContinueScope(*this, CurScope, BreakLoc, Target,
                                       LabelLoc,
                                       /*IsContinue=*/false);
