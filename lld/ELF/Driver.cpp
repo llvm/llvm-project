@@ -1623,6 +1623,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
   ctx.arg.zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   ctx.arg.zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
+  ctx.arg.relaxTbljal = args.hasArg(OPT_relax_tbljal);
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
   ctx.arg.zZicfilp = getZZicfilp(ctx, args);
