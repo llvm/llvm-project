@@ -7,8 +7,7 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This file implements the --module-dump, --module-list-functions and        *|
-|* --module-list-globals commands in llvm-c-test.                             *|
+|* This file implements the module-related commands in llvm-c-test.           *|
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
@@ -134,4 +133,58 @@ int llvm_module_list_globals(void) {
   LLVMDisposeModule(M);
 
   return 0;
+}
+
+int llvm_module_get_producer_string(void) {
+  LLVMMemoryBufferRef MB;
+  char *Msg = NULL;
+  if (LLVMCreateMemoryBufferWithSTDIN(&MB, &Msg)) {
+    fprintf(stderr, "Error reading file: %s\n", Msg);
+    LLVMDisposeMessage(Msg);
+    return 1;
+  }
+
+  char *Producer = NULL;
+  char *Err = NULL;
+  LLVMBool Res = LLVMGetBitcodeProducerString(MB, &Producer, &Err);
+  LLVMDisposeMemoryBuffer(MB);
+
+  int Ret = 0;
+  if (Res) {
+    if (Producer)
+      fprintf(stderr,
+              "LLVMGetBitcodeProducerString returned %d, but Producer is not "
+              "NULL: %s",
+              Res, Producer);
+    if (Err)
+      fprintf(stderr, "LLVMGetBitcodeProducerSring returned %d, error: %s\n",
+              Res, Err);
+    else
+      fprintf(stderr,
+              "LLVMGetBitcodeProducerString returned %d, but the error is NULL",
+              Res);
+    Ret = 1;
+  } else {
+    if (!Producer) {
+      fprintf(stderr,
+              "LLVMGetBitcodeProducerString returned %d, but Producer is NULL",
+              Res);
+      Ret = 1;
+    }
+    if (Err) {
+      fprintf(stderr,
+              "LLVMGetBitcodeProducerString returned %d, Producer is not NULL: "
+              "%s, but also returned an error: %s",
+              Res, Producer, Err);
+      Ret = 1;
+    }
+
+    printf("%s\n", Producer);
+  }
+
+  if (Err)
+    LLVMDisposeMessage(Err);
+  if (Producer)
+    LLVMDisposeMessage(Producer);
+  return Ret;
 }
