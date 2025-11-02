@@ -89,6 +89,7 @@ public:
     return CasesImpl(CaseStrings, Value);
   }
 
+  [[deprecated("Pass cases in std::initializer_list instead")]]
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, T Value) {
     return CasesImpl({S0, S1}, Value);
   }
