@@ -7648,13 +7648,18 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
       NewWeights[1] = Weights[0] / 2;
       NewWeights[0] = OrigDenominator - NewWeights[1];
       setFittedBranchWeights(*BI, NewWeights, /*IsExpected=*/false);
-
-      // For the original switch, we reduce the weight of the default by the
-      // amount by which the previous branch contributes to getting to default,
-      // and then make sure the remaining weights have the same relative ratio
-      // wrt eachother.
+      // The probability of executing the default block stays constant. It was
+      //  p_d = Weights[0] / OrigDenominator
+      //  we rewrite as W/D
+      // We want to find the probability of the default branch of the switch
+      // statement. Let's call it X. We have W/D = W/2D + X * (1-W/2D)
+      // i.e. the original probability is the probability we go to the default
+      // branch from the BI branch, or we take the default branch on the SI.
+      // Meaning X = W / (2D - W), or (W/2) / (D - W/2)
+      // This matches using W/2 for the default branch probability numerator and
+      // D-W/2 as the denominator.
+      Weights[0] = NewWeights[1];
       uint64_t CasesDenominator = OrigDenominator - Weights[0];
-      Weights[0] /= 2;
       for (auto &W : drop_begin(Weights))
         W = NewWeights[0] * static_cast<double>(W) / CasesDenominator;
 
