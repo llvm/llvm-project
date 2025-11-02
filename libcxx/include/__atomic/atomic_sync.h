@@ -64,7 +64,7 @@ struct __atomic_waitable< _Tp,
 #if _LIBCPP_STD_VER >= 20
 #  if _LIBCPP_HAS_THREADS
 
-// old dylib interface
+// old dylib interface kept for backwards compatibility
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*) _NOEXCEPT;
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile*) _NOEXCEPT;
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile*) _NOEXCEPT;
