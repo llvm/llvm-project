@@ -1271,7 +1271,15 @@ private:
       const CXXConstructorDecl *Ctor = Construct->getConstructor();
       CallableInfo CI(*Ctor);
       followCall(CI, Construct->getLocation());
+      return true;
+    }
 
+    bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *BTE) override {
+      const CXXDestructorDecl* Dtor = BTE->getTemporary()->getDestructor();
+      if (Dtor != nullptr) {
+        CallableInfo CI(*Dtor);
+        followCall(CI, BTE->getBeginLoc());
+      }
       return true;
     }
 

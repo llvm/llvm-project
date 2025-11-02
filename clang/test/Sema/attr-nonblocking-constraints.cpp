@@ -354,6 +354,20 @@ struct Unsafe {
   Unsafe(float y) [[clang::nonblocking]] : Unsafe(int(y)) {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
 };
 
+// Exercise the case of a temporary with a safe constructor and unsafe destructor.
+void nb23()
+{
+	struct X {
+		int *ptr = nullptr;
+		X() {}
+		~X() { delete ptr; } // expected-note {{destructor cannot be inferred 'nonblocking' because it allocates or deallocates memory}}
+	};
+
+	auto inner = []() [[clang::nonblocking]] {
+		X(); // expected-warning {{lambda with 'nonblocking' attribute must not call non-'nonblocking' destructor 'nb23()::X::~X'}}
+	};
+}
+
 struct DerivedFromUnsafe : public Unsafe {
   DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
   DerivedFromUnsafe(int x) [[clang::nonblocking]] : Unsafe(x) {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
