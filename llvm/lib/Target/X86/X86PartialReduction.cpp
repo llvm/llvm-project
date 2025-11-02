@@ -552,8 +552,7 @@ bool X86PartialReductionLegacy::runOnFunction(Function &F) {
 
 PreservedAnalyses X86PartialReductionPass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
-  bool Changed =
-      X86PartialReduction(static_cast<const X86TargetMachine *>(TM)).run(F);
+  bool Changed = X86PartialReduction(TM).run(F);
   if (!Changed)
     return PreservedAnalyses::all();
 

@@ -160,10 +160,10 @@ FunctionPass *createX86InsertX87waitPass();
 /// ways.
 class X86PartialReductionPass : public PassInfoMixin<X86PartialReductionPass> {
 private:
-  const TargetMachine *TM;
+  const X86TargetMachine *TM;
 
 public:
-  X86PartialReductionPass(const TargetMachine *TM) : TM(TM) {}
+  X86PartialReductionPass(const X86TargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
