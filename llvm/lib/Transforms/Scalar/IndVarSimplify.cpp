@@ -1778,6 +1778,21 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
         }
       }
 
+  // Skip if the loop has tokens referenced outside the loop to avoid
+  // changing convergence behavior.
+  for (BasicBlock *Block : L->blocks()) {
+    for (Instruction &I : *Block) {
+      if (I.getType()->isTokenTy()) {
+        for (User *U : I.users()) {
+          Instruction *UserInst = dyn_cast<Instruction>(U);
+          if (UserInst && !L->contains(UserInst)) {
+            return false;
+          }
+        }
+      }
+    }
+  }
+
   bool Changed = false;
   // Finally, do the actual predication for all predicatable blocks.  A couple
   // of notes here:
