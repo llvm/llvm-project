@@ -14933,7 +14933,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // Apply section attributes and pragmas to global variables.
   if (GlobalStorage && var->isThisDeclarationADefinition() &&
-      !inTemplateInstantiation()) {
+      !var->getDeclContext()->isDependentContext()) {
     PragmaStack<StringLiteral *> *Stack = nullptr;
     int SectionFlags = ASTContext::PSF_Read;
     bool MSVCEnv =
