@@ -1,12 +1,12 @@
 .. title:: clang-tidy - cert-err60-cpp
 .. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/exception-type-not-nothrow-copy-constructible.html
+   :http-equiv=refresh: 5;URL=../bugprone/exception-copy-constructor-throws.html
 
 cert-err60-cpp
 ==============
 
 The `cert-err60-cpp` check is an alias, please see
-`bugprone-exception-type-not-nothrow-copy-constructible <../bugprone/exception-type-not-nothrow-copy-constructible.html>`_
+`bugprone-exception-copy-constructor-throws <../bugprone/exception-copy-constructor-throws.html>`_
 for more information.
 
 This check corresponds to the CERT C++ Coding Standard rule

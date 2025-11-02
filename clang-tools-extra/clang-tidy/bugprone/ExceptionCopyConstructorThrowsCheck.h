@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONTYPENOTNOTHROWCOPYCONSTRUCTIBLECHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONTYPENOTNOTHROWCOPYCONSTRUCTIBLECHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONCOPYCONSTRUCTORTHROWSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONCOPYCONSTRUCTORTHROWSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,11 +16,10 @@ namespace clang::tidy::bugprone {
 /// Checks whether a thrown object is nothrow copy constructible.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/exception-type-not-nothrow-copy-constructible.html
-class ExceptionTypeNotNothrowCopyConstructibleCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/exception-copy-constructor-throws.html
+class ExceptionCopyConstructorThrowsCheck : public ClangTidyCheck {
 public:
-  ExceptionTypeNotNothrowCopyConstructibleCheck(StringRef Name,
-                                                ClangTidyContext *Context)
+  ExceptionCopyConstructorThrowsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
@@ -31,4 +30,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONTYPENOTNOTHROWCOPYCONSTRUCTIBLECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONCOPYCONSTRUCTORTHROWSCHECK_H

@@ -11,7 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
-#include "../bugprone/ExceptionTypeNotNothrowCopyConstructibleCheck.h"
+#include "../bugprone/ExceptionCopyConstructorThrowsCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
@@ -261,9 +261,8 @@ public:
         "cert-err52-cpp");
     CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
         "cert-err58-cpp");
-    CheckFactories
-        .registerCheck<bugprone::ExceptionTypeNotNothrowCopyConstructibleCheck>(
-            "cert-err60-cpp");
+    CheckFactories.registerCheck<bugprone::ExceptionCopyConstructorThrowsCheck>(
+        "cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
     // MEM

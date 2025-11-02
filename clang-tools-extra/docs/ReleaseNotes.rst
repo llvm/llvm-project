@@ -250,8 +250,8 @@ New check aliases
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-err60-cpp <clang-tidy/checks/cert/err60-cpp>` to
-  :doc:`bugprone-exception-type-not-nothrow-copy-constructible
-  <clang-tidy/checks/bugprone/exception-type-not-nothrow-copy-constructible>`
+  :doc:`bugprone-exception-copy-constructor-throws
+  <clang-tidy/checks/bugprone/exception-copy-constructor-throws>`
   keeping initial check as an alias to the new one.
 
 Changes in existing checks

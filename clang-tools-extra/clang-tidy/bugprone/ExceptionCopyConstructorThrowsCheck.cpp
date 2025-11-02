@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ExceptionTypeNotNothrowCopyConstructibleCheck.h"
+#include "ExceptionCopyConstructorThrowsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -14,7 +14,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-void ExceptionTypeNotNothrowCopyConstructibleCheck::registerMatchers(
+void ExceptionCopyConstructorThrowsCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
@@ -26,7 +26,7 @@ void ExceptionTypeNotNothrowCopyConstructibleCheck::registerMatchers(
       this);
 }
 
-void ExceptionTypeNotNothrowCopyConstructibleCheck::check(
+void ExceptionCopyConstructorThrowsCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<Expr>("expr");
   diag(E->getExprLoc(),
