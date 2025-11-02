@@ -525,6 +525,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"floor", &I::genFloor},
+    {"flush",
+     &I::genFlush,
+     {{{"unit", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"fraction", &I::genFraction},
     {"free", &I::genFree},
     {"fseek",
@@ -4599,6 +4603,20 @@ mlir::Value IntrinsicLibrary::genFloor(mlir::Type resultType,
   // Use LLVM floor that returns real.
   mlir::Value floor = genRuntimeCall("floor", arg.getType(), {arg});
   return builder.createConvert(loc, resultType, floor);
+}
+
+// FLUSH
+void IntrinsicLibrary::genFlush(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  mlir::Value unit;
+  if (isStaticallyAbsent(args[0]))
+    // Give a sentinal value of `-1` on the `()` case.
+    unit = builder.createIntegerConstant(loc, builder.getI32Type(), -1);
+  else
+    unit = fir::getBase(args[0]);
+
+  fir::runtime::genFlush(builder, loc, unit);
 }
 
 // FRACTION
