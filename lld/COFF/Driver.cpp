@@ -318,7 +318,8 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   }
 }
 
-void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
+void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy,
+                               llvm::raw_ostream *reproFile, bool defaultlib) {
   auto future = std::make_shared<std::future<MBErrPair>>(
       createFutureForFile(std::string(path)));
   std::string pathStr = std::string(path);
@@ -356,8 +357,17 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
         Err(ctx) << msg;
       else
         Err(ctx) << msg << "; did you mean '" << nearest << "'";
-    } else
+    } else {
+      // Write full path to library to repro file if /linkreprofullpathrsp
+      // is specified.
+      if (reproFile) {
+        *reproFile << '"';
+        if (defaultlib)
+          *reproFile << "/defaultlib:";
+        *reproFile << pathStr << "\"\n";
+      }
       ctx.driver.addBuffer(std::move(mb), wholeArchive, lazy);
+    }
   });
 }
 
@@ -514,7 +524,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       break;
     case OPT_defaultlib:
       if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
-        enqueuePath(*path, false, false);
+        enqueuePath(*path, false, false, nullptr);
       break;
     case OPT_entry:
       if (!arg->getValue()[0])
@@ -2204,6 +2214,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->incremental = false;
   }
 
+  // Handle /linkreprofullpathrsp.
+  std::unique_ptr<llvm::raw_ostream> reproFile;
+  if (auto *arg = args.getLastArg(OPT_linkreprofullpathrsp)) {
+    std::error_code ec;
+    reproFile = std::make_unique<llvm::raw_fd_ostream>(arg->getValue(), ec);
+    if (ec) {
+      Err(ctx) << "cannot open " << arg->getValue() << ": " << ec.message();
+      reproFile.reset();
+    }
+  }
+
   if (errCount(ctx))
     return;
 
@@ -2245,11 +2266,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         break;
       case OPT_wholearchive_file:
         if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-          enqueuePath(*path, true, inLib);
+          enqueuePath(*path, true, inLib, reproFile.get());
         break;
       case OPT_INPUT:
         if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-          enqueuePath(*path, isWholeArchive(*path), inLib);
+          enqueuePath(*path, isWholeArchive(*path), inLib, reproFile.get());
         break;
       default:
         // Ignore other options.
@@ -2289,7 +2310,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // addWinSysRootLibSearchPaths(), which is why they are in a separate loop.
   for (auto *arg : args.filtered(OPT_defaultlib))
     if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
-      enqueuePath(*path, false, false);
+      enqueuePath(*path, false, false, reproFile.get(), true);
   run();
   if (errorCount())
     return;
