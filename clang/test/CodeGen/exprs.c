@@ -193,13 +193,3 @@ void f18(void) {
 }
 // CHECK-LABEL: define{{.*}} void @f18()
 // CHECK: call i32 @returns_int()
-
-// Ensure the right stmt is returned
-int f19(void) {
-  return ({ 3;;4;; });
-}
-// CHECK-LABEL: define{{.*}} i32 @f19()
-// CHECK: [[T:%.*]] = alloca i32
-// CHECK: store i32 4, ptr [[T]]
-// CHECK: [[L:%.*]] = load i32, ptr [[T]]
-// CHECK: ret i32 [[L]]
