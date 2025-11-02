@@ -355,6 +355,10 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`google-readability-todo
+  <clang-tidy/checks/google/readability-todo>` check to accept the new todo
+  format from the Google Style Guide.
+
 - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
   <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
 
