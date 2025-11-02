@@ -2163,18 +2163,42 @@ Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
 }
 
 Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
-  FixedVectorType *VT = dyn_cast<FixedVectorType>(Op->getType());
-  if (!VT)
-    return nullptr;
-
-  // This isn't strictly necessary, but handle the special/common case of zero:
-  // all integer reductions of a zero input produce zero.
-  if (isa<ConstantAggregateZero>(Op))
-    return ConstantInt::get(VT->getElementType(), 0);
+  auto *OpVT = cast<VectorType>(Op->getType());
 
   // This is the same as the underlying binops - poison propagates.
-  if (isa<PoisonValue>(Op) || Op->containsPoisonElement())
-    return PoisonValue::get(VT->getElementType());
+  if (Op->containsPoisonElement())
+    return PoisonValue::get(OpVT->getElementType());
+
+  // Shortcut non-accumulating reductions.
+  if (Constant *SplatVal = Op->getSplatValue()) {
+    switch (IID) {
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
+      return SplatVal;
+    case Intrinsic::vector_reduce_add:
+      if (SplatVal->isNullValue())
+        return SplatVal;
+      break;
+    case Intrinsic::vector_reduce_mul:
+      if (SplatVal->isNullValue() || SplatVal->isOneValue())
+        return SplatVal;
+      break;
+    case Intrinsic::vector_reduce_xor:
+      if (SplatVal->isNullValue())
+        return SplatVal;
+      if (OpVT->getElementCount().isKnownMultipleOf(2))
+        return Constant::getNullValue(OpVT->getElementType());
+      break;
+    }
+  }
+
+  FixedVectorType *VT = dyn_cast<FixedVectorType>(OpVT);
+  if (!VT)
+    return nullptr;
 
   // TODO: Handle undef.
   auto *EltC = dyn_cast_or_null<ConstantInt>(Op->getAggregateElement(0U));

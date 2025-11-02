@@ -1044,15 +1044,13 @@ struct AAPointerInfoImpl
     return AAPointerInfo::manifest(A);
   }
 
-  virtual const_bin_iterator begin() const override { return State::begin(); }
-  virtual const_bin_iterator end() const override { return State::end(); }
-  virtual int64_t numOffsetBins() const override {
-    return State::numOffsetBins();
-  }
-  virtual bool reachesReturn() const override {
+  const_bin_iterator begin() const override { return State::begin(); }
+  const_bin_iterator end() const override { return State::end(); }
+  int64_t numOffsetBins() const override { return State::numOffsetBins(); }
+  bool reachesReturn() const override {
     return !ReturnedOffsets.isUnassigned();
   }
-  virtual void addReturnedOffsetsTo(OffsetInfo &OI) const override {
+  void addReturnedOffsetsTo(OffsetInfo &OI) const override {
     if (ReturnedOffsets.isUnknown()) {
       OI.setUnknown();
       return;
@@ -3621,7 +3619,7 @@ struct AAIntraFnReachabilityFunction final
       return true;
 
     RQITy StackRQI(A, From, To, ExclusionSet, false);
-    typename RQITy::Reachable Result;
+    RQITy::Reachable Result;
     if (!NonConstThis->checkQueryCache(A, StackRQI, Result))
       return NonConstThis->isReachableImpl(A, StackRQI,
                                            /*IsTemporaryRQI=*/true);
@@ -6653,7 +6651,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
   AAHeapToStackFunction(const IRPosition &IRP, Attributor &A)
       : AAHeapToStack(IRP, A) {}
 
-  ~AAHeapToStackFunction() {
+  ~AAHeapToStackFunction() override {
     // Ensure we call the destructor so we release any memory allocated in the
     // sets.
     for (auto &It : AllocationInfos)
@@ -8374,7 +8372,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
     AccessKind2Accesses.fill(nullptr);
   }
 
-  ~AAMemoryLocationImpl() {
+  ~AAMemoryLocationImpl() override {
     // The AccessSets are allocated via a BumpPtrAllocator, we call
     // the destructor manually.
     for (AccessSet *AS : AccessKind2Accesses)
@@ -10703,7 +10701,7 @@ struct AAInterFnReachabilityFunction
     auto *NonConstThis = const_cast<AAInterFnReachabilityFunction *>(this);
 
     RQITy StackRQI(A, From, To, ExclusionSet, false);
-    typename RQITy::Reachable Result;
+    RQITy::Reachable Result;
     if (!NonConstThis->checkQueryCache(A, StackRQI, Result))
       return NonConstThis->isReachableImpl(A, StackRQI,
                                            /*IsTemporaryRQI=*/true);

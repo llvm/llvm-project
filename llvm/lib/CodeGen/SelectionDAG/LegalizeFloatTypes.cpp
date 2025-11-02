@@ -1172,6 +1172,12 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::FAKE_USE:
     Res = SoftenFloatOp_FAKE_USE(N);
     break;
+  case ISD::STACKMAP:
+    Res = SoftenFloatOp_STACKMAP(N, OpNo);
+    break;
+  case ISD::PATCHPOINT:
+    Res = SoftenFloatOp_PATCHPOINT(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1510,6 +1516,20 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FAKE_USE(SDNode *N) {
   SDValue Op1 = BitConvertToInteger(N->getOperand(1));
   return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
                      N->getOperand(0), Op1);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_STACKMAP(SDNode *N, unsigned OpNo) {
+  assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
+  SmallVector<SDValue> NewOps(N->ops());
+  NewOps[OpNo] = GetSoftenedFloat(NewOps[OpNo]);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
+  assert(OpNo >= 7);
+  SmallVector<SDValue> NewOps(N->ops());
+  NewOps[OpNo] = GetSoftenedFloat(NewOps[OpNo]);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 //===----------------------------------------------------------------------===//

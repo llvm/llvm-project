@@ -112,7 +112,7 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
   mlir::Block *entryBlock = &region.getBlocks().front();
   firOpBuilder.setInsertionPointToStart(entryBlock);
   auto loadOp =
-      firOpBuilder.create<fir::LoadOp>(clonedValArg.getLoc(), clonedValArg);
+      fir::LoadOp::create(firOpBuilder, clonedValArg.getLoc(), clonedValArg);
   return loadOp.getResult();
 }
 

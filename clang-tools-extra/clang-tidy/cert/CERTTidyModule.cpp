@@ -13,6 +13,7 @@
 #include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/CopyConstructorMutatesArgumentCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
+#include "../bugprone/RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
@@ -39,7 +40,6 @@
 #include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
 #include "LimitedRandomnessCheck.h"
-#include "NonTrivialTypesLibcMemoryCallsCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 
@@ -278,7 +278,7 @@ public:
         "cert-oop11-cpp");
     CheckFactories.registerCheck<bugprone::UnhandledSelfAssignmentCheck>(
         "cert-oop54-cpp");
-    CheckFactories.registerCheck<NonTrivialTypesLibcMemoryCallsCheck>(
+    CheckFactories.registerCheck<bugprone::RawMemoryCallOnNonTrivialTypeCheck>(
         "cert-oop57-cpp");
     CheckFactories.registerCheck<bugprone::CopyConstructorMutatesArgumentCheck>(
         "cert-oop58-cpp");
