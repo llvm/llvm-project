@@ -206,7 +206,7 @@ private:
     bool Error = false;              ///< Could not allocate.
 
     explicit LiveReg(Register VirtReg) : VirtReg(VirtReg) {}
-    explicit LiveReg() {}
+    explicit LiveReg() = default;
 
     unsigned getSparseSetIndex() const { return VirtReg.virtRegIndex(); }
   };
