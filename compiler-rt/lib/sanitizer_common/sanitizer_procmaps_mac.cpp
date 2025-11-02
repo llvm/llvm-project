@@ -82,6 +82,7 @@ void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
 
 MemoryMappingLayout::MemoryMappingLayout(bool cache_enabled) {
   Reset();
+  Verify();
 }
 
 MemoryMappingLayout::~MemoryMappingLayout() {
@@ -187,6 +188,7 @@ typedef struct dyld_shared_cache_dylib_text_info
 
 extern bool _dyld_get_shared_cache_uuid(uuid_t uuid);
 extern const void *_dyld_get_shared_cache_range(size_t *length);
+extern intptr_t _dyld_get_image_slide(const struct mach_header* mh);
 extern int dyld_shared_cache_iterate_text(
     const uuid_t cacheUuid,
     void (^callback)(const dyld_shared_cache_dylib_text_info *info));
@@ -255,16 +257,16 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
   layout_data->current_load_cmd_count--;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
+    if (strncmp(sc->segname, "__LINKEDIT", sizeof("__LINKEDIT")) == 0) {
+      // The LINKEDIT sections alias, so we ignore these sections to
+      // ensure our mappings are disjoint.
+      return false;
+    }
+
     uptr base_virt_addr, addr_mask;
     if (layout_data->current_image == kDyldImageIdx) {
-      base_virt_addr = (uptr)get_dyld_hdr();
-      // vmaddr is masked with 0xfffff because on macOS versions < 10.12,
-      // it contains an absolute address rather than an offset for dyld.
-      // To make matters even more complicated, this absolute address
-      // isn't actually the absolute segment address, but the offset portion
-      // of the address is accurate when combined with the dyld base address,
-      // and the mask will give just this offset.
-      addr_mask = 0xfffff;
+      base_virt_addr = (uptr)_dyld_get_image_slide(get_dyld_hdr());
+      addr_mask = ~0;
     } else {
       base_virt_addr =
           (uptr)_dyld_get_image_vmaddr_slide(layout_data->current_image);
@@ -443,6 +445,56 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
     data_.current_load_cmd_count = -1; // This will trigger loading next image
   }
   return false;
+}
+
+// NOTE: Verify expects to be called immediately after Reset(), since otherwise
+// it may miss some mappings. Verify will Reset() the layout after verification.
+bool MemoryMappingLayout::Verify() {
+  InternalMmapVector<char> module_name(kMaxPathLength);
+  MemoryMappedSegment segment(module_name.data(), module_name.size());
+  MemoryMappedSegmentData data;
+  segment.data_ = &data;
+
+  InternalMmapVector<MemoryMappedSegment> segments;
+  while (Next(&segment)) {
+    // skip the __PAGEZERO segment, its vmsize is 0
+    if (segment.filename[0] == '\0' || (segment.start == segment.end))
+      continue;
+
+    segments.push_back(segment);
+  }
+
+  // Verify that none of the segments overlap:
+  // 1. Sort the segments by the start address
+  // 2. Check that every segment starts after the previous one ends.
+  Sort(segments.data(), segments.size(),
+       [](MemoryMappedSegment& a, MemoryMappedSegment& b) {
+         return a.start < b.start;
+       });
+
+  // To avoid spam, we only print the report message once-per-process.
+  static bool invalid_module_map_reported = false;
+  bool well_formed = true;
+
+  for (size_t i = 1; i < segments.size(); i++) {
+    uptr cur_start = segments[i].start;
+    uptr prev_end = segments[i - 1].end;
+    if (cur_start < prev_end) {
+      well_formed = false;
+      VReport(2, "Overlapping mappings: cur_start = %p prev_end = %p\n",
+              (void*)cur_start, (void*)prev_end);
+      if (!invalid_module_map_reported) {
+        Report(
+            "WARN: Invalid dyld module map detected. This is most likely a bug "
+            "in the sanitizer.\n");
+        Report("WARN: Backtraces may be unreliable.\n");
+        invalid_module_map_reported = true;
+      }
+    }
+  }
+
+  Reset();
+  return well_formed;
 }
 
 void MemoryMappingLayout::DumpListOfModules(
