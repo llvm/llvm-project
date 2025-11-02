@@ -43,8 +43,8 @@
 
 #elif defined(_WIN32)
 
-#  include <windows.h>
 #  include <memory>
+#  include <windows.h>
 
 #else // <- Add other operating systems here
 
@@ -109,14 +109,20 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 #elif defined(_WIN32)
 
 static void* win32_get_synch_api_function(const char* function_name) {
-  // Attempt to load the API set. Note that HMODULE is documented as being a pointer type, which means we can safely use
-  // std::unique_ptr here as a wrapper for the handle, with a destructor freeing the handle when this module is
-  // unloaded.
-  // https://learn.microsoft.com/en-us/windows/win32/winprog/windows-data-types
-  // https://devblogs.microsoft.com/oldnewthing/20180307-00/?p=98175
-  static auto module_handle = std::unique_ptr<std::remove_pointer<HMODULE>::type, decltype(&FreeLibrary)>(
-      LoadLibraryW(L"api-ms-win-core-synch-l1-2-0.dll"), &FreeLibrary);
-  if (!module_handle) {
+  // Attempt to load the API set. Note that as per the Microsoft STL implementation, we assume this API is already
+  // loaded and accessible. While this isn't explicitly guaranteed by publicly available Win32 API documentation, it is
+  // true in practice, and may be guaranteed by internal documentation not released publicly. In any case the fact that
+  // the Microsoft STL made this assumption is reasonable basis to say that we can too. The alternative to this would be
+  // to use LoadLibrary, but then leak the module handle. We can't call FreeLibrary, as this would have to be triggered
+  // by a global static destructor, which would hang off DllMain, and calling FreeLibrary from DllMain is explicitly
+  // mentioned as not being allowed:
+  // https://learn.microsoft.com/en-us/windows/win32/dlls/dllmain
+  // Given the range of bad options here, we have chosen to mirror what Microsoft did, as it seems fair to assume that
+  // Microsoft will guarantee compatibility for us, as we are exposed to the same conditions as all existing Windows
+  // apps using the Microsoft STL VS2015/2017/2019/2022 runtimes, where Windows 7 support has not been excluded at
+  // compile time.
+  static auto module_handle = GetModuleHandleW(L"api-ms-win-core-synch-l1-2-0.dll");
+  if (module_handle == nullptr) {
     return nullptr;
   }
 
