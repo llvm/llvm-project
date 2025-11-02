@@ -398,7 +398,7 @@ public:
                DebugLoc DL = DebugLoc::getUnknown())
       : VPDef(SC), VPUser(Operands), DL(DL) {}
 
-  virtual ~VPRecipeBase() = default;
+  ~VPRecipeBase() override = default;
 
   /// Clone the current recipe.
   virtual VPRecipeBase *clone() = 0;
@@ -576,7 +576,7 @@ public:
     return R && classof(R);
   }
 
-  virtual VPSingleDefRecipe *clone() override = 0;
+  VPSingleDefRecipe *clone() override = 0;
 
   /// Returns the underlying instruction.
   Instruction *getUnderlyingInstr() {
@@ -907,7 +907,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
     return R && classof(R);
   }
 
-  virtual VPRecipeWithIRFlags *clone() override = 0;
+  VPRecipeWithIRFlags *clone() override = 0;
 
   static inline bool classof(const VPSingleDefRecipe *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
@@ -939,7 +939,7 @@ class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
 public:
-  VPIRMetadata() {}
+  VPIRMetadata() = default;
 
   /// Adds metatadata that can be preserved from the original instruction
   /// \p I.
@@ -950,12 +950,9 @@ public:
   VPIRMetadata(Instruction &I, LoopVersioning *LVer);
 
   /// Copy constructor for cloning.
-  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
+  VPIRMetadata(const VPIRMetadata &Other) = default;
 
-  VPIRMetadata &operator=(const VPIRMetadata &Other) {
-    Metadata = Other.Metadata;
-    return *this;
-  }
+  VPIRMetadata &operator=(const VPIRMetadata &Other) = default;
 
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
@@ -1107,14 +1104,15 @@ public:
         VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, DebugLoc DL = DebugLoc::getUnknown(),
-                const Twine &Name = "");
+                const VPIRFlags &Flags, const VPIRMetadata &MD = {},
+                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPInstruction *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
-    auto *New = new VPInstruction(Opcode, Operands, *this, getDebugLoc(), Name);
+    auto *New =
+        new VPInstruction(Opcode, Operands, *this, *this, getDebugLoc(), Name);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
@@ -1196,7 +1194,14 @@ public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, const VPIRFlags &Flags, DebugLoc DL,
                         const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, DL, Name), ResultTy(ResultTy) {}
+      : VPInstruction(Opcode, Operands, Flags, {}, DL, Name),
+        ResultTy(ResultTy) {}
+
+  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Type *ResultTy, DebugLoc DL, const VPIRFlags &Flags,
+                        const VPIRMetadata &Metadata, const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name),
+        ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
@@ -2068,7 +2073,7 @@ public:
     return classof(static_cast<const VPRecipeBase *>(R));
   }
 
-  virtual void execute(VPTransformState &State) override = 0;
+  void execute(VPTransformState &State) override = 0;
 
   /// Returns the step value of the induction.
   VPValue *getStepValue() { return getOperand(1); }
@@ -2557,7 +2562,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
+  bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
 
   /// Returns the number of stored operands of this interleave group. Returns 0
   /// for load interleave groups.
@@ -2712,7 +2717,8 @@ public:
 
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC;
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
+           R->getVPDefID() == VPRecipeBase::VPPartialReductionSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2783,7 +2789,10 @@ public:
         Opcode(Opcode), VFScaleFactor(ScaleFactor) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getChainOp()->getDefiningRecipe();
-    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
+    // When cloning as part of a VPExpressionRecipe the chain op could have
+    // replaced by a temporary VPValue, so it doesn't have a defining recipe.
+    assert((!AccumulatorRecipe ||
+            isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
             isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
            "Unexpected operand order for partial reduction recipe");
   }
@@ -3093,6 +3102,11 @@ public:
   /// removed before codegen.
   void decompose();
 
+  unsigned getVFScaleFactor() const {
+    auto *PR = dyn_cast<VPPartialReductionRecipe>(ExpressionRecipes.back());
+    return PR ? PR->getVFScaleFactor() : 1;
+  }
+
   /// Method for generating code, must not be called as this recipe is abstract.
   void execute(VPTransformState &State) override {
     llvm_unreachable("recipe must be removed before execute");
@@ -3170,6 +3184,9 @@ class LLVM_ABI_FOR_TEST VPWidenMemoryRecipe : public VPRecipeBase,
 protected:
   Instruction &Ingredient;
 
+  /// Alignment information for this memory access.
+  Align Alignment;
+
   /// Whether the accessed addresses are consecutive.
   bool Consecutive;
 
@@ -3189,10 +3206,10 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, bool Reverse,
+                      bool Consecutive, bool Reverse, Align Alignment,
                       const VPIRMetadata &Metadata, DebugLoc DL)
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
-        Consecutive(Consecutive), Reverse(Reverse) {
+        Alignment(Alignment), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
   }
 
@@ -3233,6 +3250,9 @@ public:
     return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
   }
 
+  /// Returns the alignment of the memory access.
+  Align getAlign() const { return Alignment; }
+
   /// Generate the wide load/store.
   void execute(VPTransformState &State) override {
     llvm_unreachable("VPWidenMemoryRecipe should not be instantiated.");
@@ -3250,18 +3270,18 @@ public:
 struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
                                                    public VPValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, bool Reverse,
+                    bool Consecutive, bool Reverse, Align Alignment,
                     const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
-                            Reverse, Metadata, DL),
+                            Reverse, Alignment, Metadata, DL),
         VPValue(this, &Load) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, Reverse, *this,
-                                 getDebugLoc());
+                                 getMask(), Consecutive, Reverse, getAlign(),
+                                 *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenLoadSC);
@@ -3292,8 +3312,8 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
-                            {Addr, &EVL}, L.isConsecutive(), L.isReverse(), L,
-                            L.getDebugLoc()),
+                            {Addr, &EVL}, L.isConsecutive(), L.isReverse(),
+                            L.getAlign(), L, L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -3331,16 +3351,16 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
                      VPValue *Mask, bool Consecutive, bool Reverse,
-                     const VPIRMetadata &Metadata, DebugLoc DL)
+                     Align Alignment, const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
-                            Consecutive, Reverse, Metadata, DL) {
+                            Consecutive, Reverse, Alignment, Metadata, DL) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
                                   getStoredValue(), getMask(), Consecutive,
-                                  Reverse, *this, getDebugLoc());
+                                  Reverse, getAlign(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
@@ -3375,7 +3395,7 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
                         VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {Addr, S.getStoredValue(), &EVL}, S.isConsecutive(),
-                            S.isReverse(), S, S.getDebugLoc()) {
+                            S.isReverse(), S.getAlign(), S, S.getDebugLoc()) {
     setMask(Mask);
   }
 
@@ -3962,7 +3982,7 @@ class VPIRBasicBlock : public VPBasicBlock {
         IRBB(IRBB) {}
 
 public:
-  ~VPIRBasicBlock() override {}
+  ~VPIRBasicBlock() override = default;
 
   static inline bool classof(const VPBlockBase *V) {
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
@@ -4014,7 +4034,7 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
         IsReplicator(IsReplicator) {}
 
 public:
-  ~VPRegionBlock() override {}
+  ~VPRegionBlock() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -4094,6 +4114,12 @@ public:
   const VPCanonicalIVPHIRecipe *getCanonicalIV() const {
     return const_cast<VPRegionBlock *>(this)->getCanonicalIV();
   }
+
+  /// Return the type of the canonical IV for loop regions.
+  Type *getCanonicalIVType() { return getCanonicalIV()->getScalarType(); }
+  const Type *getCanonicalIVType() const {
+    return getCanonicalIV()->getScalarType();
+  }
 };
 
 inline VPRegionBlock *VPRecipeBase::getRegion() {
@@ -4162,11 +4188,6 @@ class VPlan {
   /// Contains all the external definitions created for this VPlan. External
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveIns;
-
-  /// Mapping from SCEVs to the VPValues representing their expansions.
-  /// NOTE: This mapping is temporary and will be removed once all users have
-  /// been modeled in VPlan directly.
-  DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
   /// VPlan is destroyed.
@@ -4377,15 +4398,25 @@ public:
   }
 
   /// Return a VPValue wrapping i1 true.
-  VPValue *getTrue() {
-    LLVMContext &Ctx = getContext();
-    return getOrAddLiveIn(ConstantInt::getTrue(Ctx));
-  }
+  VPValue *getTrue() { return getConstantInt(1, 1); }
 
   /// Return a VPValue wrapping i1 false.
-  VPValue *getFalse() {
-    LLVMContext &Ctx = getContext();
-    return getOrAddLiveIn(ConstantInt::getFalse(Ctx));
+  VPValue *getFalse() { return getConstantInt(1, 0); }
+
+  /// Return a VPValue wrapping a ConstantInt with the given type and value.
+  VPValue *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {
+    return getOrAddLiveIn(ConstantInt::get(Ty, Val, IsSigned));
+  }
+
+  /// Return a VPValue wrapping a ConstantInt with the given bitwidth and value.
+  VPValue *getConstantInt(unsigned BitWidth, uint64_t Val,
+                          bool IsSigned = false) {
+    return getConstantInt(APInt(BitWidth, Val, IsSigned));
+  }
+
+  /// Return a VPValue wrapping a ConstantInt with the given APInt value.
+  VPValue *getConstantInt(const APInt &Val) {
+    return getOrAddLiveIn(ConstantInt::get(getContext(), Val));
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
@@ -4414,15 +4445,6 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  VPValue *getSCEVExpansion(const SCEV *S) const {
-    return SCEVToExpansion.lookup(S);
-  }
-
-  void addSCEVExpansion(const SCEV *S, VPValue *V) {
-    assert(!SCEVToExpansion.contains(S) && "SCEV already expanded");
-    SCEVToExpansion[S] = V;
-  }
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.

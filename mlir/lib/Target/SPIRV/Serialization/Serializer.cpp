@@ -89,6 +89,22 @@ static bool isZeroValue(Attribute attr) {
   return false;
 }
 
+/// Move all functions declaration before functions definitions. In SPIR-V
+/// "declarations" are functions without a body and "definitions" functions
+/// with a body. This is stronger than necessary. It should be sufficient to
+/// ensure any declarations precede their uses and not all definitions, however
+/// this allows to avoid analysing every function in the module this way.
+static void moveFuncDeclarationsToTop(spirv::ModuleOp moduleOp) {
+  Block::OpListType &ops = moduleOp.getBody()->getOperations();
+  if (ops.empty())
+    return;
+  Operation &firstOp = ops.front();
+  for (Operation &op : llvm::drop_begin(ops))
+    if (auto funcOp = dyn_cast<spirv::FuncOp>(op))
+      if (funcOp.getBody().empty())
+        funcOp->moveBefore(&firstOp);
+}
+
 namespace mlir {
 namespace spirv {
 
@@ -118,6 +134,8 @@ LogicalResult Serializer::serialize() {
   }
   processMemoryModel();
   processDebugInfo();
+
+  moveFuncDeclarationsToTop(module);
 
   // Iterate over the module body to serialize it. Assumptions are that there is
   // only one basic block in the moduleOp
@@ -260,9 +278,9 @@ static std::string getDecorationName(StringRef attrName) {
 }
 
 template <typename AttrTy, typename EmitF>
-LogicalResult processDecorationList(Location loc, Decoration decoration,
-                                    Attribute attrList, StringRef attrName,
-                                    EmitF emitter) {
+static LogicalResult processDecorationList(Location loc, Decoration decoration,
+                                           Attribute attrList,
+                                           StringRef attrName, EmitF emitter) {
   auto arrayAttr = dyn_cast<ArrayAttr>(attrList);
   if (!arrayAttr) {
     return emitError(loc, "expecting array attribute of ")

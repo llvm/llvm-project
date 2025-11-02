@@ -5,6 +5,22 @@
 # RUN: llvm-mc -triple powerpc-unknown-aix-gnu --show-encoding %s | \
 # RUN:   FileCheck -check-prefix=CHECK-BE %s
 
+#CHECK-BE: tlbiep 8, 10, 2, 1, 0          # encoding: [0x7d,0x4a,0x40,0x64]
+#CHECK-LE: tlbiep 8, 10, 2, 1, 0          # encoding: [0x64,0x40,0x4a,0x7d]
+           tlbiep 8, 10, 2, 1, 0
+
+# CHECK-BE: tlbieio 8, 10, 2              # encoding: [0x7d,0x48,0x40,0x24]
+# CHECK-LE: tlbieio 8, 10, 2              # encoding: [0x24,0x40,0x48,0x7d]
+            tlbieio 8, 10, 2
+
+# CHECK-BE: tlbsyncio 15                  # encoding: [0x7d,0xe0,0x04,0x68]
+# CHECK-LE: tlbsyncio 15                  # encoding: [0x68,0x04,0xe0,0x7d]
+            tlbsyncio 15
+
+# CHECK-BE: ptesyncio 15                  # encoding: [0x7d,0xe0,0x04,0xa8]
+# CHECK-LE: ptesyncio 15                  # encoding: [0xa8,0x04,0xe0,0x7d]
+            ptesyncio 15
+
 # CHECK-BE: dmxxextfdmr512 2, 34, 1, 0    # encoding: [0xf0,0x82,0x17,0x12]
 # CHECK-LE: dmxxextfdmr512 2, 34, 1, 0    # encoding: [0x12,0x17,0x82,0xf0]
             dmxxextfdmr512 2, 34, 1, 0
@@ -386,6 +402,10 @@
            xvmulhuh 4, 5, 7
 #CHECK-BE: xvmulhuh 4, 5, 7              # encoding: [0xf0,0x85,0x3b,0xd0]
 #CHECK-LE: xvmulhuh 4, 5, 7              # encoding: [0xd0,0x3b,0x85,0xf0]
+
+           mtlpl 3, 4
+#CHECK-BE: mtlpl 3, 4                     # encoding: [0x7c,0x80,0x1a,0x26]
+#CHECK-LE: mtlpl 3, 4                     # encoding: [0x26,0x1a,0x80,0x7c]
 
            xxmulmul 8, 3, 4, 2
 #CHECK-BE: xxmulmul 8, 3, 4, 2          # encoding: [0xed,0x03,0x22,0x08]

@@ -1119,6 +1119,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   EXPECT_TOKEN(Tokens[8], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
 
+  Tokens = annotate("::foo::bar& ::foo::bar::operator=(::foo::bar& other);");
+  ASSERT_EQ(Tokens.size(), 22u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[17], tok::amp, TT_PointerOrReference);
+
   Tokens = annotate("SomeLoooooooooooooooooType::Awaitable\n"
                     "SomeLoooooooooooooooooType::operator co_await();");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
@@ -1129,6 +1134,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   // Not TT_FunctionDeclarationName.
   EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_Unknown);
+
+  Tokens = annotate("SomeAPI::operator()();");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
@@ -3478,6 +3488,10 @@ TEST_F(TokenAnnotatorTest, StartOfName) {
   Tokens = annotate("class FOO BAR C {};");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown); // Not StartOfName
+
+  Tokens = annotate("int* ::foo::bar;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_StartOfName);
 
   auto Style = getLLVMStyle();
   Style.StatementAttributeLikeMacros.push_back("emit");

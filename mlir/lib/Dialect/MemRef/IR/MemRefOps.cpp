@@ -405,7 +405,7 @@ ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
 void AllocaScopeOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getResults()));
+    regions.push_back(RegionSuccessor(getOperation(), getResults()));
     return;
   }
 
@@ -1751,11 +1751,11 @@ OpFoldResult MemorySpaceCastOp::fold(FoldAdaptor adaptor) {
 }
 
 TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getSourcePtr() {
-  return cast<TypedValue<PtrLikeTypeInterface>>(getSource());
+  return getSource();
 }
 
 TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getTargetPtr() {
-  return cast<TypedValue<PtrLikeTypeInterface>>(getDest());
+  return getDest();
 }
 
 bool MemorySpaceCastOp::isValidMemorySpaceCast(PtrLikeTypeInterface tgt,
