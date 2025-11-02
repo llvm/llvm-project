@@ -47,7 +47,6 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
         # than the progress indicator as the progress indicator may not be
         # aligned with the failure.
         failing_action = ninja_log[index].split("FAILED: ")[1]
-        print(failing_action)
         failure_log = []
         while (
             index < len(ninja_log)
