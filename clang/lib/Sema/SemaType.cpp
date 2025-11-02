@@ -8285,10 +8285,20 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
 
   Expr *SizeExpr = Attr.getArgAsExpr(0);
   QualType T = S.BuildVectorType(CurType, SizeExpr, Attr.getLoc());
-  if (!T.isNull())
-    CurType = T;
-  else
+  if (T.isNull()) {
     Attr.setInvalid();
+    return;
+  }
+
+  std::optional<llvm::APSInt> VecSize =
+      SizeExpr->getIntegerConstantExpr(S.Context);
+  if (VecSize && VecSize->isNegative()) {
+    S.Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+    Attr.setInvalid();
+    return;
+  }
+
+  CurType = T;
 }
 
 /// Process the OpenCL-like ext_vector_type attribute when it occurs on
@@ -8306,6 +8316,14 @@ static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   QualType T = S.BuildExtVectorType(CurType, SizeExpr, Attr.getLoc());
   if (!T.isNull())
     CurType = T;
+
+  std::optional<llvm::APSInt> VecSize =
+      SizeExpr->getIntegerConstantExpr(S.Context);
+  if (VecSize && VecSize->isNegative()) {
+    S.Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+    Attr.setInvalid();
+    return;
+  }
 }
 
 static bool isPermittedNeonBaseType(QualType &Ty, VectorKind VecKind, Sema &S) {
