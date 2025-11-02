@@ -3049,6 +3049,18 @@ SPELLING_CACHE = {
 }
 
 
+def _convert_screaming_caps_to_pascal_case(kind: BaseEnumeration):
+    """
+    Converting the new enum names (full upper-case, underscore separated)
+    to the old ones (separated by capitalization), e.g. RESULT_TYPE -> ResultType
+    """
+    # Remove underscores
+    components = kind.name.split("_")
+    # Upper-camel case each split component
+    components = [component.lower().capitalize() for component in components]
+    return "".join(components)
+
+
 class CompletionChunk:
     class Kind:
         def __init__(self, name: str):
@@ -3175,9 +3187,9 @@ class CompletionString(ClangObject):
         return conf.lib.clang_getCompletionPriority(self.obj)  # type: ignore [no-any-return]
 
     @property
-    def availability(self) -> CompletionChunk.Kind:
+    def availability(self) -> AvailabilityKind:
         res = conf.lib.clang_getCompletionAvailability(self.obj)
-        return availabilityKinds[res]
+        return AvailabilityKind.from_id(res)
 
     @property
     def briefComment(self) -> str:
@@ -3189,18 +3201,10 @@ class CompletionString(ClangObject):
             + " || Priority: "
             + str(self.priority)
             + " || Availability: "
-            + str(self.availability)
+            + _convert_screaming_caps_to_pascal_case(self.availability)
             + " || Brief comment: "
             + str(self.briefComment)
         )
-
-
-availabilityKinds = {
-    0: CompletionChunk.Kind("Available"),
-    1: CompletionChunk.Kind("Deprecated"),
-    2: CompletionChunk.Kind("NotAvailable"),
-    3: CompletionChunk.Kind("NotAccessible"),
-}
 
 
 class CodeCompletionResult(Structure):
