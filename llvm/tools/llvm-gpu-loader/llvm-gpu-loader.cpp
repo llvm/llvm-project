@@ -184,28 +184,10 @@ ol_device_handle_t getHostDevice() {
   return Device;
 }
 
-ol_program_handle_t loadBinary(std::vector<char> &Binary,
-                               std::vector<ol_device_handle_t> &Devices) {
-  for (ol_device_handle_t &Device : Devices) {
-    bool IsValid = false;
-    OFFLOAD_ERR(
-        olIsValidBinary(Device, Binary.data(), Binary.size(), &IsValid));
-    if (!IsValid)
-      continue;
-
-    ol_program_handle_t Program;
-    OFFLOAD_ERR(
-        olCreateProgram(Device, Binary.data(), Binary.size(), &Program));
-    return Program;
-  }
-  handleError(
-      createStringError("No valid device found for '%s'", File.c_str()));
-}
-
 template <typename Args>
 void launchKernel(ol_queue_handle_t Queue, ol_device_handle_t Device,
                   ol_program_handle_t Program, const char *Name,
-                  ol_kernel_launch_size_args_t LaunchArgs, Args KernelArgs) {
+                  ol_kernel_launch_size_args_t LaunchArgs, Args &KernelArgs) {
   ol_symbol_handle_t Kernel;
   OFFLOAD_ERR(olGetSymbol(Program, Name, OL_SYMBOL_KIND_KERNEL, &Kernel));
 
