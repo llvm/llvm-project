@@ -59,7 +59,7 @@ constexpr void test() {
   {
     // arguments are moved once
     MoveAwareView mv;
-    std::ranges::adjacent_view<MoveAwareView, N> v{std::move(mv)};
+    std::ranges::adjacent_view<MoveAwareView, 1> v{std::move(mv)};
     auto tuple = *v.begin();
     assert(std::get<0>(tuple) == 2); // one move from the local variable to parameter, one move from parameter to member
   }

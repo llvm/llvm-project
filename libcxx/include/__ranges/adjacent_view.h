@@ -146,7 +146,7 @@ template <forward_range _View, size_t _Np>
 template <bool _Const>
 class adjacent_view<_View, _Np>::__iterator {
   friend adjacent_view;
-  using _Base                              = __maybe_const<_Const, _View>;
+  using _Base _LIBCPP_NODEBUG              = __maybe_const<_Const, _View>;
   array<iterator_t<_Base>, _Np> __current_ = array<iterator_t<_Base>, _Np>();
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(iterator_t<_Base> __first, sentinel_t<_Base> __last) {
@@ -246,10 +246,10 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator[](difference_type n) const
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator[](difference_type __n) const
     requires random_access_range<_Base>
   {
-    return ranges::__tuple_transform([&](auto& __i) -> decltype(auto) { return __i[n]; }, __current_);
+    return ranges::__tuple_transform([&](auto& __i) -> decltype(auto) { return __i[__n]; }, __current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
@@ -335,8 +335,8 @@ template <forward_range _View, size_t _Np>
 template <bool _Const>
 class adjacent_view<_View, _Np>::__sentinel {
   friend adjacent_view;
-  using _Base              = __maybe_const<_Const, _View>;
-  sentinel_t<_Base> __end_ = sentinel_t<_Base>();
+  using _Base _LIBCPP_NODEBUG = __maybe_const<_Const, _View>;
+  sentinel_t<_Base> __end_    = sentinel_t<_Base>();
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end) { __end_ = std::move(__end); }
 
