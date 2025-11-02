@@ -503,6 +503,12 @@ RValue CodeGenFunction::EmitCXXOperatorMemberCallExpr(
 RValue CodeGenFunction::EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
                                                ReturnValueSlot ReturnValue,
                                                llvm::CallBase **CallOrInvoke) {
+  auto *FD = E->getConfig()->getDirectCallee();
+  // Emit as a device kernel call if the config is prepared using
+  // 'cudaGetParameterBuffer'.
+  if (FD && CGM.getContext().getcudaLaunchDeviceDecl() == FD)
+    return CGM.getCUDARuntime().EmitCUDADeviceKernelCallExpr(
+        *this, E, ReturnValue, CallOrInvoke);
   return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, ReturnValue,
                                                      CallOrInvoke);
 }
