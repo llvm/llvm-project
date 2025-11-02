@@ -734,6 +734,13 @@ DEFAULT_FEATURES += [
 # Those are used for backdeployment features below, do not use directly in tests.
 DEFAULT_FEATURES += [
     Feature(
+        name="_target-has-llvm-20",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "_target-has-llvm-21 || target={{.+}}-apple-macosx26.{{\d+(.\d+)?}}",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
         name="_target-has-llvm-19",
         when=lambda cfg: BooleanExpression.evaluate(
             "_target-has-llvm-20 || target={{.+}}-apple-macosx{{15.[4-9](.\d+)?}}",
