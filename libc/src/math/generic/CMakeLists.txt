@@ -1530,7 +1530,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
-    libc.src.__support.math.expxf16_utils
+    libc.src.__support.math.exp10f_utils
 )
 
 add_entrypoint_object(
