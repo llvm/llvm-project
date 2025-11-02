@@ -135,11 +135,7 @@ void kernel foo(int x) {
   }
 
   auto int L3 = 7;
-#if (__OPENCL_CPP_VERSION__ == 202100)
-// expected-error@-2{{C++ for OpenCL version 2021 does not support the 'auto' storage class specifier}}
-#else
-// expected-error-re@-4{{OpenCL C version {{1.2|3.0}} does not support the 'auto' storage class specifier}}
-#endif
+// expected-error@-1{{'auto' cannot be combined with a type specifier}}
   global int L4;                              // expected-error{{function scope variable cannot be declared in global address space}}
   __attribute__((address_space(100))) int L5; // expected-error{{automatic variable qualified with an invalid address space}}
 

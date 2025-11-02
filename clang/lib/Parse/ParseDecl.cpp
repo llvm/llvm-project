@@ -4093,19 +4093,36 @@ void Parser::ParseDeclarationSpecifiers(
       isStorageClass = true;
       break;
     case tok::kw_auto:
-      if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
-        if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
+      if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
+        // 'auto' cannot be combined with a type specifier, except in C23 and
+        // C++98.
+        if (getLangOpts().C23) {
+          // C23 allows 'auto' as storage class with type specifier.
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
-          if (!isInvalid && !getLangOpts().C23)
-            Diag(Tok, diag::ext_auto_storage_class)
-              << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
-        } else
+        } else if (getLangOpts().CPlusPlus11 || getLangOpts().OpenCL) {
+          // In C++11+ or OpenCL, 'auto' cannot be combined with a type
+          // specifier.
+          isInvalid = true;
+          PrevSpec = Tok.getIdentifierInfo()->getNameStart();
+          DiagID = diag::err_auto_type_specifier;
+        } else {
+          // In C++98 or C, 'auto' can be a storage class specifier with a type.
+          isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
+                                             PrevSpec, DiagID, Policy);
+        }
+      } else {
+        // 'auto' is not followed by a type specifier.
+        if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
+          // In C++11+ or C23, 'auto' is a type specifier (type deduction).
           isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
                                          DiagID, Policy);
-      } else
-        isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
-                                           PrevSpec, DiagID, Policy);
+        } else {
+          // In C (not C++11+ and not C23), 'auto' is a storage class specifier.
+          isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
+                                             PrevSpec, DiagID, Policy);
+        }
+      }
       isStorageClass = true;
       break;
     case tok::kw___auto_type:
