@@ -299,17 +299,45 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
 // The goal is to give users helpful live variable hints alongside the
 // disassembled instruction stream, similar to how debug information
 // enhances source-level debugging.
-std::vector<std::string>
-VariableAnnotator::annotate(Instruction &inst, Target &target,
-                            const lldb::ModuleSP &module_sp) {
-  std::vector<std::string> events;
+std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst,
+                                                     Target &target,
+                                                     lldb::ModuleSP module_sp) {
+  auto structured_annotations = AnnotateStructured(inst, target, module_sp);
 
-  // If we lost module context, everything becomes <undef>.
+  std::vector<std::string> events;
+  events.reserve(structured_annotations.size());
+
+  for (const auto &annotation : structured_annotations) {
+    std::string display_string;
+    display_string =
+        llvm::formatv(
+            "{0} = {1}", annotation.variable_name,
+            annotation.location_description == VariableAnnotator::kUndefLocation
+                ? llvm::formatv("<{0}>", VariableAnnotator::kUndefLocation)
+                      .str()
+                : annotation.location_description)
+            .str();
+    events.push_back(display_string);
+  }
+
+  return events;
+}
+
+std::vector<VariableAnnotation>
+VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
+                                      lldb::ModuleSP module_sp) {
+  std::vector<VariableAnnotation> annotations;
+
+  // If we lost module context, mark all live variables as undefined.
   if (!module_sp) {
-    for (const auto &KV : Live_)
-      events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
+    for (const auto &KV : Live_) {
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = false;
+      annotation_entity.location_description = kUndefLocation;
+      annotations.push_back(annotation_entity);
+    }
     Live_.clear();
-    return events;
+    return annotations;
   }
 
   // Resolve function/block at this *file* address.
@@ -319,10 +347,14 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
   if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
       !sc.function) {
     // No function context: everything dies here.
-    for (const auto &KV : Live_)
-      events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
+    for (const auto &KV : Live_) {
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = false;
+      annotation_entity.location_description = kUndefLocation;
+      annotations.push_back(annotation_entity);
+    }
     Live_.clear();
-    return events;
+    return annotations;
   }
 
   // Collect in-scope variables for this instruction into Current.
@@ -349,7 +381,7 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
   // Prefer "register-only" output when we have an ABI.
   opts.PrintRegisterOnly = static_cast<bool>(abi_sp);
 
-  llvm::DenseMap<lldb::user_id_t, VarState> Current;
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> Current;
 
   for (size_t i = 0, e = var_list.GetSize(); i != e; ++i) {
     lldb::VariableSP v = var_list.GetVariableAtIndex(i);
@@ -376,8 +408,26 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
     if (loc.empty())
       continue;
 
+    std::optional<std::string> decl_file;
+    std::optional<uint32_t> decl_line;
+    std::optional<std::string> type_name;
+
+    const Declaration &decl = v->GetDeclaration();
+    if (decl.GetFile()) {
+      decl_file = decl.GetFile().GetFilename().AsCString();
+      if (decl.GetLine() > 0)
+        decl_line = decl.GetLine();
+    }
+
+    if (Type *type = v->GetType())
+      if (const char *type_str = type->GetName().AsCString())
+        type_name = type_str;
+
     Current.try_emplace(v->GetID(),
-                        VarState{std::string(name), std::string(loc)});
+                        VariableAnnotation{std::string(name), std::string(loc),
+                                           true, entry.expr->GetRegisterKind(),
+                                           entry.file_range, decl_file,
+                                           decl_line, type_name});
   }
 
   // Diff Live_ → Current.
@@ -387,24 +437,31 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
     auto it = Live_.find(KV.first);
     if (it == Live_.end()) {
       // Newly live.
-      events.emplace_back(
-          llvm::formatv("{0} = {1}", KV.second.name, KV.second.last_loc).str());
-    } else if (it->second.last_loc != KV.second.last_loc) {
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = true;
+      annotations.push_back(annotation_entity);
+    } else if (it->second.location_description !=
+               KV.second.location_description) {
       // Location changed.
-      events.emplace_back(
-          llvm::formatv("{0} = {1}", KV.second.name, KV.second.last_loc).str());
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = true;
+      annotations.push_back(annotation_entity);
     }
   }
 
-  // 2) Ends: anything that was live but is not in Current becomes <undef>.
-  for (const auto &KV : Live_) {
-    if (!Current.count(KV.first))
-      events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
-  }
+  // 2) Ends: anything that was live but is not in Current becomes
+  // <kUndefLocation>.
+  for (const auto &KV : Live_)
+    if (!Current.count(KV.first)) {
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = false;
+      annotation_entity.location_description = kUndefLocation;
+      annotations.push_back(annotation_entity);
+    }
 
   // Commit new state.
   Live_ = std::move(Current);
-  return events;
+  return annotations;
 }
 
 void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
@@ -676,7 +733,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                  address_text_size);
 
       if ((options & eOptionVariableAnnotations) && target_sp) {
-        auto annotations = annot.annotate(*inst, *target_sp, module_sp);
+        auto annotations = annot.Annotate(*inst, *target_sp, module_sp);
         if (!annotations.empty()) {
           const size_t annotation_column = 100;
           inst_line.FillLastLineToColumn(annotation_column, ' ');
