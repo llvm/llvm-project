@@ -1678,7 +1678,7 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
       .Case(".ctf", eSectionTypeDebug)
-      .Cases(".data", ".tdata", eSectionTypeData)
+      .Cases({".data", ".tdata"}, eSectionTypeData)
       .Case(".eh_frame", eSectionTypeEHFrame)
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)
