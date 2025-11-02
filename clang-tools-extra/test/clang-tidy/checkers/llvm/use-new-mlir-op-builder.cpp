@@ -110,7 +110,7 @@ void f() {
   cb.g("gaz");
 
   // CHECK-FIXES:      OperandOp::create(builder, builder.getUnknownLoc(),
-  // CHECK-FIXES-NEXT:   NamedOp::create(builder, builder.getUnknownLoc(), "gaz").getResult());
+  // CHECK-FIXES-NEXT:   NamedOp::create(builder, builder.getUnknownLoc(), "haz").getResult());
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
   // CHECK-MESSAGES: :[[@LINE+2]]:5: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
   builder.create<OperandOp>(builder.getUnknownLoc(),
