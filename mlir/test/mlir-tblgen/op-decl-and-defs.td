@@ -544,33 +544,6 @@ def _BOp : NS_Op<"_op_with_leading_underscore_and_no_namespace", []>;
 // REDUCE_EXC-NOT: NS::AOp declarations
 // REDUCE_EXC-LABEL: NS::BOp declarations
 
-def _RedundantBuilderOp : NS_Op<"redundant_builder_op", []> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    TypeAttrOf<FunctionType>:$function_type,
-    OptionalAttr<DictArrayAttr>:$arg_attrs,
-    OptionalAttr<DictArrayAttr>:$res_attrs
-  );
-  let regions = (region AnyRegion:$body);
-
-  let builders = [
-  OpBuilder<(ins
-    "StringRef":$name, "FunctionType":$type,
-    CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs,
-    CArg<"ArrayRef<DictionaryAttr>", "{}">:$resultAttrs)
-  >,
-  OpBuilder<(ins
-    "StringRef":$name, "FunctionType":$type)
-  >];
-
-  let skipDefaultBuilders = 1;
-}
-// CHECK-LABEL:  NS::_RedundantBuilderOp declarations
-// CHECK:  class _RedundantBuilderOp
-// CHECK:  static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, StringRef name, FunctionType type, ArrayRef<DictionaryAttr> argAttrs = {}, ArrayRef<DictionaryAttr> resultAttrs = {});
-// CHECK:  static _RedundantBuilderOp create(::mlir::OpBuilder &builder, ::mlir::Location location, StringRef name, FunctionType type, ArrayRef<DictionaryAttr> argAttrs = {}, ArrayRef<DictionaryAttr> resultAttrs = {});
-// CHECK:  static _RedundantBuilderOp create(::mlir::ImplicitLocOpBuilder &builder, StringRef name, FunctionType type, ArrayRef<DictionaryAttr> argAttrs = {}, ArrayRef<DictionaryAttr> resultAttrs = {});
-
 // CHECK-LABEL: _TypeInferredPropOp declarations
 def _TypeInferredPropOp : NS_Op<"type_inferred_prop_op_with_properties", [
     AllTypesMatch<["value", "result"]>
