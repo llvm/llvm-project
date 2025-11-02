@@ -911,8 +911,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     payloadLayout = LayoutInfo(layout);
   } else {
     payloadLayout = getDefaultSIMTLayoutInfo(
-      payloadTy, uArch, instData, uArch->getGeneralPackedFormatBitSize(),
-      /*scattered=*/true);
+        payloadTy, uArch, instData, uArch->getGeneralPackedFormatBitSize(),
+        /*scattered=*/true);
   }
 
   LayoutInfo maskLayout =
