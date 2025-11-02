@@ -317,7 +317,11 @@ TEST(SelectionTest, CommonAncestor) {
       {"struct X { [[const int* ^Get() const <:[clang::lifetimebound]:> "
        "{return nullptr;}]]; };",
        "CXXMethodDecl"},
-      {"struct X { const [[int* Foo() const <:[clang::life^timebound]:>]] "
+      // When the cursor is on the attribute itself, we should select the
+      // AttributedTypeLoc. Note: Due to a bug or deliberate quirk in the AST
+      // modeling of AttributedTypeLoc, its range ends at the attribute name
+      // token, not including the closing brackets ":>:>".
+      {"struct X { const [[int* Foo() const <:<:clang::life^timebound]]:>:> "
        "{return nullptr;}; };",
        "AttributedTypeLoc"},
       // Tricky case: two VarDecls share a specifier.
