@@ -250,6 +250,46 @@ define float @ftrunc32(float %f) #0 {
   ret float %res
 }
 
+define float @ftrunc32ob(float %f) #0 {
+; SSE41-X86-LABEL: ftrunc32ob:
+; SSE41-X86:       # %bb.0:
+; SSE41-X86-NEXT:    pushl %eax
+; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
+; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    roundss $11, %xmm0, %xmm0
+; SSE41-X86-NEXT:    movss %xmm0, (%esp)
+; SSE41-X86-NEXT:    flds (%esp)
+; SSE41-X86-NEXT:    wait
+; SSE41-X86-NEXT:    popl %eax
+; SSE41-X86-NEXT:    .cfi_def_cfa_offset 4
+; SSE41-X86-NEXT:    retl
+;
+; SSE41-X64-LABEL: ftrunc32ob:
+; SSE41-X64:       # %bb.0:
+; SSE41-X64-NEXT:    roundss $11, %xmm0, %xmm0
+; SSE41-X64-NEXT:    retq
+;
+; AVX-X86-LABEL: ftrunc32ob:
+; AVX-X86:       # %bb.0:
+; AVX-X86-NEXT:    pushl %eax
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
+; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
+; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
+; AVX-X86-NEXT:    flds (%esp)
+; AVX-X86-NEXT:    wait
+; AVX-X86-NEXT:    popl %eax
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
+; AVX-X86-NEXT:    retl
+;
+; AVX-X64-LABEL: ftrunc32ob:
+; AVX-X64:       # %bb.0:
+; AVX-X64-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
+; AVX-X64-NEXT:    retq
+  %res = call float @llvm.trunc.f32(float %f) [ "fp.except"(metadata !"strict") ]
+  ret float %res
+}
+
 define double @ftruncf64(double %f) #0 {
 ; SSE41-X86-LABEL: ftruncf64:
 ; SSE41-X86:       # %bb.0:
@@ -300,6 +340,58 @@ define double @ftruncf64(double %f) #0 {
 ; AVX-X64-NEXT:    retq
   %res = call double @llvm.experimental.constrained.trunc.f64(
                         double %f, metadata !"fpexcept.strict") #0
+  ret double %res
+}
+
+define double @ftruncf64ob(double %f) #0 {
+; SSE41-X86-LABEL: ftruncf64ob:
+; SSE41-X86:       # %bb.0:
+; SSE41-X86-NEXT:    pushl %ebp
+; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
+; SSE41-X86-NEXT:    .cfi_offset %ebp, -8
+; SSE41-X86-NEXT:    movl %esp, %ebp
+; SSE41-X86-NEXT:    .cfi_def_cfa_register %ebp
+; SSE41-X86-NEXT:    andl $-8, %esp
+; SSE41-X86-NEXT:    subl $8, %esp
+; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    roundsd $11, %xmm0, %xmm0
+; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
+; SSE41-X86-NEXT:    fldl (%esp)
+; SSE41-X86-NEXT:    wait
+; SSE41-X86-NEXT:    movl %ebp, %esp
+; SSE41-X86-NEXT:    popl %ebp
+; SSE41-X86-NEXT:    .cfi_def_cfa %esp, 4
+; SSE41-X86-NEXT:    retl
+;
+; SSE41-X64-LABEL: ftruncf64ob:
+; SSE41-X64:       # %bb.0:
+; SSE41-X64-NEXT:    roundsd $11, %xmm0, %xmm0
+; SSE41-X64-NEXT:    retq
+;
+; AVX-X86-LABEL: ftruncf64ob:
+; AVX-X86:       # %bb.0:
+; AVX-X86-NEXT:    pushl %ebp
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
+; AVX-X86-NEXT:    .cfi_offset %ebp, -8
+; AVX-X86-NEXT:    movl %esp, %ebp
+; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
+; AVX-X86-NEXT:    andl $-8, %esp
+; AVX-X86-NEXT:    subl $8, %esp
+; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
+; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
+; AVX-X86-NEXT:    fldl (%esp)
+; AVX-X86-NEXT:    wait
+; AVX-X86-NEXT:    movl %ebp, %esp
+; AVX-X86-NEXT:    popl %ebp
+; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4
+; AVX-X86-NEXT:    retl
+;
+; AVX-X64-LABEL: ftruncf64ob:
+; AVX-X64:       # %bb.0:
+; AVX-X64-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
+; AVX-X64-NEXT:    retq
+  %res = call double @llvm.trunc.f64(double %f) [ "fp.except"(metadata !"strict") ]
   ret double %res
 }
 
@@ -441,6 +533,46 @@ define float @fnearbyint32(float %f) #0 {
   ret float %res
 }
 
+define float @fnearbyint32ob(float %f) #0 {
+; SSE41-X86-LABEL: fnearbyint32ob:
+; SSE41-X86:       # %bb.0:
+; SSE41-X86-NEXT:    pushl %eax
+; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
+; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    roundss $12, %xmm0, %xmm0
+; SSE41-X86-NEXT:    movss %xmm0, (%esp)
+; SSE41-X86-NEXT:    flds (%esp)
+; SSE41-X86-NEXT:    wait
+; SSE41-X86-NEXT:    popl %eax
+; SSE41-X86-NEXT:    .cfi_def_cfa_offset 4
+; SSE41-X86-NEXT:    retl
+;
+; SSE41-X64-LABEL: fnearbyint32ob:
+; SSE41-X64:       # %bb.0:
+; SSE41-X64-NEXT:    roundss $12, %xmm0, %xmm0
+; SSE41-X64-NEXT:    retq
+;
+; AVX-X86-LABEL: fnearbyint32ob:
+; AVX-X86:       # %bb.0:
+; AVX-X86-NEXT:    pushl %eax
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
+; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
+; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
+; AVX-X86-NEXT:    flds (%esp)
+; AVX-X86-NEXT:    wait
+; AVX-X86-NEXT:    popl %eax
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
+; AVX-X86-NEXT:    retl
+;
+; AVX-X64-LABEL: fnearbyint32ob:
+; AVX-X64:       # %bb.0:
+; AVX-X64-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
+; AVX-X64-NEXT:    retq
+  %res = call float @llvm.nearbyint.f32(float %f) [ "fp.round"(metadata !"dynamic"), "fp.except"(metadata !"strict") ]
+  ret float %res
+}
+
 define double @fnearbyintf64(double %f) #0 {
 ; SSE41-X86-LABEL: fnearbyintf64:
 ; SSE41-X86:       # %bb.0:
@@ -492,6 +624,58 @@ define double @fnearbyintf64(double %f) #0 {
   %res = call double @llvm.experimental.constrained.nearbyint.f64(
                         double %f,
                         metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %res
+}
+
+define double @fnearbyint64ob(double %f) #0 {
+; SSE41-X86-LABEL: fnearbyint64ob:
+; SSE41-X86:       # %bb.0:
+; SSE41-X86-NEXT:    pushl %ebp
+; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
+; SSE41-X86-NEXT:    .cfi_offset %ebp, -8
+; SSE41-X86-NEXT:    movl %esp, %ebp
+; SSE41-X86-NEXT:    .cfi_def_cfa_register %ebp
+; SSE41-X86-NEXT:    andl $-8, %esp
+; SSE41-X86-NEXT:    subl $8, %esp
+; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    roundsd $12, %xmm0, %xmm0
+; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
+; SSE41-X86-NEXT:    fldl (%esp)
+; SSE41-X86-NEXT:    wait
+; SSE41-X86-NEXT:    movl %ebp, %esp
+; SSE41-X86-NEXT:    popl %ebp
+; SSE41-X86-NEXT:    .cfi_def_cfa %esp, 4
+; SSE41-X86-NEXT:    retl
+;
+; SSE41-X64-LABEL: fnearbyint64ob:
+; SSE41-X64:       # %bb.0:
+; SSE41-X64-NEXT:    roundsd $12, %xmm0, %xmm0
+; SSE41-X64-NEXT:    retq
+;
+; AVX-X86-LABEL: fnearbyint64ob:
+; AVX-X86:       # %bb.0:
+; AVX-X86-NEXT:    pushl %ebp
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
+; AVX-X86-NEXT:    .cfi_offset %ebp, -8
+; AVX-X86-NEXT:    movl %esp, %ebp
+; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
+; AVX-X86-NEXT:    andl $-8, %esp
+; AVX-X86-NEXT:    subl $8, %esp
+; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vroundsd $12, %xmm0, %xmm0, %xmm0
+; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
+; AVX-X86-NEXT:    fldl (%esp)
+; AVX-X86-NEXT:    wait
+; AVX-X86-NEXT:    movl %ebp, %esp
+; AVX-X86-NEXT:    popl %ebp
+; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4
+; AVX-X86-NEXT:    retl
+;
+; AVX-X64-LABEL: fnearbyint64ob:
+; AVX-X64:       # %bb.0:
+; AVX-X64-NEXT:    vroundsd $12, %xmm0, %xmm0, %xmm0
+; AVX-X64-NEXT:    retq
+  %res = call double @llvm.nearbyint.f64(double %f) [ "fp.round"(metadata !"dynamic"), "fp.except"(metadata !"strict") ]
   ret double %res
 }
 

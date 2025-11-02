@@ -210,7 +210,7 @@ float4 strict_elementwise_rint(float4 a) {
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z28strict_elementwise_nearbyintDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ELT_NEARBYINT:%.*]] = tail call <4 x float> @llvm.nearbyint.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    [[ELT_NEARBYINT:%.*]] = tail call <4 x float> @llvm.nearbyint.v4f32(<4 x float> [[A]]) #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    ret <4 x float> [[ELT_NEARBYINT]]
 //
 float4 strict_elementwise_nearbyint(float4 a) {
@@ -300,7 +300,7 @@ float4 strict_elementwise_atan2(float4 a, float4 b) {
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z24strict_elementwise_truncDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ELT_TRUNC:%.*]] = tail call <4 x float> @llvm.trunc.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    [[ELT_TRUNC:%.*]] = tail call <4 x float> @llvm.trunc.v4f32(<4 x float> [[A]]) #[[ATTR5]]
 // CHECK-NEXT:    ret <4 x float> [[ELT_TRUNC]]
 //
 float4 strict_elementwise_trunc(float4 a) {

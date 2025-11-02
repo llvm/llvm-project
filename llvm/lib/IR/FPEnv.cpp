@@ -34,6 +34,17 @@ std::optional<RoundingMode> convertStrToRoundingMode(StringRef RoundingArg) {
       .Default(std::nullopt);
 }
 
+std::optional<RoundingMode> convertBundleToRoundingMode(StringRef RoundingArg) {
+  return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
+      .Case("dynamic", RoundingMode::Dynamic)
+      .Case("tonearest", RoundingMode::NearestTiesToEven)
+      .Case("tonearestaway", RoundingMode::NearestTiesToAway)
+      .Case("downward", RoundingMode::TowardNegative)
+      .Case("upward", RoundingMode::TowardPositive)
+      .Case("towardzero", RoundingMode::TowardZero)
+      .Default(std::nullopt);
+}
+
 std::optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
   std::optional<StringRef> RoundingStr;
   switch (UseRounding) {
@@ -61,12 +72,41 @@ std::optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
   return RoundingStr;
 }
 
+std::optional<StringRef> convertRoundingModeToBundle(RoundingMode UseRounding) {
+  std::optional<StringRef> RoundingStr;
+  switch (UseRounding) {
+  case RoundingMode::Dynamic:
+    return "dynamic";
+  case RoundingMode::NearestTiesToEven:
+    return "tonearest";
+  case RoundingMode::NearestTiesToAway:
+    return "tonearestaway";
+  case RoundingMode::TowardNegative:
+    return "downward";
+  case RoundingMode::TowardPositive:
+    return "upward";
+  case RoundingMode::TowardZero:
+    return "towardzero";
+  default:
+    return std::nullopt;
+  }
+}
+
 std::optional<fp::ExceptionBehavior>
 convertStrToExceptionBehavior(StringRef ExceptionArg) {
   return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
       .Case("fpexcept.ignore", fp::ebIgnore)
       .Case("fpexcept.maytrap", fp::ebMayTrap)
       .Case("fpexcept.strict", fp::ebStrict)
+      .Default(std::nullopt);
+}
+
+std::optional<fp::ExceptionBehavior>
+convertBundleToExceptionBehavior(StringRef ExceptionArg) {
+  return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
+      .Case("ignore", fp::ebIgnore)
+      .Case("maytrap", fp::ebMayTrap)
+      .Case("strict", fp::ebStrict)
       .Default(std::nullopt);
 }
 
@@ -85,6 +125,21 @@ convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
     break;
   }
   return ExceptStr;
+}
+
+std::optional<StringRef>
+convertExceptionBehaviorToBundle(fp::ExceptionBehavior UseExcept) {
+  std::optional<StringRef> ExceptStr;
+  switch (UseExcept) {
+  case fp::ebStrict:
+    return "strict";
+  case fp::ebIgnore:
+    return "ignore";
+  case fp::ebMayTrap:
+    return "maytrap";
+  default:
+    return std::nullopt;
+  }
 }
 
 Intrinsic::ID getConstrainedIntrinsicID(const Instruction &Instr) {

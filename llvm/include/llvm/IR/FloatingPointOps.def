@@ -1,0 +1,30 @@
+//===- llvm/IR/FloatingPointOps.def - FP intrinsics -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Defines set of intrinsics, which are classified as floating-point operations.
+//
+//===----------------------------------------------------------------------===//
+
+// Describes floating-point operation.
+// Arguments of the entries are:
+// N - intrinsic function name,
+// D - DAG node corresponding to the intrinsic.
+#ifndef FUNCTION
+#define FUNCTION(N,D)
+#endif
+
+// Describes floating-point operation, which lowers to STRICT_* nodes in DAG.
+#ifndef LEGACY_DAG
+#define LEGACY_DAG(N,D) FUNCTION(N,D)
+#endif
+
+LEGACY_DAG(nearbyint,                        FNEARBYINT)
+LEGACY_DAG(trunc,                            FTRUNC)
+
+#undef FUNCTION
+#undef LEGACY_DAG
