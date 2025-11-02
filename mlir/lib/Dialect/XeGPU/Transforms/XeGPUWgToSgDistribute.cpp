@@ -888,8 +888,8 @@ struct WgToSgLoadGatherOpWithOffset
       return failure();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::DistributeLayoutAttr layout =
-        xegpu::getDistributeLayoutAttr(op.getResult());
+    xegpu::LayoutAttr layout =
+        dyn_cast_if_present<xegpu::LayoutAttr>(xegpu::getDistributeLayoutAttr(op.getResult()));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -940,8 +940,8 @@ struct WgToSgStoreScatterOpWithOffset
     if (!valueType)
       return failure();
 
-    xegpu::DistributeLayoutAttr layout =
-        xegpu::getDistributeLayoutAttr(op.getOperand(0));
+    xegpu::LayoutAttr layout =
+        dyn_cast_if_present<xegpu::LayoutAttr>(xegpu::getDistributeLayoutAttr(op.getOperand(0)));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 

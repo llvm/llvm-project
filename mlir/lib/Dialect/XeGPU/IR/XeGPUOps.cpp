@@ -884,7 +884,7 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
                          IntegerAttr chunk_size, xegpu::CachePolicyAttr l1_hint,
                          xegpu::CachePolicyAttr l2_hint,
                          xegpu::CachePolicyAttr l3_hint,
-                         DistributeLayoutAttr layout) {
+                         xegpu::LayoutAttr layout) {
   auto loc = source.getLoc();
   int64_t size = static_cast<int64_t>(offsets.size());
   auto type = VectorType::get(size, builder.getIndexType());
@@ -968,7 +968,7 @@ void StoreScatterOp::build(
     OpBuilder &builder, OperationState &state, Value value, Value dest,
     ArrayRef<OpFoldResult> offsets, Value mask, IntegerAttr chunk_size,
     xegpu::CachePolicyAttr l1_hint, xegpu::CachePolicyAttr l2_hint,
-    xegpu::CachePolicyAttr l3_hint, DistributeLayoutAttr layout) {
+    xegpu::CachePolicyAttr l3_hint, xegpu::LayoutAttr layout) {
   auto loc = dest.getLoc();
   int64_t size = static_cast<int64_t>(offsets.size());
   auto type = VectorType::get(size, builder.getIndexType());

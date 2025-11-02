@@ -742,8 +742,13 @@ void LayoutInfoPropagation::visitStoreScatterOp(
         "Expected the first dimension of 2D tensor descriptor to be equal to "
         "subgroup size.");
 
-  LayoutInfo payloadLayout =
-      getDefaultSIMTLayoutInfo(payloadTy, /*scattered=*/true);
+  LayoutInfo payloadLayout;
+
+  // TODO: check if the layout attribute is compatible with the payload type
+  if (auto permLayout = storeScatter.getLayoutAttr())
+    payloadLayout = LayoutInfo(permLayout);
+  else
+    payloadLayout = getDefaultSIMTLayoutInfo(payloadTy, /*scattered*/ true);
 
   LayoutInfo maskLayout =
       getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1);

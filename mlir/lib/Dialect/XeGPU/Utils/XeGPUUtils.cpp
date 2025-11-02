@@ -178,7 +178,6 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
 
   // check for "permament" layout only after "temporary" layout name lookup
-  // for backward compatibility
   if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
     if (auto layout = storeScatterOp.getLayoutAttr())
       return layout;
