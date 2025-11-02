@@ -2377,8 +2377,10 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
   VP_CLASSOF_IMPL(VPDef::VPFirstOrderRecurrencePHISC)
 
   VPFirstOrderRecurrencePHIRecipe *clone() override {
-    return new VPFirstOrderRecurrencePHIRecipe(
+    auto *R = new VPFirstOrderRecurrencePHIRecipe(
         cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
+    R->addOperand(getOperand(1));
+    return R;
   }
 
   void execute(VPTransformState &State) override;
@@ -2447,6 +2449,8 @@ public:
 
   /// Get the factor that the VF of this recipe's output should be scaled by.
   unsigned getVFScaleFactor() const { return VFScaleFactor; }
+
+  void setVFScaleFactor(unsigned ScaleFactor) { VFScaleFactor = ScaleFactor; }
 
   /// Returns the number of incoming values, also number of incoming blocks.
   /// Note that at the moment, VPWidenPointerInductionRecipe only has a single

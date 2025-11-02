@@ -94,10 +94,6 @@ class VPRecipeBuilder {
   /// recipe that takes an additional VPInstruction for the mask.
   VPWidenMemoryRecipe *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
 
-  /// Check if an induction recipe should be constructed for \p VPI. If so build
-  /// and return it. If not, return null.
-  VPHeaderPHIRecipe *tryToOptimizeInductionPHI(VPInstruction *VPI);
-
   /// Optimize the special case where the operand of \p VPI is a constant
   /// integer induction variable.
   VPWidenIntOrFpInductionRecipe *

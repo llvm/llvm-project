@@ -575,6 +575,97 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
   return VPlan0;
 }
 
+/// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
+/// for \p Phi based on \p IndDesc.
+static VPHeaderPHIRecipe *
+createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR,
+                           const InductionDescriptor &IndDesc, VPlan &Plan,
+                           ScalarEvolution &SE, Loop &OrigLoop) {
+  assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
+         "step must be loop invariant");
+
+  VPValue *Start = PhiR->getOperand(0);
+  assert(Plan.getLiveIn(IndDesc.getStartValue()) == Start &&
+         "Start VPValue must match IndDesc's start value");
+  VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
+
+  if (IndDesc.getKind() == InductionDescriptor::IK_PtrInduction)
+    return new VPWidenPointerInductionRecipe(Phi, Start, Step, &Plan.getVFxUF(),
+                                             IndDesc, PhiR->getDebugLoc());
+
+   // It is always safe to copy over the NoWrap and FastMath flags. In
+   // particular, when folding tail by masking, the masked-off lanes are never
+   // used, so it is safe.
+   VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
+
+  // Update wide induction increments to use the same step as the corresponding
+  // wide induction. This enables detecting induction increments directly in
+  // VPlan and removes redundant splats.
+  using namespace llvm::VPlanPatternMatch;
+  if (match(PhiR->getOperand(1), m_Add(m_Specific(PhiR), m_VPValue())))
+    PhiR->getOperand(1)->getDefiningRecipe()->setOperand(1, Step);
+
+  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
+                                           IndDesc, Flags, PhiR->getDebugLoc());
+}
+
+void VPlanTransforms::createHeaderPhiRecipes(
+    VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop,
+    const MapVector<PHINode *, InductionDescriptor> &Inductions,
+    const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
+    const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
+    const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
+
+  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+
+  for (VPRecipeBase &R : make_early_inc_range(*HeaderVPBB)) {
+    if (isa<VPCanonicalIVPHIRecipe>(&R))
+      continue;
+    auto *PhiR = dyn_cast<VPPhi>(&R);
+    if (!PhiR)
+      break;
+
+    // TODO: Gradually replace uses of underlying instruction by analyses on
+    // VPlan.
+    auto *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
+    assert(PhiR->getNumOperands() == 2 &&
+           "Must have 2 operands for header phis");
+
+    VPHeaderPHIRecipe *HeaderPhiR = nullptr;
+    auto InductionIt = Inductions.find(Phi);
+    if (InductionIt != Inductions.end()) {
+      HeaderPhiR = createWidenInductionRecipe(Phi, PhiR, InductionIt->second, Plan,
+                                          SE, OrigLoop);
+    } else {
+      VPValue *Start = PhiR->getOperand(0);
+      auto ReductionIt = Reductions.find(Phi);
+      if (ReductionIt != Reductions.end()) {
+        const RecurrenceDescriptor &RdxDesc = ReductionIt->second;
+        assert(RdxDesc.getRecurrenceStartValue() ==
+               Phi->getIncomingValueForBlock(OrigLoop.getLoopPreheader()));
+
+        bool UseOrderedReductions = !AllowReordering && RdxDesc.isOrdered();
+        HeaderPhiR = new VPReductionPHIRecipe(Phi, RdxDesc.getRecurrenceKind(),
+                                          *Start, InLoopReductions.contains(Phi),
+                                          UseOrderedReductions);
+      } else {
+        assert(FixedOrderRecurrences.contains(Phi) &&
+               "can only widen reductions and fixed-order recurrences here");
+        // TODO: Currently fixed-order recurrences are modeled as chains of
+        // first-order recurrences. If there are no users of the intermediate
+        // recurrences in the chain, the fixed order recurrence should be
+        // modeled directly, enabling more efficient codegen.
+        HeaderPhiR = new VPFirstOrderRecurrencePHIRecipe(Phi, *Start);
+      }
+      HeaderPhiR->addOperand(PhiR->getOperand(1));
+    }
+    HeaderPhiR->insertBefore(PhiR);
+    PhiR->replaceAllUsesWith(HeaderPhiR);
+    PhiR->eraseFromParent();
+  }
+}
+
 void VPlanTransforms::handleEarlyExits(VPlan &Plan,
                                        bool HasUncountableEarlyExit) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
