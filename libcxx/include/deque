@@ -193,7 +193,6 @@ template <class T, class Allocator, class Predicate>
 #  include <__algorithm/move_backward.h>
 #  include <__algorithm/remove.h>
 #  include <__algorithm/remove_if.h>
-#  include <__algorithm/unwrap_iter.h>
 #  include <__assert>
 #  include <__config>
 #  include <__debug_utils/sanitizers.h>
@@ -220,11 +219,9 @@ template <class T, class Allocator, class Predicate>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
-#  include <__ranges/size.h>
 #  include <__split_buffer>
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/container_traits.h>
-#  include <__type_traits/disjunction.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_convertible.h>

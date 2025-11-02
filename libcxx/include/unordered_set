@@ -544,8 +544,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 #  include <__iterator/distance.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
-#  include <__iterator/ranges_iterator_traits.h>
-#  include <__memory/addressof.h>
 #  include <__memory/allocator.h>
 #  include <__memory/allocator_traits.h>
 #  include <__memory_resource/polymorphic_allocator.h>
@@ -558,7 +556,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 #  include <__type_traits/invoke.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_integral.h>
-#  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
