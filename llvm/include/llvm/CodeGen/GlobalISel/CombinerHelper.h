@@ -293,7 +293,7 @@ public:
                                  SmallVectorImpl<Register> &Ops) const;
   /// Replace \p MI with a concat_vectors with \p Ops.
   void applyCombineShuffleVector(MachineInstr &MI,
-                                 const ArrayRef<Register> Ops) const;
+                                 ArrayRef<Register> Ops) const;
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
