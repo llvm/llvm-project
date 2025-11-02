@@ -64,7 +64,7 @@ class Statistic<string varName, string statName, string desc> {
 // Pass
 //===----------------------------------------------------------------------===//
 
-class PassBase<string passArg, string base> : Testable {
+class PassBase<string passArg, string base> {
   // The command line argument of the pass.
   string argument = passArg;
 

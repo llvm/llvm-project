@@ -31,10 +31,4 @@ class LitTest<string name, code snippet, list<string> run = [], list<string> che
   list<string> checkLines = check;
 }
 
-// Base class for elements that can have auto-generated LIT tests
-class Testable {
-  // List of LIT tests associated with this element
-  list<LitTest> tests = [];
-}
-
 #endif // TESTABLE
