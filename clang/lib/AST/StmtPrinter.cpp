@@ -160,6 +160,8 @@ namespace {
     }
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
+    void VisitCXXExpansionStmt(CXXExpansionStmt *Node,
+                               Expr *Initializer = nullptr);
 
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
@@ -263,7 +265,8 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   PrintRawDeclStmt(Node);
   // Certain pragma declarations shouldn't have a semi-colon after them.
   if (!Node->isSingleDecl() ||
-      !isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
+      !isa<ExpansionStmtDecl, OpenACCDeclareDecl, OpenACCRoutineDecl>(
+          Node->getSingleDecl()))
     OS << ";";
   OS << NL;
 }
@@ -445,6 +448,63 @@ void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
   PrintExpr(Node->getRangeInit());
   OS << ")";
   PrintControlledStmt(Node->getBody());
+}
+
+void StmtPrinter::VisitCXXExpansionStmt(CXXExpansionStmt *Node,
+                                        Expr *Initializer) {
+  OS << "template for (";
+  if (Node->getInit())
+    PrintInitStmt(Node->getInit(), 14);
+  PrintingPolicy SubPolicy(Policy);
+  SubPolicy.SuppressInitializers = true;
+  Node->getExpansionVariable()->print(OS, SubPolicy, IndentLevel);
+  OS << " : ";
+  PrintExpr(Initializer ? Initializer
+                        : Node->getExpansionVariable()->getInit());
+  OS << ")";
+  PrintControlledStmt(Node->getBody());
+}
+
+void StmtPrinter::VisitCXXEnumeratingExpansionStmt(
+    CXXEnumeratingExpansionStmt *Node) {
+  VisitCXXExpansionStmt(Node);
+}
+
+void StmtPrinter::VisitCXXIteratingExpansionStmt(
+    CXXIteratingExpansionStmt *Node) {
+  VisitCXXExpansionStmt(Node, Node->getRangeVar()->getInit());
+}
+
+void StmtPrinter::VisitCXXDestructuringExpansionStmt(
+    CXXDestructuringExpansionStmt *Node) {
+  VisitCXXExpansionStmt(Node);
+}
+
+void StmtPrinter::VisitCXXDependentExpansionStmt(
+    CXXDependentExpansionStmt *Node) {
+  VisitCXXExpansionStmt(Node, Node->getExpansionInitializer());
+}
+
+void StmtPrinter::VisitCXXExpansionInstantiationStmt(
+    CXXExpansionInstantiationStmt *) {
+  llvm_unreachable("should never be printed");
+}
+
+void StmtPrinter::VisitCXXExpansionInitListExpr(
+    CXXExpansionInitListExpr *Node) {
+  OS << "{ ";
+  llvm::interleaveComma(Node->getExprs(), OS, [&](Expr *E) { PrintExpr(E); });
+  OS << " }";
+}
+
+void StmtPrinter::VisitCXXExpansionInitListSelectExpr(
+    CXXExpansionInitListSelectExpr *Node) {
+  PrintExpr(Node->getRangeExpr());
+}
+
+void StmtPrinter::VisitCXXDestructuringExpansionSelectExpr(
+    CXXDestructuringExpansionSelectExpr *Node) {
+  PrintExpr(Node->getDecompositionDecl()->getInit());
 }
 
 void StmtPrinter::VisitMSDependentExistsStmt(MSDependentExistsStmt *Node) {

@@ -7600,7 +7600,6 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
     Expr *const FE, LambdaScopeInfo *const CurrentLSI, Sema &S) {
 
   assert(!S.isUnevaluatedContext());
-  assert(S.CurContext->isDependentContext());
 #ifndef NDEBUG
   DeclContext *DC = S.CurContext;
   while (isa_and_nonnull<CapturedDecl>(DC))

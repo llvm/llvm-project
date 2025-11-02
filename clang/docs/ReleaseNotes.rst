@@ -171,6 +171,8 @@ C++2c Feature Support
   At this timem, references to constexpr and decomposition of *tuple-like* types are not supported
   (only arrays and aggregates are).
 
+- Implemented `P1306R5 <https://wg21.link/P1306R5>`_ Expansion Statements.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

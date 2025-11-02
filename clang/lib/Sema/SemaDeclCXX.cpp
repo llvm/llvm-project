@@ -2027,6 +2027,9 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       //   - using-enum-declaration
       continue;
 
+    case Decl::ExpansionStmt:
+      continue;
+
     case Decl::Typedef:
     case Decl::TypeAlias: {
       //   - typedef declarations and alias-declarations that do not define

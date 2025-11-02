@@ -260,6 +260,9 @@ Retry:
   }
 
   case tok::kw_template: {
+    if (NextToken().is(tok::kw_for))
+      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabel);
+
     SourceLocation DeclEnd;
     ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
                                              getAccessSpecifierIfPresent());
@@ -701,8 +704,9 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   // identifier ':' statement
   SourceLocation ColonLoc = ConsumeToken();
 
-  LabelDecl *LD = Actions.LookupOrCreateLabel(IdentTok.getIdentifierInfo(),
-                                              IdentTok.getLocation());
+  LabelDecl *LD = Actions.LookupOrCreateLabel(
+      IdentTok.getIdentifierInfo(), IdentTok.getLocation(), /*GnuLabelLoc=*/{},
+      /*ForLabelStmt=*/true);
 
   // Read label attributes, if present.
   StmtResult SubStmt;
@@ -745,6 +749,12 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
 
   DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
+
+  // If a label cannot appear here, just return the underlying statement.
+  if (!LD) {
+    Attrs.clear();
+    return SubStmt.get();
+  }
 
   Actions.ProcessDeclAttributeList(Actions.CurScope, LD, Attrs);
   Attrs.clear();
@@ -1890,8 +1900,55 @@ bool Parser::isForRangeIdentifier() {
   return false;
 }
 
-StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
-                                     LabelDecl *PrecedingLabel) {
+void Parser::ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
+                                                ParsingDeclSpec *VarDeclSpec) {
+  // Use an immediate function context if this is the initializer for a
+  // constexpr variable in an expansion statement.
+  auto Ctx = Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
+  if (FRI.ExpansionStmt && VarDeclSpec && VarDeclSpec->hasConstexprSpecifier())
+    Ctx = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
+
+  EnterExpressionEvaluationContext InitContext(
+      Actions, Ctx,
+      /*LambdaContextDecl=*/nullptr,
+      Sema::ExpressionEvaluationContextRecord::EK_Other,
+      getLangOpts().CPlusPlus23);
+
+  // P2718R0 - Lifetime extension in range-based for loops.
+  if (getLangOpts().CPlusPlus23) {
+    auto &LastRecord = Actions.currentEvaluationContext();
+    LastRecord.InLifetimeExtendingContext = true;
+    LastRecord.RebuildDefaultArgOrDefaultInit = true;
+  }
+
+  if (FRI.ExpansionStmt) {
+    Sema::ContextRAII CtxGuard(
+        Actions, Actions.CurContext->getEnclosingNonExpansionStatementContext(),
+        /*NewThis=*/false);
+
+    FRI.RangeExpr =
+        Tok.is(tok::l_brace) ? ParseExpansionInitList() : ParseExpression();
+    FRI.RangeExpr = Actions.MaybeCreateExprWithCleanups(FRI.RangeExpr);
+  } else if (Tok.is(tok::l_brace)) {
+    FRI.RangeExpr = ParseBraceInitializer();
+  } else {
+    FRI.RangeExpr = ParseExpression();
+  }
+
+  // Before c++23, ForRangeLifetimeExtendTemps should be empty.
+  assert(getLangOpts().CPlusPlus23 ||
+         Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps.empty());
+
+  // Move the collected materialized temporaries into ForRangeInit before
+  // ForRangeInitContext exit.
+  FRI.LifetimeExtendTemps =
+      std::move(Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps);
+}
+
+StmtResult
+Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
+                          LabelDecl *PrecedingLabel,
+                          ExpansionStmtDecl *ExpansionStmtDeclaration) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
@@ -1926,6 +1983,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   unsigned ScopeFlags = 0;
   if (C99orCXXorObjC)
     ScopeFlags = Scope::DeclScope | Scope::ControlScope;
+  if (ExpansionStmtDeclaration)
+    ScopeFlags |= Scope::TemplateParamScope;
 
   ParseScope ForScope(this, ScopeFlags);
 
@@ -1940,6 +1999,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   ExprResult Collection;
   ForRangeInfo ForRangeInfo;
   FullExprArg ThirdPart(Actions);
+  ForRangeInfo.ExpansionStmt = ExpansionStmtDeclaration != nullptr;
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
@@ -1970,18 +2030,17 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
     MaybeParseCXX11Attributes(attrs);
 
     ForRangeInfo.ColonLoc = ConsumeToken();
-    if (Tok.is(tok::l_brace))
-      ForRangeInfo.RangeExpr = ParseBraceInitializer();
-    else
-      ForRangeInfo.RangeExpr = ParseExpression();
+    ParseForRangeInitializerAfterColon(ForRangeInfo, /*VarDeclSpec=*/nullptr);
 
     Diag(Loc, diag::err_for_range_identifier)
-      << ((getLangOpts().CPlusPlus11 && !getLangOpts().CPlusPlus17)
-              ? FixItHint::CreateInsertion(Loc, "auto &&")
-              : FixItHint());
+        << ForRangeInfo.ExpansionStmt
+        << ((getLangOpts().CPlusPlus11 && !getLangOpts().CPlusPlus17)
+                ? FixItHint::CreateInsertion(Loc, "auto &&")
+                : FixItHint());
 
-    ForRangeInfo.LoopVar =
-        Actions.ActOnCXXForRangeIdentifier(getCurScope(), Loc, Name, attrs);
+    if (!ForRangeInfo.ExpansionStmt)
+      ForRangeInfo.LoopVar =
+          Actions.ActOnCXXForRangeIdentifier(getCurScope(), Loc, Name, attrs);
   } else if (isForInitDeclaration()) {  // for (int X = 4;
     ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -2073,7 +2132,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       // User tried to write the reasonable, but ill-formed, for-range-statement
       //   for (expr : expr) { ... }
       Diag(Tok, diag::err_for_range_expected_decl)
-        << FirstPart.get()->getSourceRange();
+          << (ExpansionStmtDeclaration != nullptr)
+          << FirstPart.get()->getSourceRange();
       SkipUntil(tok::r_paren, StopBeforeMatch);
       SecondPart = Sema::ConditionError();
     } else {
@@ -2195,7 +2255,13 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   StmtResult ForRangeStmt;
   StmtResult ForEachStmt;
 
-  if (ForRangeInfo.ParsedForRangeDecl()) {
+  if (ExpansionStmtDeclaration) {
+    ForRangeStmt = Actions.ActOnCXXExpansionStmt(
+        ExpansionStmtDeclaration, FirstPart.get(), ForRangeInfo.LoopVar.get(),
+        ForRangeInfo.RangeExpr.get(), ForLoc, T.getOpenLocation(),
+        ForRangeInfo.ColonLoc, T.getCloseLocation(),
+        ForRangeInfo.LifetimeExtendTemps);
+  } else if (ForRangeInfo.ParsedForRangeDecl()) {
     ForRangeStmt = Actions.ActOnCXXForRangeStmt(
         getCurScope(), ForLoc, CoawaitLoc, FirstPart.get(),
         ForRangeInfo.LoopVar.get(), ForRangeInfo.ColonLoc,
@@ -2217,7 +2283,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // OpenACC Restricts a for-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
-  if (ForRangeInfo.ParsedForRangeDecl())
+  if (ExpansionStmtDeclaration)
+    ; // Nothing.
+  else if (ForRangeInfo.ParsedForRangeDecl())
     getActions().OpenACC().ActOnRangeForStmtBegin(ForLoc, ForRangeStmt.get());
   else
     getActions().OpenACC().ActOnForStmtBegin(
@@ -2270,6 +2338,15 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   if (ForEach)
     return Actions.ObjC().FinishObjCForCollectionStmt(ForEachStmt.get(),
                                                       Body.get());
+
+  if (ExpansionStmtDeclaration) {
+    if (!ForRangeInfo.ParsedForRangeDecl()) {
+      Diag(ForLoc, diag::err_expansion_stmt_requires_range);
+      return StmtError();
+    }
+
+    return Actions.FinishCXXExpansionStmt(ForRangeStmt.get(), Body.get());
+  }
 
   if (ForRangeInfo.ParsedForRangeDecl())
     return Actions.FinishCXXForRangeStmt(ForRangeStmt.get(), Body.get());
@@ -2628,6 +2705,38 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
     return Block;
 
   return Actions.ActOnCXXCatchBlock(CatchLoc, ExceptionDecl, Block.get());
+}
+
+StmtResult Parser::ParseExpansionStatement(SourceLocation *TrailingElseLoc,
+                                           LabelDecl *PrecedingLabel) {
+  assert(Tok.is(tok::kw_template) && NextToken().is(tok::kw_for));
+  SourceLocation TemplateLoc = ConsumeToken();
+  DiagCompat(TemplateLoc, diag_compat::expansion_statements);
+
+  ExpansionStmtDecl *ExpansionDecl =
+      Actions.ActOnExpansionStmtDecl(TemplateParameterDepth, TemplateLoc);
+
+  CXXExpansionStmt *Expansion;
+  {
+    Sema::ContextRAII CtxGuard(Actions, ExpansionDecl, /*NewThis=*/false);
+    TemplateParameterDepthRAII TParamDepthGuard(TemplateParameterDepth);
+    ++TParamDepthGuard;
+
+    StmtResult SR =
+        ParseForStatement(TrailingElseLoc, PrecedingLabel, ExpansionDecl);
+    if (SR.isInvalid())
+      return SR;
+
+    Expansion = cast<CXXExpansionStmt>(SR.get());
+    ExpansionDecl->setExpansionPattern(Expansion);
+  }
+
+  DeclSpec DS(AttrFactory);
+  DeclGroupPtrTy DeclGroupPtr =
+      Actions.FinalizeDeclaratorGroup(getCurScope(), DS, {ExpansionDecl});
+
+  return Actions.ActOnDeclStmt(DeclGroupPtr, Expansion->getBeginLoc(),
+                               Expansion->getEndLoc());
 }
 
 void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {

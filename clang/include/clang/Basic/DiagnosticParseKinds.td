@@ -16,6 +16,10 @@ let CategoryName = "Parse Issue" in {
 defm enum_fixed_underlying_type : CXX11Compat<
   "enumeration types with a fixed underlying type are",
   /*ext_warn=*/false>;
+
+// C++26 compatibility with C++23.
+defm expansion_statements : CXX26Compat<
+  "expansion statements are">;
 }
 
 def err_asm_qualifier_ignored : Error<
@@ -416,9 +420,10 @@ def warn_cxx98_compat_for_range : Warning<
   "range-based for loop is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_for_range_identifier : Error<
-  "range-based for loop requires type for loop variable">;
+  "%select{range-based for loop|expansion statement}0 requires "
+  "type for %select{loop|expansion}0 variable">;
 def err_for_range_expected_decl : Error<
-  "for range declaration must declare a variable">;
+  "%select{for range|expansion statement}0 declaration must declare a variable">;
 def err_argument_required_after_attribute : Error<
   "argument required after attribute">;
 def err_missing_param : Error<"expected parameter declarator">;
@@ -445,6 +450,8 @@ def err_unspecified_size_with_static : Error<
   "'static' may not be used without an array size">;
 def err_expected_parentheses_around_typename : Error<
   "expected parentheses around type name in %0 expression">;
+def err_expansion_stmt_requires_range : Error<
+  "expansion statement must be range-based">;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;

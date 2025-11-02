@@ -5665,6 +5665,12 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
       if (VD && !CheckLocalVariableDeclaration(Info, VD))
         return ESR_Failed;
+
+      if (const auto *ESD = dyn_cast<ExpansionStmtDecl>(D)) {
+        assert(ESD->getInstantiations() && "not expanded?");
+        return EvaluateStmt(Result, Info, ESD->getInstantiations(), Case);
+      }
+
       // Each declaration initialization is its own full-expression.
       FullExpressionRAII Scope(Info);
       if (!EvaluateDecl(Info, D, /*EvaluateConditionDecl=*/true) &&
@@ -5935,6 +5941,40 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     }
 
     return Scope.destroy() ? ESR_Succeeded : ESR_Failed;
+  }
+
+  case Stmt::CXXExpansionInstantiationStmtClass: {
+    BlockScopeRAII Scope(Info);
+    const auto *Expansion = cast<CXXExpansionInstantiationStmt>(S);
+    for (const Stmt *Shared : Expansion->getSharedStmts()) {
+      EvalStmtResult ESR = EvaluateStmt(Result, Info, Shared);
+      if (ESR != ESR_Succeeded) {
+        if (ESR != ESR_Failed && !Scope.destroy())
+          return ESR_Failed;
+        return ESR;
+      }
+    }
+
+    // No need to push an extra scope for these since they're already
+    // CompoundStmts.
+    EvalStmtResult ESR = ESR_Succeeded;
+    for (const Stmt *Instantiation : Expansion->getInstantiations()) {
+      ESR = EvaluateStmt(Result, Info, Instantiation);
+      if (ESR == ESR_Failed ||
+          ShouldPropagateBreakContinue(Info, Expansion, &Scope, ESR))
+        return ESR;
+      if (ESR != ESR_Continue) {
+        // Succeeded here actually means we encountered a 'break'.
+        assert(ESR == ESR_Succeeded || ESR == ESR_Returned);
+        break;
+      }
+    }
+
+    // Map Continue back to Succeeded if we fell off the end of the loop.
+    if (ESR == ESR_Continue)
+      ESR = ESR_Succeeded;
+
+    return Scope.destroy() ? ESR : ESR_Failed;
   }
 
   case Stmt::SwitchStmtClass:
@@ -19319,6 +19359,9 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SYCLUniqueStableNameExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
+  case Expr::CXXExpansionInitListExprClass:
+  case Expr::CXXExpansionInitListSelectExprClass:
+  case Expr::CXXDestructuringExpansionSelectExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::InitListExprClass: {

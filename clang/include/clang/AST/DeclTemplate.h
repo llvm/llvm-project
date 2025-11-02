@@ -3343,6 +3343,55 @@ public:
   static bool classofKind(Kind K) { return K == TemplateParamObject; }
 };
 
+/// Represents a C++26 expansion statement declaration.
+///
+/// This is a bit of a hack, since expansion statements shouldn't really be
+/// "declarations" per se (they don't declare anything). Nevertheless, we *do*
+/// need them to be declaration *contexts*, because the DeclContext is used to
+/// compute the "template depth" of entities enclosed therein. In particular,
+/// the "template depth" is used to find instantiations of parameter variables,
+/// and a lambda enclosed within an expansion statement cannot compute its
+/// template depth without a pointer to the enclosing expansion statement.
+class ExpansionStmtDecl : public Decl, public DeclContext {
+  CXXExpansionStmt *Expansion = nullptr;
+  TemplateParameterList *TParams;
+  CXXExpansionInstantiationStmt *Instantiations = nullptr;
+
+  ExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+                    TemplateParameterList *TParams);
+
+public:
+  friend class ASTDeclReader;
+
+  static ExpansionStmtDecl *Create(ASTContext &C, DeclContext *DC,
+                                   SourceLocation Loc,
+                                   TemplateParameterList *TParams);
+  static ExpansionStmtDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
+
+  CXXExpansionStmt *getExpansionPattern() { return Expansion; }
+  const CXXExpansionStmt *getExpansionPattern() const { return Expansion; }
+  void setExpansionPattern(CXXExpansionStmt *S) { Expansion = S; }
+
+  CXXExpansionInstantiationStmt *getInstantiations() { return Instantiations; }
+  const CXXExpansionInstantiationStmt *getInstantiations() const {
+    return Instantiations;
+  }
+
+  void setInstantiations(CXXExpansionInstantiationStmt *S) {
+    Instantiations = S;
+  }
+
+  NonTypeTemplateParmDecl *getIndexTemplateParm() const {
+    return cast<NonTypeTemplateParmDecl>(TParams->getParam(0));
+  }
+  TemplateParameterList *getTemplateParameters() const { return TParams; }
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == ExpansionStmt; }
+};
+
 inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
   if (auto *PD = P.dyn_cast<TemplateTypeParmDecl *>())
     return PD;

@@ -573,6 +573,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case PriorTemplateArgumentSubstitution:
   case ConstraintsCheck:
   case NestedRequirementConstraintsCheck:
+  case ExpansionStmtInstantiation:
     return true;
 
   case RequirementInstantiation:
@@ -769,6 +770,15 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::RequirementInstantiation,
           PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
           /*Template=*/nullptr, /*TemplateArgs=*/{}, &DeductionInfo) {}
+
+Sema::InstantiatingTemplate::InstantiatingTemplate(
+    Sema &SemaRef, SourceLocation PointOfInstantiation,
+    CXXExpansionStmt *ExpansionStmt, ArrayRef<TemplateArgument> TArgs,
+    SourceRange InstantiationRange)
+    : InstantiatingTemplate(
+          SemaRef, CodeSynthesisContext::ExpansionStmtInstantiation,
+          PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
+          /*Template=*/nullptr, /*TemplateArgs=*/TArgs) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -1278,6 +1288,9 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
                                << /*isTemplateTemplateParam=*/true
                                << Active->InstantiationRange);
       break;
+    case CodeSynthesisContext::ExpansionStmtInstantiation:
+      Diags.Report(Active->PointOfInstantiation,
+                   diag::note_expansion_stmt_instantiation_here);
     }
   }
 }
@@ -1306,6 +1319,7 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::ParameterMappingSubstitution:
     case CodeSynthesisContext::ConstraintNormalization:
     case CodeSynthesisContext::NestedRequirementConstraintsCheck:
+    case CodeSynthesisContext::ExpansionStmtInstantiation:
       // This is a template instantiation, so there is no SFINAE.
       return std::nullopt;
     case CodeSynthesisContext::LambdaExpressionSubstitution:
@@ -1999,6 +2013,12 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
       maybeInstantiateFunctionParameterToScope(PVD))
     return nullptr;
 
+  if (isa<ExpansionStmtDecl>(D)) {
+    assert(SemaRef.CurrentInstantiationScope);
+    return cast<Decl *>(
+        *SemaRef.CurrentInstantiationScope->findInstantiationOf(D));
+  }
+
   return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D), TemplateArgs);
 }
 
@@ -2393,9 +2413,13 @@ ExprResult
 TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
                                                        ValueDecl *PD) {
   typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
-  llvm::PointerUnion<Decl *, DeclArgumentPack *> *Found
-    = getSema().CurrentInstantiationScope->findInstantiationOf(PD);
-  assert(Found && "no instantiation for parameter pack");
+  llvm::PointerUnion<Decl *, DeclArgumentPack *> *Found =
+      getSema().CurrentInstantiationScope->getInstantiationOfIfExists(PD);
+
+  // This can happen when instantiating an expansion statement that contains
+  // a pack (e.g. `template for (auto x : {{ts...}})`).
+  if (!Found)
+    return E;
 
   Decl *TransformedDecl;
   if (DeclArgumentPack *Pack = dyn_cast<DeclArgumentPack *>(*Found)) {

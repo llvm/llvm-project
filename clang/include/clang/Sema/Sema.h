@@ -893,6 +893,7 @@ class Sema final : public SemaBase {
   // 33. Types (SemaType.cpp)
   // 34. FixIt Helpers (SemaFixItUtils.cpp)
   // 35. Function Effects (SemaFunctionEffects.cpp)
+  // 36. C++ Expansion Statements (SemaExpand.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -4097,7 +4098,7 @@ public:
   /// complete.
   void ActOnInitializerError(Decl *Dcl);
 
-  void ActOnCXXForRangeDecl(Decl *D);
+  void ActOnCXXForRangeDecl(Decl *D, bool InExpansionStmt);
   StmtResult ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
                                         IdentifierInfo *Ident,
                                         ParsedAttributes &Attrs);
@@ -9502,7 +9503,8 @@ public:
   /// of an __label__ label name, otherwise it is a normal label definition
   /// or use.
   LabelDecl *LookupOrCreateLabel(IdentifierInfo *II, SourceLocation IdentLoc,
-                                 SourceLocation GnuLabelLoc = SourceLocation());
+                                 SourceLocation GnuLabelLoc = SourceLocation(),
+                                 bool ForLabelStmt = false);
 
   /// Perform a name lookup for a label with the specified name; this does not
   /// create a new label if the lookup fails.
@@ -11049,6 +11051,37 @@ public:
       BuildForRangeKind Kind,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
+  /// Set the type of a for-range declaration whose for-range or expansion
+  /// initialiser is dependent.
+  void ActOnDependentForRangeInitializer(VarDecl *LoopVar,
+                                         BuildForRangeKind BFRK);
+
+  /// Holds the 'begin' and 'end' variables of a range-based for loop or
+  /// expansion statement; begin-expr and end-expr are also provided; the
+  /// latter are used in some diagnostics.
+  struct ForRangeBeginEndInfo {
+    VarDecl *BeginVar = nullptr;
+    VarDecl *EndVar = nullptr;
+    Expr *BeginExpr = nullptr;
+    Expr *EndExpr = nullptr;
+    bool isValid() const { return BeginVar != nullptr && EndVar != nullptr; }
+  };
+
+  /// Determine begin-expr and end-expr and build variable declarations for
+  /// them as per [stmt.ranged].
+  ForRangeBeginEndInfo BuildCXXForRangeBeginEndVars(
+      Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
+      SourceLocation CoawaitLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
+      BuildForRangeKind Kind, bool ForExpansionStmt,
+      StmtResult *RebuildResult = nullptr,
+      llvm::function_ref<StmtResult()> RebuildWithDereference = {});
+
+  /// Build the range variable of a range-based for loop or iterating
+  /// expansion statement and return its DeclStmt.
+  StmtResult BuildCXXForRangeRangeVar(Scope *S, Expr *Range,
+                                      bool ForExpansionStmt);
+
   /// FinishCXXForRangeStmt - Attach the body to a C++0x for-range statement.
   /// This is a separate step from ActOnCXXForRangeStmt because analysis of the
   /// body cannot be performed until after the type of the range variable is
@@ -11189,6 +11222,9 @@ public:
   RecordDecl *CreateCapturedStmtRecordDecl(CapturedDecl *&CD,
                                            SourceLocation Loc,
                                            unsigned NumParams);
+
+  void ApplyForRangeOrExpansionStatementLifetimeExtension(
+      VarDecl *RangeVar, ArrayRef<MaterializeTemporaryExpr *> Temporaries);
 
 private:
   /// Check whether the given statement can have musttail applied to it,
@@ -13146,6 +13182,9 @@ public:
 
       /// We are performing partial ordering for template template parameters.
       PartialOrderingTTP,
+
+      /// We are instantiating an expansion statement.
+      ExpansionStmtInstantiation,
     } Kind;
 
     /// Was the enclosing context a non-instantiation SFINAE context?
@@ -13356,6 +13395,12 @@ public:
                           concepts::Requirement *Req,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
+
+    /// \brief Note that we are substituting the body of an expansion statement.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
+                          CXXExpansionStmt *ExpansionStmt,
+                          ArrayRef<TemplateArgument> TArgs,
+                          SourceRange InstantiationRange);
 
     /// \brief Note that we are checking the satisfaction of the constraint
     /// expression inside of a nested requirement.
@@ -15605,6 +15650,63 @@ public:
 
   void performFunctionEffectAnalysis(TranslationUnitDecl *TU);
 
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name Expansion Statements
+  /// Implementations are in SemaExpand.cpp
+  ///@{
+public:
+  ExpansionStmtDecl *ActOnExpansionStmtDecl(unsigned TemplateDepth,
+                                            SourceLocation TemplateKWLoc);
+
+  ExpansionStmtDecl *BuildExpansionStmtDecl(DeclContext *Ctx,
+                                            SourceLocation TemplateKWLoc,
+                                            NonTypeTemplateParmDecl *NTTP);
+
+  ExprResult ActOnCXXExpansionInitList(MultiExprArg SubExprs,
+                                       SourceLocation LBraceLoc,
+                                       SourceLocation RBraceLoc);
+
+  StmtResult ActOnCXXExpansionStmt(
+      ExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation ForLoc,
+      SourceLocation LParenLoc, SourceLocation ColonLoc,
+      SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps);
+
+  StmtResult FinishCXXExpansionStmt(Stmt *Expansion, Stmt *Body);
+
+  ExprResult BuildCXXExpansionInitializer(ExpansionStmtDecl *ESD,
+                                          Expr *ExpansionInitializer);
+
+  StmtResult BuildCXXEnumeratingExpansionStmt(Decl *ESD, Stmt *Init,
+                                              Stmt *ExpansionVar,
+                                              SourceLocation ForLoc,
+                                              SourceLocation LParenLoc,
+                                              SourceLocation ColonLoc,
+                                              SourceLocation RParenLoc);
+
+  ExprResult
+  BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
+                                      Expr *Idx);
+
+  ExprResult BuildCXXDestructuringExpansionSelectExpr(DecompositionDecl *DD,
+                                                      Expr *Idx);
+
+  StmtResult BuildNonEnumeratingCXXExpansionStmt(
+      ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation ForLoc,
+      SourceLocation LParenLoc, SourceLocation ColonLoc,
+      SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
+
+  std::optional<uint64_t> ComputeExpansionSize(CXXExpansionStmt *Expansion);
   ///@}
 };
 

@@ -4455,13 +4455,16 @@ LabelDecl *Sema::LookupExistingLabel(IdentifierInfo *II, SourceLocation Loc) {
                                     RedeclarationKind::NotForRedeclaration);
   // If we found a label, check to see if it is in the same context as us.
   // When in a Block, we don't want to reuse a label in an enclosing function.
-  if (!Res || Res->getDeclContext() != CurContext)
+  if (!Res ||
+      Res->getDeclContext()->getEnclosingNonExpansionStatementContext() !=
+          CurContext->getEnclosingNonExpansionStatementContext())
     return nullptr;
   return cast<LabelDecl>(Res);
 }
 
 LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
-                                     SourceLocation GnuLabelLoc) {
+                                     SourceLocation GnuLabelLoc,
+                                     bool ForLabelStmt) {
   if (GnuLabelLoc.isValid()) {
     // Local label definitions always shadow existing labels.
     auto *Res = LabelDecl::Create(Context, CurContext, Loc, II, GnuLabelLoc);
@@ -4470,15 +4473,43 @@ LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
     return cast<LabelDecl>(Res);
   }
 
-  // Not a GNU local label.
-  LabelDecl *Res = LookupExistingLabel(II, Loc);
-  if (!Res) {
-    // If not forward referenced or defined already, create the backing decl.
-    Res = LabelDecl::Create(Context, CurContext, Loc, II);
-    Scope *S = CurScope->getFnParent();
-    assert(S && "Not in a function?");
-    PushOnScopeChains(Res, S, true);
+  LabelDecl *Existing = LookupExistingLabel(II, Loc);
+
+  // C++26 [stmt.label]p4 An identifier label shall not be enclosed by an
+  // expansion-statement.
+  //
+  // As an extension, we allow GNU local labels since they are logically
+  // scoped to the containing block, which prevents us from ending up with
+  // multiple copies of the same label in a function after instantiation.
+  //
+  // While allowing this is slightly more complicated, it also has the nice
+  // side-effect of avoiding otherwise rather horrible diagnostics you'd get
+  // when trying to use '__label__' if we didn't support this.
+  if (ForLabelStmt && CurContext->isExpansionStmt()) {
+    if (Existing && Existing->isGnuLocal())
+      return Existing;
+
+    // Drop the label from the AST as creating it anyway would cause us to
+    // either issue various unhelpful diagnostics (if we were to declare
+    // it in the function decl context) or shadow a valid label with the
+    // same name outside the expansion statement.
+    Diag(Loc, diag::err_expansion_stmt_label);
+    return nullptr;
   }
+
+  if (Existing)
+    return Existing;
+
+  // Declare non-local labels outside any expansion statements; this is required
+  // to support jumping out of an expansion statement.
+  ContextRAII Ctx{*this, CurContext->getEnclosingNonExpansionStatementContext(),
+                  /*NewThisContext=*/false};
+
+  // Not a GNU local label. Create the backing decl.
+  auto *Res = LabelDecl::Create(Context, CurContext, Loc, II);
+  Scope *S = CurScope->getFnParent();
+  assert(S && "Not in a function?");
+  PushOnScopeChains(Res, S, true);
   return Res;
 }
 
