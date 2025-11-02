@@ -137,11 +137,10 @@ out_html.append('''\
 
 <p>This page tracks which C++ defect reports are implemented within Clang.</p>
 
-<table width="689" border="1" cellspacing="0">
+<table width="892" border="1" cellspacing="0">
   <tr>
     <th>Number</th>
     <th>Section</th>
-    <th>Section name</th>
     <th>Status</th>
     <th>Issue title</th>
     <th>Available in Clang?</th>
@@ -311,7 +310,6 @@ for dr in drs:
   out_html.append(f'''
   <tr{row_style} id="{dr.number}">
     <td><a href="https://cplusplus.github.io/CWG/issues/{dr.number}.html">{dr.number}</a></td>
-    <td>{dr.section_number}</td>
     <td>[<a href="{dr.section_link}">{dr.section_name}</a>]</td>
     <td>{dr.status}</td>
     <td>{dr.title}</td>
