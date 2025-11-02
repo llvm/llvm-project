@@ -1005,47 +1005,6 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
   return DL.size();
 }
 
-/// Takes a list of diagnostics that were partially matched,
-/// despite '-verify-strict' option being set.
-static unsigned PrintPartial(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
-                             llvm::SmallVector<Directive *> &DL) {
-  if (DL.empty())
-    return 0;
-
-  const bool IsSinglePrefix =
-      Diags.getDiagnosticOptions().VerifyPrefixes.size() == 1;
-
-  SmallString<256> Fmt;
-  llvm::raw_svector_ostream OS(Fmt);
-  for (const auto *D : DL) {
-    if (D->DiagnosticLoc.isInvalid() || D->MatchAnyFileAndLine)
-      OS << "\n  File *";
-    else
-      OS << "\n  File " << SourceMgr.getFilename(D->DiagnosticLoc);
-    if (D->MatchAnyLine)
-      OS << " Line *";
-    else
-      OS << " Line " << SourceMgr.getPresumedLineNumber(D->DiagnosticLoc);
-    if (D->DirectiveLoc != D->DiagnosticLoc) {
-      if (SourceMgr.getFilename(D->DirectiveLoc) !=
-          SourceMgr.getFilename(D->DiagnosticLoc)) {
-        OS << " (directive at " << SourceMgr.getFilename(D->DirectiveLoc) << ':'
-           << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << ')';
-      } else {
-        OS << " (directive at line "
-           << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << ')';
-      }
-    }
-    if (!IsSinglePrefix)
-      OS << " \'" << D->Spelling << '\'';
-    OS << ": " << D->Text;
-  }
-
-  Diags.Report(diag::err_verify_message_partial_match).setForceEmit()
-      << OS.str();
-  return DL.size();
-}
-
 /// Determine whether two source locations come from the same file.
 static bool IsFromSameFile(SourceManager &SM, SourceLocation DirectiveLoc,
                            SourceLocation DiagnosticLoc) {
@@ -1062,6 +1021,37 @@ static bool IsFromSameFile(SourceManager &SM, SourceLocation DirectiveLoc,
   return (DiagFile == SM.getFileEntryForID(SM.getFileID(DirectiveLoc)));
 }
 
+/// Takes a list of diagnostics that were partially matched,
+/// despite '-verify-strict' option being set.
+static unsigned
+PrintPartial(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
+             llvm::SmallVector<std::pair<Directive *, std::string>> &DL) {
+  if (DL.empty())
+    return 0;
+
+  SmallString<256> Fmt;
+  llvm::raw_svector_ostream OS(Fmt);
+  for (const auto &[D, DiagText] : DL) {
+    assert(!D->MatchAnyLine && !D->MatchAnyFileAndLine &&
+           "Wildcards should not be allowed in strict verify mode");
+    OS << "\n  Directive at " << SourceMgr.getFilename(D->DirectiveLoc) << ":"
+       << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << " \'"
+       << D->Spelling << "\': " << D->Text
+       << "\n    does not fully match diagnostic at ";
+    if (IsFromSameFile(SourceMgr, D->DirectiveLoc, D->DiagnosticLoc)) {
+      OS << "line " << SourceMgr.getPresumedLineNumber(D->DiagnosticLoc);
+    } else {
+      OS << SourceMgr.getFilename(D->DiagnosticLoc) << ":"
+         << SourceMgr.getPresumedLineNumber(D->DiagnosticLoc);
+    }
+    OS << ": " << DiagText;
+  }
+
+  Diags.Report(diag::err_verify_message_partial_match).setForceEmit()
+      << OS.str();
+  return DL.size();
+}
+
 /// CheckLists - Compare expected to seen diagnostic lists and return the
 /// the difference between them.
 static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
@@ -1072,7 +1062,7 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
                            bool IgnoreUnexpected) {
   std::vector<Directive *> LeftOnly;
   DiagList Right(d2_begin, d2_end);
-  llvm::SmallVector<Directive *> IncompleteMatches;
+  llvm::SmallVector<std::pair<Directive *, std::string>> IncompleteMatches;
 
   for (auto &Owner : Left) {
     Directive &D = *Owner;
@@ -1096,7 +1086,7 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
         if (MatchResult != DiagnosticMatchResult::NoMatch) {
           if (D.FullMatchRequired &&
               MatchResult == DiagnosticMatchResult::PartialMatch) {
-            IncompleteMatches.push_back(&D);
+            IncompleteMatches.push_back({&D, II->second});
           }
           break;
         }
