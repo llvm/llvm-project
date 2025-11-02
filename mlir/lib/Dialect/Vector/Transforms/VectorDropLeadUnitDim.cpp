@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 
 #define DEBUG_TYPE "vector-drop-unit-dim"
 
@@ -54,7 +55,7 @@ namespace {
 // input by inserting vector.broadcast.
 struct CastAwayExtractStridedSliceLeadingOneDim
     : public OpRewritePattern<vector::ExtractStridedSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractStridedSliceOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -78,7 +79,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     Location loc = extractOp.getLoc();
 
     Value newSrcVector = vector::ExtractOp::create(
-        rewriter, loc, extractOp.getVector(), splatZero(dropCount));
+        rewriter, loc, extractOp.getSource(), splatZero(dropCount));
 
     // The offsets/sizes/strides attribute can have a less number of elements
     // than the input vector's rank: it is meant for the leading dimensions.
@@ -104,7 +105,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
 // inputs by inserting vector.broadcast.
 struct CastAwayInsertStridedSliceLeadingOneDim
     : public OpRewritePattern<vector::InsertStridedSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::InsertStridedSliceOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -145,7 +146,7 @@ struct CastAwayInsertStridedSliceLeadingOneDim
 // Casts away leading one dimensions in vector.insert's vector inputs by
 // inserting vector.broadcast.
 struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::InsertOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -221,7 +222,7 @@ static Value dropUnitDimsFromMask(OpBuilder &b, Location loc, Value mask,
 // 1 dimensions.
 struct CastAwayTransferReadLeadingOneDim
     : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
@@ -275,7 +276,7 @@ struct CastAwayTransferReadLeadingOneDim
 // 1 dimensions.
 struct CastAwayTransferWriteLeadingOneDim
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
@@ -541,7 +542,7 @@ public:
 // vector.broadcast back to the original shape.
 struct CastAwayConstantMaskLeadingOneDim
     : public OpRewritePattern<vector::ConstantMaskOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ConstantMaskOp mask,
                                 PatternRewriter &rewriter) const override {
@@ -557,8 +558,7 @@ struct CastAwayConstantMaskLeadingOneDim
     // If any of the dropped unit dims has a size of `0`, the entire mask is a
     // zero mask, else the unit dim has no effect on the mask.
     int64_t flatLeadingSize =
-        std::accumulate(dimSizes.begin(), dimSizes.begin() + dropDim + 1,
-                        static_cast<int64_t>(1), std::multiplies<int64_t>());
+        llvm::product_of(dimSizes.take_front(dropDim + 1));
     SmallVector<int64_t> newDimSizes = {flatLeadingSize};
     newDimSizes.append(dimSizes.begin() + dropDim + 1, dimSizes.end());
 

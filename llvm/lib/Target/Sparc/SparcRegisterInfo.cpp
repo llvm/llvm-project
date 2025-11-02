@@ -31,7 +31,8 @@ static cl::opt<bool>
 ReserveAppRegisters("sparc-reserve-app-registers", cl::Hidden, cl::init(false),
                     cl::desc("Reserve application registers (%g2-%g4)"));
 
-SparcRegisterInfo::SparcRegisterInfo() : SparcGenRegisterInfo(SP::O7) {}
+SparcRegisterInfo::SparcRegisterInfo(const SparcSubtarget &STI)
+    : SparcGenRegisterInfo(SP::O7), Is64Bit(STI.is64Bit()) {}
 
 const MCPhysReg*
 SparcRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -111,11 +112,10 @@ bool SparcRegisterInfo::isReservedReg(const MachineFunction &MF,
   return getReservedRegs(MF)[Reg];
 }
 
-const TargetRegisterClass*
-SparcRegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                      unsigned Kind) const {
-  const SparcSubtarget &Subtarget = MF.getSubtarget<SparcSubtarget>();
-  return Subtarget.is64Bit() ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
+const TargetRegisterClass *
+SparcRegisterInfo::getPointerRegClass(unsigned Kind) const {
+  assert(Kind == 0 && "this should only be used for default cases");
+  return Is64Bit ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
 }
 
 static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,

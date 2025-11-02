@@ -12,7 +12,7 @@ void decompose_array() {
   auto [...] = arr; // #2
                     // expected-error@#2{{expected identifier}}
                     // expected-error@#2{{{no names were provided}}}
-                    // expected-warning@#2{{{does not allow a decomposition group to be empty}}}
+                    // expected-warning@#2{{{does not allow a structured binding group to be empty}}}
   auto [a, ..., b] = arr; // #3
                           // expected-error@#3{{expected identifier}}
                           // expected-error@#3{{{only 1 name was provided}}}

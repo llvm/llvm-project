@@ -20,7 +20,7 @@ entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
   %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
@@ -40,7 +40,7 @@ entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
   %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 14)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
@@ -60,7 +60,7 @@ entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
   %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 26)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
@@ -83,7 +83,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %vl.i64 = zext i32 %vl to i64
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl.i64)
@@ -109,7 +109,7 @@ entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i16>
   %shl = shl <vscale x 4 x i16> %offset.ext, splat (i16 12)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i16(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i16> %shl,
     i64 %vl)
@@ -132,7 +132,7 @@ entry:
   %offset.ext = zext <vscale x 4 x i7> %offset to <vscale x 4 x i64>
   %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
@@ -153,7 +153,7 @@ entry:
   %offset.ext = zext <vscale x 4 x i1> %offset to <vscale x 4 x i64>
   %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 2)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
@@ -181,7 +181,7 @@ entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
   %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.mask.nxv4i32.nxv4i64(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i64> %shl,
     <vscale x 4 x i1> %m,
@@ -208,7 +208,7 @@ entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
   %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vluxei.nxv4i32.nxv4i64(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
@@ -236,7 +236,7 @@ entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
   %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vluxei.mask.nxv4i32.nxv4i64(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     ptr %ptr,
     <vscale x 4 x i64> %shl,
     <vscale x 4 x i1> %m,

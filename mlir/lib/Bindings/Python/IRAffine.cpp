@@ -17,9 +17,9 @@
 #include "NanobindUtils.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/IntegerSet.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
@@ -64,7 +64,7 @@ static void pyListToVector(const nb::list &list,
 }
 
 template <typename PermutationTy>
-static bool isPermutation(std::vector<PermutationTy> permutation) {
+static bool isPermutation(const std::vector<PermutationTy> &permutation) {
   llvm::SmallVector<bool, 8> seen(permutation.size(), false);
   for (auto val : permutation) {
     if (val < permutation.size()) {
@@ -142,7 +142,7 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def_static("get", &PyAffineConstantExpr::get, nb::arg("value"),
-                 nb::arg("context").none() = nb::none());
+                 nb::arg("context") = nb::none());
     c.def_prop_ro("value", [](PyAffineConstantExpr &self) {
       return mlirAffineConstantExprGetValue(self);
     });
@@ -162,7 +162,7 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def_static("get", &PyAffineDimExpr::get, nb::arg("position"),
-                 nb::arg("context").none() = nb::none());
+                 nb::arg("context") = nb::none());
     c.def_prop_ro("position", [](PyAffineDimExpr &self) {
       return mlirAffineDimExprGetPosition(self);
     });
@@ -182,7 +182,7 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def_static("get", &PyAffineSymbolExpr::get, nb::arg("position"),
-                 nb::arg("context").none() = nb::none());
+                 nb::arg("context") = nb::none());
     c.def_prop_ro("position", [](PyAffineSymbolExpr &self) {
       return mlirAffineSymbolExprGetPosition(self);
     });
@@ -366,7 +366,7 @@ nb::object PyAffineExpr::getCapsule() {
   return nb::steal<nb::object>(mlirPythonAffineExprToCapsule(*this));
 }
 
-PyAffineExpr PyAffineExpr::createFromCapsule(nb::object capsule) {
+PyAffineExpr PyAffineExpr::createFromCapsule(const nb::object &capsule) {
   MlirAffineExpr rawAffineExpr = mlirPythonCapsuleToAffineExpr(capsule.ptr());
   if (mlirAffineExprIsNull(rawAffineExpr))
     throw nb::python_error();
@@ -424,7 +424,7 @@ nb::object PyAffineMap::getCapsule() {
   return nb::steal<nb::object>(mlirPythonAffineMapToCapsule(*this));
 }
 
-PyAffineMap PyAffineMap::createFromCapsule(nb::object capsule) {
+PyAffineMap PyAffineMap::createFromCapsule(const nb::object &capsule) {
   MlirAffineMap rawAffineMap = mlirPythonCapsuleToAffineMap(capsule.ptr());
   if (mlirAffineMapIsNull(rawAffineMap))
     throw nb::python_error();
@@ -500,7 +500,7 @@ nb::object PyIntegerSet::getCapsule() {
   return nb::steal<nb::object>(mlirPythonIntegerSetToCapsule(*this));
 }
 
-PyIntegerSet PyIntegerSet::createFromCapsule(nb::object capsule) {
+PyIntegerSet PyIntegerSet::createFromCapsule(const nb::object &capsule) {
   MlirIntegerSet rawIntegerSet = mlirPythonCapsuleToIntegerSet(capsule.ptr());
   if (mlirIntegerSetIsNull(rawIntegerSet))
     throw nb::python_error();
@@ -574,7 +574,9 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
            })
       .def_prop_ro(
           "context",
-          [](PyAffineExpr &self) { return self.getContext().getObject(); })
+          [](PyAffineExpr &self) -> nb::typed<nb::object, PyMlirContext> {
+            return self.getContext().getObject();
+          })
       .def("compose",
            [](PyAffineExpr &self, PyAffineMap &other) {
              return PyAffineExpr(self.getContext(),
@@ -588,7 +590,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 self.getContext(),
                 mlirAffineExprShiftDims(self, numDims, shift, offset));
           },
-          nb::arg("num_dims"), nb::arg("shift"), nb::arg("offset").none() = 0)
+          nb::arg("num_dims"), nb::arg("shift"), nb::arg("offset") = 0)
       .def(
           "shift_symbols",
           [](PyAffineExpr &self, uint32_t numSymbols, uint32_t shift,
@@ -597,8 +599,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 self.getContext(),
                 mlirAffineExprShiftSymbols(self, numSymbols, shift, offset));
           },
-          nb::arg("num_symbols"), nb::arg("shift"),
-          nb::arg("offset").none() = 0)
+          nb::arg("num_symbols"), nb::arg("shift"), nb::arg("offset") = 0)
       .def_static(
           "simplify_affine_expr",
           [](PyAffineExpr &self, uint32_t numDims, uint32_t numSymbols) {
@@ -655,15 +656,15 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                   "Gets an affine expression containing the rounded-up result "
                   "of dividing an expression by a constant.")
       .def_static("get_constant", &PyAffineConstantExpr::get, nb::arg("value"),
-                  nb::arg("context").none() = nb::none(),
+                  nb::arg("context") = nb::none(),
                   "Gets a constant affine expression with the given value.")
       .def_static(
           "get_dim", &PyAffineDimExpr::get, nb::arg("position"),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Gets an affine expression of a dimension at the given position.")
       .def_static(
           "get_symbol", &PyAffineSymbolExpr::get, nb::arg("position"),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Gets an affine expression of a symbol at the given position.")
       .def(
           "dump", [](PyAffineExpr &self) { mlirAffineExprDump(self); },
@@ -707,34 +708,36 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
            [](PyAffineMap &self) {
              return static_cast<size_t>(llvm::hash_value(self.get().ptr));
            })
-      .def_static("compress_unused_symbols",
-                  [](nb::list affineMaps, DefaultingPyMlirContext context) {
-                    SmallVector<MlirAffineMap> maps;
-                    pyListToVector<PyAffineMap, MlirAffineMap>(
-                        affineMaps, maps, "attempting to create an AffineMap");
-                    std::vector<MlirAffineMap> compressed(affineMaps.size());
-                    auto populate = [](void *result, intptr_t idx,
-                                       MlirAffineMap m) {
-                      static_cast<MlirAffineMap *>(result)[idx] = (m);
-                    };
-                    mlirAffineMapCompressUnusedSymbols(
-                        maps.data(), maps.size(), compressed.data(), populate);
-                    std::vector<PyAffineMap> res;
-                    res.reserve(compressed.size());
-                    for (auto m : compressed)
-                      res.emplace_back(context->getRef(), m);
-                    return res;
-                  })
+      .def_static(
+          "compress_unused_symbols",
+          [](const nb::list &affineMaps, DefaultingPyMlirContext context) {
+            SmallVector<MlirAffineMap> maps;
+            pyListToVector<PyAffineMap, MlirAffineMap>(
+                affineMaps, maps, "attempting to create an AffineMap");
+            std::vector<MlirAffineMap> compressed(affineMaps.size());
+            auto populate = [](void *result, intptr_t idx, MlirAffineMap m) {
+              static_cast<MlirAffineMap *>(result)[idx] = (m);
+            };
+            mlirAffineMapCompressUnusedSymbols(maps.data(), maps.size(),
+                                               compressed.data(), populate);
+            std::vector<PyAffineMap> res;
+            res.reserve(compressed.size());
+            for (auto m : compressed)
+              res.emplace_back(context->getRef(), m);
+            return res;
+          })
       .def_prop_ro(
           "context",
-          [](PyAffineMap &self) { return self.getContext().getObject(); },
+          [](PyAffineMap &self) -> nb::typed<nb::object, PyMlirContext> {
+            return self.getContext().getObject();
+          },
           "Context that owns the Affine Map")
       .def(
           "dump", [](PyAffineMap &self) { mlirAffineMapDump(self); },
           kDumpDocstring)
       .def_static(
           "get",
-          [](intptr_t dimCount, intptr_t symbolCount, nb::list exprs,
+          [](intptr_t dimCount, intptr_t symbolCount, const nb::list &exprs,
              DefaultingPyMlirContext context) {
             SmallVector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr, MlirAffineExpr>(
@@ -745,7 +748,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             return PyAffineMap(context->getRef(), map);
           },
           nb::arg("dim_count"), nb::arg("symbol_count"), nb::arg("exprs"),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Gets a map with the given expressions as results.")
       .def_static(
           "get_constant",
@@ -754,7 +757,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 mlirAffineMapConstantGet(context->get(), value);
             return PyAffineMap(context->getRef(), affineMap);
           },
-          nb::arg("value"), nb::arg("context").none() = nb::none(),
+          nb::arg("value"), nb::arg("context") = nb::none(),
           "Gets an affine map with a single constant result")
       .def_static(
           "get_empty",
@@ -762,7 +765,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             MlirAffineMap affineMap = mlirAffineMapEmptyGet(context->get());
             return PyAffineMap(context->getRef(), affineMap);
           },
-          nb::arg("context").none() = nb::none(), "Gets an empty affine map.")
+          nb::arg("context") = nb::none(), "Gets an empty affine map.")
       .def_static(
           "get_identity",
           [](intptr_t nDims, DefaultingPyMlirContext context) {
@@ -770,7 +773,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 mlirAffineMapMultiDimIdentityGet(context->get(), nDims);
             return PyAffineMap(context->getRef(), affineMap);
           },
-          nb::arg("n_dims"), nb::arg("context").none() = nb::none(),
+          nb::arg("n_dims"), nb::arg("context") = nb::none(),
           "Gets an identity map with the given number of dimensions.")
       .def_static(
           "get_minor_identity",
@@ -781,7 +784,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             return PyAffineMap(context->getRef(), affineMap);
           },
           nb::arg("n_dims"), nb::arg("n_results"),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Gets a minor identity map with the given number of dimensions and "
           "results.")
       .def_static(
@@ -795,7 +798,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 context->get(), permutation.size(), permutation.data());
             return PyAffineMap(context->getRef(), affineMap);
           },
-          nb::arg("permutation"), nb::arg("context").none() = nb::none(),
+          nb::arg("permutation"), nb::arg("context") = nb::none(),
           "Gets an affine map that permutes its inputs.")
       .def(
           "get_submap",
@@ -869,7 +872,8 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyIntegerSet::createFromCapsule)
       .def("__eq__", [](PyIntegerSet &self,
                         PyIntegerSet &other) { return self == other; })
-      .def("__eq__", [](PyIntegerSet &self, nb::object other) { return false; })
+      .def("__eq__",
+           [](PyIntegerSet &self, const nb::object &other) { return false; })
       .def("__str__",
            [](PyIntegerSet &self) {
              PyPrintAccumulator printAccum;
@@ -892,13 +896,15 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
            })
       .def_prop_ro(
           "context",
-          [](PyIntegerSet &self) { return self.getContext().getObject(); })
+          [](PyIntegerSet &self) -> nb::typed<nb::object, PyMlirContext> {
+            return self.getContext().getObject();
+          })
       .def(
           "dump", [](PyIntegerSet &self) { mlirIntegerSetDump(self); },
           kDumpDocstring)
       .def_static(
           "get",
-          [](intptr_t numDims, intptr_t numSymbols, nb::list exprs,
+          [](intptr_t numDims, intptr_t numSymbols, const nb::list &exprs,
              std::vector<bool> eqFlags, DefaultingPyMlirContext context) {
             if (exprs.size() != eqFlags.size())
               throw nb::value_error(
@@ -921,7 +927,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             return PyIntegerSet(context->getRef(), set);
           },
           nb::arg("num_dims"), nb::arg("num_symbols"), nb::arg("exprs"),
-          nb::arg("eq_flags"), nb::arg("context").none() = nb::none())
+          nb::arg("eq_flags"), nb::arg("context") = nb::none())
       .def_static(
           "get_empty",
           [](intptr_t numDims, intptr_t numSymbols,
@@ -931,11 +937,12 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             return PyIntegerSet(context->getRef(), set);
           },
           nb::arg("num_dims"), nb::arg("num_symbols"),
-          nb::arg("context").none() = nb::none())
+          nb::arg("context") = nb::none())
       .def(
           "get_replaced",
-          [](PyIntegerSet &self, nb::list dimExprs, nb::list symbolExprs,
-             intptr_t numResultDims, intptr_t numResultSymbols) {
+          [](PyIntegerSet &self, const nb::list &dimExprs,
+             const nb::list &symbolExprs, intptr_t numResultDims,
+             intptr_t numResultSymbols) {
             if (static_cast<intptr_t>(dimExprs.size()) !=
                 mlirIntegerSetGetNumDims(self))
               throw nb::value_error(

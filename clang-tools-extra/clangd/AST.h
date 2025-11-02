@@ -31,6 +31,7 @@ namespace clang {
 class SourceManager;
 class Decl;
 class DynTypedNode;
+class HeuristicResolver;
 
 namespace clangd {
 
@@ -167,7 +168,8 @@ QualType declaredType(const TypeDecl *D);
 /// Retrieves the deduced type at a given location (auto, decltype).
 /// It will return the underlying type.
 /// If the type is an undeduced auto, returns the type itself.
-std::optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
+std::optional<QualType> getDeducedType(ASTContext &, const HeuristicResolver *,
+                                       SourceLocation Loc);
 
 // Find the abbreviated-function-template `auto` within a type, or returns null.
 // Similar to getContainedAutoTypeLoc, but these `auto`s are

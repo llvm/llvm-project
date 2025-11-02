@@ -41,10 +41,6 @@
 using namespace mlir;
 using namespace mlir::tensor;
 
-using llvm::divideCeilSigned;
-using llvm::divideFloorSigned;
-using llvm::mod;
-
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
 Operation *TensorDialect::materializeConstant(OpBuilder &builder,
@@ -2310,6 +2306,7 @@ RankedTensorType ExtractSliceOp::inferResultType(
                                sourceTensorType.getEncoding());
 }
 
+// TODO: This uses neither offsets nor strides!
 RankedTensorType ExtractSliceOp::inferResultType(
     RankedTensorType sourceTensorType, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides) {
@@ -2976,9 +2973,9 @@ public:
     if (sourceType != insertSliceOp.getSourceType()) {
       OpBuilder::InsertionGuard g(rewriter);
       // The only difference between InsertSliceOp and ParallelInsertSliceOp
-      // is that the insertion point is just before the ParallelCombiningOp in
+      // is that the insertion point is just before the InParallelOp in
       // the parallel case.
-      if (std::is_same<InsertOpTy, ParallelInsertSliceOp>::value)
+      if (isa<InParallelOpInterface>(insertSliceOp->getParentOp()))
         rewriter.setInsertionPoint(insertSliceOp->getParentOp());
       toInsert = tensor::CastOp::create(rewriter, insertSliceOp.getLoc(),
                                         sourceType, toInsert);
@@ -3153,9 +3150,9 @@ struct InsertSliceOpSourceCastInserter final
     // Insert the cast.
     OpBuilder::InsertionGuard g(rewriter);
     // The only difference between InsertSliceOp and ParallelInsertSliceOp is
-    // that the insertion point is just before the ParallelCombiningOp in the
+    // that the insertion point is just before the InParallelOp in the
     // parallel case.
-    if (std::is_same<InsertOpTy, ParallelInsertSliceOp>::value)
+    if (isa<ParallelCombiningOpInterface>(insertSliceOp->getParentOp()))
       rewriter.setInsertionPoint(insertSliceOp->getParentOp());
     Value cast = tensor::CastOp::create(rewriter, insertSliceOp.getLoc(),
                                         newSrcType, insertSliceOp.getSource());
@@ -3198,20 +3195,6 @@ Value mlir::tensor::createCanonicalRankReducingInsertSliceOp(OpBuilder &b,
 
 void PadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "padded");
-}
-
-// TODO: Replace custom<InferType> directive with AllTypesMatch as soon as it
-// supports optional types.
-void printInferType(OpAsmPrinter &printer, Operation *op, Value optOperand,
-                    Type typeToInfer, Type typeToInferFrom) {}
-
-ParseResult
-parseInferType(OpAsmParser &parser,
-               std::optional<OpAsmParser::UnresolvedOperand> optOperand,
-               Type &typeToInfer, Type typeToInferFrom) {
-  if (optOperand)
-    typeToInfer = typeToInferFrom;
-  return success();
 }
 
 LogicalResult PadOp::verify() {
@@ -3860,8 +3843,7 @@ OpFoldResult PadOp::fold(FoldAdaptor) {
 //===----------------------------------------------------------------------===//
 
 OpResult ParallelInsertSliceOp::getTiedOpResult() {
-  ParallelCombiningOpInterface parallelCombiningParent =
-      getParallelCombiningParent();
+  InParallelOpInterface parallelCombiningParent = getParallelCombiningParent();
   for (const auto &it :
        llvm::enumerate(parallelCombiningParent.getYieldingOps())) {
     Operation &nextOp = it.value();
@@ -3915,8 +3897,8 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
 }
 
 LogicalResult ParallelInsertSliceOp::verify() {
-  if (!isa<ParallelCombiningOpInterface>(getOperation()->getParentOp()))
-    return this->emitError("expected ParallelCombiningOpInterface parent, got:")
+  if (!isa<InParallelOpInterface>(getOperation()->getParentOp()))
+    return this->emitError("expected InParallelOpInterface parent, got:")
            << *(getOperation()->getParentOp());
 
   // Verify result type against inferred type.
@@ -3947,6 +3929,19 @@ void ParallelInsertSliceOp::getCanonicalizationPatterns(
 
 llvm::SmallBitVector ParallelInsertSliceOp::getDroppedDims() {
   return ::getDroppedDims(getSourceType().getShape(), getMixedSizes());
+}
+
+// ParallelCombiningOpInterface implementation.
+MutableOperandRange ParallelInsertSliceOp::getUpdatedDestinations() {
+  return getDestMutable();
+}
+
+Operation *ParallelInsertSliceOp::getIteratingParent() {
+  // Return the parent InParallelOpInterface's parent.
+  if (auto combiningOp =
+          dyn_cast<InParallelOpInterface>(getOperation()->getParentOp()))
+    return combiningOp->getParentOp();
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4059,7 +4054,7 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 // Common Canonicalizers and Folders.
 //===----------------------------------------------------------------------===//
-bool foldTensorCastPrecondition(DestinationStyleOpInterface op) {
+static bool foldTensorCastPrecondition(DestinationStyleOpInterface op) {
   // 1. InsertSliceOp has its own logic about folding tensor.cast ops.
   // 2. Exclude DPS ops that are also LoopLike from this interface as they
   // might need special handling of attached regions.

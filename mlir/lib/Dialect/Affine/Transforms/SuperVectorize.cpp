@@ -978,12 +978,11 @@ static Operation *vectorizeAffineApplyOp(AffineApplyOp applyOp,
       LLVM_DEBUG(
           dbgs() << "\n[early-vect]+++++ affine.apply on vector operand\n");
       return nullptr;
-    } else {
-      Value updatedOperand = state.valueScalarReplacement.lookupOrNull(operand);
-      if (!updatedOperand)
-        updatedOperand = operand;
-      updatedOperands.push_back(updatedOperand);
     }
+    Value updatedOperand = state.valueScalarReplacement.lookupOrNull(operand);
+    if (!updatedOperand)
+      updatedOperand = operand;
+    updatedOperands.push_back(updatedOperand);
   }
 
   auto newApplyOp = AffineApplyOp::create(
@@ -1107,10 +1106,7 @@ static bool isUniformDefinition(Value value,
       return false;
   }
 
-  if (!value.getType().isIntOrIndexOrFloat())
-    return false;
-
-  return true;
+  return value.getType().isIntOrIndexOrFloat();
 }
 
 /// Generates a broadcast op for the provided uniform value using the

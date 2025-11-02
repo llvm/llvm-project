@@ -543,3 +543,12 @@ def _BOp : NS_Op<"_op_with_leading_underscore_and_no_namespace", []>;
 
 // REDUCE_EXC-NOT: NS::AOp declarations
 // REDUCE_EXC-LABEL: NS::BOp declarations
+
+// CHECK-LABEL: _TypeInferredPropOp declarations
+def _TypeInferredPropOp : NS_Op<"type_inferred_prop_op_with_properties", [
+    AllTypesMatch<["value", "result"]>
+  ]> {
+  let arguments = (ins Property<"unsigned">:$prop, AnyType:$value);
+  let results = (outs AnyType:$result);
+  let hasCustomAssemblyFormat = 1;
+}

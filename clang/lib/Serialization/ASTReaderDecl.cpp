@@ -2107,6 +2107,8 @@ void ASTDeclMerger::MergeDefinitionData(
     auto *Def = DD.Definition;
     DD = std::move(MergeDD);
     DD.Definition = Def;
+    while ((Def = Def->getPreviousDecl()))
+      cast<CXXRecordDecl>(Def)->DefinitionData = &DD;
     return;
   }
 
@@ -2337,13 +2339,18 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
 void ASTDeclReader::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
   VisitCXXMethodDecl(D);
 
+  CXXDestructorDecl *Canon = D->getCanonicalDecl();
   if (auto *OperatorDelete = readDeclAs<FunctionDecl>()) {
-    CXXDestructorDecl *Canon = D->getCanonicalDecl();
     auto *ThisArg = Record.readExpr();
     // FIXME: Check consistency if we have an old and new operator delete.
     if (!Canon->OperatorDelete) {
       Canon->OperatorDelete = OperatorDelete;
       Canon->OperatorDeleteThisArg = ThisArg;
+    }
+  }
+  if (auto *OperatorGlobDelete = readDeclAs<FunctionDecl>()) {
+    if (!Canon->OperatorGlobalDelete) {
+      Canon->OperatorGlobalDelete = OperatorGlobDelete;
     }
   }
 }
@@ -2417,7 +2424,7 @@ void ASTDeclReader::VisitImplicitConceptSpecializationDecl(
   VisitDecl(D);
   llvm::SmallVector<TemplateArgument, 4> Args;
   for (unsigned I = 0; I < D->NumTemplateArgs; ++I)
-    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/true));
+    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/false));
   D->setTemplateArguments(Args);
 }
 
@@ -3425,7 +3432,19 @@ NamedDecl *ASTDeclReader::getAnonymousDeclForMerging(ASTReader &Reader,
   // If this is the first time, but we have parsed a declaration of the context,
   // build the anonymous declaration list from the parsed declaration.
   auto *PrimaryDC = getPrimaryDCForAnonymousDecl(DC);
-  if (PrimaryDC && !cast<Decl>(PrimaryDC)->isFromASTFile()) {
+  auto needToNumberAnonymousDeclsWithin = [](Decl *D) {
+    if (!D->isFromASTFile())
+      return true;
+    // If this is a class template specialization from an AST file, has at least
+    // one field, but none of the fields have been loaded from external storage,
+    // this is a situation where the class template specialization decl
+    // was imported but the definition was instantiated within the source.
+    // In such a case, we still need to number the anonymous decls.
+    auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D);
+    return CTSD && !CTSD->noload_field_empty() &&
+           !CTSD->hasLoadedFieldsFromExternalStorage();
+  };
+  if (PrimaryDC && needToNumberAnonymousDeclsWithin(cast<Decl>(PrimaryDC))) {
     numberAnonymousDeclsWithin(PrimaryDC, [&](NamedDecl *ND, unsigned Number) {
       if (Previous.size() == Number)
         Previous.push_back(cast<NamedDecl>(ND->getCanonicalDecl()));
@@ -4841,6 +4860,14 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
         First->OperatorDelete = Del;
         First->OperatorDeleteThisArg = ThisArg;
       }
+      break;
+    }
+
+    case DeclUpdateKind::CXXResolvedDtorGlobDelete: {
+      auto *Del = readDeclAs<FunctionDecl>();
+      auto *Canon = cast<CXXDestructorDecl>(D->getCanonicalDecl());
+      if (!Canon->OperatorGlobalDelete)
+        Canon->OperatorGlobalDelete = Del;
       break;
     }
 

@@ -255,9 +255,10 @@ define i32 @sub_sub1_nsw_nsw(i32 %a, i32 %b, i32 %c) {
 
 define i8 @neg_nsw_freeze(i8 %a1, i8 %a2) {
 ; CHECK-LABEL: @neg_nsw_freeze(
-; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw i8 [[A2:%.*]], [[A1:%.*]]
-; CHECK-NEXT:    [[FR_NEG:%.*]] = freeze i8 [[A_NEG]]
-; CHECK-NEXT:    ret i8 [[FR_NEG]]
+; CHECK-NEXT:    [[A1_FR:%.*]] = freeze i8 [[A1:%.*]]
+; CHECK-NEXT:    [[A2_FR:%.*]] = freeze i8 [[A2:%.*]]
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub i8 [[A2_FR]], [[A1_FR]]
+; CHECK-NEXT:    ret i8 [[A_NEG]]
 ;
   %a = sub nsw i8 %a1, %a2
   %fr = freeze i8 %a

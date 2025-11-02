@@ -200,9 +200,9 @@ TEST(LookupTest, replaceNestedClassName) {
   Visitor.OnRecordTypeLoc = [&](RecordTypeLoc Type) {
     // Filter Types by name since there are other `RecordTypeLoc` in the test
     // file.
-    if (Type.getOriginalDecl()->getQualifiedNameAsString() == "a::b::Foo") {
-      EXPECT_EQ("x::Bar", replaceTypeLoc(Type.getOriginalDecl(),
-                                         Type.getBeginLoc(), "::a::x::Bar"));
+    if (Type.getDecl()->getQualifiedNameAsString() == "a::b::Foo") {
+      EXPECT_EQ("x::Bar", replaceTypeLoc(Type.getDecl(), Type.getBeginLoc(),
+                                         "::a::x::Bar"));
     }
   };
   Visitor.runOver("namespace a { namespace b {\n"
@@ -227,9 +227,9 @@ TEST(LookupTest, replaceNestedClassName) {
   // `x::y::Foo` in c.cc [1], it should not make "Foo" at [0] ambiguous because
   // it's not visible at [0].
   Visitor.OnRecordTypeLoc = [&](RecordTypeLoc Type) {
-    if (Type.getOriginalDecl()->getQualifiedNameAsString() == "x::y::Old") {
-      EXPECT_EQ("Foo", replaceTypeLoc(Type.getOriginalDecl(),
-                                      Type.getBeginLoc(), "::x::Foo"));
+    if (Type.getDecl()->getQualifiedNameAsString() == "x::y::Old") {
+      EXPECT_EQ("Foo",
+                replaceTypeLoc(Type.getDecl(), Type.getBeginLoc(), "::x::Foo"));
     }
   };
   Visitor.runOver(R"(

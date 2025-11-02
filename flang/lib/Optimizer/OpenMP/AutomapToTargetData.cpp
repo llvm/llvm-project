@@ -20,8 +20,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
-
 namespace flangomp {
 #define GEN_PASS_DEF_AUTOMAPTOTARGETDATAPASS
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
@@ -120,12 +118,9 @@ class AutomapToTargetDataPass
           builder, memOp.getLoc(), memOp.getMemref().getType(),
           memOp.getMemref(),
           TypeAttr::get(fir::unwrapRefType(memOp.getMemref().getType())),
-          builder.getIntegerAttr(
-              builder.getIntegerType(64, false),
-              static_cast<unsigned>(
-                  isa<fir::StoreOp>(memOp)
-                      ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
-                      : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE)),
+          builder.getAttr<omp::ClauseMapFlagsAttr>(
+              isa<fir::StoreOp>(memOp) ? omp::ClauseMapFlags::to
+                                       : omp::ClauseMapFlags::del),
           builder.getAttr<omp::VariableCaptureKindAttr>(
               omp::VariableCaptureKind::ByCopy),
           /*var_ptr_ptr=*/mlir::Value{},
@@ -135,8 +130,8 @@ class AutomapToTargetDataPass
           builder.getBoolAttr(false));
       clauses.mapVars.push_back(mapInfo);
       isa<fir::StoreOp>(memOp)
-          ? builder.create<omp::TargetEnterDataOp>(memOp.getLoc(), clauses)
-          : builder.create<omp::TargetExitDataOp>(memOp.getLoc(), clauses);
+          ? omp::TargetEnterDataOp::create(builder, memOp.getLoc(), clauses)
+          : omp::TargetExitDataOp::create(builder, memOp.getLoc(), clauses);
     };
 
     for (fir::GlobalOp globalOp : automapGlobals) {

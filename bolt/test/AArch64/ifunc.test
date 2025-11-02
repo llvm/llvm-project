@@ -9,7 +9,7 @@
 // RUN:   FileCheck --check-prefix=REL_CHECK %s
 
 // Non-pie static executable doesn't generate PT_DYNAMIC, check relocation
-// is readed successfully and IPLT trampoline has been identified by bolt.
+// is read successfully and IPLT trampoline has been identified by bolt.
 // RUN: %clang %cflags -nostdlib -O3 %p/../Inputs/ifunc.c -fuse-ld=lld -no-pie \
 // RUN:   -o %t.O3_nopie.exe -Wl,-q
 // RUN: llvm-readelf -l %t.O3_nopie.exe | \

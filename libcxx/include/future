@@ -403,6 +403,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__type_traits/strip_signature.h>
 #    include <__type_traits/underlying_type.h>
 #    include <__utility/auto_cast.h>
+#    include <__utility/exception_guard.h>
 #    include <__utility/forward.h>
 #    include <__utility/move.h>
 #    include <__utility/swap.h>
@@ -1815,16 +1816,9 @@ template <class _Rp, class _Fp>
 _LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Fp&& __f) {
   unique_ptr<__async_assoc_state<_Rp, _Fp>, __release_shared_count> __h(
       new __async_assoc_state<_Rp, _Fp>(std::forward<_Fp>(__f)));
-#    if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#    endif
-    std::thread(&__async_assoc_state<_Rp, _Fp>::__execute, __h.get()).detach();
-#    if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __h->__make_ready();
-    throw;
-  }
-#    endif
+  auto __guard = std::__make_exception_guard([&] { __h->__make_ready(); });
+  std::thread(&__async_assoc_state<_Rp, _Fp>::__execute, __h.get()).detach();
+  __guard.__complete();
   return future<_Rp>(__h.get());
 }
 

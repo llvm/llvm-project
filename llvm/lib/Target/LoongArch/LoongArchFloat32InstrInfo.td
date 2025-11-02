@@ -10,10 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+def NotBoolXor : PatFrags<(ops node:$val),
+                          [(xor node:$val, -1), (xor node:$val, 1)]>;
+
 //===----------------------------------------------------------------------===//
 // LoongArch specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+def SDT_LoongArchMOVGR2FR_W
+    : SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, i32>]>;
 def SDT_LoongArchMOVGR2FR_W_LA64
     : SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, i64>]>;
 def SDT_LoongArchMOVFR2GR_S_LA64
@@ -22,6 +27,11 @@ def SDT_LoongArchFTINT : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_LoongArchFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_LoongArchFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 
+// ISD::BRCOND is custom-lowered to LoongArchISD::BRCOND for floating-point
+// comparisons to prevent recursive lowering.
+def loongarch_brcond : SDNode<"LoongArchISD::BRCOND", SDTBrcond, [SDNPHasChain]>;
+def loongarch_movgr2fr_w
+    : SDNode<"LoongArchISD::MOVGR2FR_W", SDT_LoongArchMOVGR2FR_W>;
 def loongarch_movgr2fr_w_la64
     : SDNode<"LoongArchISD::MOVGR2FR_W_LA64", SDT_LoongArchMOVGR2FR_W_LA64>;
 def loongarch_movfr2gr_s_la64
@@ -179,6 +189,14 @@ def : PatFpr<fneg, FNEG_S, FPR32>;
 def : PatFpr<fabs, FABS_S, FPR32>;
 def : PatFpr<fsqrt, FSQRT_S, FPR32>;
 def : Pat<(fdiv fpimm1, (fsqrt FPR32:$fj)), (FRSQRT_S FPR32:$fj)>;
+let Predicates = [HasBasicF, IsLA64] in {
+def : Pat<(fdiv (loongarch_movgr2fr_w_la64 (i64 1065353216)), (fsqrt FPR32:$fj)),
+          (FRSQRT_S FPR32:$fj)>;
+} // Predicates = [HasBasicF, IsLA64]
+let Predicates = [HasBasicF, IsLA32] in {
+def : Pat<(fdiv (loongarch_movgr2fr_w (i32 1065353216)), (fsqrt FPR32:$fj)),
+          (FRSQRT_S FPR32:$fj)>;
+} // Predicates = [HasBasicF, IsLA32]
 def : Pat<(fcanonicalize FPR32:$fj), (FMAX_S $fj, $fj)>;
 def : Pat<(is_fpclass FPR32:$fj, (i32 timm:$mask)),
           (SLTU R0, (ANDI (MOVFR2GR_S (FCLASS_S FPR32:$fj)),
@@ -208,16 +226,18 @@ def : PatFPSetcc<SETUO,  FCMP_CUN_S,  FPR32>;
 def : PatFPSetcc<SETLT,  FCMP_CLT_S,  FPR32>;
 
 multiclass PatFPBrcond<CondCode cc, LAInst CmpInst, RegisterClass RegTy> {
-  def : Pat<(brcond (xor (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc)), -1),
-                     bb:$imm21),
+  def : Pat<(loongarch_brcond (NotBoolXor (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc))),
+                              bb:$imm21),
             (BCEQZ (CmpInst RegTy:$fj, RegTy:$fk), bb:$imm21)>;
-  def : Pat<(brcond (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc)), bb:$imm21),
+  def : Pat<(loongarch_brcond (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc)), bb:$imm21),
             (BCNEZ (CmpInst RegTy:$fj, RegTy:$fk), bb:$imm21)>;
 }
 
 defm : PatFPBrcond<SETOEQ, FCMP_CEQ_S, FPR32>;
+defm : PatFPBrcond<SETEQ , FCMP_CEQ_S, FPR32>;
 defm : PatFPBrcond<SETOLT, FCMP_CLT_S, FPR32>;
 defm : PatFPBrcond<SETOLE, FCMP_CLE_S, FPR32>;
+defm : PatFPBrcond<SETLE,  FCMP_CLE_S, FPR32>;
 defm : PatFPBrcond<SETONE, FCMP_CNE_S, FPR32>;
 defm : PatFPBrcond<SETO,   FCMP_COR_S, FPR32>;
 defm : PatFPBrcond<SETUEQ, FCMP_CUEQ_S, FPR32>;
@@ -287,6 +307,14 @@ def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
 
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR32:$src), (FRECIP_S $src)>;
+let Predicates = [HasBasicF, IsLA64] in {
+def : Pat<(fdiv (loongarch_movgr2fr_w_la64 (i64 1065353216)), FPR32:$src),
+          (FRECIP_S $src)>;
+} // Predicates = [HasBasicF, IsLA64]
+let Predicates = [HasBasicF, IsLA32] in {
+def : Pat<(fdiv (loongarch_movgr2fr_w (i32 1065353216)), FPR32:$src),
+          (FRECIP_S $src)>;
+} // Predicates = [HasBasicF, IsLA32]
 
 let Predicates = [HasFrecipe] in {
 // FP approximate reciprocal operation
@@ -337,11 +365,13 @@ def : Pat<(f32 (uint_to_fp (i64 (sexti32 (i64 GPR:$src))))),
 // FP Rounding
 let Predicates = [HasBasicF, IsLA64] in {
 def : PatFpr<frint, FRINT_S, FPR32>;
+def : PatFpr<flog2, FLOGB_S, FPR32>;
 } // Predicates = [HasBasicF, IsLA64]
 
 let Predicates = [HasBasicF, IsLA32] in {
 // GPR -> FPR
 def : Pat<(bitconvert (i32 GPR:$src)), (MOVGR2FR_W GPR:$src)>;
+def : Pat<(loongarch_movgr2fr_w (i32 GPR:$src)), (MOVGR2FR_W GPR:$src)>;
 // FPR -> GPR
 def : Pat<(i32 (bitconvert FPR32:$src)), (MOVFR2GR_S FPR32:$src)>;
 // int -> f32

@@ -248,10 +248,8 @@ static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
     return false;
 
   auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
-  if (!yieldOp || yieldOp.getNumOperands() != 1 ||
-      yieldOp->getOperand(0).getDefiningOp() != oper)
-    return false;
-  return true;
+  return !(!yieldOp || yieldOp.getNumOperands() != 1 ||
+           yieldOp->getOperand(0).getDefiningOp() != oper);
 }
 
 bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op) {
@@ -272,10 +270,8 @@ bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op) {
   // Check both inputs are used (elementwise).
   OpOperand *inputOpOperand0 = op.getDpsInputOperand(0);
   OpOperand *inputOpOperand1 = op.getDpsInputOperand(1);
-  if (!op.payloadUsesValueFromOperand(inputOpOperand0) ||
-      !op.payloadUsesValueFromOperand(inputOpOperand1))
-    return false;
-  return true;
+  return !(!op.payloadUsesValueFromOperand(inputOpOperand0) ||
+           !op.payloadUsesValueFromOperand(inputOpOperand1));
 }
 
 //===----------------------------------------------------------------------===//
@@ -319,7 +315,8 @@ bool mlir::linalg::detail::isContractionBody(
 
   Value yielded = getSourceSkipUnary(terminator->getOperand(0));
   Operation *reductionOp = yielded.getDefiningOp();
-  if (reductionOp->getNumResults() != 1 || reductionOp->getNumOperands() != 2) {
+  if (!reductionOp || reductionOp->getNumResults() != 1 ||
+      reductionOp->getNumOperands() != 2) {
     errs << "expected reduction op to be binary";
     return false;
   }

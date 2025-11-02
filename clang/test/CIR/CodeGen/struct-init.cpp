@@ -5,9 +5,57 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+struct BitfieldStruct {
+  unsigned int a:4;
+  unsigned int b:14;
+  unsigned int c:14;
+};
+
+BitfieldStruct overlapping_init = { 3, 2, 1 };
+
+// This is unintuitive. The bitfields are initialized using a struct of constants
+// that maps to the bitfields but splits the value into bytes.
+
+// CIR: cir.global external @overlapping_init = #cir.const_record<{#cir.int<35> : !u8i, #cir.int<0> : !u8i, #cir.int<4> : !u8i, #cir.int<0> : !u8i}> : !rec_anon_struct
+// LLVM: @overlapping_init = global { i8, i8, i8, i8 } { i8 35, i8 0, i8 4, i8 0 }
+// OGCG: @overlapping_init = global { i8, i8, i8, i8 } { i8 35, i8 0, i8 4, i8 0 }
+
 struct S {
   int a, b, c;
 };
+
+S partial_init = { 1 };
+
+// CIR: cir.global external @partial_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i}> : !rec_S
+// LLVM: @partial_init = global %struct.S { i32 1, i32 0, i32 0 }
+// OGCG: @partial_init = global %struct.S { i32 1, i32 0, i32 0 }
+
+struct StructWithDefaultInit {
+  int a = 2;
+};
+
+StructWithDefaultInit swdi = {};
+
+// CIR: cir.global external @swdi = #cir.const_record<{#cir.int<2> : !s32i}> : !rec_StructWithDefaultInit
+// LLVM: @swdi = global %struct.StructWithDefaultInit { i32 2 }, align 4
+// OGCG: @swdi = global %struct.StructWithDefaultInit { i32 2 }, align 4
+
+struct StructWithFieldInitFromConst {
+  int a : 10;
+  int b = a;
+};
+
+StructWithFieldInitFromConst swfifc = {};
+
+// CIR: cir.global external @swfifc = #cir.zero : !rec_anon_struct
+// LLVM: @swfifc = global { i8, i8, i32 } zeroinitializer, align 4
+// OGCG: @swfifc = global { i8, i8, i32 } zeroinitializer, align 4
+
+StructWithFieldInitFromConst swfifc2 = { 2 };
+
+// CIR: cir.global external @swfifc2 = #cir.const_record<{#cir.int<2> : !u8i, #cir.int<0> : !u8i, #cir.int<2> : !s32i}> : !rec_anon_struct
+// LLVM: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
+// OGCG: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
 
 void init() {
   S s1 = {1, 2, 3};

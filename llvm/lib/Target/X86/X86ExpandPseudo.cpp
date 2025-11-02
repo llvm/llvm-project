@@ -269,13 +269,17 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNdi:
   case X86::TCRETURNdicc:
   case X86::TCRETURNri:
+  case X86::TCRETURN_WIN64ri:
+  case X86::TCRETURN_HIPE32ri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNdi64cc:
   case X86::TCRETURNri64:
   case X86::TCRETURNri64_ImpCall:
-  case X86::TCRETURNmi64: {
-    bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64;
+  case X86::TCRETURNmi64:
+  case X86::TCRETURN_WINmi64: {
+    bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64 ||
+                 Opcode == X86::TCRETURN_WINmi64;
     MachineOperand &JumpTarget = MBBI->getOperand(0);
     MachineOperand &StackAdjust = MBBI->getOperand(isMem ? X86::AddrNumOperands
                                                          : 1);
@@ -339,15 +343,17 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
         MIB.addImm(MBBI->getOperand(2).getImm());
       }
 
-    } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64) {
+    } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64 ||
+               Opcode == X86::TCRETURN_WINmi64) {
       unsigned Op = (Opcode == X86::TCRETURNmi)
                         ? X86::TAILJMPm
                         : (IsX64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
       for (unsigned i = 0; i != X86::AddrNumOperands; ++i)
         MIB.add(MBBI->getOperand(i));
-    } else if ((Opcode == X86::TCRETURNri64) ||
-               (Opcode == X86::TCRETURNri64_ImpCall)) {
+    } else if (Opcode == X86::TCRETURNri64 ||
+               Opcode == X86::TCRETURNri64_ImpCall ||
+               Opcode == X86::TCRETURN_WIN64ri) {
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL,
               TII->get(IsX64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
@@ -643,149 +649,6 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.setDesc(TII->get(Opc));
     return true;
   }
-  // TILEPAIRLOAD is just for TILEPair spill, we don't have corresponding
-  // AMX instruction to support it. So, split it to 2 load instructions:
-  // "TILEPAIRLOAD TMM0:TMM1, Base, Scale, Index, Offset, Segment" -->
-  // "TILELOAD TMM0, Base, Scale, Index, Offset, Segment" +
-  // "TILELOAD TMM1, Base, Scale, Index, Offset + TMM_SIZE, Segment"
-  case X86::PTILEPAIRLOAD: {
-    int64_t Disp = MBBI->getOperand(1 + X86::AddrDisp).getImm();
-    Register TReg = MBBI->getOperand(0).getReg();
-    bool DstIsDead = MBBI->getOperand(0).isDead();
-    Register TReg0 = TRI->getSubReg(TReg, X86::sub_t0);
-    Register TReg1 = TRI->getSubReg(TReg, X86::sub_t1);
-    unsigned TmmSize = TRI->getRegSizeInBits(X86::TILERegClass) / 8;
-
-    MachineInstrBuilder MIBLo =
-        BuildMI(MBB, MBBI, DL, TII->get(X86::TILELOADD))
-            .addReg(TReg0, RegState::Define | getDeadRegState(DstIsDead));
-    MachineInstrBuilder MIBHi =
-        BuildMI(MBB, MBBI, DL, TII->get(X86::TILELOADD))
-            .addReg(TReg1, RegState::Define | getDeadRegState(DstIsDead));
-
-    for (int i = 0; i < X86::AddrNumOperands; ++i) {
-      MIBLo.add(MBBI->getOperand(1 + i));
-      if (i == X86::AddrDisp)
-        MIBHi.addImm(Disp + TmmSize);
-      else
-        MIBHi.add(MBBI->getOperand(1 + i));
-    }
-
-    // Make sure the first stride reg used in first tileload is alive.
-    MachineOperand &Stride =
-        MIBLo.getInstr()->getOperand(1 + X86::AddrIndexReg);
-    Stride.setIsKill(false);
-
-    // Split the memory operand, adjusting the offset and size for the halves.
-    MachineMemOperand *OldMMO = MBBI->memoperands().front();
-    MachineFunction *MF = MBB.getParent();
-    MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, TmmSize);
-    MachineMemOperand *MMOHi =
-        MF->getMachineMemOperand(OldMMO, TmmSize, TmmSize);
-
-    MIBLo.setMemRefs(MMOLo);
-    MIBHi.setMemRefs(MMOHi);
-
-    // Delete the pseudo.
-    MBB.erase(MBBI);
-    return true;
-  }
-  // Similar with TILEPAIRLOAD, TILEPAIRSTORE is just for TILEPair spill, no
-  // corresponding AMX instruction to support it. So, split it too:
-  // "TILEPAIRSTORE Base, Scale, Index, Offset, Segment, TMM0:TMM1" -->
-  // "TILESTORE Base, Scale, Index, Offset, Segment, TMM0" +
-  // "TILESTORE Base, Scale, Index, Offset + TMM_SIZE, Segment, TMM1"
-  case X86::PTILEPAIRSTORE: {
-    int64_t Disp = MBBI->getOperand(X86::AddrDisp).getImm();
-    Register TReg = MBBI->getOperand(X86::AddrNumOperands).getReg();
-    bool SrcIsKill = MBBI->getOperand(X86::AddrNumOperands).isKill();
-    Register TReg0 = TRI->getSubReg(TReg, X86::sub_t0);
-    Register TReg1 = TRI->getSubReg(TReg, X86::sub_t1);
-    unsigned TmmSize = TRI->getRegSizeInBits(X86::TILERegClass) / 8;
-
-    MachineInstrBuilder MIBLo =
-        BuildMI(MBB, MBBI, DL, TII->get(X86::TILESTORED));
-    MachineInstrBuilder MIBHi =
-        BuildMI(MBB, MBBI, DL, TII->get(X86::TILESTORED));
-
-    for (int i = 0; i < X86::AddrNumOperands; ++i) {
-      MIBLo.add(MBBI->getOperand(i));
-      if (i == X86::AddrDisp)
-        MIBHi.addImm(Disp + TmmSize);
-      else
-        MIBHi.add(MBBI->getOperand(i));
-    }
-    MIBLo.addReg(TReg0, getKillRegState(SrcIsKill));
-    MIBHi.addReg(TReg1, getKillRegState(SrcIsKill));
-
-    // Make sure the first stride reg used in first tilestore is alive.
-    MachineOperand &Stride = MIBLo.getInstr()->getOperand(X86::AddrIndexReg);
-    Stride.setIsKill(false);
-
-    // Split the memory operand, adjusting the offset and size for the halves.
-    MachineMemOperand *OldMMO = MBBI->memoperands().front();
-    MachineFunction *MF = MBB.getParent();
-    MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, TmmSize);
-    MachineMemOperand *MMOHi =
-        MF->getMachineMemOperand(OldMMO, TmmSize, TmmSize);
-
-    MIBLo.setMemRefs(MMOLo);
-    MIBHi.setMemRefs(MMOHi);
-
-    // Delete the pseudo.
-    MBB.erase(MBBI);
-    return true;
-  }
-  case X86::PT2RPNTLVWZ0V:
-  case X86::PT2RPNTLVWZ0T1V:
-  case X86::PT2RPNTLVWZ1V:
-  case X86::PT2RPNTLVWZ1T1V:
-  case X86::PT2RPNTLVWZ0RSV:
-  case X86::PT2RPNTLVWZ0RST1V:
-  case X86::PT2RPNTLVWZ1RSV:
-  case X86::PT2RPNTLVWZ1RST1V: {
-    for (unsigned i = 3; i > 0; --i)
-      MI.removeOperand(i);
-    unsigned Opc;
-    switch (Opcode) {
-    case X86::PT2RPNTLVWZ0V:
-      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0);
-      break;
-    case X86::PT2RPNTLVWZ0T1V:
-      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0T1);
-      break;
-    case X86::PT2RPNTLVWZ1V:
-      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1);
-      break;
-    case X86::PT2RPNTLVWZ1T1V:
-      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1T1);
-      break;
-    case X86::PT2RPNTLVWZ0RSV:
-      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0RS);
-      break;
-    case X86::PT2RPNTLVWZ0RST1V:
-      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0RST1);
-      break;
-    case X86::PT2RPNTLVWZ1RSV:
-      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1RS);
-      break;
-    case X86::PT2RPNTLVWZ1RST1V:
-      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1RST1);
-      break;
-    default:
-      llvm_unreachable("Impossible Opcode!");
-    }
-    MI.setDesc(TII->get(Opc));
-    return true;
-  }
-  case X86::PTTRANSPOSEDV:
-  case X86::PTCONJTFP16V: {
-    for (int i = 2; i > 0; --i)
-      MI.removeOperand(i);
-    MI.setDesc(TII->get(Opcode == X86::PTTRANSPOSEDV ? X86::TTRANSPOSED
-                                                     : X86::TCONJTFP16));
-    return true;
-  }
   case X86::PTCMMIMFP16PSV:
   case X86::PTCMMRLFP16PSV:
   case X86::PTDPBSSDV:
@@ -794,13 +657,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
   case X86::PTDPFP16PSV:
-  case X86::PTTDPBF16PSV:
-  case X86::PTTDPFP16PSV:
-  case X86::PTTCMMIMFP16PSV:
-  case X86::PTTCMMRLFP16PSV:
-  case X86::PTCONJTCMMIMFP16PSV:
   case X86::PTMMULTF32PSV:
-  case X86::PTTMMULTF32PSV:
   case X86::PTDPBF8PSV:
   case X86::PTDPBHF8PSV:
   case X86::PTDPHBF8PSV:
@@ -810,6 +667,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
+      // clang-format off
     case X86::PTCMMIMFP16PSV:  Opc = X86::TCMMIMFP16PS; break;
     case X86::PTCMMRLFP16PSV:  Opc = X86::TCMMRLFP16PS; break;
     case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
@@ -818,40 +676,12 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    case X86::PTTDPBF16PSV:
-      Opc = X86::TTDPBF16PS;
-      break;
-    case X86::PTTDPFP16PSV:
-      Opc = X86::TTDPFP16PS;
-      break;
-    case X86::PTTCMMIMFP16PSV:
-      Opc = X86::TTCMMIMFP16PS;
-      break;
-    case X86::PTTCMMRLFP16PSV:
-      Opc = X86::TTCMMRLFP16PS;
-      break;
-    case X86::PTCONJTCMMIMFP16PSV:
-      Opc = X86::TCONJTCMMIMFP16PS;
-      break;
-    case X86::PTMMULTF32PSV:
-      Opc = X86::TMMULTF32PS;
-      break;
-    case X86::PTTMMULTF32PSV:
-      Opc = X86::TTMMULTF32PS;
-      break;
-    case X86::PTDPBF8PSV:
-      Opc = X86::TDPBF8PS;
-      break;
-    case X86::PTDPBHF8PSV:
-      Opc = X86::TDPBHF8PS;
-      break;
-    case X86::PTDPHBF8PSV:
-      Opc = X86::TDPHBF8PS;
-      break;
-    case X86::PTDPHF8PSV:
-      Opc = X86::TDPHF8PS;
-      break;
-
+    case X86::PTMMULTF32PSV: Opc = X86::TMMULTF32PS; break;
+    case X86::PTDPBF8PSV: Opc = X86::TDPBF8PS; break;
+    case X86::PTDPBHF8PSV: Opc = X86::TDPBHF8PS; break;
+    case X86::PTDPHBF8PSV: Opc = X86::TDPHBF8PS; break;
+    case X86::PTDPHF8PSV: Opc = X86::TDPHF8PS; break;
+    // clang-format on
     default:
       llvm_unreachable("Unexpected Opcode");
     }

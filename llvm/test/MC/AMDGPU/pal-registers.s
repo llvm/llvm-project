@@ -258,6 +258,22 @@ amdpal.pipelines:
       0x2e4d: 0
       0x2e4e: 0
       0x2e4f: 0
+      0x2e50: 0
+      0x2e51: 0
+      0x2e52: 0
+      0x2e53: 0
+      0x2e54: 0
+      0x2e55: 0
+      0x2e56: 0
+      0x2e57: 0
+      0x2e58: 0
+      0x2e59: 0
+      0x2e5a: 0
+      0x2e5b: 0
+      0x2e5c: 0
+      0x2e5d: 0
+      0x2e5e: 0
+      0x2e5f: 0
       0xa08f: 0
       0xa191: 0
       0xa192: 0
@@ -596,6 +612,22 @@ amdpal.pipelines:
 // CHECK: 0x2e4d (COMPUTE_USER_DATA_13)
 // CHECK: 0x2e4e (COMPUTE_USER_DATA_14)
 // CHECK: 0x2e4f (COMPUTE_USER_DATA_15)
+// CHECK: 0x2e50 (COMPUTE_USER_DATA_16)
+// CHECK: 0x2e51 (COMPUTE_USER_DATA_17)
+// CHECK: 0x2e52 (COMPUTE_USER_DATA_18)
+// CHECK: 0x2e53 (COMPUTE_USER_DATA_19)
+// CHECK: 0x2e54 (COMPUTE_USER_DATA_20)
+// CHECK: 0x2e55 (COMPUTE_USER_DATA_21)
+// CHECK: 0x2e56 (COMPUTE_USER_DATA_22)
+// CHECK: 0x2e57 (COMPUTE_USER_DATA_23)
+// CHECK: 0x2e58 (COMPUTE_USER_DATA_24)
+// CHECK: 0x2e59 (COMPUTE_USER_DATA_25)
+// CHECK: 0x2e5a (COMPUTE_USER_DATA_26)
+// CHECK: 0x2e5b (COMPUTE_USER_DATA_27)
+// CHECK: 0x2e5c (COMPUTE_USER_DATA_28)
+// CHECK: 0x2e5d (COMPUTE_USER_DATA_29)
+// CHECK: 0x2e5e (COMPUTE_USER_DATA_30)
+// CHECK: 0x2e5f (COMPUTE_USER_DATA_31)
 // CHECK: 0xa08f (CB_SHADER_MASK)
 // CHECK: 0xa191 (SPI_PS_INPUT_CNTL_0)
 // CHECK: 0xa192 (SPI_PS_INPUT_CNTL_1)

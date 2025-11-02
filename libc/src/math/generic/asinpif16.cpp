@@ -77,7 +77,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   };
   // polynomial evaluation using horner's method
   // work only for |x| in [0, 0.5]
-  auto asinpi_polyeval = [](double x) -> double {
+  auto asinpi_polyeval = [&](double x) -> double {
     return x * fputil::polyeval(x * x, POLY_COEFFS[0], POLY_COEFFS[1],
                                 POLY_COEFFS[2], POLY_COEFFS[3], POLY_COEFFS[4],
                                 POLY_COEFFS[5], POLY_COEFFS[6], POLY_COEFFS[7]);

@@ -3,8 +3,9 @@
 // splat from vec1 to vec
 // CHECK-LABEL: call1
 // CHECK: CStyleCastExpr {{.*}} 'int3':'vector<int, 3>' <HLSLAggregateSplatCast>
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' lvalue <FloatingToIntegral> part_of_explicit_cast
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' lvalue <HLSLVectorTruncation> part_of_explicit_cast
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <FloatingToIntegral> part_of_explicit_cast
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <HLSLVectorTruncation> part_of_explicit_cast
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float1':'vector<float, 1>' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float1':'vector<float, 1>' lvalue Var {{.*}} 'A' 'float1':'vector<float, 1>'
 export void call1() {
   float1 A = {1.0};
@@ -21,7 +22,7 @@ struct S {
 // splat from scalar to aggregate
 // CHECK-LABEL: call2
 // CHECK: CStyleCastExpr {{.*}} 'S' <HLSLAggregateSplatCast>
-// CHECK-NEXt: IntegerLiteral {{.*}} 'int' 5
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 5
 export void call2() {
   S s = (S)5; 
 }

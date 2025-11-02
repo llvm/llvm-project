@@ -31,8 +31,8 @@ define <2 x half> @test_pown_reduced_fast_v2f16_known_odd(<2 x half> %x, <2 x i3
 ; GFX9-LABEL: test_pown_reduced_fast_v2f16_known_odd:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_or_b32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_or_b32_e32 v2, 1, v2
+; GFX9-NEXT:    v_or_b32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX9-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v0
@@ -126,8 +126,8 @@ define <2 x double> @test_pown_reduced_fast_v2f64_known_odd(<2 x double> %x, <2 
 ; GFX9-LABEL: test_pown_reduced_fast_v2f64_known_odd:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_or_b32_e32 v4, 1, v4
 ; GFX9-NEXT:    v_or_b32_e32 v6, 1, v5
+; GFX9-NEXT:    v_or_b32_e32 v4, 1, v4
 ; GFX9-NEXT:    v_cvt_f64_i32_e32 v[4:5], v4
 ; GFX9-NEXT:    v_cvt_f64_i32_e32 v[6:7], v6
 ; GFX9-NEXT:    s_brev_b32 s4, -2

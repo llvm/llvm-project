@@ -97,3 +97,30 @@ void foo3() {
 // OGCG: %[[TMP:.*]] = load <4 x i32>, ptr %[[CL_ADDR]], align 16
 // OGCG: store <4 x i32> %[[TMP]], ptr %[[A_ADDR]], align 16
 
+struct Point {
+  int x, y;
+};
+
+void foo4() {
+  Point p = (Point){5, 10};
+}
+
+// CIR-LABEL: @_Z4foo4v
+// CIR:   %[[P:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["p", init]
+// CIR:   %[[P_X:.*]] = cir.get_member %[[P]][0] {name = "x"}
+// CIR:   %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
+// CIR:   cir.store{{.*}} %[[FIVE]], %[[P_X]]
+// CIR:   %[[P_Y:.*]] = cir.get_member %[[P]][1] {name = "y"}
+// CIR:   %[[TEN:.*]] = cir.const #cir.int<10> : !s32i
+// CIR:   cir.store{{.*}} %[[TEN]], %[[P_Y]]
+
+// LLVM-LABEL: @_Z4foo4v
+// LLVM:   %[[P:.*]] = alloca %struct.Point
+// LLVM:   %[[P_X:.*]] = getelementptr %struct.Point, ptr %[[P]], i32 0, i32 0
+// LLVM:   store i32 5, ptr %[[P_X]]
+// LLVM:   %[[P_Y:.*]] = getelementptr %struct.Point, ptr %[[P]], i32 0, i32 1
+// LLVM:   store i32 10, ptr %[[P_Y]]
+
+// OGCG-LABEL: @_Z4foo4v
+// OGCG:   %[[P:.*]] = alloca %struct.Point
+// OGCG:   call void @llvm.memcpy{{.*}}(ptr{{.*}} %[[P]], ptr{{.*}} @__const._Z4foo4v.p

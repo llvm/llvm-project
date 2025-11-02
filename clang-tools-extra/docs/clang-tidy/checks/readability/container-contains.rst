@@ -20,6 +20,7 @@ Initial expression                      Result
 --------------------------------------  -------------------------------------
 ``myMap.find(x) == myMap.end()``        ``!myMap.contains(x)``
 ``myMap.find(x) != myMap.end()``        ``myMap.contains(x)``
+``myStr.find(x) != std::string::npos``  ``myStr.contains(x)``
 ``if (myMap.count(x))``                 ``if (myMap.contains(x))``
 ``bool exists = myMap.count(x)``        ``bool exists = myMap.contains(x)``
 ``bool exists = myMap.count(x) > 0``    ``bool exists = myMap.contains(x)``

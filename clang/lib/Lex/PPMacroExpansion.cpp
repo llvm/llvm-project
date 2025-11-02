@@ -1262,16 +1262,11 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
 
   std::optional<LexEmbedParametersResult> Params =
       this->LexEmbedParameters(Tok, /*ForHasEmbed=*/true);
-  assert((Params || Tok.is(tok::eod)) &&
-         "expected success or to be at the end of the directive");
 
   if (!Params)
     return EmbedResult::Invalid;
 
-  if (Params->UnrecognizedParams > 0)
-    return EmbedResult::NotFound;
-
-  if (!Tok.is(tok::r_paren)) {
+  if (Tok.isNot(tok::r_paren)) {
     Diag(this->getLocForEndOfToken(FilenameLoc), diag::err_pp_expected_after)
         << II << tok::r_paren;
     Diag(LParenLoc, diag::note_matching) << tok::l_paren;
@@ -1280,13 +1275,18 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     return EmbedResult::Invalid;
   }
 
+  if (Params->UnrecognizedParams > 0)
+    return EmbedResult::NotFound;
+
   SmallString<128> FilenameBuffer;
   StringRef Filename = this->getSpelling(FilenameTok, FilenameBuffer);
+  if (Filename.empty())
+    return EmbedResult::Empty;
+
   bool isAngled =
       this->GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  assert(!Filename.empty());
   const FileEntry *LookupFromFile =
       this->getCurrentFileLexer() ? *this->getCurrentFileLexer()->getFileEntry()
                                   : static_cast<FileEntry *>(nullptr);

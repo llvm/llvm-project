@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -25,6 +26,7 @@
 #include <cstdint>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "bpf-disassembler"
 
@@ -202,18 +204,6 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       Hi = (Bytes[12] << 24) | (Bytes[13] << 16) | (Bytes[14] << 8) | (Bytes[15] << 0);
     auto& Op = Instr.getOperand(1);
     Op.setImm(Make_64(Hi, Op.getImm()));
-    break;
-  }
-  case BPF::LD_ABS_B:
-  case BPF::LD_ABS_H:
-  case BPF::LD_ABS_W:
-  case BPF::LD_IND_B:
-  case BPF::LD_IND_H:
-  case BPF::LD_IND_W: {
-    auto Op = Instr.getOperand(0);
-    Instr.clear();
-    Instr.addOperand(MCOperand::createReg(BPF::R6));
-    Instr.addOperand(Op);
     break;
   }
   }

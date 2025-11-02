@@ -16,7 +16,6 @@ add_flang_library(FIRBuilder
   Runtime/Allocatable.cpp
   Runtime/ArrayConstructor.cpp
   Runtime/Assign.cpp
-  Runtime/Coarray.cpp
   Runtime/Character.cpp
   Runtime/Command.cpp
   Runtime/CUDA/Descriptor.cpp
@@ -42,6 +41,7 @@ add_flang_library(FIRBuilder
   CUFDialect
   FIRDialect
   HLFIRDialect
+  MIFDialect
 
   LINK_LIBS
   CUFAttrs
@@ -50,7 +50,9 @@ add_flang_library(FIRBuilder
   FIRDialectSupport
   FIRSupport
   FortranEvaluate
+  FortranSupport
   HLFIRDialect
+  MIFDialect
 
   MLIR_DEPS
   ${dialect_libs}

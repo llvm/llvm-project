@@ -19,6 +19,7 @@
 #include "NanobindUtils.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
@@ -92,6 +93,8 @@ public:
     return object;
   }
   operator bool() const { return referrent && object; }
+
+  using NBTypedT = nanobind::typed<nanobind::object, T>;
 
 private:
   T *referrent;
@@ -218,36 +221,6 @@ public:
   /// Gets the count of live context objects. Used for testing.
   static size_t getLiveCount();
 
-  /// Get a list of Python objects which are still in the live context map.
-  std::vector<PyOperation *> getLiveOperationObjects();
-
-  /// Gets the count of live operations associated with this context.
-  /// Used for testing.
-  size_t getLiveOperationCount();
-
-  /// Clears the live operations map, returning the number of entries which were
-  /// invalidated. To be used as a safety mechanism so that API end-users can't
-  /// corrupt by holding references they shouldn't have accessed in the first
-  /// place.
-  size_t clearLiveOperations();
-
-  /// Removes an operation from the live operations map and sets it invalid.
-  /// This is useful for when some non-bindings code destroys the operation and
-  /// the bindings need to made aware. For example, in the case when pass
-  /// manager is run.
-  ///
-  /// Note that this does *NOT* clear the nested operations.
-  void clearOperation(MlirOperation op);
-
-  /// Clears all operations nested inside the given op using
-  /// `clearOperation(MlirOperation)`.
-  void clearOperationsInside(PyOperationBase &op);
-  void clearOperationsInside(MlirOperation op);
-
-  /// Clears the operaiton _and_ all operations inside using
-  /// `clearOperation(MlirOperation)`.
-  void clearOperationAndInside(PyOperationBase &op);
-
   /// Gets the count of live modules associated with this context.
   /// Used for testing.
   size_t getLiveModuleCount();
@@ -265,6 +238,7 @@ public:
   /// Controls whether error diagnostics should be propagated to diagnostic
   /// handlers, instead of being captured by `ErrorCapture`.
   void setEmitErrorDiagnostics(bool value) { emitErrorDiagnostics = value; }
+  bool getEmitErrorDiagnostics() { return emitErrorDiagnostics; }
   struct ErrorCapture;
 
 private:
@@ -286,17 +260,6 @@ private:
       llvm::DenseMap<const void *, std::pair<nanobind::handle, PyModule *>>;
   LiveModuleMap liveModules;
 
-  // Interns all live operations associated with this context. Operations
-  // tracked in this map are valid. When an operation is invalidated, it is
-  // removed from this map, and while it still exists as an instance, any
-  // attempt to access it will raise an error.
-  using LiveOperationMap =
-      llvm::DenseMap<void *, std::pair<nanobind::handle, PyOperation *>>;
-  nanobind::ft_mutex liveOperationsMutex;
-
-  // Guarded by liveOperationsMutex in free-threading mode.
-  LiveOperationMap liveOperations;
-
   bool emitErrorDiagnostics = false;
 
   MlirContext context;
@@ -310,7 +273,7 @@ class DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "mlir.ir.Context";
+  static constexpr const char kTypeDescription[] = "Context";
   static PyMlirContext &resolve();
 };
 
@@ -536,7 +499,7 @@ class DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "mlir.ir.Location";
+  static constexpr const char kTypeDescription[] = "Location";
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }
@@ -548,8 +511,8 @@ class PyModule;
 using PyModuleRef = PyObjectRef<PyModule>;
 class PyModule : public BaseContextObject {
 public:
-  /// Returns a PyModule reference for the given MlirModule. This may return
-  /// a pre-existing or new object.
+  /// Returns a PyModule reference for the given MlirModule. This always returns
+  /// a new object.
   static PyModuleRef forModule(MlirModule module);
   PyModule(PyModule &) = delete;
   PyModule(PyMlirContext &&) = delete;
@@ -570,10 +533,11 @@ public:
   nanobind::object getCapsule();
 
   /// Creates a PyModule from the MlirModule wrapped by a capsule.
-  /// Note that PyModule instances are uniqued, so the returned object
-  /// may be a pre-existing object. Ownership of the underlying MlirModule
-  /// is taken by calling this function.
+  /// Note this returns a new object BUT clearMlirModule() must be called to
+  /// prevent double-frees (of the underlying mlir::Module).
   static nanobind::object createFromCapsule(nanobind::object capsule);
+
+  void clearMlirModule() { module = {nullptr}; }
 
 private:
   PyModule(PyMlirContextRef contextRef, MlirModule module);
@@ -636,6 +600,7 @@ public:
 /// drops to zero or it is attached to a parent, at which point its lifetime
 /// is bounded by its top-level parent reference.
 class PyOperation;
+class PyOpView;
 using PyOperationRef = PyObjectRef<PyOperation>;
 class PyOperation : public PyOperationBase, public BaseContextObject {
 public:
@@ -704,7 +669,7 @@ public:
   /// Creates a PyOperation from the MlirOperation wrapped by a capsule.
   /// Ownership of the underlying MlirOperation is taken by calling this
   /// function.
-  static nanobind::object createFromCapsule(nanobind::object capsule);
+  static nanobind::object createFromCapsule(const nanobind::object &capsule);
 
   /// Creates an operation. See corresponding python docstring.
   static nanobind::object
@@ -873,14 +838,19 @@ class PyInsertionPoint {
 public:
   /// Creates an insertion point positioned after the last operation in the
   /// block, but still inside the block.
-  PyInsertionPoint(PyBlock &block);
+  PyInsertionPoint(const PyBlock &block);
   /// Creates an insertion point positioned before a reference operation.
   PyInsertionPoint(PyOperationBase &beforeOperationBase);
+  /// Creates an insertion point positioned before a reference operation.
+  PyInsertionPoint(PyOperationRef beforeOperationRef);
 
   /// Shortcut to create an insertion point at the beginning of the block.
   static PyInsertionPoint atBlockBegin(PyBlock &block);
   /// Shortcut to create an insertion point before the block terminator.
   static PyInsertionPoint atBlockTerminator(PyBlock &block);
+  /// Shortcut to create an insertion point to the node after the specified
+  /// operation.
+  static PyInsertionPoint after(PyOperationBase &op);
 
   /// Inserts an operation.
   void insert(PyOperationBase &operationBase);
@@ -921,6 +891,8 @@ public:
   /// may be a pre-existing object. Ownership of the underlying MlirType
   /// is taken by calling this function.
   static PyType createFromCapsule(nanobind::object capsule);
+
+  nanobind::object maybeDownCast();
 
 private:
   MlirType type;
@@ -995,16 +967,18 @@ public:
         },
         nanobind::arg("other"));
     cls.def_prop_ro_static(
-        "static_typeid", [](nanobind::object & /*class*/) -> MlirTypeID {
+        "static_typeid",
+        [](nanobind::object & /*class*/) {
           if (DerivedTy::getTypeIdFunction)
-            return DerivedTy::getTypeIdFunction();
+            return PyTypeID(DerivedTy::getTypeIdFunction());
           throw nanobind::attribute_error(
               (DerivedTy::pyClassName + llvm::Twine(" has no typeid."))
                   .str()
                   .c_str());
-        });
+        },
+        nanobind::sig("def static_typeid(/) -> TypeID"));
     cls.def_prop_ro("typeid", [](PyType &self) {
-      return nanobind::cast<MlirTypeID>(nanobind::cast(self).attr("typeid"));
+      return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
     cls.def("__repr__", [](DerivedTy &self) {
       PyPrintAccumulator printAccum;
@@ -1046,7 +1020,9 @@ public:
   /// Note that PyAttribute instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAttribute
   /// is taken by calling this function.
-  static PyAttribute createFromCapsule(nanobind::object capsule);
+  static PyAttribute createFromCapsule(const nanobind::object &capsule);
+
+  nanobind::object maybeDownCast();
 
 private:
   MlirAttribute attr;
@@ -1126,18 +1102,24 @@ public:
         },
         nanobind::arg("other"));
     cls.def_prop_ro(
-        "type", [](PyAttribute &attr) { return mlirAttributeGetType(attr); });
+        "type",
+        [](PyAttribute &attr) -> nanobind::typed<nanobind::object, PyType> {
+          return PyType(attr.getContext(), mlirAttributeGetType(attr))
+              .maybeDownCast();
+        });
     cls.def_prop_ro_static(
-        "static_typeid", [](nanobind::object & /*class*/) -> MlirTypeID {
+        "static_typeid",
+        [](nanobind::object & /*class*/) -> PyTypeID {
           if (DerivedTy::getTypeIdFunction)
-            return DerivedTy::getTypeIdFunction();
+            return PyTypeID(DerivedTy::getTypeIdFunction());
           throw nanobind::attribute_error(
               (DerivedTy::pyClassName + llvm::Twine(" has no typeid."))
                   .str()
                   .c_str());
-        });
+        },
+        nanobind::sig("def static_typeid(/) -> TypeID"));
     cls.def_prop_ro("typeid", [](PyAttribute &self) {
-      return nanobind::cast<MlirTypeID>(nanobind::cast(self).attr("typeid"));
+      return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
     cls.def("__repr__", [](DerivedTy &self) {
       PyPrintAccumulator printAccum;
@@ -1163,6 +1145,17 @@ public:
 
   /// Implemented by derived classes to add methods to the Python subclass.
   static void bindDerived(ClassTy &m) {}
+};
+
+class PyStringAttribute : public PyConcreteAttribute<PyStringAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAString;
+  static constexpr const char *pyClassName = "StringAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirStringAttrGetTypeID;
+
+  static void bindDerived(ClassTy &c);
 };
 
 /// Wrapper around the generic MlirValue.
@@ -1216,7 +1209,7 @@ public:
   /// Note that PyAffineExpr instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineExpr
   /// is taken by calling this function.
-  static PyAffineExpr createFromCapsule(nanobind::object capsule);
+  static PyAffineExpr createFromCapsule(const nanobind::object &capsule);
 
   PyAffineExpr add(const PyAffineExpr &other) const;
   PyAffineExpr mul(const PyAffineExpr &other) const;
@@ -1243,7 +1236,7 @@ public:
   /// Note that PyAffineMap instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineMap
   /// is taken by calling this function.
-  static PyAffineMap createFromCapsule(nanobind::object capsule);
+  static PyAffineMap createFromCapsule(const nanobind::object &capsule);
 
 private:
   MlirAffineMap affineMap;
@@ -1263,7 +1256,7 @@ public:
   /// Creates a PyIntegerSet from the MlirAffineMap wrapped by a capsule.
   /// Note that PyIntegerSet instances may be uniqued, so the returned object
   /// may be a pre-existing object. Integer sets are owned by the context.
-  static PyIntegerSet createFromCapsule(nanobind::object capsule);
+  static PyIntegerSet createFromCapsule(const nanobind::object &capsule);
 
 private:
   MlirIntegerSet integerSet;
@@ -1291,14 +1284,14 @@ public:
 
   /// Inserts the given operation into the symbol table. The operation must have
   /// the symbol trait.
-  MlirAttribute insert(PyOperationBase &symbol);
+  PyStringAttribute insert(PyOperationBase &symbol);
 
   /// Gets and sets the name of a symbol op.
-  static MlirAttribute getSymbolName(PyOperationBase &symbol);
+  static PyStringAttribute getSymbolName(PyOperationBase &symbol);
   static void setSymbolName(PyOperationBase &symbol, const std::string &name);
 
   /// Gets and sets the visibility of a symbol op.
-  static MlirAttribute getVisibility(PyOperationBase &symbol);
+  static PyStringAttribute getVisibility(PyOperationBase &symbol);
   static void setVisibility(PyOperationBase &symbol,
                             const std::string &visibility);
 

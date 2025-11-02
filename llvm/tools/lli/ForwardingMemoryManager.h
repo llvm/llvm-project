@@ -109,8 +109,11 @@ public:
       if (Syms->size() != 1)
         return make_error<StringError>("Unexpected remote lookup result",
                                        inconvertibleErrorCode());
-      return JITSymbol(Syms->front().getAddress().getValue(),
-                       Syms->front().getFlags());
+      if (!Syms->front())
+        return make_error<StringError>("Expected valid address",
+                                       inconvertibleErrorCode());
+      return JITSymbol(Syms->front()->getAddress().getValue(),
+                       Syms->front()->getFlags());
     } else
       return Syms.takeError();
   }

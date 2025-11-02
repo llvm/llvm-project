@@ -15,7 +15,7 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 2)  @test_vlseg_nxv8i8(pt
   ; CHECK-NEXT:   $v8_v9 = COPY [[COPY2]]
   ; CHECK-NEXT:   PseudoRET implicit $v8_v9
 entry:
-  %0 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) undef, ptr %p, i64 %vl, i64 3)
+  %0 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, ptr %p, i64 %vl, i64 3)
   ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %0
 }
 
@@ -31,7 +31,7 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 2)  @test_vlseg_nxv4i16(p
   ; CHECK-NEXT:   $v8_v9 = COPY [[COPY2]]
   ; CHECK-NEXT:   PseudoRET implicit $v8_v9
 entry:
-  %0 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) undef, ptr %p, i64 %vl, i64 4)
+  %0 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, ptr %p, i64 %vl, i64 4)
   ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %0
 }
 
@@ -47,7 +47,7 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 2)  @test_vlseg_nxv2i32(p
   ; CHECK-NEXT:   $v8_v9 = COPY [[COPY2]]
   ; CHECK-NEXT:   PseudoRET implicit $v8_v9
 entry:
-  %0 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) undef, ptr %p, i64 %vl, i64 5)
+  %0 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, ptr %p, i64 %vl, i64 5)
   ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %0
 }
 
@@ -63,6 +63,6 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 2)  @test_vlseg_nxv1i64(p
   ; CHECK-NEXT:   $v8_v9 = COPY [[COPY2]]
   ; CHECK-NEXT:   PseudoRET implicit $v8_v9
 entry:
-  %0 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) undef, ptr %p, i64 %vl, i64 6)
+  %0 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, ptr %p, i64 %vl, i64 6)
   ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %0
 }

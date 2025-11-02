@@ -1,7 +1,5 @@
 static_library("Directive") {
   output_name = "LLVMFrontendDirective"
-  deps = [
-    "//llvm/lib/Support",
-  ]
+  deps = [ "//llvm/lib/Support" ]
   sources = [ "Spelling.cpp" ]
 }

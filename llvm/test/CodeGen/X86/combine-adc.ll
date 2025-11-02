@@ -89,4 +89,52 @@ define i32 @adc_merge_constants(i32 %a0) nounwind {
   ret i32 %sum
 }
 
+define i32 @adc_merge_sub(i32 %a0) nounwind {
+; X86-LABEL: adc_merge_sub:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    addl $42, %edi
+; X86-NEXT:    setb %al
+; X86-NEXT:    movl %edi, %esi
+; X86-NEXT:    negl %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll use@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    xorl %edi, %esi
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_merge_sub:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movl %edi, %ebx
+; X64-NEXT:    xorl %edi, %edi
+; X64-NEXT:    addl $42, %ebx
+; X64-NEXT:    setb %dil
+; X64-NEXT:    movl %ebx, %ebp
+; X64-NEXT:    negl %ebp
+; X64-NEXT:    callq use@PLT
+; X64-NEXT:    xorl %ebx, %ebp
+; X64-NEXT:    movl %ebp, %eax
+; X64-NEXT:    addq $8, %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    retq
+  %adc = tail call { i8, i32 } @llvm.x86.addcarry.32(i8 0, i32 %a0, i32 42)
+  %carry = extractvalue { i8, i32 } %adc, 0
+  call void @use(i8 %carry)
+  %sum = extractvalue { i8, i32 } %adc, 1
+  %sub = sub i32 -42, %a0
+  %result = xor i32 %sum, %sub
+  ret i32 %result
+}
+
 declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32)
+declare void @use(i8)

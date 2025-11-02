@@ -81,6 +81,14 @@ public:
   SBThreadCollection
   GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type);
 
+  /// Gets a human-readable description of why the thread stopped.
+  ///
+  /// \param stream Output stream to receive the stop description text
+  /// \return
+  ///   true if obtained and written to the stream,
+  //    false if there was an error retrieving the description.
+  bool GetStopDescription(lldb::SBStream &stream) const;
+
   size_t GetStopDescription(char *dst_or_null, size_t dst_len);
 
   SBValue GetStopReturnValue();

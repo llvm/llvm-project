@@ -156,6 +156,8 @@ def MipsSDR : SDNode<"MipsISD::SDR", SDTStore,
 //===----------------------------------------------------------------------===//
 // Mips Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
+// FIXME: Move to Mips.td
+
 def HasMips2     :    Predicate<"Subtarget->hasMips2()">,
                       AssemblerPredicate<(all_of FeatureMips2)>;
 def HasMips3_32  :    Predicate<"Subtarget->hasMips3_32()">,
@@ -188,10 +190,6 @@ def IsGP64bit    :    Predicate<"Subtarget->isGP64bit()">,
                       AssemblerPredicate<(all_of FeatureGP64Bit)>;
 def IsGP32bit    :    Predicate<"!Subtarget->isGP64bit()">,
                       AssemblerPredicate<(all_of (not FeatureGP64Bit))>;
-def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
-                      AssemblerPredicate<(all_of FeaturePTR64Bit)>;
-def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
-                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
 def HasMips64    :    Predicate<"Subtarget->hasMips64()">,
                       AssemblerPredicate<(all_of FeatureMips64)>;
 def NotMips64    :    Predicate<"!Subtarget->hasMips64()">,
@@ -857,6 +855,16 @@ def calltarget  : Operand<iPTR> {
 
 def imm64: Operand<i64>;
 
+def ConstantImmAsmOperandClass : AsmOperandClass {
+  let Name = "ConstantImm";
+  let PredicateMethod = "isConstantImm";
+  let RenderMethod = "addImmOperands";
+}
+
+def ConstantImm64: Operand<i64> {
+  let ParserMatchClass = ConstantImmAsmOperandClass;
+}
+
 def simm19_lsl2 : Operand<i32> {
   let EncoderMethod = "getSimm19Lsl2Encoding";
   let DecoderMethod = "DecodeSimm19Lsl2";
@@ -1125,7 +1133,7 @@ def InvertedImOperand64 : Operand<i64> {
 
 class mem_generic : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm16);
+  let MIOperandInfo = (ops mips_ptr_rc, simm16);
   let EncoderMethod = "getMemEncoding";
   let ParserMatchClass = MipsMemAsmOperand;
   let OperandType = "OPERAND_MEMORY";
@@ -1136,7 +1144,7 @@ def mem : mem_generic;
 
 // MSA specific address operand
 def mem_msa : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm10);
+  let MIOperandInfo = (ops mips_ptr_rc, simm10);
   let EncoderMethod = "getMSAMemEncoding";
 }
 
@@ -1145,7 +1153,7 @@ def simm12 : Operand<i32> {
 }
 
 def mem_simm9_exp : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm9);
+  let MIOperandInfo = (ops mips_ptr_rc, simm9);
   let ParserMatchClass = MipsMemSimmPtrAsmOperand;
   let OperandNamespace = "MipsII";
   let OperandType = "OPERAND_MEM_SIMM9";
@@ -1153,13 +1161,13 @@ def mem_simm9_exp : mem_generic {
 
 foreach I = {9, 10, 11, 12, 16} in
   def mem_simm # I : mem_generic {
-    let MIOperandInfo = (ops ptr_rc, !cast<Operand>("simm" # I));
+    let MIOperandInfo = (ops mips_ptr_rc, !cast<Operand>("simm" # I));
     let ParserMatchClass = MipsMemSimmAsmOperand<I>;
   }
 
 foreach I = {1, 2, 3} in
   def mem_simm10_lsl # I : mem_generic {
-    let MIOperandInfo = (ops ptr_rc, !cast<Operand>("simm10_lsl" # I));
+    let MIOperandInfo = (ops mips_ptr_rc, !cast<Operand>("simm10_lsl" # I));
     let EncoderMethod = "getMemEncoding<" # I  # ">";
     let ParserMatchClass = MipsMemSimmAsmOperand<10, I>;
   }
@@ -1170,13 +1178,13 @@ def mem_simmptr : mem_generic {
 
 def mem_ea : Operand<iPTR> {
   let PrintMethod = "printMemOperandEA";
-  let MIOperandInfo = (ops ptr_rc, simm16);
+  let MIOperandInfo = (ops mips_ptr_rc, simm16);
   let EncoderMethod = "getMemEncoding";
   let OperandType = "OPERAND_MEMORY";
 }
 
 def PtrRC : Operand<iPTR> {
-  let MIOperandInfo = (ops ptr_rc);
+  let MIOperandInfo = (ops mips_ptr_rc);
   let DecoderMethod = "DecodePtrRegisterClass";
   let ParserMatchClass = GPR32AsmOperand;
 }
@@ -2949,10 +2957,10 @@ def : MipsInstAlias<"nor\t$rs, $imm", (NORImm GPR32Opnd:$rs, GPR32Opnd:$rs,
 
 let hasDelaySlot = 1, isCTI = 1 in {
 def BneImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                               (ins imm64:$imm64, brtarget:$offset),
+                               (ins ConstantImm64:$imm64, brtarget:$offset),
                                "bne\t$rt, $imm64, $offset">;
 def BeqImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                               (ins imm64:$imm64, brtarget:$offset),
+                               (ins ConstantImm64:$imm64, brtarget:$offset),
                                "beq\t$rt, $imm64, $offset">;
 
 class CondBranchPseudo<string instr_asm> :
@@ -2980,7 +2988,7 @@ def BGTUL: CondBranchPseudo<"bgtul">, ISA_MIPS2_NOT_32R6_64R6;
 
 let isCTI = 1 in
 class CondBranchImmPseudo<string instr_asm> :
-  MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, imm64:$imm, brtarget:$offset),
+  MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, ConstantImm64:$imm, brtarget:$offset),
                     !strconcat(instr_asm, "\t$rs, $imm, $offset")>;
 
 def BEQLImmMacro : CondBranchImmPseudo<"beql">, ISA_MIPS2_NOT_32R6_64R6;

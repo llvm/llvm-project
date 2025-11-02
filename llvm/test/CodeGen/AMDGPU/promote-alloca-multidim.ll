@@ -312,7 +312,7 @@ define amdgpu_kernel void @i64_2d_load_store_subvec_3_i64_offset_index(ptr %out)
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <6 x i64> [[TMP14]], i64 4, i32 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <6 x i64> [[TMP15]], i64 5, i32 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[SEL3]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 6, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 6
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <6 x i64> [[TMP16]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 1
@@ -464,7 +464,7 @@ define amdgpu_kernel void @i16_2d_load_store(ptr %out, i32 %sel) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x i16> [[TMP3]], i16 3, i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x i16> [[TMP4]], i16 4, i32 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x i16> [[TMP5]], i16 5, i32 5
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 3, [[SEL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SEL]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x i16> [[TMP6]], i32 [[TMP1]]
 ; CHECK-NEXT:    store i16 [[TMP2]], ptr [[OUT]], align 2
 ; CHECK-NEXT:    ret void
@@ -498,7 +498,7 @@ define amdgpu_kernel void @float_2d_load_store(ptr %out, i32 %sel) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x float> [[TMP3]], float 3.000000e+00, i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x float> [[TMP4]], float 4.000000e+00, i32 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x float> [[TMP5]], float 5.000000e+00, i32 5
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 3, [[SEL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SEL]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x float> [[TMP6]], i32 [[TMP1]]
 ; CHECK-NEXT:    store float [[TMP2]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -538,7 +538,7 @@ define amdgpu_kernel void @ptr_2d_load_store(ptr %out, i32 %sel) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x ptr> [[TMP3]], ptr [[PTR_3]], i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x ptr> [[TMP4]], ptr [[PTR_4]], i32 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x ptr> [[TMP5]], ptr [[PTR_5]], i32 5
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 3, [[SEL]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[SEL]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <6 x ptr> [[TMP6]], i32 [[TMP7]]
 ; CHECK-NEXT:    store ptr [[TMP8]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void

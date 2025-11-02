@@ -80,19 +80,14 @@ private:
 
   uint64_t size = 0;
 
-  template <class ELFT, class RelTy>
-  void addRecords(EhInputSection *s, llvm::ArrayRef<RelTy> rels);
-  template <class ELFT> void addSectionAux(EhInputSection *s);
-  template <class ELFT, class RelTy>
-  void iterateFDEWithLSDAAux(EhInputSection &sec, ArrayRef<RelTy> rels,
+  template <llvm::endianness E> void addRecords(EhInputSection *s);
+  template <class ELFT>
+  void iterateFDEWithLSDAAux(EhInputSection &sec,
                              llvm::DenseSet<size_t> &ciesWithLSDA,
                              llvm::function_ref<void(InputSection &)> fn);
 
-  template <class ELFT, class RelTy>
-  CieRecord *addCie(EhSectionPiece &piece, ArrayRef<RelTy> rels);
-
-  template <class ELFT, class RelTy>
-  Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<RelTy> rels);
+  CieRecord *addCie(EhSectionPiece &piece, ArrayRef<Relocation> rels);
+  Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
 
   uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;
 
@@ -784,11 +779,11 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
-class RandomizePaddingSection final : public SyntheticSection {
+class PaddingSection final : public SyntheticSection {
   uint64_t size;
 
 public:
-  RandomizePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
+  PaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
   size_t getSize() const override { return size; }
   void writeTo(uint8_t *buf) override;
 };

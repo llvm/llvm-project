@@ -9,7 +9,7 @@
 ### Pre-requisites
 
 *   A relatively recent Python3 installation
-*   Installation of python dependencies as specified in
+*   Installation of Python dependencies as specified in
     `mlir/python/requirements.txt`
 
 ### CMake variables
@@ -27,8 +27,8 @@
 
 ### Recommended development practices
 
-It is recommended to use a python virtual environment. Many ways exist for this,
-but the following is the simplest:
+It is recommended to use a Python virtual environment. Many ways exist for this,
+but one of the following is generally recommended:
 
 ```shell
 # Make sure your 'python' is what you expect. Note that on multi-python
@@ -37,7 +37,22 @@ but the following is the simplest:
 which python
 python -m venv ~/.venv/mlirdev
 source ~/.venv/mlirdev/bin/activate
+```
 
+Or, if you have uv installed on your system, you can also use the following commands
+to create the same environment (targeting a Python 3.12 toolchain in this example):
+
+```shell
+uv venv ~/.venv/mlirdev --seed -p 3.12
+source ~/.venv/mlirdev/bin/activate
+```
+
+You can change the Python version (`-p` flag) as needed - if you request any Python interpreter
+not present on your system, uv will attempt to download it, unless the `--no-python-downloads` option is given.
+For information on how to install uv, refer to the official documentation at
+https://docs.astral.sh/uv/getting-started/installation/
+
+```shell
 # Note that many LTS distros will bundle a version of pip itself that is too
 # old to download all of the latest binaries for certain platforms.
 # The pip version can be obtained with `python -m pip --version`, and for
@@ -46,14 +61,16 @@ source ~/.venv/mlirdev/bin/activate
 # It is recommended to upgrade pip:
 python -m pip install --upgrade pip
 
-
 # Now the `python` command will resolve to your virtual environment and
 # packages will be installed there.
 python -m pip install -r mlir/python/requirements.txt
 
+# In a uv-generated virtual environment, you can instead run:
+uv pip install -r mlir/python/requirements.txt
+
 # Now run your build command with `cmake`, `ninja`, et al.
 
-# Run mlir tests. For example, to run python bindings tests only using ninja:
+# Run mlir tests. For example, to run Python bindings tests only using ninja:
 ninja check-mlir-python
 ```
 
@@ -65,7 +82,7 @@ the `PYTHONPATH`. Typically:
 export PYTHONPATH=$(cd build && pwd)/tools/mlir/python_packages/mlir_core
 ```
 
-Note that if you have installed (i.e. via `ninja install`, et al), then python
+Note that if you have installed (i.e. via `ninja install`, et al), then Python
 packages for all enabled projects will be in your install tree under
 `python_packages/` (i.e. `python_packages/mlir_core`). Official distributions
 are built with a more specialized setup.
@@ -74,14 +91,14 @@ are built with a more specialized setup.
 
 ### Use cases
 
-There are likely two primary use cases for the MLIR python bindings:
+There are likely two primary use cases for the MLIR Python bindings:
 
 1.  Support users who expect that an installed version of LLVM/MLIR will yield
     the ability to `import mlir` and use the API in a pure way out of the box.
 
 1.  Downstream integrations will likely want to include parts of the API in
     their private namespace or specially built libraries, probably mixing it
-    with other python native bits.
+    with other Python native bits.
 
 ### Composable modules
 
@@ -89,8 +106,8 @@ In order to support use case \#2, the Python bindings are organized into
 composable modules that downstream integrators can include and re-export into
 their own namespace if desired. This forces several design points:
 
-*   Separate the construction/populating of a `py::module` from
-    `PYBIND11_MODULE` global constructor.
+*   Separate the construction/populating of a `nb::module` from
+    `NB_MODULE` global constructor.
 
 *   Introduce headers for C++-only wrapper classes as other related C++ modules
     will need to interop with it.
@@ -130,7 +147,7 @@ registration, etc.
 
 ### Loader
 
-LLVM/MLIR is a non-trivial python-native project that is likely to co-exist with
+LLVM/MLIR is a non-trivial Python-native project that is likely to co-exist with
 other non-trivial native extensions. As such, the native extension (i.e. the
 `.so`/`.pyd`/`.dylib`) is exported as a notionally private top-level symbol
 (`_mlir`), while a small set of Python code is provided in
@@ -160,7 +177,7 @@ are) with non-RTTI polymorphic C++ code (the default compilation mode of LLVM).
 ### Ownership in the Core IR
 
 There are several top-level types in the core IR that are strongly owned by
-their python-side reference:
+their Python-side reference:
 
 *   `PyContext` (`mlir.ir.Context`)
 *   `PyModule` (`mlir.ir.Module`)
@@ -216,13 +233,29 @@ added to an attached operation, they need to be re-parented to the containing
 module).
 
 Due to the validity and parenting accounting needs, `PyOperation` is the owner
-for regions and blocks and needs to be a top-level type that we can count on not
-aliasing. This let's us do things like selectively invalidating instances when
-mutations occur without worrying that there is some alias to the same operation
-in the hierarchy. Operations are also the only entity that are allowed to be in
-a detached state, and they are interned at the context level so that there is
-never more than one Python `mlir.ir.Operation` object for a unique
-`MlirOperation`, regardless of how it is obtained.
+for regions and blocks. Operations are also the only entities which are allowed to be in
+a detached state.
+
+**Note**: Multiple `PyOperation` objects (i.e., the Python objects themselves) can alias a single `mlir::Operation`.
+This means, for example, if you have `py_op1` and `py_op2` which wrap the same `mlir::Operation op`
+and you somehow transform `op` (e.g., you run a pass on `op`) then walking the MLIR AST via either/or `py_op1`, `py_op2`
+will reflect the same MLIR AST. This is perfectly safe and supported. What is not supported is invalidating any
+operation while there exist multiple Python objects wrapping that operation **and then manipulating those wrappers**.
+For example if `py_op1` and `py_op2` wrap the same operation under a root `py_op3` and then `py_op3` is
+transformed such that the operation referenced (by `py_op1`, `py_op2`) is erased. Then `py_op1`, `py_op2`
+become "undefined" in a sense; manipulating them in any way is "formally forbidden". Note, this also applies to
+`SymbolTable` mutation, which is considered a transformation of the root `SymbolTable`-supporting operation for the
+purposes of the discussion here. Metaphorically, one can think of this similarly to how STL container iterators are invalidated
+once the container itself is changed. The "best practices" recommendation is to structure your code such that
+
+1. First, query/manipulate various Python wrapper objects `py_op1`, `py_op2`, `py_op3`, etc.;
+2. Second, transform the AST/erase operations/etc. via a single root object;
+3. Invalidate all queried nodes (e.g., using `op._set_invalid()`).
+
+Ideally this should be done in a function body so that step (3) corresponds to the end of the function and there are no
+risks of Python wrapper objects leaking/living longer than necessary. In summary, you should scope your changes based on
+nesting i.e., change leaf nodes first before going up in hierarchy, and only in very rare cases query nested ops post
+modifying a parent op.
 
 The C/C++ API allows for Region/Block to also be detached, but it simplifies the
 ownership model a lot to eliminate that possibility in this API, allowing the
@@ -237,11 +270,6 @@ With the way it is now, we can avoid having a global live list for regions and
 blocks. We may end up needing an op-local one at some point TBD, depending on
 how hard it is to guarantee how mutations interact with their Python peer
 objects. We can cross that bridge easily when we get there.
-
-Module, when used purely from the Python API, can't alias anyway, so we can use
-it as a top-level ref type without a live-list for interning. If the API ever
-changes such that this cannot be guaranteed (i.e. by letting you marshal a
-native-defined Module in), then there would need to be a live table for it too.
 
 ## User-level API
 
@@ -763,7 +791,7 @@ This allows to invoke op creation of an op with a `I32Attr` with
 foo.Op(30)
 ```
 
-The registration is based on the ODS name but registry is via pure python
+The registration is based on the ODS name but registry is via pure Python
 method. Only single custom builder is allowed to be registered per ODS attribute
 type (e.g., I32Attr can have only one, which can correspond to multiple of the
 underlying IntegerAttr type).
@@ -785,13 +813,13 @@ either for practicality or to give the resulting library an appropriately
 
 Generally favor converting trivial methods like `getContext()`, `getName()`,
 `isEntryBlock()`, etc to read-only Python properties (i.e. `context`). It is
-primarily a matter of calling `def_property_readonly` vs `def` in binding code,
+primarily a matter of calling `def_prop_ro` vs `def` in binding code,
 and makes things feel much nicer to the Python side.
 
 For example, prefer:
 
 ```c++
-m.def_property_readonly("context", ...)
+m.def_prop_ro("context", ...)
 ```
 
 Over:
@@ -904,7 +932,7 @@ def create_my_op():
 The MLIR Python bindings integrate with the tablegen-based ODS system for
 providing user-friendly wrappers around MLIR dialects and operations. There are
 multiple parts to this integration, outlined below. Most details have been
-elided: refer to the build rules and python sources under `mlir.dialects` for
+elided: refer to the build rules and Python sources under `mlir.dialects` for
 the canonical way to use this facility.
 
 Users are responsible for providing a `{DIALECT_NAMESPACE}.py` (or an equivalent
@@ -912,9 +940,9 @@ directory with `__init__.py` file) as the entrypoint.
 
 ### Generating `_{DIALECT_NAMESPACE}_ops_gen.py` wrapper modules
 
-Each dialect with a mapping to python requires that an appropriate
+Each dialect with a mapping to Python requires that an appropriate
 `_{DIALECT_NAMESPACE}_ops_gen.py` wrapper module is created. This is done by
-invoking `mlir-tblgen` on a python-bindings specific tablegen wrapper that
+invoking `mlir-tblgen` on a Python-bindings specific tablegen wrapper that
 includes the boilerplate and actual dialect specific `td` file. An example, for
 the `Func` (which is assigned the namespace `func` as a special case):
 
@@ -944,7 +972,7 @@ from ._my_dialect_ops_gen import *
 
 ### Extending the search path for wrapper modules
 
-When the python bindings need to locate a wrapper module, they consult the
+When the Python bindings need to locate a wrapper module, they consult the
 `dialect_search_path` and use it to find an appropriately named module. For the
 main repository, this search path is hard-coded to include the `mlir.dialects`
 module, which is where wrappers are emitted by the above build rule. Out of tree
@@ -1143,7 +1171,7 @@ subclasses can be defined using
 [`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)
 or
 [`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
-utilities that mimic pybind11/nanobind API for defining functions and
+utilities that mimic pybind11/nanobind APIs for defining functions and
 properties. These bindings are to be included in a separate module. The
 utilities also provide automatic casting between C API handles `MlirAttribute`
 and `MlirType` and their Python counterparts so that the C API handles can be
@@ -1166,18 +1194,17 @@ are available when the dialect is loaded from Python.
 Dialect-specific passes can be made available to the pass manager in Python by
 registering them with the context and relying on the API for pass pipeline
 parsing from string descriptions. This can be achieved by creating a new
-pybind11 module, defined in `lib/Bindings/Python/<Dialect>Passes.cpp`, that
+nanobind module, defined in `lib/Bindings/Python/<Dialect>Passes.cpp`, that
 calls the registration C API, which must be provided first. For passes defined
 declaratively using Tablegen, `mlir-tblgen -gen-pass-capi-header` and
 `-mlir-tblgen -gen-pass-capi-impl` automate the generation of C API. The
-pybind11 module must be compiled into a separate “Python extension” library,
+nanobind module must be compiled into a separate “Python extension” library,
 which can be `import`ed  from the main dialect file, i.e.
 `python/mlir/dialects/<dialect-namespace>.py` or
 `python/mlir/dialects/<dialect-namespace>/__init__.py`, or from a separate
 `passes` submodule to be put in
 `python/mlir/dialects/<dialect-namespace>/passes.py` if it is undesirable to
 make the passes available along with the dialect.
-
 
 ### Other functionality
 
@@ -1190,6 +1217,82 @@ or nanobind and
 utilities to connect to the rest of Python API. The bindings can be located in a
 separate module or in the same module as attributes and types, and
 loaded along with the dialect.
+
+
+## Extending MLIR in Python
+
+The MLIR Python bindings provide support for defining custom components in Python,
+mainly including dialects, passes, and rewrite patterns.
+The following sections outline how each of these can be implemented.
+
+### Dialects
+
+Dialects can be defined through the IRDL dialect bindings in Python.
+The IRDL bindings offer a `load_dialects` function that
+converts an MLIR module containing `irdl.dialect` ops into MLIR dialects.
+For further details, see the documentation of [the IRDL dialect](../Dialects/IRDL.md).
+
+### Passes
+
+Passes can be defined as Python callables via the `PassManager.add` API.
+In such case, the callable is wrapped as an `mlir::Pass` internally and
+executed as part of the pass pipeline when `PassManager.run` is invoked.
+In the callable, the `op` parameter represents the current operation being transformed,
+while the `pass_` parameter provides access to the current `Pass` object,
+allowing actions such as `signalPassFailure()`.
+The lifetime of the callable is extended at least until the `PassManager` is destroyed.
+The following example code demonstrates how to define Python passes.
+
+```python
+def demo_pass(op, pass_):
+    # do something with the given op
+    pass
+
+pm = PassManager('any')
+pm.add(demo_pass)
+pm.add('some-cpp-defined-passes')
+...
+pm.run(some_op)
+```
+
+### Rewrite Patterns
+
+Rewrite patterns can be registered via the `add` method
+of `mlir.rewrite.RewritePatternSet` in Python.
+This method takes the operation type to be rewritten
+and a Python callable that defines the *match and rewrite* logic.
+Note that the Python callable should be defined so that
+the rewrite is applied if and only if the match succeeds,
+which corresponds to the return value being castable to `False`.
+
+The `RewritePatternSet` can be converted into
+a `FrozenRewritePatternSet` using the `freeze` method,
+which can be applied to an operation through
+the greedy pattern driver using `apply_patterns_and_fold_greedily`.
+The following example demonstrates the typical usage:
+
+```python
+def to_muli(op, rewriter):
+    with rewriter.ip:
+        new_op = arith.muli(op.lhs, op.rhs, loc=op.location)
+    rewriter.replace_op(op, new_op)
+
+patterns = RewritePatternSet()
+patterns.add(arith.AddIOp, to_muli)  # Rewrite arith.addi into arith.muli
+patterns.add(...)
+frozen = patterns.freeze()
+
+module = ...
+apply_patterns_and_fold_greedily(module, frozen)
+```
+
+The PDL dialect bindings also enable defining and generating rewrite patterns in Python.
+The `mlir.rewrite.PDLModule` class accepts a module containing `pdl.pattern` ops,
+which can be transformed into a `FrozenRewritePatternSet` using the `freeze` method.
+This frozen set can then be applied to an operation
+using the greedy rewrite pattern driver via `apply_patterns_and_fold_greedily`.
+For further information, see [the PDL dialect documentation](/docs/Dialects/PDLOps/).
+
 
 ## Free-threading (No-GIL) support
 

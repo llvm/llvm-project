@@ -16,6 +16,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_DAP_TYPES_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_DAP_TYPES_H
 
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
@@ -47,6 +48,38 @@ struct SourceLLDBData {
 };
 bool fromJSON(const llvm::json::Value &, SourceLLDBData &, llvm::json::Path);
 llvm::json::Value toJSON(const SourceLLDBData &);
+
+struct Symbol {
+  /// The symbol id, usually the original symbol table index.
+  uint32_t id = 0;
+
+  /// True if this symbol is debug information in a symbol.
+  bool isDebug = false;
+
+  /// True if this symbol is not actually in the symbol table, but synthesized
+  /// from other info in the object file.
+  bool isSynthetic = false;
+
+  /// True if this symbol is globally visible.
+  bool isExternal = false;
+
+  /// The symbol type.
+  lldb::SymbolType type = lldb::eSymbolTypeInvalid;
+
+  /// The symbol file address.
+  lldb::addr_t fileAddress = LLDB_INVALID_ADDRESS;
+
+  /// The symbol load address.
+  std::optional<lldb::addr_t> loadAddress;
+
+  /// The symbol size.
+  lldb::addr_t size = 0;
+
+  /// The symbol name.
+  std::string name;
+};
+bool fromJSON(const llvm::json::Value &, Symbol &, llvm::json::Path);
+llvm::json::Value toJSON(const Symbol &);
 
 } // namespace lldb_dap::protocol
 

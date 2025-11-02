@@ -70,6 +70,12 @@ define half @t3(half %x)  {
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
 ;
+; USE-NEON-NO-GPRS-LABEL: t3:
+; USE-NEON-NO-GPRS:       // %bb.0: // %entry
+; USE-NEON-NO-GPRS-NEXT:    fcvtzs h0, h0
+; USE-NEON-NO-GPRS-NEXT:    scvtf h0, h0
+; USE-NEON-NO-GPRS-NEXT:    ret
+;
 ; NONEON-NOSVE-LABEL: t3:
 ; NONEON-NOSVE:       // %bb.0: // %entry
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
@@ -146,6 +152,12 @@ define half @t6(half %x)  {
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: t6:
+; USE-NEON-NO-GPRS:       // %bb.0: // %entry
+; USE-NEON-NO-GPRS-NEXT:    fcvtzu h0, h0
+; USE-NEON-NO-GPRS-NEXT:    ucvtf h0, h0
+; USE-NEON-NO-GPRS-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: t6:
 ; NONEON-NOSVE:       // %bb.0: // %entry

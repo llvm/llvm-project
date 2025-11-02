@@ -30,8 +30,7 @@ struct TestLinalgRankReduceContractionOps
 
   TestLinalgRankReduceContractionOps() = default;
   TestLinalgRankReduceContractionOps(
-      const TestLinalgRankReduceContractionOps &pass)
-      : PassWrapper(pass) {}
+      const TestLinalgRankReduceContractionOps &pass) = default;
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<affine::AffineDialect, linalg::LinalgDialect,
                     memref::MemRefDialect, tensor::TensorDialect>();

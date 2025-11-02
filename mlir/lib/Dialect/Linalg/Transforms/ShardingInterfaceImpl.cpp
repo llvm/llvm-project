@@ -266,9 +266,8 @@ struct StructuredOpShardingInterface
     LinalgOp linalgOp = llvm::cast<LinalgOp>(op);
     SmallVector<utils::IteratorType> iteratorTypes =
         linalgOp.getIteratorTypesArray();
-    unsigned reductionItersCount = std::accumulate(
-        iteratorTypes.begin(), iteratorTypes.end(), 0,
-        [](unsigned count, utils::IteratorType iter) {
+    unsigned reductionItersCount = llvm::accumulate(
+        iteratorTypes, 0u, [](unsigned count, utils::IteratorType iter) {
           return count + (iter == utils::IteratorType::reduction);
         });
     shard::ReductionKind reductionKind = getReductionKindOfLinalgOp(linalgOp);

@@ -90,6 +90,8 @@ def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
 def nodefaultlib : P<"nodefaultlib", "Remove a default library">;
+def nodbgdirmerge : F<"nodbgdirmerge">,
+                      HelpText<"Emit the debug directory in a separate section">;
 def opt     : P<"opt", "Control optimizations">;
 def order   : P<"order", "Put functions in order">;
 def out     : P<"out", "Path to file to write output">;
@@ -102,6 +104,7 @@ def pdbstream : Joined<["/", "-", "/?", "-?"], "pdbstream:">,
     MetaVarName<"<name>=<file>">,
     HelpText<"Embed the contents of <file> in the PDB as named stream <name>">;
 def section : P<"section", "Specify section attributes">;
+def sectionlayout : P<"sectionlayout", "Specifies the layout strategy for output sections">;
 def stack   : P<"stack", "Size of the stack">;
 def stub    : P<"stub", "Specify DOS stub file">;
 def subsystem : P<"subsystem", "Specify subsystem">;
@@ -199,6 +202,12 @@ defm appcontainer : B<"appcontainer",
                       "Image can run outside an app container (default)">;
 defm cetcompat : B<"cetcompat", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack",
                    "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack (default)">;
+defm cetcompatstrict : B<"cetcompatstrict", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack in strict mode",
+                         "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack in strict mode (default)">;
+defm cetdynamicapisinproc : B<"cetdynamicapisinproc", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack in such a way that dynamic APIs allowed in process",
+                              "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack with dynamic APIs allowed in process (default)">;
+defm cetipvalidationrelaxed : B<"cetipvalidationrelaxed", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack with relaxed context IP validation",
+                                "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack with relaxed context IP validation (default)">;
 defm dynamicbase : B<"dynamicbase", "Enable ASLR (default unless /fixed)",
                      "Disable ASLR (default when /fixed)">;
 defm fixed : B<"fixed", "Disable base relocations",
@@ -206,6 +215,8 @@ defm fixed : B<"fixed", "Disable base relocations",
 defm highentropyva : B<"highentropyva",
                        "Enable 64-bit ASLR (default on 64-bit)",
                        "Disable 64-bit ASLR">;
+defm hotpatchcompatible : B<"hotpatchcompatible", "Mark executable image as compatible with hotpatch",
+                            "Don't mark executable image as compatible with hotpatch (default)">;
 defm incremental : B<"incremental",
                      "Keep original import library if contents are unchanged",
                      "Overwrite import library even if contents are unchanged">;
@@ -278,10 +289,13 @@ def thinlto_distributor : P<"thinlto-distributor",
   "backend compilations will be distributed">;
 def thinlto_distributor_arg : P<"thinlto-distributor-arg",
   "Arguments to pass to the ThinLTO distributor">;
-def thinlto_compiler : P<"thinlto-remote-compiler",
+def thinlto_remote_compiler : P<"thinlto-remote-compiler",
   "Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
   "compilations">;
-def thinlto_compiler_arg : P<"thinlto-remote-compiler-arg",
+def thinlto_remote_compiler_prepend_arg : P<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
+def thinlto_remote_compiler_arg : P<"thinlto-remote-compiler-arg",
   "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
 def lto_obj_path : P<

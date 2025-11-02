@@ -130,3 +130,11 @@ void has_ptrauth_elf_got() {}
 // NOELFGOT: no_ptrauth_elf_got
 void no_ptrauth_elf_got() {}
 #endif
+
+#if __has_feature(ptrauth_objc_signable_class)
+// INTRIN: has_ptrauth_objc_signable_class
+void has_ptrauth_objc_signable_class(){}
+#else
+// NOINTRIN: no_ptrauth_objc_signable_class
+void no_ptrauth_objc_signable_class(){}
+#endif

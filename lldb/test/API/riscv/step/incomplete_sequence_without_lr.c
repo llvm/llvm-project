@@ -1,7 +1,7 @@
 void __attribute__((naked)) incomplete_cas(int *a, int *b) {
   // Stop at the first instruction (an sc without a corresponding lr), then make
   // a step instruction and ensure that execution stops at the next instruction
-  // (and).
+  // (and a5, a2, a4).
   asm volatile("1:\n\t"
                "sc.w a5, a1, (a3)\n\t"
                "and a5, a2, a4\n\t"

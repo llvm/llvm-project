@@ -27,19 +27,17 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @foo() #0 !dbg !7 {
+define i32 @foo() !dbg !7 {
 entry:
   ret i32 1, !dbg !9
 }
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @bar() #0 !dbg !10 {
+define i32 @bar() !dbg !10 {
 entry:
   %call = call i32 @foo(), !dbg !11
   ret i32 %call, !dbg !12
 }
-
-attributes #0 = { nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

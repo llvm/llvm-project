@@ -128,7 +128,7 @@ private:
   /// ECValues, it just keeps the key as part of the value.
   DenseMap<ElemTy, ECValue *> TheMapping;
 
-  /// List of all members, used to provide a determinstic iteration order.
+  /// List of all members, used to provide a deterministic iteration order.
   SmallVector<const ECValue *> Members;
 
   mutable BumpPtrAllocator ECValueAllocator;
@@ -180,8 +180,8 @@ public:
   }
 
   /// Returns true if \p V is contained an equivalence class.
-  bool contains(const ElemTy &V) const {
-    return TheMapping.find(V) != TheMapping.end();
+  [[nodiscard]] bool contains(const ElemTy &V) const {
+    return TheMapping.contains(V);
   }
 
   /// getLeaderValue - Return the leader for the specified value that is in the
@@ -256,9 +256,11 @@ public:
       }
       if (!Next) {
         // If the current element is the last element(not leader), set the
-        // successor of the current element's predecessor to null, and set
-        // the 'Leader' field of the class leader to the predecessor element.
-        Pre->Next = nullptr;
+        // successor of the current element's predecessor to null while
+        // preserving the leader bit, and set the 'Leader' field of the class
+        // leader to the predecessor element.
+        Pre->Next = reinterpret_cast<const ECValue *>(
+            static_cast<intptr_t>(Pre->isLeader()));
         Leader->Leader = Pre;
       } else {
         // If the current element is in the middle of class, then simply

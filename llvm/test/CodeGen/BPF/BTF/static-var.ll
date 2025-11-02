@@ -14,7 +14,7 @@
 @a = internal global i8 0, align 1, !dbg !10
 
 ; Function Attrs: norecurse nounwind
-define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
+define dso_local i32 @foo() local_unnamed_addr !dbg !2 {
   %1 = load volatile i8, ptr @a, align 1, !dbg !20, !tbaa !21
   %2 = sext i8 %1 to i32, !dbg !20
   %3 = load volatile i16, ptr @foo.b, align 2, !dbg !24, !tbaa !25
@@ -92,8 +92,6 @@ define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  ".bss"                  # string offset=71
 ; CHECK-NEXT:        .byte   0
-
-attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!7}
 !llvm.module.flags = !{!16, !17, !18}

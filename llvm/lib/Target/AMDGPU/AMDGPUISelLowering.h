@@ -323,6 +323,12 @@ public:
                                             const MachineRegisterInfo &MRI,
                                             unsigned Depth = 0) const override;
 
+  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           bool PoisonOnly, bool ConsiderFlags,
+                                           unsigned Depth) const override;
+
   bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
                                     const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
@@ -412,6 +418,7 @@ enum NodeType : unsigned {
   CALL,
   TC_RETURN,
   TC_RETURN_GFX,
+  TC_RETURN_GFX_WholeWave,
   TC_RETURN_CHAIN,
   TC_RETURN_CHAIN_DVGPR,
   TRAP,

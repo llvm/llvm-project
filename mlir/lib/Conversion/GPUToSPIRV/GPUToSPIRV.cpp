@@ -69,7 +69,7 @@ public:
 /// Pattern to convert a kernel function in GPU dialect within a spirv.module.
 class GPUFuncOpConversion final : public OpConversionPattern<gpu::GPUFuncOp> {
 public:
-  using OpConversionPattern<gpu::GPUFuncOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::GPUFuncOp funcOp, OpAdaptor adaptor,
@@ -82,7 +82,7 @@ private:
 /// Pattern to convert a gpu.module to a spirv.module.
 class GPUModuleConversion final : public OpConversionPattern<gpu::GPUModuleOp> {
 public:
-  using OpConversionPattern<gpu::GPUModuleOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::GPUModuleOp moduleOp, OpAdaptor adaptor,
@@ -93,7 +93,7 @@ public:
 // TODO: This can go to DRR when GPU return has operands.
 class GPUReturnOpConversion final : public OpConversionPattern<gpu::ReturnOp> {
 public:
-  using OpConversionPattern<gpu::ReturnOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::ReturnOp returnOp, OpAdaptor adaptor,
@@ -103,7 +103,7 @@ public:
 /// Pattern to convert a gpu.barrier op into a spirv.ControlBarrier op.
 class GPUBarrierConversion final : public OpConversionPattern<gpu::BarrierOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::BarrierOp barrierOp, OpAdaptor adaptor,
@@ -113,7 +113,7 @@ public:
 /// Pattern to convert a gpu.shuffle op into a spirv.GroupNonUniformShuffle op.
 class GPUShuffleConversion final : public OpConversionPattern<gpu::ShuffleOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp shuffleOp, OpAdaptor adaptor,
@@ -123,7 +123,7 @@ public:
 /// Pattern to convert a gpu.rotate op into a spirv.GroupNonUniformRotateKHROp.
 class GPURotateConversion final : public OpConversionPattern<gpu::RotateOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::RotateOp rotateOp, OpAdaptor adaptor,
@@ -132,7 +132,7 @@ public:
 
 class GPUPrintfConversion final : public OpConversionPattern<gpu::PrintfOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::PrintfOp gpuPrintfOp, OpAdaptor adaptor,
@@ -653,7 +653,7 @@ createGroupReduceOp(OpBuilder &builder, Location loc, Value arg,
 class GPUAllReduceConversion final
     : public OpConversionPattern<gpu::AllReduceOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::AllReduceOp op, OpAdaptor adaptor,
@@ -680,7 +680,7 @@ public:
 class GPUSubgroupReduceConversion final
     : public OpConversionPattern<gpu::SubgroupReduceOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupReduceOp op, OpAdaptor adaptor,

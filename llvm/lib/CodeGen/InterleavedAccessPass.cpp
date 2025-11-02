@@ -258,13 +258,11 @@ static Value *getMaskOperand(IntrinsicInst *II) {
   default:
     llvm_unreachable("Unexpected intrinsic");
   case Intrinsic::vp_load:
-    return II->getOperand(1);
   case Intrinsic::masked_load:
-    return II->getOperand(2);
+    return II->getOperand(1);
   case Intrinsic::vp_store:
-    return II->getOperand(2);
   case Intrinsic::masked_store:
-    return II->getOperand(3);
+    return II->getOperand(2);
   }
 }
 
@@ -312,10 +310,9 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       continue;
     }
     if (auto *BI = dyn_cast<BinaryOperator>(User)) {
-      if (!BI->user_empty() && all_of(BI->users(), [](auto *U) {
-            auto *SVI = dyn_cast<ShuffleVectorInst>(U);
-            return SVI && isa<UndefValue>(SVI->getOperand(1));
-          })) {
+      using namespace PatternMatch;
+      if (!BI->user_empty() &&
+          all_of(BI->users(), match_fn(m_Shuffle(m_Value(), m_Undef())))) {
         for (auto *SVI : BI->users())
           BinOpShuffles.insert(cast<ShuffleVectorInst>(SVI));
         continue;
@@ -537,28 +534,26 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
          "number of stored element should be a multiple of Factor");
 
   Value *Mask = nullptr;
+  auto GapMask = APInt::getAllOnes(Factor);
   if (SI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    APInt GapMask(Factor, 0);
     std::tie(Mask, GapMask) = getMask(getMaskOperand(II), Factor,
                                       ElementCount::getFixed(LaneMaskLen));
     if (!Mask)
       return false;
-    // We haven't supported gap mask for stores. Yet it is possible that we
-    // already changed the IR, hence returning true here.
-    if (GapMask.popcount() != Factor)
-      return true;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store or masked.store: "
                       << *Store << "\n");
+    LLVM_DEBUG(dbgs() << "IA: With nominal factor " << Factor
+                      << " and actual factor " << GapMask.popcount() << "\n");
   }
 
   // Try to create target specific intrinsics to replace the store and
   // shuffle.
-  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor))
+  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor, GapMask))
     return false;
 
   // Already have a new target specific interleaved store. Erase the old store.
@@ -662,6 +657,10 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
   }
 
   if (auto *SVI = dyn_cast<ShuffleVectorInst>(WideMask)) {
+    Type *Op1Ty = SVI->getOperand(1)->getType();
+    if (!isa<FixedVectorType>(Op1Ty))
+      return {nullptr, GapMask};
+
     // Check that the shuffle mask is: a) an interleave, b) all of the same
     // set of the elements, and c) contained by the first source.  (c) could
     // be relaxed if desired.

@@ -17,6 +17,7 @@
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/PointerIntPair.h"
 
 namespace clang::CIRGen {
@@ -44,12 +45,12 @@ public:
           clang::CharUnits alignment)
       : pointerAndKnownNonNull(pointer, false), elementType(elementType),
         alignment(alignment) {
-    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
-           "Expected cir.ptr type");
-
     assert(pointer && "Pointer cannot be null");
     assert(elementType && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
+
+    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
+           "Expected cir.ptr type");
 
     assert(mlir::cast<cir::PointerType>(pointer.getType()).getPointee() ==
            elementType);
@@ -68,6 +69,12 @@ public:
     return pointerAndKnownNonNull.getPointer() != nullptr;
   }
 
+  /// Return address with different pointer, but same element type and
+  /// alignment.
+  Address withPointer(mlir::Value newPtr) const {
+    return Address(newPtr, getElementType(), getAlignment());
+  }
+
   /// Return address with different element type, a bitcast pointer, and
   /// the same alignment.
   Address withElementType(CIRGenBuilderTy &builder, mlir::Type ElemTy) const;
@@ -82,6 +89,13 @@ public:
     // ptr auth.
     assert(isValid() && "pointer isn't valid");
     return getPointer();
+  }
+
+  /// Return the pointer contained in this class after authenticating it and
+  /// adding offset to it if necessary.
+  mlir::Value emitRawPointer() const {
+    assert(!cir::MissingFeatures::addressPointerAuthInfo());
+    return getBasePointer();
   }
 
   mlir::Type getType() const {

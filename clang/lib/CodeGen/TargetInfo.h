@@ -483,7 +483,6 @@ enum class AArch64ABIKind {
   DarwinPCS,
   Win64,
   AAPCSSoft,
-  PAuthTest,
 };
 
 std::unique_ptr<TargetCodeGenInfo>

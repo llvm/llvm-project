@@ -91,6 +91,37 @@ int main(int, char**) {
     assert(c.size() == 0);
     assert(k == c.end());
   }
+  {   // Make sure we're properly destroying the elements when erasing
+    { // When erasing part of a bucket
+      std::unordered_multimap<int, std::string> map;
+      map.insert(std::make_pair(1, "This is a long string to make sure ASan can detect a memory leak"));
+      map.insert(std::make_pair(1, "This is another long string to make sure ASan can detect a memory leak"));
+      map.erase(++map.begin(), map.end());
+    }
+    { // When erasing the whole bucket
+      std::unordered_multimap<int, std::string> map;
+      map.insert(std::make_pair(1, "This is a long string to make sure ASan can detect a memory leak"));
+      map.insert(std::make_pair(1, "This is another long string to make sure ASan can detect a memory leak"));
+      map.erase(map.begin(), map.end());
+    }
+  }
+  { // Make sure that we're properly updating the bucket list when starting within a bucket
+    struct MyHash {
+      size_t operator()(size_t v) const { return v; }
+    };
+    std::unordered_multimap<size_t, size_t, MyHash> map;
+    size_t collision_val = 2 + map.bucket_count(); // try to get a bucket collision
+    map.rehash(3);
+    map.insert(std::pair<size_t, size_t>(1, 1));
+    map.insert(std::pair<size_t, size_t>(collision_val, 1));
+    map.insert(std::pair<size_t, size_t>(2, 1));
+    LIBCPP_ASSERT(map.bucket(2) == map.bucket(collision_val));
+
+    auto erase = map.equal_range(2);
+    map.erase(erase.first, erase.second);
+    for (const auto& v : map)
+      assert(v.first == 1 || v.first == collision_val);
+  }
 #if TEST_STD_VER >= 11
   {
     typedef std::unordered_multimap<int,

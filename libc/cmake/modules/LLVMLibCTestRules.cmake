@@ -3,11 +3,6 @@ function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_config(config_flags)
   _get_compile_options_from_arch(arch_flags)
 
-  # Remove -fno-math-errno if it was added.
-  if(LIBC_ADD_FNO_MATH_ERRNO)
-    list(REMOVE_ITEM compile_flags "-fno-math-errno")
-  endif()
-
   # Death test executor is only available in Linux for now.
   if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
     list(REMOVE_ITEM config_flags "-DLIBC_ADD_NULL_CHECKS")
@@ -39,8 +34,8 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-ffixed-point")
     endif()
 
-    # list(APPEND compile_options "-Wall")
-    # list(APPEND compile_options "-Wextra")
+    list(APPEND compile_options "-Wall")
+    list(APPEND compile_options "-Wextra")
     # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
     if(NOT LIBC_WNO_ERROR)
       # list(APPEND compile_options "-Werror")
@@ -838,7 +833,7 @@ function(add_libc_hermetic test_name)
                    ${fq_deps_list})
   # TODO: currently the dependency chain is broken such that getauxval cannot properly
   # propagate to hermetic tests. This is a temporary workaround.
-  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
     target_link_libraries(
       ${fq_build_target_name}
       PRIVATE

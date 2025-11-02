@@ -52,6 +52,12 @@ protected:
     return ClangUtil::GetQualType(
         m_ast->GetBuiltinTypeByName(ConstString(name)));
   }
+
+  CompilerType GetBuiltinTypeForDWARFEncodingAndBitSize(
+      llvm::StringRef type_name, uint32_t encoding, uint32_t bit_size) const {
+    return m_ast->GetBuiltinTypeForDWARFEncodingAndBitSize(type_name, encoding,
+                                                           bit_size);
+  }
 };
 
 TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
@@ -162,6 +168,9 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromName) {
   EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128_t"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
             GetBasicQualType("__uint128_t"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
+            GetBasicQualType("unsigned __int128"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeVoid), GetBasicQualType("void"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeBool), GetBasicQualType("bool"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeFloat), GetBasicQualType("float"));
@@ -233,6 +242,91 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEncodingAndBitSize) {
 
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 32);
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
+}
+
+TEST_F(TestTypeSystemClang, TestGetBuiltinTypeForDWARFEncodingAndBitSize) {
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitIn", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt(2)", llvm::dwarf::DW_ATE_signed_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt", llvm::dwarf::DW_ATE_signed_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt(2)", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt(2)", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeName(),
+            "_BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeName(),
+            "_BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt(129)", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
+
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitIn", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_unsigned_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeName(),
+            "unsigned _BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeName(),
+            "unsigned _BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt(129)", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
+}
+
+TEST_F(TestTypeSystemClang, TestBitIntTypeInfo) {
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeInfo(),
+            eTypeIsSigned | eTypeIsScalar | eTypeHasValue | eTypeIsInteger);
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeInfo(),
+            eTypeIsScalar | eTypeHasValue | eTypeIsInteger);
 }
 
 TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
@@ -1120,6 +1214,30 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
   EXPECT_EQ(method_it->getParamDecl(1)->getDeclContext(), *method_it);
 }
 
+TEST_F(TestTypeSystemClang, TestGetTypeInfo) {
+  // Tests TypeSystemClang::GetTypeInfo
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  CompilerType complex_int = m_ast->GetType(ast.getComplexType(ast.IntTy));
+  EXPECT_EQ(complex_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType complex_float = m_ast->GetType(ast.getComplexType(ast.FloatTy));
+  EXPECT_EQ(complex_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType vector_of_int =
+      m_ast->GetType(ast.getVectorType(ast.IntTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsVector | eTypeHasChildren));
+
+  CompilerType vector_of_float =
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsVector | eTypeHasChildren));
+}
+
 TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
   // Tests TypeSystemClang::DeclGetMangledName for constructors/destructors
   // with and without AsmLabels.
@@ -1150,12 +1268,12 @@ TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
       is_explicit, is_attr_used, is_artificial);
 
   auto *ctor = m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), "S", /*asm_label=*/"$__lldb_func:0x0:0x0:S",
+      t.GetOpaqueQualType(), "S", /*asm_label=*/"$__lldb_func::0x0:0x0:S",
       function_type, lldb::AccessType::eAccessPublic, is_virtual, is_static,
       is_inline, is_explicit, is_attr_used, is_artificial);
 
   auto *dtor = m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), "~S", /*asm_label=*/"$__lldb_func:0x0:0x0:~S",
+      t.GetOpaqueQualType(), "~S", /*asm_label=*/"$__lldb_func::0x0:0x0:~S",
       function_type, lldb::AccessType::eAccessPublic, is_virtual, is_static,
       is_inline, is_explicit, is_attr_used, is_artificial);
 
@@ -1181,11 +1299,11 @@ TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
   EXPECT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
                    m_ast->DeclGetMangledName(ctor).GetStringRef())
                    .data(),
-               "$__lldb_func:0x0:0x0:S");
+               "$__lldb_func:C0:0x0:0x0:S");
   EXPECT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
                    m_ast->DeclGetMangledName(dtor).GetStringRef())
                    .data(),
-               "$__lldb_func:0x0:0x0:~S");
+               "$__lldb_func:D1:0x0:0x0:~S");
 }
 
 struct AsmLabelTestCase {
@@ -1215,10 +1333,10 @@ protected:
 };
 
 static AsmLabelTestCase g_asm_label_test_cases[] = {
-    {/*mangled=*/"$__lldb_func:0x0:0x0:_Z3foov",
+    {/*mangled=*/"$__lldb_func::0x0:0x0:_Z3foov",
      /*expected=*/"_Z3foov"},
-    {/*mangled=*/"$__lldb_func:0x0:0x0:foo",
-     /*expected=*/"$__lldb_func:0x0:0x0:foo"},
+    {/*mangled=*/"$__lldb_func::0x0:0x0:foo",
+     /*expected=*/"$__lldb_func::0x0:0x0:foo"},
     {/*mangled=*/"foo",
      /*expected=*/"foo"},
     {/*mangled=*/"_Z3foov",

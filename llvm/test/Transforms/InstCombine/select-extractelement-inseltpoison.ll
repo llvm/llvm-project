@@ -208,6 +208,3 @@ define <4 x i32> @extract_cond_type_mismatch(<4 x i32> %x, <4 x i32> %y, <5 x i1
   %r = select i1 %cond, <4 x i32> %x, <4 x i32> %y
   ret <4 x i32> %r
 }
-
-
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

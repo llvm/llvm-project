@@ -348,8 +348,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
   // Find the common bits from all possible shifts.
   unsigned ShiftAmtZeroMask = RHS.Zero.zextOrTrunc(32).getZExtValue();
   unsigned ShiftAmtOneMask = RHS.One.zextOrTrunc(32).getZExtValue();
-  Known.Zero.setAllBits();
-  Known.One.setAllBits();
+  Known.setAllConflict();
   for (unsigned ShiftAmt = MinShiftAmount; ShiftAmt <= MaxShiftAmount;
        ++ShiftAmt) {
     // Skip if the shift amount is impossible.
@@ -372,8 +371,7 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
   unsigned BitWidth = LHS.getBitWidth();
   auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
     KnownBits Known = LHS;
-    Known.Zero.lshrInPlace(ShiftAmt);
-    Known.One.lshrInPlace(ShiftAmt);
+    Known >>= ShiftAmt;
     // High bits are known zero.
     Known.Zero.setHighBits(ShiftAmt);
     return Known;
@@ -406,8 +404,7 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
 
   unsigned ShiftAmtZeroMask = RHS.Zero.zextOrTrunc(32).getZExtValue();
   unsigned ShiftAmtOneMask = RHS.One.zextOrTrunc(32).getZExtValue();
-  Known.Zero.setAllBits();
-  Known.One.setAllBits();
+  Known.setAllConflict();
   for (unsigned ShiftAmt = MinShiftAmount; ShiftAmt <= MaxShiftAmount;
        ++ShiftAmt) {
     // Skip if the shift amount is impossible.
@@ -466,8 +463,7 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
 
   unsigned ShiftAmtZeroMask = RHS.Zero.zextOrTrunc(32).getZExtValue();
   unsigned ShiftAmtOneMask = RHS.One.zextOrTrunc(32).getZExtValue();
-  Known.Zero.setAllBits();
-  Known.One.setAllBits();
+  Known.setAllConflict();
   for (unsigned ShiftAmt = MinShiftAmount; ShiftAmt <= MaxShiftAmount;
       ++ShiftAmt) {
     // Skip if the shift amount is impossible.

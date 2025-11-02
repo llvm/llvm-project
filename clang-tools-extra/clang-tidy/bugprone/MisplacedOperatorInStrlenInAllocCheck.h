@@ -1,4 +1,4 @@
-//===--- MisplacedOperatorInStrlenInAllocCheck.h - clang-tidy----*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// argument to a memory allocation function.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc.html
 class MisplacedOperatorInStrlenInAllocCheck : public ClangTidyCheck {
 public:
   MisplacedOperatorInStrlenInAllocCheck(StringRef Name,

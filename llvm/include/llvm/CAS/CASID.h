@@ -95,8 +95,7 @@ public:
   }
 
   friend hash_code hash_value(const CASID &ID) {
-    ArrayRef<uint8_t> Hash = ID.getHash();
-    return hash_combine_range(Hash.begin(), Hash.end());
+    return hash_combine_range(ID.getHash());
   }
 
   const CASContext &getContext() const {

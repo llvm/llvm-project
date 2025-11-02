@@ -92,9 +92,8 @@ cbuffer CB3 {
 StructuredBuffer<float> SB[10];
 
 // CHECK: VarDecl {{.*}} SB2 'StructuredBuffer<float>[10]'
+// CHECK: HLSLVkBindingAttr {{.*}} 2 0
 // DXIL: HLSLResourceBindingAttr {{.*}} Implicit
-// DXIL-NOT: HLSLVkBindingAttr
-// SPV: HLSLVkBindingAttr {{.*}} 2 0
 // SPV-NOT: HLSLResourceBindingAttr {{.*}} Implicit
 [[vk::binding(2)]]
 StructuredBuffer<float> SB2[10];

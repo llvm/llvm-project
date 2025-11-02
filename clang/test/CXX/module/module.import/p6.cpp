@@ -3,6 +3,9 @@
 
 // RUN: %clang_cc1 -std=c++20 -x c++-header %t/bad-header-unit.h \
 // RUN:  -emit-header-unit -o %t/bad-header-unit.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -x c++-header %t/bad-header-unit-declspec.h \
+// RUN:  -emit-header-unit -o %t/bad-header-unit.pcm -verify \
+// RUN:  -fdeclspec
 
 //--- bad-header-unit.h
 
@@ -77,3 +80,13 @@ template <typename T> bool b() {
 }
 
 inline bool B = b<int>();
+
+__attribute__((weak)) int weak_fun_definition() { return 42; }
+
+__attribute__((weak)) int weak_var_definition = 42;
+
+//--- bad-header-unit-declspec.h
+
+/* The cases below should compile without diagnostics.  */
+
+__declspec(selectany) int selectany_var_definition = 42; // expected-no-diagnostics

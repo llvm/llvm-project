@@ -14,6 +14,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/DebugLog.h"
 #include <memory>
 
 #define DEBUG_TYPE "convert-to-llvm"
@@ -79,13 +80,13 @@ public:
 
   void apply(MLIRContext *context,
              MutableArrayRef<Dialect *> dialects) const final {
-    LLVM_DEBUG(llvm::dbgs() << "Convert to LLVM extension load\n");
+    LDBG() << "Convert to LLVM extension load";
     for (Dialect *dialect : dialects) {
       auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
       if (!iface)
         continue;
-      LLVM_DEBUG(llvm::dbgs() << "Convert to LLVM found dialect interface for "
-                              << dialect->getNamespace() << "\n");
+      LDBG() << "Convert to LLVM found dialect interface for "
+             << dialect->getNamespace();
       iface->loadDependentDialects(context);
     }
   }
@@ -173,7 +174,9 @@ struct DynamicConvertToLLVM : public ConvertToLLVMPassInterface {
     target.addLegalDialect<LLVM::LLVMDialect>();
     // Get the data layout analysis.
     const auto &dlAnalysis = manager.getAnalysis<DataLayoutAnalysis>();
-    LLVMTypeConverter typeConverter(context, &dlAnalysis);
+    const DataLayout &dl = dlAnalysis.getAtOrAbove(op);
+    LowerToLLVMOptions options(context, dl);
+    LLVMTypeConverter typeConverter(context, options, &dlAnalysis);
 
     // Configure the conversion with dialect level interfaces.
     for (ConvertToLLVMPatternInterface *iface : *interfaces)

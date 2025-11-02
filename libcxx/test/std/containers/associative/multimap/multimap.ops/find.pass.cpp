@@ -69,6 +69,19 @@ int main(int, char**) {
       assert(r == m.end());
     }
   }
+  {
+    using Pair = std::pair<const int, int>;
+    using Map  = std::multimap<int, int, std::greater<int> >;
+    Pair arr[] = {
+        Pair(5, 1), Pair(5, 2), Pair(5, 3), Pair(7, 1), Pair(7, 2), Pair(7, 3), Pair(9, 1), Pair(9, 2), Pair(9, 3)};
+    const Map m(arr, arr + sizeof(arr) / sizeof(arr[0]));
+    assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), m.find(5)));
+    assert(m.find(6) == m.end());
+    assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), m.find(7)));
+    assert(m.find(8) == m.end());
+    assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), m.find(9)));
+    assert(m.find(10) == m.end());
+  }
 #if TEST_STD_VER >= 11
   {
     typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> M;

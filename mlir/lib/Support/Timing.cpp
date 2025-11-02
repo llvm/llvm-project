@@ -50,7 +50,8 @@ public:
   llvm::sys::SmartRWMutex<true> identifierMutex;
 
   /// A thread local cache of identifiers to reduce lock contention.
-  ThreadLocalCache<llvm::StringMap<llvm::StringMapEntry<std::nullopt_t> *>>
+  ThreadLocalCache<
+      llvm::StringMap<llvm::StringMapEntry<llvm::EmptyStringSetTag> *>>
       localIdentifierCache;
 
   TimingManagerImpl() : identifiers(identifierAllocator) {}
@@ -319,7 +320,6 @@ public:
   void mergeChildren(AsyncChildrenMap &&other) {
     for (auto &thread : other) {
       mergeChildren(std::move(thread.second));
-      assert(thread.second.empty());
     }
     other.clear();
   }

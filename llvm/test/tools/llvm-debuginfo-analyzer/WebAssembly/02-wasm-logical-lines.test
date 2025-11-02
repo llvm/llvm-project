@@ -71,5 +71,5 @@
 ; ONE-NEXT: [003]                 {Code} 'local.get	6'
 ; ONE-NEXT: [003]                 {Code} 'return'
 ; ONE-NEXT: [003]                 {Code} 'end'
-; ONE-NEXT: [003]     6           {Line}
-; ONE-NEXT: [003]                 {Code} 'return'
+; ONE-NEXT: [002]     6         {Line}
+; ONE-NEXT: [002]               {Code} 'return'

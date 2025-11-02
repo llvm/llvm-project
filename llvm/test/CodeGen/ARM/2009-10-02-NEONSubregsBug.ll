@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=armv7-eabi -mcpu=cortex-a8 -enable-unsafe-fp-math < %s
+; RUN: llc -mtriple=armv7-eabi -mcpu=cortex-a8 < %s
 ; PR5367
 
 define arm_aapcs_vfpcc void @_Z27Benchmark_SceDualQuaternionPvm(ptr nocapture %pBuffer, i32 %numItems) nounwind {
