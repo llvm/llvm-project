@@ -50,21 +50,19 @@ public:
 
     std::string getFullPath() const { return FilePath; }
 
-    bool setFilter(BloomFilter F) {
+    void setFilter(BloomFilter F) {
       std::lock_guard<std::shared_mutex> Lock(Mtx);
       if (Filter)
-        return false;
+        return;
       Filter.emplace(std::move(F));
-      return true;
     }
 
-    bool ensureFilterBuilt(const BloomFilterBuilder &FB,
+    void ensureFilterBuilt(const BloomFilterBuilder &FB,
                            ArrayRef<StringRef> Symbols) {
       std::lock_guard<std::shared_mutex> Lock(Mtx);
       if (Filter)
-        return false;
+        return;
       Filter.emplace(FB.build(Symbols));
-      return true;
     }
 
     bool mayContain(StringRef Symbol) const {
@@ -181,13 +179,12 @@ public:
     return false;
   }
 
-  bool removeLibrary(StringRef Path) {
+  void removeLibrary(StringRef Path) {
     std::unique_lock<std::shared_mutex> Lock(Mtx);
     auto I = Libraries.find(Path);
     if (I == Libraries.end())
-      return false;
+      return;
     Libraries.erase(I);
-    return true;
   }
 
   void markLoaded(StringRef Path) {

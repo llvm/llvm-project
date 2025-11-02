@@ -527,4 +527,11 @@ gpu.module @test_distribution {
     %cst_1 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 16]>} dense<[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]]> : vector<1x16xindex>
     gpu.return
   }
+
+  // CHECK-LABEL: scalar_broadcast
+  gpu.func @scalar_broadcast(%arg0: index) {
+    // CHECK: vector.broadcast {{.*}} : index to vector<1x1x1xindex>
+    %broadcast = vector.broadcast %arg0 {layout_result_0 = #xegpu.layout<sg_layout = [4, 8, 1], sg_data = [1, 1, 1]>} : index to vector<4x1x1xindex>
+    gpu.return
+  }
 }

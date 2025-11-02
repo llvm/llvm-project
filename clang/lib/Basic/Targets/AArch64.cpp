@@ -206,8 +206,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs" &&
-      Name != "pauthtest")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
     return false;
 
   ABI = Name;
@@ -219,12 +218,6 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     // aapcs-soft is not allowed for targets with an FPU, to avoid there being
     // two incomatible ABIs.
     Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
-    return false;
-  }
-  if (getTriple().getEnvironment() == llvm::Triple::PAuthTest &&
-      getTriple().getOS() != llvm::Triple::Linux) {
-    Diags.Report(diag::err_target_unsupported_abi_for_triple)
-        << getTriple().getEnvironmentName() << getTriple().getTriple();
     return false;
   }
   return true;
@@ -818,10 +811,10 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
-      .Cases("aarch64", "arm64", "arm", true)
+      .Cases({"aarch64", "arm64", "arm"}, true)
       .Case("fmv", HasFMV)
       .Case("fp", FPU & FPUMode)
-      .Cases("neon", "simd", FPU & NeonMode)
+      .Cases({"neon", "simd"}, FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
       .Case("rng", HasRandGen)
@@ -836,8 +829,8 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("cssc", HasCSSC)
       .Case("sha2", HasSHA2)
       .Case("sha3", HasSHA3)
-      .Cases("aes", "pmull", HasAES)
-      .Cases("fp16", "fullfp16", HasFullFP16)
+      .Cases({"aes", "pmull"}, HasAES)
+      .Cases({"fp16", "fullfp16"}, HasFullFP16)
       .Case("dit", HasDIT)
       .Case("dpb", HasCCPP)
       .Case("dpb2", HasCCDP)
@@ -866,9 +859,9 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("memtag", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
-      .Cases("ssbs", "ssbs2", HasSSBS)
+      .Cases({"ssbs", "ssbs2"}, HasSSBS)
       .Case("bti", HasBTI)
-      .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
+      .Cases({"ls64", "ls64_v", "ls64_accdata"}, HasLS64)
       .Case("wfxt", HasWFxT)
       .Case("rcpc3", HasRCPC3)
       .Case("fp8", HasFP8)

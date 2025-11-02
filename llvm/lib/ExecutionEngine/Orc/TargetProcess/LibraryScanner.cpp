@@ -644,7 +644,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef Path,
     }
   }
 #else
-  sys::fs::real_path(Path, Resolved); // Windows fallback
+  EC = sys::fs::real_path(Path, Resolved); // Windows fallback
 #endif
 
   std::string Canonical = Resolved.str().str();

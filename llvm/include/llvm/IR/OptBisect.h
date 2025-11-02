@@ -51,7 +51,7 @@ public:
   /// through LLVMContext.
   OptBisect() = default;
 
-  virtual ~OptBisect() = default;
+  ~OptBisect() override = default;
 
   /// Checks the bisect limit to determine if the specified pass should run.
   ///
