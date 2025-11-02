@@ -81,8 +81,8 @@ template string operator+ <char, char_traits<char>, allocator<char>>(char const*
 
 namespace {
 
-inline void throw_from_string_out_of_range(const string& func) {
-  std::__throw_out_of_range((func + ": out of range").c_str());
+inline void throw_from_string_out_of_range(const char* func) {
+  std::__throw_out_of_range((std::string(func) + ": out of range").c_str());
 }
 
 inline void throw_from_string_invalid_arg(const string& func) {
@@ -92,7 +92,7 @@ inline void throw_from_string_invalid_arg(const string& func) {
 // as_integer
 
 template <typename V, typename S, typename F>
-inline V as_integer_helper(const string& func, const S& str, size_t* idx, int base, F f) {
+inline V as_integer_helper(const char* func, const S& str, size_t* idx, int base, F f) {
   typename S::value_type* ptr                             = nullptr;
   const typename S::value_type* const p                   = str.c_str();
   __libcpp_remove_reference_t<decltype(errno)> errno_save = errno;
@@ -109,42 +109,14 @@ inline V as_integer_helper(const string& func, const S& str, size_t* idx, int ba
 }
 
 template <typename V, typename S>
-inline V as_integer(const string& func, const S& s, size_t* idx, int base);
+inline V as_integer(const char* func, const S& s, size_t* idx, int base);
 
 // string
-template <>
-inline int as_integer(const string& func, const string& s, size_t* idx, int base) {
-  // Use long as no Standard string to integer exists.
-  long r = as_integer_helper<long>(func, s, idx, base, strtol);
-  if (r < numeric_limits<int>::min() || numeric_limits<int>::max() < r)
-    throw_from_string_out_of_range(func);
-  return static_cast<int>(r);
-}
-
-template <>
-inline long as_integer(const string& func, const string& s, size_t* idx, int base) {
-  return as_integer_helper<long>(func, s, idx, base, strtol);
-}
-
-template <>
-inline unsigned long as_integer(const string& func, const string& s, size_t* idx, int base) {
-  return as_integer_helper<unsigned long>(func, s, idx, base, strtoul);
-}
-
-template <>
-inline long long as_integer(const string& func, const string& s, size_t* idx, int base) {
-  return as_integer_helper<long long>(func, s, idx, base, strtoll);
-}
-
-template <>
-inline unsigned long long as_integer(const string& func, const string& s, size_t* idx, int base) {
-  return as_integer_helper<unsigned long long>(func, s, idx, base, strtoull);
-}
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 // wstring
 template <>
-inline int as_integer(const string& func, const wstring& s, size_t* idx, int base) {
+inline int as_integer(const char* func, const wstring& s, size_t* idx, int base) {
   // Use long as no Stantard string to integer exists.
   long r = as_integer_helper<long>(func, s, idx, base, wcstol);
   if (r < numeric_limits<int>::min() || numeric_limits<int>::max() < r)
@@ -153,22 +125,22 @@ inline int as_integer(const string& func, const wstring& s, size_t* idx, int bas
 }
 
 template <>
-inline long as_integer(const string& func, const wstring& s, size_t* idx, int base) {
+inline long as_integer(const char* func, const wstring& s, size_t* idx, int base) {
   return as_integer_helper<long>(func, s, idx, base, wcstol);
 }
 
 template <>
-inline unsigned long as_integer(const string& func, const wstring& s, size_t* idx, int base) {
+inline unsigned long as_integer(const char* func, const wstring& s, size_t* idx, int base) {
   return as_integer_helper<unsigned long>(func, s, idx, base, wcstoul);
 }
 
 template <>
-inline long long as_integer(const string& func, const wstring& s, size_t* idx, int base) {
+inline long long as_integer(const char* func, const wstring& s, size_t* idx, int base) {
   return as_integer_helper<long long>(func, s, idx, base, wcstoll);
 }
 
 template <>
-inline unsigned long long as_integer(const string& func, const wstring& s, size_t* idx, int base) {
+inline unsigned long long as_integer(const char* func, const wstring& s, size_t* idx, int base) {
   return as_integer_helper<unsigned long long>(func, s, idx, base, wcstoull);
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
@@ -176,7 +148,7 @@ inline unsigned long long as_integer(const string& func, const wstring& s, size_
 // as_float
 
 template <typename V, typename S, typename F>
-inline V as_float_helper(const string& func, const S& str, size_t* idx, F f) {
+inline V as_float_helper(const char* func, const S& str, size_t* idx, F f) {
   typename S::value_type* ptr                             = nullptr;
   const typename S::value_type* const p                   = str.c_str();
   __libcpp_remove_reference_t<decltype(errno)> errno_save = errno;
@@ -193,54 +165,71 @@ inline V as_float_helper(const string& func, const S& str, size_t* idx, F f) {
 }
 
 template <typename V, typename S>
-inline V as_float(const string& func, const S& s, size_t* idx = nullptr);
+inline V as_float(const char* func, const S& s, size_t* idx = nullptr);
 
 template <>
-inline float as_float(const string& func, const string& s, size_t* idx) {
+inline float as_float(const char* func, const string& s, size_t* idx) {
   return as_float_helper<float>(func, s, idx, strtof);
 }
 
 template <>
-inline double as_float(const string& func, const string& s, size_t* idx) {
+inline double as_float(const char* func, const string& s, size_t* idx) {
   return as_float_helper<double>(func, s, idx, strtod);
 }
 
 template <>
-inline long double as_float(const string& func, const string& s, size_t* idx) {
+inline long double as_float(const char* func, const string& s, size_t* idx) {
   return as_float_helper<long double>(func, s, idx, strtold);
 }
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
-inline float as_float(const string& func, const wstring& s, size_t* idx) {
+inline float as_float(const char* func, const wstring& s, size_t* idx) {
   return as_float_helper<float>(func, s, idx, wcstof);
 }
 
 template <>
-inline double as_float(const string& func, const wstring& s, size_t* idx) {
+inline double as_float(const char* func, const wstring& s, size_t* idx) {
   return as_float_helper<double>(func, s, idx, wcstod);
 }
 
 template <>
-inline long double as_float(const string& func, const wstring& s, size_t* idx) {
+inline long double as_float(const char* func, const wstring& s, size_t* idx) {
   return as_float_helper<long double>(func, s, idx, wcstold);
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-} // unnamed namespace
+template <class Integer>
+Integer string_to_integer_impl(const char* func_name, const string& str, size_t* index, int base) {
+  Integer result;
+  from_chars_result status = std::from_chars(str.data(), str.data() + str.size(), result, base);
+  if (status.ec != std::errc()) {
+    if (status.ec == std::errc::result_out_of_range)
+      throw_from_string_out_of_range(func_name);
+    throw_from_string_invalid_arg(func_name);
+  }
+  if (index)
+    *index = status.ptr - str.data();
 
-int stoi(const string& str, size_t* idx, int base) { return as_integer<int>("stoi", str, idx, base); }
-
-long stol(const string& str, size_t* idx, int base) { return as_integer<long>("stol", str, idx, base); }
-
-unsigned long stoul(const string& str, size_t* idx, int base) {
-  return as_integer<unsigned long>("stoul", str, idx, base);
+  return result;
 }
 
-long long stoll(const string& str, size_t* idx, int base) { return as_integer<long long>("stoll", str, idx, base); }
+} // unnamed namespace
+
+int stoi(const string& str, size_t* idx, int base) { return string_to_integer_impl<int>("stoi", str, idx, base); }
+
+long stol(const string& str, size_t* idx, int base) { return string_to_integer_impl<long>("stol", str, idx, base); }
+
+unsigned long stoul(const string& str, size_t* idx, int base) {
+  return string_to_integer_impl<unsigned long>("stoul", str, idx, base);
+}
+
+long long stoll(const string& str, size_t* idx, int base) {
+  return string_to_integer_impl<long long>("stoll", str, idx, base);
+}
 
 unsigned long long stoull(const string& str, size_t* idx, int base) {
-  return as_integer<unsigned long long>("stoull", str, idx, base);
+  return string_to_integer_impl<unsigned long long>("stoull", str, idx, base);
 }
 
 float stof(const string& str, size_t* idx) { return as_float<float>("stof", str, idx); }
