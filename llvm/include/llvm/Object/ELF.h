@@ -261,6 +261,8 @@ public:
   ELFFile(const ELFFile &) = default;
   ELFFile &operator=(const ELFFile &) = default;
 
+  ELFFile(ELFFile &&) = default;
+
   // This is a callback that can be passed to a number of functions.
   // It can be used to ignore non-critical errors (warnings), which is
   // useful for dumpers, like llvm-readobj.

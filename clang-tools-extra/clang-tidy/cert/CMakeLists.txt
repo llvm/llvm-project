@@ -5,12 +5,10 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyCERTModule STATIC
   CERTTidyModule.cpp
-  DefaultOperatorNewAlignmentCheck.cpp
   DontModifyStdNamespaceCheck.cpp
   FloatLoopCounter.cpp
   LimitedRandomnessCheck.cpp
   MutatingCopyCheck.cpp
-  NonTrivialTypesLibcMemoryCallsCheck.cpp
   ProperlySeededRandomGeneratorCheck.cpp
   ThrownExceptionTypeCheck.cpp
 
