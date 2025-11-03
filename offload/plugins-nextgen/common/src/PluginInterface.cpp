@@ -403,19 +403,30 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   ImagePtr = &Image;
 
   // Retrieve kernel environment object for the kernel.
-  std::string EnvironmentName = std::string(Name) + "_kernel_environment";
-  GenericGlobalHandlerTy &GHandler = GenericDevice.Plugin.getGlobalHandler();
-  if (GHandler.isSymbolInImage(GenericDevice, Image, EnvironmentName)) {
-    GlobalTy KernelEnv(EnvironmentName, sizeof(KernelEnvironment),
-                       &KernelEnvironment);
-    if (auto Err =
-            GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv))
-      return Err;
-  } else {
+  switch (identify_magic(Image.getMemoryBuffer().getBuffer())) {
+  case file_magic::elf_executable: {
+    std::string EnvironmentName = std::string(Name) + "_kernel_environment";
+    GenericGlobalHandlerTy &GHandler = GenericDevice.Plugin.getGlobalHandler();
+    if (GHandler.isSymbolInImage(GenericDevice, Image, EnvironmentName)) {
+      GlobalTy KernelEnv(EnvironmentName, sizeof(KernelEnvironment),
+                         &KernelEnvironment);
+      if (auto Err =
+              GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv))
+        return Err;
+    } else {
+      KernelEnvironment = KernelEnvironmentTy{};
+      DP("Failed to read kernel environment for '%s' Using default Bare (0) "
+         "execution mode\n",
+         getName());
+    }
+    break;
+  }
+  case file_magic::spirv_object:
     KernelEnvironment = KernelEnvironmentTy{};
-    DP("Failed to read kernel environment for '%s' Using default Bare (0) "
-       "execution mode\n",
-       getName());
+    break;
+  default:
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "Unsupported image format for kernel '%s'", getName());
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
@@ -797,20 +808,22 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
   if (auto Err = callGlobalDestructors(Plugin, *Image))
     return Err;
 
-  GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-  auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
-  if (!ProfOrErr)
-    return ProfOrErr.takeError();
+  if (utils::elf::isELF(Image->getMemoryBuffer().getBuffer())) {
+    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+    auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
+    if (!ProfOrErr)
+      return ProfOrErr.takeError();
 
-  if (!ProfOrErr->empty()) {
-    // Dump out profdata
-    if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
-        uint32_t(DeviceDebugKind::PGODump))
-      ProfOrErr->dump();
+    if (!ProfOrErr->empty()) {
+      // Dump out profdata
+      if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
+          uint32_t(DeviceDebugKind::PGODump))
+        ProfOrErr->dump();
 
-    // Write data to profiling file
-    if (auto Err = ProfOrErr->write())
-      return Err;
+      // Write data to profiling file
+      if (auto Err = ProfOrErr->write())
+        return Err;
+    }
   }
 
   return unloadBinaryImpl(Image);
