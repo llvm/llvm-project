@@ -451,7 +451,7 @@ def err_unspecified_size_with_static : Error<
 def err_expected_parentheses_around_typename : Error<
   "expected parentheses around type name in %0 expression">;
 def err_expansion_stmt_requires_range : Error<
-  "expansion statement must be range-based">;
+  "expansion statement must be a range-based for loop">;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;

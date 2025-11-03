@@ -10,12 +10,12 @@ struct initializer_list {
 
 void bad() {
   template for; // expected-error {{expected '(' after 'for'}}
-  template for (); // expected-error {{expected expression}} expected-error {{expected ';' in 'for' statement specifier}} expected-error {{expansion statement must be range-based}}
-  template for (;); // expected-error {{expected ';' in 'for' statement specifier}} expected-error {{expansion statement must be range-based}}
-  template for (;;); // expected-error {{expansion statement must be range-based}}
-  template for (int x;;); // expected-error {{expansion statement must be range-based}}
+  template for (); // expected-error {{expected expression}} expected-error {{expected ';' in 'for' statement specifier}} expected-error {{expansion statement must be a range-based for loop}}
+  template for (;); // expected-error {{expected ';' in 'for' statement specifier}} expected-error {{expansion statement must be a range-based for loop}}
+  template for (;;); // expected-error {{expansion statement must be a range-based for loop}}
+  template for (int x;;); // expected-error {{expansion statement must be a range-based for loop}}
   template for (x : {1}); // expected-error {{expansion statement requires type for expansion variable}}
-  template for (: {1}); // expected-error {{expected expression}} expected-error {{expected ';' in 'for' statement specifier}} expected-error {{expansion statement must be range-based}}
+  template for (: {1}); // expected-error {{expected expression}} expected-error {{expected ';' in 'for' statement specifier}} expected-error {{expansion statement must be a range-based for loop}}
   template for (auto y : {1})]; // expected-error {{expected expression}}
   template for (auto y : {1}; // expected-error {{expected ')'}} expected-note {{to match this '('}}
 
