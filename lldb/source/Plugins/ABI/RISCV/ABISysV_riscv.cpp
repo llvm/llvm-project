@@ -815,9 +815,9 @@ void ABISysV_riscv::Terminate() {
 static uint32_t GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Cases("ra", "x1", LLDB_REGNUM_GENERIC_RA)
-      .Cases("sp", "x2", LLDB_REGNUM_GENERIC_SP)
-      .Cases("fp", "s0", LLDB_REGNUM_GENERIC_FP)
+      .Cases({"ra", "x1"}, LLDB_REGNUM_GENERIC_RA)
+      .Cases({"sp", "x2"}, LLDB_REGNUM_GENERIC_SP)
+      .Cases({"fp", "s0"}, LLDB_REGNUM_GENERIC_FP)
       .Case("a0", LLDB_REGNUM_GENERIC_ARG1)
       .Case("a1", LLDB_REGNUM_GENERIC_ARG2)
       .Case("a2", LLDB_REGNUM_GENERIC_ARG3)
