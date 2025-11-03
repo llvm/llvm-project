@@ -1739,15 +1739,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
       allocator->isReservedGlobalPlacementOperator())
     result = Builder.CreateLaunderInvariantGroup(result);
 
-  // Check what type of constructor call the sanitizer is checking
-  // Different UB can occour with custom overloads of operator new
+  // Check the default alignment of the type and why. Users may incorrectly
+  // return misaligned memory from a replaced operator new without knowing
+  // about default alignment.
   TypeCheckKind checkKind = CodeGenFunction::TCK_ConstructorCall;
   const TargetInfo &TI = getContext().getTargetInfo();
   unsigned DefaultTargetAlignment = TI.getNewAlign() / TI.getCharWidth();
   if (SanOpts.has(SanitizerKind::Alignment) &&
       (DefaultTargetAlignment >
        CGM.getContext().getTypeAlignInChars(allocType).getQuantity()))
-    checkKind = CodeGenFunction::TCK_ConstructorCallOverloadedNew;
+    checkKind = CodeGenFunction::TCK_ConstructorCallMinimumAlign;
 
   // Emit sanitizer checks for pointer value now, so that in the case of an
   // array it was checked only once and not at each constructor call. We may
