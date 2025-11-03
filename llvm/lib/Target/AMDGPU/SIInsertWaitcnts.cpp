@@ -1306,19 +1306,21 @@ bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
 
 void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   if (hasRedundantXCntWithKmCnt(Wait)) {
-    if (hasPendingEvent(VMEM_GROUP))
+    if (hasPendingEvent(VMEM_GROUP)) {
       // Only clear the SMEM_GROUP event, but VMEM_GROUP could still require
       // handling.
       PendingEvents &= ~(1 << SMEM_GROUP);
-    else
+    } else {
       applyWaitcnt(X_CNT, 0);
+    }
     return;
   }
-  if (canOptimizeXCntWithLoadCnt(Wait))
+  if (canOptimizeXCntWithLoadCnt(Wait)) {
     // On entry to a block with multiple predescessors, there may
     // be pending SMEM and VMEM events active at the same time.
     // In such cases, only clear one active event at a time.
     return applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
+  }
   applyWaitcnt(X_CNT, Wait.XCnt);
 }
 
@@ -1748,10 +1750,11 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
     if ((CT == KM_CNT && ScoreBrackets.hasRedundantXCntWithKmCnt(PreCombine)) ||
         (CT == LOAD_CNT &&
-         ScoreBrackets.canOptimizeXCntWithLoadCnt(PreCombine)))
+         ScoreBrackets.canOptimizeXCntWithLoadCnt(PreCombine))) {
       // Xcnt may need to be updated depending on a pre-existing KM/LOAD_CNT
       // due to taking the backedge of a block.
       ScoreBrackets.applyXcnt(PreCombine);
+    }
     if (!WaitInstrs[CT])
       continue;
 
