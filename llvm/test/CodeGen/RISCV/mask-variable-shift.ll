@@ -5,16 +5,14 @@
 define i32 @mask_pair(i32 %x, i32 %y) {
 ; RV32-LABEL: mask_pair:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a2, -1
-; RV32-NEXT:    sll a1, a2, a1
-; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    srl a0, a0, a1
+; RV32-NEXT:    sll a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mask_pair:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a2, -1
-; RV64-NEXT:    sllw a1, a2, a1
-; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    sllw a0, a0, a1
 ; RV64-NEXT:    ret
   %shl = shl nsw i32 -1, %y
   %and = and i32 %shl, %x
@@ -46,9 +44,8 @@ define i64 @mask_pair_64(i64 %x, i64 %y) {
 ;
 ; RV64-LABEL: mask_pair_64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a2, -1
-; RV64-NEXT:    sll a1, a2, a1
-; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    srl a0, a0, a1
+; RV64-NEXT:    sll a0, a0, a1
 ; RV64-NEXT:    ret
   %shl = shl nsw i64 -1, %y
   %and = and i64 %shl, %x

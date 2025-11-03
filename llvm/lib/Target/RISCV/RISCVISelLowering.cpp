@@ -25320,3 +25320,12 @@ ArrayRef<MCPhysReg> RISCVTargetLowering::getRoundingControlRegisters() const {
   }
   return {};
 }
+
+bool RISCVTargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  if (VT.isVector())
+    return false;
+
+  return VT.getScalarSizeInBits() <= Subtarget.getXLen();
+}
