@@ -1531,6 +1531,12 @@ public:
     setUnderlyingValue(&I);
   }
 
+  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
+                DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
+        VPIRMetadata(Metadata), Opcode(Opcode) {}
+
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
@@ -2337,17 +2343,16 @@ protected:
 /// first operand of the recipe and the incoming value from the backedge is the
 /// second operand.
 struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
-  VPFirstOrderRecurrencePHIRecipe(PHINode *Phi, VPValue &Start,
-                                  VPValue &BackedgeValue)
-      : VPHeaderPHIRecipe(VPDef::VPFirstOrderRecurrencePHISC, Phi, &Start) {
-    addOperand(&BackedgeValue);
-  }
+  VPFirstOrderRecurrencePHIRecipe(PHINode *Phi, VPValue &Start)
+      : VPHeaderPHIRecipe(VPDef::VPFirstOrderRecurrencePHISC, Phi, &Start) {}
 
   VP_CLASSOF_IMPL(VPDef::VPFirstOrderRecurrencePHISC)
 
   VPFirstOrderRecurrencePHIRecipe *clone() override {
-    return new VPFirstOrderRecurrencePHIRecipe(
-        cast<PHINode>(getUnderlyingInstr()), *getOperand(0), *getOperand(1));
+    auto *R = new VPFirstOrderRecurrencePHIRecipe(
+        cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
+    R->addOperand(getBackedgeValue());
+    return R;
   }
 
   void execute(VPTransformState &State) override;
@@ -2413,21 +2418,20 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
-                       VPValue &BackedgeValue, ReductionStyle Style,
+                       ReductionStyle Style,
                        bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start), Kind(Kind),
         Style(Style),
-        HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
-    addOperand(&BackedgeValue);
-  }
+        HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {}
 
   ~VPReductionPHIRecipe() override = default;
 
   VPReductionPHIRecipe *clone() override {
-    return new VPReductionPHIRecipe(
+    auto *R = new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), *getBackedgeValue(), Style,
-        HasUsesOutsideReductionChain);
+        *getOperand(0), Style, HasUsesOutsideReductionChain);
+    R->addOperand(getBackedgeValue());
+    return R;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionPHISC)
@@ -2442,11 +2446,11 @@ public:
     return Partial ? Partial->VFScaleFactor : 1;
   }
 
-  /// Set the VFScaleFactor for this reduction phi. Can only be set to a factor
-  /// > 1.
-  void setVFScaleFactor(unsigned ScaleFactor) {
-    assert(ScaleFactor > 1 && "must set to scale factor > 1");
-    Style = RdxUnordered{ScaleFactor};
+  /// Set the factor that the VF of this recipe's output should be scaled by.
+  void setVFScaleFactor(unsigned Factor) {
+    auto *Partial = std::get_if<RdxUnordered>(&Style);
+    assert(Partial && "Can only set VFScaleFactor for unordered reductions");
+    Partial->VFScaleFactor = Factor;
   }
 
   /// Returns the number of incoming values, also number of incoming blocks.

@@ -16,6 +16,7 @@
 #include "VPlan.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 
@@ -28,6 +29,7 @@ class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 class VPBuilder;
 class VPRecipeBuilder;
 struct VFRange;
@@ -426,6 +428,14 @@ struct VPlanTransforms {
   /// users in the original exit block using the VPIRInstruction wrapping to the
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
+
+  /// Detect and create partial reduction recipes for scaled reductions in
+  /// \p Plan. Must be called after recipe construction. If partial reductions
+  /// are only valid for a subset of VFs in Range, Range.End is updated.
+  static void
+  createPartialReductions(VPlan &Plan, VFRange &Range,
+                          const TargetTransformInfo *TTI,
+                          TargetTransformInfo::TargetCostKind CostKind);
 };
 
 } // namespace llvm

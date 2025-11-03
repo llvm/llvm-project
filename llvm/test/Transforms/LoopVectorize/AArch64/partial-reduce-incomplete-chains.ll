@@ -168,42 +168,32 @@ define void @chained_sext_adds(ptr noalias %src, ptr noalias %dst) #0 {
 ;
 ; CHECK-LABEL: define void @chained_sext_adds(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1000, [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1000, [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1000, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i8>, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 4 x i8> [[WIDE_LOAD]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i32> [[VEC_PHI]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7]] = add <vscale x 4 x i32> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP1]])
+; CHECK-NEXT:    [[PARTIAL_REDUCE1]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[PARTIAL_REDUCE]], <16 x i32> [[TMP1]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE1]])
 ; CHECK-NEXT:    store i32 [[TMP9]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[EXIT]]:
+; CHECK:       [[EXIT:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 992, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[TMP9]], %[[SCALAR_PH]] ], [ [[ADD_1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC]], align 1
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i8 [[L]] to i32

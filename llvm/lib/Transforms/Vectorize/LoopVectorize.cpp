@@ -7999,212 +7999,51 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
   return Recipe;
 }
 
-/// Find all possible partial reductions in the loop and track all of those that
-/// are valid so recipes can be formed later.
-void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
-  // Find all possible partial reductions, grouping chains by their PHI. This
-  // grouping allows invalidating the whole chain, if any link is not a valid
-  // partial reduction.
-  MapVector<Instruction *,
-            SmallVector<std::pair<PartialReductionChain, unsigned>>>
-      ChainsByPhi;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
-    if (Instruction *RdxExitInstr = RdxDesc.getLoopExitInstr())
-      getScaledReductions(Phi, RdxExitInstr, Range, ChainsByPhi[Phi]);
-  }
-
-  // A partial reduction is invalid if any of its extends are used by
-  // something that isn't another partial reduction. This is because the
-  // extends are intended to be lowered along with the reduction itself.
-
-  // Build up a set of partial reduction ops for efficient use checking.
-  SmallPtrSet<User *, 4> PartialReductionOps;
-  for (const auto &[_, Chains] : ChainsByPhi)
-    for (const auto &[PartialRdx, _] : Chains)
-      PartialReductionOps.insert(PartialRdx.ExtendUser);
-
-  auto ExtendIsOnlyUsedByPartialReductions =
-      [&PartialReductionOps](Instruction *Extend) {
-        return all_of(Extend->users(), [&](const User *U) {
-          return PartialReductionOps.contains(U);
-        });
-      };
-
-  // Check if each use of a chain's two extends is a partial reduction
-  // and only add those that don't have non-partial reduction users.
-  for (const auto &[_, Chains] : ChainsByPhi) {
-    for (const auto &[Chain, Scale] : Chains) {
-      if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
-          (!Chain.ExtendB ||
-           ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
-        ScaledReductionMap.try_emplace(Chain.Reduction, Scale);
-    }
-  }
-
-  // Check that all partial reductions in a chain are only used by other
-  // partial reductions with the same scale factor. Otherwise we end up creating
-  // users of scaled reductions where the types of the other operands don't
-  // match.
-  for (const auto &[Phi, Chains] : ChainsByPhi) {
-    for (const auto &[Chain, Scale] : Chains) {
-      auto AllUsersPartialRdx = [ScaleVal = Scale, RdxPhi = Phi,
-                                 this](const User *U) {
-        auto *UI = cast<Instruction>(U);
-        if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader())
-          return UI == RdxPhi;
-        return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
-               !OrigLoop->contains(UI->getParent());
-      };
-
-      // If any partial reduction entry for the phi is invalid, invalidate the
-      // whole chain.
-      if (!all_of(Chain.Reduction->users(), AllUsersPartialRdx)) {
-        for (const auto &[Chain, _] : Chains)
-          ScaledReductionMap.erase(Chain.Reduction);
-        break;
-      }
-    }
-  }
-}
-
-bool VPRecipeBuilder::getScaledReductions(
-    Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
-    SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains) {
-  if (!CM.TheLoop->contains(RdxExitInstr))
-    return false;
-
-  auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
-  if (!Update)
-    return false;
-
-  Value *Op = Update->getOperand(0);
-  Value *PhiOp = Update->getOperand(1);
-  if (Op == PHI)
-    std::swap(Op, PhiOp);
-
-  using namespace llvm::PatternMatch;
-  // If Op is an extend, then it's still a valid partial reduction if the
-  // extended mul fulfills the other requirements.
-  // For example, reduce.add(ext(mul(ext(A), ext(B)))) is still a valid partial
-  // reduction since the inner extends will be widened. We already have oneUse
-  // checks on the inner extends so widening them is safe.
-  std::optional<TTI::PartialReductionExtendKind> OuterExtKind = std::nullopt;
-  if (match(Op, m_ZExtOrSExt(m_Mul(m_Value(), m_Value())))) {
-    auto *Cast = cast<CastInst>(Op);
-    OuterExtKind = TTI::getPartialReductionExtendKind(Cast->getOpcode());
-    Op = Cast->getOperand(0);
-  }
-
-  // Try and get a scaled reduction from the first non-phi operand.
-  // If one is found, we use the discovered reduction instruction in
-  // place of the accumulator for costing.
-  if (auto *OpInst = dyn_cast<Instruction>(Op)) {
-    if (getScaledReductions(PHI, OpInst, Range, Chains)) {
-      PHI = Chains.rbegin()->first.Reduction;
-
-      Op = Update->getOperand(0);
-      PhiOp = Update->getOperand(1);
-      if (Op == PHI)
-        std::swap(Op, PhiOp);
-    }
-  }
-  if (PhiOp != PHI)
-    return false;
-
-  // If the update is a binary operator, check both of its operands to see if
-  // they are extends. Otherwise, see if the update comes directly from an
-  // extend.
-  Instruction *Exts[2] = {nullptr};
-  BinaryOperator *ExtendUser = dyn_cast<BinaryOperator>(Op);
-  std::optional<unsigned> BinOpc;
-  Type *ExtOpTypes[2] = {nullptr};
-  TTI::PartialReductionExtendKind ExtKinds[2] = {TTI::PR_None};
-
-  auto CollectExtInfo = [this, OuterExtKind, &Exts, &ExtOpTypes,
-                         &ExtKinds](SmallVectorImpl<Value *> &Ops) -> bool {
-    for (const auto &[I, OpI] : enumerate(Ops)) {
-      const APInt *C;
-      if (I > 0 && match(OpI, m_APInt(C)) &&
-          canConstantBeExtended(C, ExtOpTypes[0], ExtKinds[0])) {
-        ExtOpTypes[I] = ExtOpTypes[0];
-        ExtKinds[I] = ExtKinds[0];
-        continue;
-      }
-      Value *ExtOp;
-      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
-        return false;
-      Exts[I] = cast<Instruction>(OpI);
-
-      // TODO: We should be able to support live-ins.
-      if (!CM.TheLoop->contains(Exts[I]))
-        return false;
-
-      ExtOpTypes[I] = ExtOp->getType();
-      ExtKinds[I] = TTI::getPartialReductionExtendKind(Exts[I]);
-      // The outer extend kind must be the same as the inner extends, so that
-      // they can be folded together.
-      if (OuterExtKind.has_value() && OuterExtKind.value() != ExtKinds[I])
-        return false;
-    }
-    return true;
-  };
-
-  if (ExtendUser) {
-    if (!ExtendUser->hasOneUse())
-      return false;
-
-    // Use the side-effect of match to replace BinOp only if the pattern is
-    // matched, we don't care at this point whether it actually matched.
-    match(ExtendUser, m_Neg(m_BinOp(ExtendUser)));
-
-    SmallVector<Value *> Ops(ExtendUser->operands());
-    if (!CollectExtInfo(Ops))
-      return false;
-
-    BinOpc = std::make_optional(ExtendUser->getOpcode());
-  } else if (match(Update, m_Add(m_Value(), m_Value()))) {
-    // We already know the operands for Update are Op and PhiOp.
-    SmallVector<Value *> Ops({Op});
-    if (!CollectExtInfo(Ops))
-      return false;
-
-    ExtendUser = Update;
-    BinOpc = std::nullopt;
-  } else
-    return false;
-
-  PartialReductionChain Chain(RdxExitInstr, Exts[0], Exts[1], ExtendUser);
-
-  TypeSize PHISize = PHI->getType()->getPrimitiveSizeInBits();
-  TypeSize ASize = ExtOpTypes[0]->getPrimitiveSizeInBits();
-  if (!PHISize.hasKnownScalarFactor(ASize))
-    return false;
-  unsigned TargetScaleFactor = PHISize.getKnownScalarFactor(ASize);
-
-  if (LoopVectorizationPlanner::getDecisionAndClampRange(
-          [&](ElementCount VF) {
-            InstructionCost Cost = TTI->getPartialReductionCost(
-                Update->getOpcode(), ExtOpTypes[0], ExtOpTypes[1],
-                PHI->getType(), VF, ExtKinds[0], ExtKinds[1], BinOpc,
-                CM.CostKind);
-            return Cost.isValid();
-          },
-          Range)) {
-    Chains.emplace_back(Chain, TargetScaleFactor);
-    return true;
-  }
-
-  return false;
-}
-
-VPRecipeBase *
-VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
-                                              VFRange &Range) {
-  assert(!R->isPhi() && "phis must be handled earlier");
-  // First, check for specific widening recipes that deal with optimizing
-  // truncates, calls and memory operations.
-
+VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
+                                                      VFRange &Range) {
+  // First, check for specific widening recipes that deal with inductions, Phi
+  // nodes, calls and memory operations.
   VPRecipeBase *Recipe;
+  if (auto *PhiR = dyn_cast<VPPhi>(R)) {
+    VPBasicBlock *Parent = PhiR->getParent();
+    [[maybe_unused]] VPRegionBlock *LoopRegionOf =
+        Parent->getEnclosingLoopRegion();
+    assert(LoopRegionOf && LoopRegionOf->getEntry() == Parent &&
+           "Non-header phis should have been handled during predication");
+    auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
+    assert(R->getNumOperands() == 2 && "Must have 2 operands for header phis");
+
+    VPHeaderPHIRecipe *PhiRecipe = nullptr;
+    assert((Legal->isReductionVariable(Phi) ||
+            Legal->isFixedOrderRecurrence(Phi)) &&
+           "can only widen reductions and fixed-order recurrences here");
+    VPValue *StartV = R->getOperand(0);
+    if (Legal->isReductionVariable(Phi)) {
+      const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
+      assert(RdxDesc.getRecurrenceStartValue() ==
+             Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
+
+      // If the PHI is used by a partial reduction, set the scale factor.
+      bool UseInLoopReduction = CM.isInLoopReduction(Phi);
+      bool UseOrderedReductions = CM.useOrderedReductions(RdxDesc);
+
+      PhiRecipe = new VPReductionPHIRecipe(
+          Phi, RdxDesc.getRecurrenceKind(), *StartV,
+          getReductionStyle(UseInLoopReduction, UseOrderedReductions, 1),
+          RdxDesc.hasUsesOutsideReductionChain());
+    } else {
+      // TODO: Currently fixed-order recurrences are modeled as chains of
+      // first-order recurrences. If there are no users of the intermediate
+      // recurrences in the chain, the fixed order recurrence should be modeled
+      // directly, enabling more efficient codegen.
+      PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
+    }
+    // Add backedge value.
+    PhiRecipe->addOperand(R->getOperand(1));
+    return PhiRecipe;
+  }
+  assert(!R->isPhi() && "only VPPhi nodes expected at this point");
+
   auto *VPI = cast<VPInstruction>(R);
   if (VPI->getOpcode() == Instruction::Trunc &&
       (Recipe = tryToOptimizeInductionTruncate(VPI, Range)))
@@ -8227,9 +8066,6 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
       VPI->getOpcode() == Instruction::Store)
     return tryToWidenMemory(VPI, Range);
 
-  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
-    return tryToCreatePartialReduction(VPI, ScaleFactor.value());
-
   if (!shouldWiden(Instr, Range))
     return nullptr;
 
@@ -8246,46 +8082,6 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
   }
 
   return tryToWiden(VPI);
-}
-
-VPRecipeBase *
-VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
-                                             unsigned ScaleFactor) {
-  assert(Reduction->getNumOperands() == 2 &&
-         "Unexpected number of operands for partial reduction");
-
-  VPValue *BinOp = Reduction->getOperand(0);
-  VPValue *Accumulator = Reduction->getOperand(1);
-  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
-  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
-      (isa<VPReductionRecipe>(BinOpRecipe) &&
-       cast<VPReductionRecipe>(BinOpRecipe)->isPartialReduction()))
-    std::swap(BinOp, Accumulator);
-
-  if (auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(Accumulator))
-    RedPhiR->setVFScaleFactor(ScaleFactor);
-
-  assert(ScaleFactor ==
-             vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
-         "all accumulators in chain must have same scale factor");
-
-  auto *ReductionI = Reduction->getUnderlyingInstr();
-  if (Reduction->getOpcode() == Instruction::Sub) {
-    SmallVector<VPValue *, 2> Ops;
-    Ops.push_back(Plan.getConstantInt(ReductionI->getType(), 0));
-    Ops.push_back(BinOp);
-    BinOp = new VPWidenRecipe(*ReductionI, Ops, VPIRFlags(*ReductionI),
-                              VPIRMetadata(), ReductionI->getDebugLoc());
-    Builder.insert(BinOp->getDefiningRecipe());
-  }
-
-  VPValue *Cond = nullptr;
-  if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent()))
-    Cond = getBlockInMask(Builder.getInsertBlock());
-
-  return new VPReductionRecipe(
-      RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
-      RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8422,11 +8218,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
-  VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, Builder,
+  VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, Legal, CM, PSE, Builder,
                                 BlockMaskCache);
-  // TODO: Handle partial reductions with EVL tail folding.
-  if (!CM.foldTailWithEVL())
-    RecipeBuilder.collectScaledReductions(Range);
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -8485,7 +8278,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       }
 
       VPRecipeBase *Recipe =
-          RecipeBuilder.tryToCreateWidenNonPhiRecipe(VPI, Range);
+          RecipeBuilder.tryToCreateWidenRecipe(VPI, Range);
       if (!Recipe)
         Recipe =
             RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
@@ -8546,13 +8339,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                 *Plan))
     return nullptr;
 
-  // Transform recipes to abstract recipes if it is legal and beneficial and
-  // clamp the range for better cost estimation.
-  // TODO: Enable following transform when the EVL-version of extended-reduction
-  // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
-                          OrigLoop);
+    // Create partial reduction recipes for scaled reductions.
+    VPlanTransforms::createPartialReductions(*Plan, Range, &TTI, CM.CostKind);
+
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
+                          CM.PSE, OrigLoop);
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
                              CostCtx, Range);
   }
@@ -8818,11 +8610,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, RdxDesc.getFastMathFlags()));
-      // If the PHI is used by a partial reduction, set the scale factor.
-      unsigned ScaleFactor =
-          RecipeBuilder.getScalingForReduction(RdxDesc.getLoopExitInstr())
-              .value_or(1);
-      auto *ScaleFactorVPV = Plan->getConstantInt(32, ScaleFactor);
+      auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
           {PhiR->getStartValue(), Iden, ScaleFactorVPV},
