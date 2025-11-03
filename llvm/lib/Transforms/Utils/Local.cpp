@@ -3416,7 +3416,11 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   // Create integer constant expression.
   auto createIntegerExpression = [&DIB](const Constant &CV) -> DIExpression * {
     const APInt &API = cast<ConstantInt>(&CV)->getValue();
-    std::optional<int64_t> InitIntOpt = API.trySExtValue();
+    std::optional<int64_t> InitIntOpt;
+    if (API.getBitWidth() == 1)
+      InitIntOpt = API.tryZExtValue();
+    else
+      InitIntOpt = API.trySExtValue();
     return InitIntOpt ? DIB.createConstantValueExpression(
                             static_cast<uint64_t>(*InitIntOpt))
                       : nullptr;
