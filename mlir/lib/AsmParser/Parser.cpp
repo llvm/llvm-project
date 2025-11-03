@@ -407,8 +407,8 @@ Parser::parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
                      "hexadecimal float constant out of range for type");
   }
 
-  APInt truncatedValue(typeSizeInBits, llvm::ArrayRef(intValue.getRawData(),
-                                                      intValue.getNumWords()));
+  APInt truncatedValue(typeSizeInBits,
+                       ArrayRef(intValue.getRawData(), intValue.getNumWords()));
   result.emplace(semantics, truncatedValue);
   return success();
 }
