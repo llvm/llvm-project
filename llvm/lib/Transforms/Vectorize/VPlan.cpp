@@ -319,7 +319,6 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
 
   // We need to construct the vector value for a single-scalar value by
   // broadcasting the scalar to all lanes.
-  // TODO: Replace by introducing Broadcast VPInstructions.
   assert(IsSingleScalar && "must be a single-scalar at this point");
   // Set the insert point after the last scalarized instruction or after the
   // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
