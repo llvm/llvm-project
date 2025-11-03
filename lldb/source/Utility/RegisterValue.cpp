@@ -127,7 +127,7 @@ bool RegisterValue::GetScalarValue(Scalar &scalar) const {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -454,7 +454,7 @@ bool RegisterValue::SignExtend(uint32_t sign_bitpos) {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
     return m_scalar.SignExtend(sign_bitpos);
   case eTypeFloat:
   case eTypeDouble:
@@ -477,7 +477,7 @@ bool RegisterValue::CopyValue(const RegisterValue &rhs) {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -593,7 +593,7 @@ llvm::APInt RegisterValue::GetAsUInt128(const llvm::APInt &fail_value,
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -628,7 +628,7 @@ float RegisterValue::GetAsFloat(float fail_value, bool *success_ptr) const {
     break;
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -648,7 +648,7 @@ double RegisterValue::GetAsDouble(double fail_value, bool *success_ptr) const {
 
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -669,7 +669,7 @@ long double RegisterValue::GetAsLongDouble(long double fail_value,
 
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -688,7 +688,7 @@ const void *RegisterValue::GetBytes() const {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -710,7 +710,7 @@ uint32_t RegisterValue::GetByteSize() const {
     return 2;
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -761,7 +761,7 @@ bool RegisterValue::operator==(const RegisterValue &rhs) const {
     case eTypeUInt16:
     case eTypeUInt32:
     case eTypeUInt64:
-    case eTypeUInt128:
+    case eTypeUIntBig:
     case eTypeFloat:
     case eTypeDouble:
     case eTypeLongDouble:
@@ -786,7 +786,7 @@ bool RegisterValue::ClearBit(uint32_t bit) {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
     if (bit < (GetByteSize() * 8)) {
       return m_scalar.ClearBit(bit);
     }
@@ -826,7 +826,7 @@ bool RegisterValue::SetBit(uint32_t bit) {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntBig:
     if (bit < (GetByteSize() * 8)) {
       return m_scalar.SetBit(bit);
     }

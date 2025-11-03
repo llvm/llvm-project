@@ -46,7 +46,7 @@ public:
     eTypeUInt16,
     eTypeUInt32,
     eTypeUInt64,
-    eTypeUInt128,
+    eTypeUIntBig,  // an integer that has more than 64 bits
     eTypeFloat,
     eTypeDouble,
     eTypeLongDouble,
@@ -69,7 +69,7 @@ public:
     m_scalar = inst;
   }
 
-  explicit RegisterValue(llvm::APInt inst) : m_type(eTypeUInt128) {
+  explicit RegisterValue(llvm::APInt inst) : m_type(eTypeUIntBig) {
     m_scalar = llvm::APInt(std::move(inst));
   }
 
@@ -178,7 +178,7 @@ public:
   }
 
   void operator=(llvm::APInt uint) {
-    m_type = eTypeUInt128;
+    m_type = eTypeUIntBig;
     m_scalar = llvm::APInt(std::move(uint));
   }
 
@@ -218,7 +218,7 @@ public:
   }
 
   void SetUInt128(llvm::APInt uint) {
-    m_type = eTypeUInt128;
+    m_type = eTypeUIntBig;
     m_scalar = std::move(uint);
   }
 
