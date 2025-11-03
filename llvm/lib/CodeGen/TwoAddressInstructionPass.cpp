@@ -2015,9 +2015,22 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     MachineOperand &UseMO = MI.getOperand(i);
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
-    // Nothing needs to be inserted for undef operands.
+    // Insert IMPLICIT_DEF for undef operands with the corresponding sub-register.
     if (UseMO.isUndef()) {
       UndefLanes |= TRI->getSubRegIndexLaneMask(SubIdx);
+      // Insert IMPLICIT_DEF on dst register with the sub-register index.
+      MachineInstr *DefMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                    TII->get(TargetOpcode::IMPLICIT_DEF))
+                               .addReg(DstReg, RegState::Define, SubIdx);
+      // The first def needs an undef flag because there is no live register
+      // before it.
+      if (!DefEmitted) {
+        DefMI->getOperand(0).setIsUndef(true);
+        // Return an iterator pointing to the first inserted instr.
+        MBBI = DefMI;
+        DefEmitted = true;
+      }
+      LLVM_DEBUG(dbgs() << "Inserted: " << *DefMI);
       continue;
     }
 
