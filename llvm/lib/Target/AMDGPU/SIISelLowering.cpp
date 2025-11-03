@@ -42,6 +42,7 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Transforms/Utils/LowerAtomic.h"
@@ -6780,7 +6781,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ABS:
     if (Op.getValueType() == MVT::i16)
       return lowerABSi16(Op, DAG);
-    // fall through
+    LLVM_FALLTHROUGH;
   case ISD::FABS:
   case ISD::FNEG:
   case ISD::FCANONICALIZE:
