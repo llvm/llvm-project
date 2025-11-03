@@ -3191,9 +3191,6 @@ let Predicates = [HasDQI] in {
   def : Pat<(v8i1(bitconvert(i8 255))), (KSET1B)>;
   def : Pat<(v16i1(bitconvert(i16 255))), (COPY_TO_REGCLASS(KSET1B), VK16)>;
 }
-let Predicates = [HasAVX512] in {
-  def : Pat<(v16i1(bitconvert(i16 65535))), (KSET1W)>;
-}
 let Predicates = [HasBWI] in {
   def : Pat<(v32i1(bitconvert(i32 -1))), (KSET1D)>;
   def : Pat<(v64i1(bitconvert(i64 -1))), (KSET1Q)>;
