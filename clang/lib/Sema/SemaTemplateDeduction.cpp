@@ -4882,17 +4882,9 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   // noreturn can't be dependent, so we don't actually need this for them
   // right now.)
   QualType SpecializationType = Specialization->getType();
-  if (!IsAddressOfFunction) {
+  if (!IsAddressOfFunction)
     ArgFunctionType = adjustCCAndNoReturn(ArgFunctionType, SpecializationType,
                                           /*AdjustExceptionSpec*/true);
-
-    // Revert placeholder types in the return type back to undeduced types so
-    // that the comparison below compares the declared return types.
-    if (HasDeducedReturnType) {
-      SpecializationType = SubstAutoType(SpecializationType, QualType());
-      ArgFunctionType = SubstAutoType(ArgFunctionType, QualType());
-    }
-  }
 
   // If the requested function type does not match the actual type of the
   // specialization with respect to arguments of compatible pointer to function
