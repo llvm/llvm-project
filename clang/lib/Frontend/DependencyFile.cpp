@@ -81,7 +81,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
         /*FromModule*/ false,
         /*IsSystem*/ false,
         /*IsModuleFile*/ false,
-        /*IsMissing*/ false);
+        /*IsMissing*/ true);
     // Return true to silence the file not found diagnostic.
     return true;
   }
