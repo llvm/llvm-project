@@ -41,7 +41,7 @@ void MCSymbolGOFF::initAttributes() {
     } else
       llvm_unreachable("Unexpected section type for label");
   } else {
-    setERAttributes(GOFF::ERAttr{CodeData, BindingStrength,
-                                 GOFF::ESD_LT_XPLink, BindingScope});
+    setERAttributes(GOFF::ERAttr{CodeData, BindingStrength, GOFF::ESD_LT_XPLink,
+                                 BindingScope});
   }
 }

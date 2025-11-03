@@ -68,9 +68,7 @@ public:
   }
   MCSectionGOFF *getADA() const { return ADA; }
 
-  void setOwner(MCSectionGOFF *Owner) {
-    this->Owner = Owner;
-  }
+  void setOwner(MCSectionGOFF *Owner) { this->Owner = Owner; }
   MCSectionGOFF *getOwner() const { return Owner; }
 
   bool isExternal() const { return IsExternal; }
