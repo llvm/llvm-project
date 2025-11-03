@@ -528,7 +528,9 @@ static void selectInterestingSourceRegion(
   Bytes CodeEnd =
       CaretEnd < Map.columns() ? Map.columnToByte(CaretEnd.V) : CaretEnd.V;
   for (TextDiagnostic::StyleRange &R : Styles) {
-    if (R.End < static_cast<unsigned>(BytesRemoved.V)) {
+    // Remove style ranges before and after the new truncated snippet.
+    if (R.Start >= static_cast<unsigned>(CodeEnd.V) ||
+        R.End < static_cast<unsigned>(BytesRemoved.V)) {
       R.Start = R.End = std::numeric_limits<int>::max();
       continue;
     }
@@ -541,10 +543,6 @@ static void selectInterestingSourceRegion(
     if (R.Start < static_cast<unsigned>(CodeEnd.V) &&
         R.End > static_cast<unsigned>(CodeEnd.V))
       R.End = CodeEnd.V + 1; // R.End is inclusive.
-
-    // Remove style ranges after the end of the snippet.
-    if (R.Start >= static_cast<unsigned>(CodeEnd.V))
-      R.Start = R.End = std::numeric_limits<int>::max();
   }
 
   // The line needs some truncation, and we'd prefer to keep the front
@@ -1423,7 +1421,6 @@ void TextDiagnostic::emitSnippetAndCaret(
   };
 
   Columns MessageLength = DiagOpts.MessageLength;
-
   // If we don't have enough columns available, just abort now.
   if (MessageLength != 0 && MessageLength <= Columns(MaxLineNoDisplayWidth + 4))
     return;
@@ -1487,10 +1484,14 @@ void TextDiagnostic::emitSnippetAndCaret(
 
     // If the source line is too long for our terminal, select only the
     // "interesting" source region within that line.
-    if (MessageLength != 0)
+    if (MessageLength != 0) {
+      Columns NonGutterColumns = MessageLength;
+      if (MaxLineNoDisplayWidth != 0)
+        NonGutterColumns -= Columns(MaxLineNoDisplayWidth + 4);
       selectInterestingSourceRegion(SourceLine, CaretLine, FixItInsertionLine,
-                                    MessageLength, SourceColMap,
+                                    NonGutterColumns, SourceColMap,
                                     SourceStyles[LineNo - Lines.first]);
+    }
 
     // If we are in -fdiagnostics-print-source-range-info mode, we are trying
     // to produce easily machine parsable output.  Add a space before the

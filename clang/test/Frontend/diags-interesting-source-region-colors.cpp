@@ -13,12 +13,12 @@ int main() {
 
   a + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1;
   // CHECK: use of undeclared identifier
-  // CHECK-NEXT: a + [[GREEN:.\[0;32m]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] ...
+  // CHECK-NEXT: a + [[GREEN:.\[0;32m]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] ...
 
 
   /*😂😂😂*/ a + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1;
   // CHECK: use of undeclared identifier
-  // CHECK-NEXT: [[YELLOW:.\[0;33m]]/*😂😂😂*/[[RESET]] a + [[GREEN:.\[0;32m]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] + [[GREEN]]1[[RESET]] ...
+  // CHECK-NEXT: [[YELLOW:.\[0;33m]]/*😂😂😂*/[[RESET]] a + [[GREEN:.\[0;32m]]1[[RESET]] + [[GREEN]]1[[RESET]] ...
 
   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
   // CHECK: [[GREEN:.\[0;32m]]"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"[[RESET]];
