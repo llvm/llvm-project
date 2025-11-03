@@ -2758,7 +2758,7 @@ public:
     BitVector WrittenRegs(RegInfo->getNumRegs());
     const BitVector &SizeRegAliases = getAliases(SizeReg);
 
-    for (auto InstIt = BB.begin(); InstIt != CallInst; ++InstIt) {
+    for (auto InstIt = CallInst; InstIt != BB.begin(); --InstIt) {
       const MCInst &Inst = *InstIt;
       WrittenRegs.reset();
       getWrittenRegs(Inst, WrittenRegs);
