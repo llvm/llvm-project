@@ -177,6 +177,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v32i16, &AMDGPU::SGPR_512RegClass);
     addRegisterClass(MVT::v32f16, &AMDGPU::SGPR_512RegClass);
     addRegisterClass(MVT::v32bf16, &AMDGPU::SGPR_512RegClass);
+
+    // We don't want the default expansion of 16-bit ABS since we can
+    // sign-extend and use the 32-bit ABS operation for 16-bit ABS with SGPRs
+    setOperationAction(ISD::ABS, MVT::i16, Custom);
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
@@ -6774,6 +6778,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::DEBUGTRAP:
     return lowerDEBUGTRAP(Op, DAG);
   case ISD::ABS:
+    if (Op.getValueType() == MVT::i16)
+      return lowerABSi16(Op, DAG);
+    // fall through
   case ISD::FABS:
   case ISD::FNEG:
   case ISD::FCANONICALIZE:
@@ -8137,6 +8144,25 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
       static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap);
   SDValue Ops[] = {Chain, DAG.getTargetConstant(TrapID, SL, MVT::i16)};
   return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
+}
+
+// sign-extend and use the 32-bit ABS operation for 16-bit ABS with SGPRs
+SDValue SITargetLowering::lowerABSi16(SDValue Op, SelectionDAG &DAG) const {
+  assert(Op.getOpcode() == ISD::ABS &&
+         "Tried to select abs with non-abs opcode.");
+  assert(Op.getValueType() == MVT::i16 &&
+         "Tried to select abs i16 lowering with non-i16 type.");
+
+  // divergent means will not end up using SGPRs
+  if (Op->isDivergent())
+    return SDValue();
+
+  //(abs i16 (i16 op1)) -> (trunc i16 (abs i32 (sext i32 (i16 op1))))
+  SDValue Src = Op.getOperand(0);
+  SDLoc DL(Src);
+  SDValue SExtSrc = DAG.getSExtOrTrunc(Src, DL, MVT::i32);
+  SDValue ExtAbs = DAG.getNode(ISD::ABS, DL, MVT::i32, SExtSrc);
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, ExtAbs);
 }
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
