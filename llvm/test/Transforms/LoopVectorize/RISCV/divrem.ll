@@ -270,6 +270,7 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -278,7 +279,6 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult <vscale x 2 x i32> [[TMP7]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
@@ -354,6 +354,7 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -362,7 +363,6 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult <vscale x 2 x i32> [[TMP7]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
@@ -576,6 +576,7 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -583,7 +584,6 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult <vscale x 16 x i32> [[TMP6]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP7]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP12]])

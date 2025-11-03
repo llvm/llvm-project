@@ -8232,10 +8232,6 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
-      // TODO: try to put it close to addActiveLaneMask().
-      if (CM.foldTailWithEVL())
-        VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
-                                 *Plan, CM.getMaxSafeElements());
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
@@ -8498,6 +8494,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                        WithoutRuntimeCheck);
   }
   VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, *PSE.getSE());
+
+  if (CM.foldTailWithEVL())
+    VPlanTransforms::addExplicitVectorLength(*Plan, CM.getMaxSafeElements());
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;

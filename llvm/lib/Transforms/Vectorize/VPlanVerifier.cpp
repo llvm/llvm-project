@@ -317,6 +317,12 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         break;
       }
     }
+    if (const auto *EVLPhi = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
+      if (!isa<VPCanonicalIVPHIRecipe>(std::prev(EVLPhi->getIterator()))) {
+        errs() << "EVL-based IV is not immediately after canonical IV\n";
+        return false;
+      }
+    }
   }
 
   auto *IRBB = dyn_cast<VPIRBasicBlock>(VPBB);

@@ -6,14 +6,14 @@ define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture rea
 ; ZVFH-LABEL: add
 ; ZVFH:       LV(REG): VF = vscale x 4
 ; ZVFH-NEXT:  LV(REG): Found max usage: 2 item
-; ZVFH-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; ZVFH-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
 ; ZVFH-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
 ; ZVFH-NEXT:  LV(REG): Found invariant usage: 1 item
 ; ZVFH-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 ; ZVFHMIN-LABEL: add
 ; ZVFHMIN:       LV(REG): VF = vscale x 4
 ; ZVFHMIN-NEXT:  LV(REG): Found max usage: 2 item
-; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
 ; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
 ; ZVFHMIN-NEXT:  LV(REG): Found invariant usage: 1 item
 ; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers

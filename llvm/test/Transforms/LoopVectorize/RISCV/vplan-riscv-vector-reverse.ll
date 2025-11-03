@@ -27,10 +27,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:     EMIT vp<[[INDUCTION:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[INDEX_NEXT:%.+]]>
 ; CHECK-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%.+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; CHECK-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ vp<[[OTC]]>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
-; CHECK-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[EVL_PHI]]> * ir<-1>
-; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<-1>, vp<[[EVL]]>
-; CHECK-NEXT:     CLONE ir<[[IDX:%.+]]> = add nsw vp<[[SCALAR_STEPS]]>, ir<-1>
+; CHECK-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
+; CHECK-NEXT:     CLONE ir<[[IDX:%.+]]> = add nsw vp<[[DERIVED_IV]]>, ir<-1>
 ; CHECK-NEXT:     CLONE ir<[[IDX_PROM:%.+]]> = zext ir<[[IDX]]>
 ; CHECK-NEXT:     CLONE ir<[[ARRAY_IDX_B:%.+]]> = getelementptr inbounds ir<[[B:%.+]]>, ir<[[IDX_PROM]]>
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_B:%.+]]> = vector-end-pointer ir<[[ARRAY_IDX_B]]>, vp<[[EVL]]>

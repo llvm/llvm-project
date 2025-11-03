@@ -361,12 +361,12 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP2]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[EVL_BASED_IV]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 2, [[TMP16]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[EVL_BASED_IV]], 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[INTERLEAVE_EVL:%.*]] = mul nuw nsw i32 [[TMP10]], 2
 ; CHECK-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 [[TMP22]], <vscale x 8 x i1> splat (i1 true), i32 [[INTERLEAVE_EVL]])
