@@ -264,6 +264,11 @@ New check aliases
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-mem57-cpp <clang-tidy/checks/cert/mem57-cpp>` to
+  :doc:`bugprone-default-operator-new-on-overaligned-type
+  <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
   :doc:`bugprone-raw-memory-call-on-non-trivial-type
   <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`

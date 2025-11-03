@@ -2502,9 +2502,7 @@ public:
   void Unparse(const OpenMPDeclarativeAllocate &x) {
     BeginOpenMP();
     Word("!$OMP ALLOCATE");
-    Put(" (");
-    Walk(std::get<OmpObjectList>(x.t));
-    Put(")");
+    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
     Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();

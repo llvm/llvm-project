@@ -2045,11 +2045,12 @@ TYPE_PARSER(sourced(construct<OpenMPCriticalConstruct>(
     OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical})))
 
 // 2.11.3 Executable Allocate directive
-TYPE_PARSER(
-    sourced(construct<OpenMPExecutableAllocate>(verbatim("ALLOCATE"_tok),
-        maybe(parenthesized(Parser<OmpObjectList>{})), Parser<OmpClauseList>{},
-        maybe(nonemptyList(Parser<OpenMPDeclarativeAllocate>{})) / endOmpLine,
-        statement(allocateStmt))))
+TYPE_PARSER(sourced(construct<OpenMPExecutableAllocate>(
+    verbatim("ALLOCATE"_tok), maybe(parenthesized(Parser<OmpObjectList>{})),
+    Parser<OmpClauseList>{},
+    maybe(nonemptyList(startOmpLine >> Parser<OpenMPDeclarativeAllocate>{})) /
+        endOmpLine,
+    statement(allocateStmt))))
 
 // 2.8.2 Declare Simd construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
@@ -2079,7 +2080,8 @@ TYPE_PARSER(sourced( //
 // 2.11.3 Declarative Allocate directive
 TYPE_PARSER(
     sourced(construct<OpenMPDeclarativeAllocate>(verbatim("ALLOCATE"_tok),
-        parenthesized(Parser<OmpObjectList>{}), Parser<OmpClauseList>{})) /
+        maybe(parenthesized(Parser<OmpObjectList>{})),
+        Parser<OmpClauseList>{})) /
     lookAhead(endOmpLine / !statement(allocateStmt)))
 
 // Assumes Construct
