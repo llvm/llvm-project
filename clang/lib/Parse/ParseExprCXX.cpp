@@ -772,9 +772,10 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
   // Produce a diagnostic if we're not tentatively parsing; otherwise track
   // that our parse has failed.
-  auto Invalid = [&](llvm::function_ref<void()> Action) {
+  auto Result = [&](llvm::function_ref<void()> Action,
+                    LambdaIntroducerTentativeParse State) {
     if (Tentative) {
-      *Tentative = LambdaIntroducerTentativeParse::Invalid;
+      *Tentative = State;
       return false;
     }
     Action();
@@ -824,9 +825,11 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           break;
         }
 
-        return Invalid([&] {
-          Diag(Tok.getLocation(), diag::err_expected_comma_or_rsquare);
-        });
+        return Result(
+            [&] {
+              Diag(Tok.getLocation(), diag::err_expected_comma_or_rsquare);
+            },
+            LambdaIntroducerTentativeParse::Invalid);
       }
       ConsumeToken();
     }
@@ -861,9 +864,11 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         ConsumeToken();
         Kind = LCK_StarThis;
       } else {
-        return Invalid([&] {
-          Diag(Tok.getLocation(), diag::err_expected_star_this_capture);
-        });
+        return Result(
+            [&] {
+              Diag(Tok.getLocation(), diag::err_expected_star_this_capture);
+            },
+            LambdaIntroducerTentativeParse::Invalid);
       }
     } else if (Tok.is(tok::kw_this)) {
       Kind = LCK_This;
@@ -875,8 +880,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       // or the start of a capture (in the "&" case) with the rest of the
       // capture missing. Both are an error but a misplaced capture-default
       // is more likely if we don't already have a capture default.
-      return Invalid(
-          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); });
+      return Result(
+          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); },
+          LambdaIntroducerTentativeParse::Incomplete);
     } else {
       TryConsumeToken(tok::ellipsis, EllipsisLocs[0]);
 
@@ -899,14 +905,16 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         Id = Tok.getIdentifierInfo();
         Loc = ConsumeToken();
       } else if (Tok.is(tok::kw_this)) {
-        return Invalid([&] {
-          // FIXME: Suggest a fixit here.
-          Diag(Tok.getLocation(), diag::err_this_captured_by_reference);
-        });
+        return Result(
+            [&] {
+              // FIXME: Suggest a fixit here.
+              Diag(Tok.getLocation(), diag::err_this_captured_by_reference);
+            },
+            LambdaIntroducerTentativeParse::Invalid);
       } else {
-        return Invalid([&] {
-          Diag(Tok.getLocation(), diag::err_expected_capture);
-        });
+        return Result(
+            [&] { Diag(Tok.getLocation(), diag::err_expected_capture); },
+            LambdaIntroducerTentativeParse::Invalid);
       }
 
       TryConsumeToken(tok::ellipsis, EllipsisLocs[2]);
