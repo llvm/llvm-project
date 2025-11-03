@@ -5186,32 +5186,6 @@ struct AADereferenceableCallSiteReturned final
 
 namespace {
 
-static Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
-                                         const IntrinsicInst &II) {
-  Align Alignment;
-  switch (II.getIntrinsicID()) {
-  case Intrinsic::ptrmask: {
-    const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
-        QueryingAA, IRPosition::value(*II.getOperand(1)), DepClassTy::REQUIRED);
-    const auto *AlignAA =
-        A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II.getOperand(0))),
-                            DepClassTy::REQUIRED);
-    if (ConstVals && ConstVals->isValidState()) {
-      unsigned ShiftValue = std::min(ConstVals->getAssumedMinTrailingZeros(),
-                                     Value::MaxAlignmentExponent);
-      Alignment = Align(UINT64_C(1) << ShiftValue);
-    }
-    if (AlignAA && AlignAA->isValidState())
-      Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
-
-    return std::min(QueryingAA.getAssumedAlign(), Alignment);
-  }
-  default:
-    break;
-  }
-  return Alignment;
-}
-
 static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
                                     Value &AssociatedValue, const Use *U,
                                     const Instruction *I, bool &TrackUse) {
@@ -5551,10 +5525,36 @@ struct AAAlignCallSiteReturned final
   ChangeStatus updateImpl(Attributor &A) override {
     Instruction *I = getIRPosition().getCtxI();
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-      Align Align = getAssumedAlignForIntrinsic(A, *this, *II);
-      if (Align.value() > 1) {
-        return clampStateAndIndicateChange<StateType>(this->getState(),
-                                                      Align.value());
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ptrmask: {
+        Align Alignment;
+        bool Valid = false;
+
+        const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
+            *this, IRPosition::value(*II->getOperand(1)), DepClassTy::REQUIRED);
+        if (ConstVals && ConstVals->isValidState()) {
+          unsigned ShiftValue =
+              std::min(ConstVals->getAssumedMinTrailingZeros(),
+                       Value::MaxAlignmentExponent);
+          Alignment = Align(UINT64_C(1) << ShiftValue);
+          Valid = true;
+        }
+
+        const auto *AlignAA =
+            A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
+                                DepClassTy::REQUIRED);
+        if (AlignAA && AlignAA->isValidState()) {
+          Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
+          Valid = true;
+        }
+
+        if (Valid)
+          return clampStateAndIndicateChange<StateType>(
+              this->getState(),
+              std::min(this->getAssumedAlign(), Alignment).value());
+      }
+      default:
+        break;
       }
     }
     return Base::updateImpl(A);
