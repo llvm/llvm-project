@@ -321,14 +321,14 @@ public:
   /// Increment the current indentation level.
   void IndentMore(unsigned amount = 2);
 
-  class IndentScope {
-    Stream &m_stream;
-    unsigned m_original_indent_level;
-
-  public:
+  struct IndentScope {
     IndentScope(Stream &stream)
         : m_stream(stream), m_original_indent_level(stream.GetIndentLevel()) {}
     ~IndentScope() { m_stream.SetIndentLevel(m_original_indent_level); }
+
+  private:
+    Stream &m_stream;
+    unsigned m_original_indent_level;
   };
 
   /// Create an indentation scope that restores the original indent level when
