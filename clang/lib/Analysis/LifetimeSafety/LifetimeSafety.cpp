@@ -39,6 +39,19 @@ LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter)
     : AC(AC), Reporter(Reporter) {}
 
+void LifetimeSafetyAnalysis::PrintStats(llvm::raw_ostream &OS) {
+    llvm::errs() << "\n*** LifetimeSafety Missing Origin Stats "
+                    "(expression_type : count) :\n";
+    for (const auto &[expr, count] : LifetimeSafetyAnalysis::MissingOriginCount) {
+      OS << expr << " : " << count << '\n';
+    }
+  }
+
+void LifetimeSafetyAnalysis::UpdateMissingOriginCount(const OriginManager &OM) {
+    for (const auto &[expr, missing_origin_count] : OM.getMissingOrigins()) {
+      LifetimeSafetyAnalysis::MissingOriginCount[std::string(expr)] += missing_origin_count;
+    }
+  }
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
 
