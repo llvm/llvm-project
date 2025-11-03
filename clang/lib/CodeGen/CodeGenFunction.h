@@ -3296,10 +3296,7 @@ public:
     TCK_NonnullAssign,
     /// Checking the operand of a dynamic_cast or a typeid expression.  Must be
     /// null or an object within its lifetime.
-    TCK_DynamicOperation,
-    /// Checking the 'this' poiner for a constructor call, including that the
-    /// alignment is greater or equal to the targets minimum alignment
-    TCK_ConstructorCallMinimumAlign
+    TCK_DynamicOperation
   };
 
   /// Determine whether the pointer type check \p TCK permits null pointers.

@@ -28,7 +28,6 @@ UBSAN_CHECK(NullptrAfterNonZeroOffset, "nullptr-after-nonzero-offset",
 UBSAN_CHECK(PointerOverflow, "pointer-overflow", "pointer-overflow")
 UBSAN_CHECK(MisalignedPointerUse, "misaligned-pointer-use", "alignment")
 UBSAN_CHECK(AlignmentAssumption, "alignment-assumption", "alignment")
-UBSAN_CHECK(MinumumAssumedAlignment, "minimum-assumed-alignment", "alignment")
 UBSAN_CHECK(InsufficientObjectSize, "insufficient-object-size", "object-size")
 UBSAN_CHECK(SignedIntegerOverflow, "signed-integer-overflow",
             "signed-integer-overflow")
