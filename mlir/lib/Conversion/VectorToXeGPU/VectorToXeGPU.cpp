@@ -367,7 +367,7 @@ static std::pair<Value, SmallVector<OpFoldResult>>
 convertMemrefAndOffsetsToTargetRank(PatternRewriter &rewriter, Location loc,
                                     Value memref,
                                     SmallVector<OpFoldResult> offsets,
-                                    int64_t targetRank = 2) {
+                                    int64_t targetRank) {
   auto memrefType = cast<MemRefType>(memref.getType());
   unsigned rank = memrefType.getRank();
 
