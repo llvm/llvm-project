@@ -1092,7 +1092,8 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
         if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
           report_fatal_error(
               "The atomic bfloat16 instruction requires the following SPIR-V "
-              "extension: SPV_INTEL_16bit_atomics", false);
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
         Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
         Reqs.addCapability(SPIRV::Capability::AtomicBFloat16AddINTEL);
       } else {
@@ -1124,7 +1125,8 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
         if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
           report_fatal_error(
               "The atomic bfloat16 instruction requires the following SPIR-V "
-              "extension: SPV_INTEL_16bit_atomics", false);
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
         Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
         Reqs.addCapability(SPIRV::Capability::AtomicBFloat16MinMaxINTEL);
       } else {
