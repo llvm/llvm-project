@@ -644,6 +644,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__utility/forward.h>
 #  include <__utility/is_pointer_in_range.h>
 #  include <__utility/move.h>
+#  include <__utility/no_destroy.h>
 #  include <__utility/scope_guard.h>
 #  include <__utility/swap.h>
 #  include <climits>
@@ -918,6 +919,7 @@ private:
     __rep() = default;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__short __r) : __s(__r) {}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__long __r) : __l(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__uninitialized_tag) {}
   };
 
   _LIBCPP_COMPRESSED_PAIR(__rep, __rep_, allocator_type, __alloc_);
@@ -1210,7 +1212,10 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { __reset_internal_buffer(); }
+  // TODO(boomanaiden154): Once we mark this in destructors as dead on return,
+  // we can use a normal call to __reset_internal_buffer and remove the extra
+  // __rep constructor.
+  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { __reset_internal_buffer(__rep(__uninitialized_tag())); }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator __self_view() const _NOEXCEPT {
     return __self_view(typename __self_view::__assume_valid(), data(), size());

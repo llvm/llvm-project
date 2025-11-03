@@ -88,7 +88,7 @@ jobs:
             repo: ${{ github.repository }}
     steps:
       - name: Install Ninja
-        uses: llvm/actions/install-ninja@main
+        uses: llvm/actions/install-ninja@42d80571b13f4599bbefbc7189728b64723c7f78 # main
       - name: Install abi-compliance-checker
         run: |
           sudo apt-get update
