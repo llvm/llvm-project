@@ -5,24 +5,10 @@
 define void @minnum_v4f32(ptr %res, ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: minnum_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 1
-; CHECK-NEXT:    vreplvei.w $vr3, $vr1, 1
-; CHECK-NEXT:    fmin.s $fa2, $fa3, $fa2
-; CHECK-NEXT:    vreplvei.w $vr3, $vr0, 0
-; CHECK-NEXT:    vreplvei.w $vr4, $vr1, 0
-; CHECK-NEXT:    fmin.s $fa3, $fa4, $fa3
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 16
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 2
-; CHECK-NEXT:    vreplvei.w $vr4, $vr1, 2
-; CHECK-NEXT:    fmin.s $fa2, $fa4, $fa2
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 32
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 3
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 3
-; CHECK-NEXT:    fmin.s $fa0, $fa1, $fa0
-; CHECK-NEXT:    vextrins.w $vr3, $vr0, 48
-; CHECK-NEXT:    vst $vr3, $a0, 0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfmin.s $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <4 x float>, ptr %x
@@ -35,15 +21,9 @@ entry:
 define void @minnum_v2f64(ptr %res, ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: minnum_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vreplvei.d $vr2, $vr0, 1
-; CHECK-NEXT:    vreplvei.d $vr3, $vr1, 1
-; CHECK-NEXT:    fmin.d $fa2, $fa3, $fa2
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    fmin.d $fa0, $fa1, $fa0
-; CHECK-NEXT:    vextrins.d $vr0, $vr2, 16
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfmin.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -57,24 +37,10 @@ entry:
 define void @maxnum_v4f32(ptr %res, ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: maxnum_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 1
-; CHECK-NEXT:    vreplvei.w $vr3, $vr1, 1
-; CHECK-NEXT:    fmax.s $fa2, $fa3, $fa2
-; CHECK-NEXT:    vreplvei.w $vr3, $vr0, 0
-; CHECK-NEXT:    vreplvei.w $vr4, $vr1, 0
-; CHECK-NEXT:    fmax.s $fa3, $fa4, $fa3
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 16
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 2
-; CHECK-NEXT:    vreplvei.w $vr4, $vr1, 2
-; CHECK-NEXT:    fmax.s $fa2, $fa4, $fa2
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 32
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 3
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 3
-; CHECK-NEXT:    fmax.s $fa0, $fa1, $fa0
-; CHECK-NEXT:    vextrins.w $vr3, $vr0, 48
-; CHECK-NEXT:    vst $vr3, $a0, 0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfmax.s $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <4 x float>, ptr %x
@@ -87,15 +53,9 @@ entry:
 define void @maxnum_v2f64(ptr %res, ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: maxnum_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vreplvei.d $vr2, $vr0, 1
-; CHECK-NEXT:    vreplvei.d $vr3, $vr1, 1
-; CHECK-NEXT:    fmax.d $fa2, $fa3, $fa2
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    fmax.d $fa0, $fa1, $fa0
-; CHECK-NEXT:    vextrins.d $vr0, $vr2, 16
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfmax.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
