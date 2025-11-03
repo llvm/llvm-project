@@ -1304,6 +1304,14 @@ public:
   RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
                          const clang::CallExpr *e, ReturnValueSlot returnValue);
 
+  mlir::Value emitBuiltinObjectSize(const clang::Expr *e, unsigned type,
+                                     cir::IntType resType, mlir::Value emittedE,
+                                     bool isDynamic);
+
+  mlir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
+                                               unsigned type, cir::IntType resType,
+                                               mlir::Value emittedE, bool isDynamic);
+
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
