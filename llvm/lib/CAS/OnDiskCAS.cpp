@@ -65,10 +65,12 @@ private:
     auto RefsRange = DB->getObjectRefs(convertHandle(Node));
     return std::distance(RefsRange.begin(), RefsRange.end());
   }
+
   ObjectRef readRef(ObjectHandle Node, size_t I) const final {
     auto RefsRange = DB->getObjectRefs(convertHandle(Node));
     return convertRef(RefsRange.begin()[I]);
   }
+
   Error forEachRef(ObjectHandle Node,
                    function_ref<Error(ObjectRef)> Callback) const final;
 
