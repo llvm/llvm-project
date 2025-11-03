@@ -202,7 +202,7 @@ bool PredicateMapping::match(const MachineInstr &MI,
   return true;
 }
 
-SetOfRulesForOpcode::SetOfRulesForOpcode() {}
+SetOfRulesForOpcode::SetOfRulesForOpcode() = default;
 
 SetOfRulesForOpcode::SetOfRulesForOpcode(FastRulesTypes FastTypes)
     : FastTypes(FastTypes) {}
