@@ -45,7 +45,7 @@ def main(commit_sha, workflow_run_number, build_log_files):
         for name, failure_message in ninja_failures:
             failure_info["failures"].append({"name": name, "message": failure_message})
     for premerge_advisor_url in PREMERGE_ADVISOR_URLS:
-        requests.post(premerge_advisor_url, json=failure_info)
+        requests.post(premerge_advisor_url, json=failure_info, timeout=5)
 
 
 if __name__ == "__main__":

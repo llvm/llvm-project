@@ -40,7 +40,9 @@ def main(commit_sha: str, build_log_files: list[str]):
             explanation_request["failures"].append(
                 {"name": name, "message": failure_message}
             )
-    advisor_response = requests.get(PREMERGE_ADVISOR_URL, json=explanation_request)
+    advisor_response = requests.get(
+        PREMERGE_ADVISOR_URL, json=explanation_request, timeout=5
+    )
     if advisor_response.status_code == 200:
         print(advisor_response.json())
     else:
