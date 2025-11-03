@@ -72,8 +72,17 @@ getMaybeLaneLayout(xegpu::TensorDescType tdescType) {
 
 /// A layout can be optimized if its lane layout is transposed (lane[0] != 1 &&
 /// lane[1] == 1), but inner lane data is not equal to [1, 1].
-static bool canBeOptimizedForTranspose(ArrayRef<int64_t> laneLayout,
-                                       ArrayRef<int64_t> laneData) {
+/// Example:
+///     !xegpu.tensor_desc<16x16xf16,
+///         #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>>
+/// In this case, lane layout is transposed (from the usual [1, SG_SIZE] form)
+/// indicating that this is a load that requires transpose effect. However,
+/// lane data is [1, 2], meaning that each lane must grab 2 f16 elements form
+/// the inner dimension. We convert this to a canonical form by converting the
+/// tensor_desc to i32 type such that lane data becomes [1, 1]. This makes the
+/// later lowering can easily use the load with transpose instruction.
+static bool canBeCanonicalizedForTranspose(ArrayRef<int64_t> laneLayout,
+                                           ArrayRef<int64_t> laneData) {
   if (laneLayout.size() != 2 || laneData.size() != 2)
     return false;
   if (laneLayout[0] == 1 || laneLayout[1] != 1)
@@ -85,7 +94,7 @@ static bool canBeOptimizedForTranspose(ArrayRef<int64_t> laneLayout,
 
 /// A tensor desc type can be optimized if its element type is less than 32 bits
 /// and its layout can be optimized.
-static bool canBeOptimizedForTranspose(xegpu::TensorDescType tdescType) {
+static bool canBeCanonicalizedForTranspose(xegpu::TensorDescType tdescType) {
   // If the dtype is greater or equal to 32 bits, layout must be valid.
   int elementTyBitwidth = tdescType.getElementType().getIntOrFloatBitWidth();
   if (elementTyBitwidth >= 32)
@@ -94,14 +103,14 @@ static bool canBeOptimizedForTranspose(xegpu::TensorDescType tdescType) {
   auto maybeLaneData = getMaybeLaneData(tdescType);
   if (!maybeLaneData || !maybeLaneLayout)
     return false;
-  return canBeOptimizedForTranspose(*maybeLaneLayout, *maybeLaneData);
+  return canBeCanonicalizedForTranspose(*maybeLaneLayout, *maybeLaneData);
 }
 
 /// Check if a tensor desc type can be optimized for transpose, if so return the
 /// new optimized tensor desc type with a valid transpose layout.
 static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
                                          const uArch *targetuArch) {
-  if (!canBeOptimizedForTranspose(tdescType))
+  if (!canBeCanonicalizedForTranspose(tdescType))
     return tdescType;
   auto laneData = getMaybeLaneData(tdescType)
                       .value(); // Lane data must exist if we reach here.
@@ -449,11 +458,11 @@ struct XeGPUOptimizeBlockLoadsPass final
     // converted.
     target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
         [&](xegpu::CreateNdDescOp createNdOp) {
-          return !canBeOptimizedForTranspose(createNdOp.getType());
+          return !canBeCanonicalizedForTranspose(createNdOp.getType());
         });
     target.addDynamicallyLegalOp<xegpu::LoadNdOp>(
         [&](xegpu::LoadNdOp loadNdOp) {
-          return !canBeOptimizedForTranspose(loadNdOp.getTensorDescType());
+          return !canBeCanonicalizedForTranspose(loadNdOp.getTensorDescType());
         });
     // Vector ExtractOps can have optimizable layouts if they extract from
     // LoadNdOps with array length greater than 1. These ExtractOps must be
@@ -465,7 +474,7 @@ struct XeGPUOptimizeBlockLoadsPass final
             return true;
           auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
           auto laneData = layout.getEffectiveLaneDataAsInt();
-          return !canBeOptimizedForTranspose(laneLayout, laneData);
+          return !canBeCanonicalizedForTranspose(laneLayout, laneData);
         });
     converter.addConversion([](Type type) { return type; });
 
