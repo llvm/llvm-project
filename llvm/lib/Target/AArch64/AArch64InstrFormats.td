@@ -12621,6 +12621,13 @@ class MOPSMemorySet<bits<2> opcode, bit op1, bit op2, bit op3, string asm>
 class MOPSMemorySetTagging<bits<2> opcode, bit op1, bit op2, bit op3, string asm>
   : MOPSMemorySetBase<1, opcode, op1, op2, op3, asm>;
 
+class MOPSGoMemorySetTagging<bits<2> opcode, bit op1, bit op2, bit op3, string asm>
+  : MOPSMemorySetBase<1, opcode, op1, op2, op3, asm> {
+  // No `Rm` operand is required, as all bits are set to 1
+  let AsmString = !strconcat(asm, "\t[$Rd]!, $Rn!");
+  let Inst{20-16} = 0b11111;
+}
+
 multiclass MOPSMemoryCopyInsns<bits<2> opcode, string asm> {
   def ""   : MOPSMemoryCopy<opcode, 0b00, 0b00, asm>;
   def WN   : MOPSMemoryCopy<opcode, 0b00, 0b01, asm # "wn">;
@@ -12677,10 +12684,10 @@ multiclass MOPSMemorySetTaggingInsns<bits<2> opcode, string asm> {
 // MOPS Granule Only - FEAT_MOPS_GO
 //----------------------------------------------------------------------------
 multiclass MOPSGoMemorySetTaggingInsns<bits<2> opcode, string asm> {
-  def "" : MOPSMemorySetTagging<opcode, 0, 0, 0, asm>;
-  def T  : MOPSMemorySetTagging<opcode, 1, 0, 0, asm # "t">;
-  def N  : MOPSMemorySetTagging<opcode, 0, 1, 0, asm # "n">;
-  def TN : MOPSMemorySetTagging<opcode, 1, 1, 0, asm # "tn">;
+  def "" : MOPSGoMemorySetTagging<opcode, 0, 0, 0, asm>;
+  def T  : MOPSGoMemorySetTagging<opcode, 1, 0, 0, asm # "t">;
+  def N  : MOPSGoMemorySetTagging<opcode, 0, 1, 0, asm # "n">;
+  def TN : MOPSGoMemorySetTagging<opcode, 1, 1, 0, asm # "tn">;
 }
 
 //----------------------------------------------------------------------------
