@@ -2055,16 +2055,6 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     }
   }
 
-  // If there are no live intervals information, we scan the use list once
-  // in order to find which subregisters are used.
-  LaneBitmask UsedLanes = LaneBitmask::getNone();
-  if (!LIS) {
-    for (MachineOperand &Use : MRI->use_nodbg_operands(DstReg)) {
-      if (unsigned SubReg = Use.getSubReg())
-        UsedLanes |= TRI->getSubRegIndexLaneMask(SubReg);
-    }
-  }
-
   LaneBitmask UndefLanes = LaneBitmask::getNone();
   bool DefEmitted = false;
   for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2) {
@@ -2072,14 +2062,24 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
-    // Unless there are no live intervals, and they are used at a later
-    // instruction as operand.
+    // Insert IMPLICIT_DEF for undef operands with the corresponding
+    // sub-register.
     if (UseMO.isUndef()) {
-      LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
-      if (LIS || (UsedLanes & LaneMask).none()) {
-        UndefLanes |= LaneMask;
-        continue;
+      UndefLanes |= TRI->getSubRegIndexLaneMask(SubIdx);
+      // Insert IMPLICIT_DEF on dst register with the sub-register index.
+      MachineInstr *DefMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                    TII->get(TargetOpcode::IMPLICIT_DEF))
+                                .addReg(DstReg, RegState::Define, SubIdx);
+      // The first def needs an undef flag because there is no live register
+      // before it.
+      if (!DefEmitted) {
+        DefMI->getOperand(0).setIsUndef(true);
+        // Return an iterator pointing to the first inserted instr.
+        MBBI = DefMI;
+        DefEmitted = true;
       }
+      LLVM_DEBUG(dbgs() << "Inserted: " << *DefMI);
+      continue;
     }
 
     // Defer any kill flag to the last operand using SrcReg. Otherwise, we
