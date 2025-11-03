@@ -59,32 +59,12 @@ def normalize_list_rst(lines: List[str]) -> str:
     """Return normalized content of checks list.rst from given lines.
 
     Input: full file content split into lines.
-    Output: single string with csv-table rows sorted by :doc: label while
-            preserving header/leading comments and trailing content.
+    Output: single string with all csv-table rows sorted by :doc: label while
+            preserving non-table content and table options/headers.
     """
     out: List[str] = []
     i = 0
     n = len(lines)
-    while i < n:
-        out.append(lines[i])
-        if lines[i].lstrip().startswith(".. csv-table::"):
-            i += 1
-            break
-        i += 1
-
-    while i < n and (lines[i].startswith(" ") or lines[i].strip() == ""):
-        if DOC_LINE_RE.match(lines[i]):
-            break
-        out.append(lines[i])
-        i += 1
-
-    entries: List[str] = []
-    while i < n and lines[i].startswith(" "):
-        if DOC_LINE_RE.match(lines[i]):
-            entries.append(lines[i])
-        else:
-            entries.append(lines[i])
-        i += 1
 
     def key_for(line: str):
         m = DOC_LINE_RE.match(line)
@@ -92,9 +72,29 @@ def normalize_list_rst(lines: List[str]) -> str:
             return (1, "")
         return (0, m.group("label"))
 
-    entries_sorted = sorted(entries, key=key_for)
-    out.extend(entries_sorted)
-    out.extend(lines[i:])
+    while i < n:
+        line = lines[i]
+        if line.lstrip().startswith(".. csv-table::"):
+            out.append(line)
+            i += 1
+
+            while i < n and (lines[i].startswith(" ") or lines[i].strip() == ""):
+                if DOC_LINE_RE.match(lines[i]):
+                    break
+                out.append(lines[i])
+                i += 1
+
+            entries: List[str] = []
+            while i < n and lines[i].startswith(" "):
+                entries.append(lines[i])
+                i += 1
+
+            entries_sorted = sorted(entries, key=key_for)
+            out.extend(entries_sorted)
+            continue
+
+        out.append(line)
+        i += 1
 
     return "".join(out)
 
