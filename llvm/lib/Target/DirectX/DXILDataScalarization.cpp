@@ -353,13 +353,13 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
 
     ArrayType *ArrType = dyn_cast<ArrayType>(SubType);
     if (!ArrType) {
-      assert(SubType == GEPArrType && "GEP uses a strange sub-type of alloca/global variable");
+      assert(SubType == GEPArrType &&
+             "GEP uses an DXIL invalid sub-type of alloca/global variable");
       break;
     }
 
     SubType = ArrType->getElementType();
   }
-
 
   bool NeedsTransform = OrigOperand != PtrOperand ||
                         OrigGEPType != NewGEPType || MissingDims != 0;
