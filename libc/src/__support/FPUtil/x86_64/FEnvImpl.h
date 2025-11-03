@@ -24,7 +24,8 @@
 #error "Invalid include"
 #endif
 
-#ifndef __SSE__
+#if (defined(__i386__) && !defined(__SSE__)) ||                                \
+    (defined(_M_IX86_FP) && (_M_IX86_FP == 0))
 // When SSE is not available, we will only touch x87 floating point environment.
 #include "src/__support/FPUtil/x86_64/fenv_x87_only.h"
 #else // __SSE__
