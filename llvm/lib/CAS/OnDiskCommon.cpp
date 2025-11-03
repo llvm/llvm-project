@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "OnDiskCommon.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Process.h"
+#include <mutex>
 #include <thread>
 
 #if __has_include(<sys/file.h>)
@@ -25,7 +26,43 @@
 #include <fcntl.h>
 #endif
 
+#if __has_include(<sys/mount.h>)
+#include <sys/mount.h> // statfs
+#endif
+
 using namespace llvm;
+
+static uint64_t OnDiskCASMaxMappingSize = 0;
+
+Expected<std::optional<uint64_t>> cas::ondisk::getOverriddenMaxMappingSize() {
+  static std::once_flag Flag;
+  Error Err = Error::success();
+  std::call_once(Flag, [&Err] {
+    ErrorAsOutParameter EAO(&Err);
+    constexpr const char *EnvVar = "LLVM_CAS_MAX_MAPPING_SIZE";
+    auto Value = sys::Process::GetEnv(EnvVar);
+    if (!Value)
+      return;
+
+    uint64_t Size;
+    if (StringRef(*Value).getAsInteger(/*auto*/ 0, Size))
+      Err = createStringError(inconvertibleErrorCode(),
+                              "invalid value for %s: expected integer", EnvVar);
+    OnDiskCASMaxMappingSize = Size;
+  });
+
+  if (Err)
+    return std::move(Err);
+
+  if (OnDiskCASMaxMappingSize == 0)
+    return std::nullopt;
+
+  return OnDiskCASMaxMappingSize;
+}
+
+void cas::ondisk::setMaxMappingSize(uint64_t Size) {
+  OnDiskCASMaxMappingSize = Size;
+}
 
 std::error_code cas::ondisk::lockFileThreadSafe(int FD,
                                                 sys::fs::LockKind Kind) {
@@ -105,7 +142,13 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   return NewSize;
 #elif defined(__APPLE__)
   fstore_t FAlloc;
-  FAlloc.fst_flags = F_ALLOCATEALL | F_ALLOCATEPERSIST;
+  FAlloc.fst_flags = F_ALLOCATEALL;
+#if defined(F_ALLOCATEPERSIST) &&                                              \
+    defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
+    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 130000
+  // F_ALLOCATEPERSIST is introduced in macOS 13.
+  FAlloc.fst_flags |= F_ALLOCATEPERSIST;
+#endif
   FAlloc.fst_posmode = F_PEOFPOSMODE;
   FAlloc.fst_offset = 0;
   FAlloc.fst_length = NewSize - CurrentSize;
@@ -118,4 +161,21 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   (void)CreateError; // Silence unused variable.
   return NewSize;    // Pretend it worked.
 #endif
+}
+
+bool cas::ondisk::useSmallMappingSize(const Twine &P) {
+  // Add exceptions to use small database file here.
+#if defined(__APPLE__) && __has_include(<sys/mount.h>)
+  // macOS tmpfs does not support sparse tails.
+  SmallString<128> PathStorage;
+  StringRef Path = P.toNullTerminatedStringRef(PathStorage);
+  struct statfs StatFS;
+  if (statfs(Path.data(), &StatFS) != 0)
+    return false;
+
+  if (strcmp(StatFS.f_fstypename, "tmpfs") == 0)
+    return true;
+#endif
+  // Default to use regular database file.
+  return false;
 }

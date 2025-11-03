@@ -66,6 +66,7 @@
 
 #include "SIFixSGPRCopies.h"
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -1145,7 +1146,8 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 }
 
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
-  bool IsWave32 = MF.getSubtarget<GCNSubtarget>().isWave32();
+  const AMDGPU::LaneMaskConstants &LMC =
+      AMDGPU::LaneMaskConstants::get(MF.getSubtarget<GCNSubtarget>());
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
@@ -1159,10 +1161,7 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
         Register SCCCopy =
             MRI->createVirtualRegister(TRI->getWaveMaskRegClass());
         I = BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
-                    MI.getDebugLoc(),
-                    TII->get(IsWave32 ? AMDGPU::S_CSELECT_B32
-                                      : AMDGPU::S_CSELECT_B64),
-                    SCCCopy)
+                    MI.getDebugLoc(), TII->get(LMC.CSelectOpc), SCCCopy)
                 .addImm(-1)
                 .addImm(0);
         I = BuildMI(*MI.getParent(), std::next(I), I->getDebugLoc(),
@@ -1172,14 +1171,12 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
         continue;
       }
       if (DstReg == AMDGPU::SCC) {
-        unsigned Opcode = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
-        Register Exec = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
         Register Tmp = MRI->createVirtualRegister(TRI->getBoolRC());
         I = BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
-                    MI.getDebugLoc(), TII->get(Opcode))
+                    MI.getDebugLoc(), TII->get(LMC.AndOpc))
                 .addReg(Tmp, getDefRegState(true))
                 .addReg(SrcReg)
-                .addReg(Exec);
+                .addReg(LMC.ExecReg);
         MI.eraseFromParent();
       }
     }

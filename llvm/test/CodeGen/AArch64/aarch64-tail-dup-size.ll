@@ -35,24 +35,24 @@ define dso_local void @testcase(ptr nocapture %arg){
 ;
 ; CHECK-O3-LABEL: testcase:
 ; CHECK-O3:       // %bb.0: // %entry
-; CHECK-O3-NEXT:    adrp x8, global_ptr
-; CHECK-O3-NEXT:    ldr x9, [x8, :lo12:global_ptr]
+; CHECK-O3-NEXT:    adrp x8, .L_MergedGlobals+8
+; CHECK-O3-NEXT:    ldr x9, [x8, :lo12:.L_MergedGlobals+8]
 ; CHECK-O3-NEXT:    cbz x9, .LBB0_2
 ; CHECK-O3-NEXT:  // %bb.1: // %if.then
 ; CHECK-O3-NEXT:    ldr x9, [x9]
 ; CHECK-O3-NEXT:    str x9, [x0]
-; CHECK-O3-NEXT:    ldr x8, [x8, :lo12:global_ptr]
-; CHECK-O3-NEXT:    adrp x9, global_int
+; CHECK-O3-NEXT:    ldr x8, [x8, :lo12:.L_MergedGlobals+8]
+; CHECK-O3-NEXT:    adrp x9, .L_MergedGlobals
 ; CHECK-O3-NEXT:    add x2, x8, #16
 ; CHECK-O3-NEXT:    mov w0, #10 // =0xa
-; CHECK-O3-NEXT:    ldr w1, [x9, :lo12:global_int]
+; CHECK-O3-NEXT:    ldr w1, [x9, :lo12:.L_MergedGlobals]
 ; CHECK-O3-NEXT:    b externalfunc
 ; CHECK-O3-NEXT:  .LBB0_2:
 ; CHECK-O3-NEXT:    mov x8, xzr
-; CHECK-O3-NEXT:    adrp x9, global_int
+; CHECK-O3-NEXT:    adrp x9, .L_MergedGlobals
 ; CHECK-O3-NEXT:    add x2, x8, #16
 ; CHECK-O3-NEXT:    mov w0, #10 // =0xa
-; CHECK-O3-NEXT:    ldr w1, [x9, :lo12:global_int]
+; CHECK-O3-NEXT:    ldr w1, [x9, :lo12:.L_MergedGlobals]
 ; CHECK-O3-NEXT:    b externalfunc
 ;
 ; CHECK-O2-6-LABEL: testcase:

@@ -127,16 +127,11 @@ LLVMInitializeWebAssemblyTarget() {
 // WebAssembly Lowering public interface.
 //===----------------------------------------------------------------------===//
 
-static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM,
-                                           const Triple &TT) {
-  if (!RM) {
-    // Default to static relocation model.  This should always be more optimial
-    // than PIC since the static linker can determine all global addresses and
-    // assume direct function calls.
-    return Reloc::Static;
-  }
-
-  return *RM;
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
+  // Default to static relocation model.  This should always be more optimial
+  // than PIC since the static linker can determine all global addresses and
+  // assume direct function calls.
+  return RM.value_or(Reloc::Static);
 }
 
 using WebAssembly::WasmEnableEH;
@@ -197,7 +192,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
-                               getEffectiveRelocModel(RM, TT),
+                               getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Large), OL),
       TLOF(new WebAssemblyTargetObjectFile()),
       UsesMultivalueABI(Options.MCOptions.getABIName() == "experimental-mv") {

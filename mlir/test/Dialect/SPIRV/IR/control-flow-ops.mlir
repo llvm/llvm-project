@@ -262,6 +262,35 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+"builtin.module"() ({
+  "spirv.module"() <{
+    addressing_model = #spirv.addressing_model<Logical>,
+    memory_model = #spirv.memory_model<GLSL450>
+  }> ({
+    "spirv.func"() <{
+      function_control = #spirv.function_control<None>,
+      function_type = (f32) -> f32,
+      sym_name = "bar"
+    }> ({
+    ^bb0(%arg0: f32):
+      %0 = "spirv.FunctionCall"(%arg0) <{callee = @foo}> : (f32) -> f32
+      "spirv.ReturnValue"(%0) : (f32) -> ()
+    }) : () -> ()
+    // expected-error @+1 {{requires attribute 'function_type'}}
+    "spirv.func"() <{
+      function_control = #spirv.function_control<None>,
+      message = "2nd parent",
+      sym_name = "foo"
+      // This is invalid MLIR because function_type is missing from spirv.func.
+    }> ({
+    ^bb0(%arg0: f32):
+      "spirv.ReturnValue"(%arg0) : (f32) -> ()
+    }) : () -> ()
+  }) : () -> ()
+}) : () -> ()
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.mlir.loop
 //===----------------------------------------------------------------------===//

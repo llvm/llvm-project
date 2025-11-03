@@ -63,52 +63,41 @@ body:             |
   ; GCN16-NEXT:   successors: %bb.1(0x80000000)
   ; GCN16-NEXT:   liveins: $sgpr6, $sgpr10_sgpr11
   ; GCN16-NEXT: {{  $}}
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   S_BRANCH %bb.1
   ; GCN16-NEXT: {{  $}}
   ; GCN16-NEXT: bb.1:
   ; GCN16-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; GCN16-NEXT:   liveins: $sgpr6, $sgpr10_sgpr11
   ; GCN16-NEXT: {{  $}}
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 10, implicit $exec
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   S_CBRANCH_EXECZ %bb.3, implicit $exec
   ; GCN16-NEXT: {{  $}}
   ; GCN16-NEXT: bb.2:
   ; GCN16-NEXT:   successors: %bb.3(0x80000000)
   ; GCN16-NEXT:   liveins: $sgpr6, $sgpr10_sgpr11
   ; GCN16-NEXT: {{  $}}
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   SI_SPILL_S32_SAVE killed $sgpr6, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   S_NOP 0
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   renamable $sgpr6 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   S_BRANCH %bb.3
   ; GCN16-NEXT: {{  $}}
   ; GCN16-NEXT: bb.3:
   ; GCN16-NEXT:   liveins: $sgpr10_sgpr11
   ; GCN16-NEXT: {{  $}}
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   $sgpr5 = V_READFIRSTLANE_B32 [[V_MOV_B32_e32_]], implicit $exec
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   S_STORE_DWORD_IMM $sgpr5, $sgpr10_sgpr11, 0, 0
-  ; GCN16-NEXT:   S_NOP 7
-  ; GCN16-NEXT:   S_NOP 7
+  ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   SI_RETURN
   bb.0:
     liveins: $sgpr6, $sgpr10_sgpr11

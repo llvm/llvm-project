@@ -6,9 +6,9 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 define void @foo(ptr %h) !dbg !4 {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[H:%.*]]) !dbg [[DBG4:![0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:      #dbg_value(i64 0, [[META11:![0-9]+]], !DIExpression(), [[META20:![0-9]+]])
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !dbg [[DBG21:![0-9]+]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]], !dbg [[DBG21:![0-9]+]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG21]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -17,13 +17,13 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK:       [[FOR_COND5_PREHEADER1]]:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[FOR_COND5_PREHEADER1]] ], !dbg [[DBG23:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[H]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG24:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true)), !dbg [[DBG24:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 1, !dbg [[DBG26:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 1), <4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG24]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 1), <4 x ptr> align 4 [[TMP2]], <4 x i1> splat (i1 true)), !dbg [[DBG24]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 2, !dbg [[DBG26]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 2), <4 x ptr> [[TMP3]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG24]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 2), <4 x ptr> align 4 [[TMP3]], <4 x i1> splat (i1 true)), !dbg [[DBG24]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 3, !dbg [[DBG26]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 3), <4 x ptr> [[TMP4]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG24]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 3), <4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true)), !dbg [[DBG24]]
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1), !dbg [[DBG27:![0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP5]], splat (i64 5), !dbg [[DBG28:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0, !dbg [[DBG29:![0-9]+]]
@@ -33,12 +33,11 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20, !dbg [[DBG21]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG21]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG21]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]], !dbg [[DBG21]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 20, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]], !dbg [[DBG21]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
-; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC13:%.*]], %[[FOR_COND_CLEANUP3:.*]] ]
+; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ 20, %[[SCALAR_PH]] ], [ [[INC13:%.*]], %[[FOR_COND_CLEANUP3:.*]] ]
 ; CHECK-NEXT:      #dbg_value(i64 [[I_023]], [[META11]], !DIExpression(), [[META20]])
 ; CHECK-NEXT:    br label %[[FOR_COND5_PREHEADER:.*]], !dbg [[DBG29]]
 ; CHECK:       [[FOR_COND5_PREHEADER]]:

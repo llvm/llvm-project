@@ -2,15 +2,15 @@
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+neon -aarch64-enable-collect-loh=false -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+neon -aarch64-enable-collect-loh=false -global-isel -global-isel-abort=2 -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; Basic tests from input vector to bitmask
-; IR generated from clang for:
-; __builtin_convertvector + reinterpret_cast<uint16&>
-
 ; CHECK-GI:       warning: Instruction selection used fallback path for convert_to_bitmask2
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for clang_builtins_undef_concat_convert_to_bitmask4
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_2xi32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_8xi2
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for no_direct_convert_for_bad_concat
+
+; Basic tests from input vector to bitmask
+; IR generated from clang for:
+; __builtin_convertvector + reinterpret_cast<uint16&>
 
 define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; Bits used in mask

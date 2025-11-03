@@ -30,6 +30,7 @@ int fscanf(FILE * restrict, const char * restrict, ...) ;
 int scanf(const char * restrict, ...) ;
 int sscanf(const char * restrict, const char * restrict, ...) ;
 int my_scanf(const char * restrict, ...) __attribute__((__format__(__scanf__, 1, 2)));
+int my_gnu_scanf(const char * restrict, ...) __attribute__((__format__(gnu_scanf, 1, 2)));
 
 int vscanf(const char * restrict, va_list);
 int vfscanf(FILE * restrict, const char * restrict, va_list);
@@ -98,6 +99,7 @@ void test_variants(int *i, const char *s, ...) {
   fscanf(f, "%ld", i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
   sscanf(buf, "%ld", i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
   my_scanf("%ld", i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
+  my_gnu_scanf("%ld", i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
 
   va_list ap;
   va_start(ap, s);

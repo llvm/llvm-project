@@ -18,7 +18,7 @@ namespace clang::tidy::modernize {
 /// replace all occurrences of std::random_shuffle with std::shuffle.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/replace-random-shuffle.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/replace-random-shuffle.html
 class ReplaceRandomShuffleCheck : public ClangTidyCheck {
 public:
   ReplaceRandomShuffleCheck(StringRef Name, ClangTidyContext *Context);

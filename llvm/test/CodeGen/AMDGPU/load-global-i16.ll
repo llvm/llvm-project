@@ -7398,7 +7398,7 @@ define amdgpu_kernel void @global_zextload_v32i16_to_v32i64(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v15
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v36, 16, v17
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(2)
-; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v5, 16, v20
+; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v20
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v16
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v14
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v0, 0xffff, v14
@@ -7413,7 +7413,6 @@ define amdgpu_kernel void @global_zextload_v32i16_to_v32i64(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v10, 16, v18
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v8, 0xffff, v18
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v4, 0xffff, v20
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v6, v5
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v18, 16, v19
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v16, 0xffff, v19
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v44, 16, v21

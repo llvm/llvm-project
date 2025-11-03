@@ -100,7 +100,7 @@ jobs:
             repo: ${{ github.repository }}
     steps:
       - name: Install Ninja
-        uses: llvm/actions/install-ninja@main
+        uses: llvm/actions/install-ninja@42d80571b13f4599bbefbc7189728b64723c7f78 # main
       - name: Install abi-compliance-checker
         run: |
           sudo apt-get update
@@ -131,7 +131,7 @@ jobs:
             sed -i 's/LLVM_[0-9]\+/LLVM_NOVERSION/' $lib-${{ matrix.ref }}.abi
           done
       - name: Upload ABI file
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
         with:
           name: ${{ matrix.name }}
           path: '*${{ matrix.ref }}.abi'
@@ -165,7 +165,7 @@ jobs:
           done
       - name: Upload ABI Comparison
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
         with:
           name: compat-report-${{ github.sha }}
           path: compat_reports/

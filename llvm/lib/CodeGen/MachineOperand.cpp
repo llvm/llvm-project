@@ -218,6 +218,19 @@ void MachineOperand::ChangeToBA(const BlockAddress *BA, int64_t Offset,
   setTargetFlags(TargetFlags);
 }
 
+void MachineOperand::ChangeToCPI(unsigned Idx, int Offset,
+                                 unsigned TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a constant pool index");
+
+  removeRegFromUses();
+
+  OpKind = MO_ConstantPoolIndex;
+  setIndex(Idx);
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
 void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an MCSymbol");
@@ -350,8 +363,9 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut: {
     // Shallow compare of the two RegMasks
-    const uint32_t *RegMask = getRegMask();
-    const uint32_t *OtherRegMask = Other.getRegMask();
+    const uint32_t *RegMask = isRegMask() ? getRegMask() : getRegLiveOut();
+    const uint32_t *OtherRegMask =
+        isRegMask() ? Other.getRegMask() : Other.getRegLiveOut();
     if (RegMask == OtherRegMask)
       return true;
 
@@ -421,7 +435,8 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     if (const MachineFunction *MF = getMFIfAvailable(MO)) {
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
       unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
-      const uint32_t *RegMask = MO.getRegMask();
+      const uint32_t *RegMask =
+          MO.isRegMask() ? MO.getRegMask() : MO.getRegLiveOut();
       std::vector<stable_hash> RegMaskHashes(RegMask, RegMask + RegMaskSize);
       return hash_combine(MO.getType(), MO.getTargetFlags(),
                           stable_hash_combine(RegMaskHashes));

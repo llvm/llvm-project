@@ -21,7 +21,7 @@ using VPVerifierTest = VPlanTestBase;
 namespace {
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPValue *Zero = Plan.getConstantInt(32, 0);
   VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
@@ -32,7 +32,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   VPBB2->appendRecipe(CanIV);
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -56,7 +56,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPValue *Zero = Plan.getConstantInt(32, 0);
   VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
@@ -71,7 +71,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPBB2->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -117,7 +117,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB3, VPBB4);
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB4, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB4);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -160,7 +160,7 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPBB3->appendRecipe(CanIV);
 
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB3, VPBB3, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB3, VPBB3);
   VPBlockUtils::connectBlocks(VPBB1, VPBB2);
   VPBlockUtils::connectBlocks(VPBB2, R1);
   VPBlockUtils::connectBlocks(VPBB4, Plan.getScalarHeader());
@@ -184,7 +184,7 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
 
 TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPValue *Zero = Plan.getConstantInt(32, 0);
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
@@ -200,7 +200,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
@@ -218,7 +218,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 
 TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPValue *Zero = Plan.getConstantInt(32, 0);
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
@@ -237,7 +237,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB3, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -259,7 +259,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
-  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPValue *Zero = Plan.getConstantInt(32, 0);
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPBB2->appendRecipe(CanIV);
 
@@ -270,7 +270,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPBB1->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
@@ -288,7 +288,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
 
 TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
   VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPValue *Zero = Plan.getConstantInt(32, 0);
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   auto *BranchOnCond = new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
 
@@ -302,7 +302,7 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
   VPBB2->appendRecipe(IRPhi);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -351,8 +351,7 @@ TEST_F(VPIRVerifierTest, testVerifyIRPhi) {
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildVPlan(LoopHeader);
 
-  Plan->getExitBlocks()[0]->front().addOperand(
-      Plan->getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(*Ctx), 0)));
+  Plan->getExitBlocks()[0]->front().addOperand(Plan->getConstantInt(32, 0));
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();

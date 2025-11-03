@@ -465,6 +465,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         ":UtilityPrivateHeaders",
+        "//llvm:BinaryFormat",
         "//llvm:DebugInfo",
         "//llvm:DebugInfoDWARF",
         "//llvm:DebugInfoDWARFLowLevel",
@@ -1050,7 +1051,7 @@ gentbl_cc_library(
     strip_include_prefix = "tools/lldb-dap",
     tbl_outs = {"tools/lldb-dap/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
-    td_file = "tools/lldb-dap/Options.td",
+    td_file = "tools/lldb-dap/tool/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
 )
 

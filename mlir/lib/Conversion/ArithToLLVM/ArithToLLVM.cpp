@@ -57,7 +57,7 @@ struct ConstrainedVectorConvertToLLVMPattern
 /// are the same.
 struct IdentityBitcastLowering final
     : public OpConversionPattern<arith::BitcastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::BitcastOp op, OpAdaptor adaptor,
@@ -240,8 +240,7 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<arith::CmpFOp> {
 
 struct SelectOpOneToNLowering : public ConvertOpToLLVMPattern<arith::SelectOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
-  using Adaptor =
-      typename ConvertOpToLLVMPattern<arith::SelectOp>::OneToNOpAdaptor;
+  using Adaptor = ConvertOpToLLVMPattern<arith::SelectOp>::OneToNOpAdaptor;
 
   LogicalResult
   matchAndRewrite(arith::SelectOp op, Adaptor adaptor,

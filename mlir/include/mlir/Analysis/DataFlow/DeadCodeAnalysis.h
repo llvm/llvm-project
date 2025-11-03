@@ -17,6 +17,7 @@
 
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <optional>
 
@@ -199,6 +200,13 @@ private:
   /// Visit the given branch operation with successors and try to determine
   /// which are live from the current block.
   void visitBranchOperation(BranchOpInterface branch);
+
+  /// Visit region branch edges from `predecessorOp` to a list of successors.
+  /// For each edge, mark the successor program point as executable, and record
+  /// the predecessor information in its `PredecessorState`.
+  void visitRegionBranchEdges(RegionBranchOpInterface regionBranchOp,
+                              Operation *predecessorOp,
+                              const SmallVector<RegionSuccessor> &successors);
 
   /// Visit the given region branch operation, which defines regions, and
   /// compute any necessary lattice state. This also resolves the lattice state

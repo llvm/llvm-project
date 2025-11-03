@@ -19,7 +19,7 @@ namespace clang::tidy::bugprone {
 /// of the same optional-like type.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/optional-value-conversion.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/optional-value-conversion.html
 class OptionalValueConversionCheck : public ClangTidyCheck {
 public:
   OptionalValueConversionCheck(StringRef Name, ClangTidyContext *Context);

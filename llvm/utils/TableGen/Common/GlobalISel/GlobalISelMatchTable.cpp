@@ -155,6 +155,10 @@ static std::string getEncodedEmitStr(StringRef NamedValue, unsigned NumBytes) {
   llvm_unreachable("Unsupported number of bytes!");
 }
 
+template <class Range> static bool matchersRecordOperand(Range &&R) {
+  return any_of(R, [](const auto &I) { return I->recordsOperand(); });
+}
+
 //===- Global Data --------------------------------------------------------===//
 
 std::set<LLTCodeGen> llvm::gi::KnownTypes;
@@ -453,9 +457,13 @@ std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT::SimpleValueType SVT) {
 
 void Matcher::optimize() {}
 
-Matcher::~Matcher() {}
+Matcher::~Matcher() = default;
 
 //===- GroupMatcher -------------------------------------------------------===//
+
+bool GroupMatcher::recordsOperand() const {
+  return matchersRecordOperand(Conditions) || matchersRecordOperand(Matchers);
+}
 
 bool GroupMatcher::candidateConditionMatches(
     const PredicateMatcher &Predicate) const {
@@ -486,12 +494,24 @@ std::unique_ptr<PredicateMatcher> GroupMatcher::popFirstCondition() {
   return P;
 }
 
+/// Check if the Condition, which is a predicate of M, cannot be hoisted outside
+/// of (i.e., checked before) M.
+static bool cannotHoistCondition(const PredicateMatcher &Condition,
+                                 const Matcher &M) {
+  // The condition can't be hoisted if it is a C++ predicate that refers to
+  // operands and the operands are registered within the matcher.
+  return Condition.dependsOnOperands() && M.recordsOperand();
+}
+
 bool GroupMatcher::addMatcher(Matcher &Candidate) {
   if (!Candidate.hasFirstCondition())
     return false;
 
+  // Only add candidates that have a matching first condition that can be
+  // hoisted into the GroupMatcher.
   const PredicateMatcher &Predicate = Candidate.getFirstCondition();
-  if (!candidateConditionMatches(Predicate))
+  if (!candidateConditionMatches(Predicate) ||
+      cannotHoistCondition(Predicate, Candidate))
     return false;
 
   Matchers.push_back(&Candidate);
@@ -509,10 +529,17 @@ void GroupMatcher::finalize() {
     for (const auto &Rule : Matchers)
       if (!Rule->hasFirstCondition())
         return;
+    // Hoist the first condition if it is identical in all matchers in the group
+    // and it can be hoisted in every matcher.
     const auto &FirstCondition = FirstRule.getFirstCondition();
-    for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
-      if (!Matchers[I]->getFirstCondition().isIdentical(FirstCondition))
+    if (cannotHoistCondition(FirstCondition, FirstRule))
+      return;
+    for (unsigned I = 1, E = Matchers.size(); I < E; ++I) {
+      const auto &OtherFirstCondition = Matchers[I]->getFirstCondition();
+      if (!OtherFirstCondition.isIdentical(FirstCondition) ||
+          cannotHoistCondition(OtherFirstCondition, *Matchers[I]))
         return;
+    }
 
     Conditions.push_back(FirstRule.popFirstCondition());
     for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
@@ -568,6 +595,12 @@ void GroupMatcher::optimize() {
 }
 
 //===- SwitchMatcher ------------------------------------------------------===//
+
+bool SwitchMatcher::recordsOperand() const {
+  assert(!isa_and_present<RecordNamedOperandMatcher>(Condition.get()) &&
+         "Switch conditions should not record named operands");
+  return matchersRecordOperand(Matchers);
+}
 
 bool SwitchMatcher::isSupportedPredicateType(const PredicateMatcher &P) {
   return isa<InstructionOpcodeMatcher>(P) || isa<LLTOperandMatcher>(P);
@@ -707,6 +740,10 @@ uint64_t RuleMatcher::NextRuleID = 0;
 
 StringRef RuleMatcher::getOpcode() const {
   return Matchers.front()->getOpcode();
+}
+
+bool RuleMatcher::recordsOperand() const {
+  return matchersRecordOperand(Matchers);
 }
 
 LLTCodeGen RuleMatcher::getFirstConditionAsRootType() {
@@ -1113,11 +1150,11 @@ void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
 
 //===- PredicateMatcher ---------------------------------------------------===//
 
-PredicateMatcher::~PredicateMatcher() {}
+PredicateMatcher::~PredicateMatcher() = default;
 
 //===- OperandPredicateMatcher --------------------------------------------===//
 
-OperandPredicateMatcher::~OperandPredicateMatcher() {}
+OperandPredicateMatcher::~OperandPredicateMatcher() = default;
 
 bool OperandPredicateMatcher::isHigherPriorityThan(
     const OperandPredicateMatcher &B) const {
@@ -1378,6 +1415,10 @@ TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
   return TTIdx;
 }
 
+bool OperandMatcher::recordsOperand() const {
+  return matchersRecordOperand(Predicates);
+}
+
 void OperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                           RuleMatcher &Rule) {
   if (!Optimized) {
@@ -1426,7 +1467,9 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
   if (!VTy.isMachineValueType())
     return failUnsupported("unsupported typeset");
 
-  if (VTy.getMachineValueType() == MVT::iPTR && OperandIsAPointer) {
+  if ((VTy.getMachineValueType() == MVT::iPTR ||
+       VTy.getMachineValueType() == MVT::cPTR) &&
+      OperandIsAPointer) {
     addPredicate<PointerToAnyOperandMatcher>(0);
     return Error::success();
   }
@@ -1759,6 +1802,10 @@ OperandMatcher &InstructionMatcher::addPhysRegInput(const Record *Reg,
   return *OM;
 }
 
+bool InstructionMatcher::recordsOperand() const {
+  return matchersRecordOperand(Predicates) || matchersRecordOperand(operands());
+}
+
 void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,
                                               RuleMatcher &Rule) {
   if (canAddNumOperandsCheck()) {
@@ -1894,7 +1941,7 @@ bool InstructionOperandMatcher::isHigherPriorityThan(
 
 //===- OperandRenderer ----------------------------------------------------===//
 
-OperandRenderer::~OperandRenderer() {}
+OperandRenderer::~OperandRenderer() = default;
 
 //===- CopyRenderer -------------------------------------------------------===//
 

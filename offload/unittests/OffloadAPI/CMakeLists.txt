@@ -27,7 +27,9 @@ add_offload_unittest("memory"
     memory/olMemAlloc.cpp
     memory/olMemFill.cpp
     memory/olMemFree.cpp
-    memory/olMemcpy.cpp)
+    memory/olMemcpy.cpp
+    memory/olGetMemInfo.cpp
+    memory/olGetMemInfoSize.cpp)
 
 add_offload_unittest("platform"
     platform/olGetPlatformInfo.cpp
@@ -35,6 +37,7 @@ add_offload_unittest("platform"
 
 add_offload_unittest("program"
     program/olCreateProgram.cpp
+    program/olIsValidBinary.cpp
     program/olDestroyProgram.cpp)
 
 add_offload_unittest("queue"

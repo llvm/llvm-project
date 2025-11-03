@@ -85,6 +85,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   if (options.features.IsEnabled(LanguageFeature::OpenACC) ||
       (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$acc");
+    prescanner.AddCompilerDirectiveSentinel("@acc");
   }
   if (options.features.IsEnabled(LanguageFeature::OpenMP) ||
       (options.prescanAndReformat && noneOfTheAbove)) {

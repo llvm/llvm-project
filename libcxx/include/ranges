@@ -267,6 +267,11 @@ namespace std::ranges {
   template<class W, class Bound>
     inline constexpr bool enable_borrowed_range<iota_view<W, Bound>> = true;
 
+  namespace views {
+    inline constexpr unspecified iota = unspecified;
+    inline constexpr unspecified indices = unspecified; // Since C++26
+  }
+
   // [range.repeat], repeat view
   template<class T>
     concept integer-like-with-usable-difference-type =  // exposition only

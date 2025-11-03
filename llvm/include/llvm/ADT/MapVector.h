@@ -45,15 +45,15 @@ public:
   using const_reverse_iterator = typename VectorType::const_reverse_iterator;
 
   /// Clear the MapVector and return the underlying vector.
-  VectorType takeVector() {
+  [[nodiscard]] VectorType takeVector() {
     Map.clear();
     return std::move(Vector);
   }
 
   /// Returns an array reference of the underlying vector.
-  ArrayRef<value_type> getArrayRef() const { return Vector; }
+  [[nodiscard]] ArrayRef<value_type> getArrayRef() const { return Vector; }
 
-  size_type size() const { return Vector.size(); }
+  [[nodiscard]] size_type size() const { return Vector.size(); }
 
   /// Grow the MapVector so that it can contain at least \p NumEntries items
   /// before resizing again.
@@ -62,24 +62,28 @@ public:
     Vector.reserve(NumEntries);
   }
 
-  iterator begin() { return Vector.begin(); }
-  const_iterator begin() const { return Vector.begin(); }
-  iterator end() { return Vector.end(); }
-  const_iterator end() const { return Vector.end(); }
+  [[nodiscard]] iterator begin() { return Vector.begin(); }
+  [[nodiscard]] const_iterator begin() const { return Vector.begin(); }
+  [[nodiscard]] iterator end() { return Vector.end(); }
+  [[nodiscard]] const_iterator end() const { return Vector.end(); }
 
-  reverse_iterator rbegin() { return Vector.rbegin(); }
-  const_reverse_iterator rbegin() const { return Vector.rbegin(); }
-  reverse_iterator rend() { return Vector.rend(); }
-  const_reverse_iterator rend() const { return Vector.rend(); }
-
-  bool empty() const {
-    return Vector.empty();
+  [[nodiscard]] reverse_iterator rbegin() { return Vector.rbegin(); }
+  [[nodiscard]] const_reverse_iterator rbegin() const {
+    return Vector.rbegin();
   }
+  [[nodiscard]] reverse_iterator rend() { return Vector.rend(); }
+  [[nodiscard]] const_reverse_iterator rend() const { return Vector.rend(); }
 
-  std::pair<KeyT, ValueT>       &front()       { return Vector.front(); }
-  const std::pair<KeyT, ValueT> &front() const { return Vector.front(); }
-  std::pair<KeyT, ValueT>       &back()        { return Vector.back(); }
-  const std::pair<KeyT, ValueT> &back()  const { return Vector.back(); }
+  [[nodiscard]] bool empty() const { return Vector.empty(); }
+
+  [[nodiscard]] std::pair<KeyT, ValueT> &front() { return Vector.front(); }
+  [[nodiscard]] const std::pair<KeyT, ValueT> &front() const {
+    return Vector.front();
+  }
+  [[nodiscard]] std::pair<KeyT, ValueT> &back() { return Vector.back(); }
+  [[nodiscard]] const std::pair<KeyT, ValueT> &back() const {
+    return Vector.back();
+  }
 
   void clear() {
     Map.clear();
@@ -96,7 +100,7 @@ public:
   }
 
   // Returns a copy of the value.  Only allowed if ValueT is copyable.
-  ValueT lookup(const KeyT &Key) const {
+  [[nodiscard]] ValueT lookup(const KeyT &Key) const {
     static_assert(std::is_copy_constructible_v<ValueT>,
                   "Cannot call lookup() if ValueT is not copyable.");
     typename MapType::const_iterator Pos = Map.find(Key);
@@ -134,17 +138,21 @@ public:
     return Ret;
   }
 
-  bool contains(const KeyT &Key) const { return Map.find(Key) != Map.end(); }
+  [[nodiscard]] bool contains(const KeyT &Key) const {
+    return Map.find(Key) != Map.end();
+  }
 
-  size_type count(const KeyT &Key) const { return contains(Key) ? 1 : 0; }
+  [[nodiscard]] size_type count(const KeyT &Key) const {
+    return contains(Key) ? 1 : 0;
+  }
 
-  iterator find(const KeyT &Key) {
+  [[nodiscard]] iterator find(const KeyT &Key) {
     typename MapType::const_iterator Pos = Map.find(Key);
     return Pos == Map.end()? Vector.end() :
                             (Vector.begin() + Pos->second);
   }
 
-  const_iterator find(const KeyT &Key) const {
+  [[nodiscard]] const_iterator find(const KeyT &Key) const {
     typename MapType::const_iterator Pos = Map.find(Key);
     return Pos == Map.end()? Vector.end() :
                             (Vector.begin() + Pos->second);

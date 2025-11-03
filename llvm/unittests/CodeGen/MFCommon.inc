@@ -86,7 +86,7 @@ public:
       : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
                             nullptr, nullptr, nullptr, nullptr, nullptr),
         FL(), TL(TM) {}
-  ~BogusSubtarget() override {}
+  ~BogusSubtarget() override = default;
 
   const TargetFrameLowering *getFrameLowering() const override { return &FL; }
 
@@ -117,7 +117,7 @@ public:
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
-  ~BogusTargetMachine() override {}
+  ~BogusTargetMachine() override = default;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override {
     return &ST;
@@ -132,10 +132,10 @@ BogusTargetMachine *createTargetMachine() {
   return &BogusTM;
 }
 
-std::unique_ptr<MachineFunction> createMachineFunction(LLVMContext &Ctx,
-                                                       Module &M) {
+std::unique_ptr<MachineFunction>
+createMachineFunction(LLVMContext &Ctx, Module &M, const Twine &Name = "Test") {
   auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
-  auto F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &M);
+  auto F = Function::Create(Type, GlobalValue::ExternalLinkage, Name, &M);
 
   auto TM = createTargetMachine();
   unsigned FunctionNum = 42;
@@ -145,4 +145,3 @@ std::unique_ptr<MachineFunction> createMachineFunction(LLVMContext &Ctx,
   return std::make_unique<MachineFunction>(*F, *TM, STI, MMI.getContext(),
                                            FunctionNum);
 }
-

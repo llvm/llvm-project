@@ -130,16 +130,17 @@ define i128 @fptosi_sat_f32_to_i128(float %a) nounwind {
 ; RV64IF-NEXT:  # %bb.1:
 ; RV64IF-NEXT:    slli a1, a2, 63
 ; RV64IF-NEXT:  .LBB4_2:
-; RV64IF-NEXT:    lui a3, %hi(.LCPI4_0)
-; RV64IF-NEXT:    flw fa5, %lo(.LCPI4_0)(a3)
+; RV64IF-NEXT:    lui a3, 520192
+; RV64IF-NEXT:    addi a3, a3, -1
+; RV64IF-NEXT:    fmv.w.x fa5, a3
 ; RV64IF-NEXT:    flt.s a3, fa5, fs0
 ; RV64IF-NEXT:    beqz a3, .LBB4_4
 ; RV64IF-NEXT:  # %bb.3:
 ; RV64IF-NEXT:    srli a1, a2, 1
 ; RV64IF-NEXT:  .LBB4_4:
 ; RV64IF-NEXT:    feq.s a2, fs0, fs0
-; RV64IF-NEXT:    neg a3, a3
 ; RV64IF-NEXT:    neg a4, s0
+; RV64IF-NEXT:    neg a3, a3
 ; RV64IF-NEXT:    neg a2, a2
 ; RV64IF-NEXT:    and a0, a4, a0
 ; RV64IF-NEXT:    and a1, a2, a1
@@ -235,10 +236,11 @@ define i128 @fptoui_sat_f32_to_i128(float %a) nounwind {
 ; RV64IF-NEXT:    fle.s a0, fa5, fa0
 ; RV64IF-NEXT:    neg s0, a0
 ; RV64IF-NEXT:    call __fixunssfti
-; RV64IF-NEXT:    lui a2, %hi(.LCPI5_0)
-; RV64IF-NEXT:    flw fa5, %lo(.LCPI5_0)(a2)
 ; RV64IF-NEXT:    and a0, s0, a0
+; RV64IF-NEXT:    lui a2, 522240
 ; RV64IF-NEXT:    and a1, s0, a1
+; RV64IF-NEXT:    addi a2, a2, -1
+; RV64IF-NEXT:    fmv.w.x fa5, a2
 ; RV64IF-NEXT:    flt.s a2, fa5, fs0
 ; RV64IF-NEXT:    neg a2, a2
 ; RV64IF-NEXT:    or a0, a2, a0

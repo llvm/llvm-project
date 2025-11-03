@@ -15,6 +15,7 @@
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
@@ -30,7 +31,6 @@
 /// implementation, which includes a name and type signature.
 #define GET_RUNTIME_LIBCALL_ENUM
 #include "llvm/IR/RuntimeLibcalls.inc"
-#undef GET_RUNTIME_LIBCALL_ENUM
 
 namespace llvm {
 
@@ -54,8 +54,22 @@ static inline auto libcall_impls() {
                   static_cast<RTLIB::LibcallImpl>(RTLIB::NumLibcallImpls));
 }
 
+/// Manage a bitset representing the list of available libcalls for a module.
+class LibcallImplBitset : public Bitset<RTLIB::NumLibcallImpls> {
+public:
+  constexpr LibcallImplBitset() = default;
+  constexpr LibcallImplBitset(
+      const std::array<uint64_t, (RTLIB::NumLibcallImpls + 63) / 64> &Src)
+      : Bitset(Src) {}
+};
+
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
+private:
+  /// Bitset of libcalls a module may emit a call to.
+  LibcallImplBitset AvailableLibcallImpls;
+
+public:
   explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
@@ -129,6 +143,14 @@ struct RuntimeLibcallsInfo {
     return getLibcallName(RTLIB::MEMMOVE);
   }
 
+  bool isAvailable(RTLIB::LibcallImpl Impl) const {
+    return AvailableLibcallImpls.test(Impl);
+  }
+
+  void setAvailable(RTLIB::LibcallImpl Impl) {
+    AvailableLibcallImpls.set(Impl);
+  }
+
   /// Return the libcall provided by \p Impl
   static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
     return ImplToLibcall[Impl];
@@ -147,7 +169,6 @@ struct RuntimeLibcallsInfo {
   // querying a real set of symbols
 #define GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
 #include "llvm/IR/RuntimeLibcalls.inc"
-#undef GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
   }
 
   /// Check if this is valid libcall for the current module, otherwise
@@ -215,7 +236,7 @@ private:
 
   static bool hasAEABILibcalls(const Triple &TT) {
     return TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
-           TT.isTargetMuslAEABI() || TT.isAndroid();
+           TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isAndroid();
   }
 
   LLVM_READONLY
@@ -225,8 +246,7 @@ private:
 
   /// Return true if the target has sincosf/sincos/sincosl functions
   static bool hasSinCos(const Triple &TT) {
-    return TT.isGNUEnvironment() || TT.isOSFuchsia() ||
-           (TT.isAndroid() && !TT.isAndroidVersionLT(9));
+    return TT.isGNUEnvironment() || TT.isOSFuchsia() || TT.isAndroid();
   }
 
   static bool hasSinCos_f32_f64(const Triple &TT) {

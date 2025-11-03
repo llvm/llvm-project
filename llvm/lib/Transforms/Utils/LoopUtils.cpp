@@ -962,13 +962,54 @@ bool llvm::setLoopEstimatedTripCount(
   if (LatchBranch->getSuccessor(0) != L->getHeader())
     std::swap(BackedgeTakenWeight, LatchExitWeight);
 
-  MDBuilder MDB(LatchBranch->getContext());
-
   // Set/Update profile metadata.
-  LatchBranch->setMetadata(
-      LLVMContext::MD_prof,
-      MDB.createBranchWeights(BackedgeTakenWeight, LatchExitWeight));
+  setBranchWeights(*LatchBranch, {BackedgeTakenWeight, LatchExitWeight},
+                   /*IsExpected=*/false);
 
+  return true;
+}
+
+BranchProbability llvm::getLoopProbability(Loop *L) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return BranchProbability::getUnknown();
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return getBranchProbability(LatchBranch, FirstTargetIsLoop);
+}
+
+bool llvm::setLoopProbability(Loop *L, BranchProbability P) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return false;
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return setBranchProbability(LatchBranch, P, FirstTargetIsLoop);
+}
+
+BranchProbability llvm::getBranchProbability(BranchInst *B,
+                                             bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return BranchProbability::getUnknown();
+  uint64_t Weight0, Weight1;
+  if (!extractBranchWeights(*B, Weight0, Weight1))
+    return BranchProbability::getUnknown();
+  uint64_t Denominator = Weight0 + Weight1;
+  if (Denominator == 0)
+    return BranchProbability::getUnknown();
+  if (!ForFirstTarget)
+    std::swap(Weight0, Weight1);
+  return BranchProbability::getBranchProbability(Weight0, Denominator);
+}
+
+bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
+                                bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return false;
+  BranchProbability Prob0 = P;
+  BranchProbability Prob1 = P.getCompl();
+  if (!ForFirstTarget)
+    std::swap(Prob0, Prob1);
+  setBranchWeights(*B, {Prob0.getNumerator(), Prob1.getNumerator()},
+                   /*IsExpected=*/false);
   return true;
 }
 
@@ -1863,32 +1904,6 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
   // so that the rewriter doesn't trip over it later.
   Rewriter.clearInsertPoint();
   return NumReplaced;
-}
-
-/// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
-/// \p OrigLoop.
-void llvm::setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
-                                        Loop *RemainderLoop, uint64_t UF) {
-  assert(UF > 0 && "Zero unrolled factor is not supported");
-  assert(UnrolledLoop != RemainderLoop &&
-         "Unrolled and Remainder loops are expected to distinct");
-
-  // Get number of iterations in the original scalar loop.
-  unsigned OrigLoopInvocationWeight = 0;
-  std::optional<unsigned> OrigAverageTripCount =
-      getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
-  if (!OrigAverageTripCount)
-    return;
-
-  // Calculate number of iterations in unrolled loop.
-  unsigned UnrolledAverageTripCount = *OrigAverageTripCount / UF;
-  // Calculate number of iterations for remainder loop.
-  unsigned RemainderAverageTripCount = *OrigAverageTripCount % UF;
-
-  setLoopEstimatedTripCount(UnrolledLoop, UnrolledAverageTripCount,
-                            OrigLoopInvocationWeight);
-  setLoopEstimatedTripCount(RemainderLoop, RemainderAverageTripCount,
-                            OrigLoopInvocationWeight);
 }
 
 /// Utility that implements appending of loops onto a worklist.

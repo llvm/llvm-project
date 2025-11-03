@@ -209,3 +209,53 @@ merge:
   store i32 %phi, ptr  %ptr
   ret void
 }
+
+define void @test_nested_if_2 (i32 %val,ptr %gep, i1 %cond) {
+; CHECK-LABEL: define void @test_nested_if_2(
+; CHECK-SAME: i32 [[VAL:%.*]], ptr [[GEP:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[COND_INV:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[T825:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    [[T825_INV:%.*]] = xor i1 [[T825]], true
+; CHECK-NEXT:    br i1 [[T825]], label %[[IF:.*]], label %[[FLOW:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[LOADED:%.*]] = load [[PAIR:%.*]], ptr [[GEP]], align 4
+; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK:       [[FLOW1:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, %[[ELSE:.*]] ], [ [[TMP2:%.*]], %[[FLOW]] ]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[IF_2:.*]], label %[[EXIT:.*]]
+; CHECK:       [[IF_2]]:
+; CHECK-NEXT:    [[IF_VALUE:%.*]] = extractvalue [[PAIR]] [[TMP1:%.*]], 0
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[FLOW]]:
+; CHECK-NEXT:    [[TMP1]] = phi [[PAIR]] [ [[LOADED]], %[[IF]] ], [ poison, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2]] = phi i1 [ true, %[[IF]] ], [ false, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[COND_INV]], %[[IF]] ], [ [[T825_INV]], %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[ELSE]], label %[[FLOW1]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    br label %[[FLOW1]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[T_SINK168:%.*]] = phi i32 [ 0, %[[FLOW1]] ], [ [[IF_VALUE]], %[[IF_2]] ]
+; CHECK-NEXT:    store i32 [[T_SINK168]], ptr [[GEP]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %t825 = icmp eq i32 %val, 0
+  br i1 %t825, label %if, label %else
+
+if:
+  %loaded = load %pair, ptr %gep
+  br i1 %cond, label %if_2, label %else
+
+if_2:
+  %if_value = extractvalue %pair %loaded, 0
+  br label %exit
+
+else:
+  br label %exit
+
+exit:
+  %phi = phi i32 [ %if_value, %if_2 ], [ 0, %else ]
+  store i32 %phi,ptr %gep
+  ret void
+}

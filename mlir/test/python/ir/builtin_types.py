@@ -371,11 +371,16 @@ def testAbstractShapedType():
 # CHECK-LABEL: TEST: testVectorType
 @run
 def testVectorType():
+    shape = [2, 3]
+    with Context():
+        f32 = F32Type.get()
+        # CHECK: unchecked vector type: vector<2x3xf32>
+        print("unchecked vector type:", VectorType.get_unchecked(shape, f32))
+
     with Context(), Location.unknown():
         f32 = F32Type.get()
-        shape = [2, 3]
-        # CHECK: vector type: vector<2x3xf32>
-        print("vector type:", VectorType.get(shape, f32))
+        # CHECK: checked vector type: vector<2x3xf32>
+        print("checked vector type:", VectorType.get(shape, f32))
 
         none = NoneType.get()
         try:

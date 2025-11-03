@@ -261,6 +261,82 @@ TEST_P(MCPlusBuilderTester, testAccessedRegsMultipleDefs) {
                 {AArch64::W5, AArch64::X5, AArch64::W5_HI});
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_Psign_Pauth_variants) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  MCInst Paciasp = MCInstBuilder(AArch64::PACIASP);
+  MCInst Pacibsp = MCInstBuilder(AArch64::PACIBSP);
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Paciasp));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Pacibsp));
+
+  MCInst PaciaSPLR =
+      MCInstBuilder(AArch64::PACIA).addReg(AArch64::LR).addReg(AArch64::SP);
+  MCInst PacibSPLR =
+      MCInstBuilder(AArch64::PACIB).addReg(AArch64::LR).addReg(AArch64::SP);
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(PaciaSPLR));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(PacibSPLR));
+
+  MCInst PacizaX5 = MCInstBuilder(AArch64::PACIZA).addReg(AArch64::X5);
+  MCInst PacizbX5 = MCInstBuilder(AArch64::PACIZB).addReg(AArch64::X5);
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(PacizaX5));
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(PacizbX5));
+
+  MCInst Paciaz = MCInstBuilder(AArch64::PACIZA).addReg(AArch64::LR);
+  MCInst Pacibz = MCInstBuilder(AArch64::PACIZB).addReg(AArch64::LR);
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Paciaz));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Pacibz));
+
+  MCInst Pacia1716 = MCInstBuilder(AArch64::PACIA1716);
+  MCInst Pacib1716 = MCInstBuilder(AArch64::PACIB1716);
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacia1716));
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacib1716));
+
+  MCInst Pacia171615 = MCInstBuilder(AArch64::PACIA171615);
+  MCInst Pacib171615 = MCInstBuilder(AArch64::PACIB171615);
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacia171615));
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacib171615));
+
+  MCInst Autiasp = MCInstBuilder(AArch64::AUTIASP);
+  MCInst Autibsp = MCInstBuilder(AArch64::AUTIBSP);
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autiasp));
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autibsp));
+
+  MCInst AutiaSPLR =
+      MCInstBuilder(AArch64::AUTIA).addReg(AArch64::LR).addReg(AArch64::SP);
+  MCInst AutibSPLR =
+      MCInstBuilder(AArch64::AUTIB).addReg(AArch64::LR).addReg(AArch64::SP);
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(AutiaSPLR));
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(AutibSPLR));
+
+  MCInst AutizaX5 = MCInstBuilder(AArch64::AUTIZA).addReg(AArch64::X5);
+  MCInst AutizbX5 = MCInstBuilder(AArch64::AUTIZB).addReg(AArch64::X5);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(AutizaX5));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(AutizbX5));
+
+  MCInst Autiaz = MCInstBuilder(AArch64::AUTIZA).addReg(AArch64::LR);
+  MCInst Autibz = MCInstBuilder(AArch64::AUTIZB).addReg(AArch64::LR);
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autiaz));
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autibz));
+
+  MCInst Autia1716 = MCInstBuilder(AArch64::AUTIA1716);
+  MCInst Autib1716 = MCInstBuilder(AArch64::AUTIB1716);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autia1716));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autib1716));
+
+  MCInst Autia171615 = MCInstBuilder(AArch64::AUTIA171615);
+  MCInst Autib171615 = MCInstBuilder(AArch64::AUTIB171615);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autia171615));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autib171615));
+
+  MCInst Retaa = MCInstBuilder(AArch64::RETAA);
+  MCInst Retab = MCInstBuilder(AArch64::RETAB);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Retaa));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Retab));
+  ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retaa));
+  ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retab));
+}
+
 #endif // AARCH64_AVAILABLE
 
 #ifdef X86_AVAILABLE

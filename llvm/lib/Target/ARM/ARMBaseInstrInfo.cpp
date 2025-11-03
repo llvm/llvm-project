@@ -6510,14 +6510,14 @@ bool ARMBaseInstrInfo::shouldOutlineFromFunctionByDefault(
   return Subtarget.isMClass() && MF.getFunction().hasMinSize();
 }
 
-bool ARMBaseInstrInfo::isReallyTriviallyReMaterializable(
+bool ARMBaseInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   // Try hard to rematerialize any VCTPs because if we spill P0, it will block
   // the tail predication conversion. This means that the element count
   // register has to be live for longer, but that has to be better than
   // spill/restore and VPT predication.
   return (isVCTP(&MI) && !isPredicated(MI)) ||
-         TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+         TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
 unsigned llvm::getBLXOpcode(const MachineFunction &MF) {

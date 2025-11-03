@@ -945,7 +945,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
           if (Rec->isSubClassOf("RegisterOperand"))
             Rec = Rec->getValueAsDef("RegClass");
-          if (Rec->isSubClassOf("RegisterClass")) {
+          if (Rec->isSubClassOf("RegisterClassLike")) {
             if (!IAP.isOpMapped(ROName)) {
               IAP.addOperand(ROName, MIOpNum, PrintMethodIdx);
               const Record *R = CGA.ResultOperands[i].getRecord();

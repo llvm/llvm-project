@@ -13,7 +13,7 @@ define void @StoreIntrinsic(ptr %p, <4 x float> %x) nounwind uwtable sanitize_me
 ; CHECK-LABEL: define void @StoreIntrinsic(
 ; CHECK-SAME: ptr [[P:%.*]], <4 x float> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2147483649
@@ -25,8 +25,8 @@ define void @StoreIntrinsic(ptr %p, <4 x float> %x) nounwind uwtable sanitize_me
 ; ORIGINS-LABEL: define void @StoreIntrinsic(
 ; ORIGINS-SAME: ptr [[P:%.*]], <4 x float> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; ORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; ORIGINS-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], -2147483649
@@ -107,7 +107,7 @@ define <8 x i16> @Pmulhuw128(<8 x i16> %a, <8 x i16> %b) nounwind uwtable saniti
 ; CHECK-LABEL: define <8 x i16> @Pmulhuw128(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP1]], [[TMP2]]
@@ -119,8 +119,8 @@ define <8 x i16> @Pmulhuw128(<8 x i16> %a, <8 x i16> %b) nounwind uwtable saniti
 ; ORIGINS-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]]) #[[ATTR0]] {
 ; ORIGINS-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; ORIGINS-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; ORIGINS-NEXT:    [[TMP4:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4
+; ORIGINS-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; ORIGINS-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; ORIGINS-NEXT:    [[TMP8:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP1]], [[TMP3]]

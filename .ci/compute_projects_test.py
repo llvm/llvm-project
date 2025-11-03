@@ -413,6 +413,30 @@ class TestComputeProjects(unittest.TestCase):
             "check-cxx check-cxxabi check-unwind",
         )
 
+    def test_lit(self):
+        env_variables = compute_projects.get_env_variables(
+            ["llvm/utils/lit/CMakeLists.txt"], "Linux"
+        )
+        self.assertEqual(
+            env_variables["projects_to_build"],
+            "bolt;clang;clang-tools-extra;flang;lld;lldb;llvm;mlir;polly",
+        )
+        self.assertEqual(
+            env_variables["project_check_targets"],
+            "check-bolt check-clang check-clang-tools check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
+        )
+        self.assertEqual(
+            env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind"
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets"],
+            "",
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets_needs_reconfig"],
+            "check-cxx check-cxxabi check-unwind",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

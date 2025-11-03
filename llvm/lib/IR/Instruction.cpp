@@ -30,6 +30,8 @@
 #include "llvm/Support/Compiler.h"
 using namespace llvm;
 
+namespace llvm {
+
 // FIXME: Flag used for an ablation performance test, Issue #147390. Placing it
 // here because referencing IR should be feasible from anywhere. Will be
 // removed after the ablation test.
@@ -37,6 +39,8 @@ cl::opt<bool> ProfcheckDisableMetadataFixes(
     "profcheck-disable-metadata-fixes", cl::Hidden, cl::init(false),
     cl::desc(
         "Disable metadata propagation fixes discovered through Issue #147390"));
+
+} // end namespace llvm
 
 InsertPosition::InsertPosition(Instruction *InsertBefore)
     : InsertAt(InsertBefore ? InsertBefore->getIterator()
@@ -865,7 +869,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
 bool Instruction::hasSameSpecialState(const Instruction *I2,
                                       bool IgnoreAlignment,
                                       bool IntersectAttrs) const {
-  auto I1 = this;
+  const auto *I1 = this;
   assert(I1->getOpcode() == I2->getOpcode() &&
          "Can not compare special state of different instructions");
 
@@ -918,6 +922,8 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
            FI->getSyncScopeID() == cast<FenceInst>(I2)->getSyncScopeID();
   if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I1))
     return CXI->isVolatile() == cast<AtomicCmpXchgInst>(I2)->isVolatile() &&
+           (CXI->getAlign() == cast<AtomicCmpXchgInst>(I2)->getAlign() ||
+            IgnoreAlignment) &&
            CXI->isWeak() == cast<AtomicCmpXchgInst>(I2)->isWeak() &&
            CXI->getSuccessOrdering() ==
                cast<AtomicCmpXchgInst>(I2)->getSuccessOrdering() &&
@@ -928,6 +934,8 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I1))
     return RMWI->getOperation() == cast<AtomicRMWInst>(I2)->getOperation() &&
            RMWI->isVolatile() == cast<AtomicRMWInst>(I2)->isVolatile() &&
+           (RMWI->getAlign() == cast<AtomicRMWInst>(I2)->getAlign() ||
+            IgnoreAlignment) &&
            RMWI->getOrdering() == cast<AtomicRMWInst>(I2)->getOrdering() &&
            RMWI->getSyncScopeID() == cast<AtomicRMWInst>(I2)->getSyncScopeID();
   if (const ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I1))

@@ -4,16 +4,16 @@
 define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-LABEL: define void @sdiv_feeding_gep(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X:%.*]], i64 [[M:%.*]], i64 [[CONV6:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CONV61:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 3
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
@@ -37,17 +37,16 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP23]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = sext i32 [[TMP24]] to i64
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP25]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr [[TMP26]], i32 8, <4 x i1> [[TMP6]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr align 8 [[TMP26]], <4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[DIV18:%.*]] = sdiv i64 [[M]], [[CONV6]]
 ; CHECK-NEXT:    [[CONV20:%.*]] = trunc i64 [[DIV18]] to i32
 ; CHECK-NEXT:    [[MUL30:%.*]] = mul i64 [[DIV18]], [[CONV61]]
@@ -91,16 +90,16 @@ exit:
 define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-LABEL: define void @sdiv_feeding_gep_predicated(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X:%.*]], i64 [[M:%.*]], i64 [[CONV6:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CONV61:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 3
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
@@ -150,7 +149,7 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[TMP25]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = sext i32 [[TMP26]] to i64
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr [[TMP28]], i32 8, <4 x i1> [[TMP8]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr align 8 [[TMP28]], <4 x i1> [[TMP8]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -158,10 +157,9 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[IV]], [[M]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[THEN]]:

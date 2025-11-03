@@ -16,7 +16,7 @@ namespace clang::tidy::modernize {
 /// Replace enable_if with C++20 requires clauses.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-constraints.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-constraints.html
 class UseConstraintsCheck : public ClangTidyCheck {
 public:
   UseConstraintsCheck(StringRef Name, ClangTidyContext *Context)

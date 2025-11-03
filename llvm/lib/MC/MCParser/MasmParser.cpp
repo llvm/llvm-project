@@ -483,11 +483,9 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
-  bool Warning(SMLoc L, const Twine &Msg,
-               SMRange Range = std::nullopt) override;
-  bool printError(SMLoc L, const Twine &Msg,
-                  SMRange Range = std::nullopt) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool printError(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
 
   enum ExpandKind { ExpandMacros, DoNotExpandMacros };
   const AsmToken &Lex(ExpandKind ExpandNextToken);
@@ -592,7 +590,7 @@ private:
   bool expandStatement(SMLoc Loc);
 
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = std::nullopt) const {
+                    SMRange Range = {}) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -1480,7 +1478,7 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       auto VarIt = Variables.find(SymbolName.lower());
       if (VarIt != Variables.end())
         SymbolName = VarIt->second.Name;
-      Sym = getContext().getOrCreateSymbol(SymbolName);
+      Sym = getContext().parseSymbol(SymbolName);
     }
 
     // If this is an absolute variable reference, substitute it now to preserve
@@ -1965,7 +1963,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     if (IDVal == "@@") {
       Sym = Ctx.createDirectionalLocalSymbol(0);
     } else {
-      Sym = getContext().getOrCreateSymbol(IDVal);
+      Sym = getContext().parseSymbol(IDVal);
     }
 
     // End of Labels should be treated as end of line for lexing
@@ -2903,7 +2901,7 @@ bool MasmParser::parseIdentifier(StringRef &Res,
   if (Position == StartOfStatement &&
       StringSwitch<bool>(Res)
           .CaseLower("echo", true)
-          .CasesLower("ifdef", "ifndef", "elseifdef", "elseifndef", true)
+          .CasesLower({"ifdef", "ifndef", "elseifdef", "elseifndef"}, true)
           .Default(false)) {
     ExpandNextToken = DoNotExpandMacros;
   }
@@ -3009,8 +3007,7 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
     return false;
   }
 
-  auto *Sym =
-      static_cast<MCSymbolCOFF *>(getContext().getOrCreateSymbol(Var.Name));
+  auto *Sym = static_cast<MCSymbolCOFF *>(getContext().parseSymbol(Var.Name));
   const MCConstantExpr *PrevValue =
       Sym->isVariable()
           ? dyn_cast_or_null<MCConstantExpr>(Sym->getVariableValue())
@@ -3318,7 +3315,7 @@ bool MasmParser::parseDirectiveNamedValue(StringRef TypeName, unsigned Size,
                                           StringRef Name, SMLoc NameLoc) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
     getStreamer().emitLabel(Sym);
     unsigned Count;
     if (emitIntegralValues(Size, &Count))
@@ -3509,7 +3506,7 @@ bool MasmParser::parseDirectiveNamedRealValue(StringRef TypeName,
                                               SMLoc NameLoc) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
     getStreamer().emitLabel(Sym);
     unsigned Count;
     if (emitRealValues(Semantics, &Count))
@@ -4003,7 +4000,7 @@ bool MasmParser::parseDirectiveNamedStructValue(const StructInfo &Structure,
                                                 SMLoc DirLoc, StringRef Name) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
     getStreamer().emitLabel(Sym);
     unsigned Count;
     if (emitStructValues(Structure, &Count))
@@ -5326,10 +5323,10 @@ void MasmParser::initializeDirectiveKindMap() {
 bool MasmParser::isMacroLikeDirective() {
   if (getLexer().is(AsmToken::Identifier)) {
     bool IsMacroLike = StringSwitch<bool>(getTok().getIdentifier())
-                           .CasesLower("repeat", "rept", true)
+                           .CasesLower({"repeat", "rept"}, true)
                            .CaseLower("while", true)
-                           .CasesLower("for", "irp", true)
-                           .CasesLower("forc", "irpc", true)
+                           .CasesLower({"for", "irp"}, true)
+                           .CasesLower({"forc", "irpc"}, true)
                            .Default(false);
     if (IsMacroLike)
       return true;
@@ -5845,11 +5842,11 @@ bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
 
 bool MasmParser::lookUpType(StringRef Name, AsmTypeInfo &Info) const {
   unsigned Size = StringSwitch<unsigned>(Name)
-                      .CasesLower("byte", "db", "sbyte", 1)
-                      .CasesLower("word", "dw", "sword", 2)
-                      .CasesLower("dword", "dd", "sdword", 4)
-                      .CasesLower("fword", "df", 6)
-                      .CasesLower("qword", "dq", "sqword", 8)
+                      .CasesLower({"byte", "db", "sbyte"}, 1)
+                      .CasesLower({"word", "dw", "sword"}, 2)
+                      .CasesLower({"dword", "dd", "sdword"}, 4)
+                      .CasesLower({"fword", "df"}, 6)
+                      .CasesLower({"qword", "dq", "sqword"}, 8)
                       .CaseLower("real4", 4)
                       .CaseLower("real8", 8)
                       .CaseLower("real10", 10)

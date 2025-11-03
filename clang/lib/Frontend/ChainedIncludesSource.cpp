@@ -124,11 +124,12 @@ clang::createChainedIncludesSource(CompilerInstance &CI,
 
     auto Clang = std::make_unique<CompilerInstance>(
         std::move(CInvok), CI.getPCHContainerOperations());
+    Clang->createVirtualFileSystem();
     Clang->setDiagnostics(Diags);
     Clang->setTarget(TargetInfo::CreateTargetInfo(
         Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
     Clang->createFileManager();
-    Clang->createSourceManager(Clang->getFileManager());
+    Clang->createSourceManager();
     Clang->createPreprocessor(TU_Prefix);
     Clang->getDiagnosticClient().BeginSourceFile(Clang->getLangOpts(),
                                                  &Clang->getPreprocessor());

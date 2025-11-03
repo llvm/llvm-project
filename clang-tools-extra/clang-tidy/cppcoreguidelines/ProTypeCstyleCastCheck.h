@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// downcast, const_cast, or reinterpret_cast.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-cstyle-cast.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-cstyle-cast.html
 class ProTypeCstyleCastCheck : public ClangTidyCheck {
 public:
   ProTypeCstyleCastCheck(StringRef Name, ClangTidyContext *Context)

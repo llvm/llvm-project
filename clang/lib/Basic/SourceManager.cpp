@@ -608,8 +608,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
-  llvm::ErrorOr<bool> NeedConversion =
-      llvm::needConversion(Filename.str().c_str());
+  llvm::ErrorOr<bool> NeedConversion = llvm::needConversion(Filename);
   if (NeedConversion && *NeedConversion) {
     // Buffer size may increase due to potential z/OS EBCDIC to UTF-8
     // conversion.
@@ -908,19 +907,23 @@ getExpansionLocSlowCase(SourceLocation Loc) const {
 
 SourceLocation SourceManager::getSpellingLocSlowCase(SourceLocation Loc) const {
   do {
-    FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
-    Loc = getSLocEntry(LocInfo.first).getExpansion().getSpellingLoc();
-    Loc = Loc.getLocWithOffset(LocInfo.second);
+    const SLocEntry &Entry = getSLocEntry(getFileID(Loc));
+    Loc = Entry.getExpansion().getSpellingLoc().getLocWithOffset(
+        Loc.getOffset() - Entry.getOffset());
   } while (!Loc.isFileID());
   return Loc;
 }
 
 SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc) const {
   do {
-    if (isMacroArgExpansion(Loc))
-      Loc = getImmediateSpellingLoc(Loc);
-    else
-      Loc = getImmediateExpansionRange(Loc).getBegin();
+    const SLocEntry &Entry = getSLocEntry(getFileID(Loc));
+    const ExpansionInfo &ExpInfo = Entry.getExpansion();
+    if (ExpInfo.isMacroArgExpansion()) {
+      Loc = ExpInfo.getSpellingLoc().getLocWithOffset(Loc.getOffset() -
+                                                      Entry.getOffset());
+    } else {
+      Loc = ExpInfo.getExpansionLocStart();
+    }
   } while (!Loc.isFileID());
   return Loc;
 }

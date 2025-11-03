@@ -228,11 +228,9 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
-  bool Warning(SMLoc L, const Twine &Msg,
-               SMRange Range = std::nullopt) override;
-  bool printError(SMLoc L, const Twine &Msg,
-                  SMRange Range = std::nullopt) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool printError(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
 
   const AsmToken &Lex() override;
 
@@ -312,7 +310,7 @@ private:
 
   void printMacroInstantiations();
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = std::nullopt) const {
+                    SMRange Range = {}) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -726,7 +724,7 @@ public:
     Lexer.setLexHLASMStrings(true);
   }
 
-  ~HLASMAsmParser() { Lexer.setSkipSpace(true); }
+  ~HLASMAsmParser() override { Lexer.setSkipSpace(true); }
 
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI) override;
@@ -1213,8 +1211,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
     if (!Sym)
-      Sym = getContext().getOrCreateSymbol(MAI.isHLASM() ? SymbolName.upper()
-                                                         : SymbolName);
+      Sym = getContext().parseSymbol(MAI.isHLASM() ? SymbolName.upper()
+                                                   : SymbolName);
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
@@ -1845,7 +1843,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
                                        RewrittenLabel);
         IDVal = RewrittenLabel;
       }
-      Sym = getContext().getOrCreateSymbol(IDVal);
+      Sym = getContext().parseSymbol(IDVal);
     } else
       Sym = Ctx.createDirectionalLocalSymbol(LocalLabelVal);
     // End of Labels should be treated as end of line for lexing
@@ -4885,7 +4883,7 @@ bool AsmParser::parseDirectiveSymbolAttribute(MCSymbolAttr Attr) {
     if (discardLTOSymbol(Name))
       return false;
 
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
 
     // Assembler local symbols don't make any sense here, except for directives
     // that the symbol should be tagged.
@@ -6142,7 +6140,7 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
     return Error(LabelLoc,
                  "Cannot have just a label for an HLASM inline asm statement");
 
-  MCSymbol *Sym = getContext().getOrCreateSymbol(
+  MCSymbol *Sym = getContext().parseSymbol(
       getContext().getAsmInfo()->isHLASM() ? LabelVal.upper() : LabelVal);
 
   // Emit the label.
@@ -6270,7 +6268,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     Parser.getStreamer().emitValueToOffset(Value, 0, EqualLoc);
     return false;
   } else
-    Sym = Parser.getContext().getOrCreateSymbol(Name);
+    Sym = Parser.getContext().parseSymbol(Name);
 
   Sym->setRedefinable(allow_redef);
 

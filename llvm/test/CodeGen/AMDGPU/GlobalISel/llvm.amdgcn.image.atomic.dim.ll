@@ -1200,7 +1200,7 @@ define amdgpu_ps void @atomic_cmpswap_i32_1d_no_return(<8 x i32> inreg %rsrc, i3
 ; GFX6-NEXT:    s_mov_b32 s5, s7
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
-; GFX6-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm glc
+; GFX6-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: atomic_cmpswap_i32_1d_no_return:
@@ -1213,7 +1213,7 @@ define amdgpu_ps void @atomic_cmpswap_i32_1d_no_return(<8 x i32> inreg %rsrc, i3
 ; GFX8-NEXT:    s_mov_b32 s5, s7
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
-; GFX8-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm glc
+; GFX8-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX900-LABEL: atomic_cmpswap_i32_1d_no_return:
@@ -1226,7 +1226,7 @@ define amdgpu_ps void @atomic_cmpswap_i32_1d_no_return(<8 x i32> inreg %rsrc, i3
 ; GFX900-NEXT:    s_mov_b32 s5, s7
 ; GFX900-NEXT:    s_mov_b32 s6, s8
 ; GFX900-NEXT:    s_mov_b32 s7, s9
-; GFX900-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm glc
+; GFX900-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm
 ; GFX900-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: atomic_cmpswap_i32_1d_no_return:
@@ -1239,7 +1239,7 @@ define amdgpu_ps void @atomic_cmpswap_i32_1d_no_return(<8 x i32> inreg %rsrc, i3
 ; GFX90A-NEXT:    s_mov_b32 s5, s7
 ; GFX90A-NEXT:    s_mov_b32 s6, s8
 ; GFX90A-NEXT:    s_mov_b32 s7, s9
-; GFX90A-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm glc
+; GFX90A-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX10PLUS-LABEL: atomic_cmpswap_i32_1d_no_return:
@@ -1252,7 +1252,7 @@ define amdgpu_ps void @atomic_cmpswap_i32_1d_no_return(<8 x i32> inreg %rsrc, i3
 ; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
 ; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
 ; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm glc
+; GFX10PLUS-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm
 ; GFX10PLUS-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: atomic_cmpswap_i32_1d_no_return:
@@ -1265,7 +1265,7 @@ define amdgpu_ps void @atomic_cmpswap_i32_1d_no_return(<8 x i32> inreg %rsrc, i3
 ; GFX12-NEXT:    s_mov_b32 s5, s7
 ; GFX12-NEXT:    s_mov_b32 s6, s8
 ; GFX12-NEXT:    s_mov_b32 s7, s9
-; GFX12-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %v = call i32 @llvm.amdgcn.image.atomic.cmpswap.1d.i32.i32(i32 %cmp, i32 %swap, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -3194,7 +3194,7 @@ define amdgpu_ps void @atomic_cmpswap_i64_1d_no_return(<8 x i32> inreg %rsrc, i6
 ; GFX6-NEXT:    s_mov_b32 s5, s7
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
-; GFX6-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm glc
+; GFX6-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: atomic_cmpswap_i64_1d_no_return:
@@ -3207,7 +3207,7 @@ define amdgpu_ps void @atomic_cmpswap_i64_1d_no_return(<8 x i32> inreg %rsrc, i6
 ; GFX8-NEXT:    s_mov_b32 s5, s7
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
-; GFX8-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm glc
+; GFX8-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX900-LABEL: atomic_cmpswap_i64_1d_no_return:
@@ -3220,7 +3220,7 @@ define amdgpu_ps void @atomic_cmpswap_i64_1d_no_return(<8 x i32> inreg %rsrc, i6
 ; GFX900-NEXT:    s_mov_b32 s5, s7
 ; GFX900-NEXT:    s_mov_b32 s6, s8
 ; GFX900-NEXT:    s_mov_b32 s7, s9
-; GFX900-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm glc
+; GFX900-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm
 ; GFX900-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: atomic_cmpswap_i64_1d_no_return:
@@ -3233,7 +3233,7 @@ define amdgpu_ps void @atomic_cmpswap_i64_1d_no_return(<8 x i32> inreg %rsrc, i6
 ; GFX90A-NEXT:    s_mov_b32 s5, s7
 ; GFX90A-NEXT:    s_mov_b32 s6, s8
 ; GFX90A-NEXT:    s_mov_b32 s7, s9
-; GFX90A-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm glc
+; GFX90A-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX10PLUS-LABEL: atomic_cmpswap_i64_1d_no_return:
@@ -3246,7 +3246,7 @@ define amdgpu_ps void @atomic_cmpswap_i64_1d_no_return(<8 x i32> inreg %rsrc, i6
 ; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
 ; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
 ; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc
+; GFX10PLUS-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
 ; GFX10PLUS-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: atomic_cmpswap_i64_1d_no_return:
@@ -3259,7 +3259,7 @@ define amdgpu_ps void @atomic_cmpswap_i64_1d_no_return(<8 x i32> inreg %rsrc, i6
 ; GFX12-NEXT:    s_mov_b32 s5, s7
 ; GFX12-NEXT:    s_mov_b32 s6, s8
 ; GFX12-NEXT:    s_mov_b32 s7, s9
-; GFX12-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %v = call i64 @llvm.amdgcn.image.atomic.cmpswap.1d.i64.i32(i64 %cmp, i64 %swap, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)

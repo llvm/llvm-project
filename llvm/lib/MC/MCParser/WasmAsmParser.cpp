@@ -240,8 +240,7 @@ public:
       return error("Expected label after .type directive, got: ",
                    Lexer->getTok());
     auto *WasmSym = static_cast<MCSymbolWasm *>(
-        getStreamer().getContext().getOrCreateSymbol(
-            Lexer->getTok().getString()));
+        getStreamer().getContext().parseSymbol(Lexer->getTok().getString()));
     Lex();
     if (!(isNext(AsmToken::Comma) && isNext(AsmToken::At) &&
           Lexer->is(AsmToken::Identifier)))

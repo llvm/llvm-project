@@ -117,6 +117,7 @@ private:
   void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
   void relaxDwarfLineAddr(MCFragment &F);
   void relaxDwarfCallFrameFragment(MCFragment &F);
+  void relaxSFrameFragment(MCFragment &DF);
 
 public:
   /// Construct a new assembler instance.
@@ -197,8 +198,8 @@ public:
   const_iterator end() const { return Sections.end(); }
 
   SmallVectorImpl<const MCSymbol *> &getSymbols() { return Symbols; }
-  iterator_range<pointee_iterator<
-      typename SmallVector<const MCSymbol *, 0>::const_iterator>>
+  iterator_range<
+      pointee_iterator<SmallVector<const MCSymbol *, 0>::const_iterator>>
   symbols() const {
     return make_pointee_range(Symbols);
   }

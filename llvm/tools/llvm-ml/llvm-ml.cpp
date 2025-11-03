@@ -41,6 +41,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 #include <ctime>
@@ -313,6 +314,7 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     }
   }
   SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
@@ -325,7 +327,10 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, /*CPU=*/"", /*Features=*/""));
-  assert(STI && "Unable to create subtarget info!");
+  if (!STI) {
+    WithColor::error(errs(), ProgName) << "unable to create subtarget info\n";
+    exit(1);
+  }
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.

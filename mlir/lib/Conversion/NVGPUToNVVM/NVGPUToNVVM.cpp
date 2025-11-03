@@ -846,13 +846,8 @@ struct NVGPUMBarrierInitLowering
     Value barrier = getMbarrierPtr(b, mbarrierType, adaptor.getBarriers(),
                                    adaptor.getMbarId(), rewriter);
     Value count = truncToI32(b, adaptor.getCount());
-    if (isMbarrierShared(mbarrierType)) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierInitSharedOp>(
-          op, barrier, count, adaptor.getPredicate());
-    } else {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count,
-                                                        adaptor.getPredicate());
-    }
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count,
+                                                      adaptor.getPredicate());
     return success();
   }
 };
@@ -993,6 +988,14 @@ struct NVGPUTmaAsyncLoadOpLowering
     auto srcMemrefType = cast<MemRefType>(op.getDst().getType());
     Value dest = getStridedElementPtr(rewriter, op->getLoc(), srcMemrefType,
                                       adaptor.getDst(), {});
+    // Intrinsics takes a shared-cluster pointer so we need an
+    // address space cast from 3 to 7.
+    // TODO: Introduce AS(7) in NVGPU.
+    auto ptrSharedClusterType = LLVM::LLVMPointerType::get(
+        op->getContext(),
+        static_cast<unsigned>(NVVM::NVVMMemorySpace::SharedCluster));
+    dest = LLVM::AddrSpaceCastOp::create(b, ptrSharedClusterType, dest);
+
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
@@ -1001,9 +1004,14 @@ struct NVGPUTmaAsyncLoadOpLowering
     for (auto [index, value] : llvm::enumerate(coords)) {
       coords[index] = truncToI32(b, value);
     }
+
+    // TODO: Enhance the NVGPU Op for other modes too
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(
         op, dest, adaptor.getTensorMapDescriptor(), coords, barrier,
         ValueRange{}, adaptor.getMulticastMask(), Value{},
+        NVVM::TMALoadMode::TILE, // default is TILE mode
+        false,                   // default is cluster-scope
+        nullptr,                 // default is no cta-group
         adaptor.getPredicate());
     return success();
   }

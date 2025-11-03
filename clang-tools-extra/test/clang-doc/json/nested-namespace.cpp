@@ -1,7 +1,7 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
 // RUN: FileCheck %s < %t/json/nested.json --check-prefix=NESTED
-// RUN: FileCheck %s < %t/json/inner.json --check-prefix=INNER
+// RUN: FileCheck %s < %t/json/nested_inner.json --check-prefix=INNER
 
 namespace nested {
   int Global;

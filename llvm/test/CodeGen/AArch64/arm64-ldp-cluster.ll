@@ -105,13 +105,13 @@ define i32 @ldr_int_volatile(ptr %a) nounwind {
 ; CHECK: Cluster ld/st SU(1) - SU(3)
 ; CHECK: SU(1):   %{{[0-9]+}}:fpr128 = LDRQui
 ; CHECK: SU(3):   %{{[0-9]+}}:fpr128 = LDRQui
-define <2 x i64> @ldq_cluster(ptr %p) {
-  %tmp1 = load <2 x i64>, < 2 x i64>* %p, align 8
+define <4 x i32> @ldq_cluster(ptr %p) {
+  %tmp1 = load <4 x i32>, ptr %p, align 8
   %add.ptr2 = getelementptr inbounds i64, ptr %p, i64 2
-  %tmp2 = add nsw <2 x i64> %tmp1, %tmp1
-  %tmp3 = load <2 x i64>, ptr %add.ptr2, align 8
-  %res  = mul nsw <2 x i64> %tmp2, %tmp3
-  ret <2 x i64> %res
+  %tmp2 = add nsw <4 x i32> %tmp1, %tmp1
+  %tmp3 = load <4 x i32>, ptr %add.ptr2, align 8
+  %res  = mul nsw <4 x i32> %tmp2, %tmp3
+  ret <4 x i32> %res
 }
 
 ; CHECK: ********** MI Scheduling **********
@@ -215,7 +215,7 @@ exit:
 ; CHECK: ********** MI Scheduling **********
 ; CHECK: LDURXi_LDRXui:%bb.0 entry
 ; CHECK: Cluster ld/st SU(3) - SU(4)
-; CHECK: SU(3):  %{{[0-9]+}}:gpr64 = LDURXi 
+; CHECK: SU(3):  %{{[0-9]+}}:gpr64 = LDURXi
 ; CHECK: SU(4):  %{{[0-9]+}}:gpr64 = LDRXui
 ;
 define void @LDURXi_LDRXui(ptr nocapture readonly %arg, ptr nocapture readonly %wa, ptr nocapture readonly %wb) {

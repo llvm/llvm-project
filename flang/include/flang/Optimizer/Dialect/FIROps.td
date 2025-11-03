@@ -17,6 +17,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
@@ -1247,6 +1248,41 @@ def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
   let arguments = (ins BoxOrClassType:$val);
 
   let results = (outs BoolLike);
+}
+
+def fir_AssumedSizeExtentOp : fir_SimpleOneResultOp<"assumed_size_extent", [NoMemoryEffect]> {
+  let summary = "get the assumed-size last extent sentinel";
+
+  let description = [{
+    Returns the special extent value representing the last dimension of an
+    assumed-size array. This is used to model the semantics in FIR without
+    directly materializing the sentinel value. The concrete encoding is
+    introduced during FIR to LLVM lowering.
+
+    ```
+      %e = fir.assumed_size_extent : index
+    ```
+  }];
+
+  let results = (outs Index);
+  let assemblyFormat = "attr-dict `:` type(results)";
+}
+
+def fir_IsAssumedSizeExtentOp : fir_SimpleOp<"is_assumed_size_extent", [NoMemoryEffect]> {
+  let summary = "is value the assumed-size last extent sentinel";
+
+  let description = [{
+    Returns true iff the given integer equals the assumed-size extent sentinel.
+
+    ```
+      %t = fir.is_assumed_size_extent %v : (index) -> i1
+      %c = fir.is_assumed_size_extent %x : (i32) -> i1
+    ```
+  }];
+
+  let arguments = (ins AnyIntegerLike:$val);
+  let results = (outs BoolLike);
+  let hasCanonicalizer = 1;
 }
 
 def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
@@ -2514,6 +2550,7 @@ def fir_CallOp : fir_Op<"call",
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
+    OptionalAttr<fir_FortranInlineAttr>:$inline_attr,
     DefaultValuedAttr<Arith_FastMathAttr,
                       "::mlir::arith::FastMathFlags::none">:$fastmath
   );
@@ -2792,7 +2829,8 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
   let hasFolder = 1;
 }
 
-def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
+def fir_ConvertOp
+    : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
@@ -2830,6 +2868,7 @@ def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
     static bool isPointerCompatible(mlir::Type ty);
     static bool canBeConverted(mlir::Type inType, mlir::Type outType);
     static bool areVectorsCompatible(mlir::Type inTy, mlir::Type outTy);
+    mlir::Value getViewSource() { return getValue(); }
   }];
   let hasCanonicalizer = 1;
 }
@@ -3892,6 +3931,18 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
 
     unsigned getNumReduceOperands() {
       return getReduceVars().size();
+    }
+
+    unsigned getInductionVarsStart() {
+      return 0;
+    }
+
+    unsigned getLocalOperandsStart() {
+      return getNumInductionVars();
+    }
+
+    unsigned getReduceOperandsStart() {
+      return getLocalOperandsStart() + getNumLocalOperands();
     }
 
     mlir::Block::BlockArgListType getInductionVars() {

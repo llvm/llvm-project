@@ -1029,7 +1029,8 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
   MachineOperand *CarryOut = TII->getNamedOperand(MISucc, AMDGPU::OpName::sdst);
   if (!CarryOut)
     return;
-  if (!MRI->hasOneUse(CarryIn->getReg()) || !MRI->use_empty(CarryOut->getReg()))
+  if (!MRI->hasOneNonDBGUse(CarryIn->getReg()) ||
+      !MRI->use_nodbg_empty(CarryOut->getReg()))
     return;
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();
@@ -1337,8 +1338,9 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
       continue;
 
     unsigned I = Op.getOperandNo();
-    if (Desc.operands()[I].RegClass == -1 ||
-        !TRI->isVSSuperClass(TRI->getRegClass(Desc.operands()[I].RegClass)))
+
+    int16_t RegClass = TII->getOpRegClassID(Desc.operands()[I]);
+    if (RegClass == -1 || !TRI->isVSSuperClass(TRI->getRegClass(RegClass)))
       continue;
 
     if (ST.hasSDWAScalar() && ConstantBusCount == 0 && Op.isReg() &&

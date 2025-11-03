@@ -185,6 +185,7 @@ group("test") {
     "//llvm/tools/llvm-nm:symlinks",
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
+    "//llvm/tools/llvm-offload-binary",
     "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-profdata",
     "//llvm/tools/llvm-rc:symlinks",

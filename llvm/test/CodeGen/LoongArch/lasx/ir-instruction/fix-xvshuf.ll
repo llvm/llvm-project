@@ -7,12 +7,12 @@
 define <4 x double> @shufflevector_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: shufflevector_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpickve.d $xr2, $xr1, 2
-; CHECK-NEXT:    xvpickve.d $xr3, $xr0, 3
-; CHECK-NEXT:    xvinsve0.d $xr0, $xr2, 1
-; CHECK-NEXT:    xvinsve0.d $xr0, $xr3, 2
-; CHECK-NEXT:    xvpickve.d $xr1, $xr1, 3
-; CHECK-NEXT:    xvinsve0.d $xr0, $xr1, 3
+; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 3
+; CHECK-NEXT:    xvpickve.d $xr3, $xr1, 3
+; CHECK-NEXT:    vextrins.d $vr2, $vr3, 16
+; CHECK-NEXT:    xvpickve.d $xr1, $xr1, 2
+; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
+; CHECK-NEXT:    xvpermi.q $xr0, $xr2, 2
 ; CHECK-NEXT:    ret
 entry:
   %c = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 0, i32 6, i32 3, i32 7>

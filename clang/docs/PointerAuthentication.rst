@@ -592,6 +592,36 @@ The result value is never zero and always within range for both the
 
 This can be used in constant expressions.
 
+``ptrauth_type_discriminator``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+  ptrauth_type_discriminator(type)
+
+Compute the constant discriminator derived from the given type, as is computed
+for automatically type diversified schemas.
+
+``type`` must be a type. The result has the type ``ptrauth_extra_data_t``.
+
+This can be used in constant expressions.
+
+``ptrauth_function_pointer_type_discriminator``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+  ptrauth_function_pointer_type_discriminator(function_type)
+
+Compute the constant discriminator derived from the provided function type, for
+use in contexts where the default function authentication schema. If function
+pointer type diversity is enabled, this is equivalent to
+`ptrauth_type_discriminator(function_type)`, if it is not enabled this is `0`.
+
+``function_type`` must be a function type. The result has the type ``ptrauth_extra_data_t``.
+
+This can be used in constant expressions.
+
 ``ptrauth_strip``
 ^^^^^^^^^^^^^^^^^
 

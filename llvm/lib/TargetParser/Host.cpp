@@ -70,8 +70,8 @@
 
 using namespace llvm;
 
-static std::unique_ptr<llvm::MemoryBuffer>
-    LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+[[maybe_unused]] static std::unique_ptr<llvm::MemoryBuffer>
+getProcCpuinfoContent() {
   const char *CPUInfoFile = "/proc/cpuinfo";
   if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
     CPUInfoFile = CpuinfoIntercept;
@@ -369,6 +369,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
   if (Implementer == "0x63") { // Arm China.
     return StringSwitch<const char *>(Part)
         .Case("0x132", "star-mc1")
+        .Case("0xd25", "star-mc3")
         .Default("generic");
   }
 
@@ -964,6 +965,13 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
       break;
 
+    // Wildcatlake:
+    case 0xd5:
+      CPU = "wildcatlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Graniterapids:
     case 0xad:
       CPU = "graniterapids";
@@ -1145,6 +1153,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 0x12:
+    switch (Model) {
+    // Novalake:
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
@@ -1157,7 +1179,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
                                                  const unsigned *Features,
                                                  unsigned *Type,
                                                  unsigned *Subtype) {
-  const char *CPU = 0;
+  const char *CPU = nullptr;
 
   switch (Family) {
   case 4:
@@ -1302,16 +1324,17 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   case 26:
     CPU = "znver5";
     *Type = X86::AMDFAM1AH;
-    if (Model <= 0x77) {
+    if (Model <= 0x4f || (Model >= 0x60 && Model <= 0x77) ||
+        (Model >= 0xd0 && Model <= 0xd7)) {
       // Models 00h-0Fh (Breithorn).
       // Models 10h-1Fh (Breithorn-Dense).
       // Models 20h-2Fh (Strix 1).
       // Models 30h-37h (Strix 2).
       // Models 38h-3Fh (Strix 3).
       // Models 40h-4Fh (Granite Ridge).
-      // Models 50h-5Fh (Weisshorn).
       // Models 60h-6Fh (Krackan1).
       // Models 70h-77h (Sarlak).
+      // Models D0h-D7h (Annapurna).
       CPU = "znver5";
       *Subtype = X86::AMDFAM1AH_ZNVER5;
       break; //  "znver5"
@@ -2049,6 +2072,11 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["rdpru"]    = HasExtLeaf8 && ((EBX >> 4) & 1);
   Features["wbnoinvd"] = HasExtLeaf8 && ((EBX >> 9) & 1);
 
+  bool HasExtLeaf21 = MaxExtLevel >= 0x80000021 &&
+                      !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
+  // AMD cpuid bit for prefetchi is different from Intel
+  Features["prefetchi"] = HasExtLeaf21 && ((EAX >> 20) & 1);
+
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
@@ -2131,7 +2159,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
   Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
-  Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
+  Features["prefetchi"] |= HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
@@ -2164,7 +2192,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf1E = MaxLevel >= 0x1e &&
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
-  Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
   Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;

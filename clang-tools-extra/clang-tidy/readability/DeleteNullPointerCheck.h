@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// pointer.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/delete-null-pointer.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/delete-null-pointer.html
 class DeleteNullPointerCheck : public ClangTidyCheck {
 public:
   DeleteNullPointerCheck(StringRef Name, ClangTidyContext *Context)

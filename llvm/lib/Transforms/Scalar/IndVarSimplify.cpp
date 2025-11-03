@@ -53,6 +53,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -117,6 +118,10 @@ static cl::opt<bool>
 LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
                 cl::desc("Predicate conditions in read only loops"));
 
+static cl::opt<bool> LoopPredicationTraps(
+    "indvars-predicate-loop-traps", cl::Hidden, cl::init(true),
+    cl::desc("Predicate conditions that trap in loops with only local writes"));
+
 static cl::opt<bool>
 AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
                 cl::desc("Allow widening of indvars to eliminate s/zext"));
@@ -156,8 +161,6 @@ class IndVarSimplify {
   bool linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
                                  const SCEV *ExitCount,
                                  PHINode *IndVar, SCEVExpander &Rewriter);
-
-  bool sinkUnusedInvariants(Loop *L);
 
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
@@ -1074,85 +1077,6 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   return true;
 }
 
-//===----------------------------------------------------------------------===//
-//  sinkUnusedInvariants. A late subpass to cleanup loop preheaders.
-//===----------------------------------------------------------------------===//
-
-/// If there's a single exit block, sink any loop-invariant values that
-/// were defined in the preheader but not used inside the loop into the
-/// exit block to reduce register pressure in the loop.
-bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
-  BasicBlock *ExitBlock = L->getExitBlock();
-  if (!ExitBlock) return false;
-
-  BasicBlock *Preheader = L->getLoopPreheader();
-  if (!Preheader) return false;
-
-  bool MadeAnyChanges = false;
-  for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
-
-    // Skip BB Terminator.
-    if (Preheader->getTerminator() == &I)
-      continue;
-
-    // New instructions were inserted at the end of the preheader.
-    if (isa<PHINode>(I))
-      break;
-
-    // Don't move instructions which might have side effects, since the side
-    // effects need to complete before instructions inside the loop.  Also don't
-    // move instructions which might read memory, since the loop may modify
-    // memory. Note that it's okay if the instruction might have undefined
-    // behavior: LoopSimplify guarantees that the preheader dominates the exit
-    // block.
-    if (I.mayHaveSideEffects() || I.mayReadFromMemory())
-      continue;
-
-    // Skip debug or pseudo instructions.
-    if (I.isDebugOrPseudoInst())
-      continue;
-
-    // Skip eh pad instructions.
-    if (I.isEHPad())
-      continue;
-
-    // Don't sink alloca: we never want to sink static alloca's out of the
-    // entry block, and correctly sinking dynamic alloca's requires
-    // checks for stacksave/stackrestore intrinsics.
-    // FIXME: Refactor this check somehow?
-    if (isa<AllocaInst>(&I))
-      continue;
-
-    // Determine if there is a use in or before the loop (direct or
-    // otherwise).
-    bool UsedInLoop = false;
-    for (Use &U : I.uses()) {
-      Instruction *User = cast<Instruction>(U.getUser());
-      BasicBlock *UseBB = User->getParent();
-      if (PHINode *P = dyn_cast<PHINode>(User)) {
-        unsigned i =
-          PHINode::getIncomingValueNumForOperand(U.getOperandNo());
-        UseBB = P->getIncomingBlock(i);
-      }
-      if (UseBB == Preheader || L->contains(UseBB)) {
-        UsedInLoop = true;
-        break;
-      }
-    }
-
-    // If there is, the def must remain in the preheader.
-    if (UsedInLoop)
-      continue;
-
-    // Otherwise, sink it to the exit block.
-    I.moveBefore(ExitBlock->getFirstInsertionPt());
-    SE->forgetValue(&I);
-    MadeAnyChanges = true;
-  }
-
-  return MadeAnyChanges;
-}
-
 static void replaceExitCond(BranchInst *BI, Value *NewCond,
                             SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   auto *OldCond = BI->getCondition();
@@ -1704,6 +1628,24 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   return Changed;
 }
 
+static bool crashingBBWithoutEffect(const BasicBlock &BB) {
+  return llvm::all_of(BB, [](const Instruction &I) {
+    // TODO: for now this is overly restrictive, to make sure nothing in this
+    // BB can depend on the loop body.
+    // It's not enough to check for !I.mayHaveSideEffects(), because e.g. a
+    // load does not have a side effect, but we could have
+    // %a = load ptr, ptr %ptr
+    // %b = load i32, ptr %a
+    // Now if the loop stored a non-nullptr to %a, we could cause a nullptr
+    // dereference by skipping over loop iterations.
+    if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      if (CB->onlyAccessesInaccessibleMemory())
+        return true;
+    }
+    return isa<UnreachableInst>(I);
+  });
+}
+
 bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
@@ -1816,11 +1758,25 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // suggestions on how to improve this?  I can obviously bail out for outer
   // loops, but that seems less than ideal.  MemorySSA can find memory writes,
   // is that enough for *all* side effects?
+  bool HasThreadLocalSideEffects = false;
   for (BasicBlock *BB : L->blocks())
     for (auto &I : *BB)
       // TODO:isGuaranteedToTransfer
-      if (I.mayHaveSideEffects())
-        return false;
+      if (I.mayHaveSideEffects()) {
+        if (!LoopPredicationTraps)
+          return false;
+        HasThreadLocalSideEffects = true;
+        if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+          // Simple stores cannot be observed by other threads.
+          // If HasThreadLocalSideEffects is set, we check
+          // crashingBBWithoutEffect to make sure that the crashing BB cannot
+          // observe them either.
+          if (!SI->isSimple())
+            return false;
+        } else {
+          return false;
+        }
+      }
 
   bool Changed = false;
   // Finally, do the actual predication for all predicatable blocks.  A couple
@@ -1840,6 +1796,19 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
 
     auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    if (HasThreadLocalSideEffects) {
+      const BasicBlock *Unreachable = nullptr;
+      for (const BasicBlock *Succ : BI->successors()) {
+        if (isa<UnreachableInst>(Succ->getTerminator()))
+          Unreachable = Succ;
+      }
+      // Exit BB which have one branch back into the loop and another one to
+      // a trap can still be optimized, because local side effects cannot
+      // be observed in the exit case (the trap). We could be smarter about
+      // this, but for now lets pattern match common cases that directly trap.
+      if (Unreachable == nullptr || !crashingBBWithoutEffect(*Unreachable))
+        return Changed;
+    }
     Value *NewCond;
     if (ExitCount == ExactBTC) {
       NewCond = L->contains(BI->getSuccessor(0)) ?
@@ -2014,10 +1983,6 @@ bool IndVarSimplify::run(Loop *L) {
   }
 
   // The Rewriter may not be used from this point on.
-
-  // Loop-invariant instructions in the preheader that aren't used in the
-  // loop may be sunk below the loop to reduce register pressure.
-  Changed |= sinkUnusedInvariants(L);
 
   // rewriteFirstIterationLoopExitValues does not rely on the computation of
   // trip count and therefore can further simplify exit values in addition to

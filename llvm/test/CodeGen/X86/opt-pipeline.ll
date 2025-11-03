@@ -195,7 +195,7 @@
 ; CHECK-NEXT:       Insert fentry calls
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
-; CHECK-NEXT:       ReachingDefAnalysis
+; CHECK-NEXT:       Reaching Definitions Analysis
 ; CHECK-NEXT:       X86 Execution Dependency Fix
 ; CHECK-NEXT:       BreakFalseDeps
 ; CHECK-NEXT:       X86 Indirect Branch Tracking

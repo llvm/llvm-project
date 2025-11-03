@@ -107,8 +107,10 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
     Clang->getHeaderSearchOpts().ResourceDir =
         CompilerInvocation::GetResourcesPath(Argv[0], nullptr);
 
+  Clang->createVirtualFileSystem();
+
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Clang->createDiagnostics();
   if (!Clang->hasDiagnostics())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
@@ -276,9 +278,10 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 
   if (Act->getCodeGen()) {
     Act->CacheCodeGenModule();
-    // The initial PTU is filled by `-include` or by CUDA includes
-    // automatically.
-    if (!CI->getPreprocessorOpts().Includes.empty()) {
+    // The initial PTU is filled by `-include`/`-include-pch` or by CUDA
+    // includes automatically.
+    if (!CI->getPreprocessorOpts().Includes.empty() ||
+        !CI->getPreprocessorOpts().ImplicitPCHInclude.empty()) {
       // We can't really directly pass the CachedInCodeGenModule to the Jit
       // because it will steal it, causing dangling references as explained in
       // Interpreter::Execute
@@ -475,7 +478,8 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
       std::make_unique<llvm::vfs::OverlayFileSystem>(
           llvm::vfs::getRealFileSystem());
   OverlayVFS->pushOverlay(IMVFS);
-  CI->createFileManager(OverlayVFS);
+  CI->createVirtualFileSystem(OverlayVFS);
+  CI->createFileManager();
 
   llvm::Expected<std::unique_ptr<Interpreter>> InterpOrErr =
       Interpreter::create(std::move(CI));
@@ -577,12 +581,7 @@ Interpreter::Parse(llvm::StringRef Code) {
   if (!TuOrErr)
     return TuOrErr.takeError();
 
-  PTUs.emplace_back(PartialTranslationUnit());
-  PartialTranslationUnit &LastPTU = PTUs.back();
-  LastPTU.TUPart = *TuOrErr;
-
-  if (std::unique_ptr<llvm::Module> M = Act->GenModule())
-    LastPTU.TheModule = std::move(M);
+  PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
 
   return LastPTU;
 }

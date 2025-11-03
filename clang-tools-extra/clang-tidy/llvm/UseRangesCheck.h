@@ -17,7 +17,7 @@ namespace clang::tidy::llvm_check {
 /// range-based algorithms from `llvm/ADT/STLExtras.h`.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/use-ranges.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/llvm/use-ranges.html
 class UseRangesCheck : public utils::UseRangesCheck {
 public:
   UseRangesCheck(StringRef Name, ClangTidyContext *Context);

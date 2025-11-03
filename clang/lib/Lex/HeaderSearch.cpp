@@ -221,7 +221,7 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
   // file.
   for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
     SmallString<256> Result(Dir);
-    llvm::sys::fs::make_absolute(Result);
+    FileMgr.makeAbsolutePath(Result);
     if (ModuleName.contains(':'))
       // The separator of C++20 modules partitions (':') is not good for file
       // systems, here clang and gcc choose '-' by default since it is not a
@@ -246,7 +246,7 @@ std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
   StringRef ModuleCacheHash = HSOpts.DisableModuleHash ? "" : getModuleHash();
   for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
     SmallString<256> CachePath(Dir);
-    llvm::sys::fs::make_absolute(CachePath);
+    FileMgr.makeAbsolutePath(CachePath);
     llvm::sys::path::append(CachePath, ModuleCacheHash);
     std::string FileName =
         getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
@@ -672,9 +672,8 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     if (getDirCharacteristic() == SrcMgr::C_User) {
       SmallString<1024> SystemFrameworkMarker(FrameworkName);
       SystemFrameworkMarker += ".system_framework";
-      if (llvm::sys::fs::exists(SystemFrameworkMarker)) {
+      if (FileMgr.getOptionalFileRef(SystemFrameworkMarker))
         CacheEntry.IsUserSpecifiedSystemFramework = true;
-      }
     }
   }
 
@@ -2078,7 +2077,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 
   llvm::SmallString<32> FilePath = File;
   if (!WorkingDir.empty() && !path::is_absolute(FilePath))
-    fs::make_absolute(WorkingDir, FilePath);
+    path::make_absolute(WorkingDir, FilePath);
   // remove_dots switches to backslashes on windows as a side-effect!
   // We always want to suggest forward slashes for includes.
   // (not remove_dots(..., posix) as that misparses windows paths).
@@ -2092,7 +2091,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   // `BestPrefixLength` accordingly.
   auto CheckDir = [&](llvm::SmallString<32> Dir) -> bool {
     if (!WorkingDir.empty() && !path::is_absolute(Dir))
-      fs::make_absolute(WorkingDir, Dir);
+      path::make_absolute(WorkingDir, Dir);
     path::remove_dots(Dir, /*remove_dot_dot=*/true);
     for (auto NI = path::begin(File), NE = path::end(File),
               DI = path::begin(Dir), DE = path::end(Dir);
@@ -2187,6 +2186,8 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 void clang::normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
                                      SmallVectorImpl<char> &NormalizedPath) {
   NormalizedPath.assign(Path.begin(), Path.end());
-  FileMgr.makeAbsolutePath(NormalizedPath);
-  llvm::sys::path::remove_dots(NormalizedPath);
+  if (!NormalizedPath.empty()) {
+    FileMgr.makeAbsolutePath(NormalizedPath);
+    llvm::sys::path::remove_dots(NormalizedPath);
+  }
 }

@@ -18,7 +18,7 @@ namespace clang::tidy::modernize {
 /// FIXME: Add support for function references and member function references.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-bind.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-bind.html
 class AvoidBindCheck : public ClangTidyCheck {
 public:
   AvoidBindCheck(StringRef Name, ClangTidyContext *Context);

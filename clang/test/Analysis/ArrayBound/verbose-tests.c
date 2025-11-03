@@ -11,7 +11,7 @@ int TenElements[10];
 void arrayUnderflow(void) {
   TenElements[-3] = 5;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -12}}
+  // expected-note@-2 {{Access of 'int' element in 'TenElements' at negative index -3}}
 }
 
 int underflowWithDeref(void) {
@@ -19,8 +19,38 @@ int underflowWithDeref(void) {
   --p;
   return *p;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -4}}
+  // expected-note@-2 {{Access of 'int' element in 'TenElements' at negative index -1}}
 }
+
+char underflowReportedAsChar(void) {
+  // Underflow is reported with the type of the accessed element (here 'char'),
+  // not the type that appears in the declaration of the original array (which
+  // would be 'int').
+  return ((char *)TenElements)[-1];
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'char' element in 'TenElements' at negative index -1}}
+}
+
+struct TwoInts {
+  int a, b;
+};
+
+struct TwoInts underflowReportedAsStruct(void) {
+  // Another case where the accessed type is used for reporting the offset.
+  return *(struct TwoInts*)(TenElements - 4);
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'struct TwoInts' element in 'TenElements' at negative index -2}}
+}
+
+struct TwoInts underflowOnlyByteOffset(void) {
+  // In this case the negative byte offset is not a multiple of the size of the
+  // accessed element, so the part "= -... * sizeof(type)" is omitted at the
+  // end of the message.
+  return *(struct TwoInts*)(TenElements - 3);
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -12}}
+}
+
 
 int rng(void);
 int getIndex(void) {
@@ -40,10 +70,10 @@ void gh86959(void) {
   while (rng())
     TenElements[getIndex()] = 10;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -688}}
+  // expected-note@-2 {{Access of 'int' element in 'TenElements' at negative index -172}}
 }
 
-int scanf(const char *restrict fmt, ...);
+int scanf(const char *fmt, ...);
 
 void taintedIndex(void) {
   int index;

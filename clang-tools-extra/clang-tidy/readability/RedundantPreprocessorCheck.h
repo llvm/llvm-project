@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// the same condition.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-preprocessor.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-preprocessor.html
 class RedundantPreprocessorCheck : public ClangTidyCheck {
 public:
   RedundantPreprocessorCheck(StringRef Name, ClangTidyContext *Context)

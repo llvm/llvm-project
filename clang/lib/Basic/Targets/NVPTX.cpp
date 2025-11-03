@@ -171,7 +171,7 @@ ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
 
 bool NVPTXTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
-      .Cases("ptx", "nvptx", true)
+      .Cases({"ptx", "nvptx"}, true)
       .Default(false);
 }
 
@@ -240,6 +240,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
       case OffloadArch::GFX1250:
+      case OffloadArch::GFX1251:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:

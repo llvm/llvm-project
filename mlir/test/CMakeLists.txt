@@ -84,6 +84,7 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_CUDA_SM80_TESTS
   MLIR_RUN_CUDA_SM80_LT_TESTS
   MLIR_RUN_CUDA_SM90_TESTS
+  BUILD_SHARED_LIBS
   )
 
 configure_lit_site_cfg(
@@ -124,6 +125,10 @@ set(MLIR_TEST_DEPENDS
   )
 if(NOT MLIR_STANDALONE_BUILD)
   list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
+endif()
+# Examples/standalone/test.toy (vis-a-vis the standalone example) depends on these.
+if(LLVM_INCLUDE_EXAMPLES)
+  list(APPEND MLIR_TEST_DEPENDS MLIRCAPIArith)
 endif()
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}

@@ -18,7 +18,7 @@ namespace clang::tidy::readability {
 /// and overloaded operators in C++ code.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/operators-representation.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/operators-representation.html
 class OperatorsRepresentationCheck : public ClangTidyCheck {
 public:
   OperatorsRepresentationCheck(StringRef Name, ClangTidyContext *Context);

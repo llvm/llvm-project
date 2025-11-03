@@ -10,7 +10,7 @@ define i8 @scmp.8.8(i8 %x, i8 %y) nounwind #0 {
 ; CHECK-LABEL: define i8 @scmp.8.8(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i8 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i8 [[_MSPROP]], 0
@@ -26,7 +26,7 @@ define i8 @scmp.8.16(i16 %x, i16 %y) nounwind #0 {
 ; CHECK-LABEL: define i8 @scmp.8.16(
 ; CHECK-SAME: i16 [[X:%.*]], i16 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i16 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i16 [[_MSPROP]], 0
@@ -43,7 +43,7 @@ define i8 @scmp.8.32(i32 %x, i32 %y) nounwind #0 {
 ; CHECK-LABEL: define i8 @scmp.8.32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i32 [[_MSPROP]], 0
@@ -60,7 +60,7 @@ define i8 @scmp.8.64(i64 %x, i64 %y) nounwind #0 {
 ; CHECK-LABEL: define i8 @scmp.8.64(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
@@ -77,7 +77,7 @@ define i8 @scmp.8.128(i128 %x, i128 %y) nounwind #0 {
 ; CHECK-LABEL: define i8 @scmp.8.128(
 ; CHECK-SAME: i128 [[X:%.*]], i128 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i128 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i128 [[_MSPROP]], 0
@@ -94,7 +94,7 @@ define i32 @scmp.32.32(i32 %x, i32 %y) nounwind #0 {
 ; CHECK-LABEL: define i32 @scmp.32.32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i32 [[_MSPROP]], 0
@@ -110,7 +110,7 @@ define i32 @scmp.32.64(i64 %x, i64 %y) nounwind #0 {
 ; CHECK-LABEL: define i32 @scmp.32.64(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
@@ -127,7 +127,7 @@ define i64 @scmp.64.64(i64 %x, i64 %y) nounwind #0 {
 ; CHECK-LABEL: define i64 @scmp.64.64(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
@@ -143,7 +143,7 @@ define i4 @scmp_narrow_result(i32 %x, i32 %y) nounwind #0 {
 ; CHECK-LABEL: define i4 @scmp_narrow_result(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i32 [[_MSPROP]], 0
@@ -160,7 +160,7 @@ define i8 @scmp_narrow_op(i62 %x, i62 %y) nounwind #0 {
 ; CHECK-LABEL: define i8 @scmp_narrow_op(
 ; CHECK-SAME: i62 [[X:%.*]], i62 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i62, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i62, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i62, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i62 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i62 [[_MSPROP]], 0
@@ -177,7 +177,7 @@ define i141 @scmp_wide_result(i32 %x, i32 %y) nounwind #0 {
 ; CHECK-LABEL: define i141 @scmp_wide_result(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i32 [[_MSPROP]], 0
@@ -194,7 +194,7 @@ define i8 @scmp_wide_op(i109 %x, i109 %y) nounwind #0 {
 ; CHECK-LABEL: define i8 @scmp_wide_op(
 ; CHECK-SAME: i109 [[X:%.*]], i109 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i109, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i109, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i109, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i109 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i109 [[_MSPROP]], 0
@@ -211,7 +211,7 @@ define i41 @scmp_uncommon_types(i7 %x, i7 %y) nounwind #0 {
 ; CHECK-LABEL: define i41 @scmp_uncommon_types(
 ; CHECK-SAME: i7 [[X:%.*]], i7 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i7, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i7, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i7, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i7 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i7 [[_MSPROP]], 0
@@ -228,7 +228,7 @@ define <4 x i32> @scmp_normal_vectors(<4 x i32> %x, <4 x i32> %y) nounwind #0 {
 ; CHECK-LABEL: define <4 x i32> @scmp_normal_vectors(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i32> [[_MSPROP]], zeroinitializer
@@ -244,7 +244,7 @@ define <4 x i8> @scmp_narrow_vec_result(<4 x i32> %x, <4 x i32> %y) nounwind #0 
 ; CHECK-LABEL: define <4 x i8> @scmp_narrow_vec_result(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i32> [[_MSPROP]], zeroinitializer
@@ -261,7 +261,7 @@ define <4 x i32> @scmp_narrow_vec_op(<4 x i8> %x, <4 x i8> %y) nounwind #0 {
 ; CHECK-LABEL: define <4 x i32> @scmp_narrow_vec_op(
 ; CHECK-SAME: <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i8> [[_MSPROP]], zeroinitializer
@@ -278,7 +278,7 @@ define <16 x i32> @scmp_wide_vec_result(<16 x i8> %x, <16 x i8> %y) nounwind #0 
 ; CHECK-LABEL: define <16 x i32> @scmp_wide_vec_result(
 ; CHECK-SAME: <16 x i8> [[X:%.*]], <16 x i8> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i8> [[_MSPROP]], zeroinitializer
@@ -295,7 +295,7 @@ define <16 x i8> @scmp_wide_vec_op(<16 x i64> %x, <16 x i64> %y) nounwind #0 {
 ; CHECK-LABEL: define <16 x i8> @scmp_wide_vec_op(
 ; CHECK-SAME: <16 x i64> [[X:%.*]], <16 x i64> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 128) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 128), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i64> [[_MSPROP]], zeroinitializer
@@ -312,7 +312,7 @@ define <7 x i117> @scmp_uncommon_vectors(<7 x i7> %x, <7 x i7> %y) nounwind #0 {
 ; CHECK-LABEL: define <7 x i117> @scmp_uncommon_vectors(
 ; CHECK-SAME: <7 x i7> [[X:%.*]], <7 x i7> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i7>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <7 x i7>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <7 x i7>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <7 x i7> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <7 x i7> [[_MSPROP]], zeroinitializer
@@ -329,7 +329,7 @@ define <1 x i3> @scmp_scalarize(<1 x i33> %x, <1 x i33> %y) nounwind #0 {
 ; CHECK-LABEL: define <1 x i3> @scmp_scalarize(
 ; CHECK-SAME: <1 x i33> [[X:%.*]], <1 x i33> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i33>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i33>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i33>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i33> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <1 x i33> [[_MSPROP]], zeroinitializer
@@ -346,7 +346,7 @@ define <2 x i8> @scmp_bool_operands(<2 x i1> %x, <2 x i1> %y) nounwind #0 {
 ; CHECK-LABEL: define <2 x i8> @scmp_bool_operands(
 ; CHECK-SAME: <2 x i1> [[X:%.*]], <2 x i1> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i1>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i1>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i1> [[_MSPROP]], zeroinitializer
@@ -363,7 +363,7 @@ define <2 x i16> @scmp_ret_wider_than_operands(<2 x i8> %x, <2 x i8> %y) nounwin
 ; CHECK-LABEL: define <2 x i16> @scmp_ret_wider_than_operands(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i8> [[_MSPROP]], zeroinitializer

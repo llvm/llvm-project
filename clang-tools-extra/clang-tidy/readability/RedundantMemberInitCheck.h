@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// constructor would be called if they were not present.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-member-init.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-member-init.html
 class RedundantMemberInitCheck : public ClangTidyCheck {
 public:
   RedundantMemberInitCheck(StringRef Name, ClangTidyContext *Context)

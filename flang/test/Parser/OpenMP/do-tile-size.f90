@@ -23,7 +23,7 @@ subroutine openmp_do_tiles(x)
 !PARSE-TREE:| | | OmpBeginLoopDirective
 !PARSE-TREE:| | | OpenMPLoopConstruct
 !PARSE-TREE:| | | | OmpBeginLoopDirective
-!PARSE-TREE:| | | | | OmpLoopDirective -> llvm::omp::Directive = tile
+!PARSE-TREE:| | | | | OmpDirectiveName -> llvm::omp::Directive = tile
 !PARSE-TREE:| | | | | OmpClauseList -> OmpClause -> Sizes -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | | | DoConstruct
 END subroutine openmp_do_tiles
