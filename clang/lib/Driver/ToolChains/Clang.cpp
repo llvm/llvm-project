@@ -5937,10 +5937,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   else if (UnwindTables)
      CmdArgs.push_back("-funwind-tables=1");
 
-  // Sframe unwind tables are independent of the other types, and only defined
-  // for these two targets.
+  // Sframe unwind tables are independent of the other types. Although also
+  // defined for aarch64, only x86_64 support is implemented at the moment.
   if (Arg *A = Args.getLastArg(options::OPT_gsframe)) {
-    if ((Triple.isAArch64() || Triple.isX86()) && Triple.isOSBinFormatELF())
+    if (Triple.isOSBinFormatELF() && Triple.isX86())
       CmdArgs.push_back("--gsframe");
     else
       D.Diag(diag::err_drv_unsupported_opt_for_target)
