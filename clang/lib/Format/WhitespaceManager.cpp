@@ -507,7 +507,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   };
 
   unsigned I = StartAt;
-  unsigned E = Changes.size();
+  const auto E = Changes.size();
   for (; I != E; ++I) {
     auto &CurrentChange = Changes[I];
     if (CurrentChange.indentAndNestingLevel() < IndentAndNestingLevel)
