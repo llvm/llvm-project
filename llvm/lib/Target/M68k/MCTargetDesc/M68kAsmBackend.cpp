@@ -49,7 +49,7 @@ public:
   M68kAsmBackend(const Target &T, const MCSubtargetInfo &STI)
       : MCAsmBackend(llvm::endianness::big),
         Allows32BitBranch(llvm::StringSwitch<bool>(STI.getCPU())
-                              .CasesLower("m68020", "m68030", "m68040", true)
+                              .CasesLower({"m68020", "m68030", "m68040"}, true)
                               .Default(false)) {}
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,

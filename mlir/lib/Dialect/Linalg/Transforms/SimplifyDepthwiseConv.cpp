@@ -89,7 +89,7 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
                 ValueRange{input, collapsedKernel, iZp, kZp},
                 ValueRange{collapsedInit}, stride, dilation);
           })
-          .Default([](Operation *op) { return nullptr; });
+          .Default(nullptr);
   if (!newConv)
     return failure();
   for (auto attr : preservedAttrs)
