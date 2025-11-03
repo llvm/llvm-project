@@ -302,18 +302,14 @@ public:
   }
 };
 
-class ExceptionInfoRequestHandler final
-    : public RequestHandler<
-          protocol::ExceptionInfoArguments,
-          llvm::Expected<protocol::ExceptionInfoResponseBody>> {
+class ExceptionInfoRequestHandler : public LegacyRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "exceptionInfo"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureExceptionInfoRequest};
   }
-  llvm::Expected<protocol::ExceptionInfoResponseBody>
-  Run(const protocol::ExceptionInfoArguments &args) const override;
+  void operator()(const llvm::json::Object &request) const override;
 };
 
 class InitializeRequestHandler
