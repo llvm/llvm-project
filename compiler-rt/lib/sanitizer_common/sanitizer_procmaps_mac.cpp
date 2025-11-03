@@ -42,7 +42,6 @@ struct MemoryMappedSegmentData {
   const char *current_load_cmd_addr;
   u32 lc_type;
   uptr base_virt_addr;
-  uptr addr_mask;
 };
 
 template <typename Section>
@@ -51,7 +50,7 @@ static void NextSectionLoad(LoadedModule *module, MemoryMappedSegmentData *data,
   const Section *sc = (const Section *)data->current_load_cmd_addr;
   data->current_load_cmd_addr += sizeof(Section);
 
-  uptr sec_start = (sc->addr & data->addr_mask) + data->base_virt_addr;
+  uptr sec_start = sc->addr + data->base_virt_addr;
   uptr sec_end = sec_start + sc->size;
   module->addAddressRange(sec_start, sec_end, /*executable=*/false, isWritable,
                           sc->sectname);
@@ -263,17 +262,15 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
       return false;
     }
 
-    uptr base_virt_addr, addr_mask;
+    uptr base_virt_addr;
     if (layout_data->current_image == kDyldImageIdx) {
       base_virt_addr = (uptr)_dyld_get_image_slide(get_dyld_hdr());
-      addr_mask = ~0;
     } else {
       base_virt_addr =
           (uptr)_dyld_get_image_vmaddr_slide(layout_data->current_image);
-      addr_mask = ~0;
     }
 
-    segment->start = (sc->vmaddr & addr_mask) + base_virt_addr;
+    segment->start = sc->vmaddr + base_virt_addr;
     segment->end = segment->start + sc->vmsize;
     // Most callers don't need section information, so only fill this struct
     // when required.
@@ -283,7 +280,6 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
           (const char *)lc + sizeof(SegmentCommand);
       seg_data->lc_type = kLCSegment;
       seg_data->base_virt_addr = base_virt_addr;
-      seg_data->addr_mask = addr_mask;
       internal_strncpy(seg_data->name, sc->segname,
                        ARRAY_SIZE(seg_data->name));
     }
