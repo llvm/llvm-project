@@ -1,6 +1,6 @@
 ; REQUIRES: x86-registered-target
 
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s
 
 ;; Check that functions with optnone attribute are not split.
 ; CHECK-LABEL: foo_optnone:

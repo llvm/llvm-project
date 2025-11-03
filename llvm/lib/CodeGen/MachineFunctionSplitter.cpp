@@ -129,6 +129,9 @@ static bool isColdBlock(const MachineBasicBlock &MBB,
 }
 
 bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
   // Do not split functions when -basic-block-sections=all is specified.
   if (MF.getTarget().getBBSectionsType() == llvm::BasicBlockSection::All)
     return false;
@@ -136,7 +139,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   // of exception handling code may be split to cold if user passes the
   // mfs-split-ehcode flag.
   bool UseProfileData = MF.getFunction().hasProfileData();
-  if (!skipFunction(MF.getFunction()) && !UseProfileData && !SplitAllEHCode)
+  if (!UseProfileData && !SplitAllEHCode)
     return false;
 
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
