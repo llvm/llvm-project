@@ -52,6 +52,12 @@ protected:
     return ClangUtil::GetQualType(
         m_ast->GetBuiltinTypeByName(ConstString(name)));
   }
+
+  CompilerType GetBuiltinTypeForDWARFEncodingAndBitSize(
+      llvm::StringRef type_name, uint32_t encoding, uint32_t bit_size) const {
+    return m_ast->GetBuiltinTypeForDWARFEncodingAndBitSize(type_name, encoding,
+                                                           bit_size);
+  }
 };
 
 TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
@@ -236,6 +242,91 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEncodingAndBitSize) {
 
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 32);
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
+}
+
+TEST_F(TestTypeSystemClang, TestGetBuiltinTypeForDWARFEncodingAndBitSize) {
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitIn", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt(2)", llvm::dwarf::DW_ATE_signed_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt", llvm::dwarf::DW_ATE_signed_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt(2)", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt(2)", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeName(),
+            "_BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeName(),
+            "_BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt(129)", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
+
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitIn", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_unsigned_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeName(),
+            "unsigned _BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeName(),
+            "unsigned _BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt(129)", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
+}
+
+TEST_F(TestTypeSystemClang, TestBitIntTypeInfo) {
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeInfo(),
+            eTypeIsSigned | eTypeIsScalar | eTypeHasValue | eTypeIsInteger);
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeInfo(),
+            eTypeIsScalar | eTypeHasValue | eTypeIsInteger);
 }
 
 TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
@@ -1121,6 +1212,30 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
   // DeclContext of each parameter should be the CXXMethodDecl itself.
   EXPECT_EQ(method_it->getParamDecl(0)->getDeclContext(), *method_it);
   EXPECT_EQ(method_it->getParamDecl(1)->getDeclContext(), *method_it);
+}
+
+TEST_F(TestTypeSystemClang, TestGetTypeInfo) {
+  // Tests TypeSystemClang::GetTypeInfo
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  CompilerType complex_int = m_ast->GetType(ast.getComplexType(ast.IntTy));
+  EXPECT_EQ(complex_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType complex_float = m_ast->GetType(ast.getComplexType(ast.FloatTy));
+  EXPECT_EQ(complex_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType vector_of_int =
+      m_ast->GetType(ast.getVectorType(ast.IntTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsVector | eTypeHasChildren));
+
+  CompilerType vector_of_float =
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsVector | eTypeHasChildren));
 }
 
 TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {

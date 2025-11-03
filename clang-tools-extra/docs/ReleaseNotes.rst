@@ -70,6 +70,11 @@ Potentially Breaking Changes
     :doc:`bugprone-signed-char-misuse
     <clang-tidy/checks/bugprone/signed-char-misuse>`
 
+- :program:`clang-tidy` now displays warnings from all non-system headers by
+  default. Previously, users had to explicitly opt-in to header warnings using
+  `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
+  to an empty string.
+
 Improvements to clangd
 ----------------------
 
@@ -132,6 +137,11 @@ Improvements to clang-tidy
   when run over C files. If ``-std`` is not specified, it defaults to
   ``c99-or-later``.
 
+- :program:`clang-tidy` now displays warnings from all non-system headers by
+  default. Previously, users had to explicitly opt-in to header warnings using
+  `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
+  to an empty string.
+
 - :program:`clang-tidy` no longer attempts to analyze code from system headers
   by default, greatly improving performance. This behavior is disabled if the
   `SystemHeaders` option is enabled.
@@ -174,16 +184,16 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
+
+  Finds derived class methods that shadow a (non-virtual) base class method.
+
 - New :doc:`bugprone-invalid-enum-default-initialization
   <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
 
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
-
-- New :doc:`bugprone-derived-method-shadowing-base-method
-  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
-
-  Finds derived class methods that shadow a (non-virtual) base class method.
 
 - New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
@@ -254,6 +264,11 @@ New check aliases
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
+  :doc:`bugprone-raw-memory-call-on-non-trivial-type
+  <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -321,6 +336,11 @@ Changes in existing checks
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
 
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
+  by adding a new option `AllowThreadLocal` that suppresses warnings on
+  non-const global variables with thread-local storage duration.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers with multiple parameters.
@@ -352,7 +372,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false
-  positives when pointers is transferred to non-const references 
+  positives when pointers is transferred to non-const references
   and avoid false positives of function pointer and fix false
   positives on return of non-const pointer.
 
@@ -407,7 +427,8 @@ Changes in existing checks
 
 - Improved :doc:`performance-unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` by printing
-  the type of the diagnosed variable.
+  the type of the diagnosed variable and correctly generating fix-it hints for
+  parameter-pack arguments.
 
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to

@@ -1,5 +1,5 @@
-! Test for warnings generated when parsing driver options. You can use this file for relatively small tests and to avoid creating
-! new test files.
+! Test for errors and warnings generated when parsing driver options. You can
+! use this file for relatively small tests and to avoid creating new test files.
 
 ! RUN: %flang -### -S -O4 -ffp-contract=on %s 2>&1 | FileCheck %s
 
@@ -26,3 +26,20 @@
 ! RUN:     | FileCheck %s -check-prefix=WARN-BUILTIN-MULTIPLE
 ! WARN-BUILTIN-MULTIPLE: warning: '-fbuiltin' is not valid for Fortran
 ! WARN-BUILTIN-MULTIPLE: warning: '-fno-builtin' is not valid for Fortran
+
+! When emitting an error with a suggestion, ensure that the diagnostic message
+! uses '-Xflang' instead of '-Xclang'. This is typically emitted when an option
+! that is available for `flang -fc1` is passed to `flang`. We use -complex-range
+! since it is only available for fc1. If this option is ever exposed to `flang`,
+! a different option will have to be used in the test below.
+!
+! RUN: not %flang -### -complex-range=full %s 2>&1 \
+! RUN:     | FileCheck %s -check-prefix UNKNOWN-SUGGEST
+!
+! UNKNOWN-SUGGEST: error: unknown argument '-complex-range=full';
+! UNKNOWN-SUGGEST-SAME: did you mean '-Xflang -complex-range=full'
+!
+! RUN: not %flang -### -not-an-option %s 2>&1 \
+! RUN:     | FileCheck %s -check-prefix UNKNOWN-NO-SUGGEST
+!
+! UNKNOWN-NO-SUGGEST: error: unknown argument: '-not-an-option'{{$}}
