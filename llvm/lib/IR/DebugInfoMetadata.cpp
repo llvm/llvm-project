@@ -1441,6 +1441,19 @@ bool DISubprogram::describes(const Function *F) const {
   assert(F && "Invalid function");
   return F->getSubprogram() == this;
 }
+
+const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
+  return visitRetainedNode<DIScope *>(
+      N, [](const DILocalVariable *LV) { return LV->getScope(); },
+      [](const DILabel *L) { return L->getScope(); },
+      [](const DIImportedEntity *IE) { return IE->getScope(); },
+      [](const Metadata *N) { return nullptr; });
+}
+
+const DILocalScope *DISubprogram::getRetainedNodeScope(const MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,
                                        StorageType Storage,
                                        ArrayRef<Metadata *> Ops)
