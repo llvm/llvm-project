@@ -231,7 +231,7 @@ unsigned BalancedPartitioning::runIteration(const FunctionNodeRange Nodes,
   }
 
   // Compute move gains
-  typedef std::pair<float, BPFunctionNode *> GainPair;
+  using GainPair = std::pair<float, BPFunctionNode *>;
   std::vector<GainPair> Gains;
   for (auto &N : Nodes) {
     bool FromLeftToRight = (N.Bucket == LeftBucket);

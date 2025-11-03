@@ -127,7 +127,7 @@ LLVM_ABI thread::id llvm_thread_get_current_id_impl();
 template <class Function, class... Args>
 thread::thread(std::optional<unsigned> StackSizeInBytes, Function &&f,
                Args &&...args) {
-  typedef std::tuple<std::decay_t<Function>, std::decay_t<Args>...> CalleeTuple;
+  using CalleeTuple = std::tuple<std::decay_t<Function>, std::decay_t<Args>...>;
   std::unique_ptr<CalleeTuple> Callee(
       new CalleeTuple(std::forward<Function>(f), std::forward<Args>(args)...));
 

@@ -21,7 +21,7 @@ using namespace llvm;
 namespace llvm {
 
 TEST(BreadthFristIteratorTest, Basic) {
-  typedef bf_iterator<Graph<4>> BFIter;
+  using BFIter = bf_iterator<Graph<4>>;
 
   Graph<4> G;
   G.AddEdge(0, 1);
@@ -46,7 +46,7 @@ TEST(BreadthFristIteratorTest, Basic) {
 }
 
 TEST(BreadthFristIteratorTest, Cycle) {
-  typedef bf_iterator<Graph<4>> BFIter;
+  using BFIter = bf_iterator<Graph<4>>;
 
   Graph<4> G;
   G.AddEdge(0, 1);

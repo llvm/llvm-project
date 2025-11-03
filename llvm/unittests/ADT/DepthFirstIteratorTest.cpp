@@ -21,7 +21,7 @@ using namespace llvm;
 namespace llvm {
 
 template <typename T> struct CountedSet {
-  typedef typename SmallPtrSet<T, 4>::iterator iterator;
+  using iterator = typename SmallPtrSet<T, 4>::iterator;
 
   SmallPtrSet<T, 4> S;
   int InsertVisited = 0;
@@ -44,8 +44,8 @@ public:
 };
 
 TEST(DepthFirstIteratorTest, ActuallyUpdateIterator) {
-  typedef CountedSet<Graph<3>::NodeType *> StorageT;
-  typedef df_iterator<Graph<3>, StorageT, true> DFIter;
+  using StorageT = CountedSet<Graph<3>::NodeType *>;
+  using DFIter = df_iterator<Graph<3>, StorageT, true>;
 
   Graph<3> G;
   G.AddEdge(0, 1);

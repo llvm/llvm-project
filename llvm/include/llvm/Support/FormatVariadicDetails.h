@@ -63,8 +63,8 @@ template <typename T> class missing_format_adapter;
 template <class T> class has_FormatProvider {
 public:
   using Decayed = std::decay_t<T>;
-  typedef void (*Signature_format)(const Decayed &, llvm::raw_ostream &,
-                                   StringRef);
+  using Signature_format = void (*)(const Decayed &, llvm::raw_ostream &,
+                                    StringRef);
 
   template <typename U> using check = SameType<Signature_format, &U::format>;
 

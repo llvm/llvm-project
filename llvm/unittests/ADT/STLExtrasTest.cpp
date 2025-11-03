@@ -60,7 +60,7 @@ TEST(STLExtrasTest, EnumerateLValue) {
   // Test that a simple LValue can be enumerated and gives correct results with
   // multiple types, including the empty container.
   std::vector<char> foo = {'a', 'b', 'c'};
-  typedef std::pair<std::size_t, char> CharPairType;
+  using CharPairType = std::pair<std::size_t, char>;
   std::vector<CharPairType> CharResults;
 
   for (auto [index, value] : llvm::enumerate(foo)) {
@@ -72,7 +72,7 @@ TEST(STLExtrasTest, EnumerateLValue) {
                           CharPairType(2u, 'c')));
 
   // Test a const range of a different type.
-  typedef std::pair<std::size_t, int> IntPairType;
+  using IntPairType = std::pair<std::size_t, int>;
   std::vector<IntPairType> IntResults;
   const std::vector<int> bar = {1, 2, 3};
   for (auto [index, value] : llvm::enumerate(bar)) {
@@ -111,7 +111,7 @@ TEST(STLExtrasTest, EnumerateModifyLValue) {
 
 TEST(STLExtrasTest, EnumerateRValueRef) {
   // Test that an rvalue can be enumerated.
-  typedef std::pair<std::size_t, int> PairType;
+  using PairType = std::pair<std::size_t, int>;
   std::vector<PairType> Results;
 
   auto Enumerator = llvm::enumerate(std::vector<int>{1, 2, 3});
@@ -138,7 +138,7 @@ TEST(STLExtrasTest, EnumerateModifyRValue) {
   // Test that when enumerating an rvalue, modification still works (even if
   // this isn't terribly useful, it at least shows that we haven't snuck an
   // extra const in there somewhere.
-  typedef std::pair<std::size_t, char> PairType;
+  using PairType = std::pair<std::size_t, char>;
   std::vector<PairType> Results;
 
   for (auto X : llvm::enumerate(std::vector<char>{'1', '2', '3'})) {
