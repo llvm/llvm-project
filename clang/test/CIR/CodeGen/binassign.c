@@ -100,3 +100,67 @@ void binary_assign_struct() {
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[LS_PTR]], ptr align 4 @gs, i64 8, i1 false)
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[LSV_PTR]], ptr align 4 @gsv, i64 8, i1 true)
 // OGCG:   ret void
+
+int ignore_result_assign() {
+  int *p, *q = 0;
+  if(p = q)
+    return 1;
+  return 0;
+}
+
+// CIR-LABEL: cir.func{{.*}} @ignore_result_assign() -> !s32i
+// CIR:         %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:         %[[P:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p"]
+// CIR:         %[[Q:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["q", init]
+// CIR:         %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
+// CIR:         cir.store{{.*}} %[[NULL]], %[[Q]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR:         %[[Q_VAL:.*]] = cir.load{{.*}} %[[Q]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:         cir.store{{.*}} %[[Q_VAL]], %[[P]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR:         %[[COND:.*]] = cir.cast ptr_to_bool %[[Q_VAL]] : !cir.ptr<!s32i> -> !cir.bool
+// CIR:         cir.if %[[COND]] {
+// CIR:           %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:           cir.store %[[ONE]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR:           %{{.*}} = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
+// CIR:           cir.return
+// CIR:         }
+// CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:         cir.store %[[ZERO]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR:         %{{.*}} = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}}i32 @ignore_result_assign()
+// LLVM:         %[[RETVAL_PTR:.*]] = alloca i32
+// LLVM:         %[[P_PTR:.*]] = alloca ptr
+// LLVM:         %[[Q_PTR:.*]] = alloca ptr
+// LLVM:         store ptr null, ptr %[[Q_PTR]]
+// LLVM:         %[[Q_VAL:.*]] = load ptr, ptr %[[Q_PTR]]
+// LLVM:         store ptr %[[Q_VAL]], ptr %[[P_PTR]]
+// LLVM:         %[[CMP:.*]] = icmp ne ptr %[[Q_VAL]], null
+// LLVM:         br i1 %[[CMP]], label %[[THEN:.*]], label %[[ELSE:.*]]
+// LLVM:       [[THEN]]:
+// LLVM:         store i32 1, ptr %[[RETVAL_PTR]]
+// LLVM:         %{{.*}} = load i32, ptr %[[RETVAL_PTR]]
+// LLVM:         ret i32
+// LLVM:       [[ELSE]]:
+// LLVM:         store i32 0, ptr %[[RETVAL_PTR]]
+// LLVM:         %{{.*}} = load i32, ptr %[[RETVAL_PTR]]
+// LLVM:         ret i32
+
+// OGCG-LABEL: define {{.*}}i32 @ignore_result_assign()
+// OGCG:         %[[RETVAL:.*]] = alloca i32
+// OGCG:         %[[P:.*]] = alloca ptr
+// OGCG:         %[[Q:.*]] = alloca ptr
+// OGCG:         store ptr null, ptr %[[Q]]
+// OGCG:         %[[Q_VAL:.*]] = load ptr, ptr %[[Q]]
+// OGCG:         store ptr %[[Q_VAL]], ptr %[[P]]
+// OGCG:         %[[TOBOOL:.*]] = icmp ne ptr %[[Q_VAL]], null
+// OGCG:         br i1 %[[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+// OGCG:       [[IF_THEN]]:
+// OGCG:         store i32 1, ptr %[[RETVAL]]
+// OGCG:         br label %[[RETURN:.*]]
+// OGCG:       [[IF_END]]:
+// OGCG:         store i32 0, ptr %[[RETVAL]]
+// OGCG:         br label %[[RETURN]]
+// OGCG:       [[RETURN]]:
+// OGCG:         %{{.*}} = load i32, ptr %[[RETVAL]]
+// OGCG:         ret i32
