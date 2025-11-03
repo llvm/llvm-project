@@ -25,7 +25,8 @@ using namespace llvm;
 #define DEBUG_TYPE "ppctti"
 
 static cl::opt<bool> Pwr9EVL("ppc-pwr9-evl",
-cl::desc("Allow vp.load and vp.store for pwr9"), cl::init(false), cl::Hidden);
+                             cl::desc("Allow vp.load and vp.store for pwr9"),
+                             cl::init(false), cl::Hidden);
 
 static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
 cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
