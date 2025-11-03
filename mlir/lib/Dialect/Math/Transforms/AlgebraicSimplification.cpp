@@ -42,20 +42,24 @@ LogicalResult
 PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
                                        PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
+  // pow(x, y)
   Value x = op.getLhs();
+  Value y = op.getRhs();
 
-  FloatAttr scalarExponent;
-  DenseFPElementsAttr vectorExponent;
+  FloatAttr scalarBase, scalarExponent;
+  DenseFPElementsAttr vectorBase, vectorExponent;
 
-  bool isScalar = matchPattern(op.getRhs(), m_Constant(&scalarExponent));
-  bool isVector = matchPattern(op.getRhs(), m_Constant(&vectorExponent));
+  bool isScalarBase = matchPattern(x, m_Constant(&scalarBase));
+  bool isVectorBase = matchPattern(x, m_Constant(&vectorBase));
+  bool isScalarExponent = matchPattern(y, m_Constant(&scalarExponent));
+  bool isVectorExponent = matchPattern(y, m_Constant(&vectorExponent));
 
   // Returns true if exponent is a constant equal to `value`.
   auto isExponentValue = [&](double value) -> bool {
-    if (isScalar)
+    if (isScalarExponent)
       return scalarExponent.getValue().isExactlyValue(value);
 
-    if (isVector && vectorExponent.isSplat())
+    if (isVectorExponent && vectorExponent.isSplat())
       return vectorExponent.getSplatValue<FloatAttr>()
           .getValue()
           .isExactlyValue(value);
@@ -118,6 +122,24 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
     rewriter.replaceOpWithNewOp<arith::MulFOp>(op,
                                                ValueRange{powHalf, powQuarter});
     return success();
+  }
+
+  // Replace `pow(2.0^n, y)` with `exp2(n * y)`
+  if (isScalarBase || (isVectorBase && vectorBase.isSplat())) {
+    APFloat baseValue = isScalarBase
+                            ? scalarBase.getValue()
+                            : vectorBase.getSplatValue<FloatAttr>().getValue();
+    // Check if base is an exact power of 2
+    int n = baseValue.getExactLog2();
+    if (n != INT_MIN) {
+      Type opType = getElementTypeOrSelf(op.getType());
+      Value nValue = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getFloatAttr(opType, n));
+      Value nTimesY =
+          arith::MulFOp::create(rewriter, loc, ValueRange({bcast(nValue), y}));
+      rewriter.replaceOpWithNewOp<math::Exp2Op>(op, nTimesY);
+      return success();
+    }
   }
 
   return failure();
