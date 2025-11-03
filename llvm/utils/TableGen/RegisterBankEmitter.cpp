@@ -100,8 +100,7 @@ public:
     return RCsWithLargestRegSize[HwMode];
   }
 
-  iterator_range<typename RegisterClassesTy::const_iterator>
-  register_classes() const {
+  iterator_range<RegisterClassesTy::const_iterator> register_classes() const {
     return RCs;
   }
 };

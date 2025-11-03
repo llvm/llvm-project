@@ -143,8 +143,8 @@ struct SubGraphTraits {
   class WrappedSuccIterator
       : public iterator_adaptor_base<
             WrappedSuccIterator, BaseSuccIterator,
-            typename std::iterator_traits<BaseSuccIterator>::iterator_category,
-            NodeRef, std::ptrdiff_t, NodeRef *, NodeRef> {
+            std::iterator_traits<BaseSuccIterator>::iterator_category, NodeRef,
+            std::ptrdiff_t, NodeRef *, NodeRef> {
     SmallDenseSet<RegionNode *> *Nodes;
 
   public:

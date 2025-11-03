@@ -419,8 +419,8 @@ llvm.func private @mbarrier_init_generic(%barrier: !llvm.ptr) {
 
 llvm.func private @mbarrier_init_shared(%barrier: !llvm.ptr<3>) {
   %count = nvvm.read.ptx.sreg.ntid.x : i32
-  // CHECK:   nvvm.mbarrier.init.shared %{{.*}}, %{{.*}} : !llvm.ptr<3>, i32
-  nvvm.mbarrier.init.shared %barrier, %count : !llvm.ptr<3>, i32
+  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} : !llvm.ptr<3>, i32
+  nvvm.mbarrier.init %barrier, %count : !llvm.ptr<3>, i32
   llvm.return
 }
 
@@ -433,8 +433,8 @@ llvm.func private @mbarrier_inval_generic(%barrier: !llvm.ptr) {
 
 
 llvm.func private @mbarrier_inval_shared(%barrier: !llvm.ptr<3>) {
-  // CHECK:   nvvm.mbarrier.inval.shared %{{.*}} : !llvm.ptr<3>
-  nvvm.mbarrier.inval.shared %barrier : !llvm.ptr<3>
+  // CHECK:   nvvm.mbarrier.inval %{{.*}} : !llvm.ptr<3>
+  nvvm.mbarrier.inval %barrier : !llvm.ptr<3>
   llvm.return
 }
 

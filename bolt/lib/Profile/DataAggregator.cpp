@@ -1321,7 +1321,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     }
 
     using SSI = StringSwitch<int>;
-    AddrNum = SSI(Str).Cases("T", "R", 3).Case("S", 1).Case("E", 0).Default(2);
+    AddrNum =
+        SSI(Str).Cases({"T", "R"}, 3).Case("S", 1).Case("E", 0).Default(2);
     CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
@@ -2215,7 +2216,7 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
     OutFile << "boltedcollection\n";
   if (opts::BasicAggregation) {
     OutFile << "no_lbr";
-    for (const StringMapEntry<std::nullopt_t> &Entry : EventNames)
+    for (const StringMapEntry<EmptyStringSetTag> &Entry : EventNames)
       OutFile << " " << Entry.getKey();
     OutFile << "\n";
 
@@ -2291,7 +2292,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 
   ListSeparator LS(",");
   raw_string_ostream EventNamesOS(BP.Header.EventNames);
-  for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
+  for (const StringMapEntry<EmptyStringSetTag> &EventEntry : EventNames)
     EventNamesOS << LS << EventEntry.first().str();
 
   BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_BASIC

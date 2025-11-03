@@ -54,7 +54,7 @@ namespace llvm {
       virtual bool operator()(const Value *L, const Value *R) = 0;
 
     protected:
-      virtual ~Oracle() {}
+      virtual ~Oracle() = default;
     };
 
     DifferenceEngine(Consumer &consumer)

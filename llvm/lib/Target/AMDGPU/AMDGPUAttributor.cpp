@@ -1555,7 +1555,7 @@ private:
 
   AMDGPU::ClusterDimsAttr Attr;
 
-  static constexpr const char AttrName[] = "amdgpu-cluster-dims";
+  static constexpr char AttrName[] = "amdgpu-cluster-dims";
 };
 
 AAAMDGPUClusterDims &

@@ -59,7 +59,7 @@ TEST(DepthFirstIteratorTest, ActuallyUpdateIterator) {
 
 static_assert(
     std::is_convertible_v<decltype(*std::declval<df_iterator<Graph<3>>>()),
-                          typename df_iterator<Graph<3>>::reference>);
+                          df_iterator<Graph<3>>::reference>);
 
 // df_iterator should be (at-least) a forward-iterator
 static_assert(std::is_base_of_v<std::forward_iterator_tag,

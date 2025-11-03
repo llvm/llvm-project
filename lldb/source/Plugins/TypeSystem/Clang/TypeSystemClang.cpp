@@ -1000,6 +1000,8 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
   case DW_ATE_signed:
     if (!type_name.empty()) {
+      if (type_name.starts_with("_BitInt"))
+        return GetType(ast.getBitIntType(/*Unsigned=*/false, bit_size));
       if (type_name == "wchar_t" &&
           QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy) &&
           (getTargetInfo() &&
@@ -1056,6 +1058,8 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
   case DW_ATE_unsigned:
     if (!type_name.empty()) {
+      if (type_name.starts_with("unsigned _BitInt"))
+        return GetType(ast.getBitIntType(/*Unsigned=*/true, bit_size));
       if (type_name == "wchar_t") {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy)) {
           if (!(getTargetInfo() &&
@@ -3488,7 +3492,7 @@ bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
 }
 
 bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                                          uint32_t &count, bool &is_complex) {
+                                          bool &is_complex) {
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
 
@@ -3497,30 +3501,26 @@ bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
       clang::BuiltinType::Kind kind = BT->getKind();
       if (kind >= clang::BuiltinType::Float &&
           kind <= clang::BuiltinType::LongDouble) {
-        count = 1;
         is_complex = false;
         return true;
       }
     } else if (const clang::ComplexType *CT =
                    llvm::dyn_cast<clang::ComplexType>(
                        qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr(), count,
+      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr(),
                               is_complex)) {
-        count = 2;
         is_complex = true;
         return true;
       }
     } else if (const clang::VectorType *VT = llvm::dyn_cast<clang::VectorType>(
                    qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr(), count,
+      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr(),
                               is_complex)) {
-        count = VT->getNumElements();
         is_complex = false;
         return true;
       }
     }
   }
-  count = 0;
   is_complex = false;
   return false;
 }
@@ -3893,6 +3893,13 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
                            ->getModifiedType()
                            .getAsOpaquePtr(),
                        pointee_or_element_clang_type);
+  case clang::Type::BitInt: {
+    uint32_t type_flags = eTypeIsScalar | eTypeIsInteger | eTypeHasValue;
+    if (qual_type->isSignedIntegerType())
+      type_flags |= eTypeIsSigned;
+
+    return type_flags;
+  }
   case clang::Type::Builtin: {
     const clang::BuiltinType *builtin_type =
         llvm::cast<clang::BuiltinType>(qual_type->getCanonicalTypeInternal());
@@ -3965,9 +3972,9 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     if (complex_type) {
       clang::QualType complex_element_type(complex_type->getElementType());
       if (complex_element_type->isIntegerType())
-        complex_type_flags |= eTypeIsFloat;
-      else if (complex_element_type->isFloatingType())
         complex_type_flags |= eTypeIsInteger;
+      else if (complex_element_type->isFloatingType())
+        complex_type_flags |= eTypeIsFloat;
     }
     return complex_type_flags;
   } break;
@@ -4062,12 +4069,17 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     uint32_t vector_type_flags = eTypeHasChildren | eTypeIsVector;
     const clang::VectorType *vector_type = llvm::dyn_cast<clang::VectorType>(
         qual_type->getCanonicalTypeInternal());
-    if (vector_type) {
-      if (vector_type->isIntegerType())
-        vector_type_flags |= eTypeIsFloat;
-      else if (vector_type->isFloatingType())
-        vector_type_flags |= eTypeIsInteger;
-    }
+    if (!vector_type)
+      return 0;
+
+    QualType element_type = vector_type->getElementType();
+    if (element_type.isNull())
+      return 0;
+
+    if (element_type->isIntegerType())
+      vector_type_flags |= eTypeIsInteger;
+    else if (element_type->isFloatingType())
+      vector_type_flags |= eTypeIsFloat;
     return vector_type_flags;
   }
   default:
@@ -4864,12 +4876,10 @@ TypeSystemClang::GetTypeBitAlign(lldb::opaque_compiler_type_t type,
   return {};
 }
 
-lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
-                                            uint64_t &count) {
+lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   if (!type)
     return lldb::eEncodingInvalid;
 
-  count = 1;
   clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
   switch (qual_type->getTypeClass()) {
@@ -4903,7 +4913,6 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::DependentVector:
   case clang::Type::ExtVector:
   case clang::Type::Vector:
-    // TODO: Set this to more than one???
     break;
 
   case clang::Type::BitInt:
@@ -5104,11 +5113,10 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
       const clang::ComplexType *complex_type =
           qual_type->getAsComplexIntegerType();
       if (complex_type)
-        encoding = GetType(complex_type->getElementType()).GetEncoding(count);
+        encoding = GetType(complex_type->getElementType()).GetEncoding();
       else
         encoding = lldb::eEncodingSint;
     }
-    count = 2;
     return encoding;
   }
 
@@ -5165,7 +5173,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::SubstBuiltinTemplatePack:
     break;
   }
-  count = 0;
+
   return lldb::eEncodingInvalid;
 }
 

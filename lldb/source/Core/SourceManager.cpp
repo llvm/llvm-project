@@ -34,6 +34,7 @@
 
 #include "llvm/ADT/Twine.h"
 
+#include <future>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -54,8 +55,7 @@ using namespace lldb_private;
 static inline bool is_newline_char(char ch) { return ch == '\n' || ch == '\r'; }
 
 static void resolve_tilde(FileSpec &file_spec) {
-  if (!FileSystem::Instance().Exists(file_spec) &&
-      file_spec.GetDirectory() &&
+  if (!FileSystem::Instance().Exists(file_spec) && file_spec.GetDirectory() &&
       file_spec.GetDirectory().GetCString()[0] == '~') {
     FileSystem::Instance().Resolve(file_spec);
   }
@@ -477,6 +477,28 @@ SourceManager::File::File(SupportFileSP support_file_sp, TargetSP target_sp)
 
 void SourceManager::File::CommonInitializer(SupportFileSP support_file_sp,
                                             TargetSP target_sp) {
+  // It might take a while to read a source file, for example because it's
+  // coming from a virtual file system that's fetching the data on demand. When
+  // reading the data exceeds a certain threshold, show a progress event to let
+  // the user know what's going on.
+  static constexpr auto g_progress_delay = std::chrono::milliseconds(500);
+
+  std::future<void> future = std::async(std::launch::async, [=]() {
+    CommonInitializerImpl(support_file_sp, target_sp);
+  });
+
+  std::optional<Progress> progress;
+  if (future.wait_for(g_progress_delay) == std::future_status::timeout) {
+    Debugger *debugger = target_sp ? &target_sp->GetDebugger() : nullptr;
+    progress.emplace("Loading source file",
+                     support_file_sp->GetSpecOnly().GetFilename().GetString(),
+                     1, debugger);
+  }
+  future.wait();
+}
+
+void SourceManager::File::CommonInitializerImpl(SupportFileSP support_file_sp,
+                                                TargetSP target_sp) {
   // Set the file and update the modification time.
   SetSupportFile(support_file_sp);
 

@@ -44,7 +44,7 @@ class DefaultTimingManagerImpl;
 /// This is a POD type with pointer size, so it should be passed around by
 /// value. The underlying data is owned by the `TimingManager`.
 class TimingIdentifier {
-  using EntryType = llvm::StringMapEntry<std::nullopt_t>;
+  using EntryType = llvm::StringMapEntry<llvm::EmptyStringSetTag>;
 
 public:
   TimingIdentifier(const TimingIdentifier &) = default;

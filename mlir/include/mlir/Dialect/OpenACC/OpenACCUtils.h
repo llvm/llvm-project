@@ -47,6 +47,11 @@ std::string getVariableName(mlir::Value v);
 /// Returns an empty string if not possible to generate a recipe name.
 std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type);
 
+// Get the base entity from partial entity access. This is used for getting
+// the base `struct` from an operation that only accesses a field or the
+// base `array` from an operation that only accesses a subarray.
+mlir::Value getBaseEntity(mlir::Value val);
+
 } // namespace acc
 } // namespace mlir
 

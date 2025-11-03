@@ -600,9 +600,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__ranges/from_range.h>
 #  include <__tree>
 #  include <__type_traits/container_traits.h>
-#  include <__type_traits/desugars_to.h>
 #  include <__type_traits/is_allocator.h>
-#  include <__type_traits/is_convertible.h>
 #  include <__type_traits/make_transparent.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/type_identity.h>

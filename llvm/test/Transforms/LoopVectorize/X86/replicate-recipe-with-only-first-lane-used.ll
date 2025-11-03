@@ -199,10 +199,8 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 7
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ogt float [[TMP6]], 0.000000e+00
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i1> poison, i1 [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i1> [[TMP8]], i1 [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i1> [[TMP9]], i1 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i1> [[TMP13]], i1 [[TMP10]], i32 3
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP4]]

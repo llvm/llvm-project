@@ -528,7 +528,7 @@ public:
   SMRange getRange() const { return Range; }
 
   static Error get(const SourceMgr &SM, SMLoc Loc, const Twine &ErrMsg,
-                   SMRange Range = std::nullopt) {
+                   SMRange Range = {}) {
     return make_error<ErrorDiagnostic>(
         SM.GetMessage(Loc, SourceMgr::DK_Error, ErrMsg), Range);
   }

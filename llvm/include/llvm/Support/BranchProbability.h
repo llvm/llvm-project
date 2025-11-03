@@ -97,6 +97,9 @@ public:
   /// \return \c Num divided by \c this.
   LLVM_ABI uint64_t scaleByInverse(uint64_t Num) const;
 
+  /// Compute pow(Probability, N).
+  BranchProbability pow(unsigned N) const;
+
   BranchProbability &operator+=(BranchProbability RHS) {
     assert(N != UnknownN && RHS.N != UnknownN &&
            "Unknown probability cannot participate in arithmetics.");

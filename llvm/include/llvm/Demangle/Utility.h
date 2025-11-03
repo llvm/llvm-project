@@ -81,7 +81,7 @@ public:
   OutputBuffer(const OutputBuffer &) = delete;
   OutputBuffer &operator=(const OutputBuffer &) = delete;
 
-  virtual ~OutputBuffer() {}
+  virtual ~OutputBuffer() = default;
 
   operator std::string_view() const {
     return std::string_view(Buffer, CurrentPosition);

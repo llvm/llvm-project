@@ -68,13 +68,9 @@
 # CHECK:      early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.4)
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
-# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
-# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 1040
-# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1, implicit $vg
-# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
-# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1040, 0
-# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
-# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -2, implicit $vg
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 2064, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 2080
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -3, implicit $vg
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22
 #
 # CHECK-NEXT: $x8 = ADDXri $sp, 1040, 0
@@ -83,14 +79,10 @@
 # CHECK-NEXT: $x8 = ADDXri $sp, 2064, 0
 # CHECK-NEXT: STR_PXI $p0, killed $x8, 18 :: (store (<vscale x 1 x s16>) into %stack.1)
 #
-# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 2, implicit $vg
-# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
-# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1024, 0
-# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
-# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1, implicit $vg
-# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 1056
-# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
-# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 2064, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 3, implicit $vg
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
 # CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.4)
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
@@ -100,38 +92,26 @@
 # ASM:       str x29, [sp, #-16]!
 # ASM-NEXT:  .cfi_def_cfa_offset 16
 # ASM-NEXT:  .cfi_offset w29, -16
-# ASM-NEXT:  sub sp, sp, #1024
-# ASM-NEXT:  .cfi_def_cfa_offset 1040
-# ASM-NEXT:  addvl sp, sp, #-1
-# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
-# ASM-NEXT:  sub sp, sp, #1040
-# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
-# ASM-NEXT:  addvl sp, sp, #-2
+# ASM-NEXT:  sub sp, sp, #2064
+# ASM-NEXT:  .cfi_def_cfa_offset 2080
+# ASM-NEXT:  addvl sp, sp, #-3
 # ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 2080 + 24 * VG
 #
-# ASM:	     addvl sp, sp, #2
-# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
-# ASM-NEXT:  add sp, sp, #1024
-# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1056 + 8 * VG
-# ASM-NEXT:  addvl sp, sp, #1
-# ASM-NEXT:  .cfi_def_cfa wsp, 1056
-# ASM-NEXT:  add sp, sp, #1040
-# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM:	     add sp, sp, #2064
+# ASM-NEXT:  .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+# ASM-NEXT:  addvl   sp, sp, #3
+# ASM-NEXT:  .cfi_def_cfa wsp, 16
 # ASM-NEXT:  ldr x29, [sp], #16
 # ASM-NEXT:  .cfi_def_cfa_offset 0
 # ASM-NEXT:  .cfi_restore w29
 
 # UNWINDINFO:      DW_CFA_def_cfa_offset: +16
 # UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
-# UNWINDINFO:      DW_CFA_def_cfa_offset: +1040
-# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +1040, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
-# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO:      DW_CFA_def_cfa_offset: +2080
 # UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit24, DW_OP_mul, DW_OP_plus
 #
-# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
-# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +1056, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
-# UNWINDINFO:      DW_CFA_def_cfa: reg31 +1056
-# UNWINDINFO:      DW_CFA_def_cfa_offset: +16
+# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +16, DW_OP_bregx 0x2e +0, DW_OP_lit24, DW_OP_mul, DW_OP_plus
+# UNWINDINFO:      DW_CFA_def_cfa: reg31 +16
 # UNWINDINFO:      DW_CFA_def_cfa_offset: +0
 # UNWINDINFO-NEXT: DW_CFA_restore: reg29
 
@@ -270,13 +250,9 @@ body:             |
 # CHECK-NEXT: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.5)
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
-# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
-# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 1040
-# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1, implicit $vg
-# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
-# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1040, 0
-# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
-# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -2, implicit $vg
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 2064, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 2080
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -3, implicit $vg
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22
 #
 # CHECK-NEXT: $[[TMP:x[0-9]+]] = ADDXri $sp, 1040, 0
@@ -286,14 +262,10 @@ body:             |
 # CHECK-NEXT: $[[TMP:x[0-9]+]] = ADDXri $sp, 2064, 0
 # CHECK-NEXT: STR_PXI $p0, killed $[[TMP]], 23
 #
-# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 2, implicit $vg
-# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
-# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1024, 0
-# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
-# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1, implicit $vg
-# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 1056
-# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
-# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 2064, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 3, implicit $vg
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
 # CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.5)
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
@@ -303,38 +275,27 @@ body:             |
 # ASM:       str x29, [sp, #-16]!
 # ASM-NEXT:  .cfi_def_cfa_offset 16
 # ASM-NEXT:  .cfi_offset w29, -16
-# ASM-NEXT:  sub sp, sp, #1024
-# ASM-NEXT:  .cfi_def_cfa_offset 1040
-# ASM-NEXT:  addvl sp, sp, #-1
-# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
-# ASM-NEXT:  sub sp, sp, #1040
-# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
-# ASM-NEXT:  addvl sp, sp, #-2
+# ASM-NEXT:  sub sp, sp, #2064
+# ASM-NEXT:  .cfi_def_cfa_offset 2080
+# ASM-NEXT:  addvl sp, sp, #-3
 # ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 2080 + 24 * VG
 #
-# ASM:       addvl sp, sp, #2
-# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
-# ASM-NEXT:  add sp, sp, #1024
-# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1056 + 8 * VG
-# ASM-NEXT:  addvl sp, sp, #1
-# ASM-NEXT:  .cfi_def_cfa wsp, 1056
-# ASM-NEXT:  add sp, sp, #1040
-# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM:       add sp, sp, #2064
+# ASM-NEXT:  .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+# ASM-NEXT:  addvl   sp, sp, #3
+# ASM-NEXT:  .cfi_def_cfa wsp, 16
 # ASM-NEXT:  ldr x29, [sp], #16
 # ASM-NEXT:  .cfi_def_cfa_offset 0
 # ASM-NEXT:  .cfi_restore w29
+# ASM-NEXT:  ret
 
 # UNWINDINFO: DW_CFA_def_cfa_offset: +16
 # UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
-# UNWINDINFO: DW_CFA_def_cfa_offset: +1040
-# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +1040, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
-# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa_offset: +2080
 # UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit24, DW_OP_mul, DW_OP_plus
 #
-# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
-# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +1056, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
-# UNWINDINFO: DW_CFA_def_cfa: reg31 +1056
-# UNWINDINFO: DW_CFA_def_cfa_offset: +16
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +16, DW_OP_bregx 0x2e +0, DW_OP_lit24, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa: reg31 +16
 # UNWINDINFO: DW_CFA_def_cfa_offset: +0
 # UNWINDINFO-NEXT: DW_CFA_restore: reg29
 
@@ -385,10 +346,8 @@ body:             |
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -8
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
-# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
-# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1, implicit $vg
-# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1040, 0
-# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -2, implicit $vg
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 2064, 0
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -3, implicit $vg
 #
 # CHECK-NEXT: $[[TMP:x[0-9]+]] = SUBXri $fp, 1024, 0
 # CHECK-NEXT: STR_ZXI $z0, killed $[[TMP]], -2
@@ -396,10 +355,8 @@ body:             |
 # CHECK-NEXT: STR_ZXI $z1, killed $[[TMP]], -3
 # CHECK-NEXT: STR_PXI $p0, $fp, -1
 #
-# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 2, implicit $vg
-# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1024, 0
-# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1, implicit $vg
-# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 2064, 0
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 3, implicit $vg
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
 # CHECK-NEXT: early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2 :: (load (s64) from %stack.6), (load (s64) from %stack.5)
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
@@ -414,15 +371,11 @@ body:             |
 # ASM-NEXT:  .cfi_def_cfa w29, 16
 # ASM-NEXT:  .cfi_offset w30, -8
 # ASM-NEXT:  .cfi_offset w29, -16
-# ASM-NEXT:  sub sp, sp, #1024
-# ASM-NEXT:  addvl sp, sp, #-1
-# ASM-NEXT:  sub sp, sp, #1040
-# ASM-NEXT:  addvl sp, sp, #-2
+# ASM-NEXT:  sub sp, sp, #2064
+# ASM-NEXT:  addvl sp, sp, #-3
 #
-# ASM:       addvl sp, sp, #2
-# ASM-NEXT:  add sp, sp, #1024
-# ASM-NEXT:  addvl sp, sp, #1
-# ASM-NEXT:  add sp, sp, #1040
+# ASM:       add sp, sp, #2064
+# ASM-NEXT:  addvl sp, sp, #3
 # ASM-NEXT:  .cfi_def_cfa wsp, 16
 # ASM-NEXT:  ldp x29, x30, [sp], #16
 # ASM-NEXT:  .cfi_def_cfa_offset 0

@@ -334,7 +334,7 @@ public:
     LiveIntervals &LIS;
   };
 
-  MachineSchedulerImpl() {}
+  MachineSchedulerImpl() = default;
   // Migration only
   void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
   void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }
@@ -358,7 +358,7 @@ public:
     MachineLoopInfo &MLI;
     AAResults &AA;
   };
-  PostMachineSchedulerImpl() {}
+  PostMachineSchedulerImpl() = default;
   // Migration only
   void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
   void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }

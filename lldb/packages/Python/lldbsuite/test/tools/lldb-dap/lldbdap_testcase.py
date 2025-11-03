@@ -15,8 +15,6 @@ import base64
 # DAP tests as a whole have been flakey on the Windows on Arm bot. See:
 # https://github.com/llvm/llvm-project/issues/137660
 @skipIf(oslist=["windows"], archs=["aarch64"])
-# The Arm Linux bot needs stable resources before it can run these tests reliably.
-@skipIf(oslist=["linux"], archs=["arm$"])
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
@@ -225,6 +223,16 @@ class DAPTestCaseBase(TestBase):
                     return True
         return False
 
+    def verify_stop_on_entry(self) -> None:
+        """Waits for the process to be stopped and then verifies at least one
+        thread has the stop reason 'entry'."""
+        self.dap_server.wait_for_stopped()
+        self.assertIn(
+            "entry",
+            (t["reason"] for t in self.dap_server.thread_stop_reasons.values()),
+            "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
+        )
+
     def verify_commands(self, flavor: str, output: str, commands: list[str]):
         self.assertTrue(output and len(output) > 0, "expect console output")
         lines = output.splitlines()
@@ -418,7 +426,7 @@ class DAPTestCaseBase(TestBase):
         return self.dap_server.wait_for_stopped()
 
     def continue_to_breakpoint(self, breakpoint_id: str):
-        self.continue_to_breakpoints([breakpoint_id])
+        self.continue_to_breakpoints((breakpoint_id))
 
     def continue_to_breakpoints(self, breakpoint_ids):
         self.do_continue()

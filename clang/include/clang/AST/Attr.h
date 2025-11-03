@@ -16,6 +16,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/AttributeCommonInfo.h"
@@ -327,8 +328,8 @@ public:
   ParamIdx(unsigned Idx, const Decl *D)
       : Idx(Idx), HasThis(false), IsValid(true) {
     assert(Idx >= 1 && "Idx must be one-origin");
-    if (const auto *FD = dyn_cast<FunctionDecl>(D))
-      HasThis = FD->isCXXInstanceMember();
+    if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(D))
+      HasThis = MethodDecl->isImplicitObjectMemberFunction();
   }
 
   /// A type into which \c ParamIdx can be serialized.

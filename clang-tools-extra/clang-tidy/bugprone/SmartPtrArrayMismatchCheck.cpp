@@ -15,13 +15,11 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-namespace {
+static constexpr char ConstructExprN[] = "found_construct_expr";
+static constexpr char NewExprN[] = "found_new_expr";
+static constexpr char ConstructorN[] = "found_constructor";
 
-constexpr char ConstructExprN[] = "found_construct_expr";
-constexpr char NewExprN[] = "found_new_expr";
-constexpr char ConstructorN[] = "found_constructor";
-
-bool isInSingleDeclStmt(const DeclaratorDecl *D) {
+static bool isInSingleDeclStmt(const DeclaratorDecl *D) {
   const DynTypedNodeList Parents =
       D->getASTContext().getParentMapContext().getParents(*D);
   for (const DynTypedNode &PNode : Parents)
@@ -30,8 +28,8 @@ bool isInSingleDeclStmt(const DeclaratorDecl *D) {
   return false;
 }
 
-const DeclaratorDecl *getConstructedVarOrField(const Expr *FoundConstructExpr,
-                                               ASTContext &Ctx) {
+static const DeclaratorDecl *
+getConstructedVarOrField(const Expr *FoundConstructExpr, ASTContext &Ctx) {
   const DynTypedNodeList ConstructParents =
       Ctx.getParentMapContext().getParents(*FoundConstructExpr);
   if (ConstructParents.size() != 1)
@@ -42,8 +40,6 @@ const DeclaratorDecl *getConstructedVarOrField(const Expr *FoundConstructExpr,
 
   return nullptr;
 }
-
-} // namespace
 
 const char SmartPtrArrayMismatchCheck::PointerTypeN[] = "pointer_type";
 

@@ -3584,13 +3584,13 @@ void test_integer(void) {
   // CHECK-ASM: vsrlb
 
   vsc = vec_abs(vsc);
-  // CHECK-ASM: vlcb
+  // CHECK-ASM: vlpb
   vss = vec_abs(vss);
-  // CHECK-ASM: vlch
+  // CHECK-ASM: vlph
   vsi = vec_abs(vsi);
-  // CHECK-ASM: vlcf
+  // CHECK-ASM: vlpf
   vsl = vec_abs(vsl);
-  // CHECK-ASM: vlcg
+  // CHECK-ASM: vlpg
 
   vsc = vec_max(vsc, vsc);
   // CHECK-ASM: vmxb

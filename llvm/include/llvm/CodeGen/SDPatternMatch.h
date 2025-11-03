@@ -1311,7 +1311,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   }
 
   [[nodiscard]] inline bool
-  reassociatableMatchHelper(const ArrayRef<SmallBitVector> Matches,
+  reassociatableMatchHelper(ArrayRef<SmallBitVector> Matches,
                             SmallBitVector &Used, size_t Curr = 0) {
     if (Curr == Matches.size())
       return true;
