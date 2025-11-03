@@ -52,7 +52,6 @@ from tools.nvdsl import *
 import numpy as np
 
 
-
 def partition_shape():
     """
     Calculate the partition shape based on the block IDs.

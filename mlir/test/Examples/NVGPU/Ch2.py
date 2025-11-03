@@ -28,6 +28,7 @@ from mlir import runtime as rt
 from mlir.extras import types as T
 import numpy as np
 
+
 @NVDSL.mlir_func
 def saxpy(x, y, alpha):
     token_ty = gpu.AsyncTokenType.get()

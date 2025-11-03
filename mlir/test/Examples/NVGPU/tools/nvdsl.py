@@ -11,6 +11,7 @@ from tools import nvgpucompiler
 MLIR_DYNAMIC = -9223372036854775808
 DUMP_ONLY = os.getenv("MLIR_NVDSL_PRINT_IR") == "1"
 
+
 def const(value: int, ty=None):
     ty = T.index() if ty is None else ty
     if isinstance(value, ir.Value) and (

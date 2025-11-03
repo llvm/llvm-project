@@ -24,7 +24,6 @@ from tools.nvdsl import *
 import numpy as np
 
 
-
 @NVDSL.mlir_func
 def saxpy(x, y, alpha):
     # 1. Use MLIR GPU dialect to allocate and copy memory
