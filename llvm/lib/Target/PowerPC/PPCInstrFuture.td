@@ -362,7 +362,7 @@ let Predicates = [HasVSX, IsISAFuture] in {
                                   "lxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
     def LXVPB32X
         : XForm_XTp5_RAB5<31, 877, (outs vsrprc:$XTp),
-                          (ins (memr $RA):$addr, g8rc:$RB),
+                          (ins(memr $RA):$addr, g8rc:$RB),
                           "lxvpb32x $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
