@@ -195,30 +195,6 @@ void OmpStructureChecker::Leave(const parser::ExecutionPart &) {
   partStack_.pop_back();
 }
 
-// Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.
-#define CHECK_SIMPLE_CLAUSE(X, Y) \
-  void OmpStructureChecker::Enter(const parser::OmpClause::X &) { \
-    CheckAllowedClause(llvm::omp::Clause::Y); \
-  }
-
-#define CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(X, Y) \
-  void OmpStructureChecker::Enter(const parser::OmpClause::X &c) { \
-    CheckAllowedClause(llvm::omp::Clause::Y); \
-    RequiresConstantPositiveParameter(llvm::omp::Clause::Y, c.v); \
-  }
-
-#define CHECK_REQ_SCALAR_INT_CLAUSE(X, Y) \
-  void OmpStructureChecker::Enter(const parser::OmpClause::X &c) { \
-    CheckAllowedClause(llvm::omp::Clause::Y); \
-    RequiresPositiveParameter(llvm::omp::Clause::Y, c.v); \
-  }
-
-// Use when clause don't falls under 'struct OmpClause' in 'parse-tree.h'.
-#define CHECK_SIMPLE_PARSER_CLAUSE(X, Y) \
-  void OmpStructureChecker::Enter(const parser::X &) { \
-    CheckAllowedClause(llvm::omp::Y); \
-  }
-
 // 'OmpWorkshareBlockChecker' is used to check the validity of the assignment
 // statements and the expressions enclosed in an OpenMP Workshare construct
 class OmpWorkshareBlockChecker {
@@ -3391,88 +3367,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
         /*paramName=*/"parameter", /*allowZero=*/false);
 }
 
-// Following clauses do not have a separate node in parse-tree.h.
-CHECK_SIMPLE_CLAUSE(Absent, OMPC_absent)
-CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
-CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
-CHECK_SIMPLE_CLAUSE(Contains, OMPC_contains)
-CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
-CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
-CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
-CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
-CHECK_SIMPLE_CLAUSE(DynGroupprivate, OMPC_dyn_groupprivate)
-CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
-CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
-CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
-CHECK_SIMPLE_CLAUSE(Full, OMPC_full)
-CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
-CHECK_SIMPLE_CLAUSE(GraphId, OMPC_graph_id)
-CHECK_SIMPLE_CLAUSE(GraphReset, OMPC_graph_reset)
-CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
-CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
-CHECK_SIMPLE_CLAUSE(Initializer, OMPC_initializer)
-CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
-CHECK_SIMPLE_CLAUSE(Nontemporal, OMPC_nontemporal)
-CHECK_SIMPLE_CLAUSE(NumTasks, OMPC_num_tasks)
-CHECK_SIMPLE_CLAUSE(Order, OMPC_order)
-CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
-CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
-CHECK_SIMPLE_CLAUSE(Groupprivate, OMPC_groupprivate)
-CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
-CHECK_SIMPLE_CLAUSE(Threadset, OMPC_threadset)
-CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
-CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
-CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
-CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
-CHECK_SIMPLE_CLAUSE(NoOpenmp, OMPC_no_openmp)
-CHECK_SIMPLE_CLAUSE(NoOpenmpRoutines, OMPC_no_openmp_routines)
-CHECK_SIMPLE_CLAUSE(NoOpenmpConstructs, OMPC_no_openmp_constructs)
-CHECK_SIMPLE_CLAUSE(NoParallelism, OMPC_no_parallelism)
-CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
-CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
-CHECK_SIMPLE_CLAUSE(Partial, OMPC_partial)
-CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
-CHECK_SIMPLE_CLAUSE(Simd, OMPC_simd)
-CHECK_SIMPLE_CLAUSE(Permutation, OMPC_permutation)
-CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
-CHECK_SIMPLE_CLAUSE(Unknown, OMPC_unknown)
-CHECK_SIMPLE_CLAUSE(Untied, OMPC_untied)
-CHECK_SIMPLE_CLAUSE(UsesAllocators, OMPC_uses_allocators)
-CHECK_SIMPLE_CLAUSE(Write, OMPC_write)
-CHECK_SIMPLE_CLAUSE(Init, OMPC_init)
-CHECK_SIMPLE_CLAUSE(Use, OMPC_use)
-CHECK_SIMPLE_CLAUSE(Novariants, OMPC_novariants)
-CHECK_SIMPLE_CLAUSE(Nocontext, OMPC_nocontext)
-CHECK_SIMPLE_CLAUSE(Severity, OMPC_severity)
-CHECK_SIMPLE_CLAUSE(Message, OMPC_message)
-CHECK_SIMPLE_CLAUSE(Filter, OMPC_filter)
-CHECK_SIMPLE_CLAUSE(Otherwise, OMPC_otherwise)
-CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
-CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
-CHECK_SIMPLE_CLAUSE(MemoryOrder, OMPC_memory_order)
-CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
-CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
-CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
-CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
-CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
-CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
-CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
-CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
-CHECK_SIMPLE_CLAUSE(Replayable, OMPC_replayable)
-CHECK_SIMPLE_CLAUSE(Transparent, OMPC_transparent)
-CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
-CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
-
-CHECK_REQ_SCALAR_INT_CLAUSE(NumTeams, OMPC_num_teams)
-CHECK_REQ_SCALAR_INT_CLAUSE(NumThreads, OMPC_num_threads)
-CHECK_REQ_SCALAR_INT_CLAUSE(OmpxDynCgroupMem, OMPC_ompx_dyn_cgroup_mem)
-CHECK_REQ_SCALAR_INT_CLAUSE(Priority, OMPC_priority)
-CHECK_REQ_SCALAR_INT_CLAUSE(ThreadLimit, OMPC_thread_limit)
-
-CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Collapse, OMPC_collapse)
-CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Safelen, OMPC_safelen)
-CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Simdlen, OMPC_simdlen)
-
 void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
   context_.Say(GetContext().clauseSource,
       "LOOPRANGE clause is not implemented yet"_err_en_US,
@@ -5544,5 +5438,105 @@ void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
     }
   }
 }
+
+// Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.
+#define CHECK_SIMPLE_CLAUSE(X, Y) \
+  void OmpStructureChecker::Enter(const parser::OmpClause::X &) { \
+    CheckAllowedClause(llvm::omp::Clause::Y); \
+  }
+
+#define CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(X, Y) \
+  void OmpStructureChecker::Enter(const parser::OmpClause::X &c) { \
+    CheckAllowedClause(llvm::omp::Clause::Y); \
+    RequiresConstantPositiveParameter(llvm::omp::Clause::Y, c.v); \
+  }
+
+#define CHECK_REQ_SCALAR_INT_CLAUSE(X, Y) \
+  void OmpStructureChecker::Enter(const parser::OmpClause::X &c) { \
+    CheckAllowedClause(llvm::omp::Clause::Y); \
+    RequiresPositiveParameter(llvm::omp::Clause::Y, c.v); \
+  }
+
+// Following clauses do not have a separate node in parse-tree.h.
+CHECK_SIMPLE_CLAUSE(Absent, OMPC_absent)
+CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
+CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
+CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
+CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
+CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
+CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
+CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
+CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
+CHECK_SIMPLE_CLAUSE(Contains, OMPC_contains)
+CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
+CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
+CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
+CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
+CHECK_SIMPLE_CLAUSE(DynGroupprivate, OMPC_dyn_groupprivate)
+CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
+CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
+CHECK_SIMPLE_CLAUSE(Filter, OMPC_filter)
+CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
+CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
+CHECK_SIMPLE_CLAUSE(Full, OMPC_full)
+CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
+CHECK_SIMPLE_CLAUSE(GraphId, OMPC_graph_id)
+CHECK_SIMPLE_CLAUSE(GraphReset, OMPC_graph_reset)
+CHECK_SIMPLE_CLAUSE(Groupprivate, OMPC_groupprivate)
+CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
+CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
+CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
+CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
+CHECK_SIMPLE_CLAUSE(Initializer, OMPC_initializer)
+CHECK_SIMPLE_CLAUSE(Init, OMPC_init)
+CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
+CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
+CHECK_SIMPLE_CLAUSE(MemoryOrder, OMPC_memory_order)
+CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
+CHECK_SIMPLE_CLAUSE(Message, OMPC_message)
+CHECK_SIMPLE_CLAUSE(Nocontext, OMPC_nocontext)
+CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
+CHECK_SIMPLE_CLAUSE(Nontemporal, OMPC_nontemporal)
+CHECK_SIMPLE_CLAUSE(NoOpenmpConstructs, OMPC_no_openmp_constructs)
+CHECK_SIMPLE_CLAUSE(NoOpenmp, OMPC_no_openmp)
+CHECK_SIMPLE_CLAUSE(NoOpenmpRoutines, OMPC_no_openmp_routines)
+CHECK_SIMPLE_CLAUSE(NoParallelism, OMPC_no_parallelism)
+CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
+CHECK_SIMPLE_CLAUSE(Novariants, OMPC_novariants)
+CHECK_SIMPLE_CLAUSE(NumTasks, OMPC_num_tasks)
+CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
+CHECK_SIMPLE_CLAUSE(Order, OMPC_order)
+CHECK_SIMPLE_CLAUSE(Otherwise, OMPC_otherwise)
+CHECK_SIMPLE_CLAUSE(Partial, OMPC_partial)
+CHECK_SIMPLE_CLAUSE(Permutation, OMPC_permutation)
+CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
+CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
+CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
+CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
+CHECK_SIMPLE_CLAUSE(Replayable, OMPC_replayable)
+CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
+CHECK_SIMPLE_CLAUSE(Severity, OMPC_severity)
+CHECK_SIMPLE_CLAUSE(Simd, OMPC_simd)
+CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
+CHECK_SIMPLE_CLAUSE(Threadset, OMPC_threadset)
+CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
+CHECK_SIMPLE_CLAUSE(Transparent, OMPC_transparent)
+CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
+CHECK_SIMPLE_CLAUSE(Unknown, OMPC_unknown)
+CHECK_SIMPLE_CLAUSE(Untied, OMPC_untied)
+CHECK_SIMPLE_CLAUSE(Use, OMPC_use)
+CHECK_SIMPLE_CLAUSE(UsesAllocators, OMPC_uses_allocators)
+CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
+CHECK_SIMPLE_CLAUSE(Write, OMPC_write)
+
+CHECK_REQ_SCALAR_INT_CLAUSE(NumTeams, OMPC_num_teams)
+CHECK_REQ_SCALAR_INT_CLAUSE(NumThreads, OMPC_num_threads)
+CHECK_REQ_SCALAR_INT_CLAUSE(OmpxDynCgroupMem, OMPC_ompx_dyn_cgroup_mem)
+CHECK_REQ_SCALAR_INT_CLAUSE(Priority, OMPC_priority)
+CHECK_REQ_SCALAR_INT_CLAUSE(ThreadLimit, OMPC_thread_limit)
+
+CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Collapse, OMPC_collapse)
+CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Safelen, OMPC_safelen)
+CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Simdlen, OMPC_simdlen)
 
 } // namespace Fortran::semantics
