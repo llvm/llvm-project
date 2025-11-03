@@ -116,7 +116,8 @@ void XtensaInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   bool RenamableDest, bool RenamableSrc) const {
   unsigned Opcode;
 
-  // when we are copying a phys reg we want the bits for fp
+  // The MOV instruction is not present in core ISA for AR registers,
+  // so use OR instruction.
   if (Xtensa::ARRegClass.contains(DestReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(Xtensa::OR), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
