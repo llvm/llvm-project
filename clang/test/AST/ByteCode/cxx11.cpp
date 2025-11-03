@@ -374,7 +374,7 @@ namespace GH150709 {
 namespace DiscardedAddrLabel {
   void foo(void) {
   L:
-    *&&L; // both-error {{indirection not permitted}} \
+    *&&L; // both-error {{indirection not permitted on operand of type 'void *'}} \
           // both-warning {{expression result unused}}
   }
 }
