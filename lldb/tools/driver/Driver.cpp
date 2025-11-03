@@ -492,12 +492,20 @@ bool IsPythonDLLInPath() {
 }
 #endif
 
+/// Try to setup the DLL search path for the Python Runtime Library
+/// (python3xx.dll).
+///
+/// If `LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME` is set, we first check if
+/// python3xx.dll is in the search path. If it's not, we try to add it and
+/// check for it a second time.
+/// If only `LLDB_PYTHON_DLL_RELATIVE_PATH` is set, we try to add python3xx.dll
+/// to the search path python.dll is already in the search path or not.
 void SetupPythonRuntimeLibrary() {
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
   if (IsPythonDLLInPath())
     return;
 #ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
-  if (AddPythonDLLToSearchPath())
+  if (AddPythonDLLToSearchPath() && IsPythonDLLInPath())
     return;
 #endif
   llvm::errs() << "error: unable to find '"
