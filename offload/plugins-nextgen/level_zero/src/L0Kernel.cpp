@@ -374,8 +374,8 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   auto zeKernel = getZeKernel();
   auto DeviceId = l0Device.getDeviceId();
   int32_t NumArgs = KernelArgs.NumArgs;
-  int32_t NumTeams = KernelArgs.NumTeams[0];
-  int32_t ThreadLimit = KernelArgs.ThreadLimit[0];
+  int32_t NumTeams = NumThreads[0];
+  int32_t ThreadLimit = NumBlocks[0];
   if (NumTeams < 0)
     NumTeams = 0;
   if (ThreadLimit < 0)
