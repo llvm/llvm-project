@@ -3447,7 +3447,6 @@ static bool interp__builtin_ia32_shuffle_generic(
   return true;
 }
 
-
 static bool interp__builtin_x86_palignr(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned, unsigned)>
@@ -4678,21 +4677,22 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512:
-    return interp__builtin_x86_palignr(S, OpPC, Call, [](unsigned DstIdx, unsigned Shift, unsigned NumElems) {
-      // Default to -1 → zero-fill this destination element
-      unsigned VecIdx = 0;
-      int ElemIdx = -1;
+    return interp__builtin_x86_palignr(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned Shift, unsigned NumElems) {
+          // Default to -1 → zero-fill this destination element
+          unsigned VecIdx = 0;
+          int ElemIdx = -1;
 
-      // Elements come from VecB first, then VecA after the shift boundary
-      unsigned ShiftedIdx = DstIdx + Shift;
-      if(ShiftedIdx < NumElems) {   // from VecB
-        VecIdx = 1;                 
-        ElemIdx = DstIdx + Shift;
-      }else if(ShiftedIdx < 2 * NumElems) {  // from VecA
-        ElemIdx = DstIdx + Shift - NumElems;
-      }
-      return std::pair<unsigned, int>{VecIdx,ElemIdx};
-    });
+          // Elements come from VecB first, then VecA after the shift boundary
+          unsigned ShiftedIdx = DstIdx + Shift;
+          if (ShiftedIdx < NumElems) { // from VecB
+            VecIdx = 1;
+            ElemIdx = DstIdx + Shift;
+          } else if (ShiftedIdx < 2 * NumElems) { // from VecA
+            ElemIdx = DstIdx + Shift - NumElems;
+          }
+          return std::pair<unsigned, int>{VecIdx, ElemIdx};
+        });
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
