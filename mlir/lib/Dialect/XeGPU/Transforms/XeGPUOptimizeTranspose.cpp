@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -16,6 +17,8 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -24,6 +27,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <optional>
@@ -111,7 +115,8 @@ static bool canBeOptimized(xegpu::TensorDescType tdescType) {
 
 /// Check if a tensor desc type can be optimized for transpose, if so return the
 /// new optimized tensor desc type with a valid transpose layout.
-static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType) {
+static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
+                                         const uArch *targetuArch) {
   if (!canBeOptimized(tdescType))
     return tdescType;
   auto laneData = getMaybeLaneData(tdescType).value();
@@ -127,26 +132,34 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType) {
   Type newElemTy = IntegerType::get(tdescType.getContext(), newBitWidth);
   // Supported shape is the max transpose shape that can be supported by
   // hardware that is less than or equal to required shape.
-  auto supportedHeight = std::min(
-      requiredShape[0], getTransposableBlockRange(newBitWidth).maxHeight);
-  auto supportedWidth = std::min(
-      requiredShape[1], getTransposableBlockRange(newBitWidth).maxWidth);
-  SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
-
-  // Required shape must be multiple of supported shape. Otherwise, we can not
-  // optimize it.
-  // TODO: Supported shape can be adjusted to handle non-multiple cases.
-  if (requiredShape[0] % supportedShape[0] != 0 ||
-      requiredShape[1] % supportedShape[1] != 0)
+  auto *blockLoadTarget = dyn_cast<Subgroup2DBlockLoadInstruction>(
+      targetuArch->getInstruction(InstructionKind::Subgroup2DBlockLoad));
+  auto maybeHWParams = blockLoadTarget->getBlockWidthHeightCount(
+      newElemTy, /** has transform */ false, /** has transpose */ true);
+  // If no HW params found, return the original type.
+  if (!maybeHWParams)
+    return tdescType;
+  auto [widths, heights, counts] = maybeHWParams.value();
+  // TODO: Currently we expect array length to be 1 for transpose case.
+  if (counts.size() != 1 || counts[0] != 1)
+    return tdescType;
+  int arrayLen = counts[0];
+  int supportedHeight =
+      xegpu::getLargestDivisor(static_cast<int>(requiredShape[0]), heights);
+  int supportedWidth =
+      xegpu::getLargestDivisor(static_cast<int>(requiredShape[1]), widths);
+  // If no supported height or width found, return the original type.
+  if (supportedHeight == -1 || supportedWidth == -1)
     return tdescType;
 
+  SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
   xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
       tdescType.getContext(),
       tdescType.getLayoutAttr().getLaneLayout().asArrayRef(), {1, 1});
   // Array length can not be larger than 1 for transpose case.
-  return xegpu::TensorDescType::get(
-      supportedShape, newElemTy, /**array length**/ 1,
-      tdescType.getBoundaryCheck(), tdescType.getMemorySpace(), newLayout);
+  return xegpu::TensorDescType::get(supportedShape, newElemTy, arrayLen,
+                                    tdescType.getBoundaryCheck(),
+                                    tdescType.getMemorySpace(), newLayout);
 }
 
 /// Helper to create a constant index value.
@@ -242,7 +255,15 @@ public:
   matchAndRewrite(xegpu::CreateNdDescOp createNdOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto tdescTy = createNdOp.getType();
-    auto convertType = tryOptimize(tdescTy);
+    // Get the target uArch info.
+    auto chipStr = xegpu::getChipStr(createNdOp);
+    // Check if the chip is supported.
+    assert(
+        chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
+        "Expecting target chip to be pvc or bmg for transpose optimization.");
+    const uArch *targetuArch = xegpu::uArch::getUArch(chipStr.value());
+
+    auto convertType = tryOptimize(tdescTy, targetuArch);
     if (convertType == tdescTy)
       return failure();
     auto strides = createNdOp.getMixedStrides();
@@ -424,6 +445,21 @@ struct XeGPUOptimizeTransposePass final
     TypeConverter converter;
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
+
+    // This pass is only meant for PVC and BMG targets. If unsupported target
+    // is found, exit early.
+    bool isTargetSupported = true;
+    getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
+      auto chipStr = xegpu::getChipStr(funcOp);
+      if (chipStr && chipStr.value() != "pvc" && chipStr.value() != "bmg")
+        isTargetSupported = false;
+    });
+
+    if (!isTargetSupported) {
+      DBGS() << "XeGPUOptimizeTransposePass only supports PVC and BMG targets."
+             << "\n";
+      return;
+    }
 
     // CreateNdDescOp and LoadNdOp with optimizable tensor desc types must be
     // converted.
