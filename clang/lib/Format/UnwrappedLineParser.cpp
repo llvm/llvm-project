@@ -1591,9 +1591,8 @@ void UnwrappedLineParser::parseStructuralElement(
     if (Style.isVerilog()) {
       // In Verilog an extern module declaration looks like a start of module.
       // But there is no body and endmodule. So we handle it separately.
-      if (tryToParseVerilogExtern())
-        return;
-      break;
+      parseVerilogExtern();
+      return;
     }
     nextToken();
     if (FormatTok->is(tok::string_literal)) {
@@ -1621,8 +1620,10 @@ void UnwrappedLineParser::parseStructuralElement(
       parseJavaScriptEs6ImportExport();
       return;
     }
-    if (Style.isVerilog() && tryToParseVerilogExtern())
+    if (Style.isVerilog()) {
+      parseVerilogExtern();
       return;
+    }
     if (IsCpp) {
       nextToken();
       if (FormatTok->is(tok::kw_namespace)) {
@@ -1671,8 +1672,10 @@ void UnwrappedLineParser::parseStructuralElement(
         addUnwrappedLine();
         return;
       }
-      if (Style.isVerilog() && tryToParseVerilogExtern())
+      if (Style.isVerilog()) {
+        parseVerilogExtern();
         return;
+      }
       if (IsCpp && parseModuleImport())
         return;
     }
@@ -4559,7 +4562,7 @@ void UnwrappedLineParser::parseVerilogCaseLabel() {
   Line->Level = OrigLevel;
 }
 
-bool UnwrappedLineParser::tryToParseVerilogExtern() {
+void UnwrappedLineParser::parseVerilogExtern() {
   assert(
       FormatTok->isOneOf(tok::kw_extern, tok::kw_export, Keywords.kw_import));
   nextToken();
@@ -4572,11 +4575,8 @@ bool UnwrappedLineParser::tryToParseVerilogExtern() {
     nextToken();
   if (FormatTok->is(tok::equal))
     nextToken();
-  if (Keywords.isVerilogHierarchy(*FormatTok)) {
+  if (Keywords.isVerilogHierarchy(*FormatTok))
     parseVerilogHierarchyHeader();
-    return true;
-  }
-  return false;
 }
 
 bool UnwrappedLineParser::containsExpansion(const UnwrappedLine &Line) const {

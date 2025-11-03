@@ -206,7 +206,7 @@ private:
   void parseVerilogTable();
   void parseVerilogCaseLabel();
   // For import, export, and extern.
-  bool tryToParseVerilogExtern();
+  void parseVerilogExtern();
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 
