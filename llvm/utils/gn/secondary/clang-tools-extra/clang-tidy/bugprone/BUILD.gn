@@ -32,6 +32,7 @@ static_library("bugprone") {
     "CopyConstructorInitCheck.cpp",
     "CrtpConstructorAccessibilityCheck.cpp",
     "DanglingHandleCheck.cpp",
+    "DefaultOperatorNewOnOveralignedTypeCheck.cpp",
     "DerivedMethodShadowingBaseMethodCheck.cpp",
     "DynamicStaticInitializersCheck.cpp",
     "EasilySwappableParametersCheck.cpp",

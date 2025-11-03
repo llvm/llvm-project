@@ -6,41 +6,45 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines a variety of memory management related checkers, such as
+// This file defines checkers that report memory management errors such as
 // leak, double free, and use-after-free.
 //
-// The following checkers are defined here:
+// The logic for modeling memory allocations is implemented in the checker
+// family which is called 'MallocChecker' for historical reasons. (This name is
+// inaccurate, something like 'DynamicMemory' would be more precise.)
 //
-//   * MallocChecker
-//       Despite its name, it models all sorts of memory allocations and
-//       de- or reallocation, including but not limited to malloc, free,
-//       relloc, new, delete. It also reports on a variety of memory misuse
-//       errors.
-//       Many other checkers interact very closely with this checker, in fact,
-//       most are merely options to this one. Other checkers may register
-//       MallocChecker, but do not enable MallocChecker's reports (more details
-//       to follow around its field, ChecksEnabled).
-//       It also has a boolean "Optimistic" checker option, which if set to true
-//       will cause the checker to model user defined memory management related
-//       functions annotated via the attribute ownership_takes, ownership_holds
-//       and ownership_returns.
+// The reports produced by this backend are exposed through several frontends:
+//  *   MallocChecker: reports all misuse of dynamic memory allocated by
+//      malloc, related functions (like calloc, realloc etc.) and the functions
+//      annotated by ownership_returns. (Here the name "MallocChecker" is
+//      reasonably accurate; don't confuse this checker frontend with the whole
+//      misnamed family.)
+//  *   NewDeleteChecker: reports most misuse (anything but memory leaks) of
+//      memory managed by the C++ operators new and new[].
+//  *   NewDeleteLeaksChecker: reports leaks of dynamic memory allocated by
+//      the C++ operators new and new[].
+//  *   MismatchedDeallocatorChecker: reports situations where the allocation
+//      and deallocation is mismatched, e.g. memory allocated via malloc is
+//      passed to operator delete.
+//  *   InnerPointerChecker: reports use of pointers to the internal buffer of
+//      a std::string instance after operations that invalidate them.
+//  *   TaintedAllocChecker: reports situations where the size argument of a
+//      memory allocation function or array new operator is tainted (i.e. comes
+//      from an untrusted source and can be controlled by an attacker).
 //
-//   * NewDeleteChecker
-//       Enables the modeling of new, new[], delete, delete[] in MallocChecker,
-//       and checks for related double-free and use-after-free errors.
+// In addition to these frontends this file also defines the registration
+// functions for "unix.DynamicMemoryModeling". This registers the callbacks of
+// the checker family MallocChecker without enabling any of the frontends and
+// and handle two checker options which are attached to this "modeling
+// checker" because they affect multiple checker frontends.
 //
-//   * NewDeleteLeaksChecker
-//       Checks for leaks related to new, new[], delete, delete[].
-//       Depends on NewDeleteChecker.
-//
-//   * MismatchedDeallocatorChecker
-//       Enables checking whether memory is deallocated with the corresponding
-//       allocation function in MallocChecker, such as malloc() allocated
-//       regions are only freed by free(), new by delete, new[] by delete[].
-//
-//  InnerPointerChecker interacts very closely with MallocChecker, but unlike
-//  the above checkers, it has it's own file, hence the many InnerPointerChecker
-//  related headers and non-static functions.
+// Note that what the users see as the checker "cplusplus.InnerPointer" is a
+// combination of the frontend InnerPointerChecker (within this family) which
+// emits the bug reports and a separate checker class (also named
+// InnerPointerChecker) which is defined in InnerPointerChecker.cpp and does a
+// significant part of the modeling. This cooperation is enabled by several
+// non-static helper functions that are defined within this translation unit
+// and used in InnerPointerChecker.cpp.
 //
 //===----------------------------------------------------------------------===//
 

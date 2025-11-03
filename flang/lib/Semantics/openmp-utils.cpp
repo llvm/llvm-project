@@ -186,6 +186,23 @@ bool IsExtendedListItem(const Symbol &sym) {
   return IsVariableListItem(sym) || sym.IsSubprogram();
 }
 
+bool IsTypeParamInquiry(const Symbol &sym) {
+  return common::visit( //
+      common::visitors{
+          [&](const MiscDetails &d) {
+            return d.kind() == MiscDetails::Kind::KindParamInquiry ||
+                d.kind() == MiscDetails::Kind::LenParamInquiry;
+          },
+          [&](const TypeParamDetails &s) { return true; },
+          [&](auto &&) { return false; },
+      },
+      sym.details());
+}
+
+bool IsStructureComponent(const Symbol &sym) {
+  return sym.owner().kind() == Scope::Kind::DerivedType;
+}
+
 bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   if (expr) {
     return evaluate::UnwrapProcedureRef(*expr) != nullptr ||

@@ -198,6 +198,10 @@ public:
   /// If set, the UNIX timestamp specified by SOURCE_DATE_EPOCH.
   std::optional<uint64_t> SourceDateEpoch;
 
+  /// The initial value for __COUNTER__; typically is zero but can be set via a
+  /// -cc1 flag for testing purposes.
+  uint32_t InitialCounterValue = 0;
+
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
 
