@@ -219,7 +219,9 @@ def _normalize_release_notes_section(
     new_section: List[str] = []
     new_section.extend(prefix)
     for i_b, b in enumerate(sorted_blocks):
-        if i_b > 0 and (not new_section or (new_section and new_section[-1].strip() != "")):
+        if i_b > 0 and (
+            not new_section or (new_section and new_section[-1].strip() != "")
+        ):
             new_section.append("\n")
         new_section.extend(b)
     new_section.extend(suffix)
