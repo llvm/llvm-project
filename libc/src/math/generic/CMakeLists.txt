@@ -1516,9 +1516,8 @@ add_entrypoint_object(
   SRCS
     powf16.cpp
   HDRS
-    ../pow.h
+    ../powf16.h
   DEPENDS
-    .common_constants
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.CPP.bit
@@ -1531,6 +1530,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
     libc.src.__support.math.exp10f_utils
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(

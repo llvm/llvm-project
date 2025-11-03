@@ -21,11 +21,12 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/types.h"
+#include "src/__support/math/common_constants.h"
 #include "src/__support/math/exp10f_utils.h"
-#include "src/math/generic/common_constants.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using namespace common_constants_internal;
 namespace {
 static inline double exp2_range_reduced(double x) {
   // k = round(x * 32)  => (hi + mid) * 2^5
@@ -256,7 +257,7 @@ LLVM_LIBC_FUNCTION(float16, powf16, (float16 x, float16 y)) {
           (!x_abs_less_than_one && y_sign)) {
         // |x| < 1 and y = +inf => 0.0
         // |x| > 1 and y = -inf => 0.0
-        return 0.0f;
+        return 0.0f16;
       } else {
         // |x| > 1 and y = +inf => +inf
         // |x| < 1 and y = -inf => +inf
@@ -351,7 +352,7 @@ LLVM_LIBC_FUNCTION(float16, powf16, (float16 x, float16 y)) {
                                 0x1.2514fd90a130ap-2};
 
   double vsq = v * v;
-  double c0 = fputil::multiply_add(v, COEFFS[0], 0);
+  double c0 = fputil::multiply_add(v, COEFFS[0], 0.0);
   double c1 = fputil::multiply_add(v, COEFFS[2], COEFFS[1]);
   double c2 = fputil::multiply_add(v, COEFFS[4], COEFFS[3]);
 
