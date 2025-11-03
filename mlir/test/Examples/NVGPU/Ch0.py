@@ -42,6 +42,7 @@ def main(alpha):
     # 3. Call the GPU kernel
     kernel()
 
+
 alpha = 100
 # 4. The `mlir_func` decorator JIT compiles the IR and executes the MLIR function.
 main(alpha)
