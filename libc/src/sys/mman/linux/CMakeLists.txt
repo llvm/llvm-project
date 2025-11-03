@@ -235,7 +235,6 @@ add_entrypoint_object(
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
-    libc.src.sys.mman.mprotect
     libc.src.errno.errno
     .mprotect_common
 )
