@@ -125,9 +125,9 @@ static bool remainsLegalAfterInline(OpTy op, Region *src, Region *dest,
 //  Use "unused attribute" marker to silence clang-tidy warning stemming from
 //  the inability to see through "llvm::TypeSwitch".
 template <>
-bool LLVM_ATTRIBUTE_UNUSED remainsLegalAfterInline(AffineApplyOp op,
-                                                   Region *src, Region *dest,
-                                                   const IRMapping &mapping) {
+[[maybe_unused]] bool remainsLegalAfterInline(AffineApplyOp op, Region *src,
+                                              Region *dest,
+                                              const IRMapping &mapping) {
   // If it's a valid dimension, we need to check that it remains so.
   if (isValidDim(op.getResult(), src))
     return remainsLegalAfterInline(
@@ -1032,8 +1032,8 @@ static void simplifyMinOrMaxExprWithOperands(AffineMap &map,
 /// Simplify the map while exploiting information on the values in `operands`.
 //  Use "unused attribute" marker to silence warning stemming from the inability
 //  to see through the template expansion.
-static void LLVM_ATTRIBUTE_UNUSED
-simplifyMapWithOperands(AffineMap &map, ArrayRef<Value> operands) {
+[[maybe_unused]] static void simplifyMapWithOperands(AffineMap &map,
+                                                     ArrayRef<Value> operands) {
   assert(map.getNumInputs() == operands.size() && "invalid operands for map");
   SmallVector<AffineExpr> newResults;
   newResults.reserve(map.getNumResults());
@@ -1125,6 +1125,141 @@ static LogicalResult replaceAffineMinBoundingBoxExpression(AffineMinOp minOp,
   return success(*map != initialMap);
 }
 
+/// Recursively traverse `e`. If `e` or one of its sub-expressions has the form
+/// e1 + e2 + ... + eK, where the e_i are a super(multi)set of `exprsToRemove`,
+/// place a map between e and `newVal` + sum({e1, e2, .. eK} - exprsToRemove)
+/// into `replacementsMap`. If no entries were added to `replacementsMap`,
+/// nothing was found.
+static void shortenAddChainsContainingAll(
+    AffineExpr e, const llvm::SmallDenseSet<AffineExpr, 4> &exprsToRemove,
+    AffineExpr newVal, DenseMap<AffineExpr, AffineExpr> &replacementsMap) {
+  auto binOp = dyn_cast<AffineBinaryOpExpr>(e);
+  if (!binOp)
+    return;
+  AffineExpr lhs = binOp.getLHS();
+  AffineExpr rhs = binOp.getRHS();
+  if (binOp.getKind() != AffineExprKind::Add) {
+    shortenAddChainsContainingAll(lhs, exprsToRemove, newVal, replacementsMap);
+    shortenAddChainsContainingAll(rhs, exprsToRemove, newVal, replacementsMap);
+    return;
+  }
+  SmallVector<AffineExpr> toPreserve;
+  llvm::SmallDenseSet<AffineExpr, 4> ourTracker(exprsToRemove);
+  AffineExpr thisTerm = rhs;
+  AffineExpr nextTerm = lhs;
+
+  while (thisTerm) {
+    if (!ourTracker.erase(thisTerm)) {
+      toPreserve.push_back(thisTerm);
+      shortenAddChainsContainingAll(thisTerm, exprsToRemove, newVal,
+                                    replacementsMap);
+    }
+    auto nextBinOp = dyn_cast_if_present<AffineBinaryOpExpr>(nextTerm);
+    if (!nextBinOp || nextBinOp.getKind() != AffineExprKind::Add) {
+      thisTerm = nextTerm;
+      nextTerm = AffineExpr();
+    } else {
+      thisTerm = nextBinOp.getRHS();
+      nextTerm = nextBinOp.getLHS();
+    }
+  }
+  if (!ourTracker.empty())
+    return;
+  // We reverse the terms to be preserved here in order to preserve
+  // associativity between them.
+  AffineExpr newExpr = newVal;
+  for (AffineExpr preserved : llvm::reverse(toPreserve))
+    newExpr = newExpr + preserved;
+  replacementsMap.insert({e, newExpr});
+}
+
+/// If this map contains of the expression `x_1 + x_1 * C_1 + ... x_n * C_N +
+/// ...` (not necessarily in order) where the set of the `x_i` is the set of
+/// outputs of an `affine.delinearize_index` whos inverse is that expression,
+/// replace that expression with the input of that delinearize_index op.
+///
+/// `unitDimInput` is the input that was detected as the potential start to this
+/// replacement chain - if it isn't the rightmost result of the delinearization,
+/// this method fails. (This is intended to ensure we don't have redundant scans
+/// over the same expression).
+///
+/// While this currently only handles delinearizations with a constant basis,
+/// that isn't a fundamental limitation.
+///
+/// This is a utility function for `replaceDimOrSym` below.
+static LogicalResult replaceAffineDelinearizeIndexInverseExpression(
+    AffineDelinearizeIndexOp delinOp, Value resultToReplace, AffineMap *map,
+    SmallVectorImpl<Value> &dims, SmallVectorImpl<Value> &syms) {
+  if (!delinOp.getDynamicBasis().empty())
+    return failure();
+  if (resultToReplace != delinOp.getMultiIndex().back())
+    return failure();
+
+  MLIRContext *ctx = delinOp.getContext();
+  SmallVector<AffineExpr> resToExpr(delinOp.getNumResults(), AffineExpr());
+  for (auto [pos, dim] : llvm::enumerate(dims)) {
+    auto asResult = dyn_cast_if_present<OpResult>(dim);
+    if (!asResult)
+      continue;
+    if (asResult.getOwner() == delinOp.getOperation())
+      resToExpr[asResult.getResultNumber()] = getAffineDimExpr(pos, ctx);
+  }
+  for (auto [pos, sym] : llvm::enumerate(syms)) {
+    auto asResult = dyn_cast_if_present<OpResult>(sym);
+    if (!asResult)
+      continue;
+    if (asResult.getOwner() == delinOp.getOperation())
+      resToExpr[asResult.getResultNumber()] = getAffineSymbolExpr(pos, ctx);
+  }
+  if (llvm::is_contained(resToExpr, AffineExpr()))
+    return failure();
+
+  bool isDimReplacement = llvm::all_of(resToExpr, llvm::IsaPred<AffineDimExpr>);
+  int64_t stride = 1;
+  llvm::SmallDenseSet<AffineExpr, 4> expectedExprs;
+  // This isn't zip_equal since sometimes the delinearize basis is missing a
+  // size for the first result.
+  for (auto [binding, size] : llvm::zip(
+           llvm::reverse(resToExpr), llvm::reverse(delinOp.getStaticBasis()))) {
+    expectedExprs.insert(binding * getAffineConstantExpr(stride, ctx));
+    stride *= size;
+  }
+  if (resToExpr.size() != delinOp.getStaticBasis().size())
+    expectedExprs.insert(resToExpr[0] * stride);
+
+  DenseMap<AffineExpr, AffineExpr> replacements;
+  AffineExpr delinInExpr = isDimReplacement
+                               ? getAffineDimExpr(dims.size(), ctx)
+                               : getAffineSymbolExpr(syms.size(), ctx);
+
+  for (AffineExpr e : map->getResults())
+    shortenAddChainsContainingAll(e, expectedExprs, delinInExpr, replacements);
+  if (replacements.empty())
+    return failure();
+
+  AffineMap origMap = *map;
+  if (isDimReplacement)
+    dims.push_back(delinOp.getLinearIndex());
+  else
+    syms.push_back(delinOp.getLinearIndex());
+  *map = origMap.replace(replacements, dims.size(), syms.size());
+
+  // Blank out dead dimensions and symbols
+  for (AffineExpr e : resToExpr) {
+    if (auto d = dyn_cast<AffineDimExpr>(e)) {
+      unsigned pos = d.getPosition();
+      if (!map->isFunctionOfDim(pos))
+        dims[pos] = nullptr;
+    }
+    if (auto s = dyn_cast<AffineSymbolExpr>(e)) {
+      unsigned pos = s.getPosition();
+      if (!map->isFunctionOfSymbol(pos))
+        syms[pos] = nullptr;
+    }
+  }
+  return success();
+}
+
 /// Replace all occurrences of AffineExpr at position `pos` in `map` by the
 /// defining AffineApplyOp expression and operands.
 /// When `dimOrSymbolPosition < dims.size()`, AffineDimExpr@[pos] is replaced.
@@ -1155,6 +1290,11 @@ static LogicalResult replaceDimOrSym(AffineMap *map,
                                            : getAffineSymbolExpr(pos, ctx);
     return replaceAffineMinBoundingBoxExpression(minOp, dimOrSym, map, dims,
                                                  syms);
+  }
+
+  if (auto delinOp = v.getDefiningOp<affine::AffineDelinearizeIndexOp>()) {
+    return replaceAffineDelinearizeIndexInverseExpression(delinOp, v, map, dims,
+                                                          syms);
   }
 
   auto affineApply = v.getDefiningOp<AffineApplyOp>();
@@ -2460,6 +2600,65 @@ static LogicalResult foldLoopBounds(AffineForOp forOp) {
   return success(folded);
 }
 
+/// Returns constant trip count in trivial cases.
+static std::optional<uint64_t> getTrivialConstantTripCount(AffineForOp forOp) {
+  int64_t step = forOp.getStepAsInt();
+  if (!forOp.hasConstantBounds() || step <= 0)
+    return std::nullopt;
+  int64_t lb = forOp.getConstantLowerBound();
+  int64_t ub = forOp.getConstantUpperBound();
+  return ub - lb <= 0 ? 0 : (ub - lb + step - 1) / step;
+}
+
+/// Fold the empty loop.
+static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
+  if (!llvm::hasSingleElement(*forOp.getBody()))
+    return {};
+  if (forOp.getNumResults() == 0)
+    return {};
+  std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
+  if (tripCount == 0) {
+    // The initial values of the iteration arguments would be the op's
+    // results.
+    return forOp.getInits();
+  }
+  SmallVector<Value, 4> replacements;
+  auto yieldOp = cast<AffineYieldOp>(forOp.getBody()->getTerminator());
+  auto iterArgs = forOp.getRegionIterArgs();
+  bool hasValDefinedOutsideLoop = false;
+  bool iterArgsNotInOrder = false;
+  for (unsigned i = 0, e = yieldOp->getNumOperands(); i < e; ++i) {
+    Value val = yieldOp.getOperand(i);
+    BlockArgument *iterArgIt = llvm::find(iterArgs, val);
+    // TODO: It should be possible to perform a replacement by computing the
+    // last value of the IV based on the bounds and the step.
+    if (val == forOp.getInductionVar())
+      return {};
+    if (iterArgIt == iterArgs.end()) {
+      // `val` is defined outside of the loop.
+      assert(forOp.isDefinedOutsideOfLoop(val) &&
+             "must be defined outside of the loop");
+      hasValDefinedOutsideLoop = true;
+      replacements.push_back(val);
+    } else {
+      unsigned pos = std::distance(iterArgs.begin(), iterArgIt);
+      if (pos != i)
+        iterArgsNotInOrder = true;
+      replacements.push_back(forOp.getInits()[pos]);
+    }
+  }
+  // Bail out when the trip count is unknown and the loop returns any value
+  // defined outside of the loop or any iterArg out of order.
+  if (!tripCount.has_value() &&
+      (hasValDefinedOutsideLoop || iterArgsNotInOrder))
+    return {};
+  // Bail out when the loop iterates more than once and it returns any iterArg
+  // out of order.
+  if (tripCount.has_value() && tripCount.value() >= 2 && iterArgsNotInOrder)
+    return {};
+  return llvm::to_vector_of<OpFoldResult>(replacements);
+}
+
 /// Canonicalize the bounds of the given loop.
 static LogicalResult canonicalizeLoopBounds(AffineForOp forOp) {
   SmallVector<Value, 4> lbOperands(forOp.getLowerBoundOperands());
@@ -2491,121 +2690,6 @@ static LogicalResult canonicalizeLoopBounds(AffineForOp forOp) {
   return success();
 }
 
-namespace {
-/// Returns constant trip count in trivial cases.
-static std::optional<uint64_t> getTrivialConstantTripCount(AffineForOp forOp) {
-  int64_t step = forOp.getStepAsInt();
-  if (!forOp.hasConstantBounds() || step <= 0)
-    return std::nullopt;
-  int64_t lb = forOp.getConstantLowerBound();
-  int64_t ub = forOp.getConstantUpperBound();
-  return ub - lb <= 0 ? 0 : (ub - lb + step - 1) / step;
-}
-
-/// This is a pattern to fold trivially empty loop bodies.
-/// TODO: This should be moved into the folding hook.
-struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
-  using OpRewritePattern<AffineForOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(AffineForOp forOp,
-                                PatternRewriter &rewriter) const override {
-    // Check that the body only contains a yield.
-    if (!llvm::hasSingleElement(*forOp.getBody()))
-      return failure();
-    if (forOp.getNumResults() == 0)
-      return success();
-    std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
-    if (tripCount == 0) {
-      // The initial values of the iteration arguments would be the op's
-      // results.
-      rewriter.replaceOp(forOp, forOp.getInits());
-      return success();
-    }
-    SmallVector<Value, 4> replacements;
-    auto yieldOp = cast<AffineYieldOp>(forOp.getBody()->getTerminator());
-    auto iterArgs = forOp.getRegionIterArgs();
-    bool hasValDefinedOutsideLoop = false;
-    bool iterArgsNotInOrder = false;
-    for (unsigned i = 0, e = yieldOp->getNumOperands(); i < e; ++i) {
-      Value val = yieldOp.getOperand(i);
-      auto *iterArgIt = llvm::find(iterArgs, val);
-      // TODO: It should be possible to perform a replacement by computing the
-      // last value of the IV based on the bounds and the step.
-      if (val == forOp.getInductionVar())
-        return failure();
-      if (iterArgIt == iterArgs.end()) {
-        // `val` is defined outside of the loop.
-        assert(forOp.isDefinedOutsideOfLoop(val) &&
-               "must be defined outside of the loop");
-        hasValDefinedOutsideLoop = true;
-        replacements.push_back(val);
-      } else {
-        unsigned pos = std::distance(iterArgs.begin(), iterArgIt);
-        if (pos != i)
-          iterArgsNotInOrder = true;
-        replacements.push_back(forOp.getInits()[pos]);
-      }
-    }
-    // Bail out when the trip count is unknown and the loop returns any value
-    // defined outside of the loop or any iterArg out of order.
-    if (!tripCount.has_value() &&
-        (hasValDefinedOutsideLoop || iterArgsNotInOrder))
-      return failure();
-    // Bail out when the loop iterates more than once and it returns any iterArg
-    // out of order.
-    if (tripCount.has_value() && tripCount.value() >= 2 && iterArgsNotInOrder)
-      return failure();
-    rewriter.replaceOp(forOp, replacements);
-    return success();
-  }
-};
-} // namespace
-
-void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                              MLIRContext *context) {
-  results.add<AffineForEmptyLoopFolder>(context);
-}
-
-OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert((point.isParent() || point == getRegion()) && "invalid region point");
-
-  // The initial operands map to the loop arguments after the induction
-  // variable or are forwarded to the results when the trip count is zero.
-  return getInits();
-}
-
-void AffineForOp::getSuccessorRegions(
-    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  assert((point.isParent() || point == getRegion()) && "expected loop region");
-  // The loop may typically branch back to its body or to the parent operation.
-  // If the predecessor is the parent op and the trip count is known to be at
-  // least one, branch into the body using the iterator arguments. And in cases
-  // we know the trip count is zero, it can only branch back to its parent.
-  std::optional<uint64_t> tripCount = getTrivialConstantTripCount(*this);
-  if (point.isParent() && tripCount.has_value()) {
-    if (tripCount.value() > 0) {
-      regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
-      return;
-    }
-    if (tripCount.value() == 0) {
-      regions.push_back(RegionSuccessor(getResults()));
-      return;
-    }
-  }
-
-  // From the loop body, if the trip count is one, we can only branch back to
-  // the parent.
-  if (!point.isParent() && tripCount == 1) {
-    regions.push_back(RegionSuccessor(getResults()));
-    return;
-  }
-
-  // In all other cases, the loop may branch back to itself or the parent
-  // operation.
-  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
-  regions.push_back(RegionSuccessor(getResults()));
-}
-
 /// Returns true if the affine.for has zero iterations in trivial cases.
 static bool hasTrivialZeroTripCount(AffineForOp op) {
   return getTrivialConstantTripCount(op) == 0;
@@ -2624,7 +2708,60 @@ LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
     results.assign(getInits().begin(), getInits().end());
     folded = true;
   }
+  SmallVector<OpFoldResult> foldResults = AffineForEmptyLoopFolder(*this);
+  if (!foldResults.empty()) {
+    results.assign(foldResults);
+    folded = true;
+  }
   return success(folded);
+}
+
+OperandRange AffineForOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert((successor.isParent() || successor.getSuccessor() == &getRegion()) &&
+         "invalid region point");
+
+  // The initial operands map to the loop arguments after the induction
+  // variable or are forwarded to the results when the trip count is zero.
+  return getInits();
+}
+
+void AffineForOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  assert((point.isParent() ||
+          point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+              &getRegion()) &&
+         "expected loop region");
+  // The loop may typically branch back to its body or to the parent operation.
+  // If the predecessor is the parent op and the trip count is known to be at
+  // least one, branch into the body using the iterator arguments. And in cases
+  // we know the trip count is zero, it can only branch back to its parent.
+  std::optional<uint64_t> tripCount = getTrivialConstantTripCount(*this);
+  if (tripCount.has_value()) {
+    if (!point.isParent()) {
+      // From the loop body, if the trip count is one, we can only branch back
+      // to the parent.
+      if (tripCount == 1) {
+        regions.push_back(RegionSuccessor(getOperation(), getResults()));
+        return;
+      }
+      if (tripCount == 0)
+        return;
+    } else {
+      if (tripCount.value() > 0) {
+        regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
+        return;
+      }
+      if (tripCount.value() == 0) {
+        regions.push_back(RegionSuccessor(getOperation(), getResults()));
+        return;
+      }
+    }
+  }
+
+  // In all other cases, the loop may branch back to itself or the parent
+  // operation.
+  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
+  regions.push_back(RegionSuccessor(getOperation(), getResults()));
 }
 
 AffineBound AffineForOp::getLowerBound() {
@@ -3013,7 +3150,7 @@ void AffineIfOp::getSuccessorRegions(
         RegionSuccessor(&getThenRegion(), getThenRegion().getArguments()));
     // If the "else" region is empty, branch bach into parent.
     if (getElseRegion().empty()) {
-      regions.push_back(getResults());
+      regions.push_back(RegionSuccessor(getOperation(), getResults()));
     } else {
       regions.push_back(
           RegionSuccessor(&getElseRegion(), getElseRegion().getArguments()));
@@ -3023,7 +3160,7 @@ void AffineIfOp::getSuccessorRegions(
 
   // If the predecessor is the `else`/`then` region, then branching into parent
   // op is valid.
-  regions.push_back(RegionSuccessor(getResults()));
+  regions.push_back(RegionSuccessor(getOperation(), getResults()));
 }
 
 LogicalResult AffineIfOp::verify() {

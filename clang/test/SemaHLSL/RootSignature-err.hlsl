@@ -191,6 +191,10 @@ void basic_validation_5() {}
 [RootSignature("StaticSampler(s0, mipLODBias = 15.990001)")]
 void basic_validation_6() {}
 
+// expected-error@+1 {{invalid value of flags}}
+[RootSignature("StaticSampler(s0, flags = FLAG_TYPO)")]
+void basic_validation_7() {}
+
 // expected-error@+1 {{sampler and non-sampler resource mixed in descriptor table}}
 [RootSignature("DescriptorTable(Sampler(s0), CBV(b0))")]
 void mixed_resource_table() {}

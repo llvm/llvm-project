@@ -14,9 +14,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::google::objc {
 
-namespace {
-
-std::string validFunctionNameRegex(bool RequirePrefix) {
+static std::string validFunctionNameRegex(bool RequirePrefix) {
   // Allow the following name patterns for all functions:
   // • ABFoo (prefix + UpperCamelCase)
   // • ABURL (prefix + capitalized acronym/initialism)
@@ -43,7 +41,7 @@ std::string validFunctionNameRegex(bool RequirePrefix) {
 /// For now we will only fix functions of static storage class with names like
 /// 'functionName' or 'function_name' and convert them to 'FunctionName'. For
 /// other cases the user must determine an appropriate name on their own.
-FixItHint generateFixItHint(const FunctionDecl *Decl) {
+static FixItHint generateFixItHint(const FunctionDecl *Decl) {
   // A fixit can be generated for functions of static storage class but
   // otherwise the check cannot determine the appropriate function name prefix
   // to use.
@@ -81,8 +79,6 @@ FixItHint generateFixItHint(const FunctionDecl *Decl) {
 
   return {};
 }
-
-} // namespace
 
 void FunctionNamingCheck::registerMatchers(MatchFinder *Finder) {
   // Enforce Objective-C function naming conventions on all functions except:

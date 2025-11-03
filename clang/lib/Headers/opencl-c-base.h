@@ -82,6 +82,8 @@
 #define __opencl_c_read_write_images 1
 #endif // defined(__SPIR__)
 
+#endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+
 // Undefine any feature macros that have been explicitly disabled using
 // an __undef_<feature> macro.
 #ifdef __undef___opencl_c_work_group_collective_functions
@@ -99,8 +101,12 @@
 #ifdef __undef___opencl_c_read_write_images
 #undef __opencl_c_read_write_images
 #endif
-
-#endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+#ifdef __undef___opencl_c_integer_dot_product_input_4x8bit
+#undef __opencl_c_integer_dot_product_input_4x8bit
+#endif
+#ifdef __undef___opencl_c_integer_dot_product_input_4x8bit_packed
+#undef __opencl_c_integer_dot_product_input_4x8bit_packed
+#endif
 
 #if !defined(__opencl_c_generic_address_space)
 // Internal feature macro to provide named (global, local, private) address

@@ -468,6 +468,48 @@ void RegBankLegalizeHelper::lowerUnpackBitShift(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+void RegBankLegalizeHelper::lowerUnpackMinMax(MachineInstr &MI) {
+  Register Lo, Hi;
+  switch (MI.getOpcode()) {
+  case AMDGPU::G_SMIN:
+  case AMDGPU::G_SMAX: {
+    // For signed operations, use sign extension
+    auto [Val0_Lo, Val0_Hi] = unpackSExt(MI.getOperand(1).getReg());
+    auto [Val1_Lo, Val1_Hi] = unpackSExt(MI.getOperand(2).getReg());
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo})
+             .getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi})
+             .getReg(0);
+    break;
+  }
+  case AMDGPU::G_UMIN:
+  case AMDGPU::G_UMAX: {
+    // For unsigned operations, use zero extension
+    auto [Val0_Lo, Val0_Hi] = unpackZExt(MI.getOperand(1).getReg());
+    auto [Val1_Lo, Val1_Hi] = unpackZExt(MI.getOperand(2).getReg());
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo})
+             .getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi})
+             .getReg(0);
+    break;
+  }
+  default:
+    llvm_unreachable("Unpack min/max lowering not implemented");
+  }
+  B.buildBuildVectorTrunc(MI.getOperand(0).getReg(), {Lo, Hi});
+  MI.eraseFromParent();
+}
+
+void RegBankLegalizeHelper::lowerUnpackAExt(MachineInstr &MI) {
+  auto [Op1Lo, Op1Hi] = unpackAExt(MI.getOperand(1).getReg());
+  auto [Op2Lo, Op2Hi] = unpackAExt(MI.getOperand(2).getReg());
+  auto ResLo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Op1Lo, Op2Lo});
+  auto ResHi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Op1Hi, Op2Hi});
+  B.buildBuildVectorTrunc(MI.getOperand(0).getReg(),
+                          {ResLo.getReg(0), ResHi.getReg(0)});
+  MI.eraseFromParent();
+}
+
 static bool isSignedBFE(MachineInstr &MI) {
   if (GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI))
     return (GI->is(Intrinsic::amdgcn_sbfe));
@@ -584,6 +626,23 @@ void RegBankLegalizeHelper::lowerSplitTo32(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+void RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  assert(MRI.getType(Dst) == V2S16);
+  auto [Op1Lo32, Op1Hi32] = unpackAExt(MI.getOperand(1).getReg());
+  auto [Op2Lo32, Op2Hi32] = unpackAExt(MI.getOperand(2).getReg());
+  unsigned Opc = MI.getOpcode();
+  auto Flags = MI.getFlags();
+  auto Op1Lo = B.buildTrunc(SgprRB_S16, Op1Lo32);
+  auto Op1Hi = B.buildTrunc(SgprRB_S16, Op1Hi32);
+  auto Op2Lo = B.buildTrunc(SgprRB_S16, Op2Lo32);
+  auto Op2Hi = B.buildTrunc(SgprRB_S16, Op2Hi32);
+  auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo, Op2Lo}, Flags);
+  auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi, Op2Hi}, Flags);
+  B.buildMergeLikeInstr(Dst, {Lo, Hi});
+  MI.eraseFromParent();
+}
+
 void RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -654,6 +713,10 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
   case UnpackBitShift:
     return lowerUnpackBitShift(MI);
+  case UnpackMinMax:
+    return lowerUnpackMinMax(MI);
+  case ScalarizeToS16:
+    return lowerSplitTo16(MI);
   case Ext32To64: {
     const RegisterBank *RB = MRI.getRegBank(MI.getOperand(0).getReg());
     MachineInstrBuilder Hi;
@@ -770,6 +833,8 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
     }
     break;
   }
+  case UnpackAExt:
+    return lowerUnpackAExt(MI);
   case WidenMMOToS32:
     return widenMMOToS32(cast<GAnyLoad>(MI));
   }
@@ -803,6 +868,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::scalar(32);
   case Sgpr64:
   case Vgpr64:
+  case UniInVgprS64:
     return LLT::scalar(64);
   case Sgpr128:
   case Vgpr128:
@@ -926,6 +992,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case UniInVcc:
   case UniInVgprS16:
   case UniInVgprS32:
+  case UniInVgprS64:
   case UniInVgprV2S16:
   case UniInVgprV4S32:
   case UniInVgprB32:
@@ -1058,6 +1125,7 @@ void RegBankLegalizeHelper::applyMappingDst(
       break;
     }
     case UniInVgprS32:
+    case UniInVgprS64:
     case UniInVgprV2S16:
     case UniInVgprV4S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
@@ -1086,7 +1154,8 @@ void RegBankLegalizeHelper::applyMappingDst(
       assert(RB == SgprRB);
       Register NewDst = MRI.createVirtualRegister(SgprRB_S32);
       Op.setReg(NewDst);
-      B.buildTrunc(Reg, NewDst);
+      if (!MRI.use_empty(Reg))
+        B.buildTrunc(Reg, NewDst);
       break;
     }
     case InvalidMapping: {

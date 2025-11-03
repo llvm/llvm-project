@@ -17,8 +17,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-namespace {
-
 // Matcher names. Given the code:
 //
 // \code
@@ -60,11 +58,13 @@ static const char LoopInitVarName[] = "loop_init_var";
 static const char LoopEndExprName[] = "loop_end_expr";
 static const char RangeLoopName[] = "for_range_loop";
 
-ast_matchers::internal::Matcher<Expr> supportedContainerTypesMatcher() {
+static ast_matchers::internal::Matcher<Expr> supportedContainerTypesMatcher() {
   return hasType(cxxRecordDecl(hasAnyName(
       "::std::vector", "::std::set", "::std::unordered_set", "::std::map",
       "::std::unordered_map", "::std::array", "::std::deque")));
 }
+
+namespace {
 
 AST_MATCHER(Expr, hasSideEffects) {
   return Node.HasSideEffects(Finder->getASTContext());

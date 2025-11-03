@@ -11,13 +11,16 @@ add_clang_library(clangCIR
   CIRGenAsm.cpp
   CIRGenAtomic.cpp
   CIRGenBuilder.cpp
+  CIRGenBuiltin.cpp
+  CIRGenBuiltinX86.cpp
   CIRGenCall.cpp
   CIRGenClass.cpp
   CIRGenCleanup.cpp
+  CIRGenCoroutine.cpp
   CIRGenCXX.cpp
   CIRGenCXXABI.cpp
-  CIRGenBuiltin.cpp
   CIRGenDecl.cpp
+  CIRGenDeclCXX.cpp
   CIRGenDeclOpenACC.cpp
   CIRGenException.cpp
   CIRGenExpr.cpp

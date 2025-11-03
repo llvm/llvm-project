@@ -45,6 +45,7 @@ add_flang_library(FortranLower
   FIRDialect
   FIRTransforms
   HLFIRDialect
+  MIFDialect
 
   LINK_LIBS
   CUFAttrs
@@ -61,6 +62,7 @@ add_flang_library(FortranLower
   FortranEvaluate
   FortranSemantics
   FortranUtils
+  MIFDialect
 
   LINK_COMPONENTS
   Support

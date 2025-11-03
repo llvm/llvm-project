@@ -476,18 +476,20 @@ public:
   }
 
   [[nodiscard]] iterator begin() const {
-    if (shouldReverseIterate())
+    if constexpr (shouldReverseIterate())
       return makeIterator(EndPointer() - 1);
-    return makeIterator(CurArray);
+    else
+      return makeIterator(CurArray);
   }
   [[nodiscard]] iterator end() const { return makeIterator(EndPointer()); }
 
 private:
   /// Create an iterator that dereferences to same place as the given pointer.
   iterator makeIterator(const void *const *P) const {
-    if (shouldReverseIterate())
+    if constexpr (shouldReverseIterate())
       return iterator(P == EndPointer() ? CurArray : P + 1, CurArray, *this);
-    return iterator(P, EndPointer(), *this);
+    else
+      return iterator(P, EndPointer(), *this);
   }
 };
 
@@ -530,18 +532,8 @@ class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
 
   using BaseT = SmallPtrSetImpl<PtrType>;
 
-  // A constexpr version of llvm::bit_ceil.
-  // TODO: Replace this with std::bit_ceil once C++20 is available.
-  static constexpr size_t RoundUpToPowerOfTwo(size_t X) {
-    size_t C = 1;
-    size_t CMax = C << (std::numeric_limits<size_t>::digits - 1);
-    while (C < X && C < CMax)
-      C <<= 1;
-    return C;
-  }
-
   // Make sure that SmallSize is a power of two, round up if not.
-  static constexpr size_t SmallSizePowTwo = RoundUpToPowerOfTwo(SmallSize);
+  static constexpr size_t SmallSizePowTwo = llvm::bit_ceil_constexpr(SmallSize);
   /// SmallStorage - Fixed size storage used in 'small mode'.
   const void *SmallStorage[SmallSizePowTwo];
 

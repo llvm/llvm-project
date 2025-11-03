@@ -153,21 +153,6 @@ define void @test_3_inductions(ptr noalias %dst, ptr noalias %src, i64 %n) #1 {
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV_0:%.*]] = phi i32 [ 1, %[[SCALAR_PH]] ], [ [[IV_0_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_OR:%.*]] = or i32 [[IV_2]], [[IV_0]]
-; CHECK-NEXT:    [[IV_OR_EXT:%.*]] = sext i32 [[IV_OR]] to i64
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV_OR_EXT]]
-; CHECK-NEXT:    store ptr [[GEP_SRC]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[IV_0_NEXT]] = add i32 [[IV_0]], 2
-; CHECK-NEXT:    [[IV_1_NEXT]] = add i64 [[IV_1]], 1
-; CHECK-NEXT:    [[IV_2_NEXT]] = add i32 [[IV_2]], 2
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_1]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -228,27 +213,6 @@ define void @redundant_iv_trunc_for_cse(ptr noalias %src, ptr noalias %dst, i64 
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
-; CHECK-NEXT:    [[C_0:%.*]] = icmp eq i32 [[L]], 0
-; CHECK-NEXT:    [[TRUNC_IV:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-NEXT:    br i1 [[C_0]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[TRUNC_IV_2:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-NEXT:    [[SHL_IV:%.*]] = shl i32 [[TRUNC_IV_2]], 16
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[SHL_IV]], %[[THEN]] ], [ [[TRUNC_IV]], %[[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[TRUNC_P:%.*]] = trunc i32 [[P]] to i8
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i8 [[TRUNC_P]], ptr [[GEP_DST]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

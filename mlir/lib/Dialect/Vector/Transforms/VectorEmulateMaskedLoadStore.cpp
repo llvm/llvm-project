@@ -48,7 +48,7 @@ namespace {
 ///
 struct VectorMaskedLoadOpConverter final
     : OpRewritePattern<vector::MaskedLoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MaskedLoadOp maskedLoadOp,
                                 PatternRewriter &rewriter) const override {
@@ -117,7 +117,7 @@ struct VectorMaskedLoadOpConverter final
 ///
 struct VectorMaskedStoreOpConverter final
     : OpRewritePattern<vector::MaskedStoreOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MaskedStoreOp maskedStoreOp,
                                 PatternRewriter &rewriter) const override {

@@ -1710,7 +1710,7 @@ DEF_TRAVERSE_DECL(FriendDecl, {
     // it will not be in the parent context:
     if (auto *TT = D->getFriendType()->getType()->getAs<TagType>();
         TT && TT->isTagOwned())
-      TRY_TO(TraverseDecl(TT->getOriginalDecl()));
+      TRY_TO(TraverseDecl(TT->getDecl()));
   } else {
     TRY_TO(TraverseDecl(D->getFriendDecl()));
   }
@@ -3524,6 +3524,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDefaultClause(OMPDefaultClause *) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPThreadsetClause(
+    OMPThreadsetClause *) {
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPProcBindClause(OMPProcBindClause *) {
   return true;
 }
@@ -3594,7 +3600,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPOrderedClause(OMPOrderedClause *C) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *) {
+bool RecursiveASTVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  TRY_TO(TraverseStmt(C->getCondition()));
   return true;
 }
 

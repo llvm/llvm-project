@@ -150,6 +150,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    static constexpr bool is_iterable = true;
 // CHECK-NEXT:  };
 // CHECK-NEXT:  } // namespace llvm
+// CHECK-EMPTY:
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC
 
 // IMPL:      #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS

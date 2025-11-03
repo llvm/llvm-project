@@ -3,6 +3,7 @@
 ; RUN: opt < %s -passes=instcombine -S -data-layout="n8"          | FileCheck %s --check-prefixes=CHECK,DL8
 
 declare void @use(i8)
+declare void @use2(i4)
 
 define i1 @ult_2(i32 %x) {
 ; CHECK-LABEL: @ult_2(
@@ -785,3 +786,32 @@ define <2 x i1> @uge_nsw_non_splat(<2 x i32> %x) {
   ret <2 x i1> %r
 }
 
+define i1 @trunc_icmp(i8 %a0) {
+; CHECK-LABEL: @trunc_icmp(
+; CHECK-NEXT:    [[TZ:%.*]] = tail call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[A0:%.*]], i1 false)
+; CHECK-NEXT:    [[TR:%.*]] = trunc nuw i8 [[TZ]] to i4
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A0]], 0
+; CHECK-NEXT:    call void @use2(i4 [[TR]])
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %tz = tail call range(i8 0, 9) i8 @llvm.cttz.i8(i8 %a0, i1 false)
+  %tr = trunc i8 %tz to i4
+  %c = icmp eq i4 %tr, 8
+  call void @use2(i4 %tr)
+  ret i1 %c
+}
+
+define i1 @do_not_mask_trunc_eq_i32_i8(i32 %x) {
+; DL64-LABEL: @do_not_mask_trunc_eq_i32_i8(
+; DL64-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 42
+; DL64-NEXT:    ret i1 [[R]]
+;
+; DL8-LABEL: @do_not_mask_trunc_eq_i32_i8(
+; DL8-NEXT:    [[T:%.*]] = trunc nuw i32 [[X:%.*]] to i8
+; DL8-NEXT:    [[R:%.*]] = icmp eq i8 [[T]], 42
+; DL8-NEXT:    ret i1 [[R]]
+;
+  %t = trunc nuw i32 %x to i8
+  %r = icmp eq i8 %t, 42
+  ret i1 %r
+}

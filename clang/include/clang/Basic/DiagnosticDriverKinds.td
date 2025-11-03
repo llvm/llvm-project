@@ -133,6 +133,9 @@ def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
 def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_invalid_argument_for_flang : Warning<
+  "'%0' is not valid for Fortran">,
+  InGroup<OptionIgnored>;
 def warn_drv_unsupported_option_for_flang : Warning<
   "the argument '%0' is not supported for option '%1'. Mapping to '%1%2'">,
   InGroup<OptionIgnored>;
@@ -682,6 +685,9 @@ def warn_drv_fuse_ld_path : Warning<
 def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
   "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,
   InGroup<OptionIgnored>;
+
+def err_drv_profile_instrument_use_path_with_no_kind : Error<
+  "option '-fprofile-instrument-use-path=' requires -fprofile-instrument-use=<kind>">;
 
 def note_drv_verify_prefix_spelling : Note<
   "-verify prefixes must start with a letter and contain only alphanumeric"

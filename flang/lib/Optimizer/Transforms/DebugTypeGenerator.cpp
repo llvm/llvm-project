@@ -528,13 +528,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     if (dim == seqTy.getUnknownExtent()) {
       // This path is taken for both assumed size array or when the size of the
       // array is variable. In the case of variable size, we create a variable
-      // to use as countAttr. Note that fir has a constant size of -1 for
-      // assumed size array. So !optint check makes sure we don't generate
-      // variable in that case.
+      // to use as countAttr.
       if (declOp && declOp.getShape().size() > index) {
-        std::optional<std::int64_t> optint =
-            getIntIfConstant(declOp.getShape()[index]);
-        if (!optint)
+        if (!llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(
+                declOp.getShape()[index].getDefiningOp()))
           countAttr = generateArtificialVariable(
               context, declOp.getShape()[index], fileAttr, scope, declOp);
       }
@@ -682,10 +679,11 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
 static mlir::StringAttr getBasicTypeName(mlir::MLIRContext *context,
                                          llvm::StringRef baseName,
                                          unsigned bitSize) {
-  std::string name(baseName.str());
+  std::ostringstream oss;
+  oss << baseName.str();
   if (bitSize != 32)
-    name += "*" + std::to_string(bitSize / 8);
-  return mlir::StringAttr::get(context, name);
+    oss << "(kind=" << (bitSize / 8) << ")";
+  return mlir::StringAttr::get(context, oss.str());
 }
 
 mlir::LLVM::DITypeAttr

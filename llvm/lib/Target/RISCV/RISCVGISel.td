@@ -100,104 +100,11 @@ def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
 
-// Load and store patterns for i16, needed because Zfh makes s16 load/store
-// legal and regbank select may not constrain registers to FP.
-def : LdPat<load, LH, i16>;
-def : StPat<store, SH, GPR, i16>;
-
-def : LdPat<extloadi8, LBU, i16>; // Prefer unsigned due to no c.lb in Zcb.
-def : StPat<truncstorei8, SB, GPR, i16>;
-
-let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<atomic_load_aext_8,  LB, i16>;
-  def : LdPat<atomic_load_nonext_16, LH, i16>;
-
-  def : StPat<atomic_store_8,  SB, GPR, i16>;
-  def : StPat<atomic_store_16, SH, GPR, i16>;
-}
-
-let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_nonext_32, LW, i32>;
-  def : StPat<atomic_store_32, SW, GPR, i32>;
-}
-
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
 
-def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
-
-def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
-  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  return Known.isNonNegative();
-}]>;
-
 let Predicates = [IsRV64] in {
-def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
-def : LdPat<extloadi16, LH, i32>;
-
-def : StPat<truncstorei8, SB, GPR, i32>;
-def : StPat<truncstorei16, SH, GPR, i32>;
-
-def : Pat<(anyext (i32 GPR:$src)), (COPY GPR:$src)>;
-def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
-def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
-
 def : Pat<(sext_inreg (i64 (add GPR:$rs1, simm12_lo:$imm)), i32),
           (ADDIW GPR:$rs1, simm12_lo:$imm)>;
-
-// Use sext if the sign bit of the input is 0.
-def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
-}
-
-let Predicates = [IsRV64, NoStdExtZba] in
-def : Pat<(zext (i32 GPR:$src)), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
-
-let Predicates = [IsRV32, NoStdExtZbb, NoStdExtZbkb] in 
-def : Pat<(XLenVT (zext (i16 GPR:$src))),
-          (SRLI (XLenVT (SLLI GPR:$src, 16)), 16)>;
-
-let Predicates = [IsRV64, NoStdExtZbb, NoStdExtZbkb] in {
-def : Pat<(i64 (zext (i16 GPR:$src))),
-          (SRLI (XLenVT (SLLI GPR:$src, 48)), 48)>;
-def : Pat<(i32 (zext (i16 GPR:$src))),
-          (SRLI (XLenVT (SLLI GPR:$src, 48)), 48)>;
-}
-
-let Predicates = [IsRV32, NoStdExtZbb] in
-def : Pat<(XLenVT (sext (i16 GPR:$src))),
-          (SRAI (XLenVT (SLLI GPR:$src, 16)), 16)>;
-
-let Predicates = [IsRV64, NoStdExtZbb] in {
-def : Pat<(i64 (sext (i16 GPR:$src))),
-          (SRAI (XLenVT (SLLI GPR:$src, 48)), 48)>;
-def : Pat<(i32 (sext (i16 GPR:$src))),
-          (SRAI (XLenVT (SLLI GPR:$src, 48)), 48)>;
-}
-
-//===----------------------------------------------------------------------===//
-// Zb* RV64 patterns not used by SelectionDAG.
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(zext (i32 GPR:$src)), (ADD_UW GPR:$src, (XLenVT X0))>;
-}
-
-let Predicates = [HasStdExtZbb] in
-def : Pat<(i32 (sext (i16 GPR:$rs))), (SEXT_H GPR:$rs)>;
-let Predicates = [HasStdExtZbb, IsRV64] in
-def : Pat<(i64 (sext (i16 GPR:$rs))), (SEXT_H GPR:$rs)>;
-
-let Predicates = [HasStdExtZbb, IsRV32] in
-def : Pat<(i32 (zext (i16 GPR:$rs))), (ZEXT_H_RV32 GPR:$rs)>;
-let Predicates = [HasStdExtZbb, IsRV64] in {
-def : Pat<(i64 (zext (i16 GPR:$rs))), (ZEXT_H_RV64 GPR:$rs)>;
-def : Pat<(i32 (zext (i16 GPR:$rs))), (ZEXT_H_RV64 GPR:$rs)>;
-}
-
-let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV32] in
-def : Pat<(i32 (zext (i16 GPR:$rs))), (PACK GPR:$rs, (XLenVT X0))>;
-let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in {
-def : Pat<(i64 (zext (i16 GPR:$rs))), (PACKW GPR:$rs, (XLenVT X0))>;
-def : Pat<(i32 (zext (i16 GPR:$rs))), (PACKW GPR:$rs, (XLenVT X0))>;
 }

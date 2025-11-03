@@ -36,7 +36,7 @@ define i32 @inv_load_conditional(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT5]], ptr [[TMP2]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> [[BROADCAST_SPLAT]], i32 4, <16 x i1> [[TMP1]], <16 x i32> poison), !alias.scope [[META3]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 [[BROADCAST_SPLAT]], <16 x i1> [[TMP1]], <16 x i32> poison), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP1]], <16 x i32> [[WIDE_MASKED_GATHER]], <16 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -62,7 +62,7 @@ define i32 @inv_load_conditional(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX10]]
 ; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT12]], ptr [[TMP6]], align 4, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER13:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[BROADCAST_SPLAT9]], i32 4, <8 x i1> [[TMP5]], <8 x i32> poison), !alias.scope [[META3]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER13:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[BROADCAST_SPLAT9]], <8 x i1> [[TMP5]], <8 x i32> poison), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[PREDPHI14:%.*]] = select <8 x i1> [[TMP5]], <8 x i32> [[WIDE_MASKED_GATHER13]], <8 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX10]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC7]]

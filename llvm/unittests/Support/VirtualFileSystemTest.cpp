@@ -1941,6 +1941,29 @@ TEST_F(VFSFromYAMLTest, ReturnsExternalPathVFSHit) {
   EXPECT_EQ(0, NumDiagnostics);
 }
 
+TEST_F(VFSFromYAMLTest, RelativeFileDirWithOverlayRelativeSetting) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/foo/bar");
+  Lower->addRegularFile("//root/foo/bar/a");
+  Lower->setCurrentWorkingDirectory("//root/foo");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{\n"
+                        "  'case-sensitive': false,\n"
+                        "  'overlay-relative': true,\n"
+                        "  'roots': [\n"
+                        "    { 'name': '//root/foo/bar/b', 'type': 'file',\n"
+                        "      'external-contents': 'a'\n"
+                        "    }\n"
+                        "  ]\n"
+                        "}",
+                        Lower, "bar/overlay");
+
+  ASSERT_NE(FS.get(), nullptr);
+  ErrorOr<vfs::Status> S = FS->status("//root/foo/bar/b");
+  ASSERT_FALSE(S.getError());
+  EXPECT_EQ("//root/foo/bar/a", S->getName());
+}
+
 TEST_F(VFSFromYAMLTest, RootRelativeToOverlayDirTest) {
   auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
   Lower->addDirectory("//root/foo/bar");
