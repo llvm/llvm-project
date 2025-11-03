@@ -39,7 +39,6 @@ define i32 @test_bitcast(i32 %i) {
 }
 
 declare void @use(i32)
-declare void @use_vi(<4 x i32>)
 
 define void @test_poison_branch(<4 x float> %in, i32 %a, i1 %cond) {
 ; CHECK-LABEL: define void @test_poison_branch(
