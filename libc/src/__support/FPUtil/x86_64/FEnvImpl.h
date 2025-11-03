@@ -179,7 +179,7 @@ LIBC_INLINE static int get_env(fenv_t *env) {
   return 0;
 }
 
-LIBC_INLINE int set_env(const fenv_t *env) {
+LIBC_INLINE static int set_env(const fenv_t *env) {
   if (env == FE_DFL_ENV) {
 #ifndef LIBC_COMPILER_IS_MSVC
     x87::initialize_x87_state();
