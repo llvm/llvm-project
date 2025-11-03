@@ -73,10 +73,10 @@ getMaybeLaneLayout(xegpu::TensorDescType tdescType) {
 ///         #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>>
 /// In this case, lane layout is transposed (from the usual [1, SG_SIZE] form)
 /// indicating that this is a load that requires transpose effect. However,
-/// lane data is [1, 2], meaning that each lane must grab 2 f16 elements form
+/// lane data is [1, 2], meaning that each lane must grab 2 f16 elements from
 /// the inner dimension. We convert this to a canonical form by converting the
 /// tensor_desc to i32 type such that lane data becomes [1, 1]. This makes the
-/// later lowering can easily use the load with transpose instruction.
+/// later lowering easily use the load with transpose instruction.
 static bool canBeCanonicalizedForTranspose(ArrayRef<int64_t> laneLayout,
                                            ArrayRef<int64_t> laneData) {
   if (laneLayout.size() != 2 || laneData.size() != 2)
