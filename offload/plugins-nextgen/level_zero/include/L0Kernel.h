@@ -59,7 +59,6 @@ struct KernelPropertiesTy {
   uint32_t MaxThreadGroupSize = 0;
 
   /// Cached input parameters used in the previous launch
-  TgtNDRangeDescTy LoopDesc;
   int32_t NumTeams = -1;
   int32_t ThreadLimit = -1;
 
@@ -70,8 +69,6 @@ struct KernelPropertiesTy {
   bool AllowCooperative = false;
 
   std::mutex Mtx;
-
-  static constexpr TgtNDRangeDescTy LoopDescInit = {};
 
   /// Check if we can reuse group parameters.
   bool reuseGroupParams(const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
@@ -90,9 +87,6 @@ struct L0LaunchEnvTy {
   bool HalfNumThreads = false;
   bool IsTeamsNDRange = false;
 
-  bool AllowCooperative = false;
-  TgtNDRangeDescTy *LoopDesc = nullptr;
-
   L0LaunchEnvTy(bool IsAsync, AsyncQueueTy *AsyncQueue,
                 KernelPropertiesTy &KernelPR)
       : IsAsync(IsAsync), AsyncQueue(AsyncQueue), KernelPR(KernelPR) {}
@@ -108,10 +102,6 @@ class L0KernelTy : public GenericKernelTy {
   void decideKernelGroupArguments(L0DeviceTy &Device, uint32_t NumTeams,
                                   uint32_t ThreadLimit, uint32_t *GroupSizes,
                                   L0LaunchEnvTy &KEnv) const;
-
-  Error decideLoopKernelGroupArguments(L0DeviceTy &Device, uint32_t ThreadLimit,
-                                       uint32_t *GroupSizes,
-                                       L0LaunchEnvTy &KEnv) const;
 
   Error buildKernel(L0ProgramTy &Program);
 

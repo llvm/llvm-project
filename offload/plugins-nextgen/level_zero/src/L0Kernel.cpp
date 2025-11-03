@@ -21,16 +21,11 @@ bool KernelPropertiesTy::reuseGroupParams(const int32_t NumTeamsIn,
                                           const int32_t ThreadLimitIn,
                                           uint32_t *GroupSizesOut,
                                           L0LaunchEnvTy &KEnv) const {
-  if (!KEnv.LoopDesc && LoopDescInit != LoopDesc)
-    return false;
-  if (KEnv.LoopDesc && *KEnv.LoopDesc != LoopDesc)
-    return false;
   if (NumTeamsIn != NumTeams || ThreadLimitIn != ThreadLimit)
     return false;
   // Found matching input parameters.
   std::copy_n(GroupSizes, 3, GroupSizesOut);
   KEnv.GroupCounts = GroupCounts;
-  KEnv.AllowCooperative = AllowCooperative;
   return true;
 }
 
@@ -38,12 +33,10 @@ void KernelPropertiesTy::cacheGroupParams(const int32_t NumTeamsIn,
                                           const int32_t ThreadLimitIn,
                                           const uint32_t *GroupSizesIn,
                                           L0LaunchEnvTy &KEnv) {
-  LoopDesc = KEnv.LoopDesc ? *KEnv.LoopDesc : LoopDescInit;
   NumTeams = NumTeamsIn;
   ThreadLimit = ThreadLimitIn;
   std::copy_n(GroupSizesIn, 3, GroupSizes);
   GroupCounts = KEnv.GroupCounts;
-  AllowCooperative = KEnv.AllowCooperative;
 }
 
 Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
@@ -148,245 +141,13 @@ void L0KernelTy::decideKernelGroupArguments(L0DeviceTy &Device,
 
   uint32_t GRPCounts[3] = {MaxGroupCount, 1, 1};
   uint32_t GRPSizes[3] = {MaxGroupSize, 1, 1};
-  bool UsedReductionSubscriptionRate = false;
   if (!MaxGroupCountForced) {
-    {
-      GRPCounts[0] *= OptSubscRate;
-    }
-
-    size_t LoopTripcount = 0;
-    TgtNDRangeDescTy *LoopLevels = KEnv.LoopDesc;
-    if (LoopLevels) {
-      // TODO: consider other possible LoopDesc uses
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "Loop desciptor provided but specific ND-range is disabled\n");
-      // TODO: get rid of this constraint
-      if (LoopLevels->NumLoops > 1) {
-        INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-             "More than 1 loop found (%" PRIu32 "), ignoring loop info\n",
-             LoopLevels->NumLoops);
-      } else if (LoopLevels->Levels[0].Ub >= LoopLevels->Levels[0].Lb) {
-        LoopTripcount = (LoopLevels->Levels[0].Ub - LoopLevels->Levels[0].Lb +
-                         LoopLevels->Levels[0].Stride) /
-                        LoopLevels->Levels[0].Stride;
-        INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-             "Loop TC = (%" PRId64 " - %" PRId64 " + %" PRId64 ") / %" PRId64
-             " = %zu\n",
-             LoopLevels->Levels[0].Ub, LoopLevels->Levels[0].Lb,
-             LoopLevels->Levels[0].Stride, LoopLevels->Levels[0].Stride,
-             LoopTripcount);
-      }
-    }
-
-    if (LoopTripcount && !UsedReductionSubscriptionRate) {
-      const size_t MaxTotalThreads = Device.getNumThreadsPerSubslice() *
-                                     Device.getNumSubslices() * SIMDWidth;
-      size_t AdjustedGroupCount =
-          KEnv.IsTeamsNDRange
-              ? (std::min)(((LoopTripcount + 7) & ~7),
-                           MaxTotalThreads / GRPSizes[0])
-              : ((LoopTripcount + GRPSizes[0] - 1) / GRPSizes[0]);
-      AdjustedGroupCount = std::max(AdjustedGroupCount, size_t{1});
-      AdjustedGroupCount *= OptSubscRate;
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "Adjusting number of teams using the loop tripcount\n");
-      if (AdjustedGroupCount < GRPCounts[0])
-        GRPCounts[0] = AdjustedGroupCount;
-    }
+    GRPCounts[0] *= OptSubscRate;
   }
   GroupCounts.groupCountX = GRPCounts[0];
   GroupCounts.groupCountY = GRPCounts[1];
   GroupCounts.groupCountZ = GRPCounts[2];
   std::copy(GRPSizes, GRPSizes + 3, GroupSizes);
-}
-
-// Return the number of total HW threads required to execute
-// a loop kernel compiled with the given SIMDWidth, and the given
-// loop(s) trip counts and group sizes.
-// Returns UINT64_MAX, if computations overflow.
-static uint64_t computeThreadsNeeded(const llvm::ArrayRef<size_t> TripCounts,
-                                     const llvm::ArrayRef<uint32_t> GroupSizes,
-                                     uint32_t SIMDWidth) {
-  assert(TripCounts.size() == 3 && "Invalid trip counts array size");
-  assert(GroupSizes.size() == 3 && "Invalid group sizes array size");
-  // Compute the number of groups in each dimension.
-  std::array<uint64_t, 3> GroupCount;
-
-  for (int I = 0; I < 3; ++I) {
-    if (TripCounts[I] == 0 || GroupSizes[I] == 0)
-      return (std::numeric_limits<uint64_t>::max)();
-    GroupCount[I] =
-        (uint64_t(TripCounts[I]) + GroupSizes[I] - 1) / GroupSizes[I];
-    if (GroupCount[I] > (std::numeric_limits<uint32_t>::max)())
-      return (std::numeric_limits<uint64_t>::max)();
-  }
-  for (int I = 1; I < 3; ++I) {
-    if ((std::numeric_limits<uint64_t>::max)() / GroupCount[0] < GroupCount[I])
-      return (std::numeric_limits<uint64_t>::max)();
-    GroupCount[0] *= GroupCount[I];
-  }
-  // Multiplication of the group sizes must never overflow uint64_t
-  // for any existing device.
-  uint64_t LocalWorkSize =
-      uint64_t(GroupSizes[0]) * GroupSizes[1] * GroupSizes[2];
-  uint64_t ThreadsPerWG = ((LocalWorkSize + SIMDWidth - 1) / SIMDWidth);
-
-  // Check that the total number of threads fits uint64_t.
-  if ((std::numeric_limits<uint64_t>::max)() / GroupCount[0] < ThreadsPerWG)
-    return (std::numeric_limits<uint64_t>::max)();
-
-  return GroupCount[0] * ThreadsPerWG;
-}
-
-Error L0KernelTy::decideLoopKernelGroupArguments(L0DeviceTy &Device,
-                                                 uint32_t ThreadLimit,
-                                                 uint32_t *GroupSizes,
-                                                 L0LaunchEnvTy &KEnv) const {
-
-  const auto DeviceId = Device.getDeviceId();
-  const auto &Options = LevelZeroPluginTy::getOptions();
-  const auto &KernelPR = getProperties();
-  uint32_t MaxGroupSize = Device.getMaxGroupSize();
-  TgtNDRangeDescTy *LoopLevels = KEnv.LoopDesc;
-  auto &GroupCounts = KEnv.GroupCounts;
-
-  bool MaxGroupSizeForced = false;
-  if (ThreadLimit > 0) {
-    MaxGroupSizeForced = true;
-    MaxGroupSize = ThreadLimit;
-  }
-
-  uint32_t GRPCounts[3] = {1, 1, 1};
-  uint32_t GRPSizes[3] = {MaxGroupSize, 1, 1};
-  TgtLoopDescTy *Levels = LoopLevels->Levels;
-  int32_t DistributeDim = LoopLevels->DistributeDim;
-  assert(DistributeDim >= 0 && DistributeDim <= 2 &&
-         "Invalid distribute dimension.");
-  int32_t NumLoops = LoopLevels->NumLoops;
-  assert((NumLoops > 0 && NumLoops <= 3) &&
-         "Invalid loop nest description for ND partitioning");
-
-  // Compute global widths for X/Y/Z dimensions.
-  size_t TripCounts[3] = {1, 1, 1};
-
-  for (int32_t I = 0; I < NumLoops; I++) {
-    assert(Levels[I].Stride > 0 && "Invalid loop stride for ND partitioning");
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Loop %" PRIu32 ": lower bound = %" PRId64 ", upper bound = %" PRId64
-         ", Stride = %" PRId64 "\n",
-         I, Levels[I].Lb, Levels[I].Ub, Levels[I].Stride);
-    if (Levels[I].Ub < Levels[I].Lb)
-      TripCounts[I] = 0;
-    else
-      TripCounts[I] =
-          (Levels[I].Ub - Levels[I].Lb + Levels[I].Stride) / Levels[I].Stride;
-  }
-
-  // Check if any of the loop has zero iterations.
-  if (TripCounts[0] == 0 || TripCounts[1] == 0 || TripCounts[2] == 0) {
-    std::fill(GroupSizes, GroupSizes + 3, 1);
-    std::fill(GRPCounts, GRPCounts + 3, 1);
-    if (DistributeDim > 0 && TripCounts[DistributeDim] != 0) {
-      // There is a distribute dimension, and the distribute loop
-      // has non-zero iterations, but some inner parallel loop
-      // has zero iterations. We still want to split the distribute
-      // loop's iterations between many WGs (of size 1), but the inner/lower
-      // dimensions should be 1x1.
-      // Note that this code is currently dead, because we are not
-      // hoisting the inner loops' bounds outside of the target regions.
-      // The code is here just for completeness.
-      size_t DistributeTripCount = TripCounts[DistributeDim];
-      if (DistributeTripCount > UINT32_MAX) {
-        INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-             "Invalid number of teams %zu due to large loop trip count\n",
-             DistributeTripCount);
-        return Plugin::success();
-      }
-      GRPCounts[DistributeDim] = DistributeTripCount;
-    }
-    KEnv.AllowCooperative = false;
-    GroupCounts.groupCountX = GRPCounts[0];
-    GroupCounts.groupCountY = GRPCounts[1];
-    GroupCounts.groupCountZ = GRPCounts[2];
-    return Plugin::success();
-  }
-
-  if (!MaxGroupSizeForced) {
-    // Use zeKernelSuggestGroupSize to compute group sizes,
-    // or fallback to setting dimension 0 width to SIMDWidth.
-    // Note that in case of user-specified LWS GRPSizes[0]
-    // is already set according to the specified value.
-    size_t GlobalSizes[3] = {TripCounts[0], TripCounts[1], TripCounts[2]};
-    if (DistributeDim > 0) {
-      // There is a distribute dimension.
-      GlobalSizes[DistributeDim - 1] *= GlobalSizes[DistributeDim];
-      GlobalSizes[DistributeDim] = 1;
-    }
-
-    {
-      if (MaxGroupSize > KernelPR.Width) {
-        GRPSizes[0] = KernelPR.Width;
-      }
-      if (DistributeDim == 0) {
-        // If there is a distribute dimension, then we do not use
-        // thin HW threads, since we do not know anything about
-        // the iteration space of the inner parallel loop regions.
-        //
-        // If there is no distribute dimension, then try to use thiner
-        // HW threads to get more independent HW threads executing
-        // the kernel - this may allow more parallelism due to
-        // the stalls being distributed across multiple HW threads rather
-        // than across SIMD lanes within one HW thread.
-        assert(GRPSizes[1] == 1 && GRPSizes[2] == 1 &&
-               "Unexpected team sizes for dimensions 1 or/and 2.");
-        uint32_t SimdWidth = KernelPR.SIMDWidth;
-        uint64_t TotalThreads = Device.getTotalThreads();
-        TotalThreads *= Options.ThinThreadsThreshold;
-
-        uint32_t GRPSizePrev = GRPSizes[0];
-        uint64_t ThreadsNeeded =
-            computeThreadsNeeded(TripCounts, GRPSizes, SimdWidth);
-        while (ThreadsNeeded < TotalThreads) {
-          GRPSizePrev = GRPSizes[0];
-          // Try to half the local work size (if possible) and see
-          // how many HW threads the kernel will require with this
-          // new local work size.
-          // In most implementations the initial GRPSizes[0]
-          // will be a power-of-two.
-          if (GRPSizes[0] <= 1)
-            break;
-          GRPSizes[0] >>= 1;
-          ThreadsNeeded = computeThreadsNeeded(TripCounts, GRPSizes, SimdWidth);
-        }
-        GRPSizes[0] = GRPSizePrev;
-      }
-    }
-  }
-
-  for (int32_t I = 0; I < NumLoops; I++) {
-    if (I < DistributeDim) {
-      GRPCounts[I] = 1;
-      continue;
-    }
-    size_t Trip = TripCounts[I];
-    if (GRPSizes[I] >= Trip)
-      GRPSizes[I] = Trip;
-    size_t Count = (Trip + GRPSizes[I] - 1) / GRPSizes[I];
-    if (Count > UINT32_MAX) {
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "Invalid number of teams %zu due to large loop "
-                           "trip count\n",
-                           Count);
-    }
-    GRPCounts[I] = (uint32_t)Count;
-  }
-  KEnv.AllowCooperative = false;
-  GroupCounts.groupCountX = GRPCounts[0];
-  GroupCounts.groupCountY = GRPCounts[1];
-  GroupCounts.groupCountZ = GRPCounts[2];
-  std::copy(GRPSizes, GRPSizes + 3, GroupSizes);
-
-  return Plugin::success();
 }
 
 Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
@@ -454,7 +215,6 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
 
     decideKernelGroupArguments(Device, (uint32_t)NumTeams,
                                (uint32_t)ThreadLimit, GroupSizes, KEnv);
-    KEnv.AllowCooperative = false;
   }
 
   return Plugin::success();
@@ -492,13 +252,8 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Kernel depends on %zu data copying events.\n", NumWaitEvents);
-  if (KEnv.AllowCooperative)
-    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
-                      zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
-                      WaitEvents);
-  else
-    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                      &KEnv.GroupCounts, Event, NumWaitEvents, WaitEvents);
+  CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
+                    &KEnv.GroupCounts, Event, NumWaitEvents, WaitEvents);
   KEnv.KernelPR.Mtx.unlock();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
@@ -537,12 +292,8 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
        "Using regular command list for kernel submission.\n");
 
   ze_event_handle_t Event = nullptr;
-  if (KEnv.AllowCooperative)
-    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
-                      zeKernel, &KEnv.GroupCounts, Event, 0, nullptr);
-  else
-    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                      &KEnv.GroupCounts, Event, 0, nullptr);
+  CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
+                    &KEnv.GroupCounts, Event, 0, nullptr);
   KEnv.KernelPR.Mtx.unlock();
   CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
   CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
