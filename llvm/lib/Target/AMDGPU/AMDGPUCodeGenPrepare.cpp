@@ -35,7 +35,7 @@
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "amdgpu-codegenprepare"
 
@@ -2081,10 +2081,6 @@ INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
 
 /// Optimize mbcnt.lo calls on wave32 architectures for lane ID computation.
 bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) const {
-  // Abort if wave size is not known at compile time.
-  if (!ST.isWaveSizeKnown())
-    return false;
-
   // This optimization only applies to wave32 targets where mbcnt.lo operates on
   // the full execution mask.
   if (!ST.isWave32())
@@ -2104,11 +2100,11 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) const {
     // When XLen == wave_size, each work group contains exactly one wave, so
     // mbcnt.lo(~0, 0) directly equals the workitem ID within the group.
     if (XLen == Wave) {
-      Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(
-          I.getModule(), Intrinsic::amdgcn_workitem_id_x);
-      CallInst *NewCall = CallInst::Create(WorkitemIdFn, I.getName());
-      ReplaceInstWithInst(&I, NewCall);
-      ST.makeLIDRangeMetadata(NewCall);
+      IRBuilder<> B(&I);
+      CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+      ST.makeLIDRangeMetadata(Tid);
+      BasicBlock::iterator BI(&I);
+      ReplaceInstWithValue(BI, Tid);
       return true;
     }
     // When work group evenly splits into waves, we can compute lane ID within
@@ -2171,11 +2167,11 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
     // When XLen == wave_size, each work group contains exactly one wave, so
     // lane_id = workitem.id.x.
     if (XLen == Wave) {
-      Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(
-          I.getModule(), Intrinsic::amdgcn_workitem_id_x);
-      CallInst *NewCall = CallInst::Create(WorkitemIdFn, I.getName());
-      ReplaceInstWithInst(&I, NewCall);
-      ST.makeLIDRangeMetadata(NewCall);
+      IRBuilder<> B(&I);
+      CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+      ST.makeLIDRangeMetadata(Tid);
+      BasicBlock::iterator BI(&I);
+      ReplaceInstWithValue(BI, Tid);
       return true;
     }
     // When work group evenly splits into waves, we can compute lane ID within
@@ -2190,22 +2186,6 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
       BasicBlock::iterator BI(&I);
       ReplaceInstWithValue(BI, AndInst);
       return true;
-    }
-  } else {
-    // When ST.getReqdWorkGroupSize() fails, use metadata. And only optimize the
-    // case when work group size = wave size.
-    const MDNode *Node = F.getMetadata("reqd_work_group_size");
-    if (Node && Node->getNumOperands() == 3) {
-      unsigned XLen =
-          mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
-      if (XLen == Wave) {
-        Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(
-            I.getModule(), Intrinsic::amdgcn_workitem_id_x);
-        CallInst *NewCall = CallInst::Create(WorkitemIdFn, I.getName());
-        ReplaceInstWithInst(&I, NewCall);
-        ST.makeLIDRangeMetadata(NewCall);
-        return true;
-      }
     }
   }
 
