@@ -938,3 +938,66 @@ constexpr int empty_expansion_consteval() {
 }
 
 static_assert(empty_expansion_consteval() == 3);
+
+void nested_empty_expansion() {
+  template for (auto x1 : {})
+    template for (auto x2 : {1})
+      static_assert(false);
+
+  template for (auto x1 : {1})
+    template for (auto x2 : {})
+      template for (auto x3 : {1})
+        static_assert(false);
+
+  template for (auto x1 : {})
+    template for (auto x2 : {})
+      template for (auto x3 : {})
+        template for (auto x4 : {1})
+          static_assert(false);
+
+  template for (auto x1 : {})
+    template for (auto x2 : {1})
+      template for (auto x3 : {})
+        template for (auto x4 : {1})
+          static_assert(false);
+
+  template for (auto x1 : {})
+    template for (auto x2 : {1})
+      template for (auto x4 : {1})
+        static_assert(false);
+}
+
+struct Empty {};
+
+template <typename T>
+void nested_empty_expansion_dependent() {
+  template for (auto x1 : T())
+    template for (auto x2 : {1})
+      static_assert(false);
+
+  template for (auto x1 : {1})
+    template for (auto x2 : T())
+      template for (auto x3 : {1})
+        static_assert(false);
+
+  template for (auto x1 : T())
+    template for (auto x2 : T())
+      template for (auto x3 : T())
+        template for (auto x4 : {1})
+          static_assert(false);
+
+  template for (auto x1 : T())
+    template for (auto x2 : {1})
+      template for (auto x3 : T())
+        template for (auto x4 : {1})
+          static_assert(false);
+
+  template for (auto x1 : T())
+    template for (auto x2 : {1})
+      template for (auto x4 : {1})
+        static_assert(false);
+}
+
+void nested_empty_expansion_dependent_instantiate() {
+  nested_empty_expansion_dependent<Empty>();
+}

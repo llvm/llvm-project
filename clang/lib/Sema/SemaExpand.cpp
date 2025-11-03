@@ -452,8 +452,7 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   for (uint64_t I = 0; I < *NumInstantiations; ++I) {
     // Now that we're expanding this, exit the context of the expansion stmt
     // so that we no longer treat this as dependent.
-    ContextRAII CtxGuard(*this,
-                         CurContext->getEnclosingNonExpansionStatementContext(),
+    ContextRAII CtxGuard(*this, CurContext->getParent(),
                          /*NewThis=*/false);
 
     TemplateArgument Arg{Context, llvm::APSInt::get(I),
