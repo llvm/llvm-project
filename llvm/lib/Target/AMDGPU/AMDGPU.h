@@ -41,7 +41,6 @@ FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSIFoldOperandsLegacyPass();
 FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
-FunctionPass *createSISAbs16FixupLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModeLegacyPass();
@@ -96,13 +95,6 @@ struct AMDGPUUseNativeCallsPass
 class SILowerI1CopiesPass : public OptionalPassInfoMixin<SILowerI1CopiesPass> {
 public:
   SILowerI1CopiesPass() = default;
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
-};
-
-class SISAbs16FixupPass : public PassInfoMixin<SISAbs16FixupPass> {
-public:
-  SISAbs16FixupPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
@@ -218,9 +210,6 @@ extern char &SILowerWWMCopiesLegacyID;
 
 void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
 extern char &SILowerI1CopiesLegacyID;
-
-void initializeSISAbs16FixupLegacyPass(PassRegistry &);
-extern char &SISAbs16FixupLegacyID;
 
 void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
 extern char &AMDGPUGlobalISelDivergenceLoweringID;
