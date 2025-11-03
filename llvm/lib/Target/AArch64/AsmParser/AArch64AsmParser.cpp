@@ -3953,6 +3953,8 @@ static const struct Extension {
     {"f16f32mm", {AArch64::FeatureF16F32MM}},
     {"mops-go", {AArch64::FeatureMOPS_GO}},
     {"poe2", {AArch64::FeatureS1POE2}},
+    {"tev", {AArch64::FeatureTEV}},
+    {"btie", {AArch64::FeatureBTIE}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {

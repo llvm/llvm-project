@@ -2,9 +2,9 @@
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+poe2 < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+all < %s \
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+tlbid,+poe2 < %s \
 // RUN:        | llvm-objdump -d --mattr=+tlbid,+poe2 --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+all < %s \
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+tlbid,+poe2 < %s \
 // RUN:        | llvm-objdump -d --mattr=-tlbid,-poe2 --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+tlbid,+poe2 < %s \

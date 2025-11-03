@@ -53,7 +53,7 @@ plbi vmalle1isnxs, x0
 plbi vmalle1osnxs, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 
-
+// Tests where no optional register operand allowed
 plbi alle3, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 // CHECK-NO-REGISTER: error: specified plbi op does not use a register
