@@ -18,7 +18,7 @@ llvm.func @redux_sync_i32_with_nan(%value: i32, %offset: i32) {
 
 // -----
 
-llvm.func @redux_sync_f32_with_invalid_kind(%value: f32, %offset: i32) {
+llvm.func @redux_sync_f32_with_invalid_kind_add(%value: f32, %offset: i32) {
   // expected-error@+1 {{'add' redux kind unsupported with 'f32' type. Only supported type is 'i32'.}}
   %res = nvvm.redux.sync add %value, %offset: f32 -> f32
   llvm.return
@@ -26,7 +26,7 @@ llvm.func @redux_sync_f32_with_invalid_kind(%value: f32, %offset: i32) {
 
 // -----
 
-llvm.func @redux_sync_f32_with_invalid_kind(%value: f32, %offset: i32) {
+llvm.func @redux_sync_f32_with_invalid_kind_and(%value: f32, %offset: i32) {
   // expected-error@+1 {{'and' redux kind unsupported with 'f32' type. Only supported type is 'i32'.}}
   %res = nvvm.redux.sync and %value, %offset: f32 -> f32
   llvm.return
@@ -34,7 +34,7 @@ llvm.func @redux_sync_f32_with_invalid_kind(%value: f32, %offset: i32) {
 
 // -----
 
-llvm.func @redux_sync_i32_with_invalid_kind(%value: i32, %offset: i32) {
+llvm.func @redux_sync_i32_with_invalid_kind_fmin(%value: i32, %offset: i32) {
   // expected-error@+1 {{'fmin' redux kind unsupported with 'i32' type. Only supported type is 'f32'.}}
   %res = nvvm.redux.sync fmin %value, %offset: i32 -> i32
   llvm.return
