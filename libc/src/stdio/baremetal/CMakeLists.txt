@@ -29,12 +29,8 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.error_mapper
-    libc.src.stdio.printf_core.core_structs
     libc.src.__support.arg_list
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.libc_errno
-    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -91,12 +87,8 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.error_mapper
-    libc.src.stdio.printf_core.core_structs
     libc.src.__support.arg_list
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.libc_errno
-    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
