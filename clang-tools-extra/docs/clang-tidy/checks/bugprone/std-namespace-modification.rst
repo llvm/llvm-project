@@ -1,11 +1,11 @@
-.. title:: clang-tidy - bugprone-dont-modify-std-namespace
+.. title:: clang-tidy - bugprone-std-namespace-modification
 
-bugprone-dont-modify-std-namespace
-==================================
+bugprone-std-namespace-modification
+===================================
 
-Modification of the ``std`` or ``posix`` namespace can result in undefined
-behavior.
-This check warns for such modifications.
+Warns on modifications of the ``std`` or ``posix`` namespaces which can
+result in undefined behavior.
+
 The ``std`` (or ``posix``) namespace is allowed to be extended with (class or
 function) template specializations that depend on an user-defined type (a type
 that is not defined in the standard system headers).

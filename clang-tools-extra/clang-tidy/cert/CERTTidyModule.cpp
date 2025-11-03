@@ -11,13 +11,13 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
-#include "../bugprone/DontModifyStdNamespaceCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
 #include "../bugprone/SizeofExpressionCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
+#include "../bugprone/StdNamespaceModificationCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
 #include "../bugprone/ThrowingStaticInitializationCheck.h"
 #include "../bugprone/UncheckedStringToNumberConversionCheck.h"
@@ -251,7 +251,7 @@ public:
         "cert-dcl51-cpp");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
         "cert-dcl54-cpp");
-    CheckFactories.registerCheck<bugprone::DontModifyStdNamespaceCheck>(
+    CheckFactories.registerCheck<bugprone::StdNamespaceModificationCheck>(
         "cert-dcl58-cpp");
     CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
         "cert-dcl59-cpp");

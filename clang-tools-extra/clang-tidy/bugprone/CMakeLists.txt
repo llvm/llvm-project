@@ -21,7 +21,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
   DerivedMethodShadowingBaseMethodCheck.cpp
-  DontModifyStdNamespaceCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
   EmptyCatchCheck.cpp
@@ -74,6 +73,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   SmartPtrArrayMismatchCheck.cpp
   SpuriouslyWakeUpFunctionsCheck.cpp
   StandaloneEmptyCheck.cpp
+  StdNamespaceModificationCheck.cpp
   StringConstructorCheck.cpp
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DONTMODIFYSTDNAMESPACECHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DONTMODIFYSTDNAMESPACECHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STDNAMESPACEMODIFICATIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STDNAMESPACEMODIFICATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,10 +17,10 @@ namespace clang::tidy::bugprone {
 /// This check warns for such modifications.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/dont-modify-std-namespace.html
-class DontModifyStdNamespaceCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/std-namespace-modification.html
+class StdNamespaceModificationCheck : public ClangTidyCheck {
 public:
-  DontModifyStdNamespaceCheck(StringRef Name, ClangTidyContext *Context)
+  StdNamespaceModificationCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
@@ -31,4 +31,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DONTMODIFYSTDNAMESPACECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STDNAMESPACEMODIFICATIONCHECK_H

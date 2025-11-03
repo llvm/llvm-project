@@ -4,7 +4,7 @@ cert-dcl58-cpp
 ==============
 
 The `cert-dcl58-cpp` is an aliaes, please see
-`bugprone-dont-modify-std-namespace <../bugprone/dont-modify-std-namespace.html>`_
+`bugprone-std-namespace-modification <../bugprone/std-namespace-modification.html>`_
 for more information.
 
 This check corresponds to the CERT C++ Coding Standard rule

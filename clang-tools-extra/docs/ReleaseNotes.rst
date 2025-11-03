@@ -245,8 +245,8 @@ New check aliases
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-dcl58-cpp <clang-tidy/checks/cert/dcl58-cpp>` to
-  :doc:`bugprone-dont-modify-std-namespace
-  <clang-tidy/checks/bugprone/dont-modify-std-namespace>`
+  :doc:`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
