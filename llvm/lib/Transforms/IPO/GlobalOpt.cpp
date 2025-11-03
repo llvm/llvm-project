@@ -2618,8 +2618,6 @@ static bool OptimizeNonTrivialIFuncs(
                              SmallVectorImpl<Function *> &Callees) {
       // Index to the current callee candidate.
       unsigned I = 0;
-      // Feature bits from callers of previous iterations.
-      SmallVector<APInt> KnownBits;
 
       // Try to redirect calls starting from higher priority callers.
       for (Function *Caller : Callers) {
@@ -2627,38 +2625,19 @@ static bool OptimizeNonTrivialIFuncs(
           break;
 
         bool CallerIsFMV = GetTTI(*Caller).isMultiversionedFunction(*Caller);
-        // We can't reason much about non-FMV callers. Just pick the highest
-        // priority callee if it matches, otherwise bail.
-        if (!CallerIsFMV)
-          assert(I == 0 && "Should only select the highest priority candidate");
-
-        APInt CallerBits = FeatureMask[Caller];
-        APInt CalleeBits = FeatureMask[Callees[I]];
         // In the case of FMV callers, we know that all higher priority callers
         // than the current one did not get selected at runtime, which helps
         // reason about the callees (if they have versions that mandate presence
         // of the features which we already know are unavailable on this
-        // target, then we can skip over those versions/candidates).
-        if (CallerIsFMV) {
-          // Keep advancing the candidate index as long as the unavailable
-          // features are a subset of the current candidate's.
-          unsigned J = 0;
-          while (J < KnownBits.size()) {
-            // Discard feature bits that are known to be available
-            // in the current iteration.
-            APInt Version = KnownBits[J] & ~CallerBits;
-            if (Version.isSubsetOf(CalleeBits)) {
-              if (++I == Callees.size())
-                break;
-              CalleeBits = FeatureMask[Callees[I]];
-              // Start over.
-              J = 0;
-            } else
-              ++J;
-          }
-          KnownBits.push_back(CallerBits);
-        }
+        // target).
+        if (!CallerIsFMV)
+          // We can't reason much about non-FMV callers. Just pick the highest
+          // priority callee if it matches, otherwise bail.
+          assert(I == 0 && "Should only select the highest priority candidate");
+
         Function *Callee = Callees[I];
+        APInt CallerBits = FeatureMask[Caller];
+        APInt CalleeBits = FeatureMask[Callee];
         // If the feature set of the caller implies the feature set of the
         // highest priority candidate then it shall be picked.
         if (CalleeBits.isSubsetOf(CallerBits)) {
@@ -2673,19 +2652,30 @@ static bool OptimizeNonTrivialIFuncs(
             Changed = true;
           }
         }
+        // Keep advancing the candidate index as long as the caller's
+        // features are a subset of the current candidate's.
+        if (CallerIsFMV) {
+          while (CallerBits.isSubsetOf(CalleeBits)) {
+            if (++I == Callees.size())
+              break;
+            CalleeBits = FeatureMask[Callees[I]];
+          }
+        }
       }
     };
 
     auto &Callees = VersionedFuncs[CalleeIF];
 
     // Optimize non-FMV calls.
-    if (OptimizeNonFMVCallers)
+    if (!NonFMVCallers.empty() && OptimizeNonFMVCallers)
       redirectCalls(NonFMVCallers, Callees);
 
     // Optimize FMV calls.
-    for (GlobalIFunc *CallerIF : CallerIFuncs) {
-      auto &Callers = VersionedFuncs[CallerIF];
-      redirectCalls(Callers, Callees);
+    if (!CallerIFuncs.empty()) {
+      for (GlobalIFunc *CallerIF : CallerIFuncs) {
+        auto &Callers = VersionedFuncs[CallerIF];
+        redirectCalls(Callers, Callees);
+      }
     }
 
     if (CalleeIF->use_empty() ||
