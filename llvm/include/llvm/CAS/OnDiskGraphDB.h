@@ -340,13 +340,16 @@ public:
   /// \param HashByteSize Size for the object digest hash bytes.
   /// \param UpstreamDB Optional on-disk store to be used for faulting-in nodes
   /// if they don't exist in the primary store. The upstream store is only used
-  /// for reading nodes, new nodes are only written to the primary store.
+  /// for reading nodes, new nodes are only written to the primary store. User
+  /// need to make sure \p UpstreamDB outlives current instance of
+  /// OnDiskGraphDB and the common usage is to have an \p UnifiedOnDiskCache to
+  /// manage both.
   /// \param Policy If \p UpstreamDB is provided, controls how nodes are copied
   /// to primary store. This is recorded at creation time and subsequent opens
   /// need to pass the same policy otherwise the \p open will fail.
   static Expected<std::unique_ptr<OnDiskGraphDB>>
   open(StringRef Path, StringRef HashName, unsigned HashByteSize,
-       std::unique_ptr<OnDiskGraphDB> UpstreamDB = nullptr,
+       OnDiskGraphDB *UpstreamDB = nullptr,
        FaultInPolicy Policy = FaultInPolicy::FullTree);
 
   ~OnDiskGraphDB();
@@ -438,8 +441,7 @@ private:
 
   // Private constructor.
   OnDiskGraphDB(StringRef RootPath, OnDiskTrieRawHashMap Index,
-                OnDiskDataAllocator DataPool,
-                std::unique_ptr<OnDiskGraphDB> UpstreamDB,
+                OnDiskDataAllocator DataPool, OnDiskGraphDB *UpstreamDB,
                 FaultInPolicy Policy);
 
   /// Mapping from hash to object reference.
@@ -459,7 +461,7 @@ private:
   std::string RootPath;
 
   /// Optional on-disk store to be used for faulting-in nodes.
-  std::unique_ptr<OnDiskGraphDB> UpstreamDB;
+  OnDiskGraphDB *UpstreamDB = nullptr;
 
   /// The policy used to fault in data from upstream.
   FaultInPolicy FIPolicy;

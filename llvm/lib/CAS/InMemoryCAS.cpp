@@ -233,6 +233,12 @@ public:
     return cast<InMemoryObject>(asInMemoryObject(Node)).getData();
   }
 
+  void print(raw_ostream &OS) const final;
+
+  Error validate(bool CheckHash) const final {
+    return createStringError("InMemoryCAS doesn't support validate()");
+  }
+
   InMemoryCAS() = default;
 
 private:
@@ -270,6 +276,8 @@ ArrayRef<const InMemoryObject *> InMemoryObject::getRefs() const {
     return Derived->getRefsImpl();
   return cast<InMemoryInlineObject>(this)->getRefsImpl();
 }
+
+void InMemoryCAS::print(raw_ostream &OS) const {}
 
 Expected<ObjectRef>
 InMemoryCAS::storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,

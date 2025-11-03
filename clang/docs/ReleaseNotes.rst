@@ -395,6 +395,9 @@ Improvements to Clang's diagnostics
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
 
+- Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
+  attributes are used with a negative size (#GH165463).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

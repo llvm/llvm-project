@@ -3510,6 +3510,8 @@ def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;
 def err_attribute_invalid_size : Error<
   "vector size not an integral multiple of component size">;
+def err_attribute_vec_negative_size
+    : Error<"vector must have non-negative size">;
 def err_attribute_zero_size : Error<"zero %0 size">;
 def err_attribute_size_too_large : Error<"%0 size too large">;
 def err_typecheck_sve_rvv_ambiguous : Error<

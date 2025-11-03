@@ -2155,8 +2155,12 @@ defm dollars_in_identifiers : BoolFOption<"dollars-in-identifiers",
   PosFlag<SetTrue, [], [ClangOption], "Allow">,
   NegFlag<SetFalse, [], [ClangOption], "Disallow">,
   BothFlags<[], [ClangOption, CC1Option], " '$' in identifiers">>;
-def fdwarf2_cfi_asm : Flag<["-"], "fdwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
-def fno_dwarf2_cfi_asm : Flag<["-"], "fno-dwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
+
+defm dwarf2_cfi_asm
+    : BoolFOption<"dwarf2-cfi-asm", CodeGenOpts<"Dwarf2CFIAsm">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
+                  NegFlag<SetFalse>>;
+
 defm dwarf_directory_asm : BoolFOption<"dwarf-directory-asm",
   CodeGenOpts<"NoDwarfDirectoryAsm">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option]>,
