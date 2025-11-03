@@ -1,0 +1,37 @@
+# This workflow triggers the Buildkite pipeline for libc++.
+#
+# The Buildkite pipeline implements pre-commit CI checks on platforms
+# where the Github actions runner can't be used.
+
+name: "[libc++] Trigger Buildkite pipeline"
+on:
+  pull_request_target:
+    paths:
+      - 'libcxx/**'
+      - 'libcxxabi/**'
+      - 'libunwind/**'
+      - 'runtimes/**'
+      - 'cmake/**'
+  schedule:
+    # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
+    - cron: '0 8 * * *'
+
+permissions:
+  contents: read # Default everything to read-only
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  trigger_buildkite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Buildkite pipeline
+        uses: buildkite/trigger-pipeline-action@f0dcd5ae74452a8d17d473227c9d212dcc1eb8f9 # v2.4.0
+        with:
+          buildkite_api_access_token: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          pipeline: llvm-project/libcxx-ci
+          branch: ${{ github.ref_name }}
+          commit: ${{ github.sha }}
+          message: "Triggered by GitHub Actions PR against ${{ github.ref_name }}"
