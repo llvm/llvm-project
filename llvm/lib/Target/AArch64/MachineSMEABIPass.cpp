@@ -82,8 +82,8 @@ enum ZAState {
   // A ZA save has been set up or committed (i.e. ZA is dormant or off)
   LOCAL_SAVED,
 
-  // ZA is off or a lazy save has been set up by the caller
-  CALLER_DORMANT,
+  // The ZA/ZT0 state on entry to the function.
+  ENTRY,
 
   // ZA is off
   OFF,
@@ -200,7 +200,7 @@ StringRef getZAStateString(ZAState State) {
     MAKE_CASE(ZAState::ANY)
     MAKE_CASE(ZAState::ACTIVE)
     MAKE_CASE(ZAState::LOCAL_SAVED)
-    MAKE_CASE(ZAState::CALLER_DORMANT)
+    MAKE_CASE(ZAState::ENTRY)
     MAKE_CASE(ZAState::OFF)
   default:
     llvm_unreachable("Unexpected ZAState");
@@ -281,8 +281,8 @@ struct MachineSMEABI : public MachineFunctionPass {
   void propagateDesiredStates(FunctionInfo &FnInfo, bool Forwards = true);
 
   // Emission routines for private and shared ZA functions (using lazy saves).
-  void emitNewZAPrologue(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI);
+  void emitSMEPrologue(MachineBasicBlock &MBB,
+                       MachineBasicBlock::iterator MBBI);
   void emitRestoreLazySave(EmitContext &, MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI,
                            LiveRegs PhysLiveRegs);
@@ -406,9 +406,7 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
 
     if (MBB.isEntryBlock()) {
       // Entry block:
-      Block.FixedEntryState = SMEFnAttrs.hasPrivateZAInterface()
-                                  ? ZAState::CALLER_DORMANT
-                                  : ZAState::ACTIVE;
+      Block.FixedEntryState = ZAState::ENTRY;
     } else if (MBB.isEHPad()) {
       // EH entry block:
       Block.FixedEntryState = ZAState::LOCAL_SAVED;
@@ -825,32 +823,49 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
   }
 }
 
-void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
-                                      MachineBasicBlock::iterator MBBI) {
+static constexpr unsigned ZERO_ALL_ZA_MASK = 0b11111111;
+
+void MachineSMEABI::emitSMEPrologue(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI) {
   auto *TLI = Subtarget->getTargetLowering();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
 
-  // Get current TPIDR2_EL0.
-  Register TPIDR2EL0 = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS))
-      .addReg(TPIDR2EL0, RegState::Define)
-      .addImm(AArch64SysReg::TPIDR2_EL0);
-  // If TPIDR2_EL0 is non-zero, commit the lazy save.
-  // NOTE: Functions that only use ZT0 don't need to zero ZA.
-  bool ZeroZA = AFI->getSMEFnAttrs().hasZAState();
-  auto CommitZASave =
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZASavePseudo))
-          .addReg(TPIDR2EL0)
-          .addImm(ZeroZA ? 1 : 0)
-          .addImm(/*ZeroZT0=*/false)
-          .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
-          .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
-  if (ZeroZA)
-    CommitZASave.addDef(AArch64::ZAB0, RegState::ImplicitDefine);
-  // Enable ZA (as ZA could have previously been in the OFF state).
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSRpstatesvcrImm1))
-      .addImm(AArch64SVCR::SVCRZA)
-      .addImm(1);
+  bool ZeroZA = AFI->getSMEFnAttrs().isNewZA();
+  bool ZeroZT0 = AFI->getSMEFnAttrs().isNewZT0();
+  if (AFI->getSMEFnAttrs().hasPrivateZAInterface()) {
+    // Get current TPIDR2_EL0.
+    Register TPIDR2EL0 = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS))
+        .addReg(TPIDR2EL0, RegState::Define)
+        .addImm(AArch64SysReg::TPIDR2_EL0);
+    // If TPIDR2_EL0 is non-zero, commit the lazy save.
+    // NOTE: Functions that only use ZT0 don't need to zero ZA.
+    auto CommitZASave =
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZASavePseudo))
+            .addReg(TPIDR2EL0)
+            .addImm(ZeroZA)
+            .addImm(ZeroZT0)
+            .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
+            .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
+    if (ZeroZA)
+      CommitZASave.addDef(AArch64::ZAB0, RegState::ImplicitDefine);
+    if (ZeroZT0)
+      CommitZASave.addDef(AArch64::ZT0, RegState::ImplicitDefine);
+    // Enable ZA (as ZA could have previously been in the OFF state).
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSRpstatesvcrImm1))
+        .addImm(AArch64SVCR::SVCRZA)
+        .addImm(1);
+  } else if (AFI->getSMEFnAttrs().hasSharedZAInterface()) {
+    if (ZeroZA) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ZERO_M))
+          .addImm(ZERO_ALL_ZA_MASK)
+          .addDef(AArch64::ZAB0, RegState::ImplicitDefine);
+    }
+    if (ZeroZT0) {
+      DebugLoc DL = getDebugLoc(MBB, MBBI);
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ZERO_T)).addDef(AArch64::ZT0);
+    }
+  }
 }
 
 void MachineSMEABI::emitFullZASaveRestore(EmitContext &Context,
@@ -932,19 +947,19 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   if (From == ZAState::ANY || To == ZAState::ANY)
     return;
 
-  // If we're exiting from the CALLER_DORMANT state that means this new ZA
-  // function did not touch ZA (so ZA was never turned on).
-  if (From == ZAState::CALLER_DORMANT && To == ZAState::OFF)
+  // If we're exiting from the ENTRY state that means that the function has not
+  // used ZA, so in the case of private ZA/ZT0 functions we can omit any set up.
+  if (From == ZAState::ENTRY && To == ZAState::OFF)
     return;
+
+  SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
 
   // TODO: Avoid setting up the save buffer if there's no transition to
   // LOCAL_SAVED.
-  if (From == ZAState::CALLER_DORMANT) {
-    assert(AFI->getSMEFnAttrs().hasPrivateZAInterface() &&
-           "CALLER_DORMANT state requires private ZA interface");
+  if (From == ZAState::ENTRY) {
     assert(&MBB == &MBB.getParent()->front() &&
-           "CALLER_DORMANT state only valid in entry block");
-    emitNewZAPrologue(MBB, MBB.getFirstNonPHI());
+           "ENTRY state only valid in entry block");
+    emitSMEPrologue(MBB, MBB.getFirstNonPHI());
     if (To == ZAState::ACTIVE)
       return; // Nothing more to do (ZA is active after the prologue).
 
@@ -959,9 +974,9 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   else if (From == ZAState::LOCAL_SAVED && To == ZAState::ACTIVE)
     emitZARestore(Context, MBB, InsertPt, PhysLiveRegs);
   else if (To == ZAState::OFF) {
-    assert(From != ZAState::CALLER_DORMANT &&
-           "CALLER_DORMANT to OFF should have already been handled");
-    assert(!AFI->getSMEFnAttrs().hasAgnosticZAInterface() &&
+    assert(From != ZAState::ENTRY &&
+           "ENTRY to OFF should have already been handled");
+    assert(!SMEFnAttrs.hasAgnosticZAInterface() &&
            "Should not turn ZA off in agnostic ZA function");
     emitZAOff(MBB, InsertPt, /*ClearTPIDR2=*/From == ZAState::LOCAL_SAVED);
   } else {
