@@ -13,9 +13,9 @@
 #ifndef LLVM_TABLEGEN_CODEGENHELPERS_H
 #define LLVM_TABLEGEN_CODEGENHELPERS_H
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
@@ -23,9 +23,9 @@ namespace llvm {
 // Simple RAII helper for emitting ifdef-undef-endif scope.
 class IfDefEmitter {
 public:
-  IfDefEmitter(raw_ostream &OS, StringRef Name) : Name(Name.str()), OS(OS) {
-    OS << "#ifdef " << Name << "\n"
-       << "#undef " << Name << "\n\n";
+  IfDefEmitter(raw_ostream &OS, const Twine &Name) : Name(Name.str()), OS(OS) {
+    OS << "#ifdef " << this->Name << "\n"
+       << "#undef " << this->Name << "\n\n";
   }
   ~IfDefEmitter() { OS << "\n#endif // " << Name << "\n\n"; }
 
@@ -37,10 +37,10 @@ private:
 // Simple RAII helper for emitting header include guard (ifndef-define-endif).
 class IncludeGuardEmitter {
 public:
-  IncludeGuardEmitter(raw_ostream &OS, StringRef Name)
+  IncludeGuardEmitter(raw_ostream &OS, const Twine &Name)
       : Name(Name.str()), OS(OS) {
-    OS << "#ifndef " << Name << "\n"
-       << "#define " << Name << "\n\n";
+    OS << "#ifndef " << this->Name << "\n"
+       << "#define " << this->Name << "\n\n";
   }
   ~IncludeGuardEmitter() { OS << "\n#endif // " << Name << "\n"; }
 
@@ -54,10 +54,10 @@ private:
 // namespace scope.
 class NamespaceEmitter {
 public:
-  NamespaceEmitter(raw_ostream &OS, StringRef NameUntrimmed)
-      : Name(trim(NameUntrimmed).str()), OS(OS) {
-    if (!Name.empty())
-      OS << "namespace " << Name << " {\n";
+  NamespaceEmitter(raw_ostream &OS, const Twine &Name)
+      : Name(trim(Name)), OS(OS) {
+    if (!this->Name.empty())
+      OS << "namespace " << this->Name << " {\n";
   }
 
   ~NamespaceEmitter() { close(); }
@@ -77,9 +77,11 @@ private:
   // }
   //
   // and cannot use "namespace ::mlir::toy".
-  static StringRef trim(StringRef Name) {
-    Name.consume_front("::");
-    return Name;
+  static std::string trim(const Twine &Name) {
+    SmallString<64> Storage;
+    StringRef StrRef = Name.toStringRef(Storage);
+    StrRef.consume_front("::");
+    return StrRef.str();
   }
   std::string Name;
   raw_ostream &OS;

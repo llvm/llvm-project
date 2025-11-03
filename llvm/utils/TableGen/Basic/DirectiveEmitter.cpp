@@ -266,7 +266,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     return;
 
   StringRef Lang = DirLang.getName();
-  IncludeGuardEmitter IncGuard(OS, (Twine("LLVM_") + Lang + "_INC").str());
+  IncludeGuardEmitter IncGuard(OS, Twine("LLVM_") + Lang + "_INC");
 
   OS << "#include \"llvm/ADT/ArrayRef.h\"\n";
 
@@ -941,10 +941,8 @@ static void generateClauseSet(ArrayRef<const Record *> VerClauses,
 static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
                                         Frontend FE, raw_ostream &OS) {
 
-  std::string IfDefName{"GEN_"};
-  IfDefName += getFESpelling(FE).upper();
-  IfDefName += "_DIRECTIVE_CLAUSE_SETS";
-  IfDefEmitter Scope(OS, IfDefName);
+  IfDefEmitter Scope(OS, "GEN_" + getFESpelling(FE).upper() +
+                             "_DIRECTIVE_CLAUSE_SETS");
 
   StringRef Namespace =
       getFESpelling(FE == Frontend::Flang ? Frontend::LLVM : FE);
@@ -985,10 +983,8 @@ static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
 // allowances (allowed, allowed once, allowed exclusive and required).
 static void generateDirectiveClauseMap(const DirectiveLanguage &DirLang,
                                        Frontend FE, raw_ostream &OS) {
-  std::string IfDefName{"GEN_"};
-  IfDefName += getFESpelling(FE).upper();
-  IfDefName += "_DIRECTIVE_CLAUSE_MAP";
-  IfDefEmitter Scope(OS, IfDefName);
+  IfDefEmitter Scope(OS, "GEN_" + getFESpelling(FE).upper() +
+                             "_DIRECTIVE_CLAUSE_MAP");
 
   OS << "{\n";
 
