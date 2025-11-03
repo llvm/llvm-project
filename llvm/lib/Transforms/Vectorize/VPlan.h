@@ -966,11 +966,10 @@ public:
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print metadata with node IDs.
   void print(raw_ostream &O, const Module *M) const;
-
-  /// Return true if there is any metadata to print.
-  bool empty() const { return Metadata.empty(); }
+#endif
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.

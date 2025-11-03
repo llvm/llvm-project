@@ -1676,6 +1676,7 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
   Metadata = std::move(MetadataIntersection);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRMetadata::print(raw_ostream &O, const Module *M) const {
   if (Metadata.empty())
     return;
@@ -1694,6 +1695,7 @@ void VPIRMetadata::print(raw_ostream &O, const Module *M) const {
   });
   O << ")";
 }
+#endif
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
@@ -1991,6 +1993,8 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
   O << ", ";
   getOperand(2)->printAsOperand(O, SlotTracker);
   O << (isInvariantCond() ? " (condition is loop invariant)" : "");
+
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -3461,6 +3465,8 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 
   if (shouldPack())
     O << " (S->V)";
+
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -3727,6 +3733,7 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vp.load ";
   printOperands(O, SlotTracker);
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -3835,6 +3842,7 @@ void VPWidenStoreEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN vp.store ";
   printOperands(O, SlotTracker);
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -4123,6 +4131,8 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
     }
     ++OpIdx;
   }
+
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -4267,6 +4277,8 @@ void VPInterleaveEVLRecipe::print(raw_ostream &O, const Twine &Indent,
     }
     ++OpIdx;
   }
+
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
