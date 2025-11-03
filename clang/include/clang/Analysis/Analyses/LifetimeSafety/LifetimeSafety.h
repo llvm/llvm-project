@@ -23,7 +23,11 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
 
 namespace clang::lifetimes {
 
@@ -60,6 +64,9 @@ struct LifetimeFactory {
 /// Running the lifetime safety analysis and querying its results. It
 /// encapsulates the various dataflow analyses.
 class LifetimeSafetyAnalysis {
+private:
+  static llvm::StringMap<int> MissingOriginCount;
+
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                          LifetimeSafetyReporter *Reporter);
@@ -72,6 +79,20 @@ public:
   }
   LiveOriginsAnalysis &getLiveOrigins() const { return *LiveOrigins; }
   FactManager &getFactManager() { return FactMgr; }
+
+  static void PrintStats(llvm::raw_ostream &OS) {
+    llvm::errs() << "\n*** LifetimeSafety Missing Origin Stats "
+                    "(expression_type : count) :\n";
+    for (const auto &[expr, count] : LifetimeSafetyAnalysis::count) {
+      OS << expr << " : " << count << '\n';
+    }
+  }
+
+  static void UpdateMissingOriginCount(const OriginManager &OM) {
+    for (const auto &[expr, missing_origin_count] : OM.getMissingOrigins()) {
+      LifetimeSafetyAnalysis::count[std::string(expr)] += missing_origin_count;
+    }
+  }
 
 private:
   AnalysisDeclContext &AC;
