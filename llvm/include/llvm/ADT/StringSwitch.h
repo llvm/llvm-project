@@ -215,7 +215,7 @@ public:
   [[nodiscard]] operator R() { return DefaultUnreachable(); }
 
 private:
-  // Return true when a match is found. If `Str` matches the `S` argument,
+  // Returns true when a match is found. If `Str` matches the `S` argument,
   // stores the result.
   bool CaseImpl(StringLiteral S, T &Value) {
     if (Result)
@@ -228,7 +228,7 @@ private:
     return true;
   }
 
-  // Return true when a match is found. If `Str` matches the `S` argument
+  // Returns true when a match is found. If `Str` matches the `S` argument
   // (case-insensitive), stores the result.
   bool CaseLowerImpl(StringLiteral S, T &Value) {
     if (Result)
