@@ -85,11 +85,13 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
                            "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
-def XeGPUOptimizeTranspose : Pass<"xegpu-optimize-transpose"> {
-  let summary = "Optimize XeGPU loadNd operations feeding into vector.transpose";
+def XeGPUOptimizeBlockLoads : Pass<"xegpu-optimize-block-loads"> {
+  let summary = "Optimize XeGPU block load operations";
   let description = [{
-    This pass rewrites XeGPU loadNd operations that feed into vector.transpose
-    into more optimal forms to improve performance.
+    This pass rewrites XeGPU loadNd operations into more optimal forms
+    to improve performance. This includes,
+    - Rewriting transpose B loads into more optimal forms to use HW block
+      transpose instructions for better performance.
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];

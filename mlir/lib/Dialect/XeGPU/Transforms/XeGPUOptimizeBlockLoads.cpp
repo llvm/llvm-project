@@ -1,4 +1,4 @@
-//===- XeGPUOptimizeTranspose.cpp - XeGPU optimize transpose ----*- C++ -*-===//
+//===- XeGPUOptimizeBlockLoads.cpp - XeGPU optimize block loads -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,33 +34,17 @@
 
 namespace mlir {
 namespace xegpu {
-#define GEN_PASS_DEF_XEGPUOPTIMIZETRANSPOSE
+#define GEN_PASS_DEF_XEGPUOPTIMIZEBLOCKLOADS
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
 } // namespace xegpu
 } // namespace mlir
 
-#define DEBUG_TYPE "xegpu-optimize-transpose"
+#define DEBUG_TYPE "xegpu-optimize-block-loads"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 using namespace mlir;
 
 namespace {
-
-struct Allowed2DShapeRange {
-  int64_t minWidth, maxWidth, minHeight, maxHeight;
-};
-
-/// Helper to get the size range of a 2D block that can be transposed by HW.
-/// TODO: Use uArch to get supported block ranges.
-static Allowed2DShapeRange getTransposableBlockRange(int bitWidth) {
-  switch (bitWidth) {
-  case 32:
-    return {/**min width**/ 1, /**max width**/ 8, /**min height**/ 1,
-            /**max height**/ 32};
-  default:
-    llvm_unreachable("Add support for other element bitwidths");
-  }
-}
 
 /// Get the 2D lane data from a tensor desc type if it exists.
 static std::optional<SmallVector<int64_t>>
@@ -429,7 +413,7 @@ public:
 
 } // namespace
 
-void xegpu::populateXeGPUOptimizeTransposePatterns(
+void xegpu::populateXeGPUOptimizeBlockLoadsPatterns(
     RewritePatternSet &patterns) {
   patterns.add<XeGPUCreateNdDescOpPattern, XeGPULoadNdDescOpPattern,
                VectorExtractOpPattern>(patterns.getContext());
@@ -437,9 +421,9 @@ void xegpu::populateXeGPUOptimizeTransposePatterns(
 
 namespace {
 
-struct XeGPUOptimizeTransposePass final
-    : public xegpu::impl::XeGPUOptimizeTransposeBase<
-          XeGPUOptimizeTransposePass> {
+struct XeGPUOptimizeBlockLoadsPass final
+    : public xegpu::impl::XeGPUOptimizeBlockLoadsBase<
+          XeGPUOptimizeBlockLoadsPass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
     TypeConverter converter;
@@ -448,15 +432,15 @@ struct XeGPUOptimizeTransposePass final
 
     // This pass is only meant for PVC and BMG targets. If unsupported target
     // is found, exit early.
-    bool isTargetSupported = true;
+    bool isTargetSupported = false;
     getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
       auto chipStr = xegpu::getChipStr(funcOp);
-      if (chipStr && chipStr.value() != "pvc" && chipStr.value() != "bmg")
-        isTargetSupported = false;
+      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg"))
+        isTargetSupported = true;
     });
 
     if (!isTargetSupported) {
-      DBGS() << "XeGPUOptimizeTransposePass only supports PVC and BMG targets."
+      DBGS() << "XeGPUOptimizeBlockLoadsPass only supports PVC and BMG targets."
              << "\n";
       return;
     }
@@ -489,10 +473,10 @@ struct XeGPUOptimizeTransposePass final
                            vector::VectorDialect>();
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
-    xegpu::populateXeGPUOptimizeTransposePatterns(patterns);
+    xegpu::populateXeGPUOptimizeBlockLoadsPatterns(patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns)))) {
-      DBGS() << "Optimize transpose pass failed.\n";
+      DBGS() << "Optimize block loads pass failed.\n";
       return signalPassFailure();
     }
   }
