@@ -362,7 +362,7 @@ private:
                     tok::l_paren, tok::comma, TT_CastRParen,
                     TT_BinaryOperator) ||
                 OpeningParen.Previous->isIf())) {
-      // static_assert, if and while usually contain expressions.
+      // if and while usually contain expressions.
       Contexts.back().IsExpression = true;
     } else if (Style.isJavaScript() && OpeningParen.Previous &&
                (OpeningParen.Previous->is(Keywords.kw_function) ||
