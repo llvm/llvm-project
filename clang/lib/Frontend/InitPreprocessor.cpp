@@ -399,7 +399,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HLSL_202y",
                         Twine((unsigned)LangOptions::HLSLLangStd::HLSL_202y));
 
-    if (LangOpts.NativeHalfType)
+    if (LangOpts.NativeHalfType && LangOpts.NativeInt16Type)
       Builder.defineMacro("__HLSL_ENABLE_16_BIT", "1");
 
     // Shader target information
