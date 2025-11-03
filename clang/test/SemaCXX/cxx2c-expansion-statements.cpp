@@ -1001,3 +1001,96 @@ void nested_empty_expansion_dependent() {
 void nested_empty_expansion_dependent_instantiate() {
   nested_empty_expansion_dependent<Empty>();
 }
+
+// Destructuring expansion statements using tuple_size/tuple_element/get.
+namespace std {
+template <typename>
+struct tuple_size;
+
+template <__SIZE_TYPE__, typename>
+struct tuple_element; // expected-note {{template is declared here}}
+
+namespace get_decomposition {
+struct MemberGet {
+  int x[6]{};
+
+  template <__SIZE_TYPE__ I>
+  constexpr int& get() { return x[I * 2]; }
+};
+
+struct ADLGet {
+  long x[8]{};
+};
+
+template <__SIZE_TYPE__ I>
+constexpr long& get(ADLGet& a) { return a.x[I * 2]; }
+} // namespace get_decomposition
+
+template <>
+struct tuple_size<get_decomposition::MemberGet> {
+  static constexpr __SIZE_TYPE__ value = 3;
+};
+
+template <__SIZE_TYPE__ I>
+struct tuple_element<I, get_decomposition::MemberGet> {
+  using type = int;
+};
+
+template <>
+struct tuple_size<get_decomposition::ADLGet> {
+  static constexpr __SIZE_TYPE__ value = 4;
+};
+
+template <__SIZE_TYPE__ I>
+struct tuple_element<I, get_decomposition::ADLGet> {
+  using type = long;
+};
+
+constexpr int member() {
+  get_decomposition::MemberGet m;
+  int v = 1;
+  template for (int& i : m) {
+    i = v;
+    v++;
+  }
+  return m.x[0] + m.x[2] + m.x[4];
+}
+
+constexpr long adl() {
+  get_decomposition::ADLGet m;
+  long v = 1;
+  template for (long& i : m) {
+    i = v;
+    v++;
+  }
+  return m.x[0] + m.x[2] + m.x[4] + m.x[6];
+}
+
+static_assert(member() == 6);
+static_assert(adl() == 10);
+
+struct TupleSizeOnly {};
+
+template <>
+struct tuple_size<TupleSizeOnly> {
+  static constexpr __SIZE_TYPE__ value = 3;
+};
+
+struct TupleSizeAndGet {
+  template <__SIZE_TYPE__>
+  constexpr int get() { return 1; }
+};
+
+template <>
+struct tuple_size<TupleSizeAndGet> {
+  static constexpr __SIZE_TYPE__ value = 3;
+};
+
+void invalid() {
+  template for (auto x : TupleSizeOnly()) {} // expected-error {{use of undeclared identifier 'get'}} \
+                                                expected-note {{in implicit initialization of binding declaration}}
+
+  template for (auto x : TupleSizeAndGet()) {} // expected-error {{implicit instantiation of undefined template 'std::tuple_element<0, std::TupleSizeAndGet>'}} \
+                                                  expected-note {{in implicit initialization of binding declaration}}
+}
+} // namespace std
