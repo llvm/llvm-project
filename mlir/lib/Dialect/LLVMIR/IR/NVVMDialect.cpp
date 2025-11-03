@@ -1566,23 +1566,34 @@ LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
 LogicalResult NVVM::ReduxOp::verify() {
   mlir::Type reduxType = getType();
 
-  if (!reduxType.isF32() && getAbs())
-    return emitOpError("abs attribute is supported only for f32 type");
-
-  if (!reduxType.isF32() && getNan())
-    return emitOpError("nan attribute is supported only for f32 type");
+  if (!reduxType.isF32()) {
+    if (getAbs())
+      return emitOpError("abs attribute is supported only for f32 type");
+    if (getNan())
+      return emitOpError("nan attribute is supported only for f32 type");
+  }
 
   NVVM::ReduxKind kind = getKind();
   switch (kind) {
+  case NVVM::ReduxKind::ADD:
+  case NVVM::ReduxKind::AND:
+  case NVVM::ReduxKind::OR:
+  case NVVM::ReduxKind::XOR:
+  case NVVM::ReduxKind::MAX:
+  case NVVM::ReduxKind::MIN:
+  case NVVM::ReduxKind::UMAX:
+  case NVVM::ReduxKind::UMIN:
+    if (!reduxType.isInteger(32))
+      return emitOpError("'")
+             << stringifyEnum(kind) << "' redux kind unsupported with "
+             << getType() << " type. Only supported type is 'i32'.";
+    break;
   case NVVM::ReduxKind::FMIN:
   case NVVM::ReduxKind::FMAX:
     if (!reduxType.isF32())
-      return emitOpError("fmin and fmax redux kind must be used with f32 type");
-    break;
-  default:
-    if (reduxType.isF32())
-      return emitOpError(
-          "only fmin and fmax redux kinds are supported for f32 type");
+      return emitOpError("'")
+             << stringifyEnum(kind) << "' redux kind unsupported with "
+             << getType() << " type. Only supported type is 'f32'.";
     break;
   }
 
