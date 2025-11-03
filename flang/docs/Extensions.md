@@ -182,6 +182,13 @@ end
   Note that internally the main program symbol name is all uppercase, unlike
   the names of all other symbols, which are usually all lowercase. This
   may make a difference in testing/debugging.
+* A `PROCEDURE()` with no interface name or type may be called as an
+  subroutine with an implicit interface, F'2023 15.4.3.6 paragraph 4 and
+  C1525 notwithstanding.
+  This is a universally portable feature, and it also applies to
+  `PROCEDURE(), POINTER, NOPASS` derived type components.
+  Such procedures may *not* be referenced as implicitly typed functions
+  without first being associated with a function pointer.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -954,4 +961,3 @@ print *, [(j,j=1,10)]
   "&GRP A(1:)=1. 2. 3./".
   This extension is necessarily disabled when the type of the array
   has an accessible defined formatted READ subroutine.
-
