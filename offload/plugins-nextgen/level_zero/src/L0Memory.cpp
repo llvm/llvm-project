@@ -83,9 +83,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
 
   // Check page size used for this allocation kind to decide minimum
   // allocation size when allocating from L0.
-  auto MemOrErr =
-      Allocator->allocL0(/* Size=*/8, /*Align=*/0, AllocKind, /*ActiveSize=*/0,
-                         /*Logging=*/false);
+  auto MemOrErr = Allocator->allocFromL0(8, 0, AllocKind);
   if (!MemOrErr)
     return MemOrErr.takeError();
   void *Mem = *MemOrErr;
@@ -94,7 +92,8 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
       ZE_MEMORY_TYPE_UNKNOWN, 0, 0};
   CALL_ZE_RET_ERROR(zeMemGetAllocProperties, Context, Mem, &AP, nullptr);
   AllocUnit = (std::max)(AP.pageSize, AllocUnit);
-  CALL_ZE_RET_ERROR(zeMemFree, Context, Mem);
+  if (auto Err = Allocator->deallocFromL0(Mem))
+    return Err;
 
   bool IsDiscrete = false;
   if (Device) {
@@ -250,9 +249,11 @@ Error MemAllocatorTy::MemPoolTy::deinit() {
     for (auto *Block : Bucket) {
       if (DebugLevel > 0)
         Allocator->log(0, Block->Size, AllocKind);
-      CALL_ZE_RET_ERROR(zeMemFree, Allocator->L0Context->getZeContext(),
-                        reinterpret_cast<void *>(Block->Base));
+      auto Err =
+          Allocator->deallocFromL0(reinterpret_cast<void *>(Block->Base));
       delete Block;
+      if (Err)
+        return Err;
     }
   }
   return Plugin::success();
@@ -287,12 +288,11 @@ Expected<void *> MemAllocatorTy::MemPoolTy::alloc(size_t Size,
     // Bucket is empty or all blocks in the bucket are full
     const auto ChunkSize = BucketParams[BucketId].first;
     const auto BlockSize = BucketParams[BucketId].second;
-    auto BaseOrErr = Allocator->allocL0(BlockSize, 0, AllocKind);
+    auto BaseOrErr = Allocator->allocFromL0AndLog(BlockSize, 0, AllocKind);
     if (!BaseOrErr)
       return BaseOrErr.takeError();
 
     void *Base = *BaseOrErr;
-
     if (ZeroInit) {
       auto Err = Allocator->enqueueMemSet(Base, 0, BlockSize);
       if (Err)
@@ -330,22 +330,22 @@ size_t MemAllocatorTy::MemPoolTy::dealloc(void *Ptr) {
   return Deallocated;
 }
 
-void MemAllocatorTy::MemAllocInfoMapTy::add(void *Ptr, void *Base, size_t Size,
-                                            int32_t Kind, bool InPool,
+void MemAllocatorTy::MemAllocInfoMapTy::add(void *Ptr, void *Base, size_t ReqSize,
+                                            size_t AllocSize, int32_t Kind, bool InPool,
                                             bool ImplicitArg) {
   const auto Inserted =
-      Map.emplace(Ptr, MemAllocInfoTy{Base, Size, Kind, InPool, ImplicitArg});
+      Map.emplace(Ptr, MemAllocInfoTy{Base, ReqSize, AllocSize, Kind, InPool, ImplicitArg});
   // Check if we keep valid disjoint memory ranges.
   [[maybe_unused]] bool Valid = Inserted.second;
   if (Valid) {
     if (Inserted.first != Map.begin()) {
       const auto I = std::prev(Inserted.first, 1);
-      Valid = Valid && (uintptr_t)I->first + I->second.Size <= (uintptr_t)Ptr;
+      Valid = Valid && (uintptr_t)I->first + I->second.ReqSize <= (uintptr_t)Ptr;
     }
     if (Valid) {
       const auto I = std::next(Inserted.first, 1);
       if (I != Map.end())
-        Valid = Valid && (uintptr_t)Ptr + Size <= (uintptr_t)I->first;
+        Valid = Valid && (uintptr_t)Ptr + ReqSize <= (uintptr_t)I->first;
     }
   }
   assert(Valid && "Invalid overlapping memory allocation");
@@ -483,10 +483,11 @@ Error MemAllocatorTy::deinit() {
 }
 
 /// Allocate memory with the specified information
-Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
-                                       intptr_t Offset, bool UserAlloc,
-                                       bool DevMalloc, uint32_t MemAdvice,
-                                       AllocOptionTy AllocOpt) {
+Expected<void *> MemAllocatorTy::allocFromPool(size_t Size, size_t Align,
+                                               int32_t Kind, intptr_t Offset,
+                                               bool UserAlloc, bool DevMalloc,
+                                               uint32_t MemAdvice,
+                                               AllocOptionTy AllocOpt) {
   assert((Kind == TARGET_ALLOC_DEVICE || Kind == TARGET_ALLOC_HOST ||
           Kind == TARGET_ALLOC_SHARED) &&
          "Unknown memory kind while allocating target memory");
@@ -530,7 +531,7 @@ Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
       if (Align > 0)
         Base = (Base + Align) & ~(Align - 1);
       Mem = (void *)(Base + Offset);
-      AllocInfo.add(Mem, AllocBase, Size, Kind, true, UserAlloc);
+      AllocInfo.add(Mem, AllocBase, Size, PoolAllocSize, Kind, true, UserAlloc);
       log(Size, PoolAllocSize, Kind, true /* Pool */);
       if (DevMalloc)
         MemOwned.push_back(AllocBase);
@@ -542,13 +543,14 @@ Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
     }
   }
 
-  auto AllocBaseOrErr = allocL0(AllocSize, Align, Kind, Size);
+  auto AllocBaseOrErr =
+      allocFromL0AndLog(AllocSize, Align, Kind, /*ActiveSize=*/Size);
   if (!AllocBaseOrErr)
     return AllocBaseOrErr.takeError();
   AllocBase = *AllocBaseOrErr;
   if (AllocBase) {
     Mem = (void *)((uintptr_t)AllocBase + Offset);
-    AllocInfo.add(Mem, AllocBase, Size, Kind, false, UserAlloc);
+    AllocInfo.add(Mem, AllocBase, Size, AllocSize, Kind, false, UserAlloc);
     if (DevMalloc)
       MemOwned.push_back(AllocBase);
     if (UseDedicatedPool) {
@@ -594,11 +596,12 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
                          "Cannot find base address of " DPxMOD "\n",
                          DPxPTR(Ptr));
   }
-  CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Info.Base);
-  log(0, Info.Size, Info.Kind);
+  log(0, Info.AllocSize, Info.Kind);
 
+  if (auto Err = deallocFromL0(Info.Base))
+    return Err;
   DP("Deleted device memory " DPxMOD " (Base: " DPxMOD ", Size: %zu)\n",
-     DPxPTR(Ptr), DPxPTR(Info.Base), Info.Size);
+     DPxPTR(Ptr), DPxPTR(Info.Base), Info.AllocSize);
 
   return Plugin::success();
 }
@@ -611,9 +614,8 @@ Error MemAllocatorTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size) {
   return Device->enqueueMemCopy(Dst, Src, Size);
 }
 
-Expected<void *> MemAllocatorTy::allocL0(size_t Size, size_t Align,
-                                         int32_t Kind, size_t ActiveSize,
-                                         bool Logging) {
+Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
+                                             int32_t Kind) {
   void *Mem = nullptr;
   ze_device_mem_alloc_desc_t DeviceDesc{ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC,
                                         nullptr, 0, 0};
@@ -637,24 +639,22 @@ Expected<void *> MemAllocatorTy::allocL0(size_t Size, size_t Align,
     makeResident = true;
     CALL_ZE_RET_ERROR(zeMemAllocDevice, zeContext, &DeviceDesc, Size, Align,
                       zeDevice, &Mem);
-    DP("Allocated a device memory " DPxMOD "\n", DPxPTR(Mem));
+    DP("Allocated %" PRId64 " bytes of device memory " DPxMOD "\n", Size,
+       DPxPTR(Mem));
     break;
   case TARGET_ALLOC_HOST:
     CALL_ZE_RET_ERROR(zeMemAllocHost, zeContext, &HostDesc, Size, Align, &Mem);
-    DP("Allocated a host memory " DPxMOD "\n", DPxPTR(Mem));
+    DP("Allocated %" PRId64 " bytes of host memory " DPxMOD "\n", Size,
+       DPxPTR(Mem));
     break;
   case TARGET_ALLOC_SHARED:
     CALL_ZE_RET_ERROR(zeMemAllocShared, zeContext, &DeviceDesc, &HostDesc, Size,
                       Align, zeDevice, &Mem);
-    DP("Allocated a shared memory " DPxMOD "\n", DPxPTR(Mem));
+    DP("Allocated %" PRId64 " bytes of shared memory " DPxMOD "\n", Size,
+       DPxPTR(Mem));
     break;
   default:
     assert(0 && "Invalid target data allocation kind");
-  }
-
-  if (Logging) {
-    size_t LoggedSize = ActiveSize ? ActiveSize : Size;
-    log(LoggedSize, LoggedSize, Kind);
   }
 
   if (makeResident) {
@@ -666,6 +666,12 @@ Expected<void *> MemAllocatorTy::allocL0(size_t Size, size_t Align,
     }
   }
   return Mem;
+}
+
+Error MemAllocatorTy::deallocFromL0 (void *Ptr) {
+  CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Ptr);
+  DP("Freed device pointer " DPxMOD "\n", DPxPTR(Ptr));
+  return Plugin::success();
 }
 
 Expected<ze_event_handle_t> EventPoolTy::getEvent() {

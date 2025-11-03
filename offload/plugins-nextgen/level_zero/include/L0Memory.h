@@ -69,7 +69,9 @@ struct MemAllocInfoTy {
   /// Base address allocated from compute runtime
   void *Base = nullptr;
   /// Allocation size known to users/libomptarget
-  size_t Size = 0;
+  size_t ReqSize = 0;
+  /// Allocation size known to the plugin (can be larger than ReqSize)
+  size_t AllocSize = 0;
   /// TARGET_ALLOC kind
   int32_t Kind = TARGET_ALLOC_DEFAULT;
   /// Allocation from pool?
@@ -79,10 +81,10 @@ struct MemAllocInfoTy {
 
   MemAllocInfoTy() = default;
 
-  MemAllocInfoTy(void *Base, size_t Size, int32_t Kind, bool InPool,
-                 bool ImplicitArg)
-      : Base(Base), Size(Size), Kind(Kind), InPool(InPool),
-        ImplicitArg(ImplicitArg) {}
+  MemAllocInfoTy(void *Base, size_t ReqSize, size_t AllocSize, int32_t Kind,
+                 bool InPool, bool ImplicitArg)
+      : Base(Base), ReqSize(ReqSize), AllocSize(AllocSize), Kind(Kind),
+        InPool(InPool), ImplicitArg(ImplicitArg) {}
 };
 
 /// Responsible for all activities involving memory allocation/deallocation.
@@ -240,8 +242,8 @@ class MemAllocatorTy {
 
   public:
     /// Add allocation information to the map
-    void add(void *Ptr, void *Base, size_t Size, int32_t Kind,
-             bool InPool = false, bool ImplicitArg = false);
+    void add(void *Ptr, void *Base, size_t ReqSize, size_t AllocSize,
+             int32_t Kind, bool InPool = false, bool ImplicitArg = false);
 
     /// Remove allocation information for the given memory location
     bool remove(void *Ptr, MemAllocInfoTy *Removed = nullptr);
@@ -265,7 +267,7 @@ class MemAllocatorTy {
       --I;
       bool Ret = (uintptr_t)I->first <= (uintptr_t)Ptr &&
                  (uintptr_t)Ptr + (uintptr_t)Size <=
-                     (uintptr_t)I->first + (uintptr_t)I->second.Size;
+                     (uintptr_t)I->first + (uintptr_t)I->second.ReqSize;
       return Ret;
     }
 
@@ -307,6 +309,59 @@ class MemAllocatorTy {
   // hondling the Mtx lock
   Error deallocLocked(void *Ptr);
 
+  /// Allocate memory from L0 GPU RT
+  Expected<void *> allocFromL0(size_t Size, size_t Align, int32_t Kind);
+  /// Deallocate memory from L0 GPU RT
+  Error deallocFromL0(void *Ptr);
+
+  /// We use over-allocation workaround to support target pointer with
+  /// offset, and positive "ActiveSize" is specified in such cases to
+  /// correct debug logging.
+  Expected<void *> allocFromL0AndLog(size_t Size, size_t Align, int32_t Kind,
+                                     size_t ActiveSize = 0) {
+    auto MemOrErr = allocFromL0(Size, Align, Kind);
+    if (!MemOrErr)
+      return MemOrErr;
+    size_t LoggedSize = ActiveSize ? ActiveSize : Size;
+    log(LoggedSize, Size, Kind);
+    return MemOrErr;
+  }
+
+  /// Log memory allocation/deallocation
+  void log(size_t ReqSize, size_t Size, int32_t Kind, bool Pool = false) {
+    if (Kind < 0 || Kind >= MaxMemKind)
+      return; // Stat is disabled
+
+    auto &ST = Stats[Kind];
+    int32_t I = Pool ? 1 : 0;
+    if (ReqSize > 0) {
+      ST.Requested[I] += ReqSize;
+      ST.Allocated[I] += Size;
+      ST.InUse[I] += Size;
+      ST.NumAllocs[I]++;
+    } else {
+      ST.Freed[I] += Size;
+      ST.InUse[I] -= Size;
+    }
+    ST.PeakUse[I] = (std::max)(ST.PeakUse[I], ST.InUse[I]);
+  }
+
+  /// Perform copy operation
+  Error enqueueMemCopy(void *Dst, const void *Src, size_t Size);
+  /// Perform memory fill operation
+  Error enqueueMemSet(void *Dst, int8_t Value, size_t Size);
+
+  /// Allocate memory with the specified information from a memory pool
+  Expected<void *> allocFromPool(size_t Size, size_t Align, int32_t Kind,
+                                 intptr_t Offset, bool UserAlloc,
+                                 bool DevMalloc, uint32_t MemAdvice,
+                                 AllocOptionTy AllocOpt);
+  /// Deallocate memory from memory pool
+  Error deallocFromPool(void *Ptr) {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    return deallocLocked(Ptr);
+  }
+
 public:
   MemAllocatorTy() : MaxAllocSize(std::numeric_limits<uint64_t>::max()) {}
 
@@ -316,32 +371,23 @@ public:
   MemAllocatorTy &operator=(const MemAllocatorTy &&) = delete;
   ~MemAllocatorTy() {}
 
-  /// Release resources and report statistics if requested
-  Error deinit();
-
-  /// Allocator only supports host memory
-  bool supportsHostMem() { return IsHostMem; }
-
   Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option);
   Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option);
   void updateMaxAllocSize(L0DeviceTy &L0Device);
 
-  /// Allocate memory from L0 GPU RT. We use over-allocation workaround
-  /// to support target pointer with offset, and positive "ActiveSize" is
-  /// specified in such cases for correct debug logging.
-  Expected<void *> allocL0(size_t Size, size_t Align, int32_t Kind,
-                           size_t ActiveSize = 0, bool Logging = true);
+  /// Release resources and report statistics if requested
+  Error deinit();
 
   /// Allocate memory with the specified information from a memory pool
   Expected<void *> alloc(size_t Size, size_t Align, int32_t Kind,
                          intptr_t Offset, bool UserAlloc, bool DevMalloc,
-                         uint32_t MemAdvice, AllocOptionTy AllocOpt);
+                         uint32_t MemAdvice, AllocOptionTy AllocOpt) {
+    return allocFromPool(Size, Align, Kind, Offset, UserAlloc, DevMalloc,
+                         MemAdvice, AllocOpt);
+  }
 
   /// Deallocate memory
-  Error dealloc(void *Ptr) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    return deallocLocked(Ptr);
-  }
+  Error dealloc(void *Ptr) { return deallocFromPool(Ptr); }
 
   /// Check if the given memory location and offset belongs to any allocated
   /// memory
@@ -368,32 +414,6 @@ public:
       Ret |= ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
     return Ret;
   }
-
-  /// Log memory allocation/deallocation
-  void log(size_t ReqSize, size_t Size, int32_t Kind, bool Pool = false) {
-    if (Kind < 0 || Kind >= MaxMemKind)
-      return; // Stat is disabled
-
-    auto &ST = Stats[Kind];
-    int32_t I = Pool ? 1 : 0;
-    if (ReqSize > 0) {
-      ST.Requested[I] += ReqSize;
-      ST.Allocated[I] += Size;
-      ST.InUse[I] += Size;
-      ST.NumAllocs[I]++;
-    } else {
-      ST.Freed[I] += Size;
-      ST.InUse[I] -= Size;
-    }
-    ST.PeakUse[I] = (std::max)(ST.PeakUse[I], ST.InUse[I]);
-  }
-
-  /// Perform copy operation
-  Error enqueueMemCopy(void *Dst, const void *Src, size_t Size);
-
-  /// Perform memory fill operation
-  Error enqueueMemSet(void *Dst, int8_t Value, size_t Size);
-
 }; /// MemAllocatorTy
 
 // simple generic wrapper to reuse objects
