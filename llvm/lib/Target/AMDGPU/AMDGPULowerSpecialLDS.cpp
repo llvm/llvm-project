@@ -18,7 +18,6 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
@@ -33,6 +32,8 @@ using namespace AMDGPU;
 
 namespace {
 
+// If GV is also used directly by other kernels, create a new GV
+// used only by this kernel and its function.
 static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
                                            Function *KF) {
   bool NeedsReplacement = false;
@@ -64,10 +65,10 @@ static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
   return NewGV;
 }
 
+// Write the specified address into metadata where it can be retrieved by
+// the assembler. Format is a half open range, [Address Address+1)
 static void recordLDSAbsoluteAddress(Module *M, GlobalVariable *GV,
                                      uint32_t Address) {
-  // Write the specified address into metadata where it can be retrieved by
-  // the assembler. Format is a half open range, [Address Address+1)
   LLVMContext &Ctx = M->getContext();
   auto *IntTy = M->getDataLayout().getIntPtrType(Ctx, AMDGPUAS::LOCAL_ADDRESS);
   auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address));
@@ -83,7 +84,8 @@ template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
   return {std::move(V)};
 }
 
-bool lowerSpecialLDSVariables(
+// Main utility function for special LDS variables lowering.
+static bool lowerSpecialLDSVariables(
     Module &M, LDSUsesInfoTy &LDSUsesInfo,
     VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
   bool Changed = false;
@@ -172,7 +174,7 @@ bool lowerSpecialLDSVariables(
   return Changed;
 }
 
-bool runLowerSpecialLDS(Module &M) {
+static bool runLowerSpecialLDS(Module &M) {
   CallGraph CG = CallGraph(M);
   bool Changed = false;
   Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
@@ -205,6 +207,7 @@ public:
   AMDGPULowerSpecialLDSLegacy() : ModulePass(ID) {}
   bool runOnModule(Module &M) override;
 };
+
 } // namespace
 
 char AMDGPULowerSpecialLDSLegacy::ID = 0;
