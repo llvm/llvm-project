@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Target.h"
+#include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
@@ -5270,4 +5271,20 @@ void Target::ClearSectionLoadList() { GetSectionLoadList().Clear(); }
 
 void Target::DumpSectionLoadList(Stream &s) {
   GetSectionLoadList().Dump(s, this);
+}
+
+void Target::NotifyBreakpointChanged(Breakpoint &bp,
+                                     lldb::BreakpointEventType eventKind) {
+  if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged)) {
+    std::shared_ptr<Breakpoint::BreakpointEventData> data_sp =
+        std::make_shared<Breakpoint::BreakpointEventData>(
+            eventKind, bp.shared_from_this());
+    BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data_sp);
+  }
+}
+
+void Target::NotifyBreakpointChanged(
+    Breakpoint &bp, const lldb::EventDataSP &breakpoint_data_sp) {
+  if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
+    BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
 }

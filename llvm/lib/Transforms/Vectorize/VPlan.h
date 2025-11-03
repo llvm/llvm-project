@@ -939,7 +939,7 @@ class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
 public:
-  VPIRMetadata() {}
+  VPIRMetadata() = default;
 
   /// Adds metatadata that can be preserved from the original instruction
   /// \p I.
@@ -950,12 +950,9 @@ public:
   VPIRMetadata(Instruction &I, LoopVersioning *LVer);
 
   /// Copy constructor for cloning.
-  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
+  VPIRMetadata(const VPIRMetadata &Other) = default;
 
-  VPIRMetadata &operator=(const VPIRMetadata &Other) {
-    Metadata = Other.Metadata;
-    return *this;
-  }
+  VPIRMetadata &operator=(const VPIRMetadata &Other) = default;
 
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
@@ -1107,14 +1104,15 @@ public:
         VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, DebugLoc DL = DebugLoc::getUnknown(),
-                const Twine &Name = "");
+                const VPIRFlags &Flags, const VPIRMetadata &MD = {},
+                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPInstruction *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
-    auto *New = new VPInstruction(Opcode, Operands, *this, getDebugLoc(), Name);
+    auto *New =
+        new VPInstruction(Opcode, Operands, *this, *this, getDebugLoc(), Name);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
@@ -1196,7 +1194,14 @@ public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, const VPIRFlags &Flags, DebugLoc DL,
                         const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, DL, Name), ResultTy(ResultTy) {}
+      : VPInstruction(Opcode, Operands, Flags, {}, DL, Name),
+        ResultTy(ResultTy) {}
+
+  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Type *ResultTy, DebugLoc DL, const VPIRFlags &Flags,
+                        const VPIRMetadata &Metadata, const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name),
+        ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
@@ -3206,6 +3211,9 @@ protected:
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
         Alignment(Alignment), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
+    assert(isa<VPVectorEndPointerRecipe>(getAddr()) ||
+           !Reverse &&
+               "Reversed acccess without VPVectorEndPointerRecipe address?");
   }
 
 public:
@@ -3977,7 +3985,7 @@ class VPIRBasicBlock : public VPBasicBlock {
         IRBB(IRBB) {}
 
 public:
-  ~VPIRBasicBlock() override {}
+  ~VPIRBasicBlock() override = default;
 
   static inline bool classof(const VPBlockBase *V) {
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
@@ -4029,7 +4037,7 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
         IsReplicator(IsReplicator) {}
 
 public:
-  ~VPRegionBlock() override {}
+  ~VPRegionBlock() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -4108,6 +4116,12 @@ public:
   }
   const VPCanonicalIVPHIRecipe *getCanonicalIV() const {
     return const_cast<VPRegionBlock *>(this)->getCanonicalIV();
+  }
+
+  /// Return the type of the canonical IV for loop regions.
+  Type *getCanonicalIVType() { return getCanonicalIV()->getScalarType(); }
+  const Type *getCanonicalIVType() const {
+    return getCanonicalIV()->getScalarType();
   }
 };
 
@@ -4387,15 +4401,25 @@ public:
   }
 
   /// Return a VPValue wrapping i1 true.
-  VPValue *getTrue() {
-    LLVMContext &Ctx = getContext();
-    return getOrAddLiveIn(ConstantInt::getTrue(Ctx));
-  }
+  VPValue *getTrue() { return getConstantInt(1, 1); }
 
   /// Return a VPValue wrapping i1 false.
-  VPValue *getFalse() {
-    LLVMContext &Ctx = getContext();
-    return getOrAddLiveIn(ConstantInt::getFalse(Ctx));
+  VPValue *getFalse() { return getConstantInt(1, 0); }
+
+  /// Return a VPValue wrapping a ConstantInt with the given type and value.
+  VPValue *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {
+    return getOrAddLiveIn(ConstantInt::get(Ty, Val, IsSigned));
+  }
+
+  /// Return a VPValue wrapping a ConstantInt with the given bitwidth and value.
+  VPValue *getConstantInt(unsigned BitWidth, uint64_t Val,
+                          bool IsSigned = false) {
+    return getConstantInt(APInt(BitWidth, Val, IsSigned));
+  }
+
+  /// Return a VPValue wrapping a ConstantInt with the given APInt value.
+  VPValue *getConstantInt(const APInt &Val) {
+    return getOrAddLiveIn(ConstantInt::get(getContext(), Val));
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
