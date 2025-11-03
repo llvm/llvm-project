@@ -3495,11 +3495,13 @@ bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
     return false;
 
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-  LLT UnmergeSrcTy = MRI.getType(MaybeUnmerge->getOperand(MaybeUnmerge->getNumOperands()-1).getReg());
+  LLT UnmergeSrcTy = MRI.getType(
+      MaybeUnmerge->getOperand(MaybeUnmerge->getNumOperands() - 1).getReg());
 
   // Ensure we only generate legal instructions post-legalizer
-  if (!IsPreLegalize && !isLegal({TargetOpcode::G_CONCAT_VECTORS, {DstTy, UnmergeSrcTy, UnmergeSrcTy}}))
-      return false;
+  if (!IsPreLegalize && !isLegal({TargetOpcode::G_CONCAT_VECTORS,
+                                  {DstTy, UnmergeSrcTy, UnmergeSrcTy}}))
+    return false;
 
   // Check that all of the operands before the midpoint come from the same
   // unmerge and are in the same order as they are used in the build_vector
@@ -3526,7 +3528,8 @@ bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
       return false;
   }
 
-  UnmergeSrc = MaybeUnmerge->getOperand(MaybeUnmerge->getNumOperands()-1).getReg();
+  UnmergeSrc =
+      MaybeUnmerge->getOperand(MaybeUnmerge->getNumOperands() - 1).getReg();
 
   return true;
 }
