@@ -33,19 +33,6 @@ define void @i65_induction_with_negative_step(ptr %dst) {
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_I65:%.*]] = phi i65 [ 0, %[[SCALAR_PH]] ], [ [[IV_I65_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[TRUNC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TRUNC]] = trunc i65 [[IV_I65]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TRUNC]]
-; CHECK-NEXT:    store i64 [[FOR]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; CHECK-NEXT:    [[IV_I65_NEXT]] = add i65 [[IV_I65]], -1
-; CHECK-NEXT:    br i1 [[ICMP]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

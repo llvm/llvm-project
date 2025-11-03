@@ -2,6 +2,7 @@
 ; bswap should be constant folded when it is passed a constant argument
 
 ; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -use-constant-int-for-fixed-length-splat -use-constant-int-for-scalable-splat -S | FileCheck %s
 
 declare i16 @llvm.bswap.i16(i16)
 
@@ -41,4 +42,20 @@ define i80 @Z() {
 ;
   %Z = call i80 @llvm.bswap.i80( i80 76151636403560493650080 )
   ret i80 %Z
+}
+
+define <4 x i32> @bswap_splat_v4i32() {
+; CHECK-LABEL: define <4 x i32> @bswap_splat_v4i32() {
+; CHECK-NEXT:    ret <4 x i32> splat (i32 16777216)
+;
+  %Z = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> splat(i32 1))
+  ret <4 x i32> %Z
+}
+
+define <vscale x 4 x i32> @bswap_splat_nxv4i32() {
+; CHECK-LABEL: define <vscale x 4 x i32> @bswap_splat_nxv4i32() {
+; CHECK-NEXT:    ret <vscale x 4 x i32> splat (i32 16777216)
+;
+  %Z = call <vscale x 4 x i32> @llvm.bswap.v4i32(<vscale x 4 x i32> splat(i32 1))
+  ret <vscale x 4 x i32> %Z
 }

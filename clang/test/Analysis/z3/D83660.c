@@ -1,4 +1,4 @@
-// RUN: Z3_SOLVER_RESULTS="SAT,SAT,SAT,SAT,UNDEF" \
+// RUN: env Z3_SOLVER_RESULTS="SAT,SAT,SAT,SAT,UNDEF" \
 // RUN: LD_PRELOAD="%llvmshlibdir/MockZ3SolverCheck%pluginext" \
 // RUN: %clang_analyze_cc1 -analyzer-constraints=z3 \
 // RUN:   -analyzer-checker=core %s -verify

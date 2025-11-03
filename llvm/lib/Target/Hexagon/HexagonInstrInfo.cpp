@@ -1554,80 +1554,93 @@ HexagonInstrInfo::expandVGatherPseudo(MachineInstr &MI) const {
   MachineBasicBlock::iterator First;
 
   switch (Opc) {
-    case Hexagon::V6_vgathermh_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermh))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgather_vscatter_mh_pseudo:
+    // This is mainly a place holder. It will be extended.
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermh))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vscattermh))
+        .add(MI.getOperand(2))
+        .add(MI.getOperand(3))
+        .add(MI.getOperand(4))
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
+  case Hexagon::V6_vgathermh_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermh))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermw_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermw))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermw_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermw))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermhw_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhw))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermhw_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhw))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermhq_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhq))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4))
-                  .add(MI.getOperand(5));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermhq_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhq))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4))
+                .add(MI.getOperand(5));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermwq_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermwq))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4))
-                  .add(MI.getOperand(5));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermwq_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermwq))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4))
+                .add(MI.getOperand(5));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
 
-    case Hexagon::V6_vgathermhwq_pseudo:
-      First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhwq))
-                  .add(MI.getOperand(2))
-                  .add(MI.getOperand(3))
-                  .add(MI.getOperand(4))
-                  .add(MI.getOperand(5));
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
-          .add(MI.getOperand(0))
-          .addImm(MI.getOperand(1).getImm())
-          .addReg(Hexagon::VTMP);
-      MBB.erase(MI);
-      return First.getInstrIterator();
+  case Hexagon::V6_vgathermhwq_pseudo:
+    First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhwq))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3))
+                .add(MI.getOperand(4))
+                .add(MI.getOperand(5));
+    BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
+        .add(MI.getOperand(0))
+        .addImm(MI.getOperand(1).getImm())
+        .addReg(Hexagon::VTMP);
+    MBB.erase(MI);
+    return First.getInstrIterator();
   }
 
   return MI.getIterator();
@@ -2804,7 +2817,9 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vL32b_nt_cur_npred_ai:
   case Hexagon::V6_vL32b_nt_tmp_pred_ai:
   case Hexagon::V6_vL32b_nt_tmp_npred_ai:
+  case Hexagon::V6_vS32Ub_npred_ai:
   case Hexagon::V6_vgathermh_pseudo:
+  case Hexagon::V6_vgather_vscatter_mh_pseudo:
   case Hexagon::V6_vgathermw_pseudo:
   case Hexagon::V6_vgathermhw_pseudo:
   case Hexagon::V6_vgathermhq_pseudo:

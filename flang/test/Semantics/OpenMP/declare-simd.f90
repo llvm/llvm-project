@@ -19,4 +19,9 @@ end
 subroutine f01
 end
 
+integer function f02
+!Ok, expect no diagnostics
+!$omp declare_simd(f02)
+end
+
 end module

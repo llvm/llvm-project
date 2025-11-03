@@ -507,7 +507,8 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
       LLVM::LLVMFunctionType::get(rewriter.getI32Type(), {ptrType},
                                   /*isVarArg=*/true);
   LLVM::LLVMFuncOp printfDecl =
-      getOrDefineFunction(moduleOp, loc, rewriter, "printf", printfType);
+      getOrDefineFunction(moduleOp, loc, rewriter, funcName, printfType);
+  printfDecl.setCConv(callingConvention);
 
   // Create the global op or find an existing one.
   LLVM::GlobalOp global = getOrCreateStringConstant(
@@ -530,7 +531,8 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
   printfArgs.push_back(stringStart);
   printfArgs.append(argsRange.begin(), argsRange.end());
 
-  LLVM::CallOp::create(rewriter, loc, printfDecl, printfArgs);
+  auto call = LLVM::CallOp::create(rewriter, loc, printfDecl, printfArgs);
+  call.setCConv(callingConvention);
   rewriter.eraseOp(gpuPrintfOp);
   return success();
 }

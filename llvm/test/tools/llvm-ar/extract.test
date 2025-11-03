@@ -1,5 +1,4 @@
 ## Test extract operation.
-# XFAIL: target={{.*}}-darwin{{.*}}
 
 # RUN: rm -rf %t && mkdir -p %t/extracted/
 
@@ -9,7 +8,7 @@
 
 # RUN: echo filea > %t/a.txt
 # RUN: echo fileb > %t/b.txt
-# RUN: llvm-ar rc %t/archive.a %t/a.txt %t/b.txt
+# RUN: llvm-ar rc --format=gnu %t/archive.a %t/a.txt %t/b.txt
 
 ## Single member:
 # RUN: cd %t/extracted && llvm-ar xv %t/archive.a a.txt | FileCheck %s --check-prefix=A

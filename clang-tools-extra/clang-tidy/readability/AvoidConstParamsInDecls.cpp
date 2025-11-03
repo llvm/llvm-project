@@ -15,9 +15,8 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
-namespace {
 
-SourceRange getTypeRange(const ParmVarDecl &Param) {
+static SourceRange getTypeRange(const ParmVarDecl &Param) {
   return {Param.getBeginLoc(), Param.getLocation().getLocWithOffset(-1)};
 }
 
@@ -38,8 +37,6 @@ findConstToRemove(const ParmVarDecl &Param,
   return tidy::utils::lexer::getQualifyingToken(
       tok::kw_const, FileRange, *Result.Context, *Result.SourceManager);
 }
-
-} // namespace
 
 void AvoidConstParamsInDecls::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

@@ -29,22 +29,18 @@ namespace support {
 namespace detail {
 template <typename T>
 struct use_integral_formatter
-    : public std::bool_constant<
-          is_one_of<T, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t,
-                    uint64_t, int, unsigned, long, unsigned long, long long,
-                    unsigned long long>::value> {};
+    : public is_one_of<T, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
+                       int64_t, uint64_t, int, unsigned, long, unsigned long,
+                       long long, unsigned long long> {};
 
 template <typename T>
-struct use_char_formatter : public std::bool_constant<std::is_same_v<T, char>> {
-};
+struct use_char_formatter : public std::is_same<T, char> {};
 
 template <typename T>
-struct is_cstring
-    : public std::bool_constant<is_one_of<T, char *, const char *>::value> {};
+struct is_cstring : public is_one_of<T, char *, const char *> {};
 
 template <typename T>
-struct use_string_formatter
-    : public std::bool_constant<std::is_convertible_v<T, llvm::StringRef>> {};
+struct use_string_formatter : public std::is_convertible<T, llvm::StringRef> {};
 
 template <typename T>
 struct use_pointer_formatter
@@ -52,8 +48,7 @@ struct use_pointer_formatter
 };
 
 template <typename T>
-struct use_double_formatter
-    : public std::bool_constant<std::is_floating_point_v<T>> {};
+struct use_double_formatter : public std::is_floating_point<T> {};
 
 class HelperFunctions {
 protected:
@@ -266,7 +261,7 @@ template <> struct format_provider<bool> {
                   .Case("y", B ? "yes" : "no")
                   .CaseLower("D", B ? "1" : "0")
                   .Case("T", B ? "TRUE" : "FALSE")
-                  .Cases("t", "", B ? "true" : "false")
+                  .Cases({"t", ""}, B ? "true" : "false")
                   .Default(B ? "1" : "0");
   }
 };

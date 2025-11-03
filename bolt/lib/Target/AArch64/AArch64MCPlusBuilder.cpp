@@ -157,6 +157,10 @@ public:
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
   MCPhysReg getFramePointer() const override { return AArch64::FP; }
 
+  bool isBreakpoint(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::BRK;
+  }
+
   bool isPush(const MCInst &Inst) const override {
     return isStoreToStack(Inst);
   };
@@ -242,6 +246,28 @@ public:
     default:
       return std::nullopt;
     }
+  }
+
+  bool isPSignOnLR(const MCInst &Inst) const override {
+    std::optional<MCPhysReg> SignReg = getSignedReg(Inst);
+    return SignReg && *SignReg == AArch64::LR;
+  }
+
+  bool isPAuthOnLR(const MCInst &Inst) const override {
+    // LDR(A|B) should not be covered.
+    bool IsChecked;
+    std::optional<MCPhysReg> AuthReg =
+        getWrittenAuthenticatedReg(Inst, IsChecked);
+    return !IsChecked && AuthReg && *AuthReg == AArch64::LR;
+  }
+
+  bool isPAuthAndRet(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::RETAA ||
+           Inst.getOpcode() == AArch64::RETAB ||
+           Inst.getOpcode() == AArch64::RETAASPPCi ||
+           Inst.getOpcode() == AArch64::RETABSPPCi ||
+           Inst.getOpcode() == AArch64::RETAASPPCr ||
+           Inst.getOpcode() == AArch64::RETABSPPCr;
   }
 
   std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const override {
@@ -1274,7 +1300,7 @@ public:
     AArch64_AM::ShiftExtendType ExtendType =
         AArch64_AM::getArithExtendType(OperandExtension);
     if (ShiftVal != 2) {
-      // TODO: Handle the patten where ShiftVal != 2.
+      // TODO: Handle the pattern where ShiftVal != 2.
       // The following code sequence below has no shift amount,
       // the range could be 0 to 4.
       // The pattern comes from libc, it occurs when the binary is static.
@@ -1604,7 +1630,7 @@ public:
   int getUncondBranchEncodingSize() const override { return 28; }
 
   // This helper function creates the snippet of code that compares a register
-  // RegNo with an immedaite Imm, and jumps to Target if they are equal.
+  // RegNo with an immediate Imm, and jumps to Target if they are equal.
   // cmp RegNo, #Imm
   // b.eq Target
   // where cmp is an alias for subs, which results in the code below:
@@ -1626,7 +1652,7 @@ public:
   }
 
   // This helper function creates the snippet of code that compares a register
-  // RegNo with an immedaite Imm, and jumps to Target if they are not equal.
+  // RegNo with an immediate Imm, and jumps to Target if they are not equal.
   // cmp RegNo, #Imm
   // b.ne Target
   // where cmp is an alias for subs, which results in the code below:
@@ -2131,7 +2157,7 @@ public:
 
     --I;
     Address -= 4;
-    if (I->getOpcode() != AArch64::ADRP ||
+    if (I != Begin || I->getOpcode() != AArch64::ADRP ||
         MCPlus::getNumPrimeOperands(*I) < 2 || !I->getOperand(0).isReg() ||
         !I->getOperand(1).isImm() || I->getOperand(0).getReg() != AArch64::X16)
       return 0;

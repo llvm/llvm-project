@@ -7,7 +7,7 @@ program main
   real(8) :: a(256), b(256)
   N = 256
 
-  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
+  !WARNING: `DISTRIBUTE` must be dynamically enclosed in a `TEAMS` region.
   !$omp distribute simd
   do i = 1, N
      a(i) = 3.14d0

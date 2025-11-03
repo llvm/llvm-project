@@ -66,22 +66,9 @@ define float @minloopattr(ptr nocapture readonly %arg) #0 {
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP4]])
-; CHECK-NEXT:    br label [[OUT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[SCALAR_PH:%.*]] ]
-; CHECK-NEXT:    [[T2:%.*]] = phi float [ [[T6:%.*]], [[LOOP]] ], [ [[T]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, ptr [[ARG]], i64 [[T1]]
-; CHECK-NEXT:    [[T4:%.*]] = load float, ptr [[T3]], align 4
-; CHECK-NEXT:    [[T5:%.*]] = fcmp olt float [[T2]], [[T4]]
-; CHECK-NEXT:    [[T6]] = select i1 [[T5]], float [[T2]], float [[T4]]
-; CHECK-NEXT:    [[T7]] = add i64 [[T1]], 1
-; CHECK-NEXT:    [[T8:%.*]] = icmp eq i64 [[T7]], 65537
-; CHECK-NEXT:    br i1 [[T8]], label [[OUT]], label [[LOOP]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[T6_LCSSA:%.*]] = phi float [ [[T6]], [[LOOP]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret float [[T6_LCSSA]]
+; CHECK-NEXT:    ret float [[TMP6]]
 ;
 top:
   %t = load float, ptr %arg

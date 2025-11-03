@@ -84,7 +84,7 @@ public:
                            const Function *Callee) const override;
 
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
-                             const ArrayRef<Type *> &Types) const override;
+                             ArrayRef<Type *> Types) const override;
 
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const override;

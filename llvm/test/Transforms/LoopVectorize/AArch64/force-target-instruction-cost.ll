@@ -18,21 +18,8 @@ define double @test_reduction_costs() {
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_1:.*]]
-; CHECK:       [[LOOP_1]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[R_1:%.*]] = phi double [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[R_1_NEXT:%.*]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[R_2:%.*]] = phi double [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[R_2_NEXT:%.*]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[R_1_NEXT]] = fadd double [[R_1]], 3.000000e+00
-; CHECK-NEXT:    [[R_2_NEXT]] = fadd double [[R_2]], 9.000000e+00
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_1]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R_1_NEXT_LCSSA:%.*]] = phi double [ [[R_1_NEXT]], %[[LOOP_1]] ], [ [[TMP0]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[R_2_NEXT_LCSSA:%.*]] = phi double [ [[R_2_NEXT]], %[[LOOP_1]] ], [ [[TMP1]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[DIV:%.*]] = fmul double [[R_1_NEXT_LCSSA]], [[R_2_NEXT_LCSSA]]
+; CHECK-NEXT:    [[DIV:%.*]] = fmul double [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
 entry:
@@ -378,8 +365,8 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = alloca i8, i64 0, align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x ptr> [[TMP7]], ptr [[TMP6]], i32 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr ptr, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x ptr> [[TMP8]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

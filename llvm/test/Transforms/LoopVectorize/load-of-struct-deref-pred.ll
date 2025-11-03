@@ -30,28 +30,6 @@ define void @accesses_to_struct_dereferenceable(ptr noalias %dst) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    [[D:%.*]] = load i32, ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[D]], 0
-; CHECK-NEXT:    br i1 [[CMP3]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @foo, i64 0, i32 0, i64 [[IV]]
-; CHECK-NEXT:    [[L_A:%.*]] = load i32, ptr [[GEP_A]], align 4
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       if.else:
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @foo, i64 0, i32 1, i64 [[IV]]
-; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[TMP_0:%.*]] = phi i32 [ [[L_A]], [[IF_THEN]] ], [ [[L_B]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store i32 [[TMP_0]], ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 32000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -265,29 +243,6 @@ define void @accesses_to_struct_may_not_be_dereferenceable_access_size(ptr noali
 ; CHECK-NEXT:    br i1 [[TMP28]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    [[D:%.*]] = load i32, ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[D]], 0
-; CHECK-NEXT:    br i1 [[CMP3]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @foo, i64 0, i32 0, i64 [[IV]]
-; CHECK-NEXT:    [[L_A:%.*]] = load i32, ptr [[GEP_A]], align 4
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       if.else:
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @foo, i64 0, i32 1, i64 [[IV]]
-; CHECK-NEXT:    [[L_B:%.*]] = load i64, ptr [[GEP_B]], align 4
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[L_B]] to i32
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[TMP_0:%.*]] = phi i32 [ [[L_A]], [[IF_THEN]] ], [ [[T]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store i32 [[TMP_0]], ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 32000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

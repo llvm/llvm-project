@@ -489,13 +489,6 @@ OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
   SmallVector<OpFoldResult, 4> foldResults;
   LDBG() << "Trying to fold: "
          << OpWithFlags(op, OpPrintingFlags().skipRegions());
-  if (op->getName().getStringRef() == "vector.extract") {
-    Operation *parent = op->getParentOp();
-    while (parent && parent->getName().getStringRef() != "spirv.func")
-      parent = parent->getParentOp();
-    if (parent)
-      parent->dump();
-  }
   if (failed(op->fold(foldResults)))
     return cleanupFailure();
 

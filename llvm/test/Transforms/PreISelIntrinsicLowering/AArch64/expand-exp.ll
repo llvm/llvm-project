@@ -39,5 +39,4 @@ declare <4 x float> @llvm.exp.v4f32(<4 x float>) #0
 declare <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float>) #0
 
 ; CHECK: attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK-NEXT: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

@@ -8,15 +8,19 @@ include(FindPrefixFromConfig)
 # the usual CMake convention seems to be ${Project}Targets.cmake.
 set(CLANG_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/clang" CACHE STRING
   "Path for CMake subdirectory for Clang (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/clang')")
-# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-set(clang_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
 
 # Keep this in sync with llvm/cmake/CMakeLists.txt!
 set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
   "Path for CMake subdirectory for LLVM (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/llvm')")
 # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_cmake_builddir "${LLVM_LIBRARY_DIR}")
-set(llvm_cmake_builddir "${llvm_cmake_builddir}/cmake/llvm")
+string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_builddir "${LLVM_LIBRARY_DIR}")
+set(llvm_cmake_builddir "${llvm_builddir}/cmake/llvm")
+if(CLANG_BUILT_STANDALONE)
+  # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+  set(clang_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
+else()
+  set(clang_cmake_builddir "${llvm_builddir}/cmake/clang")
+endif()
 
 get_property(CLANG_EXPORTS GLOBAL PROPERTY CLANG_EXPORTS)
 export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)
