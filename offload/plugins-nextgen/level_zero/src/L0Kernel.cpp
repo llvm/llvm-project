@@ -17,17 +17,6 @@
 
 namespace llvm::omp::target::plugin {
 
-Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
-                             uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                             KernelArgsTy &KernelArgs,
-                             KernelLaunchParamsTy LaunchParams,
-                             AsyncInfoWrapperTy &AsyncInfoWrapper) const {
-
-  auto &l0Device = L0DeviceTy::makeL0Device(GenericDevice);
-  return runTargetTeamRegion(l0Device, KernelArgs, std::move(LaunchParams),
-                             AsyncInfoWrapper);
-}
-
 Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   const auto *KernelName = getName();
 
@@ -42,8 +31,7 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
                            DeviceImageTy &Image) {
   auto &Program = L0ProgramTy::makeL0Program(Image);
 
-  Error Err = buildKernel(Program);
-  if (Err)
+  if (auto Err = buildKernel(Program))
     return Err;
   Program.addKernel(this);
 
@@ -442,10 +430,14 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
   return Plugin::success();
 }
 
-Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
-                                      KernelArgsTy &KernelArgs,
-                                      KernelLaunchParamsTy LaunchParams,
-                                      __tgt_async_info *AsyncInfo) const {
+Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
+                             uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                             KernelArgsTy &KernelArgs,
+                             KernelLaunchParamsTy LaunchParams,
+                             AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+  auto &l0Device = L0DeviceTy::makeL0Device(GenericDevice);
+  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+
   // Libomptarget can pass negative NumTeams and ThreadLimit now after
   // introducing __tgt_target_kernel. This happens only when we have valid
   // LoopDesc and the region is not a teams region.
@@ -461,15 +453,13 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
     NumTeams = 0;
   if (ThreadLimit < 0)
     ThreadLimit = 0;
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Executing a kernel " DPxMOD "...\n", DPxPTR(zeKernel));
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId, "Launching kernel " DPxMOD "...\n",
+       DPxPTR(zeKernel));
 
   auto &Plugin = l0Device.getPlugin();
-  auto &Device = Plugin.getDeviceFromId(DeviceId);
-
-  auto *IdStr = Device.getZeIdCStr();
+  auto *IdStr = l0Device.getZeIdCStr();
   auto &Options = LevelZeroPluginTy::getOptions();
-  bool IsAsync = AsyncInfo && Device.asyncEnabled();
+  bool IsAsync = AsyncInfo && l0Device.asyncEnabled();
   if (IsAsync && !AsyncInfo->Queue) {
     AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());
     if (!AsyncInfo->Queue)
@@ -496,7 +486,7 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
       GroupSizes, GroupCounts, AllowCooperative);
 
   if (!GroupParamsReused) {
-    if (auto Err = getGroupsShape(Device, NumTeams, ThreadLimit, GroupSizes,
+    if (auto Err = getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes,
                                   GroupCounts, LoopDesc, AllowCooperative))
       return Err;
     KernelPR.cacheGroupParams(static_cast<TgtNDRangeDescTy *>(LoopDesc),
@@ -526,12 +516,12 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
   // Set Kernel Indirect flags
   auto &PrevFlags = KernelPR.IndirectAccessFlags;
   ze_kernel_indirect_access_flags_t Flags = 0;
-  Flags |= Device.getMemAllocator(TARGET_ALLOC_HOST).getIndirectFlags();
-  Flags |= Device.getMemAllocator(TARGET_ALLOC_DEVICE).getIndirectFlags();
+  Flags |= l0Device.getMemAllocator(TARGET_ALLOC_HOST).getIndirectFlags();
+  Flags |= l0Device.getMemAllocator(TARGET_ALLOC_DEVICE).getIndirectFlags();
 
   if (PrevFlags != Flags) {
     // Combine with common access flags
-    const auto FinalFlags = Device.getIndirectFlags() | Flags;
+    const auto FinalFlags = l0Device.getIndirectFlags() | Flags;
     CALL_ZE_RET_ERROR(zeKernelSetIndirectAccess, getZeKernel(), FinalFlags);
     DP("Setting indirect access flags " DPxMOD "\n", DPxPTR(FinalFlags));
     PrevFlags = Flags;
@@ -544,20 +534,20 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
 
   ze_command_list_handle_t CmdList = nullptr;
   ze_command_queue_handle_t CmdQueue = nullptr;
-  const bool UseImmCmdList = Device.useImmForCompute();
+  const bool UseImmCmdList = l0Device.useImmForCompute();
 
   if (UseImmCmdList) {
-    auto CmdListOrErr = Device.getImmCmdList();
+    auto CmdListOrErr = l0Device.getImmCmdList();
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
     CmdList = *CmdListOrErr;
     // Command queue is not used with immediate command list
   } else {
-    auto CmdListOrErr = Device.getCmdList();
+    auto CmdListOrErr = l0Device.getCmdList();
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
     CmdList = *CmdListOrErr;
-    auto CmdQueueOrErr = Device.getCmdQueue();
+    auto CmdQueueOrErr = l0Device.getCmdQueue();
     if (!CmdQueueOrErr)
       return CmdQueueOrErr.takeError();
     CmdQueue = *CmdQueueOrErr;
@@ -566,7 +556,7 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
   if (UseImmCmdList) {
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Using immediate command list for kernel submission.\n");
-    auto EventOrError = Device.getEvent();
+    auto EventOrError = l0Device.getEvent();
     if (!EventOrError)
       return EventOrError.takeError();
     ze_event_handle_t Event = *EventOrError;
@@ -596,7 +586,7 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
       AsyncQueue->KernelEvent = Event;
     } else {
       CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);
-      if (auto Err = Device.releaseEvent(Event))
+      if (auto Err = l0Device.releaseEvent(Event))
         return Err;
     }
   } else {
@@ -609,14 +599,14 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
                         &GroupCounts, Event, 0, nullptr);
     KernelLock.unlock();
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, Device.getMutex(),
-                          CmdQueue, 1, &CmdList, nullptr);
+    CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists,
+                          l0Device.getMutex(), CmdQueue, 1, &CmdList, nullptr);
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
     CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
     if (Event) {
-      if (auto Err = Device.releaseEvent(Event))
+      if (auto Err = l0Device.releaseEvent(Event))
         return Err;
     }
   }

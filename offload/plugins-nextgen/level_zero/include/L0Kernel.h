@@ -110,10 +110,6 @@ class L0KernelTy : public GenericKernelTy {
   KernelPropertiesTy Properties;
   KernelPropertiesTy &getProperties() { return Properties; }
 
-  Error runTargetTeamRegion(L0DeviceTy &Device, KernelArgsTy &KernelArgs,
-                            KernelLaunchParamsTy LaunchParams,
-                            __tgt_async_info *AsyncInfo) const;
-
   void decideKernelGroupArguments(L0DeviceTy &Device, uint32_t NumTeams,
                                   uint32_t ThreadLimit,
                                   TgtNDRangeDescTy *LoopLevels,

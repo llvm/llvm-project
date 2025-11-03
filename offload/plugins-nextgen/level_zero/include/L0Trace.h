@@ -41,15 +41,6 @@
       Rc = Fn(__VA_ARGS__);                                                    \
   } while (0)
 
-#define CALL_ZE_RC(Rc, Fn, ...)                                                \
-  do {                                                                         \
-    CALL_ZE(Rc, Fn, __VA_ARGS__);                                              \
-    if (Rc != ZE_RESULT_SUCCESS) {                                             \
-      DP("Error: %s:%s failed with error code %d, %s\n", __func__, #Fn, Rc,    \
-         getZeErrorName(Rc));                                                  \
-    }                                                                          \
-  } while(0)
-
 /// For non-thread-safe functions
 #define CALL_ZE_RET_MTX(Ret, Fn, Mtx, ...)                                     \
   do {                                                                         \
@@ -64,12 +55,6 @@
     }                                                                          \
   } while (0)
 
-#define CALL_ZE_RET_FAIL_MTX(Fn, Mtx, ...)                                     \
-  CALL_ZE_RET_MTX(OFFLOAD_FAIL, Fn, Mtx, __VA_ARGS__)
-#define CALL_ZE_RET_NULL_MTX(Fn, Mtx, ...)                                     \
-  CALL_ZE_RET_MTX(NULL, Fn, Mtx, __VA_ARGS__)
-#define CALL_ZE_RET_ZERO_MTX(Fn, Mtx, ...)                                     \
-  CALL_ZE_RET_MTX(0, Fn, Mtx, __VA_ARGS__)
 #define CALL_ZE_RET_ERROR_MTX(Fn, Mtx, ...)                                   \
   CALL_ZE_RET_MTX(                                                            \
     Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",          \
@@ -88,31 +73,10 @@
     }                                                                          \
   } while (0)
 
-#define CALL_ZE_RET_FAIL(Fn, ...) CALL_ZE_RET(OFFLOAD_FAIL, Fn, __VA_ARGS__)
-#define CALL_ZE_RET_NULL(Fn, ...) CALL_ZE_RET(NULL, Fn, __VA_ARGS__)
-#define CALL_ZE_RET_ZERO(Fn, ...) CALL_ZE_RET(0, Fn, __VA_ARGS__)
-#define CALL_ZE_RET_VOID(Fn, ...) CALL_ZE_RET(, Fn, __VA_ARGS__)
 #define CALL_ZE_RET_ERROR(Fn, ...)                                             \
   CALL_ZE_RET(                                                                 \
     Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",           \
     STR(Fn), rc, getZeErrorName(rc)), Fn, __VA_ARGS__)
-
-
-
-#define CALL_ZE_RET_FAIL_MSG(Fn, Dev, ...)                                     \
-  do {                                                                         \
-    ze_result_t rc;                                                            \
-    CALL_ZE(rc, Fn, __VA_ARGS__);                                              \
-    if (rc != ZE_RESULT_SUCCESS) {                                             \
-      DP("Error: %s:%s failed with error code %d, %s\n", __func__, #Fn, rc,    \
-         getZeErrorName(rc));                                                  \
-      const char *err_str = nullptr;                                           \
-      rc = zeDriverGetLastErrorDescription(                                    \
-          Dev.getDriverHandle(), &err_str);                                    \
-      fprintf(stderr, "Error: %s:%s failed with %s\n", __func__, #Fn,          \
-              err_str);                                                        \
-    }                                                                          \
-  } while (0)
 
 #define CALL_ZE_EXIT_FAIL(Fn, ...)                                             \
   do {                                                                         \
@@ -132,7 +96,6 @@
     if (rc != ZE_RESULT_SUCCESS)                                               \
       return Ret;                                                              \
   } while (0)
-
 
 #define CALL_ZE_EXT_RET_ERROR(Device, Name, ...)                               \
   CALL_ZE_EXT_SILENT_RET(Device,                                               \
