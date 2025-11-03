@@ -294,6 +294,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"atomicaddf", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddi", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddl", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddr2",
+     &I::genAtomicAddR2,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
     {"atomicandi", &I::genAtomicAnd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomiccasd",
      &I::genAtomicCas,
@@ -3119,12 +3123,49 @@ static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
 mlir::Value IntrinsicLibrary::genAtomicAdd(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-
   mlir::LLVM::AtomicBinOp binOp =
       mlir::isa<mlir::IntegerType>(args[1].getType())
           ? mlir::LLVM::AtomicBinOp::add
           : mlir::LLVM::AtomicBinOp::fadd;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicAddR2(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  mlir::Value a = fir::getBase(args[0]);
+
+  if (mlir::isa<fir::BaseBoxType>(a.getType())) {
+    a = fir::BoxAddrOp::create(builder, loc, a);
+  }
+
+  auto loc = builder.getUnknownLoc();
+  auto f16Ty = builder.getF16Type();
+  auto i32Ty = builder.getI32Type();
+  auto vecF16Ty = mlir::VectorType::get({2}, f16Ty);
+  mlir::Type idxTy = builder.getIndexType();
+  auto f16RefTy = fir::ReferenceType::get(f16Ty);
+  auto zero = builder.createIntegerConstant(loc, idxTy, 0);
+  auto one = builder.createIntegerConstant(loc, idxTy, 1);
+  auto v1Coord = fir::CoordinateOp::create(builder, loc, f16RefTy,
+                                           fir::getBase(args[1]), zero);
+  auto v2Coord = fir::CoordinateOp::create(builder, loc, f16RefTy,
+                                           fir::getBase(args[1]), one);
+  auto v1 = fir::LoadOp::create(builder, loc, v1Coord);
+  auto v2 = fir::LoadOp::create(builder, loc, v2Coord);
+  mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecF16Ty);
+  mlir::Value vec1 = mlir::LLVM::InsertElementOp::create(
+      builder, loc, undef, v1, builder.createIntegerConstant(loc, i32Ty, 0));
+  mlir::Value vec2 = mlir::LLVM::InsertElementOp::create(
+      builder, loc, vec1, v2, builder.createIntegerConstant(loc, i32Ty, 1));
+  auto res = genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, vec2);
+  auto i32VecTy = mlir::VectorType::get({1}, i32Ty);
+  mlir::Value vecI32 =
+      mlir::vector::BitCastOp::create(builder, loc, i32VecTy, res);
+  return mlir::vector::ExtractOp::create(builder, loc, vecI32,
+                                         mlir::ArrayRef<int64_t>{0});
 }
 
 mlir::Value IntrinsicLibrary::genAtomicSub(mlir::Type resultType,
