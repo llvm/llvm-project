@@ -1851,10 +1851,8 @@ NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
 
   auto S = Scopes.find(ID);
   if (S == Scopes.end()) {
-    // Get the actual scope name from LLVMContext for a better error message
-    std::string scopeName = "<unknown>";
-    if (auto name = Context->getSyncScopeName(ID))
-      scopeName = name->str();
+    auto scopeName = Context->getSyncScopeName(ID);
+    assert(scopeName.has_value() && "Scope name must exist.");
 
     // Build list of supported syncscopes programmatically
     SmallVector<StringRef> supportedScopes;
@@ -1866,7 +1864,8 @@ NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
     reportFatalUsageError(
         formatv("NVPTX backend does not support syncscope \"{0}\" (ID={1}).\n"
                 "Supported syncscopes are: {2}.",
-                scopeName, int(ID), llvm::join(supportedScopes, ", ")));
+                scopeName.value(), int(ID),
+                make_range(supportedScopes.begin(), supportedScopes.end())));
   }
   return S->second;
 }
