@@ -200,8 +200,17 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
 /// from 0 to \p N more iterations can possibly execute.  Among such cases in
 /// the original loop (with loop probability \p OriginalLoopProb), what is the
 /// probability of executing at least one more iteration?
+///
+/// If \p OriginalLoopProb is 1, then the original loop was somehow determined
+/// to be always infinite.  Runtime loop unrolling should be impossible for that
+/// case.  What is infinity % UnrollCount?  But we might have bad profile data.
+/// In that case, we arbitrarily choose to keep the probability at 1 throughout
+/// the remainder loop.
 static BranchProbability
 probOfNextInRemainder(BranchProbability OriginalLoopProb, unsigned N) {
+  if (OriginalLoopProb == BranchProbability::getOne())
+    return BranchProbability::getOne();
+
   // Each of these variables holds the original loop's probability that the
   // number of iterations it will execute is some m in the specified range.
   BranchProbability ProbOne = OriginalLoopProb;                // 1 <= m
