@@ -852,8 +852,8 @@ static bool VersionLoop(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 
   // Check for overflow by calculating the new tripcount using
   // umul_with_overflow and then checking if it overflowed.
-  BranchInst *Br = cast<BranchInst>(CheckBlock->getTerminator());
-  if (!Br->isConditional())
+  BranchInst *Br = dyn_cast<BranchInst>(CheckBlock->getTerminator());
+  if (!Br || !Br->isConditional())
     return false;
   if (!match(Br->getCondition(), m_Zero()))
     return false;
@@ -877,13 +877,8 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
   }
 
-  // TODO: don't bother widening IV's if know that they
-  // can't overflow. If they can overflow opt for versioning
-  // the loop and remove requirement to truncate when using
-  // IV in the loop
-  if (VersionLoopsOverWiden)
-    if (VersionLoop(FI, DT, LI, SE, LAI))
-      return true;
+  if (VersionLoopsOverWiden && VersionLoop(FI, DT, LI, SE, LAI))
+    return true;
 
   LLVM_DEBUG(dbgs() << "Try widening the IVs\n");
   Module *M = FI.InnerLoop->getHeader()->getParent()->getParent();
@@ -958,7 +953,6 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
 
   // Check if we can widen the induction variables to avoid overflow checks.
-  // TODO: widening doesn't remove overflow checks in practice
   bool CanFlatten = CanWidenIV(FI, DT, LI, SE, AC, TTI, LAI);
 
   // It can happen that after widening of the IV, flattening may not be
