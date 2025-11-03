@@ -1,8 +1,8 @@
-// RUN: %check_clang_tidy %s cert-oop57-cpp %t -- \
+// RUN: %check_clang_tidy %s bugprone-raw-memory-call-on-non-trivial-type %t -- \
 // RUN: -config='{CheckOptions: \
-// RUN:  {cert-oop57-cpp.MemSetNames: mymemset, \
-// RUN:  cert-oop57-cpp.MemCpyNames: mymemcpy, \
-// RUN:  cert-oop57-cpp.MemCmpNames: mymemcmp}}' \
+// RUN:  {bugprone-raw-memory-call-on-non-trivial-type.MemSetNames: mymemset, \
+// RUN:  bugprone-raw-memory-call-on-non-trivial-type.MemCpyNames: mymemcpy, \
+// RUN:  bugprone-raw-memory-call-on-non-trivial-type.MemCmpNames: mymemcmp}}' \
 // RUN: --
 
 void mymemset(void *, unsigned char, decltype(sizeof(int)));
