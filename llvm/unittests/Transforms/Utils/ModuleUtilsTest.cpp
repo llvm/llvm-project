@@ -33,42 +33,6 @@ static int getListSize(Module &M, StringRef Name) {
   return T->getNumElements();
 }
 
-TEST(ModuleUtils, AppendToUsedList1) {
-  LLVMContext C;
-
-  std::unique_ptr<Module> M = parseIR(
-      C, R"(@x = addrspace(4) global [2 x i32] zeroinitializer, align 4)");
-  SmallVector<GlobalValue *, 2> Globals;
-  for (auto &G : M->globals()) {
-    Globals.push_back(&G);
-  }
-  EXPECT_EQ(0, getListSize(*M, "llvm.compiler.used"));
-  appendToCompilerUsed(*M, Globals);
-  EXPECT_EQ(1, getListSize(*M, "llvm.compiler.used"));
-
-  EXPECT_EQ(0, getListSize(*M, "llvm.used"));
-  appendToUsed(*M, Globals);
-  EXPECT_EQ(1, getListSize(*M, "llvm.used"));
-}
-
-TEST(ModuleUtils, AppendToUsedList2) {
-  LLVMContext C;
-
-  std::unique_ptr<Module> M =
-      parseIR(C, R"(@x = global [2 x i32] zeroinitializer, align 4)");
-  SmallVector<GlobalValue *, 2> Globals;
-  for (auto &G : M->globals()) {
-    Globals.push_back(&G);
-  }
-  EXPECT_EQ(0, getListSize(*M, "llvm.compiler.used"));
-  appendToCompilerUsed(*M, Globals);
-  EXPECT_EQ(1, getListSize(*M, "llvm.compiler.used"));
-
-  EXPECT_EQ(0, getListSize(*M, "llvm.used"));
-  appendToUsed(*M, Globals);
-  EXPECT_EQ(1, getListSize(*M, "llvm.used"));
-}
-
 using AppendFnType = decltype(&appendToGlobalCtors);
 using TransformFnType = decltype(&transformGlobalCtors);
 using ParamType = std::tuple<StringRef, AppendFnType, TransformFnType>;

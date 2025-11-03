@@ -14,7 +14,6 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 namespace llvm {
 

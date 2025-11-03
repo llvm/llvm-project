@@ -684,6 +684,18 @@ public:
   LLVM_ABI bool canBeOmittedFromSymbolTable() const;
 };
 
+/// Adds global values to the llvm.used list.
+LLVM_ABI void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
+
+/// Adds global values to the llvm.compiler.used list.
+LLVM_ABI void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
+
+/// Removes global values from the llvm.used and llvm.compiler.used arrays. \p
+/// ShouldRemove should return true for any initializer field that should not be
+/// included in the replacement global.
+LLVM_ABI void removeFromUsedLists(Module &M,
+                                  function_ref<bool(Constant *)> ShouldRemove);
+
 } // end namespace llvm
 
 #endif // LLVM_IR_GLOBALVALUE_H
