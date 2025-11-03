@@ -358,11 +358,11 @@ private:
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.Previous &&
                (OpeningParen.Previous->isOneOf(
-                    tok::kw_static_assert, tok::kw_noexcept, tok::kw_explicit,
-                    tok::kw_while, tok::l_paren, tok::comma, TT_CastRParen,
+                    tok::kw_noexcept, tok::kw_explicit, tok::kw_while,
+                    tok::l_paren, tok::comma, TT_CastRParen,
                     TT_BinaryOperator) ||
                 OpeningParen.Previous->isIf())) {
-      // static_assert, if and while usually contain expressions.
+      // if and while usually contain expressions.
       Contexts.back().IsExpression = true;
     } else if (Style.isJavaScript() && OpeningParen.Previous &&
                (OpeningParen.Previous->is(Keywords.kw_function) ||
@@ -453,6 +453,11 @@ private:
 
     if (StartsObjCSelector)
       OpeningParen.setType(TT_ObjCSelector);
+
+    const bool IsStaticAssert =
+        PrevNonComment && PrevNonComment->is(tok::kw_static_assert);
+    if (IsStaticAssert)
+      Contexts.back().InStaticAssertFirstArgument = true;
 
     // MightBeFunctionType and ProbablyFunctionType are used for
     // function pointer and reference types as well as Objective-C
@@ -583,8 +588,12 @@ private:
       }
       // When we discover a 'new', we set CanBeExpression to 'false' in order to
       // parse the type correctly. Reset that after a comma.
-      if (CurrentToken->is(tok::comma))
-        Contexts.back().CanBeExpression = true;
+      if (CurrentToken->is(tok::comma)) {
+        if (IsStaticAssert)
+          Contexts.back().InStaticAssertFirstArgument = false;
+        else
+          Contexts.back().CanBeExpression = true;
+      }
 
       if (Style.isTableGen()) {
         if (CurrentToken->is(tok::comma)) {
@@ -2144,6 +2153,7 @@ private:
     bool CaretFound = false;
     bool InCpp11AttributeSpecifier = false;
     bool InCSharpAttributeSpecifier = false;
+    bool InStaticAssertFirstArgument = false;
     bool VerilogAssignmentFound = false;
     // Whether the braces may mean concatenation instead of structure or array
     // literal.
@@ -2440,7 +2450,8 @@ private:
     } else if (Current.isPointerOrReference()) {
       Current.setType(determineStarAmpUsage(
           Current,
-          Contexts.back().CanBeExpression && Contexts.back().IsExpression,
+          (Contexts.back().CanBeExpression && Contexts.back().IsExpression) ||
+              Contexts.back().InStaticAssertFirstArgument,
           Contexts.back().ContextType == Context::TemplateArgument));
     } else if (Current.isOneOf(tok::minus, tok::plus, tok::caret) ||
                (Style.isVerilog() && Current.is(tok::pipe))) {
