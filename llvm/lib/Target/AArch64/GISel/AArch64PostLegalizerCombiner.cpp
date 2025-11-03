@@ -151,90 +151,52 @@ bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
                               Register &UnmergeSrc) {
   assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
 
-  unsigned UnmergeUseCount = 0;
-  unsigned UndefInstrCount = 0;
+  unsigned BuildUseCount = MI.getNumOperands() - 1;
 
-  unsigned UnmergeEltCount = 0;
-  unsigned UnmergeEltSize = 0;
-
-  unsigned BuildOperandCount = MI.getNumOperands();
-  bool EncounteredUndef = false;
-
-  Register UnmergeSrcTemp;
-  MachineInstr *UnmergeInstr;
-
-  std::set<int> KnownRegs;
-
-  for (auto &Use : MI.all_uses()) {
-    auto *Def = getDefIgnoringCopies(Use.getReg(), MRI);
-
-    if (!Def) {
-      return false;
-    }
-
-    unsigned Opcode = Def->getOpcode();
-
-    // Ensure that the unmerged instructions are consecutive and before the
-    // undefined values by checking we don't encounter an undef before we reach
-    // half way
-    if (EncounteredUndef && UnmergeUseCount < BuildOperandCount / 2)
-      return false;
-
-    switch (Opcode) {
-    default:
-      return false;
-    case TargetOpcode::G_IMPLICIT_DEF:
-      ++UndefInstrCount;
-      EncounteredUndef = true;
-      break;
-    case TargetOpcode::G_UNMERGE_VALUES:
-      ++UnmergeUseCount;
-
-      UnmergeEltSize = MRI.getType(Use.getReg()).getScalarSizeInBits();
-      UnmergeEltCount = Def->getNumDefs();
-      if (UnmergeEltCount < 2 || (UnmergeEltSize * UnmergeEltCount != 64 &&
-                                  UnmergeEltSize * UnmergeEltCount != 128)) {
-        return false;
-      }
-
-      // Unmerge should only use one register so we can use the last one
-      for (auto &UnmergeUse : Def->all_uses())
-        UnmergeSrcTemp = UnmergeUse.getReg();
-
-      // Track unique sources for the G_UNMERGE_VALUES
-      unsigned RegId = UnmergeSrcTemp.id();
-      if (KnownRegs.find(RegId) != KnownRegs.end())
-        continue;
-
-      KnownRegs.insert(RegId);
-
-      // We know the unmerge is a valid target now so store the register & the
-      // instruction.
-      UnmergeSrc = UnmergeSrcTemp;
-      UnmergeInstr = Def;
-
-      break;
-    }
-  }
-
-  // Only want to match patterns that pad half of a vector with undefined. We
-  // also want to ensure that these values come from a single unmerge and all
-  // unmerged values are consumed.
-  if (UndefInstrCount != UnmergeUseCount ||
-      UnmergeEltCount != UnmergeUseCount || KnownRegs.size() != 1) {
+  if (BuildUseCount % 2 != 0)
     return false;
-  }
 
-  // Check the operands of the unmerge are used in the same order they are
-  // defined G_BUILD_VECTOR always defines 1 output so we know the uses start
-  // from index 1
-  for (unsigned OperandIndex = 0; OperandIndex < UnmergeUseCount;
-       ++OperandIndex) {
-    Register BuildReg = MI.getOperand(OperandIndex + 1).getReg();
-    Register UnmergeReg = UnmergeInstr->getOperand(OperandIndex).getReg();
-    if (BuildReg != UnmergeReg)
+  unsigned HalfWayIndex = BuildUseCount / 2;
+
+  // Check the first operand is an unmerge
+  auto *MaybeUnmerge = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  if (MaybeUnmerge->getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
+    return false;
+
+  // Check that the resultant concat will be legal
+  auto UnmergeEltSize =
+      MRI.getType(MaybeUnmerge->getOperand(1).getReg()).getScalarSizeInBits();
+  auto UnmergeEltCount = MaybeUnmerge->getNumDefs();
+
+  if (UnmergeEltCount < 2 || (UnmergeEltSize * UnmergeEltCount != 64 &&
+                              UnmergeEltSize * UnmergeEltCount != 128))
+    return false;
+
+  // Check that all of the operands before the midpoint come from the same
+  // unmerge and are in the same order as they are used in the build_vector
+  for (unsigned I = 0; I < HalfWayIndex; ++I) {
+    auto MaybeUnmergeReg = MI.getOperand(I + 1).getReg();
+    auto *Unmerge = getDefIgnoringCopies(MaybeUnmergeReg, MRI);
+
+    if (Unmerge != MaybeUnmerge)
+      return false;
+
+    if (Unmerge->getOperand(I).getReg() != MaybeUnmergeReg)
       return false;
   }
+
+  // Check that all of the operands after the mid point are undefs.
+  for (unsigned I = HalfWayIndex; I < BuildUseCount; ++I) {
+    auto *Undef = getDefIgnoringCopies(MI.getOperand(I + 1).getReg(), MRI);
+
+    if (Undef->getOpcode() != TargetOpcode::G_IMPLICIT_DEF)
+      return false;
+  }
+
+  // Unmerge should only use one register so we can use the last one
+  for (auto &UnmergeUse :
+       getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI)->all_uses())
+    UnmergeSrc = UnmergeUse.getReg();
 
   return true;
 }
