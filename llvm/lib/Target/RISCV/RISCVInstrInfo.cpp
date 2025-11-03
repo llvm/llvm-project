@@ -869,7 +869,7 @@ std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
   }
 }
 
-// This is the version used during inline spilling
+// This is the version used during InlineSpiller::spillAroundUses
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
@@ -1699,6 +1699,10 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::AND:   return RISCV::PseudoCCAND;
   case RISCV::OR:    return RISCV::PseudoCCOR;
   case RISCV::XOR:   return RISCV::PseudoCCXOR;
+  case RISCV::MAX:   return RISCV::PseudoCCMAX;
+  case RISCV::MAXU:  return RISCV::PseudoCCMAXU;
+  case RISCV::MIN:   return RISCV::PseudoCCMIN;
+  case RISCV::MINU:  return RISCV::PseudoCCMINU;
 
   case RISCV::ADDI:  return RISCV::PseudoCCADDI;
   case RISCV::SLLI:  return RISCV::PseudoCCSLLI;
@@ -1735,7 +1739,8 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
 /// return the defining instruction.
 static MachineInstr *canFoldAsPredicatedOp(Register Reg,
                                            const MachineRegisterInfo &MRI,
-                                           const TargetInstrInfo *TII) {
+                                           const TargetInstrInfo *TII,
+                                           const RISCVSubtarget &STI) {
   if (!Reg.isVirtual())
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
@@ -1743,6 +1748,12 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   MachineInstr *MI = MRI.getVRegDef(Reg);
   if (!MI)
     return nullptr;
+
+  if (!STI.hasShortForwardBranchIMinMax() &&
+      (MI->getOpcode() == RISCV::MAX || MI->getOpcode() == RISCV::MIN ||
+       MI->getOpcode() == RISCV::MINU || MI->getOpcode() == RISCV::MAXU))
+    return nullptr;
+
   // Check if MI can be predicated and folded into the CCMOV.
   if (getPredicatedOpcode(MI->getOpcode()) == RISCV::INSTRUCTION_LIST_END)
     return nullptr;
@@ -1806,10 +1817,10 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   MachineInstr *DefMI =
-      canFoldAsPredicatedOp(MI.getOperand(5).getReg(), MRI, this);
+      canFoldAsPredicatedOp(MI.getOperand(5).getReg(), MRI, this, STI);
   bool Invert = !DefMI;
   if (!DefMI)
-    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this);
+    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this, STI);
   if (!DefMI)
     return nullptr;
 

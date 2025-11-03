@@ -3619,7 +3619,7 @@ struct AAIntraFnReachabilityFunction final
       return true;
 
     RQITy StackRQI(A, From, To, ExclusionSet, false);
-    typename RQITy::Reachable Result;
+    RQITy::Reachable Result;
     if (!NonConstThis->checkQueryCache(A, StackRQI, Result))
       return NonConstThis->isReachableImpl(A, StackRQI,
                                            /*IsTemporaryRQI=*/true);
@@ -10701,7 +10701,7 @@ struct AAInterFnReachabilityFunction
     auto *NonConstThis = const_cast<AAInterFnReachabilityFunction *>(this);
 
     RQITy StackRQI(A, From, To, ExclusionSet, false);
-    typename RQITy::Reachable Result;
+    RQITy::Reachable Result;
     if (!NonConstThis->checkQueryCache(A, StackRQI, Result))
       return NonConstThis->isReachableImpl(A, StackRQI,
                                            /*IsTemporaryRQI=*/true);

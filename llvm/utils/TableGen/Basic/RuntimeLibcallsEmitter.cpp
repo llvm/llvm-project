@@ -154,7 +154,7 @@ public:
       Provides = ProvideMap.lookup(ProvidesDef);
   }
 
-  ~RuntimeLibcallImpl() {}
+  ~RuntimeLibcallImpl() = default;
 
   const Record *getDef() const { return TheDef; }
 
