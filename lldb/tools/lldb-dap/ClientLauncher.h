@@ -19,6 +19,7 @@ class ClientLauncher {
 public:
   enum Client {
     VSCode,
+    VSCodeURL,
   };
 
   virtual ~ClientLauncher() = default;
@@ -28,12 +29,20 @@ public:
   static std::unique_ptr<ClientLauncher> GetLauncher(Client client);
 };
 
-class VSCodeLauncher final : public ClientLauncher {
+class VSCodeLauncher : public ClientLauncher {
 public:
   using ClientLauncher::ClientLauncher;
 
   llvm::Error Launch(const std::vector<llvm::StringRef> args) override;
+
+  std::string GetLaunchURL(const std::vector<llvm::StringRef> args) const;
   static std::string URLEncode(llvm::StringRef str);
+};
+
+class VSCodeURLPrinter : public VSCodeLauncher {
+  using VSCodeLauncher::VSCodeLauncher;
+
+  llvm::Error Launch(const std::vector<llvm::StringRef> args) override;
 };
 
 } // namespace lldb_dap
