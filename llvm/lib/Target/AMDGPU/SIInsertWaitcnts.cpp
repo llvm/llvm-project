@@ -542,7 +542,8 @@ public:
   }
 
   // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM
-  // instruction.
+  // instruction that is not an invalidate or WB instruction, which are
+  // checked for using getInvOrWBWaitEventType().
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
     // Maps VMEM access types to their corresponding WaitEventType.
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
