@@ -160,7 +160,8 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   return LastInst;
 }
 
-static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF, const CallExpr *E) {
+static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
+                                        const CallExpr *E) {
   Value *Op0 = CGF.EmitScalarExpr(E->getArg(0));
   QualType Op0Ty = E->getArg(0)->getType();
   llvm::Type *ResType = CGF.FloatTy;
@@ -176,19 +177,20 @@ static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF, const CallExpr *E)
         "f16tof32 operand must have an unsigned int representation");
 
   if (CGF.CGM.getTriple().isDXIL())
-    return CGF.Builder.CreateIntrinsic(
-        ResType, Intrinsic::dx_legacyf16tof32,
-        ArrayRef<Value *>{Op0}, nullptr, "hlsl.f16tof32");
+    return CGF.Builder.CreateIntrinsic(ResType, Intrinsic::dx_legacyf16tof32,
+                                       ArrayRef<Value *>{Op0}, nullptr,
+                                       "hlsl.f16tof32");
 
   if (CGF.CGM.getTriple().isSPIRV()) {
     // We use the SPIRV UnpackHalf2x16 operation to avoid the need for the
     // Int16 and Float16 capabilities
-    auto UnpackType = llvm::VectorType::get(CGF.FloatTy, ElementCount::getFixed(2));
+    auto UnpackType =
+        llvm::VectorType::get(CGF.FloatTy, ElementCount::getFixed(2));
     if (NumElements == 0) {
-      // a scalar input - simply extract the first element of the unpacked vector
-      Value *Unpack =  CGF.Builder.CreateIntrinsic(
-          UnpackType, Intrinsic::spv_unpackhalf2x16,
-          ArrayRef<Value *>{Op0});
+      // a scalar input - simply extract the first element of the unpacked
+      // vector
+      Value *Unpack = CGF.Builder.CreateIntrinsic(
+          UnpackType, Intrinsic::spv_unpackhalf2x16, ArrayRef<Value *>{Op0});
       return CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
     } else {
       // a vector input - build a congruent output vector by iterating through
@@ -196,8 +198,9 @@ static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF, const CallExpr *E)
       Value *Result = PoisonValue::get(ResType);
       for (uint64_t i = 0; i < NumElements; i++) {
         Value *InVal = CGF.Builder.CreateExtractElement(Op0, i);
-        Value *Unpack = CGF.Builder.CreateIntrinsic(UnpackType,
-            Intrinsic::spv_unpackhalf2x16, ArrayRef<Value *>{InVal});
+        Value *Unpack = CGF.Builder.CreateIntrinsic(
+            UnpackType, Intrinsic::spv_unpackhalf2x16,
+            ArrayRef<Value *>{InVal});
         Value *Res = CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
         Result = CGF.Builder.CreateInsertElement(Result, Res, i);
       }
@@ -205,8 +208,7 @@ static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF, const CallExpr *E)
     }
   }
 
-  llvm_unreachable(
-        "Intrinsic F16ToF32 not supported by target architecture");
+  llvm_unreachable("Intrinsic F16ToF32 not supported by target architecture");
 }
 
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
