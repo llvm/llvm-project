@@ -110,8 +110,8 @@ public:
     return Data[Itr];
   }
 
-  using iterator = typename std::vector<double>::iterator;
-  using const_iterator = typename std::vector<double>::const_iterator;
+  using iterator = std::vector<double>::iterator;
+  using const_iterator = std::vector<double>::const_iterator;
 
   iterator begin() { return Data.begin(); }
   iterator end() { return Data.end(); }

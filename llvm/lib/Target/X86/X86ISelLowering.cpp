@@ -54529,8 +54529,7 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
         SDValue NewLoad =
             DAG.getLoad(VT, DL, Ld->getChain(), NewPtr, Ld->getPointerInfo(),
                         Align(), Ld->getMemOperand()->getFlags());
-        DAG.ReplaceAllUsesOfValueWith(Src.getOperand(0).getValue(1),
-                                      NewLoad.getValue(1));
+        DAG.makeEquivalentMemoryOrdering(Ld, NewLoad);
         return NewLoad;
       }
     }
