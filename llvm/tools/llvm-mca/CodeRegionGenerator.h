@@ -151,7 +151,7 @@ protected:
                    bool SkipFailures) = 0;
 
 public:
-  CodeRegionGenerator() {}
+  CodeRegionGenerator() = default;
   virtual ~CodeRegionGenerator();
 };
 

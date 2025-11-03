@@ -21,7 +21,6 @@ static_library("cert") {
     "FloatLoopCounter.cpp",
     "LimitedRandomnessCheck.cpp",
     "MutatingCopyCheck.cpp",
-    "NonTrivialTypesLibcMemoryCallsCheck.cpp",
     "ProperlySeededRandomGeneratorCheck.cpp",
     "ThrownExceptionTypeCheck.cpp",
   ]

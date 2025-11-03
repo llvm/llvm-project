@@ -19,15 +19,14 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP0]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    br label [[EXIT_1:%.*]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[DOTLCSSA]], i32 -1)
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[SMAX1]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 poison, i32 -1)
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 -1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i8 1, [[TMP4]]
@@ -61,7 +60,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i8 [[IV_2_NEXT]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_A]], align 1
 ; CHECK-NEXT:    [[IV_2_SEXT:%.*]] = sext i8 [[IV_2]] to i32
-; CHECK-NEXT:    [[EC_2:%.*]] = icmp sge i32 [[DOTLCSSA]], [[IV_2_SEXT]]
+; CHECK-NEXT:    [[EC_2:%.*]] = icmp sge i32 [[TMP0]], [[IV_2_SEXT]]
 ; CHECK-NEXT:    br i1 [[EC_2]], label [[LOOP_2]], label [[EXIT_2]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       exit.2:
 ; CHECK-NEXT:    ret void
