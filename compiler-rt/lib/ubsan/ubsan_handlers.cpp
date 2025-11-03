@@ -73,26 +73,14 @@ enum TypeCheckKind {
   TCK_NonnullAssign,
   /// Checking the operand of a dynamic_cast or a typeid expression.  Must be
   /// null or an object within its lifetime.
-  TCK_DynamicOperation,
-  /// Checking the 'this' poiner for a constructor call, including that the
-  /// alignment is greater or equal to the targets minimum alignment
-  TCK_ConstructorCallMinimumAlign
+  TCK_DynamicOperation
 };
 
 extern const char *const TypeCheckKinds[] = {
-    "load of",
-    "store to",
-    "reference binding to",
-    "member access within",
-    "member call on",
-    "constructor call on",
-    "downcast of",
-    "downcast of",
-    "upcast of",
-    "cast to virtual base of",
-    "_Nonnull binding to",
-    "dynamic operation on",
-    "constructor call with pointer from operator new on"};
+    "load of", "store to", "reference binding to", "member access within",
+    "member call on", "constructor call on", "downcast of", "downcast of",
+    "upcast of", "cast to virtual base of", "_Nonnull binding to",
+    "dynamic operation on"};
 }
 
 static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
@@ -106,9 +94,7 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
              ? ErrorType::NullPointerUseWithNullability
              : ErrorType::NullPointerUse;
   else if (Pointer & (Alignment - 1))
-    ET = (Data->TypeCheckKind == TCK_ConstructorCallMinimumAlign)
-             ? ErrorType::MinumumAssumedAlignment
-             : ErrorType::MisalignedPointerUse;
+    ET = ErrorType::MisalignedPointerUse;
   else
     ET = ErrorType::InsufficientObjectSize;
 
@@ -130,13 +116,6 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
   case ErrorType::NullPointerUseWithNullability:
     Diag(Loc, DL_Error, ET, "%0 null pointer of type %1")
         << TypeCheckKinds[Data->TypeCheckKind] << Data->Type;
-    break;
-  case ErrorType::MinumumAssumedAlignment:
-    Diag(Loc, DL_Error, ET,
-         "%0 misaligned address %1 for type %2, "
-         "which requires target minimum assumed %3 byte alignment")
-        << TypeCheckKinds[Data->TypeCheckKind] << (void *)Pointer << Data->Type
-        << Alignment;
     break;
   case ErrorType::MisalignedPointerUse:
     Diag(Loc, DL_Error, ET, "%0 misaligned address %1 for type %3, "
