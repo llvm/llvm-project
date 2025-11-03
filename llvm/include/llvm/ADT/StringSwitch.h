@@ -14,7 +14,6 @@
 #define LLVM_ADT_STRINGSWITCH_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstring>
@@ -64,7 +63,7 @@ public:
   void operator=(const StringSwitch &) = delete;
   void operator=(StringSwitch &&) = delete;
 
-  // Case-sensitive case matchers
+  // Case-sensitive case matchers.
   StringSwitch &Case(StringLiteral S, T Value) {
     CaseImpl(S, Value);
     return *this;
