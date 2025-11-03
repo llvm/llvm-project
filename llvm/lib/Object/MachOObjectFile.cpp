@@ -2000,7 +2000,7 @@ MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
     // will be returned stopping invalid section data from being returned.
     uint64_t PrevTrueOffset = 0;
     uint64_t SectOffsetAdjust = 0;
-    for (uint32_t SectIdx=0; SectIdx<Sec.d.a; ++SectIdx) {
+    for (uint32_t SectIdx = 0; SectIdx < Sec.d.a; ++SectIdx) {
       MachO::section_64 CurrSect =
           getStruct<MachO::section_64>(*this, Sections[SectIdx]);
       uint64_t CurrTrueOffset = (uint64_t)CurrSect.offset + SectOffsetAdjust;
