@@ -20,8 +20,6 @@
 
 using namespace llvm;
 
-constexpr uint32_t BranchProbability::D;
-
 raw_ostream &BranchProbability::print(raw_ostream &OS) const {
   if (isUnknown())
     return OS << "?%";

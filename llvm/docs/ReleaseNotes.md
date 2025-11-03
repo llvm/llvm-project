@@ -180,6 +180,10 @@ Changes to the LLVM tools
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 * Support for `%T` in lit has been removed.
 
+* `llvm-config` gained a new flag `--quote-paths` which quotes and escapes paths
+  emitted on stdout, to account for spaces or other special characters in path.
+  (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
+
 Changes to LLDB
 ---------------------------------
 
