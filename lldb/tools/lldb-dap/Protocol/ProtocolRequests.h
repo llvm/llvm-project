@@ -1054,7 +1054,7 @@ struct ExceptionInfoResponseBody {
   std::string description;
 
   /// Mode that caused the exception notification to be raised.
-  ExceptionBreakMode breakMode;
+  ExceptionBreakMode breakMode = eExceptionBreakModeNever;
 
   /// Detailed information about the exception.
   std::optional<ExceptionDetails> details;
