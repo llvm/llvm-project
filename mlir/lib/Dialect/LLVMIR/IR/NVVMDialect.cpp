@@ -2465,29 +2465,30 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
     return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
   }()
 
-// Helper macros for F32x2 to FPx2 stochastic rounding intrinsics
-#define GET_F32x2_TO_F16x2_RS_ID(has_relu, has_satf)                           \
-  (has_relu ? (has_satf ? llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite     \
-                        : llvm::Intrinsic::nvvm_ff2f16x2_rs_relu)              \
-            : (has_satf ? llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite          \
-                        : llvm::Intrinsic::nvvm_ff2f16x2_rs))
-
-#define GET_F32x2_TO_BF16x2_RS_ID(has_relu, has_satf)                          \
-  (has_relu ? (has_satf ? llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite    \
-                        : llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu)             \
-            : (has_satf ? llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite         \
-                        : llvm::Intrinsic::nvvm_ff2bf16x2_rs))
-
 llvm::Intrinsic::ID ConvertF32x2ToF16x2Op::getIntrinsicID() {
   bool hasRelu = getRelu();
   bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
-  return GET_F32x2_TO_F16x2_RS_ID(hasRelu, hasSatFinite);
+
+  if (hasRelu && hasSatFinite)
+    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite;
+  if (hasRelu)
+    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu;
+  if (hasSatFinite)
+    return llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite;
+  return llvm::Intrinsic::nvvm_ff2f16x2_rs;
 }
 
 llvm::Intrinsic::ID ConvertF32x2ToBF16x2Op::getIntrinsicID() {
   bool hasRelu = getRelu();
   bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
-  return GET_F32x2_TO_BF16x2_RS_ID(hasRelu, hasSatFinite);
+
+  if (hasRelu && hasSatFinite)
+    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite;
+  if (hasRelu)
+    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu;
+  if (hasSatFinite)
+    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite;
+  return llvm::Intrinsic::nvvm_ff2bf16x2_rs;
 }
 
 llvm::Intrinsic::ID ConvertF32x4ToF8x4Op::getIntrinsicID() {

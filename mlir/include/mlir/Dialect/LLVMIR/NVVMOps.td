@@ -1930,9 +1930,9 @@ def NVVM_ConvertF4x2ToF16x2Op :
 // (F16x2, BF16x2)
 // TODO: In separate PR, add .rn and .rz rounding variants for this conversion
 // as currently only support .rs rounding mode
-class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type resultType> :
+class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstType> :
   NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
-  Results<(outs resultType:$dst)>,
+  Results<(outs dstType:$dst)>,
   Arguments<(ins F32:$src_hi, F32:$src_lo, I32:$rbits,
                  DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::RS">:$rnd,
                  DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
@@ -1942,7 +1942,8 @@ class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type resu
     Converts two F32 values to packed }] # dstFormat # [{ format using stochastic 
     rounding (.rs) mode with randomness provided by the `rbits` parameter. The 
     `relu` attribute clamps negative results to 0. The `sat` attribute determines 
-    saturation behavior.
+    saturation behavior. The `src_hi` and `src_lo` parameters correspond to operands 
+    `a` and `b` in the PTX ISA, respectively.
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -1970,9 +1971,9 @@ def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"bf16x2", "conve
 // Base class for stochastic rounding conversions from F32x4 to FPx4 formats
 // (E4M3x4, E5M2x4, E2M3x4, E3M2x4, E2M1x4)
 // These operations always use RS (stochastic rounding) mode with SATFINITE saturation.
-class NVVM_ConvertF32x4ToFPx4OpBase<string dstFormat, string mnemonic, Type resultType> :
+class NVVM_ConvertF32x4ToFPx4OpBase<string dstFormat, string mnemonic, Type dstType> :
   NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
-  Results<(outs resultType:$dst)>,
+  Results<(outs dstType:$dst)>,
   Arguments<(ins VectorOfLengthAndType<[4], [F32]>:$src, I32:$rbits,
                  DefaultValuedAttr<BoolAttr, "false">:$relu,
                  TypeAttr:$dstTy)> {
@@ -1981,7 +1982,7 @@ class NVVM_ConvertF32x4ToFPx4OpBase<string dstFormat, string mnemonic, Type resu
     Converts a vector<4xf32> to packed }] # dstFormat # [{ format using 
     stochastic rounding (.rs) mode with SATFINITE saturation. Randomness is 
     provided by the `rbits` parameter. The `dstTy` attribute specifies the 
-    target format. The `relu` attribute clamps negative results to 0.
+    target floating-point format. The `relu` attribute clamps negative results to 0.
     
     Note: These operations always use RS rounding mode and SATFINITE saturation mode.
     
