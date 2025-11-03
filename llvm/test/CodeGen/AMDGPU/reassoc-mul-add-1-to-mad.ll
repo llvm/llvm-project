@@ -3357,7 +3357,9 @@ define i64 @v_mul_9_add_52_i64(i64 %arg) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX900-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, 9, 52
-; GFX900-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v2, 9, v[1:2]
+; GFX900-NEXT:    ; implicit-def: $vgpr4
+; GFX900-NEXT:    v_mov_b32_e32 v3, v1
+; GFX900-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v2, 9, v[3:4]
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: v_mul_9_add_52_i64:
@@ -3366,6 +3368,7 @@ define i64 @v_mul_9_add_52_i64(i64 %arg) {
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX90A-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, 9, 52
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
+; GFX90A-NEXT:    ; implicit-def: $vgpr5
 ; GFX90A-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v2, 9, v[4:5]
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -3375,7 +3378,9 @@ define i64 @v_mul_9_add_52_i64(i64 %arg) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, 9, 52
-; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v2, 9, v[1:2]
+; GFX10-NEXT:    ; implicit-def: $vgpr4
+; GFX10-NEXT:    v_mov_b32_e32 v3, v1
+; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v2, 9, v[3:4]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: v_mul_9_add_52_i64:
@@ -3694,7 +3699,9 @@ define i64 @v_mul_5_add_1_i64(i64 %arg) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX900-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, 5, 1
-; GFX900-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v2, 5, v[1:2]
+; GFX900-NEXT:    ; implicit-def: $vgpr4
+; GFX900-NEXT:    v_mov_b32_e32 v3, v1
+; GFX900-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v2, 5, v[3:4]
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: v_mul_5_add_1_i64:
@@ -3703,6 +3710,7 @@ define i64 @v_mul_5_add_1_i64(i64 %arg) {
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX90A-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, 5, 1
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
+; GFX90A-NEXT:    ; implicit-def: $vgpr5
 ; GFX90A-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v2, 5, v[4:5]
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -3712,7 +3720,9 @@ define i64 @v_mul_5_add_1_i64(i64 %arg) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, 5, 1
-; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v2, 5, v[1:2]
+; GFX10-NEXT:    ; implicit-def: $vgpr4
+; GFX10-NEXT:    v_mov_b32_e32 v3, v1
+; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v2, 5, v[3:4]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: v_mul_5_add_1_i64:
@@ -3772,7 +3782,9 @@ define i64 @v_mul_284_add_82_i64(i64 %arg) {
 ; GFX900-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX900-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, s6, v[3:4]
-; GFX900-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v2, s6, v[1:2]
+; GFX900-NEXT:    ; implicit-def: $vgpr4
+; GFX900-NEXT:    v_mov_b32_e32 v3, v1
+; GFX900-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v2, s6, v[3:4]
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: v_mul_284_add_82_i64:
@@ -3784,6 +3796,7 @@ define i64 @v_mul_284_add_82_i64(i64 %arg) {
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX90A-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, s6, v[4:5]
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
+; GFX90A-NEXT:    ; implicit-def: $vgpr5
 ; GFX90A-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v2, s6, v[4:5]
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -3794,7 +3807,9 @@ define i64 @v_mul_284_add_82_i64(i64 %arg) {
 ; GFX10-NEXT:    s_movk_i32 s4, 0x11c
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, s4, 0x52
-; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, 0x11c, v2, v[1:2]
+; GFX10-NEXT:    ; implicit-def: $vgpr4
+; GFX10-NEXT:    v_mov_b32_e32 v3, v1
+; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, 0x11c, v2, v[3:4]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: v_mul_284_add_82_i64:
@@ -3855,7 +3870,9 @@ define i64 @v_mul_934584645_add_8234599_i64(i64 %arg) {
 ; GFX900-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX900-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, s6, v[3:4]
-; GFX900-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v2, s6, v[1:2]
+; GFX900-NEXT:    ; implicit-def: $vgpr4
+; GFX900-NEXT:    v_mov_b32_e32 v3, v1
+; GFX900-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v2, s6, v[3:4]
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: v_mul_934584645_add_8234599_i64:
@@ -3867,6 +3884,7 @@ define i64 @v_mul_934584645_add_8234599_i64(i64 %arg) {
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX90A-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, s6, v[4:5]
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
+; GFX90A-NEXT:    ; implicit-def: $vgpr5
 ; GFX90A-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v2, s6, v[4:5]
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -3877,7 +3895,9 @@ define i64 @v_mul_934584645_add_8234599_i64(i64 %arg) {
 ; GFX10-NEXT:    s_mov_b32 s4, 0x37b4a145
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, s4, 0x7da667
-; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, 0x37b4a145, v2, v[1:2]
+; GFX10-NEXT:    ; implicit-def: $vgpr4
+; GFX10-NEXT:    v_mov_b32_e32 v3, v1
+; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, 0x37b4a145, v2, v[3:4]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: v_mul_934584645_add_8234599_i64:
@@ -4062,13 +4082,14 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_load_dword s2, s[2:3], 0x4
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, v3, v1
+; GFX10-NEXT:    v_add_nc_u32_e32 v3, 1, v3
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX10-NEXT:    v_mul_lo_u32 v2, v1, v2
-; GFX10-NEXT:    v_add_nc_u32_e32 v1, 1, v3
-; GFX10-NEXT:    v_mul_lo_u32 v4, v2, v1
+; GFX10-NEXT:    ; implicit-def: $vgpr1
+; GFX10-NEXT:    v_mul_lo_u32 v4, v2, v3
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX10-NEXT:    v_add_nc_u32_e32 v3, v4, v1
+; GFX10-NEXT:    v_add_nc_u32_e32 v3, v4, v3
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, s8, s2, v[0:1]
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v3, v2
 ; GFX10-NEXT:    v_add_co_u32 v2, s0, s0, v0

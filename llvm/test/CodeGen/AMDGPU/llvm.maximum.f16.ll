@@ -584,6 +584,7 @@ define void @s_maximum_f16(half inreg %src0, half inreg %src1) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cmp_o_f16_e64 s2, s0, s1
 ; GFX11-TRUE16-NEXT:    v_max_f16_e64 v0.l, s0, s1
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v0.l, s2
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -1197,6 +1198,7 @@ define <3 x half> @v_maximum_v3f16(<3 x half> %src0, <3 x half> %src1) {
 ; GFX11-TRUE16-NEXT:    v_pk_max_f16 v4, v0, v2
 ; GFX11-TRUE16-NEXT:    v_cmp_o_f16_e64 s1, v0.h, v2.h
 ; GFX11-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v4.l, s0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v4.h, s1
@@ -1395,6 +1397,7 @@ define <3 x half> @v_maximum_v3f16__nsz(<3 x half> %src0, <3 x half> %src1) {
 ; GFX11-TRUE16-NEXT:    v_pk_max_f16 v4, v0, v2
 ; GFX11-TRUE16-NEXT:    v_cmp_o_f16_e64 s1, v0.h, v2.h
 ; GFX11-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v4.l, s0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v4.h, s1

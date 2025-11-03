@@ -588,13 +588,22 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ; VI-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_bswap_i16_sext_to_i32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-REAL16-LABEL: v_bswap_i16_sext_to_i32:
+; GFX11-REAL16:       ; %bb.0:
+; GFX11-REAL16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-REAL16-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
+; GFX11-REAL16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-REAL16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_bswap_i16_sext_to_i32:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   %zext = sext i16 %bswap to i32
   ret i32 %zext

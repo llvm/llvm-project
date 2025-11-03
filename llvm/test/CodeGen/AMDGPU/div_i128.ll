@@ -1324,8 +1324,9 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
 ; GFX9-G-NEXT:    v_or_b32_e32 v12, v12, v8
 ; GFX9-G-NEXT:    v_and_b32_e32 v8, 1, v28
-; GFX9-G-NEXT:    v_mov_b32_e32 v0, v8
+; GFX9-G-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-G-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; GFX9-G-NEXT:    v_mov_b32_e32 v0, v8
 ; GFX9-G-NEXT:    v_mov_b32_e32 v1, v9
 ; GFX9-G-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX9-G-NEXT:    s_cbranch_execnz .LBB0_3
@@ -3395,6 +3396,7 @@ define i128 @v_udiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_or_b32_e32 v11, v19, v21
 ; GFX9-G-NEXT:    v_lshlrev_b64 v[8:9], 1, v[8:9]
 ; GFX9-G-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[10:11]
+; GFX9-G-NEXT:    ; implicit-def: $vgpr10_vgpr11
 ; GFX9-G-NEXT:    v_or_b32_e32 v8, v8, v0
 ; GFX9-G-NEXT:    v_and_b32_e32 v0, 1, v12
 ; GFX9-G-NEXT:    v_mov_b32_e32 v11, v1

@@ -97,6 +97,7 @@ define amdgpu_kernel void @sqrt_f16(
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s4, s0
 ; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s5, s1
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
 ; GFX12-TRUE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
@@ -246,8 +247,10 @@ define amdgpu_kernel void @sqrt_v2f16(
 ; GFX12-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_sqrt_f16_e32 v0.h, v1.l
-; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null
+; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v1, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
+; GFX12-TRUE16-NEXT:    buffer_store_b32 v1, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX12-FAKE16-LABEL: sqrt_v2f16:

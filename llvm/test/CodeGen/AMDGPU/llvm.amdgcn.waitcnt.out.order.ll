@@ -89,6 +89,7 @@ define amdgpu_ps <3 x float> @sample_load(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v1.l
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX11-TRUE16-NEXT:    image_sample_lz v2, [v4, v4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -109,6 +110,7 @@ define amdgpu_ps <3 x float> @sample_load(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX1150-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.l
 ; GFX1150-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v1.l
 ; GFX1150-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1150-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX1150-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX1150-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-TRUE16-NEXT:    image_sample_lz v2, [v4, v4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
@@ -129,6 +131,7 @@ define amdgpu_ps <3 x float> @sample_load(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-TRUE16-NEXT:    image_msaa_load v[0:3], [v0, v2], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    image_sample_lz v2, [v4, v4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
@@ -163,6 +166,7 @@ define amdgpu_ps <3 x float> @load_sample(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v1.l
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX11-TRUE16-NEXT:    image_sample_lz v2, [v4, v4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -183,6 +187,7 @@ define amdgpu_ps <3 x float> @load_sample(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX1150-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.l
 ; GFX1150-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v1.l
 ; GFX1150-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1150-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX1150-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX1150-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-TRUE16-NEXT:    image_sample_lz v2, [v4, v4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
@@ -203,6 +208,7 @@ define amdgpu_ps <3 x float> @load_sample(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-TRUE16-NEXT:    image_msaa_load v[0:3], [v0, v2], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    image_sample_lz v2, [v4, v4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D

@@ -86,6 +86,7 @@ define half @test_vector_reduce_fadd_v2half(half %sp, <2 x half> %v) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -133,6 +134,7 @@ define half @test_vector_reduce_fadd_v2half(half %sp, <2 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -235,6 +237,7 @@ define half @test_vector_reduce_fadd_v3half(half %sp, <3 x half> %v) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.h
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v2.l
@@ -285,6 +288,7 @@ define half @test_vector_reduce_fadd_v3half(half %sp, <3 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.h
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v2.l
@@ -405,6 +409,7 @@ define half @test_vector_reduce_fadd_v4half(half %sp, <4 x half> %v) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
@@ -467,6 +472,7 @@ define half @test_vector_reduce_fadd_v4half(half %sp, <4 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
@@ -647,6 +653,7 @@ define half @test_vector_reduce_fadd_v8half(half %sp, <8 x half> %v) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
@@ -739,6 +746,7 @@ define half @test_vector_reduce_fadd_v8half(half %sp, <8 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
@@ -1043,6 +1051,7 @@ define half @test_vector_reduce_fadd_v16half(half %sp, <16 x half> %v) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
@@ -1195,6 +1204,7 @@ define half @test_vector_reduce_fadd_v16half(half %sp, <16 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2

@@ -147,6 +147,7 @@ define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x flo
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.h, v1
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v0
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -707,6 +707,8 @@ define amdgpu_kernel void @double7_inselt(ptr addrspace(1) %out, <7 x double> %v
 ; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x94
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x84
+; GCN-NEXT:    ; implicit-def: $vgpr14
+; GCN-NEXT:    ; implicit-def: $vgpr15
 ; GCN-NEXT:    v_mov_b32_e32 v16, 0x3ff00000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s8
@@ -857,6 +859,8 @@ define amdgpu_kernel void @double15_inselt(ptr addrspace(1) %out, <15 x double> 
 ; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x114
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x104
 ; GCN-NEXT:    s_load_dwordx8 s[24:31], s[4:5], 0xe4
+; GCN-NEXT:    ; implicit-def: $vgpr30
+; GCN-NEXT:    ; implicit-def: $vgpr31
 ; GCN-NEXT:    v_mov_b32_e32 v32, 0x3ff00000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s8

@@ -103,6 +103,9 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; CHECK-NEXT:  ; %bb.6: ; %sw.bb.i.i.i.i
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:  ; %bb.7: ; %Flow7
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:    v_mov_b32_e32 v44, 0

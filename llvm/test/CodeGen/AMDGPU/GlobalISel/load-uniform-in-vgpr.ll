@@ -31,10 +31,12 @@ define amdgpu_ps void @load_uniform_P1_i16_b16_gfx12(ptr addrspace(1) inreg %ptr
 ; GFX11-True16-LABEL: load_uniform_P1_i16_b16_gfx12:
 ; GFX11-True16:       ; %bb.0:
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-True16-NEXT:    s_clause 0x1
 ; GFX11-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX11-True16-NEXT:    global_load_d16_b16 v2, v2, s[2:3] glc dlc
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-True16-NEXT:    s_add_i32 s0, s0, s1
@@ -61,10 +63,12 @@ define amdgpu_ps void @load_uniform_P1_i16_b16_gfx12(ptr addrspace(1) inreg %ptr
 ; GFX12-True16-LABEL: load_uniform_P1_i16_b16_gfx12:
 ; GFX12-True16:       ; %bb.0:
 ; GFX12-True16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-True16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-True16-NEXT:    s_clause 0x1
 ; GFX12-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX12-True16-NEXT:    global_load_d16_b16 v2, v2, s[2:3] scope:SCOPE_SYS
 ; GFX12-True16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-True16-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-True16-NEXT:    s_add_co_i32 s0, s0, s1
@@ -115,10 +119,12 @@ define amdgpu_ps void @load_uniform_P1_i16_b16_gfx11(ptr addrspace(1) inreg %ptr
 ; GFX11-True16-LABEL: load_uniform_P1_i16_b16_gfx11:
 ; GFX11-True16:       ; %bb.0:
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-True16-NEXT:    s_clause 0x1
 ; GFX11-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX11-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1] glc dlc
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-True16-NEXT:    s_add_i32 s0, s0, s1
@@ -148,6 +154,7 @@ define amdgpu_ps void @load_uniform_P1_i16_b16_gfx11(ptr addrspace(1) inreg %ptr
 ; GFX12-True16-NEXT:    s_load_u16 s2, s[0:1], 0x0
 ; GFX12-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1] scope:SCOPE_SYS
 ; GFX12-True16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-True16-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-True16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-True16-NEXT:    s_add_co_i32 s0, s2, s0
@@ -197,10 +204,12 @@ define amdgpu_ps void @load_uniform_P1_i16_anyextending_gfx12(ptr addrspace(1) i
 ; GFX11-True16-LABEL: load_uniform_P1_i16_anyextending_gfx12:
 ; GFX11-True16:       ; %bb.0:
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-True16-NEXT:    s_clause 0x1
 ; GFX11-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX11-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1] glc dlc
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-True16-NEXT:    s_add_i32 s0, s0, s1
@@ -227,10 +236,12 @@ define amdgpu_ps void @load_uniform_P1_i16_anyextending_gfx12(ptr addrspace(1) i
 ; GFX12-True16-LABEL: load_uniform_P1_i16_anyextending_gfx12:
 ; GFX12-True16:       ; %bb.0:
 ; GFX12-True16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-True16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-True16-NEXT:    s_clause 0x1
 ; GFX12-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX12-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1] scope:SCOPE_SYS
 ; GFX12-True16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-True16-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-True16-NEXT:    s_add_co_i32 s0, s0, s1
@@ -281,10 +292,12 @@ define amdgpu_ps void @load_uniform_P1_i16_anyextending_gfx11(ptr addrspace(1) i
 ; GFX11-True16-LABEL: load_uniform_P1_i16_anyextending_gfx11:
 ; GFX11-True16:       ; %bb.0:
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-True16-NEXT:    s_clause 0x1
 ; GFX11-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX11-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1] glc dlc
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-True16-NEXT:    s_add_i32 s0, s0, s1
@@ -314,6 +327,7 @@ define amdgpu_ps void @load_uniform_P1_i16_anyextending_gfx11(ptr addrspace(1) i
 ; GFX12-True16-NEXT:    s_load_u16 s2, s[0:1], 0x0
 ; GFX12-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1] scope:SCOPE_SYS
 ; GFX12-True16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-True16-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-True16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-True16-NEXT:    s_add_co_i32 s0, s2, s0
@@ -1069,6 +1083,7 @@ define amdgpu_ps void @load_divergent_P3_i16(ptr addrspace(3) inreg %ptra, ptr a
 ; GFX11-True16:       ; %bb.0:
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-True16-NEXT:    ds_load_u16_d16 v1, v1
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-True16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX11-True16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1088,6 +1103,7 @@ define amdgpu_ps void @load_divergent_P3_i16(ptr addrspace(3) inreg %ptra, ptr a
 ; GFX12-True16:       ; %bb.0:
 ; GFX12-True16-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-True16-NEXT:    ds_load_u16_d16 v1, v1
+; GFX12-True16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-True16-NEXT:    s_wait_dscnt 0x0
 ; GFX12-True16-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX12-True16-NEXT:    s_wait_alu 0xf1ff
@@ -1260,9 +1276,11 @@ define amdgpu_ps void @load_uniform_P4_i16_b16_gfx12(ptr addrspace(4) inreg %ptr
 ; GFX11-True16-LABEL: load_uniform_P4_i16_b16_gfx12:
 ; GFX11-True16:       ; %bb.0:
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-True16-NEXT:    s_clause 0x1
 ; GFX11-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX11-True16-NEXT:    global_load_d16_b16 v2, v2, s[2:3] glc dlc
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(0)
@@ -1294,6 +1312,7 @@ define amdgpu_ps void @load_uniform_P4_i16_b16_gfx12(ptr addrspace(4) inreg %ptr
 ; GFX12-True16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1]
 ; GFX12-True16-NEXT:    s_load_u16 s0, s[2:3], 0x0
+; GFX12-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-True16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-True16-NEXT:    s_wait_kmcnt 0x0
@@ -1346,6 +1365,7 @@ define amdgpu_ps void @load_uniform_P4_i16_b16_gfx11(ptr addrspace(4) inreg %ptr
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1]
 ; GFX11-True16-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-True16-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1421,9 +1441,11 @@ define amdgpu_ps void @load_uniform_P4_i16_anyextending_gfx12(ptr addrspace(4) i
 ; GFX11-True16-LABEL: load_uniform_P4_i16_anyextending_gfx12:
 ; GFX11-True16:       ; %bb.0:
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-True16-NEXT:    s_clause 0x1
 ; GFX11-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX11-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1] glc dlc
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(0)
@@ -1455,6 +1477,7 @@ define amdgpu_ps void @load_uniform_P4_i16_anyextending_gfx12(ptr addrspace(4) i
 ; GFX12-True16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1]
 ; GFX12-True16-NEXT:    s_load_u16 s0, s[0:1], 0x0
+; GFX12-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-True16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-True16-NEXT:    s_wait_kmcnt 0x0
@@ -1507,6 +1530,7 @@ define amdgpu_ps void @load_uniform_P4_i16_anyextending_gfx11(ptr addrspace(4) i
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1]
 ; GFX11-True16-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-True16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-True16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-True16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-True16-NEXT:    s_waitcnt lgkmcnt(0)

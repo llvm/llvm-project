@@ -50,6 +50,7 @@ define void @undef_lo_v2i16(i16 %arg0) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
 ; GFX11-TRUE16-NEXT:    ; use v0
 ; GFX11-TRUE16-NEXT:    ;;#ASMEND
@@ -101,6 +102,7 @@ define void @undef_lo_v2f16(half %arg0) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
 ; GFX11-TRUE16-NEXT:    ; use v0
 ; GFX11-TRUE16-NEXT:    ;;#ASMEND
@@ -159,6 +161,7 @@ define void @undef_lo_op_v2f16(half %arg0) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
@@ -242,6 +245,7 @@ define void @undef_lo_op_v2i16(i16 %arg0) {
 ; GFX11-TRUE16-SDAG:       ; %bb.0:
 ; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-SDAG-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-SDAG-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-SDAG-NEXT:    v_pk_add_u16 v0, 0x63, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
@@ -253,6 +257,7 @@ define void @undef_lo_op_v2i16(i16 %arg0) {
 ; GFX11-TRUE16-GISEL:       ; %bb.0:
 ; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-GISEL-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX11-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-GISEL-NEXT:    v_pk_add_u16 v0, 0x630063, v0
 ; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMSTART
@@ -270,6 +275,7 @@ define void @undef_lo3_v4i16(i16 %arg0) {
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
 ; GFX8-SDAG-NEXT:    ;;#ASMEND
@@ -290,6 +296,7 @@ define void @undef_lo3_v4i16(i16 %arg0) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
 ; GFX9-NEXT:    ;;#ASMEND
@@ -299,6 +306,7 @@ define void @undef_lo3_v4i16(i16 %arg0) {
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-FAKE16-NEXT:    ;;#ASMSTART
 ; GFX11-FAKE16-NEXT:    ; use v[0:1]
 ; GFX11-FAKE16-NEXT:    ;;#ASMEND
@@ -308,6 +316,8 @@ define void @undef_lo3_v4i16(i16 %arg0) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
 ; GFX11-TRUE16-NEXT:    ; use v[0:1]
 ; GFX11-TRUE16-NEXT:    ;;#ASMEND
@@ -322,6 +332,7 @@ define void @undef_lo3_v4f16(half %arg0) {
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
 ; GFX8-SDAG-NEXT:    ;;#ASMEND
@@ -342,6 +353,7 @@ define void @undef_lo3_v4f16(half %arg0) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
 ; GFX9-NEXT:    ;;#ASMEND
@@ -351,6 +363,7 @@ define void @undef_lo3_v4f16(half %arg0) {
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-FAKE16-NEXT:    ;;#ASMSTART
 ; GFX11-FAKE16-NEXT:    ; use v[0:1]
 ; GFX11-FAKE16-NEXT:    ;;#ASMEND
@@ -360,6 +373,8 @@ define void @undef_lo3_v4f16(half %arg0) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
 ; GFX11-TRUE16-NEXT:    ; use v[0:1]
 ; GFX11-TRUE16-NEXT:    ;;#ASMEND
@@ -375,6 +390,7 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX8-SDAG-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX8-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
 ; GFX8-SDAG-NEXT:    ;;#ASMEND
@@ -396,6 +412,7 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
 ; GFX9-NEXT:    v_perm_b32 v0, v0, v0, s4
+; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
 ; GFX9-NEXT:    ;;#ASMEND
@@ -405,6 +422,7 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v0, 0x7060302
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-FAKE16-NEXT:    ;;#ASMSTART
 ; GFX11-FAKE16-NEXT:    ; use v[0:1]
 ; GFX11-FAKE16-NEXT:    ;;#ASMEND
@@ -414,6 +432,7 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
 ; GFX11-TRUE16-NEXT:    ; use v[0:1]
 ; GFX11-TRUE16-NEXT:    ;;#ASMEND
@@ -429,6 +448,7 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX8-SDAG-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX8-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
 ; GFX8-SDAG-NEXT:    ;;#ASMEND
@@ -450,6 +470,7 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
 ; GFX9-NEXT:    v_perm_b32 v0, v0, v0, s4
+; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
 ; GFX9-NEXT:    ;;#ASMEND
@@ -459,6 +480,7 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v0, 0x7060302
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-FAKE16-NEXT:    ;;#ASMSTART
 ; GFX11-FAKE16-NEXT:    ; use v[0:1]
 ; GFX11-FAKE16-NEXT:    ;;#ASMEND
@@ -468,6 +490,7 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
 ; GFX11-TRUE16-NEXT:    ; use v[0:1]
 ; GFX11-TRUE16-NEXT:    ;;#ASMEND
@@ -503,13 +526,31 @@ define void @undef_hi_v2i16(i16 %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: undef_hi_v2i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    ; use v0
-; GFX11-NEXT:    ;;#ASMEND
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_hi_v2i16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v0
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-SDAG-LABEL: undef_hi_v2i16:
+; GFX11-TRUE16-SDAG:       ; %bb.0:
+; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-SDAG-NEXT:    ; use v0
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-GISEL-LABEL: undef_hi_v2i16:
+; GFX11-TRUE16-GISEL:       ; %bb.0:
+; GFX11-TRUE16-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-GISEL-NEXT:    ; use v0
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %undef.hi = insertelement <2 x i16> poison, i16 %arg0, i32 0
   call void asm sideeffect "; use $0", "v"(<2 x i16> %undef.hi);
   ret void
@@ -541,13 +582,31 @@ define void @undef_hi_v2f16(half %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: undef_hi_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    ; use v0
-; GFX11-NEXT:    ;;#ASMEND
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_hi_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v0
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-SDAG-LABEL: undef_hi_v2f16:
+; GFX11-TRUE16-SDAG:       ; %bb.0:
+; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-SDAG-NEXT:    ; use v0
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-GISEL-LABEL: undef_hi_v2f16:
+; GFX11-TRUE16-GISEL:       ; %bb.0:
+; GFX11-TRUE16-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-GISEL-NEXT:    ; use v0
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %undef.hi = insertelement <2 x half> poison, half %arg0, i32 0
   call void asm sideeffect "; use $0", "v"(<2 x half> %undef.hi);
   ret void
@@ -586,14 +645,24 @@ define void @undef_hi_op_v2f16(half %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: undef_hi_op_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
-; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    ; use v0
-; GFX11-NEXT:    ;;#ASMEND
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_hi_op_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v0
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: undef_hi_op_v2f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-NEXT:    ; use v0
+; GFX11-TRUE16-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %undef.hi = insertelement <2 x half> poison, half %arg0, i32 0
   %op = fadd <2 x half> %undef.hi, <half 1.0, half 1.0>
   call void asm sideeffect "; use $0", "v"(<2 x half> %op);
@@ -662,6 +731,7 @@ define void @undef_hi_op_v2i16(i16 %arg0) {
 ;
 ; GFX11-TRUE16-SDAG-LABEL: undef_hi_op_v2i16:
 ; GFX11-TRUE16-SDAG:       ; %bb.0:
+; GFX11-TRUE16-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-SDAG-NEXT:    v_pk_add_u16 v0, 0x63, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
@@ -671,6 +741,7 @@ define void @undef_hi_op_v2i16(i16 %arg0) {
 ;
 ; GFX11-TRUE16-GISEL-LABEL: undef_hi_op_v2i16:
 ; GFX11-TRUE16-GISEL:       ; %bb.0:
+; GFX11-TRUE16-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-GISEL-NEXT:    v_pk_add_u16 v0, 0x630063, v0
 ; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMSTART
@@ -686,6 +757,7 @@ define void @undef_hi_op_v2i16(i16 %arg0) {
 define void @undef_hi3_v4i16(i16 %arg0) {
 ; GFX8-SDAG-LABEL: undef_hi3_v4i16:
 ; GFX8-SDAG:       ; %bb.0:
+; GFX8-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
@@ -704,19 +776,41 @@ define void @undef_hi3_v4i16(i16 %arg0) {
 ;
 ; GFX9-LABEL: undef_hi3_v4i16:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: undef_hi3_v4i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    ; use v[0:1]
-; GFX11-NEXT:    ;;#ASMEND
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_hi3_v4i16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr1
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v[0:1]
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-SDAG-LABEL: undef_hi3_v4i16:
+; GFX11-TRUE16-SDAG:       ; %bb.0:
+; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-SDAG-NEXT:    ; implicit-def: $vgpr1
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-SDAG-NEXT:    ; use v[0:1]
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-GISEL-LABEL: undef_hi3_v4i16:
+; GFX11-TRUE16-GISEL:       ; %bb.0:
+; GFX11-TRUE16-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-GISEL-NEXT:    ; implicit-def: $vgpr1
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-GISEL-NEXT:    ; use v[0:1]
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %undef.hi = insertelement <4 x i16> poison, i16 %arg0, i32 0
   call void asm sideeffect "; use $0", "v"(<4 x i16> %undef.hi);
   ret void
@@ -725,6 +819,7 @@ define void @undef_hi3_v4i16(i16 %arg0) {
 define void @undef_hi3_v4f16(half %arg0) {
 ; GFX8-SDAG-LABEL: undef_hi3_v4f16:
 ; GFX8-SDAG:       ; %bb.0:
+; GFX8-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
@@ -743,19 +838,41 @@ define void @undef_hi3_v4f16(half %arg0) {
 ;
 ; GFX9-LABEL: undef_hi3_v4f16:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: undef_hi3_v4f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    ; use v[0:1]
-; GFX11-NEXT:    ;;#ASMEND
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_hi3_v4f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr1
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v[0:1]
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-SDAG-LABEL: undef_hi3_v4f16:
+; GFX11-TRUE16-SDAG:       ; %bb.0:
+; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-SDAG-NEXT:    ; implicit-def: $vgpr1
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-SDAG-NEXT:    ; use v[0:1]
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-GISEL-LABEL: undef_hi3_v4f16:
+; GFX11-TRUE16-GISEL:       ; %bb.0:
+; GFX11-TRUE16-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-GISEL-NEXT:    ; implicit-def: $vgpr1
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-GISEL-NEXT:    ; use v[0:1]
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %undef.hi = insertelement <4 x half> poison, half %arg0, i32 0
   call void asm sideeffect "; use $0", "v"(<4 x half> %undef.hi);
   ret void
@@ -764,6 +881,7 @@ define void @undef_hi3_v4f16(half %arg0) {
 define void @undef_hi2_v4i16(<2 x i16> %arg0) {
 ; GFX8-SDAG-LABEL: undef_hi2_v4i16:
 ; GFX8-SDAG:       ; %bb.0:
+; GFX8-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
@@ -784,6 +902,7 @@ define void @undef_hi2_v4i16(<2 x i16> %arg0) {
 ;
 ; GFX9-LABEL: undef_hi2_v4i16:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
@@ -792,6 +911,7 @@ define void @undef_hi2_v4i16(<2 x i16> %arg0) {
 ;
 ; GFX11-LABEL: undef_hi2_v4i16:
 ; GFX11:       ; %bb.0:
+; GFX11-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use v[0:1]
@@ -805,6 +925,7 @@ define void @undef_hi2_v4i16(<2 x i16> %arg0) {
 define void @undef_hi2_v4f16(<2 x half> %arg0) {
 ; GFX8-SDAG-LABEL: undef_hi2_v4f16:
 ; GFX8-SDAG:       ; %bb.0:
+; GFX8-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
@@ -825,6 +946,7 @@ define void @undef_hi2_v4f16(<2 x half> %arg0) {
 ;
 ; GFX9-LABEL: undef_hi2_v4f16:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
@@ -833,6 +955,7 @@ define void @undef_hi2_v4f16(<2 x half> %arg0) {
 ;
 ; GFX11-LABEL: undef_hi2_v4f16:
 ; GFX11:       ; %bb.0:
+; GFX11-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use v[0:1]

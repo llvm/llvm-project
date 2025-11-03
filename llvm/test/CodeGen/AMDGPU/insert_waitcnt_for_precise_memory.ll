@@ -1266,6 +1266,7 @@ define amdgpu_ps <4 x float> @load.f32.1d(<8 x i32> inreg %rsrc, <2 x i16> %coor
 ;
 ; GFX90A-LABEL: load.f32.1d:
 ; GFX90A:       ; %bb.0: ; %main_body
+; GFX90A-NEXT:    ; implicit-def: $vgpr1
 ; GFX90A-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 unorm a16
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ; return to shader part epilog
@@ -1325,6 +1326,7 @@ define amdgpu_ps void @store_f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <4
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v1
+; GFX90A-NEXT:    ; implicit-def: $vgpr1
 ; GFX90A-NEXT:    image_store v[2:5], v0, s[0:7] dmask:0x1 unorm a16
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_endpgm
@@ -1382,6 +1384,7 @@ define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i32 %s)
 ; GFX90A-LABEL: atomic_swap_1d:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v1
+; GFX90A-NEXT:    ; implicit-def: $vgpr3
 ; GFX90A-NEXT:    image_atomic_swap v0, v2, s[0:7] dmask:0x1 unorm glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ; return to shader part epilog

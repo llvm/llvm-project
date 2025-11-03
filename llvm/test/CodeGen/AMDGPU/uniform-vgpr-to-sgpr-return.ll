@@ -109,6 +109,7 @@ define amdgpu_ps i16 @uniform_v_to_s_i16(half inreg %a, half inreg %b) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_cmp_o_f16_e64 s2, s0, s1
 ; GFX11-TRUE16-NEXT:    v_max_f16_e64 v0.l, s0, s1
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v0.l, s2
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0

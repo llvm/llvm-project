@@ -339,6 +339,8 @@ define amdgpu_ps <3 x i32> @s_and_i96(i96 inreg %num, i96 inreg %den) {
 ; GCN-NEXT:    s_mov_b32 s7, s4
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], s[6:7]
 ; GCN-NEXT:    s_and_b32 s2, s2, s5
+; GCN-NEXT:    ; implicit-def: $sgpr3
+; GCN-NEXT:    ; implicit-def: $sgpr3
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_and_i96:
@@ -347,6 +349,8 @@ define amdgpu_ps <3 x i32> @s_and_i96(i96 inreg %num, i96 inreg %den) {
 ; GFX10PLUS-NEXT:    s_mov_b32 s7, s4
 ; GFX10PLUS-NEXT:    s_and_b32 s2, s2, s5
 ; GFX10PLUS-NEXT:    s_and_b64 s[0:1], s[0:1], s[6:7]
+; GFX10PLUS-NEXT:    ; implicit-def: $sgpr3
+; GFX10PLUS-NEXT:    ; implicit-def: $sgpr3
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_and_i96:
@@ -355,6 +359,8 @@ define amdgpu_ps <3 x i32> @s_and_i96(i96 inreg %num, i96 inreg %den) {
 ; GFX12-NEXT:    s_mov_b32 s7, s4
 ; GFX12-NEXT:    s_and_b32 s2, s2, s5
 ; GFX12-NEXT:    s_and_b64 s[0:1], s[0:1], s[6:7]
+; GFX12-NEXT:    ; implicit-def: $sgpr3
+; GFX12-NEXT:    ; implicit-def: $sgpr3
 ; GFX12-NEXT:    ; return to shader part epilog
   %result = and i96 %num, %den
   %cast = bitcast i96 %result to <3 x i32>
@@ -368,6 +374,8 @@ define i96 @v_and_i96(i96 %num, i96 %den) {
 ; GCN-NEXT:    v_and_b32_e32 v0, v0, v3
 ; GCN-NEXT:    v_and_b32_e32 v1, v1, v4
 ; GCN-NEXT:    v_and_b32_e32 v2, v2, v5
+; GCN-NEXT:    ; implicit-def: $vgpr6
+; GCN-NEXT:    ; implicit-def: $vgpr6
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10PLUS-LABEL: v_and_i96:
@@ -376,6 +384,8 @@ define i96 @v_and_i96(i96 %num, i96 %den) {
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, v0, v3
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v1, v1, v4
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v2, v2, v5
+; GFX10PLUS-NEXT:    ; implicit-def: $vgpr3
+; GFX10PLUS-NEXT:    ; implicit-def: $vgpr3
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_and_i96:
@@ -388,6 +398,8 @@ define i96 @v_and_i96(i96 %num, i96 %den) {
 ; GFX12-NEXT:    v_and_b32_e32 v0, v0, v3
 ; GFX12-NEXT:    v_and_b32_e32 v1, v1, v4
 ; GFX12-NEXT:    v_and_b32_e32 v2, v2, v5
+; GFX12-NEXT:    ; implicit-def: $vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = and i96 %num, %den
   ret i96 %result

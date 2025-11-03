@@ -2568,8 +2568,9 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_fp8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
+; GISEL-NEXT:    ; implicit-def: $vgpr29
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_endpgm
 bb:
@@ -2590,8 +2591,9 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_bf8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
+; GISEL-NEXT:    ; implicit-def: $vgpr29
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_endpgm
 bb:
@@ -2612,8 +2614,9 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_fp8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
+; GISEL-NEXT:    ; implicit-def: $vgpr29
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_endpgm
 bb:
@@ -2634,8 +2637,9 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_bf8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
+; GISEL-NEXT:    ; implicit-def: $vgpr29
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_endpgm
 bb:

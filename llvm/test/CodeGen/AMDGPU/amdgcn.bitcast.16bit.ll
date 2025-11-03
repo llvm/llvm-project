@@ -353,6 +353,7 @@ define inreg i16 @bitcast_f16_to_i16_scalar(half inreg %a, i32 inreg %b) {
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccnz .LBB3_4
 ; GFX11-TRUE16-NEXT:  .LBB3_2: ; %cmp.true
 ; GFX11-TRUE16-NEXT:    v_add_f16_e64 v0.l, 0x200, s0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB3_3:
 ; GFX11-TRUE16-NEXT:    s_branch .LBB3_2
@@ -1004,6 +1005,7 @@ define inreg bfloat @bitcast_f16_to_bf16_scalar(half inreg %a, i32 inreg %b) {
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccnz .LBB9_4
 ; GFX11-TRUE16-NEXT:  .LBB9_2: ; %cmp.true
 ; GFX11-TRUE16-NEXT:    v_add_f16_e64 v0.l, 0x200, s0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB9_3:
 ; GFX11-TRUE16-NEXT:    s_branch .LBB9_2

@@ -17390,32 +17390,60 @@ define amdgpu_gfx void @test_call_external_void_func_v1bf16(i16 %arg) #0 {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_call_external_void_func_v1bf16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, s33
-; GFX11-NEXT:    s_mov_b32 s33, s32
-; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
-; GFX11-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
-; GFX11-NEXT:    s_mov_b32 exec_lo, s1
-; GFX11-NEXT:    v_writelane_b32 v40, s0, 2
-; GFX11-NEXT:    s_mov_b32 s1, external_void_func_v1bf16@abs32@hi
-; GFX11-NEXT:    s_mov_b32 s0, external_void_func_v1bf16@abs32@lo
-; GFX11-NEXT:    s_add_i32 s32, s32, 16
-; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
-; GFX11-NEXT:    s_mov_b32 s32, s33
-; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
-; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
-; GFX11-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
-; GFX11-NEXT:    s_mov_b32 exec_lo, s1
-; GFX11-NEXT:    s_mov_b32 s33, s0
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: test_call_external_void_func_v1bf16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s33
+; GFX11-TRUE16-NEXT:    s_mov_b32 s33, s32
+; GFX11-TRUE16-NEXT:    s_or_saveexec_b32 s1, -1
+; GFX11-TRUE16-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
+; GFX11-TRUE16-NEXT:    s_mov_b32 exec_lo, s1
+; GFX11-TRUE16-NEXT:    v_writelane_b32 v40, s0, 2
+; GFX11-TRUE16-NEXT:    s_mov_b32 s1, external_void_func_v1bf16@abs32@hi
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, external_void_func_v1bf16@abs32@lo
+; GFX11-TRUE16-NEXT:    s_add_i32 s32, s32, 16
+; GFX11-TRUE16-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX11-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s31, v40, 1
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s32, s33
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s0, v40, 2
+; GFX11-TRUE16-NEXT:    s_or_saveexec_b32 s1, -1
+; GFX11-TRUE16-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
+; GFX11-TRUE16-NEXT:    s_mov_b32 exec_lo, s1
+; GFX11-TRUE16-NEXT:    s_mov_b32 s33, s0
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: test_call_external_void_func_v1bf16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s33
+; GFX11-FAKE16-NEXT:    s_mov_b32 s33, s32
+; GFX11-FAKE16-NEXT:    s_or_saveexec_b32 s1, -1
+; GFX11-FAKE16-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
+; GFX11-FAKE16-NEXT:    s_mov_b32 exec_lo, s1
+; GFX11-FAKE16-NEXT:    v_writelane_b32 v40, s0, 2
+; GFX11-FAKE16-NEXT:    s_mov_b32 s1, external_void_func_v1bf16@abs32@hi
+; GFX11-FAKE16-NEXT:    s_mov_b32 s0, external_void_func_v1bf16@abs32@lo
+; GFX11-FAKE16-NEXT:    s_add_i32 s32, s32, 16
+; GFX11-FAKE16-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX11-FAKE16-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX11-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_readlane_b32 s31, v40, 1
+; GFX11-FAKE16-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s32, s33
+; GFX11-FAKE16-NEXT:    v_readlane_b32 s0, v40, 2
+; GFX11-FAKE16-NEXT:    s_or_saveexec_b32 s1, -1
+; GFX11-FAKE16-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
+; GFX11-FAKE16-NEXT:    s_mov_b32 exec_lo, s1
+; GFX11-FAKE16-NEXT:    s_mov_b32 s33, s0
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v1bf16:
 ; GFX10-SCRATCH:       ; %bb.0:

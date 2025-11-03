@@ -159,6 +159,7 @@ define float @fadd_muladd_fpext_fmul_f16_to_f32(float %x, float %y, half %u, hal
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v2.l, v2.l, v3.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[0,0,1]
 ; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v4
@@ -204,6 +205,7 @@ define float @fadd_muladd_fpext_fmul_f16_to_f32_commute(float %x, float %y, half
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v2.l, v2.l, v3.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[0,0,1]
 ; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, v4, v0
@@ -247,6 +249,7 @@ define float @fadd_fmad_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half 
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v2.l, v2.l, v3.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[0,0,1]
 ; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v4
@@ -293,6 +296,7 @@ define float @fadd_fma_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half %
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v2.l, v2.l, v3.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[0,0,1]
 ; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v4
@@ -336,6 +340,7 @@ define float @fadd_fma_fpext_fmul_f16_to_f32_commute(float %x, float %y, half %u
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v2.l, v2.l, v3.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[0,0,1]
 ; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, v4, v0
@@ -558,11 +563,19 @@ entry:
 ; fold (fsub x, (fpext (fmul y, z)))
 ;   -> (fma (fneg (fpext y)), (fpext z), x)
 define float @fsub_fpext_fmul_f16_to_f32_commute(float %x, half %y, half %z) #0 {
-; GFX11-F32FLUSH-LABEL: fsub_fpext_fmul_f16_to_f32_commute:
-; GFX11-F32FLUSH:       ; %bb.0: ; %entry
-; GFX11-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-F32FLUSH-NEXT:    v_fma_mix_f32 v0, -v1, v2, v0 op_sel_hi:[1,1,0]
-; GFX11-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-F32FLUSH-TRUE16-LABEL: fsub_fpext_fmul_f16_to_f32_commute:
+; GFX11-F32FLUSH-TRUE16:       ; %bb.0: ; %entry
+; GFX11-F32FLUSH-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX11-F32FLUSH-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-F32FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-F32FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v0, -v1, v2, v0 op_sel_hi:[1,1,0]
+; GFX11-F32FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-F32FLUSH-FAKE16-LABEL: fsub_fpext_fmul_f16_to_f32_commute:
+; GFX11-F32FLUSH-FAKE16:       ; %bb.0: ; %entry
+; GFX11-F32FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-F32FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v0, -v1, v2, v0 op_sel_hi:[1,1,0]
+; GFX11-F32FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-F32DENORM-TRUE16-LABEL: fsub_fpext_fmul_f16_to_f32_commute:
 ; GFX11-F32DENORM-TRUE16:       ; %bb.0: ; %entry
@@ -693,6 +706,7 @@ define float @fsub_muladd_fpext_mul_f16_to_f32(float %x, float %y, float %z, hal
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v3.l, v3.l, v4.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v3 op_sel_hi:[0,0,1]
 ; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v0, v0, v2
@@ -780,6 +794,7 @@ define float @fsub_muladd_fpext_mul_f16_to_f32_commute(float %x, float %y, float
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v3.l, v3.l, v4.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v1, v1, v2, v3 op_sel_hi:[0,0,1]
 ; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -867,5 +882,4 @@ declare half @llvm.fma.f16(half, half, half) #0
 attributes #0 = { nounwind readnone speculatable }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX11-F32DENORM: {{.*}}
-; GFX11-F32FLUSH-FAKE16: {{.*}}
-; GFX11-F32FLUSH-TRUE16: {{.*}}
+; GFX11-F32FLUSH: {{.*}}

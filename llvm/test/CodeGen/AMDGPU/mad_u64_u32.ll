@@ -9,19 +9,22 @@
 define amdgpu_ps float @mad_i32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GFX9-LABEL: mad_i32_vvv:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $vgpr3
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v0, v1, v[2:3]
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: mad_i32_vvv:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    ; implicit-def: $vgpr3
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, v[2:3]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: mad_i32_vvv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v3, v1
-; GFX11-NEXT:    v_mov_b32_e32 v4, v0
-; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v3, v[2:3]
+; GFX11-NEXT:    v_mov_b32_e32 v4, v1
+; GFX11-NEXT:    v_mov_b32_e32 v5, v0
+; GFX11-NEXT:    ; implicit-def: $vgpr3
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v5, v4, v[2:3]
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: mad_i32_vvv:
@@ -159,18 +162,21 @@ define amdgpu_ps float @mad_i32_vvi_neg(i32 %a, i32 %b) {
 define amdgpu_ps float @mad_i32_vcv(i32 %a, i32 %c) {
 ; GFX9-LABEL: mad_i32_vcv:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $vgpr2
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v0, 42, v[1:2]
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: mad_i32_vcv:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    ; implicit-def: $vgpr2
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, 42, v[1:2]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: mad_i32_vcv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, v0, 42, v[1:2]
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-NEXT:    ; implicit-def: $vgpr2
+; GFX11-NEXT:    v_mad_u64_u32 v[3:4], null, v0, 42, v[1:2]
+; GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: mad_i32_vcv:
@@ -213,11 +219,13 @@ define amdgpu_ps float @mad_i32_vcc(i32 %a) {
 define amdgpu_ps float @mad_i32_vvs(i32 %a, i32 %b, i32 inreg %c) {
 ; GFX9-LABEL: mad_i32_vvs:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $sgpr1
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v0, v1, s[0:1]
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: mad_i32_vvs:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    ; implicit-def: $sgpr1
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, s[0:1]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -225,6 +233,7 @@ define amdgpu_ps float @mad_i32_vvs(i32 %a, i32 %b, i32 inreg %c) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v0
+; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v3, v2, s[0:1]
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -241,18 +250,21 @@ define amdgpu_ps float @mad_i32_vvs(i32 %a, i32 %b, i32 inreg %c) {
 define amdgpu_ps float @mad_i32_vsv(i32 %a, i32 inreg %b, i32 %c) {
 ; GFX9-LABEL: mad_i32_vsv:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $vgpr2
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v0, s0, v[1:2]
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: mad_i32_vsv:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    ; implicit-def: $vgpr2
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, s0, v[1:2]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: mad_i32_vsv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, v0, s0, v[1:2]
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-NEXT:    ; implicit-def: $vgpr2
+; GFX11-NEXT:    v_mad_u64_u32 v[3:4], null, v0, s0, v[1:2]
+; GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: mad_i32_vsv:
@@ -268,18 +280,21 @@ define amdgpu_ps float @mad_i32_vsv(i32 %a, i32 inreg %b, i32 %c) {
 define amdgpu_ps float @mad_i32_svv(i32 inreg %a, i32 %b, i32 %c) {
 ; GFX9-LABEL: mad_i32_svv:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $vgpr2
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], s0, v0, v[1:2]
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: mad_i32_svv:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    ; implicit-def: $vgpr2
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, s0, v0, v[1:2]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: mad_i32_svv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, s0, v0, v[1:2]
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-NEXT:    ; implicit-def: $vgpr2
+; GFX11-NEXT:    v_mad_u64_u32 v[3:4], null, s0, v0, v[1:2]
+; GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: mad_i32_svv:
@@ -302,6 +317,7 @@ define amdgpu_ps float @mad_i32_vss(i32 %a, i32 inreg %b, i32 inreg %c) {
 ; GFX10-LABEL: mad_i32_vss:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_mov_b32 s2, s1
+; GFX10-NEXT:    ; implicit-def: $sgpr3
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, s0, s[2:3]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -309,6 +325,7 @@ define amdgpu_ps float @mad_i32_vss(i32 %a, i32 inreg %b, i32 inreg %c) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-NEXT:    s_mov_b32 s2, s1
+; GFX11-NEXT:    ; implicit-def: $sgpr3
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v2, s0, s[2:3]
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -332,6 +349,7 @@ define amdgpu_ps float @mad_i32_svs(i32 inreg %a, i32 %b, i32 inreg %c) {
 ; GFX10-LABEL: mad_i32_svs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_mov_b32 s2, s1
+; GFX10-NEXT:    ; implicit-def: $sgpr3
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, s0, v0, s[2:3]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -339,6 +357,7 @@ define amdgpu_ps float @mad_i32_svs(i32 inreg %a, i32 %b, i32 inreg %c) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-NEXT:    s_mov_b32 s2, s1
+; GFX11-NEXT:    ; implicit-def: $sgpr3
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, s0, v2, s[2:3]
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -361,13 +380,15 @@ define amdgpu_ps float @mad_i32_ssv(i32 inreg %a, i32 inreg %b, i32 %c) {
 ;
 ; GFX10-LABEL: mad_i32_ssv:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    ; implicit-def: $vgpr1
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, s0, s1, v[0:1]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: mad_i32_ssv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, s0, s1, v[0:1]
-; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    ; implicit-def: $vgpr1
+; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, s0, s1, v[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: mad_i32_ssv:

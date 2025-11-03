@@ -402,12 +402,6 @@ define amdgpu_ps i16 @s_bswap_i16(i16 inreg %src) {
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s0
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
-;
-; GFX10-LABEL: s_bswap_i16:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_perm_b32 v0, 0, s0, 0xc0c0001
-; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10-NEXT:    ; return to shader part epilog
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   ret i16 %bswap
 }
@@ -434,12 +428,6 @@ define i16 @v_bswap_i16(i16 %src) {
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc0c0001
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: v_bswap_i16:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   ret i16 %bswap
 }
@@ -544,13 +532,6 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX9-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: v_bswap_i16_sext_to_i32:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
-; GFX10-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   %zext = sext i16 %bswap to i32
   ret i32 %zext

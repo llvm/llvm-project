@@ -7760,7 +7760,17 @@ define amdgpu_kernel void @multi_same_block(i32 %arg) {
 ; SI-MOVREL:       ; %bb.0: ; %bb
 ; SI-MOVREL-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v1, 0x41900000
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr2
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr3
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr4
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr5
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr6
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr7
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr8
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v9, 0x41b0cccd
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr10
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr11
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr12
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-MOVREL-NEXT:    s_add_i32 m0, s0, -16
 ; SI-MOVREL-NEXT:    v_movreld_b32_e32 v0, 4.0
@@ -7774,7 +7784,17 @@ define amdgpu_kernel void @multi_same_block(i32 %arg) {
 ; VI-MOVREL:       ; %bb.0: ; %bb
 ; VI-MOVREL-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, 0x41900000
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr2
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr3
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr4
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr5
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr6
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr7
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr8
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v9, 0x41b0cccd
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr10
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr11
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr12
 ; VI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-MOVREL-NEXT:    s_add_i32 m0, s0, -16
 ; VI-MOVREL-NEXT:    v_movreld_b32_e32 v0, 4.0
@@ -7788,7 +7808,17 @@ define amdgpu_kernel void @multi_same_block(i32 %arg) {
 ; VI-IDXMODE:       ; %bb.0: ; %bb
 ; VI-IDXMODE-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, 0x41900000
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr2
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr3
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr4
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr5
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr6
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr7
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr8
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v9, 0x41b0cccd
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr10
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr11
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr12
 ; VI-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-IDXMODE-NEXT:    s_add_i32 s0, s0, -16
 ; VI-IDXMODE-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
@@ -7804,7 +7834,17 @@ define amdgpu_kernel void @multi_same_block(i32 %arg) {
 ; GFX9-IDXMODE:       ; %bb.0: ; %bb
 ; GFX9-IDXMODE-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v1, 0x41900000
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr2
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr3
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr4
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr5
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr6
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr7
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr8
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v9, 0x41b0cccd
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr10
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr11
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr12
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_add_i32 s0, s0, -16
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)

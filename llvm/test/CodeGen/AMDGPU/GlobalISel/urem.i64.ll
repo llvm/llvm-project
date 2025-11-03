@@ -194,6 +194,7 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; CHECK-NEXT:    s_sub_u32 s4, 0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:    v_madmk_f32 v1, v1, 0x4f800000, v2
 ; CHECK-NEXT:    s_subb_u32 s5, 0, s3
 ; CHECK-NEXT:    v_rcp_iflag_f32_e32 v1, v1
@@ -336,6 +337,7 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_subrev_i32_e32 v1, vcc, s2, v0
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s2, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:  .LBB1_5:
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    s_mov_b32 s1, s0

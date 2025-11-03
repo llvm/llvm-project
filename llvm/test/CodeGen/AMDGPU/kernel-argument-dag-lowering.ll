@@ -393,17 +393,18 @@ define amdgpu_kernel void @v3i15_arg(ptr addrspace(1) nocapture %out, <3 x i15> 
 ; GCN-LABEL: v3i15_arg:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-NEXT:    ; implicit-def: $sgpr5
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s4, s3, 0xffff
-; GCN-NEXT:    s_and_b32 s5, s2, 0x7fff
-; GCN-NEXT:    s_lshr_b32 s6, s2, 1
+; GCN-NEXT:    s_and_b32 s6, s2, 0x7fff
+; GCN-NEXT:    s_lshr_b32 s7, s2, 1
 ; GCN-NEXT:    s_lshl_b64 s[2:3], s[4:5], 30
-; GCN-NEXT:    s_and_b32 s4, s6, 0x3fff8000
-; GCN-NEXT:    s_and_b32 s6, s3, 0x1fff
-; GCN-NEXT:    s_or_b32 s4, s5, s4
+; GCN-NEXT:    s_and_b32 s4, s7, 0x3fff8000
+; GCN-NEXT:    s_and_b32 s5, s3, 0x1fff
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    s_or_b32 s4, s6, s4
 ; GCN-NEXT:    s_mov_b32 s5, 0
-; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
 ; GCN-NEXT:    global_store_short v0, v1, s[0:1] offset:4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2

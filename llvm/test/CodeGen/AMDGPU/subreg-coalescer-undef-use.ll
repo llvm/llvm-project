@@ -21,11 +21,14 @@ define amdgpu_kernel void @foobar(float %a0, float %a1, ptr addrspace(1) %out) #
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s7
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; CHECK-NEXT:  ; %bb.1: ; %ift
-; CHECK-NEXT:    s_mov_b32 s4, s5
-; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    v_mov_b32_e32 v1, s5
-; CHECK-NEXT:    v_mov_b32_e32 v2, s6
-; CHECK-NEXT:    v_mov_b32_e32 v3, s7
+; CHECK-NEXT:    s_mov_b32 s8, s5
+; CHECK-NEXT:    ; implicit-def: $sgpr9
+; CHECK-NEXT:    ; implicit-def: $sgpr10
+; CHECK-NEXT:    ; implicit-def: $sgpr11
+; CHECK-NEXT:    v_mov_b32_e32 v0, s8
+; CHECK-NEXT:    v_mov_b32_e32 v1, s9
+; CHECK-NEXT:    v_mov_b32_e32 v2, s10
+; CHECK-NEXT:    v_mov_b32_e32 v3, s11
 ; CHECK-NEXT:  ; %bb.2: ; %ife
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb

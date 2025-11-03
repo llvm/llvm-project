@@ -668,6 +668,7 @@ define amdgpu_ps half @test_minmax_f16_ieee_false(half %a, half %b, half %c) {
 ; GISEL-GFX11-TRUE16-LABEL: test_minmax_f16_ieee_false:
 ; GISEL-GFX11-TRUE16:       ; %bb.0:
 ; GISEL-GFX11-TRUE16-NEXT:    v_maxmin_f16 v0.l, v0.l, v1.l, v2.l
+; GISEL-GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX11-FAKE16-LABEL: test_minmax_f16_ieee_false:
@@ -688,6 +689,7 @@ define amdgpu_ps half @test_minmax_f16_ieee_false(half %a, half %b, half %c) {
 ; GISEL-GFX12-TRUE16-LABEL: test_minmax_f16_ieee_false:
 ; GISEL-GFX12-TRUE16:       ; %bb.0:
 ; GISEL-GFX12-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v1.l, v2.l
+; GISEL-GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX12-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-FAKE16-LABEL: test_minmax_f16_ieee_false:
@@ -708,6 +710,7 @@ define amdgpu_ps half @test_minmax_f16_ieee_false(half %a, half %b, half %c) {
 ; GISEL-GFX1250-TRUE16-LABEL: test_minmax_f16_ieee_false:
 ; GISEL-GFX1250-TRUE16:       ; %bb.0:
 ; GISEL-GFX1250-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v1.l, v2.l
+; GISEL-GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX1250-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX1250-FAKE16-LABEL: test_minmax_f16_ieee_false:
@@ -871,6 +874,7 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GISEL-GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
 ; GISEL-GFX11-TRUE16-NEXT:    v_max_f16_e32 v1.l, v2.l, v2.l
 ; GISEL-GFX11-TRUE16-NEXT:    v_maxmin_f16 v0.l, v0.l, v0.h, v1.l
+; GISEL-GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX11-FAKE16-LABEL: test_minmax_commuted_f16_ieee_true:
@@ -919,6 +923,7 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GISEL-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
 ; GISEL-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
 ; GISEL-GFX12-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v0.h, v1.l
+; GISEL-GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX12-FAKE16-LABEL: test_minmax_commuted_f16_ieee_true:
@@ -962,6 +967,7 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GISEL-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
 ; GISEL-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
 ; GISEL-GFX1250-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v0.h, v1.l
+; GISEL-GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GISEL-GFX1250-FAKE16-LABEL: test_minmax_commuted_f16_ieee_true:
@@ -992,6 +998,7 @@ define amdgpu_ps half @test_maxmin_f16_ieee_false(half %a, half %b, half %c) {
 ; GISEL-GFX11-TRUE16-LABEL: test_maxmin_f16_ieee_false:
 ; GISEL-GFX11-TRUE16:       ; %bb.0:
 ; GISEL-GFX11-TRUE16-NEXT:    v_minmax_f16 v0.l, v0.l, v1.l, v2.l
+; GISEL-GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX11-FAKE16-LABEL: test_maxmin_f16_ieee_false:
@@ -1012,6 +1019,7 @@ define amdgpu_ps half @test_maxmin_f16_ieee_false(half %a, half %b, half %c) {
 ; GISEL-GFX12-TRUE16-LABEL: test_maxmin_f16_ieee_false:
 ; GISEL-GFX12-TRUE16:       ; %bb.0:
 ; GISEL-GFX12-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v1.l, v2.l
+; GISEL-GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX12-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-FAKE16-LABEL: test_maxmin_f16_ieee_false:
@@ -1032,6 +1040,7 @@ define amdgpu_ps half @test_maxmin_f16_ieee_false(half %a, half %b, half %c) {
 ; GISEL-GFX1250-TRUE16-LABEL: test_maxmin_f16_ieee_false:
 ; GISEL-GFX1250-TRUE16:       ; %bb.0:
 ; GISEL-GFX1250-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v1.l, v2.l
+; GISEL-GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX1250-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX1250-FAKE16-LABEL: test_maxmin_f16_ieee_false:
@@ -1069,6 +1078,7 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GISEL-GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
 ; GISEL-GFX11-TRUE16-NEXT:    v_max_f16_e32 v1.l, v2.l, v2.l
 ; GISEL-GFX11-TRUE16-NEXT:    v_minmax_f16 v0.l, v0.l, v0.h, v1.l
+; GISEL-GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX11-FAKE16-LABEL: test_maxmin_commuted_f16_ieee_true:
@@ -1117,6 +1127,7 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GISEL-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
 ; GISEL-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
 ; GISEL-GFX12-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v0.h, v1.l
+; GISEL-GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX12-FAKE16-LABEL: test_maxmin_commuted_f16_ieee_true:
@@ -1160,6 +1171,7 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GISEL-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
 ; GISEL-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
 ; GISEL-GFX1250-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v0.h, v1.l
+; GISEL-GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GISEL-GFX1250-FAKE16-LABEL: test_maxmin_commuted_f16_ieee_true:

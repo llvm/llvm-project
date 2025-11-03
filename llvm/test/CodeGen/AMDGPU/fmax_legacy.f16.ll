@@ -254,6 +254,7 @@ define <3 x half> @test_fmax_legacy_ugt_v3f16(<3 x half> %a, <3 x half> %b) #0 {
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e32 vcc_lo, v0.h, v2.h
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e64 s0, v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e64 s1, v1.l, v3.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, vcc_lo
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, s0

@@ -566,6 +566,7 @@ define <3 x half> @v_repeat_divisor_f16_x3_arcp(half %x, half %y, half %z, half 
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v3.l, v3.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v3.l
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v1.l, v3.l

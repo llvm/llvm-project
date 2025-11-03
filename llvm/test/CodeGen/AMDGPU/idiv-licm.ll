@@ -8,6 +8,7 @@ define amdgpu_kernel void @udiv32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x2c
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-NEXT:    ; implicit-def: $sgpr2
 ; GFX9-NEXT:    s_mov_b32 s7, 0
 ; GFX9-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -56,6 +57,7 @@ define amdgpu_kernel void @udiv32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX10-NEXT:    s_load_dword s6, s[4:5], 0x2c
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_mov_b32 s7, 0
+; GFX10-NEXT:    ; implicit-def: $sgpr9
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v0, s6
 ; GFX10-NEXT:    s_sub_i32 s2, 0, s6
@@ -104,6 +106,7 @@ define amdgpu_kernel void @udiv32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_load_b32 s6, s[4:5], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_mov_b32 s7, 0
+; GFX11-NEXT:    ; implicit-def: $sgpr9
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, s6
 ; GFX11-NEXT:    s_sub_i32 s2, 0, s6
@@ -171,6 +174,7 @@ define amdgpu_kernel void @urem32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x2c
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-NEXT:    ; implicit-def: $sgpr2
 ; GFX9-NEXT:    s_mov_b32 s7, 0
 ; GFX9-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -217,6 +221,7 @@ define amdgpu_kernel void @urem32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX10-NEXT:    s_load_dword s6, s[4:5], 0x2c
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_mov_b32 s7, 0
+; GFX10-NEXT:    ; implicit-def: $sgpr9
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v0, s6
 ; GFX10-NEXT:    s_sub_i32 s2, 0, s6
@@ -263,6 +268,7 @@ define amdgpu_kernel void @urem32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_load_b32 s6, s[4:5], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_mov_b32 s7, 0
+; GFX11-NEXT:    ; implicit-def: $sgpr9
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, s6
 ; GFX11-NEXT:    s_sub_i32 s2, 0, s6
@@ -329,6 +335,7 @@ define amdgpu_kernel void @sdiv32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x2c
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-NEXT:    ; implicit-def: $sgpr4
 ; GFX9-NEXT:    s_mov_b32 s3, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_abs_i32 s2, s6
@@ -387,6 +394,7 @@ define amdgpu_kernel void @sdiv32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX10-NEXT:    s_mul_hi_u32 s6, s5, s4
 ; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_add_i32 s5, s5, s6
+; GFX10-NEXT:    ; implicit-def: $sgpr6
 ; GFX10-NEXT:  .LBB2_1: ; %bb3
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_mul_hi_u32 s6, s4, s5
@@ -435,6 +443,7 @@ define amdgpu_kernel void @sdiv32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_mul_hi_u32 s6, s5, s4
 ; GFX11-NEXT:    s_mov_b32 s4, 0
 ; GFX11-NEXT:    s_add_i32 s5, s5, s6
+; GFX11-NEXT:    ; implicit-def: $sgpr6
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB2_1: ; %bb3
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -489,6 +498,7 @@ define amdgpu_kernel void @srem32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9-NEXT:    s_abs_i32 s2, s0
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s2
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-NEXT:    ; implicit-def: $sgpr4
 ; GFX9-NEXT:    s_sub_i32 s4, 0, s2
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
@@ -537,6 +547,7 @@ define amdgpu_kernel void @srem32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX10-NEXT:    s_mul_hi_u32 s5, s4, s3
 ; GFX10-NEXT:    s_mov_b32 s3, 0
 ; GFX10-NEXT:    s_add_i32 s4, s4, s5
+; GFX10-NEXT:    ; implicit-def: $sgpr5
 ; GFX10-NEXT:  .LBB3_1: ; %bb3
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_mul_hi_u32 s5, s3, s4
@@ -580,6 +591,7 @@ define amdgpu_kernel void @srem32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_mul_hi_u32 s5, s4, s3
 ; GFX11-NEXT:    s_mov_b32 s3, 0
 ; GFX11-NEXT:    s_add_i32 s4, s4, s5
+; GFX11-NEXT:    ; implicit-def: $sgpr5
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB3_1: ; %bb3
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1

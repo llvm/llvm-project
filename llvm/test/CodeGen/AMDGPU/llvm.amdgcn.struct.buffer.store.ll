@@ -302,6 +302,7 @@ define amdgpu_ps void @struct_buffer_store_f16(<4 x i32> inreg %rsrc, float %v1,
 ; GFX11-TRUE16-LABEL: struct_buffer_store_f16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, v1, s[0:3], 0 idxen
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -314,6 +315,7 @@ define amdgpu_ps void @struct_buffer_store_f16(<4 x i32> inreg %rsrc, float %v1,
 ; GFX12-TRUE16-LABEL: struct_buffer_store_f16:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    buffer_store_b16 v0, v1, s[0:3], null idxen
 ; GFX12-TRUE16-NEXT:    s_endpgm
 ;
