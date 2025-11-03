@@ -199,7 +199,6 @@ def int_spv_resource_nonuniformindex
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [generic_ptr_ty],
        [IntrNoMem, NoUndef<RetIndex>]>;
 
-  def int_spv_legacyf16tof32 : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_float_ty>],
-    [llvm_anyint_ty], [IntrNoMem]>;
+  def int_spv_unpackhalf2x16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i32_ty], [IntrNoMem]>;
 
 }

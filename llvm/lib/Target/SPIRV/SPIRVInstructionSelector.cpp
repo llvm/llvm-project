@@ -212,9 +212,6 @@ private:
   bool selectOpIsNan(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I) const;
 
-  bool selectF16ToF32(Register ResVReg, const SPIRVType *ResType,
-                      MachineInstr &I) const;
-
   template <bool Signed>
   bool selectDot4AddPacked(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
@@ -3475,8 +3472,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_nonuniformindex: {
     return selectResourceNonUniformIndex(ResVReg, ResType, I);
   }
-  case Intrinsic::spv_legacyf16tof32: {
-    return selectF16ToF32(ResVReg, ResType, I);
+  case Intrinsic::spv_unpackhalf2x16: {
+    return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
   }
 
   default: {
@@ -3749,89 +3746,6 @@ bool SPIRVInstructionSelector::selectResourceNonUniformIndex(
   // https://docs.vulkan.org/samples/latest/samples/extensions/descriptor_indexing/README.html#_when_to_use_non_uniform_indexing_qualifier
   decorateUsesAsNonUniform(ResVReg);
   return true;
-}
-
-bool SPIRVInstructionSelector::selectF16ToF32(Register ResVReg,
-                                              const SPIRVType *ResType,
-                                              MachineInstr &I) const {
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(0).isReg());
-  assert(I.getOperand(2).isReg());
-  Register SrcReg = I.getOperand(2).getReg();
-  const SPIRVType *SrcRegType = GR.getSPIRVTypeForVReg(SrcReg);
-  LLT SrcType = MRI->getType(SrcReg);
-  SPIRVType *SrcEltType = GR.getScalarOrVectorComponentType(SrcRegType);
-  SPIRVType *ResEltType = GR.getScalarOrVectorComponentType(ResType);
-  const TargetRegisterClass *SrcRegClass = GR.getRegClass(SrcEltType);
-  const TargetRegisterClass *ResRegClass = GR.getRegClass(ResEltType);
-  MachineIRBuilder MIRBuilder(I);
-  const SPIRVType *Vec2ResType =
-      GR.getOrCreateSPIRVVectorType(ResEltType, 2, MIRBuilder, false);
-  const TargetRegisterClass *Vec2RegClass = GR.getRegClass(Vec2ResType);
-
-  bool Result = true;
-  MachineBasicBlock &BB = *I.getParent();
-  if (SrcType.isVector()) {
-    // We have a vector of uints to convert elementwise
-    uint64_t ResultSize = GR.getScalarOrVectorComponentCount(ResType);
-    SmallVector<Register> ComponentRegisters;
-    for (uint64_t Idx = 0; Idx < ResultSize; Idx++) {
-      Register EltReg = MRI->createVirtualRegister(SrcRegClass);
-      Register FReg = MRI->createVirtualRegister(ResRegClass);
-      Register Vec2Reg = MRI->createVirtualRegister(Vec2RegClass);
-
-      Result =
-          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-              .addDef(EltReg)
-              .addUse(GR.getSPIRVTypeID(SrcEltType))
-              .addUse(SrcReg)
-              .addImm(Idx)
-              .constrainAllUses(TII, TRI, RBI);
-
-      Result &=
-          BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-              .addDef(Vec2Reg)
-              .addUse(GR.getSPIRVTypeID(Vec2ResType))
-              .addImm(
-                  static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-              .addImm(GL::UnpackHalf2x16)
-              .addUse(EltReg)
-              .constrainAllUses(TII, TRI, RBI);
-
-      Result &=
-          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-              .addDef(FReg)
-              .addUse(GR.getSPIRVTypeID(ResEltType))
-              .addUse(Vec2Reg)
-              .addImm(0)
-              .constrainAllUses(TII, TRI, RBI);
-
-      ComponentRegisters.emplace_back(FReg);
-    }
-
-    MachineInstrBuilder MIB =
-        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeConstruct))
-            .addDef(ResVReg)
-            .addUse(GR.getSPIRVTypeID(ResType));
-
-    for (Register ComponentReg : ComponentRegisters)
-      MIB.addUse(ComponentReg);
-    return Result && MIB.constrainAllUses(TII, TRI, RBI);
-
-  } else if (SrcType.isScalar()) {
-    // just a scalar uint to convert
-    Register Vec2Reg = MRI->createVirtualRegister(Vec2RegClass);
-    Result &= selectExtInst(Vec2Reg, Vec2ResType, I, GL::UnpackHalf2x16);
-    Result &=
-        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-            .addDef(ResVReg)
-            .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(Vec2Reg)
-            .addImm(0)
-            .constrainAllUses(TII, TRI, RBI);
-    return Result;
-  }
-  return false;
 }
 
 void SPIRVInstructionSelector::decorateUsesAsNonUniform(

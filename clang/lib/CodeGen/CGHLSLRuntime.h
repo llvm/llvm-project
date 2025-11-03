@@ -96,7 +96,6 @@ public:
                                    flattened_thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsInf, isinf)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsNaN, isnan)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(LegacyF16ToF32, legacyf16tof32)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
