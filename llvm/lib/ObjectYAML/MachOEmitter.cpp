@@ -19,13 +19,25 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
+#include "llvm/Support/WithColor.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 namespace {
+
+static const char *getLoadCommandName(uint32_t cmd) {
+  switch (cmd) {
+#define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \
+  case MachO::LCName:                                                          \
+    return #LCName;
+#include "llvm/BinaryFormat/MachO.def"
+  default:
+    return nullptr;
+  }
+}
 
 class MachOWriter {
 public:
@@ -244,7 +256,8 @@ void MachOWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
 }
 
 void MachOWriter::writeLoadCommands(raw_ostream &OS) {
-  for (auto &LC : Obj.LoadCommands) {
+  for (size_t i = 0; i < Obj.LoadCommands.size(); ++i) {
+    auto &LC = Obj.LoadCommands[i];
     size_t BytesWritten = 0;
     llvm::MachO::macho_load_command Data = LC.Data;
 
@@ -287,9 +300,18 @@ void MachOWriter::writeLoadCommands(raw_ostream &OS) {
     // specified test cases.
     // Prevent integer underflow if BytesWritten exceeds cmdsize.
     if (BytesWritten > LC.Data.load_command_data.cmdsize) {
-      errs() << "warning: load command " << LC.Data.load_command_data.cmd
-             << " cmdsize too small (" << LC.Data.load_command_data.cmdsize
-             << " bytes) for actual size (" << BytesWritten << " bytes)\n";
+      const char *name = getLoadCommandName(LC.Data.load_command_data.cmd);
+      if (name)
+        WithColor::warning()
+            << "load command " << i << " " << name << " cmdsize too small ("
+            << LC.Data.load_command_data.cmdsize << " bytes) for actual size ("
+            << BytesWritten << " bytes)\n";
+      else
+        WithColor::warning()
+            << "load command " << i << " (0x"
+            << Twine::utohexstr(LC.Data.load_command_data.cmd)
+            << ") cmdsize too small (" << LC.Data.load_command_data.cmdsize
+            << " bytes) for actual size (" << BytesWritten << " bytes)\n";
     }
     auto BytesRemaining = (BytesWritten < LC.Data.load_command_data.cmdsize)
                               ? LC.Data.load_command_data.cmdsize - BytesWritten

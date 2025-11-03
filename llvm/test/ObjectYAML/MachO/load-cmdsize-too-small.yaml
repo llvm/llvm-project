@@ -1,10 +1,10 @@
-## Test that yaml2obj handles cmdsize that is too small for LC_SEGMENT_64
-## without crashing (due to integer underflow).
+## Test that yaml2obj handles load commands with cmdsize smaller than the
+## actual structure size without crashing (due to integer underflow).
 
 # RUN: yaml2obj %s -o %t 2>&1 | FileCheck %s --check-prefix=WARNING
 # RUN: not llvm-readobj --file-headers %t 2>&1 | FileCheck %s --check-prefix=MALFORMED
 
-# WARNING: warning: load command 25 cmdsize too small (56 bytes) for actual size (72 bytes)
+# WARNING: warning: load command 0 LC_SEGMENT_64 cmdsize too small (56 bytes) for actual size (72 bytes)
 
 # MALFORMED: error: {{.*}}: truncated or malformed object (load command 0 LC_SEGMENT_64 cmdsize too small)
 
