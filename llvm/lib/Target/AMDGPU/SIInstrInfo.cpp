@@ -10691,22 +10691,28 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
     // If s_or_b32 result, sY, is unused (i.e. it is effectively a 64-bit
     // s_cmp_lg of a register pair) and the inputs are the hi and lo-halves of a
-    // 64-bit foldableSelect then transform:
-    //    s_cselect_b64 sX, (non-zero imm), 0
-    //    s_or_b32 sY, hi(sX), lo(sX)
-    // to:
-    //    s_cselect_b64 sX, (non-zero imm), 0
+    // 64-bit foldableSelect then delete s_or_b32 in the sequence:
+    //    sX = s_cselect_b64 (non-zero imm), 0
+    //    sLo = copy sX.sub0
+    //    sHi = copy sX.sub1
+    //    sY = s_or_b32 sLo, sHi
     if (Def->getOpcode() == AMDGPU::S_OR_B32 &&
         MRI->use_nodbg_empty(Def->getOperand(0).getReg())) {
       const MachineOperand &OrOpnd1 = Def->getOperand(1);
       const MachineOperand &OrOpnd2 = Def->getOperand(2);
-
-      if (OrOpnd1.isReg() && OrOpnd2.isReg() &&
-          OrOpnd1.getReg() != OrOpnd2.getReg()) {
-        auto *Def1 = getVRegSubRegDef(getRegSubRegPair(OrOpnd1), *MRI);
-        auto *Def2 = getVRegSubRegDef(getRegSubRegPair(OrOpnd2), *MRI);
-        if (Def1 == Def2 && foldableSelect(*Def1))
+      if (OrOpnd1.isReg() && OrOpnd2.isReg()) {
+        MachineInstr *Def1 = MRI->getUniqueVRegDef(OrOpnd1.getReg());
+        MachineInstr *Def2 = MRI->getUniqueVRegDef(OrOpnd2.getReg());
+        if (Def1->getOpcode() == AMDGPU::COPY &&
+            Def2->getOpcode() == AMDGPU::COPY && Def1->getOperand(1).isReg() &&
+            Def2->getOperand(1).isReg() &&
+            Def1->getOperand(1).getSubReg() == AMDGPU::sub0 &&
+            Def2->getOperand(1).getSubReg() == AMDGPU::sub1 &&
+            Def1->getOperand(1).getReg() == Def2->getOperand(1).getReg() &&
+            foldableSelect(
+                *MRI->getUniqueVRegDef(Def1->getOperand(1).getReg()))) {
           optimizeSCC(Def1, Def, RI);
+        }
       }
     }
     return true;
