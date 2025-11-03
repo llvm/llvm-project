@@ -135,8 +135,6 @@ static std::pair<std::string, bool> findNewestHIPDLL() {
           Filename.ends_with(HipDLLSuffix))
         DLLNames.push_back(sys::path::convert_to_slash(DirIt->path()));
     }
-    if (!DLLNames.empty())
-      break;
   }
 
   if (DLLNames.empty())
