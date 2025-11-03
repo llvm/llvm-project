@@ -689,11 +689,10 @@ static void appendToUsedList(Module &M, StringRef Name,
 
   SmallSetVector<Constant *, 16> Init;
   collectUsedGlobals(GV, Init);
-  Type *ArrayEltTy = GV ? GV->getValueType()->getArrayElementType()
-                        : PointerType::getUnqual(M.getContext());
   if (GV)
     GV->eraseFromParent();
 
+  Type *ArrayEltTy = PointerType::getUnqual(M.getContext());
   for (auto *V : Values)
     Init.insert(ConstantExpr::getPointerBitCastOrAddrSpaceCast(V, ArrayEltTy));
 
