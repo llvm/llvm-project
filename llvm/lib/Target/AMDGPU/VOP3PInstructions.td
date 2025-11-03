@@ -75,7 +75,7 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
                      SDPatternOperator node = null_frag, bit IsDOT = 0> {
   def NAME : VOP3P_Pseudo<OpName, P,
                           !if (P.HasModifiers,
-                               getVOP3PModPat<P, node, IsDOT, IsDOT>.ret,
+                               getVOP3PModPat<P, node, !or(P.EnableClamp, IsDOT), IsDOT>.ret,
                                getVOP3Pat<P, node>.ret)>;
   let SubtargetPredicate = isGFX11Plus in {
   if P.HasExtVOP3DPP then
@@ -434,15 +434,16 @@ defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_BF16_t16>;
 } // End SubtargetPredicate = HasFmaMixBF16Insts
 
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {
-  let HasModifiers = 0;
+  let HasNeg = 0;
+  let EnableClamp = 1;
 }
 
 let isCommutable = 1, isReMaterializable = 1 in {
 let SubtargetPredicate = HasPkAddMinMaxInsts in {
-defm V_PK_ADD_MAX_I16 : VOP3PInst<"v_pk_add_max_i16", PK_ADD_MINMAX_Profile>;
-defm V_PK_ADD_MAX_U16 : VOP3PInst<"v_pk_add_max_u16", PK_ADD_MINMAX_Profile>;
-defm V_PK_ADD_MIN_I16 : VOP3PInst<"v_pk_add_min_i16", PK_ADD_MINMAX_Profile>;
-defm V_PK_ADD_MIN_U16 : VOP3PInst<"v_pk_add_min_u16", PK_ADD_MINMAX_Profile>;
+defm V_PK_ADD_MAX_I16 : VOP3PInst<"v_pk_add_max_i16", PK_ADD_MINMAX_Profile, int_amdgcn_pk_add_max_i16>;
+defm V_PK_ADD_MAX_U16 : VOP3PInst<"v_pk_add_max_u16", PK_ADD_MINMAX_Profile, int_amdgcn_pk_add_max_u16>;
+defm V_PK_ADD_MIN_I16 : VOP3PInst<"v_pk_add_min_i16", PK_ADD_MINMAX_Profile, int_amdgcn_pk_add_min_i16>;
+defm V_PK_ADD_MIN_U16 : VOP3PInst<"v_pk_add_min_u16", PK_ADD_MINMAX_Profile, int_amdgcn_pk_add_min_u16>;
 }
 let SubtargetPredicate = HasPkMinMax3Insts in {
 defm V_PK_MAX3_I16 : VOP3PInst<"v_pk_max3_i16", PK_ADD_MINMAX_Profile>;
@@ -463,10 +464,10 @@ class ThreeOp_OpSelClampPats <SDPatternOperator op1, SDPatternOperator op2,
 >;
 
 let SubtargetPredicate = HasPkAddMinMaxInsts in {
-def : ThreeOp_OpSelClampPats<add, smax, V_PK_ADD_MAX_I16>;
-def : ThreeOp_OpSelClampPats<add, umax, V_PK_ADD_MAX_U16>;
-def : ThreeOp_OpSelClampPats<add, smin, V_PK_ADD_MIN_I16>;
-def : ThreeOp_OpSelClampPats<add, umin, V_PK_ADD_MIN_U16>;
+def : ThreeOp_OpSelClampPats<saddsat, smax, V_PK_ADD_MAX_I16>;
+def : ThreeOp_OpSelClampPats<uaddsat, umax, V_PK_ADD_MAX_U16>;
+def : ThreeOp_OpSelClampPats<saddsat, smin, V_PK_ADD_MIN_I16>;
+def : ThreeOp_OpSelClampPats<uaddsat, umin, V_PK_ADD_MIN_U16>;
 }
 
 let SubtargetPredicate = HasPkMinMax3Insts in {
@@ -705,16 +706,16 @@ foreach Type = ["U", "I"] in
     (!cast<VOP3P_Pseudo>("V_DOT8_"#Type#"32_"#Type#4) (i32 8), $src0, (i32 8), $src1, (i32 8), $src2, (i1 0))>;
 
 def ADst_32   : VOPDstOperand<AGPR_32>;
-def ADst_64   : VOPDstOperand<AReg_64>;
-def ADst_128  : VOPDstOperand<AReg_128>;
-def ADst_256  : VOPDstOperand<AReg_256>;
-def ADst_512  : VOPDstOperand<AReg_512>;
-def ADst_1024 : VOPDstOperand<AReg_1024>;
-def VDst_64   : VOPDstOperand<VReg_64>;
-def VDst_128  : VOPDstOperand<VReg_128>;
-def VDst_256  : VOPDstOperand<VReg_256>;
-def VDst_512  : VOPDstOperand<VReg_512>;
-def VDst_1024 : VOPDstOperand<VReg_1024>;
+def ADst_64   : VOPDstOperand<AReg_64_AlignTarget>;
+def ADst_128  : VOPDstOperand<AReg_128_AlignTarget>;
+def ADst_256  : VOPDstOperand<AReg_256_AlignTarget>;
+def ADst_512  : VOPDstOperand<AReg_512_AlignTarget>;
+def ADst_1024 : VOPDstOperand<AReg_1024_AlignTarget>;
+def VDst_64   : VOPDstOperand<VReg_64_AlignTarget>;
+def VDst_128  : VOPDstOperand<VReg_128_AlignTarget>;
+def VDst_256  : VOPDstOperand<VReg_256_AlignTarget>;
+def VDst_512  : VOPDstOperand<VReg_512_AlignTarget>;
+def VDst_1024 : VOPDstOperand<VReg_1024_AlignTarget>;
 
 def VOPProfileAccRead : VOP3P_Profile<VOP_I32_I32, VOP3_MAI> {
   let Src0RC64 = ARegSrc_32;
@@ -811,23 +812,23 @@ def VOPProfileMAI_F32_V2F32_X32_VCD  : VOPProfileMAI<VOP_V16F32_V2F32_V2F32_V16F
 def VOPProfileMAI_F32_I64_X32_VCD    : VOPProfileMAI<VOP_V4F32_I64_I64_V4F32,       VISrc_128_b32,  VDst_128,  AVSrc_64>;
 def VOPProfileMAI_F32_I64_X16_VCD    : VOPProfileMAI<VOP_V16F32_I64_I64_V16F32,     VISrc_512_b32,  VDst_512,  AVSrc_64>;
 
-def VOPProfileSMFMAC_F32_16X16X32_F16 : VOPProfileSMFMAC<VOP_V4F32_V4F16_V8F16_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_16X16X64_F16 : VOPProfileSMFMAC<VOP_V4F32_V8F16_V16F16_I32, AVDst_128, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_32X32X32_F16 : VOPProfileSMFMAC<VOP_V16F32_V8F16_V16F16_I32, AVDst_512, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_16X16X64_BF16 : VOPProfileSMFMAC<VOP_V4F32_V8BF16_V16BF16_I32,  AVDst_128, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_32X32X32_BF16 : VOPProfileSMFMAC<VOP_V16F32_V8BF16_V16BF16_I32, AVDst_512, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_32X32X16_F16 : VOPProfileSMFMAC<VOP_V16F32_V4F16_V8F16_I32, AVDst_512, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_16X16X32_I16 : VOPProfileSMFMAC<VOP_V4F32_V4I16_V8I16_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_32X32X16_I16 : VOPProfileSMFMAC<VOP_V16F32_V4I16_V8I16_I32, AVDst_512, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_I32_16X16X64_I8  : VOPProfileSMFMAC<VOP_V4I32_V2I32_V4I32_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_I32_32X32X32_I8  : VOPProfileSMFMAC<VOP_V16I32_V2I32_V4I32_I32, AVDst_512, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_16X16X64_F8  : VOPProfileSMFMAC<VOP_V4F32_V2I32_V4I32_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_32X32X32_F8  : VOPProfileSMFMAC<VOP_V16F32_V2I32_V4I32_I32, AVDst_512, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_I32_16X16X128_I8 : VOPProfileSMFMAC<VOP_V4I32_V4I32_V8I32_I32, AVDst_128, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_I32_32X32X64_I8 : VOPProfileSMFMAC<VOP_V16I32_V4I32_V8I32_I32, AVDst_512, AVSrc_128, AVSrc_256>;
+def VOPProfileSMFMAC_F32_16X16X32_F16 : VOPProfileSMFMAC<VOP_V4F32_V4F16_V8F16_I32,  AVDst_128_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_16X16X64_F16 : VOPProfileSMFMAC<VOP_V4F32_V8F16_V16F16_I32, AVDst_128_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_32X32X32_F16 : VOPProfileSMFMAC<VOP_V16F32_V8F16_V16F16_I32, AVDst_512_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_16X16X64_BF16 : VOPProfileSMFMAC<VOP_V4F32_V8BF16_V16BF16_I32,  AVDst_128_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_32X32X32_BF16 : VOPProfileSMFMAC<VOP_V16F32_V8BF16_V16BF16_I32, AVDst_512_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_32X32X16_F16 : VOPProfileSMFMAC<VOP_V16F32_V4F16_V8F16_I32, AVDst_512_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_16X16X32_I16 : VOPProfileSMFMAC<VOP_V4F32_V4I16_V8I16_I32,  AVDst_128_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_32X32X16_I16 : VOPProfileSMFMAC<VOP_V16F32_V4I16_V8I16_I32, AVDst_512_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_I32_16X16X64_I8  : VOPProfileSMFMAC<VOP_V4I32_V2I32_V4I32_I32,  AVDst_128_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_I32_32X32X32_I8  : VOPProfileSMFMAC<VOP_V16I32_V2I32_V4I32_I32, AVDst_512_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_16X16X64_F8  : VOPProfileSMFMAC<VOP_V4F32_V2I32_V4I32_I32,  AVDst_128_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_32X32X32_F8  : VOPProfileSMFMAC<VOP_V16F32_V2I32_V4I32_I32, AVDst_512_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_I32_16X16X128_I8 : VOPProfileSMFMAC<VOP_V4I32_V4I32_V8I32_I32, AVDst_128_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_I32_32X32X64_I8 : VOPProfileSMFMAC<VOP_V16I32_V4I32_V8I32_I32, AVDst_512_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
 
-def VOPProfileSMFMAC_F32_16X16X128_F8  : VOPProfileSMFMAC<VOP_V4F32_V4I32_V8I32_I32,  AVDst_128, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_32X32X64_F8  : VOPProfileSMFMAC<VOP_V16F32_V4I32_V8I32_I32,  AVDst_512, AVSrc_128, AVSrc_256>;
+def VOPProfileSMFMAC_F32_16X16X128_F8  : VOPProfileSMFMAC<VOP_V4F32_V4I32_V8I32_I32,  AVDst_128_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_32X32X64_F8  : VOPProfileSMFMAC<VOP_V16F32_V4I32_V8I32_I32,  AVDst_512_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
 
 def VOPProfileMAI_F32_V8F16_X32     : VOPProfileMAI<VOP_V4F32_V8F16_V8F16_V4F32,       AISrc_128_f32,  ADst_128, AVSrc_128>;
 def VOPProfileMAI_F32_V8F16_X32_VCD : VOPProfileMAI<VOP_V4F32_V8F16_V8F16_V4F32,       VISrc_128_f32,  VDst_128, AVSrc_128>;
@@ -964,14 +965,12 @@ class MAIFrag<SDPatternOperator Op, bit HasAbid = true, bit Scaled = false> : Pa
 class CanUseAGPR_MAI<ValueType vt> {
   code PredicateCode = [{
     return !Subtarget->hasGFX90AInsts() ||
-      (!SIMachineFunctionInfo::MFMAVGPRForm &&
-       MF->getInfo<SIMachineFunctionInfo>()->getMinNumAGPRs() >=
-  }] # !srl(vt.Size, 5) # ");";
+      MF->getInfo<SIMachineFunctionInfo>()->selectAGPRFormMFMA(
+        }] # !srl(vt.Size, 5) # ");";
 
   code GISelPredicateCode = [{
     return !Subtarget->hasGFX90AInsts() ||
-      (!SIMachineFunctionInfo::MFMAVGPRForm &&
-       MF.getInfo<SIMachineFunctionInfo>()->getMinNumAGPRs() >=
+      MF.getInfo<SIMachineFunctionInfo>()->selectAGPRFormMFMA(
   }] # !srl(vt.Size, 5) # ");";
 }
 

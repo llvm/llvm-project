@@ -9,11 +9,20 @@ func.func @argmax_nofold(%arg0: tensor<?x1xf32>) -> tensor<1xi32> {
 
 // -----
 
-// CHECK-LABEL: @pad_wh_avg_pool2d_fold
-func.func @pad_wh_avg_pool2d_fold(%input: tensor<1x10x8x3xf32>) -> tensor<1x6x5x3xf32> {
-  // CHECK-NOT: tosa.pad
+// CHECK-LABEL: @test_argmax_fold_i64_index
+func.func @test_argmax_fold_i64_index(%arg0: tensor<1xi8>) -> tensor<i64> {
+  // CHECK: "tosa.const"() <{values = dense<0> : tensor<i64>}> : () -> tensor<i64>
+  %0 = tosa.argmax %arg0 {axis = 0 : i32} : (tensor<1xi8>) -> tensor<i64>
+  return %0 : tensor<i64>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_wh_avg_pool2d_nofold
+func.func @pad_wh_avg_pool2d_nofold(%input: tensor<1x10x8x3xf32>) -> tensor<1x6x5x3xf32> {
+  // CHECK: tosa.pad
   // CHECK: tosa.avg_pool2d
-  // CHECK-SAME: pad = array<i64: 1, 1, 1, 1>
+  // CHECK-SAME: pad = array<i64: 0, 1, 0, 1>
   %pad_shape = tosa.const_shape { values = dense<[0, 0, 1, 0, 1, 0, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
   %pad_const = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>

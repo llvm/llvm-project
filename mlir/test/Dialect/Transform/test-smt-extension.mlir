@@ -7,7 +7,7 @@ module attributes {transform.with_named_sequence} {
     %param_as_param = transform.param.constant 42 -> !transform.param<i64>
 
     // CHECK: transform.smt.constrain_params(%[[PARAM_AS_PARAM]])
-    transform.smt.constrain_params(%param_as_param) : !transform.param<i64> {
+    transform.smt.constrain_params(%param_as_param) : (!transform.param<i64>) -> () {
       // CHECK: ^bb{{.*}}(%[[PARAM_AS_SMT_SYMB:.*]]: !smt.int):
       ^bb0(%param_as_smt_var: !smt.int):
       // CHECK: %[[C0:.*]] = smt.int.constant 0
@@ -31,18 +31,20 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: @schedule_with_constraint_on_multiple_params
+// CHECK-LABEL: @schedule_with_constraint_on_multiple_params_returning_computed_value
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @schedule_with_constraint_on_multiple_params(%arg0: !transform.any_op {transform.readonly}) {
+  transform.named_sequence @schedule_with_constraint_on_multiple_params_returning_computed_value(%arg0: !transform.any_op {transform.readonly}) {
     // CHECK: %[[PARAM_A:.*]] = transform.param.constant
     %param_a = transform.param.constant 4 -> !transform.param<i64>
     // CHECK: %[[PARAM_B:.*]] = transform.param.constant
-    %param_b = transform.param.constant 16 -> !transform.param<i64>
+    %param_b = transform.param.constant 32 -> !transform.param<i64>
 
     // CHECK: transform.smt.constrain_params(%[[PARAM_A]], %[[PARAM_B]])
-    transform.smt.constrain_params(%param_a, %param_b) : !transform.param<i64>, !transform.param<i64> {
+    %divisor = transform.smt.constrain_params(%param_a, %param_b) : (!transform.param<i64>, !transform.param<i64>) -> (!transform.param<i64>) {
       // CHECK: ^bb{{.*}}(%[[VAR_A:.*]]: !smt.int, %[[VAR_B:.*]]: !smt.int):
       ^bb0(%var_a: !smt.int, %var_b: !smt.int):
+      // CHECK: %[[DIV:.*]] = smt.int.div %[[VAR_B]], %[[VAR_A]]
+      %divisor = smt.int.div %var_b, %var_a
       // CHECK: %[[C0:.*]] = smt.int.constant 0
       %c0 = smt.int.constant 0
       // CHECK: %[[REMAINDER:.*]] = smt.int.mod %[[VAR_B]], %[[VAR_A]]
@@ -51,8 +53,11 @@ module attributes {transform.with_named_sequence} {
       %eq = smt.eq %remainder, %c0 : !smt.int
       // CHECK: smt.assert %[[EQ]]
       smt.assert %eq
+      // CHECK: smt.yield %[[DIV]]
+      smt.yield %divisor : !smt.int
     }
-    // NB: from here can rely on that %param_a is a divisor of %param_b
+    // NB: from here can rely on that %param_a is a divisor of %param_b and
+    //     that the relevant factor, 8, got associated to %divisor.
     transform.yield
   }
 }
@@ -63,10 +68,10 @@ module attributes {transform.with_named_sequence} {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @schedule_with_param_as_a_bool(%arg0: !transform.any_op {transform.readonly}) {
     // CHECK: %[[PARAM_AS_PARAM:.*]] = transform.param.constant
-    %param_as_param = transform.param.constant true -> !transform.any_param
+    %param_as_param = transform.param.constant true -> !transform.param<i1>
 
     // CHECK: transform.smt.constrain_params(%[[PARAM_AS_PARAM]])
-    transform.smt.constrain_params(%param_as_param) : !transform.any_param {
+    transform.smt.constrain_params(%param_as_param) : (!transform.param<i1>) -> () {
       // CHECK: ^bb{{.*}}(%[[PARAM_AS_SMT_VAR:.*]]: !smt.bool):
       ^bb0(%param_as_smt_var: !smt.bool):
       // CHECK: %[[C0:.*]] = smt.int.constant 0

@@ -474,7 +474,7 @@ if config.host_ldflags.find("-m32") < 0 and any(
 config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 if config.target_triple:
     if re.match(
-        r"(aarch64_be|arc|armeb|bpfeb|lanai|m68k|mips|mips64|powerpc|powerpc64|sparc|sparcv9|s390x|s390|tce|thumbeb)-.*",
+        r"(aarch64_be|arc|armeb|bpfeb|lanai|m68k|mips|mips64|powerpc|powerpc64|sparc|sparcv9|sparc64|s390x|s390|tce|thumbeb)-.*",
         config.target_triple,
     ):
         config.available_features.add("target-byteorder-big-endian")
@@ -753,10 +753,17 @@ if not hasattr(sys, "getwindowsversion") or sys.getwindowsversion().build >= 170
     config.available_features.add("unix-sockets")
 
 # .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
-if not re.match(
-    r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
-    config.target_triple,
-) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
+if (
+    not re.match(
+        r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
+        config.target_triple,
+    )
+    and not re.match(
+        r"^arm64(e)?-apple-(macos|darwin)",
+        config.target_triple,
+    )
+    and not re.match(r".*-zos.*", config.target_triple)
+):
     config.available_features.add("debug_frame")
 
 if config.enable_backtrace:

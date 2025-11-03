@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

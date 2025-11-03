@@ -11,6 +11,7 @@
 #include "mlir-c/Dialect/LLVM.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir-c/Target/LLVMIR.h"
 #include "mlir/Bindings/Python/Diagnostics.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
@@ -24,7 +25,7 @@ using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
+static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
 
   //===--------------------------------------------------------------------===//
   // StructType
@@ -154,6 +155,16 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
       .def_property_readonly("address_space", [](MlirType type) {
         return mlirLLVMPointerTypeGetAddressSpace(type);
       });
+
+  m.def(
+      "translate_module_to_llvmir",
+      [](MlirOperation module) {
+        return mlirTranslateModuleToLLVMIRToString(module);
+      },
+      // clang-format off
+      nb::sig("def translate_module_to_llvmir(module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> str"),
+      // clang-format on
+      "module"_a, nb::rv_policy::take_ownership);
 }
 
 NB_MODULE(_mlirDialectsLLVM, m) {

@@ -52,7 +52,7 @@ void StructuredDataPlugin::InitializeBasePluginForDebugger(Debugger &debugger) {
     if (!parent_command)
       return;
 
-    // Create the structured-data ommand object.
+    // Create the structured-data command object.
     auto command_name = "structured-data";
     auto command_sp = CommandObjectSP(new CommandStructuredData(interpreter));
 

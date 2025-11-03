@@ -390,7 +390,7 @@ toDW_LNAME(SourceLanguage language) {
   case DW_LANG_C11:
     return {{DW_LNAME_C, 201112}};
   case DW_LANG_C17:
-    return {{DW_LNAME_C, 201712}};
+    return {{DW_LNAME_C, 201710}};
   case DW_LANG_C_plus_plus:
     return {{DW_LNAME_C_plus_plus, 0}};
   case DW_LANG_C_plus_plus_03:
@@ -500,7 +500,14 @@ toDW_LNAME(SourceLanguage language) {
   return {};
 }
 
+/// Returns a version-independent language name.
 LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName name);
+
+/// Returns a language name corresponding to the specified version.
+/// If the version is not recognized for the specified language, returns
+/// the version-independent name.
+LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName Name,
+                                             uint32_t Version);
 
 inline bool isCPlusPlus(SourceLanguage S) {
   bool result = false;
@@ -997,6 +1004,7 @@ LLVM_ABI StringRef VisibilityString(unsigned Visibility);
 LLVM_ABI StringRef VirtualityString(unsigned Virtuality);
 LLVM_ABI StringRef EnumKindString(unsigned EnumKind);
 LLVM_ABI StringRef LanguageString(unsigned Language);
+LLVM_ABI StringRef SourceLanguageNameString(SourceLanguageName Lang);
 LLVM_ABI StringRef CaseString(unsigned Case);
 LLVM_ABI StringRef ConventionString(unsigned Convention);
 LLVM_ABI StringRef InlineCodeString(unsigned Code);
@@ -1038,6 +1046,7 @@ LLVM_ABI unsigned getSubOperationEncoding(unsigned OpEncoding,
 LLVM_ABI unsigned getVirtuality(StringRef VirtualityString);
 LLVM_ABI unsigned getEnumKind(StringRef EnumKindString);
 LLVM_ABI unsigned getLanguage(StringRef LanguageString);
+LLVM_ABI unsigned getSourceLanguageName(StringRef SourceLanguageNameString);
 LLVM_ABI unsigned getCallingConvention(StringRef LanguageString);
 LLVM_ABI unsigned getAttributeEncoding(StringRef EncodingString);
 LLVM_ABI unsigned getMacinfo(StringRef MacinfoString);
@@ -1118,6 +1127,9 @@ struct FormParams {
   /// The size of a reference is determined by the DWARF 32/64-bit format.
   uint8_t getDwarfOffsetByteSize() const {
     return dwarf::getDwarfOffsetByteSize(Format);
+  }
+  inline uint64_t getDwarfMaxOffset() const {
+    return (getDwarfOffsetByteSize() == 4) ? UINT32_MAX : UINT64_MAX;
   }
 
   explicit operator bool() const { return Version && AddrSize; }

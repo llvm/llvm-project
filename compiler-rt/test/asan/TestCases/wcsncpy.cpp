@@ -8,10 +8,12 @@
 
 int main() {
   const wchar_t *src = L"X means dog";
-  wchar_t goodDst[12];
+  wchar_t goodArray[12];
+  wchar_t *volatile goodDst = goodArray;
   wcsncpy(goodDst, src, 12);
 
-  wchar_t badDst[7];
+  wchar_t badArray[7];
+  wchar_t *volatile badDst = badArray;
   wcsncpy(badDst, src, 7); // This should still work.
   fprintf(stderr, "Good so far.\n");
   // CHECK-DAG: Good so far.
