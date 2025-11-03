@@ -22109,6 +22109,11 @@ bool ARMTargetLowering::isComplexDeinterleavingOperationSupported(
           ScalarTy->isIntegerTy(32));
 }
 
+ArrayRef<MCPhysReg> ARMTargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {ARM::FPSCR_RM};
+  return RCRegs;
+}
+
 Value *ARMTargetLowering::createComplexDeinterleavingIR(
     IRBuilderBase &B, ComplexDeinterleavingOperation OperationType,
     ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,

@@ -6696,8 +6696,6 @@ def mamx_tf32 : Flag<["-"], "mamx-tf32">, Group<m_x86_Features_Group>;
 def mno_amx_tf32 : Flag<["-"], "mno-amx-tf32">, Group<m_x86_Features_Group>;
 def mamx_tile : Flag<["-"], "mamx-tile">, Group<m_x86_Features_Group>;
 def mno_amx_tile : Flag<["-"], "mno-amx-tile">, Group<m_x86_Features_Group>;
-def mamx_transpose : Flag<["-"], "mamx-transpose">, Group<m_x86_Features_Group>;
-def mno_amx_transpose : Flag<["-"], "mno-amx-transpose">, Group<m_x86_Features_Group>;
 def mamx_movrs: Flag<["-"], "mamx-movrs">, Group<m_x86_Features_Group>;
 def mno_amx_movrs: Flag<["-"], "mno-amx-movrs">, Group<m_x86_Features_Group>;
 def mcmpccxadd : Flag<["-"], "mcmpccxadd">, Group<m_x86_Features_Group>;
@@ -8448,6 +8446,10 @@ def aligned_alloc_unavailable : Flag<["-"], "faligned-alloc-unavailable">,
   MarshallingInfoFlag<LangOpts<"AlignedAllocationUnavailable">>,
   ShouldParseIf<faligned_allocation.KeyPath>;
 
+def finitial_counter_value_EQ : Joined<["-"], "finitial-counter-value=">,
+  HelpText<"Sets the initial value for __COUNTER__, defaults to 0.">,
+  MarshallingInfoInt<PreprocessorOpts<"InitialCounterValue">, "0">;
+
 } // let Visibility = [CC1Option]
 
 //===----------------------------------------------------------------------===//
@@ -8629,6 +8631,11 @@ def fobjc_subscripting_legacy_runtime : Flag<["-"], "fobjc-subscripting-legacy-r
 def vtordisp_mode_EQ : Joined<["-"], "vtordisp-mode=">,
   HelpText<"Control vtordisp placement on win32 targets">,
   MarshallingInfoInt<LangOpts<"VtorDispMode">, "1">;
+def fnative_int16_type : Flag<["-"], "fnative-int16-type">,
+  HelpText<"Use 16 bit integer types">,
+  // This option is implied unless we are in HLSL lang mode
+  ImpliedByAnyOf<[!strconcat("!", hlsl.KeyPath)]>,
+  MarshallingInfoFlag<LangOpts<"NativeInt16Type">>;
 def fnative_half_type: Flag<["-"], "fnative-half-type">,
   HelpText<"Use the native half type for __fp16 instead of promoting to float">,
   MarshallingInfoFlag<LangOpts<"NativeHalfType">>,
@@ -9521,7 +9528,7 @@ def emit_pristine_llvm : DXCFlag<"emit-pristine-llvm">,
   HelpText<"Emit pristine LLVM IR from the frontend by not running any LLVM passes at all."
            "Same as -S + -emit-llvm + -disable-llvm-passes.">;
 def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;
-def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>,
+def enable_16bit_types : DXCFlag<"enable-16bit-types">,
   HelpText<"Enable 16-bit types and disable min precision types."
            "Available in HLSL 2018 and shader model 6.2.">;
 def fdx_rootsignature_version :
