@@ -39,11 +39,11 @@ define <16 x float> @gather_all(ptr %base, <16 x i32> %ind, i16 %mask) {
 ; AVX512DQBW-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; AVX512DQBW-NEXT:    vmovaps %zmm1, %zmm0
 ; AVX512DQBW-NEXT:    retq
-  %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-  %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+  %broadcast.splatinsert = insertelement <16 x ptr> poison, ptr %base, i32 0
+  %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> poison, <16 x i32> zeroinitializer
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr float, <16 x ptr> %broadcast.splat, <16 x i64> %sext_ind
-  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float>undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> poison)
   ret <16 x float> %res
 }
 
@@ -82,11 +82,11 @@ define <16 x float> @gather_lower(ptr %base, <16 x i32> %ind, i16 %mask) {
 ; AVX512DQBW-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; AVX512DQBW-NEXT:    vmovaps %zmm1, %zmm0
 ; AVX512DQBW-NEXT:    retq
-  %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-  %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+  %broadcast.splatinsert = insertelement <16 x ptr> poison, ptr %base, i32 0
+  %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> poison, <16 x i32> zeroinitializer
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr float, <16 x ptr> %broadcast.splat, <16 x i64> %sext_ind
-  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x float>undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x float> poison)
   ret <16 x float> %res
 }
 
