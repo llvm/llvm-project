@@ -9501,7 +9501,7 @@ void IntrinsicLibrary::genTMABulkS2G(llvm::ArrayRef<fir::ExtendedValue> args) {
       builder, loc, dst, src, fir::getBase(args[2]), {}, {});
 
   mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
-                                  "cp.async.bulk.commit_group", {});
+                                  "cp.async.bulk.commit_group;", {});
   mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
                                              builder.getI32IntegerAttr(0), {});
 }
@@ -9517,7 +9517,7 @@ static void genTMABulkStore(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(builder, loc, dst, src,
                                                      size, {}, {});
   mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
-                                  "cp.async.bulk.commit_group", {});
+                                  "cp.async.bulk.commit_group;", {});
   mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
                                              builder.getI32IntegerAttr(0), {});
 }
