@@ -640,7 +640,7 @@ public:
 
   bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
 
-  virtual bool handleCooperativeAtomic(MachineInstr &MI) const override;
+  bool handleCooperativeAtomic(MachineInstr &MI) const override;
 
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
@@ -2673,7 +2673,8 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
   // GFX12.0 only: Extra waits needed before system scope stores.
-  if (!ST.hasGFX1250Insts() && !Atomic && Scope == CPol::SCOPE_SYS)
+  if (ST.requiresWaitsBeforeSystemScopeStores() && !Atomic &&
+      Scope == CPol::SCOPE_SYS)
     Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
 
   return Changed;

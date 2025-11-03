@@ -225,8 +225,8 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
 
       ConstantInt *BoolTrue = ConstantInt::getTrue(F.getContext());
       if (DummyReturnBB == nullptr) {
-        DummyReturnBB = BasicBlock::Create(F.getContext(),
-                                           "DummyReturnBlock", &F);
+        DummyReturnBB =
+            BasicBlock::Create(F.getContext(), "DummyReturnBlock", &F);
         Type *RetTy = F.getReturnType();
         Value *RetVal = RetTy->isVoidTy() ? nullptr : PoisonValue::get(RetTy);
         ReturnInst::Create(F.getContext(), RetVal, DummyReturnBB);

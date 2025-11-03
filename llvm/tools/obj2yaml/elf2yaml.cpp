@@ -895,7 +895,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   std::vector<ELFYAML::PGOAnalysisMapEntry> PGOAnalyses;
   DataExtractor::Cursor Cur(0);
   uint8_t Version = 0;
-  uint8_t Feature = 0;
+  uint16_t Feature = 0;
   uint64_t Address = 0;
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
@@ -905,7 +905,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
             errc::invalid_argument,
             "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
                 Twine(static_cast<int>(Version)));
-      Feature = Data.getU8(Cur);
+      Feature = Version < 5 ? Data.getU8(Cur) : Data.getU16(Cur);
     }
     uint64_t NumBBRanges = 1;
     uint64_t NumBlocks = 0;
@@ -972,6 +972,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
           auto &PGOBBEntry = PGOBBEntries.emplace_back();
           if (FeatureOrErr->BBFreq) {
             PGOBBEntry.BBFreq = Data.getULEB128(Cur);
+            if (FeatureOrErr->PostLinkCfg)
+              PGOBBEntry.PostLinkBBFreq = Data.getULEB128(Cur);
             if (!Cur)
               break;
           }
@@ -982,7 +984,10 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
             for (uint64_t SuccIdx = 0; Cur && SuccIdx < SuccCount; ++SuccIdx) {
               uint32_t ID = Data.getULEB128(Cur);
               uint32_t BrProb = Data.getULEB128(Cur);
-              SuccEntries.push_back({ID, BrProb});
+              std::optional<uint32_t> PostLinkBrFreq;
+              if (FeatureOrErr->PostLinkCfg)
+                PostLinkBrFreq = Data.getULEB128(Cur);
+              SuccEntries.push_back({ID, BrProb, PostLinkBrFreq});
             }
           }
         }

@@ -4171,6 +4171,16 @@ def CIR_ATanOp : CIR_UnaryFPToFPBuiltinOp<"atan", "ATanOp"> {
   }];
 }
 
+def CIR_CeilOp : CIR_UnaryFPToFPBuiltinOp<"ceil", "FCeilOp"> {
+  let summary = "Computes the ceiling of the specified value";
+  let description = [{
+    `cir.ceil` computes the ceiling of a given value and returns a result
+    of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_CosOp : CIR_UnaryFPToFPBuiltinOp<"cos", "CosOp"> {
   let summary = "Computes the floating-point cosine value";
   let description = [{

@@ -3542,9 +3542,7 @@ bool Sema::ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum) {
 
 bool Sema::getFormatStringInfo(const Decl *D, unsigned FormatIdx,
                                unsigned FirstArg, FormatStringInfo *FSI) {
-  bool IsCXXMember = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-    IsCXXMember = MD->isInstance();
+  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
   bool IsVariadic = false;
   if (const FunctionType *FnTy = D->getFunctionType())
     IsVariadic = cast<FunctionProtoType>(FnTy)->isVariadic();
@@ -3553,11 +3551,12 @@ bool Sema::getFormatStringInfo(const Decl *D, unsigned FormatIdx,
   else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(D))
     IsVariadic = OMD->isVariadic();
 
-  return getFormatStringInfo(FormatIdx, FirstArg, IsCXXMember, IsVariadic, FSI);
+  return getFormatStringInfo(FormatIdx, FirstArg, HasImplicitThisParam,
+                             IsVariadic, FSI);
 }
 
 bool Sema::getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
-                               bool IsCXXMember, bool IsVariadic,
+                               bool HasImplicitThisParam, bool IsVariadic,
                                FormatStringInfo *FSI) {
   if (FirstArg == 0)
     FSI->ArgPassingKind = FAPK_VAList;
@@ -3571,7 +3570,7 @@ bool Sema::getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
   // The way the format attribute works in GCC, the implicit this argument
   // of member functions is counted. However, it doesn't appear in our own
   // lists, so decrement format_idx in that case.
-  if (IsCXXMember) {
+  if (HasImplicitThisParam) {
     if(FSI->FormatIdx == 0)
       return false;
     --FSI->FormatIdx;
@@ -12373,14 +12372,9 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
   }
 }
 
-enum CFIUncheckedCalleeChange {
-  None,
-  Adding,
-  Discarding,
-};
-
-static CFIUncheckedCalleeChange AdjustingCFIUncheckedCallee(QualType From,
-                                                            QualType To) {
+bool Sema::DiscardingCFIUncheckedCallee(QualType From, QualType To) const {
+  From = Context.getCanonicalType(From);
+  To = Context.getCanonicalType(To);
   QualType MaybePointee = From->getPointeeType();
   if (!MaybePointee.isNull() && MaybePointee->getAs<FunctionType>())
     From = MaybePointee;
@@ -12392,25 +12386,10 @@ static CFIUncheckedCalleeChange AdjustingCFIUncheckedCallee(QualType From,
     if (const auto *ToFn = To->getAs<FunctionType>()) {
       if (FromFn->getCFIUncheckedCalleeAttr() &&
           !ToFn->getCFIUncheckedCalleeAttr())
-        return Discarding;
-      if (!FromFn->getCFIUncheckedCalleeAttr() &&
-          ToFn->getCFIUncheckedCalleeAttr())
-        return Adding;
+        return true;
     }
   }
-  return None;
-}
-
-bool Sema::DiscardingCFIUncheckedCallee(QualType From, QualType To) const {
-  From = Context.getCanonicalType(From);
-  To = Context.getCanonicalType(To);
-  return ::AdjustingCFIUncheckedCallee(From, To) == Discarding;
-}
-
-bool Sema::AddingCFIUncheckedCallee(QualType From, QualType To) const {
-  From = Context.getCanonicalType(From);
-  To = Context.getCanonicalType(To);
-  return ::AdjustingCFIUncheckedCallee(From, To) == Adding;
+  return false;
 }
 
 void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,

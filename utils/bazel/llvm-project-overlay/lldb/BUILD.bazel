@@ -979,20 +979,11 @@ cc_binary(
 )
 
 gentbl_cc_library(
-    name = "lldb_server_llgs_opts_gen",
+    name = "lldb_server_opts_gen",
     strip_include_prefix = ".",
     tbl_outs = {"LLGSOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "tools/lldb-server/LLGSOptions.td",
-    deps = ["//llvm:OptParserTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "lldb_server_platform_opts_gen",
-    strip_include_prefix = ".",
-    tbl_outs = {"PlatformOptions.inc": ["-gen-opt-parser-defs"]},
-    tblgen = "//llvm:llvm-tblgen",
-    td_file = "tools/lldb-server/PlatformOptions.td",
     deps = ["//llvm:OptParserTdFiles"],
 )
 
@@ -1014,8 +1005,7 @@ cc_binary(
         ":Interpreter",
         ":Utility",
         ":Version",
-        ":lldb_server_llgs_opts_gen",
-        ":lldb_server_platform_opts_gen",
+        ":lldb_server_opts_gen",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb/source/Plugins:PluginCPlusPlusLanguage",
@@ -1061,7 +1051,7 @@ gentbl_cc_library(
     strip_include_prefix = "tools/lldb-dap",
     tbl_outs = {"tools/lldb-dap/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
-    td_file = "tools/lldb-dap/Options.td",
+    td_file = "tools/lldb-dap/tool/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
 )
 

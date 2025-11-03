@@ -823,7 +823,7 @@ void NotNullTerminatedResultCheck::check(
   if (Name.starts_with("mem") || Name.starts_with("wmem"))
     memoryHandlerFunctionFix(Name, Result);
   else if (Name == "strerror_s")
-    strerror_sFix(Result);
+    strerrorSFix(Result);
   else if (Name.ends_with("ncmp"))
     ncmpFix(Name, Result);
   else if (Name.ends_with("xfrm"))
@@ -852,7 +852,7 @@ void NotNullTerminatedResultCheck::memoryHandlerFunctionFix(
   if (Name.ends_with("cpy")) {
     memcpyFix(Name, Result, Diag);
   } else if (Name.ends_with("cpy_s")) {
-    memcpy_sFix(Name, Result, Diag);
+    memcpySFix(Name, Result, Diag);
   } else if (Name.ends_with("move")) {
     memmoveFix(Name, Result, Diag);
   } else if (Name.ends_with("move_s")) {
@@ -889,7 +889,7 @@ void NotNullTerminatedResultCheck::memcpyFix(
     insertNullTerminatorExpr(Name, Result, Diag);
 }
 
-void NotNullTerminatedResultCheck::memcpy_sFix(
+void NotNullTerminatedResultCheck::memcpySFix(
     StringRef Name, const MatchFinder::MatchResult &Result,
     DiagnosticBuilder &Diag) {
   bool IsOverflows = isDestCapacityFix(Result, Diag);
@@ -950,7 +950,7 @@ void NotNullTerminatedResultCheck::memmoveFix(
   lengthArgHandle(LengthHandleKind::Increase, Result, Diag);
 }
 
-void NotNullTerminatedResultCheck::strerror_sFix(
+void NotNullTerminatedResultCheck::strerrorSFix(
     const MatchFinder::MatchResult &Result) {
   auto Diag =
       diag(Result.Nodes.getNodeAs<CallExpr>(FunctionExprName)->getBeginLoc(),
