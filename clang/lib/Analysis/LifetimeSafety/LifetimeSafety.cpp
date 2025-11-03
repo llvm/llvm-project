@@ -23,13 +23,17 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 namespace clang::lifetimes {
 namespace internal {
+
+llvm::StringMap<int> LifetimeSafetyAnalysis::MissingOriginCount;
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter)
@@ -66,6 +70,7 @@ void LifetimeSafetyAnalysis::run() {
                   LiveOrigins->dump(llvm::dbgs(), FactMgr.getTestPoints()));
 
   runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter);
+  UpdateMissingOriginCount(FactMgr.getOriginMgr());
 }
 } // namespace internal
 
