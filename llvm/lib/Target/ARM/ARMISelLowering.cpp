@@ -9869,32 +9869,12 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
   assert(Subtarget->isTargetDarwin());
 
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
-
-  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
   // Pair of floats / doubles used to pass the result.
   Type *RetTy = StructType::get(ArgTy, ArgTy);
   auto &DL = DAG.getDataLayout();
 
   ArgListTy Args;
-  bool ShouldUseSRet = getTM().isAPCS_ABI();
-  SDValue SRet;
-  if (ShouldUseSRet) {
-    // Create stack object for sret.
-    const uint64_t ByteSize = DL.getTypeAllocSize(RetTy);
-    const Align StackAlign = DL.getPrefTypeAlign(RetTy);
-    int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
-    SRet = DAG.getFrameIndex(FrameIdx, getPointerTy(DL));
-
-    ArgListEntry Entry(SRet, PointerType::getUnqual(RetTy->getContext()));
-    Entry.IsSExt = false;
-    Entry.IsZExt = false;
-    Entry.IsSRet = true;
-    Args.push_back(Entry);
-    RetTy = Type::getVoidTy(*DAG.getContext());
-  }
-
   Args.emplace_back(Arg, ArgTy);
 
   StringRef LibcallName = getLibcallImplName(SincosStret);
@@ -9904,25 +9884,10 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(DAG.getEntryNode())
-      .setCallee(CC, RetTy, Callee, std::move(Args))
-      .setDiscardResult(ShouldUseSRet);
+      .setCallee(CC, RetTy, Callee, std::move(Args));
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
 
-  if (!ShouldUseSRet)
-    return CallResult.first;
-
-  SDValue LoadSin =
-      DAG.getLoad(ArgVT, dl, CallResult.second, SRet, MachinePointerInfo());
-
-  // Address of cos field.
-  SDValue Add = DAG.getNode(ISD::ADD, dl, PtrVT, SRet,
-                            DAG.getIntPtrConstant(ArgVT.getStoreSize(), dl));
-  SDValue LoadCos =
-      DAG.getLoad(ArgVT, dl, LoadSin.getValue(1), Add, MachinePointerInfo());
-
-  SDVTList Tys = DAG.getVTList(ArgVT, ArgVT);
-  return DAG.getNode(ISD::MERGE_VALUES, dl, Tys,
-                     LoadSin.getValue(0), LoadCos.getValue(0));
+  return CallResult.first;
 }
 
 SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
