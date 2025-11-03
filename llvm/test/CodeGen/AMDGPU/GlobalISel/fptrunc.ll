@@ -15,6 +15,7 @@ define amdgpu_ps half @fptrunc_f32_to_f16_uniform(float inreg %a) {
 ; GFX11-TRUE16-LABEL: fptrunc_f32_to_f16_uniform:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, s0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: fptrunc_f32_to_f16_uniform:
@@ -45,6 +46,7 @@ define amdgpu_ps half @fptrunc_f32_to_f16_div(float %a) {
 ; GFX11-TRUE16-LABEL: fptrunc_f32_to_f16_div:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-FAKE16-LABEL: fptrunc_f32_to_f16_div:
@@ -55,6 +57,7 @@ define amdgpu_ps half @fptrunc_f32_to_f16_div(float %a) {
 ; GFX12-TRUE16-LABEL: fptrunc_f32_to_f16_div:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-FAKE16-LABEL: fptrunc_f32_to_f16_div:
@@ -69,6 +72,7 @@ define amdgpu_ps half @fptrunc_f32_to_f16_div(float %a) {
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0
 ; GFX1250-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1250-TRUE16-NEXT:    ; return to shader part epilog
   %result = fptrunc float %a to half
   ret half %result
@@ -444,6 +448,8 @@ define amdgpu_ps <2 x half> @fptrunc_v2f32_to_v2f16_uniform(<2 x float> inreg %a
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, s0
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, s1
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s1, v1

@@ -113,6 +113,7 @@ define amdgpu_ps void @mad_i64_div(i64 %a, i64 %b, ptr addrspace(1) %out) {
 ; GFX11-NEXT:    v_mad_u64_u32 v[6:7], null, v0, v2, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_u64_u32 v[9:10], null, v0, v3, v[7:8]
+; GFX11-NEXT:    ; implicit-def: $vgpr10
 ; GFX11-NEXT:    v_mad_u64_u32 v[7:8], null, v1, v2, v[9:10]
 ; GFX11-NEXT:    global_store_b64 v[4:5], v[6:7], off
 ; GFX11-NEXT:    s_endpgm

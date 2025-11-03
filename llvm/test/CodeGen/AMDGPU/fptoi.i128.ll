@@ -254,11 +254,12 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_mul_lo_u32 v10, v10, v9
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v11, v8, v[5:6]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[10:11], v3, v10, s[10:11]
-; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[8:9], v3, v13, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[5:6], s[8:9], v12, v9, v[3:4]
+; GISEL-NEXT:    v_addc_co_u32_e64 v5, s[8:9], v3, v13, s[8:9]
+; GISEL-NEXT:    ; implicit-def: $vgpr6
+; GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[8:9], v12, v9, v[5:6]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v4, v7, vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v7, v3, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v7, v8, v[5:6]
+; GISEL-NEXT:    v_cndmask_b32_e64 v5, v3, 0, s[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v5, v8, v[10:11]
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
@@ -619,11 +620,12 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_mul_lo_u32 v10, v10, v9
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v11, v8, v[5:6]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[10:11], v3, v10, s[10:11]
-; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[8:9], v3, v13, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[5:6], s[8:9], v12, v9, v[3:4]
+; GISEL-NEXT:    v_addc_co_u32_e64 v5, s[8:9], v3, v13, s[8:9]
+; GISEL-NEXT:    ; implicit-def: $vgpr6
+; GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[8:9], v12, v9, v[5:6]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v4, v7, vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v7, v3, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v7, v8, v[5:6]
+; GISEL-NEXT:    v_cndmask_b32_e64 v5, v3, 0, s[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v5, v8, v[10:11]
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
@@ -977,11 +979,12 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_mul_lo_u32 v10, v10, v8
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v11, v9, v[5:6]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[10:11], v3, v10, s[10:11]
-; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[8:9], v3, v13, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[5:6], s[8:9], v12, v8, v[3:4]
+; GISEL-NEXT:    v_addc_co_u32_e64 v5, s[8:9], v3, v13, s[8:9]
+; GISEL-NEXT:    ; implicit-def: $vgpr6
+; GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[8:9], v12, v8, v[5:6]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v4, v7, vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v7, v3, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v7, v9, v[5:6]
+; GISEL-NEXT:    v_cndmask_b32_e64 v5, v3, 0, s[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v5, v9, v[10:11]
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr9
@@ -1331,11 +1334,12 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_mul_lo_u32 v10, v10, v8
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v11, v9, v[5:6]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[10:11], v3, v10, s[10:11]
-; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[8:9], v3, v13, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[5:6], s[8:9], v12, v8, v[3:4]
+; GISEL-NEXT:    v_addc_co_u32_e64 v5, s[8:9], v3, v13, s[8:9]
+; GISEL-NEXT:    ; implicit-def: $vgpr6
+; GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[8:9], v12, v8, v[5:6]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v4, v7, vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v7, v3, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v7, v9, v[5:6]
+; GISEL-NEXT:    v_cndmask_b32_e64 v5, v3, 0, s[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v5, v9, v[10:11]
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr9
@@ -1721,11 +1725,12 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_mul_lo_u32 v7, v7, v9
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v12, v8, v[10:11]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[10:11], v3, v7, s[10:11]
-; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[8:9], v3, v13, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[8:9], v5, v9, v[3:4]
+; GISEL-NEXT:    v_addc_co_u32_e64 v10, s[8:9], v3, v13, s[8:9]
+; GISEL-NEXT:    ; implicit-def: $vgpr11
+; GISEL-NEXT:    v_mad_u64_u32 v[12:13], s[8:9], v5, v9, v[10:11]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v6, v4, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v5, v3, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v5, v8, v[10:11]
+; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v5, v8, v[12:13]
 ; GISEL-NEXT:    ; implicit-def: $vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
@@ -2069,11 +2074,12 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_mul_lo_u32 v7, v7, v9
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v12, v8, v[10:11]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[10:11], v3, v7, s[10:11]
-; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[8:9], v3, v13, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[8:9], v5, v9, v[3:4]
+; GISEL-NEXT:    v_addc_co_u32_e64 v10, s[8:9], v3, v13, s[8:9]
+; GISEL-NEXT:    ; implicit-def: $vgpr11
+; GISEL-NEXT:    v_mad_u64_u32 v[12:13], s[8:9], v5, v9, v[10:11]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v6, v4, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v5, v3, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v5, v8, v[10:11]
+; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v5, v8, v[12:13]
 ; GISEL-NEXT:    ; implicit-def: $vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; GISEL-NEXT:    ; implicit-def: $vgpr8

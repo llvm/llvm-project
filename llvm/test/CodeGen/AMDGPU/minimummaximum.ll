@@ -87,6 +87,7 @@ define amdgpu_ps half @test_minmax_f16(half %a, half %b, half %c) {
 ; GISEL-TRUE16-LABEL: test_minmax_f16:
 ; GISEL-TRUE16:       ; %bb.0:
 ; GISEL-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
+; GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-FAKE16-LABEL: test_minmax_f16:
@@ -112,6 +113,7 @@ define amdgpu_ps half @test_minmax_commuted_f16(half %a, half %b, half %c) {
 ; GISEL-TRUE16-LABEL: test_minmax_commuted_f16:
 ; GISEL-TRUE16:       ; %bb.0:
 ; GISEL-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
+; GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-FAKE16-LABEL: test_minmax_commuted_f16:
@@ -137,6 +139,7 @@ define amdgpu_ps half @test_maxmin_commuted_f16(half %a, half %b, half %c) {
 ; GISEL-TRUE16-LABEL: test_maxmin_commuted_f16:
 ; GISEL-TRUE16:       ; %bb.0:
 ; GISEL-TRUE16-NEXT:    v_minimummaximum_f16 v0.l, v0.l, v1.l, v2.l
+; GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-FAKE16-LABEL: test_maxmin_commuted_f16:

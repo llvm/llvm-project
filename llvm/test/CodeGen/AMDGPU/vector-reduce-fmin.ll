@@ -111,6 +111,7 @@ define half @test_vector_reduce_fmin_v2half(<2 x half> %v) {
 ; GFX11-GISEL-TRUE16-NEXT:    v_max_f16_e32 v0.h, v0.h, v0.h
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v2half:
@@ -161,6 +162,7 @@ define half @test_vector_reduce_fmin_v2half(<2 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v0.h, v0.h
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-TRUE16-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v0.h
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v2half:
@@ -292,6 +294,7 @@ define half @test_vector_reduce_fmin_v3half(<3 x half> %v) {
 ; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-GISEL-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v3half:
@@ -352,6 +355,7 @@ define half @test_vector_reduce_fmin_v3half(<3 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v0.h
 ; GFX12-GISEL-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v0.h
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v3half:
@@ -516,6 +520,7 @@ define half @test_vector_reduce_fmin_v4half(<4 x half> %v) {
 ; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v0.h, v1.l, v1.h
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v4half:
@@ -581,6 +586,7 @@ define half @test_vector_reduce_fmin_v4half(<4 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    v_min_num_f16_e32 v0.h, v1.l, v1.h
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-TRUE16-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v0.h
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v4half:
@@ -843,6 +849,7 @@ define half @test_vector_reduce_fmin_v8half(<8 x half> %v) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v0.h, v1.l, v1.h
 ; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v8half:
@@ -935,6 +942,7 @@ define half @test_vector_reduce_fmin_v8half(<8 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-TRUE16-NEXT:    v_min_num_f16_e32 v0.h, v1.l, v1.h
 ; GFX12-GISEL-TRUE16-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v0.h
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v8half:
@@ -1390,6 +1398,7 @@ define half @test_vector_reduce_fmin_v16half(<16 x half> %v) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v0.h, v1.l, v1.h
 ; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v16half:
@@ -1534,6 +1543,7 @@ define half @test_vector_reduce_fmin_v16half(<16 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-TRUE16-NEXT:    v_min_num_f16_e32 v0.h, v1.l, v1.h
 ; GFX12-GISEL-TRUE16-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v0.h
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_vector_reduce_fmin_v16half:

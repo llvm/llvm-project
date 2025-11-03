@@ -184,6 +184,7 @@ define amdgpu_kernel void @s_sext_i16_to_i64(ptr addrspace(1) %out, i16 %a) noun
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    ; implicit-def: $sgpr7
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -197,6 +198,7 @@ define amdgpu_kernel void @s_sext_i16_to_i64(ptr addrspace(1) %out, i16 %a) noun
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s6, s[4:5], 0x2c
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    ; implicit-def: $sgpr7
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)

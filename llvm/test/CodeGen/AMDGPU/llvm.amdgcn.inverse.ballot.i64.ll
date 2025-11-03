@@ -253,6 +253,7 @@ define amdgpu_cs void @phi_uniform(i64 inreg %s0_1, i64 inreg %s2, ptr addrspace
 ; GISEL_W32-NEXT:    s_cbranch_scc1 .LBB5_2
 ; GISEL_W32-NEXT:  ; %bb.1: ; %if
 ; GISEL_W32-NEXT:    s_add_u32 s0, s0, 1
+; GISEL_W32-NEXT:    ; implicit-def: $sgpr1
 ; GISEL_W32-NEXT:  .LBB5_2: ; %endif
 ; GISEL_W32-NEXT:    v_mov_b32_e32 v3, 0
 ; GISEL_W32-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
@@ -265,6 +266,7 @@ define amdgpu_cs void @phi_uniform(i64 inreg %s0_1, i64 inreg %s2, ptr addrspace
 ; SDAG_W32-NEXT:    s_cbranch_scc1 .LBB5_2
 ; SDAG_W32-NEXT:  ; %bb.1: ; %if
 ; SDAG_W32-NEXT:    s_add_u32 s0, s0, 1
+; SDAG_W32-NEXT:    ; implicit-def: $sgpr1
 ; SDAG_W32-NEXT:  .LBB5_2: ; %endif
 ; SDAG_W32-NEXT:    s_mov_b32 s1, 0
 ; SDAG_W32-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0

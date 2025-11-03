@@ -8,6 +8,7 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX90A-LABEL: test_insert_extract:
 ; GFX90A:       ; %bb.0: ; %entry
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GFX90A-NEXT:    ; implicit-def: $sgpr3
 ; GFX90A-NEXT:    s_mov_b32 s2, 0
 ; GFX90A-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX90A-NEXT:    s_mov_b32 s3, 0
@@ -56,6 +57,7 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX942-LABEL: test_insert_extract:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX942-NEXT:    ; implicit-def: $sgpr3
 ; GFX942-NEXT:    s_mov_b32 s2, 0
 ; GFX942-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX942-NEXT:    s_mov_b32 s3, 0
@@ -110,6 +112,7 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX1030-NEXT:    s_mov_b32 s5, 0
 ; GFX1030-NEXT:    s_mov_b32 s6, 0
 ; GFX1030-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX1030-NEXT:    ; implicit-def: $sgpr7
 ; GFX1030-NEXT:    .p2align 6
 ; GFX1030-NEXT:  .LBB0_1: ; %for.body
 ; GFX1030-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -158,6 +161,7 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX1100-NEXT:    s_mov_b32 s5, 0
 ; GFX1100-NEXT:    s_mov_b32 s6, 0
 ; GFX1100-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX1100-NEXT:    ; implicit-def: $sgpr7
 ; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB0_1: ; %for.body
 ; GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1

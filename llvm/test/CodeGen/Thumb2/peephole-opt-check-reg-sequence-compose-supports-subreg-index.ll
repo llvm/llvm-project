@@ -15,6 +15,8 @@ define <4 x float> @reg_sequence_subreg_compose_failure(<4 x float> %a, <2 x flo
 ; CHECK-NEXT:    vldr s0, .LCPI0_0
 ; CHECK-NEXT:    vmov.f32 s8, s1
 ; CHECK-NEXT:    vmov.f32 s9, s3
+; CHECK-NEXT:    @ implicit-def: $s10
+; CHECK-NEXT:    @ implicit-def: $s11
 ; CHECK-NEXT:    vmul.f32 q1, q2, q1
 ; CHECK-NEXT:    vmov.f32 s2, s0
 ; CHECK-NEXT:    vmov.f32 s1, s4

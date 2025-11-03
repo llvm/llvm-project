@@ -1357,6 +1357,7 @@ define i16 @test_vector_reduce_and_v8i16(<8 x i16> %v) {
 ; GFX7-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX7-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX7-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: test_vector_reduce_and_v8i16:
@@ -1375,6 +1376,7 @@ define i16 @test_vector_reduce_and_v8i16(<8 x i16> %v) {
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, v1, v3
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    v_and_b32_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_and_v8i16:
@@ -1394,6 +1396,7 @@ define i16 @test_vector_reduce_and_v8i16(<8 x i16> %v) {
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX9-GISEL-NEXT:    v_alignbit_b32 v1, s0, v0, 16
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX9-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: test_vector_reduce_and_v8i16:
@@ -1413,6 +1416,7 @@ define i16 @test_vector_reduce_and_v8i16(<8 x i16> %v) {
 ; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX10-GISEL-NEXT:    v_alignbit_b32 v1, s4, v0, 16
 ; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX10-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_and_v8i16:
@@ -1450,6 +1454,7 @@ define i16 @test_vector_reduce_and_v8i16(<8 x i16> %v) {
 ; GFX11-GISEL-NEXT:    v_alignbit_b32 v1, s0, v0, 16
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_and_v8i16:
@@ -1499,6 +1504,7 @@ define i16 @test_vector_reduce_and_v8i16(<8 x i16> %v) {
 ; GFX12-GISEL-NEXT:    v_alignbit_b32 v1, s0, v0, 16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> %v)
@@ -1564,6 +1570,7 @@ define i16 @test_vector_reduce_and_v16i16(<16 x i16> %v) {
 ; GFX7-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX7-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX7-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: test_vector_reduce_and_v16i16:
@@ -1590,6 +1597,7 @@ define i16 @test_vector_reduce_and_v16i16(<16 x i16> %v) {
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, v1, v3
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    v_and_b32_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_and_v16i16:
@@ -1617,6 +1625,7 @@ define i16 @test_vector_reduce_and_v16i16(<16 x i16> %v) {
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX9-GISEL-NEXT:    v_alignbit_b32 v1, s0, v0, 16
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX9-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: test_vector_reduce_and_v16i16:
@@ -1644,6 +1653,7 @@ define i16 @test_vector_reduce_and_v16i16(<16 x i16> %v) {
 ; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX10-GISEL-NEXT:    v_alignbit_b32 v1, s4, v0, 16
 ; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX10-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_and_v16i16:
@@ -1696,6 +1706,7 @@ define i16 @test_vector_reduce_and_v16i16(<16 x i16> %v) {
 ; GFX11-GISEL-NEXT:    v_alignbit_b32 v1, s0, v0, 16
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_and_v16i16:
@@ -1760,6 +1771,7 @@ define i16 @test_vector_reduce_and_v16i16(<16 x i16> %v) {
 ; GFX12-GISEL-NEXT:    v_alignbit_b32 v1, s0, v0, 16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call i16 @llvm.vector.reduce.and.v16i16(<16 x i16> %v)

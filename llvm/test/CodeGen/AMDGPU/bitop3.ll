@@ -555,6 +555,7 @@ define amdgpu_ps half @not_and_not_and_not_and_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-GISEL-TRUE16:       ; %bb.0:
 ; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, v2.l bitop3:1
+; GFX1250-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %nota = xor i16 %a, -1
   %notb = xor i16 %b, -1
@@ -593,6 +594,7 @@ define amdgpu_ps half @not_and_not_and_and_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-GISEL-TRUE16:       ; %bb.0:
 ; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, v2.l bitop3:2
+; GFX1250-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %nota = xor i16 %a, -1
   %notb = xor i16 %b, -1
@@ -630,6 +632,7 @@ define amdgpu_ps half @not_and_and_not_and_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-GISEL-TRUE16:       ; %bb.0:
 ; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, v2.l bitop3:4
+; GFX1250-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %nota = xor i16 %a, -1
   %notc = xor i16 %c, -1

@@ -123,6 +123,7 @@ define void @i64_buildvector(ptr %ptr, ptr %vp) nounwind {
 ; CHECK-LABEL: i64_buildvector:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
+; CHECK-NEXT:    @ implicit-def: $d17
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    bx lr
   %t0 = load i64, ptr %ptr, align 4

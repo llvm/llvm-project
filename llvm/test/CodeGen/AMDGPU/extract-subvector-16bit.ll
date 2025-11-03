@@ -711,6 +711,12 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
 ; GFX9-NEXT:    s_cbranch_execnz .LBB3_3
 ; GFX9-NEXT:  .LBB3_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
@@ -718,6 +724,12 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:  .LBB3_3: ; %exit
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v5 op_sel_hi:[0,0]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
@@ -745,6 +757,12 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccnz .LBB3_3
 ; GFX11-TRUE16-NEXT:  .LBB3_2: ; %T
@@ -752,6 +770,12 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-TRUE16-NEXT:  .LBB3_3: ; %exit
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, 15, v3.l
 ; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v2, 15, v2 op_sel_hi:[0,1]
@@ -777,6 +801,12 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
 ; GFX11-FAKE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-FAKE16-NEXT:    s_cbranch_vccnz .LBB3_3
 ; GFX11-FAKE16-NEXT:  .LBB3_2: ; %T
@@ -784,6 +814,12 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-FAKE16-NEXT:  .LBB3_3: ; %exit
 ; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
 ; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,0]
@@ -950,6 +986,10 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
 ; GFX9-NEXT:    s_cbranch_execnz .LBB4_3
 ; GFX9-NEXT:  .LBB4_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
@@ -957,6 +997,10 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:  .LBB4_3: ; %exit
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v7 op_sel_hi:[0,1]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
@@ -984,6 +1028,10 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccnz .LBB4_3
 ; GFX11-TRUE16-NEXT:  .LBB4_2: ; %T
@@ -991,6 +1039,10 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-TRUE16-NEXT:  .LBB4_3: ; %exit
 ; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v5 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v4 op_sel_hi:[0,1]
@@ -1016,6 +1068,10 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2
 ; GFX11-FAKE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-FAKE16-NEXT:    s_cbranch_vccnz .LBB4_3
 ; GFX11-FAKE16-NEXT:  .LBB4_2: ; %T
@@ -1023,6 +1079,10 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-FAKE16-NEXT:  .LBB4_3: ; %exit
 ; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v4 op_sel_hi:[0,1]
 ; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v5 op_sel_hi:[0,1]
@@ -1186,6 +1246,12 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
 ; GFX9-NEXT:    s_cbranch_execnz .LBB5_3
 ; GFX9-NEXT:  .LBB5_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
@@ -1193,6 +1259,12 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:  .LBB5_3: ; %exit
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3900
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3d00
@@ -1223,6 +1295,12 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccnz .LBB5_3
 ; GFX11-TRUE16-NEXT:  .LBB5_2: ; %T
@@ -1230,6 +1308,12 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-TRUE16-NEXT:  .LBB5_3: ; %exit
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, 0.5, v2.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0x3900
@@ -1258,6 +1342,12 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr4
 ; GFX11-FAKE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-FAKE16-NEXT:    s_cbranch_vccnz .LBB5_3
 ; GFX11-FAKE16-NEXT:  .LBB5_2: ; %T
@@ -1265,6 +1355,12 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-FAKE16-NEXT:  .LBB5_3: ; %exit
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0x3d00
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
@@ -1544,6 +1640,10 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
 ; GFX9-NEXT:    s_cbranch_execz .LBB7_3
 ; GFX9-NEXT:    s_branch .LBB7_4
 ; GFX9-NEXT:  .LBB7_2:
@@ -1554,6 +1654,10 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:  .LBB7_4: ; %exit
 ; GFX9-NEXT:    s_movk_i32 s35, 0x3801
 ; GFX9-NEXT:    s_movk_i32 s34, 0x3800
@@ -1598,6 +1702,10 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v[2:3], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccz .LBB7_3
 ; GFX11-TRUE16-NEXT:    s_branch .LBB7_4
@@ -1608,6 +1716,10 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-TRUE16-NEXT:  .LBB7_4: ; %exit
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x3801, v7.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.h, 0x3900
@@ -1644,6 +1756,10 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr6
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr6
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr6
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr6
 ; GFX11-FAKE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-FAKE16-NEXT:    s_cbranch_vccz .LBB7_3
 ; GFX11-FAKE16-NEXT:    s_branch .LBB7_4
@@ -1654,6 +1770,10 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-FAKE16-NEXT:  .LBB7_4: ; %exit
 ; GFX11-FAKE16-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x3801, v5
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v9, 0x3900
@@ -1864,6 +1984,10 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
+; GFX9-NEXT:    ; implicit-def: $vgpr2
 ; GFX9-NEXT:    s_cbranch_execz .LBB8_3
 ; GFX9-NEXT:    s_branch .LBB8_4
 ; GFX9-NEXT:  .LBB8_2:
@@ -1874,6 +1998,10 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:  .LBB8_4: ; %exit
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3800
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3900
@@ -1916,6 +2044,10 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v[2:3], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccz .LBB8_3
 ; GFX11-TRUE16-NEXT:    s_branch .LBB8_4
@@ -1926,6 +2058,10 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-TRUE16-NEXT:  .LBB8_4: ; %exit
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, 0.5, v7.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.h, 0x3900
@@ -1962,6 +2098,10 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr6
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr6
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr6
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr6
 ; GFX11-FAKE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-FAKE16-NEXT:    s_cbranch_vccz .LBB8_3
 ; GFX11-FAKE16-NEXT:    s_branch .LBB8_4
@@ -1972,6 +2112,10 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-FAKE16-NEXT:  .LBB8_4: ; %exit
 ; GFX11-FAKE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, 0.5, v5
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v9, 0x3900

@@ -237,11 +237,18 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f32_16x16x32_f16_negA(<4 x half> %A, <8 x half> %B, <4 x float> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX12-LABEL: test_swmmac_f32_16x16x32_f16_negA:
-; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_swmmac_f32_16x16x32_f16 v[6:9], v[0:1], v[2:5], v10 neg_lo:[1,0,0] neg_hi:[1,0,0]
-; GFX12-NEXT:    global_store_b128 v[11:12], v[6:9], off
-; GFX12-NEXT:    s_endpgm
+; GFX12-TRUE16-LABEL: test_swmmac_f32_16x16x32_f16_negA:
+; GFX12-TRUE16:       ; %bb.0: ; %bb
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr10_hi16
+; GFX12-TRUE16-NEXT:    v_swmmac_f32_16x16x32_f16 v[6:9], v[0:1], v[2:5], v10 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX12-TRUE16-NEXT:    global_store_b128 v[11:12], v[6:9], off
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: test_swmmac_f32_16x16x32_f16_negA:
+; GFX12-FAKE16:       ; %bb.0: ; %bb
+; GFX12-FAKE16-NEXT:    v_swmmac_f32_16x16x32_f16 v[6:9], v[0:1], v[2:5], v10 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX12-FAKE16-NEXT:    global_store_b128 v[11:12], v[6:9], off
+; GFX12-FAKE16-NEXT:    s_endpgm
 bb:
   %fneg.A = fneg <4 x half> %A
   %res = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f32.v4f16.v8f16.i16(<4 x half> %fneg.A, <8 x half> %B, <4 x float> %C, i16 %Index)
@@ -250,11 +257,18 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f32_16x16x32_f16_negB(<4 x half> %A, <8 x half> %B, <4 x float> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX12-LABEL: test_swmmac_f32_16x16x32_f16_negB:
-; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_swmmac_f32_16x16x32_f16 v[6:9], v[0:1], v[2:5], v10 neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GFX12-NEXT:    global_store_b128 v[11:12], v[6:9], off
-; GFX12-NEXT:    s_endpgm
+; GFX12-TRUE16-LABEL: test_swmmac_f32_16x16x32_f16_negB:
+; GFX12-TRUE16:       ; %bb.0: ; %bb
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr10_hi16
+; GFX12-TRUE16-NEXT:    v_swmmac_f32_16x16x32_f16 v[6:9], v[0:1], v[2:5], v10 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GFX12-TRUE16-NEXT:    global_store_b128 v[11:12], v[6:9], off
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: test_swmmac_f32_16x16x32_f16_negB:
+; GFX12-FAKE16:       ; %bb.0: ; %bb
+; GFX12-FAKE16-NEXT:    v_swmmac_f32_16x16x32_f16 v[6:9], v[0:1], v[2:5], v10 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GFX12-FAKE16-NEXT:    global_store_b128 v[11:12], v[6:9], off
+; GFX12-FAKE16-NEXT:    s_endpgm
 bb:
   %fneg.B = fneg <8 x half> %B
   %res = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f32.v4f16.v8f16.i16(<4 x half> %A, <8 x half> %fneg.B, <4 x float> %C, i16 %Index)
@@ -263,11 +277,18 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f16_16x16x32_f16_negA(<4 x half> %A, <8 x half> %B, <4 x half> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX12-LABEL: test_swmmac_f16_16x16x32_f16_negA:
-; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_swmmac_f16_16x16x32_f16 v[6:7], v[0:1], v[2:5], v8 neg_lo:[1,0,0] neg_hi:[1,0,0]
-; GFX12-NEXT:    global_store_b64 v[9:10], v[6:7], off
-; GFX12-NEXT:    s_endpgm
+; GFX12-TRUE16-LABEL: test_swmmac_f16_16x16x32_f16_negA:
+; GFX12-TRUE16:       ; %bb.0: ; %bb
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr8_hi16
+; GFX12-TRUE16-NEXT:    v_swmmac_f16_16x16x32_f16 v[6:7], v[0:1], v[2:5], v8 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX12-TRUE16-NEXT:    global_store_b64 v[9:10], v[6:7], off
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: test_swmmac_f16_16x16x32_f16_negA:
+; GFX12-FAKE16:       ; %bb.0: ; %bb
+; GFX12-FAKE16-NEXT:    v_swmmac_f16_16x16x32_f16 v[6:7], v[0:1], v[2:5], v8 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX12-FAKE16-NEXT:    global_store_b64 v[9:10], v[6:7], off
+; GFX12-FAKE16-NEXT:    s_endpgm
 bb:
   %fneg.A = fneg <4 x half> %A
   %res = call <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v4f16.v8f16.i16(<4 x half> %fneg.A, <8 x half> %B, <4 x half> %C, i16 %Index)
@@ -276,11 +297,18 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f16_16x16x32_f16_negB(<4 x half> %A, <8 x half> %B, <4 x half> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX12-LABEL: test_swmmac_f16_16x16x32_f16_negB:
-; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_swmmac_f16_16x16x32_f16 v[6:7], v[0:1], v[2:5], v8 neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GFX12-NEXT:    global_store_b64 v[9:10], v[6:7], off
-; GFX12-NEXT:    s_endpgm
+; GFX12-TRUE16-LABEL: test_swmmac_f16_16x16x32_f16_negB:
+; GFX12-TRUE16:       ; %bb.0: ; %bb
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr8_hi16
+; GFX12-TRUE16-NEXT:    v_swmmac_f16_16x16x32_f16 v[6:7], v[0:1], v[2:5], v8 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GFX12-TRUE16-NEXT:    global_store_b64 v[9:10], v[6:7], off
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: test_swmmac_f16_16x16x32_f16_negB:
+; GFX12-FAKE16:       ; %bb.0: ; %bb
+; GFX12-FAKE16-NEXT:    v_swmmac_f16_16x16x32_f16 v[6:7], v[0:1], v[2:5], v8 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GFX12-FAKE16-NEXT:    global_store_b64 v[9:10], v[6:7], off
+; GFX12-FAKE16-NEXT:    s_endpgm
 bb:
   %fneg.B = fneg <8 x half> %B
   %res = call <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v4f16.v8f16.i16(<4 x half> %A, <8 x half> %fneg.B, <4 x half> %C, i16 %Index)

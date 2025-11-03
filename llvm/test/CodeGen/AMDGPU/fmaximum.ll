@@ -304,6 +304,7 @@ define amdgpu_ps half @test_fmaximum_f16_vv(half %a, half %b) {
 ; GFX12-GISEL-TRUE16-LABEL: test_fmaximum_f16_vv:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v1.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_fmaximum_f16_vv:
@@ -450,6 +451,7 @@ define amdgpu_ps <3 x half> @test_fmaximum_v3f16_vv(<3 x half> %a, <3 x half> %b
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-GISEL-TRUE16-NEXT:    v_maximum_f16 v1.l, v1.l, v3.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_fmaximum_v3f16_vv:
@@ -939,6 +941,8 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v1, s[4:5] scope:SCOPE_SYS
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v0.h
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
 ;

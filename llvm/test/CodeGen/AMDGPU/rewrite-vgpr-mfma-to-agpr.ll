@@ -486,6 +486,10 @@ define void @test_rewrite_mfma_subreg_insert0(float %arg0, float %arg1, ptr addr
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    ; implicit-def: $agpr4
+; CHECK-NEXT:    ; implicit-def: $agpr5
+; CHECK-NEXT:    ; implicit-def: $agpr6
+; CHECK-NEXT:    ; implicit-def: $agpr7
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 a[0:3], v0, v1, a[0:3]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -505,6 +509,11 @@ define void @test_rewrite_mfma_subreg_insert1(float %arg0, float %arg1, ptr addr
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
+; CHECK-NEXT:    ; implicit-def: $agpr3
+; CHECK-NEXT:    ; implicit-def: $agpr4
+; CHECK-NEXT:    ; implicit-def: $agpr5
+; CHECK-NEXT:    ; implicit-def: $agpr6
+; CHECK-NEXT:    ; implicit-def: $agpr7
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v0, v1, v[2:5]
 ; CHECK-NEXT:    s_nop 3
@@ -529,6 +538,8 @@ define void @test_rewrite_mfma_subreg_insert2(double %arg0, double %arg1, ptr ad
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx2 a[0:1], v[4:5], off
+; CHECK-NEXT:    ; implicit-def: $agpr2
+; CHECK-NEXT:    ; implicit-def: $agpr3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], v[2:3], a[0:1]
 ; CHECK-NEXT:    ;;#ASMSTART

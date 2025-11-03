@@ -16,6 +16,7 @@ define amdgpu_kernel void @v_mul_i64_no_zext(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s0, v2, v4, 0
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], s0, v2, v5, v[1:2]
+; GFX10-NEXT:    ; implicit-def: $vgpr2
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], s0, v3, v4, v[1:2]
 ; GFX10-NEXT:    global_store_dwordx2 v6, v[0:1], s[2:3]
 ; GFX10-NEXT:    s_endpgm
@@ -34,6 +35,7 @@ define amdgpu_kernel void @v_mul_i64_no_zext(ptr addrspace(1) %out, ptr addrspac
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v2, v4, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_u64_u32 v[6:7], null, v2, v5, v[1:2]
+; GFX11-NEXT:    ; implicit-def: $vgpr7
 ; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, v3, v4, v[6:7]
 ; GFX11-NEXT:    global_store_b64 v8, v[0:1], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -388,6 +390,7 @@ define amdgpu_kernel void @v_mul_i64_partially_masked_src0(ptr addrspace(1) %out
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s2, v5, v3, 0
 ; GFX10-NEXT:    v_mad_u64_u32 v[4:5], s2, v5, v4, v[1:2]
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0xf00f, v2
+; GFX10-NEXT:    ; implicit-def: $vgpr5
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], s2, v1, v3, v[4:5]
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -412,6 +415,7 @@ define amdgpu_kernel void @v_mul_i64_partially_masked_src0(ptr addrspace(1) %out
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v7, v3, 0
 ; GFX11-NEXT:    v_mad_u64_u32 v[5:6], null, v7, v4, v[1:2]
 ; GFX11-NEXT:    v_and_b32_e32 v4, 0xf00f, v2
+; GFX11-NEXT:    ; implicit-def: $vgpr6
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, v4, v3, v[5:6]
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0

@@ -1336,6 +1336,7 @@ define amdgpu_ps i32 @s_fminimum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX12-TRUE16-LABEL: s_fminimum3_f16:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_minimum3_f16 v0.l, s0, s1, v0.l
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0

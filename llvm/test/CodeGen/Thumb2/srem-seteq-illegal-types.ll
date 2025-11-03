@@ -97,11 +97,12 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NEXT:    adr r0, .LCPI3_0
 ; CHECK-NEXT:    vmov.32 d9[1], r4
+; CHECK-NEXT:    vmov.32 d16[1], r3
+; CHECK-NEXT:    @ implicit-def: $d17
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; CHECK-NEXT:    adr r0, .LCPI3_1
-; CHECK-NEXT:    vmov.32 d16[1], r3
-; CHECK-NEXT:    vmov.32 d8[1], r5
 ; CHECK-NEXT:    vand q8, q8, q9
+; CHECK-NEXT:    vmov.32 d8[1], r5
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0:128]
 ; CHECK-NEXT:    adr r0, .LCPI3_2
 ; CHECK-NEXT:    vand q11, q4, q9

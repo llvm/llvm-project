@@ -623,34 +623,40 @@ define amdgpu_kernel void @reorder_global_offsets_addr64_soffset0(ptr addrspace(
 define amdgpu_vs void @reorder_local_load_tbuffer_store_local_load(ptr addrspace(1) %out, i32 %a1, i32 %vaddr) #0 {
 ; CI-LABEL: reorder_local_load_tbuffer_store_local_load:
 ; CI:       ; %bb.0:
-; CI-NEXT:    v_mov_b32_e32 v4, stored_lds_ptr@abs32@lo
+; CI-NEXT:    v_mov_b32_e32 v6, v3
+; CI-NEXT:    v_mov_b32_e32 v3, stored_lds_ptr@abs32@lo
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_read_b32 v4, v4
+; CI-NEXT:    ds_read_b32 v3, v3
 ; CI-NEXT:    s_mov_b32 s2, 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s0, s2
 ; CI-NEXT:    s_mov_b32 s1, s2
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    ds_read2_b32 v[4:5], v4 offset0:1 offset1:2
-; CI-NEXT:    v_add_i32_e32 v3, vcc, 32, v3
+; CI-NEXT:    ds_read2_b32 v[7:8], v3 offset0:1 offset1:2
+; CI-NEXT:    v_add_i32_e32 v6, vcc, 32, v6
+; CI-NEXT:    ; implicit-def: $vgpr3
+; CI-NEXT:    ; implicit-def: $vgpr4
+; CI-NEXT:    ; implicit-def: $vgpr5
+; CI-NEXT:    tbuffer_store_format_xyzw v[2:5], v6, s[0:3], 0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_SNORM_OGL] idxen glc slc
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    tbuffer_store_format_xyzw v[2:5], v3, s[0:3], 0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_SNORM_OGL] idxen glc slc
-; CI-NEXT:    s_nop 0
-; CI-NEXT:    v_add_i32_e32 v2, vcc, v4, v5
+; CI-NEXT:    v_add_i32_e32 v2, vcc, v7, v8
 ; CI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: reorder_local_load_tbuffer_store_local_load:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v4, stored_lds_ptr@abs32@lo
-; GFX9-NEXT:    ds_read_b32 v4, v4
-; GFX9-NEXT:    v_add_u32_e32 v3, 32, v3
+; GFX9-NEXT:    v_mov_b32_e32 v6, v3
+; GFX9-NEXT:    v_mov_b32_e32 v3, stored_lds_ptr@abs32@lo
+; GFX9-NEXT:    ds_read_b32 v3, v3
+; GFX9-NEXT:    v_add_u32_e32 v6, 32, v6
+; GFX9-NEXT:    ; implicit-def: $vgpr4
+; GFX9-NEXT:    ; implicit-def: $vgpr5
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    ds_read2_b32 v[4:5], v4 offset0:1 offset1:2
+; GFX9-NEXT:    ds_read2_b32 v[7:8], v3 offset0:1 offset1:2
+; GFX9-NEXT:    ; implicit-def: $vgpr3
+; GFX9-NEXT:    tbuffer_store_format_xyzw v[2:5], v6, s[0:3], 0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_RESERVED_6] idxen glc slc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    tbuffer_store_format_xyzw v[2:5], v3, s[0:3], 0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_RESERVED_6] idxen glc slc
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    v_add_u32_e32 v2, v4, v5
+; GFX9-NEXT:    v_add_u32_e32 v2, v7, v8
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_endpgm
   %ptr0 = load ptr addrspace(3), ptr addrspace(3) @stored_lds_ptr, align 4
