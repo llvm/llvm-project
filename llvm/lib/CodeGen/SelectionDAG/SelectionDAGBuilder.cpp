@@ -3128,8 +3128,8 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
       MachineMemOperand::MOVolatile);
 
-  if (TLI.useStackGuardXorFP())
-    GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl, false);
+  if (TLI.useStackGuardMixCookie())
+    GuardVal = TLI.emitStackGuardMixCookie(DAG, GuardVal, dl, false);
 
   // If we're using function-based instrumentation, call the guard check
   // function
@@ -3237,8 +3237,8 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
         MachineMemOperand::MOVolatile);
 
-    if (TLI.useStackGuardXorFP())
-      GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl, true);
+    if (TLI.useStackGuardMixCookie())
+      GuardVal = TLI.emitStackGuardMixCookie(DAG, GuardVal, dl, true);
 
     // The target provides a guard check function to validate the guard value.
     // Generate a call to that function with the content of the guard slot as
@@ -7428,8 +7428,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                         MachinePointerInfo(Global, 0), Align,
                         MachineMemOperand::MOVolatile);
     }
-    if (TLI.useStackGuardXorFP())
-      Res = TLI.emitStackGuardXorFP(DAG, Res, sdl, false);
+    if (TLI.useStackGuardMixCookie())
+      Res = TLI.emitStackGuardMixCookie(DAG, Res, sdl, false);
     DAG.setRoot(Chain);
     setValue(&I, Res);
     return;

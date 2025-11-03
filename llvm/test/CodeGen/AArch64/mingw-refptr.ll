@@ -125,14 +125,14 @@ define dso_local void @sspFunc() #0 {
 ; CHECK-NEXT:    add x0, sp, #7
 ; CHECK-NEXT:    ldr x8, [x8, :lo12:.refptr.__stack_chk_guard]
 ; CHECK-NEXT:    ldr x8, [x8]
-; CHECK-NEXT:    eor x8, x8, sp
+; CHECK-NEXT:    sub x8, sp, x8
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    bl ptrUser
 ; CHECK-NEXT:    adrp x8, .refptr.__stack_chk_guard
 ; CHECK-NEXT:    ldr x8, [x8, :lo12:.refptr.__stack_chk_guard]
 ; CHECK-NEXT:    ldr x9, [sp, #8]
 ; CHECK-NEXT:    ldr x8, [x8]
-; CHECK-NEXT:    eor x8, x8, sp
+; CHECK-NEXT:    sub x8, sp, x8
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    b.ne .LBB6_2
 ; CHECK-NEXT:  // %bb.1: // %entry

@@ -29242,18 +29242,19 @@ bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return true;
 }
 
-bool AArch64TargetLowering::useStackGuardXorFP() const {
+bool AArch64TargetLowering::useStackGuardMixCookie() const {
   // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
   return Subtarget->getTargetTriple().isOSMSVCRT() &&
          !getTargetMachine().Options.EnableGlobalISel;
 }
 
-SDValue AArch64TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG,
-                                                   SDValue Val, const SDLoc &DL,
-                                                   bool FailureBB) const {
+SDValue AArch64TargetLowering::emitStackGuardMixCookie(SelectionDAG &DAG,
+                                                       SDValue Val,
+                                                       const SDLoc &DL,
+                                                       bool FailureBB) const {
   if (FailureBB) {
     return DAG.getNode(
-        ISD::XOR, DL, Val.getValueType(), Val,
+        ISD::ADD, DL, Val.getValueType(), Val,
         DAG.getCopyFromReg(DAG.getEntryNode(), DL,
                            getStackPointerRegisterToSaveRestore(), MVT::i64));
   }
