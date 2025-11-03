@@ -291,9 +291,8 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
 
 void AMDGPUSwLowerLDS::getUsesOfLDSByNonKernels() {
   for (GlobalVariable *GV : FuncLDSAccessInfo.AllNonKernelLDSAccess) {
-    if (!AMDGPU::isLDSVariableToLower(*GV))
-      continue;
-    if (isNamedBarrier(*GV))
+    // named-barrier globals are lowered by amdgpu-lower-special-lds pass.
+    if (!AMDGPU::isLDSVariableToLower(*GV) || isNamedBarrier(*GV))
       continue;
     for (User *V : GV->users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
