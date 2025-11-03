@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, isalpha, (int c)) {
   if (c < 0 || c > cpp::numeric_limits<unsigned char>::max())
-    return 0;  
+    return 0;
   return static_cast<int>(internal::isalpha(static_cast<char>(c)));
 }
 
