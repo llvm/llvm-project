@@ -1307,7 +1307,8 @@ bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
 void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   if (hasRedundantXCntWithKmCnt(Wait)) {
     if (hasPendingEvent(VMEM_GROUP))
-      // Only clear the SMEM_GROUP event, but VMEM_GROUP could still require handling.
+      // Only clear the SMEM_GROUP event, but VMEM_GROUP could still require
+      // handling.
       PendingEvents &= ~(1 << SMEM_GROUP);
     else
       applyWaitcnt(X_CNT, 0);
