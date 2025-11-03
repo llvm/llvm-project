@@ -394,8 +394,6 @@ makePrescriptiveness(parser::OmpPrescriptiveness::Value v) {
   switch (v) {
   case parser::OmpPrescriptiveness::Value::Strict:
     return clause::Prescriptiveness::Strict;
-  case parser::OmpPrescriptiveness::Value::Fallback:
-    return clause::Prescriptiveness::Fallback;
   }
   llvm_unreachable("Unexpected prescriptiveness");
 }
@@ -820,7 +818,7 @@ DynGroupprivate make(const parser::OmpClause::DynGroupprivate &inp,
   auto &size = std::get<parser::ScalarIntExpr>(inp.v.t);
 
   return DynGroupprivate{{/*AccessGroup=*/maybeApplyToV(makeAccessGroup, m0),
-                          /*Prescriptiveness=*/maybeApplyToV(makeFallback, m1),
+                          /*Fallback=*/maybeApplyToV(makeFallback, m1),
                           /*Size=*/makeExpr(size, semaCtx)}};
 }
 

@@ -4132,9 +4132,8 @@ struct OmpOrderModifier {
 //
 // prescriptiveness ->
 //    STRICT                                        // since 5.1
-//    FALLBACK                                      // since 6.1
 struct OmpPrescriptiveness {
-  ENUM_CLASS(Value, Strict, Fallback)
+  ENUM_CLASS(Value, Strict)
   WRAPPER_CLASS_BOILERPLATE(OmpPrescriptiveness, Value);
 };
 
