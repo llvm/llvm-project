@@ -31015,7 +31015,6 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       break;
     default:
       llvm_unreachable("Unexpected Shift Op");
-      return SDValue();
     }
 
     SDValue ShiftedLo =
