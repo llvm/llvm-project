@@ -1214,9 +1214,8 @@ private:
       QualType CalleeExprQT = CalleeExpr->getType();
       if (CalleeExpr->isBoundMemberFunction(Outer.S.getASTContext())) {
         QualType QT = Expr::findBoundMemberType(CalleeExpr);
-        if (!QT.isNull()) {
+        if (!QT.isNull())
           CalleeExprQT = QT;
-        }
       }
       checkIndirectCall(Call, CalleeExprQT);
 
