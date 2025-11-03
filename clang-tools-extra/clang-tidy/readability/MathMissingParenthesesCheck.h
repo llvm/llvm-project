@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// operators of different priorities.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/math-missing-parentheses.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/math-missing-parentheses.html
 class MathMissingParenthesesCheck : public ClangTidyCheck {
 public:
   MathMissingParenthesesCheck(StringRef Name, ClangTidyContext *Context)

@@ -2833,8 +2833,8 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     R = getMad(DAG, DL, VT, YH, CH, Mad1);
   }
 
-  const bool IsFiniteOnly = (Flags.hasNoNaNs() || Options.NoNaNsFPMath) &&
-                            (Flags.hasNoInfs() || Options.NoInfsFPMath);
+  const bool IsFiniteOnly =
+      (Flags.hasNoNaNs() || Options.NoNaNsFPMath) && Flags.hasNoInfs();
 
   // TODO: Check if known finite from source value.
   if (!IsFiniteOnly) {
@@ -3161,9 +3161,8 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
       DAG.getSetCC(SL, SetCCVT, X, UnderflowCheckConst, ISD::SETOLT);
 
   R = DAG.getNode(ISD::SELECT, SL, VT, Underflow, Zero, R);
-  const auto &Options = getTargetMachine().Options;
 
-  if (!Flags.hasNoInfs() && !Options.NoInfsFPMath) {
+  if (!Flags.hasNoInfs()) {
     SDValue OverflowCheckConst =
         DAG.getConstantFP(IsExp10 ? 0x1.344136p+5f : 0x1.62e430p+6f, SL, VT);
     SDValue Overflow =
@@ -5287,30 +5286,6 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
 }
 
-bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
-  if (!Subtarget->isGCN())
-    return false;
-
-  ConstantSDNode *SDConstant = dyn_cast<ConstantSDNode>(N);
-  ConstantFPSDNode *SDFPConstant = dyn_cast<ConstantFPSDNode>(N);
-  auto &ST = DAG.getSubtarget<GCNSubtarget>();
-  const auto *TII = ST.getInstrInfo();
-
-  if (!ST.hasMovB64() || (!SDConstant && !SDFPConstant))
-    return false;
-
-  if (ST.has64BitLiterals())
-    return true;
-
-  if (SDConstant) {
-    const APInt &APVal = SDConstant->getAPIntValue();
-    return isUInt<32>(APVal.getZExtValue()) || TII->isInlineConstant(APVal);
-  }
-
-  APInt Val = SDFPConstant->getValueAPF().bitcastToAPInt();
-  return isUInt<32>(Val.getZExtValue()) || TII->isInlineConstant(Val);
-}
-
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5360,8 +5335,6 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Src = N->getOperand(0);
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Src)) {
       SDLoc SL(N);
-      if (isInt64ImmLegal(C, DAG))
-        break;
       uint64_t CVal = C->getZExtValue();
       SDValue BV = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
                                DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
@@ -5372,8 +5345,6 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Src)) {
       const APInt &Val = C->getValueAPF().bitcastToAPInt();
       SDLoc SL(N);
-      if (isInt64ImmLegal(C, DAG))
-        break;
       uint64_t CVal = Val.getZExtValue();
       SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
                                 DAG.getConstant(Lo_32(CVal), SL, MVT::i32),

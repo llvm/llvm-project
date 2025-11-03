@@ -20,7 +20,9 @@ namespace rootsig {
 
 bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
-bool verifyVersion(uint32_t Version) { return (Version == 1 || Version == 2); }
+bool verifyVersion(uint32_t Version) {
+  return (Version == 1 || Version == 2 || Version == 3);
+}
 
 bool verifyRegisterValue(uint32_t RegisterValue) {
   return RegisterValue != ~0U;
@@ -32,13 +34,12 @@ bool verifyRegisterSpace(uint32_t RegisterSpace) {
   return !(RegisterSpace >= 0xFFFFFFF0);
 }
 
-bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
+bool verifyRootDescriptorFlag(uint32_t Version,
+                              dxbc::RootDescriptorFlags FlagsVal) {
   using FlagT = dxbc::RootDescriptorFlags;
   FlagT Flags = FlagT(FlagsVal);
   if (Version == 1)
     return Flags == FlagT::DataVolatile;
-
-  assert(Version == 2 && "Provided invalid root signature version");
 
   // The data-specific flags are mutually exclusive.
   FlagT DataFlags = FlagT::DataVolatile | FlagT::DataStatic |
@@ -54,7 +55,6 @@ bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
 bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
                                dxbc::DescriptorRangeFlags Flags) {
   using FlagT = dxbc::DescriptorRangeFlags;
-
   const bool IsSampler = (Type == dxil::ResourceClass::Sampler);
 
   if (Version == 1) {
@@ -111,6 +111,18 @@ bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
   return (Flags & ~Mask) == FlagT::None;
 }
 
+bool verifyStaticSamplerFlags(uint32_t Version,
+                              dxbc::StaticSamplerFlags Flags) {
+  if (Version <= 2)
+    return Flags == dxbc::StaticSamplerFlags::None;
+
+  dxbc::StaticSamplerFlags Mask =
+      dxbc::StaticSamplerFlags::NonNormalizedCoordinates |
+      dxbc::StaticSamplerFlags::UintBorderColor |
+      dxbc::StaticSamplerFlags::None;
+  return (Flags | Mask) == Mask;
+}
+
 bool verifyNumDescriptors(uint32_t NumDescriptors) {
   return NumDescriptors > 0;
 }
@@ -125,22 +137,17 @@ bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
 
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
 
-bool verifyBoundOffset(uint32_t Offset) {
-  return Offset != NumDescriptorsUnbounded;
-}
-
 bool verifyNoOverflowedOffset(uint64_t Offset) {
   return Offset <= std::numeric_limits<uint32_t>::max();
 }
 
-uint64_t computeRangeBound(uint32_t Offset, uint32_t Size) {
+uint64_t computeRangeBound(uint64_t Offset, uint32_t Size) {
   assert(0 < Size && "Must be a non-empty range");
   if (Size == NumDescriptorsUnbounded)
     return NumDescriptorsUnbounded;
 
-  return uint64_t(Offset) + uint64_t(Size) - 1;
+  return Offset + uint64_t(Size) - 1;
 }
-
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

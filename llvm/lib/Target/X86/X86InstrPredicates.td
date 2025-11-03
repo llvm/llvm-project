@@ -183,7 +183,6 @@ def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
 def HasAMXFP8    : Predicate<"Subtarget->hasAMXFP8()">;
 def HasAMXMOVRS  : Predicate<"Subtarget->hasAMXMOVRS()">;
-def HasAMXTRANSPOSE : Predicate<"Subtarget->hasAMXTRANSPOSE()">;
 def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
 def HasAMXTF32   : Predicate<"Subtarget->hasAMXTF32()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
@@ -195,6 +194,12 @@ def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
                              AssemblerPredicate<(all_of (not Is64Bit)), "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
                              AssemblerPredicate<(all_of Is64Bit), "64-bit mode">;
+
+def IsX32Mode  : Predicate<"Subtarget->getTargetTriple().isX32()">,
+                            AssemblerPredicate<(all_of IsX32), "x32 ABI">;
+def NotX32Mode  : Predicate<"!Subtarget->getTargetTriple().isX32()">,
+                            AssemblerPredicate<(all_of (not IsX32)), "not x32 ABI">;
+
 def IsLP64  : Predicate<"Subtarget->isTarget64BitLP64()">;
 def NotLP64 : Predicate<"!Subtarget->isTarget64BitLP64()">;
 def In16BitMode  : Predicate<"Subtarget->is16Bit()">,
@@ -250,3 +255,11 @@ def HasMFence    : Predicate<"Subtarget->hasMFence()">;
 def HasFastDPWSSD: Predicate<"Subtarget->hasFastDPWSSD()">;
 def UseIndirectThunkCalls : Predicate<"Subtarget->useIndirectThunkCalls()">;
 def NotUseIndirectThunkCalls : Predicate<"!Subtarget->useIndirectThunkCalls()">;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+defvar X86_32 = DefaultMode;
+def X86_64 : HwMode<[In64BitMode, NotX32Mode]>;
+def X86_64_X32 : HwMode<[IsX32Mode]>;

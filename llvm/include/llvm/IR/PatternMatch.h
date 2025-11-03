@@ -198,6 +198,26 @@ struct constantexpr_match {
 /// expression.
 inline constantexpr_match m_ConstantExpr() { return constantexpr_match(); }
 
+template <typename SubPattern_t> struct Splat_match {
+  SubPattern_t SubPattern;
+  Splat_match(const SubPattern_t &SP) : SubPattern(SP) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    if (auto *C = dyn_cast<Constant>(V)) {
+      auto *Splat = C->getSplatValue();
+      return Splat ? SubPattern.match(Splat) : false;
+    }
+    // TODO: Extend to other cases (e.g. shufflevectors).
+    return false;
+  }
+};
+
+/// Match a constant splat. TODO: Extend this to non-constant splats.
+template <typename T>
+inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
+  return SubPattern;
+}
+
 /// Match an arbitrary basic block value and ignore it.
 inline class_match<BasicBlock> m_BasicBlock() {
   return class_match<BasicBlock>();
@@ -259,48 +279,27 @@ inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
   return match_combine_and<LTy, RTy>(L, R);
 }
 
-struct apint_match {
-  const APInt *&Res;
+template <typename APTy> struct ap_match {
+  static_assert(std::is_same_v<APTy, APInt> || std::is_same_v<APTy, APFloat>);
+  using ConstantTy =
+      std::conditional_t<std::is_same_v<APTy, APInt>, ConstantInt, ConstantFP>;
+
+  const APTy *&Res;
   bool AllowPoison;
 
-  apint_match(const APInt *&Res, bool AllowPoison)
+  ap_match(const APTy *&Res, bool AllowPoison)
       : Res(Res), AllowPoison(AllowPoison) {}
 
   template <typename ITy> bool match(ITy *V) const {
-    if (auto *CI = dyn_cast<ConstantInt>(V)) {
+    if (auto *CI = dyn_cast<ConstantTy>(V)) {
       Res = &CI->getValue();
       return true;
     }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
         if (auto *CI =
-                dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowPoison))) {
+                dyn_cast_or_null<ConstantTy>(C->getSplatValue(AllowPoison))) {
           Res = &CI->getValue();
-          return true;
-        }
-    return false;
-  }
-};
-// Either constexpr if or renaming ConstantFP::getValueAPF to
-// ConstantFP::getValue is needed to do it via single template
-// function for both apint/apfloat.
-struct apfloat_match {
-  const APFloat *&Res;
-  bool AllowPoison;
-
-  apfloat_match(const APFloat *&Res, bool AllowPoison)
-      : Res(Res), AllowPoison(AllowPoison) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (auto *CI = dyn_cast<ConstantFP>(V)) {
-      Res = &CI->getValueAPF();
-      return true;
-    }
-    if (V->getType()->isVectorTy())
-      if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI =
-                dyn_cast_or_null<ConstantFP>(C->getSplatValue(AllowPoison))) {
-          Res = &CI->getValueAPF();
           return true;
         }
     return false;
@@ -309,36 +308,36 @@ struct apfloat_match {
 
 /// Match a ConstantInt or splatted ConstantVector, binding the
 /// specified pointer to the contained APInt.
-inline apint_match m_APInt(const APInt *&Res) {
+inline ap_match<APInt> m_APInt(const APInt *&Res) {
   // Forbid poison by default to maintain previous behavior.
-  return apint_match(Res, /* AllowPoison */ false);
+  return ap_match<APInt>(Res, /* AllowPoison */ false);
 }
 
 /// Match APInt while allowing poison in splat vector constants.
-inline apint_match m_APIntAllowPoison(const APInt *&Res) {
-  return apint_match(Res, /* AllowPoison */ true);
+inline ap_match<APInt> m_APIntAllowPoison(const APInt *&Res) {
+  return ap_match<APInt>(Res, /* AllowPoison */ true);
 }
 
 /// Match APInt while forbidding poison in splat vector constants.
-inline apint_match m_APIntForbidPoison(const APInt *&Res) {
-  return apint_match(Res, /* AllowPoison */ false);
+inline ap_match<APInt> m_APIntForbidPoison(const APInt *&Res) {
+  return ap_match<APInt>(Res, /* AllowPoison */ false);
 }
 
 /// Match a ConstantFP or splatted ConstantVector, binding the
 /// specified pointer to the contained APFloat.
-inline apfloat_match m_APFloat(const APFloat *&Res) {
+inline ap_match<APFloat> m_APFloat(const APFloat *&Res) {
   // Forbid undefs by default to maintain previous behavior.
-  return apfloat_match(Res, /* AllowPoison */ false);
+  return ap_match<APFloat>(Res, /* AllowPoison */ false);
 }
 
 /// Match APFloat while allowing poison in splat vector constants.
-inline apfloat_match m_APFloatAllowPoison(const APFloat *&Res) {
-  return apfloat_match(Res, /* AllowPoison */ true);
+inline ap_match<APFloat> m_APFloatAllowPoison(const APFloat *&Res) {
+  return ap_match<APFloat>(Res, /* AllowPoison */ true);
 }
 
 /// Match APFloat while forbidding poison in splat vector constants.
-inline apfloat_match m_APFloatForbidPoison(const APFloat *&Res) {
-  return apfloat_match(Res, /* AllowPoison */ false);
+inline ap_match<APFloat> m_APFloatForbidPoison(const APFloat *&Res) {
+  return ap_match<APFloat>(Res, /* AllowPoison */ false);
 }
 
 template <int64_t Val> struct constantint_match {
@@ -1027,7 +1026,7 @@ struct bind_const_intval_ty {
 
   template <typename ITy> bool match(ITy *V) const {
     const APInt *ConstInt;
-    if (!apint_match(ConstInt, /*AllowPoison=*/false).match(V))
+    if (!ap_match<APInt>(ConstInt, /*AllowPoison=*/false).match(V))
       return false;
     if (ConstInt->getActiveBits() > 64)
       return false;
@@ -2205,6 +2204,18 @@ inline PtrToIntSameSize_match<OpTy> m_PtrToIntSameSize(const DataLayout &DL,
   return PtrToIntSameSize_match<OpTy>(DL, Op);
 }
 
+/// Matches PtrToAddr.
+template <typename OpTy>
+inline CastOperator_match<OpTy, Instruction::PtrToAddr>
+m_PtrToAddr(const OpTy &Op) {
+  return CastOperator_match<OpTy, Instruction::PtrToAddr>(Op);
+}
+
+/// Matches PtrToInt or PtrToAddr.
+template <typename OpTy> inline auto m_PtrToIntOrAddr(const OpTy &Op) {
+  return m_CombineOr(m_PtrToInt(Op), m_PtrToAddr(Op));
+}
+
 /// Matches IntToPtr.
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::IntToPtr>
@@ -2787,19 +2798,24 @@ template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
 }
 
 /// Matches MaskedLoad Intrinsic.
-template <typename Opnd0, typename Opnd1, typename Opnd2, typename Opnd3>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2, Opnd3>::Ty
-m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2,
-             const Opnd3 &Op3) {
-  return m_Intrinsic<Intrinsic::masked_load>(Op0, Op1, Op2, Op3);
+template <typename Opnd0, typename Opnd1, typename Opnd2>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
+m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+  return m_Intrinsic<Intrinsic::masked_load>(Op0, Op1, Op2);
+}
+
+/// Matches MaskedStore Intrinsic.
+template <typename Opnd0, typename Opnd1, typename Opnd2>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
+m_MaskedStore(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+  return m_Intrinsic<Intrinsic::masked_store>(Op0, Op1, Op2);
 }
 
 /// Matches MaskedGather Intrinsic.
-template <typename Opnd0, typename Opnd1, typename Opnd2, typename Opnd3>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2, Opnd3>::Ty
-m_MaskedGather(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2,
-               const Opnd3 &Op3) {
-  return m_Intrinsic<Intrinsic::masked_gather>(Op0, Op1, Op2, Op3);
+template <typename Opnd0, typename Opnd1, typename Opnd2>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
+m_MaskedGather(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+  return m_Intrinsic<Intrinsic::masked_gather>(Op0, Op1, Op2);
 }
 
 template <Intrinsic::ID IntrID, typename T0>
@@ -2927,6 +2943,12 @@ inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_CopySign(const Opnd0 &Op0,
 template <typename Opnd0>
 inline typename m_Intrinsic_Ty<Opnd0>::Ty m_VecReverse(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::vector_reverse>(Op0);
+}
+
+template <typename Opnd0, typename Opnd1, typename Opnd2>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
+m_VectorInsert(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+  return m_Intrinsic<Intrinsic::vector_insert>(Op0, Op1, Op2);
 }
 
 //===----------------------------------------------------------------------===//

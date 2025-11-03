@@ -119,10 +119,10 @@ void test(uint8_t u8, uint16_t u16, uint32_t u32, uint64_t u64)
   // expected-error@+2 {{'svpmullt_pair_n_u64' needs target feature (sve,sve-aes)|(sme,ssve-aes)}}}
   // overload-error@+1 {{'svpmullt_pair' needs target feature (sve,sve-aes)|(sme,ssve-aes)}}}
   SVE_ACLE_FUNC(svpmullt_pair,_n_u64,,)(svundef_u64(), u64);
-  // expected-error@+2 {{'svrax1_u64' needs target feature (sve,sve-sha3)|(sme,sve-sha3,sme2p1)}}
-  // overload-error@+1 {{'svrax1' needs target feature (sve,sve-sha3)|(sme,sve-sha3,sme2p1)}}
+  // expected-error@+2 {{'svrax1_u64' needs target feature (sve,sve-sha3)|(sme,sme2p1,sve-sha3)}}
+  // overload-error@+1 {{'svrax1' needs target feature (sve,sve-sha3)|(sme,sme2p1,sve-sha3)}}
   SVE_ACLE_FUNC(svrax1,_u64,,)(svundef_u64(), svundef_u64());
-  // expected-error@+2 {{'svrax1_s64' needs target feature (sve,sve-sha3)|(sme,sve-sha3,sme2p1)}}
-  // overload-error@+1 {{'svrax1' needs target feature (sve,sve-sha3)|(sme,sve-sha3,sme2p1)}}
+  // expected-error@+2 {{'svrax1_s64' needs target feature (sve,sve-sha3)|(sme,sme2p1,sve-sha3)}}
+  // overload-error@+1 {{'svrax1' needs target feature (sve,sve-sha3)|(sme,sme2p1,sve-sha3)}}
   SVE_ACLE_FUNC(svrax1,_s64,,)(svundef_s64(), svundef_s64());
 }

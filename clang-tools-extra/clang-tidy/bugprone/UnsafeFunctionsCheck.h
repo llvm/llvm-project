@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 /// but is not exclusive to, the functions from the
 /// Annex K. "Bounds-checking interfaces" of C11.
 ///
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unsafe-functions.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unsafe-functions.html
 class UnsafeFunctionsCheck : public ClangTidyCheck {
 public:
   UnsafeFunctionsCheck(StringRef Name, ClangTidyContext *Context);

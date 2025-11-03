@@ -11,6 +11,7 @@ add_clang_unittest(ClangAnalysisTests
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangFrontend
   clangLex

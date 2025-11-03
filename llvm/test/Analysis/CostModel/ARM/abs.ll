@@ -16,27 +16,27 @@ define void @abs() {
 ; CHECK-T1-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-T2-LABEL: 'abs'
-; CHECK-T2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I8 = call i8 @llvm.abs.i8(i8 undef, i1 false)
-; CHECK-T2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I16 = call i16 @llvm.abs.i16(i16 undef, i1 false)
-; CHECK-T2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I32 = call i32 @llvm.abs.i32(i32 undef, i1 false)
-; CHECK-T2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:5 SizeLat:5 for: %I64 = call i64 @llvm.abs.i64(i64 undef, i1 false)
-; CHECK-T2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:10 Lat:9 SizeLat:9 for: %I128 = call i128 @llvm.abs.i128(i128 undef, i1 false)
+; CHECK-T2-NEXT:  Cost Model: Found costs of 2 for: %I8 = call i8 @llvm.abs.i8(i8 undef, i1 false)
+; CHECK-T2-NEXT:  Cost Model: Found costs of 2 for: %I16 = call i16 @llvm.abs.i16(i16 undef, i1 false)
+; CHECK-T2-NEXT:  Cost Model: Found costs of 2 for: %I32 = call i32 @llvm.abs.i32(i32 undef, i1 false)
+; CHECK-T2-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.abs.i64(i64 undef, i1 false)
+; CHECK-T2-NEXT:  Cost Model: Found costs of 8 for: %I128 = call i128 @llvm.abs.i128(i128 undef, i1 false)
 ; CHECK-T2-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-81-LABEL: 'abs'
-; CHECK-81-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I8 = call i8 @llvm.abs.i8(i8 undef, i1 false)
-; CHECK-81-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I16 = call i16 @llvm.abs.i16(i16 undef, i1 false)
-; CHECK-81-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I32 = call i32 @llvm.abs.i32(i32 undef, i1 false)
-; CHECK-81-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:5 SizeLat:5 for: %I64 = call i64 @llvm.abs.i64(i64 undef, i1 false)
-; CHECK-81-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:10 Lat:9 SizeLat:9 for: %I128 = call i128 @llvm.abs.i128(i128 undef, i1 false)
+; CHECK-81-NEXT:  Cost Model: Found costs of 2 for: %I8 = call i8 @llvm.abs.i8(i8 undef, i1 false)
+; CHECK-81-NEXT:  Cost Model: Found costs of 2 for: %I16 = call i16 @llvm.abs.i16(i16 undef, i1 false)
+; CHECK-81-NEXT:  Cost Model: Found costs of 2 for: %I32 = call i32 @llvm.abs.i32(i32 undef, i1 false)
+; CHECK-81-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.abs.i64(i64 undef, i1 false)
+; CHECK-81-NEXT:  Cost Model: Found costs of 8 for: %I128 = call i128 @llvm.abs.i128(i128 undef, i1 false)
 ; CHECK-81-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-ARM-LABEL: 'abs'
-; CHECK-ARM-NEXT:  Cost Model: Found costs of 3 for: %I8 = call i8 @llvm.abs.i8(i8 undef, i1 false)
-; CHECK-ARM-NEXT:  Cost Model: Found costs of 3 for: %I16 = call i16 @llvm.abs.i16(i16 undef, i1 false)
-; CHECK-ARM-NEXT:  Cost Model: Found costs of 3 for: %I32 = call i32 @llvm.abs.i32(i32 undef, i1 false)
-; CHECK-ARM-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.abs.i64(i64 undef, i1 false)
-; CHECK-ARM-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:6 SizeLat:6 for: %I128 = call i128 @llvm.abs.i128(i128 undef, i1 false)
+; CHECK-ARM-NEXT:  Cost Model: Found costs of 2 for: %I8 = call i8 @llvm.abs.i8(i8 undef, i1 false)
+; CHECK-ARM-NEXT:  Cost Model: Found costs of 2 for: %I16 = call i16 @llvm.abs.i16(i16 undef, i1 false)
+; CHECK-ARM-NEXT:  Cost Model: Found costs of 2 for: %I32 = call i32 @llvm.abs.i32(i32 undef, i1 false)
+; CHECK-ARM-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.abs.i64(i64 undef, i1 false)
+; CHECK-ARM-NEXT:  Cost Model: Found costs of 8 for: %I128 = call i128 @llvm.abs.i128(i128 undef, i1 false)
 ; CHECK-ARM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %I8 = call i8 @llvm.abs.i8(i8 undef, i1 false)

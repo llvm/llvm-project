@@ -16,7 +16,7 @@ namespace clang::tidy::readability {
 /// Simplifies subscript expressions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/simplify-subscript-expr.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/simplify-subscript-expr.html
 class SimplifySubscriptExprCheck : public ClangTidyCheck {
 public:
   SimplifySubscriptExprCheck(StringRef Name, ClangTidyContext *Context);

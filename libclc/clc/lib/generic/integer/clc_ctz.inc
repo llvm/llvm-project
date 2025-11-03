@@ -7,5 +7,5 @@
 //===----------------------------------------------------------------------===//
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_ctz(__CLC_GENTYPE x) {
-  return __builtin_elementwise_cttz(x, (__CLC_GENTYPE)__CLC_GENSIZE);
+  return __builtin_elementwise_ctzg(x, (__CLC_GENTYPE)__CLC_GENSIZE);
 }

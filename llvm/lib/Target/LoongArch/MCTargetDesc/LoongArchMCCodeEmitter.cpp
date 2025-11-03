@@ -38,7 +38,7 @@ public:
   LoongArchMCCodeEmitter(MCContext &ctx, MCInstrInfo const &MCII)
       : Ctx(ctx), MCII(MCII) {}
 
-  ~LoongArchMCCodeEmitter() override {}
+  ~LoongArchMCCodeEmitter() override = default;
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -161,6 +161,13 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case ELF::R_LARCH_B26:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
+    case ELF::R_LARCH_MARK_LA:
+      // Match gas behavior: generate `R_LARCH_MARK_LA` relocation when using
+      // `la.abs`.
+      Fixups.push_back(
+          MCFixup::create(0, MCConstantExpr::create(0, Ctx),
+                          FirstLiteralRelocationKind + ELF::R_LARCH_MARK_LA));
+      [[fallthrough]];
     case ELF::R_LARCH_ABS_HI20:
       FixupKind = LoongArch::fixup_loongarch_abs_hi20;
       break;

@@ -18,7 +18,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// This check implement CppCoreGuideline F.19.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/missing-std-forward.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/missing-std-forward.html
 class MissingStdForwardCheck : public ClangTidyCheck {
 public:
   MissingStdForwardCheck(StringRef Name, ClangTidyContext *Context);

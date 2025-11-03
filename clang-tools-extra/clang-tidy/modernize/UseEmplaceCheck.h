@@ -21,7 +21,7 @@ namespace clang::tidy::modernize {
 /// constructor of temporary object.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-emplace.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-emplace.html
 class UseEmplaceCheck : public ClangTidyCheck {
 public:
   UseEmplaceCheck(StringRef Name, ClangTidyContext *Context);

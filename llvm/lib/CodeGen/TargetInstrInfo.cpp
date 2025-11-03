@@ -64,8 +64,11 @@ TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 
-  short RegClass = MCID.operands()[OpNum].RegClass;
-  if (MCID.operands()[OpNum].isLookupPtrRegClass())
+  const MCOperandInfo &OpInfo = MCID.operands()[OpNum];
+  int16_t RegClass = getOpRegClassID(OpInfo);
+
+  // TODO: Remove isLookupPtrRegClass in favor of isLookupRegClassByHwMode
+  if (OpInfo.isLookupPtrRegClass())
     return TRI->getPointerRegClass(RegClass);
 
   // Instructions like INSERT_SUBREG do not have fixed register classes.
@@ -1587,7 +1590,7 @@ MachineTraceStrategy TargetInstrInfo::getMachineCombinerTraceStrategy() const {
   return MachineTraceStrategy::TS_MinInstrCount;
 }
 
-bool TargetInstrInfo::isReallyTriviallyReMaterializable(
+bool TargetInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1653,12 +1656,6 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializable(
     // Only allow one virtual-register def.  There may be multiple defs of the
     // same virtual register, though.
     if (MO.isDef() && Reg != DefReg)
-      return false;
-
-    // Don't allow any virtual-register uses. Rematting an instruction with
-    // virtual register uses would length the live ranges of the uses, which
-    // is not necessarily a good idea, certainly not "trivial".
-    if (MO.isUse())
       return false;
   }
 

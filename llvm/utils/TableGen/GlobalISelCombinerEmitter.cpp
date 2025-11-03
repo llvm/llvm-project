@@ -2441,7 +2441,7 @@ public:
   explicit GICombinerEmitter(const RecordKeeper &RK,
                              const CodeGenTarget &Target, StringRef Name,
                              const Record *Combiner);
-  ~GICombinerEmitter() {}
+  ~GICombinerEmitter() override = default;
 
   void run(raw_ostream &OS);
 };

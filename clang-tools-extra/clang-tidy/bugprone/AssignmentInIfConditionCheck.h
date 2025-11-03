@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Catches assignments within the condition clause of an if statement.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/assignment-in-if-condition.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/assignment-in-if-condition.html
 class AssignmentInIfConditionCheck : public ClangTidyCheck {
 public:
   AssignmentInIfConditionCheck(StringRef Name, ClangTidyContext *Context)

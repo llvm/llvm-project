@@ -25,29 +25,25 @@ using namespace llvm;
 
 #define DEBUG_TYPE "toolrunner"
 
-namespace llvm {
-cl::opt<bool> SaveTemps("save-temps", cl::init(false),
-                        cl::desc("Save temporary files"));
-}
+cl::opt<bool> llvm::SaveTemps("save-temps", cl::init(false),
+                              cl::desc("Save temporary files"));
 
-namespace {
-cl::opt<std::string>
+static cl::opt<std::string>
     RemoteClient("remote-client",
                  cl::desc("Remote execution client (rsh/ssh)"));
 
-cl::opt<std::string> RemoteHost("remote-host",
-                                cl::desc("Remote execution (rsh/ssh) host"));
+static cl::opt<std::string>
+    RemoteHost("remote-host", cl::desc("Remote execution (rsh/ssh) host"));
 
-cl::opt<std::string> RemotePort("remote-port",
-                                cl::desc("Remote execution (rsh/ssh) port"));
+static cl::opt<std::string>
+    RemotePort("remote-port", cl::desc("Remote execution (rsh/ssh) port"));
 
-cl::opt<std::string> RemoteUser("remote-user",
-                                cl::desc("Remote execution (rsh/ssh) user id"));
+static cl::opt<std::string>
+    RemoteUser("remote-user", cl::desc("Remote execution (rsh/ssh) user id"));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     RemoteExtra("remote-extra-options",
                 cl::desc("Remote execution (rsh/ssh) extra options"));
-}
 
 /// RunProgramWithTimeout - This function provides an alternate interface
 /// to the sys::Program::ExecuteAndWait interface.
@@ -160,7 +156,7 @@ public:
       const std::vector<std::string> &SharedLibs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0) override;
 };
-}
+} // namespace
 
 Expected<int> LLI::ExecuteProgram(const std::string &Bitcode,
                                   const std::vector<std::string> &Args,
@@ -258,7 +254,7 @@ public:
         inconvertibleErrorCode());
   }
 };
-}
+} // namespace
 
 Error CustomCompiler::compileProgram(const std::string &Bitcode,
                                      unsigned Timeout, unsigned MemoryLimit) {
@@ -301,7 +297,7 @@ public:
       const std::vector<std::string> &SharedLibs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0) override;
 };
-}
+} // namespace
 
 Expected<int> CustomExecutor::ExecuteProgram(
     const std::string &Bitcode, const std::vector<std::string> &Args,
@@ -541,7 +537,7 @@ public:
       const std::vector<std::string> &SharedLibs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0) override;
 };
-}
+} // namespace
 
 Expected<int> JIT::ExecuteProgram(const std::string &Bitcode,
                                   const std::vector<std::string> &Args,

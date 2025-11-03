@@ -575,7 +575,7 @@ let Class = TagType in {
     let Conditional = [{ !IsCanonical }];
     let Read = [{ node->getQualifier() }];
   }
-  def : Property<"TD", TagDeclRef> { let Read = [{ node->getOriginalDecl() }]; }
+  def : Property<"TD", TagDeclRef> { let Read = [{ node->getDecl() }]; }
 }
 
 let Class = EnumType in {
@@ -662,6 +662,9 @@ let Class = HLSLAttributedResourceType in {
   def : Property<"rawBuffer", Bool> {
     let Read = [{ node->getAttrs().RawBuffer }];
   }
+  def : Property<"isCounter", Bool> {
+    let Read = [{ node->getAttrs().IsCounter }];
+  }
   def : Property<"wrappedTy", QualType> {
     let Read = [{ node->getWrappedType() }];
   }
@@ -669,7 +672,7 @@ let Class = HLSLAttributedResourceType in {
     let Read = [{ node->getContainedType() }];
   }
   def : Creator<[{
-    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer);
+    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer, isCounter);
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }

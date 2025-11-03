@@ -278,10 +278,10 @@ end subroutine
 ! CMPLX-PRECISE: fir.call @csin
 
 ! CHECK-LABEL: @fir.sinh.contract.f32.f32
-! CHECK: fir.call {{.*}}sinh
+! CHECK: math.sinh {{.*}} : f32
 
 ! CHECK-LABEL: @fir.sinh.contract.f64.f64
-! CHECK: fir.call {{.*}}sinh
+! CHECK: math.sinh {{.*}} : f64
 
 ! CHECK-LABEL: @fir.sinh.contract.z32.z32
 ! CHECK: fir.call @csinhf

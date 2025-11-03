@@ -23,15 +23,15 @@ class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         # We're now stopped at breakpoint 1 before the dlopen. Flush all the module events.
-        event = self.dap_server.wait_for_event(["module"], 0.25)
+        event = self.dap_server.wait_for_event(["module"])
         while event is not None:
-            event = self.dap_server.wait_for_event(["module"], 0.25)
+            event = self.dap_server.wait_for_event(["module"])
 
         # Continue to the second breakpoint, before the dlclose.
         self.continue_to_breakpoints(breakpoint_ids)
 
         # Make sure we got a module event for libother.
-        event = self.dap_server.wait_for_event(["module"], 5)
+        event = self.dap_server.wait_for_event(["module"])
         self.assertIsNotNone(event, "didn't get a module event")
         module_name = event["body"]["module"]["name"]
         module_id = event["body"]["module"]["id"]
@@ -42,7 +42,7 @@ class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         # Make sure we got a module event for libother.
-        event = self.dap_server.wait_for_event(["module"], 5)
+        event = self.dap_server.wait_for_event(["module"])
         self.assertIsNotNone(event, "didn't get a module event")
         reason = event["body"]["reason"]
         self.assertEqual(reason, "removed")
@@ -54,9 +54,5 @@ class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
         required_keys = ["id", "name"]
         self.assertListEqual(list(module_data.keys()), required_keys)
         self.assertEqual(module_data["name"], "", "expects empty name.")
-
-        # Make sure we do not send another event
-        event = self.dap_server.wait_for_event(["module"], 3)
-        self.assertIsNone(event, "expects no events.")
 
         self.continue_to_exit()

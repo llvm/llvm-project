@@ -18,7 +18,7 @@ namespace clang::tidy::google::readability {
 /// Right now it only triggers on using declarations and directives.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/global-names-in-headers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/global-names-in-headers.html
 class GlobalNamesInHeadersCheck : public ClangTidyCheck {
 public:
   GlobalNamesInHeadersCheck(StringRef Name, ClangTidyContext *Context);

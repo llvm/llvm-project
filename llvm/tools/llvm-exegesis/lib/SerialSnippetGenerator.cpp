@@ -57,6 +57,12 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
       continue;
     if (OtherInstr.hasMemoryOperands())
       continue;
+    // Filtering out loads/stores might belong in hasMemoryOperands(), but that
+    // complicates things as there are instructions with may load/store that
+    // don't have operands (e.g. X86's CLUI instruction). So, it's easier to
+    // filter them out here.
+    if (OtherInstr.Description.mayLoad() || OtherInstr.Description.mayStore())
+      continue;
     if (!ET.allowAsBackToBack(OtherInstr))
       continue;
     if (Instr->hasAliasingRegistersThrough(OtherInstr, ForbiddenRegisters))

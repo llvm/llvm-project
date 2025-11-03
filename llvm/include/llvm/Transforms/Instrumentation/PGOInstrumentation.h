@@ -26,8 +26,6 @@
 
 namespace llvm {
 
-LLVM_ABI extern cl::opt<bool> DebugInfoCorrelate;
-
 class Function;
 class Instruction;
 class Module;

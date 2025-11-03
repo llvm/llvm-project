@@ -18,7 +18,7 @@ namespace clang::tidy::hicpp {
 /// without a final 'else'-branch.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/hicpp/multiway-paths-covered.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/hicpp/multiway-paths-covered.html
 class MultiwayPathsCoveredCheck : public ClangTidyCheck {
 public:
   MultiwayPathsCoveredCheck(StringRef Name, ClangTidyContext *Context)

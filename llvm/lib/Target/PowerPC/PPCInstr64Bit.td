@@ -14,30 +14,6 @@
 //===----------------------------------------------------------------------===//
 // 64-bit operands.
 //
-def s16imm64 : Operand<i64> {
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
-  let ParserMatchClass = PPCS16ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def u16imm64 : Operand<i64> {
-  let PrintMethod = "printU16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
-  let ParserMatchClass = PPCU16ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def s17imm64 : Operand<i64> {
-  // This operand type is used for addis/lis to allow the assembler parser
-  // to accept immediates in the range -65536..65535 for compatibility with
-  // the GNU assembler.  The operand is treated as 16-bit otherwise.
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
-  let ParserMatchClass = PPCS17ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
 def tocentry : Operand<iPTR> {
   let MIOperandInfo = (ops i64imm:$imm);
 }
@@ -76,23 +52,23 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let isReturn = 1, isPredicable = 1, Uses = [LR8, RM] in
     def BLR8 : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
-                            [(PPCretglue)]>, Requires<[In64BitMode]>;
+                            [(PPCretglue)]>, Requires<[IsPPC64]>;
   let isBranch = 1, isIndirectBranch = 1, Uses = [CTR8] in {
     let isPredicable = 1 in
       def BCTR8 : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
                                []>,
-          Requires<[In64BitMode]>;
+          Requires<[IsPPC64]>;
     def BCCCTR8 : XLForm_2_br<19, 528, 0, (outs), (ins (pred $BIBO, $CR):$cond),
                               "b${cond:cc}ctr${cond:pm} ${cond:reg}", IIC_BrB,
                               []>,
-        Requires<[In64BitMode]>;
+        Requires<[IsPPC64]>;
 
     def BCCTR8  : XLForm_2_br2<19, 528, 12, 0, (outs), (ins crbitrc:$BI),
                                "bcctr 12, $BI, 0", IIC_BrB, []>,
-        Requires<[In64BitMode]>;
+        Requires<[IsPPC64]>;
     def BCCTR8n : XLForm_2_br2<19, 528, 4, 0, (outs), (ins crbitrc:$BI),
                                "bcctr 4, $BI, 0", IIC_BrB, []>,
-        Requires<[In64BitMode]>;
+        Requires<[IsPPC64]>;
   }
 }
 
@@ -160,20 +136,20 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8], hasSideEffects = 0 in {
     let isPredicable = 1 in
       def BCTRL8 : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
                                 "bctrl", IIC_BrB, [(PPCbctrl)]>,
-                   Requires<[In64BitMode]>;
+                   Requires<[IsPPC64]>;
 
     let isCodeGenOnly = 1 in {
       def BCCCTRL8 : XLForm_2_br<19, 528, 1, (outs), (ins (pred $BIBO, $CR):$cond),
                                  "b${cond:cc}ctrl${cond:pm} ${cond:reg}", IIC_BrB,
                                  []>,
-          Requires<[In64BitMode]>;
+          Requires<[IsPPC64]>;
 
       def BCCTRL8  : XLForm_2_br2<19, 528, 12, 1, (outs), (ins crbitrc:$BI),
                                   "bcctrl 12, $BI, 0", IIC_BrB, []>,
-          Requires<[In64BitMode]>;
+          Requires<[IsPPC64]>;
       def BCCTRL8n : XLForm_2_br2<19, 528, 4, 1, (outs), (ins crbitrc:$BI),
                                   "bcctrl 4, $BI, 0", IIC_BrB, []>,
-          Requires<[In64BitMode]>;
+          Requires<[IsPPC64]>;
     }
   }
 }
@@ -207,7 +183,7 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8, RM], hasSideEffects = 0,
     let isPredicable = 1 in
       def BCTRL8_RM : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
                                    "bctrl", IIC_BrB, [(PPCbctrl_rm)]>,
-                   Requires<[In64BitMode]>;
+                   Requires<[IsPPC64]>;
   }
 }
 
@@ -218,7 +194,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
                               (ins (memrix $D, $RA):$src),
                               "bctrl\n\tld 2, $src", IIC_BrB,
                               [(PPCbctrl_load_toc iaddrX4:$src)]>,
-    Requires<[In64BitMode]>;
+    Requires<[IsPPC64]>;
 }
 
 let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
@@ -228,7 +204,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
                               (ins (memrix $D, $RA):$src),
                               "bctrl\n\tld 2, $src", IIC_BrB,
                               [(PPCbctrl_load_toc_rm iaddrX4:$src)]>,
-    Requires<[In64BitMode]>;
+    Requires<[IsPPC64]>;
 }
 
 } // Interpretation64Bit
@@ -449,7 +425,7 @@ let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, isBranch = 1,
     isIndirectBranch = 1, isCall = 1, isReturn = 1, Uses = [CTR8, RM] in
 def TAILBCTR8 : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
                              []>,
-    Requires<[In64BitMode]>;
+    Requires<[IsPPC64]>;
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7,
     isBarrier = 1, isCall = 1, isReturn = 1, Uses = [RM] in
@@ -516,7 +492,7 @@ let hasSideEffects = 1 in {
   def EH_SjLj_SetJmp64  : PPCCustomInserterPseudo<(outs gprc:$dst), (ins memr:$buf),
                             "#EH_SJLJ_SETJMP64",
                             [(set i32:$dst, (PPCeh_sjlj_setjmp addr:$buf))]>,
-                          Requires<[In64BitMode]>;
+                          Requires<[IsPPC64]>;
 }
 
 let hasSideEffects = 1, isBarrier = 1 in {
@@ -524,7 +500,7 @@ let hasSideEffects = 1, isBarrier = 1 in {
   def EH_SjLj_LongJmp64 : PPCCustomInserterPseudo<(outs), (ins memr:$buf),
                             "#EH_SJLJ_LONGJMP64",
                             [(PPCeh_sjlj_longjmp addr:$buf)]>,
-                          Requires<[In64BitMode]>;
+                          Requires<[IsPPC64]>;
 }
 
 def MFSPR8 : XFXForm_1<31, 339, (outs g8rc:$RST), (ins i32imm:$SPR),
@@ -1948,7 +1924,7 @@ def : Pat<(atomic_load_nonext_64 XForm:$src),  (LDX memrr:$src)>;
 def : Pat<(atomic_store_64 i64:$val, DSForm:$ptr), (STD  g8rc:$val, memrix:$ptr)>;
 def : Pat<(atomic_store_64 i64:$val, XForm:$ptr), (STDX g8rc:$val, memrr:$ptr)>;
 
-let Predicates = [IsISA3_0, In64BitMode] in {
+let Predicates = [IsISA3_0, IsPPC64] in {
 def : Pat<(i64 (int_ppc_cmpeqb g8rc:$a, g8rc:$b)),
           (i64 (SETB8 (CMPEQB $a, $b)))>;
 def : Pat<(i64 (int_ppc_setb g8rc:$a, g8rc:$b)),
@@ -1961,7 +1937,7 @@ def : Pat<(i64 (int_ppc_maddld g8rc:$a, g8rc:$b, g8rc:$c)),
           (i64 (MADDLD8 $a, $b, $c))>;
 }
 
-let Predicates = [In64BitMode] in {
+let Predicates = [IsPPC64] in {
 def : Pat<(i64 (int_ppc_mulhd g8rc:$a, g8rc:$b)),
           (i64 (MULHD $a, $b))>;
 def : Pat<(i64 (int_ppc_mulhdu g8rc:$a, g8rc:$b)),

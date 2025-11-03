@@ -1572,26 +1572,11 @@ define void @test_fma(ptr %p, ptr %q, ptr %r) #0 {
 }
 
 define void @test_fabs(ptr %p) {
-; CHECK-FP16-LABEL: test_fabs:
-; CHECK-FP16:         ldrh r1, [r0]
-; CHECK-FP16-NEXT:    vmov s0, r1
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FP16-NEXT:    vabs.f32 s0, s0
-; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FP16-NEXT:    vmov r1, s0
-; CHECK-FP16-NEXT:    strh r1, [r0]
-; CHECK-FP16-NEXT:    bx lr
-;
-; CHECK-LIBCALL-LABEL: test_fabs:
-; CHECK-LIBCALL:         .save {r4, lr}
-; CHECK-LIBCALL-NEXT:    push {r4, lr}
-; CHECK-LIBCALL-NEXT:    mov r4, r0
-; CHECK-LIBCALL-NEXT:    ldrh r0, [r0]
-; CHECK-LIBCALL-NEXT:    bl __aeabi_h2f
-; CHECK-LIBCALL-NEXT:    bic r0, r0, #-2147483648
-; CHECK-LIBCALL-NEXT:    bl __aeabi_f2h
-; CHECK-LIBCALL-NEXT:    strh r0, [r4]
-; CHECK-LIBCALL-NEXT:    pop {r4, pc}
+; CHECK-ALL-LABEL: test_fabs:
+; CHECK-ALL:         ldrh r1, [r0]
+; CHECK-ALL-NEXT:    bfc r1, #15, #17
+; CHECK-ALL-NEXT:    strh r1, [r0]
+; CHECK-ALL-NEXT:    bx lr
   %a = load half, ptr %p, align 2
   %r = call half @llvm.fabs.f16(half %a)
   store half %r, ptr %p
@@ -2454,26 +2439,11 @@ define half @test_sitofp_i32_fadd(i32 %a, half %b) #0 {
 }
 
 define void @test_fneg(ptr %p1, ptr %p2) #0 {
-; CHECK-FP16-LABEL: test_fneg:
-; CHECK-FP16:         ldrh r0, [r0]
-; CHECK-FP16-NEXT:    vmov s0, r0
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FP16-NEXT:    vneg.f32 s0, s0
-; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    strh r0, [r1]
-; CHECK-FP16-NEXT:    bx lr
-;
-; CHECK-LIBCALL-LABEL: test_fneg:
-; CHECK-LIBCALL:         .save {r4, lr}
-; CHECK-LIBCALL-NEXT:    push {r4, lr}
-; CHECK-LIBCALL-NEXT:    ldrh r0, [r0]
-; CHECK-LIBCALL-NEXT:    mov r4, r1
-; CHECK-LIBCALL-NEXT:    bl __aeabi_h2f
-; CHECK-LIBCALL-NEXT:    eor r0, r0, #-2147483648
-; CHECK-LIBCALL-NEXT:    bl __aeabi_f2h
-; CHECK-LIBCALL-NEXT:    strh r0, [r4]
-; CHECK-LIBCALL-NEXT:    pop {r4, pc}
+; CHECK-ALL-LABEL: test_fneg:
+; CHECK-ALL:         ldrh r0, [r0]
+; CHECK-ALL-NEXT:    eor r0, r0, #32768
+; CHECK-ALL-NEXT:    strh r0, [r1]
+; CHECK-ALL-NEXT:    bx lr
   %v = load half, ptr %p1, align 2
   %res = fneg half %v
   store half %res, ptr %p2, align 2

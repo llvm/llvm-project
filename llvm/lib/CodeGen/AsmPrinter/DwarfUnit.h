@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 #include <string>
@@ -107,7 +108,7 @@ public:
     return LabelBegin;
   }
   MCSymbol *getEndLabel() const { return EndLabel; }
-  uint16_t getLanguage() const { return CUNode->getSourceLanguage(); }
+  llvm::dwarf::SourceLanguage getSourceLanguage() const;
   const DICompileUnit *getCUNode() const { return CUNode; }
   DwarfDebug &getDwarfDebug() const { return *DD; }
 
@@ -333,7 +334,7 @@ public:
                                const DIE &TyDIE);
 
 protected:
-  ~DwarfUnit();
+  ~DwarfUnit() override;
 
   /// Create new static data member DIE.
   DIE *getOrCreateStaticMemberDIE(const DIDerivedType *DT);
@@ -358,6 +359,10 @@ protected:
   }
 
 private:
+  DISourceLanguageName getLanguage() const {
+    return CUNode->getSourceLanguage();
+  }
+
   /// A helper to add a wide integer constant to a DIE using a block
   /// form.
   void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val);

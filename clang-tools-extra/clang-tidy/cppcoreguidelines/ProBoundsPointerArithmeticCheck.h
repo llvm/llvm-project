@@ -18,7 +18,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// arrays) is flagged.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic.html
 class ProBoundsPointerArithmeticCheck : public ClangTidyCheck {
 public:
   ProBoundsPointerArithmeticCheck(StringRef Name, ClangTidyContext *Context);

@@ -21,6 +21,7 @@ namespace llvm {
 
 class BitsInit;
 class CodeGenInstruction;
+class CodeGenTarget;
 class Record;
 class RecordVal;
 class VarLenInst;
@@ -136,6 +137,13 @@ public:
 
   /// Returns information about the operands' contribution to this encoding.
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
+
+  /// \returns the effective value of the DecoderMethod field. If DecoderMethod
+  /// is an explictly set value, return false for second.
+  static std::pair<std::string, bool>
+  findOperandDecoderMethod(const Record *Record);
+
+  static OperandInfo getOpInfo(const Record *TypeRecord);
 
 private:
   void parseVarLenEncoding(const VarLenInst &VLI);

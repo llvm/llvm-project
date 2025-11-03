@@ -826,6 +826,24 @@ bool ObjectFileELF::ParseHeader() {
 }
 
 UUID ObjectFileELF::GetUUID() {
+  if (m_uuid)
+    return m_uuid;
+
+  // Try loading note info from any PT_NOTE program headers. This is more
+  // friendly to ELF files that have no section headers, like ELF files that
+  // are loaded from memory.
+  for (const ELFProgramHeader &H : ProgramHeaders()) {
+    if (H.p_type == llvm::ELF::PT_NOTE) {
+      DataExtractor note_data = GetSegmentData(H);
+      if (note_data.GetByteSize()) {
+        lldb_private::ArchSpec arch_spec;
+        RefineModuleDetailsFromNote(note_data, arch_spec, m_uuid);
+        if (m_uuid)
+          return m_uuid;
+      }
+    }
+  }
+
   // Need to parse the section list to get the UUIDs, so make sure that's been
   // done.
   if (!ParseSectionHeaders() && GetType() != ObjectFile::eTypeCoreFile)
@@ -1660,7 +1678,7 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
       .Case(".ctf", eSectionTypeDebug)
-      .Cases(".data", ".tdata", eSectionTypeData)
+      .Cases({".data", ".tdata"}, eSectionTypeData)
       .Case(".eh_frame", eSectionTypeEHFrame)
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)

@@ -210,6 +210,15 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_ALLOCATE_MODIFIER(Name) .Case(#Name, OMPC_ALLOCATE_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_ALLOCATE_unknown);
+  case OMPC_threadset: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_THREADSET_KIND(Name) .Case(#Name, OMPC_THREADSET_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+                        .Default(OMPC_THREADSET_unknown);
+    if (LangOpts.OpenMP < 60)
+      return OMPC_THREADSET_unknown;
+    return Type;
+  }
   case OMPC_num_threads: {
     unsigned Type = llvm::StringSwitch<unsigned>(Str)
 #define OPENMP_NUMTHREADS_MODIFIER(Name) .Case(#Name, OMPC_NUMTHREADS_##Name)
@@ -282,6 +291,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_append_args:
+  case OMPC_looprange:
     break;
   default:
     break;
@@ -564,6 +574,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'num_threads' clause modifier");
+  case OMPC_threadset:
+    switch (Type) {
+    case OMPC_THREADSET_unknown:
+      return "unknown";
+#define OPENMP_THREADSET_KIND(Name)                                            \
+  case OMPC_THREADSET_##Name:                                                  \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'threadset' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_groupprivate:
@@ -627,6 +647,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_append_args:
+  case OMPC_looprange:
     break;
   default:
     break;
@@ -675,6 +696,11 @@ bool clang::isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind) {
 bool clang::isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_target_data || DKind == OMPD_target_enter_data ||
          DKind == OMPD_target_exit_data || DKind == OMPD_target_update;
+}
+
+bool clang::isOpenMPTargetMapEnteringDirective(OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_target_data || DKind == OMPD_target_enter_data ||
+         isOpenMPTargetExecutionDirective(DKind);
 }
 
 bool clang::isOpenMPNestingTeamsDirective(OpenMPDirectiveKind DKind) {
@@ -750,9 +776,14 @@ bool clang::isOpenMPCanonicalLoopNestTransformationDirective(
          DKind == OMPD_interchange || DKind == OMPD_stripe;
 }
 
+bool clang::isOpenMPCanonicalLoopSequenceTransformationDirective(
+    OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_fuse;
+}
+
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
-  // FIXME: There will be more cases when we implement 'fuse'.
-  return isOpenMPCanonicalLoopNestTransformationDirective(DKind);
+  return isOpenMPCanonicalLoopNestTransformationDirective(DKind) ||
+         isOpenMPCanonicalLoopSequenceTransformationDirective(DKind);
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {

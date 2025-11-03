@@ -238,6 +238,10 @@ def OMPUnrollDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPReverseDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPInterchangeDirective
     : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPCanonicalLoopSequenceTransformationDirective
+    : StmtNode<OMPExecutableDirective, 1>;
+def OMPFuseDirective
+    : StmtNode<OMPCanonicalLoopSequenceTransformationDirective>;
 def OMPForDirective : StmtNode<OMPLoopDirective>;
 def OMPForSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPSectionsDirective : StmtNode<OMPExecutableDirective>;

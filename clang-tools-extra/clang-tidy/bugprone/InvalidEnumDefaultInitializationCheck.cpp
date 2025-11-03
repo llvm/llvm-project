@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InvalidEnumDefaultInitializationCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -18,6 +20,8 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
+// Preserve same name as AST_MATCHER(isCompleteAndHasNoZeroValue)
+// NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
 bool isCompleteAndHasNoZeroValue(const EnumDecl *D) {
   const EnumDecl *Definition = D->getDefinition();
   return Definition && Definition->isComplete() &&
@@ -67,14 +71,14 @@ public:
     return Visit(T->getElementType().getTypePtr());
   }
   bool VisitEnumType(const EnumType *T) {
-    if (isCompleteAndHasNoZeroValue(T->getOriginalDecl())) {
+    if (isCompleteAndHasNoZeroValue(T->getDecl())) {
       FoundEnum = T;
       return true;
     }
     return false;
   }
   bool VisitRecordType(const RecordType *T) {
-    const RecordDecl *RD = T->getOriginalDecl()->getDefinition();
+    const RecordDecl *RD = T->getDecl()->getDefinition();
     if (!RD || RD->isUnion())
       return false;
     auto VisitField = [this](const FieldDecl *F) {
@@ -88,12 +92,24 @@ public:
 
 InvalidEnumDefaultInitializationCheck::InvalidEnumDefaultInitializationCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      IgnoredEnums(
+          utils::options::parseStringList(Options.get("IgnoredEnums", ""))) {
+  IgnoredEnums.emplace_back("::std::errc");
+}
+
+void InvalidEnumDefaultInitializationCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoredEnums",
+                utils::options::serializeStringList(IgnoredEnums));
+}
 
 void InvalidEnumDefaultInitializationCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto EnumWithoutZeroValue = enumType(
-      hasDeclaration(enumDecl(isCompleteAndHasNoZeroValue()).bind("enum")));
+  auto EnumWithoutZeroValue = enumType(hasDeclaration(
+      enumDecl(isCompleteAndHasNoZeroValue(),
+               unless(matchers::matchesAnyListedName(IgnoredEnums)))
+          .bind("enum")));
   auto EnumOrArrayOfEnum = qualType(hasUnqualifiedDesugaredType(
       anyOf(EnumWithoutZeroValue,
             arrayType(hasElementType(qualType(
@@ -125,7 +141,7 @@ void InvalidEnumDefaultInitializationCheck::check(
     if (!Finder.Visit(InitList->getArrayFiller()->getType().getTypePtr()))
       return;
     InitExpr = InitList;
-    Enum = Finder.FoundEnum->getOriginalDecl();
+    Enum = Finder.FoundEnum->getDecl();
   }
 
   if (!InitExpr || !Enum)

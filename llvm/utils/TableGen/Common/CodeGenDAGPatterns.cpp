@@ -246,16 +246,14 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
   return true;
 }
 
-namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
   T.writeToStream(OS);
   return OS;
 }
-raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
-} // namespace llvm
 
 LLVM_DUMP_METHOD
 void TypeSetByHwMode::dump() const { dbgs() << *this << '\n'; }
@@ -335,6 +333,8 @@ bool TypeSetByHwMode::intersect(SetType &Out, const SetType &In) {
   using WildPartT = std::pair<MVT, std::function<bool(MVT)>>;
   static const WildPartT WildParts[] = {
       {MVT::iPTR, [](MVT T) { return T.isScalarInteger() || T == MVT::iPTR; }},
+      {MVT::cPTR,
+       [](MVT T) { return T.isCheriCapability() || T == MVT::cPTR; }},
   };
 
   bool Changed = false;
@@ -816,6 +816,10 @@ void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
   if (Out.count(MVT::pAny)) {
     Out.erase(MVT::pAny);
     Out.insert(MVT::iPTR);
+    for (MVT T : MVT::cheri_capability_valuetypes()) {
+      if (Legal.count(T))
+        Out.insert(MVT::cPTR);
+    }
   } else if (Out.count(MVT::iAny)) {
     Out.erase(MVT::iAny);
     for (MVT T : MVT::integer_valuetypes())
@@ -1647,9 +1651,11 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   case SDTCisVT:
     // Operand must be a particular type.
     return NodeToApply.UpdateNodeType(ResNo, VVT, TP);
-  case SDTCisPtrTy:
-    // Operand must be same as target pointer type.
-    return NodeToApply.UpdateNodeType(ResNo, MVT::iPTR, TP);
+  case SDTCisPtrTy: {
+    // Operand must be a legal pointer (iPTR, or possibly cPTR) type.
+    const TypeSetByHwMode &PtrTys = TP.getDAGPatterns().getLegalPtrTypes();
+    return NodeToApply.UpdateNodeType(ResNo, PtrTys, TP);
+  }
   case SDTCisInt:
     // Require it to be one of the legal integer VTs.
     return TI.EnforceInteger(NodeToApply.getExtType(ResNo));
@@ -1789,6 +1795,23 @@ bool llvm::operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS) {
   return false;
 }
 
+/// RegClassByHwMode acts like ValueTypeByHwMode, taking the type of the
+/// register class from the active mode.
+static TypeSetByHwMode getTypeForRegClassByHwMode(const CodeGenTarget &T,
+                                                  const Record *R) {
+  TypeSetByHwMode TypeSet;
+  RegClassByHwMode Helper(R, T.getHwModes(), T.getRegBank());
+
+  for (auto [ModeID, RegClass] : Helper) {
+    ArrayRef<ValueTypeByHwMode> RegClassVTs = RegClass->getValueTypes();
+    MachineValueTypeSet &ModeTypeSet = TypeSet.getOrCreate(ModeID);
+    for (const ValueTypeByHwMode &VT : RegClassVTs)
+      ModeTypeSet.insert(VT.getType(ModeID));
+  }
+
+  return TypeSet;
+}
+
 // Update the node type to match an instruction operand or result as specified
 // in the ins or outs lists on the instruction definition. Return true if the
 // type was actually changed.
@@ -1814,13 +1837,16 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
   // Both RegisterClass and RegisterOperand operands derive their types from a
   // register class def.
   const Record *RC = nullptr;
-  if (Operand->isSubClassOf("RegisterClass"))
+  if (Operand->isSubClassOf("RegisterClassLike"))
     RC = Operand;
   else if (Operand->isSubClassOf("RegisterOperand"))
     RC = Operand->getValueAsDef("RegClass");
 
   assert(RC && "Unknown operand type");
   CodeGenTarget &Tgt = TP.getDAGPatterns().getTargetInfo();
+  if (RC->isSubClassOf("RegClassByHwMode"))
+    return UpdateNodeType(ResNo, getTypeForRegClassByHwMode(Tgt, RC), TP);
+
   return UpdateNodeType(ResNo, Tgt.getRegisterClass(RC).getValueTypes(), TP);
 }
 
@@ -2306,6 +2332,10 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
       return TypeSetByHwMode(); // Unknown.
     const Record *RegClass = R->getValueAsDef("RegClass");
     const CodeGenTarget &T = TP.getDAGPatterns().getTargetInfo();
+
+    if (RegClass->isSubClassOf("RegClassByHwMode"))
+      return getTypeForRegClassByHwMode(T, RegClass);
+
     return TypeSetByHwMode(T.getRegisterClass(RegClass).getValueTypes());
   }
 
@@ -2323,6 +2353,11 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
       return TypeSetByHwMode(); // Unknown.
     const CodeGenTarget &T = TP.getDAGPatterns().getTargetInfo();
     return TypeSetByHwMode(T.getRegisterClass(R).getValueTypes());
+  }
+
+  if (R->isSubClassOf("RegClassByHwMode")) {
+    const CodeGenTarget &T = CDP.getTargetInfo();
+    return getTypeForRegClassByHwMode(T, R);
   }
 
   if (R->isSubClassOf("PatFrags")) {
@@ -3264,6 +3299,7 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
                                        PatternRewriterFn PatternRewriter)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
+      LegalPtrVTS(ComputeLegalPtrTypes()),
       PatternRewriter(std::move(PatternRewriter)) {
   ParseNodeInfo();
   ParseNodeTransforms();
@@ -3297,6 +3333,36 @@ const Record *CodeGenDAGPatterns::getSDNodeNamed(StringRef Name) const {
   if (!N || !N->isSubClassOf("SDNode"))
     PrintFatalError("Error getting SDNode '" + Name + "'!");
   return N;
+}
+
+// Compute the subset of iPTR and cPTR legal for each mode, coalescing into the
+// default mode where possible to avoid predicate explosion.
+TypeSetByHwMode CodeGenDAGPatterns::ComputeLegalPtrTypes() const {
+  auto LegalPtrsForSet = [](const MachineValueTypeSet &In) {
+    MachineValueTypeSet Out;
+    Out.insert(MVT::iPTR);
+    for (MVT T : MVT::cheri_capability_valuetypes()) {
+      if (In.count(T)) {
+        Out.insert(MVT::cPTR);
+        break;
+      }
+    }
+    return Out;
+  };
+
+  const TypeSetByHwMode &LegalTypes = getLegalTypes();
+  MachineValueTypeSet LegalPtrsDefault =
+      LegalPtrsForSet(LegalTypes.get(DefaultMode));
+
+  TypeSetByHwMode LegalPtrTypes;
+  for (const auto &I : LegalTypes) {
+    MachineValueTypeSet S = LegalPtrsForSet(I.second);
+    if (I.first != DefaultMode && S == LegalPtrsDefault)
+      continue;
+    LegalPtrTypes.getOrCreate(I.first).insert(S);
+  }
+
+  return LegalPtrTypes;
 }
 
 // Parse all of the SDNode definitions for the target, populating SDNodes.
@@ -3581,7 +3647,7 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
       continue;
     }
 
-    if (Val->getDef()->isSubClassOf("RegisterClass") ||
+    if (Val->getDef()->isSubClassOf("RegisterClassLike") ||
         Val->getDef()->isSubClassOf("ValueType") ||
         Val->getDef()->isSubClassOf("RegisterOperand") ||
         Val->getDef()->isSubClassOf("PointerLikeRegClass")) {

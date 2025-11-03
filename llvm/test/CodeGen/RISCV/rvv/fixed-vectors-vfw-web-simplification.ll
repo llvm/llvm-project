@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+zvfhmin,+f,+d -verify-machineinstrs %s -o - --riscv-lower-ext-max-web-size=3 | FileCheck %s --check-prefixes=FOLDING,ZVFHMIN
 ; Check that the default value enables the web folding and
 ; that it is bigger than 3.
-; RUN: llc -mtriple=riscv64 -mattr=+v,+zvfh,+f,+d -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=FOLDING
+; RUN: llc -mtriple=riscv64 -mattr=+v,+zvfh,+f,+d -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=FOLDING,ZVFH
 
 define void @vfwmul_v2f116_multiple_users(ptr %x, ptr %y, ptr %z, <2 x half> %a, <2 x half> %b, <2 x half> %b2) {
 ; NO_FOLDING1-LABEL: vfwmul_v2f116_multiple_users:

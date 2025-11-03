@@ -169,8 +169,6 @@ define i64 @streaming_agnostic_caller_nonstreaming_private_za_callee(i64 %v) nou
 ; CHECK-NEWLOWERING-NEXT:    smstop sm
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
-; CHECK-NEWLOWERING-NEXT:    smstart sm
-; CHECK-NEWLOWERING-NEXT:    smstop sm
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
 ; CHECK-NEWLOWERING-NEXT:    smstart sm
 ; CHECK-NEWLOWERING-NEXT:    mov x8, x0
@@ -268,19 +266,11 @@ define i64 @streaming_compatible_agnostic_caller_nonstreaming_private_za_callee(
 ; CHECK-NEWLOWERING-NEXT:  .LBB5_2:
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
+; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
 ; CHECK-NEWLOWERING-NEXT:    tbz w20, #0, .LBB5_4
 ; CHECK-NEWLOWERING-NEXT:  // %bb.3:
 ; CHECK-NEWLOWERING-NEXT:    smstart sm
 ; CHECK-NEWLOWERING-NEXT:  .LBB5_4:
-; CHECK-NEWLOWERING-NEXT:    tbz w20, #0, .LBB5_6
-; CHECK-NEWLOWERING-NEXT:  // %bb.5:
-; CHECK-NEWLOWERING-NEXT:    smstop sm
-; CHECK-NEWLOWERING-NEXT:  .LBB5_6:
-; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
-; CHECK-NEWLOWERING-NEXT:    tbz w20, #0, .LBB5_8
-; CHECK-NEWLOWERING-NEXT:  // %bb.7:
-; CHECK-NEWLOWERING-NEXT:    smstart sm
-; CHECK-NEWLOWERING-NEXT:  .LBB5_8:
 ; CHECK-NEWLOWERING-NEXT:    mov x8, x0
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x19
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
@@ -361,7 +351,6 @@ define i64  @test_many_callee_arguments(
   ret i64 %ret
 }
 
-; FIXME: The new lowering should avoid saves/restores in the probing loop.
 define void @agnostic_za_buffer_alloc_with_stack_probes() nounwind "aarch64_za_state_agnostic" "probe-stack"="inline-asm" "stack-probe-size"="65536"{
 ; CHECK-LABEL: agnostic_za_buffer_alloc_with_stack_probes:
 ; CHECK:       // %bb.0:
@@ -399,18 +388,14 @@ define void @agnostic_za_buffer_alloc_with_stack_probes() nounwind "aarch64_za_s
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_state_size
 ; CHECK-NEWLOWERING-NEXT:    mov x8, sp
 ; CHECK-NEWLOWERING-NEXT:    sub x19, x8, x0
+; CHECK-NEWLOWERING-NEXT:    mov x0, x19
+; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_save
 ; CHECK-NEWLOWERING-NEXT:  .LBB7_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16, lsl #12 // =65536
 ; CHECK-NEWLOWERING-NEXT:    cmp sp, x19
-; CHECK-NEWLOWERING-NEXT:    mov x0, x19
-; CHECK-NEWLOWERING-NEXT:    mrs x8, NZCV
-; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_save
-; CHECK-NEWLOWERING-NEXT:    msr NZCV, x8
 ; CHECK-NEWLOWERING-NEXT:    b.le .LBB7_3
 ; CHECK-NEWLOWERING-NEXT:  // %bb.2: // in Loop: Header=BB7_1 Depth=1
-; CHECK-NEWLOWERING-NEXT:    mov x0, x19
 ; CHECK-NEWLOWERING-NEXT:    str xzr, [sp]
-; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
 ; CHECK-NEWLOWERING-NEXT:    b .LBB7_1
 ; CHECK-NEWLOWERING-NEXT:  .LBB7_3:
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x19

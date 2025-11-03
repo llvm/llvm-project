@@ -132,7 +132,11 @@ namespace test7 {
   template <class...> class B {};
   template struct A<B>;
 // DUMP-LABEL: NamespaceDecl {{.*}} test7{{$}}
-// DUMP:       ClassTemplateSpecializationDecl {{.*}} struct A definition explicit_instantiation_definition strict-pack-match{{$}}
+// DUMP:       ClassTemplateDecl 0x{{.+}} A{{$}}
+// DUMP-NEXT:  |-TemplateTemplateParmDecl
+// DUMP-NEXT:  | `-TemplateTypeParmDecl
+// DUMP-NEXT:  |-CXXRecordDecl 0x[[TEST7_PAT:[^ ]+]] {{.+}} struct A definition
+// DUMP:       ClassTemplateSpecializationDecl {{.*}} struct A definition instantiated_from 0x[[TEST7_PAT]] explicit_instantiation_definition strict-pack-match{{$}}
 } // namespce test7
 
 namespace test8 {
@@ -929,6 +933,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "name": "foo",
 // JSON-NEXT:      "tagUsed": "struct",
 // JSON-NEXT:      "completeDefinition": true,
+// JSON-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:      "definitionData": {
 // JSON-NEXT:       "canConstDefaultInit": true,
 // JSON-NEXT:       "canPassInRegisters": true,
@@ -1073,6 +1078,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "type": {
 // JSON-NEXT:         "qualType": "void ()"
 // JSON-NEXT:        },
+// JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:        "inner": [
 // JSON-NEXT:         {
 // JSON-NEXT:          "id": "0x{{.*}}",
@@ -1119,6 +1125,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "type": {
 // JSON-NEXT:         "qualType": "int ()"
 // JSON-NEXT:        },
+// JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:        "inner": [
 // JSON-NEXT:         {
 // JSON-NEXT:          "id": "0x{{.*}}",
@@ -1566,6 +1573,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "name": "foo",
 // JSON-NEXT:      "tagUsed": "struct",
 // JSON-NEXT:      "completeDefinition": true,
+// JSON-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:      "definitionData": {
 // JSON-NEXT:       "canConstDefaultInit": true,
 // JSON-NEXT:       "canPassInRegisters": true,
@@ -1710,6 +1718,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "type": {
 // JSON-NEXT:         "qualType": "void ()"
 // JSON-NEXT:        },
+// JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:        "inner": [
 // JSON-NEXT:         {
 // JSON-NEXT:          "id": "0x{{.*}}",
@@ -1756,6 +1765,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "type": {
 // JSON-NEXT:         "qualType": "double ()"
 // JSON-NEXT:        },
+// JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:        "inner": [
 // JSON-NEXT:         {
 // JSON-NEXT:          "id": "0x{{.*}}",
@@ -2430,6 +2440,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "type": {
 // JSON-NEXT:       "qualType": "int ()"
 // JSON-NEXT:      },
+// JSON-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:      "inner": [
 // JSON-NEXT:       {
 // JSON-NEXT:        "kind": "TemplateArgument",
@@ -4621,6 +4632,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "name": "foo",
 // JSON-NEXT:        "tagUsed": "struct",
 // JSON-NEXT:        "completeDefinition": true,
+// JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:        "definitionData": {
 // JSON-NEXT:         "canConstDefaultInit": true,
 // JSON-NEXT:         "canPassInRegisters": true,
@@ -4733,7 +4745,8 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "type": {
 // JSON-NEXT:           "qualType": "void ()"
 // JSON-NEXT:          },
-// JSON-NEXT:          "storageClass": "static"
+// JSON-NEXT:          "storageClass": "static",
+// JSON-NEXT:          "TemplateInstantiationPattern": "0x{{.*}}"
 // JSON-NEXT:         }
 // JSON-NEXT:        ]
 // JSON-NEXT:       },
@@ -4892,6 +4905,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "name": "foo",
 // JSON-NEXT:      "tagUsed": "struct",
 // JSON-NEXT:      "completeDefinition": true,
+// JSON-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:      "definitionData": {
 // JSON-NEXT:       "canConstDefaultInit": true,
 // JSON-NEXT:       "canPassInRegisters": true,
@@ -5003,7 +5017,8 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "type": {
 // JSON-NEXT:         "qualType": "void ()"
 // JSON-NEXT:        },
-// JSON-NEXT:        "storageClass": "static"
+// JSON-NEXT:        "storageClass": "static",
+// JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}"
 // JSON-NEXT:       }
 // JSON-NEXT:      ]
 // JSON-NEXT:     }
@@ -5151,6 +5166,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "type": {
 // JSON-NEXT:         "qualType": "void ()"
 // JSON-NEXT:        },
+// JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:        "inner": [
 // JSON-NEXT:         {
 // JSON-NEXT:          "kind": "TemplateArgument",
@@ -5425,6 +5441,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "type": {
 // JSON-NEXT:         "qualType": "void ()"
 // JSON-NEXT:        },
+// JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:        "inner": [
 // JSON-NEXT:         {
 // JSON-NEXT:          "kind": "TemplateArgument",
@@ -5640,6 +5657,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        },
 // JSON-NEXT:        "constexpr": true,
 // JSON-NEXT:        "init": "c",
+// JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:        "inner": [
 // JSON-NEXT:         {
 // JSON-NEXT:          "id": "0x{{.*}}",
@@ -5843,8 +5861,8 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 4308,
-// JSON-NEXT:      "line": 136,
+// JSON-NEXT:      "offset": 4553,
+// JSON-NEXT:      "line": 140,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -6206,6 +6224,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "tagUsed": "struct",
 // JSON-NEXT:      "completeDefinition": true,
 // JSON-NEXT:      "strict-pack-match": true,
+// JSON-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:      "definitionData": {
 // JSON-NEXT:       "canConstDefaultInit": true,
 // JSON-NEXT:       "canPassInRegisters": true,
@@ -6294,20 +6313,20 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 4339,
-// JSON-NEXT:     "line": 138,
+// JSON-NEXT:     "offset": 4584,
+// JSON-NEXT:     "line": 142,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 5
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 4329,
+// JSON-NEXT:      "offset": 4574,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 4648,
-// JSON-NEXT:      "line": 147,
+// JSON-NEXT:      "offset": 4893,
+// JSON-NEXT:      "line": 151,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -6318,21 +6337,21 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 4379,
-// JSON-NEXT:       "line": 140,
+// JSON-NEXT:       "offset": 4624,
+// JSON-NEXT:       "line": 144,
 // JSON-NEXT:       "col": 8,
 // JSON-NEXT:       "tokLen": 8
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 4347,
-// JSON-NEXT:        "line": 139,
+// JSON-NEXT:        "offset": 4592,
+// JSON-NEXT:        "line": 143,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 4379,
-// JSON-NEXT:        "line": 140,
+// JSON-NEXT:        "offset": 4624,
+// JSON-NEXT:        "line": 144,
 // JSON-NEXT:        "col": 8,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       }
@@ -6343,19 +6362,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4369,
-// JSON-NEXT:         "line": 139,
+// JSON-NEXT:         "offset": 4614,
+// JSON-NEXT:         "line": 143,
 // JSON-NEXT:         "col": 23,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4356,
+// JSON-NEXT:          "offset": 4601,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4369,
+// JSON-NEXT:          "offset": 4614,
 // JSON-NEXT:          "col": 23,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -6371,19 +6390,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4379,
-// JSON-NEXT:         "line": 140,
+// JSON-NEXT:         "offset": 4624,
+// JSON-NEXT:         "line": 144,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 8
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4372,
+// JSON-NEXT:          "offset": 4617,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4379,
+// JSON-NEXT:          "offset": 4624,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         }
@@ -6402,21 +6421,21 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateSpecializationDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 4407,
-// JSON-NEXT:       "line": 142,
+// JSON-NEXT:       "offset": 4652,
+// JSON-NEXT:       "line": 146,
 // JSON-NEXT:       "col": 8,
 // JSON-NEXT:       "tokLen": 8
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 4389,
-// JSON-NEXT:        "line": 141,
+// JSON-NEXT:        "offset": 4634,
+// JSON-NEXT:        "line": 145,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 4422,
-// JSON-NEXT:        "line": 142,
+// JSON-NEXT:        "offset": 4667,
+// JSON-NEXT:        "line": 146,
 // JSON-NEXT:        "col": 23,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -6436,20 +6455,20 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 4680,
-// JSON-NEXT:     "line": 149,
+// JSON-NEXT:     "offset": 4925,
+// JSON-NEXT:     "line": 153,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 28
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 4670,
+// JSON-NEXT:      "offset": 4915,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 5303,
-// JSON-NEXT:      "line": 158,
+// JSON-NEXT:      "offset": 5548,
+// JSON-NEXT:      "line": 162,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -6460,19 +6479,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 4737,
-// JSON-NEXT:       "line": 150,
+// JSON-NEXT:       "offset": 4982,
+// JSON-NEXT:       "line": 154,
 // JSON-NEXT:       "col": 27,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 4713,
+// JSON-NEXT:        "offset": 4958,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 4737,
+// JSON-NEXT:        "offset": 4982,
 // JSON-NEXT:        "col": 27,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -6483,18 +6502,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4728,
+// JSON-NEXT:         "offset": 4973,
 // JSON-NEXT:         "col": 18,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4723,
+// JSON-NEXT:          "offset": 4968,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4723,
+// JSON-NEXT:          "offset": 4968,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         }
@@ -6507,18 +6526,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4737,
+// JSON-NEXT:         "offset": 4982,
 // JSON-NEXT:         "col": 27,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4730,
+// JSON-NEXT:          "offset": 4975,
 // JSON-NEXT:          "col": 20,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4737,
+// JSON-NEXT:          "offset": 4982,
 // JSON-NEXT:          "col": 27,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -6532,19 +6551,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplatePartialSpecializationDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 4779,
-// JSON-NEXT:       "line": 151,
+// JSON-NEXT:       "offset": 5024,
+// JSON-NEXT:       "line": 155,
 // JSON-NEXT:       "col": 40,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 4742,
+// JSON-NEXT:        "offset": 4987,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 4789,
+// JSON-NEXT:        "offset": 5034,
 // JSON-NEXT:        "col": 50,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -6604,18 +6623,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4758,
+// JSON-NEXT:         "offset": 5003,
 // JSON-NEXT:         "col": 19,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4752,
+// JSON-NEXT:          "offset": 4997,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4758,
+// JSON-NEXT:          "offset": 5003,
 // JSON-NEXT:          "col": 19,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -6630,18 +6649,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4768,
+// JSON-NEXT:         "offset": 5013,
 // JSON-NEXT:         "col": 29,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4762,
+// JSON-NEXT:          "offset": 5007,
 // JSON-NEXT:          "col": 23,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4768,
+// JSON-NEXT:          "offset": 5013,
 // JSON-NEXT:          "col": 29,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -6659,20 +6678,20 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 5358,
-// JSON-NEXT:     "line": 160,
+// JSON-NEXT:     "offset": 5603,
+// JSON-NEXT:     "line": 164,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 26
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 5348,
+// JSON-NEXT:      "offset": 5593,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 6613,
-// JSON-NEXT:      "line": 183,
+// JSON-NEXT:      "offset": 6858,
+// JSON-NEXT:      "line": 187,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -6683,20 +6702,20 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 5415,
-// JSON-NEXT:       "line": 161,
+// JSON-NEXT:       "offset": 5660,
+// JSON-NEXT:       "line": 165,
 // JSON-NEXT:       "col": 29,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 5389,
+// JSON-NEXT:        "offset": 5634,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 5516,
-// JSON-NEXT:        "line": 165,
+// JSON-NEXT:        "offset": 5761,
+// JSON-NEXT:        "line": 169,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -6707,19 +6726,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 5405,
-// JSON-NEXT:         "line": 161,
+// JSON-NEXT:         "offset": 5650,
+// JSON-NEXT:         "line": 165,
 // JSON-NEXT:         "col": 19,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 5399,
+// JSON-NEXT:          "offset": 5644,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 5405,
+// JSON-NEXT:          "offset": 5650,
 // JSON-NEXT:          "col": 19,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -6733,19 +6752,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 5415,
+// JSON-NEXT:         "offset": 5660,
 // JSON-NEXT:         "col": 29,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 5408,
+// JSON-NEXT:          "offset": 5653,
 // JSON-NEXT:          "col": 22,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 5516,
-// JSON-NEXT:          "line": 165,
+// JSON-NEXT:          "offset": 5761,
+// JSON-NEXT:          "line": 169,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -6808,19 +6827,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 5415,
-// JSON-NEXT:           "line": 161,
+// JSON-NEXT:           "offset": 5660,
+// JSON-NEXT:           "line": 165,
 // JSON-NEXT:           "col": 29,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 5408,
+// JSON-NEXT:            "offset": 5653,
 // JSON-NEXT:            "col": 22,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 5415,
+// JSON-NEXT:            "offset": 5660,
 // JSON-NEXT:            "col": 29,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -6833,19 +6852,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "TypeAliasDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 5429,
-// JSON-NEXT:           "line": 162,
+// JSON-NEXT:           "offset": 5674,
+// JSON-NEXT:           "line": 166,
 // JSON-NEXT:           "col": 11,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 5423,
+// JSON-NEXT:            "offset": 5668,
 // JSON-NEXT:            "col": 5,
 // JSON-NEXT:            "tokLen": 5
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 5440,
+// JSON-NEXT:            "offset": 5685,
 // JSON-NEXT:            "col": 22,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -6896,19 +6915,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "TypeAliasDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 5453,
-// JSON-NEXT:           "line": 163,
+// JSON-NEXT:           "offset": 5698,
+// JSON-NEXT:           "line": 167,
 // JSON-NEXT:           "col": 11,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 5447,
+// JSON-NEXT:            "offset": 5692,
 // JSON-NEXT:            "col": 5,
 // JSON-NEXT:            "tokLen": 5
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 5470,
+// JSON-NEXT:            "offset": 5715,
 // JSON-NEXT:            "col": 28,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -6952,19 +6971,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "TypeAliasDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 5483,
-// JSON-NEXT:           "line": 164,
+// JSON-NEXT:           "offset": 5728,
+// JSON-NEXT:           "line": 168,
 // JSON-NEXT:           "col": 11,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 5477,
+// JSON-NEXT:            "offset": 5722,
 // JSON-NEXT:            "col": 5,
 // JSON-NEXT:            "tokLen": 5
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 5511,
+// JSON-NEXT:            "offset": 5756,
 // JSON-NEXT:            "col": 39,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -7032,20 +7051,20 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 6666,
-// JSON-NEXT:     "line": 185,
+// JSON-NEXT:     "offset": 6911,
+// JSON-NEXT:     "line": 189,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 19
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 6656,
+// JSON-NEXT:      "offset": 6901,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 9524,
-// JSON-NEXT:      "line": 225,
+// JSON-NEXT:      "offset": 9769,
+// JSON-NEXT:      "line": 229,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -7056,19 +7075,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 6789,
-// JSON-NEXT:       "line": 187,
+// JSON-NEXT:       "offset": 7034,
+// JSON-NEXT:       "line": 191,
 // JSON-NEXT:       "col": 41,
 // JSON-NEXT:       "tokLen": 9
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 6751,
+// JSON-NEXT:        "offset": 6996,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 6800,
+// JSON-NEXT:        "offset": 7045,
 // JSON-NEXT:        "col": 52,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -7079,18 +7098,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6767,
+// JSON-NEXT:         "offset": 7012,
 // JSON-NEXT:         "col": 19,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6761,
+// JSON-NEXT:          "offset": 7006,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6767,
+// JSON-NEXT:          "offset": 7012,
 // JSON-NEXT:          "col": 19,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -7104,18 +7123,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6777,
+// JSON-NEXT:         "offset": 7022,
 // JSON-NEXT:         "col": 29,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6772,
+// JSON-NEXT:          "offset": 7017,
 // JSON-NEXT:          "col": 24,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6777,
+// JSON-NEXT:          "offset": 7022,
 // JSON-NEXT:          "col": 29,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -7131,18 +7150,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6789,
+// JSON-NEXT:         "offset": 7034,
 // JSON-NEXT:         "col": 41,
 // JSON-NEXT:         "tokLen": 9
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6782,
+// JSON-NEXT:          "offset": 7027,
 // JSON-NEXT:          "col": 34,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6800,
+// JSON-NEXT:          "offset": 7045,
 // JSON-NEXT:          "col": 52,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -7205,18 +7224,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 6789,
+// JSON-NEXT:           "offset": 7034,
 // JSON-NEXT:           "col": 41,
 // JSON-NEXT:           "tokLen": 9
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 6782,
+// JSON-NEXT:            "offset": 7027,
 // JSON-NEXT:            "col": 34,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 6789,
+// JSON-NEXT:            "offset": 7034,
 // JSON-NEXT:            "col": 41,
 // JSON-NEXT:            "tokLen": 9
 // JSON-NEXT:           }
@@ -7233,19 +7252,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 6843,
-// JSON-NEXT:       "line": 188,
+// JSON-NEXT:       "offset": 7088,
+// JSON-NEXT:       "line": 192,
 // JSON-NEXT:       "col": 41,
 // JSON-NEXT:       "tokLen": 9
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 6805,
+// JSON-NEXT:        "offset": 7050,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 6854,
+// JSON-NEXT:        "offset": 7099,
 // JSON-NEXT:        "col": 52,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -7256,18 +7275,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6821,
+// JSON-NEXT:         "offset": 7066,
 // JSON-NEXT:         "col": 19,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6815,
+// JSON-NEXT:          "offset": 7060,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6821,
+// JSON-NEXT:          "offset": 7066,
 // JSON-NEXT:          "col": 19,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -7281,18 +7300,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6831,
+// JSON-NEXT:         "offset": 7076,
 // JSON-NEXT:         "col": 29,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6826,
+// JSON-NEXT:          "offset": 7071,
 // JSON-NEXT:          "col": 24,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6831,
+// JSON-NEXT:          "offset": 7076,
 // JSON-NEXT:          "col": 29,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -7308,18 +7327,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6843,
+// JSON-NEXT:         "offset": 7088,
 // JSON-NEXT:         "col": 41,
 // JSON-NEXT:         "tokLen": 9
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6836,
+// JSON-NEXT:          "offset": 7081,
 // JSON-NEXT:          "col": 34,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6854,
+// JSON-NEXT:          "offset": 7099,
 // JSON-NEXT:          "col": 52,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -7382,18 +7401,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 6843,
+// JSON-NEXT:           "offset": 7088,
 // JSON-NEXT:           "col": 41,
 // JSON-NEXT:           "tokLen": 9
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 6836,
+// JSON-NEXT:            "offset": 7081,
 // JSON-NEXT:            "col": 34,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 6843,
+// JSON-NEXT:            "offset": 7088,
 // JSON-NEXT:            "col": 41,
 // JSON-NEXT:            "tokLen": 9
 // JSON-NEXT:           }
@@ -7410,21 +7429,21 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplatePartialSpecializationDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 6907,
-// JSON-NEXT:       "line": 191,
+// JSON-NEXT:       "offset": 7152,
+// JSON-NEXT:       "line": 195,
 // JSON-NEXT:       "col": 10,
 // JSON-NEXT:       "tokLen": 9
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 6860,
-// JSON-NEXT:        "line": 190,
+// JSON-NEXT:        "offset": 7105,
+// JSON-NEXT:        "line": 194,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 6941,
-// JSON-NEXT:        "line": 191,
+// JSON-NEXT:        "offset": 7186,
+// JSON-NEXT:        "line": 195,
 // JSON-NEXT:        "col": 44,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -7531,12 +7550,12 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:              "kind": "DeclRefExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 6931,
+// JSON-NEXT:                "offset": 7176,
 // JSON-NEXT:                "col": 34,
 // JSON-NEXT:                "tokLen": 2
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 6931,
+// JSON-NEXT:                "offset": 7176,
 // JSON-NEXT:                "col": 34,
 // JSON-NEXT:                "tokLen": 2
 // JSON-NEXT:               }
@@ -7570,12 +7589,12 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "kind": "DeclRefExpr",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 6936,
+// JSON-NEXT:            "offset": 7181,
 // JSON-NEXT:            "col": 39,
 // JSON-NEXT:            "tokLen": 2
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 6936,
+// JSON-NEXT:            "offset": 7181,
 // JSON-NEXT:            "col": 39,
 // JSON-NEXT:            "tokLen": 2
 // JSON-NEXT:           }
@@ -7599,19 +7618,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6876,
-// JSON-NEXT:         "line": 190,
+// JSON-NEXT:         "offset": 7121,
+// JSON-NEXT:         "line": 194,
 // JSON-NEXT:         "col": 19,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6870,
+// JSON-NEXT:          "offset": 7115,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6876,
+// JSON-NEXT:          "offset": 7121,
 // JSON-NEXT:          "col": 19,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -7626,18 +7645,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6885,
+// JSON-NEXT:         "offset": 7130,
 // JSON-NEXT:         "col": 28,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6880,
+// JSON-NEXT:          "offset": 7125,
 // JSON-NEXT:          "col": 23,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6885,
+// JSON-NEXT:          "offset": 7130,
 // JSON-NEXT:          "col": 28,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -7654,18 +7673,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6894,
+// JSON-NEXT:         "offset": 7139,
 // JSON-NEXT:         "col": 37,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6889,
+// JSON-NEXT:          "offset": 7134,
 // JSON-NEXT:          "col": 32,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6894,
+// JSON-NEXT:          "offset": 7139,
 // JSON-NEXT:          "col": 37,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -7682,19 +7701,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 6907,
-// JSON-NEXT:         "line": 191,
+// JSON-NEXT:         "offset": 7152,
+// JSON-NEXT:         "line": 195,
 // JSON-NEXT:         "col": 10,
 // JSON-NEXT:         "tokLen": 9
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 6900,
+// JSON-NEXT:          "offset": 7145,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 6907,
+// JSON-NEXT:          "offset": 7152,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 9
 // JSON-NEXT:         }
@@ -7709,21 +7728,21 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplatePartialSpecializationDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 8223,
-// JSON-NEXT:       "line": 209,
+// JSON-NEXT:       "offset": 8468,
+// JSON-NEXT:       "line": 213,
 // JSON-NEXT:       "col": 10,
 // JSON-NEXT:       "tokLen": 9
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 8173,
-// JSON-NEXT:        "line": 208,
+// JSON-NEXT:        "offset": 8418,
+// JSON-NEXT:        "line": 212,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 8257,
-// JSON-NEXT:        "line": 209,
+// JSON-NEXT:        "offset": 8502,
+// JSON-NEXT:        "line": 213,
 // JSON-NEXT:        "col": 44,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -7830,12 +7849,12 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:              "kind": "DeclRefExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 8247,
+// JSON-NEXT:                "offset": 8492,
 // JSON-NEXT:                "col": 34,
 // JSON-NEXT:                "tokLen": 2
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 8247,
+// JSON-NEXT:                "offset": 8492,
 // JSON-NEXT:                "col": 34,
 // JSON-NEXT:                "tokLen": 2
 // JSON-NEXT:               }
@@ -7869,12 +7888,12 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "kind": "DeclRefExpr",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 8252,
+// JSON-NEXT:            "offset": 8497,
 // JSON-NEXT:            "col": 39,
 // JSON-NEXT:            "tokLen": 2
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 8252,
+// JSON-NEXT:            "offset": 8497,
 // JSON-NEXT:            "col": 39,
 // JSON-NEXT:            "tokLen": 2
 // JSON-NEXT:           }
@@ -7898,19 +7917,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 8192,
-// JSON-NEXT:         "line": 208,
+// JSON-NEXT:         "offset": 8437,
+// JSON-NEXT:         "line": 212,
 // JSON-NEXT:         "col": 22,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 8183,
+// JSON-NEXT:          "offset": 8428,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 8192,
+// JSON-NEXT:          "offset": 8437,
 // JSON-NEXT:          "col": 22,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -7925,18 +7944,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 8201,
+// JSON-NEXT:         "offset": 8446,
 // JSON-NEXT:         "col": 31,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 8196,
+// JSON-NEXT:          "offset": 8441,
 // JSON-NEXT:          "col": 26,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 8201,
+// JSON-NEXT:          "offset": 8446,
 // JSON-NEXT:          "col": 31,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -7953,18 +7972,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 8210,
+// JSON-NEXT:         "offset": 8455,
 // JSON-NEXT:         "col": 40,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 8205,
+// JSON-NEXT:          "offset": 8450,
 // JSON-NEXT:          "col": 35,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 8210,
+// JSON-NEXT:          "offset": 8455,
 // JSON-NEXT:          "col": 40,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -7981,19 +8000,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 8223,
-// JSON-NEXT:         "line": 209,
+// JSON-NEXT:         "offset": 8468,
+// JSON-NEXT:         "line": 213,
 // JSON-NEXT:         "col": 10,
 // JSON-NEXT:         "tokLen": 9
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 8216,
+// JSON-NEXT:          "offset": 8461,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 8223,
+// JSON-NEXT:          "offset": 8468,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 9
 // JSON-NEXT:         }
@@ -8010,20 +8029,20 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 9570,
-// JSON-NEXT:     "line": 227,
+// JSON-NEXT:     "offset": 9815,
+// JSON-NEXT:     "line": 231,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 8
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 9560,
+// JSON-NEXT:      "offset": 9805,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 9979,
-// JSON-NEXT:      "line": 241,
+// JSON-NEXT:      "offset": 10224,
+// JSON-NEXT:      "line": 245,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -8034,20 +8053,20 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "NamespaceDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 9644,
-// JSON-NEXT:       "line": 230,
+// JSON-NEXT:       "offset": 9889,
+// JSON-NEXT:       "line": 234,
 // JSON-NEXT:       "col": 13,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 9634,
+// JSON-NEXT:        "offset": 9879,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 9
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 9695,
-// JSON-NEXT:        "line": 232,
+// JSON-NEXT:        "offset": 9940,
+// JSON-NEXT:        "line": 236,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -8058,19 +8077,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "ClassTemplateDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 9680,
-// JSON-NEXT:         "line": 231,
+// JSON-NEXT:         "offset": 9925,
+// JSON-NEXT:         "line": 235,
 // JSON-NEXT:         "col": 33,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 9652,
+// JSON-NEXT:          "offset": 9897,
 // JSON-NEXT:          "col": 5,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 9690,
+// JSON-NEXT:          "offset": 9935,
 // JSON-NEXT:          "col": 43,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -8081,18 +8100,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 9670,
+// JSON-NEXT:           "offset": 9915,
 // JSON-NEXT:           "col": 23,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9661,
+// JSON-NEXT:            "offset": 9906,
 // JSON-NEXT:            "col": 14,
 // JSON-NEXT:            "tokLen": 8
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 9670,
+// JSON-NEXT:            "offset": 9915,
 // JSON-NEXT:            "col": 23,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -8107,18 +8126,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 9680,
+// JSON-NEXT:           "offset": 9925,
 // JSON-NEXT:           "col": 33,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9673,
+// JSON-NEXT:            "offset": 9918,
 // JSON-NEXT:            "col": 26,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 9690,
+// JSON-NEXT:            "offset": 9935,
 // JSON-NEXT:            "col": 43,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -8173,18 +8192,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "CXXRecordDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9680,
+// JSON-NEXT:             "offset": 9925,
 // JSON-NEXT:             "col": 33,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9673,
+// JSON-NEXT:              "offset": 9918,
 // JSON-NEXT:              "col": 26,
 // JSON-NEXT:              "tokLen": 6
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8197,18 +8216,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "CXXConstructorDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9684,
+// JSON-NEXT:             "offset": 9929,
 // JSON-NEXT:             "col": 37,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9684,
+// JSON-NEXT:              "offset": 9929,
 // JSON-NEXT:              "col": 37,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9687,
+// JSON-NEXT:              "offset": 9932,
 // JSON-NEXT:              "col": 40,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8222,18 +8241,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:              "id": "0x{{.*}}",
 // JSON-NEXT:              "kind": "ParmVarDecl",
 // JSON-NEXT:              "loc": {
-// JSON-NEXT:               "offset": 9687,
+// JSON-NEXT:               "offset": 9932,
 // JSON-NEXT:               "col": 40,
 // JSON-NEXT:               "tokLen": 1
 // JSON-NEXT:              },
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 9686,
+// JSON-NEXT:                "offset": 9931,
 // JSON-NEXT:                "col": 39,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 9686,
+// JSON-NEXT:                "offset": 9931,
 // JSON-NEXT:                "col": 39,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -8250,18 +8269,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "ClassTemplateSpecializationDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 9680,
+// JSON-NEXT:           "offset": 9925,
 // JSON-NEXT:           "col": 33,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9652,
+// JSON-NEXT:            "offset": 9897,
 // JSON-NEXT:            "col": 5,
 // JSON-NEXT:            "tokLen": 8
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 9690,
+// JSON-NEXT:            "offset": 9935,
 // JSON-NEXT:            "col": 43,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -8269,6 +8288,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "name": "S",
 // JSON-NEXT:          "tagUsed": "struct",
 // JSON-NEXT:          "completeDefinition": true,
+// JSON-NEXT:          "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:          "definitionData": {
 // JSON-NEXT:           "canConstDefaultInit": true,
 // JSON-NEXT:           "canPassInRegisters": true,
@@ -8329,18 +8349,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "CXXRecordDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9680,
+// JSON-NEXT:             "offset": 9925,
 // JSON-NEXT:             "col": 33,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9673,
+// JSON-NEXT:              "offset": 9918,
 // JSON-NEXT:              "col": 26,
 // JSON-NEXT:              "tokLen": 6
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8353,18 +8373,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "CXXConstructorDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9684,
+// JSON-NEXT:             "offset": 9929,
 // JSON-NEXT:             "col": 37,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9684,
+// JSON-NEXT:              "offset": 9929,
 // JSON-NEXT:              "col": 37,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9687,
+// JSON-NEXT:              "offset": 9932,
 // JSON-NEXT:              "col": 40,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8375,23 +8395,24 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "type": {
 // JSON-NEXT:             "qualType": "void (int)"
 // JSON-NEXT:            },
+// JSON-NEXT:            "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:            "inner": [
 // JSON-NEXT:             {
 // JSON-NEXT:              "id": "0x{{.*}}",
 // JSON-NEXT:              "kind": "ParmVarDecl",
 // JSON-NEXT:              "loc": {
-// JSON-NEXT:               "offset": 9687,
+// JSON-NEXT:               "offset": 9932,
 // JSON-NEXT:               "col": 40,
 // JSON-NEXT:               "tokLen": 1
 // JSON-NEXT:              },
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 9686,
+// JSON-NEXT:                "offset": 9931,
 // JSON-NEXT:                "col": 39,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 9686,
+// JSON-NEXT:                "offset": 9931,
 // JSON-NEXT:                "col": 39,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -8406,18 +8427,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "CXXConstructorDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9680,
+// JSON-NEXT:             "offset": 9925,
 // JSON-NEXT:             "col": 33,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8436,18 +8457,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:              "id": "0x{{.*}}",
 // JSON-NEXT:              "kind": "ParmVarDecl",
 // JSON-NEXT:              "loc": {
-// JSON-NEXT:               "offset": 9680,
+// JSON-NEXT:               "offset": 9925,
 // JSON-NEXT:               "col": 33,
 // JSON-NEXT:               "tokLen": 1
 // JSON-NEXT:              },
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 9680,
+// JSON-NEXT:                "offset": 9925,
 // JSON-NEXT:                "col": 33,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 9680,
+// JSON-NEXT:                "offset": 9925,
 // JSON-NEXT:                "col": 33,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -8462,18 +8483,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "CXXConstructorDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9680,
+// JSON-NEXT:             "offset": 9925,
 // JSON-NEXT:             "col": 33,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8492,18 +8513,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:              "id": "0x{{.*}}",
 // JSON-NEXT:              "kind": "ParmVarDecl",
 // JSON-NEXT:              "loc": {
-// JSON-NEXT:               "offset": 9680,
+// JSON-NEXT:               "offset": 9925,
 // JSON-NEXT:               "col": 33,
 // JSON-NEXT:               "tokLen": 1
 // JSON-NEXT:              },
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 9680,
+// JSON-NEXT:                "offset": 9925,
 // JSON-NEXT:                "col": 33,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 9680,
+// JSON-NEXT:                "offset": 9925,
 // JSON-NEXT:                "col": 33,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -8518,18 +8539,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "CXXDestructorDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9680,
+// JSON-NEXT:             "offset": 9925,
 // JSON-NEXT:             "col": 33,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8553,18 +8574,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FunctionTemplateDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 9684,
+// JSON-NEXT:         "offset": 9929,
 // JSON-NEXT:         "col": 37,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 9652,
+// JSON-NEXT:          "offset": 9897,
 // JSON-NEXT:          "col": 5,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 9687,
+// JSON-NEXT:          "offset": 9932,
 // JSON-NEXT:          "col": 40,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -8576,18 +8597,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 9670,
+// JSON-NEXT:           "offset": 9915,
 // JSON-NEXT:           "col": 23,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9661,
+// JSON-NEXT:            "offset": 9906,
 // JSON-NEXT:            "col": 14,
 // JSON-NEXT:            "tokLen": 8
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 9670,
+// JSON-NEXT:            "offset": 9915,
 // JSON-NEXT:            "col": 23,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -8602,18 +8623,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXDeductionGuideDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 9684,
+// JSON-NEXT:           "offset": 9929,
 // JSON-NEXT:           "col": 37,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9684,
+// JSON-NEXT:            "offset": 9929,
 // JSON-NEXT:            "col": 37,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 9687,
+// JSON-NEXT:            "offset": 9932,
 // JSON-NEXT:            "col": 40,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -8628,18 +8649,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "ParmVarDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9687,
+// JSON-NEXT:             "offset": 9932,
 // JSON-NEXT:             "col": 40,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9686,
+// JSON-NEXT:              "offset": 9931,
 // JSON-NEXT:              "col": 39,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9686,
+// JSON-NEXT:              "offset": 9931,
 // JSON-NEXT:              "col": 39,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8654,18 +8675,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXDeductionGuideDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 9684,
+// JSON-NEXT:           "offset": 9929,
 // JSON-NEXT:           "col": 37,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9684,
+// JSON-NEXT:            "offset": 9929,
 // JSON-NEXT:            "col": 37,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 9687,
+// JSON-NEXT:            "offset": 9932,
 // JSON-NEXT:            "col": 40,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -8676,6 +8697,7 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "type": {
 // JSON-NEXT:           "qualType": "auto (int) -> GH153540::N::S<int>"
 // JSON-NEXT:          },
+// JSON-NEXT:          "TemplateInstantiationPattern": "0x{{.*}}",
 // JSON-NEXT:          "inner": [
 // JSON-NEXT:           {
 // JSON-NEXT:            "kind": "TemplateArgument",
@@ -8696,18 +8718,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "ParmVarDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9687,
+// JSON-NEXT:             "offset": 9932,
 // JSON-NEXT:             "col": 40,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9686,
+// JSON-NEXT:              "offset": 9931,
 // JSON-NEXT:              "col": 39,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9686,
+// JSON-NEXT:              "offset": 9931,
 // JSON-NEXT:              "col": 39,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8724,18 +8746,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FunctionTemplateDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 9680,
+// JSON-NEXT:         "offset": 9925,
 // JSON-NEXT:         "col": 33,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 9652,
+// JSON-NEXT:          "offset": 9897,
 // JSON-NEXT:          "col": 5,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 9680,
+// JSON-NEXT:          "offset": 9925,
 // JSON-NEXT:          "col": 33,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -8747,18 +8769,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 9670,
+// JSON-NEXT:           "offset": 9915,
 // JSON-NEXT:           "col": 23,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9661,
+// JSON-NEXT:            "offset": 9906,
 // JSON-NEXT:            "col": 14,
 // JSON-NEXT:            "tokLen": 8
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 9670,
+// JSON-NEXT:            "offset": 9915,
 // JSON-NEXT:            "col": 23,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -8773,18 +8795,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXDeductionGuideDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 9680,
+// JSON-NEXT:           "offset": 9925,
 // JSON-NEXT:           "col": 33,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9680,
+// JSON-NEXT:            "offset": 9925,
 // JSON-NEXT:            "col": 33,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 9680,
+// JSON-NEXT:            "offset": 9925,
 // JSON-NEXT:            "col": 33,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -8799,18 +8821,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "ParmVarDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 9680,
+// JSON-NEXT:             "offset": 9925,
 // JSON-NEXT:             "col": 33,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9680,
+// JSON-NEXT:              "offset": 9925,
 // JSON-NEXT:              "col": 33,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8829,20 +8851,20 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 9704,
-// JSON-NEXT:       "line": 233,
+// JSON-NEXT:       "offset": 9949,
+// JSON-NEXT:       "line": 237,
 // JSON-NEXT:       "col": 8,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 9699,
+// JSON-NEXT:        "offset": 9944,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 4
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 9725,
-// JSON-NEXT:        "line": 235,
+// JSON-NEXT:        "offset": 9970,
+// JSON-NEXT:        "line": 239,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -8858,14 +8880,14 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "kind": "CompoundStmt",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 9708,
-// JSON-NEXT:          "line": 233,
+// JSON-NEXT:          "offset": 9953,
+// JSON-NEXT:          "line": 237,
 // JSON-NEXT:          "col": 12,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 9725,
-// JSON-NEXT:          "line": 235,
+// JSON-NEXT:          "offset": 9970,
+// JSON-NEXT:          "line": 239,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -8876,13 +8898,13 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "kind": "CXXFunctionalCastExpr",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9714,
-// JSON-NEXT:            "line": 234,
+// JSON-NEXT:            "offset": 9959,
+// JSON-NEXT:            "line": 238,
 // JSON-NEXT:            "col": 5,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 9720,
+// JSON-NEXT:            "offset": 9965,
 // JSON-NEXT:            "col": 11,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -8907,12 +8929,12 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:            "kind": "CXXConstructExpr",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 9714,
+// JSON-NEXT:              "offset": 9959,
 // JSON-NEXT:              "col": 5,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 9720,
+// JSON-NEXT:              "offset": 9965,
 // JSON-NEXT:              "col": 11,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -8933,12 +8955,12 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:              "kind": "IntegerLiteral",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 9719,
+// JSON-NEXT:                "offset": 9964,
 // JSON-NEXT:                "col": 10,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 9719,
+// JSON-NEXT:                "offset": 9964,
 // JSON-NEXT:                "col": 10,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -8963,20 +8985,20 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 10014,
-// JSON-NEXT:     "line": 243,
+// JSON-NEXT:     "offset": 10259,
+// JSON-NEXT:     "line": 247,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 40
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 10004,
+// JSON-NEXT:      "offset": 10249,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 11286,
-// JSON-NEXT:      "line": 263,
+// JSON-NEXT:      "offset": 11531,
+// JSON-NEXT:      "line": 267,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -8987,19 +9009,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "TypeAliasTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 10179,
-// JSON-NEXT:       "line": 246,
+// JSON-NEXT:       "offset": 10424,
+// JSON-NEXT:       "line": 250,
 // JSON-NEXT:       "col": 38,
 // JSON-NEXT:       "tokLen": 5
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 10144,
+// JSON-NEXT:        "offset": 10389,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 10196,
+// JSON-NEXT:        "offset": 10441,
 // JSON-NEXT:        "col": 55,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -9010,18 +9032,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 10175,
+// JSON-NEXT:         "offset": 10420,
 // JSON-NEXT:         "col": 34,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 10153,
+// JSON-NEXT:          "offset": 10398,
 // JSON-NEXT:          "col": 12,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 10175,
+// JSON-NEXT:          "offset": 10420,
 // JSON-NEXT:          "col": 34,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -9034,18 +9056,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 10167,
+// JSON-NEXT:           "offset": 10412,
 // JSON-NEXT:           "col": 26,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 10162,
+// JSON-NEXT:            "offset": 10407,
 // JSON-NEXT:            "col": 21,
 // JSON-NEXT:            "tokLen": 5
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 10162,
+// JSON-NEXT:            "offset": 10407,
 // JSON-NEXT:            "col": 21,
 // JSON-NEXT:            "tokLen": 5
 // JSON-NEXT:           }
@@ -9060,18 +9082,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TypeAliasDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 10185,
+// JSON-NEXT:         "offset": 10430,
 // JSON-NEXT:         "col": 44,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 10179,
+// JSON-NEXT:          "offset": 10424,
 // JSON-NEXT:          "col": 38,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 10196,
+// JSON-NEXT:          "offset": 10441,
 // JSON-NEXT:          "col": 55,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -9116,19 +9138,19 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "TypeAliasTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 10219,
-// JSON-NEXT:       "line": 247,
+// JSON-NEXT:       "offset": 10464,
+// JSON-NEXT:       "line": 251,
 // JSON-NEXT:       "col": 21,
 // JSON-NEXT:       "tokLen": 5
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 10201,
+// JSON-NEXT:        "offset": 10446,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 10246,
+// JSON-NEXT:        "offset": 10491,
 // JSON-NEXT:        "col": 48,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -9139,18 +9161,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 10216,
+// JSON-NEXT:         "offset": 10461,
 // JSON-NEXT:         "col": 18,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 10210,
+// JSON-NEXT:          "offset": 10455,
 // JSON-NEXT:          "col": 12,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 10216,
+// JSON-NEXT:          "offset": 10461,
 // JSON-NEXT:          "col": 18,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -9164,18 +9186,18 @@ namespace AliasDependentTemplateSpecializationType {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TypeAliasDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 10225,
+// JSON-NEXT:         "offset": 10470,
 // JSON-NEXT:         "col": 27,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 10219,
+// JSON-NEXT:          "offset": 10464,
 // JSON-NEXT:          "col": 21,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 10246,
+// JSON-NEXT:          "offset": 10491,
 // JSON-NEXT:          "col": 48,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }

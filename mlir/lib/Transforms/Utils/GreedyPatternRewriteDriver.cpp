@@ -712,7 +712,7 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
 
     Operation *otherUser = nullptr;
     bool hasMoreThanTwoUses = false;
-    for (auto user : operand.getUsers()) {
+    for (auto *user : operand.getUsers()) {
       if (user == op || user == otherUser)
         continue;
       if (!otherUser) {

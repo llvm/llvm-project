@@ -46,7 +46,7 @@ struct ArithToAMDGPUConversionPass final
 };
 
 struct ExtFOnFloat8RewritePattern final : OpRewritePattern<arith::ExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   Chipset chipset;
   ExtFOnFloat8RewritePattern(MLIRContext *ctx, Chipset chipset,
@@ -72,7 +72,7 @@ struct TruncFToFloat8RewritePattern final : OpRewritePattern<arith::TruncFOp> {
 struct TruncfToFloat16RewritePattern final
     : public OpRewritePattern<arith::TruncFOp> {
 
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::TruncFOp op,
                                 PatternRewriter &rewriter) const override;
@@ -80,7 +80,7 @@ struct TruncfToFloat16RewritePattern final
 
 struct ScalingExtFRewritePattern final
     : OpRewritePattern<arith::ScalingExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::ScalingExtFOp op,
                                 PatternRewriter &rewriter) const override;
@@ -88,7 +88,7 @@ struct ScalingExtFRewritePattern final
 
 struct ScalingTruncFRewritePattern final
     : OpRewritePattern<arith::ScalingTruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::ScalingTruncFOp op,
                                 PatternRewriter &rewriter) const override;
@@ -432,11 +432,7 @@ static Value getOriginalVectorValue(Value value) {
                         current = op.getSource();
                         return false;
                       })
-                      .Case<vector::SplatOp>([&current](auto op) {
-                        current = op.getInput();
-                        return false;
-                      })
-                      .Default([](Operation *) { return false; });
+                      .Default(false);
 
     if (!skipOp) {
       break;
