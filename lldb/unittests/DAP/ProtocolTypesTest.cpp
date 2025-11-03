@@ -1129,3 +1129,50 @@ TEST(ProtocolTypesTest, DataBreakpointInfoArguments) {
   EXPECT_THAT_EXPECTED(parse<DataBreakpointInfoArguments>(R"({"name":"data"})"),
                        llvm::Succeeded());
 }
+
+TEST(ProtocolTypesTest, ExceptionBreakMode) {
+  const std::vector<std::pair<ExceptionBreakMode, llvm::StringRef>> test_cases =
+      {{ExceptionBreakMode::eExceptionBreakModeAlways, "always"},
+       {ExceptionBreakMode::eExceptionBreakModeNever, "never"},
+       {ExceptionBreakMode::eExceptionBreakModeUnhandled, "unhandled"},
+       {ExceptionBreakMode::eExceptionBreakModeUserUnhandled, "userUnhandled"}};
+
+  for (const auto [value, expected] : test_cases) {
+    json::Value const serialized = toJSON(value);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), expected);
+  }
+}
+
+TEST(ProtocolTypesTest, ExceptionDetails) {
+  ExceptionDetails details;
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(details));
+
+  // Check optional keys.
+  details.message = "SIGABRT exception";
+  details.typeName = "signal";
+  details.fullTypeName = "SIGABRT";
+  details.evaluateName = "process handle SIGABRT";
+  details.stackTrace = "some stacktrace";
+  ExceptionDetails inner_details;
+  inner_details.message = "inner message";
+  details.innerException = {std::move(inner_details)};
+
+  Expected<json::Value> expected_opt = parse(R"({
+    "message": "SIGABRT exception",
+    "typeName": "signal",
+    "fullTypeName": "SIGABRT",
+    "evaluateName": "process handle SIGABRT",
+    "stackTrace": "some stacktrace",
+    "innerException": [{
+      "message": "inner message"
+    }]
+    })");
+
+  ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_opt), pp(details));
+}
