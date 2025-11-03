@@ -511,7 +511,6 @@ exit:
 ;
 ; This code may require reloading ZT0 in the cleanup for ~ZT0Resource().
 ;
-; FIXME: Codegen with `-aarch64-new-sme-abi` is broken with ZT0 (as it is not implemented).
 define void @try_catch_shared_zt0_callee() "aarch64_inout_zt0" personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: try_catch_shared_zt0_callee:
 ; CHECK:       .Lfunc_begin3:
@@ -519,52 +518,37 @@ define void @try_catch_shared_zt0_callee() "aarch64_inout_zt0" personality ptr @
 ; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
 ; CHECK-NEXT:    .cfi_lsda 28, .Lexception3
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    .cfi_def_cfa w29, 32
+; CHECK-NEXT:    sub sp, sp, #96
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -24
-; CHECK-NEXT:    .cfi_offset w29, -32
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x9, x8, x8, x9
-; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    stp x9, x8, [x29, #-80]
+; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:  .Ltmp9: // EH_LABEL
-; CHECK-NEXT:    sub x19, x29, #64
+; CHECK-NEXT:    mov x19, sp
 ; CHECK-NEXT:    str zt0, [x19]
 ; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    bl may_throw
+; CHECK-NEXT:  .Ltmp10: // EH_LABEL
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    ldr zt0, [x19]
-; CHECK-NEXT:  .Ltmp10: // EH_LABEL
 ; CHECK-NEXT:  // %bb.1: // %return_normally
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_2: // %unwind_dtors
 ; CHECK-NEXT:  .Ltmp11: // EH_LABEL
-; CHECK-NEXT:    sub x20, x29, #64
+; CHECK-NEXT:    mov x20, sp
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    sub x0, x29, #80
-; CHECK-NEXT:    cbnz x8, .LBB3_4
-; CHECK-NEXT:  // %bb.3: // %unwind_dtors
-; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB3_4: // %unwind_dtors
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    ldr zt0, [x20]
 ; CHECK-NEXT:    bl shared_zt0_call
 ; CHECK-NEXT:    str zt0, [x20]
 ; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    bl _Unwind_Resume
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    ldr zt0, [x20]
 ;
 ; CHECK-SDAG-LABEL: try_catch_shared_zt0_callee:
 ; CHECK-SDAG:       .Lfunc_begin3:
@@ -951,6 +935,90 @@ define void @try_catch_inout_za_agnostic_za_callee() "aarch64_inout_za" personal
 ; CHECK-SDAG-NEXT:    b .LBB6_3
 entry:
   invoke void @agnostic_za_call()
+          to label %exit unwind label %catch
+
+catch:
+  %eh_info = landingpad { ptr, i32 }
+          catch ptr null
+  %exception_ptr = extractvalue { ptr, i32 } %eh_info, 0
+  tail call ptr @__cxa_begin_catch(ptr %exception_ptr)
+  tail call void @__cxa_end_catch()
+  br label %exit
+
+exit:
+  ret void
+}
+
+define void @try_catch_inout_zt0() "aarch64_inout_zt0" personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: try_catch_inout_zt0:
+; CHECK:       .Lfunc_begin7:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-NEXT:    .cfi_lsda 28, .Lexception7
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:  .Ltmp21: // EH_LABEL
+; CHECK-NEXT:    mov x19, sp
+; CHECK-NEXT:    str zt0, [x19]
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    bl may_throw
+; CHECK-NEXT:  .Ltmp22: // EH_LABEL
+; CHECK-NEXT:  .LBB7_1: // %exit
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    ldr zt0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB7_2: // %catch
+; CHECK-NEXT:  .Ltmp23: // EH_LABEL
+; CHECK-NEXT:    bl __cxa_begin_catch
+; CHECK-NEXT:    bl __cxa_end_catch
+; CHECK-NEXT:    b .LBB7_1
+;
+; CHECK-SDAG-LABEL: try_catch_inout_zt0:
+; CHECK-SDAG:       .Lfunc_begin7:
+; CHECK-SDAG-NEXT:    .cfi_startproc
+; CHECK-SDAG-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception7
+; CHECK-SDAG-NEXT:  // %bb.0: // %entry
+; CHECK-SDAG-NEXT:    sub sp, sp, #80
+; CHECK-SDAG-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-SDAG-NEXT:    .cfi_offset w19, -8
+; CHECK-SDAG-NEXT:    .cfi_offset w30, -16
+; CHECK-SDAG-NEXT:  .Ltmp21: // EH_LABEL
+; CHECK-SDAG-NEXT:    mov x19, sp
+; CHECK-SDAG-NEXT:    str zt0, [x19]
+; CHECK-SDAG-NEXT:    smstop za
+; CHECK-SDAG-NEXT:    bl may_throw
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    ldr zt0, [x19]
+; CHECK-SDAG-NEXT:  .Ltmp22: // EH_LABEL
+; CHECK-SDAG-NEXT:  .LBB7_1: // %exit
+; CHECK-SDAG-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-SDAG-NEXT:    add sp, sp, #80
+; CHECK-SDAG-NEXT:    ret
+; CHECK-SDAG-NEXT:  .LBB7_2: // %catch
+; CHECK-SDAG-NEXT:  .Ltmp23: // EH_LABEL
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    ldr zt0, [x19]
+; CHECK-SDAG-NEXT:    str zt0, [x19]
+; CHECK-SDAG-NEXT:    smstop za
+; CHECK-SDAG-NEXT:    bl __cxa_begin_catch
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    ldr zt0, [x19]
+; CHECK-SDAG-NEXT:    str zt0, [x19]
+; CHECK-SDAG-NEXT:    smstop za
+; CHECK-SDAG-NEXT:    bl __cxa_end_catch
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    ldr zt0, [x19]
+; CHECK-SDAG-NEXT:    b .LBB7_1
+entry:
+  invoke void @may_throw()
           to label %exit unwind label %catch
 
 catch:
