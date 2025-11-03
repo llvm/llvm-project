@@ -175,13 +175,12 @@ int main(int Argc, char **Argv) {
   return validateObject(*CAS, ID);
 }
 
-static Expected<std::unique_ptr<MemoryBuffer>>
-openBuffer(StringRef DataPath) {
+static Expected<std::unique_ptr<MemoryBuffer>> openBuffer(StringRef DataPath) {
   if (DataPath.empty())
     return createStringError(inconvertibleErrorCode(), "--data missing");
-  return errorOrToExpected(
-      DataPath == "-" ? llvm::MemoryBuffer::getSTDIN()
-                      : llvm::MemoryBuffer::getFile(DataPath));
+  return errorOrToExpected(DataPath == "-"
+                               ? llvm::MemoryBuffer::getSTDIN()
+                               : llvm::MemoryBuffer::getFile(DataPath));
 }
 
 int dump(ObjectStore &CAS) {
@@ -311,7 +310,7 @@ int validateIfNeeded(StringRef Path, bool CheckHash, bool Force,
     Exec = ExecStorage;
   }
   ValidationResult Result = ExitOnErr(validateOnDiskUnifiedCASDatabasesIfNeeded(
-        Path, CheckHash, AllowRecovery, Force, Exec));
+      Path, CheckHash, AllowRecovery, Force, Exec));
   switch (Result) {
   case ValidationResult::Valid:
     outs() << "validated successfully\n";
