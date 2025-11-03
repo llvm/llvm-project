@@ -318,6 +318,20 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   }
 }
 
+static void handleReproFile(COFFLinkerContext &ctx, raw_ostream &reproFile,
+                            StringRef path, bool defaultlib) {
+  reproFile << '"';
+  if (defaultlib)
+    reproFile << "/defaultlib:";
+  SmallString<128> absPath = path;
+  std::error_code ec = sys::fs::make_absolute(absPath);
+  if (ec)
+    Err(ctx) << "cannot find absolute path for reproFile for " << absPath
+             << ": " << ec.message();
+  sys::path::remove_dots(absPath, true);
+  reproFile << absPath << "\"\n";
+}
+
 void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy,
                                llvm::raw_ostream *reproFile, bool defaultlib) {
   auto future = std::make_shared<std::future<MBErrPair>>(
@@ -360,12 +374,9 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy,
     } else {
       // Write full path to library to repro file if /linkreprofullpathrsp
       // is specified.
-      if (reproFile) {
-        *reproFile << '"';
-        if (defaultlib)
-          *reproFile << "/defaultlib:";
-        *reproFile << pathStr << "\"\n";
-      }
+      if (reproFile)
+        handleReproFile(ctx, *reproFile, pathStr, defaultlib);
+
       ctx.driver.addBuffer(std::move(mb), wholeArchive, lazy);
     }
   });
