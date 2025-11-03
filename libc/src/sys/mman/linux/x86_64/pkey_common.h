@@ -9,6 +9,8 @@
 #ifndef LLVM_SYS_MMAN_LINUX_X86_64_PKEY_COMMON_H_
 #define LLVM_SYS_MMAN_LINUX_X86_64_PKEY_COMMON_H_
 
+#include <immintrin.h>
+
 #include "hdr/errno_macros.h" // For ENOSYS
 #include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
@@ -20,55 +22,35 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace pkey_common {
-namespace internal {
 
-constexpr int MAX_KEY = 15;
+constexpr int KEY_COUNT = 16;
 constexpr int KEY_MASK = 0x3;
 constexpr int BITS_PER_KEY = 2;
 
-// This will SIGILL on CPUs that don't support PKU / OSPKE,
-// but this case should never be reached as a prior pkey_alloc invocation
-// would have failed more gracefully.
-LIBC_INLINE uint32_t read_prku() {
-  uint32_t pkru = 0;
-  uint32_t edx = 0;
-  asm volatile("rdpkru" : "=a"(pkru), "=d"(edx) : "c"(0));
-  return pkru;
-}
-
-// This will SIGILL on CPUs that don't support PKU / OSPKE,
-// but this case should never be reached as a prior pkey_alloc invocation
-// would have failed more gracefully.
-LIBC_INLINE void write_prku(uint32_t pkru) {
-  asm volatile("wrpkru" : : "a"(pkru), "d"(0), "c"(0));
-}
-
-} // namespace internal
-
 // x86_64 implementation of pkey_get.
 // Returns the access rights for the given pkey on success, errno otherwise.
+[[gnu::target("pku")]]
 LIBC_INLINE ErrorOr<int> pkey_get(int pkey) {
-  if (pkey < 0 || pkey > internal::MAX_KEY) {
+  if (pkey < 0 || pkey >= KEY_COUNT) {
     return Error(EINVAL);
   }
 
-  uint32_t pkru = internal::read_prku();
-  return (pkru >> (pkey * internal::BITS_PER_KEY)) & internal::KEY_MASK;
+  uint32_t pkru = _rdpkru_u32();
+  return (pkru >> (pkey * BITS_PER_KEY)) & KEY_MASK;
 }
 
 // x86_64 implementation of pkey_set.
 // Returns 0 on success, errno otherwise.
+[[gnu::target("pku")]]
 LIBC_INLINE ErrorOr<int> pkey_set(int pkey, unsigned int access_rights) {
-  if (pkey < 0 || pkey > internal::MAX_KEY ||
-      access_rights > internal::KEY_MASK) {
+  if (pkey < 0 || pkey >= KEY_COUNT || access_rights > KEY_MASK) {
     return Error(EINVAL);
   }
 
-  uint32_t pkru = internal::read_prku();
-  pkru &= ~(internal::KEY_MASK << (pkey * internal::BITS_PER_KEY));
-  pkru |=
-      ((access_rights & internal::KEY_MASK) << (pkey * internal::BITS_PER_KEY));
-  internal::write_prku(pkru);
+  uint32_t pkru = _rdpkru_u32();
+  pkru &= ~(KEY_MASK << (pkey * BITS_PER_KEY));
+  pkru |= ((access_rights & KEY_MASK) << (pkey * BITS_PER_KEY));
+  _wrpkru(pkru);
 
   return 0;
 }

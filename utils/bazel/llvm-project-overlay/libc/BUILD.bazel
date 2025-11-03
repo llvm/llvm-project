@@ -6833,6 +6833,17 @@ libc_function(
     ],
 )
 
+libc_support_library(
+    name = "mprotect_common",
+    hdrs = ["src/sys/mman/linux/mprotect_common.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
 libc_function(
     name = "mprotect",
     srcs = ["src/sys/mman/linux/mprotect.cpp"],
@@ -6841,6 +6852,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":mprotect_common",
     ],
 )
 
@@ -6943,6 +6955,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":mprotect",
+        ":mprotect_common",
         ":types_size_t",
     ],
 )

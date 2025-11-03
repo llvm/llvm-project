@@ -8,7 +8,6 @@
 
 #include "src/sys/mman/pkey_set.h"
 
-#include "hdr/errno_macros.h" // For ENOSYS
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"

@@ -57,6 +57,17 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
+add_header_library(
+  mprotect_common
+  HDRS
+    mprotect_common.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.__support.error_or
+)
+
 add_entrypoint_object(
   mprotect
   SRCS
@@ -68,6 +79,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+    .mprotect_common
 )
 
 add_entrypoint_object(
@@ -225,6 +237,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.sys.mman.mprotect
     libc.src.errno.errno
+    .mprotect_common
 )
 
 add_entrypoint_object(

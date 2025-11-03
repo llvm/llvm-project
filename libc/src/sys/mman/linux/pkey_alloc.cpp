@@ -27,7 +27,7 @@ LLVM_LIBC_FUNCTION(int, pkey_alloc,
   int ret =
       LIBC_NAMESPACE::syscall_impl<int>(SYS_pkey_alloc, flags, access_rights);
   if (ret < 0) {
-    libc_errno = static_cast<int>(-ret);
+    libc_errno = -ret;
     return -1;
   }
   return static_cast<int>(ret);
