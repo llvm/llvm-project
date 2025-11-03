@@ -31,6 +31,22 @@
 using namespace mlir;
 using namespace mlir::affine;
 
+/// Returns the vector type associated with an affine vector load/store op.
+static std::optional<VectorType> getAffineVectorType(Operation *op) {
+  if (auto vectorLoad = dyn_cast<AffineVectorLoadOp>(op))
+    return vectorLoad.getVectorType();
+  if (auto vectorStore = dyn_cast<AffineVectorStoreOp>(op))
+    return vectorStore.getVectorType();
+  return std::nullopt;
+}
+
+/// Returns the memref underlying an affine read/write op.
+static Value getAccessMemRef(Operation *op) {
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(op))
+    return loadOp.getMemRef();
+  return cast<AffineWriteOpInterface>(op).getMemRef();
+}
+
 // Gathers all load and store memref accesses in 'opA' into 'values', where
 // 'values[memref] == true' for each store operation.
 static void getLoadAndStoreMemRefAccesses(Operation *opA,
@@ -332,6 +348,40 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
         strategyOpsA.push_back(op);
     }
     break;
+  }
+
+  // Guard vector fusion by matching producer/consumer vector shapes on actual
+  // dependence pairs (here we duplicate the early dependence check used in
+  // `computeSliceUnion` to avoid rejecting disjoint accesses).
+  for (Operation *srcOp : strategyOpsA) {
+    MemRefAccess srcAccess(srcOp);
+    auto srcVectorType = getAffineVectorType(srcOp);
+    bool srcIsRead = isa<AffineReadOpInterface>(srcOp);
+    for (Operation *dstOp : opsB) {
+      MemRefAccess dstAccess(dstOp);
+      if (srcAccess.memref != dstAccess.memref)
+        continue;
+      bool dstIsRead = isa<AffineReadOpInterface>(dstOp);
+      bool readReadAccesses = srcIsRead && dstIsRead;
+      DependenceResult result = checkMemrefAccessDependence(
+          srcAccess, dstAccess, /*loopDepth=*/numCommonLoops + 1,
+          /*dependenceConstraints=*/nullptr,
+          /*dependenceComponents=*/nullptr, readReadAccesses);
+      if (result.value == DependenceResult::Failure) {
+        LDBG() << "Dependency check failed";
+        return FusionResult::FailPrecondition;
+      }
+      if (result.value == DependenceResult::NoDependence)
+        continue;
+      if (readReadAccesses)
+        continue;
+      auto dstVectorType = getAffineVectorType(dstOp);
+      if (srcVectorType && dstVectorType &&
+          srcVectorType->getShape() != dstVectorType->getShape()) {
+        LDBG() << "Mismatching vector shapes between producer and consumer";
+        return FusionResult::FailPrecondition;
+      }
+    }
   }
 
   // Compute union of computation slices computed between all pairs of ops

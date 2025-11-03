@@ -547,10 +547,12 @@ struct MemRefRegion {
   /// use int64_t instead of uint64_t since index types can be at most
   /// int64_t. `lbs` are set to the lower bound maps for each of the rank
   /// dimensions where each of these maps is purely symbolic in the constraints
-  /// set's symbols.
+  /// set's symbols. If `minShape` is provided, each computed bound is at least
+  /// `minShape[d]` for dimension `d`.
   std::optional<int64_t> getConstantBoundingSizeAndShape(
       SmallVectorImpl<int64_t> *shape = nullptr,
-      SmallVectorImpl<AffineMap> *lbs = nullptr) const;
+      SmallVectorImpl<AffineMap> *lbs = nullptr,
+      ArrayRef<int64_t> minShape = {}) const;
 
   /// Gets the lower and upper bound map for the dimensional variable at
   /// `pos`.
