@@ -832,7 +832,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
       auto PassthruReg = I.getOperand(CurOp++).getReg();
       SrcOps.push_back(PassthruReg);
     } else {
-      SrcOps.push_back(Register(RISCV::NoRegister));
+      // Use NoRegister if there is no specified passthru.
+      SrcOps.push_back(Register());
     }
     LLT IndexVT;
     addVectorLoadStoreOperands(I, SrcOps, CurOp, IsMasked, true, &IndexVT);
@@ -842,8 +843,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
         RISCVTargetLowering::getLMUL(getMVTForLLT(IndexVT));
     unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
     if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
-      report_fatal_error("The V extension does not support EEW=64 for index "
-                         "values when XLEN=32");
+      reportFatalUsageError("The V extension does not support EEW=64 for index "
+                            "values when XLEN=32");
     }
     const RISCV::VLX_VSXPseudo *P = RISCV::getVLXPseudo(
         IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
@@ -940,8 +941,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
         RISCVTargetLowering::getLMUL(getMVTForLLT(IndexVT));
     unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
     if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
-      report_fatal_error("The V extension does not support EEW=64 for index "
-                         "values when XLEN=32");
+      reportFatalUsageError("The V extension does not support EEW=64 for index "
+                            "values when XLEN=32");
     }
     const RISCV::VLX_VSXPseudo *P = RISCV::getVSXPseudo(
         IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
