@@ -8965,13 +8965,13 @@ int test_mm512_kortestc(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
                          _mm512_cmpneq_epu32_mask(__C, __D));
 }
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_mm512_kortestc() {
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+void _mm512_kortestc() {
   // TODO: should I check for carry flag set/unset here, and if so, how?
-  return (_mm512_kortestc(0x0000, 0x0000) == 0x0000)
-      && (_mm512_kortestc(0x0000, 0x8000) == 0x8000)
-      && (_mm512_kortestc(0x0123, 0xFEDC) == 0xFFFF)
-      ;
+  static_assert(_mm512_kortestc(0x0000, 0x0000) == 0x0000);
+  static_assert(_mm512_kortestc(0x0000, 0x8000) == 0x8000);
+  static_assert(_mm512_kortestc(0x0123, 0xFEDC) == 0xFFFF);
 }
 #endif
 
@@ -8987,13 +8987,13 @@ int test_mm512_kortestz(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
                          _mm512_cmpneq_epu32_mask(__C, __D));
 }
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_mm512_kortestz() {
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+void _mm512_kortestz() {
   // TODO: should I check for zero flag set/unset here, and if so, how?
-  return (_mm512_kortestz(0x0000, 0x0000) == 0x0000)
-      && (_mm512_kortestz(0x0000, 0x8000) == 0x8000)
-      && (_mm512_kortestz(0x0123, 0xFEDC) == 0xFFFF)
-      ;
+  static_assert(_mm512_kortestz(0x0000, 0x0000) == 0x0000);
+  static_assert(_mm512_kortestz(0x0000, 0x8000) == 0x8000);
+  static_assert(_mm512_kortestz(0x0123, 0xFEDC) == 0xFFFF);
 }
 #endif
 
@@ -9051,13 +9051,13 @@ unsigned char test_kortest_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m5
                             _mm512_cmpneq_epu32_mask(__C, __D), CF);
 }
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_kortest_mask16_u8() {
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+constexpr void test_kortest_mask16_u8() {
   unsigned char all_ones = 0;
-  return (_kortest_mask16_u8(0x0000, 0x0000, &all_ones) == 1) && (all_ones == 0)
-      && (_kortest_mask16_u8(0x0000, 0x8000, &all_ones) == 0) && (all_ones == 0)
-      && (_kortest_mask16_u8(0x0123, 0xFEDC, &all_ones) == 0) && (all_ones == 1)
-      ;
+  static_assert((_kortest_mask16_u8(0x0000, 0x0000, &all_ones) == 1) && (all_ones == 0));
+  static_assert((_kortest_mask16_u8(0x0000, 0x8000, &all_ones) == 0) && (all_ones == 0));
+  static_assert((_kortest_mask16_u8(0x0123, 0xFEDC, &all_ones) == 0) && (all_ones == 1));
 }
 #endif
 

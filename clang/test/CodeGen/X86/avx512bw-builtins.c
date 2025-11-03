@@ -10,6 +10,7 @@
 
 
 #include <immintrin.h>
+#include <utility>
 #include "builtin_test_helpers.h"
 
 __mmask32 test_knot_mask32(__mmask32 a) {
@@ -250,13 +251,28 @@ unsigned char test_kortest_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m5
                             _mm512_cmpneq_epu16_mask(__C, __D), CF);
 }
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_kortest_mask32_u8() {
-  unsigned char all_ones = 0;
-  return (_kortest_mask32_u8(0x0000'0000, 0x0000'0000, &all_ones) == 1) && (all_ones == 0)
-      && (_kortest_mask32_u8(0x0000'0000, 0x8000'0000, &all_ones) == 0) && (all_ones == 0)
-      && (_kortest_mask32_u8(0x0123'4567, 0xFEDC'BA98, &all_ones) == 0) && (all_ones == 1)
-      ;
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201402L)
+constexpr std::pair<unsigned char, unsigned char>
+test_kortest_mask32_u8(unsigned int A, unsigned int B) {
+  unsigned char all_ones{};
+  unsigned char result = _kortest_mask32_u8(A, B, &all_ones);
+  return {result, all_ones};
+}
+
+void _kortest_mask32_u8() {
+  constexpr unsigned int A1 = 0x0000'0000;
+  constexpr unsigned int B1 = 0x0000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_1{1, 0};
+  static_assert(test_kortest_mask32_u8(A1, B1) == expected_result_1);
+  constexpr unsigned int A2 = 0x0000'0000;
+  constexpr unsigned int B2 = 0x8000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_2{0, 0};
+  static_assert(test_kortest_mask32_u8(A2, B2) == expected_result_2);
+  constexpr unsigned int A3 = 0x0123'4567;
+  constexpr unsigned int B3 = 0xFEDC'BA98;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_3{0, 1};
+  static_assert(test_kortest_mask32_u8(A3, B3) == expected_result_3);
 }
 #endif
 
@@ -314,13 +330,28 @@ unsigned char test_kortest_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m5
                             _mm512_cmpneq_epu8_mask(__C, __D), CF);
 }
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_kortest_mask64_u8() {
-  unsigned char all_ones = 0;
-  return (_kortest_mask64_u8(0x0000'0000'0000'0000, 0x0000'0000'0000'0000, &all_ones) == 1) && (all_ones == 0)
-      && (_kortest_mask64_u8(0x0000'0000'0000'0000, 0x8000'0000'0000'0000, &all_ones) == 0) && (all_ones == 0)
-      && (_kortest_mask64_u8(0x0123'4567'89AB'CDEF, 0xFEDC'BA98'7654'3210, &all_ones) == 0) && (all_ones == 1)
-      ;
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201402L)
+constexpr std::pair<unsigned char, unsigned char>
+test_kortest_mask64_u8(unsigned long long A, unsigned long long B) {
+  unsigned char all_ones{};
+  unsigned char result = _kortest_mask64_u8(A, B, &all_ones);
+  return {result, all_ones};
+}
+
+void _kortest_mask64_u8() {
+  constexpr unsigned long long A1 = 0x0000'0000'0000'0000;
+  constexpr unsigned long long B1 = 0x0000'0000'0000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_1{1, 0};
+  static_assert(test_kortest_mask64_u8(A1, B1) == expected_result_1);
+  constexpr unsigned long long A2 = 0x0000'0000'0000'0000;
+  constexpr unsigned long long B2 = 0x8000'0000'0000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_2{0, 0};
+  static_assert(test_kortest_mask64_u8(A2, B2) == expected_result_2);
+  constexpr unsigned long long A3 = 0x0123'4567'89AB'CDEF;
+  constexpr unsigned long long B3 = 0xFEDC'BA98'7654'3210;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_3{0, 1};
+  static_assert(test_kortest_mask64_u8(A3, B3) == expected_result_3);
 }
 #endif
 
@@ -368,14 +399,32 @@ unsigned char test_ktest_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m512
                           _mm512_cmpneq_epu16_mask(__C, __D), CF);
 }
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_ktest_mask32_u8() {
-  unsigned char and_not = 0;
-  return (_ktest_mask32_u8(0x0000'0000, 0x0000'0000, &and_not) == 1) && (and_not == 1)
-      && (_ktest_mask32_u8(0x0000'0000, 0x8000'0000, &and_not) == 1) && (and_not == 0)
-      && (_ktest_mask32_u8(0xF000'0000, 0x8000'0000, &and_not) == 0) && (and_not == 1)
-      && (_ktest_mask32_u8(0x0123'4567, 0x0123'4567, &and_not) == 0) && (and_not == 1)
-      ;
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201402L)
+constexpr std::pair<unsigned char, unsigned char>
+test_ktest_mask32_u8(unsigned int A, unsigned int B) {
+  unsigned char and_not{};
+  unsigned char result = _ktest_mask32_u8(A, B, &and_not);
+  return {result, and_not};
+}
+
+void _ktest_mask32_u8() {
+  constexpr unsigned int A1 = 0x0000'0000;
+  constexpr unsigned int B1 = 0x0000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_1{1, 1};
+  static_assert(test_ktest_mask32_u8(A1, B1) == expected_result_1);
+  constexpr unsigned int A2 = 0x0000'0000;
+  constexpr unsigned int B2 = 0x8000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_2{1, 0};
+  static_assert(test_ktest_mask32_u8(A2, B2) == expected_result_2);
+  constexpr unsigned int A3 = 0xF000'0000;
+  constexpr unsigned int B3 = 0x8000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_3{0, 1};
+  static_assert(test_ktest_mask32_u8(A3, B3) == expected_result_3);
+  constexpr unsigned int A4 = 0x0123'4567;
+  constexpr unsigned int B4 = 0x0123'4567;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_4{0, 1};
+  static_assert(test_ktest_mask32_u8(A4, B4) == expected_result_4);
 }
 #endif
 
@@ -423,14 +472,32 @@ unsigned char test_ktest_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m512
                           _mm512_cmpneq_epu8_mask(__C, __D), CF);
 }
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_ktest_mask64_u8() {
-  unsigned char and_not = 0;
-  return (_ktest_mask64_u8(0x0000'0000'0000'0000, 0x0000'0000'0000'0000, &and_not) == 1) && (and_not == 1)
-      && (_ktest_mask64_u8(0x0000'0000'0000'0000, 0x8000'0000'0000'0000, &and_not) == 1) && (and_not == 0)
-      && (_ktest_mask64_u8(0xF000'0000'0000'0000, 0x8000'0000'0000'0000, &and_not) == 0) && (and_not == 1)
-      && (_ktest_mask64_u8(0x0123'4567'89AB'CDEF, 0x0123'4567'89AB'CDEF, &and_not) == 0) && (and_not == 1)
-      ;
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201402L)
+constexpr std::pair<unsigned char, unsigned char>
+test_ktest_mask64_u8(unsigned long long A, unsigned long long B) {
+  unsigned char and_not{};
+  unsigned char result = _ktest_mask64_u8(A, B, &and_not);
+  return {result, and_not};
+}
+
+void _ktest_mask64_u8() {
+  constexpr unsigned long long A1 = 0x0000'0000'0000'0000;
+  constexpr unsigned long long B1 = 0x0000'0000'0000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_1{1, 1};
+  static_assert(test_ktest_mask64_u8(A1, B1) == expected_result_1);
+  constexpr unsigned long long A2 = 0x0000'0000'0000'0000;
+  constexpr unsigned long long B2 = 0x8000'0000'0000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_2{1, 0};
+  static_assert(test_ktest_mask64_u8(A2, B2) == expected_result_2);
+  constexpr unsigned long long A3 = 0xF000'0000'0000'0000;
+  constexpr unsigned long long B3 = 0x8000'0000'0000'0000;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_3{0, 1};
+  static_assert(test_ktest_mask64_u8(A3, B3) == expected_result_3);
+  constexpr unsigned long long A4 = 0x0123'4567'89AB'CDEF;
+  constexpr unsigned long long B4 = 0x0123'4567'89AB'CDEF;
+  constexpr std::pair<unsigned char, unsigned char> expected_result_4{0, 1};
+  static_assert(test_ktest_mask64_u8(A4, B4) == expected_result_4);
 }
 #endif
 
