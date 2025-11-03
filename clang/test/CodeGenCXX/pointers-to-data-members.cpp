@@ -265,3 +265,24 @@ namespace PR47864 {
   struct D : B { int m; };
   auto x = (int B::*)&D::m;
 }
+
+namespace ContainerOf {
+  using size_t = unsigned long long;
+
+  struct List {
+    int data;
+  };
+
+  struct Node {
+    int data;
+    struct List list1;
+    struct List list2;
+  };
+
+  // CHECK-LABEL: define{{.*}} ptr @_ZN11ContainerOf8getOwnerEPNS_4ListEMNS_4NodeES0_
+  // CHECK: %memptr.offset = getelementptr i8, ptr null, i64 {{.*}}
+  Node* getOwner(List *list, List Node::*member) {
+    size_t offset = reinterpret_cast<size_t>(&((Node*)nullptr->*member));
+    return reinterpret_cast<Node*>(reinterpret_cast<char*>(list) - offset);
+  }
+}

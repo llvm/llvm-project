@@ -1,4 +1,4 @@
-//===- OnDiskCAS.cpp --------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "BuiltinCAS.h"
+#include "llvm/CAS/BuiltinCASContext.h"
+#include "llvm/CAS/BuiltinObjectHasher.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -34,8 +37,12 @@ public:
   ArrayRef<char> getDataConst(ObjectHandle Node) const final;
 
   void print(raw_ostream &OS) const final;
+  Error validate(bool CheckHash) const final;
 
   static Expected<std::unique_ptr<OnDiskCAS>> open(StringRef Path);
+
+  OnDiskCAS(std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB)
+      : UnifiedDB(std::move(UniDB)), DB(&UnifiedDB->getGraphDB()) {}
 
 private:
   ObjectHandle convertHandle(ondisk::ObjectHandle Node) const {
@@ -43,7 +50,7 @@ private:
   }
 
   ondisk::ObjectHandle convertHandle(ObjectHandle Node) const {
-    return ondisk::ObjectHandle::fromOpaqueData(Node.getInternalRef(*this));
+    return ondisk::ObjectHandle(Node.getInternalRef(*this));
   }
 
   ObjectRef convertRef(ondisk::ObjectID Ref) const {
@@ -58,23 +65,43 @@ private:
     auto RefsRange = DB->getObjectRefs(convertHandle(Node));
     return std::distance(RefsRange.begin(), RefsRange.end());
   }
+
   ObjectRef readRef(ObjectHandle Node, size_t I) const final {
     auto RefsRange = DB->getObjectRefs(convertHandle(Node));
     return convertRef(RefsRange.begin()[I]);
   }
+
   Error forEachRef(ObjectHandle Node,
                    function_ref<Error(ObjectRef)> Callback) const final;
+
+  Error setSizeLimit(std::optional<uint64_t> SizeLimit) final;
+  Expected<std::optional<uint64_t>> getStorageSize() const final;
+  Error pruneStorageData() final;
 
   OnDiskCAS(std::unique_ptr<ondisk::OnDiskGraphDB> GraphDB)
       : OwnedDB(std::move(GraphDB)), DB(OwnedDB.get()) {}
 
   std::unique_ptr<ondisk::OnDiskGraphDB> OwnedDB;
+  std::shared_ptr<ondisk::UnifiedOnDiskCache> UnifiedDB;
   ondisk::OnDiskGraphDB *DB;
 };
 
 } // end anonymous namespace
 
 void OnDiskCAS::print(raw_ostream &OS) const { DB->print(OS); }
+Error OnDiskCAS::validate(bool CheckHash) const {
+  auto Hasher = [](ArrayRef<ArrayRef<uint8_t>> Refs, ArrayRef<char> Data,
+                   SmallVectorImpl<uint8_t> &Result) {
+    auto Hash = BuiltinObjectHasher<llvm::cas::builtin::HasherT>::hashObject(
+        Refs, Data);
+    Result.assign(Hash.begin(), Hash.end());
+  };
+
+  if (auto E = DB->validate(CheckHash, Hasher))
+    return E;
+
+  return Error::success();
+}
 
 CASID OnDiskCAS::getID(ObjectRef Ref) const {
   ArrayRef<uint8_t> Hash = DB->getDigest(convertRef(Ref));
@@ -117,10 +144,12 @@ Expected<ObjectRef> OnDiskCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
     IDs.push_back(convertRef(Ref));
   }
 
-  ondisk::ObjectID StoredID = DB->getReference(ComputedHash);
-  if (Error E = DB->store(StoredID, IDs, Data))
+  auto StoredID = DB->getReference(ComputedHash);
+  if (LLVM_UNLIKELY(!StoredID))
+    return StoredID.takeError();
+  if (Error E = DB->store(*StoredID, IDs, Data))
     return std::move(E);
-  return convertRef(StoredID);
+  return convertRef(*StoredID);
 }
 
 Error OnDiskCAS::forEachRef(ObjectHandle Node,
@@ -132,6 +161,17 @@ Error OnDiskCAS::forEachRef(ObjectHandle Node,
   }
   return Error::success();
 }
+
+Error OnDiskCAS::setSizeLimit(std::optional<uint64_t> SizeLimit) {
+  UnifiedDB->setSizeLimit(SizeLimit);
+  return Error::success();
+}
+
+Expected<std::optional<uint64_t>> OnDiskCAS::getStorageSize() const {
+  return UnifiedDB->getStorageSize();
+}
+
+Error OnDiskCAS::pruneStorageData() { return UnifiedDB->collectGarbage(); }
 
 Expected<std::unique_ptr<OnDiskCAS>> OnDiskCAS::open(StringRef AbsPath) {
   Expected<std::unique_ptr<ondisk::OnDiskGraphDB>> DB =
@@ -164,23 +204,8 @@ Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {
 #endif /* LLVM_ENABLE_ONDISK_CAS */
 }
 
-static constexpr StringLiteral DefaultName = "cas";
-
-Error cas::getDefaultOnDiskCASPath(SmallVectorImpl<char> &Path) {
-  // FIXME: Should this return 'Error' instead of hard-failing?
-  if (!llvm::sys::path::cache_directory(Path))
-    return createStringError(inconvertibleErrorCode(),
-                             "cannot get default cache directory");
-  llvm::sys::path::append(Path, DefaultDir, DefaultName);
-  return Error::success();
-}
-
-std::string cas::getDefaultOnDiskCASPath() {
-  SmallString<128> Path;
-  if (auto Err = getDefaultOnDiskCASPath(Path)) {
-    consumeError(std::move(Err));
-    return {};
-  }
-
-  return Path.str().str();
+std::unique_ptr<ObjectStore>
+cas::builtin::createObjectStoreFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
+  return std::make_unique<OnDiskCAS>(std::move(UniDB));
 }

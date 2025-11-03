@@ -43,8 +43,8 @@ frameInfo:
   maxCallFrameSize: 0
   cvBytesOfCalleeSavedRegisters: 0
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 callSites:       []

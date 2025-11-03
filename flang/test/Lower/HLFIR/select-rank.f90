@@ -339,7 +339,7 @@ end subroutine
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<f32>
 ! CHECK:           %[[VAL_14:.*]] = fir.box_addr %[[VAL_13]] : (!fir.box<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFtest_simple_caseEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:           fir.call @_QPr0(%[[VAL_15]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_15]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb6:
 ! CHECK:           return
@@ -371,7 +371,7 @@ end subroutine
 ! CHECK:           fir.call @_QPr1(%[[VAL_11]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb5:
-! CHECK:           %[[VAL_12:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_12:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_13:.*]] = fir.box_addr %[[VAL_2]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.ref<!fir.array<*:f32>>
 ! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.array<*:f32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
@@ -416,7 +416,7 @@ end subroutine
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QPtest_rank_star_attributes(
-! CHECK-SAME:                                            %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x", fir.optional, fir.target}) {
+! CHECK-SAME:                                            %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.asynchronous, fir.bindc_name = "x", fir.optional, fir.target}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<asynchronous, optional, target>, uniq_name = "_QFtest_rank_star_attributesEx"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 2 : i8
@@ -435,7 +435,7 @@ end subroutine
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_8]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb5
 ! CHECK:         ^bb4:
-! CHECK:           %[[VAL_9:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_9:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_10:.*]] = fir.box_addr %[[VAL_2]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.ref<!fir.array<*:f32>>
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.array<*:f32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_9]] : (index) -> !fir.shape<1>
@@ -482,7 +482,7 @@ end subroutine
 ! CHECK:           fir.call @_QPr1_implicit(%[[VAL_21]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb5:
-! CHECK:           %[[VAL_22:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_22:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_23:.*]] = fir.box_addr %[[VAL_2]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.ref<!fir.array<*:f32>>
 ! CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.ref<!fir.array<*:f32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_25:.*]] = fir.shape %[[VAL_22]] : (index) -> !fir.shape<1>
@@ -534,7 +534,7 @@ end subroutine
 ! CHECK:           fir.call @_QPrc1_implicit(%[[VAL_26]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb5:
-! CHECK:           %[[VAL_27:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_27:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_28:.*]] = fir.box_addr %[[VAL_8]]#1 : (!fir.box<!fir.array<*:!fir.char<1,?>>>) -> !fir.ref<!fir.array<*:!fir.char<1,?>>>
 ! CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.array<*:!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_30:.*]] = fir.shape %[[VAL_27]] : (index) -> !fir.shape<1>
@@ -701,18 +701,18 @@ end subroutine
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<f32>
 ! CHECK:           %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:           fir.call @_QPr0(%[[VAL_11]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
-! CHECK:           fir.call @_QPr0(%[[VAL_18]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_11]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_18]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           cf.br ^bb7
 ! CHECK:         ^bb5:
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-! CHECK:           fir.call @_QPr0(%[[VAL_11]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_11]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           fir.call @_QPr1(%[[VAL_20]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:           cf.br ^bb7
 ! CHECK:         ^bb6:
 ! CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_4]]#0 {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
-! CHECK:           fir.call @_QPr0(%[[VAL_11]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_11]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_21]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb7
 ! CHECK:         ^bb7:
@@ -732,7 +732,7 @@ end subroutine
 ! CHECK:           %[[VAL_29:.*]] = fir.box_addr %[[VAL_28]] : (!fir.box<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_29]] {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           fir.call @_QPr1(%[[VAL_23]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
-! CHECK:           fir.call @_QPr0(%[[VAL_30]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_30]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           cf.br ^bb13
 ! CHECK:         ^bb11:
 ! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<?xf32>>
@@ -761,7 +761,7 @@ end subroutine
 ! CHECK:           %[[VAL_40:.*]] = fir.box_addr %[[VAL_39]] : (!fir.box<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_41:.*]]:2 = hlfir.declare %[[VAL_40]] {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_34]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
-! CHECK:           fir.call @_QPr0(%[[VAL_41]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_41]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           cf.br ^bb19
 ! CHECK:         ^bb17:
 ! CHECK:           %[[VAL_42:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<?xf32>>

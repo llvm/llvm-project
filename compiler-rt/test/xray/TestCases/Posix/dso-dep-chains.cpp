@@ -15,9 +15,9 @@
 // Executable links with a and b explicitly and loads d and e at runtime.
 // RUN: %clangxx_xray -g -fPIC -rdynamic -fxray-instrument -fxray-shared -std=c++11 %t/main.cpp %t/testliba.so %t/testlibb.so -o %t/main.o
 //
-// RUN:  XRAY_OPTIONS="patch_premain=true" %run %t/main.o %t/testlibd.so %t/testlibe.so 2>&1 | FileCheck %s
+// RUN:  env XRAY_OPTIONS="patch_premain=true" %run %t/main.o %t/testlibd.so %t/testlibe.so 2>&1 | FileCheck %s
 
-// REQUIRES: target=x86_64{{.*}}
+// REQUIRES: target={{(aarch64|x86_64)-.*}}
 
 //--- main.cpp
 

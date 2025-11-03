@@ -12,17 +12,17 @@ using namespace clang;
 
 namespace {
 
-struct CastExprVisitor : TestVisitor<CastExprVisitor> {
+struct CastExprVisitor : TestVisitor {
   std::function<void(ExplicitCastExpr *)> OnExplicitCast;
   std::function<void(CastExpr *)> OnCast;
 
-  bool VisitExplicitCastExpr(ExplicitCastExpr *Expr) {
+  bool VisitExplicitCastExpr(ExplicitCastExpr *Expr) override {
     if (OnExplicitCast)
       OnExplicitCast(Expr);
     return true;
   }
 
-  bool VisitCastExpr(CastExpr *Expr) {
+  bool VisitCastExpr(CastExpr *Expr) override {
     if (OnCast)
       OnCast(Expr);
     return true;

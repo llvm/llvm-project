@@ -82,7 +82,7 @@ Scalar::Type Scalar::PromoteToMaxType(Scalar &lhs, Scalar &rhs) {
   return Scalar::e_void;
 }
 
-bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
+bool Scalar::GetData(DataExtractor &data) const {
   size_t byte_size = GetByteSize();
   if (byte_size == 0) {
     data.Clear();
@@ -90,25 +90,55 @@ bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
   }
   auto buffer_up = std::make_unique<DataBufferHeap>(byte_size, 0);
   GetBytes(buffer_up->GetData());
-  lldb::offset_t offset = 0;
-
-  if (limit_byte_size < byte_size) {
-    if (endian::InlHostByteOrder() == eByteOrderLittle) {
-      // On little endian systems if we want fewer bytes from the current
-      // type we just specify fewer bytes since the LSByte is first...
-      byte_size = limit_byte_size;
-    } else if (endian::InlHostByteOrder() == eByteOrderBig) {
-      // On big endian systems if we want fewer bytes from the current type
-      // have to advance our initial byte pointer and trim down the number of
-      // bytes since the MSByte is first
-      offset = byte_size - limit_byte_size;
-      byte_size = limit_byte_size;
-    }
-  }
-
-  data.SetData(std::move(buffer_up), offset, byte_size);
+  data.SetData(std::move(buffer_up), 0, byte_size);
   data.SetByteOrder(endian::InlHostByteOrder());
   return true;
+}
+
+bool Scalar::GetData(DataExtractor &data, size_t result_byte_size) const {
+  size_t byte_size = GetByteSize();
+  if (byte_size == 0 || result_byte_size == 0) {
+    data.Clear();
+    return false;
+  }
+
+  if (endian::InlHostByteOrder() == lldb::eByteOrderBig) {
+    // On big endian systems if we want fewer bytes from the current type
+    // we have to advance our initial byte pointer since the MSByte is
+    // first.
+    if (result_byte_size <= byte_size) {
+      auto buffer_up = std::make_unique<DataBufferHeap>(byte_size, 0);
+      GetBytes(buffer_up->GetData());
+      auto offset = byte_size - result_byte_size;
+      data.SetData(std::move(buffer_up), offset, result_byte_size);
+      data.SetByteOrder(endian::InlHostByteOrder());
+    } else {
+      // Extend created buffer size and insert the data bytes with an offset
+      auto buffer_up = std::make_unique<DataBufferHeap>(result_byte_size, 0);
+      auto offset = result_byte_size - byte_size;
+      GetBytes(buffer_up->GetBytes() + offset, byte_size);
+      data.SetData(std::move(buffer_up), 0, result_byte_size);
+      data.SetByteOrder(endian::InlHostByteOrder());
+    }
+    return true;
+  }
+
+  // On little endian systems MSBytes get trimmed or extended automatically by
+  // size.
+  if (byte_size < result_byte_size)
+    byte_size = result_byte_size;
+  auto buffer_up = std::make_unique<DataBufferHeap>(byte_size, 0);
+  GetBytes(buffer_up->GetData());
+  data.SetData(std::move(buffer_up), 0, result_byte_size);
+  data.SetByteOrder(endian::InlHostByteOrder());
+
+  return true;
+}
+
+void Scalar::GetBytes(uint8_t *storage, size_t size) const {
+  assert(size >= GetByteSize());
+  llvm::MutableArrayRef<uint8_t> storage_ref(storage, size);
+  GetBytes(storage_ref);
 }
 
 void Scalar::GetBytes(llvm::MutableArrayRef<uint8_t> storage) const {
@@ -441,24 +471,10 @@ bool Scalar::ShiftRightLogical(const Scalar &rhs) {
 }
 
 Scalar &Scalar::operator>>=(const Scalar &rhs) {
-  switch (m_type) {
-  case e_void:
-  case e_float:
+  if (m_type == e_int && rhs.m_type == e_int)
+    m_integer >>= rhs.m_integer.getZExtValue();
+  else
     m_type = e_void;
-    break;
-
-  case e_int:
-    switch (rhs.m_type) {
-    case e_void:
-    case e_float:
-      m_type = e_void;
-      break;
-    case e_int:
-      m_integer = m_integer.ashr(rhs.m_integer);
-      break;
-    }
-    break;
-  }
   return *this;
 }
 
@@ -535,12 +551,13 @@ const Scalar lldb_private::operator-(Scalar lhs, Scalar rhs) {
 
 const Scalar lldb_private::operator/(Scalar lhs, Scalar rhs) {
   Scalar result;
-  if ((result.m_type = Scalar::PromoteToMaxType(lhs, rhs)) != Scalar::e_void &&
-      !rhs.IsZero()) {
+  if ((result.m_type = Scalar::PromoteToMaxType(lhs, rhs)) != Scalar::e_void) {
     switch (result.m_type) {
     case Scalar::e_void:
       break;
     case Scalar::e_int:
+      if (rhs.IsZero())
+        break;
       result.m_integer = lhs.m_integer / rhs.m_integer;
       return result;
     case Scalar::e_float:

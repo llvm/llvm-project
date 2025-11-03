@@ -7,6 +7,8 @@
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-signed-char
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T
 
+// RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-signed-char -fexperimental-new-constant-interpreter
+
 # 9 "/usr/include/string.h" 1 3 4  // expected-warning {{this style of line directive is a GNU extension}}
 extern "C" {
   typedef decltype(sizeof(int)) size_t;
@@ -670,8 +672,6 @@ namespace MemcpyEtc {
   constexpr bool test_address_of_incomplete_struct_type() { // expected-error {{never produces a constant}}
     struct Incomplete;
     extern Incomplete x, y;
-    // expected-warning@+2 {{first argument in call to '__builtin_memcpy' is a pointer to non-trivially copyable type 'Incomplete'}}
-    // expected-note@+1 {{explicitly cast the pointer to silence this warning}}
     __builtin_memcpy(&x, &x, 4);
     // expected-note@-1 2{{cannot constant evaluate 'memcpy' between objects of incomplete type 'Incomplete'}}
     return true;

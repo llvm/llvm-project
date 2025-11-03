@@ -30,8 +30,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x2 = frame-setup ADDI $x2, -2032
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 2032
-    ; CHECK-NEXT: SD killed $x1, $x2, 2024 :: (store (s64) into %stack.3)
-    ; CHECK-NEXT: SD killed $x8, $x2, 2016 :: (store (s64) into %stack.4)
+    ; CHECK-NEXT: frame-setup SD killed $x1, $x2, 2024 :: (store (s64) into %stack.3)
+    ; CHECK-NEXT: frame-setup SD killed $x8, $x2, 2016 :: (store (s64) into %stack.4)
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x1, -8
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -16
     ; CHECK-NEXT: $x8 = frame-setup ADDI $x2, 2032
@@ -47,9 +47,13 @@ body: |
     ; CHECK-NEXT: $x10 = ADDI killed $x10, -224
     ; CHECK-NEXT: VS1R_V killed renamable $v8, killed renamable $x10
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x8, -2032
-    ; CHECK-NEXT: $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
-    ; CHECK-NEXT: $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $x2, 2032
+    ; CHECK-NEXT: $x1 = frame-destroy LD $x2, 2024 :: (load (s64) from %stack.3)
+    ; CHECK-NEXT: $x8 = frame-destroy LD $x2, 2016 :: (load (s64) from %stack.4)
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 2032
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NEXT: PseudoRET
     %1:gprnox0 = COPY $x11
     %0:gpr = COPY $x10

@@ -19,7 +19,6 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -293,7 +292,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
 
 void TestingFormatWriter::write(raw_ostream &OS, TestingFormatVersion Version) {
   auto ByteSwap = [](uint64_t N) {
-    return support::endian::byte_swap<uint64_t, llvm::endianness::little>(N);
+    return support::endian::byte_swap<uint64_t>(N, llvm::endianness::little);
   };
 
   // Output a 64bit magic number.

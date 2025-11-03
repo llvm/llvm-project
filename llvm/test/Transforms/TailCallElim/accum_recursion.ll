@@ -145,7 +145,7 @@ declare i32 @test4_helper()
 
 define i32 @test5_base_case_load(ptr nocapture %A, i32 %n) local_unnamed_addr {
 ; CHECK-LABEL: define i32 @test5_base_case_load(
-; CHECK-SAME: ptr nocapture [[A:%.*]], i32 [[N:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[N:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
 ; CHECK:       tailrecurse:

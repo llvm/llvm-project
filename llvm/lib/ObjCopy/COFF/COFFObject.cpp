@@ -8,7 +8,6 @@
 
 #include "COFFObject.h"
 #include "llvm/ADT/DenseSet.h"
-#include <algorithm>
 
 namespace llvm {
 namespace objcopy {
@@ -19,6 +18,8 @@ using namespace object;
 void Object::addSymbols(ArrayRef<Symbol> NewSymbols) {
   for (Symbol S : NewSymbols) {
     S.UniqueId = NextSymbolUniqueId++;
+    S.OriginalRawIndex = NextSymbolOriginalIndex;
+    NextSymbolOriginalIndex += 1 + S.Sym.NumberOfAuxSymbols;
     Symbols.emplace_back(S);
   }
   updateSymbols();

@@ -123,6 +123,15 @@ static types::ID foldType(types::ID Lang) {
   }
 }
 
+// Return the language standard that's activated by the /std:c++latest
+// flag in clang-CL mode.
+static LangStandard::Kind latestLangStandard() {
+  // FIXME: Have a single source of truth for the mapping from
+  // c++latest --> c++26 that's shared by the driver code
+  // (clang/lib/Driver/ToolChains/Clang.cpp) and this file.
+  return LangStandard::lang_cxx26;
+}
+
 // A CompileCommand that can be applied to another file.
 struct TransferableCommand {
   // Flags that should not apply to all files are stripped from CommandLine.
@@ -237,9 +246,16 @@ struct TransferableCommand {
     // --std flag may only be transferred if the language is the same.
     // We may consider "translating" these, e.g. c++11 -> c11.
     if (Std != LangStandard::lang_unspecified && foldType(TargetType) == Type) {
-      Result.CommandLine.emplace_back((
-          llvm::Twine(ClangCLMode ? "/std:" : "-std=") +
-          LangStandard::getLangStandardForKind(Std).getName()).str());
+      const char *Spelling =
+          LangStandard::getLangStandardForKind(Std).getName();
+      // In clang-cl mode, the latest standard is spelled 'c++latest' rather
+      // than e.g. 'c++26', and the driver does not accept the latter, so emit
+      // the spelling that the driver does accept.
+      if (ClangCLMode && Std == latestLangStandard()) {
+        Spelling = "c++latest";
+      }
+      Result.CommandLine.emplace_back(
+          (llvm::Twine(ClangCLMode ? "/std:" : "-std=") + Spelling).str());
     }
     Result.CommandLine.push_back("--");
     Result.CommandLine.push_back(std::string(Filename));
@@ -296,8 +312,14 @@ private:
   // Try to interpret the argument as '-std='.
   std::optional<LangStandard::Kind> tryParseStdArg(const llvm::opt::Arg &Arg) {
     using namespace driver::options;
-    if (Arg.getOption().matches(ClangCLMode ? OPT__SLASH_std : OPT_std_EQ))
+    if (Arg.getOption().matches(ClangCLMode ? OPT__SLASH_std : OPT_std_EQ)) {
+      // "c++latest" is not a recognized LangStandard, but it's accepted by
+      // the clang driver in CL mode.
+      if (ClangCLMode && StringRef(Arg.getValue()) == "c++latest") {
+        return latestLangStandard();
+      }
       return LangStandard::getLangKind(Arg.getValue());
+    }
     return std::nullopt;
   }
 };

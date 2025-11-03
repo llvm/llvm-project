@@ -37,6 +37,9 @@ endif()
 
 include(LLDBConfig)
 include(AddLLDB)
+include(LLDBLayeringCheck)
+
+set(LLDB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Define the LLDB_CONFIGURATION_xxx matching the build type.
 if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
@@ -84,11 +87,16 @@ if (LLDB_ENABLE_PYTHON)
       set(LLDB_PYTHON_EXT_SUFFIX "_d${LLDB_PYTHON_EXT_SUFFIX}")
     endif()
   endif()
+  if(TARGET Python3::Python)
+    get_target_property(_Python3_LIB_PATH Python3::Python IMPORTED_LIBRARY_LOCATION)
+    if(_Python3_LIB_PATH)
+      get_filename_component(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME "${_Python3_LIB_PATH}" NAME)
+    endif()
+  endif()
 endif ()
 
 if (LLDB_ENABLE_LUA)
-  find_program(Lua_EXECUTABLE lua5.3)
-  set(LLDB_LUA_DEFAULT_RELATIVE_PATH "lib/lua/5.3")
+  set(LLDB_LUA_DEFAULT_RELATIVE_PATH "lib/lua/${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
   set(LLDB_LUA_RELATIVE_PATH ${LLDB_LUA_DEFAULT_RELATIVE_PATH}
     CACHE STRING "Path where Lua modules are installed, relative to install prefix")
 endif ()
@@ -126,6 +134,8 @@ add_subdirectory(source)
 add_subdirectory(tools)
 add_subdirectory(docs)
 
+check_lldb_plugin_layering()
+
 if (LLDB_ENABLE_PYTHON)
   if(LLDB_BUILD_FRAMEWORK)
     set(lldb_python_target_dir "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Resources/Python/lldb")
@@ -138,12 +148,12 @@ endif()
 
 if (LLDB_ENABLE_LUA)
   if(LLDB_BUILD_FRAMEWORK)
-    set(lldb_lua_target_dir "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Resources/Lua")
+    set(LLDB_LUA_CPATH "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Resources/Lua")
   else()
-    set(lldb_lua_target_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_LUA_RELATIVE_PATH}")
+    set(LLDB_LUA_CPATH "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_LUA_RELATIVE_PATH}")
   endif()
   get_target_property(lldb_lua_bindings_dir swig_wrapper_lua BINARY_DIR)
-  finish_swig_lua("lldb-lua" "${lldb_lua_bindings_dir}" "${lldb_lua_target_dir}")
+  finish_swig_lua("lldb-lua" "${lldb_lua_bindings_dir}" "${LLDB_LUA_CPATH}")
 endif()
 
 set(LLDB_INCLUDE_UNITTESTS ON)

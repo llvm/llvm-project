@@ -352,9 +352,9 @@ define fp128 @select_quad_mimm(i1 zeroext %0, fp128 %1) {
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s1, .LCPI{{[0-9]+}}_0@hi(, %s1)
 ; CHECK-NEXT:    ld %s4, 8(, %s1)
-; CHECK-NEXT:    ld %s5, (, %s1)
+; CHECK-NEXT:    ld %s1, (, %s1)
 ; CHECK-NEXT:    cmov.w.ne %s2, %s4, %s0
-; CHECK-NEXT:    cmov.w.ne %s3, %s5, %s0
+; CHECK-NEXT:    cmov.w.ne %s3, %s1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    or %s1, 0, %s3
 ; CHECK-NEXT:    b.l.t (, %s10)

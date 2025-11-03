@@ -13,19 +13,16 @@
 
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstddef>
 #include <optional>
 #include <utility>
-#include <vector>
 
 using namespace clang;
 using namespace ento;
@@ -154,8 +151,7 @@ StringRef AnalyzerOptions::getCheckerStringOption(StringRef CheckerName,
 StringRef AnalyzerOptions::getCheckerStringOption(const ento::CheckerBase *C,
                                                   StringRef OptionName,
                                                   bool SearchInParents) const {
-  return getCheckerStringOption(
-                           C->getTagDescription(), OptionName, SearchInParents);
+  return getCheckerStringOption(C->getName(), OptionName, SearchInParents);
 }
 
 bool AnalyzerOptions::getCheckerBooleanOption(StringRef CheckerName,
@@ -178,8 +174,7 @@ bool AnalyzerOptions::getCheckerBooleanOption(StringRef CheckerName,
 bool AnalyzerOptions::getCheckerBooleanOption(const ento::CheckerBase *C,
                                               StringRef OptionName,
                                               bool SearchInParents) const {
-  return getCheckerBooleanOption(
-             C->getTagDescription(), OptionName, SearchInParents);
+  return getCheckerBooleanOption(C->getName(), OptionName, SearchInParents);
 }
 
 int AnalyzerOptions::getCheckerIntegerOption(StringRef CheckerName,
@@ -199,6 +194,5 @@ int AnalyzerOptions::getCheckerIntegerOption(StringRef CheckerName,
 int AnalyzerOptions::getCheckerIntegerOption(const ento::CheckerBase *C,
                                              StringRef OptionName,
                                              bool SearchInParents) const {
-  return getCheckerIntegerOption(
-                           C->getTagDescription(), OptionName, SearchInParents);
+  return getCheckerIntegerOption(C->getName(), OptionName, SearchInParents);
 }

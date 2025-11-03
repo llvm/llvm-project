@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_USES_ALLOCATOR_H
-#define _LIBCPP___MEMORY_USES_ALLOCATOR_H
+#ifndef _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H
+#define _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H
 
-#include <__config>
-#include <__type_traits/is_convertible.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,11 +42,6 @@ struct __uses_allocator<_Tp, _Alloc, false> : public false_type {};
 template <class _Tp, class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS uses_allocator : public __uses_allocator<_Tp, _Alloc> {};
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp, class _Alloc>
-inline constexpr bool uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_USES_ALLOCATOR_H
+#endif // _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H

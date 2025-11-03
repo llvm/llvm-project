@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -convert-math-to-rocdl -allow-unregistered-dialect -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -pass-pipeline='builtin.module(convert-math-to-rocdl{chipset=gfx803})' | FileCheck %s --check-prefix=PRE9
+// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -pass-pipeline='builtin.module(convert-math-to-rocdl{chipset=gfx942})' | FileCheck %s --check-prefix=POST9
 
 module @test_module {
   // CHECK: llvm.func @__ocml_fmod_f16(f16, f16) -> f16
@@ -463,6 +464,24 @@ module @test_module {
 // -----
 
 module @test_module {
+  // CHECK: llvm.func @__ocml_erfc_f16(f16) -> f16
+  // CHECK: llvm.func @__ocml_erfc_f32(f32) -> f32
+  // CHECK: llvm.func @__ocml_erfc_f64(f64) -> f64
+  // CHECK-LABEL: func @math_erfc
+  func.func @math_erfc(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.erfc %arg_f16 : f16
+    // CHECK: llvm.call @__ocml_erfc_f16(%{{.*}}) : (f16) -> f16
+    %result32 = math.erfc %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_erfc_f32(%{{.*}}) : (f32) -> f32
+    %result64 = math.erfc %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_erfc_f64(%{{.*}}) : (f64) -> f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+// -----
+
+module @test_module {
   // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
   // CHECK: llvm.func @__ocml_sin_f32(f32) -> f32
   // CHECK: llvm.func @__ocml_sin_f64(f64) -> f64
@@ -484,6 +503,24 @@ module @test_module {
 
 // -----
 
+module @test_module {
+  // CHECK: llvm.func @__ocml_pown_f16(f16, i32) -> f16
+  // CHECK: llvm.func @__ocml_pown_f32(f32, i32) -> f32
+  // CHECK: llvm.func @__ocml_pown_f64(f64, i32) -> f64
+  // CHECK-LABEL: func @math_fpowi
+  func.func @math_fpowi(%arg0: f16, %arg1: f32, %arg2: f64, %arg3: i32) -> (f16, f32, f64) {
+    // CHECK: llvm.call @__ocml_pown_f16(%{{.*}}) : (f16, i32) -> f16
+    %0 = math.fpowi %arg0, %arg3 : f16, i32
+    // CHECK: llvm.call @__ocml_pown_f32(%{{.*}}) : (f32, i32) -> f32
+    %1 = math.fpowi %arg1, %arg3 : f32, i32
+    // CHECK: llvm.call @__ocml_pown_f64(%{{.*}}) : (f64, i32) -> f64
+    %2 = math.fpowi %arg2, %arg3 : f64, i32
+    return %0, %1, %2 : f16, f32, f64
+  }
+}
+
+// -----
+
 // Math operation not inside function
 // Ensure it not crash
 
@@ -494,4 +531,142 @@ module {
     %0 = math.atan %arg0 : f64
     "test.possible_terminator"() : () -> ()
   }) : () -> ()
+}
+
+// -----
+
+module @test_module {
+  // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
+  // CHECK-LABEL: func @math_sin_vector_0d
+  func.func @math_sin_vector_0d(%arg : vector<f16>) -> vector<f16> {
+    // CHECK: llvm.extractelement {{.*}} : vector<1xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<1xf16>
+    %result = math.sin %arg : vector<f16>
+    func.return %result : vector<f16>
+  }
+}
+
+// -----
+
+module @test_module {
+  // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
+  // CHECK-LABEL: func @math_sin_vector_1d
+  func.func @math_sin_vector_1d(%arg : vector<4xf16>) -> vector<4xf16> {
+    // CHECK: llvm.extractelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<4xf16>
+    %result = math.sin %arg : vector<4xf16>
+    func.return %result : vector<4xf16>
+  }
+}
+
+// -----
+
+module @test_module {
+  // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
+  // CHECK-LABEL: func @math_sin_vector_2d
+  func.func @math_sin_vector_2d(%arg : vector<2x2xf16>) -> vector<2x2xf16> {
+    // CHECK: builtin.unrealized_conversion_cast {{.*}} : vector<2x2xf16> to !llvm.array<2 x vector<2xf16>>
+    // CHECK: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+    // CHECK: llvm.extractelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+    // CHECK: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+    // CHECK: llvm.extractelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>    
+    %result = math.sin %arg : vector<2x2xf16>
+    func.return %result : vector<2x2xf16>
+  }
+}
+
+// -----
+
+// f16 clamp → rocdl.fmed3 on gfx9+
+// CHECK-LABEL: func.func @clampf_f16
+func.func @clampf_f16(%x: f16, %lo: f16, %hi: f16) -> f16 {
+  %r = math.clampf %x to [%lo, %hi] : f16
+  return %r : f16
+  // POST9: rocdl.fmed3 {{.*}} : f16
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : f16
+}
+
+// f32 clamp → rocdl.fmed3 on gfx9+
+// CHECK-LABEL: func.func @clampf_f32
+func.func @clampf_f32(%x: f32, %lo: f32, %hi: f32) -> f32 {
+  %r = math.clampf %x to [%lo, %hi] : f32
+  return %r : f32
+  // POST9: rocdl.fmed3 {{.*}} : f32
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : f32
+}
+
+// -----
+
+// Vector f16 clamp → rocdl.fmed3 on gfx9+
+// CHECK-LABEL: func.func @clampf_vector_f16
+func.func @clampf_vector_f16(%x: vector<2xf16>, %lo: vector<2xf16>, %hi: vector<2xf16>) -> vector<2xf16> {
+  %r = math.clampf %x to [%lo, %hi] : vector<2xf16>
+  return %r : vector<2xf16>
+  // POST9: rocdl.fmed3 {{.*}} : vector<2xf16>
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : vector<2xf16>
+}
+
+// -----
+
+// Vector f32 clamp → rocdl.fmed3 on gfx9+
+// CHECK-LABEL: func.func @clampf_vector_f32
+func.func @clampf_vector_f32(%x: vector<2xf32>, %lo: vector<2xf32>, %hi: vector<2xf32>) -> vector<2xf32> {
+  %r = math.clampf %x to [%lo, %hi] : vector<2xf32>
+  return %r : vector<2xf32>
+  // POST9: rocdl.fmed3 {{.*}} : vector<2xf32>
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : vector<2xf32>
+}
+
+// -----
+
+// Multi-dimensional vector f16 clamp → rocdl.fmed3 on gfx9+ (unrolled to 1D vectors)
+// CHECK-LABEL: func.func @clampf_vector_2d_f16
+func.func @clampf_vector_2d_f16(%x: vector<2x2xf16>, %lo: vector<2x2xf16>, %hi: vector<2x2xf16>) -> vector<2x2xf16> {
+  %r = math.clampf %x to [%lo, %hi] : vector<2x2xf16>
+  return %r : vector<2x2xf16>
+  // POST9: builtin.unrealized_conversion_cast {{.*}} : vector<2x2xf16> to !llvm.array<2 x vector<2xf16>>
+  // POST9: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+  // POST9: rocdl.fmed3 {{.*}} : vector<2xf16>
+  // POST9: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+  // POST9: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+  // POST9: rocdl.fmed3 {{.*}} : vector<2xf16>
+  // POST9: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : vector<2x2xf16>
+}
+
+// -----
+// CHECK-LABEL: func.func @clampf_bf16
+func.func @clampf_bf16(%x: bf16, %lo: bf16, %hi: bf16) -> bf16 {
+  %r = math.clampf %x to [%lo, %hi] : bf16
+  return %r : bf16
+  // CHECK: math.clampf {{.*}} : bf16
+  // CHECK-NOT: rocdl.fmed3
 }

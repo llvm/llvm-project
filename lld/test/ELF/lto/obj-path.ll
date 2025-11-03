@@ -54,14 +54,14 @@
 
 ;; With --thinlto-index-only, --lto-obj-path= creates just one file.
 ; RUN: rm -f objpath.o objpath.o1 objpath.o2
-; RUN: ld.lld --thinlto-index-only --lto-obj-path=objpath.o -shared 1.bc d/2.bc -o /dev/null
+; RUN: ld.lld --thinlto-index-only --lto-obj-path=objpath.o -shared 1.bc d/2.bc
 ; RUN: llvm-objdump -d objpath.o | FileCheck %s --check-prefix=EMPTY
 ; RUN: not ls objpath.o1
 ; RUN: not ls objpath.o2
 
 ;; Test --plugin-opt=obj-path=.
 ; RUN: rm -f objpath.o
-; RUN: ld.lld --plugin-opt=thinlto-index-only --plugin-opt=obj-path=objpath.o -shared 1.bc d/2.bc -o /dev/null
+; RUN: ld.lld --plugin-opt=thinlto-index-only --plugin-opt=obj-path=objpath.o -shared 1.bc d/2.bc
 ; RUN: llvm-objdump -d objpath.o | FileCheck %s --check-prefix=EMPTY
 
 ;; Ensure lld emits empty combined module if specific obj-path.

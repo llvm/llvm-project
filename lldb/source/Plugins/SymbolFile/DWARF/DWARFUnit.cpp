@@ -13,8 +13,10 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/Object/Error.h"
 
 #include "DWARFCompileUnit.h"
@@ -27,8 +29,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 extern int g_verbose;
 
@@ -187,21 +189,20 @@ DWARFUnit::ScopedExtractDIEs DWARFUnit::ExtractDIEsScoped() {
 }
 
 DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(DWARFUnit &cu) : m_cu(&cu) {
-  m_cu->m_die_array_scoped_mutex.lock_shared();
+  llvm::sys::ScopedLock lock(m_cu->m_die_array_scoped_mutex);
+  ++m_cu->m_die_array_scoped_count;
 }
 
 DWARFUnit::ScopedExtractDIEs::~ScopedExtractDIEs() {
   if (!m_cu)
     return;
-  m_cu->m_die_array_scoped_mutex.unlock_shared();
-  if (!m_clear_dies || m_cu->m_cancel_scopes)
-    return;
-  // Be sure no other ScopedExtractDIEs is running anymore.
-  llvm::sys::ScopedWriter lock_scoped(m_cu->m_die_array_scoped_mutex);
-  llvm::sys::ScopedWriter lock(m_cu->m_die_array_mutex);
-  if (m_cu->m_cancel_scopes)
-    return;
-  m_cu->ClearDIEsRWLocked();
+  llvm::sys::ScopedLock lock(m_cu->m_die_array_scoped_mutex);
+  --m_cu->m_die_array_scoped_count;
+  if (m_cu->m_die_array_scoped_count == 0 && m_clear_dies &&
+      !m_cu->m_cancel_scopes) {
+    llvm::sys::ScopedWriter lock(m_cu->m_die_array_mutex);
+    m_cu->ClearDIEsRWLocked();
+  }
 }
 
 DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(ScopedExtractDIEs &&rhs)
@@ -694,6 +695,90 @@ llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
   return llvm::StringRef();
 }
 
+llvm::Expected<std::pair<uint64_t, bool>>
+DWARFUnit::GetDIEBitSizeAndSign(uint64_t relative_die_offset) const {
+  // Retrieve the type DIE that the value is being converted to. This
+  // offset is compile unit relative so we need to fix it up.
+  const uint64_t abs_die_offset = relative_die_offset + GetOffset();
+  // FIXME: the constness has annoying ripple effects.
+  DWARFDIE die = const_cast<DWARFUnit *>(this)->GetDIE(abs_die_offset);
+  if (!die)
+    return llvm::createStringError("cannot resolve DW_OP_convert type DIE");
+  uint64_t encoding =
+      die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
+  uint64_t bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+  if (!bit_size)
+    bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
+  if (!bit_size)
+    return llvm::createStringError("unsupported type size");
+  bool sign;
+  switch (encoding) {
+  case DW_ATE_signed:
+  case DW_ATE_signed_char:
+    sign = true;
+    break;
+  case DW_ATE_unsigned:
+  case DW_ATE_unsigned_char:
+    sign = false;
+    break;
+  default:
+    return llvm::createStringError("unsupported encoding");
+  }
+  return std::pair{bit_size, sign};
+}
+
+lldb::offset_t
+DWARFUnit::GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                                    const lldb::offset_t data_offset,
+                                    const uint8_t op) const {
+  return GetSymbolFileDWARF().GetVendorDWARFOpcodeSize(data, data_offset, op);
+}
+
+bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+                                       lldb::offset_t &offset,
+                                       RegisterContext *reg_ctx,
+                                       lldb::RegisterKind reg_kind,
+                                       std::vector<Value> &stack) const {
+  return GetSymbolFileDWARF().ParseVendorDWARFOpcode(op, opcodes, offset,
+                                                     reg_ctx, reg_kind, stack);
+}
+
+bool DWARFUnit::ParseDWARFLocationList(
+    const DataExtractor &data, DWARFExpressionList &location_list) const {
+  location_list.Clear();
+  std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
+      GetLocationTable(data);
+  Log *log = GetLog(DWARFLog::DebugInfo);
+  auto lookup_addr =
+      [&](uint32_t index) -> std::optional<llvm::object::SectionedAddress> {
+    addr_t address = ReadAddressFromDebugAddrSection(index);
+    if (address == LLDB_INVALID_ADDRESS)
+      return std::nullopt;
+    return llvm::object::SectionedAddress{address};
+  };
+  auto process_list = [&](llvm::Expected<llvm::DWARFLocationExpression> loc) {
+    if (!loc) {
+      LLDB_LOG_ERROR(log, loc.takeError(), "{0}");
+      return true;
+    }
+    auto buffer_sp =
+        std::make_shared<DataBufferHeap>(loc->Expr.data(), loc->Expr.size());
+    DWARFExpression expr = DWARFExpression(DataExtractor(
+        buffer_sp, data.GetByteOrder(), data.GetAddressByteSize()));
+    location_list.AddExpression(loc->Range->LowPC, loc->Range->HighPC, expr);
+    return true;
+  };
+  llvm::Error error = loctable_up->visitAbsoluteLocationList(
+      0, llvm::object::SectionedAddress{GetBaseAddress()}, lookup_addr,
+      process_list);
+  location_list.Sort();
+  if (error) {
+    LLDB_LOG_ERROR(log, std::move(error), "{0}");
+    return false;
+  }
+  return true;
+}
+
 DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
   ExtractUnitDIEIfNeeded();
   if (m_dwo)
@@ -734,16 +819,6 @@ bool DWARFUnit::LinkToSkeletonUnit(DWARFUnit &skeleton_unit) {
   return false; // Already linked to a different unit.
 }
 
-bool DWARFUnit::Supports_DW_AT_APPLE_objc_complete_type() {
-  return GetProducer() != eProducerLLVMGCC;
-}
-
-bool DWARFUnit::DW_AT_decl_file_attributes_are_invalid() {
-  // llvm-gcc makes completely invalid decl file attributes and won't ever be
-  // fixed, so we need to know to ignore these.
-  return GetProducer() == eProducerLLVMGCC;
-}
-
 bool DWARFUnit::Supports_unnamed_objc_bitfields() {
   if (GetProducer() == eProducerClang)
     return GetProducerVersion() >= llvm::VersionTuple(425, 0, 13);
@@ -766,10 +841,6 @@ void DWARFUnit::ParseProducerInfo() {
       llvm::StringRef(R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
   static const RegularExpression g_clang_version_regex(
       llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
-  static const RegularExpression g_llvm_gcc_regex(
-      llvm::StringRef(R"(4\.[012]\.[01] )"
-                      R"(\(Based on Apple Inc\. build [0-9]+\) )"
-                      R"(\(LLVM build [\.0-9]+\)$)"));
 
   llvm::SmallVector<llvm::StringRef, 3> matches;
   if (g_swiftlang_version_regex.Execute(producer, &matches)) {
@@ -781,8 +852,6 @@ void DWARFUnit::ParseProducerInfo() {
     m_producer = eProducerClang;
   } else if (producer.contains("GNU")) {
     m_producer = eProducerGCC;
-  } else if (g_llvm_gcc_regex.Execute(producer)) {
-    m_producer = eProducerLLVMGCC;
   }
 }
 
@@ -1006,37 +1075,31 @@ const lldb_private::DWARFDataExtractor &DWARFUnit::GetData() const {
              : m_dwarf.GetDWARFContext().getOrLoadDebugInfoData();
 }
 
-uint32_t DWARFUnit::GetHeaderByteSize() const {
-  switch (m_header.getUnitType()) {
-  case llvm::dwarf::DW_UT_compile:
-  case llvm::dwarf::DW_UT_partial:
-    return GetVersion() < 5 ? 11 : 12;
-  case llvm::dwarf::DW_UT_skeleton:
-  case llvm::dwarf::DW_UT_split_compile:
-    return 20;
-  case llvm::dwarf::DW_UT_type:
-  case llvm::dwarf::DW_UT_split_type:
-    return GetVersion() < 5 ? 23 : 24;
-  }
-  llvm_unreachable("invalid UnitType.");
-}
+uint32_t DWARFUnit::GetHeaderByteSize() const { return m_header.getSize(); }
 
 std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
-  lldb::offset_t offset = GetStrOffsetsBase() + index * 4;
-  return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetU32(&offset);
+  lldb::offset_t offset =
+      GetStrOffsetsBase() + index * m_header.getDwarfOffsetByteSize();
+  return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
+      &offset, m_header.getDwarfOffsetByteSize());
 }
 
-llvm::Expected<DWARFRangeList>
+llvm::Expected<llvm::DWARFAddressRangesVector>
 DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   if (GetVersion() <= 4) {
-    const DWARFDebugRanges *debug_ranges = m_dwarf.GetDebugRanges();
-    if (!debug_ranges)
-      return llvm::make_error<llvm::object::GenericBinaryError>(
-          "No debug_ranges section");
-    return debug_ranges->FindRanges(this, offset);
+    llvm::DWARFDataExtractor data =
+        m_dwarf.GetDWARFContext().getOrLoadRangesData().GetAsLLVMDWARF();
+    data.setAddressSize(m_header.getAddressByteSize());
+
+    llvm::DWARFDebugRangeList list;
+    if (llvm::Error e = list.extract(data, &offset))
+      return e;
+    return list.getAbsoluteRanges(
+        llvm::object::SectionedAddress{GetBaseAddress()});
   }
 
+  // DWARF >= v5
   if (!GetRnglistTable())
     return llvm::createStringError(std::errc::invalid_argument,
                                    "missing or invalid range list table");
@@ -1049,31 +1112,21 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   if (!range_list_or_error)
     return range_list_or_error.takeError();
 
-  llvm::Expected<llvm::DWARFAddressRangesVector> llvm_ranges =
-      range_list_or_error->getAbsoluteRanges(
-          llvm::object::SectionedAddress{GetBaseAddress()},
-          GetAddressByteSize(), [&](uint32_t index) {
-            uint32_t index_size = GetAddressByteSize();
-            dw_offset_t addr_base = GetAddrBase();
-            lldb::offset_t offset =
-                addr_base + static_cast<lldb::offset_t>(index) * index_size;
-            return llvm::object::SectionedAddress{
-                m_dwarf.GetDWARFContext().getOrLoadAddrData().GetMaxU64(
-                    &offset, index_size)};
-          });
-  if (!llvm_ranges)
-    return llvm_ranges.takeError();
-
-  DWARFRangeList ranges;
-  for (const llvm::DWARFAddressRange &llvm_range : *llvm_ranges) {
-    ranges.Append(DWARFRangeList::Entry(llvm_range.LowPC,
-                                        llvm_range.HighPC - llvm_range.LowPC));
-  }
-  ranges.Sort();
-  return ranges;
+  return range_list_or_error->getAbsoluteRanges(
+      llvm::object::SectionedAddress{GetBaseAddress()}, GetAddressByteSize(),
+      [&](uint32_t index) {
+        uint32_t index_size = GetAddressByteSize();
+        dw_offset_t addr_base = GetAddrBase();
+        lldb::offset_t offset =
+            addr_base + static_cast<lldb::offset_t>(index) * index_size;
+        return llvm::object::SectionedAddress{
+            m_dwarf.GetDWARFContext().getOrLoadAddrData().GetMaxU64(
+                &offset, index_size)};
+      });
 }
 
-llvm::Expected<DWARFRangeList> DWARFUnit::FindRnglistFromIndex(uint32_t index) {
+llvm::Expected<llvm::DWARFAddressRangesVector>
+DWARFUnit::FindRnglistFromIndex(uint32_t index) {
   llvm::Expected<uint64_t> maybe_offset = GetRnglistOffset(index);
   if (!maybe_offset)
     return maybe_offset.takeError();

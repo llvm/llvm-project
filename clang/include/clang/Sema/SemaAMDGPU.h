@@ -26,6 +26,11 @@ public:
 
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
+  bool checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore);
+
+  bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
+                               unsigned NumDataArgs);
+
   /// Create an AMDGPUWavesPerEUAttr attribute.
   AMDGPUFlatWorkGroupSizeAttr *
   CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI, Expr *Min,

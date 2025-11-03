@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_INTEGRAL_H
-#define _LIBCPP___TYPE_TRAITS_IS_INTEGRAL_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_INTEGRAL_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_INTEGRAL_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/remove_cv.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -52,23 +52,13 @@ template <>          struct __libcpp_is_integral<__uint128_t>        { enum { va
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_integral : _BoolConstant<__is_integral(_Tp)> {};
 
-#  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_integral_v = __is_integral(_Tp);
-#  endif
-
 #else
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_integral : public _BoolConstant<__libcpp_is_integral<__remove_cv_t<_Tp> >::value> {};
 
-#  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_integral_v = is_integral<_Tp>::value;
-#  endif
-
 #endif // __has_builtin(__is_integral)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_INTEGRAL_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_INTEGRAL_H

@@ -31,7 +31,7 @@ let Definition = "interpreter" in {
   def SpaceReplPrompts: Property<"space-repl-prompts", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, blank lines will be printed between between REPL submissions.">;
+    Desc<"If true, blank lines will be printed between REPL submissions.">;
   def EchoCommands: Property<"echo-commands", "Boolean">,
     Global,
     DefaultTrue,

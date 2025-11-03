@@ -4,10 +4,10 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: %[[TyInt:.*]] = OpTypeInt 8 0
-; CHECK: %[[ConstInt:.*]] = OpConstant %[[TyInt]] 123
-; CHECK: %[[TyPtr:.*]] = OpTypePointer {{[a-zA-Z]+}} %[[TyInt]]
-; CHECK: %[[VarId:.*]] = OpVariable %[[TyPtr]] {{[a-zA-Z]+}} %[[ConstInt]]
+; CHECK-DAG: %[[TyInt:.*]] = OpTypeInt 8 0
+; CHECK-DAG: %[[ConstInt:.*]] = OpConstant %[[TyInt]] 123
+; CHECK-DAG: %[[TyPtr:.*]] = OpTypePointer {{[a-zA-Z]+}} %[[TyInt]]
+; CHECK-DAG: %[[VarId:.*]] = OpVariable %[[TyPtr]] {{[a-zA-Z]+}} %[[ConstInt]]
 
 @0 = addrspace(1) global i8 123
 

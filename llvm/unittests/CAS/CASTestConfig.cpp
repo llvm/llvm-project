@@ -10,14 +10,14 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::cas;
 
-CASTestingEnv createInMemory(int I) {
-  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
-  std::unique_ptr<ActionCache> Cache = createInMemoryActionCache();
-  return CASTestingEnv{std::move(CAS), std::move(Cache), std::nullopt};
+static CASTestingEnv createInMemory(int I) {
+  return CASTestingEnv{createInMemoryCAS(), createInMemoryActionCache(),
+                       std::nullopt};
 }
 
 INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,
@@ -34,7 +34,7 @@ void setMaxOnDiskCASMappingSize() {
       Flag, [] { llvm::cas::ondisk::setMaxMappingSize(100 * 1024 * 1024); });
 }
 
-CASTestingEnv createOnDisk(int I) {
+static CASTestingEnv createOnDisk(int I) {
   unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
   std::unique_ptr<ObjectStore> CAS;
   EXPECT_THAT_ERROR(createOnDiskCAS(Temp.path()).moveInto(CAS), Succeeded());

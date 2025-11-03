@@ -1,4 +1,5 @@
-! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
+! REQUIRES: x86-registered-target
+! RUN: bbc -target x86_64-unknown-linux-gnu --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPproduct_test(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}) -> i32
@@ -25,7 +26,7 @@ integer :: r(:)
 ! CHECK-DAG:  %[[a7:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 ! CHECK-DAG:  %[[a9:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
 r = product(a,dim=2)
-! CHECK:  %{{.*}} = fir.call @_FortranAProductDim(%[[a6]], %[[a7]], %[[c2_i32]], %{{.*}}, %{{.*}}, %[[a9]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> none
+! CHECK:  fir.call @_FortranAProductDim(%[[a6]], %[[a7]], %[[c2_i32]], %{{.*}}, %{{.*}}, %[[a9]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> ()
 ! CHECK-DAG: %[[a11:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK-DAG:  %[[a13:.*]] = fir.box_addr %[[a11]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK-DAG:  fir.freemem %[[a13]]
@@ -42,7 +43,7 @@ complex :: a(:)
 ! CHECK-DAG:  %[[a8:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a9:.*]] = fir.convert %[[a3]] : (!fir.box<i1>) -> !fir.box<none>
 product_test3 = product(a)
-! CHECK:  %{{.*}} = fir.call @_FortranACppProductComplex4(%[[a0]], %[[a6]], %{{.*}}, %{{.*}}, %[[a8]], %[[a9]]) {{.*}}: (!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> none
+! CHECK:  fir.call @_FortranACppProductComplex4(%[[a0]], %[[a6]], %{{.*}}, %{{.*}}, %[[a8]], %[[a9]]) {{.*}}: (!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> ()
 end function
 
 ! CHECK-LABEL: func @_QPproduct_test4(

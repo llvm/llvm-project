@@ -1,5 +1,5 @@
 ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s -check-prefixes=HONORINF,ALL
-! RUN: flang -fc1 -menable-no-infs -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s -check-prefixes=CHECK,ALL
+! RUN: flang -fc1 -menable-no-infs -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s -check-prefixes=CHECK,ALL,%if flang-supports-f128-math %{F128%} %else %{F64%}
 
 ! ALL-LABEL: func @_QPmodulo_testr(
 ! ALL-SAME: %[[arg0:.*]]: !fir.ref<f64>{{.*}}, %[[arg1:.*]]: !fir.ref<f64>{{.*}}, %[[arg2:.*]]: !fir.ref<f64>{{.*}}) {
@@ -39,9 +39,12 @@ subroutine modulo_testi(r, a, p)
 end subroutine
 
 ! CHECK-LABEL: func @_QPmodulo_testr16(
-! CHECK-SAME: %[[arg0:.*]]: !fir.ref<f128>{{.*}}, %[[arg1:.*]]: !fir.ref<f128>{{.*}}, %[[arg2:.*]]: !fir.ref<f128>{{.*}}) {
+! F128-SAME: %[[arg0:.*]]: !fir.ref<f128>{{.*}}, %[[arg1:.*]]: !fir.ref<f128>{{.*}}, %[[arg2:.*]]: !fir.ref<f128>{{.*}}) {
+! F64-SAME: %[[arg0:.*]]: !fir.ref<f64>{{.*}}, %[[arg1:.*]]: !fir.ref<f64>{{.*}}, %[[arg2:.*]]: !fir.ref<f64>{{.*}}) {
 subroutine modulo_testr16(r, a, p)
-  real(16) :: r, a, p
-  ! CHECK: fir.call @_FortranAModuloReal16({{.*}}){{.*}}: (f128, f128, !fir.ref<i8>, i32) -> f128
+  integer, parameter :: rk = merge(16, 8, selected_real_kind(33, 4931)==16)
+  real(rk) :: r, a, p
+  !F128: fir.call @_FortranAModuloReal16({{.*}}){{.*}}: (f128, f128, !fir.ref<i8>, i32) -> f128
+  !F64: arith.remf %0, %1 fastmath<ninf,contract> : f64
   r = modulo(a, p)
 end subroutine

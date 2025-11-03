@@ -6,47 +6,47 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_SHUFFLE_ORDER_ENGINE_H
-#define _LIBCPP___RANDOM_SHUFFLE_ORDER_ENGINE_H
+#ifndef _LIBCPP___CXX03___RANDOM_SHUFFLE_ORDER_ENGINE_H
+#define _LIBCPP___CXX03___RANDOM_SHUFFLE_ORDER_ENGINE_H
 
-#include <__algorithm/equal.h>
-#include <__config>
-#include <__random/is_seed_sequence.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_convertible.h>
-#include <__utility/move.h>
-#include <cstddef>
-#include <cstdint>
-#include <iosfwd>
+#include <__cxx03/__algorithm/equal.h>
+#include <__cxx03/__config>
+#include <__cxx03/__random/is_seed_sequence.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
+#include <__cxx03/iosfwd>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <uint64_t _Xp, uint64_t _Yp>
 struct __ugcd {
-  static _LIBCPP_CONSTEXPR const uint64_t value = __ugcd<_Yp, _Xp % _Yp>::value;
+  static const uint64_t value = __ugcd<_Yp, _Xp % _Yp>::value;
 };
 
 template <uint64_t _Xp>
 struct __ugcd<_Xp, 0> {
-  static _LIBCPP_CONSTEXPR const uint64_t value = _Xp;
+  static const uint64_t value = _Xp;
 };
 
 template <uint64_t _Np, uint64_t _Dp>
 class __uratio {
   static_assert(_Dp != 0, "__uratio divide by 0");
-  static _LIBCPP_CONSTEXPR const uint64_t __gcd = __ugcd<_Np, _Dp>::value;
+  static const uint64_t __gcd = __ugcd<_Np, _Dp>::value;
 
 public:
-  static _LIBCPP_CONSTEXPR const uint64_t num = _Np / __gcd;
-  static _LIBCPP_CONSTEXPR const uint64_t den = _Dp / __gcd;
+  static const uint64_t num = _Np / __gcd;
+  static const uint64_t den = _Dp / __gcd;
 
   typedef __uratio<num, den> type;
 };
@@ -66,27 +66,19 @@ private:
 
 public:
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const size_t table_size = __k;
+  static const size_t table_size = __k;
 
-#ifdef _LIBCPP_CXX03_LANG
   static const result_type _Min = _Engine::_Min;
   static const result_type _Max = _Engine::_Max;
-#else
-  static _LIBCPP_CONSTEXPR const result_type _Min = _Engine::min();
-  static _LIBCPP_CONSTEXPR const result_type _Max = _Engine::max();
-#endif
   static_assert(_Min < _Max, "shuffle_order_engine invalid parameters");
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  _LIBCPP_HIDE_FROM_ABI static result_type min() { return _Min; }
+  _LIBCPP_HIDE_FROM_ABI static result_type max() { return _Max; }
 
-  static _LIBCPP_CONSTEXPR const unsigned long long _Rp = _Max - _Min + 1ull;
+  static const unsigned long long _Rp = _Max - _Min + 1ull;
 
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI shuffle_order_engine() { __init(); }
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(const _Engine& __e) : __e_(__e) { __init(); }
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(_Engine&& __e) : __e_(std::move(__e)) { __init(); }
-#endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(result_type __sd) : __e_(__sd) { __init(); }
   template <
       class _Sseq,
@@ -174,7 +166,7 @@ private:
 };
 
 template <class _Engine, size_t __k>
-_LIBCPP_CONSTEXPR const size_t shuffle_order_engine<_Engine, __k>::table_size;
+const size_t shuffle_order_engine<_Engine, __k>::table_size;
 
 template <class _Eng, size_t _Kp>
 _LIBCPP_HIDE_FROM_ABI bool
@@ -227,4 +219,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_SHUFFLE_ORDER_ENGINE_H
+#endif // _LIBCPP___CXX03___RANDOM_SHUFFLE_ORDER_ENGINE_H

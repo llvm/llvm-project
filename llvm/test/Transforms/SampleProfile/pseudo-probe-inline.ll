@@ -11,9 +11,6 @@
 ; RUN: opt < %s -passes=pseudo-probe,sample-profile -annotate-sample-profile-inline-phase=true -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t4.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t4.opt.yaml
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
 @factor = dso_local global i32 3, align 4
 
 define dso_local i32 @foo(i32 %x) #0 !dbg !12 {

@@ -8,15 +8,14 @@ c.addw   a0, a7 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 c.subw   a0, a6 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 
 ## GPRNoX0
-c.ldsp  x0, 4(sp) # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
-c.ldsp  zero, 4(sp) # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
+c.ldsp  x0, 4(sp) # CHECK: :[[@LINE]]:9: error: register must be a GPR excluding zero (x0)
+c.ldsp  zero, 4(sp) # CHECK: :[[@LINE]]:9: error: register must be a GPR excluding zero (x0)
 
 # Out of range immediates
 
-## uimmlog2xlennonzero
-c.slli t0, 64 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [1, 63]
-c.srli a0, -1 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [1, 63]
-c.srai a0, 0  # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [1, 63]
+## uimmlog2xlen
+c.slli t0, 64 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 63]
+c.srli a0, -1 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 63]
 
 ## simm6
 c.addiw t0, -33 # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-32, 31]

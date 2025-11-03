@@ -20,7 +20,7 @@ ValuesEqual(T x1, T x2) {
   LIBC_NAMESPACE::fputil::FPBits<T> bits2(x2);
   // If either is NaN, we want both to be NaN.
   if (bits1.is_nan() || bits2.is_nan())
-    return bits2.is_nan() && bits2.is_nan();
+    return bits1.is_nan() && bits2.is_nan();
 
   // For all other values, we want the values to be bitwise equal.
   return bits1.uintval() == bits2.uintval();

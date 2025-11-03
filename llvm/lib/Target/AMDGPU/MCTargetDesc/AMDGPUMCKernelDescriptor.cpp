@@ -70,6 +70,11 @@ MCKernelDescriptor::getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
         KD.compute_pgm_rsrc1, OneMCExpr,
         amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED_SHIFT,
         amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, Ctx);
+
+    MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc1, OneMCExpr,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS_SHIFT,
+        amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS, Ctx);
   }
   if (AMDGPU::isGFX90A(*STI) && STI->getFeatureBits().test(FeatureTgSplit))
     MCKernelDescriptor::bits_set(

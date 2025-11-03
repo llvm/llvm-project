@@ -1,15 +1,15 @@
-// RUN: rm -rf %T/misc-header-include-cycle-headers
-// RUN: mkdir %T/misc-header-include-cycle-headers
-// RUN: cp -r %S/Inputs/header-include-cycle* %T/misc-header-include-cycle-headers/
-// RUN: mkdir %T/misc-header-include-cycle-headers/system
-// RUN: cp -r %S/Inputs/system/header-include-cycle* %T/misc-header-include-cycle-headers/system
-// RUN: cp %s %T/header-include-cycle.cpp
-// RUN: clang-tidy %T%{fs-sep}header-include-cycle.cpp -checks='-*,misc-header-include-cycle' -header-filter=.* \
+// RUN: rm -rf %t.dir/misc-header-include-cycle-headers
+// RUN: mkdir -p %t.dir/misc-header-include-cycle-headers
+// RUN: cp -r %S/Inputs/header-include-cycle* %t.dir/misc-header-include-cycle-headers/
+// RUN: mkdir %t.dir/misc-header-include-cycle-headers/system
+// RUN: cp -r %S/Inputs/system/header-include-cycle* %t.dir/misc-header-include-cycle-headers/system
+// RUN: cp %s %t.dir/header-include-cycle.cpp
+// RUN: clang-tidy %t.dir%{fs-sep}header-include-cycle.cpp -checks='-*,misc-header-include-cycle' -header-filter=.* \
 // RUN: -config="{CheckOptions: {misc-header-include-cycle.IgnoredFilesList: 'header-include-cycle.self-e.hpp'}}" \
-// RUN: -- -I%T%{fs-sep}misc-header-include-cycle-headers -isystem %T%{fs-sep}misc-header-include-cycle-headers%{fs-sep}system \
-// RUN: --include %T%{fs-sep}misc-header-include-cycle-headers%{fs-sep}header-include-cycle.self-i.hpp | FileCheck %s \
+// RUN: -- -I%t.dir%{fs-sep}misc-header-include-cycle-headers -isystem %t.dir%{fs-sep}misc-header-include-cycle-headers%{fs-sep}system \
+// RUN: --include %t.dir%{fs-sep}misc-header-include-cycle-headers%{fs-sep}header-include-cycle.self-i.hpp | FileCheck %s \
 // RUN: -check-prefix=CHECK-MESSAGES "-implicit-check-not={{note|warning|error}}:" --dump-input=fail
-// RUN: rm -rf %T/misc-header-include-cycle-headers
+// RUN: rm -rf %t.dir/misc-header-include-cycle-headers
 
 #ifndef MAIN_GUARD
 #define MAIN_GUARD

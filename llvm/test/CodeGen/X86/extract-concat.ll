@@ -84,9 +84,9 @@ define <16 x i64> @catcat(<4 x i64> %x) {
 ; AVX512F-LABEL: catcat:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,0,0,1,1,1,1]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,0,0,0,1,1,1,1]
 ; AVX512F-NEXT:    vpermpd %zmm0, %zmm1, %zmm2
-; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [2,2,2,2,3,3,3,3]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [2,2,2,2,3,3,3,3]
 ; AVX512F-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
 ; AVX512F-NEXT:    vmovaps %zmm2, %zmm0
 ; AVX512F-NEXT:    retq

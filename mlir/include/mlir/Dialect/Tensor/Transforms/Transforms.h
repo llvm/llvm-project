@@ -31,12 +31,16 @@ namespace tensor {
 FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
     OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producerOp);
 
-/// Method to swap an `tensor.insert_slice` with its consumer when the
-/// consumer implements the `TilingInterface`.
+/// Method to swap `tensor.insert_slice`s with their consumers when the
+/// consumer implements the `TilingInterface`. The size of `sliceOps` and
+/// `consumerOperands` is expected to be the same. Every entry in
+/// `consumerOperands` represents a use of the the corresponding
+/// entry in `sliceOps` in the consumer. All entries of `consumerOperands` is
+/// expected to be uses in the same consumer.
 FailureOr<TilingResult>
-replaceInsertSliceWithTiledConsumer(OpBuilder &builder,
-                                    OffsetSizeAndStrideOpInterface sliceOp,
-                                    OpOperand &consumerOp);
+replaceInsertSlicesWithTiledConsumer(OpBuilder &builder,
+                                     ArrayRef<tensor::InsertSliceOp> sliceOps,
+                                     ArrayRef<OpOperand *> consumerOperands);
 
 //===----------------------------------------------------------------------===//
 // Populate functions.
@@ -57,6 +61,12 @@ void populateFoldTensorSubsetIntoVectorTransferPatterns(
 /// tensor.extract_slice and tensor.insert_slice ops for creating the slices.
 void populateMergeConsecutiveInsertExtractSlicePatterns(
     RewritePatternSet &patterns);
+
+/// Appends patterns that are used to bubble up tensor.extract slice op above
+/// its producer. When used as cleanup patterns of tile and fuse, enables fusing
+/// the producer with the consumer even if the producer does not implement the
+/// tiling interface.
+void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that drop redundant tensor.insert_slice
 /// rank expansions.
@@ -85,15 +95,6 @@ void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
 /// used as a fallback tensor -> tensor lowering that decomposes concat such
 /// that it can be bufferized into a sequence of copies.
 void populateDecomposeTensorConcatPatterns(RewritePatternSet &patterns);
-
-/// Populates `patterns` with patterns that simplify `tensor.pack` and
-/// `tensor.unpack` operations.
-void populateSimplifyPackAndUnpackPatterns(RewritePatternSet &patterns);
-
-/// Populates `patterns` with patterns that fold operations like `tensor.pad`
-/// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
-/// respectively.
-void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
 
 using ControlFoldFn = std::function<bool(OpOperand *)>;
 
@@ -140,6 +141,32 @@ FailureOr<Value> buildIndependentOp(OpBuilder &b, tensor::PadOp padOp,
 /// found.
 FailureOr<Value> buildIndependentOp(OpBuilder &b, tensor::EmptyOp emptyOp,
                                     ValueRange independencies);
+
+/// Computes the offsets, sizes, and strides needed to build a collapsed
+/// `sliceOp`. The dimensions to collapse are specified by `reassociation`.
+///
+/// This fails when the specified collapse cannot be represented by a valid
+/// ExtractSliceOp.
+LogicalResult
+getCollapsedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
+                             ArrayRef<ReassociationIndices> reassociation,
+                             SmallVectorImpl<OpFoldResult> &collapsedOffsets,
+                             SmallVectorImpl<OpFoldResult> &collapsedSizes,
+                             SmallVectorImpl<OpFoldResult> &collapsedStrides);
+
+/// Computes the offsets, sizes, and strides needed to build an expanded
+/// `sliceOp`. The dimensions to expand are specified by `reassociation` and
+/// `expandedShape`.
+///
+/// This fails when the specified expansion cannot be represented by a valid
+/// ExtractSliceOp.
+LogicalResult
+getExpandedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
+                            ArrayRef<ReassociationIndices> reassociation,
+                            ArrayRef<int64_t> expandedShape,
+                            SmallVectorImpl<OpFoldResult> &expandedOffsets,
+                            SmallVectorImpl<OpFoldResult> &expandedSizes,
+                            SmallVectorImpl<OpFoldResult> &expandedStrides);
 
 } // namespace tensor
 } // namespace mlir

@@ -1254,6 +1254,36 @@ define <16 x i8> @tbx4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %
   ret <16 x i8> %tmp3
 }
 
+define <16 x i8> @pr135950(<16 x i8> %A, <16 x i8> %B, <16 x i8> %M) {
+; CHECK-SD-LABEL: pr135950:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov.16b v3, v1
+; CHECK-SD-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-SD-NEXT:    mov.16b v4, v0
+; CHECK-SD-NEXT:    mov.16b v5, v3
+; CHECK-SD-NEXT:    tbl.16b v1, { v3, v4 }, v1
+; CHECK-SD-NEXT:    tbl.16b v0, { v4, v5 }, v2
+; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: pr135950:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    mov.16b v3, v2
+; CHECK-GI-NEXT:    movi.2d v4, #0000000000000000
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    tbl.16b v3, { v0, v1 }, v3
+; CHECK-GI-NEXT:    mov.16b v2, v0
+; CHECK-GI-NEXT:    tbl.16b v0, { v1, v2 }, v4
+; CHECK-GI-NEXT:    zip1.16b v0, v3, v0
+; CHECK-GI-NEXT:    ret
+  %t1 = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %M)
+  %t2 = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> %B, <16 x i8> %A, <16 x i8> zeroinitializer)
+  %s = shufflevector <16 x i8> %t1, <16 x i8> %t2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
+  ret <16 x i8> %s
+}
+
+
 declare <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8>, <16 x i8>, <8 x i8>) nounwind readnone
 declare <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
 declare <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8>, <16 x i8>, <16 x i8>, <8 x i8>) nounwind readnone

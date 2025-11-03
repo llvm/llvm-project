@@ -1,9 +1,14 @@
-//===- ActionCacheTest.cpp ------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the tests for ActionCaches.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ActionCache.h"
@@ -16,12 +21,11 @@ using namespace llvm;
 using namespace llvm::cas;
 
 TEST_P(CASTest, ActionCacheHit) {
-  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
   std::unique_ptr<ActionCache> Cache = createActionCache();
 
   std::optional<ObjectProxy> ID;
-  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID),
-                    Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID), Succeeded());
   std::optional<CASID> ResultID;
   ASSERT_THAT_ERROR(Cache->put(*ID, *ID), Succeeded());
   ASSERT_THAT_ERROR(Cache->get(*ID).moveInto(ResultID), Succeeded());
@@ -32,14 +36,12 @@ TEST_P(CASTest, ActionCacheHit) {
 }
 
 TEST_P(CASTest, ActionCacheMiss) {
-  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
   std::unique_ptr<ActionCache> Cache = createActionCache();
 
   std::optional<ObjectProxy> ID1, ID2;
-  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID1),
-                    Succeeded());
-  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "2").moveInto(ID2),
-                    Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID1), Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy({}, "2").moveInto(ID2), Succeeded());
   ASSERT_THAT_ERROR(Cache->put(*ID1, *ID2), Succeeded());
   // This is a cache miss for looking up a key doesn't exist.
   std::optional<CASID> Result1;
@@ -57,14 +59,12 @@ TEST_P(CASTest, ActionCacheMiss) {
 }
 
 TEST_P(CASTest, ActionCacheRewrite) {
-  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
   std::unique_ptr<ActionCache> Cache = createActionCache();
 
   std::optional<ObjectProxy> ID1, ID2;
-  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID1),
-                    Succeeded());
-  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "2").moveInto(ID2),
-                    Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID1), Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy({}, "2").moveInto(ID2), Succeeded());
   ASSERT_THAT_ERROR(Cache->put(*ID1, *ID1), Succeeded());
   // Writing to the same key with different value is error.
   ASSERT_THAT_ERROR(Cache->put(*ID1, *ID2), Failed());

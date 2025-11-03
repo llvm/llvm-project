@@ -1,9 +1,8 @@
-
-; RUN: llc -debugger-tune=gdb -mtriple powerpc-ibm-aix-xcoff < %s | \
+; RUN: llc -debugger-tune=gdb -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=ASM32
-; RUN: llc -debugger-tune=gdb -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN: llc -debugger-tune=gdb -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=ASM64
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj < %s | \
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj < %s | \
 ; RUN:   llvm-dwarfdump --all - | FileCheck %s --check-prefix=DWARF32
 
 source_filename = "1.c"
@@ -38,6 +37,7 @@ entry:
 ; ASM32:               .file   "1.c"
 ; ASM32-NEXT:          .csect ..text..[PR],5
 ; ASM32-NEXT:          .rename ..text..[PR],""
+; ASM32-NEXT:          .machine "COM"
 ; ASM32-NEXT:          .globl  main[DS]                        # -- Begin function main
 ; ASM32-NEXT:          .globl  .main
 ; ASM32-NEXT:          .align  2
@@ -61,7 +61,7 @@ entry:
 ; ASM32-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; ASM32-NEXT:          .byte   0x00                            # Version = 0
 ; ASM32-NEXT:          .byte   0x09                            # Language = CPlusPlus
-; ASM32-NEXT:          .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; ASM32-NEXT:          .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; ASM32-NEXT:                                          # +HasTraceBackTableOffset, -IsInternalProcedure
 ; ASM32-NEXT:                                          # -HasControlledStorage, -IsTOCless
 ; ASM32-NEXT:                                          # -IsFloatingPointPresent
@@ -240,6 +240,7 @@ entry:
 ; ASM64:               .file   "1.c"
 ; ASM64-NEXT:          .csect ..text..[PR],5
 ; ASM64-NEXT:          .rename ..text..[PR],""
+; ASM64-NEXT:          .machine "COM"
 ; ASM64-NEXT:          .globl  main[DS]                        # -- Begin function main
 ; ASM64-NEXT:          .globl  .main
 ; ASM64-NEXT:          .align  2
@@ -263,7 +264,7 @@ entry:
 ; ASM64-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; ASM64-NEXT:          .byte   0x00                            # Version = 0
 ; ASM64-NEXT:          .byte   0x09                            # Language = CPlusPlus
-; ASM64-NEXT:          .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; ASM64-NEXT:          .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; ASM64-NEXT:                                          # +HasTraceBackTableOffset, -IsInternalProcedure
 ; ASM64-NEXT:                                          # -HasControlledStorage, -IsTOCless
 ; ASM64-NEXT:                                          # -IsFloatingPointPresent

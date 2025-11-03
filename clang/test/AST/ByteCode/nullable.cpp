@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1 -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=ref,both      %s
 
 
 constexpr int dummy = 1;

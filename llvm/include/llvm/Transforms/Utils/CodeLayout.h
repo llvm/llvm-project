@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_UTILS_CODELAYOUT_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 
 #include <utility>
 #include <vector>
@@ -40,20 +41,21 @@ struct EdgeCount {
 /// \p EdgeCounts: The execution counts of every edge (jump) in the profile. The
 ///    map also defines the edges in CFG and should include 0-count edges.
 /// \returns The best block order found.
-std::vector<uint64_t> computeExtTspLayout(ArrayRef<uint64_t> NodeSizes,
-                                          ArrayRef<uint64_t> NodeCounts,
-                                          ArrayRef<EdgeCount> EdgeCounts);
+LLVM_ABI std::vector<uint64_t>
+computeExtTspLayout(ArrayRef<uint64_t> NodeSizes, ArrayRef<uint64_t> NodeCounts,
+                    ArrayRef<EdgeCount> EdgeCounts);
 
 /// Estimate the "quality" of a given node order in CFG. The higher the score,
 /// the better the order is. The score is designed to reflect the locality of
 /// the given order, which is anti-correlated with the number of I-cache misses
 /// in a typical execution of the function.
-double calcExtTspScore(ArrayRef<uint64_t> Order, ArrayRef<uint64_t> NodeSizes,
-                       ArrayRef<EdgeCount> EdgeCounts);
+LLVM_ABI double calcExtTspScore(ArrayRef<uint64_t> Order,
+                                ArrayRef<uint64_t> NodeSizes,
+                                ArrayRef<EdgeCount> EdgeCounts);
 
 /// Estimate the "quality" of the current node order in CFG.
-double calcExtTspScore(ArrayRef<uint64_t> NodeSizes,
-                       ArrayRef<EdgeCount> EdgeCounts);
+LLVM_ABI double calcExtTspScore(ArrayRef<uint64_t> NodeSizes,
+                                ArrayRef<EdgeCount> EdgeCounts);
 
 /// Algorithm-specific params for Cache-Directed Sort. The values are tuned for
 /// the best performance of large-scale front-end bound binaries.
@@ -79,12 +81,12 @@ struct CDSortConfig {
 ///    map also defines the edges in CFG and should include 0-count edges.
 /// \p CallOffsets: The offsets of the calls from their source nodes.
 /// \returns The best function order found.
-std::vector<uint64_t> computeCacheDirectedLayout(
+LLVM_ABI std::vector<uint64_t> computeCacheDirectedLayout(
     ArrayRef<uint64_t> FuncSizes, ArrayRef<uint64_t> FuncCounts,
     ArrayRef<EdgeCount> CallCounts, ArrayRef<uint64_t> CallOffsets);
 
 /// Apply a Cache-Directed Sort with a custom config.
-std::vector<uint64_t> computeCacheDirectedLayout(
+LLVM_ABI std::vector<uint64_t> computeCacheDirectedLayout(
     const CDSortConfig &Config, ArrayRef<uint64_t> FuncSizes,
     ArrayRef<uint64_t> FuncCounts, ArrayRef<EdgeCount> CallCounts,
     ArrayRef<uint64_t> CallOffsets);

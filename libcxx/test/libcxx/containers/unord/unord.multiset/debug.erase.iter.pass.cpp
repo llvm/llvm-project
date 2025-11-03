@@ -18,24 +18,24 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    // With end()
-    {
-        int a1[] = {1, 2, 3};
-        std::unordered_multiset<int> l1(a1, a1+3);
-        std::unordered_multiset<int>::const_iterator i = l1.end();
-        TEST_LIBCPP_ASSERT_FAILURE(l1.erase(i),
-                                "unordered container erase(iterator) called with a non-dereferenceable iterator");
-    }
+  // With end()
+  {
+    int a1[] = {1, 2, 3};
+    std::unordered_multiset<int> l1(a1, a1 + 3);
+    std::unordered_multiset<int>::const_iterator i = l1.end();
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(i), "unordered container erase(iterator) called with a non-dereferenceable iterator");
+  }
 
-    // With iterator from another container
-    {
-        int a1[] = {1, 2, 3};
-        std::unordered_multiset<int> l1(a1, a1+3);
-        std::unordered_multiset<int> l2(a1, a1+3);
-        std::unordered_multiset<int>::const_iterator i = l2.begin();
-        TEST_LIBCPP_ASSERT_FAILURE(
-            l1.erase(i), "unordered container erase(iterator) called with an iterator not referring to this container");
-    }
+  // With iterator from another container
+  {
+    int a1[] = {1, 2, 3};
+    std::unordered_multiset<int> l1(a1, a1 + 3);
+    std::unordered_multiset<int> l2(a1, a1 + 3);
+    std::unordered_multiset<int>::const_iterator i = l2.begin();
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(i), "unordered container erase(iterator) called with an iterator not referring to this container");
+  }
 
-    return 0;
+  return 0;
 }

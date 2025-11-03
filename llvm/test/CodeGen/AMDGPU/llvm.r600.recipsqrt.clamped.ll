@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG %s
+; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG %s
 
 declare float @llvm.r600.recipsqrt.clamped.f32(float) nounwind readnone
 

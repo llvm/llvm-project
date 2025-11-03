@@ -1,19 +1,25 @@
-//===- ActionCaches.cpp -----------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file This file implements the underlying ActionCache implementations.
+///
+//===----------------------------------------------------------------------===//
 
 #include "BuiltinCAS.h"
 #include "llvm/ADT/TrieRawHashMap.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/BLAKE3.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/Errc.h"
 
-#define DEBUG_TYPE "action-caches"
+#define DEBUG_TYPE "cas-action-caches"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -34,15 +40,20 @@ private:
   std::array<uint8_t, Size> Value;
 };
 
+/// Builtin InMemory ActionCache that stores the mapping in memory.
 class InMemoryActionCache final : public ActionCache {
 public:
   InMemoryActionCache()
       : ActionCache(builtin::BuiltinCASContext::getDefaultContext()) {}
 
   Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result,
-                bool Globally) final;
+                bool CanBeDistributed) final;
   Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey,
-                                         bool Globally) const final;
+                                         bool CanBeDistributed) const final;
+
+  Error validate() const final {
+    return createStringError("InMemoryActionCache doesn't support validate()");
+  }
 
 private:
   using DataT = CacheEntry<sizeof(HashType)>;
@@ -51,14 +62,17 @@ private:
   InMemoryCacheT Cache;
 };
 
+/// Builtin basic OnDiskActionCache that uses one underlying OnDiskKeyValueDB.
 class OnDiskActionCache final : public ActionCache {
 public:
   Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result,
-                bool Globally) final;
+                bool CanBeDistributed) final;
   Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey,
-                                         bool Globally) const final;
+                                         bool CanBeDistributed) const final;
 
   static Expected<std::unique_ptr<OnDiskActionCache>> create(StringRef Path);
+
+  Error validate() const final;
 
 private:
   static StringRef getHashName() { return "BLAKE3"; }
@@ -69,20 +83,32 @@ private:
   using DataT = CacheEntry<sizeof(HashType)>;
 };
 
+/// Builtin unified ActionCache that wraps around UnifiedOnDiskCache to provide
+/// access to its ActionCache.
+class UnifiedOnDiskActionCache final : public ActionCache {
+public:
+  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result,
+                bool CanBeDistributed) final;
+  Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey,
+                                         bool CanBeDistributed) const final;
+
+  UnifiedOnDiskActionCache(std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB);
+
+  Error validate() const final;
+
+private:
+  std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB;
+};
 } // end namespace
 
-static std::string hashToString(ArrayRef<uint8_t> Hash) {
-  SmallString<64> Str;
-  toHex(Hash, /*LowerCase=*/true, Str);
-  return Str.str().str();
-}
-
-static Error createResultCachePoisonedError(StringRef Key,
+static Error createResultCachePoisonedError(ArrayRef<uint8_t> KeyHash,
                                             const CASContext &Context,
                                             CASID Output,
                                             ArrayRef<uint8_t> ExistingOutput) {
   std::string Existing =
       CASID::create(&Context, toStringRef(ExistingOutput)).toString();
+  SmallString<64> Key;
+  toHex(KeyHash, /*LowerCase=*/true, Key);
   return createStringError(std::make_error_code(std::errc::invalid_argument),
                            "cache poisoned for '" + Key + "' (new='" +
                                Output.toString() + "' vs. existing '" +
@@ -90,7 +116,8 @@ static Error createResultCachePoisonedError(StringRef Key,
 }
 
 Expected<std::optional<CASID>>
-InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key, bool /*Globally*/) const {
+InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key,
+                             bool /*CanBeDistributed*/) const {
   auto Result = Cache.find(Key);
   if (!Result)
     return std::nullopt;
@@ -98,7 +125,7 @@ InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key, bool /*Globally*/) const {
 }
 
 Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
-                                   bool /*Globally*/) {
+                                   bool /*CanBeDistributed*/) {
   DataT Expected(Result.getHash());
   const InMemoryCacheT::value_type &Cached = *Cache.insertLazy(
       Key, [&](auto ValueConstructor) { ValueConstructor.emplace(Expected); });
@@ -107,24 +134,14 @@ Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
   if (Expected.getValue() == Observed.getValue())
     return Error::success();
 
-  return createResultCachePoisonedError(hashToString(Key), getContext(), Result,
+  return createResultCachePoisonedError(Key, getContext(), Result,
                                         Observed.getValue());
 }
-
-static constexpr StringLiteral DefaultName = "actioncache";
 
 namespace llvm::cas {
 
 std::unique_ptr<ActionCache> createInMemoryActionCache() {
   return std::make_unique<InMemoryActionCache>();
-}
-
-std::string getDefaultOnDiskActionCachePath() {
-  SmallString<128> Path;
-  if (!llvm::sys::path::cache_directory(Path))
-    report_fatal_error("cannot get default cache directory");
-  llvm::sys::path::append(Path, builtin::DefaultDir, DefaultName);
-  return Path.str().str();
 }
 
 } // namespace llvm::cas
@@ -147,7 +164,8 @@ OnDiskActionCache::create(StringRef AbsPath) {
 }
 
 Expected<std::optional<CASID>>
-OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key, bool /*Globally*/) const {
+OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key,
+                           bool /*CanBeDistributed*/) const {
   std::optional<ArrayRef<char>> Val;
   if (Error E = DB->get(Key).moveInto(Val))
     return std::move(E);
@@ -157,7 +175,7 @@ OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key, bool /*Globally*/) const {
 }
 
 Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
-                                 bool /*Globally*/) {
+                                 bool /*CanBeDistributed*/) {
   auto ResultHash = Result.getHash();
   ArrayRef Expected((const char *)ResultHash.data(), ResultHash.size());
   ArrayRef<char> Observed;
@@ -168,8 +186,69 @@ Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
     return Error::success();
 
   return createResultCachePoisonedError(
-      hashToString(Key), getContext(), Result,
+      Key, getContext(), Result,
       ArrayRef((const uint8_t *)Observed.data(), Observed.size()));
+}
+
+Error OnDiskActionCache::validate() const {
+  // FIXME: without the matching CAS there is nothing we can check about the
+  // cached values. The hash size is already validated by the DB validator.
+  return DB->validate(nullptr);
+}
+
+UnifiedOnDiskActionCache::UnifiedOnDiskActionCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB)
+    : ActionCache(builtin::BuiltinCASContext::getDefaultContext()),
+      UniDB(std::move(UniDB)) {}
+
+Expected<std::optional<CASID>>
+UnifiedOnDiskActionCache::getImpl(ArrayRef<uint8_t> Key,
+                                  bool /*CanBeDistributed*/) const {
+  std::optional<ArrayRef<char>> Val;
+  if (Error E = UniDB->getKeyValueDB().get(Key).moveInto(Val))
+    return std::move(E);
+  if (!Val)
+    return std::nullopt;
+  auto ID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(*Val);
+  return CASID::create(&getContext(),
+                       toStringRef(UniDB->getGraphDB().getDigest(ID)));
+}
+
+Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
+                                        const CASID &Result,
+                                        bool /*CanBeDistributed*/) {
+  auto Expected = UniDB->getGraphDB().getReference(Result.getHash());
+  if (LLVM_UNLIKELY(!Expected))
+    return Expected.takeError();
+
+  auto Value = ondisk::UnifiedOnDiskCache::getValueFromObjectID(*Expected);
+  std::optional<ArrayRef<char>> Observed;
+  if (Error E = UniDB->getKeyValueDB().put(Key, Value).moveInto(Observed))
+    return E;
+
+  auto ObservedID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(*Observed);
+  if (*Expected == ObservedID)
+    return Error::success();
+
+  return createResultCachePoisonedError(
+      Key, getContext(), Result, UniDB->getGraphDB().getDigest(ObservedID));
+}
+
+Error UnifiedOnDiskActionCache::validate() const {
+  auto ValidateRef = [](FileOffset Offset, ArrayRef<char> Value) -> Error {
+    auto ID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(Value);
+    auto formatError = [&](Twine Msg) {
+      return createStringError(
+          llvm::errc::illegal_byte_sequence,
+          "bad record at 0x" +
+              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
+              Msg.str());
+    };
+    if (ID.getOpaqueData() == 0)
+      return formatError("zero is not a valid ref");
+    return Error::success();
+  };
+  return UniDB->getKeyValueDB().validate(ValidateRef);
 }
 
 Expected<std::unique_ptr<ActionCache>>
@@ -179,4 +258,10 @@ cas::createOnDiskActionCache(StringRef Path) {
 #else
   return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
 #endif
+}
+
+std::unique_ptr<ActionCache>
+cas::builtin::createActionCacheFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
+  return std::make_unique<UnifiedOnDiskActionCache>(std::move(UniDB));
 }

@@ -20,7 +20,9 @@ body:             |
     liveins: $x0, $x1
 
     ; CHECK-LABEL: name: zext_of_load_copy
-    ; CHECK: [[DEF:%[0-9]+]]:gpr64common = IMPLICIT_DEF
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64common = IMPLICIT_DEF
     ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[DEF]], 0 :: (load (s8))
     ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDRBBui]], %subreg.sub_32
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]

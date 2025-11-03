@@ -40,12 +40,6 @@ void buildTerminatedBody(OpBuilder &builder, Location loc);
 namespace mlir {
 namespace scf {
 
-// Insert `loop.yield` at the end of the only region's only block if it
-// does not have a terminator already.  If a new `loop.yield` is inserted,
-// the location is specified by `loc`. If the region is empty, insert a new
-// block first.
-void ensureLoopTerminator(Region &region, Builder &builder, Location loc);
-
 /// Returns the loop parent of an induction variable. If the provided value is
 /// not an induction variable, then return nullptr.
 ForOp getForInductionVarOwner(Value val);
@@ -117,6 +111,10 @@ SmallVector<Value> replaceAndCastForOpIterArg(RewriterBase &rewriter,
                                               OpOperand &operand,
                                               Value replacement,
                                               const ValueTypeCastFnTy &castFn);
+
+/// Helper function to compute the difference between two values. This is used
+/// by the loop implementations to compute the trip count.
+std::optional<llvm::APSInt> computeUbMinusLb(Value lb, Value ub, bool isSigned);
 
 } // namespace scf
 } // namespace mlir

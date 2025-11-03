@@ -29,6 +29,6 @@ end function
 ! CHECK:             fir.result %[[VAL_12]] : f32
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_7]]#0 : f32, !fir.ref<f32>
-! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<f32>
+! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<f32>
 ! CHECK:           return %[[VAL_17]] : f32
 ! CHECK:         }

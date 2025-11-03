@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CFLOAT
-#define _LIBCPP_CFLOAT
+#ifndef _LIBCPP___CXX03_CFLOAT
+#define _LIBCPP___CXX03_CFLOAT
 
 /*
     cfloat synopsis
@@ -69,7 +69,7 @@ Macros:
     LDBL_TRUE_MIN       // C11
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #include <float.h>
 
@@ -85,4 +85,4 @@ Macros:
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_CFLOAT
+#endif // _LIBCPP___CXX03_CFLOAT

@@ -7,23 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_THIS_THREAD_H
-#define _LIBCPP___THREAD_THIS_THREAD_H
+#ifndef _LIBCPP___CXX03___THREAD_THIS_THREAD_H
+#define _LIBCPP___CXX03___THREAD_THIS_THREAD_H
 
-#include <__chrono/steady_clock.h>
-#include <__chrono/time_point.h>
-#include <__condition_variable/condition_variable.h>
-#include <__config>
-#include <__mutex/mutex.h>
-#include <__mutex/unique_lock.h>
-#include <__thread/support.h>
+#include <__cxx03/__chrono/steady_clock.h>
+#include <__cxx03/__chrono/time_point.h>
+#include <__cxx03/__condition_variable/condition_variable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__mutex/mutex.h>
+#include <__cxx03/__mutex/unique_lock.h>
+#include <__cxx03/__thread/support.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -37,7 +37,7 @@ _LIBCPP_HIDE_FROM_ABI void sleep_for(const chrono::duration<_Rep, _Period>& __d)
     // The standard guarantees a 64bit signed integer resolution for nanoseconds,
     // so use INT64_MAX / 1e9 as cut-off point. Use a constant to avoid <climits>
     // and issues with long double folding on PowerPC with GCC.
-    _LIBCPP_CONSTEXPR chrono::duration<long double> __max = chrono::duration<long double>(9223372036.0L);
+    chrono::duration<long double> __max = chrono::duration<long double>(9223372036.0L);
     chrono::nanoseconds __ns;
     if (__d < __max) {
       __ns = chrono::duration_cast<chrono::nanoseconds>(__d);
@@ -71,4 +71,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___THREAD_THIS_THREAD_H
+#endif // _LIBCPP___CXX03___THREAD_THIS_THREAD_H

@@ -66,15 +66,18 @@ static Expected<Symbol &> getCOFFStubTarget(LinkGraph &G, Block &B) {
 
 namespace llvm {
 Error registerCOFFGraphInfo(Session &S, LinkGraph &G) {
+  std::lock_guard<std::mutex> Lock(S.M);
+
   auto FileName = sys::path::filename(G.getName());
-  if (S.FileInfos.count(FileName)) {
+  auto [It, Inserted] = S.FileInfos.try_emplace(FileName);
+  if (!Inserted) {
     return make_error<StringError>("When -check is passed, file names must be "
                                    "distinct (duplicate: \"" +
                                        FileName + "\")",
                                    inconvertibleErrorCode());
   }
 
-  auto &FileInfo = S.FileInfos[FileName];
+  auto &FileInfo = It->second;
   LLVM_DEBUG(
       { dbgs() << "Registering COFF file info for \"" << FileName << "\"\n"; });
   for (auto &Sec : G.sections()) {

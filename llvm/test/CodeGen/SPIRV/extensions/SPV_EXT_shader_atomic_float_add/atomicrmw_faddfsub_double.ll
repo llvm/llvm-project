@@ -8,11 +8,11 @@
 ; CHECK: Extension "SPV_EXT_shader_atomic_float_add"
 ; CHECK-DAG: %[[TyFP64:[0-9]+]] = OpTypeFloat 64
 ; CHECK-DAG: %[[TyInt32:[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: %[[Const0:[0-9]+]] = OpConstant %[[TyFP64]] 0
-; CHECK-DAG: %[[Const42:[0-9]+]] = OpConstant %[[TyFP64]] 42
+; CHECK-DAG: %[[Const0:[0-9]+]] = OpConstantNull %[[TyFP64]]
+; CHECK-DAG: %[[Const42:[0-9]+]] = OpConstant %[[TyFP64]] 42{{$}}
 ; CHECK-DAG: %[[ScopeAllSvmDevices:[0-9]+]] = OpConstantNull %[[TyInt32]]
-; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 16
-; CHECK-DAG: %[[ScopeDevice:[0-9]+]] = OpConstant %[[TyInt32]] 1
+; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 16{{$}}
+; CHECK-DAG: %[[ScopeDevice:[0-9]+]] = OpConstant %[[TyInt32]] 1{{$}}
 ; CHECK-DAG: %[[TyFP64Ptr:[0-9]+]] = OpTypePointer {{[a-zA-Z]+}} %[[TyFP64]]
 ; CHECK-DAG: %[[DblPtr:[0-9]+]] = OpVariable %[[TyFP64Ptr]] {{[a-zA-Z]+}} %[[Const0]]
 ; CHECK: OpAtomicFAddEXT %[[TyFP64]] %[[DblPtr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[Const42]]

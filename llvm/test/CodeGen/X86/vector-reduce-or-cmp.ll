@@ -875,32 +875,118 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: mask_v8i32:
+; AVX-LABEL: mask_v8i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vtestps %ymm0, %ymm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %1 = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %a0)
+  %2 = and i32 %1, 2147483648
+  %3 = icmp eq i32 %2, 0
+  ret i1 %3
+}
+
+define i1 @mask_v8i32_2(<8 x i32> %a0) {
+; SSE2-LABEL: mask_v8i32_2:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    paddd %xmm0, %xmm0
+; SSE2-NEXT:    movmskps %xmm0, %eax
+; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: mask_v8i32_2:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: mask_v8i32_2:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: mask_v8i32:
+; AVX2-LABEL: mask_v8i32_2:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4611686019501129728,4611686019501129728,4611686019501129728,4611686019501129728]
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: mask_v8i32:
+; AVX512-LABEL: mask_v8i32_2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4611686019501129728,4611686019501129728,4611686019501129728,4611686019501129728]
 ; AVX512-NEXT:    vptest %ymm1, %ymm0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %a0)
-  %2 = and i32 %1, 2147483648
+  %2 = and i32 %1, 1073741824
   %3 = icmp eq i32 %2, 0
   ret i1 %3
+}
+
+
+define i1 @signtest_v8i32(<8 x i32> %a0) {
+; SSE2-LABEL: signtest_v8i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    orps %xmm1, %xmm0
+; SSE2-NEXT:    movmskps %xmm0, %eax
+; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: signtest_v8i32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: signtest_v8i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vtestps %ymm0, %ymm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %1 = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %a0)
+  %2 = icmp sgt i32 %1, -1
+  ret i1 %2
+}
+
+define i1 @signtest_v4i64(<4 x i64> %a0) {
+; SSE2-LABEL: signtest_v4i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE2-NEXT:    por %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    testq %rax, %rax
+; SSE2-NEXT:    setns %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: signtest_v4i64:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: signtest_v4i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vtestpd %ymm0, %ymm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %1 = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> %a0)
+  %2 = icmp sgt i64 %1, -1
+  ret i1 %2
 }
 
 define i1 @trunc_v16i16(<16 x i16> %a0) {
@@ -1073,11 +1159,11 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    orl %ecx, %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    je .LBB27_2
+; SSE2-NEXT:    je .LBB30_2
 ; SSE2-NEXT:  # %bb.1:
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB27_2:
+; SSE2-NEXT:  .LBB30_2:
 ; SSE2-NEXT:    movl $1, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -1092,11 +1178,11 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; SSE41-NEXT:    pextrd $2, %xmm1, %eax
 ; SSE41-NEXT:    orl %ecx, %eax
 ; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    je .LBB27_2
+; SSE41-NEXT:    je .LBB30_2
 ; SSE41-NEXT:  # %bb.1:
 ; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    retq
-; SSE41-NEXT:  .LBB27_2:
+; SSE41-NEXT:  .LBB30_2:
 ; SSE41-NEXT:    movl $1, %eax
 ; SSE41-NEXT:    retq
 ;
@@ -1111,11 +1197,11 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX1OR2-NEXT:    vpextrd $2, %xmm0, %eax
 ; AVX1OR2-NEXT:    orl %ecx, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
-; AVX1OR2-NEXT:    je .LBB27_2
+; AVX1OR2-NEXT:    je .LBB30_2
 ; AVX1OR2-NEXT:  # %bb.1:
 ; AVX1OR2-NEXT:    xorl %eax, %eax
 ; AVX1OR2-NEXT:    retq
-; AVX1OR2-NEXT:  .LBB27_2:
+; AVX1OR2-NEXT:  .LBB30_2:
 ; AVX1OR2-NEXT:    movl $1, %eax
 ; AVX1OR2-NEXT:    retq
 ;
@@ -1130,12 +1216,12 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX512F-NEXT:    korw %k0, %k1, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    je .LBB27_2
+; AVX512F-NEXT:    je .LBB30_2
 ; AVX512F-NEXT:  # %bb.1:
 ; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB27_2:
+; AVX512F-NEXT:  .LBB30_2:
 ; AVX512F-NEXT:    movl $1, %eax
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -1151,12 +1237,12 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX512BW-NEXT:    korw %k0, %k1, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    testb $1, %al
-; AVX512BW-NEXT:    je .LBB27_2
+; AVX512BW-NEXT:    je .LBB30_2
 ; AVX512BW-NEXT:  # %bb.1:
 ; AVX512BW-NEXT:    xorl %eax, %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-; AVX512BW-NEXT:  .LBB27_2:
+; AVX512BW-NEXT:  .LBB30_2:
 ; AVX512BW-NEXT:    movl $1, %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -1170,11 +1256,11 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX512BWVL-NEXT:    korw %k0, %k1, %k0
 ; AVX512BWVL-NEXT:    kmovd %k0, %eax
 ; AVX512BWVL-NEXT:    testb $1, %al
-; AVX512BWVL-NEXT:    je .LBB27_2
+; AVX512BWVL-NEXT:    je .LBB30_2
 ; AVX512BWVL-NEXT:  # %bb.1:
 ; AVX512BWVL-NEXT:    xorl %eax, %eax
 ; AVX512BWVL-NEXT:    retq
-; AVX512BWVL-NEXT:  .LBB27_2:
+; AVX512BWVL-NEXT:  .LBB30_2:
 ; AVX512BWVL-NEXT:    movl $1, %eax
 ; AVX512BWVL-NEXT:    retq
   %1 = icmp ne <3 x i32> %a, %b

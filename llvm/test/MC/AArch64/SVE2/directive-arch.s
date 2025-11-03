@@ -4,6 +4,10 @@
 tbx z0.b, z1.b, z2.b
 // CHECK: tbx z0.b, z1.b, z2.b
 
+.arch armv9-a+sve-aes
+aesd z23.b, z23.b, z13.b
+// CHECK: aesd z23.b, z23.b, z13.b
+
 .arch armv9-a+sve2-aes
 aesd z23.b, z23.b, z13.b
 // CHECK: aesd z23.b, z23.b, z13.b
@@ -16,7 +20,11 @@ sm4e z0.s, z0.s, z0.s
 rax1 z0.d, z0.d, z0.d
 // CHECK: rax1 z0.d, z0.d, z0.d
 
-.arch armv9-a+sve2-bitperm
+.arch armv9-a+sve2+sve-bitperm
+bgrp z21.s, z10.s, z21.s
+// CHECK: bgrp z21.s, z10.s, z21.s
+
+.arch armv9-a+ssve-bitperm
 bgrp z21.s, z10.s, z21.s
 // CHECK: bgrp z21.s, z10.s, z21.s
 

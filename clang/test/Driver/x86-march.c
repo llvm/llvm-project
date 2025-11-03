@@ -116,9 +116,21 @@
 // RUN:   | FileCheck %s -check-prefix=pantherlake
 // pantherlake: "-target-cpu" "pantherlake"
 //
+// RUN: %clang --target=x86_64 -c -### %s -march=wildcatlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=wildcatlake
+// wildcatlake: "-target-cpu" "wildcatlake"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=novalake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=novalake
+// novalake: "-target-cpu" "novalake"
+//
 // RUN: %clang --target=x86_64 -c -### %s -march=clearwaterforest 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=clearwaterforest
 // clearwaterforest: "-target-cpu" "clearwaterforest"
+//
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=diamondrapids 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=diamondrapids
+// diamondrapids: "-target-cpu" "diamondrapids"
 //
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont

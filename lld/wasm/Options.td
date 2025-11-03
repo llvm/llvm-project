@@ -132,6 +132,8 @@ def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
 defm reproduce: EEq<"reproduce", "Dump linker invocation and input files for debugging">;
 
+defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
+
 defm rsp_quoting: Eq<"rsp-quoting", "Quoting style for response files">,
   MetaVarName<"[posix,windows]">;
 
@@ -230,6 +232,9 @@ def import_table: FF<"import-table">,
 def initial_heap: JJ<"initial-heap=">,
   HelpText<"Initial size of the heap">;
 
+def page_size: JJ<"page-size=">,
+  HelpText<"The Wasm page size (Defaults to 65536)">;
+
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;
 
@@ -297,13 +302,20 @@ def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
   HelpText<"Codegen optimization level for LTO">;
 def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
+def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def disable_verify: F<"disable-verify">;
 def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
 def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
+def thinlto_emit_index_files: FF<"thinlto-emit-index-files">;
+def thinlto_emit_imports_files: FF<"thinlto-emit-imports-files">;
+def thinlto_index_only: FF<"thinlto-index-only">;
+def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
 def thinlto_jobs: JJ<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
+def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 

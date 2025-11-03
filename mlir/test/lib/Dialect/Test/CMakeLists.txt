@@ -68,9 +68,10 @@ add_mlir_library(MLIRTestDialect
   MLIRTestOpsIncGen
   MLIRTestOpsSyntaxIncGen
   MLIRTestOpsShardGen
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRControlFlowInterfaces
+  MLIRControlFlowTransforms
   MLIRDataLayoutInterfaces
   MLIRDerivedAttributeOpInterface
   MLIRDestinationStyleOpInterface
@@ -84,14 +85,16 @@ add_mlir_library(MLIRTestDialect
   MLIRInferTypeOpInterface
   MLIRLinalgDialect
   MLIRLinalgTransforms
+  MLIRPtrDialect
   MLIRLLVMDialect
+  MLIRNVVMDialect
   MLIRPass
-  MLIRPolynomialDialect
   MLIRReduce
   MLIRTensorDialect
   MLIRTransformUtils
   MLIRTransforms
   MLIRValueBoundsOpInterface
+  MLIRBufferizationDialect
 )
 
 add_mlir_translation_library(MLIRTestFromLLVMIRTranslation

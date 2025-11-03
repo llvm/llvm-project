@@ -18,6 +18,7 @@
 #include <deque>
 #include <tuple>
 #include <functional>
+#include <type_traits>
 #include <vector>
 
 #include "MinSequenceContainer.h"
@@ -39,23 +40,85 @@ static_assert(!CanEmplace<Map, Emplaceable>);
 static_assert(!CanEmplace<Map, int, double>);
 
 template <class KeyContainer, class ValueContainer>
-void test_simple() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
   using R     = std::pair<typename M::iterator, bool>;
-  M m;
-  ASSERT_SAME_TYPE(decltype(m.emplace()), R);
-  R r = m.emplace(typename M::value_type(2, 3.5));
-  assert(r.second);
-  assert(r.first == m.begin());
-  assert(m.size() == 1);
-  assert(m.begin()->first == 2);
-  assert(m.begin()->second == 3.5);
+  {
+    // was empty
+    M m;
+    std::same_as<R> decltype(auto) r = m.emplace(typename M::value_type(2, 3.5));
+    assert(r.second);
+    assert(r.first == m.begin());
+    assert(m.size() == 1);
+    assert(r.first->first == 2);
+    assert(r.first->second == 3.5);
+  }
+  {
+    // key does not exist and inserted at the begin
+    M m                              = {{3, 4.0}, {5, 3.0}, {6, 1.0}, {7, 0.0}};
+    std::same_as<R> decltype(auto) r = m.emplace(typename M::value_type(2, 2.0));
+    assert(r.second);
+    assert(r.first == m.begin());
+    assert(m.size() == 5);
+    assert(r.first->first == 2);
+    assert(r.first->second == 2.0);
+  }
+  {
+    // key does not exist and inserted in the middle
+    M m                              = {{0, 4.0}, {1, 3.0}, {3, 1.0}, {4, 0.0}};
+    std::same_as<R> decltype(auto) r = m.emplace(typename M::value_type(2, 2.0));
+    assert(r.second);
+    assert(r.first == m.begin() + 2);
+    assert(m.size() == 5);
+    assert(r.first->first == 2);
+    assert(r.first->second == 2.0);
+  }
+  {
+    // key does not exist and inserted at the end
+    M m                              = {{0, 4.0}, {1, 3.0}};
+    std::same_as<R> decltype(auto) r = m.emplace(typename M::value_type(2, 2.0));
+    assert(r.second);
+    assert(r.first == m.begin() + 2);
+    assert(m.size() == 3);
+    assert(r.first->first == 2);
+    assert(r.first->second == 2.0);
+  }
+  {
+    // key already exists and original at the begin
+    M m                              = {{2, 4.0}, {3, 3.0}, {5, 1.0}, {6, 0.0}};
+    std::same_as<R> decltype(auto) r = m.emplace(typename M::value_type(2, 2.0));
+    assert(!r.second);
+    assert(r.first == m.begin());
+    assert(m.size() == 4);
+    assert(r.first->first == 2);
+    assert(r.first->second == 4.0);
+  }
+  {
+    // key already exists and original in the middle
+    M m                              = {{0, 4.0}, {2, 3.0}, {3, 1.0}, {4, 0.0}};
+    std::same_as<R> decltype(auto) r = m.emplace(typename M::value_type(2, 2.0));
+    assert(!r.second);
+    assert(r.first == m.begin() + 1);
+    assert(m.size() == 4);
+    assert(r.first->first == 2);
+    assert(r.first->second == 3.0);
+  }
+  {
+    // key already exists and original at the end
+    M m                              = {{0, 4.0}, {1, 3.0}, {2, 1.0}};
+    std::same_as<R> decltype(auto) r = m.emplace(typename M::value_type(2, 2.0));
+    assert(!r.second);
+    assert(r.first == m.begin() + 2);
+    assert(m.size() == 3);
+    assert(r.first->first == 2);
+    assert(r.first->second == 1.0);
+  }
 }
 
 template <class KeyContainer, class ValueContainer>
-void test_emplaceable() {
+constexpr void test_emplaceable() {
   using M = std::flat_map<int, Emplaceable, std::less<int>, KeyContainer, ValueContainer>;
   using R = std::pair<typename M::iterator, bool>;
 
@@ -81,23 +144,38 @@ void test_emplaceable() {
   assert(m.begin()->second == Emplaceable(2, 3.5));
 }
 
-int main(int, char**) {
-  test_simple<std::vector<int>, std::vector<double>>();
-  test_simple<std::deque<int>, std::vector<double>>();
-  test_simple<MinSequenceContainer<int>, MinSequenceContainer<double>>();
-  test_simple<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
+constexpr bool test() {
+  test<std::vector<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
   test_emplaceable<std::vector<int>, std::vector<Emplaceable>>();
-  test_emplaceable<std::deque<int>, std::vector<Emplaceable>>();
   test_emplaceable<MinSequenceContainer<int>, MinSequenceContainer<Emplaceable>>();
   test_emplaceable<std::vector<int, min_allocator<int>>, std::vector<Emplaceable, min_allocator<Emplaceable>>>();
 
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
+    test<std::deque<int>, std::vector<double>>();
+    test_emplaceable<std::deque<int>, std::vector<Emplaceable>>();
+  }
+
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto emplace_func = [](auto& m, auto key_arg, auto value_arg) {
       m.emplace(std::piecewise_construct, std::tuple(key_arg), std::tuple(value_arg));
     };
     test_emplace_exception_guarantee(emplace_func);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

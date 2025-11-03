@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1                                         -verify=ref,both      %s
 
 
 constexpr int a = 10;
@@ -139,4 +139,58 @@ namespace Temporaries {
 
   static_assert(j.a.n == 1, "");  // both-error {{not an integral constant expression}} \
                                   // both-note {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+}
+
+namespace Params {
+  typedef __SIZE_TYPE__ size_t;
+
+  template <class _Tp, size_t _Np>
+  constexpr _Tp* end(_Tp (&__array)[_Np]) noexcept {
+    return __array + _Np;
+  }
+
+
+  struct classnames {
+    const char* elem_;
+    int a;
+  };
+
+  constexpr classnames ClassNames[] = {
+    {"a", 0},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+  };
+
+  constexpr bool foo() {
+    /// This will instantiate end() with ClassNames.
+    /// In Sema, we will constant-evaluate the return statement, which is
+    /// something like __array + 8. The APValue we return for this
+    /// may NOT have a LValuePath set, since it's for a parameter
+    /// of LValueReferenceType.
+    end(ClassNames);
+    return true;
+  }
+
+  static_assert(foo());
+}
+
+namespace ReadFromNullBlockPtr {
+  struct S {
+    int *const &t;
+  };
+
+  void foo(int x) {
+    constexpr S s = {&x}; // both-error {{must be initialized by a constant expression}} \
+                          // both-note {{reference to temporary}} \
+                          // both-note {{created here}} \
+                          // ref-note {{declared here}}
+    static_assert(s.t == &x, ""); // both-error {{not an integral constant expression}} \
+                                  // expected-note {{read of dereferenced null pointer}} \
+                                  // ref-note {{initializer of 's' is not a constant expression}}
+  }
 }

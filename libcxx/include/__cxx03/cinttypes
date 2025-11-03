@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CINTTYPES
-#define _LIBCPP_CINTTYPES
+#ifndef _LIBCPP___CXX03_CINTTYPES
+#define _LIBCPP___CXX03_CINTTYPES
 
 /*
     cinttypes synopsis
 
 This entire header is C99 / C++0X
 
-#include <cstdint>  // <cinttypes> includes <cstdint>
+#include <__cxx03/cstdint>  // <cinttypes> includes <cstdint>
 
 Macros:
 
@@ -234,12 +234,12 @@ uintmax_t wcstoumax(const wchar_t* restrict nptr, wchar_t** restrict endptr, int
 }  // std
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 // standard-mandated includes
 
 // [cinttypes.syn]
-#include <cstdint>
+#include <__cxx03/cstdint>
 
 #include <inttypes.h>
 
@@ -267,4 +267,4 @@ using ::wcstoumax _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CINTTYPES
+#endif // _LIBCPP___CXX03_CINTTYPES

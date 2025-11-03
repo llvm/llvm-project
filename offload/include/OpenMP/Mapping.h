@@ -49,9 +49,46 @@ public:
 /// Information about shadow pointers.
 struct ShadowPtrInfoTy {
   void **HstPtrAddr = nullptr;
-  void *HstPtrVal = nullptr;
   void **TgtPtrAddr = nullptr;
-  void *TgtPtrVal = nullptr;
+  int64_t PtrSize = sizeof(void *); // Size of the pointer/descriptor
+
+  // Store the complete contents for both host and target pointers/descriptors.
+  // 96 bytes is chosen as the "Small" size to cover simple Fortran
+  // descriptors of up to 3 dimensions.
+  llvm::SmallVector<char, 96> HstPtrContent;
+  llvm::SmallVector<char, 96> TgtPtrContent;
+
+  ShadowPtrInfoTy(void **HstPtrAddr, void **TgtPtrAddr, void *TgtPteeBase,
+                  int64_t PtrSize)
+      : HstPtrAddr(HstPtrAddr), TgtPtrAddr(TgtPtrAddr), PtrSize(PtrSize),
+        HstPtrContent(PtrSize), TgtPtrContent(PtrSize) {
+    constexpr int64_t VoidPtrSize = sizeof(void *);
+    assert(HstPtrAddr != nullptr && "HstPtrAddr is nullptr");
+    assert(TgtPtrAddr != nullptr && "TgtPtrAddr is nullptr");
+    assert(PtrSize >= VoidPtrSize && "PtrSize is less than sizeof(void *)");
+
+    void *HstPteeBase = *HstPtrAddr;
+    // The first VoidPtrSize bytes for HstPtrContent/TgtPtrContent are from
+    // HstPteeBase/TgtPteeBase.
+    std::memcpy(HstPtrContent.data(), &HstPteeBase, VoidPtrSize);
+    std::memcpy(TgtPtrContent.data(), &TgtPteeBase, VoidPtrSize);
+
+    // If we are not dealing with Fortran descriptors (pointers larger than
+    // VoidPtrSize), then that's that.
+    if (PtrSize <= VoidPtrSize)
+      return;
+
+    // For larger pointers, i.e. Fortran descriptors, the remaining contents of
+    // the descriptor come from the host descriptor, i.e. HstPtrAddr.
+    std::memcpy(HstPtrContent.data() + VoidPtrSize,
+                reinterpret_cast<char *>(HstPtrAddr) + VoidPtrSize,
+                PtrSize - VoidPtrSize);
+    std::memcpy(TgtPtrContent.data() + VoidPtrSize,
+                reinterpret_cast<char *>(HstPtrAddr) + VoidPtrSize,
+                PtrSize - VoidPtrSize);
+  }
+
+  ShadowPtrInfoTy() = delete;
 
   bool operator==(const ShadowPtrInfoTy &Other) const {
     return HstPtrAddr == Other.HstPtrAddr;
@@ -243,9 +280,25 @@ public:
     auto Pair = States->ShadowPtrInfos.insert(ShadowPtrInfo);
     if (Pair.second)
       return true;
+
     // Check for a stale entry, if found, replace the old one.
-    if ((*Pair.first).TgtPtrVal == ShadowPtrInfo.TgtPtrVal)
+
+    // For Fortran descriptors, we need to compare their full contents,
+    // as the starting address may be the same while other fields have
+    // been updated. e.g.
+    //
+    //   !$omp target enter data map(x(1:100)) !             (1)
+    //   p => x(10: 19)
+    //   !$omp target enter data map(p, p(:)) !              (2)
+    //   p => x(5: 9)
+    //   !$omp target enter data map(attach(always): p(:)) ! (3)
+    //
+    // While &desc_p and &p(1) (TgtPtrAddr and first "sizeof(void*)" bytes of
+    // TgtPtrContent) are same for (2) and (3), the pointer attachment for (3)
+    // needs to update the bounds information in the descriptor of p on device.
+    if ((*Pair.first).TgtPtrContent == ShadowPtrInfo.TgtPtrContent)
       return false;
+
     States->ShadowPtrInfos.erase(ShadowPtrInfo);
     return addShadowPointer(ShadowPtrInfo);
   }
@@ -417,12 +470,42 @@ struct MapperComponentsTy {
 typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t,
                                 void *);
 
+/// Structure to store information about a single ATTACH map entry.
+struct AttachMapInfo {
+  void *PointerBase;
+  void *PointeeBegin;
+  int64_t PointerSize;
+  int64_t MapType;
+  map_var_info_t Pointername;
+
+  AttachMapInfo(void *PointerBase, void *PointeeBegin, int64_t Size,
+                int64_t Type, map_var_info_t Name)
+      : PointerBase(PointerBase), PointeeBegin(PointeeBegin), PointerSize(Size),
+        MapType(Type), Pointername(Name) {}
+};
+
+/// Structure to track ATTACH entries and new allocations across recursive calls
+/// (for handling mappers) to targetDataBegin for a given construct.
+struct AttachInfoTy {
+  /// ATTACH map entries for deferred processing.
+  llvm::SmallVector<AttachMapInfo> AttachEntries;
+
+  /// Key: host pointer, Value: allocation size.
+  llvm::DenseMap<void *, int64_t> NewAllocations;
+
+  AttachInfoTy() = default;
+
+  // Delete copy constructor and copy assignment operator to prevent copying
+  AttachInfoTy(const AttachInfoTy &) = delete;
+  AttachInfoTy &operator=(const AttachInfoTy &) = delete;
+};
+
 // Function pointer type for targetData* functions (targetDataBegin,
 // targetDataEnd and targetDataUpdate).
 typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
                                    void **, int64_t *, int64_t *,
                                    map_var_info_t *, void **, AsyncInfoTy &,
-                                   bool);
+                                   AttachInfoTy *, bool);
 
 void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
                                bool toStdOut = false);
@@ -431,19 +514,25 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     void **ArgsBase, void **Args, int64_t *ArgSizes,
                     int64_t *ArgTypes, map_var_info_t *ArgNames,
                     void **ArgMappers, AsyncInfoTy &AsyncInfo,
+                    AttachInfoTy *AttachInfo = nullptr,
                     bool FromMapper = false);
 
 int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *ArgNames,
                   void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                  bool FromMapper = false);
+                  AttachInfoTy *AttachInfo = nullptr, bool FromMapper = false);
 
 int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                      void **ArgsBase, void **Args, int64_t *ArgSizes,
                      int64_t *ArgTypes, map_var_info_t *ArgNames,
                      void **ArgMappers, AsyncInfoTy &AsyncInfo,
+                     AttachInfoTy *AttachInfo = nullptr,
                      bool FromMapper = false);
+
+// Process deferred ATTACH map entries collected during targetDataBegin.
+int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
+                         AsyncInfoTy &AsyncInfo);
 
 struct MappingInfoTy {
   MappingInfoTy(DeviceTy &Device) : Device(Device) {}

@@ -7,16 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/ferror.h"
-#include "file.h"
-#include "src/__support/macros/config.h"
 
+#include "file.h"
 #include "hdr/types/FILE.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, ferror, (::FILE * stream)) {
   int ret;
-  rpc::Client::Port port = rpc::client.open<RPC_FERROR>();
+  rpc::Client::Port port = rpc::client.open<LIBC_FERROR>();
   port.send_and_recv(
       [=](rpc::Buffer *buffer, uint32_t) {
         buffer->data[0] = file::from_stream(stream);

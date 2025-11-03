@@ -1,4 +1,4 @@
-//===- MappedFileRegionBumpPtrTest.cpp ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Program.h"
-#include "llvm/CAS/MappedFileRegionBumpPtr.h"
+#include "llvm/CAS/MappedFileRegionArena.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #if defined(__APPLE__)
 #include <crt_externs.h>
@@ -21,6 +25,8 @@ extern char **environ;
 
 using namespace llvm;
 using namespace llvm::cas;
+
+#if LLVM_ENABLE_ONDISK_CAS
 
 extern const char *TestMainArgv0;
 static char ProgramID = 0;
@@ -50,7 +56,7 @@ protected:
       ArrayRef<char> Ref{reinterpret_cast<char const *>(Var),
                          Len * sizeof(*Var)};
       EnvStorage.emplace_back();
-      auto convStatus = convertUTF16ToUTF8String(Ref, EnvStorage.back());
+      auto convStatus = llvm::convertUTF16ToUTF8String(Ref, EnvStorage.back());
       EXPECT_TRUE(convStatus);
       return EnvStorage.back();
 #else
@@ -77,20 +83,18 @@ protected:
   ArrayRef<StringRef> getEnviron() const { return EnvTable; }
 };
 
-#if LLVM_ENABLE_ONDISK_CAS
+static Error emptyConstructor(MappedFileRegionArena &) {
+  return Error::success();
+}
 
-TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
+TEST_F(CASProgramTest, MappedFileRegionArenaTest) {
   auto TestAllocator = [](StringRef Path) {
-    auto NewFileConstructor = [&](MappedFileRegionBumpPtr &Alloc) -> Error {
-      Alloc.initializeBumpPtr(0);
-      return Error::success();
-    };
-
-    auto Alloc = MappedFileRegionBumpPtr::create(
-        Path, /*Capacity=*/10 * 1024 * 1024,
-        /*BumpPtrOffset=*/0, NewFileConstructor);
-    if (!Alloc)
-      ASSERT_TRUE(false);
+    std::optional<MappedFileRegionArena> Alloc;
+    ASSERT_THAT_ERROR(
+        MappedFileRegionArena::create(Path, /*Capacity=*/10 * 1024 * 1024,
+                                      /*HeaderOffset=*/0, emptyConstructor)
+            .moveInto(Alloc),
+        Succeeded());
 
     std::vector<unsigned *> AllocatedPtr;
     AllocatedPtr.resize(100);
@@ -100,7 +104,7 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
           [&](unsigned Idx) {
             // Allocate a buffer that is larger than needed so allocator hits
             // additional pages for test coverage.
-            unsigned *P = (unsigned *)Alloc->allocate(100);
+            unsigned *P = (unsigned *)cantFail(Alloc->allocate(100));
             *P = Idx;
             AllocatedPtr[Idx] = P;
           },
@@ -118,13 +122,13 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
   }
 
   SmallString<128> FilePath;
-  sys::fs::createUniqueDirectory("MappedFileRegionBumpPtr", FilePath);
+  sys::fs::createUniqueDirectory("MappedFileRegionArena", FilePath);
   sys::path::append(FilePath, "allocation-file");
 
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &ProgramID);
   StringRef Argv[] = {
-      Executable, "--gtest_filter=CASProgramTest.MappedFileRegionBumpPtrTest"};
+      Executable, "--gtest_filter=CASProgramTest.MappedFileRegionArenaTest"};
 
   // Add LLVM_PROGRAM_TEST_LOCKED_FILE to the environment of the child.
   std::string EnvVar = "LLVM_CAS_TEST_MAPPED_FILE_REGION=";
@@ -138,10 +142,94 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
   TestAllocator(FilePath);
 
   ASSERT_FALSE(ExecutionFailed) << Error;
-  ASSERT_TRUE(Error.empty());
   ASSERT_NE(PI.Pid, sys::ProcessInfo::InvalidPid) << "Invalid process id";
-  llvm::sys::Wait(PI, /*SecondsToWait=*/5, &Error);
+  PI = llvm::sys::Wait(PI, /*SecondsToWait=*/5, &Error);
+  ASSERT_TRUE(PI.ReturnCode == 0);
   ASSERT_TRUE(Error.empty());
+
+  // Clean up after both processes finish testing.
+  sys::fs::remove(FilePath);
+  sys::fs::remove_directories(sys::path::parent_path(FilePath));
+}
+
+TEST_F(CASProgramTest, MappedFileRegionArenaSizeTest) {
+  using namespace std::chrono_literals;
+  if (const char *File = getenv("LLVM_CAS_TEST_MAPPED_FILE_REGION")) {
+    ExponentialBackoff Backoff(5s);
+    do {
+      if (sys::fs::exists(File)) {
+        break;
+      }
+    } while (Backoff.waitForNextAttempt());
+
+    std::optional<MappedFileRegionArena> Alloc;
+    ASSERT_THAT_ERROR(MappedFileRegionArena::create(File, /*Capacity=*/1024,
+                                                    /*HeaderOffset=*/0,
+                                                    emptyConstructor)
+                          .moveInto(Alloc),
+                      Succeeded());
+    ASSERT_TRUE(Alloc->capacity() == 2048);
+
+    Alloc.reset();
+    ASSERT_THAT_ERROR(MappedFileRegionArena::create(File, /*Capacity=*/4096,
+                                                    /*HeaderOffset=*/0,
+                                                    emptyConstructor)
+                          .moveInto(Alloc),
+                      Succeeded());
+    ASSERT_TRUE(Alloc->capacity() == 2048);
+    Alloc.reset();
+
+    ASSERT_THAT_ERROR(
+        MappedFileRegionArena::create(File, /*Capacity=*/2048,
+                                      /*HeaderOffset=*/32, emptyConstructor)
+            .moveInto(Alloc),
+        FailedWithMessage(
+            "specified header offset (32) does not match existing config (0)"));
+
+    ASSERT_THAT_ERROR(MappedFileRegionArena::create(File, /*Capacity=*/2048,
+                                                    /*HeaderOffset=*/0,
+                                                    emptyConstructor)
+                          .moveInto(Alloc),
+                      Succeeded());
+
+    exit(0);
+  }
+
+  SmallString<128> FilePath;
+  sys::fs::createUniqueDirectory("MappedFileRegionArena", FilePath);
+  sys::path::append(FilePath, "allocation-file");
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramID);
+  StringRef Argv[] = {
+      Executable,
+      "--gtest_filter=CASProgramTest.MappedFileRegionArenaSizeTest"};
+
+  // Add LLVM_PROGRAM_TEST_LOCKED_FILE to the environment of the child.
+  std::string EnvVar = "LLVM_CAS_TEST_MAPPED_FILE_REGION=";
+  EnvVar += FilePath.str();
+  addEnvVar(EnvVar);
+
+  std::optional<MappedFileRegionArena> Alloc;
+  ASSERT_THAT_ERROR(MappedFileRegionArena::create(FilePath, /*Capacity=*/2048,
+                                                  /*HeaderOffset=*/0,
+                                                  emptyConstructor)
+                        .moveInto(Alloc),
+                    Succeeded());
+
+  std::string Error;
+  bool ExecutionFailed;
+  sys::ProcessInfo PI = sys::ExecuteNoWait(Executable, Argv, getEnviron(), {},
+                                           0, &Error, &ExecutionFailed);
+
+  ASSERT_FALSE(ExecutionFailed) << Error;
+  ASSERT_NE(PI.Pid, sys::ProcessInfo::InvalidPid) << "Invalid process id";
+  PI = llvm::sys::Wait(PI, /*SecondsToWait=*/100, &Error);
+  ASSERT_TRUE(PI.ReturnCode == 0);
+  ASSERT_TRUE(Error.empty());
+
+  // Size is still the requested 2048.
+  ASSERT_TRUE(Alloc->capacity() == 2048);
 
   // Clean up after both processes finish testing.
   sys::fs::remove(FilePath);

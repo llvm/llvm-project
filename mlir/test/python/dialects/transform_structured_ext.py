@@ -103,6 +103,96 @@ def testFuseIntoContainingOpCompact(target):
 
 @run
 @create_sequence
+def testFuseOpCompact(target):
+    structured.FuseOp(
+        target, tile_sizes=[4, 8], tile_interchange=[0, 1], apply_cleanup=True
+    )
+    # CHECK-LABEL: TEST: testFuseOpCompact
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
+    # CHECK-SAME: interchange [0, 1] {apply_cleanup}
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpCompactForall(target):
+    structured.FuseOp(
+        target,
+        tile_sizes=[4, 8],
+        apply_cleanup=True,
+        use_forall=True,
+    )
+    # CHECK-LABEL: TEST: testFuseOpCompact
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
+    # CHECK-SAME: {apply_cleanup, use_forall}
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpNoArg(target):
+    structured.FuseOp(target)
+    # CHECK-LABEL: TEST: testFuseOpNoArg
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}} = transform.structured.fuse %{{.*}} :
+    # CHECK-SAME: (!transform.any_op) -> !transform.any_op
+
+
+@run
+@create_sequence
+def testFuseOpParams(target):
+    structured.FuseOp(
+        target,
+        tile_sizes=[constant_param(4), Attribute.parse("8")],
+        tile_interchange=[constant_param(0), Attribute.parse("1")],
+    )
+    # CHECK-LABEL: TEST: testFuseOpParams
+    # CHECK: transform.sequence
+    # CHECK-DAG: %[[P:.*]] = transform.param.constant 4
+    # CHECK-DAG: %[[I:.*]] = transform.param.constant 0
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse
+    # CHECK-SAME: tile_sizes [%[[P]], 8]
+    # CHECK-SAME: interchange [%[[I]], 1]
+    # CHECK-SAME: (!transform.any_op, !transform.param<i64>, !transform.param<i64>) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpHandles(target):
+    size1 = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    ichange1 = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(
+        target,
+        tile_sizes=[size1, 8],
+        tile_interchange=[ichange1, 1],
+    )
+    # CHECK-LABEL: TEST: testFuseOpHandles
+    # CHECK: transform.sequence
+    # CHECK: %[[H:.*]] = transform.structured.match
+    # CHECK: %[[I:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse
+    # CHECK-SAME: tile_sizes [%[[H]], 8]
+    # CHECK-SAME: interchange [%[[I]], 1]
+    # CHECK-SAME: (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpAttributes(target):
+    attr = DenseI64ArrayAttr.get([4, 8])
+    ichange = DenseI64ArrayAttr.get([0, 1])
+    structured.FuseOp(target, tile_sizes=attr, tile_interchange=ichange)
+    # CHECK-LABEL: TEST: testFuseOpAttributes
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
+    # CHECK-SAME: interchange [0, 1]
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testGeneralize(target):
     structured.GeneralizeOp(target)
     # CHECK-LABEL: TEST: testGeneralize
@@ -361,11 +451,15 @@ def testScalarize(target):
 @run
 @create_sequence
 def testSplit(target):
-    split = structured.SplitOp(target, dimension=1, chunk_sizes=42)
+    handle = structured.SplitOp(target, dimension=1, chunk_sizes=42)
+    split = transform.SplitHandleOp(
+        [transform.AnyOpType.get(), transform.AnyOpType.get()], handle
+    )
     structured.SplitOp(split.results[0], dimension=3, chunk_sizes=split.results[1])
     # CHECK-LABEL: TEST: testSplit
-    # CHECK: %[[F:.+]], %[[S:.+]] = transform.structured.split %{{.*}} after 42 {dimension = 1
-    # CHECK: transform.structured.split %[[F]] after %[[S]] {dimension = 3
+    # CHECK: %[[G:.+]] = transform.structured.split %{{.*}} after 42 {dimension = 1
+    # CHECK: %[[F:.+]]:2 = split_handle %[[G]]
+    # CHECK: transform.structured.split %[[F]]#0 after %[[F]]#1 {dimension = 3
 
 
 @run

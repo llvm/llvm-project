@@ -22,8 +22,6 @@ enum kmp_target_offload_kind_t {
   tgt_mandatory = 2
 };
 
-extern "C" int __kmpc_get_target_offload(void) __attribute__((weak));
-
 class OffloadPolicy {
 
   OffloadPolicy(PluginManager &PM) {
@@ -46,10 +44,15 @@ class OffloadPolicy {
         Kind = DISABLED;
       }
       return;
-    };
+    }
   }
 
 public:
+  static bool isOffloadDisabled() {
+    return static_cast<kmp_target_offload_kind_t>(
+               __kmpc_get_target_offload()) == tgt_disabled;
+  }
+
   static const OffloadPolicy &get(PluginManager &PM) {
     static OffloadPolicy OP(PM);
     return OP;

@@ -32,11 +32,11 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_AVAILABILITY_SYNC jthread {
+class jthread {
 public:
   // types
   using id                 = thread::id;
@@ -129,7 +129,7 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 _LIBCPP_POP_MACROS
 

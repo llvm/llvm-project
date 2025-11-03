@@ -1,0 +1,26 @@
+# REQUIRES: x86
+
+# Pulling in on both a dllimport symbol and a static symbol should only warn.
+# RUN: split-file %s %t.dir
+# RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/other.s -o %t.other.obj
+# RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/main.s -o %t.main.obj
+# RUN: llvm-lib %t.other.obj -out:%t.other.lib
+# RUN: lld-link %t.other.lib %t.main.obj -out:%t.dll -dll 2>&1 | FileCheck %s
+
+CHECK: warning: {{.*}} locally defined symbol imported: foo {{.*}} [LNK4217]
+
+#--- other.s
+.text
+.globl other
+.globl foo
+other:
+  ret
+foo:
+  ret
+#--- main.s
+.text
+.global _DllMainCRTStartup
+_DllMainCRTStartup:
+  call *other(%rip)
+  call *__imp_foo(%rip)
+  ret
