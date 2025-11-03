@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*}}-windows-{{.*}}
+
 // RUN: %clang -S -fsanitize=type -emit-llvm -o - -fsanitize=type %s \
 // RUN:     | FileCheck %s --check-prefixes=CHECK-NO-OUTLINE
 // RUN: %clang -S -fsanitize=type -emit-llvm -o - -fsanitize=type %s \
