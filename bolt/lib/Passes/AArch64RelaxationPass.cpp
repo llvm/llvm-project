@@ -1,4 +1,4 @@
-//===- bolt/Passes/AArch64RelaxationPass.cpp
+//===- bolt/Passes/AArch64RelaxationPass.cpp ------------------------------===//
 //----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -22,7 +22,7 @@ namespace opts {
 extern cl::OptionCategory BoltCategory;
 
 static cl::opt<bool> AArch64PassOpt(
-    "adr-ldr-relaxation",
+    "aarch64-relaxation",
     cl::desc("Replace ARM non-local ADR/LDR instructions with ADRP"),
     cl::init(true), cl::cat(BoltCategory), cl::ReallyHidden);
 } // namespace opts

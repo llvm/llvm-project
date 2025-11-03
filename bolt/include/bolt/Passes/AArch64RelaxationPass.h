@@ -1,4 +1,4 @@
-//===- bolt/Passes/ADRRelaxationPass.h --------------------------*- C++ -*-===//
+//===- bolt/Passes/AArch64RelaxationPass.h ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef BOLT_PASSES_ADRLDRRELAXATIONPASS_H
-#define BOLT_PASSES_ADRLDRRELAXATIONPASS_H
+#ifndef BOLT_PASSES_AARCH64RELAXATIONPASS_H
+#define BOLT_PASSES_AARCH64RELAXATIONPASS_H
 
 #include "bolt/Passes/BinaryPasses.h"
 

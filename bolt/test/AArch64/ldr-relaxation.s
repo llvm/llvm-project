@@ -1,5 +1,5 @@
 ## Check that LDR relaxation will fail since LDR is inside a non-simple
-## function and there is no NOP next ot it.
+## function and there is no NOP next to it.
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:    --defsym FAIL=1 %s -o %t.o
