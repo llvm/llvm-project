@@ -38,6 +38,7 @@ Code example
 
 .. code-block:: cpp
 
+  // main.cpp
   #include <clang-c/Index.h>
   #include <iostream>
 
@@ -56,6 +57,18 @@ Code example
     }
     CXCursor cursor = clang_getTranslationUnitCursor(unit); //Obtain a cursor at the root of the translation unit
   }
+
+.. code-block:: cmake
+
+  # CMakeLists.txt
+  cmake_minimum_required(VERSION 3.30)
+  project(my_clang_tool VERSION 0.1.0)
+
+  find_package(Clang CONFIG REQUIRED)
+
+  add_executable(my_clang_tool main.cpp)
+  target_include_directories(my_clang_tool PRIVATE ${CLANG_INCLUDE_DIRS})
+  target_link_libraries(my_clang_tool PRIVATE libclang)
 
 Visiting elements of an AST
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -283,6 +296,7 @@ Complete example code
 
 .. code-block:: cpp
 
+  // main.cpp
   #include <clang-c/Index.h>
   #include <iostream>
 
@@ -356,6 +370,17 @@ Complete example code
     );
   }
 
+.. code-block:: cmake
+
+  # CMakeLists.txt
+  cmake_minimum_required(VERSION 3.30)
+  project(my_clang_tool VERSION 0.1.0)
+
+  find_package(Clang CONFIG REQUIRED)
+
+  add_executable(my_clang_tool main.cpp)
+  target_include_directories(my_clang_tool PRIVATE ${CLANG_INCLUDE_DIRS})
+  target_link_libraries(my_clang_tool PRIVATE libclang)
 
 .. _Index.h: https://github.com/llvm/llvm-project/blob/main/clang/include/clang-c/Index.h
 
