@@ -145,19 +145,15 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%6> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:     ACTIVE-LANE-MASK-PHI vp<%7> = phi vp<%active.lane.mask.entry>, vp<%active.lane.mask.next>
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi vp<%4>, ir<%add> (VF scaled by 1/4)
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi vp<%4>, vp<%11> (VF scaled by 1/4)
 ; CHECK-NEXT:     vp<%8> = SCALAR-STEPS vp<%6>, ir<1>, vp<%0>
 ; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%8>
 ; CHECK-NEXT:     vp<%9> = vector-pointer ir<%gep.a>
 ; CHECK-NEXT:     WIDEN ir<%load.a> = load vp<%9>, vp<%7>
-; CHECK-NEXT:     WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i32
 ; CHECK-NEXT:     CLONE ir<%gep.b> = getelementptr ir<%b>, vp<%8>
 ; CHECK-NEXT:     vp<%10> = vector-pointer ir<%gep.b>
 ; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<%10>, vp<%7>
-; CHECK-NEXT:     WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32
-; CHECK-NEXT:     WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
-; CHECK-NEXT:     EMIT vp<%11> = select vp<%7>, ir<%mul>, ir<0>
-; CHECK-NEXT:     PARTIAL-REDUCE ir<%add> = add ir<%accum>, vp<%11>, vp<%7>
+; CHECK-NEXT:     EXPRESSION vp<%11> = vp<%7> + partial.reduce.add (mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32), <badref>)
 ; CHECK-NEXT:     EMIT vp<%index.next> = add vp<%6>, vp<%1>
 ; CHECK-NEXT:     EMIT vp<%12> = VF * Part + vp<%6>
 ; CHECK-NEXT:     EMIT vp<%active.lane.mask.next> = active lane mask vp<%12>, vp<%5>, ir<1>
@@ -165,6 +161,15 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:     EMIT branch-on-cond vp<%13>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<%15> = compute-reduction-result ir<%accum>, vp<%11>
+; CHECK-NEXT: Successor(s): ir-bb<exit>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<%15> from middle.block)
+; CHECK-NEXT: No successors
 entry:
   br label %for.body
 
