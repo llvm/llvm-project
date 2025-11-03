@@ -78,10 +78,10 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
   bool EmbedFileNotFound(StringRef FileName) override {
     DepCollector.maybeAddDependency(
         llvm::sys::path::remove_leading_dotslash(FileName),
-        /*FromModule=*/ false,
-        /*IsSystem=*/ false,
-        /*IsModuleFile=*/ false,
-        /*IsMissing=*/ true);
+        /*FromModule=*/false,
+        /*IsSystem=*/false,
+        /*IsModuleFile=*/false,
+        /*IsMissing=*/true);
     // Return true to silence the file not found diagnostic.
     return true;
   }
