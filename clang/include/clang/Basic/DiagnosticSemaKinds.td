@@ -9401,7 +9401,7 @@ def err_atomic_exclusive_builtin_pointer_size : Error<
   "%select{|,| or }7%select{|8}8"
   " byte type (%0 invalid)">;
 def err_atomic_exclusive_builtin_pointer_size_none : Error<
-  "load and store exclusive builtins are not available on this architecture">;
+  "%select{|eight-byte }0load and store exclusive builtins are not available on this architecture">;
 def err_atomic_builtin_ext_int_size : Error<
   "atomic memory operand must have a power-of-two size">;
 def err_atomic_builtin_bit_int_prohibit : Error<

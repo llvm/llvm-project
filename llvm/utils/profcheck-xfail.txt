@@ -332,10 +332,10 @@ Instrumentation/MemorySanitizer/AArch64/arm64-vshift.ll
 Instrumentation/MemorySanitizer/AArch64/module-flags-aarch64.ll
 Instrumentation/MemorySanitizer/AArch64/neon_vst_float.ll
 Instrumentation/MemorySanitizer/AArch64/qshrn.ll
-Instrumentation/MemorySanitizer/AArch64/sme-aarch64-svcount-mini.ll
-Instrumentation/MemorySanitizer/AArch64/sme-aarch64-svcount.ll
-Instrumentation/MemorySanitizer/AArch64/sme2-intrinsics-add-mini.ll
 Instrumentation/MemorySanitizer/AArch64/sme2-intrinsics-add.ll
+Instrumentation/MemorySanitizer/AArch64/sme2-intrinsics-add-mini.ll
+Instrumentation/MemorySanitizer/AArch64/sme-aarch64-svcount.ll
+Instrumentation/MemorySanitizer/AArch64/sme-aarch64-svcount-mini.ll
 Instrumentation/MemorySanitizer/AArch64/vararg.ll
 Instrumentation/MemorySanitizer/AArch64/vararg_shadow.ll
 Instrumentation/MemorySanitizer/abs-vector.ll
@@ -517,8 +517,11 @@ Instrumentation/TypeSanitizer/alloca-only.ll
 Instrumentation/TypeSanitizer/anon.ll
 Instrumentation/TypeSanitizer/basic.ll
 Instrumentation/TypeSanitizer/basic-nosan.ll
+Instrumentation/TypeSanitizer/basic_outlined.ll
+Instrumentation/TypeSanitizer/basic_verify_outlined.ll
 Instrumentation/TypeSanitizer/byval.ll
 Instrumentation/TypeSanitizer/globals.ll
+Instrumentation/TypeSanitizer/globals_outlined.ll
 Instrumentation/TypeSanitizer/invalid-metadata.ll
 Instrumentation/TypeSanitizer/memintrinsics.ll
 Instrumentation/TypeSanitizer/nosanitize.ll
@@ -550,6 +553,7 @@ tools/UpdateTestChecks/update_test_checks/stable_ir_values5.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values6.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values_funcs.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values.test
+tools/UpdateTestChecks/update_test_checks/switch_case.test
 tools/UpdateTestChecks/update_test_checks/tbaa-semantics-checks.test
 tools/UpdateTestChecks/update_test_checks/various_ir_values_dbgrecords.test
 Transforms/AtomicExpand/AArch64/atomicrmw-fp.ll
@@ -728,6 +732,7 @@ Transforms/ExpandVariadics/expand-va-intrinsic-split-simple.ll
 Transforms/ExpandVariadics/intrinsics.ll
 Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
+Transforms/FixIrreducible/callbr.ll
 Transforms/FixIrreducible/nested.ll
 Transforms/FixIrreducible/switch.ll
 Transforms/GCOVProfiling/atomic-counter.ll
@@ -1105,6 +1110,7 @@ Transforms/LoopSimplifyCFG/update_parents.ll
 Transforms/LoopUnroll/peel-last-iteration-expansion-cost.ll
 Transforms/LoopUnroll/peel-last-iteration-with-guards.ll
 Transforms/LoopUnroll/peel-last-iteration-with-variable-trip-count.ll
+Transforms/LoopUnroll/runtime-loop-multiple-exits.ll
 Transforms/LoopVersioning/add-phi-update-users.ll
 Transforms/LoopVersioning/basic.ll
 Transforms/LoopVersioning/bound-check-partially-known.ll

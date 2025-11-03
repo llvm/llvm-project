@@ -72,3 +72,27 @@ subroutine no_vector
   do i=1,10
   enddo
 end subroutine
+
+subroutine inline
+  integer :: a
+  !dir$ forceinline 
+  ! CHECK: !DIR$ FORCEINLINE 
+  a = f(2)
+
+  !dir$ inline 
+  ! CHECK: !DIR$ INLINE 
+  call g()
+
+  !dir$ noinline 
+  ! CHECK: !DIR$ NOINLINE 
+  call g()
+
+  contains
+    function f(x)
+      integer :: x
+      f = x**2
+    end function
+
+    subroutine g()
+    end subroutine
+end subroutine

@@ -260,7 +260,8 @@ CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
   LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
                   ? LangAS::Default
                   : QT->getPointeeType().getAddressSpace();
-  if (AS == LangAS::Default || AS == LangAS::opencl_generic)
+  if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
+      AS == LangAS::opencl_constant)
     return llvm::ConstantPointerNull::get(PT);
 
   auto &Ctx = CGM.getContext();
