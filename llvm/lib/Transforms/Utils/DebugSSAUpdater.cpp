@@ -281,6 +281,15 @@ void DbgValueRangeTable::addVariable(Function *F, DebugVariableAggregate DVA) {
   // which case we need a complete SSA liveness analysis to determine live-in
   // values per-block, or a variable has a single #dbg_declare.
   if (DeclareRecordFound) {
+    // Rust generates multiple #dbg_declare's.
+    // %self.dbg.spill = alloca [8 x i8], align 8
+    // store ptr %self, ptr %self.dbg.spill, align 8
+    //   #dbg_declare(ptr %self.dbg.spill, !892, !DIExpression(), !894)
+    //   #dbg_declare(ptr %self.dbg.spill, !895, !DIExpression(), !905)
+    if (NumRecordsFound != 1) {
+      LLVM_DEBUG(dbgs() << "Multiple records for a #dbg_declare!\n");
+      return;
+    }
     // FIXME: This should be changed for fragments!
     LLVM_DEBUG(dbgs() << "Single location found for variable!\n");
     assert(NumRecordsFound == 1 &&
