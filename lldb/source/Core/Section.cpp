@@ -683,13 +683,14 @@ uint64_t SectionList::GetDebugInfoSize() const {
   return debug_info_size;
 }
 
-std::shared_ptr<SectionList> SectionList::Merge(SectionList &lhs, SectionList &rhs, MergeCallback filter) {
+std::shared_ptr<SectionList>
+SectionList::Merge(SectionList &lhs, SectionList &rhs, MergeCallback filter) {
   std::shared_ptr<SectionList> output_sp = std::make_shared<SectionList>();
 
   // Iterate through all the sections in lhs and see if we have matches in
   // the rhs list.
   for (const auto &lhs_section : lhs) {
-    auto rhs_section = rhs.FindSectionByType(lhs_section->GetType(), true);
+    auto rhs_section = rhs.FindSectionByID(lhs_section->GetID());
     if (rhs_section)
       output_sp->AddSection(filter(lhs_section, rhs_section));
     else
@@ -697,9 +698,9 @@ std::shared_ptr<SectionList> SectionList::Merge(SectionList &lhs, SectionList &r
   }
 
   // Now that we've visited all possible duplicates, we can iterate over
-  // the rhs and take any values not in lhs. 
+  // the rhs and take any values not in lhs.
   for (const auto &rhs_section : rhs) {
-    auto lhs_section  = lhs.FindSectionByType(rhs_section->GetType(), true);
+    auto lhs_section = lhs.FindSectionByID(rhs_section->GetID());
     // Because we already visited everything overlapping between rhs
     // and lhs, any section not in lhs is unique and can be output.
     if (!lhs_section)
