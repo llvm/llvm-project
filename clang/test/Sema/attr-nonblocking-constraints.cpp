@@ -235,10 +235,14 @@ void nb13() [[clang::nonblocking]] { nb12(); }
 // C++ member function pointers
 struct PTMFTester {
 	typedef void (PTMFTester::*ConvertFunction)() [[clang::nonblocking]];
+	typedef void (PTMFTester::*BlockingFunction)();
 
 	ConvertFunction mConvertFunc;
 
-	void convert() [[clang::nonblocking]];
+	void convert() [[clang::nonblocking]]
+	{
+		(this->*mConvertFunc)(); // This should not generate a warning.
+	}
 
 	template <typename T>
 	struct Holder {
@@ -250,14 +254,16 @@ struct PTMFTester {
 
 	void ptmfInExpr(Holder<ConvertFunction>& holder) [[clang::nonblocking]]
 	{
-		(this->*(*holder))(); // This should not generate a warning.
+		(this->*(*holder))();   // Should not generate a warning.
+		((*this).*(*holder))(); // Should not generate a warning.
+	}
+
+	void ptmfInExpr(Holder<BlockingFunction>& holder) [[clang::nonblocking]]
+	{
+		(this->*(*holder))(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' expression}}
+		((*this).*(*holder))(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' expression}}
 	}
 };
-
-void PTMFTester::convert() [[clang::nonblocking]]
-{
-	(this->*mConvertFunc)();
-}
 
 // Allow implicit conversion from array to pointer.
 void nb14(unsigned idx) [[clang::nonblocking]]
