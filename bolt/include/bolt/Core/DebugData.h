@@ -471,7 +471,8 @@ public:
     return std::move(StrOffsetsBuffer);
   }
 
-  StringRef bufferStr() {
+  /// Returns strings of .debug_str_offsets.
+  StringRef getBufferStr() {
     return StringRef(reinterpret_cast<const char *>(StrOffsetsBuffer->data()),
                      StrOffsetsBuffer->size());
   }
@@ -512,7 +513,8 @@ public:
     return std::move(StrBuffer);
   }
 
-  StringRef bufferStr() {
+  /// Returns strings of .debug_str.
+  StringRef getBufferStr() {
     return StringRef(reinterpret_cast<const char *>(StrBuffer->data()),
                      StrBuffer->size());
   }

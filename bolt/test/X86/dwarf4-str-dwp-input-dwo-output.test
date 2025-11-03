@@ -20,9 +20,8 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets helper.dwo.dwo \
 ; RUN: | FileCheck -check-prefix=BOLT-HELPER-STR-OFFSETS %s
 
-;; For DWARF4.
-;; Test input into bolt a DWP file.
-;; Make sure output in the .dwo files has current str and str_offsets information.
+;; For DWARF4, this test checks that strings are split correctly from a combined
+;; section in DWP file, into appropriate .dwo files.
 
 ; PRE-BOLT-STR: 0x00000000: "main"
 ; PRE-BOLT-STR: 0x00000005: "int"

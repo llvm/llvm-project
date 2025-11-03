@@ -1723,29 +1723,39 @@ StringRef getSectionName(const SectionRef &Section) {
   return Name;
 }
 
-// Exctracts some appropriate slices of .debug_str.dwo from DWP.
-// Updates the .debug_str_offets.dwo for CUs.
-void UpdateStrAndStrOffsets(StringRef StrDWOContent,
-                            StringRef StrOffsetsContent,
-                            SmallVectorImpl<StringRef> &StrDWOOutData,
-                            std::string &StrOffsetsOutData,
-                            unsigned DwarfVersion, bool IsLittleEndian) {
+/// Extracts the slice of the .debug_str.dwo section for a given CU from a DWP
+/// file, based on the .debug_str_offsets.dwo section. This helps address DWO
+/// bloat that may occur after updates.
+///
+/// A slice of .debug_str.dwo may be composed of several non-contiguous
+/// fragments. These non-contiguous string views will be written out
+/// sequentially, avoiding the copying overhead caused by assembling them.
+///
+/// The .debug_str_offsets for the first CU often does not need to be updated,
+/// so copying is only performed when .debug_str_offsets requires updating.
+static void UpdateStrAndStrOffsets(StringRef StrDWOContent,
+                                   StringRef StrOffsetsContent,
+                                   SmallVectorImpl<StringRef> &StrDWOOutData,
+                                   std::string &StrOffsetsOutData,
+                                   unsigned DwarfVersion, bool IsLittleEndian) {
   const llvm::endianness Endian =
       IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
-  // ignore DWARF64
   const uint64_t HeaderOffset = (DwarfVersion >= 5) ? 8 : 0;
-  const uint64_t NumOffsets = (StrOffsetsContent.size() - HeaderOffset) / 4;
+  constexpr size_t SizeOfOffset = sizeof(int32_t);
+  const uint64_t NumOffsets =
+      (StrOffsetsContent.size() - HeaderOffset) / SizeOfOffset;
 
   DataExtractor Extractor(StrOffsetsContent, IsLittleEndian, 0);
   uint64_t ExtractionOffset = HeaderOffset;
 
   using StringFragment = DWARFUnitIndex::Entry::SectionContribution;
-  auto getStringLength = [](StringRef Content, uint64_t Offset) -> uint64_t {
+  const auto getStringLength = [](StringRef Content,
+                                  uint64_t Offset) -> uint64_t {
     size_t NullPos = Content.find('\0', Offset);
     return (NullPos != StringRef::npos) ? (NullPos - Offset + 1) : 0;
   };
-  auto isContiguous = [](const StringFragment &Fragment,
-                         uint64_t NextOffset) -> bool {
+  const auto isContiguous = [](const StringFragment &Fragment,
+                               uint64_t NextOffset) -> bool {
     return NextOffset == Fragment.getOffset() + Fragment.getLength();
   };
   std::optional<StringFragment> CurrentFragment;
@@ -1754,26 +1764,26 @@ void UpdateStrAndStrOffsets(StringRef StrDWOContent,
     const uint64_t StrOffset = Extractor.getU32(&ExtractionOffset);
     const uint64_t StringLength = getStringLength(StrDWOContent, StrOffset);
     if (!CurrentFragment) {
-      // first init
+      // First init.
       CurrentFragment = StringFragment(StrOffset, StringLength);
     } else {
       if (isContiguous(*CurrentFragment, StrOffset)) {
-        // expand the current fragment
+        // Expanding the current fragment.
         CurrentFragment->setLength(CurrentFragment->getLength() + StringLength);
       } else {
-        // save the current fragment and start a new one
+        // Saving the current fragment and start a new one.
         StrDWOOutData.push_back(StrDWOContent.substr(
             CurrentFragment->getOffset(), CurrentFragment->getLength()));
         CurrentFragment = StringFragment(StrOffset, StringLength);
       }
     }
     if (AccumulatedStrLen != StrOffset) {
-      // update str offsets
+      // Updating str offsets.
       if (StrOffsetsOutData.empty())
         StrOffsetsOutData = StrOffsetsContent.str();
-      llvm::support::endian::write32(&StrOffsetsOutData[HeaderOffset + I * 4],
-                                     static_cast<uint32_t>(AccumulatedStrLen),
-                                     Endian);
+      llvm::support::endian::write32(
+          &StrOffsetsOutData[HeaderOffset + I * SizeOfOffset],
+          static_cast<uint32_t>(AccumulatedStrLen), Endian);
     }
     AccumulatedStrLen += StringLength;
   }
@@ -1832,7 +1842,7 @@ std::optional<StringRef> updateDebugData(
              << "\n";
     if (StrWriter.isInitialized()) {
       if (CUDWOEntry)
-        return StrWriter.bufferStr();
+        return StrWriter.getBufferStr();
       OutputBuffer = StrWriter.releaseBuffer();
       return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                        OutputBuffer->size());
@@ -1848,7 +1858,7 @@ std::optional<StringRef> updateDebugData(
   case DWARFSectionKind::DW_SECT_STR_OFFSETS: {
     if (StrOffstsWriter.isFinalized()) {
       if (CUDWOEntry)
-        return StrOffstsWriter.bufferStr();
+        return StrOffstsWriter.getBufferStr();
       OutputBuffer = StrOffstsWriter.releaseBuffer();
       return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                        OutputBuffer->size());
@@ -1964,7 +1974,7 @@ void DWARFRewriter::writeDWOFiles(
     assert(ContentsExp && "Invalid contents.");
     if (IsDWP && SectionName == "debug_str.dwo") {
       if (StrWriter.isInitialized())
-        StrDWOContent = StrWriter.bufferStr();
+        StrDWOContent = StrWriter.getBufferStr();
       else
         StrDWOContent = *ContentsExp;
       continue;

@@ -1,5 +1,5 @@
 #--- main.s
-# clang++ -g2 -gdwarf-4 -gsplit-dwarf=split -S main.cpp
+# clang++ -g2 -gdwarf-4 -gsplit-dwarf=split -gno-pubnames -S main.cpp
 # extern int getReturn();
 # int main() {
 #   return getReturn();
@@ -24,8 +24,6 @@ main:                                   # @main
 	.byte	23                              # DW_FORM_sec_offset
 	.byte	27                              # DW_AT_comp_dir
 	.byte	14                              # DW_FORM_strp
-	.ascii	"\264B"                         # DW_AT_GNU_pubnames
-	.byte	25                              # DW_FORM_flag_present
 	.ascii	"\260B"                         # DW_AT_GNU_dwo_name
 	.byte	14                              # DW_FORM_strp
 	.ascii	"\261B"                         # DW_AT_GNU_dwo_id
@@ -49,7 +47,6 @@ main:                                   # @main
 	.byte	1                               # Abbrev [1] 0xb:0x25 DW_TAG_compile_unit
 	.long	.Lline_table_start0             # DW_AT_stmt_list
 	.long	.Lskel_string0                  # DW_AT_comp_dir
-                                        # DW_AT_GNU_pubnames
 	.long	.Lskel_string1                  # DW_AT_GNU_dwo_name
 	.quad	-9094791692727444213            # DW_AT_GNU_dwo_id
 	.quad	.Lfunc_begin0                   # DW_AT_low_pc
@@ -158,28 +155,6 @@ main:                                   # @main
 	.section	.debug_addr,"",@progbits
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
-	.section	.debug_gnu_pubnames,"",@progbits
-	.long	.LpubNames_end0-.LpubNames_start0 # Length of Public Names Info
-.LpubNames_start0:
-	.short	2                               # DWARF Version
-	.long	.Lcu_begin0                     # Offset of Compilation Unit Info
-	.long	48                              # Compilation Unit Length
-	.long	25                              # DIE offset
-	.byte	48                              # Attributes: FUNCTION, EXTERNAL
-	.asciz	"main"                          # External Name
-	.long	0                               # End Mark
-.LpubNames_end0:
-	.section	.debug_gnu_pubtypes,"",@progbits
-	.long	.LpubTypes_end0-.LpubTypes_start0 # Length of Public Types Info
-.LpubTypes_start0:
-	.short	2                               # DWARF Version
-	.long	.Lcu_begin0                     # Offset of Compilation Unit Info
-	.long	48                              # Compilation Unit Length
-	.long	40                              # DIE offset
-	.byte	144                             # Attributes: TYPE, STATIC
-	.asciz	"int"                           # External Name
-	.long	0                               # End Mark
-.LpubTypes_end0:
 	.ident	"clang version 22.0.0"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
@@ -187,7 +162,7 @@ main:                                   # @main
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
 #--- helper.s
-# clang++ -g2 -gdwarf-4 -gsplit-dwarf=split -S helper.cpp
+# clang++ -g2 -gdwarf-4 -gsplit-dwarf=split -gno-pubnames -S helper.cpp
 # int getReturn() {
 #   return 0;
 # }
@@ -211,8 +186,6 @@ _Z9getReturnv:                          # @_Z9getReturnv
 	.byte	23                              # DW_FORM_sec_offset
 	.byte	27                              # DW_AT_comp_dir
 	.byte	14                              # DW_FORM_strp
-	.ascii	"\264B"                         # DW_AT_GNU_pubnames
-	.byte	25                              # DW_FORM_flag_present
 	.ascii	"\260B"                         # DW_AT_GNU_dwo_name
 	.byte	14                              # DW_FORM_strp
 	.ascii	"\261B"                         # DW_AT_GNU_dwo_id
@@ -236,7 +209,6 @@ _Z9getReturnv:                          # @_Z9getReturnv
 	.byte	1                               # Abbrev [1] 0xb:0x25 DW_TAG_compile_unit
 	.long	.Lline_table_start0             # DW_AT_stmt_list
 	.long	.Lskel_string0                  # DW_AT_comp_dir
-                                        # DW_AT_GNU_pubnames
 	.long	.Lskel_string1                  # DW_AT_GNU_dwo_name
 	.quad	5976014880088676049             # DW_AT_GNU_dwo_id
 	.quad	.Lfunc_begin0                   # DW_AT_low_pc
@@ -351,28 +323,6 @@ _Z9getReturnv:                          # @_Z9getReturnv
 	.section	.debug_addr,"",@progbits
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
-	.section	.debug_gnu_pubnames,"",@progbits
-	.long	.LpubNames_end0-.LpubNames_start0 # Length of Public Names Info
-.LpubNames_start0:
-	.short	2                               # DWARF Version
-	.long	.Lcu_begin0                     # Offset of Compilation Unit Info
-	.long	48                              # Compilation Unit Length
-	.long	25                              # DIE offset
-	.byte	48                              # Attributes: FUNCTION, EXTERNAL
-	.asciz	"getReturn"                     # External Name
-	.long	0                               # End Mark
-.LpubNames_end0:
-	.section	.debug_gnu_pubtypes,"",@progbits
-	.long	.LpubTypes_end0-.LpubTypes_start0 # Length of Public Types Info
-.LpubTypes_start0:
-	.short	2                               # DWARF Version
-	.long	.Lcu_begin0                     # Offset of Compilation Unit Info
-	.long	48                              # Compilation Unit Length
-	.long	41                              # DIE offset
-	.byte	144                             # Attributes: TYPE, STATIC
-	.asciz	"int"                           # External Name
-	.long	0                               # End Mark
-.LpubTypes_end0:
 	.ident	"clang version 22.0.0"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
