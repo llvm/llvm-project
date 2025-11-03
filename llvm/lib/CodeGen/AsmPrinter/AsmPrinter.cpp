@@ -168,7 +168,10 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         "extracted from PGO related analysis."));
 
 static cl::opt<bool> PgoAnalysisMapEmitBBSectionsCfg(
-    "pgo-analysis-map-emit-bb-sections-cfg", cl::desc("Enable the post-link cfg information from the basic block sections profile in the PGO analysis map"), cl::Hidden, cl::init(false));
+    "pgo-analysis-map-emit-bb-sections-cfg",
+    cl::desc("Enable the post-link cfg information from the basic block "
+             "sections profile in the PGO analysis map"),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
     "basic-block-address-map-skip-bb-entries",

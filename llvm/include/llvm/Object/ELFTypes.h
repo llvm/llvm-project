@@ -836,13 +836,9 @@ struct BBAddrMap {
     bool BBHash : 1;
     bool PostLinkCfg : 1;
 
-    bool hasPGOAnalysis() const {
-      return FuncEntryCount || BBFreq || BrProb;
-    }
+    bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
 
-    bool hasPGOAnalysisBBData() const {
-      return BBFreq || BrProb;
-    }
+    bool hasPGOAnalysisBBData() const { return BBFreq || BrProb; }
 
     // Encodes to minimum bit width representation.
     uint16_t encode() const {
