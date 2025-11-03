@@ -55,6 +55,8 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
     ${LIBCOMPRESSION}
   )
 
+target_compile_definitions(lldbPluginProcessGDBRemote PRIVATE "-D_ALL_SOURCE") 
+
 add_dependencies(lldbPluginProcessGDBRemote
   LLDBPluginProcessGDBRemotePropertiesGen
   LLDBPluginProcessGDBRemotePropertiesEnumGen)

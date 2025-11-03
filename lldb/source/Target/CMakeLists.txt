@@ -107,3 +107,5 @@ add_lldb_library(lldbTarget
 add_dependencies(lldbTarget
   LLDBTargetPropertiesGen
   LLDBTargetPropertiesEnumGen)
+
+target_compile_definitions(lldbTarget PRIVATE "-D_ALL_SOURCE")
