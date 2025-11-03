@@ -43,12 +43,6 @@ struct OptionEnumMapping<misc::UseInternalLinkageCheck::FixModeKind> {
 
 namespace clang::tidy::misc {
 
-namespace {
-
-AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
-
-AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
-
 static bool isInMainFile(SourceLocation L, SourceManager &SM,
                          const FileExtensionsSet &HeaderFileExtensions) {
   for (;;) {
@@ -64,6 +58,12 @@ static bool isInMainFile(SourceLocation L, SourceManager &SM,
     return false;
   }
 }
+
+namespace {
+
+AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
+
+AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
 
 AST_MATCHER_P(Decl, isAllRedeclsInMainFile, FileExtensionsSet,
               HeaderFileExtensions) {
