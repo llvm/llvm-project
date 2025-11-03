@@ -2327,6 +2327,18 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
   return ConstantVector::get(NewVecC);
 }
 
+// Get the result of `Vector Op Splat` (or Splat Op Vector if \p SplatLHS).
+static Constant *constantFoldBinOpWithSplat(unsigned Opcode, Constant *Vector,
+                                            Constant *Splat, bool SplatLHS,
+                                            const DataLayout &DL) {
+  ElementCount EC = cast<VectorType>(Vector->getType())->getElementCount();
+  Constant *LHS = ConstantVector::getSplat(EC, Splat);
+  Constant *RHS = Vector;
+  if (!SplatLHS)
+    std::swap(LHS, RHS);
+  return ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
+}
+
 Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   if (!isa<VectorType>(Inst.getType()))
     return nullptr;
@@ -2337,6 +2349,37 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
          cast<VectorType>(Inst.getType())->getElementCount());
   assert(cast<VectorType>(RHS->getType())->getElementCount() ==
          cast<VectorType>(Inst.getType())->getElementCount());
+
+  auto foldConstantsThroughSubVectorInsertSplat =
+      [&](Value *MaybeSubVector, Value *MaybeSplat,
+          bool SplatLHS) -> Instruction * {
+    Value *Idx;
+    Constant *Splat, *SubVector, *Dest;
+    if (!match(MaybeSplat, m_ConstantSplat(m_Constant(Splat))) ||
+        !match(MaybeSubVector,
+               m_VectorInsert(m_Constant(Dest), m_Constant(SubVector),
+                              m_Value(Idx))))
+      return nullptr;
+    SubVector =
+        constantFoldBinOpWithSplat(Opcode, SubVector, Splat, SplatLHS, DL);
+    Dest = constantFoldBinOpWithSplat(Opcode, Dest, Splat, SplatLHS, DL);
+    if (!SubVector || !Dest)
+      return nullptr;
+    auto *InsertVector =
+        Builder.CreateInsertVector(Dest->getType(), Dest, SubVector, Idx);
+    return replaceInstUsesWith(Inst, InsertVector);
+  };
+
+  // If one operand is a constant splat and the other operand is a
+  // `vector.insert` where both the destination and subvector are constant,
+  // apply the operation to both the destination and subvector, returning a new
+  // constant `vector.insert`. This helps constant folding for scalable vectors.
+  if (Instruction *Folded = foldConstantsThroughSubVectorInsertSplat(
+          /*MaybeSubVector=*/LHS, /*MaybeSplat=*/RHS, /*SplatLHS=*/false))
+    return Folded;
+  if (Instruction *Folded = foldConstantsThroughSubVectorInsertSplat(
+          /*MaybeSubVector=*/RHS, /*MaybeSplat=*/LHS, /*SplatLHS=*/true))
+    return Folded;
 
   // If both operands of the binop are vector concatenations, then perform the
   // narrow binop on each pair of the source operands followed by concatenation
@@ -3315,21 +3358,21 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
       if (TyAllocSize == 1) {
         // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y),
-        // but only if the result pointer is only used as if it were an integer,
-        // or both point to the same underlying object (otherwise provenance is
-        // not necessarily retained).
+        // but only if the result pointer is only used as if it were an integer.
+        // (The case where the underlying object is the same is handled by
+        // InstSimplify.)
         Value *X = GEP.getPointerOperand();
         Value *Y;
-        if (match(GEP.getOperand(1),
-                  m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
+        if (match(GEP.getOperand(1), m_Sub(m_PtrToIntOrAddr(m_Value(Y)),
+                                           m_PtrToIntOrAddr(m_Specific(X)))) &&
             GEPType == Y->getType()) {
-          bool HasSameUnderlyingObject =
-              getUnderlyingObject(X) == getUnderlyingObject(Y);
+          bool HasNonAddressBits =
+              DL.getAddressSizeInBits(AS) != DL.getPointerSizeInBits(AS);
           bool Changed = false;
           GEP.replaceUsesWithIf(Y, [&](Use &U) {
-            bool ShouldReplace = HasSameUnderlyingObject ||
-                                 isa<ICmpInst>(U.getUser()) ||
-                                 isa<PtrToIntInst>(U.getUser());
+            bool ShouldReplace = isa<PtrToAddrInst>(U.getUser()) ||
+                                 (!HasNonAddressBits &&
+                                  isa<ICmpInst, PtrToIntInst>(U.getUser()));
             Changed |= ShouldReplace;
             return ShouldReplace;
           });

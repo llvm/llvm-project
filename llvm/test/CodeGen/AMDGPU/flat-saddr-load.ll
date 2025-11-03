@@ -2080,21 +2080,13 @@ define amdgpu_ps float @flat_load_saddr_i8_offset_or_i64_imm_offset_16(ptr addrs
 }
 
 define amdgpu_ps float @flat_load_saddr_i8_offset_or_i64_imm_offset_4160(ptr addrspace(6) inreg %sbase, i32 %idx) {
-; GFX1250-SDAG-LABEL: flat_load_saddr_i8_offset_or_i64_imm_offset_4160:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    v_or_b32_e32 v0, 0x1040, v0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: flat_load_saddr_i8_offset_or_i64_imm_offset_4160:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-GISEL-NEXT:    v_or_b32_e32 v0, 0x1040, v0
-; GFX1250-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: flat_load_saddr_i8_offset_or_i64_imm_offset_4160:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_or_b32_e32 v0, 0x1040, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
   %zext.idx = zext i32 %idx to i64
   %or = or i64 %zext.idx, 4160
   %addr = inttoptr i64 %or to ptr

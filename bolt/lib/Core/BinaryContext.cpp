@@ -518,6 +518,23 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
   return std::make_pair(TargetSymbol, 0);
 }
 
+MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
+                                                    BinaryFunction &BF) {
+  if (BF.isInConstantIsland(Address)) {
+    BF.setIgnored();
+    this->outs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                 << Twine::utohexstr(Address)
+                 << " in constant island of function " << BF << '\n';
+    return nullptr;
+  }
+
+  const uint64_t Offset = Address - BF.getAddress();
+  assert(Offset < BF.getSize() &&
+         "Address should be inside the referenced function");
+
+  return Offset ? BF.addEntryPointAtOffset(Offset) : BF.getSymbol();
+}
+
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
                                                   BinaryFunction &BF) {
   if (!isX86())
@@ -761,13 +778,17 @@ void BinaryContext::populateJumpTables() {
   }
 
   if (opts::StrictMode && DataPCRelocations.size()) {
-    LLVM_DEBUG({
-      dbgs() << DataPCRelocations.size()
-             << " unclaimed PC-relative relocations left in data:\n";
-      for (uint64_t Reloc : DataPCRelocations)
-        dbgs() << Twine::utohexstr(Reloc) << '\n';
-    });
-    assert(0 && "unclaimed PC-relative relocations left in data\n");
+    this->errs() << "BOLT-ERROR: " << DataPCRelocations.size()
+                 << " unclaimed PC-relative relocation(s) left in data";
+    if (opts::Verbosity) {
+      this->errs() << ":\n";
+      for (uint64_t RelocOffset : DataPCRelocations)
+        this->errs() << "  @0x" << Twine::utohexstr(RelocOffset) << '\n';
+    } else {
+      this->errs() << ". Re-run with -v=1 to see the list\n";
+    }
+    this->errs() << "BOLT-ERROR: unable to proceed with --strict\n";
+    exit(1);
   }
   clearList(DataPCRelocations);
 }
@@ -1399,17 +1420,10 @@ void BinaryContext::processInterproceduralReferences() {
             << Function.getPrintName() << " and "
             << TargetFunction->getPrintName() << '\n';
       }
-      if (uint64_t Offset = Address - TargetFunction->getAddress()) {
-        if (!TargetFunction->isInConstantIsland(Address)) {
-          TargetFunction->addEntryPointAtOffset(Offset);
-        } else {
-          TargetFunction->setIgnored();
-          this->outs() << "BOLT-WARNING: Ignoring entry point at address 0x"
-                       << Twine::utohexstr(Address)
-                       << " in constant island of function " << *TargetFunction
-                       << '\n';
-        }
-      }
+
+      // Create an extra entry point if needed. Can also render the target
+      // function ignored if the reference is invalid.
+      handleExternalBranchTarget(Address, *TargetFunction);
 
       continue;
     }

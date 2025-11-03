@@ -2608,13 +2608,13 @@ public:
   };
 
   /// Given a function and its FormatAttr or FormatMatchesAttr info, attempts to
-  /// populate the FomatStringInfo parameter with the attribute's correct
+  /// populate the FormatStringInfo parameter with the attribute's correct
   /// format_idx and firstDataArg. Returns true when the format fits the
   /// function and the FormatStringInfo has been populated.
   static bool getFormatStringInfo(const Decl *Function, unsigned FormatIdx,
                                   unsigned FirstArg, FormatStringInfo *FSI);
   static bool getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
-                                  bool IsCXXMember, bool IsVariadic,
+                                  bool HasImplicitThisParam, bool IsVariadic,
                                   FormatStringInfo *FSI);
 
   // Used by C++ template instantiation.
@@ -2680,11 +2680,6 @@ public:
   /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
   /// function without this attribute.
   bool DiscardingCFIUncheckedCallee(QualType From, QualType To) const;
-
-  /// Returns true if `From` is a function or pointer to a function without the
-  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
-  /// function with this attribute.
-  bool AddingCFIUncheckedCallee(QualType From, QualType To) const;
 
   /// This function calls Action when it determines that E designates a
   /// misaligned member due to the packed attribute. This is used to emit
@@ -5124,7 +5119,7 @@ public:
     // In C++ the implicit 'this' function parameter also counts.
     // Parameters are counted from one.
     bool HP = hasFunctionProto(D);
-    bool HasImplicitThisParam = isInstanceMethod(D);
+    bool HasImplicitThisParam = hasImplicitObjectParameter(D);
     bool IV = HP && isFunctionOrMethodVariadic(D);
     unsigned NumParams =
         (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
