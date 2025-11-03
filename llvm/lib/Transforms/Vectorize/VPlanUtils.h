@@ -12,6 +12,7 @@
 #include "VPlan.h"
 
 namespace llvm {
+class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 } // namespace llvm
@@ -71,6 +72,10 @@ std::optional<VPValue *>
 getRecipesForUncountableExit(VPlan &Plan,
                              SmallVectorImpl<VPRecipeBase *> &Recipes,
                              SmallVectorImpl<VPRecipeBase *> &GEPs);
+
+/// Return a MemoryLocation for \p R with noalias metadata populated from
+/// \p R. The pointer of the location is conservatively set to nullptr.
+std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
