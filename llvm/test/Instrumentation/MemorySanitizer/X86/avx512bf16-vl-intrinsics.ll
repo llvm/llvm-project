@@ -364,13 +364,13 @@ define <2 x i64> @test_mm128_cvtneps2bf16_128(<4 x float> %A) local_unnamed_addr
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> [[A]], <8 x bfloat> undef, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> [[A]], <8 x bfloat> poison, <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x bfloat> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
 entry:
-  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>) #4
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> poison, <4 x i1> <i1 true, i1 true, i1 true, i1 true>) #4
   %1 = bitcast <8 x bfloat> %0 to <2 x i64>
   ret <2 x i64> %1
 }
@@ -385,7 +385,7 @@ define <2 x i64> @test_mm128_maskz_cvtneps2bf16_128(<4 x float> %A, i8 zeroext %
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[TMP0]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8 [[U]] to <8 x i1>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> splat (i1 true), <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i1> [[_MSPROP]] to i4
@@ -403,7 +403,7 @@ define <2 x i64> @test_mm128_maskz_cvtneps2bf16_128(<4 x float> %A, i8 zeroext %
 ;
 entry:
   %0 = bitcast i8 %U to <8 x i1>
-  %1 = shufflevector <8 x i1> %0, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %1 = shufflevector <8 x i1> %0, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> zeroinitializer, <4 x i1> %1) #4
   %3 = bitcast <8 x bfloat> %2 to <2 x i64>
   ret <2 x i64> %3
@@ -420,7 +420,7 @@ define <2 x i64> @test_mm128_mask_cvtneps2bf16_128(<2 x i64> %C, i8 zeroext %U, 
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8 [[TMP0]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8 [[U]] to <8 x i1>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> splat (i1 true), <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i64> [[TMP1]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[C]] to <8 x bfloat>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
@@ -443,7 +443,7 @@ define <2 x i64> @test_mm128_mask_cvtneps2bf16_128(<2 x i64> %C, i8 zeroext %U, 
 ;
 entry:
   %0 = bitcast i8 %U to <8 x i1>
-  %1 = shufflevector <8 x i1> %0, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %1 = shufflevector <8 x i1> %0, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = bitcast <2 x i64> %C to <8 x bfloat>
   %3 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> %2, <4 x i1> %1) #4
   %4 = bitcast <8 x bfloat> %3 to <2 x i64>
@@ -463,7 +463,7 @@ define <2 x i64> @test_mm128_cvtneps2bf16_128_select(<2 x i64> %C, i8 zeroext %U
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP1]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i64> [[C]] to <8 x bfloat>
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> [[A]], <8 x bfloat> undef, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> [[A]], <8 x bfloat> poison, <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <8 x i1> [[TMP4]], <8 x i16> zeroinitializer, <8 x i16> [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <8 x bfloat> [[TMP7]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <8 x bfloat> [[TMP6]] to <8 x i16>
@@ -480,7 +480,7 @@ define <2 x i64> @test_mm128_cvtneps2bf16_128_select(<2 x i64> %C, i8 zeroext %U
 entry:
   %0 = bitcast i8 %U to <8 x i1>
   %1 = bitcast <2 x i64> %C to <8 x bfloat>
-  %2 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>) #4
+  %2 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> poison, <4 x i1> <i1 true, i1 true, i1 true, i1 true>) #4
   %3 = select <8 x i1> %0, <8 x bfloat> %2, <8 x bfloat> %1
   %4 = bitcast <8 x bfloat> %3 to <2 x i64>
   ret <2 x i64> %4
@@ -726,14 +726,14 @@ define <16 x i16> @test_no_vbroadcast1() sanitize_memory {
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> poison, <8 x bfloat> zeroinitializer, <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x bfloat> [[TMP0]] to <8 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    store <16 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i16> [[TMP2]]
 ;
 entry:
   %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> poison, <8 x bfloat> zeroinitializer, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   %1 = bitcast <8 x bfloat> %0 to <8 x i16>
-  %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <16 x i32> zeroinitializer
+  %2 = shufflevector <8 x i16> %1, <8 x i16> poison, <16 x i32> zeroinitializer
   ret <16 x i16> %2
 }
 
@@ -744,13 +744,13 @@ define <16 x bfloat> @test_no_vbroadcast2() nounwind sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> poison, <8 x bfloat> zeroinitializer, <4 x i1> splat (i1 true))
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x bfloat> [[TMP0]], <8 x bfloat> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x bfloat> [[TMP0]], <8 x bfloat> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    store <16 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x bfloat> [[TMP1]]
 ;
 entry:
   %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> poison, <8 x bfloat> zeroinitializer, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
-  %1 = shufflevector <8 x bfloat> %0, <8 x bfloat> undef, <16 x i32> zeroinitializer
+  %1 = shufflevector <8 x bfloat> %0, <8 x bfloat> poison, <16 x i32> zeroinitializer
   ret <16 x bfloat> %1
 }
 
@@ -760,13 +760,13 @@ define <16 x i32> @pr83358() sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 5.000000e+00, float 6.000000e+00, float 7.000000e+00, float 8.000000e+00>)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x bfloat> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    store <16 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i32> [[TMP3]]
 ;
   %1 = call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 5.000000e+00, float 6.000000e+00, float 7.000000e+00, float 8.000000e+00>)
   %2 = bitcast <8 x bfloat> %1 to <4 x i32>
-  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <16 x i32> %3
 }
 ;.
