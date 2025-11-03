@@ -23,7 +23,10 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes {
 
@@ -73,7 +76,12 @@ public:
   LiveOriginsAnalysis &getLiveOrigins() const { return *LiveOrigins; }
   FactManager &getFactManager() { return FactMgr; }
 
+  static void PrintStats(llvm::raw_ostream& OS);
+
+  static void UpdateMissingOriginCount(const OriginManager& OM);
+
 private:
+  static llvm::StringMap<int> MissingOriginMap;
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;

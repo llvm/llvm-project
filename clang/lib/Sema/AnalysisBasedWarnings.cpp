@@ -30,6 +30,7 @@
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
@@ -53,6 +54,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <deque>
 #include <iterator>
@@ -3132,6 +3134,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 }
 
 void clang::sema::AnalysisBasedWarnings::PrintStats() const {
+  clang::lifetimes::internal::LifetimeSafetyAnalysis::PrintStats(llvm::errs());
   llvm::errs() << "\n*** Analysis Based Warnings Stats:\n";
 
   unsigned NumCFGsBuilt = NumFunctionsAnalyzed - NumFunctionsWithBadCFGs;

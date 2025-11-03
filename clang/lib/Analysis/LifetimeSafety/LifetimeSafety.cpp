@@ -23,17 +23,34 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 namespace clang::lifetimes {
 namespace internal {
 
+llvm::StringMap<int> LifetimeSafetyAnalysis::MissingOriginMap;
+
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter)
     : AC(AC), Reporter(Reporter) {}
+
+void LifetimeSafetyAnalysis::PrintStats(llvm::raw_ostream& OS) {
+  llvm::errs() << "\n*** LifetimeSafety Missing Origin Stats (expression_type : count) :\n";
+  for (const auto& [expr, count] : LifetimeSafetyAnalysis::MissingOriginMap) {
+    OS << expr << " : " << count << '\n';
+  }
+}
+
+void LifetimeSafetyAnalysis::UpdateMissingOriginCount(const OriginManager& OM) {
+  for (const auto& [expr, missing_origin_count] : OM.getMissingOrigins()) {
+    LifetimeSafetyAnalysis::MissingOriginMap[std::string(expr)] += missing_origin_count;
+  }
+}
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
@@ -66,6 +83,7 @@ void LifetimeSafetyAnalysis::run() {
                   LiveOrigins->dump(llvm::dbgs(), FactMgr.getTestPoints()));
 
   runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter);
+  UpdateMissingOriginCount(FactMgr.getOriginMgr());
 }
 } // namespace internal
 
