@@ -162,8 +162,12 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
     return false;
-  case VPInstructionSC:
-    return mayWriteToMemory();
+  case VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(this);
+    return mayWriteToMemory() ||
+           VPI->getOpcode() == VPInstruction::BranchOnCount ||
+           VPI->getOpcode() == VPInstruction::BranchOnCond;
+  }
   case VPWidenCallSC: {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
@@ -1241,6 +1245,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::Select:
   case Instruction::PHI:
   case VPInstruction::AnyOf:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnCount:
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
@@ -1443,8 +1449,7 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 
   printFlags(O);
   printOperands(O, SlotTracker);
-  if (!VPIRMetadata::empty())
-    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 
   if (auto DL = getDebugLoc()) {
     O << ", !dbg ";
@@ -1671,12 +1676,12 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
   Metadata = std::move(MetadataIntersection);
 }
 
-void VPIRMetadata::print(raw_ostream &O, const Module &M) const {
+void VPIRMetadata::print(raw_ostream &O, const Module *M) const {
   if (Metadata.empty())
     return;
 
   SmallVector<StringRef, 8> MDNames;
-  M.getContext().getMDKindNames(MDNames);
+  M->getContext().getMDKindNames(MDNames);
 
   O << " (";
   interleaveComma(Metadata, O, [&](const auto &KindNodePair) {
@@ -1685,7 +1690,7 @@ void VPIRMetadata::print(raw_ostream &O, const Module &M) const {
     assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
            "Unexpected unnamed metadata kind");
     O << "!" << MDNames[Kind] << " ";
-    Node->printAsOperand(O, &M);
+    Node->printAsOperand(O, M);
   });
   O << ")";
 }
@@ -1750,8 +1755,7 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
     Op->printAsOperand(O, SlotTracker);
   });
   O << ")";
-  if (!VPIRMetadata::empty())
-    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 
   O << " (using library function";
   if (Variant->hasName())
@@ -1886,8 +1890,7 @@ void VPWidenIntrinsicRecipe::print(raw_ostream &O, const Twine &Indent,
     Op->printAsOperand(O, SlotTracker);
   });
   O << ")";
-  if (!VPIRMetadata::empty())
-    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -2280,8 +2283,7 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
   printOperands(O, SlotTracker);
-  if (!VPIRMetadata::empty())
-    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -2363,8 +2365,7 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
   printFlags(O);
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
-  if (!VPIRMetadata::empty())
-    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -3646,8 +3647,7 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = load ";
   printOperands(O, SlotTracker);
-  if (!VPIRMetadata::empty())
-    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -3769,8 +3769,7 @@ void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN store ";
   printOperands(O, SlotTracker);
-  if (!VPIRMetadata::empty())
-    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
+  VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
