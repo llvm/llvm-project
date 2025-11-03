@@ -2502,6 +2502,10 @@ public:
       Action != TypeSplitVector;
   }
 
+  // Return true is targets has a conditional zero-ing instruction
+  // i.e. select cond, x, 0
+  virtual bool hasConditionalZero() const { return false; }
+
   virtual bool isProfitableToCombineMinNumMaxNum(EVT VT) const { return true; }
 
   /// Return true if a select of constants (select Cond, C1, C2) should be

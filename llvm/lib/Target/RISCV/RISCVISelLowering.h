@@ -612,6 +612,8 @@ private:
     return false;
   }
 
+  bool hasConditionalZero() const override;
+
   /// Disables storing and loading vectors by default when there are function
   /// calls between the load and store, since these are more expensive than just
   /// using scalars

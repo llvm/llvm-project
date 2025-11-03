@@ -2763,6 +2763,10 @@ bool RISCVTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
          (VT.isFixedLengthVector() && VT.getVectorElementType() == MVT::i1);
 }
 
+bool RISCVTargetLowering::hasConditionalZero() const {
+  return Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps();
+}
+
 bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
   if (!ScalarTy.isSimple())
     return false;
