@@ -1575,8 +1575,9 @@ LLVMValueRef LLVMConstRealOfStringAndSize(LLVMTypeRef RealTy, const char Str[],
 
 LLVMValueRef LLVMConstFP128(LLVMTypeRef Ty, const uint64_t N[2]) {
   Type *T = unwrap(Ty);
-  assert(T->getPrimitiveSizeInBits() == 128 && "Ty size should be 128");
-  APInt AI(128, ArrayRef<uint64_t>(N, 2));
+  unsigned SB = T->getScalarSizeInBits();
+  assert(SB == 128 && "Ty size should be 128");
+  APInt AI(SB, ArrayRef<uint64_t>(N, divideCeil(SB, 64)));
   APFloat Quad(T->getFltSemantics(), AI);
   return wrap(ConstantFP::get(T, Quad));
 }
