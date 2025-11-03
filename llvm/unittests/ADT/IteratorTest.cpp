@@ -48,11 +48,10 @@ struct AdaptedIter : iterator_adaptor_base<AdaptedIter, WeirdIter> {};
 
 // Test that iterator_adaptor_base forwards typedefs, if value_type is
 // unchanged.
-static_assert(std::is_same_v<typename AdaptedIter::value_type, Shadow<0>>, "");
-static_assert(std::is_same_v<typename AdaptedIter::difference_type, Shadow<1>>,
-              "");
-static_assert(std::is_same_v<typename AdaptedIter::pointer, Shadow<2>>, "");
-static_assert(std::is_same_v<typename AdaptedIter::reference, Shadow<3>>, "");
+static_assert(std::is_same_v<AdaptedIter::value_type, Shadow<0>>, "");
+static_assert(std::is_same_v<AdaptedIter::difference_type, Shadow<1>>, "");
+static_assert(std::is_same_v<AdaptedIter::pointer, Shadow<2>>, "");
+static_assert(std::is_same_v<AdaptedIter::reference, Shadow<3>>, "");
 
 // Ensure that pointe{e,r}_iterator adaptors correctly forward the category of
 // the underlying iterator.

@@ -52,6 +52,12 @@ protected:
     return ClangUtil::GetQualType(
         m_ast->GetBuiltinTypeByName(ConstString(name)));
   }
+
+  CompilerType GetBuiltinTypeForDWARFEncodingAndBitSize(
+      llvm::StringRef type_name, uint32_t encoding, uint32_t bit_size) const {
+    return m_ast->GetBuiltinTypeForDWARFEncodingAndBitSize(type_name, encoding,
+                                                           bit_size);
+  }
 };
 
 TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
@@ -236,6 +242,91 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEncodingAndBitSize) {
 
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 32);
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
+}
+
+TEST_F(TestTypeSystemClang, TestGetBuiltinTypeForDWARFEncodingAndBitSize) {
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitIn", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt(2)", llvm::dwarf::DW_ATE_signed_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt", llvm::dwarf::DW_ATE_signed_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt(2)", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt(2)", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeName(),
+            "_BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeName(),
+            "_BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt(129)", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
+
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitIn", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_unsigned_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeName(),
+            "unsigned _BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeName(),
+            "unsigned _BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt(129)", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
+}
+
+TEST_F(TestTypeSystemClang, TestBitIntTypeInfo) {
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeInfo(),
+            eTypeIsSigned | eTypeIsScalar | eTypeHasValue | eTypeIsInteger);
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeInfo(),
+            eTypeIsScalar | eTypeHasValue | eTypeIsInteger);
 }
 
 TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
