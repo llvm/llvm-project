@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS Support)
 add_lldb_library(lldbDAP
   Breakpoint.cpp
   BreakpointBase.cpp
+  ClientLauncher.cpp
   CommandPlugins.cpp
   DAP.cpp
   DAPError.cpp

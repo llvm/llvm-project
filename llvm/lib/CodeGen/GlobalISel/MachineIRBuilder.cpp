@@ -109,8 +109,10 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
   if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
-    else
+    else if (CI->getBitWidth() == 1)
       MIB.addImm(CI->getZExtValue());
+    else
+      MIB.addImm(CI->getSExtValue());
   } else if (auto *CFP = dyn_cast<ConstantFP>(NumericConstant)) {
     MIB.addFPImm(CFP);
   } else if (isa<ConstantPointerNull>(NumericConstant)) {
