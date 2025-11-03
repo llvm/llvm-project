@@ -221,6 +221,67 @@ TEST_P(PassTester, fillUnknownStateInBBTest) {
   EXPECT_EQ(CFILoc[0], 4);
 }
 
+TEST_P(PassTester, fillUnknownStubs) {
+  /*
+   * Stubs that are not part of the function's CFG should inherit the RAState of
+   the BasicBlock before it.
+   *
+   * LBB1 is not part of the CFG: LBB0 jumps unconditionally to LBB2.
+   * LBB1 would be a stub inserted in LongJmp in real code.
+   * We do not add any NegateRAState CFIs, as other CFIs are not added either.
+   * See issue #160989 for more details.
+   *
+   *  .LBB0 (1 instructions, align : 1)
+       Entry Point
+         00000000:   b       .LBB2
+       Successors: .LBB2
+
+     .LBB1 (1 instructions, align : 1)
+         00000004:   ret
+
+     .LBB2 (1 instructions, align : 1)
+       Predecessors: .LBB0
+          00000008:   ret
+   */
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  ASSERT_NE(TextSection, nullptr);
+
+  PREPARE_FUNC("FuncWithStub");
+  BinaryBasicBlock *BB2 = BF->addBasicBlock();
+  BB2->setCFIState(0);
+  BinaryBasicBlock *BB3 = BF->addBasicBlock();
+  BB3->setCFIState(0);
+
+  BB->addSuccessor(BB3);
+
+  // Jumping over BB2, to BB3.
+  MCInst Jump;
+  BC->MIB->createUncondBranch(Jump, BB3->getLabel(), BC->Ctx.get());
+  BB->addInstruction(Jump);
+  BC->MIB->setRAState(Jump, false);
+
+  // BB2, in real code it would be a ShortJmp.
+  // Unknown RAState.
+  MCInst StubInst;
+  BC->MIB->createReturn(StubInst);
+  BB2->addInstruction(StubInst);
+
+  // Can be any instruction.
+  MCInst Ret;
+  BC->MIB->createReturn(Ret);
+  BB3->addInstruction(Ret);
+  BC->MIB->setRAState(Ret, false);
+
+  Error E = PassManager->runPasses();
+  EXPECT_FALSE(E);
+
+  // Check that we did not generate any NegateRAState CFIs.
+  auto CFILoc = findCFIOffsets(*BF);
+  EXPECT_EQ(CFILoc.size(), 0u);
+}
+
 #ifdef AARCH64_AVAILABLE
 INSTANTIATE_TEST_SUITE_P(AArch64, PassTester,
                          ::testing::Values(Triple::aarch64));
