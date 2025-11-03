@@ -8473,11 +8473,11 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Ctx)) {
       // C++ [temp.mem]p2:
       //   A local class shall not have member templates.
-      if (RD->isLocalClass()) {
+      if (RD->isLocalClass())
         return Diag(FindTemplateParamsLoc(TemplateParams, RD->getLocation()),
                     diag::err_template_inside_local_class)
                << TemplateParams->getSourceRange();
-      }
+
       return false;
     }
   }
