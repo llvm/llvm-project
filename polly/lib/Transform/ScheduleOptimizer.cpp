@@ -240,6 +240,7 @@ struct OptimizerAdditionalInfoTy {
   bool Postopts;
   bool Prevect;
   bool &DepsChanged;
+  IslMaxOperationsGuard &MaxOpGuard;
 };
 
 class ScheduleTreeOptimizer final {
@@ -384,6 +385,8 @@ private:
 isl::schedule_node
 ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
                                                int VectorWidth) {
+  if (Node.is_null())
+    return {};
   assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band);
   Node = Node.child(0).child(0);
   isl::union_map SchedRelUMap = Node.get_prefix_schedule_relation();
@@ -394,6 +397,8 @@ ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
   isl::union_set IsolateOption = getIsolateOptions(IsolateDomain, 1);
   Node = Node.parent().parent();
   isl::union_set Options = IsolateOption.unite(AtomicOption);
+  if (Node.is_null())
+    return {};
   isl::schedule_node_band Result =
       Node.as<isl::schedule_node_band>().set_ast_build_options(Options);
   return Result;
@@ -414,9 +419,13 @@ struct InsertSimdMarkers final : ScheduleNodeRewriter<InsertSimdMarkers> {
 
 isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
     isl::schedule_node Node, unsigned DimToVectorize, int VectorWidth) {
+  if (Node.is_null())
+    return {};
   assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band);
 
   auto Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
+  if (Space.is_null())
+    return {};
   unsigned ScheduleDimensions = unsignedFromIslSize(Space.dim(isl::dim::set));
   assert(DimToVectorize < ScheduleDimensions);
 
@@ -442,12 +451,15 @@ isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
   // Sink the inner loop into the smallest possible statements to make them
   // represent a single vector instruction if possible.
   Node = isl::manage(isl_schedule_node_band_sink(Node.release()));
+  if (Node.is_null())
+    return {};
 
   // Add SIMD markers to those vector statements.
   InsertSimdMarkers SimdMarkerInserter;
   Node = SimdMarkerInserter.visit(Node);
 
-  PrevectOpts++;
+  if (!Node.is_null())
+    PrevectOpts++;
   return Node.parent();
 }
 
@@ -538,6 +550,8 @@ ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
 isl::schedule_node
 ScheduleTreeOptimizer::applyPrevectBandOpt(isl::schedule_node Node) {
   auto Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
+  if (Space.is_null())
+    return {};
   int Dims = unsignedFromIslSize(Space.dim(isl::dim::set));
 
   for (int i = Dims - 1; i >= 0; i--)
@@ -575,9 +589,14 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
     Node = applyTileBandOpt(Node);
 
   if (OAI->Prevect) {
+    IslQuotaScope MaxScope = OAI->MaxOpGuard.enter();
+
     // FIXME: Prevectorization requirements are different from those checked by
     // isTileableBandNode.
     Node = applyPrevectBandOpt(Node);
+
+    if (OAI->MaxOpGuard.hasQuotaExceeded() || Node.is_null())
+      return (isl::schedule_node()).release();
   }
 
   return Node.release();
@@ -746,6 +765,10 @@ static void runIslScheduleOptimizerImpl(
     return;
   }
 
+  isl_ctx *Ctx = S.getIslCtx().get();
+  IslMaxOperationsGuard MaxOpGuard(Ctx, ScheduleComputeOut,
+                                   /*AutoEnter=*/false);
+
   // Apply ISL's algorithm only if not overridden by the user. Note that
   // post-rescheduling optimizations (tiling, pattern-based, prevectorization)
   // rely on the coincidence/permutable annotations on schedule tree bands that
@@ -828,8 +851,6 @@ static void runIslScheduleOptimizerImpl(
       IslOuterCoincidence = 0;
     }
 
-    isl_ctx *Ctx = S.getIslCtx().get();
-
     isl_options_set_schedule_outer_coincidence(Ctx, IslOuterCoincidence);
     isl_options_set_schedule_maximize_band_depth(Ctx, IslMaximizeBands);
     isl_options_set_schedule_max_constant_term(Ctx, MaxConstantTerm);
@@ -845,28 +866,20 @@ static void runIslScheduleOptimizerImpl(
     SC = SC.set_coincidence(Validity);
 
     {
-      IslMaxOperationsGuard MaxOpGuard(Ctx, ScheduleComputeOut);
+      IslQuotaScope MaxOpScope = MaxOpGuard.enter();
       Schedule = SC.compute_schedule();
-
-      if (MaxOpGuard.hasQuotaExceeded())
-        POLLY_DEBUG(
-            dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
     }
 
     isl_options_set_on_error(Ctx, OnErrorStatus);
 
-    ScopsRescheduled++;
+    if (!Schedule.is_null())
+      ScopsRescheduled++;
     POLLY_DEBUG(printSchedule(dbgs(), Schedule, "After rescheduling"));
   }
 
   walkScheduleTreeForStatistics(Schedule, 1);
 
-  // In cases the scheduler is not able to optimize the code, we just do not
-  // touch the schedule.
-  if (Schedule.is_null())
-    return;
-
-  if (GreedyFusion) {
+  if (GreedyFusion && !Schedule.is_null()) {
     isl::union_map Validity = D.getDependences(
         Dependences::TYPE_RAW | Dependences::TYPE_WAR | Dependences::TYPE_WAW);
     Schedule = applyGreedyFusion(Schedule, Validity);
@@ -880,12 +893,18 @@ static void runIslScheduleOptimizerImpl(
       /*PatternOpts=*/!HasUserTransformation && PMBasedOpts,
       /*Postopts=*/!HasUserTransformation && EnablePostopts,
       /*Prevect=*/PollyVectorizerChoice != VECTORIZER_NONE,
-      DepsChanged};
-  if (OAI.PatternOpts || OAI.Postopts || OAI.Prevect) {
+      DepsChanged,
+      MaxOpGuard};
+  if (!Schedule.is_null() && (OAI.PatternOpts || OAI.Postopts || OAI.Prevect)) {
     Schedule = ScheduleTreeOptimizer::optimizeSchedule(Schedule, &OAI);
     Schedule = hoistExtensionNodes(Schedule);
     POLLY_DEBUG(printSchedule(dbgs(), Schedule, "After post-optimizations"));
     walkScheduleTreeForStatistics(Schedule, 2);
+  }
+
+  if (MaxOpGuard.hasQuotaExceeded()) {
+    POLLY_DEBUG(dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
+    return;
   }
 
   // Skip profitability check if user transformation(s) have been applied.

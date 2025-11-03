@@ -209,12 +209,12 @@ template <> struct CustomMappingTraits<MapDocNode> {
   static void inputOne(IO &IO, StringRef Key, MapDocNode &M) {
     ScalarDocNode KeyObj = M.getDocument()->getNode();
     KeyObj.fromString(Key, "");
-    IO.mapRequired(Key.str().c_str(), M.getMap()[KeyObj]);
+    IO.mapRequired(Key, M.getMap()[KeyObj]);
   }
 
   static void output(IO &IO, MapDocNode &M) {
     for (auto I : M.getMap()) {
-      IO.mapRequired(I.first.toString().c_str(), I.second);
+      IO.mapRequired(I.first.toString(), I.second);
     }
   }
 };

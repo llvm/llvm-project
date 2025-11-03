@@ -1760,6 +1760,10 @@ defm : PatVrVrF<fmul, "VFMUL">;
 // VFDIV_{S/D}
 defm : PatVrVrF<fdiv, "VFDIV">;
 
+// VFMAX_{S/D}, VFMIN_{S/D}
+defm : PatVrVrF<fmaxnum, "VFMAX">;
+defm : PatVrVrF<fminnum, "VFMIN">;
+
 // VFMADD_{S/D}
 def : Pat<(fma v4f32:$vj, v4f32:$vk, v4f32:$va),
           (VFMADD_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
@@ -2551,6 +2555,11 @@ def : Pat<(f32 (froundeven FPR32:$fj)),
 def : Pat<(f64 (froundeven FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRNE_D (VREPLVEI_D
                (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+
+defm : PatVrF<fceil, "VFRINTRP">;
+defm : PatVrF<ffloor, "VFRINTRM">;
+defm : PatVrF<ftrunc, "VFRINTRZ">;
+defm : PatVrF<froundeven, "VFRINTRNE">;
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),
