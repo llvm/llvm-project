@@ -1297,6 +1297,7 @@ Transforms/SimpleLoopUnswitch/trivial-unswitch.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-logical-and-or.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/StructurizeCFG/AMDGPU/uniform-regions.ll
+Transforms/StructurizeCFG/callbr.ll
 Transforms/StructurizeCFG/hoist-zerocost.ll
 Transforms/StructurizeCFG/loop-break-phi.ll
 Transforms/StructurizeCFG/nested-loop-order.ll
