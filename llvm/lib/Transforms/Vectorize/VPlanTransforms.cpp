@@ -2528,90 +2528,102 @@ void VPlanTransforms::addActiveLaneMask(
   HeaderMask->eraseFromParent();
 }
 
+template <typename Op0_t, typename Op1_t> struct RemoveMask_match {
+  Op0_t In;
+  Op1_t &Out;
+
+  RemoveMask_match(const Op0_t &In, Op1_t &Out) : In(In), Out(Out) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    if (m_Specific(In).match(V)) {
+      Out = nullptr;
+      return true;
+    }
+    if (m_LogicalAnd(m_Specific(In), m_VPValue(Out)).match(V))
+      return true;
+    return false;
+  }
+};
+
+/// Match a specific mask \p In, or a combination of it (logical-and In, Out).
+/// Returns the remaining part \p Out if so, or nullptr otherwise.
+template <typename Op0_t, typename Op1_t>
+static inline RemoveMask_match<Op0_t, Op1_t> m_RemoveMask(const Op0_t &In,
+                                                          Op1_t &Out) {
+  return RemoveMask_match<Op0_t, Op1_t>(In, Out);
+}
+
 /// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
 /// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
 /// recipe could be created.
 /// \p HeaderMask  Header Mask.
 /// \p CurRecipe   Recipe to be transform.
 /// \p TypeInfo    VPlan-based type analysis.
-/// \p AllOneMask  The vector mask parameter of vector-predication intrinsics.
 /// \p EVL         The explicit vector length parameter of vector-predication
 /// intrinsics.
 static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
-                                       VPTypeAnalysis &TypeInfo,
-                                       VPValue &AllOneMask, VPValue &EVL) {
-  // FIXME: Don't transform recipes to EVL recipes if they're not masked by the
-  // header mask.
-  auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
-    assert(OrigMask && "Unmasked recipe when folding tail");
-    // HeaderMask will be handled using EVL.
-    VPValue *Mask;
-    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
-      return Mask;
-    return HeaderMask == OrigMask ? nullptr : OrigMask;
-  };
+                                       VPTypeAnalysis &TypeInfo, VPValue &EVL) {
+  VPlan *Plan = CurRecipe.getParent()->getPlan();
+  VPValue *Addr, *Mask, *EndPtr;
 
   /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
-  auto GetNewAddr = [&CurRecipe, &EVL](VPValue *Addr) -> VPValue * {
-    auto *EndPtr = dyn_cast<VPVectorEndPointerRecipe>(Addr);
-    if (!EndPtr)
-      return Addr;
-    assert(EndPtr->getOperand(1) == &EndPtr->getParent()->getPlan()->getVF() &&
-           "VPVectorEndPointerRecipe with non-VF VF operand?");
-    assert(
-        all_of(EndPtr->users(),
-               [](VPUser *U) {
-                 return cast<VPWidenMemoryRecipe>(U)->isReverse();
-               }) &&
-        "VPVectorEndPointRecipe not used by reversed widened memory recipe?");
-    VPVectorEndPointerRecipe *EVLAddr = EndPtr->clone();
-    EVLAddr->insertBefore(&CurRecipe);
-    EVLAddr->setOperand(1, &EVL);
-    return EVLAddr;
+  auto AdjustEndPtr = [&CurRecipe, &EVL](VPValue *EndPtr) {
+    auto *EVLEndPtr = cast<VPVectorEndPointerRecipe>(EndPtr)->clone();
+    EVLEndPtr->insertBefore(&CurRecipe);
+    EVLEndPtr->setOperand(1, &EVL);
+    return EVLEndPtr;
   };
 
-  return TypeSwitch<VPRecipeBase *, VPRecipeBase *>(&CurRecipe)
-      .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
-        VPValue *NewMask = GetNewMask(L->getMask());
-        VPValue *NewAddr = GetNewAddr(L->getAddr());
-        return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL, NewMask);
-      })
-      .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
-        VPValue *NewMask = GetNewMask(S->getMask());
-        VPValue *NewAddr = GetNewAddr(S->getAddr());
-        return new VPWidenStoreEVLRecipe(*S, NewAddr, EVL, NewMask);
-      })
-      .Case<VPInterleaveRecipe>([&](VPInterleaveRecipe *IR) {
-        VPValue *NewMask = GetNewMask(IR->getMask());
-        return new VPInterleaveEVLRecipe(*IR, EVL, NewMask);
-      })
-      .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
-        VPValue *NewMask = GetNewMask(Red->getCondOp());
-        return new VPReductionEVLRecipe(*Red, EVL, NewMask);
-      })
-      .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
-        VPValue *LHS, *RHS;
-        // Transform select with a header mask condition
-        //   select(header_mask, LHS, RHS)
-        // into vector predication merge.
-        //   vp.merge(all-true, LHS, RHS, EVL)
-        if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
-          return nullptr;
-        // Use all true as the condition because this transformation is
-        // limited to selects whose condition is a header mask.
-        return new VPWidenIntrinsicRecipe(
-            Intrinsic::vp_merge, {&AllOneMask, LHS, RHS, &EVL},
-            TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
-      })
-      .Default([&](VPRecipeBase *R) { return nullptr; });
+  if (match(&CurRecipe,
+            m_MaskedLoad(m_VPValue(Addr), m_RemoveMask(HeaderMask, Mask))) &&
+      !cast<VPWidenLoadRecipe>(CurRecipe).isReverse())
+    return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
+                                    EVL, Mask);
+
+  if (match(&CurRecipe,
+            m_MaskedLoad(m_VPValue(EndPtr), m_RemoveMask(HeaderMask, Mask))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
+      cast<VPWidenLoadRecipe>(CurRecipe).isReverse())
+    return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
+                                    AdjustEndPtr(EndPtr), EVL, Mask);
+
+  if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(),
+                                      m_RemoveMask(HeaderMask, Mask))) &&
+      !cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
+    return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
+                                     EVL, Mask);
+
+  if (match(&CurRecipe, m_MaskedStore(m_VPValue(EndPtr), m_VPValue(),
+                                      m_RemoveMask(HeaderMask, Mask))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
+      cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
+    return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe),
+                                     AdjustEndPtr(EndPtr), EVL, Mask);
+
+  if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
+    if (Rdx->isConditional() &&
+        match(Rdx->getCondOp(), m_RemoveMask(HeaderMask, Mask)))
+      return new VPReductionEVLRecipe(*Rdx, EVL, Mask);
+
+  if (auto *Interleave = dyn_cast<VPInterleaveRecipe>(&CurRecipe))
+    if (Interleave->getMask() &&
+        match(Interleave->getMask(), m_RemoveMask(HeaderMask, Mask)))
+      return new VPInterleaveEVLRecipe(*Interleave, EVL, Mask);
+
+  VPValue *LHS, *RHS;
+  if (match(&CurRecipe,
+            m_Select(m_Specific(HeaderMask), m_VPValue(LHS), m_VPValue(RHS))))
+    return new VPWidenIntrinsicRecipe(
+        Intrinsic::vp_merge, {Plan->getTrue(), LHS, RHS, &EVL},
+        TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
+
+  return nullptr;
 }
 
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(Plan);
-  VPValue *AllOneMask = Plan.getTrue();
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
@@ -2671,7 +2683,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
             ConstantInt::getSigned(Type::getInt32Ty(Plan.getContext()), -1));
         VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
             Intrinsic::experimental_vp_splice,
-            {V1, V2, Imm, AllOneMask, PrevEVL, &EVL},
+            {V1, V2, Imm, Plan.getTrue(), PrevEVL, &EVL},
             TypeInfo.inferScalarType(R.getVPSingleValue()), R.getDebugLoc());
         VPSplice->insertBefore(&R);
         R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
@@ -2705,7 +2717,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   for (VPUser *U : collectUsersRecursively(EVLMask)) {
     auto *CurRecipe = cast<VPRecipeBase>(U);
     VPRecipeBase *EVLRecipe =
-        optimizeMaskToEVL(EVLMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
+        optimizeMaskToEVL(EVLMask, *CurRecipe, TypeInfo, EVL);
     if (!EVLRecipe)
       continue;
 
