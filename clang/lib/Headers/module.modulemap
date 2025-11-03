@@ -253,6 +253,11 @@ module _Builtin_stdbool [system] {
   export *
 }
 
+module _Builtin_stdckdint [system] {
+  header "stdckdint.h"
+  export *
+}
+
 module _Builtin_stdcountof [system] {
   header "stdcountof.h"
   export *
