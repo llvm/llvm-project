@@ -799,6 +799,30 @@ TEST_F(TokenAnnotatorTest, UnderstandsTemplateTemplateParameters) {
   EXPECT_TOKEN(Tokens[23], tok::identifier, TT_ClassHeadName);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsCommonCppTemplates) {
+  auto Tokens =
+      annotate("static_assert(std::conditional_t<A || B, C, D>::value);");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[13], tok::greater, TT_TemplateCloser);
+
+  Tokens =
+      annotate("static_assert(std::conditional<A || B, C, D>::type::value);");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[13], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("static_assert(fancy_v<A || B>);");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("static_assert(fancy<A || B>::value);");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsWhitespaceSensitiveMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.WhitespaceSensitiveMacros.push_back("FOO");
@@ -2686,6 +2710,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   // precedence.
   std::pair<prec::Level, std::string> JoinedBinary[] = {
       {prec::Comma, "->"},        {prec::Comma, "<->"},
+      {prec::Comma, "#-#"},       {prec::Comma, "#=#"},
       {prec::Assignment, "+="},   {prec::Assignment, "-="},
       {prec::Assignment, "*="},   {prec::Assignment, "/="},
       {prec::Assignment, "%="},   {prec::Assignment, "&="},

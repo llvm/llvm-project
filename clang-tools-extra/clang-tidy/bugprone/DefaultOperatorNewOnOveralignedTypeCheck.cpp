@@ -6,21 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DefaultOperatorNewAlignmentCheck.h"
+#include "DefaultOperatorNewOnOveralignedTypeCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/TargetInfo.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
-void DefaultOperatorNewAlignmentCheck::registerMatchers(MatchFinder *Finder) {
+void DefaultOperatorNewOnOveralignedTypeCheck::registerMatchers(
+    MatchFinder *Finder) {
   Finder->addMatcher(
       cxxNewExpr(unless(hasAnyPlacementArg(anything()))).bind("new"), this);
 }
 
-void DefaultOperatorNewAlignmentCheck::check(
+void DefaultOperatorNewOnOveralignedTypeCheck::check(
     const MatchFinder::MatchResult &Result) {
   // Get the found 'new' expression.
   const auto *NewExpr = Result.Nodes.getNodeAs<CXXNewExpr>("new");
@@ -61,4 +62,4 @@ void DefaultOperatorNewAlignmentCheck::check(
         << (SpecifiedAlignment / CharWidth);
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
