@@ -151,6 +151,17 @@ public:
       LookupModuleOutputCallback LookupModuleOutput,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
+  /// Given a compilation context specified via the Clang driver command-line,
+  /// gather modular dependencies of module with the given name, and return the
+  /// information needed for explicit build.
+  /// TODO: this method should be removed as soon as Swift and our C-APIs adopt
+  /// CompilerInstanceWithContext. We are keeping it here so that it is easier
+  /// to coordinate with Swift and C-API changes.
+  llvm::Expected<TranslationUnitDeps> getModuleDependencies(
+      StringRef ModuleName, const std::vector<std::string> &CommandLine,
+      StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
+      LookupModuleOutputCallback LookupModuleOutput);
+
   /// The following three methods provide a new interface to perform
   /// by name dependency scan. The new interface's intention is to improve
   /// dependency scanning performance when a sequence of name is looked up

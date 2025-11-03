@@ -1097,32 +1097,42 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         SmallVector<StringRef> Names;
         ModuleNameRef.split(Names, ',');
 
-        if (llvm::Error Err = WorkerTool.initializeCompilerInstanceWithContext(
-                CWD, Input->CommandLine)) {
-          handleErrorWithInfoString(
-              "Compiler instance with context setup error", std::move(Err),
-              DependencyOS, Errs);
-          HadErrors = true;
-          continue;
-        }
-
-        for (auto N : Names) {
-          auto MaybeModuleDepsGraph =
-              WorkerTool.computeDependenciesByNameWithContext(
-                  N, AlreadySeenModules, LookupOutput);
-          if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
-                                 DependencyOS, Errs)) {
+        if (Names.size() == 1) {
+          auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
+              Names[0], Input->CommandLine, CWD, AlreadySeenModules,
+              LookupOutput);
+          if (handleModuleResult(Names[0], MaybeModuleDepsGraph, *FD,
+                                 LocalIndex, DependencyOS, Errs))
             HadErrors = true;
-            break;
+        } else {
+          if (llvm::Error Err =
+                  WorkerTool.initializeCompilerInstanceWithContext(
+                      CWD, Input->CommandLine)) {
+            handleErrorWithInfoString(
+                "Compiler instance with context setup error", std::move(Err),
+                DependencyOS, Errs);
+            HadErrors = true;
+            continue;
           }
-        }
 
-        if (llvm::Error Err =
-                WorkerTool.finalizeCompilerInstanceWithContext()) {
-          handleErrorWithInfoString(
-              "Compiler instance with context finialization error",
-              std::move(Err), DependencyOS, Errs);
-          HadErrors = true;
+          for (auto N : Names) {
+            auto MaybeModuleDepsGraph =
+                WorkerTool.computeDependenciesByNameWithContext(
+                    N, AlreadySeenModules, LookupOutput);
+            if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
+                                   DependencyOS, Errs)) {
+              HadErrors = true;
+              break;
+            }
+          }
+
+          if (llvm::Error Err =
+                  WorkerTool.finalizeCompilerInstanceWithContext()) {
+            handleErrorWithInfoString(
+                "Compiler instance with context finialization error",
+                std::move(Err), DependencyOS, Errs);
+            HadErrors = true;
+          }
         }
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;
