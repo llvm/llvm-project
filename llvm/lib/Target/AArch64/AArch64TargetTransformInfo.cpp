@@ -2227,7 +2227,7 @@ static std::optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
   return std::nullopt;
 }
 
-template <Intrinsic::ID MulOpc, typename Intrinsic::ID FuseOpc>
+template <Intrinsic::ID MulOpc, Intrinsic::ID FuseOpc>
 static std::optional<Instruction *>
 instCombineSVEVectorFuseMulAddSub(InstCombiner &IC, IntrinsicInst &II,
                                   bool MergeIntoAddendOp) {
@@ -6657,10 +6657,15 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
           Ops.push_back(&Ext->getOperandUse(0));
         Ops.push_back(&Op);
 
-        if (isa<SExtInst>(Ext))
+        if (isa<SExtInst>(Ext)) {
           NumSExts++;
-        else
+        } else {
           NumZExts++;
+          // A zext(a) is also a sext(zext(a)), if we take more than 2 steps.
+          if (Ext->getOperand(0)->getType()->getScalarSizeInBits() * 2 <
+              I->getType()->getScalarSizeInBits())
+            NumSExts++;
+        }
 
         continue;
       }
