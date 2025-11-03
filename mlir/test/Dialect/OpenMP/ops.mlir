@@ -828,11 +828,11 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
     // Test with optional map clause.
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
     // CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: %[[MAP_C:.*]] = omp.map.info var_ptr(%[[VAL_3:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: %[[MAP_C:.*]] = omp.map.info var_ptr(%[[VAL_3:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
     // CHECK: omp.target is_device_ptr(%[[VAL_4:.*]] : memref<i32>) has_device_addr(%[[MAP_A]] -> {{.*}} : memref<?xi32>) map_entries(%[[MAP_B]] -> {{.*}}, %[[MAP_C]] -> {{.*}} : memref<?xi32>, memref<?xi32>) {
     %mapv0 = omp.map.info var_ptr(%device_addr : memref<?xi32>, tensor<?xi32>)   map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv1 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-    %mapv2 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv2 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target is_device_ptr(%device_ptr : memref<i32>) has_device_addr(%mapv0 -> %arg0 : memref<?xi32>) map_entries(%mapv1 -> %arg1, %mapv2 -> %arg2 : memref<?xi32>, memref<?xi32>) {
       omp.terminator
     }
@@ -868,20 +868,20 @@ func.func @omp_target_data (%if_cond : i1, %device : si32, %device_ptr: memref<i
     }
 
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
     // CHECK: omp.target_data map_entries(%[[MAP_A]], %[[MAP_B]] : memref<?xi32>, memref<?xi32>)
     %mapv3 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-    %mapv4 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv4 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target_data map_entries(%mapv3, %mapv4 : memref<?xi32>, memref<?xi32>) {}
 
-    // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_3:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_3:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
     // CHECK: omp.target_enter_data device(%[[VAL_1:.*]] : si32) if(%[[VAL_0:.*]]) map_entries(%[[MAP_A]] : memref<?xi32>) nowait
-    %mapv5 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv5 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target_enter_data if(%if_cond) device(%device : si32) nowait map_entries(%mapv5 : memref<?xi32>)
 
-    // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_3:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_3:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
     // CHECK: omp.target_exit_data device(%[[VAL_1:.*]] : si32) if(%[[VAL_0:.*]]) map_entries(%[[MAP_A]] : memref<?xi32>) nowait
-    %mapv6 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv6 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target_exit_data if(%if_cond) device(%device : si32) nowait map_entries(%mapv6 : memref<?xi32>)
 
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(ompx_hold, to) capture(ByRef) -> memref<?xi32> {name = ""}
@@ -2790,13 +2790,13 @@ func.func @omp_targets_with_map_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> ()
   // CHECK: %[[C_12:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[C_13:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C_11]] : i64) upper_bound(%[[C_10]] : i64) stride(%[[C_12]] : i64) start_idx(%[[C_13]] : i64)
-  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) mapper(@my_mapper) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
+  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(storage) capture(ByCopy) mapper(@my_mapper) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
     %6 = llvm.mlir.constant(9 : index) : i64
     %7 = llvm.mlir.constant(1 : index) : i64
     %8 = llvm.mlir.constant(2 : index) : i64
     %9 = llvm.mlir.constant(2 : index) : i64
     %10 = omp.map.bounds   lower_bound(%7 : i64) upper_bound(%6 : i64) stride(%8 : i64) start_idx(%9 : i64)
-    %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) mapper(@my_mapper) bounds(%10) -> !llvm.ptr {name = ""}
+    %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(storage) capture(ByCopy) mapper(@my_mapper) bounds(%10) -> !llvm.ptr {name = ""}
 
     // CHECK: omp.target map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}} : !llvm.ptr, !llvm.ptr)
     omp.target map_entries(%mapv1 -> %arg2, %mapv2 -> %arg3 : !llvm.ptr, !llvm.ptr) {
@@ -2806,14 +2806,14 @@ func.func @omp_targets_with_map_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> ()
     // CHECK: omp.target_data map_entries(%[[MAP0]], %[[MAP1]] : !llvm.ptr, !llvm.ptr)
     omp.target_data map_entries(%mapv1, %mapv2 : !llvm.ptr, !llvm.ptr){}
 
-    // CHECK: %[[MAP2:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(VLAType) bounds(%[[BOUNDS0]]) -> !llvm.ptr {name = ""}
+    // CHECK: %[[MAP2:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(storage) capture(VLAType) bounds(%[[BOUNDS0]]) -> !llvm.ptr {name = ""}
     // CHECK: omp.target_enter_data map_entries(%[[MAP2]] : !llvm.ptr)
-    %mapv3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(VLAType) bounds(%4) -> !llvm.ptr {name = ""}
+    %mapv3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(storage) capture(VLAType) bounds(%4) -> !llvm.ptr {name = ""}
     omp.target_enter_data map_entries(%mapv3 : !llvm.ptr){}
 
-    // CHECK: %[[MAP3:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(This) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
+    // CHECK: %[[MAP3:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(storage) capture(This) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
     // CHECK: omp.target_exit_data map_entries(%[[MAP3]] : !llvm.ptr)
-    %mapv4 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(This) bounds(%10) -> !llvm.ptr {name = ""}
+    %mapv4 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(storage) capture(This) bounds(%10) -> !llvm.ptr {name = ""}
     omp.target_exit_data map_entries(%mapv4 : !llvm.ptr){}
 
     return
@@ -2852,7 +2852,7 @@ func.func @omp_target_enter_update_exit_data_depend(%a: memref<?xi32>, %b: memre
 // CHECK-NEXT: [[MAP2:%.*]] = omp.map.info
   %map_a = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   %map_b = omp.map.info var_ptr(%b: memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32>
-  %map_c = omp.map.info var_ptr(%c: memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32>
+  %map_c = omp.map.info var_ptr(%c: memref<?xi32>, tensor<?xi32>) map_clauses(storage) capture(ByRef) -> memref<?xi32>
 
   // Do some work on the host that writes to 'a'
   omp.task depend(taskdependout -> %a : memref<?xi32>) {
@@ -3014,7 +3014,7 @@ func.func @parallel_op_reduction_and_private(%priv_var: !llvm.ptr, %priv_var2: !
 // CHECK-LABEL: omp_target_private
 func.func @omp_target_private(%map1: memref<?xi32>, %map2: memref<?xi32>, %priv_var: !llvm.ptr) -> () {
   %mapv1 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-  %mapv2 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv2 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>) map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // CHECK: omp.target
   // CHECK-SAME: private(
@@ -3047,7 +3047,7 @@ func.func @omp_target_private(%map1: memref<?xi32>, %map2: memref<?xi32>, %priv_
 // CHECK-LABEL: omp_target_private_with_map_idx
 func.func @omp_target_private_with_map_idx(%map1: memref<?xi32>, %map2: memref<?xi32>, %priv_var: !llvm.ptr) -> () {
   %mapv1 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-  %mapv2 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv2 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>) map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // CHECK: omp.target
 
@@ -3320,4 +3320,50 @@ func.func @omp_workdistribute() {
   omp.terminator
   }
   return
+}
+
+func.func @omp_target_map_clause_type_test(%arg0 : memref<?xi32>) -> () {
+    // Test new map clause additions
+    // CHECK: %{{.*}}map_clauses(none){{.*}}
+    // CHECK: %{{.*}}map_clauses(to){{.*}}
+    // CHECK: %{{.*}}map_clauses(from){{.*}}
+    // CHECK: %{{.*}}map_clauses(tofrom){{.*}}
+    // CHECK: %{{.*}}map_clauses(storage){{.*}}
+    // CHECK: %{{.*}}map_clauses(delete){{.*}}
+    // CHECK: %{{.*}}map_clauses(return_param){{.*}}
+    // CHECK: %{{.*}}map_clauses(private){{.*}}
+    // CHECK: %{{.*}}map_clauses(literal){{.*}}
+    // CHECK: %{{.*}}map_clauses(implicit){{.*}}
+    // CHECK: %{{.*}}map_clauses(close){{.*}}
+    // CHECK: %{{.*}}map_clauses(present){{.*}}
+    // CHECK: %{{.*}}map_clauses(ompx_hold){{.*}}
+    // CHECK: %{{.*}}map_clauses(attach){{.*}}
+    // CHECK: %{{.*}}map_clauses(attach_always){{.*}}
+    // CHECK: %{{.*}}map_clauses(attach_none){{.*}}
+    // CHECK: %{{.*}}map_clauses(attach_auto){{.*}}
+    // CHECK: %{{.*}}map_clauses(ref_ptr){{.*}}
+    // CHECK: %{{.*}}map_clauses(ref_ptee){{.*}}
+    // CHECK: %{{.*}}map_clauses(ref_ptr_ptee){{.*}}
+    %mapv0 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(none) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv1 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv2 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv3 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv4 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(storage) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv5 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv6 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(return_param) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv7 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(private) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv8 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(literal) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv9 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv10 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(close) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv11 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(present) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv12 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ompx_hold) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv13 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv14 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_always) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv15 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_none) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv16 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_auto) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv17 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptr) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv18 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptee) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv19 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptr_ptee) capture(ByRef) -> memref<?xi32> {name = ""}
+
+    return
 }

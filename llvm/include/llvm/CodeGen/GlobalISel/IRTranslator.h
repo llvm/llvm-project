@@ -656,7 +656,7 @@ private:
       IRT->addSuccessorWithProb(Src, Dst, Prob);
     }
 
-    virtual ~GISelSwitchLowering() = default;
+    ~GISelSwitchLowering() override = default;
 
   private:
     IRTranslator *IRT;

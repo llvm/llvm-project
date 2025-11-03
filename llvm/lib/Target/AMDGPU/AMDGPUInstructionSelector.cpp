@@ -221,12 +221,21 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectCOPY_SCC_VCC(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
   MachineBasicBlock *BB = I.getParent();
+  Register VCCReg = I.getOperand(1).getReg();
+  MachineInstr *Cmp;
 
-  unsigned CmpOpc =
-      STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
-  MachineInstr *Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc))
-                          .addReg(I.getOperand(1).getReg())
-                          .addImm(0);
+  // Set SCC as a side effect with S_CMP or S_OR.
+  if (STI.hasScalarCompareEq64()) {
+    unsigned CmpOpc =
+        STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
+    Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc)).addReg(VCCReg).addImm(0);
+  } else {
+    Register DeadDst = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    Cmp = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_OR_B64), DeadDst)
+              .addReg(VCCReg)
+              .addReg(VCCReg);
+  }
+
   if (!constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI))
     return false;
 
@@ -2006,19 +2015,27 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   MachineInstr &MI, const AMDGPU::ImageDimIntrinsicInfo *Intr) const {
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
+  unsigned IntrOpcode = Intr->BaseOpcode;
+
+  // For image atomic: use no-return opcode if result is unused.
+  if (Intr->AtomicNoRetBaseOpcode != Intr->BaseOpcode) {
+    Register ResultDef = MI.getOperand(0).getReg();
+    if (MRI->use_nodbg_empty(ResultDef))
+      IntrOpcode = Intr->AtomicNoRetBaseOpcode;
+  }
 
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
-    AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
+      AMDGPU::getMIMGBaseOpcodeInfo(IntrOpcode);
 
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
-  unsigned IntrOpcode = Intr->BaseOpcode;
   const bool IsGFX10Plus = AMDGPU::isGFX10Plus(STI);
   const bool IsGFX11Plus = AMDGPU::isGFX11Plus(STI);
   const bool IsGFX12Plus = AMDGPU::isGFX12Plus(STI);
 
   const unsigned ArgOffset = MI.getNumExplicitDefs() + 1;
 
-  Register VDataIn, VDataOut;
+  Register VDataIn = AMDGPU::NoRegister;
+  Register VDataOut = AMDGPU::NoRegister;
   LLT VDataTy;
   int NumVDataDwords = -1;
   bool IsD16 = MI.getOpcode() == AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16 ||
@@ -2049,7 +2066,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned DMaskLanes = 0;
 
   if (BaseOpcode->Atomic) {
-    VDataOut = MI.getOperand(0).getReg();
+    if (!BaseOpcode->NoReturn)
+      VDataOut = MI.getOperand(0).getReg();
     VDataIn = MI.getOperand(2).getReg();
     LLT Ty = MRI->getType(VDataIn);
 
@@ -2099,8 +2117,9 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   assert((!IsTexFail || DMaskLanes >= 1) && "should have legalized this");
 
   unsigned CPol = MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm();
-  if (BaseOpcode->Atomic)
-    CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
+  // Keep GLC only when the atomic's result is actually used.
+  if (BaseOpcode->Atomic && !BaseOpcode->NoReturn)
+    CPol |= AMDGPU::CPol::GLC;
   if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
                AMDGPU::CPol::VOLATILE))
     return false;

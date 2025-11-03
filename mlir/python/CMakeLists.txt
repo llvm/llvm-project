@@ -349,6 +349,15 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/ShardOps.td
+  SOURCES
+    dialects/shard.py
+  DIALECT_NAME shard
+  GEN_ENUM_BINDINGS)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/MLProgramOps.td
   SOURCES
     dialects/ml_program.py
@@ -885,9 +894,16 @@ if(NOT LLVM_ENABLE_IDE)
   )
 endif()
 
+set(_mlir_python_stubgen_enabled ON)
 # Stubgen doesn't work when cross-compiling (stubgen will run in the host interpreter and then fail
 # to find the extension module for the host arch).
-if(NOT CMAKE_CROSSCOMPILING)
+# Note: Stubgen requires some extra handling to work properly when sanitizers are enabled,
+# so we skip running it in that case now.
+if(CMAKE_CROSSCOMPILING OR (NOT LLVM_USE_SANITIZER STREQUAL ""))
+  set(_mlir_python_stubgen_enabled OFF)
+endif()
+
+if(_mlir_python_stubgen_enabled)
   # _mlir stubgen
   # Note: All this needs to come before add_mlir_python_modules(MLIRPythonModules so that the install targets for the
   # generated type stubs get created.
@@ -976,7 +992,7 @@ endif()
 ################################################################################
 
 set(_declared_sources MLIRPythonSources MLIRPythonExtension.RegisterEverything)
-if(NOT CMAKE_CROSSCOMPILING)
+if(_mlir_python_stubgen_enabled)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()
 
@@ -989,7 +1005,7 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
-if(NOT CMAKE_CROSSCOMPILING)
+if(_mlir_python_stubgen_enabled)
   add_dependencies(MLIRPythonModules "${_mlir_typestub_gen_target}")
   if(MLIR_INCLUDE_TESTS)
     add_dependencies(MLIRPythonModules "${_mlirPythonTestNanobind_typestub_gen_target}")

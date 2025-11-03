@@ -10,6 +10,7 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolBase.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
@@ -284,7 +285,7 @@ void FillResponse(const llvm::json::Object &request,
   // Fill in all of the needed response fields to a "request" and set "success"
   // to true by default.
   response.try_emplace("type", "response");
-  response.try_emplace("seq", (int64_t)0);
+  response.try_emplace("seq", protocol::kCalculateSeq);
   EmplaceSafeString(response, "command",
                     GetString(request, "command").value_or(""));
   const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
@@ -417,7 +418,7 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 // }
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   llvm::json::Object event;
-  event.try_emplace("seq", 0);
+  event.try_emplace("seq", protocol::kCalculateSeq);
   event.try_emplace("type", "event");
   EmplaceSafeString(event, "event", event_name);
   return event;
@@ -710,7 +711,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     break;
   }
   if (stop_id == 0)
-    body.try_emplace("reason", "entry");
+    body["reason"] = "entry";
   const lldb::tid_t tid = thread.GetThreadID();
   body.try_emplace("threadId", (int64_t)tid);
   // If no description has been set, then set it to the default thread stopped

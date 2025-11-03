@@ -131,7 +131,7 @@ protected:
 
 public:
   MetadataStreamerMsgPackV4() = default;
-  ~MetadataStreamerMsgPackV4() = default;
+  ~MetadataStreamerMsgPackV4() override = default;
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
@@ -154,7 +154,7 @@ protected:
 
 public:
   MetadataStreamerMsgPackV5() = default;
-  ~MetadataStreamerMsgPackV5() = default;
+  ~MetadataStreamerMsgPackV5() override = default;
 };
 
 class MetadataStreamerMsgPackV6 final : public MetadataStreamerMsgPackV5 {
@@ -163,7 +163,7 @@ protected:
 
 public:
   MetadataStreamerMsgPackV6() = default;
-  ~MetadataStreamerMsgPackV6() = default;
+  ~MetadataStreamerMsgPackV6() override = default;
 
   void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
                        msgpack::MapDocNode Kern) override;

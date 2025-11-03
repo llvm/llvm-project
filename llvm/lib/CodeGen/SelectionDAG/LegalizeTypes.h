@@ -658,6 +658,8 @@ private:
   SDValue SoftenFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
   SDValue SoftenFloatOp_FCOPYSIGN(SDNode *N);
   SDValue SoftenFloatOp_FAKE_USE(SDNode *N);
+  SDValue SoftenFloatOp_STACKMAP(SDNode *N, unsigned OpNo);
+  SDValue SoftenFloatOp_PATCHPOINT(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
   // Float Expansion Support: LegalizeFloatTypes.cpp
@@ -890,6 +892,7 @@ private:
   SDValue ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N);
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
+  SDValue ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N);
   SDValue ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_VSELECT(SDNode *N);
   SDValue ScalarizeVecRes_SELECT(SDNode *N);

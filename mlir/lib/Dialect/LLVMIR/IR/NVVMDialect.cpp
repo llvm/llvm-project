@@ -320,6 +320,51 @@ LogicalResult ConvertF32x2ToF4x2Op::verify() {
   return success();
 }
 
+LogicalResult ConvertF8x2ToF16x2Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+
+  if (!llvm::isa<Float8E4M3FNType, Float8E5M2Type>(getSrcType()))
+    return emitOpError("Only ")
+           << mlir::Float8E4M3FNType::get(ctx) << " and "
+           << mlir::Float8E5M2Type::get(ctx)
+           << " types are supported for conversions from f8x2 to f16x2.";
+
+  return success();
+}
+
+LogicalResult ConvertF8x2ToBF16x2Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+  if (!llvm::isa<Float8E8M0FNUType>(getSrcType()))
+    return emitOpError("Only ")
+           << mlir::Float8E8M0FNUType::get(ctx)
+           << " type is supported for conversions from f8x2 to bf16x2.";
+
+  return success();
+}
+
+LogicalResult ConvertF6x2ToF16x2Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+
+  if (!llvm::isa<Float6E2M3FNType, Float6E3M2FNType>(getSrcType()))
+    return emitOpError("Only ")
+           << mlir::Float6E2M3FNType::get(ctx) << " and "
+           << mlir::Float6E3M2FNType::get(ctx)
+           << " types are supported for conversions from f6x2 to f16x2.";
+
+  return success();
+}
+
+LogicalResult ConvertF4x2ToF16x2Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+
+  if (!llvm::isa<Float4E2M1FNType>(getSrcType()))
+    return emitOpError("Only ")
+           << mlir::Float4E2M1FNType::get(ctx)
+           << " type is supported for conversions from f4x2 to f16x2.";
+
+  return success();
+}
+
 LogicalResult BulkStoreOp::verify() {
   if (getInitVal() != 0)
     return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
@@ -851,6 +896,12 @@ std::pair<mlir::Type, unsigned> NVVM::inferMMAType(NVVM::MMATypes type,
   } else if (type == NVVM::MMATypes::f32) {
     elementType = builder.getF32Type();
     numberElements = 8;
+  } else if (type == NVVM::MMATypes::f64) {
+    elementType = builder.getF64Type();
+    if (frag == NVVM::MMAFrag::a || frag == NVVM::MMAFrag::b)
+      numberElements = 1;
+    else
+      numberElements = 2;
   } else if (type == NVVM::MMATypes::tf32) {
     elementType = builder.getI32Type();
     numberElements = 4;
@@ -909,6 +960,14 @@ LogicalResult NVVM::WMMALoadOp::verify() {
     return emitOpError() << "invalid attribute combination";
   std::pair<Type, unsigned> typeInfo = inferMMATypeFromMNK(
       getEltype(), getFrag(), getM(), getN(), getK(), getContext());
+  // Special case for f64 fragments
+  Type f64Ty = Float64Type::get(getContext());
+  if (typeInfo.first == f64Ty && typeInfo.second == 1) {
+    if (getType() != f64Ty)
+      return emitOpError("expected destination type to be f64");
+    return success();
+  }
+  // Everything else is a struct
   Type dstType = LLVM::LLVMStructType::getLiteral(
       getContext(), SmallVector<Type, 8>(typeInfo.second, typeInfo.first));
   if (getType() != dstType)
@@ -1563,8 +1622,51 @@ void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
 }
 
 //===----------------------------------------------------------------------===//
+// getPtx methods
+//===----------------------------------------------------------------------===//
+
+std::string NVVM::MBarrierInitOp::getPtx() {
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
+  return (addressSpace == NVVMMemorySpace::Shared)
+             ? std::string("mbarrier.init.shared.b64 [%0], %1;")
+             : std::string("mbarrier.init.b64 [%0], %1;");
+}
+
+//===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierInitOp>(op);
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(thisOp.getAddr().getType())
+          .getAddressSpace();
+  llvm::Intrinsic::ID id = (addressSpace == NVVMMemorySpace::Shared)
+                               ? llvm::Intrinsic::nvvm_mbarrier_init_shared
+                               : llvm::Intrinsic::nvvm_mbarrier_init;
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getCount()));
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierInvalOp>(op);
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(thisOp.getAddr().getType())
+          .getAddressSpace();
+  llvm::Intrinsic::ID id = (addressSpace == NVVMMemorySpace::Shared)
+                               ? llvm::Intrinsic::nvvm_mbarrier_inval_shared
+                               : llvm::Intrinsic::nvvm_mbarrier_inval;
+
+  return {id, {mt.lookupValue(thisOp.getAddr())}};
+}
 
 #define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
   llvm::Intrinsic::nvvm_cp_async_##mod##_shared_global_##size##suffix
@@ -2185,6 +2287,98 @@ ConvertBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   default:
     llvm_unreachable("Invalid rounding mode for CvtBF16x2ToF8x2Op");
   }
+}
+
+NVVM::IDArgPair ConvertF8x2ToF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ConvertF8x2ToF16x2Op>(op);
+
+  bool hasRelu = curOp.getRelu();
+
+  llvm::Intrinsic::ID intId =
+      llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
+          .Case<Float8E4M3FNType>([&](Float8E4M3FNType type) {
+            return hasRelu ? llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn_relu
+                           : llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn;
+          })
+          .Case<Float8E5M2Type>([&](Float8E5M2Type type) {
+            return hasRelu ? llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn_relu
+                           : llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn;
+          })
+          .Default([](mlir::Type type) {
+            llvm_unreachable("Invalid type for ConvertF8x2ToF16x2Op");
+            return llvm::Intrinsic::not_intrinsic;
+          });
+
+  llvm::Value *packedI16 =
+      builder.CreateBitCast(mt.lookupValue(curOp.getSrc()),
+                            llvm::Type::getInt16Ty(builder.getContext()));
+
+  return {intId, {packedI16}};
+}
+
+NVVM::IDArgPair ConvertF8x2ToBF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ConvertF8x2ToBF16x2Op>(op);
+
+  llvm::Intrinsic::ID intId = llvm::Intrinsic::nvvm_ue8m0x2_to_bf16x2;
+  llvm::Value *packedI16 =
+      builder.CreateBitCast(mt.lookupValue(curOp.getSrc()),
+                            llvm::Type::getInt16Ty(builder.getContext()));
+
+  return {intId, {packedI16}};
+}
+
+NVVM::IDArgPair ConvertF6x2ToF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ConvertF6x2ToF16x2Op>(op);
+
+  bool hasRelu = curOp.getRelu();
+
+  llvm::Intrinsic::ID intId =
+      llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
+          .Case<Float6E2M3FNType>([&](Float6E2M3FNType type) {
+            return hasRelu ? llvm::Intrinsic::nvvm_e2m3x2_to_f16x2_rn_relu
+                           : llvm::Intrinsic::nvvm_e2m3x2_to_f16x2_rn;
+          })
+          .Case<Float6E3M2FNType>([&](Float6E3M2FNType type) {
+            return hasRelu ? llvm::Intrinsic::nvvm_e3m2x2_to_f16x2_rn_relu
+                           : llvm::Intrinsic::nvvm_e3m2x2_to_f16x2_rn;
+          })
+          .Default([](mlir::Type type) {
+            llvm_unreachable("Invalid type for ConvertF6x2ToF16x2Op");
+            return llvm::Intrinsic::not_intrinsic;
+          });
+
+  llvm::Value *packedI16 =
+      builder.CreateBitCast(mt.lookupValue(curOp.getSrc()),
+                            llvm::Type::getInt16Ty(builder.getContext()));
+
+  return {intId, {packedI16}};
+}
+
+NVVM::IDArgPair ConvertF4x2ToF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ConvertF4x2ToF16x2Op>(op);
+
+  bool hasRelu = curOp.getRelu();
+
+  llvm::Intrinsic::ID intId =
+      llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
+          .Case<Float4E2M1FNType>([&](Float4E2M1FNType type) {
+            return hasRelu ? llvm::Intrinsic::nvvm_e2m1x2_to_f16x2_rn_relu
+                           : llvm::Intrinsic::nvvm_e2m1x2_to_f16x2_rn;
+          })
+          .Default([](mlir::Type type) {
+            llvm_unreachable("Invalid type for ConvertF4x2ToF16x2Op");
+            return llvm::Intrinsic::not_intrinsic;
+          });
+
+  llvm::Value *extendedI16 =
+      builder.CreateZExt(mt.lookupValue(curOp.getSrc()),
+                         llvm::Type::getInt16Ty(builder.getContext()));
+
+  return {intId, {extendedI16}};
 }
 
 llvm::Intrinsic::ID
