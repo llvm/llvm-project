@@ -5,7 +5,7 @@
 ; RUN: echo 'g 0:1000,1:800,2:200 1:800,3:800 2:200,3:200 3:1000' >> %t
 ; RUN: echo 'c 0 1 2' >> %t
 ;
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -basic-block-address-map -pgo-analysis-map=all | FileCheck %s
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -basic-block-address-map -pgo-analysis-map=all -pgo-analysis-map-emit-bb-sections-cfg | FileCheck %s
 
 define void @foo(i1 %cond) nounwind !prof !0 {
 entry:
@@ -27,7 +27,7 @@ bb3:
 ;; Verify that foo's PGO map contains both IRPGO and Propeller CFG profiles.
 
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text.foo
-; CHECK-NEXT:	.byte	3		# version
+; CHECK-NEXT:	.byte	4		# version
 ; CHECK-NEXT:	.byte	143		# feature
 ; CHECK:	.quad	.Lfunc_begin0	# base address
 ; CHECK:	.byte	0		# BB id

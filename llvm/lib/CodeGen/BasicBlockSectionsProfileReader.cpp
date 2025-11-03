@@ -264,10 +264,10 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
                 Twine("unsigned integer expected: '") + CountStr + "'");
           if (i == 0) {
             // The first element represents the source and its total count.
-            FI->second.CFG.NodeCounts[SrcBBID = *BBID] = Count;
+            FI->second.Cfg.NodeCounts[SrcBBID = *BBID] = Count;
             continue;
           }
-          FI->second.CFG.EdgeCounts[SrcBBID][*BBID] = Count;
+          FI->second.Cfg.EdgeCounts[SrcBBID][*BBID] = Count;
         }
       }
       continue;

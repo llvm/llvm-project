@@ -837,11 +837,11 @@ struct BBAddrMap {
     bool PostLinkCfg : 1;
 
     bool hasPGOAnalysis() const {
-      return FuncEntryCount || BBFreq || BrProb || PropellerCFG;
+      return FuncEntryCount || BBFreq || BrProb;
     }
 
     bool hasPGOAnalysisBBData() const {
-      return BBFreq || BrProb || PropellerCFG;
+      return BBFreq || BrProb;
     }
 
     // Encodes to minimum bit width representation.
