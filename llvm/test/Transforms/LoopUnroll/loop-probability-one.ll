@@ -2,10 +2,10 @@
 ; not crash or otherwise break LoopUnroll behavior when it tries to compute new
 ; probabilities from it.
 ;
-; Runtime loop unrolling should be impossible for that case.  What is infinity %
-; UnrollCount?  But we can have bad profile data.  In that case, the
-; implementation arbitrarily chooses to keep the probability at 1 throughout the
-; remainder loop.
+; That case indicates an infinite loop, but runtime loop unrolling is not
+; possible for an actual infinite loop as infinity % UnrollCount is undefined.
+; The implementation then arbitrarily chooses probabilities indicating that all
+; remainder loop iterations will always execute.
 
 ; DEFINE: %{unroll} = opt < %s -unroll-count=3 -passes=loop-unroll -S
 ; DEFINE: %{rt} = %{unroll} -unroll-runtime
