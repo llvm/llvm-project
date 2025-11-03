@@ -11,6 +11,7 @@
 
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/fenv_t.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/x86_64/fenv_x86_common.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
@@ -85,6 +86,40 @@ LIBC_INLINE static void raise_except(uint16_t excepts) {
   uint32_t mxcsr = _MM_GET_EXCEPTION_STATE();
   mxcsr |= excepts;
   _MM_SET_EXCEPTION_STATE(mxcsr);
+#ifdef LIBC_TRAP_ON_RAISE_FP_EXCEPT
+  // We will try to trigger the SIGFPE if floating point exceptions are not
+  // masked.  Since we already set all the floating point exception flags, we
+  // only need to trigger the trap on one of them.
+  static constexpr float EXCEPTION_INPUTS[6][2] = {
+      // FE_INVALID: 0.0 * inf
+      {0.0f, cpp::bit_cast<float>(0x7f80'0000U)},
+      // FE_DENORM: 1.0 * 0x1.0p-128
+      {1.0f, 0x1.0p-128f},
+      // FE_DIVBYZERO: 1.0 / 0.0
+      {1.0f, 0.0f},
+      // FE_OVERFLOW: 0x1.0p127 * 0x1.0p127
+      {0x1.0p127f, 0x1.0p127f},
+      // FE_UNDERFLOW: 0x1.0p-126 * 0x1.0p-126
+      {0x1.0p-126f, 0x1.0p-126f},
+      // FE_INEXACT: (1 + 2^-12) * (1 + 2^-12)
+      {0x1.001p0f, 0x1.001p0f}};
+
+  uint32_t except_masks =
+      (~(get_mxcsr() >> ExceptionFlags::MXCSR_EXCEPTION_MASK_BIT_POSITION)) &
+      excepts;
+  if (except_masks) {
+    int idx = cpp::countr_zero(except_masks);
+    if (idx == 2) {
+      // FE_DIVBYZERO, we need floating point division operations.
+      [[maybe_unused]] volatile float z = EXCEPTION_INPUTS[idx][0];
+      z /= EXCEPTION_INPUTS[idx][1];
+    } else {
+      // For the remaining exceptions, we floating point multiplications.
+      [[maybe_unused]] volatile float z = EXCEPTION_INPUTS[idx][0];
+      z *= EXCEPTION_INPUTS[idx][1];
+    }
+  }
+#endif // LIBC_TRAP_ON_RAISE_FP_EXCEPT
 }
 
 LIBC_INLINE static uint16_t enable_except(uint16_t excepts) {

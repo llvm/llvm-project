@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENV_X86_COMMON_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENV_X86_COMMON_H
 
+#include <stdbool.h>
+
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/fenv_t.h"
 #include "src/__support/macros/attributes.h"
@@ -23,12 +25,12 @@ namespace fputil {
 namespace internal {
 
 // Default order of floating point exception flags in x87 and mxcsr registers:
-// - Bit 1: Invalid Operations
-// - Bit 2: Denormal
-// - Bit 3: Divide-by-zero
-// - Bit 4: Overflow
-// - Bit 5: Underflow
-// - Bit 6: Inexact
+// - Bit 0: Invalid Operations
+// - Bit 1: Denormal
+// - Bit 2: Divide-by-zero
+// - Bit 3: Overflow
+// - Bit 4: Underflow
+// - Bit 5: Inexact
 struct ExceptionFlags {
   static constexpr uint16_t INVALID_F = 0x1;
   // Some libcs define __FE_DENORM corresponding to the denormal input
