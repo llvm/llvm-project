@@ -308,9 +308,9 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (EffectiveCallerBits & EffectiveCalleeBits) == EffectiveCalleeBits;
 }
 
-bool AArch64TTIImpl::areTypesABICompatible(
-    const Function *Caller, const Function *Callee,
-    const ArrayRef<Type *> &Types) const {
+bool AArch64TTIImpl::areTypesABICompatible(const Function *Caller,
+                                           const Function *Callee,
+                                           ArrayRef<Type *> Types) const {
   if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
     return false;
 
@@ -2227,7 +2227,7 @@ static std::optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
   return std::nullopt;
 }
 
-template <Intrinsic::ID MulOpc, typename Intrinsic::ID FuseOpc>
+template <Intrinsic::ID MulOpc, Intrinsic::ID FuseOpc>
 static std::optional<Instruction *>
 instCombineSVEVectorFuseMulAddSub(InstCombiner &IC, IntrinsicInst &II,
                                   bool MergeIntoAddendOp) {
