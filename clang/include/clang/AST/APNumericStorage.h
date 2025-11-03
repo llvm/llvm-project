@@ -42,8 +42,7 @@ protected:
     unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
     if (NumWords > 1)
       return llvm::APInt(BitWidth, llvm::ArrayRef(pVal, NumWords));
-    else
-      return llvm::APInt(BitWidth, VAL);
+    return llvm::APInt(BitWidth, VAL);
   }
   void setIntValue(const ASTContext &C, const llvm::APInt &Val);
 };
