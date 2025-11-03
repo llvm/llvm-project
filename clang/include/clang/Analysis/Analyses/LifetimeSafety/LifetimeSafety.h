@@ -80,19 +80,9 @@ public:
   LiveOriginsAnalysis &getLiveOrigins() const { return *LiveOrigins; }
   FactManager &getFactManager() { return FactMgr; }
 
-  static void PrintStats(llvm::raw_ostream &OS) {
-    llvm::errs() << "\n*** LifetimeSafety Missing Origin Stats "
-                    "(expression_type : count) :\n";
-    for (const auto &[expr, count] : LifetimeSafetyAnalysis::count) {
-      OS << expr << " : " << count << '\n';
-    }
-  }
+  static void PrintStats(llvm::raw_ostream &OS);
 
-  static void UpdateMissingOriginCount(const OriginManager &OM) {
-    for (const auto &[expr, missing_origin_count] : OM.getMissingOrigins()) {
-      LifetimeSafetyAnalysis::count[std::string(expr)] += missing_origin_count;
-    }
-  }
+  static void UpdateMissingOriginCount(const OriginManager &OM);
 
 private:
   AnalysisDeclContext &AC;
