@@ -1358,10 +1358,10 @@ __tid = 8
 	PROC __kmp_invoke_microtask
 	PACBTI_C
 
-	stp	x29, x30, [sp, #-16]!
 # if OMPT_SUPPORT
 	stp	x19, x20, [sp, #-16]!
 # endif
+	stp	x29, x30, [sp, #-16]!
 	mov	x29, sp
 
 	orr	w9, wzr, #1
@@ -1415,11 +1415,11 @@ KMP_LABEL(kmp_1):
 	blr	x8
 	orr	w0, wzr, #1
 	mov	sp, x29
+	ldp	x29, x30, [sp], #16
 # if OMPT_SUPPORT
 	str	xzr, [x19]
 	ldp	x19, x20, [sp], #16
 # endif
-	ldp	x29, x30, [sp], #16
 	PACBTI_RET
 	ret
 
