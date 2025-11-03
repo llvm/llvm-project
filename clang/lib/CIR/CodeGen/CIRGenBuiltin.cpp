@@ -655,14 +655,10 @@ mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
   return cir::VAArgOp::create(builder, loc, type, vaList);
 }
 
-/// Returns a Value corresponding to the size of the given expression.
-/// This Value may be either of the following:
+/// Returns a Value corresponding to the size of the given expression by
+/// emitting a `cir.objsize` operation.
 ///
-///   - Reference an argument if `pass_object_size` is used.
-///   - A call to a `cir.objsize`.
-///
-/// emittedE is the result of emitting `e` as a scalar expr. If it's non-null
-/// and we wouldn't otherwise try to reference a pass_object_size parameter,
+/// emittedE is the result of emitting `e` as a scalar expr. If it's non-null,
 /// we'll call `cir.objsize` on emittedE, rather than emitting e.
 mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
                                                   cir::IntType resType,
@@ -675,7 +671,7 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
   // lowering, we shouldn't lower to `cir.objsize`.
   if (type == 3 || (!emittedE && e->HasSideEffects(getContext())))
     return builder.getConstInt(getLoc(e->getSourceRange()), resType,
-                                (type & 2) ? 0 : -1);
+                               (type & 2) ? 0 : -1);
 
   mlir::Value ptr = emittedE ? emittedE : emitScalarExpr(e);
   assert(mlir::isa<cir::PointerType>(ptr.getType()) &&
@@ -686,8 +682,6 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
   // LLVM intrinsics (which CIR lowers to at some point, only supports 0
   // and 2, account for that right now.
   const bool min = ((type & 2) != 0);
-  // TODO(cir): Heads up for LLVM lowering, For GCC compatibility,
-  // __builtin_object_size treat NULL as unknown size.
   auto op = cir::ObjSizeOp::create(builder, getLoc(e->getSourceRange()),
                                    resType, ptr, min, isDynamic);
   return op.getResult();
