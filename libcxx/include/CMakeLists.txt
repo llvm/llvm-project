@@ -567,7 +567,6 @@ set(files
   __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
-  __memory/aligned_alloc.h
   __memory/allocate_at_least.h
   __memory/allocation_guard.h
   __memory/allocator.h
