@@ -185,12 +185,12 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   return getDistributeLayoutAttr(opr.get());
 }
 
+// Returns the permanent layout attribute for the given result if it's
+// available on the defining op. Otherwise returns the provided layout.
 xegpu::DistributeLayoutAttr
-maybePickPermamentLayout(xegpu::DistributeLayoutAttr layout,
-                         const OpResult &result, bool respectPermLayout,
-                         mlir::Operation *owner, const std::string &name) {
-  if (!respectPermLayout)
-    return layout;
+maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
+                         const OpResult &result, mlir::Operation *owner,
+                         const std::string &name) {
   xegpu::DistributeLayoutAttr candidate = layout;
 
   if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(owner)) {
@@ -201,13 +201,12 @@ maybePickPermamentLayout(xegpu::DistributeLayoutAttr layout,
   return candidate;
 }
 
+// Returns the permanent layout attribute for the given operand if it's
+// available on the defining op. Otherwise returns the provided layout.
 xegpu::DistributeLayoutAttr
-maybePickPermamentLayout(xegpu::DistributeLayoutAttr layout,
-                         const OpOperand &operand, bool respectPermLayout,
-                         mlir::Operation *owner, const std::string &name) {
-  if (!respectPermLayout)
-    return layout;
-
+maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
+                         const OpOperand &operand, mlir::Operation *owner,
+                         const std::string &name) {
   xegpu::DistributeLayoutAttr candidate = layout;
   unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
 
@@ -231,8 +230,9 @@ void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
     return;
 
-  auto candidate = maybePickPermamentLayout(layout, operandOrResult,
-                                            respectPermLayout, owner, name);
+  DistributeLayoutAttr candidate = layout;
+  if (respectPermLayout)
+    candidate = maybePickPermanentLayout(layout, operandOrResult, owner, name);
 
   if (candidate)
     owner->setAttr(name, candidate);
