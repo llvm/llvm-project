@@ -183,30 +183,28 @@ void SPIRVPassConfig::addISelPrepare() {
     addPass(createInferAddressSpacesPass());
   }
 
-  if (TM.getSubtargetImpl()->isShader() || TM.getSubtargetImpl()->isKernel()) {
-    // 1.  Simplify loop for subsequent transformations. After this steps, loops
-    // have the following properties:
-    //  - loops have a single entry edge (pre-header to loop header).
-    //  - all loop exits are dominated by the loop pre-header.
-    //  - loops have a single back-edge.
-    addPass(createLoopSimplifyPass());
+  // 1.  Simplify loop for subsequent transformations. After this steps, loops
+  // have the following properties:
+  //  - loops have a single entry edge (pre-header to loop header).
+  //  - all loop exits are dominated by the loop pre-header.
+  //  - loops have a single back-edge.
+  addPass(createLoopSimplifyPass());
 
-    // 2. Removes registers whose lifetime spans across basic blocks. Also
-    // removes phi nodes. This will greatly simplify the next steps.
-    addPass(createRegToMemWrapperPass());
+  // 2. Removes registers whose lifetime spans across basic blocks. Also
+  // removes phi nodes. This will greatly simplify the next steps.
+  addPass(createRegToMemWrapperPass());
 
-    // 3. Merge the convergence region exit nodes into one. After this step,
-    // regions are single-entry, single-exit. This will help determine the
-    // correct merge block.
-    addPass(createSPIRVMergeRegionExitTargetsPass());
+  // 3. Merge the convergence region exit nodes into one. After this step,
+  // regions are single-entry, single-exit. This will help determine the
+  // correct merge block.
+  addPass(createSPIRVMergeRegionExitTargetsPass());
 
-    // 4. Structurize.
-    addPass(createSPIRVStructurizerPass());
+  // 4. Structurize.
+  addPass(createSPIRVStructurizerPass());
 
-    // 5. Reduce the amount of variables required by pushing some operations
-    // back to virtual registers.
-    addPass(createPromoteMemoryToRegisterPass());
-  }
+  // 5. Reduce the amount of variables required by pushing some operations
+  // back to virtual registers.
+  addPass(createPromoteMemoryToRegisterPass());
 
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
