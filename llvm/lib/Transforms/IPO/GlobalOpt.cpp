@@ -2540,6 +2540,8 @@ static bool OptimizeNonTrivialIFuncs(
   SmallVector<GlobalIFunc *> IFuncs;
 
   for (GlobalIFunc &IF : M.ifuncs()) {
+    LLVM_DEBUG(dbgs() << "Examining IFUNC " << IF.getName() << "\n");
+
     if (IF.isInterposable())
       continue;
 
@@ -2581,7 +2583,7 @@ static bool OptimizeNonTrivialIFuncs(
 
   for (GlobalIFunc *CalleeIF : IFuncs) {
     SmallVector<Function *> NonFMVCallers;
-    SmallVector<GlobalIFunc *> CallerIFuncs;
+    DenseSet<GlobalIFunc *> CallerIFuncs;
     DenseMap<Function *, SmallVector<CallBase *>> CallSites;
 
     // Find the callsites.
@@ -2606,7 +2608,7 @@ static bool OptimizeNonTrivialIFuncs(
           auto [It, Inserted] = CallSites.try_emplace(Caller);
           if (Inserted) {
             if (CallerIsFMV)
-              CallerIFuncs.push_back(CallerIF);
+              CallerIFuncs.insert(CallerIF);
             else
               NonFMVCallers.push_back(Caller);
           }
@@ -2614,6 +2616,9 @@ static bool OptimizeNonTrivialIFuncs(
         }
       }
     }
+
+    if (CallSites.empty())
+      continue;
 
     LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
                       << CalleeIF->getResolverFunction()->getName() << "\n");
@@ -2633,6 +2638,12 @@ static bool OptimizeNonTrivialIFuncs(
       unsigned I = 0;
 
       for (Function *const &Caller : Callers) {
+        bool CallerIsFMV = GetTTI(*Caller).isMultiversionedFunction(*Caller);
+
+        LLVM_DEBUG(dbgs() << "   Examining "
+                          << (CallerIsFMV ? "FMV" : "regular") << " caller "
+                          << Caller->getName() << "\n");
+
         if (I == Callees.size())
           break;
 
@@ -2643,17 +2654,19 @@ static bool OptimizeNonTrivialIFuncs(
         // If the feature set of the caller implies the feature set of the
         // callee then all the callsites can be statically resolved.
         if (CalleeBits.isSubsetOf(CallerBits)) {
-          auto &Calls = CallSites[Caller];
-          for (CallBase *CS : Calls) {
-            LLVM_DEBUG(dbgs() << "Redirecting call " << Caller->getName()
-                              << " -> " << Callee->getName() << "\n");
-            CS->setCalledOperand(Callee);
+          // Not all caller versions are necessarily users of the callee IFUNC.
+          if (auto It = CallSites.find(Caller); It != CallSites.end()) {
+            for (CallBase *CS : It->second) {
+              LLVM_DEBUG(dbgs() << "   Redirecting call " << Caller->getName()
+                                << " -> " << Callee->getName() << "\n");
+              CS->setCalledOperand(Callee);
+            }
+            Changed = true;
           }
-          Changed = true;
         }
 
         // Nothing else to do about non-FMV callers.
-        if (!GetTTI(*Caller).isMultiversionedFunction(*Caller))
+        if (!CallerIsFMV)
           continue;
 
         // Subsequent iterations of the outermost loop (set of callers)
