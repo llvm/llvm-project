@@ -1565,14 +1565,14 @@ private:
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
 // to do the copy after the callee returns.
-bool MayNeedCopy(const ActualArgument *actual,
+std::optional<bool> ActualNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
   if (!actual) {
-    return false;
+    return std::nullopt;
   }
   if (actual->isAlternateReturn()) {
-    return false;
+    return std::nullopt;
   }
   const auto *dummyObj{dummy
           ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
@@ -1603,7 +1603,7 @@ bool MayNeedCopy(const ActualArgument *actual,
     // Note: contiguity and polymorphic checks deal with array or assumed rank
     // arguments
     if (!check.HaveArrayOrAssumedRankArgs()) {
-      return false;
+      return std::nullopt;
     }
     if (check.HaveContiguityDifferences()) {
       return true;
