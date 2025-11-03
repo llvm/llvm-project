@@ -105,7 +105,7 @@ negate-ra-state CFIs will become invalid during BasicBlock reordering.
 
 The implementation introduces two new passes:
 1. `PointerAuthCFIAnalyzer`: assigns the RA state to each instruction based on
-    the CFI in the input binary
+    the CFIs in the input binary
 2. `PointerAuthCFIFixup`: reads those assigned instruction RA states after
     optimizations, and emits `DW_CFA_AARCH64_negate_ra_state` CFIs at the correct
     places: wherever there is a state change between two consecutive instructions
