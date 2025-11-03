@@ -567,3 +567,8 @@ void LVElement::printLinkageName(raw_ostream &OS, bool Full, LVElement *Parent,
                     /*UseQuotes=*/false, /*PrintRef=*/false);
   }
 }
+
+void LVElement::printCommon(raw_ostream &OS, bool Full) const {
+  LVElement::print(OS, Full);
+  printExtra(OS, Full);
+}
