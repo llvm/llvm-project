@@ -3128,6 +3128,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (!OMPX_UseMultipleSdmaEngines.isPresent()) {
       OMPX_UseMultipleSdmaEngines = EnvarConfig.OMPX_UseMultipleSdmaEngines;
     }
+    if (!OMPX_AdjustNumTeamsForXteamRedSmallBlockSize.isPresent()) {
+      OMPX_AdjustNumTeamsForXteamRedSmallBlockSize =
+          EnvarConfig.OMPX_AdjustNumTeamsForXteamRedSmallBlockSize;
+    }
   }
 
   ~AMDGPUDeviceTy() {}
@@ -5043,14 +5047,27 @@ private:
   struct DeviceEnvarConfigTy {
     bool
         OMPX_UseMultipleSdmaEngines; // LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES
+    bool
+        OMPX_AdjustNumTeamsForXteamRedSmallBlockSize;
   };
 
   static inline const std::unordered_map<std::string, DeviceEnvarConfigTy>
-      EnvarConfigs = {{"MI210", {.OMPX_UseMultipleSdmaEngines = true}},
-                      {"MI300A", {.OMPX_UseMultipleSdmaEngines = false}},
-                      {"MI300X", {.OMPX_UseMultipleSdmaEngines = true}},
+      EnvarConfigs = {{"MI210", {.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=0}},
+                      {"MI250X",{.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=0}},
+                      {"MI250X/MI250",{
+                                 .OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=0}},
+                      {"MI300A", {.OMPX_UseMultipleSdmaEngines = false,
+                                 .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}},
+                      {"MI300X", {.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}},
+                      {"MI355X", {.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}},
                       // Default config for unknown devices.
-                      {"DEFAULT", {.OMPX_UseMultipleSdmaEngines = true}}};
+                      {"DEFAULT", {.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}}};
 
   const DeviceEnvarConfigTy &getEnvarConfig() const {
     std::string DeviceMarketingName = getNormMarketingName();
