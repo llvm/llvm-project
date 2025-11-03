@@ -3992,6 +3992,17 @@ struct OmpExpectation {
   WRAPPER_CLASS_BOILERPLATE(OmpExpectation, Value);
 };
 
+// Ref: [6.1:tbd]
+//
+// fallback-modifier ->
+//    FALLBACK(fallback-mode)                       // since 6.1
+// fallback-mode ->
+//    ABORT | DEFAULT_MEM | NULL                    // since 6.1
+struct OmpFallbackModifier {
+  ENUM_CLASS(Value, Abort, Default_Mem, Null);
+  WRAPPER_CLASS_BOILERPLATE(OmpFallbackModifier, Value);
+};
+
 // REF: [5.1:217-220], [5.2:293-294]
 //
 // OmpInteropRuntimeIdentifier ->                   // since 5.2
@@ -4504,7 +4515,7 @@ struct OmpDynamicAllocatorsClause {
 
 struct OmpDynGroupprivateClause {
   TUPLE_CLASS_BOILERPLATE(OmpDynGroupprivateClause);
-  MODIFIER_BOILERPLATE(OmpAccessGroup, OmpPrescriptiveness);
+  MODIFIER_BOILERPLATE(OmpAccessGroup, OmpFallbackModifier);
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 

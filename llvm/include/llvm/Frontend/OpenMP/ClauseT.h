@@ -587,10 +587,10 @@ struct DynamicAllocatorsT {
 template <typename T, typename I, typename E> //
 struct DynGroupprivateT {
   ENUM(AccessGroup, Cgroup);
-  using Prescriptiveness = type::Prescriptiveness;
+  ENUM(Fallback, Abort, Default_Mem, Null);
   using Size = E;
   using TupleTrait = std::true_type;
-  std::tuple<OPT(AccessGroup), OPT(Prescriptiveness), Size> t;
+  std::tuple<OPT(AccessGroup), OPT(Fallback), Size> t;
 };
 
 // V5.2: [5.8.4] `enter` clause

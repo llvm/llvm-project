@@ -2281,6 +2281,11 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
     Walk(": ", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpFallbackModifier &x) {
+    Word("FALLBACK(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpDynGroupprivateClause &x) {
     using Modifier = OmpDynGroupprivateClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2790,6 +2795,7 @@ public:
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
+  WALK_NESTED_ENUM(OmpFallbackModifier, Value) // OMP fallback-modifier
   WALK_NESTED_ENUM(OmpInteropType, Value) // OMP InteropType
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
   WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier
