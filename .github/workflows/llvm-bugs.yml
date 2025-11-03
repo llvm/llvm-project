@@ -52,7 +52,7 @@ jobs:
                 url    : issue.data.html_url,
                 labels : issue.data.labels.map((label) => label.name),
                 assignee : issue.data.assignees.map((assignee) => assignee.login),
-                body   : issue.data.body
+                body   : maybeTruncatedBody
               };
 
               const data = {

@@ -114,7 +114,8 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
   // Compute the list of subgroup-relative offsets for sub-tensors or sub-memory
   // descriptors to be accessed, based on the layout information.
   ArrayRef<int64_t> wgShape = op.getDataShape();
-  auto maybeDescOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+  auto maybeDescOffsets =
+      layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
   if (failed(maybeDescOffsets))
     return failure();
 
@@ -830,8 +831,8 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       // Get subgroup id
       Value sgId =
           gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-
-      auto sgOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+      auto sgOffsets =
+          layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
       if (failed(sgOffsets))
         return failure();
 
@@ -1052,7 +1053,8 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
 
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-    auto sgOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+    auto sgOffsets =
+        layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
     if (failed(sgOffsets))
       return failure();
 

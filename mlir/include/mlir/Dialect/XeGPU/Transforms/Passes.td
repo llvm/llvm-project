@@ -26,7 +26,7 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
     The pass distributes subgroup level (SIMD) XeGPU ops to work items.
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
-                           "vector::VectorDialect"];
+                           "vector::VectorDialect", "index::IndexDialect"];
 }
 
 def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
