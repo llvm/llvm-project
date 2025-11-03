@@ -1586,14 +1586,14 @@ LogicalResult NVVM::ReduxOp::verify() {
     if (!reduxType.isInteger(32))
       return emitOpError("'")
              << stringifyEnum(kind) << "' redux kind unsupported with "
-             << getType() << " type. Only supported type is 'i32'.";
+             << reduxType << " type. Only supported type is 'i32'.";
     break;
   case NVVM::ReduxKind::FMIN:
   case NVVM::ReduxKind::FMAX:
     if (!reduxType.isF32())
       return emitOpError("'")
              << stringifyEnum(kind) << "' redux kind unsupported with "
-             << getType() << " type. Only supported type is 'f32'.";
+             << reduxType << " type. Only supported type is 'f32'.";
     break;
   }
 
