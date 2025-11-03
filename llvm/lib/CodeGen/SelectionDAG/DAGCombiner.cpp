@@ -2715,6 +2715,12 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
           (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
       SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z}, Flags);
       AddToWorklist(Add.getNode());
+      // We can't set InBounds even if both original ptradds were InBounds and
+      // NUW: SDAG usually represents pointers as integers, therefore, the
+      // matched pattern behaves as if it had implicit casts:
+      //   (ptradd inbounds (inttoptr (ptrtoint (ptradd inbounds x, y))), z)
+      // The outer inbounds ptradd might therefore rely on a provenance that x
+      // does not have.
       return DAG.getMemBasePlusOffset(X, Add, DL, Flags);
     }
   }
@@ -2740,6 +2746,12 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
         // that.
         SDNodeFlags Flags =
             (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+        // We can't set InBounds even if both original ptradds were InBounds and
+        // NUW: SDAG usually represents pointers as integers, therefore, the
+        // matched pattern behaves as if it had implicit casts:
+        //   (ptradd inbounds (inttoptr (ptrtoint (ptradd inbounds GA, v))), c)
+        // The outer inbounds ptradd might therefore rely on a provenance that
+        // GA does not have.
         SDValue Inner = DAG.getMemBasePlusOffset(GAValue, N1, DL, Flags);
         AddToWorklist(Inner.getNode());
         return DAG.getMemBasePlusOffset(Inner, N0.getOperand(1), DL, Flags);
@@ -2763,8 +2775,13 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
     bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
 
     // If both additions in the original were NUW, reassociation preserves that.
-    SDNodeFlags ReassocFlags =
-        (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+    SDNodeFlags CommonFlags = N->getFlags() & N1->getFlags();
+    SDNodeFlags ReassocFlags = CommonFlags & SDNodeFlags::NoUnsignedWrap;
+    if (CommonFlags.hasNoUnsignedWrap()) {
+      // If both operations are NUW and the PTRADD is inbounds, the offests are
+      // both non-negative, so the reassociated PTRADDs are also inbounds.
+      ReassocFlags |= N->getFlags() & SDNodeFlags::InBounds;
+    }
 
     if (ZIsConstant != YIsConstant) {
       if (YIsConstant)
@@ -9357,7 +9374,7 @@ static unsigned bigEndianByteAt(unsigned BW, unsigned i) {
 // Check if the bytes offsets we are looking at match with either big or
 // little endian value loaded. Return true for big endian, false for little
 // endian, and std::nullopt if match failed.
-static std::optional<bool> isBigEndian(const ArrayRef<int64_t> ByteOffsets,
+static std::optional<bool> isBigEndian(ArrayRef<int64_t> ByteOffsets,
                                        int64_t FirstOffset) {
   // The endian can be decided only when it is 2 bytes at least.
   unsigned Width = ByteOffsets.size();
@@ -22743,7 +22760,10 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
     NewPtr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(COffset), DL);
     PointerInfo = ST->getPointerInfo().getWithOffset(COffset);
   } else {
-    NewPtr = TLI.getVectorElementPointer(DAG, Ptr, Value.getValueType(), Idx);
+    // The original DAG loaded the entire vector from memory, so arithmetic
+    // within it must be inbounds.
+    NewPtr = TLI.getInboundsVectorElementPointer(DAG, Ptr, Value.getValueType(),
+                                                 Idx);
   }
 
   return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, ST->getAlign(),

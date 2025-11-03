@@ -184,16 +184,16 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
+
+  Finds derived class methods that shadow a (non-virtual) base class method.
+
 - New :doc:`bugprone-invalid-enum-default-initialization
   <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
 
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
-
-- New :doc:`bugprone-derived-method-shadowing-base-method
-  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
-
-  Finds derived class methods that shadow a (non-virtual) base class method.
 
 - New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
@@ -262,6 +262,11 @@ New check aliases
 - Renamed :doc:`cert-err58-cpp <clang-tidy/checks/cert/err58-cpp>` to
   :doc:`bugprone-throwing-static-initialization
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
+  :doc:`bugprone-raw-memory-call-on-non-trivial-type
+  <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`
   keeping initial check as an alias to the new one.
 
 Changes in existing checks
@@ -367,7 +372,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false
-  positives when pointers is transferred to non-const references 
+  positives when pointers is transferred to non-const references
   and avoid false positives of function pointer and fix false
   positives on return of non-const pointer.
 
