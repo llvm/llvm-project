@@ -291,7 +291,7 @@ jobs:
 
   buildkite_platforms:
     # needs: [ stage2 ] # TODO: temporarily always trigger
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: ubuntu-latest
     steps:
       - name: Set up Docker
         uses: docker/setup-docker-action@3fb92d6d9c634363128c8cce4bc3b2826526370a
