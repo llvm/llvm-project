@@ -1158,7 +1158,7 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
                                        const ExpectedData &ED) {
   // Building a set of all directives ordered by their location
   auto directiveComparator = [](const Directive *LHS, const Directive *RHS) {
-    return LHS->DirectiveLoc < RHS->DiagnosticLoc;
+    return LHS->DirectiveLoc < RHS->DirectiveLoc;
   };
   auto sortDirectives = [&](const DirectiveList &Unordered) {
     std::vector<const Directive *> Ordered(Unordered.size());
@@ -1191,8 +1191,8 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
     return OrderedDirectives;
   }();
 
-  auto getLocDiagPair = [&](DiagnosticsEngine::Level DiagLevel,
-                            long DiagIndex) {
+  auto getLocDiagPair = [&](DiagnosticsEngine::Level DiagLevel, long DiagIndex)
+      -> const std::pair<clang::SourceLocation, std::basic_string<char>> & {
     TextDiagnosticBuffer::const_iterator It = [&] {
       switch (DiagLevel) {
       case DiagnosticsEngine::Level::Fatal:
@@ -1230,15 +1230,15 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
   for (const auto [Directive, LevelDiagPair] : llvm::zip_equal(
            OrderedDirectives,
            llvm::iterator_range{Buffer.all_begin(), Buffer.all_end()})) {
-    assert(!Directive->MatchAnyFileAndLine);
-    assert(!Directive->MatchAnyLine);
+    assert(!Directive->MatchAnyFileAndLine && !Directive->MatchAnyLine &&
+           "Wildcards should not be allowed in strict verify mode!");
     const auto [DiagLevel, DiagIndex] = LevelDiagPair;
-    const auto [DiagLoc, DiagText] = getLocDiagPair(DiagLevel, DiagIndex);
+    const auto &[DiagLoc, DiagText] = getLocDiagPair(DiagLevel, DiagIndex);
     const SourceLocation DirLoc = Directive->DirectiveLoc;
     bool LocsMatch =
         SourceMgr.getPresumedLineNumber(DiagLoc) ==
             SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc) &&
-        IsFromSameFile(SourceMgr, DiagLoc, Directive->DiagnosticLoc);
+        IsFromSameFile(SourceMgr, Directive->DiagnosticLoc, DiagLoc);
     if (!LocsMatch ||
         Directive->match(DiagText) != DiagnosticMatchResult::Match) {
       SmallString<256> Fmt;
