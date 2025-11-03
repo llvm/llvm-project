@@ -190,7 +190,7 @@ exact functions ignored, and the found inconsistency.
 
 ### PointerAuthCFIFixup
 
-This pass runs after optimizations. It performns the _inverse_ of PointerAuthCFIAnalyzer
+This pass runs after optimizations. It performs the _inverse_ of PointerAuthCFIAnalyzer
 pass:
 1. it reads the RA state annotations attached to the instructions, and
 2. whenever the state changes, it adds a PseudoInstruction that holds an
