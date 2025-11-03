@@ -867,19 +867,33 @@ LogicalResult MmaOp::verify() {
 }
 
 LogicalResult ShflOp::verify() {
-  auto type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
+  auto returnStructType = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
 
-  if ((*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid")) {
-    auto predicateType = (type && type.getBody().size() == 2)
-                             ? llvm::dyn_cast<IntegerType>(type.getBody()[1])
-                             : nullptr;
-    if (!predicateType || predicateType.getWidth() != 1)
-      return emitOpError("expected return type to be a two-element struct with "
-                         "i1 as the second element");
+  if (returnStructType && !getReturnValueAndIsValid())
+    return emitOpError("\"return_value_and_is_valid\" attribute must be "
+                       "specified when the return type is a struct type");
+
+  if (getReturnValueAndIsValid()) {
+    if (!returnStructType || returnStructType.getBody().size() != 2)
+      return emitOpError("expected return type to be a two-element struct");
+
+    llvm::ArrayRef<Type> returnStruct = returnStructType.getBody();
+
+    auto resultType = returnStruct[0];
+    if (resultType != getVal().getType())
+      return emitOpError(
+                 "expected first element in the returned struct to be of type ")
+             << getVal().getType() << " but got " << resultType << " instead.";
+
+    auto predicateType = returnStruct[1];
+    if (!predicateType.isInteger(1))
+      return emitOpError("expected second element in the returned struct to be "
+                         "of type 'i1' but got ")
+             << predicateType << " instead.";
   } else {
-    if (type)
-      return emitOpError("\"return_value_and_is_valid\" attribute must be "
-                         "specified when returning the predicate");
+    if (getType() != getVal().getType())
+      return emitOpError("expected return type to be of type ")
+             << getVal().getType() << " but got " << getType() << " instead.";
   }
   return success();
 }

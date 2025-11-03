@@ -1359,8 +1359,9 @@ def NVVM_ShflOp :
     a mask for logically splitting warps into sub-segments and an upper bound
     for clamping the source lane index.
     
-    Optionally, `return_value_and_is_valid` can be specified to return a 
-    two-element struct with the result and a predicate indicating if the 
+    The `return_value_and_is_valid` unit attribute can be specified to indicate 
+    that the return value is a two-element struct, where the first element is 
+    the result value and the second element is a predicate indicating if the 
     computed source lane index is valid.
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-shfl-sync)
