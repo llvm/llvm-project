@@ -318,8 +318,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
-  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb() &&
-      !Subtarget.hasVendorXqcibm() && !Subtarget.hasVendorXAndesPerf() &&
+  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasStdExtP() &&
+      !Subtarget.hasVendorXTHeadBb() && !Subtarget.hasVendorXqcibm() &&
+      !Subtarget.hasVendorXAndesPerf() &&
       !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
@@ -392,7 +393,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
   }
 
-  if (Subtarget.hasStdExtZbb() ||
+  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtP() ||
       (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, XLenVT,
                        Legal);
@@ -403,6 +404,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
+    // If have a CLZW, but not CTZW, custom promote i32.
+    if (Subtarget.hasStdExtP() && Subtarget.is64Bit())
+      setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   }
 
   if (!Subtarget.hasCPOPLike()) {
@@ -419,14 +423,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // We need the custom lowering to make sure that the resulting sequence
     // for the 32bit case is efficient on 64bit targets.
     // Use default promotion for i32 without Zbb.
-    if (Subtarget.is64Bit() && Subtarget.hasStdExtZbb())
+    if (Subtarget.is64Bit() &&
+        (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtP()))
       setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
   }
 
-  if (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()) {
+  if (Subtarget.hasStdExtP() ||
+      (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::ABS, MVT::i32, Custom);
   } else if (Subtarget.hasShortForwardBranchOpt()) {
     // We can use PseudoCCSUB to implement ABS.
     setOperationAction(ISD::ABS, XLenVT, Legal);
@@ -14669,6 +14677,25 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     bool IsCTZ =
         N->getOpcode() == ISD::CTTZ || N->getOpcode() == ISD::CTTZ_ZERO_UNDEF;
+
+    // Without Zbb, lower as 32 - clzw(~X & (X-1))
+    if (IsCTZ && !Subtarget.hasStdExtZbb()) {
+      assert(Subtarget.hasStdExtP());
+
+      NewOp0 = DAG.getFreeze(NewOp0);
+      SDValue Not = DAG.getNOT(DL, NewOp0, MVT::i64);
+      SDValue Minus1 = DAG.getNode(ISD::SUB, DL, MVT::i64, NewOp0,
+                                   DAG.getConstant(1, DL, MVT::i64));
+      SDValue And = DAG.getNode(ISD::AND, DL, MVT::i64, Not, Minus1);
+      SDValue CLZW = DAG.getNode(RISCVISD::CLZW, DL, MVT::i64, And);
+      SDValue Sub = DAG.getNode(ISD::SUB, DL, MVT::i64,
+                                DAG.getConstant(32, DL, MVT::i64), CLZW);
+      SDValue Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Sub,
+                                DAG.getValueType(MVT::i32));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+
     unsigned Opc = IsCTZ ? RISCVISD::CTZW : RISCVISD::CLZW;
     SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp0);
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
@@ -14791,8 +14818,16 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
 
+    if (Subtarget.hasStdExtP()) {
+      SDValue Src =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+      SDValue Abs = DAG.getNode(RISCVISD::ABSW, DL, MVT::i64, Src);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Abs));
+      return;
+    }
+
     if (Subtarget.hasStdExtZbb()) {
-      // Emit a special ABSW node that will be expanded to NEGW+MAX at isel.
+      // Emit a special node that will be expanded to NEGW+MAX at isel.
       // This allows us to remember that the result is sign extended. Expanding
       // to NEGW+MAX here requires a Freeze which breaks ComputeNumSignBits.
       SDValue Src = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64,
@@ -19759,7 +19794,9 @@ legalizeScatterGatherIndexType(SDLoc DL, SDValue &Index,
     // LLVM's legalization take care of the splitting.
     // FIXME: LLVM can't split VP_GATHER or VP_SCATTER yet.
     Index = DAG.getNode(ISD::SIGN_EXTEND, DL,
-                        IndexVT.changeVectorElementType(XLenVT), Index);
+                        EVT::getVectorVT(*DAG.getContext(), XLenVT,
+                                         IndexVT.getVectorElementCount()),
+                        Index);
   }
   IndexType = ISD::UNSIGNED_SCALED;
   return true;
@@ -20265,6 +20302,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
+  case RISCVISD::ABSW:
   case RISCVISD::CLZW:
   case RISCVISD::CTZW: {
     // Only the lower 32 bits of the first operand are read
@@ -21837,6 +21875,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::REMUW:
   case RISCVISD::ROLW:
   case RISCVISD::RORW:
+  case RISCVISD::ABSW:
   case RISCVISD::FCVT_W_RV64:
   case RISCVISD::FCVT_WU_RV64:
   case RISCVISD::STRICT_FCVT_W_RV64:
@@ -23907,7 +23946,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                .Case("{t0}", RISCV::X5)
                                .Case("{t1}", RISCV::X6)
                                .Case("{t2}", RISCV::X7)
-                               .Cases("{s0}", "{fp}", RISCV::X8)
+                               .Cases({"{s0}", "{fp}"}, RISCV::X8)
                                .Case("{s1}", RISCV::X9)
                                .Case("{a0}", RISCV::X10)
                                .Case("{a1}", RISCV::X11)
@@ -23944,38 +23983,38 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // use the ABI names in register constraint lists.
   if (Subtarget.hasStdExtF()) {
     unsigned FReg = StringSwitch<unsigned>(Constraint.lower())
-                        .Cases("{f0}", "{ft0}", RISCV::F0_F)
-                        .Cases("{f1}", "{ft1}", RISCV::F1_F)
-                        .Cases("{f2}", "{ft2}", RISCV::F2_F)
-                        .Cases("{f3}", "{ft3}", RISCV::F3_F)
-                        .Cases("{f4}", "{ft4}", RISCV::F4_F)
-                        .Cases("{f5}", "{ft5}", RISCV::F5_F)
-                        .Cases("{f6}", "{ft6}", RISCV::F6_F)
-                        .Cases("{f7}", "{ft7}", RISCV::F7_F)
-                        .Cases("{f8}", "{fs0}", RISCV::F8_F)
-                        .Cases("{f9}", "{fs1}", RISCV::F9_F)
-                        .Cases("{f10}", "{fa0}", RISCV::F10_F)
-                        .Cases("{f11}", "{fa1}", RISCV::F11_F)
-                        .Cases("{f12}", "{fa2}", RISCV::F12_F)
-                        .Cases("{f13}", "{fa3}", RISCV::F13_F)
-                        .Cases("{f14}", "{fa4}", RISCV::F14_F)
-                        .Cases("{f15}", "{fa5}", RISCV::F15_F)
-                        .Cases("{f16}", "{fa6}", RISCV::F16_F)
-                        .Cases("{f17}", "{fa7}", RISCV::F17_F)
-                        .Cases("{f18}", "{fs2}", RISCV::F18_F)
-                        .Cases("{f19}", "{fs3}", RISCV::F19_F)
-                        .Cases("{f20}", "{fs4}", RISCV::F20_F)
-                        .Cases("{f21}", "{fs5}", RISCV::F21_F)
-                        .Cases("{f22}", "{fs6}", RISCV::F22_F)
-                        .Cases("{f23}", "{fs7}", RISCV::F23_F)
-                        .Cases("{f24}", "{fs8}", RISCV::F24_F)
-                        .Cases("{f25}", "{fs9}", RISCV::F25_F)
-                        .Cases("{f26}", "{fs10}", RISCV::F26_F)
-                        .Cases("{f27}", "{fs11}", RISCV::F27_F)
-                        .Cases("{f28}", "{ft8}", RISCV::F28_F)
-                        .Cases("{f29}", "{ft9}", RISCV::F29_F)
-                        .Cases("{f30}", "{ft10}", RISCV::F30_F)
-                        .Cases("{f31}", "{ft11}", RISCV::F31_F)
+                        .Cases({"{f0}", "{ft0}"}, RISCV::F0_F)
+                        .Cases({"{f1}", "{ft1}"}, RISCV::F1_F)
+                        .Cases({"{f2}", "{ft2}"}, RISCV::F2_F)
+                        .Cases({"{f3}", "{ft3}"}, RISCV::F3_F)
+                        .Cases({"{f4}", "{ft4}"}, RISCV::F4_F)
+                        .Cases({"{f5}", "{ft5}"}, RISCV::F5_F)
+                        .Cases({"{f6}", "{ft6}"}, RISCV::F6_F)
+                        .Cases({"{f7}", "{ft7}"}, RISCV::F7_F)
+                        .Cases({"{f8}", "{fs0}"}, RISCV::F8_F)
+                        .Cases({"{f9}", "{fs1}"}, RISCV::F9_F)
+                        .Cases({"{f10}", "{fa0}"}, RISCV::F10_F)
+                        .Cases({"{f11}", "{fa1}"}, RISCV::F11_F)
+                        .Cases({"{f12}", "{fa2}"}, RISCV::F12_F)
+                        .Cases({"{f13}", "{fa3}"}, RISCV::F13_F)
+                        .Cases({"{f14}", "{fa4}"}, RISCV::F14_F)
+                        .Cases({"{f15}", "{fa5}"}, RISCV::F15_F)
+                        .Cases({"{f16}", "{fa6}"}, RISCV::F16_F)
+                        .Cases({"{f17}", "{fa7}"}, RISCV::F17_F)
+                        .Cases({"{f18}", "{fs2}"}, RISCV::F18_F)
+                        .Cases({"{f19}", "{fs3}"}, RISCV::F19_F)
+                        .Cases({"{f20}", "{fs4}"}, RISCV::F20_F)
+                        .Cases({"{f21}", "{fs5}"}, RISCV::F21_F)
+                        .Cases({"{f22}", "{fs6}"}, RISCV::F22_F)
+                        .Cases({"{f23}", "{fs7}"}, RISCV::F23_F)
+                        .Cases({"{f24}", "{fs8}"}, RISCV::F24_F)
+                        .Cases({"{f25}", "{fs9}"}, RISCV::F25_F)
+                        .Cases({"{f26}", "{fs10}"}, RISCV::F26_F)
+                        .Cases({"{f27}", "{fs11}"}, RISCV::F27_F)
+                        .Cases({"{f28}", "{ft8}"}, RISCV::F28_F)
+                        .Cases({"{f29}", "{ft9}"}, RISCV::F29_F)
+                        .Cases({"{f30}", "{ft10}"}, RISCV::F30_F)
+                        .Cases({"{f31}", "{ft11}"}, RISCV::F31_F)
                         .Default(RISCV::NoRegister);
     if (FReg != RISCV::NoRegister) {
       assert(RISCV::F0_F <= FReg && FReg <= RISCV::F31_F && "Unknown fp-reg");

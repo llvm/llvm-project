@@ -170,8 +170,9 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
       if (Name.empty())
         continue;
 
-      if (OnEach(Name) != EnumerateResult::Continue)
-        return false;
+      EnumerateResult Res = OnEach(Name);
+      if (Res != EnumerateResult::Continue)
+        return Res == EnumerateResult::Stop;
     }
   } else if (Obj->isMachO()) {
   }

@@ -72,7 +72,7 @@ public:
       : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
                      PSI, DL, RPOT) {}
 
-  virtual ~InstCombinerImpl() = default;
+  ~InstCombinerImpl() override = default;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);
@@ -700,7 +700,7 @@ public:
   /// folded operation.
   void PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN);
 
-  Value *foldPtrToIntOfGEP(Type *IntTy, Value *Ptr);
+  Value *foldPtrToIntOrAddrOfGEP(Type *IntTy, Value *Ptr);
   Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS, CmpPredicate Cond,
                            Instruction &I);
   Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,

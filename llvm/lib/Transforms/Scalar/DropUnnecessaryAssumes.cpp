@@ -122,7 +122,8 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
 
     Value *Cond = Assume->getArgOperand(0);
     // Don't drop type tests, which have special semantics.
-    if (match(Cond, m_Intrinsic<Intrinsic::type_test>()))
+    if (match(Cond, m_Intrinsic<Intrinsic::type_test>()) ||
+        match(Cond, m_Intrinsic<Intrinsic::public_type_test>()))
       continue;
 
     SmallVector<Value *> Affected;

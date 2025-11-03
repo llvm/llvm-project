@@ -9084,6 +9084,8 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   SmallVector<Register, 32> BuildVec;
   LLT EltTy = DstTy.getScalarType();
 
+  DenseMap<unsigned, Register> CachedExtract;
+
   for (int Idx : Mask) {
     if (Idx < 0) {
       if (!Undef.isValid())
@@ -9097,9 +9099,13 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
     int NumElts = Src0Ty.getNumElements();
     Register SrcVec = Idx < NumElts ? Src0Reg : Src1Reg;
     int ExtractIdx = Idx < NumElts ? Idx : Idx - NumElts;
-    auto IdxK = MIRBuilder.buildConstant(IdxTy, ExtractIdx);
-    auto Extract = MIRBuilder.buildExtractVectorElement(EltTy, SrcVec, IdxK);
-    BuildVec.push_back(Extract.getReg(0));
+    auto [It, Inserted] = CachedExtract.try_emplace(Idx);
+    if (Inserted) {
+      auto IdxK = MIRBuilder.buildConstant(IdxTy, ExtractIdx);
+      It->second =
+          MIRBuilder.buildExtractVectorElement(EltTy, SrcVec, IdxK).getReg(0);
+    }
+    BuildVec.push_back(It->second);
   }
 
   assert(DstTy.isVector() && "Unexpected scalar G_SHUFFLE_VECTOR");

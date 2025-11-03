@@ -14,11 +14,10 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[SELECT]] to i64
 ; CHECK-NEXT:    br label %[[LOOP_1:.*]]
 ; CHECK:       [[LOOP_1]]:
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ZEXT]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_1_LCSSA2:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ZEXT]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP_1_EXIT:.*]], label %[[LOOP_1]]
 ; CHECK:       [[LOOP_1_EXIT]]:
-; CHECK-NEXT:    [[IV_1_LCSSA2:%.*]] = phi i64 [ [[IV_1]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i64 [ [[IV_1]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i64 [ [[IV_1_LCSSA2]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_2_PREHEADER:.*]], label %[[LOOP_3_PREHEADER:.*]]
 ; CHECK:       [[LOOP_3_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
