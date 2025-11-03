@@ -1393,6 +1393,8 @@ def : PatGpr<ctlz, CLZ_D>;
 def : PatGpr<cttz, CTZ_D>;
 def : Pat<(ctlz (not GPR:$rj)), (CLO_D GPR:$rj)>;
 def : Pat<(cttz (not GPR:$rj)), (CTO_D GPR:$rj)>;
+def : Pat<(cttz (or (not GPR:$rj), 256)), (CTO_D (ANDI GPR:$rj, 255))>;
+def : Pat<(cttz (or (not GPR:$rj), 65536)), (CTO_D (BSTRPICK_D GPR:$rj, 15, 0))>;
 def : PatGpr<loongarch_clzw, CLZ_W>;
 def : PatGpr<loongarch_ctzw, CTZ_W>;
 def : Pat<(loongarch_clzw (not GPR:$rj)), (CLO_W GPR:$rj)>;
@@ -1404,6 +1406,8 @@ def : PatGpr<ctlz, CLZ_W>;
 def : PatGpr<cttz, CTZ_W>;
 def : Pat<(ctlz (not GPR:$rj)), (CLO_W GPR:$rj)>;
 def : Pat<(cttz (not GPR:$rj)), (CTO_W GPR:$rj)>;
+def : Pat<(cttz (or (not GPR:$rj), 256)), (CTO_W (ANDI GPR:$rj, 255))>;
+def : Pat<(cttz (or (not GPR:$rj), 65536)), (CTO_W (BSTRPICK_W GPR:$rj, 15, 0))>;
 } // Predicates = [IsLA32, Has32S]
 
 /// FrameIndex calculations
