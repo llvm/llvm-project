@@ -277,6 +277,8 @@ void llvm::setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
                                                        StringRef PassName,
                                                        const Function *F) {
   F = F ? F : I.getFunction();
+  assert(F && "Either pass a instruction attached to a Function, or explicitly "
+              "pass the Function that it will be attached to");
   if (std::optional<Function::ProfileCount> EC = F->getEntryCount();
       EC && EC->getCount() > 0)
     setExplicitlyUnknownBranchWeights(I, PassName);
