@@ -103,7 +103,8 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
                                          const uArch *targetuArch) {
   if (!canBeOptimized(tdescType))
     return tdescType;
-  auto laneData = getMaybeLaneData(tdescType).value();
+  auto laneData = getMaybeLaneData(tdescType)
+                      .value(); // Lane data must exist if we reach here.
   int64_t innerLaneData = laneData[1];
   int elementTyBitwidth = tdescType.getElementType().getIntOrFloatBitWidth();
   // Required shape is total shape of the vector result that this tensor desc
@@ -146,18 +147,12 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
                                     tdescType.getMemorySpace(), newLayout);
 }
 
-/// Helper to create a constant index value.
-static Value createConstantIndex(ConversionPatternRewriter &rewriter,
-                                 Location loc, int64_t value) {
-  return arith::ConstantIndexOp::create(rewriter, loc, value).getResult();
-}
-
 /// Helper to convert an OpFoldResult to Value.
 static Value convertToValue(ConversionPatternRewriter &rewriter, Location loc,
                             OpFoldResult ofr) {
   std::optional<int64_t> mayBeInt = getConstantIntValue(ofr);
   if (mayBeInt)
-    return createConstantIndex(rewriter, loc, *mayBeInt);
+    return arith::ConstantIndexOp::create(rewriter, loc, *mayBeInt).getResult();
   return llvm::cast<Value>(ofr);
 }
 
@@ -169,10 +164,12 @@ static Value divideByConstant(ConversionPatternRewriter &rewriter, Location loc,
     int64_t shiftAmount = llvm::Log2_64(constant);
     return arith::ShRUIOp::create(
                rewriter, loc, val,
-               createConstantIndex(rewriter, loc, shiftAmount))
+               arith::ConstantIndexOp::create(rewriter, loc, shiftAmount)
+                   .getResult())
         .getResult();
   }
-  auto constantOp = createConstantIndex(rewriter, loc, constant);
+  auto constantOp =
+      arith::ConstantIndexOp::create(rewriter, loc, constant).getResult();
   return arith::DivUIOp::create(rewriter, loc, val, constantOp).getResult();
 }
 
@@ -186,8 +183,8 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
                            xegpu::LoadNdOp origLoadOp) {
   Location loc = data.getLoc();
   assert(offsets.size() >= 2 && "Expecting at least 2 offsets for 2D LoadNdOp");
-  Value offsetX = convertToValue(rewriter, loc, offsets[offsets.size() - 2]);
-  Value offsetY = convertToValue(rewriter, loc, offsets[offsets.size() - 1]);
+  Value offsetDim0 = convertToValue(rewriter, loc, offsets[offsets.size() - 2]);
+  Value offsetDim1 = convertToValue(rewriter, loc, offsets[offsets.size() - 1]);
   SmallVector<int64_t> supportedShape(newTensorDesc.getType().getShape());
   // Compute the ratio between original shape and supported shape. We need to
   // generate loads in this ratio arrangement.
@@ -196,14 +193,16 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
                         .value(); // `ratio` must be defined if we reach here.
   for (int64_t h = 0; h < shapeRatio[0]; ++h) {
     for (int64_t w = 0; w < shapeRatio[1]; ++w) {
-      int64_t localOffsetX = h * supportedShape[0];
-      int64_t localOffsetY = w * supportedShape[1];
+      int64_t localOffsetDim0 = h * supportedShape[0];
+      int64_t localOffsetDim1 = w * supportedShape[1];
       Value loadOffsetX = arith::AddIOp::create(
-          rewriter, loc, offsetX,
-          createConstantIndex(rewriter, loc, localOffsetX));
+          rewriter, loc, offsetDim0,
+          arith::ConstantIndexOp::create(rewriter, loc, localOffsetDim0)
+              .getResult());
       Value loadOffsetY = arith::AddIOp::create(
-          rewriter, loc, offsetY,
-          createConstantIndex(rewriter, loc, localOffsetY));
+          rewriter, loc, offsetDim1,
+          arith::ConstantIndexOp::create(rewriter, loc, localOffsetDim1)
+              .getResult());
       auto loadOp = xegpu::LoadNdOp::create(
           rewriter, loc,
           VectorType::get(supportedShape, data.getType().getElementType()),
@@ -217,7 +216,7 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
       // Insert the loaded block into the right position in data.
       auto insertOp = vector::InsertStridedSliceOp::create(
           rewriter, loc, loadOp.getResult(), data,
-          ArrayRef<int64_t>{localOffsetX, localOffsetY},
+          ArrayRef<int64_t>{localOffsetDim0, localOffsetDim1},
           ArrayRef<int64_t>{1, 1});
       // InsertOp must have the same layout as newTensorDesc.
       xegpu::setDistributeLayoutAttr(insertOp->getOpResult(0), layoutAttr);
@@ -227,7 +226,7 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
   return data;
 }
 
-/// Checks is a CreateNdDescOp can be optimized for transpose, if so creates a
+/// Checks if a CreateNdDescOp can be optimized for transpose, if so creates a
 /// new CreateNdDescOp with optimized tensor desc type. This involves extracting
 /// the base pointer from the original memory source and adjusting the shape and
 /// strides of the tensor desc to fit with the new optimized transpose layout.
@@ -254,7 +253,8 @@ public:
     auto maybeConstInnerStride = getConstantIntValue(strides.back());
     // Only row-major memrefs are expected for now.
     if (!maybeConstInnerStride || *maybeConstInnerStride != 1)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          createNdOp, "Expecting row-major memref for transpose optimization.");
     Value source = createNdOp.getSource();
     auto optionalLaneData = getMaybeLaneData(tdescTy);
     assert(optionalLaneData && "Expected 2D lane data");
@@ -282,10 +282,9 @@ public:
     if (memrefType && memrefType.hasStaticShape()) {
       auto extractOp = memref::ExtractAlignedPointerAsIndexOp::create(
           rewriter, createNdOp.getLoc(), source);
-      source = arith::IndexCastOp::create(
-                   rewriter, createNdOp.getLoc(),
-                   IntegerType::get(rewriter.getContext(), 64),
-                   extractOp.getResult())
+      source = arith::IndexCastOp::create(rewriter, createNdOp.getLoc(),
+                                          rewriter.getI64Type(),
+                                          extractOp.getResult())
                    .getResult();
     }
     // Create a new CreateNdDescOp with the modified shape and converted type.
@@ -346,10 +345,11 @@ public:
         Value offsetY = convertToValue(rewriter, loadNdOp->getLoc(),
                                        modifiedOffsets.back());
         modifiedOffsets.back() =
-            arith::AddIOp::create(rewriter, loadNdOp->getLoc(), offsetY,
-                                  createConstantIndex(rewriter,
-                                                      loadNdOp->getLoc(),
-                                                      i * origDataShape[1]))
+            arith::AddIOp::create(
+                rewriter, loadNdOp->getLoc(), offsetY,
+                arith::ConstantIndexOp::create(rewriter, loadNdOp->getLoc(),
+                                               i * origDataShape[1])
+                    .getResult())
                 .getResult();
         slice = generateLoads(
             rewriter, cast<TypedValue<VectorType>>(slice), modifiedOffsets,
