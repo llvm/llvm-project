@@ -778,13 +778,17 @@ void BinaryContext::populateJumpTables() {
   }
 
   if (opts::StrictMode && DataPCRelocations.size()) {
-    LLVM_DEBUG({
-      dbgs() << DataPCRelocations.size()
-             << " unclaimed PC-relative relocations left in data:\n";
-      for (uint64_t Reloc : DataPCRelocations)
-        dbgs() << Twine::utohexstr(Reloc) << '\n';
-    });
-    assert(0 && "unclaimed PC-relative relocations left in data\n");
+    this->errs() << "BOLT-ERROR: " << DataPCRelocations.size()
+                 << " unclaimed PC-relative relocation(s) left in data";
+    if (opts::Verbosity) {
+      this->errs() << ":\n";
+      for (uint64_t RelocOffset : DataPCRelocations)
+        this->errs() << "  @0x" << Twine::utohexstr(RelocOffset) << '\n';
+    } else {
+      this->errs() << ". Re-run with -v=1 to see the list\n";
+    }
+    this->errs() << "BOLT-ERROR: unable to proceed with --strict\n";
+    exit(1);
   }
   clearList(DataPCRelocations);
 }
