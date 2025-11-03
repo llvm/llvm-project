@@ -64,6 +64,10 @@ Code example
   cmake_minimum_required(VERSION 3.20)
   project(my_clang_tool VERSION 0.1.0)
 
+  # This will find the default system installation of Clang; if you want to
+  # use a different build of clang, pass -DClang_DIR=/foobar/lib/cmake/clang
+  # to the CMake configure command, where /foobar is the build directory where
+  # you built Clang.
   find_package(Clang CONFIG REQUIRED)
 
   add_executable(my_clang_tool main.cpp)
@@ -376,6 +380,10 @@ Complete example code
   cmake_minimum_required(VERSION 3.20)
   project(my_clang_tool VERSION 0.1.0)
 
+  # This will find the default system installation of Clang; if you want to
+  # use a different build of clang, pass -DClang_DIR=/foobar/lib/cmake/clang
+  # to the CMake configure command, where /foobar is the build directory where
+  # you built Clang.
   find_package(Clang CONFIG REQUIRED)
 
   add_executable(my_clang_tool main.cpp)
