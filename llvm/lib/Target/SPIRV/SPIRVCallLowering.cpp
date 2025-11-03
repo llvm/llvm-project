@@ -149,8 +149,6 @@ static FunctionType *getOriginalFunctionType(const Function &F) {
         return isa<MDString>(N->getOperand(0)) &&
                cast<MDString>(N->getOperand(0))->getString() == F.getName();
       });
-  // TODO: probably one function can have numerous type mutations,
-  // so we should support this.
   if (ThisFuncMDIt != NamedMD->op_end()) {
     auto *ThisFuncMD = *ThisFuncMDIt;
     for (unsigned I = 1; I != ThisFuncMD->getNumOperands(); ++I) {
