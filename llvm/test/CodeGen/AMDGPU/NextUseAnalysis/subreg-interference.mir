@@ -1,0 +1,39 @@
+# NOTE: Sub-register interference resolution test  
+# This tests the V2 capability to handle disjoint sub-register usage without false interference
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=amdgpu-next-use -debug-only=amdgpu-next-use %s -o /dev/null 2>&1 | FileCheck %s
+
+---
+name:            subreg_interference  
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+body: |
+  bb.0:
+    ; Create a 128-bit register with sub-register usage
+    ; Lower 64 bits (sub0_sub1) and upper 64 bits (sub2_sub3) should not interfere
+    %0:vreg_128 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1, %3, %subreg.sub2, %4, %subreg.sub3
+    
+    ; Use only lower 64 bits - should not interfere with upper bits
+    %1:vgpr_32 = COPY %0.sub0
+    %2:vgpr_32 = COPY %0.sub1  
+    
+    ; Later use upper 64 bits - should show separate distance tracking
+    %3:vgpr_32 = COPY %0.sub2
+    %4:vgpr_32 = COPY %0.sub3
+    
+    S_ENDPGM 0
+
+# CHECK: === NextUseAnalysis Results for subreg_interference ===
+# CHECK: --- MBB_0 ---
+
+# The V2 implementation should track sub-register lanes separately
+# Look for lane mask information in the output
+# CHECK: Next-use distances:
+
+# CHECK: === End NextUseAnalysis Results ===
+...

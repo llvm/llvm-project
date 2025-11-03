@@ -49,10 +49,18 @@ add_llvm_unittest(CodeGenTests
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp
   MLRegAllocDevelopmentFeatures.cpp
+  VRegMaskPairTest.cpp
   X86MCInstLowerTest.cpp
   )
 
 add_subdirectory(GlobalISel)
 add_subdirectory(CGPluginTest)
+ 
+target_include_directories(CodeGenTests
+  PRIVATE
+    ${LLVM_MAIN_SRC_DIR}/lib/Target/AMDGPU
+    ${LLVM_BINARY_DIR}/lib/Target/AMDGPU
+)
+
 
 target_link_libraries(CodeGenTests PRIVATE LLVMTestingSupport)
