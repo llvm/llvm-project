@@ -399,7 +399,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HLSL_202y",
                         Twine((unsigned)LangOptions::HLSLLangStd::HLSL_202y));
 
-    if (LangOpts.NativeHalfType)
+    if (LangOpts.NativeHalfType && LangOpts.NativeInt16Type)
       Builder.defineMacro("__HLSL_ENABLE_16_BIT", "1");
 
     // Shader target information
@@ -1541,6 +1541,9 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   PredefineBuffer.reserve(4080);
   llvm::raw_string_ostream Predefines(PredefineBuffer);
   MacroBuilder Builder(Predefines);
+
+  // Ensure that the initial value of __COUNTER__ is hooked up.
+  PP.setCounterValue(InitOpts.InitialCounterValue);
 
   // Emit line markers for various builtin sections of the file. The 3 here
   // marks <built-in> as being a system header, which suppresses warnings when

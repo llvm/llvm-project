@@ -798,7 +798,7 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
           // clang-format on
           .Case<PtrLikeTypeInterface>(
               [](Type type) { return isCompatiblePtrType(type); })
-          .Default([](Type) { return false; });
+          .Default(false);
 
   if (!result)
     compatibleTypes.erase(type);

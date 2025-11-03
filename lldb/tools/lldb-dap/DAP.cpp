@@ -1104,9 +1104,11 @@ llvm::Error DAP::Loop() {
                                      "unhandled packet");
   }
 
-  m_loop.AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); });
-  thread.join();
+  // Don't wait to join the mainloop thread if our callback wasn't added
+  // successfully, or we'll wait forever.
+  if (m_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+    thread.join();
 
   if (m_error_occurred)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

@@ -211,6 +211,8 @@ struct IntrinsicLibrary {
   mlir::Value genBarrierArrive(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genBarrierArriveCnt(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genBarrierInit(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genBarrierTryWait(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genBarrierTryWaitSleep(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genBesselJn(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genBesselYn(mlir::Type,
@@ -459,7 +461,21 @@ struct IntrinsicLibrary {
   mlir::Value genTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genTMABulkCommitGroup(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkG2S(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkLoadC4(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkLoadC8(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkLoadI4(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkLoadI8(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkLoadR2(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkLoadR4(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkLoadR8(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkS2G(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreI4(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreI8(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreR2(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreR4(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreR8(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreC4(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreC8(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkWaitGroup(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,

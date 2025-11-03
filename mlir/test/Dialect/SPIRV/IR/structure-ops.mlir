@@ -501,7 +501,7 @@ spirv.module Logical GLSL450 {
 // -----
 
 spirv.module Logical GLSL450 {
-  // expected-error @+1 {{op initializer must be result of a spirv.SpecConstant or spirv.GlobalVariable or spirv.SpecConstantCompositeOp op}}
+  // expected-error @+1 {{op initializer must be result of a spirv.SpecConstant or spirv.SpecConstantCompositeOp op}}
   spirv.GlobalVariable @var0 initializer(@var1) : !spirv.ptr<f32, Private>
 }
 
