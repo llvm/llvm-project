@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
@@ -3493,14 +3494,12 @@ bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
   if (MaybeUnmerge->getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
     return false;
 
-  // Check that the resultant concat will be legal
-  auto UnmergeEltSize =
-      MRI.getType(MaybeUnmerge->getOperand(1).getReg()).getScalarSizeInBits();
-  auto UnmergeEltCount = MaybeUnmerge->getNumDefs();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT UnmergeSrcTy = MRI.getType(MaybeUnmerge->getOperand(MaybeUnmerge->getNumOperands()-1).getReg());
 
-  if (UnmergeEltCount < 2 || (UnmergeEltSize * UnmergeEltCount != 64 &&
-                              UnmergeEltSize * UnmergeEltCount != 128))
-    return false;
+  // Ensure we only generate legal instructions post-legalizer
+  if (!IsPreLegalize && !isLegal({TargetOpcode::G_CONCAT_VECTORS, {DstTy, UnmergeSrcTy, UnmergeSrcTy}}))
+      return false;
 
   // Check that all of the operands before the midpoint come from the same
   // unmerge and are in the same order as they are used in the build_vector
@@ -3516,7 +3515,7 @@ bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
   }
 
   // Check that all of the unmerged values are used
-  if (UnmergeEltCount != NumUnmerge)
+  if (MaybeUnmerge->getNumDefs() != NumUnmerge)
     return false;
 
   // Check that all of the operands after the mid point are undefs.
@@ -3527,10 +3526,7 @@ bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
       return false;
   }
 
-  // Unmerge should only use one register so we can use the last one
-  for (auto &UnmergeUse :
-       getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI)->all_uses())
-    UnmergeSrc = UnmergeUse.getReg();
+  UnmergeSrc = MaybeUnmerge->getOperand(MaybeUnmerge->getNumOperands()-1).getReg();
 
   return true;
 }
