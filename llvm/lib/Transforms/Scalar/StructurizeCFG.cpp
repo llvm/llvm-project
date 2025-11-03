@@ -558,10 +558,11 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
   } else {
     // Test for successors as back edge
     BasicBlock *BB = N->getNodeAs<BasicBlock>();
-    if (BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator()))
-      for (BasicBlock *Succ : Term->successors())
-        if (Visited.count(Succ))
-          Loops[Succ] = BB;
+    BranchInst *Term = cast<BranchInst>(BB->getTerminator());
+
+    for (BasicBlock *Succ : Term->successors())
+      if (Visited.count(Succ))
+        Loops[Succ] = BB;
   }
 }
 
@@ -593,7 +594,7 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
 
   for (BasicBlock *P : predecessors(BB)) {
     // Ignore it if it's a branch from outside into our region entry
-    if (!ParentRegion->contains(P) || !dyn_cast<BranchInst>(P->getTerminator()))
+    if (!ParentRegion->contains(P))
       continue;
 
     Region *R = RI->getRegionFor(P);
@@ -1401,17 +1402,13 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 /// Run the transformation for each region found
 bool StructurizeCFG::run(Region *R, DominatorTree *DT,
                          const TargetTransformInfo *TTI) {
-  // CallBr and its corresponding direct target blocks are for now ignored by
-  // this pass. This is not a limitation for the currently intended uses cases
-  // of callbr in the AMDGPU backend.
-  // Parent and child regions are not affected by this (current) restriction.
-  // See `llvm/test/Transforms/StructurizeCFG/callbr.ll` for details.
-  if (R->isTopLevelRegion() || isa<CallBrInst>(R->getEntry()->getTerminator()))
+  if (R->isTopLevelRegion())
     return false;
 
   this->DT = DT;
   this->TTI = TTI;
   Func = R->getEntry()->getParent();
+  assert(hasOnlySimpleTerminator(*Func) && "Unsupported block terminator.");
 
   ParentRegion = R;
 
