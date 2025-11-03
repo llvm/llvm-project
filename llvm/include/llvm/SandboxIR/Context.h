@@ -51,7 +51,7 @@ public:
     // Uses a 64-bit integer so we don't have to worry about the unlikely case
     // of overflowing a 32-bit counter.
     using ValTy = uint64_t;
-    static constexpr const ValTy InvalidVal = 0;
+    static constexpr ValTy InvalidVal = 0;
 
   private:
     // Default initialization results in an invalid ID.

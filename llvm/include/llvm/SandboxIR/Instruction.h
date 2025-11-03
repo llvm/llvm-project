@@ -1866,7 +1866,7 @@ class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  static constexpr const unsigned DefaultPseudoIndex =
+  static constexpr unsigned DefaultPseudoIndex =
       llvm::SwitchInst::DefaultPseudoIndex;
 
   LLVM_ABI static SwitchInst *create(Value *V, BasicBlock *Dest,

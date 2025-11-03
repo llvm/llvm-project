@@ -161,7 +161,7 @@ template <char NsanTypeId>
 class ShadowTypeConfigImpl : public ShadowTypeConfig {
 public:
   char getNsanTypeId() const override { return NsanTypeId; }
-  static constexpr const char kNsanTypeId = NsanTypeId;
+  static constexpr char kNsanTypeId = NsanTypeId;
 };
 
 // `double` (`d`) shadow type.
