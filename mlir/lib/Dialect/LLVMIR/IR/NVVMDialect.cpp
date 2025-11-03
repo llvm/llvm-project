@@ -869,31 +869,38 @@ LogicalResult MmaOp::verify() {
 LogicalResult ShflOp::verify() {
   auto returnStructType = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
 
-  if (returnStructType && !getReturnValueAndIsValid())
-    return emitOpError("\"return_value_and_is_valid\" attribute must be "
-                       "specified when the return type is a struct type");
+  auto mismatchedType = [&](Twine desc, Type expectedType,
+                            Type actualType) -> LogicalResult {
+    return emitOpError("expected " + desc + " to be of type ")
+           << expectedType << " but got " << actualType << " instead.";
+  };
 
-  if (getReturnValueAndIsValid()) {
-    if (!returnStructType || returnStructType.getBody().size() != 2)
+  if (returnStructType) {
+    if (!getReturnValueAndIsValid())
+      return emitOpError("\"return_value_and_is_valid\" attribute must be "
+                         "specified when the return type is a struct type");
+
+    if (returnStructType.getBody().size() != 2)
       return emitOpError("expected return type to be a two-element struct");
 
     llvm::ArrayRef<Type> returnStruct = returnStructType.getBody();
 
     auto resultType = returnStruct[0];
     if (resultType != getVal().getType())
-      return emitOpError(
-                 "expected first element in the returned struct to be of type ")
-             << getVal().getType() << " but got " << resultType << " instead.";
+      return mismatchedType("first element in the returned struct",
+                            getVal().getType(), resultType);
 
     auto predicateType = returnStruct[1];
     if (!predicateType.isInteger(1))
-      return emitOpError("expected second element in the returned struct to be "
-                         "of type 'i1' but got ")
-             << predicateType << " instead.";
+      return mismatchedType("second element in the returned struct",
+                            mlir::IntegerType::get(getContext(), 1),
+                            predicateType);
   } else {
+    if (getReturnValueAndIsValid())
+      return emitOpError("expected return type to be a two-element struct");
+
     if (getType() != getVal().getType())
-      return emitOpError("expected return type to be of type ")
-             << getVal().getType() << " but got " << getType() << " instead.";
+      return mismatchedType("return type", getVal().getType(), getType());
   }
   return success();
 }
