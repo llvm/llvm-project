@@ -59,6 +59,8 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CRC.h"
@@ -72,6 +74,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <optional>
 #include <set>
 
@@ -3325,35 +3328,18 @@ void CodeGenModule::addUsedOrCompilerUsedGlobal(llvm::GlobalValue *GV) {
     LLVMUsed.emplace_back(GV);
 }
 
-static void emitUsed(CodeGenModule &CGM, StringRef Name,
-                     std::vector<llvm::WeakTrackingVH> &List) {
-  // Don't create llvm.used if there is no need.
-  if (List.empty())
-    return;
-
-  llvm::PointerType *UnqualPtr =
-      llvm::PointerType::getUnqual(CGM.getLLVMContext());
-
-  // Convert List to what ConstantArray needs.
-  SmallVector<llvm::Constant*, 8> UsedArray;
-  UsedArray.resize(List.size());
-  for (unsigned i = 0, e = List.size(); i != e; ++i) {
-    UsedArray[i] = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-        cast<llvm::Constant>(&*List[i]), UnqualPtr);
-  }
-
-  llvm::ArrayType *ATy = llvm::ArrayType::get(UnqualPtr, UsedArray.size());
-
-  auto *GV = new llvm::GlobalVariable(
-      CGM.getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
-      llvm::ConstantArray::get(ATy, UsedArray), Name);
-
-  GV->setSection("llvm.metadata");
-}
-
 void CodeGenModule::emitLLVMUsed() {
-  emitUsed(*this, "llvm.used", LLVMUsed);
-  emitUsed(*this, "llvm.compiler.used", LLVMCompilerUsed);
+  auto CastToGlobal = [](llvm::WeakTrackingVH &VH) {
+    return cast<llvm::GlobalValue>(VH);
+  };
+
+  SmallVector<llvm::GlobalValue *> LLVMUsedGV(LLVMUsed.size());
+  llvm::transform(LLVMUsed, LLVMUsedGV.begin(), CastToGlobal);
+  llvm::appendToUsed(getModule(), LLVMUsedGV);
+
+  SmallVector<llvm::GlobalValue *> LLVMCompilerUsedGV(LLVMCompilerUsed.size());
+  llvm::transform(LLVMCompilerUsed, LLVMCompilerUsedGV.begin(), CastToGlobal);
+  llvm::appendToCompilerUsed(getModule(), LLVMCompilerUsedGV);
 }
 
 void CodeGenModule::AppendLinkerOptions(StringRef Opts) {
