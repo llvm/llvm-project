@@ -355,7 +355,7 @@ Improvements to Clang's diagnostics
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
 
-- Clang now emits dignostic with correct message in case of assigning to const reference captured in lambda. (#GH105647)
+- Clang now emits a diagnostic with the correct message in case of assigning to const reference captured in lambda. (#GH105647)
 
 - Fixed false positive in ``-Wmissing-noreturn`` diagnostic when it was requiring the usage of
   ``[[noreturn]]`` on lambdas before C++23 (#GH154493).
@@ -471,7 +471,7 @@ Bug Fixes to C++ Support
   casts that are guaranteed to fail (#GH137518).
 - Fix bug rejecting partial specialization of variable templates with auto NTTPs (#GH118190).
 - Fix a crash if errors "member of anonymous [...] redeclares" and
-  "intializing multiple members of union" coincide (#GH149985).
+  "initializing multiple members of union" coincide (#GH149985).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
 - Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be

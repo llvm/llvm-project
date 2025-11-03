@@ -741,6 +741,7 @@ def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
     "Specify a directory where Flang can find 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
     "Flang will use the GCC installation with the largest version">;
 def gcc_triple_EQ : Joined<["--"], "gcc-triple=">,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Search for the GCC installation with the specified triple.">;
 def CC : Flag<["-"], "CC">, Visibility<[ClangOption, CC1Option]>,
   Group<Preprocessor_Group>,
