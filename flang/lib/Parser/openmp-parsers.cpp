@@ -1778,6 +1778,31 @@ private:
   llvm::omp::Directive dir_;
 };
 
+struct OmpDeclarativeAllocateParser {
+  using resultType = OmpAllocateDirective;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    constexpr llvm::omp::Directive dir{llvm::omp::Directive::OMPD_allocate};
+    if (auto &&begin{attempt(OmpBeginDirectiveParser(dir)).Parse(state)}) {
+      Block empty;
+      auto end{maybe(OmpEndDirectiveParser{dir}).Parse(state)};
+      return OmpAllocateDirective{std::move(*begin), std::move(empty),
+          llvm::transformOptional(std::move(*end),
+              [](auto &&s) { return OmpEndDirective(std::move(s)); })};
+    }
+    return std::nullopt;
+  }
+};
+
+struct OmpExecutableAllocateParser {
+  using resultType = OmpAllocateDirective;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    OmpStatementConstructParser p{llvm::omp::Directive::OMPD_allocate};
+    return construct<OmpAllocateDirective>(p).Parse(state);
+  }
+};
+
 TYPE_PARSER(sourced(construct<OpenMPAllocatorsConstruct>(
     OmpStatementConstructParser{llvm::omp::Directive::OMPD_allocators})))
 
@@ -2044,13 +2069,6 @@ TYPE_PARSER(construct<OmpInitializerExpression>(OmpStylizedExpressionParser{}))
 TYPE_PARSER(sourced(construct<OpenMPCriticalConstruct>(
     OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical})))
 
-// 2.11.3 Executable Allocate directive
-TYPE_PARSER(
-    sourced(construct<OpenMPExecutableAllocate>(verbatim("ALLOCATE"_tok),
-        maybe(parenthesized(Parser<OmpObjectList>{})), Parser<OmpClauseList>{},
-        maybe(nonemptyList(Parser<OpenMPDeclarativeAllocate>{})) / endOmpLine,
-        statement(allocateStmt))))
-
 // 2.8.2 Declare Simd construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
     predicated(Parser<OmpDirectiveName>{},
@@ -2076,12 +2094,6 @@ TYPE_PARSER(sourced( //
             IsDirective(llvm::omp::Directive::OMPD_threadprivate)) >=
         Parser<OmpDirectiveSpecification>{})))
 
-// 2.11.3 Declarative Allocate directive
-TYPE_PARSER(
-    sourced(construct<OpenMPDeclarativeAllocate>(verbatim("ALLOCATE"_tok),
-        parenthesized(Parser<OmpObjectList>{}), Parser<OmpClauseList>{})) /
-    lookAhead(endOmpLine / !statement(allocateStmt)))
-
 // Assumes Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
     predicated(OmpDirectiveNameParser{},
@@ -2104,7 +2116,7 @@ TYPE_PARSER(
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OmpDeclareVariantDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPDeclarativeAllocate>{}) ||
+                                sourced(OmpDeclarativeAllocateParser{})) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OpenMPGroupprivate>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
@@ -2192,6 +2204,8 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
         withMessage("expected OpenMP construct"_err_en_US,
             first(construct<OpenMPConstruct>(Parser<OpenMPSectionsConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPLoopConstruct>{}),
+                construct<OpenMPConstruct>(
+                    sourced(OmpExecutableAllocateParser{})),
                 construct<OpenMPConstruct>(Parser<OmpBlockConstruct>{}),
                 // OmpBlockConstruct is attempted before
                 // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
@@ -2199,9 +2213,7 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPUtilityConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDispatchConstruct>{}),
-                construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
-                construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAssumeConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{}))))
 
