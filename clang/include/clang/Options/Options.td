@@ -2465,10 +2465,10 @@ def fsanitize_type_outline_instrumentation : Flag<["-"], "fsanitize-type-outline
 def fno_sanitize_type_outline_instrumentation : Flag<["-"], "fno-sanitize-type-outline-instrumentation">,
                                                    Group<f_clang_Group>,
                                                    HelpText<"Use default code inlining logic for the type sanitizer">;
-def fsanitize_type_verify_outlined_instrumentation : Flag<["-"], "fsanitize_type_verify_outlined_instrumentation">,
+def fsanitize_type_verify_outlined_instrumentation : Flag<["-"], "fsanitize-type-verify-outlined-instrumentation">,
                                                    Group<f_clang_Group>,
                                                    HelpText<"Use both inlined and outlined instrumentation for type sanitizer to verify equivilence">;
-def fno_sanitize_type_verify_outlined_instrumentation : Flag<["-"], "fno_sanitize_type_verify_outlined_instrumentation">,
+def fno_sanitize_type_verify_outlined_instrumentation : Flag<["-"], "fno_sanitize-type-verify-outlined-instrumentation">,
                                                    Group<f_clang_Group>,
                                                    HelpText<"Don't use both inlined and outlined instrumentation for type sanitizer to verify equivilence">;
 defm sanitize_stable_abi
