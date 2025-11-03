@@ -1995,8 +1995,9 @@ MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
     // Check for large mach-o files where the section contents might exceed
     // 4GB. MachO::section_64 objects only have 32 bit file offsets to the
     // section contents and can overflow in dSYM files. We can track this and
-    // adjust the section offset to be 64 bit safe.
-    // Assumes the sections are ordered.
+    // adjust the section offset to be 64 bit safe. If sections overflow then
+    // section ordering is enforced. If sections are not ordered, then an error
+    // will be returned stopping invalid section data from being returned.
     uint64_t PrevTrueOffset = 0;
     uint64_t SectOffsetAdjust = 0;
     for (uint32_t SectIdx=0; SectIdx<Sec.d.a; ++SectIdx) {
