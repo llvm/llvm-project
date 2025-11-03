@@ -54,7 +54,7 @@ public:
   bool CullSGPRHazardsAtMemWait;
   unsigned CullSGPRHazardsMemWaitThreshold;
 
-  AMDGPUWaitSGPRHazards() {}
+  AMDGPUWaitSGPRHazards() = default;
 
   // Return the numeric ID 0-127 for a given SGPR.
   static std::optional<unsigned> sgprNumber(Register Reg,

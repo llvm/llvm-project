@@ -28,7 +28,7 @@ struct FunctionRecord;
 /// Matches specific functions that pass the requirement of this filter.
 class CoverageFilter {
 public:
-  virtual ~CoverageFilter() {}
+  virtual ~CoverageFilter() = default;
 
   /// Return true if the function passes the requirements of this filter.
   virtual bool matches(const coverage::CoverageMapping &CM,

@@ -34,7 +34,7 @@ public:
   LiveElement(const char *Name, DWARFUnit *Unit, const DWARFDie FuncDie)
       : Name(Name), Unit(Unit), FuncDie(FuncDie) {}
 
-  virtual ~LiveElement() {};
+  virtual ~LiveElement() = default;
   const char *getName() const { return Name; }
 
   virtual bool liveAtAddress(object::SectionedAddress Addr) const = 0;

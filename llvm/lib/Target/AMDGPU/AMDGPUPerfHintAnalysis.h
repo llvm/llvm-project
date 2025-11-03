@@ -48,7 +48,7 @@ private:
   FuncInfoMap FIM;
 
 public:
-  AMDGPUPerfHintAnalysis() {}
+  AMDGPUPerfHintAnalysis() = default;
 
   // OldPM
   bool runOnSCC(const GCNTargetMachine &TM, CallGraphSCC &SCC);

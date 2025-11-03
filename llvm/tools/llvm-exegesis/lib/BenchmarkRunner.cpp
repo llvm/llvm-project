@@ -877,7 +877,7 @@ Error BenchmarkRunner::getValidationCountersToRun(
   return Error::success();
 }
 
-BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}
+BenchmarkRunner::FunctionExecutor::~FunctionExecutor() = default;
 
 } // namespace exegesis
 } // namespace llvm
