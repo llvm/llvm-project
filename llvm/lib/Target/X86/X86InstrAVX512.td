@@ -3179,23 +3179,24 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v1i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK1)>;
 }
 
-// With AVX512DQ, use 8-bit operations for 8-bit masks to avoid setting upper bits
+// With AVX512DQ, use 8-bit operations for 8-bit masks to avoid setting upper
+// bits
 let Predicates = [HasDQI] in {
   def : Pat<(v8i1 immAllZerosV), (KSET0B)>;
-  def : Pat<(v8i1 immAllOnesV),  (KSET1B)>;
+  def : Pat<(v8i1 immAllOnesV), (KSET1B)>;
 }
 
 // Optimize bitconvert of all-ones constants to use kxnor instructions
 let Predicates = [HasDQI] in {
-  def : Pat<(v8i1 (bitconvert (i8 255))), (KSET1B)>;
-  def : Pat<(v16i1 (bitconvert (i16 255))), (COPY_TO_REGCLASS (KSET1B), VK16)>;
+  def : Pat<(v8i1(bitconvert(i8 255))), (KSET1B)>;
+  def : Pat<(v16i1(bitconvert(i16 255))), (COPY_TO_REGCLASS(KSET1B), VK16)>;
 }
 let Predicates = [HasAVX512] in {
-  def : Pat<(v16i1 (bitconvert (i16 65535))), (KSET1W)>;
+  def : Pat<(v16i1(bitconvert(i16 65535))), (KSET1W)>;
 }
 let Predicates = [HasBWI] in {
-  def : Pat<(v32i1 (bitconvert (i32 -1))), (KSET1D)>;
-  def : Pat<(v64i1 (bitconvert (i64 -1))), (KSET1Q)>;
+  def : Pat<(v32i1(bitconvert(i32 -1))), (KSET1D)>;
+  def : Pat<(v64i1(bitconvert(i64 -1))), (KSET1Q)>;
 }
 
 // Patterns for kmask insert_subvector/extract_subvector to/from index=0
