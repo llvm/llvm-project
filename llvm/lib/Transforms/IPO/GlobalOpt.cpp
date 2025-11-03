@@ -2511,30 +2511,28 @@ collectVersions(Value *V, SmallVectorImpl<Function *> &Versions,
   return true;
 }
 
-// Bypass the IFunc Resolver of MultiVersioned functions when possible. To
-// deduce whether the optimization is legal we need to compare the target
-// features between caller and callee versions. The criteria for bypassing
-// the resolver are the following:
+// Try to statically resolve calls to versioned functions when possible. First
+// we identify the function versions which are associated with an IFUNC symbol.
+// We do that by examining the resolver function of the IFUNC. Once we have
+// collected all the function versions, we sort them in decreasing priority
+// order. This is necessary for identifying the highest priority callee version
+// for a given caller version. We then collect all the callsites to versioned
+// functions. The static resolution is performed by comparing the feature sets
+// between callers and callees. Versions of the callee may be skipped if they
+// depend on features we already know are unavailable. This information can
+// be deduced on each subsequent iteration of the set of caller versions: prior
+// iterations correspond to higher priority caller versions which would not have
+// been selected in a hypothetical runtime execution.
 //
-// * If the callee's feature set is a subset of the caller's feature set,
-//   then the callee is a candidate for direct call.
-//
-// * Among such candidates the one of highest priority is the best match
-//   and it shall be picked, unless there is a version of the callee with
-//   higher priority than the best match which cannot be picked from a
-//   higher priority caller (directly or through the resolver).
-//
-// * For every higher priority callee version than the best match, there
-//   is a higher priority caller version whose feature set availability
-//   is implied by the callee's feature set.
-//
+// Presentation in EuroLLVM2025:
+// https://www.youtube.com/watch?v=k54MFimPz-A&t=867s
 static bool OptimizeNonTrivialIFuncs(
     Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
   bool Changed = false;
 
   // Map containing the feature bits for a given function.
   DenseMap<Function *, APInt> FeatureMask;
-  // Map containing all the versions corresponding to an IFunc symbol.
+  // Map containing all the function versions corresponding to an IFunc symbol.
   DenseMap<GlobalIFunc *, SmallVector<Function *>> VersionedFuncs;
   // Map containing the IFunc symbol a function is version of.
   DenseMap<Function *, GlobalIFunc *> VersionOf;
@@ -2620,52 +2618,51 @@ static bool OptimizeNonTrivialIFuncs(
     LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
                       << CalleeIF->getResolverFunction()->getName() << "\n");
 
-    auto redirectCalls = [&](SmallVectorImpl<Function *> &Callers,
-                             SmallVectorImpl<Function *> &Callees) {
-      // Index to the current callee candidate.
+    // The complexity of this algorithm is linear: O(NumCallers + NumCallees).
+    // TODO
+    // A limitation it has is that we are not using information about the
+    // current caller to deduce why an earlier caller of higher priority was
+    // skipped. For example let's say the current caller is aes+sve2 and a
+    // previous caller was mops+sve2. Knowing that sve2 is available we could
+    // infer that mops is unavailable. This would allow us to skip callee
+    // versions which depend on mops. I tried implementing this but the
+    // complexity was cubic :/
+    auto redirectCalls = [&](ArrayRef<Function *> Callers,
+                             ArrayRef<Function *> Callees) {
+      // Index to the highest callee candidate.
       unsigned I = 0;
 
-      // Try to redirect calls starting from higher priority callers.
-      for (Function *Caller : Callers) {
+      for (Function *const &Caller : Callers) {
         if (I == Callees.size())
           break;
-
-        bool CallerIsFMV = GetTTI(*Caller).isMultiversionedFunction(*Caller);
-        // In the case of FMV callers, we know that all higher priority callers
-        // than the current one did not get selected at runtime, which helps
-        // reason about the callees (if they have versions that mandate presence
-        // of the features which we already know are unavailable on this
-        // target).
-        if (!CallerIsFMV)
-          // We can't reason much about non-FMV callers. Just pick the highest
-          // priority callee if it matches, otherwise bail.
-          assert(I == 0 && "Should only select the highest priority candidate");
 
         Function *Callee = Callees[I];
         APInt CallerBits = FeatureMask[Caller];
         APInt CalleeBits = FeatureMask[Callee];
+
         // If the feature set of the caller implies the feature set of the
-        // highest priority candidate then it shall be picked.
+        // callee then all the callsites can be statically resolved.
         if (CalleeBits.isSubsetOf(CallerBits)) {
-          // If there are no records of call sites for this particular function
-          // version, then it is not actually a caller, in which case skip.
-          if (auto It = CallSites.find(Caller); It != CallSites.end()) {
-            for (CallBase *CS : It->second) {
-              LLVM_DEBUG(dbgs() << "Redirecting call " << Caller->getName()
-                                << " -> " << Callee->getName() << "\n");
-              CS->setCalledOperand(Callee);
-            }
-            Changed = true;
+          auto &Calls = CallSites[Caller];
+          for (CallBase *CS : Calls) {
+            LLVM_DEBUG(dbgs() << "Redirecting call " << Caller->getName()
+                              << " -> " << Callee->getName() << "\n");
+            CS->setCalledOperand(Callee);
           }
+          Changed = true;
         }
-        // Keep advancing the candidate index as long as the caller's
-        // features are a subset of the current candidate's.
-        if (CallerIsFMV) {
-          while (CallerBits.isSubsetOf(CalleeBits)) {
-            if (++I == Callees.size())
-              break;
-            CalleeBits = FeatureMask[Callees[I]];
-          }
+
+        // Nothing else to do about non-FMV callers.
+        if (!GetTTI(*Caller).isMultiversionedFunction(*Caller))
+          continue;
+
+        // Subsequent iterations of the outermost loop (set of callers)
+        // will consider the caller of the current iteration unavailable.
+        // Therefore we can skip all those callees which depend on it.
+        while (CallerBits.isSubsetOf(CalleeBits)) {
+          if (++I == Callees.size())
+            break;
+          CalleeBits = FeatureMask[Callees[I]];
         }
       }
     };
@@ -2673,15 +2670,13 @@ static bool OptimizeNonTrivialIFuncs(
     auto &Callees = VersionedFuncs[CalleeIF];
 
     // Optimize non-FMV calls.
-    if (!NonFMVCallers.empty() && OptimizeNonFMVCallers)
+    if (OptimizeNonFMVCallers)
       redirectCalls(NonFMVCallers, Callees);
 
     // Optimize FMV calls.
-    if (!CallerIFuncs.empty()) {
-      for (GlobalIFunc *CallerIF : CallerIFuncs) {
-        auto &Callers = VersionedFuncs[CallerIF];
-        redirectCalls(Callers, Callees);
-      }
+    for (GlobalIFunc *CallerIF : CallerIFuncs) {
+      auto &Callers = VersionedFuncs[CallerIF];
+      redirectCalls(Callers, Callees);
     }
 
     if (CalleeIF->use_empty() ||
