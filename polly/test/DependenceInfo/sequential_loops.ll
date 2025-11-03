@@ -1,6 +1,6 @@
-; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-dependences>' -polly-dependences-analysis-type=value-based -disable-output < %s | FileCheck %s -check-prefix=VALUE
-; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-dependences>' -polly-dependences-analysis-type=memory-based -disable-output < %s | FileCheck %s -check-prefix=MEMORY
-; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-dependences>' -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s -check-prefix=VALUE_ACCESS
+; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly-custom<deps>' -polly-print-deps -polly-dependences-analysis-type=value-based -disable-output < %s | FileCheck %s -check-prefix=VALUE
+; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly-custom<deps>' -polly-print-deps -polly-dependences-analysis-type=memory-based -disable-output < %s | FileCheck %s -check-prefix=MEMORY
+; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly-custom<deps>' -polly-print-deps -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s -check-prefix=VALUE_ACCESS
 
 ; VALUE:      RAW dependences:
 ; VALUE-NEXT:          {  }

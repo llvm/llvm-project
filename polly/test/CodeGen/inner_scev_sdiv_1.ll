@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' < %s
 ;
 ; Excerpt from the test-suite's oggenc reduced using bugpoint.
 ;

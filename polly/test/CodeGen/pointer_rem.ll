@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-process-unprofitable '-passes=print<polly-function-scops>,scop(print<polly-ast>)' -disable-output -S < %s | FileCheck %s --check-prefix=AST
-; RUN: opt %loadNPMPolly -polly-process-unprofitable '-passes=print<polly-function-scops>,scop(polly-codegen)' -S < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadNPMPolly -polly-process-unprofitable '-passes=polly-custom<ast>' -polly-print-scops -polly-print-ast -disable-output -S < %s | FileCheck %s --check-prefix=AST
+; RUN: opt %loadNPMPolly -polly-process-unprofitable '-passes=polly-custom<codegen>' -polly-print-scops -S < %s | FileCheck %s --check-prefix=CODEGEN
 
 target datalayout = "e-m:e-i64:64-i128:128-n8:16:32:64-S128"
 target triple = "aarch64--linux-gnu"

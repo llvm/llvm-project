@@ -1,3 +1,10 @@
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS, PARSER)
+#endif
+MODULE_PASS("polly", createModuleToFunctionPassAdaptor(PollyFunctionPass(Opts)), parsePollyDefaultOptions)
+MODULE_PASS("polly-custom", createModuleToFunctionPassAdaptor(PollyFunctionPass(Opts)), parsePollyCustomOptions)
+#undef MODULE_PASS
+
 #ifndef CGSCC_PASS
 #define CGSCC_PASS(NAME, CREATE_PASS, PARSER)
 #endif
@@ -12,15 +19,17 @@ FUNCTION_ANALYSIS("polly-function-scops", ScopInfoAnalysis())
 #undef FUNCTION_ANALYSIS
 
 #ifndef FUNCTION_PASS
-#define FUNCTION_PASS(NAME, CREATE_PASS)
+#define FUNCTION_PASS(NAME, CREATE_PASS, PARSER)
 #endif
-FUNCTION_PASS("polly-prepare", CodePreparationPass())
-FUNCTION_PASS("print<polly-detect>", ScopAnalysisPrinterPass(llvm::errs()))
-FUNCTION_PASS("print<polly-function-scops>", ScopInfoPrinterPass(llvm::errs()))
-FUNCTION_PASS("polly-scop-viewer", ScopViewer())
-FUNCTION_PASS("polly-scop-only-viewer", ScopOnlyViewer())
-FUNCTION_PASS("polly-scop-printer", ScopPrinter())
-FUNCTION_PASS("polly-scop-only-printer", ScopOnlyPrinter())
+FUNCTION_PASS("polly-prepare", CodePreparationPass(), parseNoOptions)
+FUNCTION_PASS("print<polly-detect>", ScopAnalysisPrinterPass(llvm::errs()), parseNoOptions)
+FUNCTION_PASS("print<polly-function-scops>", ScopInfoPrinterPass(llvm::errs()), parseNoOptions)
+FUNCTION_PASS("polly-scop-viewer", ScopViewer(), parseNoOptions)
+FUNCTION_PASS("polly-scop-only-viewer", ScopOnlyViewer(), parseNoOptions)
+FUNCTION_PASS("polly-scop-printer", ScopPrinter(), parseNoOptions)
+FUNCTION_PASS("polly-scop-only-printer", ScopOnlyPrinter(), parseNoOptions)
+FUNCTION_PASS("polly", PollyFunctionPass(Opts), parsePollyDefaultOptions)
+FUNCTION_PASS("polly-custom", PollyFunctionPass(Opts), parsePollyCustomOptions)
 #undef FUNCTION_PASS
 
 #ifndef SCOP_ANALYSIS

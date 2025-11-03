@@ -206,18 +206,6 @@ void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, DominatorTree *DT,
   splitBlock(EntryBlock, I, DT, LI, RI);
 }
 
-void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, Pass *P) {
-  auto *DTWP = P->getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  auto *LIWP = P->getAnalysisIfAvailable<LoopInfoWrapperPass>();
-  auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
-  RegionInfoPass *RIP = P->getAnalysisIfAvailable<RegionInfoPass>();
-  RegionInfo *RI = RIP ? &RIP->getRegionInfo() : nullptr;
-
-  // splitBlock updates DT, LI and RI.
-  polly::splitEntryBlockForAlloca(EntryBlock, DT, LI, RI);
-}
-
 void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
                              polly::AssumptionKind Kind, isl::set Set,
                              DebugLoc Loc, polly::AssumptionSign Sign,
