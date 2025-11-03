@@ -196,6 +196,11 @@ C2y Feature Support
   function or variable within an extern inline function is no longer a
   constraint per `WG14 N3622 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3622.txt>`_.
 - Clang now supports `N3355 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3355.htm>`_ Named Loops.
+- Clang's implementation of ``__COUNTER__`` was updated to conform to
+  `WG14 N3457 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3457.htm>`_.
+  This includes adding pedantic warnings for the feature being an extension in
+  other language modes as well as an error when the counter is expanded more
+  than 2147483647 times.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -350,7 +355,7 @@ Improvements to Clang's diagnostics
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
 
-- Clang now emits dignostic with correct message in case of assigning to const reference captured in lambda. (#GH105647)
+- Clang now emits a diagnostic with the correct message in case of assigning to const reference captured in lambda. (#GH105647)
 
 - Fixed false positive in ``-Wmissing-noreturn`` diagnostic when it was requiring the usage of
   ``[[noreturn]]`` on lambdas before C++23 (#GH154493).
@@ -389,6 +394,9 @@ Improvements to Clang's diagnostics
   extended function type information in C mode (#GH41465). Function conversions
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
+
+- Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
+  attributes are used with a negative size (#GH165463).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -466,7 +474,7 @@ Bug Fixes to C++ Support
   casts that are guaranteed to fail (#GH137518).
 - Fix bug rejecting partial specialization of variable templates with auto NTTPs (#GH118190).
 - Fix a crash if errors "member of anonymous [...] redeclares" and
-  "intializing multiple members of union" coincide (#GH149985).
+  "initializing multiple members of union" coincide (#GH149985).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
 - Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be

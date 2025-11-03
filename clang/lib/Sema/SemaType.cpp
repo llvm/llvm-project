@@ -2358,6 +2358,11 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
 
+  if (VecSize->isNegative()) {
+    Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+    return QualType();
+  }
+
   if (CurType->isDependentType())
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
                                           VectorKind::Generic);
@@ -2424,6 +2429,11 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
       Diag(AttrLoc, diag::err_attribute_argument_type)
         << "ext_vector_type" << AANT_ArgumentIntegerConstant
         << ArraySize->getSourceRange();
+      return QualType();
+    }
+
+    if (vecSize->isNegative()) {
+      Diag(ArraySize->getExprLoc(), diag::err_attribute_vec_negative_size);
       return QualType();
     }
 
