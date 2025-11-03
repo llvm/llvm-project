@@ -61,7 +61,7 @@ Code example
 .. code-block:: cmake
 
   # CMakeLists.txt
-  cmake_minimum_required(VERSION 3.30)
+  cmake_minimum_required(VERSION 3.20)
   project(my_clang_tool VERSION 0.1.0)
 
   find_package(Clang CONFIG REQUIRED)
@@ -373,7 +373,7 @@ Complete example code
 .. code-block:: cmake
 
   # CMakeLists.txt
-  cmake_minimum_required(VERSION 3.30)
+  cmake_minimum_required(VERSION 3.20)
   project(my_clang_tool VERSION 0.1.0)
 
   find_package(Clang CONFIG REQUIRED)
