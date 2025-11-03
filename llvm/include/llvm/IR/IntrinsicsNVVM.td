@@ -1334,15 +1334,8 @@ let TargetPrefix = "nvvm" in {
   //
   let IntrProperties = [IntrNoMem] in {
     foreach ftz = ["", "_ftz"] in
-      def int_nvvm_ex2_approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
-
-    def int_nvvm_ex2_approx_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-    def int_nvvm_ex2_approx_f16 :
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty]>;
-    def int_nvvm_ex2_approx_f16x2 :
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty]>;
+      def int_nvvm_ex2_approx # ftz :
+          DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
 
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_lg2_approx # ftz # _f : NVVMBuiltin,
@@ -1865,6 +1858,73 @@ let IntrProperties = [IntrConvergent, IntrNoCallback] in {
 
 def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
     Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem, IntrConvergent, IntrNoCallback]>;
+
+// mbarrier.{expect_tx/complete_tx}
+foreach op = ["expect_tx", "complete_tx"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach space = ["space_cta", "space_cluster"] in {
+      defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
+      defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
+                            llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
+
+      def int_nvvm_mbarrier_ # suffix :
+          Intrinsic<[], [mbar_addr_ty, llvm_i32_ty],
+          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+    } // space
+  } // scope
+} // op
+
+// mbarrier.arrive and mbarrier.arrive.expect_tx
+// mbarrier.arrive_drop and mbarrier.arrive_drop.expect_tx
+foreach op = ["arrive", "arrive_expect_tx",
+              "arrive_drop", "arrive_drop_expect_tx"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach space = ["space_cta", "space_cluster"] in {
+      defvar suffix = StrJoin<"_", [scope, space]>.ret;
+      defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
+                            llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
+      defvar args_ty = [mbar_addr_ty, // mbar_address_ptr
+                        llvm_i32_ty]; // tx-count
+
+      // mbarriers in shared_cluster space cannot return any value.
+      defvar mbar_ret_ty = !if(!eq(space, "space_cta"),
+                              [llvm_i64_ty], []<LLVMType>);
+
+      def int_nvvm_mbarrier_ # op # "_" # suffix:
+          Intrinsic<mbar_ret_ty, args_ty,
+          [IntrConvergent, IntrNoCallback]>;
+      def int_nvvm_mbarrier_ # op # "_relaxed_" # suffix :
+          Intrinsic<mbar_ret_ty, args_ty,
+          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+    } // space
+  } // scope
+} // op
+
+// mbarrier.{test_wait and try_wait}
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach parity = [true, false] in {
+      foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+        defvar base_args = [llvm_shared_ptr_ty]; // mbar_ptr
+        defvar parity_args = !if(parity, [llvm_i32_ty], [llvm_i64_ty]);
+        defvar tl_args = !if(time_limit, [llvm_i32_ty], []<LLVMType>);
+        defvar args = !listconcat(base_args, parity_args, tl_args);
+        defvar tmp_op = StrJoin<"_", [op,
+                           !if(parity, "parity", ""),
+                           !if(time_limit, "tl", "")]>.ret;
+        defvar suffix = StrJoin<"_", [scope, "space_cta"]>.ret;
+
+        def int_nvvm_mbarrier_ # tmp_op # "_" # suffix :
+            Intrinsic<[llvm_i1_ty], args,
+            [IntrConvergent, NoCapture<ArgIndex<0>>, IntrNoCallback]>;
+        def int_nvvm_mbarrier_ # tmp_op # "_relaxed_" # suffix :
+            Intrinsic<[llvm_i1_ty], args,
+            [IntrConvergent, NoCapture<ArgIndex<0>>, IntrNoCallback,
+             IntrArgMemOnly, IntrReadMem]>;
+      } // tl
+    } // parity
+  } // scope
+} // op
 
 // Generated within nvvm. Use for ldu on sm_20 or later.  Second arg is the
 // pointer's alignment.

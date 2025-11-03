@@ -843,7 +843,7 @@ public:
   SlotTracker(const SlotTracker &) = delete;
   SlotTracker &operator=(const SlotTracker &) = delete;
 
-  ~SlotTracker() = default;
+  ~SlotTracker() override = default;
 
   void setProcessHook(
       std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>);
@@ -2199,6 +2199,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printString("name", N->getName());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
+  Printer.printInt("dataSize", N->getDataSizeInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
   Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
@@ -5323,7 +5324,7 @@ struct MDTreeAsmWriterContext : public AsmWriterContext {
     --Level;
   }
 
-  ~MDTreeAsmWriterContext() {
+  ~MDTreeAsmWriterContext() override {
     for (const auto &Entry : Buffer) {
       MainOS << "\n";
       unsigned NumIndent = Entry.first * 2U;

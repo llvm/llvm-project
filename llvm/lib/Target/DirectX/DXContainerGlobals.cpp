@@ -194,9 +194,10 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
         dxbc::PSV::v2::ResourceBindInfo BindInfo;
         BindInfo.Type = Type;
         BindInfo.LowerBound = Binding.LowerBound;
-        assert(Binding.Size == UINT32_MAX ||
-               (uint64_t)Binding.LowerBound + Binding.Size - 1 <= UINT32_MAX &&
-                   "Resource range is too large");
+        assert(
+            (Binding.Size == UINT32_MAX ||
+             (uint64_t)Binding.LowerBound + Binding.Size - 1 <= UINT32_MAX) &&
+            "Resource range is too large");
         BindInfo.UpperBound = (Binding.Size == UINT32_MAX)
                                   ? UINT32_MAX
                                   : Binding.LowerBound + Binding.Size - 1;

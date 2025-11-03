@@ -41,10 +41,12 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
         # touch test/4.stamp
         #
         # index will point to the line that starts with Failed:. The progress
-        # indicator is the line before this ([4/5] test/4.stamp) and contains a pretty
-        # printed version of the target being built (test/4.stamp). We use this line
-        # and remove the progress information to get a succinct name for the target.
-        failing_action = ninja_log[index - 1].split("] ")[1]
+        # indicator is sometimes the line before this ([4/5] test/4.stamp) and
+        # will contain a pretty printed version of the target being built
+        # (test/4.stamp) when accurate. We instead parse the failed line rather
+        # than the progress indicator as the progress indicator may not be
+        # aligned with the failure.
+        failing_action = ninja_log[index].split("FAILED: ")[1]
         failure_log = []
         while (
             index < len(ninja_log)

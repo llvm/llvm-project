@@ -52,7 +52,6 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Pass.h"
 #include <set>
 
 namespace polly {
@@ -68,7 +67,6 @@ using llvm::DenseMap;
 using llvm::DominatorTree;
 using llvm::Function;
 using llvm::FunctionAnalysisManager;
-using llvm::FunctionPass;
 using llvm::IntrinsicInst;
 using llvm::LoopInfo;
 using llvm::Module;
@@ -631,31 +629,6 @@ struct ScopAnalysisPrinterPass final : PassInfoMixin<ScopAnalysisPrinterPass> {
 
   raw_ostream &OS;
 };
-
-class ScopDetectionWrapperPass final : public FunctionPass {
-  std::unique_ptr<ScopDetection> Result;
-
-public:
-  ScopDetectionWrapperPass();
-
-  /// @name FunctionPass interface
-  ///@{
-  static char ID;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override;
-  bool runOnFunction(Function &F) override;
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
-  ///@}
-
-  ScopDetection &getSD() const { return *Result; }
-};
-
-llvm::Pass *createScopDetectionPrinterLegacyPass(llvm::raw_ostream &OS);
 } // namespace polly
-
-namespace llvm {
-void initializeScopDetectionWrapperPassPass(llvm::PassRegistry &);
-void initializeScopDetectionPrinterLegacyPassPass(llvm::PassRegistry &);
-} // namespace llvm
 
 #endif // POLLY_SCOPDETECTION_H
