@@ -2,7 +2,8 @@
 # Unsupported on Windows due to maximum path length limitations.
 # UNSUPPORTED: system-windows
 
-# RUN: rm -rf %t.dir
+# RUN: rm -rf %t.dir %t.obj
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 
 Test link.exe-style /linkreprofullpathrsp: flag.
 # RUN: mkdir -p %t.dir/build1
