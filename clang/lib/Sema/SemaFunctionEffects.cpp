@@ -1275,7 +1275,7 @@ private:
     }
 
     bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *BTE) override {
-      const CXXDestructorDecl* Dtor = BTE->getTemporary()->getDestructor();
+      const CXXDestructorDecl *Dtor = BTE->getTemporary()->getDestructor();
       if (Dtor != nullptr) {
         CallableInfo CI(*Dtor);
         followCall(CI, BTE->getBeginLoc());
