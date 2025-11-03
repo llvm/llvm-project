@@ -163,7 +163,7 @@ extern template bool IsErrorExpr(const Expr<SomeType> &);
 std::optional<parser::Message> CheckStatementFunction(
     const Symbol &, const Expr<SomeType> &, FoldingContext &);
 
-std::optional<bool> ActualNeedsCopy(const ActualArgument *,
+std::optional<bool> ActualArgNeedsCopy(const ActualArgument *,
     const characteristics::DummyArgument *, FoldingContext &, bool forCopyOut);
 
 } // namespace Fortran::evaluate

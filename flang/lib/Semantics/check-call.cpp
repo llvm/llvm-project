@@ -795,7 +795,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool dummyIsAssumedShape{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedShape)};
   bool copyOutNeeded{
-      evaluate::ActualNeedsCopy(&arg, &dummyArg, foldingContext,
+      evaluate::ActualArgNeedsCopy(&arg, &dummyArg, foldingContext,
       /*forCopyOut=*/true).value_or(false)};
   if (copyOutNeeded && !dummyIsValue &&
       (dummyIsAsynchronous || dummyIsVolatile)) {
@@ -833,8 +833,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // a unread value in the actual argument.
   // Occurences of `volatileOrAsyncNeedsTempDiagnosticIssued = true` indicate a
   // more specific error message has already been issued. We might be able to
-  // clean this up by switching the coding style of ActualNeedsCopy to be more
-  // like WhyNotDefinable.
+  // clean this up by switching the coding style of ActualArgNeedsCopy to be
+  // more like WhyNotDefinable.
   if (copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued) {
     if ((actualIsVolatile || actualIsAsynchronous) &&
         (dummyIsVolatile || dummyIsAsynchronous)) {

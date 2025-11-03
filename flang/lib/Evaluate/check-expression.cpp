@@ -1565,14 +1565,15 @@ private:
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
 // to do the copy after the callee returns.
-std::optional<bool> ActualNeedsCopy(const ActualArgument *actual,
+std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
+  constexpr auto unknown = std::nullopt;
   if (!actual) {
-    return std::nullopt;
+    return unknown;
   }
   if (actual->isAlternateReturn()) {
-    return std::nullopt;
+    return unknown;
   }
   const auto *dummyObj{dummy
           ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
@@ -1603,7 +1604,7 @@ std::optional<bool> ActualNeedsCopy(const ActualArgument *actual,
     // Note: contiguity and polymorphic checks deal with array or assumed rank
     // arguments
     if (!check.HaveArrayOrAssumedRankArgs()) {
-      return std::nullopt;
+      return unknown;
     }
     if (check.HaveContiguityDifferences()) {
       return true;
@@ -1612,21 +1613,22 @@ std::optional<bool> ActualNeedsCopy(const ActualArgument *actual,
       return true;
     }
   } else { // Implicit interface
-    if (ExtractCoarrayRef(*actual)) {
-      // Coindexed actual args may need copy-in and copy-out with implicit
-      // interface
+    bool hasVectorSubscript{HasVectorSubscript(*actual)};
+    if (forCopyOut && hasVectorSubscript) {
+      // Vector subscripts could refer to duplicate elments, can't copy out
+      return false;
+    }
+    if (forCopyIn && hasVectorSubscript) {
       return true;
     }
-    if (!IsSimplyContiguous(*actual, fc)) {
-      // Copy-in:  actual arguments that are variables are copy-in when
-      //           non-contiguous.
-      // Copy-out: vector subscripts could refer to duplicate elements, can't
-      //           copy out.
-      return !(forCopyOut && HasVectorSubscript(*actual));
+    if (auto isContig{IsContiguous(*actual, fc)}) {
+      // If we are pretty sure the actual argument is contiguous, then we
+      // don't need to copy it. On the other hand, if we are pretty sure the
+      // actual argument is not contiguous, then we need to copy it.
+      return !isContig.value();
     }
   }
-  // For everything else, no copy-in or copy-out
-  return false;
+  return unknown;
 }
 
 } // namespace Fortran::evaluate
