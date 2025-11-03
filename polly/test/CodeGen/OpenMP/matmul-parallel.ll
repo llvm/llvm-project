@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-parallel '-passes=polly-opt-isl,print<polly-ast>' -disable-output -debug-only=polly-ast < %s 2>&1 | FileCheck --check-prefix=AST %s
-; RUN: opt %loadNPMPolly -polly-parallel '-passes=polly-opt-isl,polly-codegen' -S < %s | FileCheck --check-prefix=CODEGEN %s
+; RUN: opt %loadNPMPolly -polly-parallel '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output -debug-only=polly-ast < %s 2>&1 | FileCheck --check-prefix=AST %s
+; RUN: opt %loadNPMPolly -polly-parallel '-passes=polly<no-default-opts;opt-isl>' -S < %s | FileCheck --check-prefix=CODEGEN %s
 ; REQUIRES: asserts
 
 ; Parallelization of detected matrix-multiplication.
