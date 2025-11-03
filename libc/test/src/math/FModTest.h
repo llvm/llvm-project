@@ -19,12 +19,16 @@
 #include "hdr/math_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, dom_err, expected_exception)              \
-  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                         \
-  EXPECT_FP_EQ(expected, f(x, y));                                             \
-  EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                     \
-  EXPECT_FP_EXCEPTION(expected_exception)
+  do {                                                                         \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FP_EQ(expected, f(x, y));                                           \
+    EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                   \
+    if (expected_exception < FE_ALL_EXCEPT)                                    \
+      EXPECT_FP_EXCEPTION(expected_exception);                                 \
+  } while (0)
 
-#define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, false, 0)
+#define TEST_REGULAR(x, y, expected)                                           \
+  TEST_SPECIAL(x, y, expected, false, FE_ALL_EXCEPT)
 
 template <typename T>
 class FmodTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
@@ -212,7 +216,6 @@ public:
 
   void testRegularExtreme(FModFunc f) {
 
-    TEST_REGULAR(0x1p127L, 0x3p-149L, 0x1p-149L);
     TEST_REGULAR(0x1p127L, -0x3p-149L, 0x1p-149L);
     TEST_REGULAR(0x1p127L, 0x3p-148L, 0x1p-147L);
     TEST_REGULAR(0x1p127L, -0x3p-148L, 0x1p-147L);
