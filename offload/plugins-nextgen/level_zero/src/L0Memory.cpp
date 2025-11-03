@@ -330,17 +330,19 @@ size_t MemAllocatorTy::MemPoolTy::dealloc(void *Ptr) {
   return Deallocated;
 }
 
-void MemAllocatorTy::MemAllocInfoMapTy::add(void *Ptr, void *Base, size_t ReqSize,
-                                            size_t AllocSize, int32_t Kind, bool InPool,
+void MemAllocatorTy::MemAllocInfoMapTy::add(void *Ptr, void *Base,
+                                            size_t ReqSize, size_t AllocSize,
+                                            int32_t Kind, bool InPool,
                                             bool ImplicitArg) {
-  const auto Inserted =
-      Map.emplace(Ptr, MemAllocInfoTy{Base, ReqSize, AllocSize, Kind, InPool, ImplicitArg});
+  const auto Inserted = Map.emplace(
+      Ptr, MemAllocInfoTy{Base, ReqSize, AllocSize, Kind, InPool, ImplicitArg});
   // Check if we keep valid disjoint memory ranges.
   [[maybe_unused]] bool Valid = Inserted.second;
   if (Valid) {
     if (Inserted.first != Map.begin()) {
       const auto I = std::prev(Inserted.first, 1);
-      Valid = Valid && (uintptr_t)I->first + I->second.ReqSize <= (uintptr_t)Ptr;
+      Valid =
+          Valid && (uintptr_t)I->first + I->second.ReqSize <= (uintptr_t)Ptr;
     }
     if (Valid) {
       const auto I = std::next(Inserted.first, 1);
@@ -668,7 +670,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
   return Mem;
 }
 
-Error MemAllocatorTy::deallocFromL0 (void *Ptr) {
+Error MemAllocatorTy::deallocFromL0(void *Ptr) {
   CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Ptr);
   DP("Freed device pointer " DPxMOD "\n", DPxPTR(Ptr));
   return Plugin::success();
