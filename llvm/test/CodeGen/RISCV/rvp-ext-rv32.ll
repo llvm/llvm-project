@@ -496,6 +496,48 @@ define void @test_extract_vector_8(ptr %ret_ptr, ptr %a_ptr) {
   ret void
 }
 
+; Test logical shift left immediate for v2i16
+define void @test_pslli_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    pslli.h a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %res = shl <2 x i16> %a, splat(i16 2)
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift left immediate for v4i8
+define void @test_pslli_b(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    pslli.b a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %res = shl <4 x i8> %a, splat(i8 2)
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic saturation shift left immediate for v2i16
+define void @test_psslai_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psslai_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psslai.h a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %res = call <2 x i16> @llvm.sshl.sat.v2i16(<2 x i16> %a, <2 x i16> splat(i16 2))
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
 ; Intrinsic declarations
 declare <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16>, <2 x i16>)
 declare <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16>, <2 x i16>)
@@ -513,3 +555,4 @@ declare <4 x i8> @llvm.smin.v4i8(<4 x i8>, <4 x i8>)
 declare <4 x i8> @llvm.smax.v4i8(<4 x i8>, <4 x i8>)
 declare <4 x i8> @llvm.umin.v4i8(<4 x i8>, <4 x i8>)
 declare <4 x i8> @llvm.umax.v4i8(<4 x i8>, <4 x i8>)
+declare <2 x i16> @llvm.sshl.sat.v2i16(<2 x i16> %a, <2 x i16> %b)

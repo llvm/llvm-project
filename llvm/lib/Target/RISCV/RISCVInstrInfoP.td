@@ -19,6 +19,8 @@
 //===----------------------------------------------------------------------===//
 
 def simm10 : RISCVSImmOp<10>, TImmLeaf<XLenVT, "return isInt<10>(Imm);">;
+def tuimm3 : RISCVUImmOp<3>, TImmLeaf<XLenVT, "return isUInt<3>(Imm);">;
+def tuimm4 : RISCVUImmOp<4>, TImmLeaf<XLenVT, "return isUInt<4>(Imm);">;
 
 def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
   let RenderMethod = "addSImm8UnsignedOperands";
@@ -1517,6 +1519,17 @@ let Predicates = [HasStdExtP] in {
   def: Pat<(XLenVecI16VT (abds GPR:$rs1, GPR:$rs2)), (PDIF_H GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (abdu GPR:$rs1, GPR:$rs2)), (PDIFU_H GPR:$rs1, GPR:$rs2)>;
   
+  // 8-bit logical shift left patterns
+  def: Pat<(XLenVecI8VT (shl GPR:$rs1, (XLenVecI8VT (riscv_pli tuimm3:$shamt)))),
+           (PSLLI_B GPR:$rs1, tuimm3:$shamt)>;
+
+  // 16-bit logical shift left patterns
+  def: Pat<(XLenVecI16VT (shl GPR:$rs1, (XLenVecI16VT (riscv_pli tuimm4:$shamt)))),
+           (PSLLI_H GPR:$rs1, tuimm4:$shamt)>;
+
+  // 16-bit signed saturation shift left patterns
+  def: Pat<(XLenVecI16VT (sshlsat GPR:$rs1, (XLenVecI16VT (riscv_pli tuimm4:$shamt)))),
+           (PSSLAI_H GPR:$rs1, tuimm4:$shamt)>;
 
   // 8-bit PLI SD node pattern
   def: Pat<(XLenVecI8VT (riscv_pli simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
@@ -1542,6 +1555,14 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // 32-bit averaging-sub patterns
   def: Pat<(v2i32 (riscv_pasub GPR:$rs1, GPR:$rs2)), (PASUB_W GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (riscv_pasubu GPR:$rs1, GPR:$rs2)), (PASUBU_W GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit logical shift left patterns
+  def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (riscv_pli tuimm4:$shamt)))),
+           (PSLLI_W GPR:$rs1, tuimm4:$shamt)>;
+
+  // 32-bit signed saturation shift left patterns
+  def: Pat<(v2i32 (sshlsat GPR:$rs1, (v2i32 (riscv_pli tuimm4:$shamt)))),
+           (PSSLAI_W GPR:$rs1, tuimm4:$shamt)>;
 
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;
