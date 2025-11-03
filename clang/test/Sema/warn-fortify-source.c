@@ -30,6 +30,8 @@ void call_memcpy(void) {
   char dst[10];
   char src[20];
   memcpy(dst, src, 20); // expected-warning {{memcpy' will always overflow; destination buffer has size 10, but size argument is 20}}
+  memcpy(dst, src, 21); // expected-warning {{memcpy' will always overflow; destination buffer has size 10, but size argument is 21}} \
+                          // expected-warning {{memcpy' will always over-read; source buffer has size 20, but size argument is 21}}
 
   if (sizeof(dst) == sizeof(src))
     memcpy(dst, src, 20); // no warning, unreachable
@@ -43,18 +45,29 @@ void call_memcpy_type(void) {
   struct pair p;
   char buf[20];
   memcpy(&p.first, buf, 20); // expected-warning {{memcpy' will always overflow; destination buffer has size 8, but size argument is 20}}
+  memcpy(&p.first, buf, 21); // expected-warning {{memcpy' will always overflow; destination buffer has size 8, but size argument is 21}} \
+                                        // expected-warning {{memcpy' will always over-read; source buffer has size 20, but size argument is 21}}
+}
+
+void call_memcpy_chk(void) {
+  char dst[10];
+  char src[10];
+  __builtin___memcpy_chk(dst, src, 10, 10);
+  __builtin___memcpy_chk(dst, src, 10, 9); // expected-warning {{memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
 }
 
 void call_strncat(void) {
   char s1[10], s2[20];
   __builtin_strncat(s2, s1, 20);
   __builtin_strncat(s1, s2, 20); // expected-warning {{'strncat' size argument is too large; destination buffer has size 10, but size argument is 20}}
+  __builtin_strncat(s1, "abcd", 20); // expected-warning {{'strncat' size argument is too large; destination buffer has size 10, but size argument is 20}}
 }
 
 void call_strncpy(void) {
   char s1[10], s2[20];
   __builtin_strncpy(s2, s1, 20);
   __builtin_strncpy(s1, s2, 20); // expected-warning {{'strncpy' size argument is too large; destination buffer has size 10, but size argument is 20}}
+  __builtin_strncpy(s1, "abcd", 20); // expected-warning {{'strncpy' size argument is too large; destination buffer has size 10, but size argument is 20}}
 }
 
 void call_stpncpy(void) {
@@ -92,9 +105,17 @@ void call_stpcpy(void) {
   __builtin_stpcpy(dst2, src); // expected-warning {{'stpcpy' will always overflow; destination buffer has size 4, but the source string has length 5 (including NUL byte)}}
 }
 
+void call_stpcpy_chk(void) {
+  const char *const src = "abcd";
+  char dst1[5];
+  __builtin___stpcpy_chk(dst1, src, 5);
+  __builtin___stpcpy_chk(dst1, src, 4); // expected-warning {{'stpcpy' will always overflow; destination buffer has size 4, but the source string has length 5 (including NUL byte)}}
+}
+
 void call_memmove(void) {
   char s1[10], s2[20];
-  __builtin_memmove(s2, s1, 20);
+  __builtin_memmove(s2, s1, 10);
+  __builtin_memmove(s2, s1, 20); // expected-warning {{'memmove' will always over-read; source buffer has size 10, but size argument is 20}}
   __builtin_memmove(s1, s2, 20); // expected-warning {{'memmove' will always overflow; destination buffer has size 10, but size argument is 20}}
 }
 
@@ -298,11 +319,23 @@ template <int A, int B>
 void call_memcpy_dep() {
   char bufferA[A];
   char bufferB[B];
-  memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
+  if (sizeof(bufferA) < 10 && sizeof(bufferB) < 10) {
+    memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}} \
+                                  // expected-warning{{'memcpy' will always over-read; source buffer has size 9, but size argument is 10}}
+  } else if (sizeof(bufferA) < 10) {
+    memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
+  } else if (sizeof(bufferB) < 10) {
+    memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always over-read; source buffer has size 9, but size argument is 10}}
+  } else {
+    memcpy(bufferA, bufferB, 10);
+  }
+
 }
 
 void call_call_memcpy() {
-  call_memcpy_dep<10, 9>();
+  call_memcpy_dep<10, 10>();
+  call_memcpy_dep<10, 9>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<10, 9>' requested here}}
   call_memcpy_dep<9, 10>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<9, 10>' requested here}}
+  call_memcpy_dep<9, 9>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<9, 9>' requested here}}
 }
 #endif
