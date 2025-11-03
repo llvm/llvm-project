@@ -1247,7 +1247,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
                                                   m_VPValue(X), m_VPValue())) &&
       match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
-      TypeInfo.inferScalarType(Def->getVPSingleValue())->isIntegerTy(1)) {
+      TypeInfo.inferScalarType(Def)->isIntegerTy(1)) {
     Def->setOperand(1, Def->getOperand(0));
     Def->setOperand(0, Y);
     return;
