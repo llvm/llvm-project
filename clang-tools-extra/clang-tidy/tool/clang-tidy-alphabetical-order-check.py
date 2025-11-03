@@ -15,18 +15,13 @@ ClangTidy Alphabetical Order Checker
 
 Normalize clang-tidy docs with deterministic sorting for linting/tests.
 
-Subcommands:
-  - checks-list: Sort entries in docs/clang-tidy/checks/list.rst csv-table.
-  - release-notes: Sort key sections in docs/ReleaseNotes.rst and de-duplicate
-                   entries in "Changes in existing checks".
-
-Usage:
-  clang-tidy-alphabetical-order-check.py <subcommand> [-i <input rst>] [-o <output rst>] [--fix]
+Behavior:
+- Sort entries in docs/clang-tidy/checks/list.rst csv-table.
+- Sort key sections in docs/ReleaseNotes.rst. Does not remove duplicate
+  entries; developers should merge duplicates manually when needed.
 
 Flags:
-  -i/--input   Input file.
-  -o/--output  Write normalized content here; omit to write to stdout.
-  --fix        Rewrite the input file in place. Cannot be combined with -o/--output.
+  -o/--output  Write normalized content to this path instead of updating docs.
 """
 
 import argparse
@@ -36,7 +31,13 @@ import re
 import sys
 from typing import List, Optional, Sequence, Tuple
 
+# Matches a :doc:`label <path>` or :doc:`label` reference anywhere in text and
+# captures the label. Used to sort bullet items alphabetically in ReleaseNotes
+# items by their label.
 DOC_LABEL_RN_RE = re.compile(r":doc:`(?P<label>[^`<]+)\s*(?:<[^>]+>)?`")
+
+# Matches a single csv-table row line in list.rst that begins with a :doc:
+# reference, capturing the label. Used to extract the sort key per row.
 DOC_LINE_RE = re.compile(r"^\s*:doc:`(?P<label>[^`<]+?)\s*<[^>]+>`.*$")
 
 
@@ -55,6 +56,12 @@ def write_text(path: str, content: str) -> None:
 
 
 def normalize_list_rst(lines: List[str]) -> str:
+    """Return normalized content of checks list.rst from given lines.
+
+    Input: full file content split into lines.
+    Output: single string with csv-table rows sorted by :doc: label while
+            preserving header/leading comments and trailing content.
+    """
     out: List[str] = []
     i = 0
     n = len(lines)
@@ -92,37 +99,15 @@ def normalize_list_rst(lines: List[str]) -> str:
     return "".join(out)
 
 
-def run_checks_list(inp: Optional[str], out_path: Optional[str], fix: bool) -> int:
-    if not inp:
-        inp = os.path.normpath(
-            os.path.join(
-                script_dir(),
-                "..",
-                "..",
-                "docs",
-                "clang-tidy",
-                "checks",
-                "list.rst",
-            )
-        )
-    lines = read_text(inp)
-    normalized = normalize_list_rst(lines)
-    if fix and out_path:
-        sys.stderr.write("error: --fix cannot be used together with --output\n")
-        return 2
-    if fix:
-        original = "".join(lines)
-        if original != normalized:
-            write_text(inp, normalized)
-        return 0
-    if out_path:
-        write_text(out_path, normalized)
-        return 0
-    sys.stdout.write(normalized)
-    return 0
-
-
 def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
+    """Find heading start index for a section underlined with ^ characters.
+
+    The function looks for a line equal to `title` followed by a line that
+    consists solely of ^, which matches the ReleaseNotes style for subsection
+    headings used here.
+
+    Returns index of the title line, or None if not found.
+    """
     for i in range(len(lines) - 1):
         if lines[i].rstrip("\n") == title:
             underline = lines[i + 1].rstrip("\n")
@@ -173,125 +158,125 @@ def collect_bullet_blocks(
     return prefix, blocks, suffix
 
 
-def sort_and_dedup_blocks(
-    blocks: List[Tuple[str, List[str]]], dedup: bool = False
-) -> List[List[str]]:
-    seen = set()
-    filtered: List[Tuple[str, List[str]]] = []
-    for key, block in blocks:
-        if dedup:
-            if key in seen:
-                continue
-            seen.add(key)
-        filtered.append((key, block))
-    filtered.sort(key=lambda kb: kb[0])
-    return [b for _, b in filtered]
+def sort_blocks(blocks: List[Tuple[str, List[str]]]) -> List[List[str]]:
+    """Return blocks sorted deterministically by their extracted label.
+
+    Duplicates are preserved; merging is left to authors to handle manually.
+    """
+    return [b for _, b in sorted(blocks, key=lambda kb: kb[0])]
+
+
+def _find_section_bounds(
+    lines: Sequence[str], title: str, next_title: Optional[str]
+) -> Optional[Tuple[int, int, int]]:
+    """Return (h_start, sec_start, sec_end) for section `title`.
+
+    - h_start: index of the section title line
+    - sec_start: index of the first content line after underline
+    - sec_end: index of the first line of the next section title (or end)
+    """
+    h_start = find_heading(lines, title)
+    if h_start is None:
+        return None
+
+    sec_start = h_start + 2
+
+    # Determine end of section either from next_title or by scanning.
+    if next_title is not None:
+        h_end = find_heading(lines, next_title)
+        if h_end is None:
+            # Scan forward to the next heading-like underline.
+            h_end = sec_start
+            while h_end + 1 < len(lines):
+                if lines[h_end].strip() and set(lines[h_end + 1].rstrip("\n")) == {"^"}:
+                    break
+                h_end += 1
+        sec_end = h_end
+    else:
+        # Scan to end or until a heading underline is found.
+        h_end = sec_start
+        while h_end + 1 < len(lines):
+            if lines[h_end].strip() and set(lines[h_end + 1].rstrip("\n")) == {"^"}:
+                break
+            h_end += 1
+        sec_end = h_end
+
+    return h_start, sec_start, sec_end
+
+
+def _normalize_release_notes_section(
+    lines: List[str], title: str, next_title: Optional[str]
+) -> List[str]:
+    """Normalize a single release-notes section and return updated lines."""
+    bounds = _find_section_bounds(lines, title, next_title)
+    if bounds is None:
+        return lines
+    _, sec_start, sec_end = bounds
+
+    prefix, blocks, suffix = collect_bullet_blocks(lines, sec_start, sec_end)
+    sorted_blocks = sort_blocks(blocks)
+
+    new_section: List[str] = []
+    new_section.extend(prefix)
+    for i_b, b in enumerate(sorted_blocks):
+        if i_b > 0 and (not new_section or (new_section and new_section[-1].strip() != "")):
+            new_section.append("\n")
+        new_section.extend(b)
+    new_section.extend(suffix)
+
+    return lines[:sec_start] + new_section + lines[sec_end:]
 
 
 def normalize_release_notes(lines: List[str]) -> str:
-    sections = [
-        ("New checks", False),
-        ("New check aliases", False),
-        ("Changes in existing checks", True),
-    ]
+    sections = ["New checks", "New check aliases", "Changes in existing checks"]
 
     out = list(lines)
 
     for idx in range(len(sections) - 1, -1, -1):
-        title, dedup = sections[idx]
-        h_start = find_heading(out, title)
-
-        if h_start is None:
-            continue
-
-        sec_start = h_start + 2
-
-        if idx + 1 < len(sections):
-            next_title = sections[idx + 1][0]
-            h_end = find_heading(out, next_title)
-            if h_end is None:
-                h_end = sec_start
-                while h_end + 1 < len(out):
-                    if out[h_end].strip() and set(out[h_end + 1].rstrip("\n")) == {"^"}:
-                        break
-                    h_end += 1
-            sec_end = h_end
-        else:
-            h_end = sec_start
-            while h_end + 1 < len(out):
-                if out[h_end].strip() and set(out[h_end + 1].rstrip("\n")) == {"^"}:
-                    break
-                h_end += 1
-            sec_end = h_end
-
-        prefix, blocks, suffix = collect_bullet_blocks(out, sec_start, sec_end)
-        sorted_blocks = sort_and_dedup_blocks(blocks, dedup=dedup)
-
-        new_section: List[str] = []
-        new_section.extend(prefix)
-        for i_b, b in enumerate(sorted_blocks):
-            if i_b > 0 and (
-                not new_section or (new_section and new_section[-1].strip() != "")
-            ):
-                new_section.append("\n")
-            new_section.extend(b)
-        new_section.extend(suffix)
-
-        out = out[:sec_start] + new_section + out[sec_end:]
+        title = sections[idx]
+        next_title = sections[idx + 1] if idx + 1 < len(sections) else None
+        out = _normalize_release_notes_section(out, title, next_title)
 
     return "".join(out)
 
 
-def run_release_notes(inp: Optional[str], out_path: Optional[str], fix: bool) -> int:
-    if not inp:
-        inp = os.path.normpath(
-            os.path.join(script_dir(), "..", "..", "docs", "ReleaseNotes.rst")
-        )
-    lines = read_text(inp)
-    normalized = normalize_release_notes(lines)
-    if fix and out_path:
-        sys.stderr.write("error: --fix cannot be used together with --output\n")
-        return 2
-    if fix:
-        original = "".join(lines)
-        if original != normalized:
-            write_text(inp, normalized)
-        return 0
-    if out_path:
-        write_text(out_path, normalized)
-        return 0
-    sys.stdout.write(normalized)
-    return 0
+def _default_paths() -> Tuple[str, str]:
+    base = os.path.normpath(os.path.join(script_dir(), "..", ".."))
+    list_doc = os.path.join(base, "docs", "clang-tidy", "checks", "list.rst")
+    rn_doc = os.path.join(base, "docs", "ReleaseNotes.rst")
+    return list_doc, rn_doc
 
 
 def main(argv: List[str]) -> int:
     ap = argparse.ArgumentParser()
-    sub = ap.add_subparsers(dest="cmd", required=True)
-
-    ap_checks = sub.add_parser(
-        "checks-list", help="normalize clang-tidy checks list.rst"
-    )
-    ap_checks.add_argument("-i", "--input", dest="inp", default=None)
-    ap_checks.add_argument("-o", "--output", dest="out", default=None)
-    ap_checks.add_argument(
-        "--fix", action="store_true", help="rewrite the input file in place"
-    )
-
-    ap_rn = sub.add_parser("release-notes", help="normalize ReleaseNotes.rst sections")
-    ap_rn.add_argument("-i", "--input", dest="inp", default=None)
-    ap_rn.add_argument("-o", "--output", dest="out", default=None)
-    ap_rn.add_argument(
-        "--fix", action="store_true", help="rewrite the input file in place"
-    )
-
+    ap.add_argument("-o", "--output", dest="out", default=None)
     args = ap.parse_args(argv)
 
-    if args.cmd == "checks-list":
-        return run_checks_list(args.inp, args.out, args.fix)
-    if args.cmd == "release-notes":
-        return run_release_notes(args.inp, args.out, args.fix)
+    list_doc, rn_doc = _default_paths()
 
-    ap.error("unknown command")
+    if args.out:
+        out_path = args.out
+        out_lower = os.path.basename(out_path).lower()
+        if "release" in out_lower:
+            lines = read_text(rn_doc)
+            normalized = normalize_release_notes(lines)
+            write_text(out_path, normalized)
+            return 0
+        else:
+            lines = read_text(list_doc)
+            normalized = normalize_list_rst(lines)
+            write_text(out_path, normalized)
+            return 0
+
+    list_lines = read_text(list_doc)
+    rn_lines = read_text(rn_doc)
+    list_norm = normalize_list_rst(list_lines)
+    rn_norm = normalize_release_notes(rn_lines)
+    if "".join(list_lines) != list_norm:
+        write_text(list_doc, list_norm)
+    if "".join(rn_lines) != rn_norm:
+        write_text(rn_doc, rn_norm)
+    return 0
 
 
 if __name__ == "__main__":
