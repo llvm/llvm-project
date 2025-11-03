@@ -40,7 +40,10 @@ public:
   /// deduplicated constants. If successful, replaces `op`'s uses with
   /// folded results, and returns success. If the op was completely folded it is
   /// erased. If it is just updated in place, `inPlaceUpdate` is set to true.
-  LogicalResult tryToFold(Operation *op, bool *inPlaceUpdate = nullptr);
+  /// On success() and when in-place, the folder is invoked until
+  /// `maxIterations` is reached (default INT_MAX).
+  LogicalResult tryToFold(Operation *op, bool *inPlaceUpdate = nullptr,
+                          int maxIterations = INT_MAX);
 
   /// Tries to fold a pre-existing constant operation. `constValue` represents
   /// the value of the constant, and can be optionally passed if the value is
@@ -82,7 +85,10 @@ private:
 
   /// Tries to perform folding on the given `op`. If successful, populates
   /// `results` with the results of the folding.
-  LogicalResult tryToFold(Operation *op, SmallVectorImpl<Value> &results);
+  /// On success() and when in-place, the folder is invoked until
+  /// `maxIterations` is reached (default INT_MAX).
+  LogicalResult tryToFold(Operation *op, SmallVectorImpl<Value> &results,
+                          int maxIterations = INT_MAX);
 
   /// Try to process a set of fold results. Populates `results` on success,
   /// otherwise leaves it unchanged.

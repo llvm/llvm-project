@@ -92,8 +92,10 @@ enum UniformityLLTOpPredicateID {
   V4S32,
 
   UniV2S16,
+  UniV2S32,
 
   DivV2S16,
+  DivV2S32,
 
   // B types
   B32,
@@ -176,8 +178,11 @@ enum RegBankLLTMappingApplyID {
 
   // Dst only modifiers: read-any-lane and truncs
   UniInVcc,
+  UniInVgprS16,
   UniInVgprS32,
+  UniInVgprS64,
   UniInVgprV2S16,
+  UniInVgprV2S32,
   UniInVgprV4S32,
   UniInVgprB32,
   UniInVgprB64,
@@ -188,7 +193,11 @@ enum RegBankLLTMappingApplyID {
 
   Sgpr32Trunc,
 
-  // Src only modifiers: waterfalls, extends
+  // Src only modifiers: execute in waterfall loop if divergent
+  Sgpr32_WF,
+  SgprV4S32_WF,
+
+  // Src only modifiers: extends
   Sgpr32AExt,
   Sgpr32AExtBoolInReg,
   Sgpr32SExt,
@@ -207,16 +216,20 @@ enum LoweringMethodID {
   VccExtToSel,
   UniExtToSel,
   UnpackBitShift,
+  UnpackMinMax,
   S_BFE,
   V_BFE,
   VgprToVccCopy,
   SplitTo32,
+  ScalarizeToS16,
   SplitTo32Select,
   SplitTo32SExtInReg,
   Ext32To64,
   UniCstExt,
   SplitLoad,
   WidenLoad,
+  WidenMMOToS32,
+  UnpackAExt
 };
 
 enum FastRulesTypes {

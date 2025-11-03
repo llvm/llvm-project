@@ -129,7 +129,7 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
     SPIRV_Integer:$stride,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand,
-    OptionalAttr<I32Attr>:$alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
 
   let results = (outs
@@ -214,7 +214,7 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
     SPIRV_Integer:$stride,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand,
-    OptionalAttr<I32Attr>:$alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
 
   let results = (outs);

@@ -9,17 +9,17 @@ define i32 @propagate_freeze_in_landingpad() personality ptr null {
 ; CHECK:       invoke.bb1:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[NORMAL_RETURN:%.*]] ]
 ; CHECK-NEXT:    [[RES0:%.*]] = invoke i32 @foo()
-; CHECK-NEXT:    to label [[INVOKE_BB2:%.*]] unwind label [[EXCEPTIONAL_RETURN:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_BB2:%.*]] unwind label [[EXCEPTIONAL_RETURN:%.*]]
 ; CHECK:       invoke.bb2:
 ; CHECK-NEXT:    [[RES1:%.*]] = invoke i32 @foo()
-; CHECK-NEXT:    to label [[NORMAL_RETURN]] unwind label [[EXCEPTIONAL_RETURN]]
+; CHECK-NEXT:            to label [[NORMAL_RETURN]] unwind label [[EXCEPTIONAL_RETURN]]
 ; CHECK:       normal_return:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[X]], 1
 ; CHECK-NEXT:    br label [[INVOKE_BB1]]
 ; CHECK:       exceptional_return:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[INVOKE_BB1]] ], [ 0, [[INVOKE_BB2]] ]
 ; CHECK-NEXT:    [[LANDING_PAD:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[PHI]]
 ; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[FR]], 1
 ; CHECK-NEXT:    ret i32 [[RES]]

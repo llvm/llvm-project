@@ -61,7 +61,7 @@ TEST(LlvmLibcWCSPBrkTest, FindsFirstInBreakset) {
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"43"), src + 2);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST(LlvmLibcWCSPBrkTest, NullptrCrash) {
   // Passing in a nullptr should crash the program.
   EXPECT_DEATH([] { LIBC_NAMESPACE::wcspbrk(L"aaaaaaaaaaaaaa", nullptr); },
@@ -69,4 +69,4 @@ TEST(LlvmLibcWCSPBrkTest, NullptrCrash) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::wcspbrk(nullptr, L"aaaaaaaaaaaaaa"); },
                WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAS_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

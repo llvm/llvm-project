@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Enum {
-  let name = "ol_platform_info_t";
+def ol_platform_info_t : Enum {
   let desc = "Supported platform info.";
   let is_typed = 1;
   let etors = [
@@ -22,8 +21,7 @@ def : Enum {
   ];
 }
 
-def : Enum {
-  let name = "ol_platform_backend_t";
+def ol_platform_backend_t : Enum {
   let desc = "Identifies the native backend of the platform.";
   let etors =[
     Etor<"UNKNOWN", "The backend is not recognized">,
@@ -33,8 +31,7 @@ def : Enum {
   ];
 }
 
-def : Function {
-  let name = "olGetPlatformInfo";
+def olGetPlatformInfo : Function {
   let desc = "Queries the given property of the platform.";
   let details = [
     "`olGetPlatformInfoSize` can be used to query the storage size "
@@ -61,8 +58,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetPlatformInfoSize";
+def olGetPlatformInfoSize : Function {
   let desc = "Returns the storage size of the given platform query.";
   let details = [];
   let params = [

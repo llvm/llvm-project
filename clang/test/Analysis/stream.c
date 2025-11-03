@@ -519,14 +519,36 @@ void reopen_std_stream(void) {
   if (!fp) return;
 
   stdout = fp; // Let's make them alias.
-  clang_analyzer_eval(fp == oldStdout);     // expected-warning {{UNKNOWN}}
-  clang_analyzer_eval(fp == stdout);        // expected-warning {{TRUE}} no-FALSE
-  clang_analyzer_eval(oldStdout == stdout); // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(fp == oldStdout);     // expected-warning {{FALSE}}
+  clang_analyzer_eval(fp == stdout);        // expected-warning {{TRUE}}
+  clang_analyzer_eval(oldStdout == stdout); // expected-warning {{FALSE}}
 }
 
 void only_success_path_does_not_alias_with_stdout(void) {
   if (stdout) return;
   FILE *f = fopen("/tmp/foof", "r"); // no-crash
+  clang_analyzer_eval(f == 0);// expected-warning {{TRUE}} expected-warning {{FALSE}}
   if (!f) return;
   fclose(f);
+}
+
+extern void do_something();
+
+void test_no_invalidate_at_system_call() {
+  FILE *old_stdin = stdin;
+  if ((stdin = fopen("x/y/z", "r")) == NULL)
+    return;
+  clang_analyzer_eval(old_stdin == stdin); // expected-warning{{FALSE}}
+  free(malloc(100));
+  clang_analyzer_eval(old_stdin == stdin); // expected-warning{{FALSE}}
+  fclose(stdin);
+}
+
+void test_invalidate_at_non_system_call() {
+  FILE *old_stdin = stdin;
+  if ((stdin = fopen("x/y/z", "r")) == NULL)
+    return;
+  clang_analyzer_eval(old_stdin == stdin); // expected-warning{{FALSE}}
+  do_something();
+  clang_analyzer_eval(old_stdin == stdin); // expected-warning{{UNKNOWN}}
 }

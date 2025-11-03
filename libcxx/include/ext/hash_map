@@ -206,6 +206,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #else
 #  include <__config>
 #  include <__hash_table>
+#  include <__memory/compressed_pair.h>
 #  include <algorithm>
 #  include <ext/__hash>
 #  include <functional>
@@ -224,21 +225,9 @@ _LIBCPP_WARNING("Use of the header <ext/hash_map> is deprecated.  Migrate to <un
 
 namespace __gnu_cxx {
 
-template <class _Tp, class _Hash, bool = std::is_empty<_Hash>::value && !std::__libcpp_is_final<_Hash>::value >
-class __hash_map_hasher : private _Hash {
-public:
-  _LIBCPP_HIDE_FROM_ABI __hash_map_hasher() : _Hash() {}
-  _LIBCPP_HIDE_FROM_ABI __hash_map_hasher(const _Hash& __h) : _Hash(__h) {}
-  _LIBCPP_HIDE_FROM_ABI const _Hash& hash_function() const { return *this; }
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Tp& __x) const { return static_cast<const _Hash&>(*this)(__x.first); }
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const typename _Tp::first_type& __x) const {
-    return static_cast<const _Hash&>(*this)(__x);
-  }
-};
-
 template <class _Tp, class _Hash>
-class __hash_map_hasher<_Tp, _Hash, false> {
-  _Hash __hash_;
+class __hash_map_hasher {
+  _LIBCPP_COMPRESSED_ELEMENT(_Hash, __hash_);
 
 public:
   _LIBCPP_HIDE_FROM_ABI __hash_map_hasher() : __hash_() {}
@@ -248,30 +237,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const typename _Tp::first_type& __x) const { return __hash_(__x); }
 };
 
-template <class _Tp, class _Pred, bool = std::is_empty<_Pred>::value && !std::__libcpp_is_final<_Pred>::value >
-class __hash_map_equal : private _Pred {
-public:
-  _LIBCPP_HIDE_FROM_ABI __hash_map_equal() : _Pred() {}
-  _LIBCPP_HIDE_FROM_ABI __hash_map_equal(const _Pred& __p) : _Pred(__p) {}
-  _LIBCPP_HIDE_FROM_ABI const _Pred& key_eq() const { return *this; }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return static_cast<const _Pred&>(*this)(__x.first, __y.first);
-  }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const typename _Tp::first_type& __x, const _Tp& __y) const {
-    return static_cast<const _Pred&>(*this)(__x, __y.first);
-  }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const typename _Tp::first_type& __y) const {
-    return static_cast<const _Pred&>(*this)(__x.first, __y);
-  }
-  _LIBCPP_HIDE_FROM_ABI bool
-  operator()(const typename _Tp::first_type& __x, const typename _Tp::first_type& __y) const {
-    return static_cast<const _Pred&>(*this)(__x, __y);
-  }
-};
-
 template <class _Tp, class _Pred>
-class __hash_map_equal<_Tp, _Pred, false> {
-  _Pred __pred_;
+class __hash_map_equal {
+  _LIBCPP_COMPRESSED_ELEMENT(_Pred, __pred_);
 
 public:
   _LIBCPP_HIDE_FROM_ABI __hash_map_equal() : __pred_() {}
@@ -467,8 +435,6 @@ private:
 
   __table __table_;
 
-  typedef typename __table::__node_pointer __node_pointer;
-  typedef typename __table::__node_const_pointer __node_const_pointer;
   typedef typename __table::__node_traits __node_traits;
   typedef typename __table::__node_allocator __node_allocator;
   typedef typename __table::__node __node;
@@ -693,7 +659,6 @@ private:
 
   __table __table_;
 
-  typedef typename __table::__node_traits __node_traits;
   typedef typename __table::__node_allocator __node_allocator;
   typedef typename __table::__node __node;
   typedef __hash_map_node_destructor<__node_allocator> _Dp;
@@ -744,7 +709,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const { return __table_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator end() const { return __table_.end(); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__emplace_unique(__x); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__emplace_multi(__x); }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, const value_type& __x) { return insert(__x); }
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last);
@@ -822,16 +787,13 @@ hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(const hash_multimap& __u) : __table_(__u.__table_) {
-  __table_.__rehash_multi(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
+hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(const hash_multimap& __u) : __table_(__u.__table_) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
 inline void hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterator __first, _InputIterator __last) {
   for (; __first != __last; ++__first)
-    __table_.__emplace_unique(*__first);
+    __table_.__emplace_multi(*__first);
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>

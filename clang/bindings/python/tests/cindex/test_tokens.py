@@ -53,3 +53,9 @@ class TestTokens(unittest.TestCase):
 
         self.assertEqual(extent.start.offset, 4)
         self.assertEqual(extent.end.offset, 7)
+
+    def test_null_cursor(self):
+        """Ensure that the cursor property converts null cursors to None"""
+        tu = get_tu("int i = 5;")
+        tokens = list(tu.get_tokens(extent=tu.cursor.extent))
+        self.assertEqual(tokens[-1].cursor, None)

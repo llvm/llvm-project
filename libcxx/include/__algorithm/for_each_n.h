@@ -37,8 +37,8 @@ template <class _InputIterator,
           class _Func,
           class _Proj,
           __enable_if_t<!__has_random_access_iterator_category<_InputIterator>::value &&
-                            _Or< _Not<__is_segmented_iterator<_InputIterator> >,
-                                 _Not<__has_random_access_local_iterator<_InputIterator> > >::value,
+                            _Or<integral_constant<bool, !__is_segmented_iterator_v<_InputIterator> >,
+                                _Not<__has_random_access_local_iterator<_InputIterator> > >::value,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 __for_each_n(_InputIterator __first, _Size __orig_n, _Func& __f, _Proj& __proj) {
@@ -71,7 +71,7 @@ template <class _SegmentedIterator,
           class _Func,
           class _Proj,
           __enable_if_t<!__has_random_access_iterator_category<_SegmentedIterator>::value &&
-                            __is_segmented_iterator<_SegmentedIterator>::value &&
+                            __is_segmented_iterator_v<_SegmentedIterator> &&
                             __has_random_access_iterator_category<
                                 typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator>::value,
                         int> = 0>

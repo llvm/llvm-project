@@ -25,7 +25,6 @@
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
 namespace bufferization {
@@ -537,10 +536,20 @@ struct ControlDropUnitDims {
     return SmallVector<unsigned>{};
   };
 };
+
 struct DropUnitDimsResult {
-  linalg::GenericOp resultOp;
+  IndexingMapOpInterface resultOp;
   SmallVector<Value> replacements;
 };
+using DroppedUnitDimsBuilder = std::function<IndexingMapOpInterface(
+    Location loc, OpBuilder &, IndexingMapOpInterface,
+    ArrayRef<Value> newOperands, ArrayRef<AffineMap> newIndexingMaps,
+    const llvm::SmallDenseSet<unsigned> &droppedDims)>;
+
+FailureOr<DropUnitDimsResult>
+dropUnitDims(RewriterBase &rewriter, IndexingMapOpInterface op,
+             const DroppedUnitDimsBuilder &droppedUnitDimsBuilder,
+             const ControlDropUnitDims &options);
 FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
                                            GenericOp genericOp,
                                            const ControlDropUnitDims &options);
@@ -601,38 +610,56 @@ LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
 /// affine.apply operations.
 /// The `indexingMap` + `indexingSizes` encoding suits StructuredOps and
 /// provides a gentle portability path for Linalg-like ops with affine maps.
+/// The padded shape is computed by evaluating the maximum accessed index per
+/// dimension, which may involve multiplying by constant factors derived from
+/// the affine indexing expressions. Currently, only a limited set of projected
+/// permuation indexing maps are supported, such as
+/// - affine_map<(d0, d1, d2) -> (d0, d1)>
+/// - affine_map<(d0, d1, d2) -> (d0, d1 + d2)>
+/// - affine_map<(d0, d1) -> (d0 * 3 + d1)>
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
 SmallVector<OpFoldResult>
-computePaddedShape(RewriterBase &rewriter, TypedValue<RankedTensorType> v,
+computePaddedShape(OpBuilder &, TypedValue<RankedTensorType> v,
                    AffineMap indexingMap, ArrayRef<OpFoldResult> indexingSizes,
                    const PadTilingInterfaceOptions &options);
 
 using PadSizeComputationFunction =
     std::function<FailureOr<SmallVector<OpFoldResult>>(
-        RewriterBase &, OpOperand &, ArrayRef<Range>,
+        OpBuilder &, OpOperand &, ArrayRef<Range>,
         const PadTilingInterfaceOptions &)>;
 
 /// Specific helper for Linalg ops.
-FailureOr<SmallVector<OpFoldResult>> computeIndexingMapOpInterfacePaddedShape(
-    RewriterBase &rewriter, OpOperand &operandToPad,
-    ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options);
+FailureOr<SmallVector<OpFoldResult>>
+computeIndexingMapOpInterfacePaddedShape(OpBuilder &, OpOperand &operandToPad,
+                                         ArrayRef<Range> iterationDomain,
+                                         const PadTilingInterfaceOptions &);
 
-/// Pad the iterator dimensions `options.paddingDimensions` of `opToPad`.
-///
+/// Operations and values created in the process of padding a TilingInterface
+/// operation.
+struct PadTilingInterfaceResult {
+  /// The operands of the padded op.
+  SmallVector<tensor::PadOp> padOps;
+  /// The padded op, a clone of `toPad` with padded operands.
+  TilingInterface paddedOp;
+  /// Slices of the padded op's results, same types as `toPad`.
+  SmallVector<Value> replacements;
+};
+
+/// Pad the iterator dimensions of `toPad`.
 /// * "options.paddingSizes" indicates that each padding dimension should be
 ///   padded to the specified padding size.
 /// * "options.padToMultipleOf" indicates that the paddingSizes should be
 //    interpreted as the bounding box (dynamic) value to pad to.
 /// * Use "options.paddingValues" to set the padding value of the created
 //    tensor::PadOp.
-/// * The tensor::PadOp is returned on success.
-
-FailureOr<TilingInterface>
-rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
-                  const PadTilingInterfaceOptions &constOptions,
-                  SmallVector<tensor::PadOp> &padOps,
-                  PadSizeComputationFunction computePaddingSizeFun =
+//
+// The transformation assumes that the insertion point is set after the
+// operation to pad.
+FailureOr<PadTilingInterfaceResult>
+rewriteAsPaddedOp(OpBuilder &, TilingInterface toPad,
+                  PadTilingInterfaceOptions options,
+                  const PadSizeComputationFunction & =
                       &computeIndexingMapOpInterfacePaddedShape);
 
 namespace detail {
@@ -876,11 +903,15 @@ struct VectorizationResult {
 /// greater than or equal to their counterpart iteration space sizes, if static.
 /// `inputVectorShapes` also allows the vectorization of operations with dynamic
 /// shapes.
+/// Optionally, `createNamedContraction` can force compatible contractions to be
+/// vectorized directly to vector.contract operation.
 FailureOr<VectorizationResult>
 vectorize(RewriterBase &rewriter, Operation *op,
           ArrayRef<int64_t> inputVectorSizes = {},
           ArrayRef<bool> inputScalableVecDims = {},
-          bool vectorizeNDExtract = false, bool flatten1DDepthwiseConv = false);
+          bool vectorizeNDExtract = false, bool flatten1DDepthwiseConv = false,
+          bool assumeDynamicDimsMatchVecSizes = false,
+          bool createNamedContraction = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
@@ -1629,8 +1660,12 @@ protected:
 /// Rewrites a linalg::PackOp into a sequence of:
 ///   * tensor::PadOp + linalg::TransposeOp + tensor::EmptyOp +
 ///     tensor::InsertSliceOp ops.
+/// (InsertSliceOp is rank-expanding).
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled-outer-dims of the input linalg::PackOp are 1.
+/// Note that this constraint means that effectively exactly one tile is packed.
+///
+/// In addition, assumes that the un-tiled-outer-dims are not permuted.
 ///
 /// Before:
 /// ```
@@ -1666,10 +1701,13 @@ struct DecomposeOuterUnitDimsPackOpPattern
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Rewrites a linalg::UnPackOp into a sequence of rank-reduced
+/// Rewrites a linalg::UnPackOp into a sequence of:
 ///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
+/// (ExtractSliceOp is rank-reducing).
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled-outer-dims of the input linalg::UnPackOp are 1.
+/// Note that this constraint means that effectively exactly one tile is
+/// unpacked.
 ///
 /// Before:
 /// ```
@@ -1810,6 +1848,10 @@ void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 void populateLinalgGenericOpsSpecializationPatterns(
     RewritePatternSet &patterns);
 
+/// Populates `patterns` that convert linalg named ops e.g. `linalg.add`
+/// to equivalent `linalg.elementwise`.
+void populateLinalgNamedToElementwisePatterns(RewritePatternSet &patterns);
+
 /// Populates `patterns` with patterns that fold operations like
 /// `linalg.transform` into elementwise op map.
 void populateLinalgFoldIntoElementwisePatterns(RewritePatternSet &patterns);
@@ -1833,6 +1875,7 @@ void populateDecomposePadPatterns(RewritePatternSet &patterns);
 
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.
+/// Note: currently limited to Tensor semantics only.
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 
@@ -1889,7 +1932,15 @@ void populateElementwiseOpsFusionPatterns(
 using ControlPropagationFn = std::function<bool(OpOperand *opOperand)>;
 
 /// Patterns to bubble up or down data layout ops across other operations.
+/// The function also has an option to allow the patterns to propagate with
+/// poison padding if requested by the caller.
 void populateDataLayoutPropagationPatterns(
+    RewritePatternSet &patterns,
+    const ControlPropagationFn &controlPackUnPackPropagation,
+    bool PoisonPaddingOk = false);
+
+/// Patterns to sink extract slice across other operations.
+void populateExtractSliceSinkingPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation);
 
@@ -1937,9 +1988,8 @@ void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
 void populateFuseTensorPadWithProducerLinalgOpPatterns(
     RewritePatternSet &patterns);
 
-/// Patterns to convert from one named op to another. These can be seen as
-/// canonicalizations of named ops into another named op.
-void populateLinalgNamedOpConversionPatterns(RewritePatternSet &patterns);
+/// Patterns to simplify depthwise convolutions.
+void populateSimplifyDepthwiseConvPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
 /// tensors via reassociative reshape ops.

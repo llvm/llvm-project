@@ -14,8 +14,11 @@ LLVM and API reference documentation.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
+   CalleeTypeMetadata
+   CallGraphSection
    CIBestPractices
    CommandGuide/index
+   ContentAddressableStorage
    ConvergenceAndUniformity
    ConvergentOperations
    Coroutines
@@ -44,6 +47,7 @@ LLVM and API reference documentation.
    ScudoHardenedAllocator
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
+   QualGroup
    Security
    SecurityTransparencyReports
    SegmentedStacks
@@ -243,3 +247,10 @@ Additional Topics
 :doc:`MLGO`
    Facilities for ML-Guided Optimization, such as collecting IR corpora from a
    build, interfacing with ML models, an exposing features for training.
+
+:doc:`ContentAddressableStorage`
+   A reference guide for using LLVM's CAS library.
+
+:doc:`CIBestPractices`
+   A list of guidelines and best practices to use when working on LLVM's
+   CI systems.

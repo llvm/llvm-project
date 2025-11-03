@@ -6,10 +6,10 @@
 
 ; Check that the addresses for a scalarized memory access is not extracted
 ; from a vector register.
-define i32 @foo(ptr nocapture %A) {
+define void @foo(ptr nocapture %A) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -25,13 +25,9 @@ define i32 @foo(ptr nocapture %A) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 poison
+; CHECK-NEXT:    ret void
 ;
 
 entry:
@@ -48,15 +44,15 @@ for.body:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 poison
+  ret void
 }
 
 
 ; Check that a load of address is scalarized.
-define i32 @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
+define void @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
 ; CHECK-LABEL: @foo1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -74,15 +70,11 @@ define i32 @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
 ; CHECK-NEXT:    store <2 x i32> [[TMP8]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 poison
+; CHECK-NEXT:    ret void
 ;
 
 entry:
@@ -101,5 +93,5 @@ for.body:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 poison
+  ret void
 }

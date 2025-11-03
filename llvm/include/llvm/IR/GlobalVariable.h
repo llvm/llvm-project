@@ -219,6 +219,11 @@ public:
     Attrs = Attrs.addAttribute(getContext(), Kind, Val);
   }
 
+  /// Add attributes to this global.
+  void addAttributes(const AttrBuilder &AttrBuilder) {
+    Attrs = Attrs.addAttributes(getContext(), AttrBuilder);
+  }
+
   /// Return true if the attribute exists.
   bool hasAttribute(Attribute::AttrKind Kind) const {
     return Attrs.hasAttribute(Kind);

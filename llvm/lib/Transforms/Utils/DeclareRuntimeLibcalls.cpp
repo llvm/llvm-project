@@ -30,7 +30,7 @@ PreservedAnalyses DeclareRuntimeLibcallsPass::run(Module &M,
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(Ctx), {}, /*IsVarArgs=*/true);
 
-    const char *FuncName = RTLCI.getLibcallImplName(Impl);
+    StringRef FuncName = RTLCI.getLibcallImplName(Impl);
     M.getOrInsertFunction(FuncName, FuncTy);
   }
 

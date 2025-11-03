@@ -17,6 +17,6 @@ _CLC_OVERLOAD _CLC_DEF size_t __clc_get_local_size(uint dim) {
   case 2:
     return __nvvm_read_ptx_sreg_ntid_z();
   default:
-    return 0;
+    return 1;
   }
 }

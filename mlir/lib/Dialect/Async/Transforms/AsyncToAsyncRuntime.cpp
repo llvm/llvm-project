@@ -23,11 +23,9 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -188,22 +186,22 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
 
   std::optional<Value> retToken;
   if (isStateful)
-    retToken.emplace(builder.create<RuntimeCreateOp>(TokenType::get(ctx)));
+    retToken.emplace(RuntimeCreateOp::create(builder, TokenType::get(ctx)));
 
   llvm::SmallVector<Value, 4> retValues;
   ArrayRef<Type> resValueTypes =
       isStateful ? func.getResultTypes().drop_front() : func.getResultTypes();
   for (auto resType : resValueTypes)
     retValues.emplace_back(
-        builder.create<RuntimeCreateOp>(resType).getResult());
+        RuntimeCreateOp::create(builder, resType).getResult());
 
   // ------------------------------------------------------------------------ //
   // Initialize coroutine: get coroutine id and coroutine handle.
   // ------------------------------------------------------------------------ //
-  auto coroIdOp = builder.create<CoroIdOp>(CoroIdType::get(ctx));
+  auto coroIdOp = CoroIdOp::create(builder, CoroIdType::get(ctx));
   auto coroHdlOp =
-      builder.create<CoroBeginOp>(CoroHandleType::get(ctx), coroIdOp.getId());
-  builder.create<cf::BranchOp>(originalEntryBlock);
+      CoroBeginOp::create(builder, CoroHandleType::get(ctx), coroIdOp.getId());
+  cf::BranchOp::create(builder, originalEntryBlock);
 
   Block *cleanupBlock = func.addBlock();
   Block *cleanupBlockForDestroy = func.addBlock();
@@ -214,10 +212,10 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   // ------------------------------------------------------------------------ //
   auto buildCleanupBlock = [&](Block *cb) {
     builder.setInsertionPointToStart(cb);
-    builder.create<CoroFreeOp>(coroIdOp.getId(), coroHdlOp.getHandle());
+    CoroFreeOp::create(builder, coroIdOp.getId(), coroHdlOp.getHandle());
 
     // Branch into the suspend block.
-    builder.create<cf::BranchOp>(suspendBlock);
+    cf::BranchOp::create(builder, suspendBlock);
   };
   buildCleanupBlock(cleanupBlock);
   buildCleanupBlock(cleanupBlockForDestroy);
@@ -229,7 +227,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   builder.setInsertionPointToStart(suspendBlock);
 
   // Mark the end of a coroutine: async.coro.end
-  builder.create<CoroEndOp>(coroHdlOp.getHandle());
+  CoroEndOp::create(builder, coroHdlOp.getHandle());
 
   // Return created optional `async.token` and `async.values` from the suspend
   // block. This will be the return value of a coroutine ramp function.
@@ -237,7 +235,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   if (retToken)
     ret.push_back(*retToken);
   llvm::append_range(ret, retValues);
-  builder.create<func::ReturnOp>(ret);
+  func::ReturnOp::create(builder, ret);
 
   // `async.await` op lowering will create resume blocks for async
   // continuations, and will conditionally branch to cleanup or suspend blocks.
@@ -274,13 +272,13 @@ static Block *setupSetErrorBlock(CoroMachinery &coro) {
 
   // Coroutine set_error block: set error on token and all returned values.
   if (coro.asyncToken)
-    builder.create<RuntimeSetErrorOp>(*coro.asyncToken);
+    RuntimeSetErrorOp::create(builder, *coro.asyncToken);
 
   for (Value retValue : coro.returnValues)
-    builder.create<RuntimeSetErrorOp>(retValue);
+    RuntimeSetErrorOp::create(builder, retValue);
 
   // Branch into the cleanup block.
-  builder.create<cf::BranchOp>(coro.cleanup);
+  cf::BranchOp::create(builder, coro.cleanup);
 
   return *coro.setError;
 }
@@ -335,13 +333,13 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
     // Await on all dependencies before starting to execute the body region.
     for (size_t i = 0; i < numDependencies; ++i)
-      builder.create<AwaitOp>(func.getArgument(i));
+      AwaitOp::create(builder, func.getArgument(i));
 
     // Await on all async value operands and unwrap the payload.
     SmallVector<Value, 4> unwrappedOperands(numOperands);
     for (size_t i = 0; i < numOperands; ++i) {
       Value operand = func.getArgument(numDependencies + i);
-      unwrappedOperands[i] = builder.create<AwaitOp>(loc, operand).getResult();
+      unwrappedOperands[i] = AwaitOp::create(builder, loc, operand).getResult();
     }
 
     // Map from function inputs defined above the execute op to the function
@@ -368,15 +366,15 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
     // Save the coroutine state: async.coro.save
     auto coroSaveOp =
-        builder.create<CoroSaveOp>(CoroStateType::get(ctx), coro.coroHandle);
+        CoroSaveOp::create(builder, CoroStateType::get(ctx), coro.coroHandle);
 
     // Pass coroutine to the runtime to be resumed on a runtime managed
     // thread.
-    builder.create<RuntimeResumeOp>(coro.coroHandle);
+    RuntimeResumeOp::create(builder, coro.coroHandle);
 
     // Add async.coro.suspend as a suspended block terminator.
-    builder.create<CoroSuspendOp>(coroSaveOp.getState(), coro.suspend,
-                                  branch.getDest(), coro.cleanupForDestroy);
+    CoroSuspendOp::create(builder, coroSaveOp.getState(), coro.suspend,
+                          branch.getDest(), coro.cleanupForDestroy);
 
     branch.erase();
   }
@@ -384,8 +382,9 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // Replace the original `async.execute` with a call to outlined function.
   {
     ImplicitLocOpBuilder callBuilder(loc, execute);
-    auto callOutlinedFunc = callBuilder.create<func::CallOp>(
-        func.getName(), execute.getResultTypes(), functionInputs.getArrayRef());
+    auto callOutlinedFunc = func::CallOp::create(callBuilder, func.getName(),
+                                                 execute.getResultTypes(),
+                                                 functionInputs.getArrayRef());
     execute.replaceAllUsesWith(callOutlinedFunc.getResults());
     execute.erase();
   }
@@ -453,7 +452,7 @@ public:
     Location loc = op->getLoc();
 
     auto newFuncOp =
-        rewriter.create<func::FuncOp>(loc, op.getName(), op.getFunctionType());
+        func::FuncOp::create(rewriter, loc, op.getName(), op.getFunctionType());
 
     SymbolTable::setSymbolVisibility(newFuncOp,
                                      SymbolTable::getSymbolVisibility(op));
@@ -523,16 +522,16 @@ public:
     for (auto tuple : llvm::zip(adaptor.getOperands(), coro.returnValues)) {
       Value returnValue = std::get<0>(tuple);
       Value asyncValue = std::get<1>(tuple);
-      rewriter.create<RuntimeStoreOp>(loc, returnValue, asyncValue);
-      rewriter.create<RuntimeSetAvailableOp>(loc, asyncValue);
+      RuntimeStoreOp::create(rewriter, loc, returnValue, asyncValue);
+      RuntimeSetAvailableOp::create(rewriter, loc, asyncValue);
     }
 
     if (coro.asyncToken)
       // Switch the coroutine completion token to available state.
-      rewriter.create<RuntimeSetAvailableOp>(loc, *coro.asyncToken);
+      RuntimeSetAvailableOp::create(rewriter, loc, *coro.asyncToken);
 
     rewriter.eraseOp(op);
-    rewriter.create<cf::BranchOp>(loc, coro.cleanup);
+    cf::BranchOp::create(rewriter, loc, coro.cleanup);
     return success();
   }
 
@@ -583,16 +582,17 @@ public:
     // the async object (token, value or group) to become available.
     if (!isInCoroutine) {
       ImplicitLocOpBuilder builder(loc, rewriter);
-      builder.create<RuntimeAwaitOp>(loc, operand);
+      RuntimeAwaitOp::create(builder, loc, operand);
 
       // Assert that the awaited operands is not in the error state.
-      Value isError = builder.create<RuntimeIsErrorOp>(i1, operand);
-      Value notError = builder.create<arith::XOrIOp>(
-          isError, builder.create<arith::ConstantOp>(
-                       loc, i1, builder.getIntegerAttr(i1, 1)));
+      Value isError = RuntimeIsErrorOp::create(builder, i1, operand);
+      Value notError = arith::XOrIOp::create(
+          builder, isError,
+          arith::ConstantOp::create(builder, loc, i1,
+                                    builder.getIntegerAttr(i1, 1)));
 
-      builder.create<cf::AssertOp>(notError,
-                                   "Awaited async operand is in error state");
+      cf::AssertOp::create(builder, notError,
+                           "Awaited async operand is in error state");
     }
 
     // Inside the coroutine we convert await operation into coroutine suspension
@@ -607,28 +607,28 @@ public:
       // Save the coroutine state and resume on a runtime managed thread when
       // the operand becomes available.
       auto coroSaveOp =
-          builder.create<CoroSaveOp>(CoroStateType::get(ctx), coro.coroHandle);
-      builder.create<RuntimeAwaitAndResumeOp>(operand, coro.coroHandle);
+          CoroSaveOp::create(builder, CoroStateType::get(ctx), coro.coroHandle);
+      RuntimeAwaitAndResumeOp::create(builder, operand, coro.coroHandle);
 
       // Split the entry block before the await operation.
       Block *resume = rewriter.splitBlock(suspended, Block::iterator(op));
 
       // Add async.coro.suspend as a suspended block terminator.
       builder.setInsertionPointToEnd(suspended);
-      builder.create<CoroSuspendOp>(coroSaveOp.getState(), coro.suspend, resume,
-                                    coro.cleanupForDestroy);
+      CoroSuspendOp::create(builder, coroSaveOp.getState(), coro.suspend,
+                            resume, coro.cleanupForDestroy);
 
       // Split the resume block into error checking and continuation.
       Block *continuation = rewriter.splitBlock(resume, Block::iterator(op));
 
       // Check if the awaited value is in the error state.
       builder.setInsertionPointToStart(resume);
-      auto isError = builder.create<RuntimeIsErrorOp>(loc, i1, operand);
-      builder.create<cf::CondBranchOp>(isError,
-                                       /*trueDest=*/setupSetErrorBlock(coro),
-                                       /*trueArgs=*/ArrayRef<Value>(),
-                                       /*falseDest=*/continuation,
-                                       /*falseArgs=*/ArrayRef<Value>());
+      auto isError = RuntimeIsErrorOp::create(builder, loc, i1, operand);
+      cf::CondBranchOp::create(builder, isError,
+                               /*trueDest=*/setupSetErrorBlock(coro),
+                               /*trueArgs=*/ArrayRef<Value>(),
+                               /*falseDest=*/continuation,
+                               /*falseArgs=*/ArrayRef<Value>());
 
       // Make sure that replacement value will be constructed in the
       // continuation block.
@@ -674,7 +674,7 @@ public:
                       ConversionPatternRewriter &rewriter) const override {
     // Load from the async value storage.
     auto valueType = cast<ValueType>(operand.getType()).getValueType();
-    return rewriter.create<RuntimeLoadOp>(op->getLoc(), valueType, operand);
+    return RuntimeLoadOp::create(rewriter, op->getLoc(), valueType, operand);
   }
 };
 
@@ -715,15 +715,15 @@ public:
     for (auto tuple : llvm::zip(adaptor.getOperands(), coro.returnValues)) {
       Value yieldValue = std::get<0>(tuple);
       Value asyncValue = std::get<1>(tuple);
-      rewriter.create<RuntimeStoreOp>(loc, yieldValue, asyncValue);
-      rewriter.create<RuntimeSetAvailableOp>(loc, asyncValue);
+      RuntimeStoreOp::create(rewriter, loc, yieldValue, asyncValue);
+      RuntimeSetAvailableOp::create(rewriter, loc, asyncValue);
     }
 
     if (coro.asyncToken)
       // Switch the coroutine completion token to available state.
-      rewriter.create<RuntimeSetAvailableOp>(loc, *coro.asyncToken);
+      RuntimeSetAvailableOp::create(rewriter, loc, *coro.asyncToken);
 
-    rewriter.create<cf::BranchOp>(loc, coro.cleanup);
+    cf::BranchOp::create(rewriter, loc, coro.cleanup);
     rewriter.eraseOp(op);
 
     return success();
@@ -757,11 +757,11 @@ public:
 
     Block *cont = rewriter.splitBlock(op->getBlock(), Block::iterator(op));
     rewriter.setInsertionPointToEnd(cont->getPrevNode());
-    rewriter.create<cf::CondBranchOp>(loc, adaptor.getArg(),
-                                      /*trueDest=*/cont,
-                                      /*trueArgs=*/ArrayRef<Value>(),
-                                      /*falseDest=*/setupSetErrorBlock(coro),
-                                      /*falseArgs=*/ArrayRef<Value>());
+    cf::CondBranchOp::create(rewriter, loc, adaptor.getArg(),
+                             /*trueDest=*/cont,
+                             /*trueArgs=*/ArrayRef<Value>(),
+                             /*falseDest=*/setupSetErrorBlock(coro),
+                             /*falseArgs=*/ArrayRef<Value>());
     rewriter.eraseOp(op);
 
     return success();

@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/mem_fence/clc_mem_fence.h>
 #include <clc/opencl/explicit_fence/explicit_memory_fence.h>
+#include <clc/opencl/synchronization/utils.h>
 
 _CLC_DEF _CLC_OVERLOAD void mem_fence(cl_mem_fence_flags flags) {
-  if (flags & (CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE))
-    __nvvm_membar_cta();
+  int memory_scope = __opencl_get_memory_scope(flags);
+  int memory_order = __ATOMIC_SEQ_CST;
+  __CLC_MemorySemantics memory_semantics = __opencl_get_memory_semantics(flags);
+  __clc_mem_fence(memory_scope, memory_order, memory_semantics);
 }
 
 // We do not have separate mechanism for read and write fences.

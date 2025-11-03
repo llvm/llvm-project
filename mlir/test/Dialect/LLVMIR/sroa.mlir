@@ -177,7 +177,7 @@ llvm.func @direct_promotable_use_is_fine() -> i32 {
   // CHECK: %[[RES:.*]] = llvm.load %[[ALLOCA]]
   %3 = llvm.load %2 : !llvm.ptr -> i32
   // This is a direct use of the slot but it can be removed because it implements PromotableOpInterface.
-  llvm.intr.lifetime.start 2, %1 : !llvm.ptr
+  llvm.intr.lifetime.start %1 : !llvm.ptr
   // CHECK: llvm.return %[[RES]] : i32
   llvm.return %3 : i32
 }

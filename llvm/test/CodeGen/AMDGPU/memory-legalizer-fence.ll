@@ -12,6 +12,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250 %s
 
 define amdgpu_kernel void @singlethread_acquire_fence() {
 ; GFX6-LABEL: singlethread_acquire_fence:
@@ -65,6 +66,10 @@ define amdgpu_kernel void @singlethread_acquire_fence() {
 ; GFX12-CU-LABEL: singlethread_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: singlethread_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread") acquire
   ret void
@@ -122,6 +127,10 @@ define amdgpu_kernel void @singlethread_release_fence() {
 ; GFX12-CU-LABEL: singlethread_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: singlethread_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread") release
   ret void
@@ -179,6 +188,10 @@ define amdgpu_kernel void @singlethread_acq_rel_fence() {
 ; GFX12-CU-LABEL: singlethread_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: singlethread_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread") acq_rel
   ret void
@@ -236,6 +249,10 @@ define amdgpu_kernel void @singlethread_seq_cst_fence() {
 ; GFX12-CU-LABEL: singlethread_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: singlethread_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread") seq_cst
   ret void
@@ -293,6 +310,10 @@ define amdgpu_kernel void @singlethread_one_as_acquire_fence() {
 ; GFX12-CU-LABEL: singlethread_one_as_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: singlethread_one_as_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread-one-as") acquire
   ret void
@@ -350,6 +371,10 @@ define amdgpu_kernel void @singlethread_one_as_release_fence() {
 ; GFX12-CU-LABEL: singlethread_one_as_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: singlethread_one_as_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread-one-as") release
   ret void
@@ -407,6 +432,10 @@ define amdgpu_kernel void @singlethread_one_as_acq_rel_fence() {
 ; GFX12-CU-LABEL: singlethread_one_as_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: singlethread_one_as_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread-one-as") acq_rel
   ret void
@@ -464,6 +493,10 @@ define amdgpu_kernel void @singlethread_one_as_seq_cst_fence() {
 ; GFX12-CU-LABEL: singlethread_one_as_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: singlethread_one_as_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread-one-as") seq_cst
   ret void
@@ -521,6 +554,10 @@ define amdgpu_kernel void @wavefront_acquire_fence() {
 ; GFX12-CU-LABEL: wavefront_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: wavefront_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront") acquire
   ret void
@@ -578,6 +615,10 @@ define amdgpu_kernel void @wavefront_release_fence() {
 ; GFX12-CU-LABEL: wavefront_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: wavefront_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront") release
   ret void
@@ -635,6 +676,10 @@ define amdgpu_kernel void @wavefront_acq_rel_fence() {
 ; GFX12-CU-LABEL: wavefront_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: wavefront_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront") acq_rel
   ret void
@@ -692,6 +737,10 @@ define amdgpu_kernel void @wavefront_seq_cst_fence() {
 ; GFX12-CU-LABEL: wavefront_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: wavefront_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront") seq_cst
   ret void
@@ -749,6 +798,10 @@ define amdgpu_kernel void @wavefront_one_as_acquire_fence() {
 ; GFX12-CU-LABEL: wavefront_one_as_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: wavefront_one_as_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront-one-as") acquire
   ret void
@@ -806,6 +859,10 @@ define amdgpu_kernel void @wavefront_one_as_release_fence() {
 ; GFX12-CU-LABEL: wavefront_one_as_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: wavefront_one_as_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront-one-as") release
   ret void
@@ -863,6 +920,10 @@ define amdgpu_kernel void @wavefront_one_as_acq_rel_fence() {
 ; GFX12-CU-LABEL: wavefront_one_as_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: wavefront_one_as_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront-one-as") acq_rel
   ret void
@@ -920,6 +981,10 @@ define amdgpu_kernel void @wavefront_one_as_seq_cst_fence() {
 ; GFX12-CU-LABEL: wavefront_one_as_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: wavefront_one_as_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront-one-as") seq_cst
   ret void
@@ -998,6 +1063,12 @@ define amdgpu_kernel void @workgroup_acquire_fence() {
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") acquire
   ret void
@@ -1022,7 +1093,8 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ;
 ; GFX10-CU-LABEL: workgroup_release_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: workgroup_release_fence:
@@ -1058,7 +1130,8 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ;
 ; GFX11-CU-LABEL: workgroup_release_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: workgroup_release_fence:
@@ -1071,8 +1144,17 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") release
   ret void
@@ -1098,7 +1180,8 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ;
 ; GFX10-CU-LABEL: workgroup_acq_rel_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: workgroup_acq_rel_fence:
@@ -1137,7 +1220,8 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ;
 ; GFX11-CU-LABEL: workgroup_acq_rel_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: workgroup_acq_rel_fence:
@@ -1151,8 +1235,17 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") acq_rel
   ret void
@@ -1178,7 +1271,8 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ;
 ; GFX10-CU-LABEL: workgroup_seq_cst_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: workgroup_seq_cst_fence:
@@ -1217,7 +1311,8 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ;
 ; GFX11-CU-LABEL: workgroup_seq_cst_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: workgroup_seq_cst_fence:
@@ -1231,8 +1326,17 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") seq_cst
   ret void
@@ -1303,6 +1407,12 @@ define amdgpu_kernel void @workgroup_one_as_acquire_fence() {
 ; GFX12-CU-LABEL: workgroup_one_as_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_one_as_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") acquire
   ret void
@@ -1325,6 +1435,8 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ;
 ; GFX10-CU-LABEL: workgroup_one_as_release_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: workgroup_one_as_release_fence:
@@ -1357,6 +1469,8 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ;
 ; GFX11-CU-LABEL: workgroup_one_as_release_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_release_fence:
@@ -1369,7 +1483,17 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_one_as_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_one_as_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") release
   ret void
@@ -1393,6 +1517,8 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ;
 ; GFX10-CU-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: workgroup_one_as_acq_rel_fence:
@@ -1428,6 +1554,8 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ;
 ; GFX11-CU-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_acq_rel_fence:
@@ -1441,7 +1569,17 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_one_as_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") acq_rel
   ret void
@@ -1465,6 +1603,8 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ;
 ; GFX10-CU-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: workgroup_one_as_seq_cst_fence:
@@ -1500,6 +1640,8 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ;
 ; GFX11-CU-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_seq_cst_fence:
@@ -1513,9 +1655,814 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_one_as_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") seq_cst
+  ret void
+}
+
+
+define amdgpu_kernel void @cluster_acquire_fence() {
+; GFX6-LABEL: cluster_acquire_fence:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    buffer_wbinvl1
+; GFX6-NEXT:    s_endpgm
+;
+; GFX7-LABEL: cluster_acquire_fence:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    buffer_wbinvl1_vol
+; GFX7-NEXT:    s_endpgm
+;
+; GFX10-WGP-LABEL: cluster_acquire_fence:
+; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
+; GFX10-WGP-NEXT:    s_endpgm
+;
+; GFX10-CU-LABEL: cluster_acquire_fence:
+; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
+; GFX10-CU-NEXT:    s_endpgm
+;
+; SKIP-CACHE-INV-LABEL: cluster_acquire_fence:
+; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_endpgm
+;
+; GFX90A-NOTTGSPLIT-LABEL: cluster_acquire_fence:
+; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: cluster_acquire_fence:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-NOTTGSPLIT-LABEL: cluster_acquire_fence:
+; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-NOTTGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-TGSPLIT-LABEL: cluster_acquire_fence:
+; GFX942-TGSPLIT:       ; %bb.0: ; %entry
+; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-TGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX11-WGP-LABEL: cluster_acquire_fence:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
+; GFX11-WGP-NEXT:    s_endpgm
+;
+; GFX11-CU-LABEL: cluster_acquire_fence:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
+; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: cluster_acquire_fence:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: cluster_acquire_fence:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: cluster_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
+; GFX1250-NEXT:    s_endpgm
+entry:
+  fence syncscope("cluster") acquire
+  ret void
+}
+
+define amdgpu_kernel void @cluster_release_fence() {
+; GFX6-LABEL: cluster_release_fence:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_endpgm
+;
+; GFX7-LABEL: cluster_release_fence:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_endpgm
+;
+; GFX10-WGP-LABEL: cluster_release_fence:
+; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WGP-NEXT:    s_endpgm
+;
+; GFX10-CU-LABEL: cluster_release_fence:
+; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-CU-NEXT:    s_endpgm
+;
+; SKIP-CACHE-INV-LABEL: cluster_release_fence:
+; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_endpgm
+;
+; GFX90A-NOTTGSPLIT-LABEL: cluster_release_fence:
+; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: cluster_release_fence:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-NOTTGSPLIT-LABEL: cluster_release_fence:
+; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-TGSPLIT-LABEL: cluster_release_fence:
+; GFX942-TGSPLIT:       ; %bb.0: ; %entry
+; GFX942-TGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX11-WGP-LABEL: cluster_release_fence:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    s_endpgm
+;
+; GFX11-CU-LABEL: cluster_release_fence:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: cluster_release_fence:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: cluster_release_fence:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: cluster_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_endpgm
+entry:
+  fence syncscope("cluster") release
+  ret void
+}
+
+define amdgpu_kernel void @cluster_acq_rel_fence() {
+; GFX6-LABEL: cluster_acq_rel_fence:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    buffer_wbinvl1
+; GFX6-NEXT:    s_endpgm
+;
+; GFX7-LABEL: cluster_acq_rel_fence:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    buffer_wbinvl1_vol
+; GFX7-NEXT:    s_endpgm
+;
+; GFX10-WGP-LABEL: cluster_acq_rel_fence:
+; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
+; GFX10-WGP-NEXT:    s_endpgm
+;
+; GFX10-CU-LABEL: cluster_acq_rel_fence:
+; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
+; GFX10-CU-NEXT:    s_endpgm
+;
+; SKIP-CACHE-INV-LABEL: cluster_acq_rel_fence:
+; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_endpgm
+;
+; GFX90A-NOTTGSPLIT-LABEL: cluster_acq_rel_fence:
+; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: cluster_acq_rel_fence:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-NOTTGSPLIT-LABEL: cluster_acq_rel_fence:
+; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-NOTTGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-TGSPLIT-LABEL: cluster_acq_rel_fence:
+; GFX942-TGSPLIT:       ; %bb.0: ; %entry
+; GFX942-TGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-TGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX11-WGP-LABEL: cluster_acq_rel_fence:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
+; GFX11-WGP-NEXT:    s_endpgm
+;
+; GFX11-CU-LABEL: cluster_acq_rel_fence:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
+; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: cluster_acq_rel_fence:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: cluster_acq_rel_fence:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: cluster_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
+; GFX1250-NEXT:    s_endpgm
+entry:
+  fence syncscope("cluster") acq_rel
+  ret void
+}
+
+define amdgpu_kernel void @cluster_seq_cst_fence() {
+; GFX6-LABEL: cluster_seq_cst_fence:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    buffer_wbinvl1
+; GFX6-NEXT:    s_endpgm
+;
+; GFX7-LABEL: cluster_seq_cst_fence:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    buffer_wbinvl1_vol
+; GFX7-NEXT:    s_endpgm
+;
+; GFX10-WGP-LABEL: cluster_seq_cst_fence:
+; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
+; GFX10-WGP-NEXT:    s_endpgm
+;
+; GFX10-CU-LABEL: cluster_seq_cst_fence:
+; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
+; GFX10-CU-NEXT:    s_endpgm
+;
+; SKIP-CACHE-INV-LABEL: cluster_seq_cst_fence:
+; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_endpgm
+;
+; GFX90A-NOTTGSPLIT-LABEL: cluster_seq_cst_fence:
+; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: cluster_seq_cst_fence:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-NOTTGSPLIT-LABEL: cluster_seq_cst_fence:
+; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-NOTTGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-TGSPLIT-LABEL: cluster_seq_cst_fence:
+; GFX942-TGSPLIT:       ; %bb.0: ; %entry
+; GFX942-TGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-TGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX11-WGP-LABEL: cluster_seq_cst_fence:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
+; GFX11-WGP-NEXT:    s_endpgm
+;
+; GFX11-CU-LABEL: cluster_seq_cst_fence:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
+; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: cluster_seq_cst_fence:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: cluster_seq_cst_fence:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: cluster_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
+; GFX1250-NEXT:    s_endpgm
+entry:
+  fence syncscope("cluster") seq_cst
+  ret void
+}
+
+define amdgpu_kernel void @cluster_one_as_acquire_fence() {
+; GFX6-LABEL: cluster_one_as_acquire_fence:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_wbinvl1
+; GFX6-NEXT:    s_endpgm
+;
+; GFX7-LABEL: cluster_one_as_acquire_fence:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    buffer_wbinvl1_vol
+; GFX7-NEXT:    s_endpgm
+;
+; GFX10-WGP-LABEL: cluster_one_as_acquire_fence:
+; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
+; GFX10-WGP-NEXT:    s_endpgm
+;
+; GFX10-CU-LABEL: cluster_one_as_acquire_fence:
+; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
+; GFX10-CU-NEXT:    s_endpgm
+;
+; SKIP-CACHE-INV-LABEL: cluster_one_as_acquire_fence:
+; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_endpgm
+;
+; GFX90A-NOTTGSPLIT-LABEL: cluster_one_as_acquire_fence:
+; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: cluster_one_as_acquire_fence:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-NOTTGSPLIT-LABEL: cluster_one_as_acquire_fence:
+; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NOTTGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-TGSPLIT-LABEL: cluster_one_as_acquire_fence:
+; GFX942-TGSPLIT:       ; %bb.0: ; %entry
+; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-TGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX11-WGP-LABEL: cluster_one_as_acquire_fence:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
+; GFX11-WGP-NEXT:    s_endpgm
+;
+; GFX11-CU-LABEL: cluster_one_as_acquire_fence:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
+; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: cluster_one_as_acquire_fence:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: cluster_one_as_acquire_fence:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: cluster_one_as_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
+; GFX1250-NEXT:    s_endpgm
+entry:
+  fence syncscope("cluster-one-as") acquire
+  ret void
+}
+
+define amdgpu_kernel void @cluster_one_as_release_fence() {
+; GFX6-LABEL: cluster_one_as_release_fence:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    s_endpgm
+;
+; GFX7-LABEL: cluster_one_as_release_fence:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_endpgm
+;
+; GFX10-WGP-LABEL: cluster_one_as_release_fence:
+; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WGP-NEXT:    s_endpgm
+;
+; GFX10-CU-LABEL: cluster_one_as_release_fence:
+; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-CU-NEXT:    s_endpgm
+;
+; SKIP-CACHE-INV-LABEL: cluster_one_as_release_fence:
+; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_endpgm
+;
+; GFX90A-NOTTGSPLIT-LABEL: cluster_one_as_release_fence:
+; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: cluster_one_as_release_fence:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-NOTTGSPLIT-LABEL: cluster_one_as_release_fence:
+; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-TGSPLIT-LABEL: cluster_one_as_release_fence:
+; GFX942-TGSPLIT:       ; %bb.0: ; %entry
+; GFX942-TGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX11-WGP-LABEL: cluster_one_as_release_fence:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    s_endpgm
+;
+; GFX11-CU-LABEL: cluster_one_as_release_fence:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: cluster_one_as_release_fence:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: cluster_one_as_release_fence:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: cluster_one_as_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
+entry:
+  fence syncscope("cluster-one-as") release
+  ret void
+}
+
+define amdgpu_kernel void @cluster_one_as_acq_rel_fence() {
+; GFX6-LABEL: cluster_one_as_acq_rel_fence:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_wbinvl1
+; GFX6-NEXT:    s_endpgm
+;
+; GFX7-LABEL: cluster_one_as_acq_rel_fence:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    buffer_wbinvl1_vol
+; GFX7-NEXT:    s_endpgm
+;
+; GFX10-WGP-LABEL: cluster_one_as_acq_rel_fence:
+; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
+; GFX10-WGP-NEXT:    s_endpgm
+;
+; GFX10-CU-LABEL: cluster_one_as_acq_rel_fence:
+; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
+; GFX10-CU-NEXT:    s_endpgm
+;
+; SKIP-CACHE-INV-LABEL: cluster_one_as_acq_rel_fence:
+; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_endpgm
+;
+; GFX90A-NOTTGSPLIT-LABEL: cluster_one_as_acq_rel_fence:
+; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: cluster_one_as_acq_rel_fence:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-NOTTGSPLIT-LABEL: cluster_one_as_acq_rel_fence:
+; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NOTTGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-TGSPLIT-LABEL: cluster_one_as_acq_rel_fence:
+; GFX942-TGSPLIT:       ; %bb.0: ; %entry
+; GFX942-TGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-TGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX11-WGP-LABEL: cluster_one_as_acq_rel_fence:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
+; GFX11-WGP-NEXT:    s_endpgm
+;
+; GFX11-CU-LABEL: cluster_one_as_acq_rel_fence:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
+; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: cluster_one_as_acq_rel_fence:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: cluster_one_as_acq_rel_fence:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: cluster_one_as_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
+; GFX1250-NEXT:    s_endpgm
+entry:
+  fence syncscope("cluster-one-as") acq_rel
+  ret void
+}
+
+define amdgpu_kernel void @cluster_one_as_seq_cst_fence() {
+; GFX6-LABEL: cluster_one_as_seq_cst_fence:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_wbinvl1
+; GFX6-NEXT:    s_endpgm
+;
+; GFX7-LABEL: cluster_one_as_seq_cst_fence:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    buffer_wbinvl1_vol
+; GFX7-NEXT:    s_endpgm
+;
+; GFX10-WGP-LABEL: cluster_one_as_seq_cst_fence:
+; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
+; GFX10-WGP-NEXT:    s_endpgm
+;
+; GFX10-CU-LABEL: cluster_one_as_seq_cst_fence:
+; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
+; GFX10-CU-NEXT:    s_endpgm
+;
+; SKIP-CACHE-INV-LABEL: cluster_one_as_seq_cst_fence:
+; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_endpgm
+;
+; GFX90A-NOTTGSPLIT-LABEL: cluster_one_as_seq_cst_fence:
+; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: cluster_one_as_seq_cst_fence:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    buffer_wbinvl1_vol
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-NOTTGSPLIT-LABEL: cluster_one_as_seq_cst_fence:
+; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NOTTGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX942-TGSPLIT-LABEL: cluster_one_as_seq_cst_fence:
+; GFX942-TGSPLIT:       ; %bb.0: ; %entry
+; GFX942-TGSPLIT-NEXT:    buffer_wbl2 sc1
+; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-TGSPLIT-NEXT:    buffer_inv sc1
+; GFX942-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX11-WGP-LABEL: cluster_one_as_seq_cst_fence:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
+; GFX11-WGP-NEXT:    s_endpgm
+;
+; GFX11-CU-LABEL: cluster_one_as_seq_cst_fence:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
+; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: cluster_one_as_seq_cst_fence:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: cluster_one_as_seq_cst_fence:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: cluster_one_as_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
+; GFX1250-NEXT:    s_endpgm
+entry:
+  fence syncscope("cluster-one-as") seq_cst
   ret void
 }
 
@@ -1606,6 +2553,13 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") acquire
   ret void
@@ -1688,6 +2642,13 @@ define amdgpu_kernel void @agent_release_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") release
   ret void
@@ -1786,6 +2747,14 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") acq_rel
   ret void
@@ -1884,6 +2853,14 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") seq_cst
   ret void
@@ -1976,6 +2953,13 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_one_as_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent-one-as") acquire
   ret void
@@ -2058,6 +3042,13 @@ define amdgpu_kernel void @agent_one_as_release_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_one_as_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent-one-as") release
   ret void
@@ -2156,6 +3147,14 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_one_as_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent-one-as") acq_rel
   ret void
@@ -2254,6 +3253,14 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_one_as_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent-one-as") seq_cst
   ret void
@@ -2348,6 +3355,13 @@ define amdgpu_kernel void @system_acquire_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence acquire
   ret void
@@ -2434,6 +3448,13 @@ define amdgpu_kernel void @system_release_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence release
   ret void
@@ -2538,6 +3559,14 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence acq_rel
   ret void
@@ -2642,6 +3671,14 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence seq_cst
   ret void
@@ -2736,6 +3773,13 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_one_as_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("one-as") acquire
   ret void
@@ -2822,6 +3866,13 @@ define amdgpu_kernel void @system_one_as_release_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_one_as_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("one-as") release
   ret void
@@ -2926,6 +3977,14 @@ define amdgpu_kernel void @system_one_as_acq_rel_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_one_as_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("one-as") acq_rel
   ret void
@@ -3030,6 +4089,14 @@ define amdgpu_kernel void @system_one_as_seq_cst_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_one_as_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("one-as") seq_cst
   ret void

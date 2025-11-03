@@ -184,18 +184,15 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-LABEL: s_urem_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_or_b64 s[4:5], s[0:1], s[2:3]
-; CHECK-NEXT:    s_mov_b32 s6, 0
-; CHECK-NEXT:    s_mov_b32 s7, -1
-; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
+; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 vcc, s[4:5], 0
-; CHECK-NEXT:    s_mov_b32 s6, 1
+; CHECK-NEXT:    s_mov_b32 s4, 1
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, s2
 ; CHECK-NEXT:    s_cbranch_vccz .LBB1_2
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s3
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; CHECK-NEXT:    s_sub_u32 s4, 0, s2
-; CHECK-NEXT:    s_mov_b32 s6, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    v_madmk_f32 v1, v1, 0x4f800000, v2
 ; CHECK-NEXT:    s_subb_u32 s5, 0, s3
@@ -314,11 +311,12 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v6, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_branch .LBB1_3
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB1_3: ; %Flow
-; CHECK-NEXT:    s_xor_b32 s1, s6, 1
+; CHECK-NEXT:    s_xor_b32 s1, s4, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB1_5
 ; CHECK-NEXT:  ; %bb.4:
@@ -2060,42 +2058,34 @@ define <2 x i64> @v_urem_v2i64_24bit(<2 x i64> %num, <2 x i64> %den) {
 ; GISEL-NEXT:    v_mul_hi_u32 v5, 0, v5
 ; GISEL-NEXT:    v_add_i32_e32 v4, vcc, v4, v12
 ; GISEL-NEXT:    v_add_i32_e32 v8, vcc, v13, v8
+; GISEL-NEXT:    v_mul_lo_u32 v2, v3, v2
 ; GISEL-NEXT:    v_add_i32_e32 v10, vcc, v10, v15
 ; GISEL-NEXT:    v_add_i32_e32 v7, vcc, v16, v7
+; GISEL-NEXT:    v_mul_lo_u32 v5, v1, v5
 ; GISEL-NEXT:    v_add_i32_e32 v4, vcc, v4, v9
 ; GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; GISEL-NEXT:    v_add_i32_e32 v8, vcc, v8, v14
+; GISEL-NEXT:    v_add_i32_e32 v9, vcc, v10, v11
 ; GISEL-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
-; GISEL-NEXT:    v_add_i32_e32 v10, vcc, v10, v11
-; GISEL-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
 ; GISEL-NEXT:    v_add_i32_e32 v7, vcc, v7, v17
-; GISEL-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
 ; GISEL-NEXT:    v_add_i32_e32 v4, vcc, v8, v4
-; GISEL-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
-; GISEL-NEXT:    v_add_i32_e32 v7, vcc, v7, v10
-; GISEL-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
-; GISEL-NEXT:    v_add_i32_e32 v8, vcc, v9, v8
-; GISEL-NEXT:    v_mul_lo_u32 v9, v3, v4
-; GISEL-NEXT:    v_mul_lo_u32 v12, 0, v4
+; GISEL-NEXT:    v_add_i32_e32 v7, vcc, v7, v9
+; GISEL-NEXT:    v_mul_lo_u32 v8, v3, v4
+; GISEL-NEXT:    v_mul_lo_u32 v9, 0, v4
 ; GISEL-NEXT:    v_mul_hi_u32 v4, v3, v4
-; GISEL-NEXT:    v_add_i32_e32 v10, vcc, v11, v10
-; GISEL-NEXT:    v_mul_lo_u32 v11, v1, v7
-; GISEL-NEXT:    v_mul_lo_u32 v13, 0, v7
+; GISEL-NEXT:    v_mul_lo_u32 v10, v1, v7
+; GISEL-NEXT:    v_mul_lo_u32 v11, 0, v7
 ; GISEL-NEXT:    v_mul_hi_u32 v7, v1, v7
-; GISEL-NEXT:    v_add_i32_e32 v2, vcc, v2, v8
-; GISEL-NEXT:    v_add_i32_e32 v5, vcc, v5, v10
-; GISEL-NEXT:    v_mul_lo_u32 v2, v3, v2
-; GISEL-NEXT:    v_mul_lo_u32 v5, v1, v5
-; GISEL-NEXT:    v_add_i32_e32 v2, vcc, v12, v2
-; GISEL-NEXT:    v_add_i32_e32 v5, vcc, v13, v5
+; GISEL-NEXT:    v_add_i32_e32 v2, vcc, v9, v2
+; GISEL-NEXT:    v_add_i32_e32 v5, vcc, v11, v5
 ; GISEL-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; GISEL-NEXT:    v_add_i32_e32 v4, vcc, v5, v7
-; GISEL-NEXT:    v_sub_i32_e32 v5, vcc, v6, v9
+; GISEL-NEXT:    v_sub_i32_e32 v5, vcc, v6, v8
 ; GISEL-NEXT:    v_subb_u32_e64 v6, s[4:5], 0, v2, vcc
 ; GISEL-NEXT:    v_sub_i32_e64 v2, s[4:5], 0, v2
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[4:5], v5, v3
 ; GISEL-NEXT:    v_cndmask_b32_e64 v7, 0, -1, s[4:5]
-; GISEL-NEXT:    v_sub_i32_e64 v8, s[4:5], v0, v11
+; GISEL-NEXT:    v_sub_i32_e64 v8, s[4:5], v0, v10
 ; GISEL-NEXT:    v_subb_u32_e64 v9, s[6:7], 0, v4, s[4:5]
 ; GISEL-NEXT:    v_sub_i32_e64 v0, s[6:7], 0, v4
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[6:7], v8, v1

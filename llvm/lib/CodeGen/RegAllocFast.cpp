@@ -206,12 +206,12 @@ private:
     bool Error = false;              ///< Could not allocate.
 
     explicit LiveReg(Register VirtReg) : VirtReg(VirtReg) {}
-    explicit LiveReg() {}
+    explicit LiveReg() = default;
 
     unsigned getSparseSetIndex() const { return VirtReg.virtRegIndex(); }
   };
 
-  using LiveRegMap = SparseSet<LiveReg, identity<unsigned>, uint16_t>;
+  using LiveRegMap = SparseSet<LiveReg, unsigned, identity, uint16_t>;
   /// This map contains entries for each virtual register that is currently
   /// available in a physical register.
   LiveRegMap LiveVirtRegs;
@@ -474,6 +474,13 @@ int RegAllocFastImpl::getStackSpaceFor(Register VirtReg) {
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   unsigned Size = TRI->getSpillSize(RC);
   Align Alignment = TRI->getSpillAlign(RC);
+
+  const MachineFunction &MF = MRI->getMF();
+  auto &ST = MF.getSubtarget();
+  Align CurrentAlign = ST.getFrameLowering()->getStackAlign();
+  if (Alignment > CurrentAlign && !TRI->canRealignStack(MF))
+    Alignment = CurrentAlign;
+
   int FrameIdx = MFI->CreateSpillStackObject(Size, Alignment);
 
   // Assign the slot.

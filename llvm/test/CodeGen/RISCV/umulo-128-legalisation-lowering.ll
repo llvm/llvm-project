@@ -112,7 +112,7 @@ start:
   %1 = extractvalue { i128, i1 } %0, 0
   %2 = extractvalue { i128, i1 } %0, 1
   %3 = zext i1 %2 to i8
-  %4 = insertvalue { i128, i8 } undef, i128 %1, 0
+  %4 = insertvalue { i128, i8 } poison, i128 %1, 0
   %5 = insertvalue { i128, i8 } %4, i8 %3, 1
   ret { i128, i8 } %5
 }

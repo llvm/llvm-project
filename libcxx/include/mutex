@@ -320,7 +320,7 @@ public:
 };
 
 template <class _L0, class _L1>
-_LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
   unique_lock<_L0> __u0(__l0, try_to_lock_t());
   if (__u0.owns_lock()) {
     if (__l1.try_lock()) {
@@ -335,7 +335,7 @@ _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
 #    ifndef _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1, class _L2, class... _L3>
-_LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
   int __r = 0;
   unique_lock<_L0> __u0(__l0, try_to_lock);
   if (__u0.owns_lock()) {
@@ -350,8 +350,11 @@ _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3
 
 #    endif // _LIBCPP_CXX03_LANG
 
+// We're using unique_lock to implement the functions, which thread annotations don't support. So we have to disable
+// the analysis inside the function.
 template <class _L0, class _L1>
-_LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1)
+    _LIBCPP_ACQUIRE_CAPABILITY(__l0, __l1) {
   while (true) {
     {
       unique_lock<_L0> __u0(__l0);
@@ -375,7 +378,7 @@ _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1) {
 #    ifndef _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1, class _L2, class... _L3>
-void __lock_first(int __i, _L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS void __lock_first(int __i, _L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
   while (true) {
     switch (__i) {
     case 0: {
@@ -410,8 +413,14 @@ void __lock_first(int __i, _L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
   }
 }
 
+// We're using unique_lock to implement the functions, which thread annotations don't support. So we have to disable
+// the analysis inside the function.
 template <class _L0, class _L1, class _L2, class... _L3>
-inline _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3)
+#      if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
+    _LIBCPP_ACQUIRE_CAPABILITY(__l0, __l1, __l2, __l3...)
+#      endif
+{
   std::__lock_first(0, __l0, __l1, __l2, __l3...);
 }
 
@@ -469,17 +478,14 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI scoped_lock(adopt_lock_t, _MArgs&... __margs) : __t_(__margs...) {}
 
-  _LIBCPP_HIDE_FROM_ABI ~scoped_lock() {
-    typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;
-    __unlock_unpack(_Indices{}, __t_);
-  }
+  _LIBCPP_HIDE_FROM_ABI ~scoped_lock() { __unlock_unpack(make_index_sequence<sizeof...(_MArgs)>(), __t_); }
 
   scoped_lock(scoped_lock const&)            = delete;
   scoped_lock& operator=(scoped_lock const&) = delete;
 
 private:
   template <size_t... _Indx>
-  _LIBCPP_HIDE_FROM_ABI static void __unlock_unpack(__tuple_indices<_Indx...>, _MutexTuple& __mt) {
+  _LIBCPP_HIDE_FROM_ABI static void __unlock_unpack(index_sequence<_Indx...>, _MutexTuple& __mt) {
     (std::get<_Indx>(__mt).unlock(), ...);
   }
 
@@ -494,6 +500,10 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#    include <typeinfo>
+#  endif
+
 #  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #    include <atomic>
 #    include <concepts>
@@ -507,7 +517,6 @@ _LIBCPP_POP_MACROS
 #    include <stdexcept>
 #    include <system_error>
 #    include <type_traits>
-#    include <typeinfo>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

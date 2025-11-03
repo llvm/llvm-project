@@ -236,6 +236,10 @@ struct alignas(SANITIZER_CACHE_LINE_SIZE) ThreadState {
 
   const ReportDesc *current_report;
 
+#if SANITIZER_APPLE && !SANITIZER_GO
+  bool in_internal_write_call;
+#endif
+
   explicit ThreadState(Tid tid);
 };
 
@@ -420,6 +424,7 @@ class ScopedReportBase {
   void AddSleep(StackID stack_id);
   void SetCount(int count);
   void SetSigNum(int sig);
+  void SymbolizeStackElems(void);
 
   const ReportDesc *GetReport() const;
 
@@ -498,7 +503,7 @@ void ForkChildAfter(ThreadState *thr, uptr pc, bool start_thread);
 
 void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
                 AccessType typ);
-bool OutputReport(ThreadState *thr, const ScopedReport &srep);
+bool OutputReport(ThreadState *thr, ScopedReport &srep);
 bool IsFiredSuppression(Context *ctx, ReportType type, StackTrace trace);
 bool IsExpectedReport(uptr addr, uptr size);
 
@@ -559,7 +564,7 @@ void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc);
 void ThreadIgnoreSyncEnd(ThreadState *thr);
 
 Tid ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached);
-void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
+void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
                  ThreadType thread_type);
 void ThreadFinish(ThreadState *thr);
 Tid ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid);

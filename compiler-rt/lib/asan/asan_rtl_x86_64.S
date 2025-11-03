@@ -5,6 +5,7 @@
 #include "sanitizer_common/sanitizer_platform.h"
 
 .file "asan_rtl_x86_64.S"
+.att_syntax
 
 #define NAME(n, reg, op, s, i) n##_##op##_##i##_##s##_##reg
 

@@ -514,9 +514,9 @@ define internal void @callee_no_alias_addr_space_select(ptr %ptr1, ptr %ptr2, pt
   ret void
 }
 
-define internal void @callee_alias_addr_space_branch(ptr %ptr1, ptr %ptr2, ptr %ptr3, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+define internal void @callee_alias_addr_space_branch(ptr %ptr1, ptr %ptr2, ptr %ptr3, i1 %cond1, i1 %cond2, i32 %val) #0 {
 ; CHECK-LABEL: define internal void @callee_alias_addr_space_branch(
-; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], ptr [[PTR3:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], ptr [[PTR3:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    br i1 [[COND1]], label %[[BB_1_TRUE:.*]], label %[[BB_1_FALSE:.*]]
 ; CHECK:       [[BB_1_TRUE]]:
 ; CHECK-NEXT:    br label %[[BB_1_END:.*]]

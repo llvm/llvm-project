@@ -495,7 +495,8 @@ static void InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
 
 static void InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
   Scope.Records.emplace_back(Info.USR, Info.Name, InfoType::IT_record,
-                             Info.Name, getInfoRelativePath(Info.Namespace));
+                             Info.Name, getInfoRelativePath(Info.Namespace),
+                             Info.MangledName);
 }
 
 static void InsertChild(ScopeChildren &Scope, EnumInfo Info) {
@@ -777,7 +778,13 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
     Mangler->mangleCXXVTable(CXXD, MangledStream);
   else
     MangledStream << D->getNameAsString();
-  I.MangledName = MangledName;
+  // A 250 length limit was chosen since 255 is a common limit across
+  // different filesystems, with a 5 character buffer for file extensions.
+  if (MangledName.size() > 250) {
+    auto SymbolID = llvm::toStringRef(llvm::toHex(I.USR)).str();
+    I.MangledName = MangledName.substr(0, 250 - SymbolID.size()) + SymbolID;
+  } else
+    I.MangledName = MangledName;
   delete Mangler;
 }
 
@@ -894,9 +901,8 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
   if (!D->isThisDeclarationADefinition())
     return;
   for (const CXXBaseSpecifier &B : D->bases()) {
-    if (const RecordType *Ty = B.getType()->getAs<RecordType>()) {
-      if (const CXXRecordDecl *Base =
-              cast_or_null<CXXRecordDecl>(Ty->getDecl()->getDefinition())) {
+    if (const auto *Base = B.getType()->getAsCXXRecordDecl()) {
+      if (Base->isCompleteDefinition()) {
         // Initialized without USR and name, this will be set in the following
         // if-else stmt.
         BaseRecordInfo BI(

@@ -1,7 +1,7 @@
 # REQUIRES: system-darwin
 # Create a temp dir for output and run the framework fix script on the truncated version of SBAddress.h in the inputs dir.
 RUN: mkdir -p %t/Outputs
-RUN: %python %p/../../../scripts/framework-header-fix.py -f lldb_main -i %p/Inputs/Main/SBAddress.h -o %t/Outputs/SBAddress.h -p /usr/bin/unifdef USWIG
+RUN: %python %p/../../../scripts/framework-header-fix.py -f lldb_main -i %p/Inputs/Main/SBAddress.h -o %t/Outputs/SBAddress.h -p /usr/bin/unifdef --unifdef_guards SWIG
 
 # Check the output
 RUN: cat %t/Outputs/SBAddress.h | FileCheck %s

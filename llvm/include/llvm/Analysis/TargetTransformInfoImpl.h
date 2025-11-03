@@ -459,8 +459,7 @@ public:
   }
 
   virtual InstructionCost
-  getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   ArrayRef<Type *> Tys,
+  getOperandsScalarizationOverhead(ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind) const {
     return 0;
   }
@@ -731,6 +730,13 @@ public:
         return 0;
       break;
     }
+    case Instruction::PtrToAddr: {
+      unsigned DstSize = Dst->getScalarSizeInBits();
+      assert(DstSize == DL.getAddressSizeInBits(Src));
+      if (DL.isLegalInteger(DstSize))
+        return 0;
+      break;
+    }
     case Instruction::PtrToInt: {
       unsigned DstSize = Dst->getScalarSizeInBits();
       if (DL.isLegalInteger(DstSize) &&
@@ -803,6 +809,13 @@ public:
   }
 
   virtual InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const {
+    return 1;
+  }
+
+  virtual InstructionCost
   getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                             const APInt &DemandedDstElts,
                             TTI::TargetCostKind CostKind) const {
@@ -825,14 +838,6 @@ public:
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                   unsigned AddressSpace, TTI::TargetCostKind CostKind,
                   TTI::OperandValueInfo OpInfo, const Instruction *I) const {
-    return 1;
-  }
-
-  virtual InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src,
-                                            Align Alignment,
-                                            unsigned AddressSpace,
-                                            TTI::TargetCostKind CostKind,
-                                            const Instruction *I) const {
     return 1;
   }
 
@@ -878,9 +883,6 @@ public:
     switch (ICA.getID()) {
     default:
       break;
-    case Intrinsic::experimental_vector_histogram_add:
-      // For now, we want explicit support from the target for histograms.
-      return InstructionCost::getInvalid();
     case Intrinsic::allow_runtime_check:
     case Intrinsic::allow_ubsan_check:
     case Intrinsic::annotation:
@@ -933,8 +935,10 @@ public:
   // Assume that we have a register of the right size for the type.
   virtual unsigned getNumberOfParts(Type *Tp) const { return 1; }
 
-  virtual InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *,
-                                                    const SCEV *) const {
+  virtual InstructionCost getAddressComputationCost(Type *PtrTy,
+                                                    ScalarEvolution *,
+                                                    const SCEV *,
+                                                    TTI::TargetCostKind) const {
     return 0;
   }
 
@@ -959,8 +963,8 @@ public:
   }
 
   virtual InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, Type *ResTy, VectorType *Ty,
-                         TTI::TargetCostKind CostKind) const {
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
+                         VectorType *Ty, TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
@@ -1024,7 +1028,7 @@ public:
 
   virtual bool areTypesABICompatible(const Function *Caller,
                                      const Function *Callee,
-                                     const ArrayRef<Type *> &Types) const {
+                                     ArrayRef<Type *> Types) const {
     return (Caller->getFnAttribute("target-cpu") ==
             Callee->getFnAttribute("target-cpu")) &&
            (Caller->getFnAttribute("target-features") ==
@@ -1080,7 +1084,9 @@ public:
     return VF;
   }
 
-  virtual bool preferFixedOverScalableIfEqualCost() const { return false; }
+  virtual bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
+    return false;
+  }
 
   virtual bool preferInLoopReduction(RecurKind Kind, Type *Ty) const {
     return false;
@@ -1090,6 +1096,8 @@ public:
   virtual bool preferPredicatedReductionSelect() const { return false; }
 
   virtual bool preferEpilogueVectorization() const { return true; }
+
+  virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const {
     return true;
@@ -1126,7 +1134,9 @@ public:
 
   virtual bool hasArmWideBranch(bool) const { return false; }
 
-  virtual uint64_t getFeatureMask(const Function &F) const { return 0; }
+  virtual APInt getFeatureMask(const Function &F) const {
+    return APInt::getZero(32);
+  }
 
   virtual bool isMultiversionedFunction(const Function &F) const {
     return false;
@@ -1142,6 +1152,8 @@ public:
   virtual void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
+
+  virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
@@ -1435,6 +1447,7 @@ public:
                                                Op2Info, Operands, I);
     }
     case Instruction::IntToPtr:
+    case Instruction::PtrToAddr:
     case Instruction::PtrToInt:
     case Instruction::SIToFP:
     case Instruction::UIToFP:

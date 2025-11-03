@@ -105,8 +105,9 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
     }
   }
 
-  auto combinedModule = combinedModuleBuilder.create<spirv::ModuleOp>(
-      firstModule.getLoc(), addressingModel, memoryModel, vceTriple);
+  auto combinedModule =
+      spirv::ModuleOp::create(combinedModuleBuilder, firstModule.getLoc(),
+                              addressingModel, memoryModel, vceTriple);
   combinedModuleBuilder.setInsertionPointToStart(combinedModule.getBody());
 
   // In some cases, a symbol in the (current state of the) combined module is

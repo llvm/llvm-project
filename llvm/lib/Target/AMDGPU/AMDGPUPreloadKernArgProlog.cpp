@@ -109,7 +109,7 @@ AMDGPUPreloadKernArgProlog::AMDGPUPreloadKernArgProlog(MachineFunction &MF)
       TRI(*ST.getRegisterInfo()) {}
 
 bool AMDGPUPreloadKernArgProlog::run() {
-  if (!ST.hasKernargPreload())
+  if (!ST.needsKernArgPreloadProlog())
     return false;
 
   unsigned NumKernArgPreloadSGPRs = MFI.getNumKernargPreloadedSGPRs();

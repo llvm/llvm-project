@@ -17,8 +17,7 @@
 #error "Invalid include"
 #endif
 
-#include <stdint.h>
-
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/fenv_t.h"
 #include "src/__support/macros/sanitizer.h"
 

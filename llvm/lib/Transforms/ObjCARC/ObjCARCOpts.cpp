@@ -39,6 +39,7 @@
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -132,11 +133,8 @@ static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
 //
 // The second retain and autorelease can be deleted.
 
-// TODO: It should be possible to delete
-// objc_autoreleasePoolPush and objc_autoreleasePoolPop
-// pairs if nothing is actually autoreleased between them. Also, autorelease
-// calls followed by objc_autoreleasePoolPop calls (perhaps in ObjC++ code
-// after inlining) can be turned into plain release calls.
+// TODO: Autorelease calls followed by objc_autoreleasePoolPop calls (perhaps in
+// ObjC++ code after inlining) can be turned into plain release calls.
 
 // TODO: Critical-edge splitting. If the optimial insertion point is
 // a critical edge, the current algorithm has to fail, because it doesn't
@@ -328,8 +326,7 @@ const unsigned BBState::OverflowOccurredValue = 0xffffffff;
 
 namespace llvm {
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        BBState &BBState) LLVM_ATTRIBUTE_UNUSED;
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, BBState &BBState);
 
 } // end namespace llvm
 
@@ -565,6 +562,8 @@ class ObjCARCOpt {
   bool OptimizeSequences(Function &F);
 
   void OptimizeReturns(Function &F);
+
+  void OptimizeAutoreleasePools(Function &F);
 
   template <typename PredicateT>
   static void cloneOpBundlesIf(CallBase *CI,
@@ -2473,6 +2472,11 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
                             (1 << unsigned(ARCInstKind::AutoreleaseRV))))
     OptimizeReturns(F);
 
+  // Optimizations for autorelease pools.
+  if (UsedInThisFunction & ((1 << unsigned(ARCInstKind::AutoreleasepoolPush)) |
+                            (1 << unsigned(ARCInstKind::AutoreleasepoolPop))))
+    OptimizeAutoreleasePools(F);
+
   // Gather statistics after optimization.
 #ifndef NDEBUG
   if (AreStatisticsEnabled()) {
@@ -2483,6 +2487,183 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
   LLVM_DEBUG(dbgs() << "\n");
 
   return Changed;
+}
+
+/// Interprocedurally determine if calls made by the given call site can
+/// possibly produce autoreleases.
+bool MayAutorelease(const CallBase &CB, unsigned Depth = 0) {
+  if (CB.onlyReadsMemory())
+    return false;
+
+  // This recursion depth limit is arbitrary. It's just great
+  // enough to cover known interesting testcases.
+  if (Depth > 5)
+    return true;
+
+  if (const Function *Callee = CB.getCalledFunction()) {
+    if (!Callee->hasExactDefinition())
+      return true;
+    for (const BasicBlock &BB : *Callee) {
+      for (const Instruction &I : BB) {
+        // TODO: Ignore all instructions between autorelease pools
+        ARCInstKind InstKind = GetBasicARCInstKind(&I);
+        switch (InstKind) {
+        case ARCInstKind::Autorelease:
+        case ARCInstKind::AutoreleaseRV:
+        case ARCInstKind::FusedRetainAutorelease:
+        case ARCInstKind::FusedRetainAutoreleaseRV:
+        case ARCInstKind::LoadWeak:
+          // These may produce autoreleases
+          return true;
+
+        case ARCInstKind::Retain:
+        case ARCInstKind::RetainRV:
+        case ARCInstKind::UnsafeClaimRV:
+        case ARCInstKind::RetainBlock:
+        case ARCInstKind::Release:
+        case ARCInstKind::NoopCast:
+        case ARCInstKind::LoadWeakRetained:
+        case ARCInstKind::StoreWeak:
+        case ARCInstKind::InitWeak:
+        case ARCInstKind::MoveWeak:
+        case ARCInstKind::CopyWeak:
+        case ARCInstKind::DestroyWeak:
+        case ARCInstKind::StoreStrong:
+        case ARCInstKind::AutoreleasepoolPush:
+        case ARCInstKind::AutoreleasepoolPop:
+          // These ObjC runtime functions don't produce autoreleases
+          break;
+
+        case ARCInstKind::CallOrUser:
+        case ARCInstKind::Call:
+          // For non-ObjC function calls, recursively analyze
+          if (MayAutorelease(cast<CallBase>(I), Depth + 1))
+            return true;
+          break;
+
+        case ARCInstKind::IntrinsicUser:
+        case ARCInstKind::User:
+        case ARCInstKind::None:
+          // These are not relevant for autorelease analysis
+          break;
+        }
+      }
+    }
+    return false;
+  }
+
+  return true;
+}
+
+/// Optimize autorelease pools by eliminating empty push/pop pairs.
+void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
+  LLVM_DEBUG(dbgs() << "\n== ObjCARCOpt::OptimizeAutoreleasePools ==\n");
+
+  OptimizationRemarkEmitter ORE(&F);
+
+  // Process each basic block independently.
+  // TODO: Can we optimize inter-block autorelease pool pairs?
+  // This would involve tracking autorelease pool state across blocks.
+  for (BasicBlock &BB : F) {
+    // Use a stack to track nested autorelease pools
+    SmallVector<std::pair<CallInst *, bool>, 4>
+        PoolStack; // {push_inst, has_autorelease_in_scope}
+
+    for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
+      ARCInstKind Class = GetBasicARCInstKind(&Inst);
+
+      switch (Class) {
+      case ARCInstKind::AutoreleasepoolPush: {
+        // Start tracking a new autorelease pool scope
+        auto *Push = cast<CallInst>(&Inst);
+        PoolStack.push_back(
+            {Push, false}); // {push_inst, has_autorelease_in_scope}
+        LLVM_DEBUG(dbgs() << "Found autorelease pool push: " << *Push << "\n");
+        break;
+      }
+
+      case ARCInstKind::AutoreleasepoolPop: {
+        auto *Pop = cast<CallInst>(&Inst);
+
+        if (PoolStack.empty())
+          break;
+
+        auto &TopPool = PoolStack.back();
+        CallInst *PendingPush = TopPool.first;
+        bool HasAutoreleaseInScope = TopPool.second;
+
+        // Pop the stack - remove this pool scope
+        PoolStack.pop_back();
+
+        // Bail if this pop doesn't match the pending push
+        if (Pop->getArgOperand(0)->stripPointerCasts() != PendingPush)
+          break;
+
+        // Bail if there were autoreleases in this scope
+        if (HasAutoreleaseInScope)
+          break;
+
+        // Optimize: eliminate this empty autorelease pool pair
+        ORE.emit([&]() {
+          return OptimizationRemark(DEBUG_TYPE, "AutoreleasePoolElimination",
+                                    PendingPush)
+                 << "eliminated empty autorelease pool pair";
+        });
+
+        // Replace all uses of push with poison before deletion
+        PendingPush->replaceAllUsesWith(
+            PoisonValue::get(PendingPush->getType()));
+
+        Pop->eraseFromParent();
+        PendingPush->eraseFromParent();
+
+        Changed = true;
+        ++NumNoops;
+        break;
+      }
+      case ARCInstKind::CallOrUser:
+      case ARCInstKind::Call:
+        if (!MayAutorelease(cast<CallBase>(Inst)))
+          break;
+        [[fallthrough]];
+      case ARCInstKind::Autorelease:
+      case ARCInstKind::AutoreleaseRV:
+      case ARCInstKind::FusedRetainAutorelease:
+      case ARCInstKind::FusedRetainAutoreleaseRV:
+      case ARCInstKind::LoadWeak: {
+        // Track that we have autorelease calls in the current pool scope
+        if (!PoolStack.empty()) {
+          PoolStack.back().second = true; // Set has_autorelease_in_scope = true
+          LLVM_DEBUG(
+              dbgs()
+              << "Found autorelease or potential autorelease in pool scope: "
+              << Inst << "\n");
+        }
+        break;
+      }
+
+      // Enumerate all remaining ARCInstKind cases explicitly
+      case ARCInstKind::Retain:
+      case ARCInstKind::RetainRV:
+      case ARCInstKind::UnsafeClaimRV:
+      case ARCInstKind::RetainBlock:
+      case ARCInstKind::Release:
+      case ARCInstKind::NoopCast:
+      case ARCInstKind::LoadWeakRetained:
+      case ARCInstKind::StoreWeak:
+      case ARCInstKind::InitWeak:
+      case ARCInstKind::MoveWeak:
+      case ARCInstKind::CopyWeak:
+      case ARCInstKind::DestroyWeak:
+      case ARCInstKind::StoreStrong:
+      case ARCInstKind::IntrinsicUser:
+      case ARCInstKind::User:
+      case ARCInstKind::None:
+        // These instruction kinds don't affect autorelease pool optimization
+        break;
+      }
+    }
+  }
 }
 
 /// @}

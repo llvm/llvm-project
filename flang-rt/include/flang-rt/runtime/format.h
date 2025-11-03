@@ -36,6 +36,14 @@ enum EditingFlags {
 };
 
 struct MutableModes {
+  // Handle DC or DECIMAL='COMMA' and determine the active separator character
+  constexpr RT_API_ATTRS char32_t GetSeparatorChar() const {
+    return editingFlags & decimalComma ? char32_t{';'} : char32_t{','};
+  }
+  constexpr RT_API_ATTRS char32_t GetRadixPointChar() const {
+    return editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
+  }
+
   std::uint8_t editingFlags{0}; // BN, DP, SS
   enum decimal::FortranRounding round{
       executionEnvironment
@@ -68,9 +76,9 @@ struct DataEdit {
   }
 
   char variation{'\0'}; // N, S, or X for EN, ES, EX; G/l for original G/list
-  Fortran::common::optional<int> width; // the 'w' field; optional for A
-  Fortran::common::optional<int> digits; // the 'm' or 'd' field
-  Fortran::common::optional<int> expoDigits; // 'Ee' field
+  common::optional<int> width; // the 'w' field; optional for A
+  common::optional<int> digits; // the 'm' or 'd' field
+  common::optional<int> expoDigits; // 'Ee' field
   MutableModes modes;
   int repeat{1};
 
@@ -78,12 +86,11 @@ struct DataEdit {
   // defined I/O data edit descriptor
   RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr std::size_t maxIoTypeChars{32};
-  static constexpr std::size_t maxVListEntries{4};
+  static constexpr std::size_t maxVListEntries{16};
   RT_OFFLOAD_VAR_GROUP_END
   std::uint8_t ioTypeChars{0};
   std::uint8_t vListEntries{0};
   char ioType[maxIoTypeChars];
-  int vList[maxVListEntries];
 };
 
 // Generates a sequence of DataEdits from a FORMAT statement or
@@ -108,7 +115,7 @@ public:
   // Extracts the next data edit descriptor, handling control edit descriptors
   // along the way.  If maxRepeat==0, this is a peek at the next data edit
   // descriptor.
-  RT_API_ATTRS Fortran::common::optional<DataEdit> GetNextDataEdit(
+  RT_API_ATTRS common::optional<DataEdit> GetNextDataEdit(
       Context &, int maxRepeat = 1);
 
   // Emit any remaining character literals after the last data item (on output)

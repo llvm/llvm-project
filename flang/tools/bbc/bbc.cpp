@@ -316,13 +316,14 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
   std::string triple{targetTriple};
   if (triple.empty())
     triple = llvm::sys::getDefaultTargetTriple();
+  llvm::Triple parsedTriple(triple);
 
   const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(triple, error);
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
   if (!theTarget)
     return nullptr;
   return std::unique_ptr<llvm::TargetMachine>{
-      theTarget->createTargetMachine(llvm::Triple(triple), /*CPU=*/"",
+      theTarget->createTargetMachine(parsedTriple, /*CPU=*/"",
                                      /*Features=*/"", llvm::TargetOptions(),
                                      /*Reloc::Model=*/std::nullopt)};
 }
@@ -520,7 +521,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     if (emitFIR && useHLFIR) {
       // lower HLFIR to FIR
-      fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP,
+      fir::EnableOpenMP enableOmp =
+          enableOpenMP ? fir::EnableOpenMP::Full : fir::EnableOpenMP::None;
+      fir::createHLFIRToFIRPassPipeline(pm, enableOmp,
                                         llvm::OptimizationLevel::O2);
       if (mlir::failed(pm.run(mlirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
@@ -536,6 +539,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
     config.NSWOnLoopVarInc = !integerWrapAround;

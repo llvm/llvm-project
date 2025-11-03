@@ -109,25 +109,6 @@ void bad_root_signature_14() {}
 #define DuplicatesRootSignature \
   "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
 
-// CHECK: [[@LINE-2]]:13: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-3]] |   "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:             |             ^
-// CHECK: [[@LINE-5]]:4: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-6]] |    "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:             |     ^
-// CHECK: [[@LINE-8]]:22: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-9]] |    "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:             |                       ^
-// CHECK: [[@LINE-11]]:4: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-12]] |    "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:              |     ^
-// CHECK: [[@LINE-14]]:47: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-15]] |    "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:              |                                                ^
-// CHECK: [[@LINE-17]]:4: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-18]] |    "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:              |     ^
-
 // expected-error@+6 {{resource ranges b[0;0] and b[0;0] overlap within space = 0 and visibility = All}}
 // expected-note@+5 {{overlapping resource range here}}
 // expected-error@+4 {{resource ranges b[0;0] and b[0;0] overlap within space = 0 and visibility = All}}
@@ -136,3 +117,36 @@ void bad_root_signature_14() {}
 // expected-note@+1 {{overlapping resource range here}}
 [RootSignature(DuplicatesRootSignature)]
 void valid_root_signature_15() {}
+
+#define AppendingToUnbound \
+  "DescriptorTable(CBV(b1, numDescriptors = unbounded), CBV(b0))"
+
+// expected-error@+1 {{offset appends to unbounded descriptor range}}
+[RootSignature(AppendingToUnbound)]
+void append_to_unbound_signature() {}
+
+#define DirectOffsetOverflow \
+  "DescriptorTable(CBV(b0, offset = 4294967294 , numDescriptors = 6))"
+
+// expected-error@+1 {{descriptor range offset overflows [4294967294, 4294967299]}}
+[RootSignature(DirectOffsetOverflow)]
+void direct_offset_overflow_signature() {}
+
+#define AppendOffsetOverflow \
+  "DescriptorTable(CBV(b0, offset = 4294967292), CBV(b1, numDescriptors = 7))"
+
+// expected-error@+1 {{descriptor range offset overflows [4294967293, 4294967299]}}
+[RootSignature(AppendOffsetOverflow)]
+void append_offset_overflow_signature() {}
+
+// expected-error@+1 {{descriptor range offset overflows [4294967292, 4294967296]}}
+[RootSignature("DescriptorTable(CBV(b0, offset = 4294967292, numDescriptors = 5))")]
+void offset_overflow() {}
+
+// expected-error@+1 {{descriptor range offset overflows [4294967295, 4294967296]}}
+[RootSignature("DescriptorTable(CBV(b0, offset = 4294967294), CBV(b1, numDescriptors = 2))")]
+void appended_offset_overflow() {}
+
+// expected-error@+1 {{descriptor range offset overflows [4294967296, 4294967296]}}
+[RootSignature("DescriptorTable(CBV(b0, offset = 4294967294), CBV(b1), CBV(b2))")]
+void multiple_appended_offset_overflow() {}

@@ -94,6 +94,8 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_reduce_usum:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_umax:
+  case Intrinsic::dx_wave_reduce_min:
+  case Intrinsic::dx_wave_reduce_umin:
     return true;
   }
 }
@@ -106,11 +108,11 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
                                             DXILResourceTypeMap &DRTM,
                                             const ModuleMetadataInfo &MMDI) {
   if (!CSF.Doubles)
-    CSF.Doubles = I.getType()->isDoubleTy();
+    CSF.Doubles = I.getType()->getScalarType()->isDoubleTy();
 
   if (!CSF.Doubles) {
     for (const Value *Op : I.operands()) {
-      if (Op->getType()->isDoubleTy()) {
+      if (Op->getType()->getScalarType()->isDoubleTy()) {
         CSF.Doubles = true;
         break;
       }
@@ -130,12 +132,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   }
 
   if (!CSF.LowPrecisionPresent)
-    CSF.LowPrecisionPresent =
-        I.getType()->isIntegerTy(16) || I.getType()->isHalfTy();
+    CSF.LowPrecisionPresent = I.getType()->getScalarType()->isIntegerTy(16) ||
+                              I.getType()->getScalarType()->isHalfTy();
 
   if (!CSF.LowPrecisionPresent) {
     for (const Value *Op : I.operands()) {
-      if (Op->getType()->isIntegerTy(16) || Op->getType()->isHalfTy()) {
+      if (Op->getType()->getScalarType()->isIntegerTy(16) ||
+          Op->getType()->getScalarType()->isHalfTy()) {
         CSF.LowPrecisionPresent = true;
         break;
       }
@@ -150,11 +153,11 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   }
 
   if (!CSF.Int64Ops)
-    CSF.Int64Ops = I.getType()->isIntegerTy(64);
+    CSF.Int64Ops = I.getType()->getScalarType()->isIntegerTy(64);
 
   if (!CSF.Int64Ops && !isa<LifetimeIntrinsic>(&I)) {
     for (const Value *Op : I.operands()) {
-      if (Op->getType()->isIntegerTy(64)) {
+      if (Op->getType()->getScalarType()->isIntegerTy(64)) {
         CSF.Int64Ops = true;
         break;
       }

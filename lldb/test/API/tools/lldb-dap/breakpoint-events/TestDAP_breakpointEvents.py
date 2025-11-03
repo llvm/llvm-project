@@ -58,7 +58,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # Set breakpoints and verify that they got set correctly
         dap_breakpoint_ids = []
         response = self.dap_server.request_setBreakpoints(
-            Source(main_source_path), [main_bp_line]
+            Source.build(path=main_source_path), [main_bp_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
@@ -70,7 +70,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
             )
 
         response = self.dap_server.request_setBreakpoints(
-            Source(foo_source_path), [foo_bp1_line]
+            Source.build(path=foo_source_path), [foo_bp1_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
@@ -82,14 +82,14 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
             )
 
         # Flush the breakpoint events.
-        self.dap_server.wait_for_breakpoint_events(timeout=5)
+        self.dap_server.wait_for_breakpoint_events()
 
         # Continue to the breakpoint
         self.continue_to_breakpoints(dap_breakpoint_ids)
 
         verified_breakpoint_ids = []
         unverified_breakpoint_ids = []
-        for breakpoint_event in self.dap_server.wait_for_breakpoint_events(timeout=5):
+        for breakpoint_event in self.dap_server.wait_for_breakpoint_events():
             breakpoint = breakpoint_event["body"]["breakpoint"]
             id = breakpoint["id"]
             if breakpoint["verified"]:

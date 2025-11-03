@@ -8,10 +8,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; GCN-LABEL: test_sched_group_barrier_pipeline_SWMMAC_cluster:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GCN-NEXT:    v_mov_b32_e32 v48, 0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v28, 4, v0
+; GCN-NEXT:    v_and_b32_e32 v28, 0x3ff0, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_add_nc_u32_e32 v0, s0, v28
 ; GCN-NEXT:    v_dual_mov_b32 v50, s1 :: v_dual_add_nc_u32 v49, s1, v28
@@ -60,10 +60,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_SWMMAC_cluster:
 ; EXACTCUTOFF:       ; %bb.0: ; %entry
 ; EXACTCUTOFF-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v48, 0
 ; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v28, 4, v0
+; EXACTCUTOFF-NEXT:    v_and_b32_e32 v28, 0x3ff0, v0
 ; EXACTCUTOFF-NEXT:    s_wait_kmcnt 0x0
 ; EXACTCUTOFF-NEXT:    v_add_nc_u32_e32 v0, s0, v28
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v50, s1 :: v_dual_add_nc_u32 v49, s1, v28

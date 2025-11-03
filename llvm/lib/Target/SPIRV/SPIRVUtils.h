@@ -113,6 +113,54 @@ public:
                          std::function<bool(BasicBlock *)> Op);
 };
 
+namespace SPIRV {
+struct FPFastMathDefaultInfo {
+  const Type *Ty = nullptr;
+  unsigned FastMathFlags = 0;
+  // When SPV_KHR_float_controls2 ContractionOff and SignzeroInfNanPreserve are
+  // deprecated, and we replace them with FPFastMathDefault appropriate flags
+  // instead. However, we have no guarantee about the order in which we will
+  // process execution modes. Therefore it could happen that we first process
+  // ContractionOff, setting AllowContraction bit to 0, and then we process
+  // FPFastMathDefault enabling AllowContraction bit, effectively invalidating
+  // ContractionOff. Because of that, it's best to keep separate bits for the
+  // different execution modes, and we will try and combine them later when we
+  // emit OpExecutionMode instructions.
+  bool ContractionOff = false;
+  bool SignedZeroInfNanPreserve = false;
+  bool FPFastMathDefault = false;
+
+  FPFastMathDefaultInfo() = default;
+  FPFastMathDefaultInfo(const Type *Ty, unsigned FastMathFlags)
+      : Ty(Ty), FastMathFlags(FastMathFlags) {}
+  bool operator==(const FPFastMathDefaultInfo &Other) const {
+    return Ty == Other.Ty && FastMathFlags == Other.FastMathFlags &&
+           ContractionOff == Other.ContractionOff &&
+           SignedZeroInfNanPreserve == Other.SignedZeroInfNanPreserve &&
+           FPFastMathDefault == Other.FPFastMathDefault;
+  }
+};
+
+struct FPFastMathDefaultInfoVector
+    : public SmallVector<SPIRV::FPFastMathDefaultInfo, 3> {
+  static size_t computeFPFastMathDefaultInfoVecIndex(size_t BitWidth) {
+    switch (BitWidth) {
+    case 16: // half
+      return 0;
+    case 32: // float
+      return 1;
+    case 64: // double
+      return 2;
+    default:
+      report_fatal_error("Expected BitWidth to be 16, 32, 64", false);
+    }
+    llvm_unreachable(
+        "Unreachable code in computeFPFastMathDefaultInfoVecIndex");
+  }
+};
+
+} // namespace SPIRV
+
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
 // little-endian words.
@@ -161,7 +209,7 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             const MDNode *GVarMD);
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST);
 
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.
@@ -240,6 +288,9 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
 
 // Get constant integer value of the given ConstReg.
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
+
+// Get constant integer value of the given ConstReg, sign-extended.
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
@@ -506,6 +557,10 @@ MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType);
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

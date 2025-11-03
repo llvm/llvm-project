@@ -57,7 +57,7 @@ int test_rss_difference(void *p) {
   size_t diff = rss_before - rss_after;
   fprintf(stderr, "diff %zu\n", diff);
   // Check that the difference is at least close to kNumShadowPages.
-  return diff > kNumShadowPages / 2;
+  return diff >= kNumShadowPages / 2;
 }
 
 int main() {

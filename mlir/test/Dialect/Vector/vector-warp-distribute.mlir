@@ -474,6 +474,41 @@ func.func @warp_scf_for_use_from_above(%arg0: index) {
 }
 
 // -----
+// CHECK-PROP-LABEL:  func.func @warp_scf_for_local_loop_bounds
+// CHECK-PROP:          (%{{.*}}: index, %[[ARG1:[a-zA-Z0-9]+]]: index) {
+// CHECK-PROP:          %[[W:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%[[ARG1]] : index) -> (vector<4xf32>) {
+// CHECK-PROP:          ^bb0(%{{.*}}: index):
+// CHECK-PROP:            %[[T2:.*]] = "some_def"() : () -> vector<128xf32>
+// CHECK-PROP:            gpu.yield %[[T2]] : vector<128xf32>
+// CHECK-PROP:          }
+// CHECK-PROP:          %[[FOR:.*]] = scf.for %{{.*}} to %[[ARG1]] step %{{.*}} iter_args(%{{.*}}) -> (vector<4xf32>) {
+// CHECK-PROP:            %[[W2:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32]
+// CHECK-PROP-SAME:          args(%{{.*}} : vector<4xf32>) -> (vector<4xf32>) {
+// CHECK-PROP:            ^bb0(%{{.*}}: vector<128xf32>):
+// CHECK-PROP:              gpu.yield %{{.*}} : vector<128xf32>
+// CHECK-PROP:            }
+// CHECK-PROP:            scf.yield %[[W2]] : vector<4xf32>
+// CHECK-PROP:          }
+// CHECK-PROP:          "some_use"(%[[FOR]]) : (vector<4xf32>) -> ()
+// CHECK-PROP:          return
+func.func @warp_scf_for_local_loop_bounds(%arg0: index, %bound: index) {
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0 = gpu.warp_execute_on_lane_0(%arg0)[32]
+    args(%bound : index) -> (vector<4xf32>) {
+    ^bb0(%arg1: index):
+    %ini = "some_def"() : () -> (vector<128xf32>)
+    %3 = scf.for %arg3 = %c0 to %arg1 step %c1 iter_args(%arg4 = %ini) -> (vector<128xf32>) {
+      %acc = "some_def"(%arg4) : (vector<128xf32>) -> (vector<128xf32>)
+      scf.yield %acc : vector<128xf32>
+    }
+    gpu.yield %3 : vector<128xf32>
+  }
+  "some_use"(%0) : (vector<4xf32>) -> ()
+  return
+}
+
+// -----
 
 // CHECK-PROP-LABEL:   func @warp_scf_for_swap(
 // CHECK-PROP: %[[INI:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<4xf32>, vector<4xf32>) {
@@ -532,6 +567,35 @@ func.func @warp_scf_for_swap_no_yield(%arg0: index) {
 }
 
 // -----
+// scf.for result is not distributed in this case.
+// CHECK-PROP-LABEL:   func @warp_scf_for_broadcasted_result(
+// CHECK-PROP:  %[[W0:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>) {
+// CHECK-PROP:    %[[INI:.*]] = "some_def"() : () -> vector<1xf32>
+// CHECK-PROP:    gpu.yield %[[INI]] : vector<1xf32>
+// CHECK-PROP:  }
+// CHECK-PROP:  %[[F:.*]] = scf.for {{.*}} iter_args(%[[ARG2:.*]] = %[[W0]]) -> (vector<1xf32>) {
+// CHECK-PROP:    %[[W1:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%[[ARG2]] : vector<1xf32>) -> (vector<1xf32>) {
+// CHECK-PROP:    ^bb0(%{{.*}}: vector<1xf32>):
+// CHECK-PROP:      %[[T0:.*]] = "some_op"(%{{.*}}) : (vector<1xf32>) -> vector<1xf32>
+// CHECK-PROP:      gpu.yield %[[T0]] : vector<1xf32>
+// CHECK-PROP:    }
+// CHECK-PROP:    scf.yield %[[W1]] : vector<1xf32>
+func.func @warp_scf_for_broadcasted_result(%arg0: index) -> vector<1xf32> {
+  %c128 = arith.constant 128 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %2 = gpu.warp_execute_on_lane_0(%arg0)[32] -> (vector<1xf32>) {
+    %ini = "some_def"() : () -> (vector<1xf32>)
+    %0 = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%arg4 = %ini) -> (vector<1xf32>) {
+      %1 = "some_op"(%arg4) : (vector<1xf32>) -> (vector<1xf32>)
+      scf.yield %1 : vector<1xf32>
+    }
+    gpu.yield %0 : vector<1xf32>
+  }
+  return %2 : vector<1xf32>
+}
+
+// -----
 
 #map = affine_map<()[s0] -> (s0 * 4)>
 #map1 = affine_map<()[s0] -> (s0 * 128 + 128)>
@@ -581,6 +645,85 @@ func.func @warp_scf_for_multiple_yield(%arg0: index, %arg1: memref<?xf32>, %arg2
   %2 = affine.apply #map2()[%arg0]
   vector.transfer_write %0#2, %arg2[%2] {in_bounds = [true]} : vector<4xf32>, memref<?xf32>
   "some_use"(%0#0) : (vector<1xf32>) -> ()
+  return
+}
+
+// -----
+// CHECK-PROP-LABEL: func.func @warp_scf_for_unused_for_result(
+//       CHECK-PROP: %[[W0:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<4xf32>, vector<4xf32>) {
+//       CHECK-PROP:  %[[INI0:.*]] = "some_def"() : () -> vector<128xf32>
+//       CHECK-PROP:  %[[INI1:.*]] = "some_def"() : () -> vector<128xf32>
+//       CHECK-PROP:  gpu.yield %[[INI0]], %[[INI1]] : vector<128xf32>, vector<128xf32>
+//       CHECK-PROP: }
+//       CHECK-PROP: %[[F:.*]]:2 = scf.for %{{.*}} iter_args(%{{.*}} = %[[W0]]#0, %{{.*}} = %[[W0]]#1) -> (vector<4xf32>, vector<4xf32>) {
+//       CHECK-PROP:  %[[W1:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%{{.*}} : vector<4xf32>, vector<4xf32>) -> (vector<4xf32>, vector<4xf32>) {
+//       CHECK-PROP:    %[[ACC0:.*]] = "some_def"(%{{.*}}) : (vector<128xf32>, index) -> vector<128xf32>
+//       CHECK-PROP:    %[[ACC1:.*]] = "some_def"(%{{.*}}) : (index, vector<128xf32>, vector<128xf32>) -> vector<128xf32>
+//       CHECK-PROP:    gpu.yield %[[ACC1]], %[[ACC0]] : vector<128xf32>, vector<128xf32>
+//       CHECK-PROP:  }
+//       CHECK-PROP:  scf.yield %[[W1]]#0, %[[W1]]#1 : vector<4xf32>, vector<4xf32>
+//       CHECK-PROP: }
+//       CHECK-PROP: "some_use"(%[[F]]#0) : (vector<4xf32>) -> ()
+func.func @warp_scf_for_unused_for_result(%arg0: index) {
+  %c128 = arith.constant 128 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0 = gpu.warp_execute_on_lane_0(%arg0)[32] -> (vector<4xf32>) {
+    %ini = "some_def"() : () -> (vector<128xf32>)
+    %ini1 = "some_def"() : () -> (vector<128xf32>)
+    %3:2 = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%arg4 = %ini, %arg5 = %ini1) -> (vector<128xf32>, vector<128xf32>) {
+      %add = arith.addi %arg3, %c1 : index
+      %1  = "some_def"(%arg5, %add) : (vector<128xf32>, index) -> (vector<128xf32>)
+      %acc = "some_def"(%add, %arg4, %1) : (index, vector<128xf32>, vector<128xf32>) -> (vector<128xf32>)
+      scf.yield %acc, %1 : vector<128xf32>, vector<128xf32>
+    }
+    gpu.yield %3#0 : vector<128xf32>
+  }
+  "some_use"(%0) : (vector<4xf32>) -> ()
+  return
+}
+
+// -----
+// CHECK-PROP-LABEL: func.func @warp_scf_for_swapped_for_results(
+//       CHECK-PROP:  %[[W0:.*]]:3 = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<8xf32>, vector<4xf32>, vector<4xf32>) {
+//  CHECK-PROP-NEXT:    %[[INI0:.*]] = "some_def"() : () -> vector<256xf32>
+//  CHECK-PROP-NEXT:    %[[INI1:.*]] = "some_def"() : () -> vector<128xf32>
+//  CHECK-PROP-NEXT:    %[[INI2:.*]] = "some_def"() : () -> vector<128xf32>
+//  CHECK-PROP-NEXT:    gpu.yield %[[INI0]], %[[INI1]], %[[INI2]] : vector<256xf32>, vector<128xf32>, vector<128xf32>
+//  CHECK-PROP-NEXT:  }
+//  CHECK-PROP-NEXT:  %[[F0:.*]]:3 = scf.for {{.*}} iter_args(%{{.*}} = %[[W0]]#0, %{{.*}} = %[[W0]]#1, %{{.*}} = %[[W0]]#2) -> (vector<8xf32>, vector<4xf32>, vector<4xf32>) {
+//  CHECK-PROP-NEXT:    %[[W1:.*]]:3 = gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%{{.*}} :
+//  CHECK-PROP-SAME:        vector<8xf32>, vector<4xf32>, vector<4xf32>) -> (vector<8xf32>, vector<4xf32>, vector<4xf32>) {
+//  CHECK-PROP-NEXT:      ^bb0(%{{.*}}: vector<256xf32>, %{{.*}}: vector<128xf32>, %{{.*}}: vector<128xf32>):
+//  CHECK-PROP-NEXT:        %[[T3:.*]] = "some_def_1"(%{{.*}}) : (vector<256xf32>) -> vector<256xf32>
+//  CHECK-PROP-NEXT:        %[[T4:.*]] = "some_def_2"(%{{.*}}) : (vector<128xf32>) -> vector<128xf32>
+//  CHECK-PROP-NEXT:        %[[T5:.*]] = "some_def_3"(%{{.*}}) : (vector<128xf32>) -> vector<128xf32>
+//  CHECK-PROP-NEXT:        gpu.yield %[[T3]], %[[T4]], %[[T5]] : vector<256xf32>, vector<128xf32>, vector<128xf32>
+//  CHECK-PROP-NEXT:    }
+//  CHECK-PROP-NEXT:    scf.yield %[[W1]]#0, %[[W1]]#1, %[[W1]]#2 : vector<8xf32>, vector<4xf32>, vector<4xf32>
+//  CHECK-PROP-NEXT:  }
+//  CHECK-PROP-NEXT:  "some_use_1"(%[[F0]]#2) : (vector<4xf32>) -> ()
+//  CHECK-PROP-NEXT:  "some_use_2"(%[[F0]]#1) : (vector<4xf32>) -> ()
+//  CHECK-PROP-NEXT:  "some_use_3"(%[[F0]]#0) : (vector<8xf32>) -> ()
+func.func @warp_scf_for_swapped_for_results(%arg0: index) {
+  %c128 = arith.constant 128 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0:3 = gpu.warp_execute_on_lane_0(%arg0)[32] -> (vector<4xf32>, vector<4xf32>, vector<8xf32>) {
+    %ini1 = "some_def"() : () -> (vector<256xf32>)
+    %ini2 = "some_def"() : () -> (vector<128xf32>)
+    %ini3 = "some_def"() : () -> (vector<128xf32>)
+    %3:3 = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%arg4 = %ini1, %arg5 = %ini2, %arg6 = %ini3) -> (vector<256xf32>, vector<128xf32>, vector<128xf32>) {
+      %acc1 = "some_def_1"(%arg4) : (vector<256xf32>) -> (vector<256xf32>)
+      %acc2 = "some_def_2"(%arg5) : (vector<128xf32>) -> (vector<128xf32>)
+      %acc3 = "some_def_3"(%arg6) : (vector<128xf32>) -> (vector<128xf32>)
+      scf.yield %acc1, %acc2, %acc3 : vector<256xf32>, vector<128xf32>, vector<128xf32>
+    }
+    gpu.yield %3#2, %3#1, %3#0 : vector<128xf32>, vector<128xf32>, vector<256xf32>
+  }
+  "some_use_1"(%0#0) : (vector<4xf32>) -> ()
+  "some_use_2"(%0#1) : (vector<4xf32>) -> ()
+  "some_use_3"(%0#2) : (vector<8xf32>) -> ()
   return
 }
 
@@ -1191,7 +1334,7 @@ func.func @vector_insert_1d_broadcast(%laneid: index, %pos: index) -> (vector<96
 //       CHECK-PROP:     %[[VEC:.*]] = "some_def"
 //       CHECK-PROP:     %[[VAL:.*]] = "another_def"
 //       CHECK-PROP:     gpu.yield %[[VEC]], %[[VAL]]
-//       CHECK-PROP:   vector.insert %[[W]]#1, %[[W]]#0 [] : f32 into vector<f32>
+//       CHECK-PROP:   vector.broadcast %[[W]]#1 : f32 to vector<f32>
 func.func @vector_insert_0d(%laneid: index) -> (vector<f32>) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<f32>) {
     %0 = "some_def"() : () -> (vector<f32>)
@@ -1695,3 +1838,144 @@ func.func @warp_propagate_nd_write(%laneid: index, %dest: memref<4x1024xf32>) {
 //       CHECK-DIST-AND-PROP:   %[[IDS:.+]]:2 = affine.delinearize_index %{{.*}} into (4, 8) : index, index
 //       CHECK-DIST-AND-PROP:   %[[INNER_ID:.+]] = affine.apply #map()[%[[IDS]]#1]
 //       CHECK-DIST-AND-PROP:   vector.transfer_write %[[W]], %{{.*}}[%[[IDS]]#0, %[[INNER_ID]]] {{.*}} : vector<1x128xf32>
+
+// -----
+func.func @warp_propagate_duplicated_operands_in_yield(%laneid: index)  {
+  %r:3 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>, vector<1xf32>, vector<1xf32>) {
+    %0 = "some_def"() : () -> (vector<32xf32>)
+    %1 = "some_other_def"() : () -> (vector<32xf32>)
+    %2 = math.exp %1 : vector<32xf32>
+    gpu.yield %2, %0, %0 : vector<32xf32>, vector<32xf32>, vector<32xf32>
+  }
+  "some_use"(%r#0) : (vector<1xf32>) -> ()
+  return
+}
+
+// CHECK-PROP-LABEL : func.func @warp_propagate_duplicated_operands_in_yield(
+// CHECK-PROP       :   %[[W:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>) {
+// CHECK-PROP       :     %{{.*}} = "some_def"() : () -> vector<32xf32>
+// CHECK-PROP       :     %[[T3:.*]] = "some_other_def"() : () -> vector<32xf32>
+// CHECK-PROP       :     gpu.yield %[[T3]] : vector<32xf32>
+// CHECK-PROP       :   }
+// CHECK-PROP       :   %[T1:.*] = math.exp %[[W]] : vector<1xf32>
+// CHECK-PROP       :   "some_use"(%[[T1]]) : (vector<1xf32>) -> ()
+
+// -----
+
+func.func @warp_step_distribute(%buffer: memref<128xindex>)  {
+  %laneid = gpu.lane_id
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xindex>) {
+    %seq = vector.step : vector<32xindex>
+    gpu.yield %seq : vector<32xindex>
+  }
+  vector.transfer_write %r, %buffer[%laneid] : vector<1xindex>, memref<128xindex>
+  return
+}
+
+// CHECK-PROP-LABEL: func.func @warp_step_distribute(
+//       CHECK-PROP:   %[[LANE_ID:.*]] = gpu.lane_id
+//       CHECK-PROP:   %[[LANE_ID_VEC:.*]] = vector.broadcast %[[LANE_ID]] : index to vector<1xindex>
+//       CHECK-PROP:   vector.transfer_write %[[LANE_ID_VEC]], %{{.*}} : vector<1xindex>, memref<128xindex>
+
+// -----
+
+func.func @negative_warp_step_more_than_warp_size(%laneid: index, %buffer: memref<128xindex>)  {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xindex>) {
+    %seq = vector.step : vector<64xindex>
+    gpu.yield %seq : vector<64xindex>
+  }
+  vector.transfer_write %r, %buffer[%laneid] : vector<2xindex>, memref<128xindex>
+  return
+}
+
+// CHECK-PROP-LABEL: @negative_warp_step_more_than_warp_size
+// CHECK-PROP-NOT: vector.broadcast
+// CHECK-PROP: vector.step : vector<64xindex>
+
+// -----
+
+func.func @warp_scf_if_no_yield_distribute(%buffer: memref<128xindex>, %pred : i1)  {
+  %laneid = gpu.lane_id
+  %c0 = arith.constant 0 : index
+
+  gpu.warp_execute_on_lane_0(%laneid)[32] {
+    %seq = vector.step : vector<32xindex>
+    scf.if %pred {
+      vector.store %seq, %buffer[%c0] : memref<128xindex>, vector<32xindex>
+    }
+    gpu.yield
+  }
+  return
+}
+
+// CHECK-PROP-LABEL: func.func @warp_scf_if_no_yield_distribute(
+//  CHECK-PROP-SAME:   %[[ARG0:.+]]: memref<128xindex>, %[[ARG1:.+]]: i1
+//       CHECK-PROP:   scf.if %[[ARG1]] {
+//       CHECK-PROP:   gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%{{.*}} : vector<1xindex>) {
+//       CHECK-PROP:   ^bb0(%[[ARG2:.+]]: vector<32xindex>):
+//       CHECK-PROP:   vector.store %[[ARG2]], %[[ARG0]][%{{.*}}] : memref<128xindex>, vector<32xindex>
+
+// -----
+
+func.func @warp_scf_if_distribute(%pred : i1)  {
+  %laneid = gpu.lane_id
+  %c0 = arith.constant 0 : index
+
+  %0 = gpu.warp_execute_on_lane_0(%laneid)[32] -> vector<1xf32> {
+    %seq1 = vector.step : vector<32xindex>
+    %seq2 = arith.constant dense<2> : vector<32xindex>
+    %0 = scf.if %pred -> (vector<32xf32>) {
+      %1 = "some_op"(%seq1) : (vector<32xindex>) -> (vector<32xf32>)
+      scf.yield %1 : vector<32xf32>
+    } else {
+      %2 = "other_op"(%seq2) : (vector<32xindex>) -> (vector<32xf32>)
+      scf.yield %2 : vector<32xf32>
+    }
+    gpu.yield %0 : vector<32xf32>
+  }
+  "some_use"(%0) : (vector<1xf32>) -> ()
+
+  return
+}
+
+// CHECK-PROP-LABEL: func.func @warp_scf_if_distribute(
+//  CHECK-PROP-SAME:    %[[ARG0:.+]]: i1
+//       CHECK-PROP:    %[[SEQ2:.+]] = arith.constant dense<2> : vector<32xindex>
+//       CHECK-PROP:    %[[LANE_ID:.+]] = gpu.lane_id
+//       CHECK-PROP:    %[[SEQ1:.+]] = vector.broadcast %[[LANE_ID]] : index to vector<1xindex>
+//       CHECK-PROP:    %[[IF_YIELD_DIST:.+]] = scf.if %[[ARG0]] -> (vector<1xf32>) {
+//       CHECK-PROP:    %[[THEN_DIST:.+]] = gpu.warp_execute_on_lane_0(%[[LANE_ID]])[32] args(%[[SEQ1]] : vector<1xindex>) -> (vector<1xf32>) {
+//       CHECK-PROP:        ^bb0(%[[ARG1:.+]]: vector<32xindex>):
+//       CHECK-PROP:        %{{.*}} = "some_op"(%[[ARG1]]) : (vector<32xindex>) -> vector<32xf32>
+//       CHECK-PROP:        gpu.yield %{{.*}} : vector<32xf32>
+//       CHECK-PROP:      }
+//       CHECK-PROP:      scf.yield %[[THEN_DIST]] : vector<1xf32>
+//       CHECK-PROP:    } else {
+//       CHECK-PROP:      %[[ELSE_DIST:.+]] = gpu.warp_execute_on_lane_0(%[[LANE_ID]])[32] -> (vector<1xf32>) {
+//       CHECK-PROP:        %{{.*}} = "other_op"(%[[SEQ2]]) : (vector<32xindex>) -> vector<32xf32>
+//       CHECK-PROP:        gpu.yield %{{.*}} : vector<32xf32>
+//       CHECK-PROP:      }
+//       CHECK-PROP:      scf.yield %[[ELSE_DIST]] : vector<1xf32>
+//       CHECK-PROP:    }
+//       CHECK-PROP:    "some_use"(%[[IF_YIELD_DIST]]) : (vector<1xf32>) -> ()
+//       CHECK-PROP:    return
+//       CHECK-PROP:  }
+
+// -----
+func.func @dedup_unused_result(%laneid : index) -> (vector<1xf32>) {
+  %r:3 = gpu.warp_execute_on_lane_0(%laneid)[32] ->
+    (vector<1xf32>, vector<2xf32>, vector<1xf32>) {
+    %2 = "some_def"() : () -> (vector<32xf32>)
+    %3 = "some_def"() : () -> (vector<64xf32>)
+    gpu.yield %2, %3, %2 : vector<32xf32>, vector<64xf32>, vector<32xf32>
+  }
+  %r0 = "some_use"(%r#2, %r#2) : (vector<1xf32>, vector<1xf32>) -> (vector<1xf32>)
+  return %r0 : vector<1xf32>
+}
+
+// CHECK-PROP: func @dedup_unused_result
+// CHECK-PROP: %[[R:.*]] = gpu.warp_execute_on_lane_0(%arg0)[32] -> (vector<1xf32>)
+// CHECK-PROP:   %[[Y0:.*]] = "some_def"() : () -> vector<32xf32>
+// CHECK-PROP:   %[[Y1:.*]] = "some_def"() : () -> vector<64xf32>
+// CHECK-PROP:   gpu.yield %[[Y0]] : vector<32xf32>
+// CHECK-PROP: "some_use"(%[[R]], %[[R]]) : (vector<1xf32>, vector<1xf32>) -> vector<1xf32>

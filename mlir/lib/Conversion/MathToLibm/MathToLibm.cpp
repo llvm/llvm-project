@@ -84,20 +84,21 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   auto shape = vecType.getShape();
   int64_t numElements = vecType.getNumElements();
 
-  Value result = rewriter.create<arith::ConstantOp>(
-      loc, DenseElementsAttr::get(
-               vecType, FloatAttr::get(vecType.getElementType(), 0.0)));
+  Value result = arith::ConstantOp::create(
+      rewriter, loc,
+      DenseElementsAttr::get(vecType,
+                             FloatAttr::get(vecType.getElementType(), 0.0)));
   SmallVector<int64_t> strides = computeStrides(shape);
   for (auto linearIndex = 0; linearIndex < numElements; ++linearIndex) {
     SmallVector<int64_t> positions = delinearize(linearIndex, strides);
     SmallVector<Value> operands;
     for (auto input : op->getOperands())
       operands.push_back(
-          rewriter.create<vector::ExtractOp>(loc, input, positions));
+          vector::ExtractOp::create(rewriter, loc, input, positions));
     Value scalarOp =
-        rewriter.create<Op>(loc, vecType.getElementType(), operands);
+        Op::create(rewriter, loc, vecType.getElementType(), operands);
     result =
-        rewriter.create<vector::InsertOp>(loc, scalarOp, result, positions);
+        vector::InsertOp::create(rewriter, loc, scalarOp, result, positions);
   }
   rewriter.replaceOp(op, {result});
   return success();
@@ -114,9 +115,9 @@ PromoteOpToF32<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   auto f32 = rewriter.getF32Type();
   auto extendedOperands = llvm::to_vector(
       llvm::map_range(op->getOperands(), [&](Value operand) -> Value {
-        return rewriter.create<arith::ExtFOp>(loc, f32, operand);
+        return arith::ExtFOp::create(rewriter, loc, f32, operand);
       }));
-  auto newOp = rewriter.create<Op>(loc, f32, extendedOperands);
+  auto newOp = Op::create(rewriter, loc, f32, extendedOperands);
   rewriter.replaceOpWithNewOp<arith::TruncFOp>(op, opType, newOp);
   return success();
 }
@@ -139,8 +140,8 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
     rewriter.setInsertionPointToStart(&module->getRegion(0).front());
     auto opFunctionTy = FunctionType::get(
         rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
-    opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name,
-                                           opFunctionTy);
+    opFunc = func::FuncOp::create(rewriter, rewriter.getUnknownLoc(), name,
+                                  opFunctionTy);
     opFunc.setPrivate();
 
     // By definition Math dialect operations imply LLVM's "readnone"

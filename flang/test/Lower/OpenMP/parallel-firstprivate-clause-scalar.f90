@@ -1,7 +1,6 @@
 ! This test checks lowering of `FIRSTPRIVATE` clause for scalar types.
 
 ! REQUIRES: x86-registered-target
-! REQUIRES: shell
 ! RUN: bbc -target x86_64-unknown-linux-gnu -fopenmp -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 

@@ -884,13 +884,13 @@ CSKYTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                .Case("{t4}", CSKY::R20)
                                .Case("{t5}", CSKY::R21)
                                .Case("{t6}", CSKY::R22)
-                               .Cases("{t7}", "{fp}", CSKY::R23)
-                               .Cases("{t8}", "{top}", CSKY::R24)
-                               .Cases("{t9}", "{bsp}", CSKY::R25)
+                               .Cases({"{t7}", "{fp}"}, CSKY::R23)
+                               .Cases({"{t8}", "{top}"}, CSKY::R24)
+                               .Cases({"{t9}", "{bsp}"}, CSKY::R25)
                                .Case("{r26}", CSKY::R26)
                                .Case("{r27}", CSKY::R27)
-                               .Cases("{gb}", "{rgb}", "{rdb}", CSKY::R28)
-                               .Cases("{tb}", "{rtb}", CSKY::R29)
+                               .Cases({"{gb}", "{rgb}", "{rdb}"}, CSKY::R28)
+                               .Cases({"{tb}", "{rtb}"}, CSKY::R29)
                                .Case("{svbr}", CSKY::R30)
                                .Case("{tls}", CSKY::R31)
                                .Default(CSKY::NoRegister);
@@ -907,38 +907,38 @@ CSKYTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // use the ABI names in register constraint lists.
   if (Subtarget.useHardFloat()) {
     unsigned FReg = StringSwitch<unsigned>(Constraint.lower())
-                        .Cases("{fr0}", "{vr0}", CSKY::F0_32)
-                        .Cases("{fr1}", "{vr1}", CSKY::F1_32)
-                        .Cases("{fr2}", "{vr2}", CSKY::F2_32)
-                        .Cases("{fr3}", "{vr3}", CSKY::F3_32)
-                        .Cases("{fr4}", "{vr4}", CSKY::F4_32)
-                        .Cases("{fr5}", "{vr5}", CSKY::F5_32)
-                        .Cases("{fr6}", "{vr6}", CSKY::F6_32)
-                        .Cases("{fr7}", "{vr7}", CSKY::F7_32)
-                        .Cases("{fr8}", "{vr8}", CSKY::F8_32)
-                        .Cases("{fr9}", "{vr9}", CSKY::F9_32)
-                        .Cases("{fr10}", "{vr10}", CSKY::F10_32)
-                        .Cases("{fr11}", "{vr11}", CSKY::F11_32)
-                        .Cases("{fr12}", "{vr12}", CSKY::F12_32)
-                        .Cases("{fr13}", "{vr13}", CSKY::F13_32)
-                        .Cases("{fr14}", "{vr14}", CSKY::F14_32)
-                        .Cases("{fr15}", "{vr15}", CSKY::F15_32)
-                        .Cases("{fr16}", "{vr16}", CSKY::F16_32)
-                        .Cases("{fr17}", "{vr17}", CSKY::F17_32)
-                        .Cases("{fr18}", "{vr18}", CSKY::F18_32)
-                        .Cases("{fr19}", "{vr19}", CSKY::F19_32)
-                        .Cases("{fr20}", "{vr20}", CSKY::F20_32)
-                        .Cases("{fr21}", "{vr21}", CSKY::F21_32)
-                        .Cases("{fr22}", "{vr22}", CSKY::F22_32)
-                        .Cases("{fr23}", "{vr23}", CSKY::F23_32)
-                        .Cases("{fr24}", "{vr24}", CSKY::F24_32)
-                        .Cases("{fr25}", "{vr25}", CSKY::F25_32)
-                        .Cases("{fr26}", "{vr26}", CSKY::F26_32)
-                        .Cases("{fr27}", "{vr27}", CSKY::F27_32)
-                        .Cases("{fr28}", "{vr28}", CSKY::F28_32)
-                        .Cases("{fr29}", "{vr29}", CSKY::F29_32)
-                        .Cases("{fr30}", "{vr30}", CSKY::F30_32)
-                        .Cases("{fr31}", "{vr31}", CSKY::F31_32)
+                        .Cases({"{fr0}", "{vr0}"}, CSKY::F0_32)
+                        .Cases({"{fr1}", "{vr1}"}, CSKY::F1_32)
+                        .Cases({"{fr2}", "{vr2}"}, CSKY::F2_32)
+                        .Cases({"{fr3}", "{vr3}"}, CSKY::F3_32)
+                        .Cases({"{fr4}", "{vr4}"}, CSKY::F4_32)
+                        .Cases({"{fr5}", "{vr5}"}, CSKY::F5_32)
+                        .Cases({"{fr6}", "{vr6}"}, CSKY::F6_32)
+                        .Cases({"{fr7}", "{vr7}"}, CSKY::F7_32)
+                        .Cases({"{fr8}", "{vr8}"}, CSKY::F8_32)
+                        .Cases({"{fr9}", "{vr9}"}, CSKY::F9_32)
+                        .Cases({"{fr10}", "{vr10}"}, CSKY::F10_32)
+                        .Cases({"{fr11}", "{vr11}"}, CSKY::F11_32)
+                        .Cases({"{fr12}", "{vr12}"}, CSKY::F12_32)
+                        .Cases({"{fr13}", "{vr13}"}, CSKY::F13_32)
+                        .Cases({"{fr14}", "{vr14}"}, CSKY::F14_32)
+                        .Cases({"{fr15}", "{vr15}"}, CSKY::F15_32)
+                        .Cases({"{fr16}", "{vr16}"}, CSKY::F16_32)
+                        .Cases({"{fr17}", "{vr17}"}, CSKY::F17_32)
+                        .Cases({"{fr18}", "{vr18}"}, CSKY::F18_32)
+                        .Cases({"{fr19}", "{vr19}"}, CSKY::F19_32)
+                        .Cases({"{fr20}", "{vr20}"}, CSKY::F20_32)
+                        .Cases({"{fr21}", "{vr21}"}, CSKY::F21_32)
+                        .Cases({"{fr22}", "{vr22}"}, CSKY::F22_32)
+                        .Cases({"{fr23}", "{vr23}"}, CSKY::F23_32)
+                        .Cases({"{fr24}", "{vr24}"}, CSKY::F24_32)
+                        .Cases({"{fr25}", "{vr25}"}, CSKY::F25_32)
+                        .Cases({"{fr26}", "{vr26}"}, CSKY::F26_32)
+                        .Cases({"{fr27}", "{vr27}"}, CSKY::F27_32)
+                        .Cases({"{fr28}", "{vr28}"}, CSKY::F28_32)
+                        .Cases({"{fr29}", "{vr29}"}, CSKY::F29_32)
+                        .Cases({"{fr30}", "{vr30}"}, CSKY::F30_32)
+                        .Cases({"{fr31}", "{vr31}"}, CSKY::F31_32)
                         .Default(CSKY::NoRegister);
     if (FReg != CSKY::NoRegister) {
       assert(CSKY::F0_32 <= FReg && FReg <= CSKY::F31_32 && "Unknown fp-reg");
@@ -1329,10 +1329,7 @@ SDValue CSKYTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 
   // Prepare argument list to generate call.
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Load;
-  Entry.Ty = CallTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Load, CallTy);
 
   // Setup call to __tls_get_addr.
   TargetLowering::CallLoweringInfo CLI(DAG);

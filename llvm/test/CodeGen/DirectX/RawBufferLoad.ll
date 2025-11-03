@@ -13,7 +13,7 @@ declare void @v4f64_user(<4 x double>)
 define void @loadf32_struct(i32 %index) {
   %buffer = call target("dx.RawBuffer", float, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.rawBufferLoad.f32(i32 139, %dx.types.Handle %{{.*}}, i32 %index, i32 0, i8 1, i32 4)
   %load = call {float, i1}
@@ -34,7 +34,7 @@ define void @loadf32_struct(i32 %index) {
 define void @loadf32_byte(i32 %offset) {
   %buffer = call target("dx.RawBuffer", i8, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.rawBufferLoad.f32(i32 139, %dx.types.Handle %{{.*}}, i32 %offset, i32 0, i8 1, i32 4)
   %load = call {float, i1}
@@ -55,7 +55,7 @@ define void @loadf32_byte(i32 %offset) {
 define void @loadv4f32_struct(i32 %index) {
   %buffer = call target("dx.RawBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.rawBufferLoad.f32(i32 139, %dx.types.Handle %{{.*}}, i32 %index, i32 0, i8 15, i32 4)
   %load = call {<4 x float>, i1}
@@ -83,7 +83,7 @@ define void @loadv4f32_struct(i32 %index) {
 define void @loadv4f32_byte(i32 %offset) {
   %buffer = call target("dx.RawBuffer", i8, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.rawBufferLoad.f32(i32 139, %dx.types.Handle %{{.*}}, i32 %offset, i32 0, i8 15, i32 4)
   %load = call {<4 x float>, i1}
@@ -111,7 +111,7 @@ define void @loadv4f32_byte(i32 %offset) {
 define void @loadelements(i32 %index) {
   %buffer = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATAF32:%.*]] = call %dx.types.ResRet.f32 @dx.op.rawBufferLoad.f32(i32 139, %dx.types.Handle %{{.*}}, i32 %index, i32 0, i8 15, i32 4)
   %loadf32 = call {<4 x float>, i1}
@@ -158,7 +158,7 @@ define void @loadelements(i32 %index) {
 define void @loadnested(i32 %index) {
   %buffer = call
       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 0, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATAI32:%.*]] = call %dx.types.ResRet.i32 @dx.op.rawBufferLoad.i32(i32 139, %dx.types.Handle %{{.*}}, i32 %index, i32 0, i8 1, i32 4)
   %loadi32 = call {i32, i1} @llvm.dx.resource.load.rawbuffer.i32(
@@ -210,7 +210,7 @@ define void @loadnested(i32 %index) {
 define void @loadv4f64_byte(i32 %offset) {
   %buffer = call target("dx.RawBuffer", i8, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f64 @dx.op.rawBufferLoad.f64(i32 139, %dx.types.Handle %{{.*}}, i32 %offset, i32 0, i8 15, i32 8)
   %load = call {<4 x double>, i1} @llvm.dx.resource.load.rawbuffer.v4i64(

@@ -601,11 +601,9 @@ public:
       Instruction::CastOps firstOpcode,  ///< Opcode of first cast
       Instruction::CastOps secondOpcode, ///< Opcode of second cast
       Type *SrcTy,                       ///< SrcTy of 1st cast
-      Type *MidTy,       ///< DstTy of 1st cast & SrcTy of 2nd cast
-      Type *DstTy,       ///< DstTy of 2nd cast
-      Type *SrcIntPtrTy, ///< Integer type corresponding to Ptr SrcTy, or null
-      Type *MidIntPtrTy, ///< Integer type corresponding to Ptr MidTy, or null
-      Type *DstIntPtrTy  ///< Integer type corresponding to Ptr DstTy, or null
+      Type *MidTy,         ///< DstTy of 1st cast & SrcTy of 2nd cast
+      Type *DstTy,         ///< DstTy of 2nd cast
+      const DataLayout *DL ///< Optional data layout
   );
 
   /// Return the opcode of this CastInst

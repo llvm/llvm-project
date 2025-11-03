@@ -125,13 +125,6 @@ End-user Options
 
  Enable setting the FP exceptions build attribute not to use exceptions.
 
-.. option:: --enable-unsafe-fp-math
-
- Enable optimizations that make unsafe assumptions about IEEE math (e.g. that
- addition is associative) or may not work for all input ranges.  These
- optimizations allow the code generator to make use of some instructions which
- would otherwise not be usable (such as ``fsin`` on X86).
-
 .. option:: --stats
 
  Print statistics recorded by code-generation passes.

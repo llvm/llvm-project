@@ -1231,7 +1231,7 @@ define void @optimized_range_check_unsigned3(ptr %pred, i1 %c) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,3) S: [0,3) Exits: (-1 + %N)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, ptr %pred, i32 %iv
-; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N)<nsw> to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((zext i32 (-2 + (2 * %N)<nuw><nsw>)<nsw> to i64) + %pred) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4) S: [1,4) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned3
@@ -1390,9 +1390,9 @@ define void @ptr_induction_eq_2(ptr %a, i64 %n) {
 ; CHECK-NEXT:    %b = getelementptr inbounds ptr, ptr %a, i64 %n
 ; CHECK-NEXT:    --> ((8 * %n)<nsw> + %a) U: full-set S: full-set
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * ((-8 + (8 * %n)<nsw>) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: (-8 + (8 * %n)<nsw> + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
-; CHECK-NEXT:    --> {(8 + %a),+,8}<nuw><%loop> U: full-set S: full-set Exits: (8 + (8 * ((-8 + (8 * %n)<nsw>) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(8 + %a),+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * %n)<nsw> + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_eq_2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * %n)<nsw>) /u 8)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
@@ -1431,7 +1431,7 @@ define void @ptr_induction_early_exit_eq_1_with_align_on_load(ptr %a, ptr %b, pt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
@@ -1470,7 +1470,7 @@ define void @ptr_induction_early_exit_eq_1_with_align_on_arguments(ptr align 8 %
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
@@ -1511,7 +1511,7 @@ define void @ptr_induction_early_exit_eq_1_align_assumption_1(ptr %a, ptr %b, pt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
@@ -1556,7 +1556,7 @@ define void @ptr_induction_early_exit_eq_1_align_assumption_2(ptr %a, ptr %b, pt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)

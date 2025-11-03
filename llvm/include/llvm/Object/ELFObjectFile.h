@@ -1218,12 +1218,12 @@ ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
     : ELFObjectFileBase(getELFType(ELFT::Endianness == llvm::endianness::little,
                                    ELFT::Is64Bits),
                         Object),
-      EF(EF), DotDynSymSec(DotDynSymSec), DotSymtabSec(DotSymtabSec),
+      EF(std::move(EF)), DotDynSymSec(DotDynSymSec), DotSymtabSec(DotSymtabSec),
       DotSymtabShndxSec(DotSymtabShndx) {}
 
 template <class ELFT>
 ELFObjectFile<ELFT>::ELFObjectFile(ELFObjectFile<ELFT> &&Other)
-    : ELFObjectFile(Other.Data, Other.EF, Other.DotDynSymSec,
+    : ELFObjectFile(Other.Data, std::move(Other.EF), Other.DotDynSymSec,
                     Other.DotSymtabSec, Other.DotSymtabShndxSec) {}
 
 template <class ELFT>
@@ -1312,7 +1312,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
     case ELF::EM_PPC:
       return (IsLittleEndian ? "elf32-powerpcle" : "elf32-powerpc");
     case ELF::EM_RISCV:
-      return "elf32-littleriscv";
+      return (IsLittleEndian ? "elf32-littleriscv" : "elf32-bigriscv");
     case ELF::EM_CSKY:
       return "elf32-csky";
     case ELF::EM_SPARC:
@@ -1338,7 +1338,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
     case ELF::EM_PPC64:
       return (IsLittleEndian ? "elf64-powerpcle" : "elf64-powerpc");
     case ELF::EM_RISCV:
-      return "elf64-littleriscv";
+      return (IsLittleEndian ? "elf64-littleriscv" : "elf64-bigriscv");
     case ELF::EM_S390:
       return "elf64-s390";
     case ELF::EM_SPARCV9:
@@ -1400,9 +1400,9 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   case ELF::EM_RISCV:
     switch (EF.getHeader().e_ident[ELF::EI_CLASS]) {
     case ELF::ELFCLASS32:
-      return Triple::riscv32;
+      return IsLittleEndian ? Triple::riscv32 : Triple::riscv32be;
     case ELF::ELFCLASS64:
-      return Triple::riscv64;
+      return IsLittleEndian ? Triple::riscv64 : Triple::riscv64be;
     default:
       report_fatal_error("Invalid ELFCLASS!");
     }
@@ -1479,6 +1479,7 @@ template <class ELFT> Triple::OSType ELFObjectFile<ELFT>::getOS() const {
   case ELF::ELFOSABI_OPENBSD:
     return Triple::OpenBSD;
   case ELF::ELFOSABI_CUDA:
+  case ELF::ELFOSABI_CUDA_V2:
     return Triple::CUDA;
   case ELF::ELFOSABI_AMDGPU_HSA:
     return Triple::AMDHSA;

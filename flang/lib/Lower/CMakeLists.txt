@@ -15,6 +15,7 @@ add_flang_library(FortranLower
   ConvertProcedureDesignator.cpp
   ConvertType.cpp
   ConvertVariable.cpp
+  CUDA.cpp
   CustomIntrinsicCall.cpp
   HlfirIntrinsics.cpp
   HostAssociations.cpp
@@ -44,6 +45,7 @@ add_flang_library(FortranLower
   FIRDialect
   FIRTransforms
   HLFIRDialect
+  MIFDialect
 
   LINK_LIBS
   CUFAttrs
@@ -51,6 +53,7 @@ add_flang_library(FortranLower
   FIRDialect
   FIRDialectSupport
   FIRBuilder
+  FIROpenACCSupport
   FIRSupport
   FIRTransforms
   HLFIRDialect
@@ -58,6 +61,8 @@ add_flang_library(FortranLower
   FortranParser
   FortranEvaluate
   FortranSemantics
+  FortranUtils
+  MIFDialect
 
   LINK_COMPONENTS
   Support

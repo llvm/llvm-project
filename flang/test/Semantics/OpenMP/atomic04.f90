@@ -180,7 +180,7 @@ subroutine more_invalid_atomic_update_stmts()
         x = x
 
     !$omp atomic update
-    !ERROR: The atomic variable x should appear as an argument in the update operation
+    !ERROR: This is not a valid ATOMIC UPDATE operation
         x = 1    
 
     !$omp atomic update
@@ -205,9 +205,8 @@ subroutine more_invalid_atomic_update_stmts()
     !ERROR: The atomic variable a should appear as an argument of the top-level + operator
         a = a * b + c
 
+    !This is expected to work due to reassociation.
     !$omp atomic update
-    !ERROR: The atomic variable a cannot be a proper subexpression of an argument (here: a+b) in the update operation
-    !ERROR: The atomic variable a should appear as an argument of the top-level + operator
         a = a + b + c
 
     !$omp atomic

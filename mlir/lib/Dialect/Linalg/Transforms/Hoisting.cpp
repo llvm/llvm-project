@@ -53,9 +53,10 @@ static scf::ForOp replaceWithDifferentYield(RewriterBase &rewriter,
   assert(index < inits.size());
   inits[index] = newInitOperand;
 
-  scf::ForOp newLoop = rewriter.create<scf::ForOp>(
-      loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
-      inits, [](OpBuilder &, Location, Value, ValueRange) {});
+  scf::ForOp newLoop = scf::ForOp::create(
+      rewriter, loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(),
+      loop.getStep(), inits, [](OpBuilder &, Location, Value, ValueRange) {},
+      loop.getUnsignedCmp());
 
   // Generate the new yield with the replaced operand.
   auto yieldOp = cast<scf::YieldOp>(loop.getBody()->getTerminator());
@@ -104,7 +105,7 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
         return WalkResult::advance();
 
       // Check that the vector to extract from is a BlockArgument.
-      auto blockArg = dyn_cast<BlockArgument>(extractOp.getVector());
+      auto blockArg = dyn_cast<BlockArgument>(extractOp.getSource());
       if (!blockArg)
         return WalkResult::advance();
 
@@ -140,7 +141,7 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
           return WalkResult::advance();
 
       rewriter.modifyOpInPlace(broadcast, [&] {
-        extractOp.getVectorMutable().assign(initArg->get());
+        extractOp.getSourceMutable().assign(initArg->get());
       });
       loop.moveOutOfLoop(extractOp);
       rewriter.moveOpAfter(broadcast, loop);
@@ -165,9 +166,12 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
   Value source = transferRead.getBase();
 
   // Skip view-like Ops and retrive the actual soruce Operation
-  while (auto srcOp =
-             dyn_cast_or_null<ViewLikeOpInterface>(source.getDefiningOp()))
-    source = srcOp.getViewSource();
+  while (auto viewLike = source.getDefiningOp<ViewLikeOpInterface>()) {
+    if (viewLike.getViewDest() != source) {
+      break;
+    }
+    source = viewLike.getViewSource();
+  }
 
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
@@ -178,7 +182,8 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
     if (!processed.insert(user).second)
       continue;
     if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
-      users.append(viewLike->getUsers().begin(), viewLike->getUsers().end());
+      Value viewDest = viewLike.getViewDest();
+      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))

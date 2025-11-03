@@ -47,7 +47,6 @@ namespace llvm {
 
 class CodeViewContext;
 class MCAsmInfo;
-class MCDataFragment;
 class MCInst;
 class MCLabel;
 class MCObjectFileInfo;
@@ -176,7 +175,7 @@ private:
   unsigned GetInstance(unsigned LocalLabelVal);
 
   /// SHT_LLVM_BB_ADDR_MAP version to emit.
-  uint8_t BBAddrMapVersion = 3;
+  uint8_t BBAddrMapVersion = 4;
 
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
@@ -334,8 +333,6 @@ private:
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
 
-  MCDataFragment *allocInitialFragment(MCSection &Sec);
-
   MCSymbolTableEntry &getSymbolTableEntry(StringRef Name);
 
   MCSymbol *createSymbolImpl(const MCSymbolTableEntry *Name, bool IsTemporary);
@@ -393,6 +390,9 @@ public:
   LLVM_ABI ~MCContext();
 
   Environment getObjectFileType() const { return Env; }
+  bool isELF() const { return Env == IsELF; }
+  bool isMachO() const { return Env == IsMachO; }
+  bool isXCOFF() const { return Env == IsXCOFF; }
 
   const StringRef &getSwift5ReflectionSegmentName() const {
     return Swift5ReflectionSegmentName;
@@ -436,11 +436,6 @@ public:
 
   /// Create and return a new MC instruction.
   LLVM_ABI MCInst *createMCInst();
-
-  template <typename F, typename... Args> F *allocFragment(Args &&...args) {
-    return new (FragmentAllocator.Allocate(sizeof(F), alignof(F)))
-        F(std::forward<Args>(args)...);
-  }
 
   /// \name Symbol Management
   /// @{
@@ -488,6 +483,10 @@ public:
   ///
   /// \param Name - The symbol name, which must be unique across all symbols.
   LLVM_ABI MCSymbol *getOrCreateSymbol(const Twine &Name);
+
+  /// Variant of getOrCreateSymbol that handles backslash-escaped symbols.
+  /// For example, parse "a\"b\\" as a"\.
+  LLVM_ABI MCSymbol *parseSymbol(const Twine &Name);
 
   /// Gets a symbol that will be defined to the final stack offset of a local
   /// variable after codegen.

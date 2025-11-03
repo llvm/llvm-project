@@ -21,7 +21,7 @@ void f4(unsigned short a) {}
 // CHECK-LABEL: define dso_local void @f5(i64 noundef %a.coerce)
 void f5(_Complex float a) {}
 
-// CHECK-LABEL: define dso_local void @f6(ptr noundef %a)
+// CHECK-LABEL: define dso_local void @f6(ptr dead_on_return noundef %a)
 void f6(_Complex double a) {}
 
 // CHECK-LABEL: define dso_local i64 @f7()

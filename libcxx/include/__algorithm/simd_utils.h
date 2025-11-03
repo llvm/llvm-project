@@ -26,9 +26,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 // TODO: Find out how altivec changes things and allow vectorizations there too.
-// TODO: Simplify this condition once we stop building with AppleClang 15 in the CI.
-#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__ALTIVEC__) &&                         \
-    !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600)
+#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__ALTIVEC__)
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 1
 #else
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
@@ -117,6 +115,11 @@ template <class _VecT, class _Iter>
 }
 
 template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __any_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+  return __builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
+}
+
+template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
@@ -125,7 +128,7 @@ template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   using __mask_vec = __simd_vector<bool, _Np>;
 
-  // This has MSan disabled du to https://github.com/llvm/llvm-project/issues/85876
+  // This has MSan disabled du to https://llvm.org/PR85876
   auto __impl = [&]<class _MaskT>(_MaskT) _LIBCPP_NO_SANITIZE("memory") noexcept {
 #  if defined(_LIBCPP_BIG_ENDIAN)
     return std::min<size_t>(

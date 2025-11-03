@@ -205,6 +205,7 @@ void LinkerDriver::addFile(InputFile *file) {
     else
       cast<ObjFile>(file)->parseLazy();
   } else {
+    ctx.consumedInputsSize += file->mb.getBufferSize();
     file->parse();
     if (auto *f = dyn_cast<ObjFile>(file)) {
       ctx.objFileInstances.push_back(f);
@@ -274,8 +275,13 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
       make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
 
       int memberIndex = 0;
-      for (MemoryBufferRef m : getArchiveMembers(ctx, archive))
-        addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
+      for (MemoryBufferRef m : getArchiveMembers(ctx, archive)) {
+        if (!archive->isThin())
+          addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
+        else
+          addThinArchiveBuffer(m, "<whole-archive>");
+      }
+
       return;
     }
     addFile(make<ArchiveFile>(ctx, mbref));
@@ -386,11 +392,23 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   Log(ctx) << "Loaded " << obj << " for " << symName;
 }
 
+void LinkerDriver::addThinArchiveBuffer(MemoryBufferRef mb, StringRef symName) {
+  // Pass an empty string as the archive name and an offset of 0 so that
+  // the original filename is used as the buffer identifier. This is
+  // useful for DTLTO, where having the member identifier be the actual
+  // path on disk enables distribution of bitcode files during ThinLTO.
+  addArchiveBuffer(mb, symName, /*parentName=*/"", /*OffsetInArchive=*/0);
+}
+
 void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         const Archive::Symbol &sym,
                                         StringRef parentName) {
 
-  auto reportBufferError = [=](Error &&e, StringRef childName) {
+  auto reportBufferError = [=](Error &&e) {
+    StringRef childName =
+      CHECK(c.getName(),
+            "could not get child name for archive " + parentName +
+            " while loading symbol " + toCOFFString(ctx, sym));
     Fatal(ctx) << "could not get the buffer for the member defining symbol "
                << &sym << ": " << parentName << "(" << childName
                << "): " << std::move(e);
@@ -400,7 +418,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     uint64_t offsetInArchive = c.getChildOffset();
     Expected<MemoryBufferRef> mbOrErr = c.getMemoryBufferRef();
     if (!mbOrErr)
-      reportBufferError(mbOrErr.takeError(), check(c.getFullName()));
+      reportBufferError(mbOrErr.takeError());
     MemoryBufferRef mb = mbOrErr.get();
     enqueueTask([=]() {
       llvm::TimeTraceScope timeScope("Archive: ", mb.getBufferIdentifier());
@@ -419,14 +437,11 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
-      reportBufferError(errorCodeToError(mbOrErr.second), childName);
+      reportBufferError(errorCodeToError(mbOrErr.second));
     llvm::TimeTraceScope timeScope("Archive: ",
                                    mbOrErr.first->getBufferIdentifier());
-    // Pass empty string as archive name so that the original filename is
-    // used as the buffer identifier.
-    ctx.driver.addArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
-                                toCOFFString(ctx, sym), "",
-                                /*OffsetInArchive=*/0);
+    ctx.driver.addThinArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
+                                    toCOFFString(ctx, sym));
   });
 }
 
@@ -490,7 +505,9 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       file->symtab.parseAlternateName(arg->getValue());
       break;
     case OPT_arm64xsameaddress:
-      if (!file->symtab.isEC())
+      if (file->symtab.isEC())
+        parseSameAddress(arg->getValue());
+      else
         Warn(ctx) << arg->getSpelling()
                   << " is not allowed in non-ARM64EC files (" << toString(file)
                   << ")";
@@ -1308,13 +1325,9 @@ void LinkerDriver::convertResources() {
 }
 
 void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
-  Defined *def;
   if (!sym)
     return;
-  if (auto undef = dyn_cast<Undefined>(sym))
-    def = undef->getDefinedWeakAlias();
-  else
-    def = dyn_cast<Defined>(sym);
+  Defined *def = sym->getDefined();
   if (!def)
     return;
 
@@ -1346,11 +1359,7 @@ void LinkerDriver::createECExportThunks() {
     Symbol *sym = ctx.symtab.find(targetName);
     if (!sym)
       continue;
-    Defined *targetSym;
-    if (auto undef = dyn_cast<Undefined>(sym))
-      targetSym = undef->getDefinedWeakAlias();
-    else
-      targetSym = dyn_cast<Defined>(sym);
+    Defined *targetSym = sym->getDefined();
     if (!targetSym)
       continue;
 
@@ -1643,8 +1652,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         config->warnLocallyDefinedImported = false;
       else if (s == "longsections")
         config->warnLongSectionNames = false;
-      else if (s == "exporteddllmain")
-        config->warnExportedDllMain = false;
+      else if (s == "importeddllmain")
+        config->warnImportedDllMain = false;
       // Other warning numbers are ignored.
     }
   }
@@ -2045,6 +2054,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /section
   for (auto *arg : args.filtered(OPT_section))
     parseSection(arg->getValue());
+  // Handle /sectionlayout
+  if (auto *arg = args.getLastArg(OPT_sectionlayout))
+    parseSectionLayout(arg->getValue());
 
   // Handle /align
   if (auto *arg = args.getLastArg(OPT_align)) {
@@ -2088,6 +2100,27 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     Fatal(ctx) << "/manifestinput: requires /manifest:embed";
   }
 
+  // Handle /thinlto-distributor:<path>
+  config->dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor);
+
+  // Handle /thinlto-distributor-arg:<arg>
+  config->dtltoDistributorArgs =
+      args::getStrings(args, OPT_thinlto_distributor_arg);
+
+  // Handle /thinlto-remote-compiler:<path>
+  config->dtltoCompiler = args.getLastArgValue(OPT_thinlto_remote_compiler);
+  if (!config->dtltoDistributor.empty() && config->dtltoCompiler.empty())
+    Err(ctx) << "A value must be specified for /thinlto-remote-compiler if "
+                "/thinlto-distributor is specified.";
+
+  // Handle /thinlto-remote-compiler-prepend-arg:<arg>
+  config->dtltoCompilerPrependArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg);
+
+  // Handle /thinlto-remote-compiler-arg:<arg>
+  config->dtltoCompilerArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_arg);
+
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);
 
@@ -2118,6 +2151,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->integrityCheck =
       args.hasFlag(OPT_integritycheck, OPT_integritycheck_no, false);
   config->cetCompat = args.hasFlag(OPT_cetcompat, OPT_cetcompat_no, false);
+  config->cetCompatStrict =
+      args.hasFlag(OPT_cetcompatstrict, OPT_cetcompatstrict_no, false);
+  config->cetCompatIpValidationRelaxed = args.hasFlag(
+      OPT_cetipvalidationrelaxed, OPT_cetipvalidationrelaxed_no, false);
+  config->cetCompatDynamicApisInProcOnly = args.hasFlag(
+      OPT_cetdynamicapisinproc, OPT_cetdynamicapisinproc_no, false);
+  config->hotpatchCompat =
+      args.hasFlag(OPT_hotpatchcompatible, OPT_hotpatchcompatible_no, false);
   config->nxCompat = args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
   for (auto *arg : args.filtered(OPT_swaprun))
     parseSwaprun(arg->getValue());
@@ -2271,10 +2312,23 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
     parseFunctionPadMin(arg);
 
+  // MS link.exe compatibility, at least 6 bytes of function padding is
+  // required if hotpatchable
+  if (config->hotpatchCompat && config->functionPadMin < 6)
+    Err(ctx)
+        << "/hotpatchcompatible: requires at least 6 bytes of /functionpadmin";
+
   // Handle /dependentloadflag
   for (auto *arg :
        args.filtered(OPT_dependentloadflag, OPT_dependentloadflag_opt))
     parseDependentLoadFlags(arg);
+
+  for (auto *arg : args.filtered(OPT_arm64xsameaddress)) {
+    if (ctx.hybridSymtab)
+      parseSameAddress(arg->getValue());
+    else
+      Warn(ctx) << arg->getSpelling() << " is allowed only on EC targets";
+  }
 
   if (tar) {
     llvm::TimeTraceScope timeScope("Reproducer: response file");
@@ -2291,6 +2345,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->highEntropyVA =
       config->is64() &&
       args.hasFlag(OPT_highentropyva, OPT_highentropyva_no, true);
+
+  // Handle /nodbgdirmerge
+  config->mergeDebugDirectory = !args.hasArg(OPT_nodbgdirmerge);
 
   if (!config->dynamicBase &&
       (config->machine == ARMNT || isAnyArm64(config->machine)))
@@ -2527,28 +2584,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
             e.symbolName = symtab.mangleMaybe(e.sym);
         }
 
-        // Add weak aliases. Weak aliases is a mechanism to give remaining
-        // undefined symbols final chance to be resolved successfully.
-        for (auto pair : symtab.alternateNames) {
-          StringRef from = pair.first;
-          StringRef to = pair.second;
-          Symbol *sym = symtab.find(from);
-          if (!sym)
-            continue;
-          if (auto *u = dyn_cast<Undefined>(sym)) {
-            if (u->weakAlias) {
-              // On ARM64EC, anti-dependency aliases are treated as undefined
-              // symbols unless a demangled symbol aliases a defined one, which
-              // is part of the implementation.
-              if (!symtab.isEC() || !u->isAntiDep)
-                continue;
-              if (!isa<Undefined>(u->weakAlias) &&
-                  !isArm64ECMangledFunctionName(u->getName()))
-                continue;
-            }
-            u->setWeakAlias(symtab.addUndefined(to));
-          }
-        }
+        symtab.resolveAlternateNames();
       });
 
       ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
@@ -2670,11 +2706,47 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     createECExportThunks();
 
   // Resolve remaining undefined symbols and warn about imported locals.
+  std::vector<Undefined *> aliases;
   ctx.forEachSymtab(
-      [&](SymbolTable &symtab) { symtab.resolveRemainingUndefines(); });
+      [&](SymbolTable &symtab) { symtab.resolveRemainingUndefines(aliases); });
 
   if (errorCount())
     return;
+
+  ctx.forEachActiveSymtab([](SymbolTable &symtab) {
+    symtab.initializeECThunks();
+    symtab.initializeLoadConfig();
+  });
+
+  // Identify unreferenced COMDAT sections.
+  if (config->doGC) {
+    if (config->mingw) {
+      // markLive doesn't traverse .eh_frame, but the personality function is
+      // only reached that way. The proper solution would be to parse and
+      // traverse the .eh_frame section, like the ELF linker does.
+      // For now, just manually try to retain the known possible personality
+      // functions. This doesn't bring in more object files, but only marks
+      // functions that already have been included to be retained.
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
+                              "rust_eh_personality"}) {
+          Defined *d = dyn_cast_or_null<Defined>(symtab.findUnderscore(n));
+          if (d && !d->isGCRoot) {
+            d->isGCRoot = true;
+            config->gcroot.push_back(d);
+          }
+        }
+      });
+    }
+
+    markLive(ctx);
+  }
+
+  ctx.symtab.initializeSameAddressThunks();
+  for (auto alias : aliases) {
+    assert(alias->kind() == Symbol::UndefinedKind);
+    alias->resolveWeakAlias();
+  }
 
   if (config->mingw) {
     // Make sure the crtend.o object is the last object file. This object
@@ -2766,35 +2838,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /print-symbol-order.
   if (auto *arg = args.getLastArg(OPT_print_symbol_order))
     config->printSymbolOrder = arg->getValue();
-
-  if (ctx.symtab.isEC())
-    ctx.symtab.initializeECThunks();
-  ctx.forEachActiveSymtab(
-      [](SymbolTable &symtab) { symtab.initializeLoadConfig(); });
-
-  // Identify unreferenced COMDAT sections.
-  if (config->doGC) {
-    if (config->mingw) {
-      // markLive doesn't traverse .eh_frame, but the personality function is
-      // only reached that way. The proper solution would be to parse and
-      // traverse the .eh_frame section, like the ELF linker does.
-      // For now, just manually try to retain the known possible personality
-      // functions. This doesn't bring in more object files, but only marks
-      // functions that already have been included to be retained.
-      ctx.forEachSymtab([&](SymbolTable &symtab) {
-        for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
-                              "rust_eh_personality"}) {
-          Defined *d = dyn_cast_or_null<Defined>(symtab.findUnderscore(n));
-          if (d && !d->isGCRoot) {
-            d->isGCRoot = true;
-            config->gcroot.push_back(d);
-          }
-        }
-      });
-    }
-
-    markLive(ctx);
-  }
 
   // Needs to happen after the last call to addFile().
   convertResources();

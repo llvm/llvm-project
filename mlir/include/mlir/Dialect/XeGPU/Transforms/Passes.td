@@ -43,7 +43,12 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
   let options = [Option<
     "printOnly", "print-analysis-only", "bool",
     /*default=*/"false",
-    "Print the result of layout propagation analysis and exit.">];
+    "Print the result of layout propagation analysis and exit.">,
+    Option<
+    "layoutKind", "layout-kind", "std::string",
+    /*default=*/"\"lane\"",
+    "Propagate a `sg` / `inst` / `lane` level of xegpu layouts.">
+  ];
 }
 
 def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {
@@ -67,8 +72,17 @@ def XeGPUBlocking: Pass<"xegpu-blocking"> {
     to a hardware instruction.
   }];
   let dependentDialects = [
-      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect"
-  ];
+      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect",
+      "index::IndexDialect"];
+}
+
+def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
+  let summary = "Linearize n-D vectors to 1-D vectors";
+  let description = [{
+    This pass linearizes n-D vectors to 1-D vectors for lowering to XeVM.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect",
+                           "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
