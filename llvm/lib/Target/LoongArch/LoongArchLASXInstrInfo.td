@@ -1558,6 +1558,10 @@ defm : PatXrXrF<fmul, "XVFMUL">;
 // XVFDIV_{S/D}
 defm : PatXrXrF<fdiv, "XVFDIV">;
 
+// XVFMAX_{S/D}, XVFMIN_{S/D}
+defm : PatXrXrF<fmaxnum, "XVFMAX">;
+defm : PatXrXrF<fminnum, "XVFMIN">;
+
 // XVFMADD_{S/D}
 def : Pat<(fma v8f32:$xj, v8f32:$xk, v8f32:$xa),
           (XVFMADD_S v8f32:$xj, v8f32:$xk, v8f32:$xa)>;
