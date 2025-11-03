@@ -2,6 +2,9 @@
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-special-lds,amdgpu-lower-module-lds < %s 2>&1 | FileCheck %s
 ; RUN: llc < %s -enable-new-pm -stop-after=amdgpu-lower-module-lds -mtriple=amdgcn-amd-amdhsa | FileCheck %s
 
+; Test to ensure that special LDS variables like named barriers are lowered correctly,
+; where amdgpu-lower-module-lds pass runs in pipeline after amdgpu-lower-special-lds pass.
+
 %class.ExpAmdWorkgroupWaveBarrier = type { target("amdgcn.named.barrier", 0) }
 @bar2 = internal addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] poison
 @bar3 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
