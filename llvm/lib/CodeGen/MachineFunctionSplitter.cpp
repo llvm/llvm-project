@@ -136,7 +136,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   // of exception handling code may be split to cold if user passes the
   // mfs-split-ehcode flag.
   bool UseProfileData = MF.getFunction().hasProfileData();
-  if (!UseProfileData && !SplitAllEHCode)
+  if (!skipFunction(MF.getFunction()) && !UseProfileData && !SplitAllEHCode)
     return false;
 
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
