@@ -293,9 +293,6 @@ jobs:
     # needs: [ stage2 ] # TODO: temporarily always trigger
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Docker
-        uses: docker/setup-docker-action@3fb92d6d9c634363128c8cce4bc3b2826526370a
-
       - name: Trigger Buildkite pipeline
         uses: buildkite/trigger-pipeline-action@f0dcd5ae74452a8d17d473227c9d212dcc1eb8f9 # v2.4.0
         with:
