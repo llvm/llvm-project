@@ -2005,7 +2005,8 @@ MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
           getStruct<MachO::section_64>(*this, Sections[SectIdx]);
       uint64_t CurrTrueOffset = (uint64_t)CurrSect.offset + SectOffsetAdjust;
       if ((SectOffsetAdjust > 0) && (PrevTrueOffset > CurrTrueOffset))
-        return malformedError("section data exceeds 4GB and are not ordered");
+        return malformedError("section data exceeds 4GB and section file "
+                              "offsets are not ordered");
       const uint64_t EndSectFileOffset =
           (uint64_t)CurrSect.offset + CurrSect.size;
       if (EndSectFileOffset > UINT32_MAX)
