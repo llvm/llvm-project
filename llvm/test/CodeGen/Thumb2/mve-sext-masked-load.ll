@@ -55,7 +55,10 @@ define arm_aapcs_vfpcc <4 x double> @foo_v4i32(ptr nocapture readonly %pSrc, i32
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vpt.s32 lt, q0, zr
+; CHECK-NEXT:    vcmp.s32 lt, q0, zr
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q5, [r0]
 ; CHECK-NEXT:    vmov.f32 s2, s23
 ; CHECK-NEXT:    vmov.f32 s16, s22
@@ -69,6 +72,9 @@ define arm_aapcs_vfpcc <4 x double> @foo_v4i32(ptr nocapture readonly %pSrc, i32
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl __aeabi_l2d
 ; CHECK-NEXT:    vmov.f32 s2, s21
+; CHECK-NEXT:    @ implicit-def: $s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    asrs r3, r2, #31

@@ -61,6 +61,7 @@ define amdgpu_ps void @image_store_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; GFX81-NEXT:    s_mov_b32 s5, s7
 ; GFX81-NEXT:    s_mov_b32 s6, s8
 ; GFX81-NEXT:    s_mov_b32 s7, s9
+; GFX81-NEXT:    ; implicit-def: $vgpr3
 ; GFX81-NEXT:    image_store v[2:3], v[0:1], s[0:7] dmask:0x3 unorm d16
 ; GFX81-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v2f16.i32(<2 x half> %in, i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -135,6 +136,8 @@ define amdgpu_ps void @image_store_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; GFX81-NEXT:    s_mov_b32 s5, s7
 ; GFX81-NEXT:    s_mov_b32 s6, s8
 ; GFX81-NEXT:    s_mov_b32 s7, s9
+; GFX81-NEXT:    ; implicit-def: $vgpr4
+; GFX81-NEXT:    ; implicit-def: $vgpr5
 ; GFX81-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0xf unorm d16
 ; GFX81-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f16.i32(<4 x half> %in, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)

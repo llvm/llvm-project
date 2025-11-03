@@ -463,12 +463,14 @@ define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 ; CHECK-NEXT:    vld1.32 {d18[0]}, [lr:32]
 ; CHECK-NEXT:    add lr, sp, #40
 ; CHECK-NEXT:    vld1.32 {d20[0]}, [lr:32]
+; CHECK-NEXT:    @ implicit-def: $d21
 ; CHECK-NEXT:    ldr r12, [sp, #68]
 ; CHECK-NEXT:    ldr r4, [r12]
 ; CHECK-NEXT:    vmov.32 d23[0], r4
 ; CHECK-NEXT:    add r4, sp, #64
 ; CHECK-NEXT:    vld1.32 {d24[0]}, [r4:32]
 ; CHECK-NEXT:    add r4, sp, #36
+; CHECK-NEXT:    @ implicit-def: $d25
 ; CHECK-NEXT:    vcgt.u32 q10, q12, q10
 ; CHECK-NEXT:    vld1.32 {d17[1]}, [r4:32]
 ; CHECK-NEXT:    add r4, sp, #28

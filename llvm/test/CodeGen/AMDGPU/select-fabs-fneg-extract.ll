@@ -893,8 +893,8 @@ define amdgpu_kernel void @mul_select_negfabs_negk_inv2pi_f32(i32 %c) #0 {
 
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0xbe22f983
 ; GCN: s_cmp_lg_u32
-; GCN: s_cselect_b64 s[0:1], -1, 0
-; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[K]], -|[[X]]|, s[0:1]
+; GCN: s_cselect_b64 s[4:5], -1, 0
+; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[K]], -|[[X]]|, s[4:5]
 ; GCN: v_mul_f32_e32 v{{[0-9]+}}, [[SELECT]], [[Y]]
 define amdgpu_kernel void @mul_select_negk_inv2pi_negfabs_f32(i32 %c) #0 {
   %x = load volatile float, ptr addrspace(1) poison
@@ -973,8 +973,8 @@ define amdgpu_kernel void @mul_select_negfabs_negk_0_f32(i32 %c) #0 {
 
 ; GCN: v_bfrev_b32_e32 [[NEG0:v[0-9]+]], 1
 ; GCN: s_cmp_lg_u32
-; GCN: s_cselect_b64 s[0:1], -1, 0
-; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[NEG0]], -|[[X]]|, s[0:1]
+; GCN: s_cselect_b64 s[4:5], -1, 0
+; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[NEG0]], -|[[X]]|, s[4:5]
 ; GCN: v_mul_f32_e32 v{{[0-9]+}}, [[SELECT]], [[Y]]
 define amdgpu_kernel void @mul_select_negk_0_negfabs_f32(i32 %c) #0 {
   %x = load volatile float, ptr addrspace(1) poison

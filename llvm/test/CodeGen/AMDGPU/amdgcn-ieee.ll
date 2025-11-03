@@ -74,6 +74,8 @@ define amdgpu_kernel void @kernel_ieee_mode_default() #0 {
 ; GCN-NEXT:  ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -164,6 +166,8 @@ define amdgpu_kernel void @kernel_ieee_mode_on() #1 {
 ; GCN-NEXT:  ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -254,6 +258,8 @@ define amdgpu_kernel void @kernel_ieee_mode_off() #2 {
 ; GCN-NEXT:  ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -275,6 +281,8 @@ define void @func_ieee_mode_default() #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    ; implicit-def: $sgpr4
+; GCN-NEXT:    ; implicit-def: $sgpr5
 ; GCN-NEXT:    buffer_load_dword v0, off, s[4:7], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[4:7], 0 glc
@@ -298,6 +306,8 @@ define void @func_ieee_mode_on() #1 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    ; implicit-def: $sgpr4
+; GCN-NEXT:    ; implicit-def: $sgpr5
 ; GCN-NEXT:    buffer_load_dword v0, off, s[4:7], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[4:7], 0 glc
@@ -321,6 +331,8 @@ define void @func_ieee_mode_off() #2 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    ; implicit-def: $sgpr4
+; GCN-NEXT:    ; implicit-def: $sgpr5
 ; GCN-NEXT:    buffer_load_dword v0, off, s[4:7], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[4:7], 0 glc
@@ -341,6 +353,8 @@ define amdgpu_cs void @cs_ieee_mode_default() #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -361,6 +375,8 @@ define amdgpu_cs void @cs_ieee_mode_on() #1 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -383,6 +399,8 @@ define amdgpu_cs void @cs_ieee_mode_off() #2 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -403,6 +421,8 @@ define amdgpu_ps void @ps_ieee_mode_default() #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -423,6 +443,8 @@ define amdgpu_ps void @ps_ieee_mode_on() #1 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -445,6 +467,8 @@ define amdgpu_ps void @ps_ieee_mode_off() #2 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc

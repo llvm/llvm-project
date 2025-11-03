@@ -5563,8 +5563,9 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; SI-GISEL-NEXT:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_mov_b32 s3, s11
+; SI-GISEL-NEXT:    s_mov_b32 s14, -1
+; SI-GISEL-NEXT:    ; implicit-def: $sgpr12_sgpr13
+; SI-GISEL-NEXT:    s_mov_b32 s15, s11
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -5573,7 +5574,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
 ; SI-GISEL-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v4
-; SI-GISEL-NEXT:    buffer_store_dword v5, off, s[0:3], 0
+; SI-GISEL-NEXT:    buffer_store_dword v5, off, s[12:15], 0
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_min_f32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v5, v2
@@ -5765,8 +5766,9 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; SI-GISEL-NEXT:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_mov_b32 s3, s11
+; SI-GISEL-NEXT:    s_mov_b32 s14, -1
+; SI-GISEL-NEXT:    ; implicit-def: $sgpr12_sgpr13
+; SI-GISEL-NEXT:    s_mov_b32 s15, s11
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -5775,7 +5777,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
 ; SI-GISEL-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v4
-; SI-GISEL-NEXT:    buffer_store_dword v2, off, s[0:3], 0
+; SI-GISEL-NEXT:    buffer_store_dword v2, off, s[12:15], 0
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-GISEL-NEXT:    v_min_f32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v5, v2
@@ -5992,8 +5994,9 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1)
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; SI-GISEL-NEXT:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_mov_b32 s3, s11
+; SI-GISEL-NEXT:    s_mov_b32 s14, -1
+; SI-GISEL-NEXT:    ; implicit-def: $sgpr12_sgpr13
+; SI-GISEL-NEXT:    s_mov_b32 s15, s11
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -6003,7 +6006,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1)
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v4
 ; SI-GISEL-NEXT:    v_min_f32_e32 v2, v2, v3
-; SI-GISEL-NEXT:    buffer_store_dword v2, off, s[0:3], 0
+; SI-GISEL-NEXT:    buffer_store_dword v2, off, s[12:15], 0
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v5, v2
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
@@ -8776,6 +8779,7 @@ define half @v_test_fmed3_r_i_i_f16_minimumnum_maximumnum(half %a) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -9299,6 +9303,7 @@ define half @v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum(half %a) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_max_f16_e32 v0.h, 2.0, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0

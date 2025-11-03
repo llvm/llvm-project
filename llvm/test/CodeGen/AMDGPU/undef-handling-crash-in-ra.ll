@@ -78,6 +78,9 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[60:61]
 ; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:4
 ; CHECK-NEXT:    buffer_store_dword v58, v0, s[0:3], 0 offen
+; CHECK-NEXT:    ; implicit-def: $vgpr43
+; CHECK-NEXT:    ; implicit-def: $vgpr44
+; CHECK-NEXT:    ; implicit-def: $vgpr45
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -103,6 +106,9 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; CHECK-NEXT:  ; %bb.6: ; %sw.bb.i.i.i.i
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:  ; %bb.7: ; %Flow7
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
@@ -120,6 +126,11 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CHECK-NEXT:  ; %bb.11: ; %sw.bb7.i.i.i3.i.i
+; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; implicit-def: $vgpr3
+; CHECK-NEXT:  ; %bb.12: ; %bb.4
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], 0
 ; CHECK-NEXT:    s_endpgm

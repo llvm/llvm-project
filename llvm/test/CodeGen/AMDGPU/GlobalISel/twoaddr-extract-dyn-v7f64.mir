@@ -51,6 +51,7 @@ body:             |
     ; CHECK-NEXT: [[COPY22:%[0-9]+]].sub8_sub9:vreg_512 = COPY [[COPY18]]
     ; CHECK-NEXT: [[COPY22:%[0-9]+]].sub10_sub11:vreg_512 = COPY [[COPY19]]
     ; CHECK-NEXT: [[COPY22:%[0-9]+]].sub12_sub13:vreg_512 = COPY [[COPY20]]
+    ; CHECK-NEXT: [[COPY22:%[0-9]+]].sub14_sub15:vreg_512 = IMPLICIT_DEF
     ; CHECK-NEXT: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 1, [[COPY21]], implicit $exec
     ; CHECK-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY22]].sub0, 0, [[COPY22]].sub2, [[V_CMP_EQ_U32_e64_]], implicit $exec
     ; CHECK-NEXT: [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY22]].sub1, 0, [[COPY22]].sub3, [[V_CMP_EQ_U32_e64_]], implicit $exec

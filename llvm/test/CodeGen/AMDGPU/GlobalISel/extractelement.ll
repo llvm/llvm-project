@@ -2470,6 +2470,7 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v_bitcast(<14 x float> inreg %userD
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
+; GCN-NEXT:    ; implicit-def: $sgpr16_sgpr17
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dyn_extract_v7f64_s_v_bitcast:
@@ -2603,6 +2604,7 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v(<7 x double> inreg %vec, i32 %sel
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
+; GCN-NEXT:    ; implicit-def: $sgpr16_sgpr17
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dyn_extract_v7f64_s_v:
@@ -2745,29 +2747,32 @@ define amdgpu_ps double @dyn_extract_v7f64_v_s(<7 x double> %vec, i32 inreg %sel
 ; GPRIDX-LABEL: dyn_extract_v7f64_v_s:
 ; GPRIDX:       ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
+; GPRIDX-NEXT:    ; implicit-def: $vgpr14_vgpr15
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
-; GPRIDX-NEXT:    v_mov_b32_e32 v14, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, v0
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
-; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v14
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v16
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v0
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
 ; MOVREL-LABEL: dyn_extract_v7f64_v_s:
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    s_lshl_b32 m0, s2, 1
-; MOVREL-NEXT:    v_movrels_b32_e32 v14, v0
+; MOVREL-NEXT:    ; implicit-def: $vgpr14_vgpr15
+; MOVREL-NEXT:    v_movrels_b32_e32 v16, v0
 ; MOVREL-NEXT:    v_movrels_b32_e32 v0, v1
-; MOVREL-NEXT:    v_readfirstlane_b32 s0, v14
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v16
 ; MOVREL-NEXT:    v_readfirstlane_b32 s1, v0
 ; MOVREL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: dyn_extract_v7f64_v_s:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_lshl_b32 m0, s2, 1
-; GFX10PLUS-NEXT:    v_movrels_b32_e32 v14, v0
+; GFX10PLUS-NEXT:    ; implicit-def: $vgpr14_vgpr15
+; GFX10PLUS-NEXT:    v_movrels_b32_e32 v16, v0
 ; GFX10PLUS-NEXT:    v_movrels_b32_e32 v0, v1
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v14
+; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v16
 ; GFX10PLUS-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
@@ -2793,6 +2798,7 @@ define amdgpu_ps double @dyn_extract_v7f64_s_s(<7 x double> inreg %vec, i32 inre
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    s_mov_b32 s12, s14
 ; GCN-NEXT:    s_mov_b32 s13, s15
+; GCN-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[0:1]
 ; GCN-NEXT:    ; return to shader part epilog
 ;
@@ -2813,6 +2819,7 @@ define amdgpu_ps double @dyn_extract_v7f64_s_s(<7 x double> inreg %vec, i32 inre
 ; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
 ; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
 ; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
+; GFX10PLUS-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[0:1]
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
@@ -3324,6 +3331,7 @@ define amdgpu_ps float @dyn_extract_v15f32_const_s_s(i32 inreg %sel) {
 ; GCN-NEXT:    s_mov_b32 s7, 4.0
 ; GCN-NEXT:    s_mov_b32 s6, 0x40400000
 ; GCN-NEXT:    s_mov_b32 s5, 2.0
+; GCN-NEXT:    ; implicit-def: $sgpr19
 ; GCN-NEXT:    s_movrels_b32 s0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -3346,6 +3354,7 @@ define amdgpu_ps float @dyn_extract_v15f32_const_s_s(i32 inreg %sel) {
 ; GFX10PLUS-NEXT:    s_mov_b32 s7, 4.0
 ; GFX10PLUS-NEXT:    s_mov_b32 s6, 0x40400000
 ; GFX10PLUS-NEXT:    s_mov_b32 s5, 2.0
+; GFX10PLUS-NEXT:    ; implicit-def: $sgpr19
 ; GFX10PLUS-NEXT:    s_movrels_b32 s0, s4
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
@@ -3556,6 +3565,7 @@ entry:
 define amdgpu_ps float @dyn_extract_v15f32_v_s(<15 x float> %vec, i32 inreg %sel) {
 ; GPRIDX-LABEL: dyn_extract_v15f32_v_s:
 ; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    ; implicit-def: $vgpr15
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, v0
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
@@ -3564,12 +3574,14 @@ define amdgpu_ps float @dyn_extract_v15f32_v_s(<15 x float> %vec, i32 inreg %sel
 ; MOVREL-LABEL: dyn_extract_v15f32_v_s:
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    ; implicit-def: $vgpr15
 ; MOVREL-NEXT:    v_movrels_b32_e32 v0, v0
 ; MOVREL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: dyn_extract_v15f32_v_s:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_mov_b32 m0, s2
+; GFX10PLUS-NEXT:    ; implicit-def: $vgpr15
 ; GFX10PLUS-NEXT:    v_movrels_b32_e32 v0, v0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
@@ -3596,6 +3608,7 @@ define amdgpu_ps float @dyn_extract_v15f32_s_s(<15 x float> inreg %vec, i32 inre
 ; GCN-NEXT:    s_mov_b32 s12, s14
 ; GCN-NEXT:    s_mov_b32 s13, s15
 ; GCN-NEXT:    s_mov_b32 s14, s16
+; GCN-NEXT:    ; implicit-def: $sgpr15
 ; GCN-NEXT:    s_movrels_b32 s0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -3618,6 +3631,7 @@ define amdgpu_ps float @dyn_extract_v15f32_s_s(<15 x float> inreg %vec, i32 inre
 ; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
 ; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
 ; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
+; GFX10PLUS-NEXT:    ; implicit-def: $sgpr15
 ; GFX10PLUS-NEXT:    s_movrels_b32 s0, s0
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
@@ -3645,6 +3659,7 @@ define amdgpu_ps float @dyn_extract_v15f32_s_s_offset3(<15 x float> inreg %vec, 
 ; GCN-NEXT:    s_mov_b32 s12, s14
 ; GCN-NEXT:    s_mov_b32 s13, s15
 ; GCN-NEXT:    s_mov_b32 s14, s16
+; GCN-NEXT:    ; implicit-def: $sgpr15
 ; GCN-NEXT:    s_movrels_b32 s0, s3
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -3667,6 +3682,7 @@ define amdgpu_ps float @dyn_extract_v15f32_s_s_offset3(<15 x float> inreg %vec, 
 ; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
 ; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
 ; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
+; GFX10PLUS-NEXT:    ; implicit-def: $sgpr15
 ; GFX10PLUS-NEXT:    s_movrels_b32 s0, s3
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog

@@ -207,6 +207,7 @@ define void @matrix_mul_double_shuffle(i32 %N, ptr nocapture %C, ptr nocapture r
 ; CHECK-GI-NEXT:    fmov s2, w9
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    add w0, w0, #8
+; CHECK-GI-NEXT:    // implicit-def: $q3
 ; CHECK-GI-NEXT:    lsl x9, x9, #2
 ; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v1.16b
 ; CHECK-GI-NEXT:    mul v2.4s, v0.4s, v2.4s

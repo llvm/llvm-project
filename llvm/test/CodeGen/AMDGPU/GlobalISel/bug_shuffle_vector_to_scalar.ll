@@ -13,9 +13,11 @@ define amdgpu_gs <4 x float> @_amdgpu_gs_main() {
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    s_mov_b32 s2, s0
 ; CHECK-NEXT:    s_mov_b32 s3, s0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v2, s[0:3], 0 idxen
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

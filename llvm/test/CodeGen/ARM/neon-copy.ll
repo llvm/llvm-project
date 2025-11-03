@@ -1212,6 +1212,7 @@ define <2 x i64> @scalar_to_vector_v2i64(i64 %a) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.32 d0[0], r0
 ; CHECK-NEXT:    vmov.32 d0[1], r1
+; CHECK-NEXT:    @ implicit-def: $d1
 ; CHECK-NEXT:    bx lr
   %b = insertelement <2 x i64> undef, i64 %a, i32 0
   ret <2 x i64> %b

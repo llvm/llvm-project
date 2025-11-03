@@ -8,6 +8,8 @@ define i32 @mov16_bfi_fold_regression(half %arg, i32 %arg1) {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b16_e32 v2.l, 0x3c00
+; CHECK-NEXT:    ; implicit-def: $vgpr0_hi16
+; CHECK-NEXT:    ; implicit-def: $vgpr2_hi16
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v1
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0

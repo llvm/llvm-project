@@ -100,6 +100,7 @@ define <3 x half> @v_constained_fma_v3f16_fpexcept_strict(<3 x half> %x, <3 x ha
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v5.l, v1.l, v3.l
 ; GFX11-TRUE16-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

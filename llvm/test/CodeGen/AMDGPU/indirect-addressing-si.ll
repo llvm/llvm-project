@@ -7397,6 +7397,8 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; GENERIC-NEXT:  ; %bb.1: ; %bb4
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    ; implicit-def: $sgpr0
+; GENERIC-NEXT:    ; implicit-def: $sgpr1
 ; GENERIC-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    ;;#ASMSTART
@@ -7407,6 +7409,8 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; GENERIC-NEXT:  .LBB19_2: ; %bb1
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    ; implicit-def: $sgpr0
+; GENERIC-NEXT:    ; implicit-def: $sgpr1
 ; GENERIC-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    ;;#ASMSTART
@@ -7415,6 +7419,8 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; GENERIC-NEXT:  .LBB19_3: ; %bb7
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    ; implicit-def: $sgpr0
+; GENERIC-NEXT:    ; implicit-def: $sgpr1
 ; GENERIC-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    s_endpgm
@@ -7530,6 +7536,8 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; SI-MOVREL-NEXT:  ; %bb.1: ; %bb4
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr0
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr1
 ; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
@@ -7539,6 +7547,8 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; SI-MOVREL-NEXT:  .LBB19_2: ; %bb1
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr0
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr1
 ; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
@@ -7547,6 +7557,8 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; SI-MOVREL-NEXT:  .LBB19_3: ; %bb7
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr0
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr1
 ; SI-MOVREL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    s_endpgm
@@ -7636,6 +7648,8 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; GENERIC-NEXT:  ; %bb.1: ; %bb4
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    ; implicit-def: $sgpr0
+; GENERIC-NEXT:    ; implicit-def: $sgpr1
 ; GENERIC-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    ;;#ASMSTART
@@ -7646,6 +7660,8 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; GENERIC-NEXT:  .LBB20_2: ; %bb1
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    ; implicit-def: $sgpr0
+; GENERIC-NEXT:    ; implicit-def: $sgpr1
 ; GENERIC-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    ;;#ASMSTART
@@ -7654,6 +7670,8 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; GENERIC-NEXT:  .LBB20_3: ; %bb7
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    ; implicit-def: $sgpr0
+; GENERIC-NEXT:    ; implicit-def: $sgpr1
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    s_endpgm
@@ -7778,6 +7796,8 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; SI-MOVREL-NEXT:  ; %bb.1: ; %bb4
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr0
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr1
 ; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
@@ -7787,6 +7807,8 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; SI-MOVREL-NEXT:  .LBB20_2: ; %bb1
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr0
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr1
 ; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
@@ -7795,6 +7817,8 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; SI-MOVREL-NEXT:  .LBB20_3: ; %bb7
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr0
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr1
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    s_endpgm
@@ -7976,59 +8000,123 @@ define amdgpu_kernel void @multi_same_block(i32 %arg) {
 ; SI-MOVREL:       ; %bb.0: ; %bb
 ; SI-MOVREL-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v1, 0x41900000
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v9, 0x41b0cccd
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr0
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr2
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr3
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr4
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr5
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr6
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr7
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr8
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v14, 0x41b0cccd
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr9
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr10
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr11
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr12
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr13
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr15
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr16
+; SI-MOVREL-NEXT:    ; implicit-def: $vgpr17
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-MOVREL-NEXT:    s_add_i32 m0, s0, -16
 ; SI-MOVREL-NEXT:    v_movreld_b32_e32 v0, 4.0
-; SI-MOVREL-NEXT:    v_movreld_b32_e32 v4, -4.0
+; SI-MOVREL-NEXT:    v_movreld_b32_e32 v9, -4.0
 ; SI-MOVREL-NEXT:    s_mov_b32 m0, -1
 ; SI-MOVREL-NEXT:    ds_write_b32 v0, v1
-; SI-MOVREL-NEXT:    ds_write_b32 v0, v9
+; SI-MOVREL-NEXT:    ds_write_b32 v0, v14
 ; SI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-MOVREL-LABEL: multi_same_block:
 ; VI-MOVREL:       ; %bb.0: ; %bb
 ; VI-MOVREL-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, 0x41900000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v9, 0x41b0cccd
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr0
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr2
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr3
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr4
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr5
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr6
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr7
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr8
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v14, 0x41b0cccd
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr9
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr10
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr11
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr12
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr13
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr15
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr16
+; VI-MOVREL-NEXT:    ; implicit-def: $vgpr17
 ; VI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-MOVREL-NEXT:    s_add_i32 m0, s0, -16
 ; VI-MOVREL-NEXT:    v_movreld_b32_e32 v0, 4.0
-; VI-MOVREL-NEXT:    v_movreld_b32_e32 v4, -4.0
+; VI-MOVREL-NEXT:    v_movreld_b32_e32 v9, -4.0
 ; VI-MOVREL-NEXT:    s_mov_b32 m0, -1
 ; VI-MOVREL-NEXT:    ds_write_b32 v0, v1
-; VI-MOVREL-NEXT:    ds_write_b32 v0, v9
+; VI-MOVREL-NEXT:    ds_write_b32 v0, v14
 ; VI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-IDXMODE-LABEL: multi_same_block:
 ; VI-IDXMODE:       ; %bb.0: ; %bb
 ; VI-IDXMODE-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, 0x41900000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v9, 0x41b0cccd
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr0
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr2
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr3
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr4
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr5
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr6
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr7
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr8
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v14, 0x41b0cccd
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr9
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr10
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr11
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr12
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr13
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr15
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr16
+; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr17
 ; VI-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-IDXMODE-NEXT:    s_add_i32 s0, s0, -16
 ; VI-IDXMODE-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, 4.0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v4, -4.0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v9, -4.0
 ; VI-IDXMODE-NEXT:    s_set_gpr_idx_off
 ; VI-IDXMODE-NEXT:    s_mov_b32 m0, -1
 ; VI-IDXMODE-NEXT:    ds_write_b32 v0, v1
-; VI-IDXMODE-NEXT:    ds_write_b32 v0, v9
+; VI-IDXMODE-NEXT:    ds_write_b32 v0, v14
 ; VI-IDXMODE-NEXT:    s_endpgm
 ;
 ; GFX9-IDXMODE-LABEL: multi_same_block:
 ; GFX9-IDXMODE:       ; %bb.0: ; %bb
 ; GFX9-IDXMODE-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v1, 0x41900000
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v9, 0x41b0cccd
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr0
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr2
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr3
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr4
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr5
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr6
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr7
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr8
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v14, 0x41b0cccd
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr9
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr10
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr11
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr12
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr13
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr15
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr16
+; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_add_i32 s0, s0, -16
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, 4.0
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v4, -4.0
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v9, -4.0
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
 ; GFX9-IDXMODE-NEXT:    ds_write_b32 v0, v1
-; GFX9-IDXMODE-NEXT:    ds_write_b32 v0, v9
+; GFX9-IDXMODE-NEXT:    ds_write_b32 v0, v14
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 bb:
   %tmp1 = add i32 %arg, -16
@@ -9314,28 +9402,30 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(ptr addrspace(1) %out, 
 define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; GENERIC-LABEL: broken_phi_bb:
 ; GENERIC:       ; %bb.0: ; %bb
-; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GENERIC-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
 ; GENERIC-NEXT:    s_mov_b32 s6, 8
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    s_branch .LBB26_2
 ; GENERIC-NEXT:  .LBB26_1: ; %Flow
 ; GENERIC-NEXT:    ; in Loop: Header=BB26_2 Depth=1
-; GENERIC-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; GENERIC-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
 ; GENERIC-NEXT:    s_cbranch_vccz .LBB26_4
 ; GENERIC-NEXT:  .LBB26_2: ; %bb2
 ; GENERIC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    s_cmp_ge_i32 s6, s0
-; GENERIC-NEXT:    s_mov_b64 s[4:5], -1
+; GENERIC-NEXT:    s_cmp_ge_i32 s6, s4
+; GENERIC-NEXT:    s_mov_b64 s[0:1], -1
 ; GENERIC-NEXT:    ; implicit-def: $sgpr6
 ; GENERIC-NEXT:    s_cbranch_scc1 .LBB26_1
 ; GENERIC-NEXT:  ; %bb.3: ; %bb4
 ; GENERIC-NEXT:    ; in Loop: Header=BB26_2 Depth=1
+; GENERIC-NEXT:    ; implicit-def: $sgpr0
+; GENERIC-NEXT:    ; implicit-def: $sgpr1
 ; GENERIC-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
-; GENERIC-NEXT:    s_mov_b64 s[4:5], 0
-; GENERIC-NEXT:    s_mov_b32 s6, s1
+; GENERIC-NEXT:    s_mov_b64 s[0:1], 0
+; GENERIC-NEXT:    s_mov_b32 s6, s5
 ; GENERIC-NEXT:    s_branch .LBB26_1
 ; GENERIC-NEXT:  .LBB26_4: ; %bb8
 ; GENERIC-NEXT:    s_endpgm
@@ -9591,7 +9681,7 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ;
 ; SI-MOVREL-LABEL: broken_phi_bb:
 ; SI-MOVREL:       ; %bb.0: ; %bb
-; SI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-MOVREL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v0, 8
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
@@ -9603,14 +9693,16 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; SI-MOVREL-NEXT:    ; =>This Loop Header: Depth=1
 ; SI-MOVREL-NEXT:    ; Child Loop BB26_4 Depth 2
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-MOVREL-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
+; SI-MOVREL-NEXT:    v_cmp_le_i32_e32 vcc, s4, v0
 ; SI-MOVREL-NEXT:    s_cbranch_vccnz .LBB26_1
 ; SI-MOVREL-NEXT:  ; %bb.3: ; %bb4
 ; SI-MOVREL-NEXT:    ; in Loop: Header=BB26_2 Depth=1
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr0
+; SI-MOVREL-NEXT:    ; implicit-def: $sgpr1
 ; SI-MOVREL-NEXT:    buffer_load_dword v16, off, s[0:3], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v17, s1
-; SI-MOVREL-NEXT:    s_mov_b64 s[4:5], exec
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v17, s5
+; SI-MOVREL-NEXT:    s_mov_b64 s[0:1], exec
 ; SI-MOVREL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 ; SI-MOVREL-NEXT:  .LBB26_4: ; Parent Loop BB26_2 Depth=1
 ; SI-MOVREL-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -9622,7 +9714,7 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; SI-MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
 ; SI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_4
 ; SI-MOVREL-NEXT:  ; %bb.5: ; in Loop: Header=BB26_2 Depth=1
-; SI-MOVREL-NEXT:    s_mov_b64 exec, s[4:5]
+; SI-MOVREL-NEXT:    s_mov_b64 exec, s[0:1]
 ; SI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_2
 ; SI-MOVREL-NEXT:  .LBB26_6: ; %bb8
 ; SI-MOVREL-NEXT:    s_endpgm

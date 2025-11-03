@@ -436,13 +436,24 @@ define amdgpu_cs float @fdiv_f32_i32(float inreg %a, i32 inreg %b) {
 }
 
 define amdgpu_cs half @fdiv_f16_i16(half inreg %a, i16 inreg %b) {
-; GFX12-LABEL: fdiv_f16_i16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_cvt_f16_u16_e32 v0.l, s1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX12-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX12-NEXT:    v_mul_f16_e32 v0.l, s0, v0.l
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: fdiv_f16_i16:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_cvt_f16_u16_e32 v0.l, s1
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-SDAG-NEXT:    v_rcp_f16_e32 v0.l, v0.l
+; GFX12-SDAG-NEXT:    v_mul_f16_e32 v0.l, s0, v0.l
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: fdiv_f16_i16:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_cvt_f16_u16_e32 v0.l, s1
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_rcp_f16_e32 v0.l, v0.l
+; GFX12-GISEL-NEXT:    v_mul_f16_e32 v0.l, s0, v0.l
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %uint = uitofp i16 %b to half
   %result = fdiv afn half %a, %uint
   ret half %result

@@ -697,6 +697,7 @@ define void @memset_pattern_i96_dynval_dynlen(ptr addrspace(1) align 16 %a, i96 
 ; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB11_3
 ; GFX942-SDAG-NEXT:  ; %bb.1: ; %memset.pattern-expansion-main-body.preheader
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-SDAG-NEXT:    ; implicit-def: $vgpr5
 ; GFX942-SDAG-NEXT:  .LBB11_2: ; %memset.pattern-expansion-main-body
 ; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-SDAG-NEXT:    s_add_u32 s4, s4, 1
@@ -754,6 +755,7 @@ define void @memset_pattern_i64_as7_dynlen(ptr addrspace(7) inreg align 16 %a, i
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, 0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; GFX942-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB12_3
 ; GFX942-SDAG-NEXT:  ; %bb.1: ; %memset.pattern-expansion-main-body.preheader
@@ -881,6 +883,7 @@ define void @memset_pattern_i64_as7_dynlen_dynval(ptr addrspace(7) inreg align 1
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
+; GFX942-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX942-SDAG-NEXT:  ; %bb.1: ; %memset.pattern-expansion-main-body.preheader

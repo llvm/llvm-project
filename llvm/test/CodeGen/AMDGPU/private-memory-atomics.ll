@@ -122,6 +122,8 @@ define i32 @cmpxchg_private_i32(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    ; implicit-def: $sgpr4
+; GCN-NEXT:    ; implicit-def: $sgpr5
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, v1, 1, vcc
@@ -162,6 +164,8 @@ define i64 @cmpxchg_private_i64(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    ; implicit-def: $sgpr4
+; GCN-NEXT:    ; implicit-def: $sgpr5
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v1, 0, vcc

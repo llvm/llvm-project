@@ -2310,7 +2310,11 @@ define i32 @bitcast_v4i8_to_i32(<4 x i8> %a, i32 %b) {
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB22_3: ; %cmp.false
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v5, v1, 0xc0c0004
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_lo16
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_lo16
@@ -4573,7 +4577,11 @@ define float @bitcast_v4i8_to_f32(<4 x i8> %a, i32 %b) {
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB42_3: ; %cmp.false
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v5, v1, 0xc0c0004
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_lo16
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_lo16
@@ -6554,7 +6562,11 @@ define <2 x i16> @bitcast_v4i8_to_v2i16(<4 x i8> %a, i32 %b) {
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB58_3: ; %cmp.false
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v5, v1, 0xc0c0004
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_lo16
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_lo16
@@ -8213,7 +8225,11 @@ define <2 x half> @bitcast_v4i8_to_v2f16(<4 x i8> %a, i32 %b) {
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB70_3: ; %cmp.false
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v5, v1, 0xc0c0004
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_lo16
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_lo16
@@ -9656,7 +9672,11 @@ define <2 x bfloat> @bitcast_v4i8_to_v2bf16(<4 x i8> %a, i32 %b) {
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB78_3: ; %cmp.false
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v5, v1, 0xc0c0004
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_lo16
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_lo16
@@ -10340,7 +10360,11 @@ define <1 x i32> @bitcast_v4i8_to_v1i32(<4 x i8> %a, i32 %b) {
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB82_3: ; %cmp.false
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v5, v1, 0xc0c0004
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_lo16
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_lo16

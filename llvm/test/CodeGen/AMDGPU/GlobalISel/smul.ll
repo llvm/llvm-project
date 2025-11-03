@@ -157,14 +157,16 @@ define i64 @v_mul_i64_i32(i32 %a, i32 %b) {
 ; GFX11-LABEL: v_mul_i64_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v1
+; GFX11-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
+; GFX11-NEXT:    ; implicit-def: $vgpr2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v2, v3, 0
-; GFX11-NEXT:    v_ashrrev_i32_e32 v6, 31, v3
-; GFX11-NEXT:    v_mad_u64_u32 v[4:5], null, v2, v6, v[1:2]
-; GFX11-NEXT:    v_ashrrev_i32_e32 v5, 31, v2
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v3, v4, 0
+; GFX11-NEXT:    v_ashrrev_i32_e32 v7, 31, v4
+; GFX11-NEXT:    v_mad_u64_u32 v[5:6], null, v3, v7, v[1:2]
+; GFX11-NEXT:    v_ashrrev_i32_e32 v3, 31, v3
+; GFX11-NEXT:    ; implicit-def: $vgpr6
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, v5, v3, v[4:5]
+; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, v3, v4, v[5:6]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_mul_i64_i32:

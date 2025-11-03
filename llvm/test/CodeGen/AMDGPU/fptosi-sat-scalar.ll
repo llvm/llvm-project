@@ -1637,6 +1637,7 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    v_med3_i16 v0.l, v0.l, -1, 0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1659,6 +1660,7 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    v_med3_i16 v0.l, v0.l, -1, 0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1831,6 +1833,7 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, v0.l
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call i16 @llvm.fptosi.sat.i16.f16(half %f)
     ret i16 %x
@@ -2010,6 +2013,7 @@ define i1 @test_s_signed_i1_f16(half inreg %f) nounwind {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v0, v0, -1, 0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -2034,6 +2038,7 @@ define i1 @test_s_signed_i1_f16(half inreg %f) nounwind {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v0, v0, -1, 0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -2103,6 +2108,7 @@ define i8 @test_s_signed_i8_f16(half inreg %f) nounwind {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_movk_i32 s0, 0xff80
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v0, v0, s0, 0x7f
@@ -2130,6 +2136,7 @@ define i8 @test_s_signed_i8_f16(half inreg %f) nounwind {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_movk_i32 s0, 0xff80
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -2224,6 +2231,7 @@ define i16 @test_s_signed_i16_f16(half inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s0
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call i16 @llvm.fptosi.sat.i16.f16(half %f)
     ret i16 %x

@@ -51,6 +51,7 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-SDAG-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
@@ -73,6 +74,7 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-SDAG-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-SDAG-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
@@ -108,7 +110,9 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -130,7 +134,9 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -222,6 +228,7 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_frexp_f16_i32_only_use_fract:
@@ -238,6 +245,7 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_frexp_f16_i32_only_use_fract:
@@ -283,6 +291,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -303,6 +312,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -333,6 +343,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -353,6 +364,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -428,6 +440,8 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v2.l, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-SDAG-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.h, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
@@ -459,6 +473,8 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
 ; GFX12-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v2.l, v0.h
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-SDAG-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.h, v0.h
 ; GFX12-SDAG-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
@@ -537,6 +553,8 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v2.l, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.h, v0.h
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
@@ -568,6 +586,8 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v2.l, v0.h
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.h, v0.h
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
@@ -787,6 +807,8 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
@@ -813,6 +835,8 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
 ; GFX12-SDAG-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.h
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-SDAG-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
@@ -874,6 +898,8 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-GISEL-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
@@ -900,6 +926,8 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.h
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-GISEL-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
@@ -1017,6 +1045,8 @@ define { half, i16 } @test_frexp_f16_i16(half %a) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v2.l, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1039,6 +1069,8 @@ define { half, i16 } @test_frexp_f16_i16(half %a) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v2.l, v0.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v0.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1130,6 +1162,7 @@ define half @test_frexp_f16_i16_only_use_fract(half %a) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_frexp_f16_i16_only_use_fract:
@@ -1146,6 +1179,7 @@ define half @test_frexp_f16_i16_only_use_fract(half %a) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_mant_f16_e32 v0.l, v0.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_frexp_f16_i16_only_use_fract:
@@ -1231,6 +1265,7 @@ define i16 @test_frexp_f16_i16_only_use_exp(half %a) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_frexp_f16_i16_only_use_exp:
@@ -1247,6 +1282,7 @@ define i16 @test_frexp_f16_i16_only_use_exp(half %a) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v0.l, v0.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_frexp_f16_i16_only_use_exp:

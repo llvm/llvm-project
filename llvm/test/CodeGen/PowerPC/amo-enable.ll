@@ -10,6 +10,7 @@ define void @test_lwat(ptr noundef %ptr, i32 noundef %value, ptr nocapture %resp
 ; CHECK-LABEL: test_lwat:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr r7, r4
+; CHECK-NEXT:    # implicit-def: $x6
 ; CHECK-NEXT:    lwat r6, r3, 0
 ; CHECK-NEXT:    stw r6, 0(r5)
 ; CHECK-NEXT:    blr
@@ -17,6 +18,7 @@ define void @test_lwat(ptr noundef %ptr, i32 noundef %value, ptr nocapture %resp
 ; CHECK-BE-LABEL: test_lwat:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mr r7, r4
+; CHECK-BE-NEXT:    # implicit-def: $x6
 ; CHECK-BE-NEXT:    lwat r6, r3, 0
 ; CHECK-BE-NEXT:    stw r6, 0(r5)
 ; CHECK-BE-NEXT:    blr
@@ -30,6 +32,7 @@ define void @test_ldat(ptr noundef %ptr, i64 noundef %value, ptr nocapture %resp
 ; CHECK-LABEL: test_ldat:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr r7, r4
+; CHECK-NEXT:    # implicit-def: $x6
 ; CHECK-NEXT:    ldat r6, r3, 0
 ; CHECK-NEXT:    std r6, 0(r5)
 ; CHECK-NEXT:    blr
@@ -37,6 +40,7 @@ define void @test_ldat(ptr noundef %ptr, i64 noundef %value, ptr nocapture %resp
 ; CHECK-BE-LABEL: test_ldat:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mr r7, r4
+; CHECK-BE-NEXT:    # implicit-def: $x6
 ; CHECK-BE-NEXT:    ldat r6, r3, 0
 ; CHECK-BE-NEXT:    std r6, 0(r5)
 ; CHECK-BE-NEXT:    blr

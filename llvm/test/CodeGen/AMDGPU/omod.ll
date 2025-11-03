@@ -310,6 +310,8 @@ define amdgpu_ps void @v_omod_div2_f32_signed_zeros(float %a) #4 {
 ; SI-NEXT:    v_mul_f32_e32 v0, 0.5, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -341,6 +343,8 @@ define amdgpu_ps void @v_omod_div2_f64_signed_zeros(double %a) #4 {
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    v_mul_f64 v[0:1], v[0:1], 0.5
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -378,6 +382,8 @@ define amdgpu_ps void @v_omod_div2_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 div:2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -404,6 +410,8 @@ define amdgpu_ps void @v_omod_div2_f64(double %a) #5 {
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0 div:2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -436,6 +444,8 @@ define amdgpu_ps void @v_omod_mul2_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 mul:2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -462,6 +472,8 @@ define amdgpu_ps void @v_omod_mul2_med3(float %x, float %y, float %z) #0 {
 ; SI-NEXT:    v_med3_f32 v0, v0, v1, v2 mul:2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -494,6 +506,8 @@ define amdgpu_ps void @v_omod_mul2_f64(double %a) #5 {
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0 mul:2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -526,6 +540,8 @@ define amdgpu_ps void @v_omod_mul4_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 mul:4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -552,6 +568,8 @@ define amdgpu_ps void @v_omod_mul4_f64(double %a) #5 {
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0 mul:4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -585,6 +603,8 @@ define amdgpu_ps void @v_omod_mul4_multi_use_f32(float %a) #0 {
 ; SI-NEXT:    v_mul_f32_e32 v1, 4.0, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -633,6 +653,8 @@ define amdgpu_ps void @v_omod_mul4_dbg_use_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 mul:4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -661,6 +683,8 @@ define amdgpu_ps void @v_clamp_omod_div2_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 clamp div:2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -692,6 +716,8 @@ define amdgpu_ps void @v_omod_div2_clamp_f32(float %a) #0 {
 ; SI-NEXT:    v_mul_f32_e32 v0, 0.5, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -724,6 +750,8 @@ define amdgpu_ps void @v_omod_div2_abs_src_f32(float %a) #0 {
 ; SI-NEXT:    v_mul_f32_e64 v0, |v0|, 0.5
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -754,6 +782,8 @@ define amdgpu_ps void @v_omod_add_self_clamp_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e64 v0, v0, v0 clamp
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -782,6 +812,8 @@ define amdgpu_ps void @v_omod_add_clamp_self_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e32 v0, v0, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -821,6 +853,8 @@ define amdgpu_ps void @v_omod_add_abs_self_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e64 v0, |v0|, |v0|
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -852,6 +886,8 @@ define amdgpu_ps void @v_omod_add_abs_x_x_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e64 v0, |v0|, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -883,6 +919,8 @@ define amdgpu_ps void @v_omod_add_x_abs_x_f32(float %a) #0 {
 ; SI-NEXT:    v_add_f32_e64 v0, v0, |v0|
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -915,6 +953,8 @@ define amdgpu_ps void @v_omod_div2_omod_div2_f32(float %a) #0 {
 ; SI-NEXT:    v_mul_f32_e32 v0, 0.5, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -947,6 +987,8 @@ define amdgpu_ps void @v_omod_div2_f32_denormals(float %a) #2 {
 ; SI-NEXT:    v_mul_f32_e32 v0, 0.5, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -978,6 +1020,8 @@ define amdgpu_ps void @v_omod_div2_f64_denormals(double %a) #6 {
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    v_mul_f64 v[0:1], v[0:1], 0.5
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -1017,6 +1061,8 @@ define amdgpu_ps void @v_omod_mul2_f32_denormals(float %a) #2 {
 ; SI-NEXT:    v_add_f32_e32 v0, v0, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -1048,6 +1094,8 @@ define amdgpu_ps void @v_omod_mul2_f64_denormals(double %a) #2 {
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], v[0:1]
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -1086,6 +1134,8 @@ define amdgpu_ps void @v_omod_div2_f16_denormals(half %a) #0 {
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e64 v0, v0 div:2
@@ -1144,6 +1194,8 @@ define amdgpu_ps void @v_omod_mul2_f16_denormals(half %a) #0 {
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e64 v0, v0 mul:2
@@ -1201,6 +1253,8 @@ define amdgpu_ps void @v_omod_div2_f16_no_denormals(half %a) #3 {
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e64 v0, v0 div:2
@@ -1250,6 +1304,8 @@ define amdgpu_ps void @v_omod_mac_to_mad(float %b, float %a) #0 {
 ; SI-NEXT:    v_mul_f32_e32 v0, v1, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -1282,6 +1338,8 @@ define amdgpu_ps void @v_clamp_omod_div2_f32_minimumnum_maximumnum(float %a) #0 
 ; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 clamp div:2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;

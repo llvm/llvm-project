@@ -129,6 +129,7 @@ b0:
 define <2 x i16> @f6(<2 x i16> %a0) unnamed_addr #0 {
 ; CHECK-LABEL: f6:
 ; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    // implicit-def: $r1
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = vasrh(r1:0,#1)
 ; CHECK-NEXT:     jumpr r31
@@ -141,6 +142,7 @@ b0:
 define <2 x i16> @f7(<2 x i16> %a0) unnamed_addr #0 {
 ; CHECK-LABEL: f7:
 ; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    // implicit-def: $r1
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = vlsrh(r1:0,#1)
 ; CHECK-NEXT:     jumpr r31
@@ -153,6 +155,7 @@ b0:
 define <2 x i16> @f8(<2 x i16> %a0) unnamed_addr #0 {
 ; CHECK-LABEL: f8:
 ; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    // implicit-def: $r1
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = vaslh(r1:0,#1)
 ; CHECK-NEXT:     jumpr r31

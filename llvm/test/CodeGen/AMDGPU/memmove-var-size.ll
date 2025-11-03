@@ -1724,6 +1724,7 @@ define void @memmove_p3_p5(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
+; CHECK-NEXT:    ; implicit-def: $vgpr7
 ; CHECK-NEXT:    v_and_b32_e32 v2, -16, v4
 ; CHECK-NEXT:    v_and_b32_e32 v5, 15, v4
 ; CHECK-NEXT:    v_cmpx_ne_u64_e32 0, v[2:3]
@@ -2007,6 +2008,7 @@ define void @memmove_p5_p3(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
+; CHECK-NEXT:    ; implicit-def: $vgpr7
 ; CHECK-NEXT:    v_and_b32_e32 v2, -16, v4
 ; CHECK-NEXT:    v_and_b32_e32 v5, 15, v4
 ; CHECK-NEXT:    v_cmpx_ne_u64_e32 0, v[2:3]

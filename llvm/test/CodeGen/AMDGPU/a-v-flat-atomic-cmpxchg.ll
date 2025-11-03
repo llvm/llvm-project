@@ -399,6 +399,7 @@ define void @flat_atomic_cmpxchg_i64_ret_av_av__av(ptr %ptr) #0 {
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB12_2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB12_4
@@ -456,6 +457,7 @@ define void @flat_atomic_cmpxchg_i64_ret_av_av__v(ptr %ptr) #0 {
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB13_2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB13_4
@@ -512,9 +514,10 @@ define void @flat_atomic_cmpxchg_i64_ret_av_av__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
-; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB14_2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB14_4
@@ -835,9 +838,10 @@ define void @flat_atomic_cmpxchg_i64_ret_v_v__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
-; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB19_2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB19_4
@@ -898,6 +902,7 @@ define void @flat_atomic_cmpxchg_i64_ret_av_v__av(ptr %ptr) #0 {
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB20_2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB20_4
@@ -955,6 +960,7 @@ define void @flat_atomic_cmpxchg_i64_ret_v_av__av(ptr %ptr) #0 {
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB21_2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB21_4

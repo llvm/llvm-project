@@ -1014,6 +1014,8 @@ define <2 x i64> @udivrem64(i64 %a, i64 %b) {
 define i64 @sdiv64_known32(i64 %a, i64 %b) {
 ; GFX9-LABEL: sdiv64_known32:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ; implicit-def: $vgpr0
+; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v0, 31, v3

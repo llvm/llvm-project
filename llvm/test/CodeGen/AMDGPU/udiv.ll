@@ -2230,9 +2230,11 @@ define amdgpu_kernel void @test_udiv2(i32 %p) {
 ; SI-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshr_b32 s0, s0, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    s_lshr_b32 s4, s0, 1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    ; implicit-def: $sgpr0
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_endpgm
@@ -2242,9 +2244,11 @@ define amdgpu_kernel void @test_udiv2(i32 %p) {
 ; VI-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    ; implicit-def: $sgpr1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s0, s0, 1
-; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    s_lshr_b32 s4, s0, 1
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    ; implicit-def: $sgpr0
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
@@ -2294,8 +2298,10 @@ define amdgpu_kernel void @test_udiv_3_mulhu(i32 %p) {
 ; SI-NEXT:    v_mov_b32_e32 v0, 0xaaaaaaab
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mul_hi_u32 v0, s0, v0
+; SI-NEXT:    ; implicit-def: $sgpr0
 ; SI-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -2307,8 +2313,10 @@ define amdgpu_kernel void @test_udiv_3_mulhu(i32 %p) {
 ; VI-NEXT:    v_mov_b32_e32 v0, 0xaaaaaaab
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    ; implicit-def: $sgpr1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mul_hi_u32 v0, s0, v0
+; VI-NEXT:    ; implicit-def: $sgpr0
 ; VI-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)

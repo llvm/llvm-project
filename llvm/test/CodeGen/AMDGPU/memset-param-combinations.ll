@@ -263,6 +263,7 @@ define void @memset_p3_varsize_align_4_varsetval(ptr addrspace(3) align 4 %dst, 
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
+; GFX942-SDAG-NEXT:    ; implicit-def: $vgpr3
 ; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX942-SDAG-NEXT:  ; %bb.1: ; %dynamic-memset-expansion-main-body.preheader
@@ -384,6 +385,7 @@ define void @memset_p5_varsize_align_4_varsetval(ptr addrspace(5) align 4 %dst, 
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
+; GFX942-SDAG-NEXT:    ; implicit-def: $vgpr3
 ; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB3_3
 ; GFX942-SDAG-NEXT:  ; %bb.1: ; %dynamic-memset-expansion-main-body.preheader

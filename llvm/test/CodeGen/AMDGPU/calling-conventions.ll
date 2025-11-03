@@ -225,6 +225,8 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -337,6 +339,8 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -708,6 +712,8 @@ define amdgpu_ps void @ps_mesa_v2i16(<2 x i16> %arg0) {
 ; SI-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x10000, v0
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -745,9 +751,11 @@ define amdgpu_ps void @ps_mesa_inreg_v2i16(<2 x i16> inreg %arg0) {
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_and_b32 s0, s0, 0xffff
 ; SI-NEXT:    s_or_b32 s0, s1, s0
-; SI-NEXT:    s_add_i32 s0, s0, 0x10000
+; SI-NEXT:    s_add_i32 s4, s0, 0x10000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -890,16 +898,18 @@ define amdgpu_ps <4 x half> @ps_mesa_inreg_v4f16(<4 x half> inreg %arg0) {
 define amdgpu_ps void @ps_mesa_inreg_v3i32(<3 x i32> inreg %arg0) {
 ; SI-LABEL: ps_mesa_inreg_v3i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_add_i32 s1, s1, 2
-; SI-NEXT:    s_add_i32 s0, s0, 1
-; SI-NEXT:    s_add_i32 s4, s2, 3
+; SI-NEXT:    s_add_i32 s4, s1, 2
+; SI-NEXT:    s_add_i32 s5, s0, 1
+; SI-NEXT:    s_add_i32 s6, s2, 3
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
+; SI-NEXT:    v_mov_b32_e32 v0, s6
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    v_mov_b32_e32 v1, s1
+; SI-NEXT:    v_mov_b32_e32 v0, s5
+; SI-NEXT:    v_mov_b32_e32 v1, s4
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -949,6 +959,8 @@ define amdgpu_ps void @ps_mesa_inreg_v3f32(<3 x float> inreg %arg0) {
 ; SI-NEXT:    v_add_f32_e64 v2, s2, 4.0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v2, off, s[0:3], 0
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -990,16 +1002,18 @@ define amdgpu_ps void @ps_mesa_inreg_v5i32(<5 x i32> inreg %arg0) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_add_i32 s5, s3, 4
 ; SI-NEXT:    s_add_i32 s6, s2, 3
-; SI-NEXT:    s_add_i32 s1, s1, 2
-; SI-NEXT:    s_add_i32 s0, s0, 1
+; SI-NEXT:    s_add_i32 s7, s1, 2
+; SI-NEXT:    s_add_i32 s8, s0, 1
 ; SI-NEXT:    s_add_i32 s4, s4, 5
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    v_mov_b32_e32 v1, s1
+; SI-NEXT:    v_mov_b32_e32 v0, s8
+; SI-NEXT:    v_mov_b32_e32 v1, s7
 ; SI-NEXT:    v_mov_b32_e32 v2, s6
 ; SI-NEXT:    v_mov_b32_e32 v3, s5
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
@@ -1067,6 +1081,8 @@ define amdgpu_ps void @ps_mesa_inreg_v5f32(<5 x float> inreg %arg0) {
 ; SI-NEXT:    v_add_f32_e64 v4, s4, 0.5
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v4, off, s[0:3], 0
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1123,6 +1139,8 @@ define amdgpu_ps void @ps_mesa_v3i32(<3 x i32> %arg0) {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, 3, v2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v2, off, s[0:3], 0
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1163,6 +1181,8 @@ define amdgpu_ps void @ps_mesa_v3f32(<3 x float> %arg0) {
 ; SI-NEXT:    v_add_f32_e32 v2, 4.0, v2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v2, off, s[0:3], 0
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1204,6 +1224,8 @@ define amdgpu_ps void @ps_mesa_v5i32(<5 x i32> %arg0) {
 ; SI-NEXT:    v_add_i32_e32 v4, vcc, 5, v4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v4, off, s[0:3], 0
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1256,6 +1278,8 @@ define amdgpu_ps void @ps_mesa_v5f32(<5 x float> %arg0) {
 ; SI-NEXT:    v_add_f32_e32 v4, 0.5, v4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v4, off, s[0:3], 0
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1302,6 +1326,8 @@ define amdgpu_ps void @ps_mesa_i16(i16 %arg0) {
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -1344,10 +1370,12 @@ define amdgpu_ps void @ps_mesa_i16(i16 %arg0) {
 define amdgpu_ps void @ps_mesa_inreg_i16(i16 inreg %arg0) {
 ; SI-LABEL: ps_mesa_inreg_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_add_i32 s0, s0, s0
+; SI-NEXT:    s_add_i32 s4, s0, s0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -1409,9 +1437,11 @@ define amdgpu_kernel void @amd_kernel_i8(i8 %arg0) {
 ; SI-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_add_i32 s0, s0, s0
+; SI-NEXT:    s_add_i32 s4, s0, s0
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -2946,6 +2976,8 @@ define amdgpu_cs void @amdgpu_cs_i1(i1 %arg0) {
 ; SI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -2997,6 +3029,8 @@ define amdgpu_cs void @amdgpu_cs_v8i1(<8 x i1> %arg0) {
 ; SI-NEXT:    v_and_b32_e32 v0, 15, v0
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -3191,6 +3225,8 @@ define amdgpu_cs void @amdgpu_cs_v16i1(<16 x i1> %arg0) {
 ; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -3544,6 +3580,8 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -4007,10 +4045,12 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 define amdgpu_cs void @amdgpu_cs_inreg_i1(i1 inreg %arg0) {
 ; SI-LABEL: amdgpu_cs_inreg_i1:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_and_b32 s0, s0, 1
+; SI-NEXT:    s_and_b32 s4, s0, 1
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -4065,9 +4105,11 @@ define amdgpu_cs void @amdgpu_cs_inreg_v8i1(<8 x i1> inreg %arg0) {
 ; SI-NEXT:    s_or_b32 s0, s0, s2
 ; SI-NEXT:    s_lshl_b32 s1, s1, 4
 ; SI-NEXT:    s_and_b32 s0, s0, 15
-; SI-NEXT:    s_or_b32 s0, s0, s1
+; SI-NEXT:    s_or_b32 s4, s0, s1
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -4206,9 +4248,11 @@ define amdgpu_cs void @amdgpu_cs_inreg_v16i1(<16 x i1> inreg %arg0) {
 ; SI-NEXT:    s_or_b32 s0, s0, s4
 ; SI-NEXT:    s_or_b32 s1, s1, s2
 ; SI-NEXT:    s_and_b32 s0, s0, 0xff
-; SI-NEXT:    s_or_b32 s0, s0, s1
+; SI-NEXT:    s_or_b32 s4, s0, s1
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -4467,9 +4511,11 @@ define amdgpu_cs void @amdgpu_cs_inreg_v32i1(<32 x i1> inreg %arg0) {
 ; SI-NEXT:    s_or_b32 s0, s0, s4
 ; SI-NEXT:    s_lshl_b32 s1, s1, 16
 ; SI-NEXT:    s_and_b32 s0, s0, 0xffff
-; SI-NEXT:    s_or_b32 s0, s0, s1
+; SI-NEXT:    s_or_b32 s4, s0, s1
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -4782,6 +4828,8 @@ define amdgpu_cs void @amdgpu_cs_i1_sext(i1 signext %arg0) {
 ; SI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -4812,6 +4860,8 @@ define amdgpu_cs void @amdgpu_cs_i1_zext(i1 zeroext %arg0) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;

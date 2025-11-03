@@ -80,6 +80,7 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; SI-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0

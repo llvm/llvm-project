@@ -99,15 +99,21 @@ define amdgpu_ps float @test_maxmin_commuted_f32(float %a, float %b, float %c) {
 }
 
 define amdgpu_ps half @test_minmax_f16(half %a, half %b, half %c) {
-; TRUE16-LABEL: test_minmax_f16:
-; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
-; TRUE16-NEXT:    ; return to shader part epilog
+; GFX1170-SDAG-TRUE16-LABEL: test_minmax_f16:
+; GFX1170-SDAG-TRUE16:       ; %bb.0:
+; GFX1170-SDAG-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
+; GFX1170-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; FAKE16-LABEL: test_minmax_f16:
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    v_maximumminimum_f16 v0, v0, v1, v2
 ; FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1170-GISEL-TRUE16-LABEL: test_minmax_f16:
+; GFX1170-GISEL-TRUE16:       ; %bb.0:
+; GFX1170-GISEL-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
+; GFX1170-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX1170-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_minmax_f16:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -122,6 +128,7 @@ define amdgpu_ps half @test_minmax_f16(half %a, half %b, half %c) {
 ; GFX12-GISEL-TRUE16-LABEL: test_minmax_f16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_minmax_f16:
@@ -134,15 +141,21 @@ define amdgpu_ps half @test_minmax_f16(half %a, half %b, half %c) {
 }
 
 define amdgpu_ps half @test_minmax_commuted_f16(half %a, half %b, half %c) {
-; TRUE16-LABEL: test_minmax_commuted_f16:
-; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
-; TRUE16-NEXT:    ; return to shader part epilog
+; GFX1170-SDAG-TRUE16-LABEL: test_minmax_commuted_f16:
+; GFX1170-SDAG-TRUE16:       ; %bb.0:
+; GFX1170-SDAG-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
+; GFX1170-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; FAKE16-LABEL: test_minmax_commuted_f16:
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    v_maximumminimum_f16 v0, v0, v1, v2
 ; FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1170-GISEL-TRUE16-LABEL: test_minmax_commuted_f16:
+; GFX1170-GISEL-TRUE16:       ; %bb.0:
+; GFX1170-GISEL-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
+; GFX1170-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX1170-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_minmax_commuted_f16:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -157,6 +170,7 @@ define amdgpu_ps half @test_minmax_commuted_f16(half %a, half %b, half %c) {
 ; GFX12-GISEL-TRUE16-LABEL: test_minmax_commuted_f16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_minmax_commuted_f16:
@@ -169,15 +183,21 @@ define amdgpu_ps half @test_minmax_commuted_f16(half %a, half %b, half %c) {
 }
 
 define amdgpu_ps half @test_maxmin_commuted_f16(half %a, half %b, half %c) {
-; TRUE16-LABEL: test_maxmin_commuted_f16:
-; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    v_minimummaximum_f16 v0.l, v0.l, v1.l, v2.l
-; TRUE16-NEXT:    ; return to shader part epilog
+; GFX1170-SDAG-TRUE16-LABEL: test_maxmin_commuted_f16:
+; GFX1170-SDAG-TRUE16:       ; %bb.0:
+; GFX1170-SDAG-TRUE16-NEXT:    v_minimummaximum_f16 v0.l, v0.l, v1.l, v2.l
+; GFX1170-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; FAKE16-LABEL: test_maxmin_commuted_f16:
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    v_minimummaximum_f16 v0, v0, v1, v2
 ; FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1170-GISEL-TRUE16-LABEL: test_maxmin_commuted_f16:
+; GFX1170-GISEL-TRUE16:       ; %bb.0:
+; GFX1170-GISEL-TRUE16-NEXT:    v_minimummaximum_f16 v0.l, v0.l, v1.l, v2.l
+; GFX1170-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX1170-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_maxmin_commuted_f16:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -192,6 +212,7 @@ define amdgpu_ps half @test_maxmin_commuted_f16(half %a, half %b, half %c) {
 ; GFX12-GISEL-TRUE16-LABEL: test_maxmin_commuted_f16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    v_minimummaximum_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_maxmin_commuted_f16:
@@ -303,3 +324,5 @@ declare half @llvm.minimum.f16(half, half)
 declare half @llvm.maximum.f16(half, half)
 declare float @llvm.minimum.f32(float, float)
 declare float @llvm.maximum.f32(float, float)
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; TRUE16: {{.*}}

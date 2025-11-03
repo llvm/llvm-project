@@ -147,6 +147,7 @@ define amdgpu_kernel void @local_store_i55(ptr addrspace(3) %ptr, i55 %arg) #0 {
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    global_load_d16_hi_u8 v1, v0, s[4:5] offset:14
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s3, s1, 0xffff

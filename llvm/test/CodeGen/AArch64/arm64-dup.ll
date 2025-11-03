@@ -513,6 +513,7 @@ define void @disguised_dup(<4 x float> %x, ptr %p1, ptr %p2) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI38_1
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI38_1]
+; CHECK-GI-NEXT:    // implicit-def: $q1
 ; CHECK-GI-NEXT:    adrp x8, .LCPI38_0
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI38_0]

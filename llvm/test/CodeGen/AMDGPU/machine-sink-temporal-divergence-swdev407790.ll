@@ -80,6 +80,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    ; implicit-def: $sgpr15
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v0
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
@@ -393,6 +394,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_add_co_u32 v41, vcc_lo, v0, v41
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v1, vcc_lo
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc_lo, v47, v41
 ; CHECK-NEXT:    s_or_b32 s52, vcc_lo, s52
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s52

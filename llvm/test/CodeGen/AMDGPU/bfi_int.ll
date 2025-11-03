@@ -1414,6 +1414,8 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-NEXT:    ; implicit-def: $sgpr4
+; GFX7-NEXT:    ; implicit-def: $sgpr5
 ; GFX7-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1502,6 +1504,8 @@ define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-NEXT:    ; implicit-def: $sgpr4
+; GFX7-NEXT:    ; implicit-def: $sgpr5
 ; GFX7-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1590,6 +1594,8 @@ define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-NEXT:    ; implicit-def: $sgpr4
+; GFX7-NEXT:    ; implicit-def: $sgpr5
 ; GFX7-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1679,6 +1685,8 @@ define amdgpu_kernel void @s_bfi_sha256_ma_i64(i64 %x, i64 %y, i64 %z) {
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-NEXT:    ; implicit-def: $sgpr4
+; GFX7-NEXT:    ; implicit-def: $sgpr5
 ; GFX7-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX7-NEXT:    s_endpgm
 ;

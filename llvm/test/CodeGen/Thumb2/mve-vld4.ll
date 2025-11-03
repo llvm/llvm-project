@@ -8,12 +8,16 @@ define void @vld4_v2i32(ptr %src, ptr %dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    @ implicit-def: $s9
 ; CHECK-NEXT:    vmov.f32 s10, s7
 ; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    vmov r3, s4
 ; CHECK-NEXT:    vmov.f32 s8, s3
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vmov.f32 s12, s1
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    vmov r2, s6
@@ -742,17 +746,25 @@ entry:
 define void @vld4_v2f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld4_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmov.f32 s8, s7
-; CHECK-NEXT:    vmov.f32 s9, s3
-; CHECK-NEXT:    vmov.f32 s12, s6
-; CHECK-NEXT:    vmov.f32 s13, s2
+; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    @ implicit-def: $s10
+; CHECK-NEXT:    @ implicit-def: $s11
+; CHECK-NEXT:    @ implicit-def: $s14
+; CHECK-NEXT:    @ implicit-def: $s15
+; CHECK-NEXT:    vmov.f32 s8, s3
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    vmov.f32 s12, s2
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s13, s6
 ; CHECK-NEXT:    vadd.f32 q2, q3, q2
-; CHECK-NEXT:    vmov.f32 s12, s5
-; CHECK-NEXT:    vmov.f32 s13, s1
-; CHECK-NEXT:    vmov.f32 s5, s0
-; CHECK-NEXT:    vadd.f32 q0, q1, q3
+; CHECK-NEXT:    vmov.f32 s12, s1
+; CHECK-NEXT:    vmov.f32 s13, s5
+; CHECK-NEXT:    @ implicit-def: $s14
+; CHECK-NEXT:    @ implicit-def: $s15
+; CHECK-NEXT:    vmov.f32 s1, s4
+; CHECK-NEXT:    vadd.f32 q0, q0, q3
 ; CHECK-NEXT:    vadd.f32 q0, q0, q2
 ; CHECK-NEXT:    vstmia r1, {s0, s1}
 ; CHECK-NEXT:    bx lr

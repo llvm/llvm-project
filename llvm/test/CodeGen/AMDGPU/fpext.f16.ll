@@ -718,6 +718,7 @@ define amdgpu_kernel void @fneg_multi_use_fpext_f16_to_f32(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s10, s6
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s11, s7
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3
@@ -921,6 +922,7 @@ define amdgpu_kernel void @fabs_multi_use_fpext_f16_to_f32(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s10, s6
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s11, s7
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3
@@ -1124,6 +1126,7 @@ define amdgpu_kernel void @fabs_fneg_multi_use_fpext_f16_to_f32(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s10, s6
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s11, s7
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3

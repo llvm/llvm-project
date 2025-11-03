@@ -414,6 +414,7 @@ define amdgpu_ps half @test_fmaximum_f16_vv(half %a, half %b) {
 ; GFX1170-GISEL-TRUE16-LABEL: test_fmaximum_f16_vv:
 ; GFX1170-GISEL-TRUE16:       ; %bb.0:
 ; GFX1170-GISEL-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v1.l
+; GFX1170-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1170-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-GISEL-FAKE16-LABEL: test_fmaximum_f16_vv:
@@ -434,6 +435,7 @@ define amdgpu_ps half @test_fmaximum_f16_vv(half %a, half %b) {
 ; GFX12-GISEL-TRUE16-LABEL: test_fmaximum_f16_vv:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v1.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_fmaximum_f16_vv:
@@ -478,6 +480,7 @@ define amdgpu_ps half @test_fmaximum_f16_ss(half inreg %a, half inreg %b) {
 ; GFX1170-GISEL-TRUE16-LABEL: test_fmaximum_f16_ss:
 ; GFX1170-GISEL-TRUE16:       ; %bb.0:
 ; GFX1170-GISEL-TRUE16-NEXT:    v_maximum_f16 v0.l, s0, s1
+; GFX1170-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1170-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-GISEL-FAKE16-LABEL: test_fmaximum_f16_ss:
@@ -631,6 +634,7 @@ define amdgpu_ps <3 x half> @test_fmaximum_v3f16_vv(<3 x half> %a, <3 x half> %b
 ; GFX1170-GISEL-TRUE16:       ; %bb.0:
 ; GFX1170-GISEL-TRUE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX1170-GISEL-TRUE16-NEXT:    v_maximum_f16 v1.l, v1.l, v3.l
+; GFX1170-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX1170-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-GISEL-FAKE16-LABEL: test_fmaximum_v3f16_vv:
@@ -652,6 +656,7 @@ define amdgpu_ps <3 x half> @test_fmaximum_v3f16_vv(<3 x half> %a, <3 x half> %b
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-GISEL-TRUE16-NEXT:    v_maximum_f16 v1.l, v1.l, v3.l
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_fmaximum_v3f16_vv:
@@ -729,6 +734,7 @@ define amdgpu_ps <3 x half> @test_fmaximum_v3f16_ss(<3 x half> inreg %a, <3 x ha
 ; GFX1170-GISEL-TRUE16:       ; %bb.0:
 ; GFX1170-GISEL-TRUE16-NEXT:    v_maximum_f16 v1.l, s1, s3
 ; GFX1170-GISEL-TRUE16-NEXT:    v_pk_maximum_f16 v0, s0, s2
+; GFX1170-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX1170-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX1170-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
@@ -1500,6 +1506,8 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v1, s[4:5] scope:SCOPE_SYS
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v0.h
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
 ;
@@ -1524,6 +1532,8 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX12-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-GISEL-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0

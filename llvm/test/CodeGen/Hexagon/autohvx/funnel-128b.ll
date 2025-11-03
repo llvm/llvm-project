@@ -264,6 +264,7 @@ define <32 x i32> @f2(<32 x i32> %a0, <32 x i32> %a1, i32 %a2) #0 {
 ; V66-NEXT:    {
 ; V66-NEXT:     v4 = vxor(v4,v4)
 ; V66-NEXT:    }
+; V66-NEXT:    // implicit-def: $v5
 ; V66-NEXT:    {
 ; V66-NEXT:     v2 = vsplat(r0)
 ; V66-NEXT:    }
@@ -549,14 +550,15 @@ define <32 x i32> @f5(<32 x i32> %a0, <32 x i32> %a1, i32 %a2) #0 {
 ; V66-NEXT:    {
 ; V66-NEXT:     r0 = and(r0,#31)
 ; V66-NEXT:    }
+; V66-NEXT:    // implicit-def: $v3
 ; V66-NEXT:    {
-; V66-NEXT:     v3 = vsplat(r0)
+; V66-NEXT:     v4 = vsplat(r0)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v2.w = vlsr(v1.w,v3.w)
+; V66-NEXT:     v2.w = vlsr(v1.w,v4.w)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v3:2.w = vasrinto(v0.w,v3.w)
+; V66-NEXT:     v3:2.w = vasrinto(v0.w,v4.w)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
 ; V66-NEXT:     v0 = v2
@@ -848,9 +850,7 @@ define <32 x i32> @f8(<32 x i32> %a0, <32 x i32> %a1, <32 x i32> %a2) #0 {
 ; V66-NEXT:    {
 ; V66-NEXT:     r1:0 = combine(#32,#31)
 ; V66-NEXT:    }
-; V66-NEXT:    {
-; V66-NEXT:     v31 = vxor(v31,v31)
-; V66-NEXT:    }
+; V66-NEXT:    // implicit-def: $v5
 ; V66-NEXT:    {
 ; V66-NEXT:     v3 = vsplat(r0)
 ; V66-NEXT:    }
@@ -861,13 +861,16 @@ define <32 x i32> @f8(<32 x i32> %a0, <32 x i32> %a1, <32 x i32> %a2) #0 {
 ; V66-NEXT:     v2 = vand(v2,v3)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v4.w = vsub(v4.w,v2.w)
+; V66-NEXT:     v3.w = vsub(v4.w,v2.w)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v2.w = vsub(v31.w,v2.w)
+; V66-NEXT:     v4 = vxor(v4,v4)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v4.w = vlsr(v1.w,v4.w)
+; V66-NEXT:     v2.w = vsub(v4.w,v2.w)
+; V66-NEXT:    }
+; V66-NEXT:    {
+; V66-NEXT:     v4.w = vlsr(v1.w,v3.w)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
 ; V66-NEXT:     v5:4.w = vasrinto(v0.w,v2.w)
@@ -1161,13 +1164,14 @@ define <32 x i32> @f11(<32 x i32> %a0, <32 x i32> %a1, <32 x i32> %a2) #0 {
 ; V66-NEXT:     v3 = vsplat(r0)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v3 = vand(v2,v3)
+; V66-NEXT:     v4 = vand(v2,v3)
+; V66-NEXT:    }
+; V66-NEXT:    // implicit-def: $v3
+; V66-NEXT:    {
+; V66-NEXT:     v2.w = vlsr(v1.w,v4.w)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v2.w = vlsr(v1.w,v3.w)
-; V66-NEXT:    }
-; V66-NEXT:    {
-; V66-NEXT:     v3:2.w = vasrinto(v0.w,v3.w)
+; V66-NEXT:     v3:2.w = vasrinto(v0.w,v4.w)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
 ; V66-NEXT:     v0 = v2

@@ -186,6 +186,8 @@ define amdgpu_kernel void @scalar_to_vector_v4i16() {
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
@@ -202,16 +204,18 @@ define amdgpu_kernel void @scalar_to_vector_v4i16() {
 ; VI:       ; %bb.0: ; %bb
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    ; implicit-def: $sgpr0
+; VI-NEXT:    ; implicit-def: $sgpr1
 ; VI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s0, v0
-; VI-NEXT:    s_lshl_b32 s1, s0, 8
-; VI-NEXT:    s_or_b32 s0, s0, s1
-; VI-NEXT:    s_lshl_b32 s1, s0, 16
-; VI-NEXT:    s_and_b32 s0, s0, 0xffff
-; VI-NEXT:    s_or_b32 s0, s0, s1
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s0
+; VI-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-NEXT:    s_lshl_b32 s5, s4, 8
+; VI-NEXT:    s_or_b32 s4, s4, s5
+; VI-NEXT:    s_lshl_b32 s5, s4, 16
+; VI-NEXT:    s_and_b32 s4, s4, 0xffff
+; VI-NEXT:    s_or_b32 s4, s4, s5
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -219,16 +223,18 @@ define amdgpu_kernel void @scalar_to_vector_v4i16() {
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    ; implicit-def: $sgpr0
+; GFX9-NEXT:    ; implicit-def: $sgpr1
 ; GFX9-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    s_lshl_b32 s1, s0, 8
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s0, 0xffff
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX9-NEXT:    s_or_b32 s0, s1, s0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-NEXT:    s_lshl_b32 s5, s4, 8
+; GFX9-NEXT:    s_or_b32 s4, s4, s5
+; GFX9-NEXT:    s_and_b32 s5, s4, 0xffff
+; GFX9-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX9-NEXT:    s_or_b32 s4, s5, s4
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -236,17 +242,20 @@ define amdgpu_kernel void @scalar_to_vector_v4i16() {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    ; implicit-def: $sgpr0
+; GFX11-NEXT:    ; implicit-def: $sgpr1
+; GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-NEXT:    buffer_load_d16_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    s_lshl_b32 s1, s0, 8
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX11-NEXT:    s_lshl_b32 s5, s4, 8
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_or_b32 s0, s0, s1
-; GFX11-NEXT:    s_and_b32 s1, s0, 0xffff
-; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX11-NEXT:    s_or_b32 s4, s4, s5
+; GFX11-NEXT:    s_and_b32 s5, s4, 0xffff
+; GFX11-NEXT:    s_lshl_b32 s4, s4, 16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_or_b32 s0, s1, s0
-; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s0
+; GFX11-NEXT:    s_or_b32 s4, s5, s4
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s4
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_endpgm
 bb:
@@ -262,6 +271,8 @@ define amdgpu_kernel void @scalar_to_vector_v4f16() {
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    ; implicit-def: $sgpr0
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
@@ -278,21 +289,23 @@ define amdgpu_kernel void @scalar_to_vector_v4f16() {
 ; VI:       ; %bb.0: ; %bb
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    ; implicit-def: $sgpr0
+; VI-NEXT:    ; implicit-def: $sgpr1
 ; VI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s0, v0
-; VI-NEXT:    s_lshl_b32 s1, s0, 8
-; VI-NEXT:    s_or_b32 s0, s1, s0
-; VI-NEXT:    s_and_b32 s1, s0, 0xff00
-; VI-NEXT:    s_bfe_u32 s4, s0, 0x80008
-; VI-NEXT:    s_or_b32 s1, s4, s1
-; VI-NEXT:    s_and_b32 s0, s0, 0xffff
-; VI-NEXT:    s_lshl_b32 s4, s1, 16
-; VI-NEXT:    s_and_b32 s1, s1, 0xffff
-; VI-NEXT:    s_or_b32 s1, s1, s4
-; VI-NEXT:    s_or_b32 s0, s0, s4
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-NEXT:    s_lshl_b32 s5, s4, 8
+; VI-NEXT:    s_or_b32 s4, s5, s4
+; VI-NEXT:    s_and_b32 s5, s4, 0xff00
+; VI-NEXT:    s_bfe_u32 s6, s4, 0x80008
+; VI-NEXT:    s_or_b32 s5, s6, s5
+; VI-NEXT:    s_and_b32 s4, s4, 0xffff
+; VI-NEXT:    s_lshl_b32 s6, s5, 16
+; VI-NEXT:    s_and_b32 s5, s5, 0xffff
+; VI-NEXT:    s_or_b32 s5, s5, s6
+; VI-NEXT:    s_or_b32 s4, s4, s6
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -300,21 +313,23 @@ define amdgpu_kernel void @scalar_to_vector_v4f16() {
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    ; implicit-def: $sgpr0
+; GFX9-NEXT:    ; implicit-def: $sgpr1
 ; GFX9-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    s_lshl_b32 s1, s0, 8
-; GFX9-NEXT:    s_or_b32 s0, s1, s0
-; GFX9-NEXT:    s_and_b32 s1, s0, 0xff00
-; GFX9-NEXT:    s_bfe_u32 s4, s0, 0x80008
-; GFX9-NEXT:    s_or_b32 s1, s4, s1
-; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX9-NEXT:    s_and_b32 s4, s1, 0xffff
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX9-NEXT:    s_or_b32 s4, s4, s1
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-NEXT:    s_lshl_b32 s5, s4, 8
+; GFX9-NEXT:    s_or_b32 s4, s5, s4
+; GFX9-NEXT:    s_and_b32 s5, s4, 0xff00
+; GFX9-NEXT:    s_bfe_u32 s6, s4, 0x80008
+; GFX9-NEXT:    s_or_b32 s5, s6, s5
+; GFX9-NEXT:    s_and_b32 s4, s4, 0xffff
+; GFX9-NEXT:    s_and_b32 s6, s5, 0xffff
+; GFX9-NEXT:    s_lshl_b32 s5, s5, 16
+; GFX9-NEXT:    s_or_b32 s6, s6, s5
+; GFX9-NEXT:    s_or_b32 s4, s4, s5
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -322,25 +337,27 @@ define amdgpu_kernel void @scalar_to_vector_v4f16() {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    ; implicit-def: $sgpr0
+; GFX11-NEXT:    ; implicit-def: $sgpr1
+; GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-NEXT:    buffer_load_d16_u8 v0, off, s[0:3], 0
+; GFX11-NEXT:    ; implicit-def: $vgpr2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_or_b32_e32 v0, v1, v0
-; GFX11-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
-; GFX11-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX11-NEXT:    s_and_b32 s1, s0, 0xff00
-; GFX11-NEXT:    s_bfe_u32 s4, s0, 0x80008
-; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX11-NEXT:    s_or_b32 s1, s4, s1
-; GFX11-NEXT:    s_lshl_b32 s4, s1, 16
-; GFX11-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX11-NEXT:    s_or_b32 s0, s0, s4
-; GFX11-NEXT:    s_or_b32 s1, s1, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX11-NEXT:    s_and_b32 s5, s4, 0xff00
+; GFX11-NEXT:    s_bfe_u32 s6, s4, 0x80008
+; GFX11-NEXT:    s_and_b32 s4, s4, 0xffff
+; GFX11-NEXT:    s_or_b32 s5, s6, s5
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_lshl_b32 s6, s5, 16
+; GFX11-NEXT:    s_and_b32 s5, s5, 0xffff
+; GFX11-NEXT:    s_or_b32 s4, s4, s6
+; GFX11-NEXT:    s_or_b32 s5, s5, s6
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_endpgm
 bb:
