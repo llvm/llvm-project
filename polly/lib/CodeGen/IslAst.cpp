@@ -794,5 +794,5 @@ polly::runIslAstGen(Scop &S, DependenceAnalysis::Result &DA) {
     if (Result)
       Result->print(llvm::outs());
   }
-  return std::move(Result);
+  return Result;
 }
