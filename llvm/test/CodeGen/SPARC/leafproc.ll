@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc -disable-sparc-leaf-proc=0 < %s | FileCheck %s
+; RUN: llc -mtriple=sparc -disable-sparc-leaf-proc=0 < %s | FileCheck %s
 
 ; CHECK-LABEL:      func_nobody:
 ; CHECK:      retl
@@ -86,12 +86,12 @@ entry:
 ; CHECK-LABEL: leaf_proc_give_up
 ; CHECK: save %sp, -96, %sp
 ; CHECK: ld [%fp+92], %o5
-; CHECK: mov %i0, %g1
-; CHECK: mov %i1, %o0
-; CHECK: mov %i2, %o1
-; CHECK: mov %i3, %o2
-; CHECK: mov %i4, %o3
 ; CHECK: mov %i5, %o4
+; CHECK: mov %i4, %o3
+; CHECK: mov %i3, %o2
+; CHECK: mov %i2, %o1
+; CHECK: mov %i1, %o0
+; CHECK: mov %i0, %g1
 ; CHECK: ret
 ; CHECK-NEXT: restore %g0, %o0, %o0
 

@@ -105,7 +105,9 @@ TargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
   // Set a dummy attr to be retrieved by `createObject`.
   module->setAttr("serialize_attr", UnitAttr::get(module->getContext()));
   std::string targetTriple = llvm::sys::getProcessTriple();
-  LLVM::ModuleToObject serializer(*module, targetTriple, "", "");
+  LLVM::ModuleToObject serializer(
+      *module, targetTriple, "", "", 3, options.getInitialLlvmIRCallback(),
+      options.getLinkedLlvmIRCallback(), options.getOptimizedLlvmIRCallback());
   return serializer.run();
 }
 
@@ -152,4 +154,89 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(TargetAttrAPI)) {
   // Check that it contains the attribute added to the module in
   // `serializeToObject`.
   ASSERT_TRUE(properties.contains("serialize_attr"));
+}
+
+// Test callback function invoked with initial LLVM IR
+TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithInitialLLVMIR)) {
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+  Builder builder(&context);
+  IntegerAttr target = builder.getI32IntegerAttr(0);
+  auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
+
+  std::string initialLLVMIR;
+  auto initialCallback = [&initialLLVMIR](llvm::Module &module) {
+    llvm::raw_string_ostream ros(initialLLVMIR);
+    module.print(ros, nullptr);
+  };
+
+  gpu::TargetOptions opts(
+      {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
+      {}, initialCallback);
+  std::optional<SmallVector<char, 0>> serializedBinary =
+      targetAttr.serializeToObject(*module, opts);
+
+  ASSERT_TRUE(serializedBinary != std::nullopt);
+  ASSERT_TRUE(!serializedBinary->empty());
+  ASSERT_TRUE(!initialLLVMIR.empty());
+}
+
+// Test callback function invoked with linked LLVM IR
+TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithLinkedLLVMIR)) {
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+  Builder builder(&context);
+  IntegerAttr target = builder.getI32IntegerAttr(0);
+  auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
+
+  std::string linkedLLVMIR;
+  auto linkedCallback = [&linkedLLVMIR](llvm::Module &module) {
+    llvm::raw_string_ostream ros(linkedLLVMIR);
+    module.print(ros, nullptr);
+  };
+
+  gpu::TargetOptions opts(
+      {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
+      {}, {}, linkedCallback);
+  std::optional<SmallVector<char, 0>> serializedBinary =
+      targetAttr.serializeToObject(*module, opts);
+
+  ASSERT_TRUE(serializedBinary != std::nullopt);
+  ASSERT_TRUE(!serializedBinary->empty());
+  ASSERT_TRUE(!linkedLLVMIR.empty());
+}
+
+// Test callback function invoked with optimized LLVM IR
+TEST_F(MLIRTargetLLVM,
+       SKIP_WITHOUT_NATIVE(CallbackInvokedWithOptimizedLLVMIR)) {
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+  Builder builder(&context);
+  IntegerAttr target = builder.getI32IntegerAttr(0);
+  auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
+
+  std::string optimizedLLVMIR;
+  auto optimizedCallback = [&optimizedLLVMIR](llvm::Module &module) {
+    llvm::raw_string_ostream ros(optimizedLLVMIR);
+    module.print(ros, nullptr);
+  };
+
+  gpu::TargetOptions opts(
+      {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
+      {}, {}, {}, optimizedCallback);
+  std::optional<SmallVector<char, 0>> serializedBinary =
+      targetAttr.serializeToObject(*module, opts);
+
+  ASSERT_TRUE(serializedBinary != std::nullopt);
+  ASSERT_TRUE(!serializedBinary->empty());
+  ASSERT_TRUE(!optimizedLLVMIR.empty());
 }

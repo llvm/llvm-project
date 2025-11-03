@@ -21,6 +21,8 @@
 // CHECK-OUTPUT-NEXT: ModuleID
 
 // CHECK-ROUNDTRIP:       module {{.*}} {
+// FIXME: importer forces debug info version even without importing one.
+// CHECK-ROUNDTRIP-NEXT:    llvm.module_flag
 // CHECK-ROUNDTRIP-NEXT:  }
 // CHECK-ROUNDTRIP-EMPTY:
 // CHECK-ROUNDTRIP:       module

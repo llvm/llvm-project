@@ -1,4 +1,4 @@
-//===- ObjectStore.cpp ------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <deque>
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -121,20 +122,14 @@ Expected<ObjectProxy> ObjectStore::createProxy(ArrayRef<ObjectRef> Refs,
 Expected<ObjectRef>
 ObjectStore::storeFromOpenFileImpl(sys::fs::file_t FD,
                                    std::optional<sys::fs::file_status> Status) {
-  // Copy the file into an immutable memory buffer and call \c store on that.
-  // Using \c mmap would be unsafe because there's a race window between when we
-  // get the digest hash for the \c mmap contents and when we store the data; if
-  // the file changes in-between we will create an invalid object.
-
-  // FIXME: For the on-disk CAS implementation use cloning to store it as a
+  // TODO: For the on-disk CAS implementation use cloning to store it as a
   // standalone file if the file-system supports it and the file is large.
+  uint64_t Size = Status ? Status->getSize() : -1;
+  auto Buffer = MemoryBuffer::getOpenFile(FD, /*Filename=*/"", Size);
+  if (!Buffer)
+    return errorCodeToError(Buffer.getError());
 
-  constexpr size_t ChunkSize = 4 * 4096;
-  SmallString<0> Data;
-  Data.reserve(ChunkSize * 2);
-  if (Error E = sys::fs::readNativeFileToEOF(FD, Data, ChunkSize))
-    return std::move(E);
-  return store(std::nullopt, ArrayRef(Data.data(), Data.size()));
+  return store({}, arrayRefFromStringRef<char>((*Buffer)->getBuffer()));
 }
 
 Error ObjectStore::validateTree(ObjectRef Root) {
@@ -147,7 +142,7 @@ Error ObjectStore::validateTree(ObjectRef Root) {
     auto [I, Inserted] = ValidatedRefs.insert(Ref);
     if (!Inserted)
       continue; // already validated.
-    if (Error E = validate(getID(Ref)))
+    if (Error E = validateObject(getID(Ref)))
       return E;
     Expected<ObjectHandle> Obj = load(Ref);
     if (!Obj)
@@ -159,6 +154,92 @@ Error ObjectStore::validateTree(ObjectRef Root) {
       return E;
   }
   return Error::success();
+}
+
+Expected<ObjectRef> ObjectStore::importObject(ObjectStore &Upstream,
+                                              ObjectRef Other) {
+  // Copy the full CAS tree from upstream with depth-first ordering to ensure
+  // all the child nodes are available in downstream CAS before inserting
+  // current object. This uses a similar algorithm as
+  // `OnDiskGraphDB::importFullTree` but doesn't assume the upstream CAS schema
+  // so it can be used to import from any other ObjectStore reguardless of the
+  // CAS schema.
+
+  // There is no work to do if importing from self.
+  if (this == &Upstream)
+    return Other;
+
+  /// Keeps track of the state of visitation for current node and all of its
+  /// parents. Upstream Cursor holds information only from upstream CAS.
+  struct UpstreamCursor {
+    ObjectRef Ref;
+    ObjectHandle Node;
+    size_t RefsCount;
+    std::deque<ObjectRef> Refs;
+  };
+  SmallVector<UpstreamCursor, 16> CursorStack;
+  /// PrimaryNodeStack holds the ObjectRef of the current CAS, with nodes either
+  /// just stored in the CAS or nodes already exists in the current CAS.
+  SmallVector<ObjectRef, 128> PrimaryRefStack;
+  /// A map from upstream ObjectRef to current ObjectRef.
+  llvm::DenseMap<ObjectRef, ObjectRef> CreatedObjects;
+
+  auto enqueueNode = [&](ObjectRef Ref, ObjectHandle Node) {
+    unsigned NumRefs = Upstream.getNumRefs(Node);
+    std::deque<ObjectRef> Refs;
+    for (unsigned I = 0; I < NumRefs; ++I)
+      Refs.push_back(Upstream.readRef(Node, I));
+
+    CursorStack.push_back({Ref, Node, NumRefs, std::move(Refs)});
+  };
+
+  auto UpstreamHandle = Upstream.load(Other);
+  if (!UpstreamHandle)
+    return UpstreamHandle.takeError();
+  enqueueNode(Other, *UpstreamHandle);
+
+  while (!CursorStack.empty()) {
+    UpstreamCursor &Cur = CursorStack.back();
+    if (Cur.Refs.empty()) {
+      // Copy the node data into the primary store.
+      // The bottom of \p PrimaryRefStack contains the ObjectRef for the
+      // current node.
+      assert(PrimaryRefStack.size() >= Cur.RefsCount);
+      auto Refs = ArrayRef(PrimaryRefStack)
+                      .slice(PrimaryRefStack.size() - Cur.RefsCount);
+      auto NewNode = store(Refs, Upstream.getData(Cur.Node));
+      if (!NewNode)
+        return NewNode.takeError();
+
+      // Remove the current node and its IDs from the stack.
+      PrimaryRefStack.truncate(PrimaryRefStack.size() - Cur.RefsCount);
+      CursorStack.pop_back();
+
+      PrimaryRefStack.push_back(*NewNode);
+      CreatedObjects.try_emplace(Cur.Ref, *NewNode);
+      continue;
+    }
+
+    // Check if the node exists already.
+    auto CurrentID = Cur.Refs.front();
+    Cur.Refs.pop_front();
+    auto Ref = CreatedObjects.find(CurrentID);
+    if (Ref != CreatedObjects.end()) {
+      // If exists already, just need to enqueue the primary node.
+      PrimaryRefStack.push_back(Ref->second);
+      continue;
+    }
+
+    // Load child.
+    auto PrimaryID = Upstream.load(CurrentID);
+    if (LLVM_UNLIKELY(!PrimaryID))
+      return PrimaryID.takeError();
+
+    enqueueNode(CurrentID, *PrimaryID);
+  }
+
+  assert(PrimaryRefStack.size() == 1);
+  return PrimaryRefStack.front();
 }
 
 std::unique_ptr<MemoryBuffer>

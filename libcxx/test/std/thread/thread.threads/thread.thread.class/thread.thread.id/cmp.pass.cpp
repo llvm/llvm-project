@@ -51,7 +51,7 @@ int main(int, char**) {
   assert(testOrder(id1, id3, isLess ? std::strong_ordering::less : std::strong_ordering::greater));
 #endif
 
-  // Regression tests for https://github.com/llvm/llvm-project/issues/56187
+  // Regression tests for https://llvm.org/PR56187
   // libc++ previously declared the comparison operators as hidden friends
   // which was non-conforming.
   assert(std::operator==(id1, id2));

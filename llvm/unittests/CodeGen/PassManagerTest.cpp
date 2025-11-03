@@ -162,16 +162,14 @@ public:
     // MachineModuleAnalysis needs a TargetMachine instance.
     llvm::InitializeAllTargets();
 
-    std::string TripleName = Triple::normalize(sys::getDefaultTargetTriple());
+    Triple TT(sys::getDefaultTargetTriple());
     std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(TripleName, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     if (!TheTarget)
       return;
 
     TargetOptions Options;
-    TM.reset(TheTarget->createTargetMachine(TripleName, "", "", Options,
-                                            std::nullopt));
+    TM.reset(TheTarget->createTargetMachine(TT, "", "", Options, std::nullopt));
   }
 };
 
@@ -179,10 +177,9 @@ TEST_F(PassManagerTest, Basic) {
   if (!TM)
     GTEST_SKIP();
 
-  LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  MachineModuleInfo MMI(LLVMTM);
+  MachineModuleInfo MMI(TM.get());
 
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
@@ -229,10 +226,9 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   if (!TM)
     GTEST_SKIP();
 
-  LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  MachineModuleInfo MMI(LLVMTM);
+  MachineModuleInfo MMI(TM.get());
 
   LoopAnalysisManager LAM;
   MachineFunctionAnalysisManager MFAM;

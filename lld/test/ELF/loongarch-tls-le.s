@@ -1,14 +1,20 @@
 # REQUIRES: loongarch
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 --defsym ELF32=1 %s -o %t.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --defsym ELF32=1 -mattr=+relax %s -o %t.32.relax.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %s -o %t.64.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 -mattr=+relax %s -o %t.64.relax.o
 
 # RUN: ld.lld %t.32.o -o %t.32
 # RUN: llvm-nm -p %t.32 | FileCheck --check-prefixes=NM %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.32 | FileCheck --check-prefixes=LE,LE32 %s
+# RUN: ld.lld %t.32.relax.o -o %t.32.relax
+# RUN: llvm-objdump -d --no-show-raw-insn %t.32.relax | FileCheck --check-prefixes=LE,LE32-RELAX %s
 
 # RUN: ld.lld %t.64.o -o %t.64
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=LE,LE64 %s
+# RUN: ld.lld %t.64.relax.o -o %t.64.relax
+# RUN: llvm-objdump -d --no-show-raw-insn %t.64.relax | FileCheck --check-prefixes=LE,LE64-RELAX %s
 
 # RUN: not ld.lld -shared %t.32.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
@@ -37,11 +43,21 @@
 # LE32-NEXT: add.w   $a0, $a0, $tp
 # LE32-NEXT: addi.w  $a0, $a0, -2048
 
+# LE32-RELAX:      addi.w  $a0, $tp, 8
+# LE32-RELAX-NEXT: lu12i.w $a0, 1
+# LE32-RELAX-NEXT: add.w   $a0, $a0, $tp
+# LE32-RELAX-NEXT: addi.w  $a0, $a0, -2048
+
 # LE64:      add.d   $a0, $a0, $tp
 # LE64-NEXT: addi.d  $a0, $a0, 8
 # LE64-NEXT: lu12i.w $a0, 1
 # LE64-NEXT: add.d   $a0, $a0, $tp
 # LE64-NEXT: addi.d  $a0, $a0, -2048
+
+# LE64-RELAX:      addi.d  $a0, $tp, 8
+# LE64-RELAX-NEXT: lu12i.w $a0, 1
+# LE64-RELAX-NEXT: add.d   $a0, $a0, $tp
+# LE64-RELAX-NEXT: addi.d  $a0, $a0, -2048
 
 # LE-EMPTY:
 

@@ -405,6 +405,28 @@ void __ubsan::__ubsan_handle_out_of_bounds_abort(OutOfBoundsData *Data,
   Die();
 }
 
+static void handleLocalOutOfBoundsImpl(ReportOptions Opts) {
+  // FIXME: Pass more diagnostic info.
+  SymbolizedStackHolder CallerLoc;
+  CallerLoc.reset(getCallerLocation(Opts.pc));
+  Location Loc;
+  Loc = CallerLoc;
+  ErrorType ET = ErrorType::LocalOutOfBounds;
+  ScopedReport R(Opts, Loc, ET);
+  Diag(Loc, DL_Error, ET, "access out of bounds");
+}
+
+void __ubsan::__ubsan_handle_local_out_of_bounds() {
+  GET_REPORT_OPTIONS(false);
+  handleLocalOutOfBoundsImpl(Opts);
+}
+
+void __ubsan::__ubsan_handle_local_out_of_bounds_abort() {
+  GET_REPORT_OPTIONS(true);
+  handleLocalOutOfBoundsImpl(Opts);
+  Die();
+}
+
 static void handleBuiltinUnreachableImpl(UnreachableData *Data,
                                          ReportOptions Opts) {
   ErrorType ET = ErrorType::UnreachableCall;
@@ -877,10 +899,7 @@ static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
 
 namespace __ubsan {
 
-#ifdef UBSAN_CAN_USE_CXXABI
-
 #ifdef _WIN32
-
 extern "C" void __ubsan_handle_cfi_bad_type_default(CFICheckFailData *Data,
                                                     ValueHandle Vtable,
                                                     bool ValidVtable,
@@ -889,20 +908,17 @@ extern "C" void __ubsan_handle_cfi_bad_type_default(CFICheckFailData *Data,
 }
 
 WIN_WEAK_ALIAS(__ubsan_handle_cfi_bad_type, __ubsan_handle_cfi_bad_type_default)
-#else
-SANITIZER_WEAK_ATTRIBUTE
-#endif
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts);
-
 #else
+SANITIZER_WEAK_ATTRIBUTE
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts) {
   Die();
 }
 #endif
 
-}  // namespace __ubsan
+} // namespace __ubsan
 
 void __ubsan::__ubsan_handle_cfi_check_fail(CFICheckFailData *Data,
                                             ValueHandle Value,

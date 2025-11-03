@@ -124,7 +124,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; AVX-NEXT:    fldt 16(%rbp)
 ; AVX-NEXT:    fld %st(0)
 ; AVX-NEXT:    fisttpl -4(%rbp)
-; AVX-NEXT:    vcvtsi2sdl -4(%rbp), %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sdl -4(%rbp), %xmm15, %xmm0
 ; AVX-NEXT:    vmovsd %xmm0, -48(%rbp)
 ; AVX-NEXT:    vmovsd %xmm0, -24(%rbp)
 ; AVX-NEXT:    fsubl -24(%rbp)
@@ -132,7 +132,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; AVX-NEXT:    fmul %st, %st(1)
 ; AVX-NEXT:    fld %st(1)
 ; AVX-NEXT:    fisttpl -8(%rbp)
-; AVX-NEXT:    vcvtsi2sdl -8(%rbp), %xmm1, %xmm0
+; AVX-NEXT:    vcvtsi2sdl -8(%rbp), %xmm15, %xmm0
 ; AVX-NEXT:    vmovsd %xmm0, -40(%rbp)
 ; AVX-NEXT:    vmovsd %xmm0, -16(%rbp)
 ; AVX-NEXT:    fxch %st(1)
@@ -162,4 +162,4 @@ entry:
   ret void
 }
 
-attributes #0 = { noinline uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }

@@ -143,6 +143,12 @@ struct sanitizer_kernel_sockaddr {
   char sa_data[14];
 };
 
+struct sanitizer_kernel_open_how {
+  u64 flags;
+  u64 mode;
+  u64 resolve;
+};
+
 // Real sigset size is always passed as a syscall argument.
 // Declare it "void" to catch sizeof(kernel_sigset_t).
 typedef void kernel_sigset_t;
@@ -2843,6 +2849,18 @@ PRE_SYSCALL(openat)(long dfd, const void *filename, long flags, long mode) {
 POST_SYSCALL(openat)
 (long res, long dfd, const void *filename, long flags, long mode) {}
 
+PRE_SYSCALL(openat2)(long dfd, const void* filename,
+                     const sanitizer_kernel_open_how* how, uptr howlen) {
+  if (filename)
+    PRE_READ(filename, __sanitizer::internal_strlen((const char*)filename) + 1);
+
+  if (how)
+    PRE_READ(how, howlen);
+}
+
+POST_SYSCALL(openat2)(long res, long dfd, const void* filename,
+                      const sanitizer_kernel_open_how* how, uptr howlen) {}
+
 PRE_SYSCALL(newfstatat)
 (long dfd, const void *filename, void *statbuf, long flag) {
   if (filename)
@@ -3203,6 +3221,28 @@ POST_SYSCALL(futex)
 (long res, void *uaddr, long futex_op, long val, void *timeout, void *uaddr2,
  long val3) {
   COMMON_SYSCALL_BLOCKING_END();
+}
+
+PRE_SYSCALL(copy_file_range)
+(int fdin, __sanitizer___kernel_off_t *offin, int fdout,
+ __sanitizer___kernel_off_t *offout, SIZE_T size, unsigned int flags) {
+  if (offin != nullptr) {
+    PRE_READ(offin, sizeof(*offin));
+  }
+  if (offout != nullptr) {
+    PRE_READ(offout, sizeof(*offout));
+  }
+}
+
+POST_SYSCALL(copy_file_range)
+(SSIZE_T, int fdin, __sanitizer___kernel_off_t *offin, int fdout,
+ __sanitizer___kernel_off_t *offout, SIZE_T size, unsigned int flags) {
+  if (offin != nullptr) {
+    POST_WRITE(offin, sizeof(*offin));
+  }
+  if (offout != nullptr) {
+    POST_WRITE(offout, sizeof(*offout));
+  }
 }
 
 }  // extern "C"

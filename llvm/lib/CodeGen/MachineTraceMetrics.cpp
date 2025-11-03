@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -31,7 +30,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <tuple>
 #include <utility>
 
@@ -487,10 +485,7 @@ struct LoopBounds {
 
 // Specialize po_iterator_storage in order to prune the post-order traversal so
 // it is limited to the current loop and doesn't traverse the loop back edges.
-namespace llvm {
-
-template<>
-class po_iterator_storage<LoopBounds, true> {
+template <> class llvm::po_iterator_storage<LoopBounds, true> {
   LoopBounds &LB;
 
 public:
@@ -520,8 +515,6 @@ public:
     return LB.Visited.insert(To).second;
   }
 };
-
-} // end namespace llvm
 
 /// Compute the trace through MBB.
 void MachineTraceMetrics::Ensemble::computeTrace(const MachineBasicBlock *MBB) {
@@ -682,14 +675,13 @@ struct DataDep {
     : DefMI(DefMI), DefOp(DefOp), UseOp(UseOp) {}
 
   /// Create a DataDep from an SSA form virtual register.
-  DataDep(const MachineRegisterInfo *MRI, unsigned VirtReg, unsigned UseOp)
-    : UseOp(UseOp) {
-    assert(Register::isVirtualRegister(VirtReg));
-    MachineRegisterInfo::def_iterator DefI = MRI->def_begin(VirtReg);
-    assert(!DefI.atEnd() && "Register has no defs");
-    DefMI = DefI->getParent();
-    DefOp = DefI.getOperandNo();
-    assert((++DefI).atEnd() && "Register has multiple defs");
+  DataDep(const MachineRegisterInfo *MRI, Register VirtReg, unsigned UseOp)
+      : UseOp(UseOp) {
+    assert(VirtReg.isVirtual());
+    MachineOperand *DefMO = MRI->getOneDef(VirtReg);
+    assert(DefMO && "Register does not have unique def");
+    DefMI = DefMO->getParent();
+    DefOp = DefMO->getOperandNo();
   }
 };
 
@@ -1074,7 +1066,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
       } else {
         // For register units, the def latency is not included because we don't
         // know the def yet.
-        RegUnits[LI.Reg].Cycle = LI.Height;
+        RegUnits[LI.Reg.id()].Cycle = LI.Height;
       }
     }
   }

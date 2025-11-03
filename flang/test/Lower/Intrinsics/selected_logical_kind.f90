@@ -11,7 +11,7 @@ end
 ! CHECK: %[[RES_ALLOCA:.*]] = fir.alloca i8 {bindc_name = "res", uniq_name = "_QFselected_logical_kind_test1Eres"}
 ! CHECK: %[[RES:.*]]:2 = hlfir.declare %[[RES_ALLOCA]] {uniq_name = "_QFselected_logical_kind_test1Eres"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 ! CHECK: %[[KIND:.*]] = arith.constant 1 : i32
-! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %1#1 : (!fir.ref<i8>) -> !fir.llvm_ptr<i8>
+! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %1#0 : (!fir.ref<i8>) -> !fir.llvm_ptr<i8>
 ! CHECK: %{{.*}} = fir.call @_FortranASelectedLogicalKind(%{{.*}}, %{{.*}}, %[[INPUT_ADDR]], %[[KIND]]) fastmath<contract> : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 
 subroutine selected_logical_kind_test2(input)
@@ -25,7 +25,7 @@ end
 ! CHECK: %[[RES_ALLOCA:.*]] = fir.alloca i16 {bindc_name = "res", uniq_name = "_QFselected_logical_kind_test2Eres"}
 ! CHECK: %[[RES:.*]]:2 = hlfir.declare %[[RES_ALLOCA]] {uniq_name = "_QFselected_logical_kind_test2Eres"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
 ! CHECK: %[[KIND:.*]] = arith.constant 2 : i32
-! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %[[INPUT]]#1 : (!fir.ref<i16>) -> !fir.llvm_ptr<i8>
+! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %[[INPUT]]#0 : (!fir.ref<i16>) -> !fir.llvm_ptr<i8>
 ! CHECK: %{{.*}} = fir.call @_FortranASelectedLogicalKind(%{{.*}}, %{{.*}}, %[[INPUT_ADDR]], %[[KIND]]) fastmath<contract> : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 
 subroutine selected_logical_kind_test4(input)
@@ -39,7 +39,7 @@ end
 ! CHECK: %[[RES_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "res", uniq_name = "_QFselected_logical_kind_test4Eres"}
 ! CHECK: %[[RES:.*]]:2 = hlfir.declare %[[RES_ALLOCA]] {uniq_name = "_QFselected_logical_kind_test4Eres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[KIND:.*]] = arith.constant 4 : i32
-! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %[[INPUT]]#1 : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %[[INPUT]]#0 : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
 ! CHECK: %{{.*}} = fir.call @_FortranASelectedLogicalKind(%{{.*}}, %{{.*}}, %[[INPUT_ADDR]], %[[KIND]]) fastmath<contract> : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 
 subroutine selected_logical_kind_test8(input)
@@ -53,7 +53,7 @@ end
 ! CHECK: %[[RES_ALLOCA]] = fir.alloca i64 {bindc_name = "res", uniq_name = "_QFselected_logical_kind_test8Eres"}
 ! CHECK: %[[RES:.*]]:2 = hlfir.declare %[[RES_ALLOCA]] {uniq_name = "_QFselected_logical_kind_test8Eres"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK: %[[KIND:.*]] = arith.constant 8 : i32
-! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %[[INPUT]]#1 : (!fir.ref<i64>) -> !fir.llvm_ptr<i8>
+! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %[[INPUT]]#0 : (!fir.ref<i64>) -> !fir.llvm_ptr<i8>
 ! CHECK: %{{.*}} = fir.call @_FortranASelectedLogicalKind(%{{.*}}, %{{.*}}, %[[INPUT_ADDR]], %[[KIND]]) fastmath<contract> : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 
 subroutine selected_logical_kind_test16(input)
@@ -67,5 +67,5 @@ end
 ! CHECK: %[[RES_ALLOCA:.*]] = fir.alloca i128 {bindc_name = "res", uniq_name = "_QFselected_logical_kind_test16Eres"}
 ! CHECK: %[[RES:.*]]:2 = hlfir.declare %[[RES_ALLOCA]] {uniq_name = "_QFselected_logical_kind_test16Eres"} : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
 ! CHECK: %[[KIND:.*]] = arith.constant 16 : i32
-! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %[[INPUT]]#1 : (!fir.ref<i128>) -> !fir.llvm_ptr<i8>
+! CHECK: %[[INPUT_ADDR:.*]] = fir.convert %[[INPUT]]#0 : (!fir.ref<i128>) -> !fir.llvm_ptr<i8>
 ! CHECK: %{{.*}} = fir.call @_FortranASelectedLogicalKind(%{{.*}}, %{{.*}}, %[[INPUT_ADDR]], %[[KIND]]) fastmath<contract> : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32

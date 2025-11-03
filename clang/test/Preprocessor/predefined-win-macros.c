@@ -113,6 +113,13 @@
 // CHECK-ARM64EC-WIN: #define _WIN32 1
 // CHECK-ARM64EC-WIN: #define _WIN64 1
 
+// RUN: %clang_cc1 -triple mipsel-windows %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-MIPSEL-WIN
+
+// CHECK-MIPSEL-WIN: #define _M_MRX000 4000
+// CHECK-MIPSEL-WIN: #define _WIN32 1
+// CHECK-MIPSEL-WIN-NOT: #define _MIPS_ 1
+
 // RUN: %clang_cc1 -triple i686-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-MINGW
 
@@ -173,3 +180,12 @@
 // CHECK-ARM64EC-MINGW: #define __arm64ec__ 1
 // CHECK-ARM64EC-MINGW: #define __x86_64 1
 // CHECK-ARM64EC-MINGW: #define __x86_64__ 1
+
+// RUN: %clang_cc1 -triple mipsel-windows-gnu %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-MIPSEL-MINGW
+
+// CHECK-MIPSEL-MINGW-NOT: #define _M_MRX000 4000
+// CHECK-MIPSEL-MINGW: #define _MIPS_ 1
+// CHECK-MIPSEL-MINGW: #define _WIN32 1
+// CHECK-MIPSEL-MINGW: #define __mips 32
+// CHECK-MIPSEL-MINGW: #define __mips__ 1

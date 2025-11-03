@@ -1,6 +1,9 @@
 # RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -O3 -run-pass=machine-sink %s -o - \
 # RUN:   -verify-machineinstrs | FileCheck %s
 #
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -O3 -passes=machine-sink %s -o - \
+# RUN:   -verify-machineinstrs | FileCheck %s
+#
 # Test that the AGHIK can be sunk into %bb.4. It has a def of CC, but it is dead.
 
 --- |

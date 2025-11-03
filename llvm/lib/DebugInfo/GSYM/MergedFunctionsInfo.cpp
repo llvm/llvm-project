@@ -35,22 +35,59 @@ llvm::Error MergedFunctionsInfo::encode(FileWriter &Out) const {
 llvm::Expected<MergedFunctionsInfo>
 MergedFunctionsInfo::decode(DataExtractor &Data, uint64_t BaseAddr) {
   MergedFunctionsInfo MFI;
-  uint64_t Offset = 0;
-  uint32_t Count = Data.getU32(&Offset);
+  auto FuncExtractorsOrError = MFI.getFuncsDataExtractors(Data);
 
-  for (uint32_t i = 0; i < Count; ++i) {
-    uint32_t FnSize = Data.getU32(&Offset);
-    DataExtractor FnData(Data.getData().substr(Offset, FnSize),
-                         Data.isLittleEndian(), Data.getAddressSize());
-    llvm::Expected<FunctionInfo> FI =
-        FunctionInfo::decode(FnData, BaseAddr + Offset);
+  if (!FuncExtractorsOrError)
+    return FuncExtractorsOrError.takeError();
+
+  for (DataExtractor &FuncData : *FuncExtractorsOrError) {
+    llvm::Expected<FunctionInfo> FI = FunctionInfo::decode(FuncData, BaseAddr);
     if (!FI)
       return FI.takeError();
     MFI.MergedFunctions.push_back(std::move(*FI));
-    Offset += FnSize;
   }
 
   return MFI;
+}
+
+llvm::Expected<std::vector<DataExtractor>>
+MergedFunctionsInfo::getFuncsDataExtractors(DataExtractor &Data) {
+  std::vector<DataExtractor> Results;
+  uint64_t Offset = 0;
+
+  // Ensure there is enough data to read the function count.
+  if (!Data.isValidOffsetForDataOfSize(Offset, 4))
+    return createStringError(
+        std::errc::io_error,
+        "unable to read the function count at offset 0x%8.8" PRIx64, Offset);
+
+  uint32_t Count = Data.getU32(&Offset);
+
+  for (uint32_t i = 0; i < Count; ++i) {
+    // Ensure there is enough data to read the function size.
+    if (!Data.isValidOffsetForDataOfSize(Offset, 4))
+      return createStringError(
+          std::errc::io_error,
+          "unable to read size of function %u at offset 0x%8.8" PRIx64, i,
+          Offset);
+
+    uint32_t FnSize = Data.getU32(&Offset);
+
+    // Ensure there is enough data for the function content.
+    if (!Data.isValidOffsetForDataOfSize(Offset, FnSize))
+      return createStringError(
+          std::errc::io_error,
+          "function data is truncated for function %u at offset 0x%8.8" PRIx64
+          ", expected size %u",
+          i, Offset, FnSize);
+
+    // Extract the function data.
+    Results.emplace_back(Data.getData().substr(Offset, FnSize),
+                         Data.isLittleEndian(), Data.getAddressSize());
+
+    Offset += FnSize;
+  }
+  return Results;
 }
 
 bool operator==(const MergedFunctionsInfo &LHS,

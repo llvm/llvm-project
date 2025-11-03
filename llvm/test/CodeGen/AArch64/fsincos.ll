@@ -20,12 +20,10 @@ entry:
   ret float %c
 }
 
-define half @sin_f16(half %a) {
+define half @sin_f16(half %a) nounwind {
 ; CHECK-LABEL: sin_f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    fcvt h0, s0
@@ -45,12 +43,10 @@ entry:
   ret fp128 %c
 }
 
-define <1 x double> @sin_v1f64(<1 x double> %x) {
+define <1 x double> @sin_v1f64(<1 x double> %x) nounwind {
 ; CHECK-LABEL: sin_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl sin
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -58,15 +54,13 @@ define <1 x double> @sin_v1f64(<1 x double> %x) {
   ret <1 x double> %c
 }
 
-define <2 x double> @sin_v2f64(<2 x double> %a) {
+define <2 x double> @sin_v2f64(<2 x double> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v2f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl sin
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
@@ -84,12 +78,9 @@ define <2 x double> @sin_v2f64(<2 x double> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #32
 ; CHECK-GI-NEXT:    str d8, [sp, #16] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
 ; CHECK-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl sin
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -108,19 +99,14 @@ entry:
   ret <2 x double> %c
 }
 
-define <3 x double> @sin_v3f64(<3 x double> %a) {
+define <3 x double> @sin_v3f64(<3 x double> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SD-NEXT:    .cfi_offset w30, -8
-; CHECK-SD-NEXT:    .cfi_offset b8, -16
-; CHECK-SD-NEXT:    .cfi_offset b9, -24
-; CHECK-SD-NEXT:    .cfi_offset b10, -32
 ; CHECK-SD-NEXT:    fmov d8, d2
 ; CHECK-SD-NEXT:    fmov d9, d1
+; CHECK-SD-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl sin
 ; CHECK-SD-NEXT:    fmov d10, d0
 ; CHECK-SD-NEXT:    fmov d0, d9
@@ -140,14 +126,9 @@ define <3 x double> @sin_v3f64(<3 x double> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    .cfi_offset b9, -24
-; CHECK-GI-NEXT:    .cfi_offset b10, -32
 ; CHECK-GI-NEXT:    fmov d8, d1
 ; CHECK-GI-NEXT:    fmov d9, d2
+; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl sin
 ; CHECK-GI-NEXT:    fmov d10, d0
 ; CHECK-GI-NEXT:    fmov d0, d8
@@ -167,15 +148,13 @@ entry:
   ret <3 x double> %c
 }
 
-define <4 x double> @sin_v4f64(<4 x double> %a) {
+define <4 x double> @sin_v4f64(<4 x double> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v4f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl sin
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
@@ -206,15 +185,11 @@ define <4 x double> @sin_v4f64(<4 x double> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #80
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
-; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-GI-NEXT:    mov d9, v1.d[1]
+; CHECK-GI-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl sin
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
@@ -244,16 +219,14 @@ entry:
   ret <4 x double> %c
 }
 
-define <2 x float> @sin_v2f32(<2 x float> %a) {
+define <2 x float> @sin_v2f32(<2 x float> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v2f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
@@ -271,13 +244,10 @@ define <2 x float> @sin_v2f32(<2 x float> %a) {
 ; CHECK-GI-LABEL: sin_v2f32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #32
-; CHECK-GI-NEXT:    str d8, [sp, #16] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str d8, [sp, #16] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
+; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
@@ -297,15 +267,13 @@ entry:
   ret <2 x float> %c
 }
 
-define <3 x float> @sin_v3f32(<3 x float> %a) {
+define <3 x float> @sin_v3f32(<3 x float> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -331,13 +299,9 @@ define <3 x float> @sin_v3f32(<3 x float> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #64
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    mov s9, v0.s[2]
+; CHECK-GI-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
@@ -362,15 +326,13 @@ entry:
   ret <3 x float> %c
 }
 
-define <4 x float> @sin_v4f32(<4 x float> %a) {
+define <4 x float> @sin_v4f32(<4 x float> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v4f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -403,16 +365,11 @@ define <4 x float> @sin_v4f32(<4 x float> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #80
 ; CHECK-GI-NEXT:    str d10, [sp, #48] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    mov s10, v0.s[3]
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    .cfi_offset b9, -24
-; CHECK-GI-NEXT:    .cfi_offset b10, -32
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    mov s9, v0.s[2]
-; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
@@ -444,15 +401,13 @@ entry:
   ret <4 x float> %c
 }
 
-define <8 x float> @sin_v8f32(<8 x float> %a) {
+define <8 x float> @sin_v8f32(<8 x float> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v8f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
@@ -511,25 +466,17 @@ define <8 x float> @sin_v8f32(<8 x float> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #176
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #112] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d11, d10, [sp, #128] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #144] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #160] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 176
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
-; CHECK-GI-NEXT:    .cfi_offset b10, -40
-; CHECK-GI-NEXT:    .cfi_offset b11, -48
-; CHECK-GI-NEXT:    .cfi_offset b12, -56
-; CHECK-GI-NEXT:    .cfi_offset b13, -64
-; CHECK-GI-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    mov s8, v0.s[1]
-; CHECK-GI-NEXT:    mov s9, v0.s[2]
-; CHECK-GI-NEXT:    mov s10, v0.s[3]
-; CHECK-GI-NEXT:    mov s11, v1.s[1]
-; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    mov s12, v1.s[2]
 ; CHECK-GI-NEXT:    mov s13, v1.s[3]
+; CHECK-GI-NEXT:    stp d11, d10, [sp, #128] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    mov s11, v1.s[1]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #144] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov s8, v0.s[1]
+; CHECK-GI-NEXT:    mov s9, v0.s[2]
+; CHECK-GI-NEXT:    str x30, [sp, #160] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-GI-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
@@ -586,15 +533,13 @@ entry:
   ret <8 x float> %c
 }
 
-define <7 x half> @sin_v7f16(<7 x half> %a) {
+define <7 x half> @sin_v7f16(<7 x half> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v7f16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -661,24 +606,16 @@ define <7 x half> @sin_v7f16(<7 x half> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #160
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #96] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d11, d10, [sp, #112] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #128] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #144] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 160
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
-; CHECK-GI-NEXT:    .cfi_offset b10, -40
-; CHECK-GI-NEXT:    .cfi_offset b11, -48
-; CHECK-GI-NEXT:    .cfi_offset b12, -56
-; CHECK-GI-NEXT:    .cfi_offset b13, -64
-; CHECK-GI-NEXT:    mov h8, v0.h[1]
-; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    mov h10, v0.h[3]
-; CHECK-GI-NEXT:    mov h11, v0.h[4]
 ; CHECK-GI-NEXT:    mov h12, v0.h[5]
 ; CHECK-GI-NEXT:    mov h13, v0.h[6]
+; CHECK-GI-NEXT:    stp d11, d10, [sp, #112] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h10, v0.h[3]
+; CHECK-GI-NEXT:    mov h11, v0.h[4]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #128] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h8, v0.h[1]
+; CHECK-GI-NEXT:    mov h9, v0.h[2]
 ; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    str x30, [sp, #144] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -733,16 +670,14 @@ entry:
   ret <7 x half> %c
 }
 
-define <4 x half> @sin_v4f16(<4 x half> %a) {
+define <4 x half> @sin_v4f16(<4 x half> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v4f16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
@@ -778,19 +713,14 @@ define <4 x half> @sin_v4f16(<4 x half> %a) {
 ; CHECK-GI-LABEL: sin_v4f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #80
-; CHECK-GI-NEXT:    str d10, [sp, #48] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    .cfi_offset b9, -24
-; CHECK-GI-NEXT:    .cfi_offset b10, -32
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str d10, [sp, #48] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    mov h10, v0.h[3]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
 ; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    mov h10, v0.h[3]
 ; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -825,15 +755,13 @@ entry:
   ret <4 x half> %c
 }
 
-define <8 x half> @sin_v8f16(<8 x half> %a) {
+define <8 x half> @sin_v8f16(<8 x half> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v8f16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -900,27 +828,18 @@ define <8 x half> @sin_v8f16(<8 x half> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #176
 ; CHECK-GI-NEXT:    str d14, [sp, #112] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    mov h14, v0.h[7]
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #120] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d11, d10, [sp, #136] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #152] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #168] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 176
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    .cfi_offset b9, -24
-; CHECK-GI-NEXT:    .cfi_offset b10, -32
-; CHECK-GI-NEXT:    .cfi_offset b11, -40
-; CHECK-GI-NEXT:    .cfi_offset b12, -48
-; CHECK-GI-NEXT:    .cfi_offset b13, -56
-; CHECK-GI-NEXT:    .cfi_offset b14, -64
-; CHECK-GI-NEXT:    mov h8, v0.h[1]
-; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    mov h10, v0.h[3]
-; CHECK-GI-NEXT:    mov h11, v0.h[4]
 ; CHECK-GI-NEXT:    mov h12, v0.h[5]
 ; CHECK-GI-NEXT:    mov h13, v0.h[6]
-; CHECK-GI-NEXT:    mov h14, v0.h[7]
+; CHECK-GI-NEXT:    stp d11, d10, [sp, #136] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h10, v0.h[3]
+; CHECK-GI-NEXT:    mov h11, v0.h[4]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #152] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h8, v0.h[1]
+; CHECK-GI-NEXT:    mov h9, v0.h[2]
 ; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    str x30, [sp, #168] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -982,15 +901,13 @@ entry:
   ret <8 x half> %c
 }
 
-define <16 x half> @sin_v16f16(<16 x half> %a) {
+define <16 x half> @sin_v16f16(<16 x half> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v16f16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -1119,35 +1036,24 @@ define <16 x half> @sin_v16f16(<16 x half> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #320
 ; CHECK-GI-NEXT:    stp d15, d14, [sp, #240] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d13, d12, [sp, #256] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d11, d10, [sp, #272] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #288] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x29, x30, [sp, #304] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 320
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
-; CHECK-GI-NEXT:    .cfi_offset b10, -40
-; CHECK-GI-NEXT:    .cfi_offset b11, -48
-; CHECK-GI-NEXT:    .cfi_offset b12, -56
-; CHECK-GI-NEXT:    .cfi_offset b13, -64
-; CHECK-GI-NEXT:    .cfi_offset b14, -72
-; CHECK-GI-NEXT:    .cfi_offset b15, -80
 ; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    str q1, [sp, #80] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h14, v1.h[1]
+; CHECK-GI-NEXT:    str q1, [sp, #80] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h1, v1.h[2]
 ; CHECK-GI-NEXT:    mov h15, v0.h[1]
-; CHECK-GI-NEXT:    mov h8, v0.h[2]
-; CHECK-GI-NEXT:    mov h9, v0.h[3]
-; CHECK-GI-NEXT:    mov h10, v0.h[4]
-; CHECK-GI-NEXT:    mov h11, v0.h[5]
+; CHECK-GI-NEXT:    stp d13, d12, [sp, #256] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h12, v0.h[6]
 ; CHECK-GI-NEXT:    mov h13, v0.h[7]
-; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    stp d11, d10, [sp, #272] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h10, v0.h[4]
+; CHECK-GI-NEXT:    mov h11, v0.h[5]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #288] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h8, v0.h[2]
+; CHECK-GI-NEXT:    mov h9, v0.h[3]
 ; CHECK-GI-NEXT:    str h1, [sp, #16] // 2-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h1, v2.h[3]
+; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #304] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    str h1, [sp, #32] // 2-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h1, v2.h[4]
 ; CHECK-GI-NEXT:    str h1, [sp, #48] // 2-byte Folded Spill
@@ -1282,13 +1188,11 @@ entry:
   ret <16 x half> %c
 }
 
-define <2 x fp128> @sin_v2fp128(<2 x fp128> %a) {
+define <2 x fp128> @sin_v2fp128(<2 x fp128> %a) nounwind {
 ; CHECK-LABEL: sin_v2fp128:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl sinl
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -1322,12 +1226,10 @@ entry:
   ret float %c
 }
 
-define half @cos_f16(half %a) {
+define half @cos_f16(half %a) nounwind {
 ; CHECK-LABEL: cos_f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    fcvt h0, s0
@@ -1347,12 +1249,10 @@ entry:
   ret fp128 %c
 }
 
-define <1 x double> @cos_v1f64(<1 x double> %x) {
+define <1 x double> @cos_v1f64(<1 x double> %x) nounwind {
 ; CHECK-LABEL: cos_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl cos
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1360,15 +1260,13 @@ define <1 x double> @cos_v1f64(<1 x double> %x) {
   ret <1 x double> %c
 }
 
-define <2 x double> @cos_v2f64(<2 x double> %a) {
+define <2 x double> @cos_v2f64(<2 x double> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v2f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl cos
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
@@ -1386,12 +1284,9 @@ define <2 x double> @cos_v2f64(<2 x double> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #32
 ; CHECK-GI-NEXT:    str d8, [sp, #16] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
 ; CHECK-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl cos
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -1410,19 +1305,14 @@ entry:
   ret <2 x double> %c
 }
 
-define <3 x double> @cos_v3f64(<3 x double> %a) {
+define <3 x double> @cos_v3f64(<3 x double> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SD-NEXT:    .cfi_offset w30, -8
-; CHECK-SD-NEXT:    .cfi_offset b8, -16
-; CHECK-SD-NEXT:    .cfi_offset b9, -24
-; CHECK-SD-NEXT:    .cfi_offset b10, -32
 ; CHECK-SD-NEXT:    fmov d8, d2
 ; CHECK-SD-NEXT:    fmov d9, d1
+; CHECK-SD-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl cos
 ; CHECK-SD-NEXT:    fmov d10, d0
 ; CHECK-SD-NEXT:    fmov d0, d9
@@ -1442,14 +1332,9 @@ define <3 x double> @cos_v3f64(<3 x double> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    .cfi_offset b9, -24
-; CHECK-GI-NEXT:    .cfi_offset b10, -32
 ; CHECK-GI-NEXT:    fmov d8, d1
 ; CHECK-GI-NEXT:    fmov d9, d2
+; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl cos
 ; CHECK-GI-NEXT:    fmov d10, d0
 ; CHECK-GI-NEXT:    fmov d0, d8
@@ -1469,15 +1354,13 @@ entry:
   ret <3 x double> %c
 }
 
-define <4 x double> @cos_v4f64(<4 x double> %a) {
+define <4 x double> @cos_v4f64(<4 x double> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v4f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl cos
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
@@ -1508,15 +1391,11 @@ define <4 x double> @cos_v4f64(<4 x double> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #80
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
-; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-GI-NEXT:    mov d9, v1.d[1]
+; CHECK-GI-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl cos
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
@@ -1546,16 +1425,14 @@ entry:
   ret <4 x double> %c
 }
 
-define <2 x float> @cos_v2f32(<2 x float> %a) {
+define <2 x float> @cos_v2f32(<2 x float> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v2f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
@@ -1573,13 +1450,10 @@ define <2 x float> @cos_v2f32(<2 x float> %a) {
 ; CHECK-GI-LABEL: cos_v2f32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #32
-; CHECK-GI-NEXT:    str d8, [sp, #16] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str d8, [sp, #16] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
+; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
@@ -1599,15 +1473,13 @@ entry:
   ret <2 x float> %c
 }
 
-define <3 x float> @cos_v3f32(<3 x float> %a) {
+define <3 x float> @cos_v3f32(<3 x float> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -1633,13 +1505,9 @@ define <3 x float> @cos_v3f32(<3 x float> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #64
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    mov s9, v0.s[2]
+; CHECK-GI-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
@@ -1664,15 +1532,13 @@ entry:
   ret <3 x float> %c
 }
 
-define <4 x float> @cos_v4f32(<4 x float> %a) {
+define <4 x float> @cos_v4f32(<4 x float> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v4f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -1705,16 +1571,11 @@ define <4 x float> @cos_v4f32(<4 x float> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #80
 ; CHECK-GI-NEXT:    str d10, [sp, #48] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    mov s10, v0.s[3]
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    .cfi_offset b9, -24
-; CHECK-GI-NEXT:    .cfi_offset b10, -32
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    mov s9, v0.s[2]
-; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
@@ -1746,15 +1607,13 @@ entry:
   ret <4 x float> %c
 }
 
-define <8 x float> @cos_v8f32(<8 x float> %a) {
+define <8 x float> @cos_v8f32(<8 x float> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v8f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
@@ -1813,25 +1672,17 @@ define <8 x float> @cos_v8f32(<8 x float> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #176
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #112] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d11, d10, [sp, #128] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #144] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #160] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 176
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
-; CHECK-GI-NEXT:    .cfi_offset b10, -40
-; CHECK-GI-NEXT:    .cfi_offset b11, -48
-; CHECK-GI-NEXT:    .cfi_offset b12, -56
-; CHECK-GI-NEXT:    .cfi_offset b13, -64
-; CHECK-GI-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    mov s8, v0.s[1]
-; CHECK-GI-NEXT:    mov s9, v0.s[2]
-; CHECK-GI-NEXT:    mov s10, v0.s[3]
-; CHECK-GI-NEXT:    mov s11, v1.s[1]
-; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    mov s12, v1.s[2]
 ; CHECK-GI-NEXT:    mov s13, v1.s[3]
+; CHECK-GI-NEXT:    stp d11, d10, [sp, #128] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    mov s11, v1.s[1]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #144] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov s8, v0.s[1]
+; CHECK-GI-NEXT:    mov s9, v0.s[2]
+; CHECK-GI-NEXT:    str x30, [sp, #160] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-GI-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
@@ -1888,15 +1739,13 @@ entry:
   ret <8 x float> %c
 }
 
-define <7 x half> @cos_v7f16(<7 x half> %a) {
+define <7 x half> @cos_v7f16(<7 x half> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v7f16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -1963,24 +1812,16 @@ define <7 x half> @cos_v7f16(<7 x half> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #160
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #96] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d11, d10, [sp, #112] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #128] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #144] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 160
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
-; CHECK-GI-NEXT:    .cfi_offset b10, -40
-; CHECK-GI-NEXT:    .cfi_offset b11, -48
-; CHECK-GI-NEXT:    .cfi_offset b12, -56
-; CHECK-GI-NEXT:    .cfi_offset b13, -64
-; CHECK-GI-NEXT:    mov h8, v0.h[1]
-; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    mov h10, v0.h[3]
-; CHECK-GI-NEXT:    mov h11, v0.h[4]
 ; CHECK-GI-NEXT:    mov h12, v0.h[5]
 ; CHECK-GI-NEXT:    mov h13, v0.h[6]
+; CHECK-GI-NEXT:    stp d11, d10, [sp, #112] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h10, v0.h[3]
+; CHECK-GI-NEXT:    mov h11, v0.h[4]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #128] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h8, v0.h[1]
+; CHECK-GI-NEXT:    mov h9, v0.h[2]
 ; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    str x30, [sp, #144] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -2035,16 +1876,14 @@ entry:
   ret <7 x half> %c
 }
 
-define <4 x half> @cos_v4f16(<4 x half> %a) {
+define <4 x half> @cos_v4f16(<4 x half> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v4f16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
@@ -2080,19 +1919,14 @@ define <4 x half> @cos_v4f16(<4 x half> %a) {
 ; CHECK-GI-LABEL: cos_v4f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #80
-; CHECK-GI-NEXT:    str d10, [sp, #48] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    .cfi_offset b9, -24
-; CHECK-GI-NEXT:    .cfi_offset b10, -32
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str d10, [sp, #48] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    mov h10, v0.h[3]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
 ; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    mov h10, v0.h[3]
 ; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -2127,15 +1961,13 @@ entry:
   ret <4 x half> %c
 }
 
-define <8 x half> @cos_v8f16(<8 x half> %a) {
+define <8 x half> @cos_v8f16(<8 x half> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v8f16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -2202,27 +2034,18 @@ define <8 x half> @cos_v8f16(<8 x half> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #176
 ; CHECK-GI-NEXT:    str d14, [sp, #112] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    mov h14, v0.h[7]
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #120] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d11, d10, [sp, #136] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #152] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #168] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 176
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    .cfi_offset b9, -24
-; CHECK-GI-NEXT:    .cfi_offset b10, -32
-; CHECK-GI-NEXT:    .cfi_offset b11, -40
-; CHECK-GI-NEXT:    .cfi_offset b12, -48
-; CHECK-GI-NEXT:    .cfi_offset b13, -56
-; CHECK-GI-NEXT:    .cfi_offset b14, -64
-; CHECK-GI-NEXT:    mov h8, v0.h[1]
-; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    mov h10, v0.h[3]
-; CHECK-GI-NEXT:    mov h11, v0.h[4]
 ; CHECK-GI-NEXT:    mov h12, v0.h[5]
 ; CHECK-GI-NEXT:    mov h13, v0.h[6]
-; CHECK-GI-NEXT:    mov h14, v0.h[7]
+; CHECK-GI-NEXT:    stp d11, d10, [sp, #136] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h10, v0.h[3]
+; CHECK-GI-NEXT:    mov h11, v0.h[4]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #152] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h8, v0.h[1]
+; CHECK-GI-NEXT:    mov h9, v0.h[2]
 ; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    str x30, [sp, #168] // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -2284,15 +2107,13 @@ entry:
   ret <8 x half> %c
 }
 
-define <16 x half> @cos_v16f16(<16 x half> %a) {
+define <16 x half> @cos_v16f16(<16 x half> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v16f16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -2421,35 +2242,24 @@ define <16 x half> @cos_v16f16(<16 x half> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #320
 ; CHECK-GI-NEXT:    stp d15, d14, [sp, #240] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d13, d12, [sp, #256] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d11, d10, [sp, #272] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #288] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x29, x30, [sp, #304] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 320
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    .cfi_offset b8, -24
-; CHECK-GI-NEXT:    .cfi_offset b9, -32
-; CHECK-GI-NEXT:    .cfi_offset b10, -40
-; CHECK-GI-NEXT:    .cfi_offset b11, -48
-; CHECK-GI-NEXT:    .cfi_offset b12, -56
-; CHECK-GI-NEXT:    .cfi_offset b13, -64
-; CHECK-GI-NEXT:    .cfi_offset b14, -72
-; CHECK-GI-NEXT:    .cfi_offset b15, -80
 ; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    str q1, [sp, #80] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h14, v1.h[1]
+; CHECK-GI-NEXT:    str q1, [sp, #80] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h1, v1.h[2]
 ; CHECK-GI-NEXT:    mov h15, v0.h[1]
-; CHECK-GI-NEXT:    mov h8, v0.h[2]
-; CHECK-GI-NEXT:    mov h9, v0.h[3]
-; CHECK-GI-NEXT:    mov h10, v0.h[4]
-; CHECK-GI-NEXT:    mov h11, v0.h[5]
+; CHECK-GI-NEXT:    stp d13, d12, [sp, #256] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h12, v0.h[6]
 ; CHECK-GI-NEXT:    mov h13, v0.h[7]
-; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    stp d11, d10, [sp, #272] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h10, v0.h[4]
+; CHECK-GI-NEXT:    mov h11, v0.h[5]
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #288] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov h8, v0.h[2]
+; CHECK-GI-NEXT:    mov h9, v0.h[3]
 ; CHECK-GI-NEXT:    str h1, [sp, #16] // 2-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h1, v2.h[3]
+; CHECK-GI-NEXT:    fcvt s0, h0
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #304] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    str h1, [sp, #32] // 2-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h1, v2.h[4]
 ; CHECK-GI-NEXT:    str h1, [sp, #48] // 2-byte Folded Spill
@@ -2584,13 +2394,11 @@ entry:
   ret <16 x half> %c
 }
 
-define <2 x fp128> @cos_v2fp128(<2 x fp128> %a) {
+define <2 x fp128> @cos_v2fp128(<2 x fp128> %a) nounwind {
 ; CHECK-LABEL: cos_v2fp128:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl cosl
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -2607,12 +2415,10 @@ entry:
 }
 
 ; This is testing that we do not produce incorrect tailcall lowerings
-define i64 @donttailcall(double noundef %x, double noundef %y) {
+define i64 @donttailcall(double noundef %x, double noundef %y) nounwind {
 ; CHECK-LABEL: donttailcall:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl sin
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload

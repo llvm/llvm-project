@@ -24,7 +24,7 @@
 // CHECK-NEXT:   ret ptr @_ZTS1A
 // CHECK-NEXT: }
 
-// CHECK:      define{{.*}} i1 @_Z5equalP1A(ptr noundef readonly %a) local_unnamed_addr
+// CHECK:      define{{.*}} i1 @_Z5equalP1A(ptr noundef readonly captures(address_is_null) %a) local_unnamed_addr
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[isnull:%[0-9]+]] = icmp eq ptr %a, null
 // CHECK-NEXT:   br i1 [[isnull]], label %[[bad_typeid:[a-z0-9._]+]], label %[[end:[a-z0-9.+]+]]

@@ -8,5 +8,6 @@ static_library("Shared") {
     "OrcError.cpp",
     "OrcRTBridge.cpp",
     "SimpleRemoteEPCUtils.cpp",
+    "SymbolStringPool.cpp",
   ]
 }

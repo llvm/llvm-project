@@ -1,4 +1,4 @@
-//===--- BugproneTidyModule.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,6 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "../cppcoreguidelines/NarrowingConversionsCheck.h"
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
 #include "AssignmentInIfConditionCheck.h"
@@ -17,12 +16,16 @@
 #include "BitwisePointerCastCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
+#include "CapturingThisInMemberVariableCheck.h"
 #include "CastingThroughVoidCheck.h"
 #include "ChainedComparisonCheck.h"
+#include "CommandProcessorCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
 #include "CopyConstructorInitCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
+#include "DefaultOperatorNewOnOveralignedTypeCheck.h"
+#include "DerivedMethodShadowingBaseMethodCheck.h"
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
 #include "EmptyCatchCheck.h"
@@ -34,12 +37,15 @@
 #include "InaccurateEraseCheck.h"
 #include "IncDecInConditionsCheck.h"
 #include "IncorrectEnableIfCheck.h"
+#include "IncorrectEnableSharedFromThisCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
 #include "IntegerDivisionCheck.h"
+#include "InvalidEnumDefaultInitializationCheck.h"
 #include "LambdaFunctionNameCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
+#include "MisleadingSetterOfReferenceCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
 #include "MisplacedPointerArithmeticInAllocCheck.h"
 #include "MisplacedWideningCastCheck.h"
@@ -47,6 +53,7 @@
 #include "MultiLevelImplicitPointerConversionCheck.h"
 #include "MultipleNewInOneExpressionCheck.h"
 #include "MultipleStatementMacroCheck.h"
+#include "NarrowingConversionsCheck.h"
 #include "NoEscapeCheck.h"
 #include "NonZeroEnumToBoolConversionCheck.h"
 #include "NondeterministicPointerIterationOrderCheck.h"
@@ -55,6 +62,7 @@
 #include "ParentVirtualCallCheck.h"
 #include "PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "PosixReturnCheck.h"
+#include "RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
 #include "ReturnConstRefFromParameterCheck.h"
@@ -83,12 +91,15 @@
 #include "TaggedUnionMemberCountCheck.h"
 #include "TerminatingContinueCheck.h"
 #include "ThrowKeywordMissingCheck.h"
+#include "ThrowingStaticInitializationCheck.h"
 #include "TooSmallLoopVariableCheck.h"
 #include "UncheckedOptionalAccessCheck.h"
+#include "UncheckedStringToNumberConversionCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
 #include "UnhandledExceptionAtNewCheck.h"
 #include "UnhandledSelfAssignmentCheck.h"
+#include "UnintendedCharOstreamOutputCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
 #include "UnsafeFunctionsCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
@@ -116,16 +127,24 @@ public:
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "bugprone-bool-pointer-implicit-conversion");
     CheckFactories.registerCheck<BranchCloneCheck>("bugprone-branch-clone");
+    CheckFactories.registerCheck<CapturingThisInMemberVariableCheck>(
+        "bugprone-capturing-this-in-member-variable");
     CheckFactories.registerCheck<CastingThroughVoidCheck>(
         "bugprone-casting-through-void");
     CheckFactories.registerCheck<ChainedComparisonCheck>(
         "bugprone-chained-comparison");
+    CheckFactories.registerCheck<CommandProcessorCheck>(
+        "bugprone-command-processor");
     CheckFactories.registerCheck<ComparePointerToMemberVirtualFunctionCheck>(
         "bugprone-compare-pointer-to-member-virtual-function");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
         "bugprone-dangling-handle");
+    CheckFactories.registerCheck<DefaultOperatorNewOnOveralignedTypeCheck>(
+        "bugprone-default-operator-new-on-overaligned-type");
+    CheckFactories.registerCheck<DerivedMethodShadowingBaseMethodCheck>(
+        "bugprone-derived-method-shadowing-base-method");
     CheckFactories.registerCheck<DynamicStaticInitializersCheck>(
         "bugprone-dynamic-static-initializers");
     CheckFactories.registerCheck<EasilySwappableParametersCheck>(
@@ -144,6 +163,10 @@ public:
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectEnableIfCheck>(
         "bugprone-incorrect-enable-if");
+    CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
+        "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
+        "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
         "bugprone-return-const-ref-from-parameter");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(
@@ -155,12 +178,16 @@ public:
     CheckFactories.registerCheck<InfiniteLoopCheck>("bugprone-infinite-loop");
     CheckFactories.registerCheck<IntegerDivisionCheck>(
         "bugprone-integer-division");
+    CheckFactories.registerCheck<InvalidEnumDefaultInitializationCheck>(
+        "bugprone-invalid-enum-default-initialization");
     CheckFactories.registerCheck<LambdaFunctionNameCheck>(
         "bugprone-lambda-function-name");
     CheckFactories.registerCheck<MacroParenthesesCheck>(
         "bugprone-macro-parentheses");
     CheckFactories.registerCheck<MacroRepeatedSideEffectsCheck>(
         "bugprone-macro-repeated-side-effects");
+    CheckFactories.registerCheck<MisleadingSetterOfReferenceCheck>(
+        "bugprone-misleading-setter-of-reference");
     CheckFactories.registerCheck<MisplacedOperatorInStrlenInAllocCheck>(
         "bugprone-misplaced-operator-in-strlen-in-alloc");
     CheckFactories.registerCheck<MisplacedPointerArithmeticInAllocCheck>(
@@ -183,7 +210,7 @@ public:
         "bugprone-pointer-arithmetic-on-polymorphic-object");
     CheckFactories.registerCheck<RedundantBranchConditionCheck>(
         "bugprone-redundant-branch-condition");
-    CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(
+    CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "bugprone-narrowing-conversions");
     CheckFactories.registerCheck<NoEscapeCheck>("bugprone-no-escape");
     CheckFactories.registerCheck<NonZeroEnumToBoolConversionCheck>(
@@ -193,6 +220,8 @@ public:
     CheckFactories.registerCheck<ParentVirtualCallCheck>(
         "bugprone-parent-virtual-call");
     CheckFactories.registerCheck<PosixReturnCheck>("bugprone-posix-return");
+    CheckFactories.registerCheck<RawMemoryCallOnNonTrivialTypeCheck>(
+        "bugprone-raw-memory-call-on-non-trivial-type");
     CheckFactories.registerCheck<ReservedIdentifierCheck>(
         "bugprone-reserved-identifier");
     CheckFactories.registerCheck<SharedPtrArrayMismatchCheck>(
@@ -242,10 +271,14 @@ public:
         "bugprone-terminating-continue");
     CheckFactories.registerCheck<ThrowKeywordMissingCheck>(
         "bugprone-throw-keyword-missing");
+    CheckFactories.registerCheck<ThrowingStaticInitializationCheck>(
+        "bugprone-throwing-static-initialization");
     CheckFactories.registerCheck<TooSmallLoopVariableCheck>(
         "bugprone-too-small-loop-variable");
     CheckFactories.registerCheck<UncheckedOptionalAccessCheck>(
         "bugprone-unchecked-optional-access");
+    CheckFactories.registerCheck<UncheckedStringToNumberConversionCheck>(
+        "bugprone-unchecked-string-to-number-conversion");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(
         "bugprone-undefined-memory-manipulation");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(
@@ -279,6 +312,7 @@ static ClangTidyModuleRegistry::Add<bugprone::BugproneModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the BugproneModule.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int BugproneModuleAnchorSource = 0;
 
 } // namespace clang::tidy

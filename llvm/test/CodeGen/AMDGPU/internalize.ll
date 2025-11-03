@@ -5,10 +5,10 @@
 
 ; OPT-NOT: gvar_unused
 ; OPTNONE: gvar_unused
-@gvar_unused = addrspace(1) global i32 undef, align 4
+@gvar_unused = addrspace(1) global i32 poison, align 4
 
 ; ALL: gvar_used
-@gvar_used = addrspace(1) global i32 undef, align 4
+@gvar_used = addrspace(1) global i32 poison, align 4
 
 ; OPT: define internal fastcc void @func_used_noinline(
 ; OPT-NONE: define fastcc void @func_used_noinline(

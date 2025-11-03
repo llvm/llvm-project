@@ -10,7 +10,7 @@
 ; CHECK: store i64 %indvars.outer, ptr %O2, align 4
 
 
-define i64 @foo(ptr nocapture %A, ptr nocapture %B, i64 %n, i64 %m, ptr %O1, ptr %O2) {
+define void @foo(ptr nocapture %A, ptr nocapture %B, i64 %n, i64 %m, ptr %O1, ptr %O2) {
 entry:
   %cmp = icmp sgt i64 %n, 0
   br i1 %cmp, label %for.body.outer.preheader, label %for.end.outer
@@ -50,5 +50,5 @@ for.end.outer.loopexit:                           ; preds = %for.end.inner
   br label %for.end.outer
 
 for.end.outer:                                    ; preds = %for.end.outer.loopexit, %entry
-  ret i64 undef
+  ret void
 }

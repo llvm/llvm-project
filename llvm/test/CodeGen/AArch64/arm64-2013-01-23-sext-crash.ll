@@ -2,13 +2,13 @@
 
 ; Make sure we are not crashing on this test.
 
-define void @autogen_SD12881() {
+define void @autogen_SD12881(i1 %arg) {
 BB:
   %B17 = ashr <4 x i32> zeroinitializer, zeroinitializer
   br label %CF
 
 CF:                                               ; preds = %CF83, %CF, %BB
-  br i1 undef, label %CF, label %CF83
+  br i1 %arg, label %CF, label %CF83
 
 CF83:                                             ; preds = %CF
   %FC70 = sitofp <4 x i32> %B17 to <4 x double>
@@ -16,13 +16,13 @@ CF83:                                             ; preds = %CF
 }
 
 
-define void @autogen_SD12881_2() {
+define void @autogen_SD12881_2(i1 %arg) {
 BB:
   %B17 = ashr <4 x i32> zeroinitializer, zeroinitializer
   br label %CF
 
 CF:                                               ; preds = %CF83, %CF, %BB
-  br i1 undef, label %CF, label %CF83
+  br i1 %arg, label %CF, label %CF83
 
 CF83:                                             ; preds = %CF
   %FC70 = uitofp <4 x i32> %B17 to <4 x double>

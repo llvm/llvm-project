@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the ObjectStore class.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CAS_OBJECTSTORE_H
 #define LLVM_CAS_OBJECTSTORE_H
@@ -111,7 +116,10 @@ public:
   virtual Expected<bool> isMaterialized(ObjectRef Ref) const = 0;
 
   /// Validate the underlying object referred by CASID.
-  virtual Error validate(const CASID &ID) = 0;
+  virtual Error validateObject(const CASID &ID) = 0;
+
+  /// Validate the entire ObjectStore.
+  virtual Error validate(bool CheckHash) const = 0;
 
 protected:
   /// Load the object referenced by \p Ref.
@@ -126,7 +134,8 @@ protected:
   /// Get the size of some data.
   virtual uint64_t getDataSize(ObjectHandle Node) const = 0;
 
-  /// Methods for handling objects.
+  /// Methods for handling objects. CAS implementations need to override to
+  /// provide functions to access stored CAS objects and references.
   virtual Error forEachRef(ObjectHandle Node,
                            function_ref<Error(ObjectRef)> Callback) const = 0;
   virtual ObjectRef readRef(ObjectHandle Node, size_t I) const = 0;
@@ -214,8 +223,34 @@ public:
     return Data.size();
   }
 
+  /// Set the size for limiting growth of on-disk storage. This has an effect
+  /// for when the instance is closed.
+  ///
+  /// Implementations may leave this unimplemented.
+  virtual Error setSizeLimit(std::optional<uint64_t> SizeLimit) {
+    return Error::success();
+  }
+
+  /// \returns the storage size of the on-disk CAS data.
+  ///
+  /// Implementations that don't have an implementation for this should return
+  /// \p std::nullopt.
+  virtual Expected<std::optional<uint64_t>> getStorageSize() const {
+    return std::nullopt;
+  }
+
+  /// Prune local storage to reduce its size according to the desired size
+  /// limit. Pruning can happen concurrently with other operations.
+  ///
+  /// Implementations may leave this unimplemented.
+  virtual Error pruneStorageData() { return Error::success(); }
+
   /// Validate the whole node tree.
   Error validateTree(ObjectRef Ref);
+
+  /// Import object from another CAS. This will import the full tree from the
+  /// other CAS.
+  Expected<ObjectRef> importObject(ObjectStore &Upstream, ObjectRef Other);
 
   /// Print the ObjectStore internals for debugging purpose.
   virtual void print(raw_ostream &) const {}
@@ -238,8 +273,7 @@ private:
 /// ObjectStore is.
 class ObjectProxy {
 public:
-  const ObjectStore &getCAS() const { return *CAS; }
-  ObjectStore &getCAS() { return *CAS; }
+  ObjectStore &getCAS() const { return *CAS; }
   CASID getID() const { return CAS->getID(Ref); }
   ObjectRef getRef() const { return Ref; }
   size_t getNumReferences() const { return CAS->getNumRefs(H); }
@@ -294,21 +328,14 @@ private:
   ObjectHandle H;
 };
 
+/// Create an in memory CAS.
 std::unique_ptr<ObjectStore> createInMemoryCAS();
 
 /// \returns true if \c LLVM_ENABLE_ONDISK_CAS configuration was enabled.
 bool isOnDiskCASEnabled();
 
-/// Gets or creates a persistent on-disk path at \p Path.
+/// Create a persistent on-disk path at \p Path.
 Expected<std::unique_ptr<ObjectStore>> createOnDiskCAS(const Twine &Path);
-
-/// Set \p Path to a reasonable default on-disk path for a persistent CAS for
-/// the current user.
-Error getDefaultOnDiskCASPath(SmallVectorImpl<char> &Path);
-
-/// Get a reasonable default on-disk path for a persistent CAS for the current
-/// user. \returns empty string if no reasonable path can be found.
-std::string getDefaultOnDiskCASPath();
 
 } // namespace cas
 } // namespace llvm

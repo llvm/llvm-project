@@ -160,6 +160,7 @@ const Decoder::RingEntry Decoder::Ring64[] = {
     {0xfe, 0xda, 2, &Decoder::opcode_save_fregp_x},
     {0xfe, 0xdc, 2, &Decoder::opcode_save_freg},
     {0xff, 0xde, 2, &Decoder::opcode_save_freg_x},
+    {0xff, 0xdf, 2, &Decoder::opcode_alloc_z},
     {0xff, 0xe0, 4, &Decoder::opcode_alloc_l},
     {0xff, 0xe1, 1, &Decoder::opcode_setfp},
     {0xff, 0xe2, 2, &Decoder::opcode_addfp},
@@ -167,7 +168,7 @@ const Decoder::RingEntry Decoder::Ring64[] = {
     {0xff, 0xe4, 1, &Decoder::opcode_end},
     {0xff, 0xe5, 1, &Decoder::opcode_end_c},
     {0xff, 0xe6, 1, &Decoder::opcode_save_next},
-    {0xff, 0xe7, 3, &Decoder::opcode_save_any_reg},
+    {0xff, 0xe7, 3, &Decoder::opcode_e7},
     {0xff, 0xe8, 1, &Decoder::opcode_trap_frame},
     {0xff, 0xe9, 1, &Decoder::opcode_machine_frame},
     {0xff, 0xea, 1, &Decoder::opcode_context},
@@ -305,7 +306,7 @@ ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(AddressOrErr.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
     // We apply SymbolOffset here directly. We return it separately to allow
     // the caller to print it as an offset on the symbol name.
@@ -805,6 +806,16 @@ bool Decoder::opcode_save_freg_x(const uint8_t *OC, unsigned &Offset,
   return false;
 }
 
+bool Decoder::opcode_alloc_z(const uint8_t *OC, unsigned &Offset,
+                             unsigned Length, bool Prologue) {
+  unsigned Off = OC[Offset + 1];
+  SW.startLine() << format("0x%02x%02x              ; addvl sp, #%d\n",
+                           OC[Offset], OC[Offset + 1],
+                           Prologue ? -(int)Off : (int)Off);
+  Offset += 2;
+  return false;
+}
+
 bool Decoder::opcode_alloc_l(const uint8_t *OC, unsigned &Offset,
                              unsigned Length, bool Prologue) {
   unsigned Off =
@@ -869,6 +880,24 @@ bool Decoder::opcode_save_next(const uint8_t *OC, unsigned &Offset,
                              OC[Offset]);
   ++Offset;
   return false;
+}
+
+bool Decoder::opcode_e7(const uint8_t *OC, unsigned &Offset, unsigned Length,
+                        bool Prologue) {
+  // The e7 opcode has unusual decoding rules; write out the logic.
+  if ((OC[Offset + 1] & 0x80) == 0x80) {
+    SW.getOStream() << "reserved encoding\n";
+    Offset += 3;
+    return false;
+  }
+
+  if ((OC[Offset + 2] & 0xC0) == 0xC0) {
+    if ((OC[Offset + 1] & 0x10) == 0)
+      return opcode_save_zreg(OC, Offset, Length, Prologue);
+    return opcode_save_preg(OC, Offset, Length, Prologue);
+  }
+
+  return opcode_save_any_reg(OC, Offset, Length, Prologue);
 }
 
 bool Decoder::opcode_save_any_reg(const uint8_t *OC, unsigned &Offset,
@@ -944,6 +973,30 @@ bool Decoder::opcode_save_any_reg(const uint8_t *OC, unsigned &Offset,
     SW.getOStream() << format("[sp, #%d]\n", StackOffset);
   }
 
+  Offset += 3;
+  return false;
+}
+
+bool Decoder::opcode_save_zreg(const uint8_t *OC, unsigned &Offset,
+                               unsigned Length, bool Prologue) {
+  uint32_t Reg = (OC[Offset + 1] & 0x0F) + 8;
+  uint32_t Off = ((OC[Offset + 1] & 0x60) << 1) | (OC[Offset + 2] & 0x3F);
+  SW.startLine() << format(
+      "0x%02x%02x%02x            ; %s z%u, [sp, #%u, mul vl]\n", OC[Offset],
+      OC[Offset + 1], OC[Offset + 2],
+      static_cast<const char *>(Prologue ? "str" : "ldr"), Reg, Off);
+  Offset += 3;
+  return false;
+}
+
+bool Decoder::opcode_save_preg(const uint8_t *OC, unsigned &Offset,
+                               unsigned Length, bool Prologue) {
+  uint32_t Reg = (OC[Offset + 1] & 0x0F);
+  uint32_t Off = ((OC[Offset + 1] & 0x60) << 1) | (OC[Offset + 2] & 0x3F);
+  SW.startLine() << format(
+      "0x%02x%02x%02x            ; %s p%u, [sp, #%u, mul vl]\n", OC[Offset],
+      OC[Offset + 1], OC[Offset + 2],
+      static_cast<const char *>(Prologue ? "str" : "ldr"), Reg, Off);
   Offset += 3;
   return false;
 }
@@ -1041,7 +1094,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
   // A header is one or two words, followed by at least one word to describe
   // the unwind codes. Applicable to both ARM and AArch64.
   if (Contents.size() - Offset < 8)
-    report_fatal_error(".xdata must be at least 8 bytes in size");
+    reportFatalUsageError(".xdata must be at least 8 bytes in size");
 
   const ExceptionDataRecord XData(Data, isAArch64);
   DictScope XRS(SW, "ExceptionData");
@@ -1062,7 +1115,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
                 (XData.E() ? 0 : XData.EpilogueCount() * 4) -
                 (XData.X() ? 8 : 0)) < (int64_t)ByteCodeLength) {
     SW.flush();
-    report_fatal_error("Malformed unwind data");
+    reportFatalUsageError("Malformed unwind data");
   }
 
   if (XData.E()) {
@@ -1125,7 +1178,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
 
     ListScope EHS(SW, "ExceptionHandler");
@@ -1164,7 +1217,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
     FunctionName = *FunctionNameOrErr;
   }
@@ -1178,7 +1231,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
 
     SW.printString("ExceptionRecord",
@@ -1223,7 +1276,7 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
     FunctionName = *FunctionNameOrErr;
   }
@@ -1322,7 +1375,7 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
     FunctionName = *FunctionNameOrErr;
   }

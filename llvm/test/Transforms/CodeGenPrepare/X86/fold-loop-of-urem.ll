@@ -319,20 +319,20 @@ for.body.tail:
 define void @simple_urem_to_sel_vec(<2 x i64> %rem_amt) nounwind {
 ; CHECK-LABEL: define void @simple_urem_to_sel_vec(
 ; CHECK-SAME: <2 x i64> [[REM_AMT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[ENTRY:.*]]:
+; CHECK:       [[FOR_COND_CLEANUP:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = phi <2 x i64> [ zeroinitializer, %[[FOR_COND_CLEANUP]] ], [ [[TMP3:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_04:%.*]] = phi <2 x i64> [ [[INC:%.*]], %[[FOR_BODY]] ], [ zeroinitializer, %[[FOR_COND_CLEANUP]] ]
+; CHECK-NEXT:    [[REM:%.*]] = phi <2 x i64> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP3:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_04:%.*]] = phi <2 x i64> [ [[INC:%.*]], %[[FOR_BODY]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    tail call void @use.2xi64(<2 x i64> [[REM]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <2 x i64> [[REM]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <2 x i64> [[REM]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], [[REM_AMT]]
 ; CHECK-NEXT:    [[TMP3]] = select <2 x i1> [[TMP2]], <2 x i64> zeroinitializer, <2 x i64> [[TMP1]]
-; CHECK-NEXT:    [[INC]] = add nuw <2 x i64> [[I_04]], <i64 1, i64 1>
+; CHECK-NEXT:    [[INC]] = add nuw <2 x i64> [[I_04]], splat (i64 1)
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = call i1 @get.i1()
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[ENTRY]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
 entry:
   br label %for.body
@@ -892,10 +892,12 @@ define void @simple_urem_to_sel_non_zero_start_through_add(i32 %N, i32 %rem_amt_
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[REM:%.*]] = phi i32 [ 7, %[[FOR_BODY_PREHEADER]] ], [ [[TMP3:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 2, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[I_WITH_OFF:%.*]] = add nuw i32 [[I_04]], 5
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[I_WITH_OFF]], [[REM_AMT]]
 ; CHECK-NEXT:    tail call void @use.i32(i32 [[REM]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[REM]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], [[REM_AMT]]
+; CHECK-NEXT:    [[TMP3]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
@@ -1062,4 +1064,38 @@ for.body:
   %inc = add nuw i32 %i.04, 1
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define i64 @pr150611_add_offset_is_not_loop_invariant(i1 %cond) {
+; CHECK-LABEL: define i64 @pr150611_add_offset_is_not_loop_invariant(
+; CHECK-SAME: i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[REMAMT:%.*]] = select i1 [[COND]], i64 2, i64 0
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[INDVARS:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ADD_OFFSET:%.*]] = zext i1 [[COND]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i64 [[INDVARS]], [[ADD_OFFSET]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[ADD]], [[REMAMT]]
+; CHECK-NEXT:    [[INDVARS_NEXT]] = add nuw i64 [[INDVARS]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_NEXT]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret i64 [[REM]]
+;
+entry:
+  %remamt = select i1 %cond, i64 2, i64 0
+  br label %for.body
+
+for.body:
+  %indvars = phi i64 [ 0, %entry ], [ %indvars.next, %for.body ]
+  %add.offset = zext i1 %cond to i64
+  %add = add nuw i64 %indvars, %add.offset
+  %rem = urem i64 %add, %remamt
+  %indvars.next = add nuw i64 %indvars, 1
+  %exitcond = icmp eq i64 %indvars.next, 3
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret i64 %rem
 }

@@ -146,3 +146,205 @@ define <16 x i16> @sext_avgceils_mismatch(<16 x i4> %a0, <16 x i8> %a1) {
   %avg = sub <16 x i16> %or, %shift
   ret <16 x i16> %avg
 }
+
+define <8 x i16> @add_avgflooru(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgflooru:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %add = add nuw <8 x i16> %a0, %a1
+  %avg = lshr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgflooru_mismatch(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgflooru_mismatch:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #1
+; CHECK-NEXT:    ret
+  %add = add <8 x i16> %a0, %a1
+  %avg = lshr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceilu(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceilu:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %add0 = add nuw <8 x i16> %a0, splat(i16 1)
+  %add = add nuw <8 x i16> %a1, %add0
+  %avg = lshr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceilu2(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceilu2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    urhadd v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    ret
+  %add0 = add nuw <8 x i16> %a1, %a0
+  %add = add nuw <8 x i16> %add0, splat(i16 1)
+  %avg = lshr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceilu_mismatch1(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceilu_mismatch1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #1
+; CHECK-NEXT:    add v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    ret
+  %add0 = add <8 x i16> %a1, %a0
+  %add = add nuw <8 x i16> %add0, splat(i16 1)
+  %avg = lshr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceilu_mismatch2(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceilu_mismatch2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #1
+; CHECK-NEXT:    ret
+  %add0 = add nuw <8 x i16> %a1, %a0
+  %add = add <8 x i16> %add0, splat(i16 1)
+  %avg = lshr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceilu_mismatch3(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceilu_mismatch3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #1
+; CHECK-NEXT:    ret
+  %add0 = add nuw <8 x i16> %a1, %a0
+  %add = add <8 x i16> %add0, splat(i16 1)
+  %avg = lshr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgfloors(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgfloors:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %add = add nsw <8 x i16> %a0, %a1
+  %avg = ashr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgfloors_mismatch(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgfloors_mismatch:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #1
+; CHECK-NEXT:    ret
+  %add = add <8 x i16> %a0, %a1
+  %avg = ashr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgfoor_mismatch2(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgfoor_mismatch2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #2
+; CHECK-NEXT:    ret
+  %add = add nsw <8 x i16> %a0, %a1
+  %avg = ashr <8 x i16> %add, splat(i16 2)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceils(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceils:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %add0 = add nsw <8 x i16> %a0, splat(i16 1)
+  %add = add nsw <8 x i16> %a1, %add0
+  %avg = ashr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceils2(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceils2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    srhadd v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    ret
+  %add0 = add nsw <8 x i16> %a1, %a0
+  %add = add nsw <8 x i16> %add0, splat(i16 1)
+  %avg = ashr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceils_mismatch1(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceils_mismatch1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #1
+; CHECK-NEXT:    add v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    ret
+  %add0 = add <8 x i16> %a1, %a0
+  %add = add nsw <8 x i16> %add0, splat(i16 1)
+  %avg = ashr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceils_mismatch2(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceils_mismatch2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #1
+; CHECK-NEXT:    ret
+  %add0 = add nsw <8 x i16> %a1, %a0
+  %add = add <8 x i16> %add0, splat(i16 1)
+  %avg = ashr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceils_mismatch3(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceils_mismatch3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #1
+; CHECK-NEXT:    ret
+  %add0 = add nsw <8 x i16> %a1, %a0
+  %add = add <8 x i16> %add0, splat(i16 1)
+  %avg = ashr <8 x i16> %add, splat(i16 1)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceils_mismatch4(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceils_mismatch4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #2
+; CHECK-NEXT:    ret
+  %add0 = add nsw <8 x i16> %a0, splat(i16 1)
+  %add = add nsw <8 x i16> %a1, %add0
+  %avg = ashr <8 x i16> %add, splat(i16 2)
+  ret <8 x i16> %avg
+}
+
+define <8 x i16> @add_avgceilu_mismatch(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: add_avgceilu_mismatch:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #1
+; CHECK-NEXT:    add v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #2
+; CHECK-NEXT:    ret
+  %add0 = add nuw <8 x i16> %a1, %a0
+  %add = add nuw <8 x i16> %add0, splat(i16 1)
+  %avg = lshr <8 x i16> %add, splat(i16 2)
+  ret <8 x i16> %avg
+}

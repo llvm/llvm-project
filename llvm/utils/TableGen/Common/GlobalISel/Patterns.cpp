@@ -18,8 +18,8 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
-namespace llvm {
-namespace gi {
+using namespace llvm;
+using namespace gi;
 
 //===- PatternType --------------------------------------------------------===//
 
@@ -168,8 +168,7 @@ void Pattern::printImpl(raw_ostream &OS, bool PrintName,
 void AnyOpcodePattern::print(raw_ostream &OS, bool PrintName) const {
   printImpl(OS, PrintName, [&OS, this]() {
     OS << "["
-       << join(map_range(Insts,
-                         [](const auto *I) { return I->TheDef->getName(); }),
+       << join(map_range(Insts, [](const auto *I) { return I->getName(); }),
                ", ")
        << "]";
   });
@@ -366,7 +365,7 @@ void MIFlagsInfo::addCopyFlag(StringRef InstName) { CopyF.insert(InstName); }
 //===- CodeGenInstructionPattern ------------------------------------------===//
 
 bool CodeGenInstructionPattern::is(StringRef OpcodeName) const {
-  return I.TheDef->getName() == OpcodeName;
+  return I.getName() == OpcodeName;
 }
 
 bool CodeGenInstructionPattern::isVariadic() const {
@@ -416,9 +415,7 @@ MIFlagsInfo &CodeGenInstructionPattern::getOrCreateMIFlagsInfo() {
   return *FI;
 }
 
-StringRef CodeGenInstructionPattern::getInstName() const {
-  return I.TheDef->getName();
-}
+StringRef CodeGenInstructionPattern::getInstName() const { return I.getName(); }
 
 void CodeGenInstructionPattern::printExtras(raw_ostream &OS) const {
   if (isIntrinsic())
@@ -581,7 +578,7 @@ bool PatFrag::checkSemantics() {
 
   StringSet<> SeenOps;
   for (const auto &Op : in_params()) {
-    if (SeenOps.count(Op.Name)) {
+    if (SeenOps.contains(Op.Name)) {
       PrintError("duplicate parameter '" + Op.Name + "'");
       return false;
     }
@@ -609,7 +606,7 @@ bool PatFrag::checkSemantics() {
       return false;
     }
 
-    if (SeenOps.count(Op.Name)) {
+    if (SeenOps.contains(Op.Name)) {
       PrintError("duplicate parameter '" + Op.Name + "'");
       return false;
     }
@@ -840,8 +837,9 @@ bool PatFragPattern::mapInputCodeExpansions(const CodeExpansions &ParentCEs,
       if (It == ParentCEs.end()) {
         if (!PF.handleUnboundInParam(ParamName, ArgName, DiagLoc))
           return false;
-      } else
+      } else {
         PatFragCEs.declare(ParamName, It->second);
+      }
       continue;
     }
 
@@ -886,6 +884,3 @@ bool BuiltinPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
 
   return true;
 }
-
-} // namespace gi
-} // namespace llvm

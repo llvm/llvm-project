@@ -1,4 +1,4 @@
-//===--- FormatStringConverter.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -207,13 +207,9 @@ FormatStringConverter::FormatStringConverter(
       ArgsOffset(FormatArgOffset + 1), LangOpts(LO) {
   assert(ArgsOffset <= NumArgs);
   FormatExpr = llvm::dyn_cast<StringLiteral>(
-      Args[FormatArgOffset]->IgnoreImplicitAsWritten());
+      Args[FormatArgOffset]->IgnoreUnlessSpelledInSource());
 
-  if (!FormatExpr || !FormatExpr->isOrdinary()) {
-    // Function must have a narrow string literal as its first argument.
-    conversionNotPossible("first argument is not a narrow string literal");
-    return;
-  }
+  assert(FormatExpr && FormatExpr->isOrdinary());
 
   if (const std::optional<StringRef> MaybeMacroName =
           formatStringContainsUnreplaceableMacro(Call, FormatExpr, SM, PP);
@@ -464,9 +460,9 @@ bool FormatStringConverter::emitIntegerArgument(
     // be passed as its underlying type. However, printf will have forced
     // the signedness based on the format string, so we need to do the
     // same.
-    if (const auto *ET = ArgType->getAs<EnumType>()) {
+    if (const auto *ED = ArgType->getAsEnumDecl()) {
       if (const std::optional<std::string> MaybeCastType =
-              castTypeForArgument(ArgKind, ET->getDecl()->getIntegerType()))
+              castTypeForArgument(ArgKind, ED->getIntegerType()))
         ArgFixes.emplace_back(
             ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
       else

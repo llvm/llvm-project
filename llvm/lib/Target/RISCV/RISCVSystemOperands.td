@@ -19,12 +19,9 @@ include "llvm/TableGen/SearchableTable.td"
 
 class SysReg<string name, bits<12> op> {
   string Name = name;
-  // A maximum of one alias is supported right now.
-  string AltName = name;
-  // A maximum of one deprecated name is supported right now.  Unlike the
-  // `AltName` alias, a `DeprecatedName` generates a diagnostic when the name is
-  // used to encourage software to migrate away from the name.
-  string DeprecatedName = "";
+  // Custom vendor CSRs have a "<vendor>." prefix. Convert these to "<vendor>_"
+  // before passing it to the SysRegEncodings GenericEnum below.
+  string EnumName = !subst(".", "_", name);
   bits<12> Encoding = op;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read and Write = 0, 1, 2; Read-Only = 3.
@@ -37,14 +34,16 @@ class SysReg<string name, bits<12> op> {
   // bits<6> Number = op{5 - 0};
   code FeaturesRequired = [{ {} }];
   bit isRV32Only = 0;
+  bit isAltName = 0;
+  bit isDeprecatedName = 0;
 }
 
 def SysRegsList : GenericTable {
   let FilterClass = "SysReg";
   // FIXME: add "ReadWrite", "Mode", "Extra", "Number" fields when needed.
   let Fields = [
-    "Name", "AltName", "DeprecatedName", "Encoding", "FeaturesRequired",
-    "isRV32Only",
+    "Name", "Encoding", "FeaturesRequired",
+    "isRV32Only", "isAltName", "isDeprecatedName"
   ];
 
   let PrimaryKey = [ "Encoding" ];
@@ -52,19 +51,15 @@ def SysRegsList : GenericTable {
   let PrimaryKeyReturnRange = true;
 }
 
+def SysRegEncodings : GenericEnum {
+  let FilterClass = "SysReg";
+  let NameField = "EnumName";
+  let ValueField = "Encoding";
+}
+
 def lookupSysRegByName : SearchIndex {
   let Table = SysRegsList;
   let Key = [ "Name" ];
-}
-
-def lookupSysRegByAltName : SearchIndex {
-  let Table = SysRegsList;
-  let Key = [ "AltName" ];
-}
-
-def lookupSysRegByDeprecatedName : SearchIndex {
-  let Table = SysRegsList;
-  let Key = [ "DeprecatedName" ];
 }
 
 // The following CSR encodings match those given in Tables 2.2,
@@ -72,7 +67,7 @@ def lookupSysRegByDeprecatedName : SearchIndex {
 // Volume II: Privileged Architecture.
 
 //===----------------------------------------------------------------------===//
-// User Floating-Point CSRs
+// Unprivileged Floating-Point CSRs
 //===----------------------------------------------------------------------===//
 
 def SysRegFFLAGS : SysReg<"fflags", 0x001>;
@@ -80,8 +75,38 @@ def SysRegFRM    : SysReg<"frm", 0x002>;
 def SysRegFCSR   : SysReg<"fcsr", 0x003>;
 
 //===----------------------------------------------------------------------===//
-// User Counter/Timers
+// Unprivileged Vector CSRs
 //===----------------------------------------------------------------------===//
+def : SysReg<"vstart", 0x008>;
+def : SysReg<"vxsat", 0x009>;
+def SysRegVXRM : SysReg<"vxrm", 0x00A>;
+def : SysReg<"vcsr", 0x00F>;
+def SysRegVL : SysReg<"vl", 0xC20>;
+def : SysReg<"vtype", 0xC21>;
+def SysRegVLENB: SysReg<"vlenb", 0xC22>;
+
+//===----------------------------------------------------------------------===//
+// Unprivileged Zicfiss extension CSR
+//===----------------------------------------------------------------------===//
+
+def : SysReg<"ssp", 0x011>;
+
+//===-----------------------------------------------
+// Unprivileged Entropy Source Extension CSR
+//===-----------------------------------------------
+
+def SEED : SysReg<"seed", 0x015>;
+
+//===-----------------------------------------------
+// Unprivileged Zcmt Extension CSR
+//===-----------------------------------------------
+
+def : SysReg<"jvt", 0x017>;
+
+//===----------------------------------------------------------------------===//
+// Unprivileged Counter/Timers
+//===----------------------------------------------------------------------===//
+
 def CYCLE   : SysReg<"cycle", 0xC00>;
 def TIME    : SysReg<"time", 0xC01>;
 def INSTRET : SysReg<"instret", 0xC02>;
@@ -103,13 +128,11 @@ foreach i = 3...31 in
 //===----------------------------------------------------------------------===//
 // Supervisor Trap Setup
 //===----------------------------------------------------------------------===//
+
 def : SysReg<"sstatus", 0x100>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;
-def : SysReg<"stimecmp", 0x14D>;
-let isRV32Only = 1 in
-def : SysReg<"stimecmph", 0x15D>;
 
 //===----------------------------------------------------------------------===//
 // Supervisor Configuration
@@ -118,25 +141,39 @@ def : SysReg<"stimecmph", 0x15D>;
 def : SysReg<"senvcfg", 0x10A>;
 
 //===----------------------------------------------------------------------===//
+// Supervisor Counter Setup
+//===----------------------------------------------------------------------===//
+
+def : SysReg<"scountinhibit", 0x120>;
+
+//===----------------------------------------------------------------------===//
 // Supervisor Trap Handling
 //===----------------------------------------------------------------------===//
+
 def : SysReg<"sscratch", 0x140>;
 def : SysReg<"sepc", 0x141>;
 def : SysReg<"scause", 0x142>;
-let DeprecatedName = "sbadaddr" in
 def : SysReg<"stval", 0x143>;
+let isDeprecatedName = 1 in
+def : SysReg<"sbadaddr", 0x143>;
 def : SysReg<"sip", 0x144>;
+def : SysReg<"scountovf", 0xDA0>;
 
 //===----------------------------------------------------------------------===//
 // Supervisor Protection and Translation
 //===----------------------------------------------------------------------===//
-let DeprecatedName = "sptbr" in
+
 def : SysReg<"satp", 0x180>;
+let isDeprecatedName = 1 in
+def : SysReg<"sptbr", 0x180>;
 
 //===----------------------------------------------------------------------===//
-// Quality-of-Service(QoS) Identifiers (Ssqosid)
+// Supervisor Timer Compare
 //===----------------------------------------------------------------------===//
-def : SysReg<"srmcfg", 0x181>;
+
+def : SysReg<"stimecmp", 0x14D>;
+let isRV32Only = 1 in
+def : SysReg<"stimecmph", 0x15D>;
 
 //===----------------------------------------------------------------------===//
 // Debug/Trace Registers
@@ -145,10 +182,18 @@ def : SysReg<"srmcfg", 0x181>;
 def : SysReg<"scontext", 0x5A8>;
 
 //===----------------------------------------------------------------------===//
-// Supervisor Count Overflow (defined in Sscofpmf)
+// Supervisor Resource Management Configuration
 //===----------------------------------------------------------------------===//
 
-def : SysReg<"scountovf", 0xDA0>;
+def : SysReg<"srmcfg", 0x181>;
+
+//===----------------------------------------------------------------------===//
+// Supervisor State Enable
+//===----------------------------------------------------------------------===//
+
+foreach i = 0...3 in {
+  def : SysReg<"sstateen"#i, !add(0x10C, i)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Trap Setup
@@ -160,6 +205,8 @@ def : SysReg<"hideleg", 0x603>;
 def : SysReg<"hie", 0x604>;
 def : SysReg<"hcounteren", 0x606>;
 def : SysReg<"hgeie", 0x607>;
+let isRV32Only = 1 in
+def : SysReg<"hedelegh", 0x612>;
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Trap Handling
@@ -200,6 +247,16 @@ let isRV32Only = 1 in
 def : SysReg<"htimedeltah", 0x615>;
 
 //===----------------------------------------------------------------------===//
+// Hypervisor State Enable Registers
+//===----------------------------------------------------------------------===//
+
+foreach i = 0...3 in {
+  def : SysReg<"hstateen"#i, !add(0x60C, i)>;
+  let isRV32Only = 1 in
+  def : SysReg<"hstateen"#i#"h", !add(0x61C, i)>;
+}
+
+//===----------------------------------------------------------------------===//
 // Virtual Supervisor Registers
 //===----------------------------------------------------------------------===//
 
@@ -211,10 +268,15 @@ def : SysReg<"vsepc", 0x241>;
 def : SysReg<"vscause", 0x242>;
 def : SysReg<"vstval", 0x243>;
 def : SysReg<"vsip", 0x244>;
+def : SysReg<"vsatp", 0x280>;
+
+//===----------------------------------------------------------------------===//
+// Virtual Supervisor Timer Compare
+//===----------------------------------------------------------------------===//
+
 def : SysReg<"vstimecmp", 0x24D>;
 let isRV32Only = 1 in
 def : SysReg<"vstimecmph", 0x25D>;
-def : SysReg<"vsatp", 0x280>;
 
 //===----------------------------------------------------------------------===//
 // Machine Information Registers
@@ -229,6 +291,7 @@ def : SysReg<"mconfigptr", 0xF15>;
 //===----------------------------------------------------------------------===//
 // Machine Trap Setup
 //===----------------------------------------------------------------------===//
+
 def : SysReg<"mstatus", 0x300>;
 def : SysReg<"misa", 0x301>;
 def : SysReg<"medeleg", 0x302>;
@@ -236,8 +299,10 @@ def : SysReg<"mideleg", 0x303>;
 def : SysReg<"mie", 0x304>;
 def : SysReg<"mtvec", 0x305>;
 def : SysReg<"mcounteren", 0x306>;
-let isRV32Only = 1 in
+let isRV32Only = 1 in {
 def : SysReg<"mstatush", 0x310>;
+def : SysReg<"medelegh", 0x312>;
+} // isRV32Only
 
 //===----------------------------------------------------------------------===//
 // Machine Trap Handling
@@ -245,8 +310,9 @@ def : SysReg<"mstatush", 0x310>;
 def : SysReg<"mscratch", 0x340>;
 def : SysReg<"mepc", 0x341>;
 def : SysReg<"mcause", 0x342>;
-let DeprecatedName = "mbadaddr" in
 def : SysReg<"mtval", 0x343>;
+let isDeprecatedName = 1 in
+def : SysReg<"mbadaddr", 0x343>;
 def : SysReg<"mip", 0x344>;
 def : SysReg<"mtinst", 0x34A>;
 def : SysReg<"mtval2", 0x34B>;
@@ -277,8 +343,27 @@ foreach i = 0...63 in
   def : SysReg<"pmpaddr"#i, !add(0x3B0, i)>;
 
 //===----------------------------------------------------------------------===//
+// Machine State Enable Registers
+//===----------------------------------------------------------------------===//
+
+foreach i = 0...3 in {
+  def : SysReg<"mstateen"#i, !add(0x30C, i)>;
+  let isRV32Only = 1 in
+  def : SysReg<"mstateen"#i#"h", !add(0x31C, i)>;
+}
+
+//===-----------------------------------------------
+// Resumable Non-Maskable Interrupts(Smrnmi) CSRs
+//===-----------------------------------------------
+def : SysReg<"mnscratch", 0x740>;
+def : SysReg<"mnepc", 0x741>;
+def : SysReg<"mncause", 0x742>;
+def : SysReg<"mnstatus", 0x744>;
+
+//===----------------------------------------------------------------------===//
 // Machine Counter and Timers
 //===----------------------------------------------------------------------===//
+
 def : SysReg<"mcycle", 0xB00>;
 def : SysReg<"minstret", 0xB02>;
 
@@ -298,7 +383,7 @@ foreach i = 3...31 in
 //===----------------------------------------------------------------------===//
 // Machine Counter Setup
 //===----------------------------------------------------------------------===//
-let AltName = "mucounteren" in // Privileged spec v1.9.1 Name
+
 def : SysReg<"mcountinhibit", 0x320>;
 
 // mhpmevent3-mhpmevent31 at 0x323-0x33F.
@@ -312,69 +397,43 @@ foreach i = 3...31 in {
 }
 
 //===----------------------------------------------------------------------===//
-// Supervisor Counter Setup
-//===----------------------------------------------------------------------===//
-def : SysReg<"scountinhibit", 0x120>;
-
-//===----------------------------------------------------------------------===//
 // Debug/ Trace Registers (shared with Debug Mode)
 //===----------------------------------------------------------------------===//
+
 def : SysReg<"tselect", 0x7A0>;
 def : SysReg<"tdata1", 0x7A1>;
+let isAltName = 1 in {
+def : SysReg<"mcontrol", 0x7A1>;
+def : SysReg<"mcontrol6", 0x7A1>;
+def : SysReg<"icount", 0x7A1>;
+def : SysReg<"itrigger", 0x7A1>;
+def : SysReg<"etrigger", 0x7A1>;
+def : SysReg<"tmexttrigger", 0x7A1>;
+}
 def : SysReg<"tdata2", 0x7A2>;
 def : SysReg<"tdata3", 0x7A3>;
+let isAltName = 1 in {
+def : SysReg<"textra32", 0x7A3>;
+def : SysReg<"textra64", 0x7A3>;
+}
+def : SysReg<"tinfo", 0x7A4>;
+def : SysReg<"tcontrol", 0x7A5>;
 def : SysReg<"mcontext", 0x7A8>;
+def : SysReg<"mscontext", 0x7AA>;
 
 //===----------------------------------------------------------------------===//
 // Debug Mode Registers
 //===----------------------------------------------------------------------===//
+
 def : SysReg<"dcsr", 0x7B0>;
 def : SysReg<"dpc", 0x7B1>;
 
 // "dscratch" is an alternative name for "dscratch0" which appeared in earlier
 // drafts of the RISC-V debug spec
-let AltName = "dscratch" in
 def : SysReg<"dscratch0", 0x7B2>;
+let isAltName = 1 in
+def : SysReg<"dscratch", 0x7B2>;
 def : SysReg<"dscratch1", 0x7B3>;
-
-//===----------------------------------------------------------------------===//
-// User Vector CSRs
-//===----------------------------------------------------------------------===//
-def : SysReg<"vstart", 0x008>;
-def : SysReg<"vxsat", 0x009>;
-def SysRegVXRM : SysReg<"vxrm", 0x00A>;
-def : SysReg<"vcsr", 0x00F>;
-def SysRegVL : SysReg<"vl", 0xC20>;
-def : SysReg<"vtype", 0xC21>;
-def SysRegVLENB: SysReg<"vlenb", 0xC22>;
-
-//===----------------------------------------------------------------------===//
-// Shadow Stack CSR
-//===----------------------------------------------------------------------===//
-def : SysReg<"ssp", 0x011>;
-
-//===----------------------------------------------------------------------===//
-// State Enable Extension (Smstateen)
-//===----------------------------------------------------------------------===//
-
-// sstateen0-sstateen3 at 0x10C-0x10F, mstateen0-mstateen3 at 0x30C-0x30F,
-// mstateen0h-mstateen3h at 0x31C-0x31F, hstateen0-hstateen3 at 0x60C-0x60F,
-// and hstateen0h-hstateen3h at 0x61C-0x61F.
-foreach i = 0...3 in {
-  def : SysReg<"sstateen"#i, !add(0x10C, i)>;
-  def : SysReg<"mstateen"#i, !add(0x30C, i)>;
-  let isRV32Only = 1 in
-  def : SysReg<"mstateen"#i#"h", !add(0x31C, i)>;
-  def : SysReg<"hstateen"#i, !add(0x60C, i)>;
-  let isRV32Only = 1 in
-  def : SysReg<"hstateen"#i#"h", !add(0x61C, i)>;
-}
-
-//===-----------------------------------------------
-// Entropy Source CSR
-//===-----------------------------------------------
-
-def SEED : SysReg<"seed", 0x015>;
 
 //===-----------------------------------------------
 // Advanced Interrupt Architecture
@@ -443,20 +502,6 @@ def : SysReg<"vsiph", 0x254>;
 } // isRV32Only
 
 //===-----------------------------------------------
-// Jump Vector Table CSR
-//===-----------------------------------------------
-
-def : SysReg<"jvt", 0x017>;
-
-//===-----------------------------------------------
-// Resumable Non-Maskable Interrupts(Smrnmi) CSRs
-//===-----------------------------------------------
-def : SysReg<"mnscratch", 0x740>;
-def : SysReg<"mnepc", 0x741>;
-def : SysReg<"mncause", 0x742>;
-def : SysReg<"mnstatus", 0x744>;
-
-//===-----------------------------------------------
 // Control Transfer Records CSRs
 //===-----------------------------------------------
 def : SysReg<"sctrctl", 0x14e>;
@@ -464,3 +509,60 @@ def : SysReg<"sctrstatus", 0x14f>;
 def : SysReg<"sctrdepth", 0x15f>;
 def : SysReg<"vsctrctl", 0x24e>;
 def : SysReg<"mctrctl", 0x34e>;
+
+//===-----------------------------------------------
+// Cycle and Instret Privilege Mode Filtering (Smcntrpmf)
+//===-----------------------------------------------
+def : SysReg<"mcyclecfg", 0x321>;
+def : SysReg<"minstretcfg", 0x322>;
+let isRV32Only = 1 in {
+def : SysReg<"mcyclecfgh", 0x721>;
+def : SysReg<"minstretcfgh", 0x722>;
+} // isRV32Only
+
+//===-----------------------------------------------
+// Vendor CSRs
+//===-----------------------------------------------
+
+// XSfmclic
+let FeaturesRequired = [{ {RISCV::FeatureVendorXSfmclic} }] in {
+def : SysReg<"sf.mtvt", 0x307>;
+def : SysReg<"sf.mnxti", 0x345>;
+def : SysReg<"sf.mintstatus", 0x346>;
+def : SysReg<"sf.mscratchcsw", 0x348>;
+def : SysReg<"sf.mscratchcswl", 0x349>;
+}
+
+// XSfsclic
+let FeaturesRequired = [{ {RISCV::FeatureVendorXSfsclic} }] in {
+def : SysReg<"sf.stvt", 0x107>;
+def : SysReg<"sf.snxti", 0x145>;
+def : SysReg<"sf.sintstatus", 0x146>;
+def : SysReg<"sf.sscratchcsw", 0x148>;
+def : SysReg<"sf.sscratchcswl", 0x149>;
+}
+
+// Xqciint
+let FeaturesRequired = [{ {RISCV::FeatureVendorXqciint} }], isRV32Only = 1 in {
+def : SysReg<"qc.mmcr", 0x7C0>;
+def : SysReg<"qc.mntvec", 0x7C3>;
+def : SysReg<"qc.mstktopaddr", 0x7C4>;
+def : SysReg<"qc.mstkbottomaddr", 0x7C5>;
+def : SysReg<"qc.mthreadptr", 0x7C8>;
+def : SysReg<"qc.mcause", 0x7C9>;
+
+foreach i = 0 - 7 in {
+  def : SysReg<"qc.mclicip" # i, !add(0x7F0, i)>;
+  def : SysReg<"qc.mclicie" # i, !add(0x7F8, i)>;
+}
+
+foreach i = 0 - 31 in {
+  def : SysReg<"qc.mclicilvl" # !if(!lt(i, 10), "0", "") # i, 
+               !add(0xBC0, i)>;
+}
+
+foreach i = 0 - 3 in {
+  def : SysReg<"qc.mwpstartaddr" # i, !add(0x7D0, i)>;
+  def : SysReg<"qc.mwpendaddr" # i,   !add(0x7D4, i)>;
+}
+} // FeatureVendorXqciint, isRV32Only

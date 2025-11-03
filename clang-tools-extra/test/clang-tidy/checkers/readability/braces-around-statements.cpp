@@ -77,15 +77,16 @@ void test() {
   // CHECK-FIXES-NEXT: do_something("for");
   // CHECK-FIXES-NEXT: }
 
-  for (;;) {
-    do_something("for-ok");
-  }
   for (;;)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: statement should be inside braces
   // CHECK-FIXES: for (;;) {
   // CHECK-FIXES-NEXT: ;
   // CHECK-FIXES-NEXT: }
+
+  for (;;) {
+    do_something("for-ok");
+  }
 
   int arr[4] = {1, 2, 3, 4};
   for (int a : arr)
@@ -378,7 +379,7 @@ int test_macros(bool b) {
 
   #define WRAP(X) { X; }
   // This is to ensure no other CHECK-FIXES matches the macro definition:
-  // CHECK-FIXES: WRAP
+  // CHECK-FIXES: #define WRAP(X) { X; }
 
   // Use-case: LLVM_DEBUG({ for(...) do_something(); });
   WRAP({

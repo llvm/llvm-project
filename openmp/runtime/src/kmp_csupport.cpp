@@ -570,7 +570,7 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
 
   this_thr->th.th_teams_microtask = NULL;
   this_thr->th.th_teams_level = 0;
-  *(kmp_int64 *)(&this_thr->th.th_teams_size) = 0L;
+  memset(&this_thr->th.th_teams_size, 0, sizeof(kmp_teams_size_t));
   va_end(ap);
 #if KMP_STATS_ENABLED
   if (previous_state == stats_state_e::SERIAL_REGION) {

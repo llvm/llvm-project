@@ -1,4 +1,4 @@
-//===--- ImplicitConversionInLoopCheck.cpp - clang-tidy--------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,8 +65,7 @@ void ImplicitConversionInLoopCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *VD = Result.Nodes.getNodeAs<VarDecl>("faulty-var");
   const auto *Init = Result.Nodes.getNodeAs<Expr>("init");
-  const auto *OperatorCall =
-      Result.Nodes.getNodeAs<Expr>("operator-call");
+  const auto *OperatorCall = Result.Nodes.getNodeAs<Expr>("operator-call");
 
   if (const auto *Cleanup = dyn_cast<ExprWithCleanups>(Init))
     Init = Cleanup->getSubExpr();

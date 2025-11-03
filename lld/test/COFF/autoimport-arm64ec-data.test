@@ -12,16 +12,16 @@ RUN: llvm-objdump -s out.dll | FileCheck --check-prefix=CONTENTS %s
 
 IMPORTS:      Import {
 IMPORTS-NEXT:   Name: test.dll
-IMPORTS-NEXT:   ImportLookupTableRVA: 0x40E0
+IMPORTS-NEXT:   ImportLookupTableRVA: 0x4100
 IMPORTS-NEXT:   ImportAddressTableRVA: 0x3000
 IMPORTS-NEXT:   Symbol: variable (0)
 IMPORTS-NEXT: }
 
 Runtime pseudo relocation list header at 0x401c, consisting of 0x0, 0x0, 0x1.
 The first runtime pseudo relocation is from an x86_64 object file, with import
-from 0x3000, applied at 0x7000 with a size of 32 bits. The second pseudo
+from 0x3000, applied at 0x7000 with a size of 64 bits. The second pseudo
 relocation is from an ARM64EC object file, with import from 0x3000, applied
-at 0x7008 with a size of 32 bits.
+at 0x7008 with a size of 64 bits.
 
 CONTENTS: Contents of section .rdata:
 CONTENTS:  180004010 00200000 10200000 00200000 00000000

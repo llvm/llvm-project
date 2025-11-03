@@ -15,7 +15,7 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX || \
-    SANITIZER_NETBSD || SANITIZER_SOLARIS
+    SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 #  include "asan_allocator.h"
 #  include "asan_interceptors.h"
@@ -49,7 +49,7 @@ INTERCEPTOR(void, free, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
   GET_STACK_TRACE_FREE;
-  asan_free(ptr, &stack, FROM_MALLOC);
+  asan_free(ptr, &stack);
 }
 
 #if SANITIZER_INTERCEPT_CFREE
@@ -57,7 +57,7 @@ INTERCEPTOR(void, cfree, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
   GET_STACK_TRACE_FREE;
-  asan_free(ptr, &stack, FROM_MALLOC);
+  asan_free(ptr, &stack);
 }
 #endif // SANITIZER_INTERCEPT_CFREE
 
@@ -93,12 +93,12 @@ INTERCEPTOR(void*, reallocarray, void *ptr, uptr nmemb, uptr size) {
 #if SANITIZER_INTERCEPT_MEMALIGN
 INTERCEPTOR(void*, memalign, uptr boundary, uptr size) {
   GET_STACK_TRACE_MALLOC;
-  return asan_memalign(boundary, size, &stack, FROM_MALLOC);
+  return asan_memalign(boundary, size, &stack);
 }
 
 INTERCEPTOR(void*, __libc_memalign, uptr boundary, uptr size) {
   GET_STACK_TRACE_MALLOC;
-  return asan_memalign(boundary, size, &stack, FROM_MALLOC);
+  return asan_memalign(boundary, size, &stack);
 }
 #endif // SANITIZER_INTERCEPT_MEMALIGN
 
@@ -217,4 +217,4 @@ void ReplaceSystemMalloc() {
 #endif  // SANITIZER_ANDROID
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX ||
-        // SANITIZER_NETBSD || SANITIZER_SOLARIS
+        // SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU

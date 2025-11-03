@@ -33,27 +33,31 @@ Types:
 
 */
 
-#include <__config>
-#include <version>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/cstddef>
+#else
+#  include <__config>
+#  include <version>
 
-#include <stddef.h>
+#  include <stddef.h>
 
-#ifndef _LIBCPP_STDDEF_H
+#  ifndef _LIBCPP_STDDEF_H
 #   error <cstddef> tried including <stddef.h> but didn't find libc++'s <stddef.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
           any C Standard Library, and you are probably using compiler flags that make that \
           not be the case.
-#endif
+#  endif
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
-#include <__cstddef/byte.h>
-#include <__cstddef/max_align_t.h>
-#include <__cstddef/nullptr_t.h>
-#include <__cstddef/ptrdiff_t.h>
-#include <__cstddef/size_t.h>
+#  include <__cstddef/byte.h>
+#  include <__cstddef/max_align_t.h>
+#  include <__cstddef/nullptr_t.h>
+#  include <__cstddef/ptrdiff_t.h>
+#  include <__cstddef/size_t.h>
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CSTDDEF

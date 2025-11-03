@@ -155,6 +155,13 @@ void MappingTraits<PdbDbiStream>::mapping(IO &IO, PdbDbiStream &Obj) {
   IO.mapOptional("PdbDllRbld", Obj.PdbDllRbld, uint16_t(0U));
   IO.mapOptional("Flags", Obj.Flags, uint16_t(1U));
   IO.mapOptional("MachineType", Obj.MachineType, PDB_Machine::x86);
+  // This is a workaround for IO not having document context with the
+  // machine type. The machine type is needed to properly parse Register enums
+  // in the PDB.
+  if (!IO.getContext()) {
+    Obj.FakeHeader.Machine = static_cast<uint16_t>(Obj.MachineType);
+    IO.setContext(&Obj.FakeHeader);
+  }
   IO.mapOptional("Modules", Obj.ModInfos);
 }
 

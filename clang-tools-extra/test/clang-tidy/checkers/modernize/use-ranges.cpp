@@ -1,14 +1,25 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -I %S/Inputs/use-ranges/
-// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/use-ranges/
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -I %S/Inputs/
+// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/
+// Example: ./check_clang_tidy.py -std=c++20 checkers/modernize/use-ranges.cpp modernize-use-ranges temp.txt -- -- -I ~/llvm-project/clang-tools-extra/test/clang-tidy/checkers/modernize/Inputs/
 
 // CHECK-FIXES: #include <algorithm>
 // CHECK-FIXES-CPP23: #include <numeric>
 // CHECK-FIXES: #include <ranges>
 
-#include "fake_std.h"
+#include "use-ranges/fake_std.h"
+#include "smart-ptr/unique_ptr.h"
 
 void Positives() {
   std::vector<int> I, J;
+  std::vector<std::unique_ptr<int>> K;
+
+  // Expect to have no check messages
+  std::find(K.begin(), K.end(), nullptr);
+
+  std::find(K.begin(), K.end(), std::unique_ptr<int>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(K, std::unique_ptr<int>());
+
   std::find(I.begin(), I.end(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 0);
@@ -76,6 +87,15 @@ void Positives() {
 
 void Reverse(){
   std::vector<int> I, J;
+  std::vector<std::unique_ptr<int>> K;
+  
+  // Expect to have no check messages
+  std::find(K.rbegin(), K.rend(), nullptr);
+
+  std::find(K.rbegin(), K.rend(), std::unique_ptr<int>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(K), std::unique_ptr<int>());
+
   std::find(I.rbegin(), I.rend(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(I), 0);

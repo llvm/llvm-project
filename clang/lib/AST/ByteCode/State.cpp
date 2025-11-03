@@ -67,10 +67,8 @@ OptionalDiagnostic State::Note(SourceLocation Loc, diag::kind DiagId) {
 }
 
 void State::addNotes(ArrayRef<PartialDiagnosticAt> Diags) {
-  if (hasActiveDiagnostic()) {
-    getEvalStatus().Diag->insert(getEvalStatus().Diag->end(), Diags.begin(),
-                                 Diags.end());
-  }
+  if (hasActiveDiagnostic())
+    llvm::append_range(*getEvalStatus().Diag, Diags);
 }
 
 DiagnosticBuilder State::report(SourceLocation Loc, diag::kind DiagId) {
@@ -114,10 +112,6 @@ OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
   return OptionalDiagnostic();
 }
 
-const LangOptions &State::getLangOpts() const {
-  return getASTContext().getLangOpts();
-}
-
 void State::addCallStack(unsigned Limit) {
   // Determine which calls to skip, if any.
   unsigned ActiveCalls = getCallStackDepth() - 1;
@@ -133,6 +127,7 @@ void State::addCallStack(unsigned Limit) {
   const Frame *Bottom = getBottomFrame();
   for (const Frame *F = Top; F != Bottom; F = F->getCaller(), ++CallIdx) {
     SourceRange CallRange = F->getCallRange();
+    assert(CallRange.isValid());
 
     // Skip this call?
     if (CallIdx >= SkipStart && CallIdx < SkipEnd) {

@@ -87,7 +87,7 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
   // of the blocks or operation results contained within this region as that
   // would lead to a write in their use-def list. This is unavoidable for
   // 'Value's from outside the region however, in which case it is not read
-  // only. Using the BlockAndValueMapper it is possible to remap such 'Value's
+  // only. Using the IRMapper it is possible to remap such 'Value's
   // to ones owned by the calling thread however, making it read only once
   // again.
 
@@ -253,6 +253,21 @@ void Region::OpIterator::skipOverBlocksWithNoOps() {
     operation = block->begin();
 }
 
+llvm::raw_ostream &mlir::operator<<(llvm::raw_ostream &os, Region &region) {
+  if (!region.getParentOp()) {
+    os << "Region has no parent op";
+  } else {
+    os << "Region #" << region.getRegionNumber() << " in operation "
+       << region.getParentOp()->getName();
+  }
+  for (auto it : llvm::enumerate(region.getBlocks())) {
+    os << "\n  Block #" << it.index() << ":";
+    for (Operation &op : it.value().getOperations())
+      os << "\n    " << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+  }
+  return os;
+}
+
 //===----------------------------------------------------------------------===//
 // RegionRange
 //===----------------------------------------------------------------------===//
@@ -271,7 +286,7 @@ RegionRange::OwnerT RegionRange::offset_base(const OwnerT &owner,
     return region + index;
   if (auto **region = llvm::dyn_cast_if_present<Region **>(owner))
     return region + index;
-  return &owner.get<Region *>()[index];
+  return &cast<Region *>(owner)[index];
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Region *RegionRange::dereference_iterator(const OwnerT &owner,
@@ -280,5 +295,5 @@ Region *RegionRange::dereference_iterator(const OwnerT &owner,
     return region[index].get();
   if (auto **region = llvm::dyn_cast_if_present<Region **>(owner))
     return region[index];
-  return &owner.get<Region *>()[index];
+  return &cast<Region *>(owner)[index];
 }

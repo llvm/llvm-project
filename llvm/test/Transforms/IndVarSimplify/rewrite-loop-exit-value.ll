@@ -218,7 +218,8 @@ define i32 @vscale_slt_with_vp_umin(ptr nocapture %A, i32 %n) mustprogress vscal
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[TMP0]], [[VF]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 2, 33) i32 @llvm.cttz.i32(i32 [[VF]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[VSCALE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[TMP3]]
@@ -270,7 +271,8 @@ define i32 @vscale_slt_with_vp_umin2(ptr nocapture %A, i32 %n) mustprogress vsca
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[TMP0]], [[VF]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 2, 33) i32 @llvm.cttz.i32(i32 [[VF]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[VSCALE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[TMP3]]

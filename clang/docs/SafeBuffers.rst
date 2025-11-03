@@ -58,7 +58,7 @@ A relatively fresh version of C++ is recommended. In particular, the very useful
 standard view class ``std::span`` requires C++20.
 
 Other implementations of the C++ standard library may provide different
-flags to enable such hardening hardening.
+flags to enable such hardening.
 
 If you're using custom containers and views, they will need to be hardened
 this way as well, but you don't necessarily need to do this ahead of time.
@@ -262,7 +262,7 @@ You can achieve this by refactoring the function to accept a ``std::span``
 as a parameter::
 
     int get_last_element(std::span<int> sp) {
-      return sp[size - 1];
+      return sp[sp.size() - 1];
     }
 
 This solution puts the responsibility for making sure the span is well-formed
@@ -411,7 +411,7 @@ backwards compatibility -- in terms of both API and ABI -- by adding
 a "compatibility overload"::
 
     int get_last_element(std::span<int> sp) {
-      return sp[size - 1];
+      return sp[sp.size() - 1];
     }
 
     [[clang::unsafe_buffer_usage]] // Please use the new function.

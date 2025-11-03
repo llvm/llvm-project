@@ -264,7 +264,7 @@ define <2 x i15> @shl_vector_zero(<2 x i15> %a, <2 x i15> %b) {
 
 define <2 x i32> @shl_vector_for_real(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @shl_vector_for_real(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], splat (i32 3)
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[AND]]
 ; CHECK-NEXT:    ret <2 x i32> [[SHL]]
 ;
@@ -318,7 +318,7 @@ define i32 @lshr_cttz_zero_is_undef(i32 %x) {
 define <2 x i8> @lshr_ctlz_zero_is_undef_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_ctlz_zero_is_undef_splat_vec(
 ; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 3>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %ct = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %x, i1 true)
@@ -342,7 +342,7 @@ define i8 @lshr_ctlz_zero_is_undef_vec(<2 x i8> %x) {
 define <2 x i8> @lshr_cttz_zero_is_undef_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_cttz_zero_is_undef_splat_vec(
 ; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 3>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %ct = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 true)
@@ -498,4 +498,30 @@ define <1 x i64> @bitcast_noshift_vector_wrong_type(<2 x float> %v1, <1 x i64> %
   %b = bitcast <2 x float> %s to <1 x i64>
   %r = shl <1 x i64> %v2, %b
   ret <1 x i64> %r
+}
+
+; Test that verifies correct handling of known bits when bitcasting from a smaller vector
+; to a larger one (e.g., <2 x i32> to <8 x i8>). Previously, only the subscale portion
+; (e.g., 4 elements) was checked instead of the full demanded vector width (8 elements),
+; leading to incorrect known bits and removal of the `ashr` instruction.
+
+define <8 x i8> @bitcast_knownbits_subscale_miscompile(i32 %x) {
+; CHECK-LABEL: @bitcast_knownbits_subscale_miscompile(
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], -256
+; CHECK-NEXT:    [[SETBITS:%.*]] = or i32 [[MASKED]], -16777216
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <2 x i32> poison, i32 [[SETBITS]], i32 0
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x i32> [[INSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC:%.*]] = bitcast <2 x i32> [[SPLAT]] to <8 x i8>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i8> [[VEC]], <8 x i8> zeroinitializer, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 0, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[SHR:%.*]] = ashr <8 x i8> [[SHUF]], splat (i8 1)
+; CHECK-NEXT:    ret <8 x i8> [[SHR]]
+;
+  %masked = and i32 %x, u0xFFFFFF00
+  %setbits = or i32 %masked, u0xFF000000
+  %insert = insertelement <2 x i32> poison, i32 %setbits, i32 0
+  %splat = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> splat (i32 0)
+  %vec = bitcast <2 x i32> %splat to <8 x i8>
+  %shuf = shufflevector <8 x i8> %vec, <8 x i8> zeroinitializer, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 0, i32 0, i32 0, i32 0>
+  %shr = ashr <8 x i8> %shuf, splat (i8 1)
+  ret <8 x i8> %shr
 }

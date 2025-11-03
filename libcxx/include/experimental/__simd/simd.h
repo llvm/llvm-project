@@ -11,12 +11,12 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
-#include <cstddef>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/reference.h>
 #include <experimental/__simd/traits.h>
@@ -43,8 +43,8 @@ public:
 // TODO: implement simd class
 template <class _Tp, class _Abi>
 class simd : public __simd_int_operators<simd<_Tp, _Abi>, __simd_operations<_Tp, _Abi>, is_integral_v<_Tp>> {
-  using _Impl    = __simd_operations<_Tp, _Abi>;
-  using _Storage = typename _Impl::_SimdStorage;
+  using _Impl _LIBCPP_NODEBUG    = __simd_operations<_Tp, _Abi>;
+  using _Storage _LIBCPP_NODEBUG = typename _Impl::_SimdStorage;
 
   _Storage __s_;
 

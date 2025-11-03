@@ -57,6 +57,13 @@ struct DiagnosticDetail {
   std::string rendered;
 };
 
+StructuredData::ObjectSP Serialize(llvm::ArrayRef<DiagnosticDetail> details);
+
+void RenderDiagnosticDetails(Stream &stream,
+                             std::optional<uint16_t> offset_in_command,
+                             bool show_inline,
+                             llvm::ArrayRef<DiagnosticDetail> details);
+
 class DiagnosticError
     : public llvm::ErrorInfo<DiagnosticError, CloneableECError> {
 public:
@@ -64,12 +71,11 @@ public:
   DiagnosticError(std::error_code ec) : ErrorInfo(ec) {}
   lldb::ErrorType GetErrorType() const override;
   virtual llvm::ArrayRef<DiagnosticDetail> GetDetails() const = 0;
+  StructuredData::ObjectSP GetAsStructuredData() const override {
+    return Serialize(GetDetails());
+  }
   static char ID;
 };
 
-void RenderDiagnosticDetails(Stream &stream,
-                             std::optional<uint16_t> offset_in_command,
-                             bool show_inline,
-                             llvm::ArrayRef<DiagnosticDetail> details);
 } // namespace lldb_private
 #endif

@@ -1,4 +1,8 @@
 add_lldb_library(lldbValueObject
+  DILAST.cpp
+  DILEval.cpp
+  DILLexer.cpp
+  DILParser.cpp
   ValueObject.cpp
   ValueObjectCast.cpp
   ValueObjectChild.cpp
@@ -10,12 +14,17 @@ add_lldb_library(lldbValueObject
   ValueObjectList.cpp
   ValueObjectMemory.cpp
   ValueObjectRegister.cpp
-  ValueObjectSyntheticFilter.cpp
+  ValueObjectSynthetic.cpp
   ValueObjectUpdater.cpp
   ValueObjectVariable.cpp
   ValueObjectVTable.cpp
 
-
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/ValueObject
+  LINK_COMPONENTS
+    Support
+    Demangle
+    TargetParser
   LINK_LIBS
     lldbBreakpoint
     lldbDataFormatters
@@ -27,9 +36,4 @@ add_lldb_library(lldbValueObject
     lldbUtility
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
-
-  LINK_COMPONENTS
-    Support
-    Demangle
-    TargetParser
   )

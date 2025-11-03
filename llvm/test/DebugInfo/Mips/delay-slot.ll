@@ -1,5 +1,4 @@
 ; RUN: llc -filetype=obj -O0 -relocation-model=pic < %s -mtriple mips-unknown-linux-gnu | llvm-dwarfdump -a - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj -O0 -relocation-model=pic < %s -mtriple mips-unknown-linux-gnu | llvm-dwarfdump -a - | FileCheck %s
 ; PR19815
 
 ; Generated using clang -target mips-linux-gnu -g test.c -S -o - -flto|opt -passes=sroa -S

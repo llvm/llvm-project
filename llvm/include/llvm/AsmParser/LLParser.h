@@ -13,8 +13,9 @@
 #ifndef LLVM_ASMPARSER_LLPARSER_H
 #define LLVM_ASMPARSER_LLPARSER_H
 
-#include "LLLexer.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/AsmParser/AsmParserContext.h"
+#include "llvm/AsmParser/LLLexer.h"
 #include "llvm/AsmParser/NumberedValues.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
@@ -91,12 +92,15 @@ namespace llvm {
     }
 
     bool operator<(const ValID &RHS) const {
-      assert(Kind == RHS.Kind && "Comparing ValIDs of different kinds");
+      assert((((Kind == t_LocalID || Kind == t_LocalName) &&
+               (RHS.Kind == t_LocalID || RHS.Kind == t_LocalName)) ||
+              ((Kind == t_GlobalID || Kind == t_GlobalName) &&
+               (RHS.Kind == t_GlobalID || RHS.Kind == t_GlobalName))) &&
+             "Comparing ValIDs of different kinds");
+      if (Kind != RHS.Kind)
+        return Kind < RHS.Kind;
       if (Kind == t_LocalID || Kind == t_GlobalID)
         return UIntVal < RHS.UIntVal;
-      assert((Kind == t_LocalName || Kind == t_GlobalName ||
-              Kind == t_ConstantStruct || Kind == t_PackedConstantStruct) &&
-             "Ordering not defined for this ValID kind yet");
       return StrVal < RHS.StrVal;
     }
   };
@@ -174,6 +178,9 @@ namespace llvm {
     // Map of module ID to path.
     std::map<unsigned, StringRef> ModuleIdMap;
 
+    /// Keeps track of source locations for Values, BasicBlocks, and Functions.
+    AsmParserContext *ParserContext;
+
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
@@ -186,10 +193,11 @@ namespace llvm {
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
              ModuleSummaryIndex *Index, LLVMContext &Context,
-             SlotMapping *Slots = nullptr)
+             SlotMapping *Slots = nullptr,
+             AsmParserContext *ParserContext = nullptr)
         : Context(Context), OPLex(F, SM, Err, Context),
           Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
-          BlockAddressPFS(nullptr) {}
+          BlockAddressPFS(nullptr), ParserContext(ParserContext) {}
     bool Run(
         bool UpgradeDebugInfo,
         DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
@@ -376,6 +384,7 @@ namespace llvm {
                                     bool inAttrGrp, LocTy &BuiltinLoc);
     bool parseRangeAttr(AttrBuilder &B);
     bool parseInitializesAttr(AttrBuilder &B);
+    bool parseCapturesAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);
 

@@ -143,6 +143,7 @@ struct Configuration {
   bool timeTraceEnabled = false;
   bool dataConst = false;
   bool dedupStrings = true;
+  bool dedupSymbolStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
   bool warnDylibInstallName = false;
@@ -164,7 +165,9 @@ struct Configuration {
   llvm::StringRef finalOutput;
 
   llvm::StringRef installName;
+  llvm::StringRef clientName;
   llvm::StringRef mapFile;
+  llvm::StringRef ltoNewPmPasses;
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;
   llvm::StringRef umbrella;
@@ -180,8 +183,10 @@ struct Configuration {
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;
+  bool interposable = false;
   bool errorForArchMismatch = false;
   bool ignoreAutoLink = false;
+  int readWorkers = 0;
   // ld64 allows invalid auto link options as long as the link succeeds. LLD
   // does not, but there are cases in the wild where the invalid linker options
   // exist. This allows users to ignore the specific invalid options in the case
@@ -202,6 +207,7 @@ struct Configuration {
   std::vector<llvm::StringRef> frameworkSearchPaths;
   bool warnDuplicateRpath = true;
   llvm::SmallVector<llvm::StringRef, 0> runtimePaths;
+  llvm::SmallVector<llvm::StringRef, 0> allowableClients;
   std::vector<std::string> astPaths;
   std::vector<Symbol *> explicitUndefineds;
   llvm::StringSet<> explicitDynamicLookups;
@@ -215,15 +221,19 @@ struct Configuration {
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
+  bool disableVerify;
+  bool separateCstringLiteralSections;
+  bool tailMergeStrings;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
 
-  llvm::StringRef irpgoProfileSortProfilePath;
-  bool compressionSortStartupFunctions = false;
-  bool functionOrderForCompression = false;
-  bool dataOrderForCompression = false;
-  bool verboseBpSectionOrderer = false;
+  llvm::StringRef irpgoProfilePath;
+  bool bpStartupFunctionSort = false;
+  bool bpCompressionSortStartupFunctions = false;
+  bool bpFunctionOrderForCompression = false;
+  bool bpDataOrderForCompression = false;
+  bool bpVerboseSectionOrderer = false;
 
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;
@@ -238,6 +248,7 @@ struct Configuration {
   SymtabPresence localSymbolsPresence = SymtabPresence::All;
   SymbolPatterns localSymbolPatterns;
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
+  llvm::SmallVector<llvm::StringRef, 0> passPlugins;
 
   bool zeroModTime = true;
   bool generateUuid = true;

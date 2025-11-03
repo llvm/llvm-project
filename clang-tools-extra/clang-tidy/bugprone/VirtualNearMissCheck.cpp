@@ -1,4 +1,4 @@
-//===--- VirtualNearMissCheck.cpp - clang-tidy-----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -50,7 +50,7 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
     return false;
 
   // Check if return types are identical.
-  if (Context->hasSameType(DerivedReturnTy, BaseReturnTy))
+  if (ASTContext::hasSameType(DerivedReturnTy, BaseReturnTy))
     return true;
 
   /// Check if the return types are covariant.
@@ -77,7 +77,7 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
   if (DRD == BRD)
     return true;
 
-  if (!Context->hasSameUnqualifiedType(DTy, BTy)) {
+  if (!ASTContext::hasSameUnqualifiedType(DTy, BTy)) {
     // Begin checking whether the conversion from D to B is valid.
     CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                        /*DetectVirtual=*/false);
@@ -87,7 +87,8 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
       return false;
 
     // Check ambiguity.
-    if (Paths.isAmbiguous(Context->getCanonicalType(BTy).getUnqualifiedType()))
+    if (Paths.isAmbiguous(
+            ASTContext::getCanonicalType(BTy).getUnqualifiedType()))
       return false;
 
     // Check accessibility.
@@ -112,7 +113,7 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
 
   // The class type D should have the same cv-qualification as or less
   // cv-qualification than the class type B.
-  if (DTy.isMoreQualifiedThan(BTy))
+  if (DTy.isMoreQualifiedThan(BTy, *Context))
     return false;
 
   return true;
@@ -179,15 +180,15 @@ static bool checkOverrideByDerivedMethod(const CXXMethodDecl *BaseMD,
 
 bool VirtualNearMissCheck::isPossibleToBeOverridden(
     const CXXMethodDecl *BaseMD) {
-  auto Iter = PossibleMap.find(BaseMD);
-  if (Iter != PossibleMap.end())
+  auto [Iter, Inserted] = PossibleMap.try_emplace(BaseMD);
+  if (!Inserted)
     return Iter->second;
 
   bool IsPossible = !BaseMD->isImplicit() && !isa<CXXConstructorDecl>(BaseMD) &&
                     !isa<CXXDestructorDecl>(BaseMD) && BaseMD->isVirtual() &&
                     !BaseMD->isOverloadedOperator() &&
                     !isa<CXXConversionDecl>(BaseMD);
-  PossibleMap[BaseMD] = IsPossible;
+  Iter->second = IsPossible;
   return IsPossible;
 }
 

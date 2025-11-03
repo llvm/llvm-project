@@ -27,7 +27,6 @@ gen_version_script("version_script") {
 source_set("sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  defines = [ "UBSAN_CAN_USE_CXXABI" ]
   deps = [
     "//compiler-rt/lib/interception:sources",
     "//compiler-rt/lib/sanitizer_common:sources",
@@ -65,7 +64,6 @@ source_set("standalone_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs -= [ "//llvm/utils/gn/build:no_rtti" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  defines = [ "UBSAN_CAN_USE_CXXABI" ]
   sources = [
     "ubsan_diag_standalone.cpp",
     "ubsan_init_standalone.cpp",
@@ -77,7 +75,6 @@ source_set("cxx_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs -= [ "//llvm/utils/gn/build:no_rtti" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  defines = [ "UBSAN_CAN_USE_CXXABI" ]
   sources = [
     "ubsan_handlers_cxx.cpp",
     "ubsan_handlers_cxx.h",

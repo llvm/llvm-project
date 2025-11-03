@@ -1,17 +1,19 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
+set(LLVM_LINK_COMPONENTS
+  TargetParser
+)
+
 set(LIBS
   CUFDialect
   FIRBuilder
-  FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
-  LLVMTargetParser
+  MIFDialect
 )
 
 add_flang_unittest(FlangOptimizerTests
@@ -42,8 +44,18 @@ DEPENDS
   FIRDialect
   FIRSupport
   HLFIRDialect
-  ${dialect_libs})
+  MIFDialect)
+
+if(NOT FLANG_STANDALONE_BUILD)
+  add_dependencies(FlangOptimizerTests
+    ${dialect_libs})
+endif()
 
 target_link_libraries(FlangOptimizerTests
   PRIVATE
   ${LIBS})
+mlir_target_link_libraries(FlangOptimizerTests
+  PRIVATE
+  ${dialect_libs}
+  ${extension_libs}
+  )

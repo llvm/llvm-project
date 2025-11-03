@@ -151,7 +151,7 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
   // function.
   Register InitialRegister =
       MF.getSubtarget().getFrameLowering()->getInitialCFARegister(MF);
-  InitialRegister = TRI.getDwarfRegNum(InitialRegister, true);
+  unsigned DwarfInitialRegister = TRI.getDwarfRegNum(InitialRegister, true);
   unsigned NumRegs = TRI.getNumSupportedRegs(MF);
 
   // Initialize MBBMap.
@@ -160,8 +160,8 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
     MBBInfo.MBB = &MBB;
     MBBInfo.IncomingCFAOffset = InitialOffset;
     MBBInfo.OutgoingCFAOffset = InitialOffset;
-    MBBInfo.IncomingCFARegister = InitialRegister;
-    MBBInfo.OutgoingCFARegister = InitialRegister;
+    MBBInfo.IncomingCFARegister = DwarfInitialRegister;
+    MBBInfo.OutgoingCFARegister = DwarfInitialRegister;
     MBBInfo.IncomingCSRSaved.resize(NumRegs);
     MBBInfo.OutgoingCSRSaved.resize(NumRegs);
   }
@@ -263,6 +263,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpNegateRAStateWithPC:
       case MCCFIInstruction::OpGnuArgsSize:
       case MCCFIInstruction::OpLabel:
+      case MCCFIInstruction::OpValOffset:
         break;
       }
       if (CSRReg || CSROffset) {

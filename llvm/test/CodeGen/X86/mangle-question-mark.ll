@@ -2,6 +2,7 @@
 
 ; RUN: llc -mtriple i686-pc-win32 < %s | FileCheck %s --check-prefix=COFF
 ; RUN: llc -mtriple x86_64-pc-win32 < %s | FileCheck %s --check-prefix=COFF64
+; RUN: llc -mtriple x86_64-uefi < %s | FileCheck %s --check-prefix=COFF64
 ; RUN: llc -mtriple i686-linux-gnu < %s | FileCheck %s --check-prefix=ELF
 ; RUN: llc -mtriple i686-apple-darwin < %s | FileCheck %s --check-prefix=MACHO
 

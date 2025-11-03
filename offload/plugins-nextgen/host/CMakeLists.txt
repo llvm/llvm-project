@@ -1,4 +1,4 @@
-set(supported_targets x86_64 aarch64 ppc64 ppc64le s390x)
+set(supported_targets x86_64 aarch64 ppc64 ppc64le riscv64 s390x loongarch64)
 if(NOT ${CMAKE_SYSTEM_PROCESSOR} IN_LIST supported_targets)
   message(STATUS "Not building ${machine} NextGen offloading plugin")
   return()
@@ -35,7 +35,7 @@ if(LIBOMPTARGET_DEP_LIBFFI_FOUND)
   set(LIBOMPTARGET_TESTED_PLUGINS
       "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()
-  message(STATUS "Not generating ${tmachine_name} tests. LibFFI not found.")
+  message(STATUS "Not generating ${machine} tests. LibFFI not found.")
 endif()
 
 # Define the target specific triples and ELF machine values.
@@ -58,5 +58,13 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64$")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "s390x$")
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
        "s390x-ibm-linux-gnu" "s390x-ibm-linux-gnu-LTO")
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv64$")
+  list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
+       "riscv64-unknown-linux-gnu" "riscv64-unknown-linux-gnu-LTO")
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "loongarch64$")
+  list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
+       "loongarch64-unknown-linux-gnu" "loongarch64-unknown-linux-gnu-LTO")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 endif()

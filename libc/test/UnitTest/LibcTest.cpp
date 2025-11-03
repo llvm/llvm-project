@@ -44,7 +44,6 @@ cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
                      is_big_int_v<T>,
                  cpp::string>
 describeValue(T Value) {
-  static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
   const IntegerToString<T, radix::Hex::WithPrefix> buffer(Value);
   return buffer.view();
 }
@@ -159,13 +158,13 @@ int Test::runTests(const TestOptions &Options) {
     }
 
     tlog << green << "[ RUN      ] " << reset << TestName << '\n';
-    [[maybe_unused]] const uint64_t start_time = clock();
+    [[maybe_unused]] const uint64_t start_time = static_cast<uint64_t>(clock());
     RunContext Ctx;
     T->SetUp();
     T->setContext(&Ctx);
     T->Run();
     T->TearDown();
-    [[maybe_unused]] const uint64_t end_time = clock();
+    [[maybe_unused]] const uint64_t end_time = static_cast<uint64_t>(clock());
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:
       tlog << red << "[  FAILED  ] " << reset << TestName << '\n';
@@ -224,6 +223,7 @@ TEST_SPECIALIZATION(int);
 TEST_SPECIALIZATION(long);
 TEST_SPECIALIZATION(long long);
 
+TEST_SPECIALIZATION(signed char);
 TEST_SPECIALIZATION(unsigned char);
 TEST_SPECIALIZATION(unsigned short);
 TEST_SPECIALIZATION(unsigned int);
@@ -242,6 +242,7 @@ TEST_SPECIALIZATION(__uint128_t);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::Int<128>);
 
+TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<96>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<128>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<192>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<256>);

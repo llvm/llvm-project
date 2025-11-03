@@ -113,6 +113,18 @@ template <typename A> int ExpressionBase<A>::Rank() const {
       derived().u);
 }
 
+template <typename A> int ExpressionBase<A>::Corank() const {
+  return common::visit(
+      [](const auto &x) {
+        if constexpr (common::HasMember<decltype(x), TypelessExpression>) {
+          return 0;
+        } else {
+          return x.Corank();
+        }
+      },
+      derived().u);
+}
+
 DynamicType Parentheses<SomeDerived>::GetType() const {
   return left().GetType().value();
 }
@@ -226,6 +238,12 @@ bool Expr<Type<TypeCategory::Logical, KIND>>::operator==(
 template <int KIND>
 bool Expr<Type<TypeCategory::Character, KIND>>::operator==(
     const Expr<Type<TypeCategory::Character, KIND>> &that) const {
+  return u == that.u;
+}
+
+template <int KIND>
+bool Expr<Type<TypeCategory::Unsigned, KIND>>::operator==(
+    const Expr<Type<TypeCategory::Unsigned, KIND>> &that) const {
   return u == that.u;
 }
 

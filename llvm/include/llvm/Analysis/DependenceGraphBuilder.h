@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -28,7 +29,7 @@ class Instruction;
 /// DDG-like graphs. The client code is expected to inherit from this class and
 /// define concrete implementation for each of the pure virtual functions used
 /// in the high-level algorithm.
-template <class GraphType> class AbstractDependenceGraphBuilder {
+template <class GraphType> class LLVM_ABI AbstractDependenceGraphBuilder {
 protected:
   using BasicBlockListType = SmallVectorImpl<BasicBlock *>;
 

@@ -92,6 +92,13 @@ def parse_args():
         action="store_true",
     )
     format_group.add_argument(
+        "-r",
+        "--relative-paths",
+        dest="printPathRelativeCWD",
+        help="Print paths relative to CWD",
+        action="store_true",
+    )
+    format_group.add_argument(
         "-o",
         "--output",
         type=lit.reports.JsonReport,
@@ -166,6 +173,12 @@ def parse_args():
         help="Write XUnit-compatible XML test reports to the specified file",
     )
     execution_group.add_argument(
+        "--report-failures-only",
+        help="Only include unresolved, timed out, failed"
+        " and unexpectedly passed tests in the report",
+        action="store_true",
+    )
+    execution_group.add_argument(
         "--resultdb-output",
         type=lit.reports.ResultDBReport,
         help="Write LuCI ResultDB compatible JSON to the specified file",
@@ -175,12 +188,15 @@ def parse_args():
         type=lit.reports.TimeTraceReport,
         help="Write Chrome tracing compatible JSON to the specified file",
     )
+    # This option only exists for the benefit of LLVM's Buildkite CI pipelines.
+    # As soon as it is not needed, it should be removed. Its help text would be:
+    # When enabled, lit will add a unique element to the output file name,
+    # before the extension. For example "results.xml" will become
+    # "results.<something>.xml". The "<something>" is not ordered in any
+    # way and is chosen so that existing files are not overwritten. [Default: Off]
     execution_group.add_argument(
         "--use-unique-output-file-name",
-        help="When enabled, lit will add a unique element to the output file name, "
-        'before the extension. For example "results.xml" will become '
-        '"results.<something>.xml". The "<something>" is not ordered in any '
-        "way and is chosen so that existing files are not overwritten. [Default: Off]",
+        help=argparse.SUPPRESS,
         action="store_true",
     )
     execution_group.add_argument(
@@ -189,6 +205,15 @@ def parse_args():
         help="Maximum time to spend running a single test (in seconds). "
         "0 means no time limit. [Default: 0]",
         type=_non_negative_int,
+    )
+    execution_group.add_argument(
+        "--max-retries-per-test",
+        dest="maxRetriesPerTest",
+        metavar="N",
+        help="Maximum number of allowed retry attempts per test "
+        "(NOTE: The config.test_retry_attempts test suite option and "
+        "ALLOWED_RETRIES keyword always take precedence)",
+        type=_positive_int,
     )
     execution_group.add_argument(
         "--max-failures",
@@ -211,6 +236,12 @@ def parse_args():
         dest="ignoreFail",
         action="store_true",
         help="Exit with status zero even if some tests fail",
+    )
+    execution_group.add_argument(
+        "--update-tests",
+        dest="update_tests",
+        action="store_true",
+        help="Try to update regression tests to reflect current behavior, if possible",
     )
     execution_test_time_group = execution_group.add_mutually_exclusive_group()
     execution_test_time_group.add_argument(
@@ -284,6 +315,16 @@ def parse_args():
         type=_semicolon_list,
         help="do not XFAIL tests with paths in the semicolon separated list",
         default=os.environ.get("LIT_XFAIL_NOT", ""),
+    )
+    selection_group.add_argument(
+        "--exclude-xfail",
+        help="exclude XFAIL tests (unless they are in the --xfail-not list). "
+        "Note: This option is implemented in "
+        "lit.TestRunner.parseIntegratedTestScript and so will have no effect on "
+        "test formats that do not call that and do not implement the option "
+        "separately.",
+        default=False,
+        action="store_true",
     )
     selection_group.add_argument(
         "--num-shards",

@@ -20,7 +20,6 @@
 #include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
-#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -59,8 +58,7 @@ struct X86TileConfig : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &mf) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   static char ID;
@@ -83,7 +81,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  const X86RegisterInfo *TRI = ST.getRegisterInfo();
   const TargetInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
@@ -126,7 +124,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
     Register VirtReg = Register::index2VirtReg(I);
     if (MRI.reg_nodbg_empty(VirtReg))
       continue;
-    if (MRI.getRegClass(VirtReg)->getID() != X86::TILERegClassID)
+    if (!TRI->isTileRegisterClass(MRI.getRegClass(VirtReg)))
       continue;
     MCRegister PhysReg = VRM.getPhys(VirtReg);
     if (!PhysReg)
@@ -173,6 +171,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
             continue;
           }
           Imm = DefMI.getOperand(1).getImm();
+
           NewMI = addFrameReference(
                       BuildMI(MF.front(), ++ConstMI->getIterator(), DL,
                               TII->get(IsRow ? X86::MOV8mi : X86::MOV16mi)),

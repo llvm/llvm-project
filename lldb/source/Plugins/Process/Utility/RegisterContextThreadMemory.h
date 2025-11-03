@@ -52,8 +52,12 @@ public:
   // so these API's should only be used when this behavior is needed.
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
+  bool ReadAllRegisterValues(
+      lldb_private::RegisterCheckpoint &reg_checkpoint) override;
 
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
+  bool WriteAllRegisterValues(
+      const lldb_private::RegisterCheckpoint &reg_checkpoint) override;
 
   bool CopyFromRegisterContext(lldb::RegisterContextSP context);
 
@@ -95,6 +99,8 @@ private:
   RegisterContextThreadMemory(const RegisterContextThreadMemory &) = delete;
   const RegisterContextThreadMemory &
   operator=(const RegisterContextThreadMemory &) = delete;
+
+  std::mutex m_update_register_ctx_lock;
 };
 
 } // namespace lldb_private
