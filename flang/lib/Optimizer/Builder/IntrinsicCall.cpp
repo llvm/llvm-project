@@ -3160,8 +3160,7 @@ IntrinsicLibrary::genAtomicAddR2(mlir::Type resultType,
       builder, loc, undef, v1, builder.createIntegerConstant(loc, i32Ty, 0));
   mlir::Value vec2 = mlir::LLVM::InsertElementOp::create(
       builder, loc, vec1, v2, builder.createIntegerConstant(loc, i32Ty, 1));
-  auto res = genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd,
-                          a, vec2);
+  auto res = genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, vec2);
   auto i32VecTy = mlir::VectorType::get({1}, i32Ty);
   mlir::Value vecI32 =
       mlir::vector::BitCastOp::create(builder, loc, i32VecTy, res);
