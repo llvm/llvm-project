@@ -13,6 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H
 
+#include "AsyncQueue.h"
 #include "L0Defs.h"
 #include "L0Trace.h"
 #include "PluginInterface.h"
@@ -48,6 +49,9 @@ struct TgtNDRangeDescTy {
   }
 };
 
+/// forward declaration
+struct L0LaunchEnvTy;
+
 /// Kernel properties.
 struct KernelPropertiesTy {
   uint32_t Width = 0;
@@ -70,37 +74,28 @@ struct KernelPropertiesTy {
   static constexpr TgtNDRangeDescTy LoopDescInit = {};
 
   /// Check if we can reuse group parameters.
-  bool reuseGroupParams(const TgtNDRangeDescTy *LoopDescPtr,
-                        const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
-                        uint32_t *GroupSizesOut,
-                        ze_group_count_t &GroupCountsOut,
-                        bool &AllowCooperativeOut) const {
-    if (!LoopDescPtr && LoopDescInit != LoopDesc)
-      return false;
-    if (LoopDescPtr && *LoopDescPtr != LoopDesc)
-      return false;
-    if (NumTeamsIn != NumTeams || ThreadLimitIn != ThreadLimit)
-      return false;
-    // Found matching input parameters.
-    std::copy_n(GroupSizes, 3, GroupSizesOut);
-    GroupCountsOut = GroupCounts;
-    AllowCooperativeOut = AllowCooperative;
-    return true;
-  }
+  bool reuseGroupParams(const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
+                        uint32_t *GroupSizesOut, L0LaunchEnvTy &KEnv) const;
 
   /// Update cached group parameters.
-  void cacheGroupParams(const TgtNDRangeDescTy *LoopDescPtr,
-                        const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
-                        const uint32_t *GroupSizesIn,
-                        const ze_group_count_t &GroupCountsIn,
-                        const bool &AllowCooperativeIn) {
-    LoopDesc = LoopDescPtr ? *LoopDescPtr : LoopDescInit;
-    NumTeams = NumTeamsIn;
-    ThreadLimit = ThreadLimitIn;
-    std::copy_n(GroupSizesIn, 3, GroupSizes);
-    GroupCounts = GroupCountsIn;
-    AllowCooperative = AllowCooperativeIn;
-  }
+  void cacheGroupParams(const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
+                        const uint32_t *GroupSizesIn, L0LaunchEnvTy &KEnv);
+};
+
+struct L0LaunchEnvTy {
+  bool IsAsync;
+  AsyncQueueTy *AsyncQueue;
+  ze_group_count_t GroupCounts;
+  KernelPropertiesTy &KernelPR;
+  bool HalfNumThreads = false;
+  bool IsTeamsNDRange = false;
+
+  bool AllowCooperative = false;
+  TgtNDRangeDescTy *LoopDesc = nullptr;
+
+  L0LaunchEnvTy(bool IsAsync, AsyncQueueTy *AsyncQueue,
+                KernelPropertiesTy &KernelPR)
+      : IsAsync(IsAsync), AsyncQueue(AsyncQueue), KernelPR(KernelPR) {}
 };
 
 class L0KernelTy : public GenericKernelTy {
@@ -111,21 +106,18 @@ class L0KernelTy : public GenericKernelTy {
   KernelPropertiesTy &getProperties() { return Properties; }
 
   void decideKernelGroupArguments(L0DeviceTy &Device, uint32_t NumTeams,
-                                  uint32_t ThreadLimit,
-                                  TgtNDRangeDescTy *LoopLevels,
-                                  uint32_t *GroupSizes,
-                                  ze_group_count_t &GroupCounts,
-                                  bool HalfNumThreads,
-                                  bool IsTeamsNDRange) const;
+                                  uint32_t ThreadLimit, uint32_t *GroupSizes,
+                                  L0LaunchEnvTy &KEnv) const;
 
   Error decideLoopKernelGroupArguments(L0DeviceTy &Device, uint32_t ThreadLimit,
-                                       TgtNDRangeDescTy *LoopLevels,
                                        uint32_t *GroupSizes,
-                                       ze_group_count_t &GroupCounts,
-                                       bool HalfNumThreads,
-                                       bool &AllowCooperative) const;
+                                       L0LaunchEnvTy &KEnv) const;
 
   Error buildKernel(L0ProgramTy &Program);
+
+  Error setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
+                        int32_t NumTeams, int32_t ThreadLimit) const;
+  Error setIndirectFlags(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv) const;
 
 public:
   /// Create a L0 kernel with a name and an execution mode.
@@ -160,8 +152,7 @@ public:
 
   Error getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
                        int32_t ThreadLimit, uint32_t *GroupSizes,
-                       ze_group_count_t &GroupCounts, void *LoopDesc,
-                       bool &AllowCooperative) const;
+                       L0LaunchEnvTy &KEnv) const;
 };
 
 } // namespace llvm::omp::target::plugin

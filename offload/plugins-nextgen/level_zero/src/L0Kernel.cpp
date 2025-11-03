@@ -17,6 +17,35 @@
 
 namespace llvm::omp::target::plugin {
 
+bool KernelPropertiesTy::reuseGroupParams(const int32_t NumTeamsIn,
+                                          const int32_t ThreadLimitIn,
+                                          uint32_t *GroupSizesOut,
+                                          L0LaunchEnvTy &KEnv) const {
+  if (!KEnv.LoopDesc && LoopDescInit != LoopDesc)
+    return false;
+  if (KEnv.LoopDesc && *KEnv.LoopDesc != LoopDesc)
+    return false;
+  if (NumTeamsIn != NumTeams || ThreadLimitIn != ThreadLimit)
+    return false;
+  // Found matching input parameters.
+  std::copy_n(GroupSizes, 3, GroupSizesOut);
+  KEnv.GroupCounts = GroupCounts;
+  KEnv.AllowCooperative = AllowCooperative;
+  return true;
+}
+
+void KernelPropertiesTy::cacheGroupParams(const int32_t NumTeamsIn,
+                                          const int32_t ThreadLimitIn,
+                                          const uint32_t *GroupSizesIn,
+                                          L0LaunchEnvTy &KEnv) {
+  LoopDesc = KEnv.LoopDesc ? *KEnv.LoopDesc : LoopDescInit;
+  NumTeams = NumTeamsIn;
+  ThreadLimit = ThreadLimitIn;
+  std::copy_n(GroupSizesIn, 3, GroupSizes);
+  GroupCounts = KEnv.GroupCounts;
+  AllowCooperative = KEnv.AllowCooperative;
+}
+
 Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   const auto *KernelName = getName();
 
@@ -38,11 +67,11 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-void L0KernelTy::decideKernelGroupArguments(
-    L0DeviceTy &Device, uint32_t NumTeams, uint32_t ThreadLimit,
-    TgtNDRangeDescTy *LoopLevels, uint32_t *GroupSizes,
-    ze_group_count_t &GroupCounts, bool HalfNumThreads,
-    bool IsTeamsNDRange) const {
+void L0KernelTy::decideKernelGroupArguments(L0DeviceTy &Device,
+                                            uint32_t NumTeams,
+                                            uint32_t ThreadLimit,
+                                            uint32_t *GroupSizes,
+                                            L0LaunchEnvTy &KEnv) const {
 
   const KernelPropertiesTy &KernelPR = getProperties();
 
@@ -52,6 +81,7 @@ void L0KernelTy::decideKernelGroupArguments(
   uint32_t MaxGroupSize = Device.getMaxGroupSize();
   const auto &Option = LevelZeroPluginTy::getOptions();
   const auto OptSubscRate = Option.SubscriptionRate;
+  auto &GroupCounts = KEnv.GroupCounts;
 
   uint32_t SIMDWidth = KernelPR.SIMDWidth;
   uint32_t KernelWidth = KernelPR.Width;
@@ -86,7 +116,7 @@ void L0KernelTy::decideKernelGroupArguments(
   } else {
     const uint32_t NumSubslices = Device.getNumSubslices();
     uint32_t NumThreadsPerSubslice = Device.getNumThreadsPerSubslice();
-    if (HalfNumThreads)
+    if (KEnv.HalfNumThreads)
       NumThreadsPerSubslice /= 2;
 
     MaxGroupCount = NumSubslices * NumThreadsPerSubslice;
@@ -125,6 +155,7 @@ void L0KernelTy::decideKernelGroupArguments(
     }
 
     size_t LoopTripcount = 0;
+    TgtNDRangeDescTy *LoopLevels = KEnv.LoopDesc;
     if (LoopLevels) {
       // TODO: consider other possible LoopDesc uses
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
@@ -151,9 +182,10 @@ void L0KernelTy::decideKernelGroupArguments(
       const size_t MaxTotalThreads = Device.getNumThreadsPerSubslice() *
                                      Device.getNumSubslices() * SIMDWidth;
       size_t AdjustedGroupCount =
-          IsTeamsNDRange ? (std::min)(((LoopTripcount + 7) & ~7),
-                                      MaxTotalThreads / GRPSizes[0])
-                         : ((LoopTripcount + GRPSizes[0] - 1) / GRPSizes[0]);
+          KEnv.IsTeamsNDRange
+              ? (std::min)(((LoopTripcount + 7) & ~7),
+                           MaxTotalThreads / GRPSizes[0])
+              : ((LoopTripcount + GRPSizes[0] - 1) / GRPSizes[0]);
       AdjustedGroupCount = std::max(AdjustedGroupCount, size_t{1});
       AdjustedGroupCount *= OptSubscRate;
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
@@ -206,15 +238,17 @@ static uint64_t computeThreadsNeeded(const llvm::ArrayRef<size_t> TripCounts,
   return GroupCount[0] * ThreadsPerWG;
 }
 
-Error L0KernelTy::decideLoopKernelGroupArguments(
-    L0DeviceTy &Device, uint32_t ThreadLimit, TgtNDRangeDescTy *LoopLevels,
-    uint32_t *GroupSizes, ze_group_count_t &GroupCounts, bool HalfNumThreads,
-    bool &AllowCooperative) const {
+Error L0KernelTy::decideLoopKernelGroupArguments(L0DeviceTy &Device,
+                                                 uint32_t ThreadLimit,
+                                                 uint32_t *GroupSizes,
+                                                 L0LaunchEnvTy &KEnv) const {
 
   const auto DeviceId = Device.getDeviceId();
   const auto &Options = LevelZeroPluginTy::getOptions();
   const auto &KernelPR = getProperties();
   uint32_t MaxGroupSize = Device.getMaxGroupSize();
+  TgtNDRangeDescTy *LoopLevels = KEnv.LoopDesc;
+  auto &GroupCounts = KEnv.GroupCounts;
 
   bool MaxGroupSizeForced = false;
   if (ThreadLimit > 0) {
@@ -270,7 +304,7 @@ Error L0KernelTy::decideLoopKernelGroupArguments(
       }
       GRPCounts[DistributeDim] = DistributeTripCount;
     }
-    AllowCooperative = false;
+    KEnv.AllowCooperative = false;
     GroupCounts.groupCountX = GRPCounts[0];
     GroupCounts.groupCountY = GRPCounts[1];
     GroupCounts.groupCountZ = GRPCounts[2];
@@ -346,7 +380,7 @@ Error L0KernelTy::decideLoopKernelGroupArguments(
     }
     GRPCounts[I] = (uint32_t)Count;
   }
-  AllowCooperative = false;
+  KEnv.AllowCooperative = false;
   GroupCounts.groupCountX = GRPCounts[0];
   GroupCounts.groupCountY = GRPCounts[1];
   GroupCounts.groupCountZ = GRPCounts[2];
@@ -357,8 +391,7 @@ Error L0KernelTy::decideLoopKernelGroupArguments(
 
 Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
                                  int32_t ThreadLimit, uint32_t *GroupSizes,
-                                 ze_group_count_t &GroupCounts, void *LoopDesc,
-                                 bool &AllowCooperative) const {
+                                 L0LaunchEnvTy &KEnv) const {
 
   const auto DeviceId = Device.getDeviceId();
   const auto &KernelPR = getProperties();
@@ -367,7 +400,7 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
   const auto [NumTeamsICV, ThreadLimitICV] = std::make_tuple(0, 0);
 
   bool IsXeHPG = Device.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
-  bool HalfNumThreads =
+  KEnv.HalfNumThreads =
       LevelZeroPluginTy::getOptions().ZeDebugEnabled && IsXeHPG;
   uint32_t KernelWidth = KernelPR.Width;
   uint32_t SIMDWidth = KernelPR.SIMDWidth;
@@ -419,12 +452,161 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
          NumTeams);
     }
 
-    bool UseLoopTC = LoopDesc;
-    decideKernelGroupArguments(
-        Device, (uint32_t)NumTeams, (uint32_t)ThreadLimit,
-        UseLoopTC ? (TgtNDRangeDescTy *)LoopDesc : nullptr, GroupSizes,
-        GroupCounts, HalfNumThreads, false);
-    AllowCooperative = false;
+    decideKernelGroupArguments(Device, (uint32_t)NumTeams,
+                               (uint32_t)ThreadLimit, GroupSizes, KEnv);
+    KEnv.AllowCooperative = false;
+  }
+
+  return Plugin::success();
+}
+
+static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
+                                        ze_kernel_handle_t zeKernel,
+                                        L0LaunchEnvTy &KEnv,
+                                        CommandModeTy CommandMode) {
+  const auto DeviceId = l0Device.getDeviceId();
+  auto *IdStr = l0Device.getZeIdCStr();
+  auto CmdListOrErr = l0Device.getImmCmdList();
+  if (!CmdListOrErr)
+    return CmdListOrErr.takeError();
+  const ze_command_list_handle_t CmdList = *CmdListOrErr;
+  // Command queue is not used with immediate command list
+
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Using immediate command list for kernel submission.\n");
+  auto EventOrError = l0Device.getEvent();
+  if (!EventOrError)
+    return EventOrError.takeError();
+  ze_event_handle_t Event = *EventOrError;
+  size_t NumWaitEvents = 0;
+  ze_event_handle_t *WaitEvents = nullptr;
+  auto *AsyncQueue = KEnv.AsyncQueue;
+  if (KEnv.IsAsync && !AsyncQueue->WaitEvents.empty()) {
+    if (CommandMode == CommandModeTy::AsyncOrdered) {
+      NumWaitEvents = 1;
+      WaitEvents = &AsyncQueue->WaitEvents.back();
+    } else {
+      NumWaitEvents = AsyncQueue->WaitEvents.size();
+      WaitEvents = AsyncQueue->WaitEvents.data();
+    }
+  }
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Kernel depends on %zu data copying events.\n", NumWaitEvents);
+  if (KEnv.AllowCooperative)
+    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
+                      zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
+                      WaitEvents);
+  else
+    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
+                      &KEnv.GroupCounts, Event, NumWaitEvents, WaitEvents);
+  KEnv.KernelPR.Mtx.unlock();
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
+
+  if (KEnv.IsAsync) {
+    AsyncQueue->WaitEvents.push_back(Event);
+    AsyncQueue->KernelEvent = Event;
+  } else {
+    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);
+    if (auto Err = l0Device.releaseEvent(Event))
+      return Err;
+  }
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
+       IdStr);
+
+  return Plugin::success();
+}
+
+static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
+                                      ze_kernel_handle_t zeKernel,
+                                      L0LaunchEnvTy &KEnv) {
+  const auto DeviceId = l0Device.getDeviceId();
+  const auto *IdStr = l0Device.getZeIdCStr();
+
+  auto CmdListOrErr = l0Device.getCmdList();
+  if (!CmdListOrErr)
+    return CmdListOrErr.takeError();
+  ze_command_list_handle_t CmdList = *CmdListOrErr;
+  auto CmdQueueOrErr = l0Device.getCmdQueue();
+  if (!CmdQueueOrErr)
+    return CmdQueueOrErr.takeError();
+  const ze_command_queue_handle_t CmdQueue = *CmdQueueOrErr;
+
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Using regular command list for kernel submission.\n");
+
+  ze_event_handle_t Event = nullptr;
+  if (KEnv.AllowCooperative)
+    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
+                      zeKernel, &KEnv.GroupCounts, Event, 0, nullptr);
+  else
+    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
+                      &KEnv.GroupCounts, Event, 0, nullptr);
+  KEnv.KernelPR.Mtx.unlock();
+  CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+  CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
+                        CmdQueue, 1, &CmdList, nullptr);
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
+  CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
+  CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
+  if (Event) {
+    if (auto Err = l0Device.releaseEvent(Event))
+      return Err;
+  }
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
+       IdStr);
+
+  return Plugin::success();
+}
+
+Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
+                                  int32_t NumTeams, int32_t ThreadLimit) const {
+  uint32_t GroupSizes[3];
+  auto DeviceId = l0Device.getDeviceId();
+  auto &KernelPR = KEnv.KernelPR;
+  // Check if we can reuse previous group parameters
+  bool GroupParamsReused =
+      KernelPR.reuseGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+
+  if (!GroupParamsReused) {
+    if (auto Err =
+            getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes, KEnv))
+      return Err;
+    KernelPR.cacheGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+  }
+
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n", GroupSizes[0],
+       GroupSizes[1], GroupSizes[2]);
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Number of teams = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
+       KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
+       KEnv.GroupCounts.groupCountZ);
+
+  if (!GroupParamsReused) {
+    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), GroupSizes[0],
+                      GroupSizes[1], GroupSizes[2]);
+  }
+
+  return Plugin::success();
+}
+
+Error L0KernelTy::setIndirectFlags(L0DeviceTy &l0Device,
+                                   L0LaunchEnvTy &KEnv) const {
+  // Set Kernel Indirect flags
+  ze_kernel_indirect_access_flags_t Flags = 0;
+  Flags |= l0Device.getMemAllocator(TARGET_ALLOC_HOST).getIndirectFlags();
+  Flags |= l0Device.getMemAllocator(TARGET_ALLOC_DEVICE).getIndirectFlags();
+
+  if (KEnv.KernelPR.IndirectAccessFlags != Flags) {
+    // Combine with common access flags
+    const auto FinalFlags = l0Device.getIndirectFlags() | Flags;
+    CALL_ZE_RET_ERROR(zeKernelSetIndirectAccess, zeKernel, FinalFlags);
+    DP("Setting indirect access flags " DPxMOD "\n", DPxPTR(FinalFlags));
+    KEnv.KernelPR.IndirectAccessFlags = Flags;
   }
 
   return Plugin::success();
@@ -438,17 +620,11 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   auto &l0Device = L0DeviceTy::makeL0Device(GenericDevice);
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
 
-  // Libomptarget can pass negative NumTeams and ThreadLimit now after
-  // introducing __tgt_target_kernel. This happens only when we have valid
-  // LoopDesc and the region is not a teams region.
-
   auto zeKernel = getZeKernel();
   auto DeviceId = l0Device.getDeviceId();
   int32_t NumArgs = KernelArgs.NumArgs;
   int32_t NumTeams = KernelArgs.NumTeams[0];
   int32_t ThreadLimit = KernelArgs.ThreadLimit[0];
-  void *LoopDesc = nullptr;
-
   if (NumTeams < 0)
     NumTeams = 0;
   if (ThreadLimit < 0)
@@ -471,36 +647,16 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // We need to get a non-const version of the Properties structure in order to
   // use its lock and be able to cache the group params and indirect flags
   auto &KernelPR = const_cast<KernelPropertiesTy &>(getProperties());
+
+  L0LaunchEnvTy KEnv(IsAsync, AsyncQueue, KernelPR);
+
   // Protect from kernel preparation to submission as kernels are shared.
-  std::unique_lock<std::mutex> KernelLock(KernelPR.Mtx);
+  KernelPR.Mtx.lock();
 
-  // Decide group sizes and counts
-  uint32_t GroupSizes[3];
-  ze_group_count_t GroupCounts;
+  if (auto Err = setKernelGroups(l0Device, KEnv, NumTeams, ThreadLimit))
+    return Err;
 
-  bool AllowCooperative = false;
-
-  // Check if we can reuse previous group parameters
-  bool GroupParamsReused = KernelPR.reuseGroupParams(
-      static_cast<TgtNDRangeDescTy *>(LoopDesc), NumTeams, ThreadLimit,
-      GroupSizes, GroupCounts, AllowCooperative);
-
-  if (!GroupParamsReused) {
-    if (auto Err = getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes,
-                                  GroupCounts, LoopDesc, AllowCooperative))
-      return Err;
-    KernelPR.cacheGroupParams(static_cast<TgtNDRangeDescTy *>(LoopDesc),
-                              NumTeams, ThreadLimit, GroupSizes, GroupCounts,
-                              AllowCooperative);
-  }
-
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n", GroupSizes[0],
-       GroupSizes[1], GroupSizes[2]);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Number of teams = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
-       GroupCounts.groupCountX, GroupCounts.groupCountY,
-       GroupCounts.groupCountZ);
+  // Set kernel arguments
   for (int32_t I = 0; I < NumArgs; I++) {
     {
       void *Arg = (static_cast<void **>(LaunchParams.Data))[I];
@@ -513,109 +669,16 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     }
   }
 
-  // Set Kernel Indirect flags
-  auto &PrevFlags = KernelPR.IndirectAccessFlags;
-  ze_kernel_indirect_access_flags_t Flags = 0;
-  Flags |= l0Device.getMemAllocator(TARGET_ALLOC_HOST).getIndirectFlags();
-  Flags |= l0Device.getMemAllocator(TARGET_ALLOC_DEVICE).getIndirectFlags();
+  if (auto Err = setIndirectFlags(l0Device, KEnv))
+    return Err;
 
-  if (PrevFlags != Flags) {
-    // Combine with common access flags
-    const auto FinalFlags = l0Device.getIndirectFlags() | Flags;
-    CALL_ZE_RET_ERROR(zeKernelSetIndirectAccess, getZeKernel(), FinalFlags);
-    DP("Setting indirect access flags " DPxMOD "\n", DPxPTR(FinalFlags));
-    PrevFlags = Flags;
-  }
-
-  if (!GroupParamsReused) {
-    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, zeKernel, GroupSizes[0],
-                      GroupSizes[1], GroupSizes[2]);
-  }
-
-  ze_command_list_handle_t CmdList = nullptr;
-  ze_command_queue_handle_t CmdQueue = nullptr;
+  // The next calls should unlock the KernelLock internally
   const bool UseImmCmdList = l0Device.useImmForCompute();
+  if (UseImmCmdList)
+    return launchKernelWithImmCmdList(l0Device, zeKernel, KEnv,
+                                      Options.CommandMode);
 
-  if (UseImmCmdList) {
-    auto CmdListOrErr = l0Device.getImmCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    CmdList = *CmdListOrErr;
-    // Command queue is not used with immediate command list
-  } else {
-    auto CmdListOrErr = l0Device.getCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    CmdList = *CmdListOrErr;
-    auto CmdQueueOrErr = l0Device.getCmdQueue();
-    if (!CmdQueueOrErr)
-      return CmdQueueOrErr.takeError();
-    CmdQueue = *CmdQueueOrErr;
-  }
-
-  if (UseImmCmdList) {
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Using immediate command list for kernel submission.\n");
-    auto EventOrError = l0Device.getEvent();
-    if (!EventOrError)
-      return EventOrError.takeError();
-    ze_event_handle_t Event = *EventOrError;
-    size_t NumWaitEvents = 0;
-    ze_event_handle_t *WaitEvents = nullptr;
-    if (IsAsync && !AsyncQueue->WaitEvents.empty()) {
-      if (Options.CommandMode == CommandModeTy::AsyncOrdered) {
-        NumWaitEvents = 1;
-        WaitEvents = &AsyncQueue->WaitEvents.back();
-      } else {
-        NumWaitEvents = AsyncQueue->WaitEvents.size();
-        WaitEvents = AsyncQueue->WaitEvents.data();
-      }
-    }
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Kernel depends on %zu data copying events.\n", NumWaitEvents);
-    if (AllowCooperative)
-      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
-                        zeKernel, &GroupCounts, Event, NumWaitEvents,
-                        WaitEvents);
-    else
-      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                        &GroupCounts, Event, NumWaitEvents, WaitEvents);
-    KernelLock.unlock();
-    if (IsAsync) {
-      AsyncQueue->WaitEvents.push_back(Event);
-      AsyncQueue->KernelEvent = Event;
-    } else {
-      CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);
-      if (auto Err = l0Device.releaseEvent(Event))
-        return Err;
-    }
-  } else {
-    ze_event_handle_t Event = nullptr;
-    if (AllowCooperative)
-      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
-                        zeKernel, &GroupCounts, Event, 0, nullptr);
-    else
-      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                        &GroupCounts, Event, 0, nullptr);
-    KernelLock.unlock();
-    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists,
-                          l0Device.getMutex(), CmdQueue, 1, &CmdList, nullptr);
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
-    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-    if (Event) {
-      if (auto Err = l0Device.releaseEvent(Event))
-        return Err;
-    }
-  }
-
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
-       IdStr);
-
-  return Plugin::success();
+  return launchKernelWithCmdQueue(l0Device, zeKernel, KEnv);
 }
 
 } // namespace llvm::omp::target::plugin
