@@ -146,14 +146,14 @@ using Boolean = unsigned char; /* 0 or 1 */
 #define UNI_UTF32_BYTE_ORDER_MARK_NATIVE 0x0000FEFF
 #define UNI_UTF32_BYTE_ORDER_MARK_SWAPPED 0xFFFE0000
 
-using ConversionResult = enum {
+enum ConversionResult {
   conversionOK,    /* conversion successful */
   sourceExhausted, /* partial character in source, but hit end */
   targetExhausted, /* insuff. room in target for conversion */
   sourceIllegal    /* source sequence is illegal/malformed */
 };
 
-using ConversionFlags = enum { strictConversion = 0, lenientConversion };
+enum ConversionFlags { strictConversion = 0, lenientConversion };
 
 LLVM_ABI ConversionResult ConvertUTF8toUTF16(const UTF8 **sourceStart,
                                              const UTF8 *sourceEnd,
