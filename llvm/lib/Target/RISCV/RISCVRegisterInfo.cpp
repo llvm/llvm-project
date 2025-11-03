@@ -438,18 +438,19 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
   TypeSize VRegSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
 
   Register VLENB = 0;
-  unsigned PreHandledNum = 0;
+  unsigned VLENBShift = 0;
+  unsigned PrevHandledNum = 0;
   unsigned I = 0;
   while (I != NumRegs) {
     auto [LMulHandled, RegClass, Opcode] =
         getSpillReloadInfo(NumRegs - I, RegEncoding, IsSpill);
     auto [RegNumHandled, _] = RISCVVType::decodeVLMUL(LMulHandled);
     bool IsLast = I + RegNumHandled == NumRegs;
-    if (PreHandledNum) {
+    if (PrevHandledNum) {
       Register Step;
       // Optimize for constant VLEN.
       if (auto VLEN = STI.getRealVLen()) {
-        int64_t Offset = *VLEN / 8 * PreHandledNum;
+        int64_t Offset = *VLEN / 8 * PrevHandledNum;
         Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         STI.getInstrInfo()->movImm(MBB, II, DL, Step, Offset);
       } else {
@@ -457,15 +458,21 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
           VLENB = MRI.createVirtualRegister(&RISCV::GPRRegClass);
           BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VLENB);
         }
-        uint32_t ShiftAmount = Log2_32(PreHandledNum);
-        if (ShiftAmount == 0)
-          Step = VLENB;
-        else {
-          Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-          BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), Step)
-              .addReg(VLENB, getKillRegState(IsLast))
-              .addImm(ShiftAmount);
+        uint32_t ShiftAmount = Log2_32(PrevHandledNum);
+        // To avoid using an extra register, we shift the VLENB register and
+        // remember how much it has been shifted. We can then use relative
+        // shifts to adjust to the desired shift amount.
+        if (VLENBShift > ShiftAmount) {
+          BuildMI(MBB, II, DL, TII->get(RISCV::SRLI), VLENB)
+              .addReg(VLENB, RegState::Kill)
+              .addImm(VLENBShift - ShiftAmount);
+        } else if (VLENBShift < ShiftAmount) {
+          BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VLENB)
+              .addReg(VLENB, RegState::Kill)
+              .addImm(ShiftAmount - VLENBShift);
         }
+        VLENBShift = ShiftAmount;
+        Step = VLENB;
       }
 
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
@@ -489,7 +496,7 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
     if (IsSpill)
       MIB.addReg(Reg, RegState::Implicit);
 
-    PreHandledNum = RegNumHandled;
+    PrevHandledNum = RegNumHandled;
     RegEncoding += RegNumHandled;
     I += RegNumHandled;
   }

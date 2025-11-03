@@ -2251,6 +2251,78 @@ void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
       }
     }
   }
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &x) {
+  auto [allocStmt, allocSource]{getAllocateStmtAndSource(
+      std::get<parser::Statement<parser::AllocateStmt>>(x.t))};
+
+  UnorderedSymbolSet allocateSyms{GetNonComponentSymbols(*allocStmt)};
+  SymbolSourceMap directiveSyms;
+  auto &objects{
+      GetObjectsOrEmpty(std::get<std::optional<parser::OmpObjectList>>(x.t))};
+  auto emptyListCount{static_cast<size_t>(objects.v.empty())};
+  auto checkObjects{[&](const parser::OmpObjectList &objects,
+                        parser::CharBlock dirSource,
+                        parser::CharBlock allocSource) {
+    for (const parser::OmpObject &object : objects.v) {
+      parser::CharBlock objSource{[&]() {
+        if (auto &&maybeSource{GetObjectSource(object)}) {
+          return *maybeSource;
+        }
+        return dirSource;
+      }()};
+      if (auto *sym{GetObjectSymbol(object)}) {
+        // Ignore these checks for structure members. They are not allowed
+        // in the first place, so don't tell the users that they nened to
+        // be specified somewhere,
+        if (IsStructureComponent(*sym)) {
+          continue;
+        }
+        if (auto f{directiveSyms.find(sym)}; f != directiveSyms.end()) {
+          parser::MessageFormattedText txt(
+              "A list item on an executable ALLOCATE may only be specified once"_err_en_US);
+          parser::Message message(objSource, txt);
+          message.Attach(f->second, "The list item was specified here"_en_US);
+          context_.Say(std::move(message));
+        } else {
+          directiveSyms.insert(std::make_pair(sym, objSource));
+        }
+
+        if (auto f{allocateSyms.find(*sym)}; f == allocateSyms.end()) {
+          context_
+              .Say(objSource,
+                  "A list item on an executable ALLOCATE must be specified on the associated ALLOCATE statement"_err_en_US)
+              .Attach(allocSource, "The ALLOCATE statement"_en_US);
+        }
+      }
+    }
+  }};
+
+  checkObjects(objects, std::get<parser::Verbatim>(x.t).source, allocSource);
+
+  const auto &subDirs{
+      std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
+          x.t)};
+  if (!subDirs) {
+    inExecutableAllocate_ = false;
+    dirContext_.pop_back();
+    return;
+  }
+
+  for (const parser::OpenMPDeclarativeAllocate &ompAlloc : *subDirs) {
+    parser::CharBlock dirSource{std::get<parser::Verbatim>(ompAlloc.t).source};
+    auto &objects{GetObjectsOrEmpty(
+        std::get<std::optional<parser::OmpObjectList>>(ompAlloc.t))};
+    if (objects.v.empty()) {
+      // Only show the message once per construct.
+      if (++emptyListCount == 2 && subDirs->size() >= 1) {
+        context_.Say(dirSource,
+            "If multiple directives are present in an executable ALLOCATE directive, at most one of them may specify no list items"_err_en_US);
+      }
+    }
+    checkObjects(objects, dirSource, allocSource);
+  }
 
   auto &body{std::get<parser::Block>(x.t)};
   // The parser should put at most one statement in the body.
