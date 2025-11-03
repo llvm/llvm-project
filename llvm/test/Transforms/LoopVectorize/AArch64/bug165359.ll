@@ -1,4 +1,7 @@
-; RUN: opt < %s -passes=loop-vectorize -S -pass-remarks=loop-vectorize
+; RUN: opt < %s -passes=loop-vectorize -S -pass-remarks=loop-vectorize -debug-only=loop-vectorize &> %t
+; RUN: cat %t | FileCheck --check-prefix=CHECK-REMARKS %s
+
+; CHECK-REMARKS: LV: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): fadd.
 
 target triple = "aarch64-unknown-linux-gnu"
 
