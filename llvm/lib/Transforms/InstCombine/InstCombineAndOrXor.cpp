@@ -17,6 +17,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
@@ -343,6 +344,45 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
   unsigned RightType = getMaskedICmpType(A, D, E, PredR);
   return std::optional<std::pair<unsigned, unsigned>>(
       std::make_pair(LeftType, RightType));
+}
+
+static Instruction *foldBinOpIntoSelectWhenConditionIsOperand(Instruction &I) {
+  Type *Ty = I.getType();
+  Value *CommonInput;
+  ConstantInt *SelLeft, *SelRight;
+  bool MatchRes =
+      match(&I, m_c_BinOp(m_Select(m_Value(CommonInput), m_ConstantInt(SelLeft),
+                                   m_ConstantInt(SelRight)),
+                          m_ZExtOrTruncOrSelf(m_Deferred(CommonInput))));
+  if (!MatchRes)
+    return nullptr;
+
+  switch (I.getOpcode()) {
+  case Instruction::Or:
+    return SelectInst::Create(
+        CommonInput, ConstantInt::get(Ty, SelLeft->getValue() | 1), SelRight);
+  case Instruction::And:
+    return SelectInst::Create(CommonInput,
+                              ConstantInt::get(Ty, SelLeft->getValue() & 1),
+                              ConstantInt::getNullValue(Ty));
+  case Instruction::Xor:
+    return SelectInst::Create(CommonInput,
+                              ConstantInt::get(Ty, SelLeft->getValue() ^ 1),
+                              ConstantInt::get(Ty, SelRight->getValue() ^ 0));
+  case Instruction::Add:
+    return SelectInst::Create(CommonInput,
+                              ConstantInt::get(Ty, SelLeft->getValue() + 1),
+                              SelRight);
+  case Instruction::Sub:
+    return SelectInst::Create(CommonInput,
+                              ConstantInt::get(Ty, SelLeft->getValue() - 1),
+                              SelRight);
+  case Instruction::Mul:
+    return SelectInst::Create(CommonInput,
+                              ConstantInt::get(Ty, SelLeft->getValue()),
+                              ConstantInt::getNullValue(Ty));
+  }
+  return nullptr;
 }
 
 /// Try to fold (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E) into a single
@@ -2470,6 +2510,10 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), Y);
   }
 
+
+  if (Instruction *Res = foldBinOpIntoSelectWhenConditionIsOperand(I))
+    return Res;
+
   // Canonicalize:
   // (X +/- Y) & Y --> ~X & Y when Y is a power of 2.
   if (match(&I, m_c_And(m_Value(Y), m_OneUse(m_CombineOr(
@@ -4099,6 +4143,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateXor(Or, ConstantInt::get(Ty, *CV));
   }
 
+  if (Instruction *Res = foldBinOpIntoSelectWhenConditionIsOperand(I))
+    return Res;
+
+
   // If the operands have no common bits set:
   // or (mul X, Y), X --> add (mul X, Y), X --> mul X, (Y + 1)
   if (match(&I, m_c_DisjointOr(m_OneUse(m_Mul(m_Value(X), m_Value(Y))),
@@ -5195,6 +5243,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     if (Value *XorBC = simplifyXorInst(Y, M, SQ.getWithInstruction(&I)))
       return BinaryOperator::CreateXor(XorBC, X);
   }
+
+  if (Instruction *Res = foldBinOpIntoSelectWhenConditionIsOperand(I))
+    return Res;
+
 
   // Fold (X & M) ^ (Y & ~M) -> (X & M) | (Y & ~M)
   // This it a special case in haveNoCommonBitsSet, but the computeKnownBits
