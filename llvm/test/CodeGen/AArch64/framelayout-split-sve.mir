@@ -172,10 +172,8 @@ body:             |
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -8
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
-# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
-# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1, implicit $vg
-# CHECK-NEXT: $[[TMP:x[0-9]+]]  = frame-setup SUBXri $sp, 1040, 0
-# CHECK-NEXT: $[[TMP]] = frame-setup ADDVL_XXI $[[TMP]], -2, implicit $vg
+# CHECK-NEXT: $[[TMP:x[0-9]+]] = frame-setup SUBXri $sp, 2064, 0
+# CHECK-NEXT: $[[TMP]] = frame-setup ADDVL_XXI $x9, -3, implicit $vg
 # CHECK-NEXT: $sp = frame-setup ANDXri killed $[[TMP]], 7930
 #
 # CHECK-NEXT: $x8 = SUBXri $fp, 1024, 0

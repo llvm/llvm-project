@@ -741,11 +741,9 @@ define void @zpr_and_ppr_local_realignment(<vscale x 16 x i1> %pred, <vscale x 1
 ; CHECK-LABEL: zpr_and_ppr_local_realignment:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #2064
 ; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    sub sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    sub x9, sp, #1040
-; CHECK-NEXT:    addvl x9, x9, #-1
+; CHECK-NEXT:    addvl x9, x9, #-2
 ; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
@@ -943,10 +941,8 @@ define void @sve_locals_only_ppr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vsca
 ; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    sub sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    sub sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    sub sp, sp, #2048
+; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    mov x19, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w19, -16
