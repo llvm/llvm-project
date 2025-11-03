@@ -5,10 +5,10 @@ define void @test_poison(float %b, ptr %p) {
 ; CHECK-LABEL: define void @test_poison(
 ; CHECK-SAME: float [[B:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[P]], align 32
+; CHECK-NEXT:    [[A:%.*]] = fptosi <8 x float> [[TMP1]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[B]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], -2
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP1]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fptosi float [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[A]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> poison, i32 [[TMP5]], i64 7
 ; CHECK-NEXT:    [[TMP7:%.*]] = sitofp <8 x i32> [[TMP6]] to <8 x float>
 ; CHECK-NEXT:    store <8 x float> [[TMP7]], ptr [[P]], align 32
@@ -45,14 +45,14 @@ define void @test_loop(<4 x float> %in) {
 ; CHECK-SAME: <4 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> [[IN]], i32 9)
+; CHECK-NEXT:    [[VI:%.*]] = fptosi <4 x float> [[R]] to <4 x i32>
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[LATCH:.*]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ult i32 [[I]], 4
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BODY:.*]], label %[[DONE:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[R]], i32 [[I]]
-; CHECK-NEXT:    [[ELEM:%.*]] = fptosi float [[TMP0]] to i32
+; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <4 x i32> [[VI]], i32 [[I]]
 ; CHECK-NEXT:    call void @use(i32 [[ELEM]])
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
