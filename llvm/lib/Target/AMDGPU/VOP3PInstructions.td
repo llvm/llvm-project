@@ -464,10 +464,10 @@ class ThreeOp_OpSelClampPats <SDPatternOperator op1, SDPatternOperator op2,
 >;
 
 let SubtargetPredicate = HasPkAddMinMaxInsts in {
-def : ThreeOp_OpSelClampPats<add, smax, V_PK_ADD_MAX_I16>;
-def : ThreeOp_OpSelClampPats<add, umax, V_PK_ADD_MAX_U16>;
-def : ThreeOp_OpSelClampPats<add, smin, V_PK_ADD_MIN_I16>;
-def : ThreeOp_OpSelClampPats<add, umin, V_PK_ADD_MIN_U16>;
+def : ThreeOp_OpSelClampPats<saddsat, smax, V_PK_ADD_MAX_I16>;
+def : ThreeOp_OpSelClampPats<uaddsat, umax, V_PK_ADD_MAX_U16>;
+def : ThreeOp_OpSelClampPats<saddsat, smin, V_PK_ADD_MIN_I16>;
+def : ThreeOp_OpSelClampPats<uaddsat, umin, V_PK_ADD_MIN_U16>;
 }
 
 let SubtargetPredicate = HasPkMinMax3Insts in {

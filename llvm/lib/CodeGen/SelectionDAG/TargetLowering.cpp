@@ -9899,6 +9899,18 @@ SDValue TargetLowering::expandBSWAP(SDNode *N, SelectionDAG &DAG) const {
     // Use a rotate by 8. This can be further expanded if necessary.
     return DAG.getNode(ISD::ROTL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
   case MVT::i32:
+    // This is meant for ARM speficially, which has ROTR but no ROTL.
+    if (isOperationLegalOrCustom(ISD::ROTR, VT)) {
+      SDValue Mask = DAG.getConstant(0x00FF00FF, dl, VT);
+      // (x & 0x00FF00FF) rotr 8 | (x rotl 8) & 0x00FF00FF
+      SDValue And = DAG.getNode(ISD::AND, dl, VT, Op, Mask);
+      SDValue Rotr =
+          DAG.getNode(ISD::ROTR, dl, VT, And, DAG.getConstant(8, dl, SHVT));
+      SDValue Rotl =
+          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
+      SDValue And2 = DAG.getNode(ISD::AND, dl, VT, Rotl, Mask);
+      return DAG.getNode(ISD::OR, dl, VT, Rotr, And2);
+    }
     Tmp4 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
     Tmp3 = DAG.getNode(ISD::AND, dl, VT, Op,
                        DAG.getConstant(0xFF00, dl, VT));
@@ -10656,19 +10668,20 @@ static SDValue clampDynamicVectorIndex(SelectionDAG &DAG, SDValue Idx,
                      DAG.getConstant(MaxIndex, dl, IdxVT));
 }
 
-SDValue TargetLowering::getVectorElementPointer(SelectionDAG &DAG,
-                                                SDValue VecPtr, EVT VecVT,
-                                                SDValue Index) const {
+SDValue
+TargetLowering::getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr,
+                                        EVT VecVT, SDValue Index,
+                                        const SDNodeFlags PtrArithFlags) const {
   return getVectorSubVecPointer(
       DAG, VecPtr, VecVT,
       EVT::getVectorVT(*DAG.getContext(), VecVT.getVectorElementType(), 1),
-      Index);
+      Index, PtrArithFlags);
 }
 
-SDValue TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG,
-                                               SDValue VecPtr, EVT VecVT,
-                                               EVT SubVecVT,
-                                               SDValue Index) const {
+SDValue
+TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
+                                       EVT VecVT, EVT SubVecVT, SDValue Index,
+                                       const SDNodeFlags PtrArithFlags) const {
   SDLoc dl(Index);
   // Make sure the index type is big enough to compute in.
   Index = DAG.getZExtOrTrunc(Index, dl, VecPtr.getValueType());
@@ -10692,7 +10705,7 @@ SDValue TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG,
 
   Index = DAG.getNode(ISD::MUL, dl, IdxVT, Index,
                       DAG.getConstant(EltSize, dl, IdxVT));
-  return DAG.getMemBasePlusOffset(VecPtr, Index, dl);
+  return DAG.getMemBasePlusOffset(VecPtr, Index, dl, PtrArithFlags);
 }
 
 //===----------------------------------------------------------------------===//
@@ -12370,8 +12383,10 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
       !IsFast)
     return SDValue();
 
-  SDValue NewPtr =
-      getVectorElementPointer(DAG, OriginalLoad->getBasePtr(), InVecVT, EltNo);
+  // The original DAG loaded the entire vector from memory, so arithmetic
+  // within it must be inbounds.
+  SDValue NewPtr = getInboundsVectorElementPointer(
+      DAG, OriginalLoad->getBasePtr(), InVecVT, EltNo);
 
   // We are replacing a vector load with a scalar load. The new load must have
   // identical memory op ordering to the original.
