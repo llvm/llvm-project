@@ -603,14 +603,8 @@ private:
   /// this override can be removed.
   bool mergeStoresAfterLegalization(EVT VT) const override;
 
-  /// Disable normalizing
-  /// select(N0&N1, X, Y) => select(N0, select(N1, X, Y), Y) and
-  /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y))
-  /// RISC-V doesn't have flags so it's better to perform the and/or in a GPR.
-  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT,
-                                       SDNode *N) const override {
-    return false;
-  }
+  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT VT,
+                                       SDNode *N) const override;
 
   bool hasConditionalZero() const override;
 
