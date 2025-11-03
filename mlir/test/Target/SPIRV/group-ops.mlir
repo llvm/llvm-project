@@ -7,7 +7,7 @@
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.3,
   [Shader, Linkage, SubgroupBallotKHR, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR],
-  [SPV_KHR_storage_buffer_storage_class, SPV_KHR_shader_ballot, SPV_INTEL_subgroups, SPV_KHR_uniform_group_instructions]> {
+  [SPV_KHR_storage_buffer_storage_class, SPV_KHR_shader_ballot, SPV_KHR_uniform_group_instructions]> {
   // CHECK-LABEL: @subgroup_ballot
   spirv.func @subgroup_ballot(%predicate: i1) -> vector<4xi32> "None" {
     // CHECK: %{{.*}} = spirv.KHR.SubgroupBallot %{{.*}}: vector<4xi32>
