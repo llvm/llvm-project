@@ -6,8 +6,6 @@ define void @truncate_i16_to_i8_cse(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x ptr> poison, ptr [[DST]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT1]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -15,8 +13,9 @@ define void @truncate_i16_to_i8_cse(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[BROADCAST_SPLAT]] to <2 x i8>
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> [[TMP1]], <2 x ptr> align 1 zeroinitializer, <2 x i1> splat (i1 true))
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> [[TMP1]], <2 x ptr> align 1 [[BROADCAST_SPLAT1]], <2 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    store i8 [[TMP2]], ptr null, align 1
+; CHECK-NEXT:    store i8 [[TMP2]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4294967296
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

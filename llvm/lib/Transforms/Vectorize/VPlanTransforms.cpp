@@ -1400,14 +1400,47 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe,
+               VPWidenMemoryRecipe>(&R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
-      auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
-      if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+      // Convert scatters with a uniform address that is unmasked into an
+      // extract-last-element + scalar store.
+      //  TODO: Add a profitability check comparing the cost of a scatter vs.
+      //  extract + scalar store.
+      auto *WidenStoreR = dyn_cast<VPWidenMemoryRecipe>(&R);
+      if (WidenStoreR && vputils::isSingleScalar(WidenStoreR->getAddr()) &&
+          !WidenStoreR->isConsecutive() &&
+          isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(WidenStoreR)) {
+        assert(!WidenStoreR->isReverse() &&
+               "Not consecutive memory recipes shouldn't be reversed");
+        VPValue *Mask = WidenStoreR->getMask();
+
+        // Only convert the scatter to a scalar store if it is unmasked. or
+        // TODO: Support converting scatter masked by the header mask to scalar
+        // store.
+        if (Mask)
+          continue;
+
+        auto *Extract = new VPInstruction(VPInstruction::ExtractLastElement,
+                                          {WidenStoreR->getOperand(1)});
+        Extract->insertBefore(WidenStoreR);
+
+        // TODO: Sink the scalar store recipe to middle block if possible.
+        auto *ScalarStore = new VPReplicateRecipe(
+            &WidenStoreR->getIngredient(), {Extract, WidenStoreR->getAddr()},
+            true /*IsSingleScalar*/, nullptr /*Mask*/,
+            *WidenStoreR /*Metadata*/);
+        ScalarStore->insertBefore(WidenStoreR);
+        WidenStoreR->eraseFromParent();
+        continue;
+      }
+
+      auto *RepOrWidenR = dyn_cast<VPSingleDefRecipe>(&R);
+      if (RepR && RepOrWidenR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
           vputils::isSingleScalar(RepR->getOperand(1))) {
         auto *Clone = new VPReplicateRecipe(
             RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
@@ -1427,7 +1460,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // Skip recipes that aren't single scalars or don't have only their
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
-      if (!vputils::isSingleScalar(RepOrWidenR) ||
+      if (!RepOrWidenR || !vputils::isSingleScalar(RepOrWidenR) ||
           !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
             if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U)) {
               // VPWidenStore doesn't have users, and stores are always
