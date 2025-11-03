@@ -224,6 +224,20 @@ VmemType getVmemType(const MachineInstr &Inst) {
   return VMEM_NOSAMPLER;
 }
 
+// Return an optional WaitEventType value if Inst is a cache invalidate
+// or WB instruction.
+std::optional<WaitEventType> getInvOrWBWaitEventType(const MachineInstr &Inst) {
+  switch (Inst.getOpcode()) {
+  case AMDGPU::GLOBAL_INV:
+    return VMEM_READ_ACCESS; // tracked using loadcnt
+  case AMDGPU::GLOBAL_WB:
+  case AMDGPU::GLOBAL_WBINV:
+    return VMEM_WRITE_ACCESS; // tracked using storecnt
+  default:
+    return {};
+  }
+}
+
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
   switch (T) {
   case LOAD_CNT:
@@ -525,21 +539,6 @@ public:
       ForceEmitWaitcnt[BVH_CNT] = false;
     }
 #endif // NDEBUG
-  }
-
-  // Return an optional WaitEventType value if Inst is a cache
-  // invalidate or WB instruction.
-  std::optional<WaitEventType>
-  getInvOrWBWaitEventType(const MachineInstr &Inst) const {
-    switch (Inst.getOpcode()) {
-    case AMDGPU::GLOBAL_INV:
-      return VMEM_READ_ACCESS; // tracked using loadcnt
-    case AMDGPU::GLOBAL_WB:
-    case AMDGPU::GLOBAL_WBINV:
-      return VMEM_WRITE_ACCESS; // tracked using storecnt
-    default:
-      return {};
-    }
   }
 
   // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM
