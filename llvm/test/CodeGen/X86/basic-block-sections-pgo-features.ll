@@ -27,7 +27,7 @@ bb3:
 ;; Verify that foo's PGO map contains both IRPGO and Propeller CFG profiles.
 
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text.foo
-; CHECK-NEXT:	.byte	4		# version
+; CHECK-NEXT:	.byte	5		# version
 ; CHECK-NEXT:	.byte	143		# feature
 ; CHECK:	.quad	.Lfunc_begin0	# base address
 ; CHECK:	.byte	0		# BB id
@@ -79,7 +79,7 @@ bb2:
 ;; have Propeller profile.
 
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text.bar
-; CHECK-NEXT:	.byte	3		# version
+; CHECK-NEXT:	.byte	5		# version
 ; CHECK-NEXT:	.byte	7		# feature
 ; CHECK:	.quad	.Lfunc_begin1	# function address
 ; CHECK:	.byte	0		# BB id
