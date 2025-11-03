@@ -218,21 +218,42 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
     return std::nullopt;
 
   Global *NewGlobal = Globals[*Idx];
+  // Note that this loop has one iteration where Redecl == VD.
   for (const Decl *Redecl : VD->redecls()) {
-    unsigned &PIdx = GlobalIndices[Redecl];
+
+    // If this redecl was registered as a dummy variable, it is now a proper
+    // global variable and points to the block we just created.
+    if (auto DummyIt = DummyVariables.find(Redecl);
+        DummyIt != DummyVariables.end()) {
+      assert(!Globals[DummyIt->second]->block()->hasPointers());
+      Globals[DummyIt->second] = NewGlobal;
+      DummyVariables.erase(DummyIt);
+    }
+    // If the redeclaration hasn't been registered yet at all, we just set its
+    // global index to Idx. If it has been registered yet, it might have
+    // pointers pointing to it and we need to transfer those pointers to the new
+    // block.
+    auto [Iter, Inserted] = GlobalIndices.try_emplace(Redecl);
+    if (Inserted) {
+      GlobalIndices[Redecl] = *Idx;
+      continue;
+    }
+
     if (Redecl != VD) {
-      if (Block *RedeclBlock = Globals[PIdx]->block();
+      if (Block *RedeclBlock = Globals[Iter->second]->block();
           RedeclBlock->isExtern()) {
-        Globals[PIdx] = NewGlobal;
+
         // All pointers pointing to the previous extern decl now point to the
         // new decl.
         // A previous iteration might've already fixed up the pointers for this
         // global.
         if (RedeclBlock != NewGlobal->block())
           RedeclBlock->movePointersTo(NewGlobal->block());
+
+        Globals[Iter->second] = NewGlobal;
       }
     }
-    PIdx = *Idx;
+    Iter->second = *Idx;
   }
 
   return *Idx;
