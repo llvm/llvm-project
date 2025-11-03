@@ -39,7 +39,6 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
-#include <set>
 
 #define GET_GICOMBINER_DEPS
 #include "AArch64GenPostLegalizeGICombiner.inc"
