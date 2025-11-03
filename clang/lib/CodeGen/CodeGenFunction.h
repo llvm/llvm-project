@@ -3299,7 +3299,7 @@ public:
     TCK_DynamicOperation,
     /// Checking the 'this' poiner for a constructor call, including that the
     /// alignment is greater or equal to the targets minimum alignment
-    TCK_ConstructorCallOverloadedNew
+    TCK_ConstructorCallMinimumAlign
   };
 
   /// Determine whether the pointer type check \p TCK permits null pointers.

@@ -76,7 +76,7 @@ enum TypeCheckKind {
   TCK_DynamicOperation,
   /// Checking the 'this' poiner for a constructor call, including that the
   /// alignment is greater or equal to the targets minimum alignment
-  TCK_ConstructorCallOverloadedNew
+  TCK_ConstructorCallMinimumAlign
 };
 
 extern const char *const TypeCheckKinds[] = {
@@ -106,8 +106,8 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
              ? ErrorType::NullPointerUseWithNullability
              : ErrorType::NullPointerUse;
   else if (Pointer & (Alignment - 1))
-    ET = (Data->TypeCheckKind == TCK_ConstructorCallOverloadedNew)
-             ? ErrorType::AlignmentOnOverloadedNew
+    ET = (Data->TypeCheckKind == TCK_ConstructorCallMinimumAlign)
+             ? ErrorType::MinumumAssumedAlignment
              : ErrorType::MisalignedPointerUse;
   else
     ET = ErrorType::InsufficientObjectSize;
@@ -131,7 +131,7 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
     Diag(Loc, DL_Error, ET, "%0 null pointer of type %1")
         << TypeCheckKinds[Data->TypeCheckKind] << Data->Type;
     break;
-  case ErrorType::AlignmentOnOverloadedNew:
+  case ErrorType::MinumumAssumedAlignment:
     Diag(Loc, DL_Error, ET,
          "%0 misaligned address %1 for type %2, "
          "which requires target minimum assumed %3 byte alignment")
