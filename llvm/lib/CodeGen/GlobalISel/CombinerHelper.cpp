@@ -3463,6 +3463,91 @@ static bool isConstValidTrue(const TargetLowering &TLI, unsigned ScalarSizeBits,
          isConstTrueVal(TLI, Cst, IsVector, IsFP);
 }
 
+// This pattern aims to match the following shape to avoid extra mov
+// instructions
+// G_BUILD_VECTOR(
+//   G_UNMERGE_VALUES(src, 0)
+//   G_UNMERGE_VALUES(src, 1)
+//   G_IMPLICIT_DEF
+//   G_IMPLICIT_DEF
+// )
+// ->
+// G_CONCAT_VECTORS(
+//   src,
+//   undef
+// )
+bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              Register &UnmergeSrc) const {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+
+  unsigned BuildUseCount = MI.getNumOperands() - 1;
+
+  if (BuildUseCount % 2 != 0)
+    return false;
+
+  unsigned NumUnmerge = BuildUseCount / 2;
+
+  // Check the first operand is an unmerge
+  auto *MaybeUnmerge = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  if (MaybeUnmerge->getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
+    return false;
+
+  // Check that the resultant concat will be legal
+  auto UnmergeEltSize =
+      MRI.getType(MaybeUnmerge->getOperand(1).getReg()).getScalarSizeInBits();
+  auto UnmergeEltCount = MaybeUnmerge->getNumDefs();
+
+  if (UnmergeEltCount < 2 || (UnmergeEltSize * UnmergeEltCount != 64 &&
+                              UnmergeEltSize * UnmergeEltCount != 128))
+    return false;
+
+  // Check that all of the operands before the midpoint come from the same
+  // unmerge and are in the same order as they are used in the build_vector
+  for (unsigned I = 0; I < NumUnmerge; ++I) {
+    auto MaybeUnmergeReg = MI.getOperand(I + 1).getReg();
+    auto *Unmerge = getDefIgnoringCopies(MaybeUnmergeReg, MRI);
+
+    if (Unmerge != MaybeUnmerge)
+      return false;
+
+    if (Unmerge->getOperand(I).getReg() != MaybeUnmergeReg)
+      return false;
+  }
+
+  // Check that all of the unmerged values are used
+  if (UnmergeEltCount != NumUnmerge)
+    return false;
+
+  // Check that all of the operands after the mid point are undefs.
+  for (unsigned I = NumUnmerge; I < BuildUseCount; ++I) {
+    auto *Undef = getDefIgnoringCopies(MI.getOperand(I + 1).getReg(), MRI);
+
+    if (Undef->getOpcode() != TargetOpcode::G_IMPLICIT_DEF)
+      return false;
+  }
+
+  // Unmerge should only use one register so we can use the last one
+  for (auto &UnmergeUse :
+       getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI)->all_uses())
+    UnmergeSrc = UnmergeUse.getReg();
+
+  return true;
+}
+
+void CombinerHelper::applyCombineBuildUnmerge(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B,
+                                              Register &UnmergeSrc) const {
+  assert(UnmergeSrc && "Expected there to be one matching G_UNMERGE_VALUES");
+  B.setInstrAndDebugLoc(MI);
+
+  Register UndefVec = B.buildUndef(MRI.getType(UnmergeSrc)).getReg(0);
+  B.buildConcatVectors(MI.getOperand(0), {UnmergeSrc, UndefVec});
+
+  MI.eraseFromParent();
+}
+
 // This combine tries to reduce the number of scalarised G_TRUNC instructions by
 // using vector truncates instead
 //
