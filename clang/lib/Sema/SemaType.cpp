@@ -2358,6 +2358,11 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
 
+  if (VecSize->isNegative()) {
+    Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+    return QualType();
+  }
+
   if (CurType->isDependentType())
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
                                           VectorKind::Generic);
@@ -2424,6 +2429,11 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
       Diag(AttrLoc, diag::err_attribute_argument_type)
         << "ext_vector_type" << AANT_ArgumentIntegerConstant
         << ArraySize->getSourceRange();
+      return QualType();
+    }
+
+    if (vecSize->isNegative()) {
+      Diag(ArraySize->getExprLoc(), diag::err_attribute_vec_negative_size);
       return QualType();
     }
 
@@ -8285,20 +8295,10 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
 
   Expr *SizeExpr = Attr.getArgAsExpr(0);
   QualType T = S.BuildVectorType(CurType, SizeExpr, Attr.getLoc());
-  if (T.isNull()) {
+  if (!T.isNull())
+    CurType = T;
+  else
     Attr.setInvalid();
-    return;
-  }
-
-  std::optional<llvm::APSInt> VecSize =
-      SizeExpr->getIntegerConstantExpr(S.Context);
-  if (VecSize && VecSize->isNegative()) {
-    S.Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
-    Attr.setInvalid();
-    return;
-  }
-
-  CurType = T;
 }
 
 /// Process the OpenCL-like ext_vector_type attribute when it occurs on
@@ -8316,14 +8316,6 @@ static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   QualType T = S.BuildExtVectorType(CurType, SizeExpr, Attr.getLoc());
   if (!T.isNull())
     CurType = T;
-
-  std::optional<llvm::APSInt> VecSize =
-      SizeExpr->getIntegerConstantExpr(S.Context);
-  if (VecSize && VecSize->isNegative()) {
-    S.Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
-    Attr.setInvalid();
-    return;
-  }
 }
 
 static bool isPermittedNeonBaseType(QualType &Ty, VectorKind VecKind, Sema &S) {
