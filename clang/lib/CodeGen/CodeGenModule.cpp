@@ -59,8 +59,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
-#include "llvm/IR/Value.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CRC.h"
