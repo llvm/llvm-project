@@ -1046,15 +1046,15 @@ func.func @map_matmul(%in1: tensor<8x10xf32>, %in2: tensor<10x12xf32>) -> tensor
     return %matmul : tensor<8x12xf32>
 }
 
-// CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
-// CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0, d1, d2) -> (d2, d1)>
-// CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK-DAG: #[[$MAP2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL: func @map_matmul
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: tensor<8x10xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: tensor<10x12xf32>
 //       CHECK:   %[[EMPTY:.+]] = tensor.empty() : tensor<8x12xf32>
 //       CHECK:   %[[FUSED_OP:.+]] = linalg.generic
-//  CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
+//  CHECK-SAME:       indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]]
 //  CHECK-SAME:       iterator_types = ["parallel", "parallel", "reduction"]
 //  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] : {{.*}}) outs(%[[EMPTY]] :
 //  CHECK-NEXT:   ^bb0(%[[IN0:.*]]: f32, %[[IN1:.*]]: f32, %[[OUT:.*]]: f32):
