@@ -101,7 +101,7 @@ public:
 
   MetadataType metadataType() const { return MT; }
 
-  virtual ~MetadataRecord() = default;
+  ~MetadataRecord() override = default;
 };
 
 // What follows are specific Metadata record types which encapsulate the

@@ -110,6 +110,33 @@ static bool IsArtificial(VarDecl const *VD) {
                               cast<Decl>(VD->getDeclContext())->isImplicit());
 }
 
+/// Returns \c true if the specified variable \c VD is an explicit parameter of
+/// a synthesized Objective-C property accessor. E.g., a synthesized property
+/// setter method will have a single explicit parameter which is the property to
+/// set.
+static bool IsObjCSynthesizedPropertyExplicitParameter(VarDecl const *VD) {
+  assert(VD);
+
+  if (!llvm::isa<ParmVarDecl>(VD))
+    return false;
+
+  // Not a property method.
+  const auto *Method =
+      llvm::dyn_cast_or_null<ObjCMethodDecl>(VD->getDeclContext());
+  if (!Method)
+    return false;
+
+  // Not a synthesized property accessor.
+  if (!Method->isImplicit() || !Method->isPropertyAccessor())
+    return false;
+
+  // Not an explicit parameter.
+  if (VD->isImplicit())
+    return false;
+
+  return true;
+}
+
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
@@ -318,7 +345,7 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (Loc.isInvalid())
     return;
 
-  CurLoc = CGM.getContext().getSourceManager().getExpansionLoc(Loc);
+  CurLoc = CGM.getContext().getSourceManager().getFileLoc(Loc);
 
   // If we've changed files in the middle of a lexical scope go ahead
   // and create a new lexical scope with file node if it's different
@@ -595,7 +622,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+    PresumedLoc PLoc = SM.getPresumedLoc(SM.getFileLoc(Loc));
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
@@ -622,7 +649,8 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     if (CSKind)
       CSInfo.emplace(*CSKind, Checksum);
   }
-  return createFile(FileName, CSInfo, getSource(SM, SM.getFileID(Loc)));
+  return createFile(FileName, CSInfo,
+                    getSource(SM, SM.getFileID(SM.getFileLoc(Loc))));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
@@ -677,7 +705,7 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  return SM.getPresumedLoc(Loc).getLine();
+  return SM.getPresumedLoc(SM.getFileLoc(Loc)).getLine();
 }
 
 unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
@@ -689,7 +717,8 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(Loc.isValid() ? Loc : CurLoc);
+  PresumedLoc PLoc =
+      SM.getPresumedLoc(Loc.isValid() ? SM.getFileLoc(Loc) : CurLoc);
   return PLoc.isValid() ? PLoc.getColumn() : 0;
 }
 
@@ -1204,14 +1233,16 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
-
-  StringRef Name = Ty->isUnsigned() ? "unsigned _BitInt" : "_BitInt";
+  SmallString<32> Name;
+  llvm::raw_svector_ostream OS(Name);
+  OS << (Ty->isUnsigned() ? "unsigned _BitInt(" : "_BitInt(")
+     << Ty->getNumBits() << ")";
   llvm::dwarf::TypeKind Encoding = Ty->isUnsigned()
                                        ? llvm::dwarf::DW_ATE_unsigned
                                        : llvm::dwarf::DW_ATE_signed;
-
   return DBuilder.createBasicType(Name, CGM.getContext().getTypeSize(Ty),
-                                  Encoding);
+                                  Encoding, llvm::DINode::FlagZero, 0,
+                                  Ty->getNumBits());
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
@@ -5035,7 +5066,7 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
   // Update our current location
   setLocation(Loc);
 
-  if (CurLoc.isInvalid() || CurLoc.isMacroID() || LexicalBlockStack.empty())
+  if (CurLoc.isInvalid() || LexicalBlockStack.empty())
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
@@ -5226,7 +5257,12 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   }
   SmallVector<uint64_t, 13> Expr;
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
-  if (VarIsArtificial)
+
+  // While synthesized Objective-C property setters are "artificial" (i.e., they
+  // are not spelled out in source), we want to pretend they are just like a
+  // regular non-compiler generated method. Hence, don't mark explicitly passed
+  // parameters of such methods as artificial.
+  if (VarIsArtificial && !IsObjCSynthesizedPropertyExplicitParameter(VD))
     Flags |= llvm::DINode::FlagArtificial;
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
@@ -6818,7 +6854,8 @@ void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
     return;
 
   SourceLocation Loc = S->getStrTokenLoc(0);
-  PresumedLoc PLoc = CGM.getContext().getSourceManager().getPresumedLoc(Loc);
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(SM.getFileLoc(Loc));
   if (!PLoc.isValid())
     return;
 

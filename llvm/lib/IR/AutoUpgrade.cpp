@@ -730,7 +730,7 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
       // (arm|aarch64).neon.bfdot.*'.
       Intrinsic::ID ID =
           StringSwitch<Intrinsic::ID>(Name)
-              .Cases("v2f32.v8i8", "v4f32.v16i8",
+              .Cases({"v2f32.v8i8", "v4f32.v16i8"},
                      IsArm ? (Intrinsic::ID)Intrinsic::arm_neon_bfdot
                            : (Intrinsic::ID)Intrinsic::aarch64_neon_bfdot)
               .Default(Intrinsic::not_intrinsic);
@@ -1456,7 +1456,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (F->arg_size() == 1) {
         Intrinsic::ID IID =
             StringSwitch<Intrinsic::ID>(Name)
-                .Cases("brev32", "brev64", Intrinsic::bitreverse)
+                .Cases({"brev32", "brev64"}, Intrinsic::bitreverse)
                 .Case("clz.i", Intrinsic::ctlz)
                 .Case("popc.i", Intrinsic::ctpop)
                 .Default(Intrinsic::not_intrinsic);
@@ -1504,6 +1504,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("fabs."))
         // nvvm.fabs.{f,ftz.f,d}
         Expand = Name == "f" || Name == "ftz.f" || Name == "d";
+      else if (Name.consume_front("ex2.approx."))
+        // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
+        Expand =
+            Name == "f" || Name == "ftz.f" || Name == "d" || Name == "f16x2";
       else if (Name.consume_front("max.") || Name.consume_front("min."))
         // nvvm.{min,max}.{i,ii,ui,ull}
         Expand = Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
@@ -2549,6 +2553,11 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   } else if (Name == "fabs.f" || Name == "fabs.ftz.f" || Name == "fabs.d") {
     Intrinsic::ID IID = (Name == "fabs.ftz.f") ? Intrinsic::nvvm_fabs_ftz
                                                : Intrinsic::nvvm_fabs;
+    Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
+  } else if (Name.consume_front("ex2.approx.")) {
+    // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
+    Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz
+                                                : Intrinsic::nvvm_ex2_approx;
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
   } else if (Name.starts_with("atomic.load.add.f32.p") ||
              Name.starts_with("atomic.load.add.f64.p")) {

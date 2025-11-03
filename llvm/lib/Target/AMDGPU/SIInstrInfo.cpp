@@ -10276,82 +10276,6 @@ MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
   return nullptr;
 }
 
-// helper function to checkIfExecMayBeModifiedBeforeUseAcrossBB and
-// execMayBeModifiedBeforeUse. This checks possible EXEC register modifications
-// for a straight-line sequence of instructions between BeginIterator and
-// EndIterator (both inclusive) upto a pre-defined limit MaxInstScan
-bool execMayBeModifiedBeforeUseUtil(
-    const TargetRegisterInfo *TRI,
-    const MachineInstrBundleIterator<const MachineInstr> BeginIterator,
-    const MachineInstrBundleIterator<const MachineInstr> EndIterator,
-    const int MaxInstScan) {
-
-  int NumInst = 0;
-  for (auto I = BeginIterator; I != EndIterator; ++I) {
-    if (I->isMetaInstruction())
-      continue;
-
-    if (++NumInst > MaxInstScan)
-      return true;
-
-    if (I->modifiesRegister(AMDGPU::EXEC, TRI))
-      return true;
-  }
-  return false;
-}
-
-// Variant of execMayBeModifiedBeforeUse(), where DefMI and UseMI belong to
-// different basic blocks. Current code is limited to a very simple case: DefMI
-// in the predecessor BB of the single BB loop where UseMI resides.
-bool llvm::checkIfExecMayBeModifiedBeforeUseAcrossBB(
-    const MachineRegisterInfo &MRI, Register VReg, const MachineInstr &DefMI,
-    const MachineInstr &UseMI, const int SIFoldOperandsPreheaderThreshold) {
-
-  assert(MRI.isSSA() && "Must be run on SSA");
-  auto *TRI = MRI.getTargetRegisterInfo();
-  auto *DefBB = DefMI.getParent();
-  const int MaxInstScan = (SIFoldOperandsPreheaderThreshold > 10000)
-                              ? 10000
-                              : SIFoldOperandsPreheaderThreshold;
-
-  // Check whether EXEC is modified along all possible control flow between
-  // DefMI and UseMI, which may include loop backedge
-  // 1. UseBB is the only successor of DefBB
-  // 2. UseBB is a single basic block loop (only two predecessor blocks: DefBB
-  // and UseBB)
-  // 3. check if EXEC is modified
-  auto *UseBB = UseMI.getParent();
-  if (UseBB != DefBB) {
-    if (!(DefBB->isSuccessor(UseBB) && (DefBB->succ_size() == 1)))
-      return true;
-
-    if (!((UseBB->pred_size() == 2) && UseBB->isPredecessor(UseBB) &&
-          UseBB->isPredecessor(DefBB)))
-      return true;
-
-    bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
-        TRI, UseBB->begin(), UseBB->end(), MaxInstScan);
-    if (canExecBeModifiedBeforeUse)
-      return true;
-
-    // Stop scan at the end of the DEF basic block.
-    // If we are here, we know for sure that the instructions in focus are in
-    // the same basic block. Scan them to be safe.
-    canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
-        TRI, std::next(DefMI.getIterator()), DefBB->end(), MaxInstScan);
-    if (canExecBeModifiedBeforeUse)
-      return true;
-
-  } else {
-      // Stop scan at the use.
-    bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
-        TRI, std::next(DefMI.getIterator()), UseMI.getIterator(), MaxInstScan);
-    if (canExecBeModifiedBeforeUse)
-      return true;
-  }
-  return false;
-}
-
 bool llvm::execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
                                       Register VReg,
                                       const MachineInstr &DefMI,
@@ -10367,12 +10291,20 @@ bool llvm::execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
     return true;
 
   const int MaxInstScan = 20;
+  int NumInst = 0;
 
   // Stop scan at the use.
-  bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
-      TRI, std::next(DefMI.getIterator()), UseMI.getIterator(), MaxInstScan);
-  if (canExecBeModifiedBeforeUse)
-    return true;
+  auto E = UseMI.getIterator();
+  for (auto I = std::next(DefMI.getIterator()); I != E; ++I) {
+    if (I->isDebugInstr())
+      continue;
+
+    if (++NumInst > MaxInstScan)
+      return true;
+
+    if (I->modifiesRegister(AMDGPU::EXEC, TRI))
+      return true;
+  }
 
   return false;
 }
@@ -10409,7 +10341,7 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
   for (auto I = std::next(DefMI.getIterator()); ; ++I) {
     assert(I != DefBB->end());
 
-    if (I->isMetaInstruction())
+    if (I->isDebugInstr())
       continue;
 
     if (++NumInst > MaxInstScan)
@@ -10768,6 +10700,42 @@ bool SIInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   return false;
 }
 
+// SCC is already valid after SCCValid.
+// SCCRedefine will redefine SCC to the same value already available after
+// SCCValid. If there are no intervening SCC conflicts delete SCCRedefine and
+// update kill/dead flags if necessary.
+static bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
+                        const SIRegisterInfo &RI) {
+  MachineInstr *KillsSCC = nullptr;
+  for (MachineInstr &MI : make_range(std::next(SCCValid->getIterator()),
+                                     SCCRedefine->getIterator())) {
+    if (MI.modifiesRegister(AMDGPU::SCC, &RI))
+      return false;
+    if (MI.killsRegister(AMDGPU::SCC, &RI))
+      KillsSCC = &MI;
+  }
+  if (MachineOperand *SccDef =
+          SCCValid->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
+    SccDef->setIsDead(false);
+  if (KillsSCC)
+    KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
+  SCCRedefine->eraseFromParent();
+  return true;
+}
+
+static bool foldableSelect(const MachineInstr &Def) {
+  if (Def.getOpcode() != AMDGPU::S_CSELECT_B32 &&
+      Def.getOpcode() != AMDGPU::S_CSELECT_B64)
+    return false;
+  bool Op1IsNonZeroImm =
+      Def.getOperand(1).isImm() && Def.getOperand(1).getImm() != 0;
+  bool Op2IsZeroImm =
+      Def.getOperand(2).isImm() && Def.getOperand(2).getImm() == 0;
+  if (!Op1IsNonZeroImm || !Op2IsZeroImm)
+    return false;
+  return true;
+}
+
 bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                                        Register SrcReg2, int64_t CmpMask,
                                        int64_t CmpValue,
@@ -10787,19 +10755,6 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!Def || Def->getParent() != CmpInstr.getParent())
       return false;
 
-    const auto foldableSelect = [](MachineInstr *Def) -> bool {
-      if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
-          Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
-        bool Op1IsNonZeroImm =
-            Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
-        bool Op2IsZeroImm =
-            Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
-        if (Op1IsNonZeroImm && Op2IsZeroImm)
-          return true;
-      }
-      return false;
-    };
-
     // For S_OP that set SCC = DST!=0, do the transformation
     //
     //   s_cmp_lg_* (S_OP ...), 0 => (S_OP ...)
@@ -10810,24 +10765,12 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     //
     //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
     //   imm), 0)
-    if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(Def))
+    if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(*Def))
       return false;
 
-    MachineInstr *KillsSCC = nullptr;
-    for (MachineInstr &MI :
-         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
-      if (MI.modifiesRegister(AMDGPU::SCC, &RI))
-        return false;
-      if (MI.killsRegister(AMDGPU::SCC, &RI))
-        KillsSCC = &MI;
-    }
+    if (!optimizeSCC(Def, &CmpInstr, RI))
+      return false;
 
-    if (MachineOperand *SccDef =
-            Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
-      SccDef->setIsDead(false);
-    if (KillsSCC)
-      KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
-    CmpInstr.eraseFromParent();
     return true;
   };
 
@@ -10905,21 +10848,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    MachineInstr *KillsSCC = nullptr;
-    for (MachineInstr &MI :
-         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
-      if (MI.modifiesRegister(AMDGPU::SCC, &RI))
-        return false;
-      if (MI.killsRegister(AMDGPU::SCC, &RI))
-        KillsSCC = &MI;
-    }
-
-    MachineOperand *SccDef =
-        Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
-    SccDef->setIsDead(false);
-    if (KillsSCC)
-      KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
-    CmpInstr.eraseFromParent();
+    if (!optimizeSCC(Def, &CmpInstr, RI))
+      return false;
 
     if (!MRI->use_nodbg_empty(DefReg)) {
       assert(!IsReversedCC);

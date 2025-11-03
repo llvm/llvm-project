@@ -642,6 +642,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfAsan
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
+    @skipIfBuildType(["debug"])
     def test_stdio_redirection_and_console(self):
         """
         Test stdio redirection and console.
