@@ -25,6 +25,6 @@ int z __asm__("zooms");  // expected-error{{conflicting asm label}}
 
 
 // No diagnostics on the following.
-void __real_readlink(void) __asm("readlink");
-void readlink(void) __asm("__protected_readlink");
-void readlink(void) { __real_readlink(); }
+void __real_sync(void) __asm("sync");
+void sync(void) __asm("__protected_sync");
+void sync(void) { __real_sync(); }
