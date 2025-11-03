@@ -59,8 +59,8 @@ export void fn() {
 
   // result type struct
   // splat from a scalar
-  constexpr double D = 100.6789;
-  constexpr R SR = (R)D;
+  constexpr double D = 97.6789;
+  constexpr R SR = (R)(D + 3.0);
   _Static_assert(SR.D == 100.6789, "Woo!");
   _Static_assert(SR.U[0] == 100, "Woo!");
   _Static_assert(SR.U[1] == 100, "Woo!");

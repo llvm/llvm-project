@@ -3899,6 +3899,7 @@ static bool handleScalarCast(EvalInfo &Info, const FPOptions FPO, const Expr *E,
     }
   }
 
+  Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
   return false;
 }
 
@@ -3959,9 +3960,8 @@ static bool constructAggregate(EvalInfo &Info, const FPOptions FPO,
       uint64_t Size =
           cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))->getZExtSize();
       *Res = APValue(APValue::UninitArray(), Size, Size);
-      for (int64_t I = Size - 1; I > -1; --I) {
+      for (int64_t I = Size - 1; I > -1; --I)
         WorkList.emplace_back(&Res->getArrayInitializedElt(I), ElTy, 0u);
-      }
       continue;
     }
     if (Type->isRecordType()) {
@@ -4002,6 +4002,7 @@ static bool constructAggregate(EvalInfo &Info, const FPOptions FPO,
       llvm::append_range(WorkList, ReverseList);
       continue;
     }
+    Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
     return false;
   }
   return true;
@@ -4079,7 +4080,26 @@ static unsigned elementwiseSize(EvalInfo &Info, QualType BaseTy) {
   return Size;
 }
 
-static bool flattenAPValue(const ASTContext &Ctx, APValue Value,
+static bool hlslAggSplatHelper(EvalInfo &Info, const Expr *E, APValue &SrcVal,
+                               QualType &SrcTy) {
+  SrcTy = E->getType();
+
+  if (!Evaluate(SrcVal, Info, E))
+    return false;
+
+  assert(SrcVal.isFloat() || SrcVal.isInt() ||
+         (SrcVal.isVector() && SrcVal.getVectorLength() == 1) &&
+             "Not a valid HLSLAggregateSplatCast.");
+
+  if (SrcVal.isVector()) {
+    assert(SrcTy->isVectorType() && "Type mismatch.");
+    SrcTy = SrcTy->castAs<VectorType>()->getElementType();
+    SrcVal = SrcVal.getVectorElt(0);
+  }
+  return true;
+}
+
+static bool flattenAPValue(EvalInfo &Info, const Expr *E, APValue Value,
                            QualType BaseTy, SmallVectorImpl<APValue> &Elements,
                            SmallVectorImpl<QualType> &Types, unsigned Size) {
 
@@ -4088,7 +4108,7 @@ static bool flattenAPValue(const ASTContext &Ctx, APValue Value,
   while (!WorkList.empty() && Populated < Size) {
     auto [Work, Type] = WorkList.pop_back_val();
 
-    if (Work.isFloat() || Work.isInt()) { // todo what does this do with bool
+    if (Work.isFloat() || Work.isInt()) {
       Elements.push_back(Work);
       Types.push_back(Type);
       Populated++;
@@ -4107,8 +4127,8 @@ static bool flattenAPValue(const ASTContext &Ctx, APValue Value,
     }
     if (Work.isArray()) {
       assert(Type->isConstantArrayType() && "Type mismatch.");
-      QualType ElTy =
-          cast<ConstantArrayType>(Ctx.getAsArrayType(Type))->getElementType();
+      QualType ElTy = cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))
+                          ->getElementType();
       for (int64_t I = Work.getArraySize() - 1; I > -1; --I) {
         WorkList.emplace_back(Work.getArrayInitializedElt(I), ElTy);
       }
@@ -4148,6 +4168,7 @@ static bool flattenAPValue(const ASTContext &Ctx, APValue Value,
       }
       continue;
     }
+    Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
     return false;
   }
   return true;
@@ -4961,6 +4982,30 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
 
   CompleteObject Obj = findCompleteObject(Info, Conv, AK, LVal, Type);
   return Obj && extractSubobject(Info, Conv, Obj, LVal.Designator, RVal, AK);
+}
+
+static bool hlslElementwiseCastHelper(EvalInfo &Info, const Expr *E,
+                                      QualType DestTy,
+                                      SmallVectorImpl<APValue> &SrcVals,
+                                      SmallVectorImpl<QualType> &SrcTypes) {
+  APValue Val;
+  if (!Evaluate(Val, Info, E))
+    return false;
+
+  // must be dealing with a record
+  if (Val.isLValue()) {
+    LValue LVal;
+    LVal.setFrom(Info.Ctx, Val);
+    if (!handleLValueToRValueConversion(Info, E, E->getType(), LVal, Val))
+      return false;
+  }
+
+  unsigned NEls = elementwiseSize(Info, DestTy);
+  // flatten the source
+  if (!flattenAPValue(Info, E, Val, E->getType(), SrcVals, SrcTypes, NEls))
+    return false;
+
+  return true;
 }
 
 /// Perform an assignment of Val to LVal. Takes ownership of Val.
@@ -11196,62 +11241,37 @@ bool RecordExprEvaluator::VisitCastExpr(const CastExpr *E) {
   }
   case CK_HLSLAggregateSplatCast: {
     APValue Val;
-    const Expr *SE = E->getSubExpr();
+    QualType ValTy;
 
-    if (!Evaluate(Val, Info, SE))
-      return Error(E);
+    if (!hlslAggSplatHelper(Info, E->getSubExpr(), Val, ValTy))
+      return false;
 
     unsigned NEls = elementwiseSize(Info, E->getType());
-    // flatten the source
-    SmallVector<APValue, 1> SrcEls;
-    SmallVector<QualType, 1> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes, NEls))
-      return Error(E);
-
-    // check there is only one and splat it
-    assert(SrcEls.size() == 1);
-    SmallVector<APValue> SplatEls(NEls, SrcEls[0]);
-    SmallVector<QualType> SplatType(NEls, SrcTypes[0]);
-
-    APValue Tmp;
-    handleDefaultInitValue(E->getType(), Tmp);
+    // splat our Val
+    SmallVector<APValue> SplatEls(NEls, Val);
+    SmallVector<QualType> SplatType(NEls, ValTy);
 
     // cast the elements and construct our struct result
     const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
     if (!constructAggregate(Info, FPO, E, Result, E->getType(), SplatEls,
                             SplatType))
-      return Error(E);
+      return false;
 
     return true;
   }
   case CK_HLSLElementwiseCast: {
-    APValue Val;
-    const Expr *SE = E->getSubExpr();
-
-    if (!Evaluate(Val, Info, SE))
-      return Error(E);
-
-    // must be dealing with a record;
-    if (Val.isLValue()) {
-      LValue LVal;
-      LVal.setFrom(Info.Ctx, Val);
-      if (!handleLValueToRValueConversion(Info, SE, SE->getType(), LVal, Val))
-        return false;
-    }
-
-    unsigned NEls = elementwiseSize(Info, E->getType());
-    // flatten the source
     SmallVector<APValue> SrcEls;
     SmallVector<QualType> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes, NEls))
-      return Error(E);
+
+    if (!hlslElementwiseCastHelper(Info, E->getSubExpr(), E->getType(), SrcEls,
+                                   SrcTypes))
+      return false;
 
     // cast the elements and construct our struct result
     const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
-
     if (!constructAggregate(Info, FPO, E, Result, E->getType(), SrcEls,
                             SrcTypes))
-      return Error(E);
+      return false;
 
     return true;
   }
@@ -11752,54 +11772,34 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
   }
   case CK_HLSLAggregateSplatCast: {
     APValue Val;
+    QualType ValTy;
 
-    if (!Evaluate(Val, Info, SE))
-      return Error(E);
+    if (!hlslAggSplatHelper(Info, SE, Val, ValTy))
+      return false;
 
-    // this cast doesn't handle splatting from scalars when result is a vector
-    SmallVector<APValue, 1> Elements;
-    SmallVector<QualType, 1> DestTypes = {VTy->getElementType()};
-    SmallVector<QualType, 1> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SETy, Elements, SrcTypes, NElts))
-      return Error(E);
-
-    // check there is only one element and cast and splat it
-    assert(Elements.size() == 1 &&
-           "HLSLAggregateSplatCast RHS must contain one element");
+    // cast our Val once.
+    APValue Result;
     const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
-    SmallVector<APValue, 1> ResultEls(1);
-    if (!handleElementwiseCast(Info, E, FPO, Elements, SrcTypes, DestTypes,
-                               ResultEls))
-      return Error(E);
+    if (!handleScalarCast(Info, FPO, E, ValTy, VTy->getElementType(), Val,
+                          Result))
+      return false;
 
-    SmallVector<APValue, 4> SplatEls(NElts, ResultEls[0]);
+    SmallVector<APValue, 4> SplatEls(NElts, Result);
     return Success(SplatEls, E);
   }
   case CK_HLSLElementwiseCast: {
-    APValue Val;
+    SmallVector<APValue> SrcVals;
+    SmallVector<QualType> SrcTypes;
 
-    if (!Evaluate(Val, Info, SE))
-      return Error(E);
+    if (!hlslElementwiseCastHelper(Info, SE, E->getType(), SrcVals, SrcTypes))
+      return false;
 
-    // must be dealing with a record;
-    if (Val.isLValue()) {
-      LValue LVal;
-      LVal.setFrom(Info.Ctx, Val);
-      if (!handleLValueToRValueConversion(Info, SE, SE->getType(), LVal, Val))
-        return false;
-    }
-
-    SmallVector<APValue, 4> Elements;
-    SmallVector<QualType, 4> DestTypes(NElts, VTy->getElementType());
-    SmallVector<QualType, 4> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SETy, Elements, SrcTypes, NElts))
-      return Error(E);
-    // cast elements
     const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    SmallVector<QualType, 4> DestTypes(NElts, VTy->getElementType());
     SmallVector<APValue, 4> ResultEls(NElts);
-    if (!handleElementwiseCast(Info, E, FPO, Elements, SrcTypes, DestTypes,
+    if (!handleElementwiseCast(Info, E, FPO, SrcVals, SrcTypes, DestTypes,
                                ResultEls))
-      return Error(E);
+      return false;
     return Success(ResultEls, E);
   }
   default:
@@ -13579,57 +13579,36 @@ bool ArrayExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
   case CK_HLSLAggregateSplatCast: {
     APValue Val;
+    QualType ValTy;
 
-    if (!Evaluate(Val, Info, SE))
-      return Error(E);
+    if (!hlslAggSplatHelper(Info, SE, Val, ValTy))
+      return false;
 
     unsigned NEls = elementwiseSize(Info, E->getType());
-    // flatten the source
-    SmallVector<APValue, 1> SrcEls;
-    SmallVector<QualType, 1> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes, NEls))
-      return Error(E);
 
-    // check there is only one and splat it
-    assert(SrcEls.size() == 1);
-    SmallVector<APValue> SplatEls(NEls, SrcEls[0]);
-    SmallVector<QualType> SplatType(NEls, SrcTypes[0]);
+    SmallVector<APValue> SplatEls(NEls, Val);
+    SmallVector<QualType> SplatType(NEls, ValTy);
 
     // cast the elements
     const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
     if (!constructAggregate(Info, FPO, E, Result, E->getType(), SplatEls,
                             SplatType))
-      return Error(E);
+      return false;
 
     return true;
   }
   case CK_HLSLElementwiseCast: {
-    APValue Val;
-
-    if (!Evaluate(Val, Info, SE))
-      return Error(E);
-
-    // must be dealing with a record;
-    if (Val.isLValue()) {
-      LValue LVal;
-      LVal.setFrom(Info.Ctx, Val);
-      if (!handleLValueToRValueConversion(Info, SE, SE->getType(), LVal, Val))
-        return false;
-    }
-
-    unsigned NEls = elementwiseSize(Info, E->getType());
-    // flatten the source
     SmallVector<APValue> SrcEls;
     SmallVector<QualType> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes, NEls))
-      return Error(E);
+
+    if (!hlslElementwiseCastHelper(Info, SE, E->getType(), SrcEls, SrcTypes))
+      return false;
 
     // cast the elements
     const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
     if (!constructAggregate(Info, FPO, E, Result, E->getType(), SrcEls,
                             SrcTypes))
-      return Error(E);
-
+      return false;
     return true;
   }
   }
@@ -17505,32 +17484,18 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Val.getVectorElt(0), E);
   }
   case CK_HLSLElementwiseCast: {
-    APValue Val;
+    SmallVector<APValue> SrcVals;
+    SmallVector<QualType> SrcTypes;
 
-    if (!Evaluate(Val, Info, SubExpr))
-      return Error(E);
-
-    // must be dealing with a record;
-    if (Val.isLValue()) {
-      LValue LVal;
-      LVal.setFrom(Info.Ctx, Val);
-      if (!handleLValueToRValueConversion(Info, SubExpr, SubExpr->getType(),
-                                          LVal, Val))
-        return false;
-    }
-
-    SmallVector<APValue, 1> Elements;
-    SmallVector<QualType, 1> DestTypes(1, DestType);
-    SmallVector<QualType, 1> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SrcType, Elements, SrcTypes, 1))
-      return Error(E);
+    if (!hlslElementwiseCastHelper(Info, SubExpr, DestType, SrcVals, SrcTypes))
+      return false;
 
     // cast our single element
     const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
     APValue ResultVal;
-    if (!handleScalarCast(Info, FPO, E, SrcTypes[0], DestTypes[0], Elements[0],
+    if (!handleScalarCast(Info, FPO, E, SrcTypes[0], DestType, SrcVals[0],
                           ResultVal))
-      return Error(E);
+      return false;
     return Success(ResultVal, E);
   }
   }
@@ -18112,33 +18077,20 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Val.getVectorElt(0), E);
   }
   case CK_HLSLElementwiseCast: {
+    SmallVector<APValue> SrcVals;
+    SmallVector<QualType> SrcTypes;
+
+    if (!hlslElementwiseCastHelper(Info, SubExpr, E->getType(), SrcVals,
+                                   SrcTypes))
+      return false;
     APValue Val;
-
-    if (!Evaluate(Val, Info, SubExpr))
-      return Error(E);
-
-    // must be dealing with a record;
-    if (Val.isLValue()) {
-      LValue LVal;
-      LVal.setFrom(Info.Ctx, Val);
-      if (!handleLValueToRValueConversion(Info, SubExpr, SubExpr->getType(),
-                                          LVal, Val))
-        return false;
-    }
-
-    SmallVector<APValue, 1> Elements;
-    SmallVector<QualType, 1> DestTypes(1, E->getType());
-    SmallVector<QualType, 1> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SubExpr->getType(), Elements, SrcTypes,
-                        1))
-      return Error(E);
 
     // cast our single element
     const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
     APValue ResultVal;
-    if (!handleScalarCast(Info, FPO, E, SrcTypes[0], DestTypes[0], Elements[0],
+    if (!handleScalarCast(Info, FPO, E, SrcTypes[0], E->getType(), SrcVals[0],
                           ResultVal))
-      return Error(E);
+      return false;
     return Success(ResultVal, E);
   }
   }
