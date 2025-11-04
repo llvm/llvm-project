@@ -221,12 +221,21 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectCOPY_SCC_VCC(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
   MachineBasicBlock *BB = I.getParent();
+  Register VCCReg = I.getOperand(1).getReg();
+  MachineInstr *Cmp;
 
-  unsigned CmpOpc =
-      STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
-  MachineInstr *Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc))
-                          .addReg(I.getOperand(1).getReg())
-                          .addImm(0);
+  // Set SCC as a side effect with S_CMP or S_OR.
+  if (STI.hasScalarCompareEq64()) {
+    unsigned CmpOpc =
+        STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
+    Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc)).addReg(VCCReg).addImm(0);
+  } else {
+    Register DeadDst = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    Cmp = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_OR_B64), DeadDst)
+              .addReg(VCCReg)
+              .addReg(VCCReg);
+  }
+
   if (!constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI))
     return false;
 

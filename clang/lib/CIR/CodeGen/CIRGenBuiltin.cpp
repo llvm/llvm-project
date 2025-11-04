@@ -211,6 +211,28 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::fastMathFlags());
     return emitUnaryMaybeConstrainedFPBuiltin<cir::CosOp>(*this, *e);
 
+  case Builtin::BIceil:
+  case Builtin::BIceilf:
+  case Builtin::BIceill:
+  case Builtin::BI__builtin_ceil:
+  case Builtin::BI__builtin_ceilf:
+  case Builtin::BI__builtin_ceilf16:
+  case Builtin::BI__builtin_ceill:
+  case Builtin::BI__builtin_ceilf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(*this, *e);
+
+  case Builtin::BIexp:
+  case Builtin::BIexpf:
+  case Builtin::BIexpl:
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ExpOp>(*this, *e);
+
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
   case Builtin::BIfabsl:

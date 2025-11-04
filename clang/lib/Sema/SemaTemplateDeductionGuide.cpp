@@ -659,7 +659,8 @@ private:
                 SemaRef, MaterializedTypedefs, NestedPattern,
                 TransformingOuterPatterns ? &Args : nullptr)
                 .transform(NewDI);
-
+    if (!NewDI)
+      return nullptr;
     // Resolving a wording defect, we also inherit default arguments from the
     // constructor.
     ExprResult NewDefArg;

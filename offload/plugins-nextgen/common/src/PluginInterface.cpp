@@ -715,6 +715,10 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
       PinnedAllocs(*this), RPCServer(nullptr) {
+  // Conservative fall-back to the plugin's device uid for the case that no real
+  // vendor (u)uid will become available later.
+  setDeviceUidFromVendorUid(std::to_string(static_cast<uint64_t>(DeviceId)));
+
 #ifdef OMPT_SUPPORT
   OmptInitialized.store(false);
   // Bind the callbacks to this device's member functions
@@ -1524,15 +1528,22 @@ Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
   return Err;
 }
 
+Expected<InfoTreeNode> GenericDeviceTy::obtainInfo() {
+  auto InfoOrErr = obtainInfoImpl();
+  if (InfoOrErr)
+    InfoOrErr->add("UID", getDeviceUid(), "", DeviceInfo::UID);
+  return InfoOrErr;
+}
+
 Error GenericDeviceTy::printInfo() {
-  auto Info = obtainInfoImpl();
+  auto InfoOrErr = obtainInfo();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = Info.takeError())
+  if (auto Err = InfoOrErr.takeError())
     return Err;
 
   // Print all info entries.
-  Info->print();
+  InfoOrErr->print();
 
   return Plugin::success();
 }
@@ -1601,6 +1612,10 @@ bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
 Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
   return isAccessiblePtrImpl(Ptr, Size);
+}
+
+void GenericDeviceTy::setDeviceUidFromVendorUid(StringRef VendorUid) {
+  DeviceUid = std::string(Plugin.getName()) + "-" + std::string(VendorUid);
 }
 
 Error GenericPluginTy::init() {

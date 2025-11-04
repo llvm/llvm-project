@@ -14,9 +14,9 @@ using namespace llvm;
 
 namespace {
 
-typedef IntervalMap<unsigned, unsigned, 4> UUMap;
-typedef IntervalMap<unsigned, unsigned, 4,
-                    IntervalMapHalfOpenInfo<unsigned>> UUHalfOpenMap;
+using UUMap = IntervalMap<unsigned, unsigned, 4>;
+using UUHalfOpenMap =
+    IntervalMap<unsigned, unsigned, 4, IntervalMapHalfOpenInfo<unsigned>>;
 
 // Empty map tests
 TEST(IntervalMapTest, EmptyMap) {
@@ -713,7 +713,7 @@ TEST(IntervalMapTest, OverlapsHalfOpen) {
 }
 
 TEST(IntervalMapOverlapsTest, SmallMaps) {
-  typedef IntervalMapOverlaps<UUMap,UUMap> UUOverlaps;
+  using UUOverlaps = IntervalMapOverlaps<UUMap, UUMap>;
   UUMap::Allocator allocator;
   UUMap mapA(allocator);
   UUMap mapB(allocator);
@@ -757,7 +757,7 @@ TEST(IntervalMapOverlapsTest, SmallMaps) {
 }
 
 TEST(IntervalMapOverlapsTest, BigMaps) {
-  typedef IntervalMapOverlaps<UUMap,UUMap> UUOverlaps;
+  using UUOverlaps = IntervalMapOverlaps<UUMap, UUMap>;
   UUMap::Allocator allocator;
   UUMap mapA(allocator);
   UUMap mapB(allocator);

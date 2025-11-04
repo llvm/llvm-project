@@ -14,7 +14,7 @@ using namespace llvm;
 namespace {
 
 struct CostTest : public testing::Test {
-  CostTest() {}
+  CostTest() = default;
 };
 
 } // namespace
