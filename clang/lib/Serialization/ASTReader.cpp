@@ -225,7 +225,7 @@ bool ChainedASTReaderListener::ReadPreprocessorOptions(
 }
 
 void ChainedASTReaderListener::ReadCounter(const serialization::ModuleFile &M,
-                                           uint32_t Value) {
+                                           unsigned Value) {
   First->ReadCounter(M, Value);
   Second->ReadCounter(M, Value);
 }
@@ -973,7 +973,7 @@ bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
       PP.getPreprocessorOpts());
 }
 
-void PCHValidator::ReadCounter(const ModuleFile &M, uint32_t Value) {
+void PCHValidator::ReadCounter(const ModuleFile &M, unsigned Value) {
   PP.setCounterValue(Value);
 }
 

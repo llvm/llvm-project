@@ -2,3 +2,6 @@
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
+breaks build of ROCmValidationSuite
+[C2y] Support WG14 N3457, the __COUNTER__ macro (#162662)
+---
