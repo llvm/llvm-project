@@ -1112,9 +1112,9 @@ static void redirectValuesFromPredecessorsToPhi(
     }
     if (CommonPreds.size() == 1) {
       // Single common predecessor, fold the phi node into Succ.
-      PN->addIncoming(OldValPN->getIncomingValueForBlock(*CommonPreds.begin()), BB);
-    }
-    else if (CommonPreds.size() >= 2) {
+      PN->addIncoming(OldValPN->getIncomingValueForBlock(*CommonPreds.begin()),
+                      BB);
+    } else if (CommonPreds.size() >= 2) {
       // >1 common predecessors, reserve the phi in BB.
       PN->addIncoming(OldVal, BB);
     }
