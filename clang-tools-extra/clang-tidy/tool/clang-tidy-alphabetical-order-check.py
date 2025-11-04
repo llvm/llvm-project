@@ -17,8 +17,8 @@ Normalize Clang-Tidy documentation with deterministic sorting for linting/tests.
 
 Behavior:
 - Sort entries in docs/clang-tidy/checks/list.rst csv-table.
-- Sort key sections in docs/ReleaseNotes.rst. Does not remove duplicate
-  entries; developers should merge duplicates manually when needed.
+- Sort key sections in docs/ReleaseNotes.rst.
+- Detect duplicated entries in 'Changes in existing checks'.
 
 Flags:
   -o/--output  Write normalized content to this path instead of updating docs.
@@ -29,7 +29,7 @@ import io
 import os
 import re
 import sys
-from typing import List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 # Matches a :doc:`label <path>` or :doc:`label` reference anywhere in text and
 # captures the label. Used to sort bullet items alphabetically in ReleaseNotes
@@ -165,6 +165,56 @@ def sort_blocks(blocks: List[Tuple[str, List[str]]]) -> List[List[str]]:
     """
     return [b for _, b in sorted(blocks, key=lambda kb: kb[0])]
 
+def find_duplicate_block_details(
+    lines: Sequence[str], title: str
+) -> List[Tuple[str, List[Tuple[int, List[str]]]]]:
+    """Return detailed duplicate info as (key, [(start_idx, block_lines), ...]).
+
+    start_idx is the 0-based index of the first line of the bullet block in
+    the original lines list. Only keys with more than one occurrence are
+    returned, and occurrences are listed in the order they appear.
+    """
+    bounds = _find_section_bounds(lines, title, None)
+    if bounds is None:
+        return []
+    _, sec_start, sec_end = bounds
+
+    i = sec_start
+    n = sec_end
+
+    while i < n and not is_bullet_start(lines[i]):
+        i += 1
+
+    blocks_with_pos: List[Tuple[str, int, List[str]]] = []
+    while i < n:
+        if not is_bullet_start(lines[i]):
+            break
+        bstart = i
+        i += 1
+        while i < n and not is_bullet_start(lines[i]):
+            if (
+                i + 1 < n
+                and set(lines[i + 1].rstrip("\n")) == {"^"}
+                and lines[i].strip()
+            ):
+                break
+            i += 1
+        block = list(lines[bstart:i])
+        key = extract_label(block[0])
+        blocks_with_pos.append((key, bstart, block))
+
+    grouped: Dict[str, List[Tuple[int, List[str]]]] = {}
+    for key, start, block in blocks_with_pos:
+        grouped.setdefault(key, []).append((start, block))
+
+    result: List[Tuple[str, List[Tuple[int, List[str]]]]] = []
+    for key, occs in grouped.items():
+        if len(occs) > 1:
+            result.append((key, occs))
+
+    result.sort(key=lambda kv: kv[0])
+    return result
+
 
 def _find_section_bounds(
     lines: Sequence[str], title: str, next_title: Optional[str]
@@ -210,7 +260,7 @@ def _normalize_release_notes_section(
     """Normalize a single release-notes section and return updated lines."""
     bounds = _find_section_bounds(lines, title, next_title)
     if bounds is None:
-        return lines
+        return list(lines)
     _, sec_start, sec_end = bounds
 
     prefix, blocks, suffix = collect_bullet_blocks(lines, sec_start, sec_end)
@@ -249,6 +299,47 @@ def _default_paths() -> Tuple[str, str]:
     return list_doc, rn_doc
 
 
+def _emit_duplicate_report(lines: Sequence[str], title: str) -> Optional[str]:
+    dups_detail = find_duplicate_block_details(lines, title)
+    if not dups_detail:
+        return None
+    out: List[str] = []
+    out.append(f"Error: Duplicate entries in '{title}':\n")
+    for key, occs in dups_detail:
+        out.append(f"\n-- Duplicate: {key}\n")
+        for start_idx, block in occs:
+            out.append(f"- At line {start_idx + 1}:\n")
+            out.append("".join(block))
+            if not (block and block[-1].endswith("\n")):
+                out.append("\n")
+    return "".join(out)
+
+
+def _handle_release_notes_out(out_path: str, rn_doc: str) -> int:
+    lines = read_text(rn_doc)
+    normalized = normalize_release_notes(lines)
+    write_text(out_path, normalized)
+
+    # Prefer reporting ordering issues first; let diff fail the test.
+    if "".join(lines) != normalized:
+        sys.stderr.write("Note: 'ReleaseNotes.rst' section is not normalized; Please fix ordering first.\n")
+        return 0
+
+    # Ordering is clean then enforce duplicates.
+    report = _emit_duplicate_report(lines, "Changes in existing checks")
+    if report:
+        sys.stderr.write(report)
+        return 3
+    return 0
+
+
+def _handle_checks_list_out(out_path: str, list_doc: str) -> int:
+    lines = read_text(list_doc)
+    normalized = normalize_list_rst(lines)
+    write_text(out_path, normalized)
+    return 0
+
+
 def main(argv: List[str]) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("-o", "--output", dest="out", default=None)
@@ -260,15 +351,9 @@ def main(argv: List[str]) -> int:
         out_path = args.out
         out_lower = os.path.basename(out_path).lower()
         if "release" in out_lower:
-            lines = read_text(rn_doc)
-            normalized = normalize_release_notes(lines)
-            write_text(out_path, normalized)
-            return 0
+            return _handle_release_notes_out(out_path, rn_doc)
         else:
-            lines = read_text(list_doc)
-            normalized = normalize_list_rst(lines)
-            write_text(out_path, normalized)
-            return 0
+            return _handle_checks_list_out(out_path, list_doc)
 
     list_lines = read_text(list_doc)
     rn_lines = read_text(rn_doc)
@@ -278,8 +363,13 @@ def main(argv: List[str]) -> int:
         write_text(list_doc, list_norm)
     if "".join(rn_lines) != rn_norm:
         write_text(rn_doc, rn_norm)
+
+    report = _emit_duplicate_report(rn_lines, "Changes in existing checks")
+    if report:
+        sys.stderr.write(report)
+        return 3
     return 0
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    sys.exit(main(sys.argv[1:]))
