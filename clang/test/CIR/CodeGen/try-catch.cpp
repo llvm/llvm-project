@@ -164,3 +164,33 @@ void try_catch_with_alloca() {
 // OGCG: %[[TMP_B:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // OGCG: %[[RESULT:.*]] = add nsw i32 %[[TMP_A]], %[[TMP_B]]
 // OGCG: store i32 %[[RESULT]], ptr %[[C_ADDR]], align 4
+
+void function_with_noexcept() noexcept;
+
+void calling_noexcept_function_inside_try_block() {
+  try {
+    function_with_noexcept();
+  } catch (...) {
+  }
+}
+
+// CIR: cir.scope {
+// CIR:   cir.try {
+// CIR:     cir.call @_Z22function_with_noexceptv() nothrow : () -> ()
+// CIR:     cir.yield
+// CIR:   }
+// CIR: }
+
+// LLVM:   br label %[[LABEL_1:.*]]
+// LLVM: [[LABEL_1]]:
+// LLVM:   br label %[[LABEL_2:.*]]
+// LLVM: [[LABEL_2]]:
+// LLVM:   call void @_Z22function_with_noexceptv()
+// LLVM:   br label %[[LABEL_3:.*]]
+// LLVM: [[LABEL_3]]:
+// LLVM:   br label %[[LABEL_4:.*]]
+// LLVM: [[LABEL_4]]:
+// LLVM:   ret void
+
+// OGCG: call void @_Z22function_with_noexceptv()
+// OGCG: ret void
