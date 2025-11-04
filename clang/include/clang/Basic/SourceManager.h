@@ -1275,8 +1275,10 @@ public:
   /// start of the buffer of the location.
   FileIDAndOffset getDecomposedLoc(SourceLocation Loc) const {
     FileID FID = getFileID(Loc);
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID);
-    return std::make_pair(FID, Loc.getOffset() - Entry.getOffset());
+    auto *Entry = getSLocEntryOrNull(FID);
+    if (!Entry)
+      return std::make_pair(FileID(), 0);
+    return std::make_pair(FID, Loc.getOffset() - Entry->getOffset());
   }
 
   /// Decompose the specified location into a raw FileID + Offset pair.
