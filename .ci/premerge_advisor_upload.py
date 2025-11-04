@@ -12,9 +12,12 @@ import requests
 
 import generate_test_report_lib
 
-PREMERGE_ADVISOR_URL = (
-    "http://premerge-advisor.premerge-advisor.svc.cluster.local:5000/upload"
-)
+# These are IP addresses of the two premerge advisor instances. They should
+# eventually be updated to domain names.
+PREMERGE_ADVISOR_URLS = [
+    "http://34.82.126.63:5000/upload",
+    "http://136.114.125.23:5000/upload",
+]
 
 
 def main(commit_sha, workflow_run_number, build_log_files):
@@ -41,7 +44,8 @@ def main(commit_sha, workflow_run_number, build_log_files):
         ninja_failures = generate_test_report_lib.find_failure_in_ninja_logs(ninja_logs)
         for name, failure_message in ninja_failures:
             failure_info["failures"].append({"name": name, "message": failure_message})
-    requests.post(PREMERGE_ADVISOR_URL, json=failure_info)
+    for premerge_advisor_url in PREMERGE_ADVISOR_URLS:
+        requests.post(premerge_advisor_url, json=failure_info, timeout=5)
 
 
 if __name__ == "__main__":

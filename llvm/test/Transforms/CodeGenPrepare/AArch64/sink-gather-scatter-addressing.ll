@@ -11,8 +11,8 @@ define <vscale x 4 x float> @gather_offsets_sink_gep(ptr %base, <vscale x 4 x i3
 ; CHECK-NEXT:    br i1 [[COND]], label [[COND_BLOCK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       cond.block:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i32> [[INDICES]]
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[TMP0]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+; CHECK-NEXT:    [[RET:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP0]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RET]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
 ;
@@ -38,8 +38,8 @@ define <vscale x 4 x float> @gather_offsets_sink_sext(ptr %base, <vscale x 4 x i
 ; CHECK:       cond.block:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext <vscale x 4 x i32> [[INDICES]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i64> [[TMP0]]
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[PTRS]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+; CHECK-NEXT:    [[RET:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[PTRS]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RET]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
 ;
@@ -66,8 +66,8 @@ define <vscale x 4 x float> @gather_offsets_sink_sext_get(ptr %base, <vscale x 4
 ; CHECK:       cond.block:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext <vscale x 4 x i32> [[INDICES]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i64> [[TMP0]]
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[TMP1]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+; CHECK-NEXT:    [[RET:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP1]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RET]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
 ;
@@ -93,8 +93,8 @@ define <vscale x 4 x float> @gather_no_scalar_base(<vscale x 4 x ptr> %bases, <v
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr float, <vscale x 4 x ptr> [[BASES]], <vscale x 4 x i32> [[INDICES]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[COND_BLOCK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       cond.block:
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[PTRS]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+; CHECK-NEXT:    [[RET:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[PTRS]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RET]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
 ;
@@ -121,8 +121,8 @@ define <vscale x 4 x float> @gather_offset_type_too_small(ptr %base, <vscale x 4
 ; CHECK-NEXT:    br i1 [[COND]], label [[COND_BLOCK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       cond.block:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i32> [[INDICES_SEXT]]
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[TMP0]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+; CHECK-NEXT:    [[RET:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP0]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RET]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
 ;
@@ -150,8 +150,8 @@ define <vscale x 4 x float> @gather_offset_type_too_big(ptr %base, <vscale x 4 x
 ; CHECK-NEXT:    br i1 [[COND]], label [[COND_BLOCK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       cond.block:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i64> [[INDICES_SEXT]]
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[TMP0]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+; CHECK-NEXT:    [[RET:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP0]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RET]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
 ;
@@ -181,8 +181,8 @@ define <vscale x 4 x float> @gather_offset_sink_zext(ptr %base, <vscale x 4 x i8
 ; CHECK:       cond.block:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext <vscale x 4 x i8> [[INDICES]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i64> [[TMP0]]
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[PTRS]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+; CHECK-NEXT:    [[RET:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[PTRS]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RET]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
 ;
@@ -209,7 +209,7 @@ define void @scatter_offsets_sink_sext_get(<vscale x 4 x float> %data, ptr %base
 ; CHECK:       cond.block:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext <vscale x 4 x i32> [[INDICES]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i64> [[TMP0]]
-; CHECK-NEXT:    tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[DATA]], <vscale x 4 x ptr> [[TMP1]], i32 4, <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[DATA]], <vscale x 4 x ptr> align 4 [[TMP1]], <vscale x 4 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

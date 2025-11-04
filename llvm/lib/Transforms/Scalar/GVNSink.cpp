@@ -430,6 +430,7 @@ public:
     case Instruction::FPTrunc:
     case Instruction::FPExt:
     case Instruction::PtrToInt:
+    case Instruction::PtrToAddr:
     case Instruction::IntToPtr:
     case Instruction::BitCast:
     case Instruction::AddrSpaceCast:
@@ -513,7 +514,7 @@ public:
 
 class GVNSink {
 public:
-  GVNSink() {}
+  GVNSink() = default;
 
   bool run(Function &F) {
     LLVM_DEBUG(dbgs() << "GVNSink: running on function @" << F.getName()

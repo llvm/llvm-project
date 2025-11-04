@@ -1,6 +1,7 @@
 # RUN: env MLIR_RUNNER_UTILS=%mlir_runner_utils MLIR_C_RUNNER_UTILS=%mlir_c_runner_utils %PYTHON %s 2>&1 | FileCheck %s
 # REQUIRES: host-supports-jit
 import gc, sys, os, tempfile
+from textwrap import dedent
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
@@ -20,6 +21,7 @@ MLIR_RUNNER_UTILS = os.getenv(
 MLIR_C_RUNNER_UTILS = os.getenv(
     "MLIR_C_RUNNER_UTILS", "../../../../lib/libmlir_c_runner_utils.so"
 )
+
 
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
@@ -336,6 +338,7 @@ func.func private @some_callback_into_python(memref<*xf32>) attributes {llvm.emi
             "callback_memref",
             ctypes.pointer(ctypes.pointer(get_ranked_memref_descriptor(inp_arr))),
         )
+
 
 run(testUnrankedMemRefWithOffsetCallback)
 
@@ -785,15 +788,25 @@ def testDumpToObjectFile():
     try:
         with Context():
             module = Module.parse(
-                """
-        module {
-        func.func @main() attributes { llvm.emit_c_interface } {
-          return
-        }
-      }"""
+                dedent(
+                    """
+                    func.func private @printF32(f32)
+                    func.func @main(%arg0: f32) attributes { llvm.emit_c_interface } {
+                      call @printF32(%arg0) : (f32) -> ()
+                      return
+                    }
+                    """
+                )
             )
 
-            execution_engine = ExecutionEngine(lowerToLLVM(module), opt_level=3)
+            execution_engine = ExecutionEngine(
+                lowerToLLVM(module),
+                opt_level=3,
+                # Loading MLIR_C_RUNNER_UTILS is necessary even though we don't actually run the code (i.e., call printF32)
+                # because RTDyldObjectLinkingLayer::emit will try to resolve symbols before dumping
+                # (see the jitLinkForORC call at the bottom there).
+                shared_libs=[MLIR_C_RUNNER_UTILS],
+            )
 
             # CHECK: Object file exists: True
             print(f"Object file exists: {os.path.exists(object_path)}")

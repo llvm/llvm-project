@@ -18,7 +18,7 @@ define void @_Z1dv() local_unnamed_addr #0 {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[F_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD5:%.*]], [[FOR_COND_CLEANUP:%.*]] ]
-; CHECK-NEXT:    [[G_0:%.*]] = phi i32 [ undef, [[ENTRY]] ], [ [[G_1_LCSSA:%.*]], [[FOR_COND_CLEANUP]] ]
+; CHECK-NEXT:    [[G_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[G_1_LCSSA:%.*]], [[FOR_COND_CLEANUP]] ]
 ; CHECK-NEXT:    [[CMP12:%.*]] = icmp ult i32 [[G_0]], 4
 ; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[F_0]], 65535
 ; CHECK-NEXT:    br i1 [[CMP12]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP]]
@@ -50,7 +50,7 @@ entry:
 
 for.cond:                                         ; preds = %for.cond.cleanup, %entry
   %f.0 = phi i32 [ 0, %entry ], [ %add5, %for.cond.cleanup ]
-  %g.0 = phi i32 [ undef, %entry ], [ %g.1.lcssa, %for.cond.cleanup ]
+  %g.0 = phi i32 [ 0, %entry ], [ %g.1.lcssa, %for.cond.cleanup ]
   %cmp12 = icmp ult i32 %g.0, 4
   %conv = and i32 %f.0, 65535
   br i1 %cmp12, label %for.body.lr.ph, label %for.cond.cleanup

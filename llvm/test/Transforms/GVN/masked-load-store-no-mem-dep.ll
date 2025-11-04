@@ -5,22 +5,22 @@
 define <4 x float> @forward_binop_with_sel(ptr %0, ptr %1, i32 %a, i32 %b, <4 x float> %passthrough) {
 ; CHECK-LABEL: @forward_binop_with_sel(
 ; CHECK-NEXT:    [[MASK:%.*]] = tail call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[LOAD_0_0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP0:%.*]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0_0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[TMP0:%.*]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
 ; CHECK-NEXT:    [[GEP_0_16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 16
-; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[GEP_0_16]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[GEP_0_16]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul <4 x float> [[LOAD_0_0]], [[LOAD_0_16]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[FMUL]], ptr [[TMP1:%.*]], i32 1, <4 x i1> [[MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[FMUL]], ptr align 1 [[TMP1:%.*]], <4 x i1> [[MASK]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[MASK]], <4 x float> [[FMUL]], <4 x float> [[PASSTHROUGH:%.*]]
 ; CHECK-NEXT:    ret <4 x float> [[TMP3]]
 ;
 ; MEMDEPFALSE-LABEL: @forward_binop_with_sel(
 ; MEMDEPFALSE-NEXT:    [[MASK:%.*]] = tail call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; MEMDEPFALSE-NEXT:    [[LOAD_0_0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP0:%.*]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; MEMDEPFALSE-NEXT:    [[LOAD_0_0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[TMP0:%.*]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
 ; MEMDEPFALSE-NEXT:    [[GEP_0_16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 16
-; MEMDEPFALSE-NEXT:    [[LOAD_0_16:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[GEP_0_16]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; MEMDEPFALSE-NEXT:    [[LOAD_0_16:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[GEP_0_16]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
 ; MEMDEPFALSE-NEXT:    [[FMUL:%.*]] = fmul <4 x float> [[LOAD_0_0]], [[LOAD_0_16]]
-; MEMDEPFALSE-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[FMUL]], ptr [[TMP1:%.*]], i32 1, <4 x i1> [[MASK]])
-; MEMDEPFALSE-NEXT:    [[LOAD_1_0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP1]], i32 1, <4 x i1> [[MASK]], <4 x float> [[PASSTHROUGH:%.*]])
+; MEMDEPFALSE-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[FMUL]], ptr align 1 [[TMP1:%.*]], <4 x i1> [[MASK]])
+; MEMDEPFALSE-NEXT:    [[LOAD_1_0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[TMP1]], <4 x i1> [[MASK]], <4 x float> [[PASSTHROUGH:%.*]])
 ; MEMDEPFALSE-NEXT:    ret <4 x float> [[LOAD_1_0]]
 ;
   %mask = tail call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %a, i32 %b)

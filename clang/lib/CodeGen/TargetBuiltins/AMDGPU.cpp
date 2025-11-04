@@ -12,6 +12,7 @@
 
 #include "CGBuiltin.h"
 #include "CodeGenFunction.h"
+#include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -313,33 +314,33 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   }
 
   // Older builtins had an enum argument for the memory scope.
+  const char *SSN = nullptr;
   int scope = cast<llvm::ConstantInt>(Scope)->getZExtValue();
   switch (scope) {
-  case 0: // __MEMORY_SCOPE_SYSTEM
+  case AtomicScopeGenericModel::System: // __MEMORY_SCOPE_SYSTEM
     SSID = llvm::SyncScope::System;
     break;
-  case 1: // __MEMORY_SCOPE_DEVICE
-    if (getTarget().getTriple().isSPIRV())
-      SSID = getLLVMContext().getOrInsertSyncScopeID("device");
-    else
-      SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+  case AtomicScopeGenericModel::Device: // __MEMORY_SCOPE_DEVICE
+    SSN = getTarget().getTriple().isSPIRV() ? "device" : "agent";
     break;
-  case 2: // __MEMORY_SCOPE_WRKGRP
-    SSID = getLLVMContext().getOrInsertSyncScopeID("workgroup");
+  case AtomicScopeGenericModel::Workgroup: // __MEMORY_SCOPE_WRKGRP
+    SSN = "workgroup";
     break;
-  case 3: // __MEMORY_SCOPE_WVFRNT
-    if (getTarget().getTriple().isSPIRV())
-      SSID = getLLVMContext().getOrInsertSyncScopeID("subgroup");
-    else
-      SSID = getLLVMContext().getOrInsertSyncScopeID("wavefront");
+  case AtomicScopeGenericModel::Cluster: // __MEMORY_SCOPE_CLUSTR
+    SSN = getTarget().getTriple().isSPIRV() ? "workgroup" : "cluster";
     break;
-  case 4: // __MEMORY_SCOPE_SINGLE
+  case AtomicScopeGenericModel::Wavefront: // __MEMORY_SCOPE_WVFRNT
+    SSN = getTarget().getTriple().isSPIRV() ? "subgroup" : "wavefront";
+    break;
+  case AtomicScopeGenericModel::Single: // __MEMORY_SCOPE_SINGLE
     SSID = llvm::SyncScope::SingleThread;
     break;
   default:
     SSID = llvm::SyncScope::System;
     break;
   }
+  if (SSN)
+    SSID = getLLVMContext().getOrInsertSyncScopeID(SSN);
 }
 
 llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
@@ -646,8 +647,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ballot_w64: {
     llvm::Type *ResultType = ConvertType(E->getType());
     llvm::Value *Src = EmitScalarExpr(E->getArg(0));
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, { ResultType });
-    return Builder.CreateCall(F, { Src });
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {ResultType});
+    return Builder.CreateCall(F, {Src});
   }
   case AMDGPU::BI__builtin_amdgcn_inverse_ballot_w32:
   case AMDGPU::BI__builtin_amdgcn_inverse_ballot_w64: {
@@ -1138,6 +1139,83 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f16_f32:
     return emitAMDGCNImageOverloadedReturnType(
         *this, E, Intrinsic::amdgcn_image_sample_cube, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_1d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_1d_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_lz_1d, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_1d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_1d_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_l_1d, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_1d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_1d_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_d_1d, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_2d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_2d_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_2d_f32_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_lz_2d, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_f32_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_l_2d, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_2d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_2d_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_2d_f32_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_d_2d, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_3d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_3d_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_lz_3d, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_3d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_3d_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_l_3d, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_d_3d, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_cube_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_cube_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_lz_cube, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_cube_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_cube_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_l_cube, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_1darray_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_1darray_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_lz_1darray, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_1darray_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_1darray_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_l_1darray, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_1darray_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_1darray_v4f16_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_d_1darray, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_2darray_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_2darray_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_lz_2darray_f32_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_lz_2darray, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_f32_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_l_2darray, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_f32_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_sample_d_2darray, false);
+  case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, E, Intrinsic::amdgcn_image_gather4_lz_2d, false);
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
     llvm::FixedVectorType *VT = FixedVectorType::get(Builder.getInt32Ty(), 8);
