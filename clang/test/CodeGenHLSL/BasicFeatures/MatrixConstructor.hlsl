@@ -13,8 +13,9 @@ float3x2 case1() {
   // vec[3] = 1
   // vec[4] = 3
   // vec[5] = 5
-  return float3x2(0, 1, 2,
-                  3, 4, 5);
+  return float3x2(0, 1, 
+                  2, 3,
+                  4, 5);
 }
 
 
@@ -50,8 +51,9 @@ float3x2 case2() {
   // vec[3] = Call1
   // vec[4] = Call3
   // vec[5] = Call5
-  return float3x2(In[0], In[1], In[2],
-                  In[3], In[4], In[5]);
+  return float3x2(In[0], In[1], 
+                  In[2], In[3],
+                  In[4], In[5]);
 }
 
 
