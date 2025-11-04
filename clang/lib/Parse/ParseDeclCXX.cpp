@@ -4444,8 +4444,7 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
 }
 
 void Parser::ParseAnnotationSpecifier(ParsedAttributes &Attrs,
-                                      SourceLocation *EndLoc)
-{
+                                      SourceLocation *EndLoc) {
   assert(Tok.is(tok::equal) && "not an annotation");
   SourceLocation EqLoc = ConsumeToken();
 
@@ -4786,9 +4785,9 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     }
 
     // Parse attribute arguments
-    hasAttribute = Tok.is(tok::l_paren)
-      && ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
-                                 ScopeName, ScopeLoc, OpenMPTokens);
+    hasAttribute = Tok.is(tok::l_paren) &&
+                   ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
+                                           ScopeName, ScopeLoc, OpenMPTokens);
 
     if (!hasAttribute) {
       Attrs.addNew(AttrName,

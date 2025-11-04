@@ -6413,9 +6413,8 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr *CE = AL.getArgAsExpr(0);
   if (CE->isLValue()) {
     if (CE->getType()->isRecordType()) {
-      InitializedEntity Entity =
-          InitializedEntity::InitializeTemporary(
-              CE->getType().getUnqualifiedType());
+      InitializedEntity Entity = InitializedEntity::InitializeTemporary(
+          CE->getType().getUnqualifiedType());
       InitializationKind Kind =
           InitializationKind::CreateCopy(CE->getExprLoc(), SourceLocation());
       InitializationSequence Seq(S, Entity, Kind, CE);
@@ -6439,9 +6438,10 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Result.Diag = &Notes;
 
   if (!CE->isValueDependent()) {
-    ConstantExprKind CEKind = (CE->getType()->isClassType() ?
-                               ConstantExprKind::ClassTemplateArgument :
-                               ConstantExprKind::NonClassTemplateArgument);
+    ConstantExprKind CEKind =
+        (CE->getType()->isClassType()
+             ? ConstantExprKind::ClassTemplateArgument
+             : ConstantExprKind::NonClassTemplateArgument);
 
     if (!CE->EvaluateAsConstantExpr(Result, S.Context, CEKind)) {
       S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
