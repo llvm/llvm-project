@@ -707,7 +707,7 @@ foreach bitsVal = [8, 32, 64, 128] in {
     let arguments = !con(args, baseArgs);
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,` $aux
-      attr-dict `:` type($globalPtr)
+      attr-dict `:` type($globalPtr) `,` type($ldsPtr)
     }];
     let description = [{
       Asynchronously loads }] # !cast<string>(bitsVal) # [{ bits of data from a global memory pointer

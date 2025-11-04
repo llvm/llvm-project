@@ -670,10 +670,10 @@ llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3
   // CHECK: rocdl.global.load.async.to.lds.b32 %{{.*}}, %{{.*}}, 0, 0
   // CHECK: rocdl.global.load.async.to.lds.b64 %{{.*}}, %{{.*}}, 0, 0
   // CHECK: rocdl.global.load.async.to.lds.b128 %{{.*}}, %{{.*}}, 0, 0
-  rocdl.global.load.async.to.lds.b8 %src, %dst, 0, 0 : <1>
-  rocdl.global.load.async.to.lds.b32 %src, %dst, 0, 0 : <1>
-  rocdl.global.load.async.to.lds.b64 %src, %dst, 0, 0 : <1>
-  rocdl.global.load.async.to.lds.b128 %src, %dst, 0, 0 : <1>
+  rocdl.global.load.async.to.lds.b8 %src, %dst, 0, 0 : <1>, <3>
+  rocdl.global.load.async.to.lds.b32 %src, %dst, 0, 0 : <1>, <3>
+  rocdl.global.load.async.to.lds.b64 %src, %dst, 0, 0 : <1>, <3>
+  rocdl.global.load.async.to.lds.b128 %src, %dst, 0, 0 : <1>, <3>
   llvm.return
 }
 
