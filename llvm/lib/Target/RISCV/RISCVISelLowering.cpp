@@ -9186,7 +9186,7 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
           unsigned ShAmount = Log2_64(TrueM1);
           if (Subtarget.hasShlAdd(ShAmount))
             return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, CondV,
-                               DAG.getConstant(ShAmount, DL, VT), CondV);
+                               DAG.getTargetConstant(ShAmount, DL, VT), CondV);
         }
       }
       // (select c, y, 0) -> -c & y
@@ -15463,7 +15463,7 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   SDValue NS = (C0 < C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue NL = (C0 > C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, NL,
-                              DAG.getConstant(Diff, DL, VT), NS);
+                              DAG.getTargetConstant(Diff, DL, VT), NS);
   return DAG.getNode(ISD::SHL, DL, VT, SHADD, DAG.getConstant(Bits, DL, VT));
 }
 
@@ -15501,7 +15501,7 @@ static SDValue combineShlAddIAddImpl(SDNode *N, SDValue AddI, SDValue Other,
   int64_t AddConst = AddVal.getSExtValue();
 
   SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, SHLVal->getOperand(0),
-                              DAG.getConstant(ShlConst, DL, VT), Other);
+                              DAG.getTargetConstant(ShlConst, DL, VT), Other);
   return DAG.getNode(ISD::ADD, DL, VT, SHADD,
                      DAG.getSignedConstant(AddConst, DL, VT));
 }
@@ -16543,12 +16543,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
         SDValue Shl =
             DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(Shift, DL, VT));
         return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
-                           DAG.getConstant(ShXAmount, DL, VT), Shl);
+                           DAG.getTargetConstant(ShXAmount, DL, VT), Shl);
       }
       // Otherwise, put the shl second so that it can fold with following
       // instructions (e.g. sext or add).
       SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                   DAG.getConstant(ShXAmount, DL, VT), X);
+                                   DAG.getTargetConstant(ShXAmount, DL, VT), X);
       return DAG.getNode(ISD::SHL, DL, VT, Mul359,
                          DAG.getConstant(Shift, DL, VT));
     }
@@ -16582,9 +16582,9 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ShX) {
       SDLoc DL(N);
       SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                   DAG.getConstant(ShY, DL, VT), X);
+                                   DAG.getTargetConstant(ShY, DL, VT), X);
       return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                         DAG.getConstant(ShX, DL, VT), Mul359);
+                         DAG.getTargetConstant(ShX, DL, VT), Mul359);
     }
 
     // If this is a power 2 + 2/4/8, we can use a shift followed by a single
@@ -16598,7 +16598,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
         SDValue Shift1 =
             DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
         return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                           DAG.getConstant(ScaleShift, DL, VT), Shift1);
+                           DAG.getTargetConstant(ScaleShift, DL, VT), Shift1);
       }
     }
 
@@ -16611,10 +16611,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
       assert(Shift != 0 && "MulAmt=4,6,10 handled before");
       if (Shift <= 3) {
         SDLoc DL(N);
-        SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                     DAG.getConstant(ShXAmount, DL, VT), X);
+        SDValue Mul359 =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getTargetConstant(ShXAmount, DL, VT), X);
         return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                           DAG.getConstant(Shift, DL, VT), X);
+                           DAG.getTargetConstant(Shift, DL, VT), X);
       }
     }
 
@@ -16626,9 +16627,10 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
         SDLoc DL(N);
         SDValue Shift1 =
             DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
-        return DAG.getNode(ISD::ADD, DL, VT, Shift1,
-                           DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                       DAG.getConstant(ScaleShift, DL, VT), X));
+        return DAG.getNode(
+            ISD::ADD, DL, VT, Shift1,
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getTargetConstant(ScaleShift, DL, VT), X));
       }
     }
 
@@ -16643,7 +16645,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
             DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShAmt, DL, VT));
         SDValue Mul359 =
             DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Offset - 1), DL, VT), X);
+                        DAG.getTargetConstant(Log2_64(Offset - 1), DL, VT), X);
         return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
       }
     }
@@ -16658,10 +16660,10 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
         SDLoc DL(N);
         SDValue Mul359A =
             DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+                        DAG.getTargetConstant(Log2_64(Divisor - 1), DL, VT), X);
         SDValue Mul359B =
             DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359A,
-                        DAG.getConstant(ShBAmount, DL, VT), Mul359A);
+                        DAG.getTargetConstant(ShBAmount, DL, VT), Mul359A);
         return DAG.getNode(ISD::SHL, DL, VT, Mul359B,
                            DAG.getConstant(Shift, DL, VT));
       }
