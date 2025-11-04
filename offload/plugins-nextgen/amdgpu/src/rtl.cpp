@@ -946,6 +946,10 @@ private:
       if (ThreadLimitClause[0] > 0 && ThreadLimitClause[0] != (uint32_t)-1 &&
           ThreadLimitClause[0] <= static_cast<uint32_t>(ConstWGSize))
         return llvm::omp::getBlockSizeAsPowerOfTwo(ThreadLimitClause[0]);
+      uint32_t BlockSizeOverride = GenericDevice.getOMPXXteamBlockSize();
+      if (BlockSizeOverride > 0 &&
+          BlockSizeOverride <= static_cast<int32_t>(ConstWGSize))
+        return llvm::omp::getBlockSizeAsPowerOfTwo(BlockSizeOverride);
       assert(((ConstWGSize & (ConstWGSize - 1)) == 0) &&
              "XTeam Reduction blocksize must be a power of two");
       return ConstWGSize;
@@ -3096,6 +3100,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
             "LIBOMPTARGET_AMDGPU_ADJUST_XTEAM_RED_TEAMS", 1),
         OMPX_GenericSpmdUseSmallBlockSize(
             "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_USE_SMALL_BLOCKSIZE", 1),
+        OMPX_XteamBlockSize("LIBOMPTARGET_AMDGPU_XTEAM_BLOCKSIZE", 0),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
                                64 * 1024),
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
@@ -3234,6 +3239,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
   virtual bool getOMPXGenericSpmdUseSmallBlockSize() const override {
     return OMPX_GenericSpmdUseSmallBlockSize;
+  }
+  virtual uint32_t getOMPXXteamBlockSize() const override {
+    return OMPX_XteamBlockSize;
   }
 
   uint64_t getDeviceTimeStamp() override { return getSystemTimestampInNs(); }
@@ -4871,6 +4879,13 @@ private:
   /// Envar indicating whether, for generic-SPMD kernels, the blocksize should
   /// be reduced and the corresponding number of teams adjusted.
   BoolEnvar OMPX_GenericSpmdUseSmallBlockSize;
+
+  /// Envar indicating the blocksize to be used for Xteam reduction kernels. The
+  /// default of 0 indicates that there is no runtime override and the value
+  /// indicated by CodeGen will be used. If a non-zero value is specified, the
+  /// runtime will attempt to use it as an override if other constraints are
+  /// satisfied.
+  UInt32Envar OMPX_XteamBlockSize;
 
   /// Envar specifying the maximum size in bytes where the memory copies are
   /// asynchronous operations. Up to this transfer size, the memory copies are

@@ -1164,6 +1164,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual bool getOMPXGenericSpmdUseSmallBlockSize() const {
     llvm_unreachable("Unimplemented");
   }
+  virtual uint32_t getOMPXXteamBlockSize() const {
+    llvm_unreachable("Unimplemented");
+  }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }
