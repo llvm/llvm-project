@@ -44,40 +44,10 @@ extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
                          SPIRVType *KnownResType);
 } // namespace llvm
 
-static bool mayBeInserted(unsigned Opcode) {
-  switch (Opcode) {
-  case TargetOpcode::G_CONSTANT:
-  case TargetOpcode::G_UNMERGE_VALUES:
-  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
-  case TargetOpcode::G_INTRINSIC:
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-  case TargetOpcode::G_SMAX:
-  case TargetOpcode::G_UMAX:
-  case TargetOpcode::G_SMIN:
-  case TargetOpcode::G_UMIN:
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMINIMUM:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMAXIMUM:
-  case TargetOpcode::G_IMPLICIT_DEF:
-  case TargetOpcode::G_BUILD_VECTOR:
-  case TargetOpcode::G_ICMP:
-  case TargetOpcode::G_SHUFFLE_VECTOR:
-  case TargetOpcode::G_ANYEXT:
-    return true;
-  default:
-    return isTypeFoldingSupported(Opcode);
-  }
-}
-
-static SPIRVType *deduceTypeForGConstant(MachineInstr *I, MachineFunction &MF,
-                                         SPIRVGlobalRegistry *GR,
-                                         MachineIRBuilder &MIB,
-                                         Register ResVReg) {
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const LLT &Ty = MRI.getType(ResVReg);
-  unsigned BitWidth = Ty.getScalarSizeInBits();
-  return GR->getOrCreateSPIRVIntegerType(BitWidth, MIB);
+static SPIRVType *deduceIntTypeFromRes(Register ResVReg, MachineIRBuilder &MIB,
+                                       SPIRVGlobalRegistry *GR) {
+  const LLT &Ty = MIB.getMRI()->getType(ResVReg);
+  return GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
 }
 
 static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
@@ -127,173 +97,87 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
   return true;
 }
 
-static SPIRVType *deduceTypeForGExtractVectorElt(MachineInstr *I,
-                                                 MachineFunction &MF,
-                                                 SPIRVGlobalRegistry *GR,
-                                                 Register ResVReg) {
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  Register VecReg = I->getOperand(1).getReg();
-  if (SPIRVType *VecType = GR->getSPIRVTypeForVReg(VecReg)) {
-    assert(VecType->getOpcode() == SPIRV::OpTypeVector);
-    return GR->getScalarOrVectorComponentType(VecType);
-  }
-
-  // If not handled yet, then check if it is used in a G_BUILD_VECTOR.
-  // If so get the type from there.
-  for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
-    if (Use.getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
-      Register BuildVecResReg = Use.getOperand(0).getReg();
-      if (SPIRVType *BuildVecType = GR->getSPIRVTypeForVReg(BuildVecResReg))
-        return GR->getScalarOrVectorComponentType(BuildVecType);
+static SPIRVType *deduceTypeFromOperand(MachineInstr *I, MachineIRBuilder &MIB,
+                                        SPIRVGlobalRegistry *GR,
+                                        unsigned OpIdx) {
+  Register OpReg = I->getOperand(OpIdx).getReg();
+  if (SPIRVType *OpType = GR->getSPIRVTypeForVReg(OpReg)) {
+    if (SPIRVType *CompType = GR->getScalarOrVectorComponentType(OpType)) {
+      Register ResVReg = I->getOperand(0).getReg();
+      const LLT &ResLLT = MIB.getMRI()->getType(ResVReg);
+      if (ResLLT.isVector())
+        return GR->getOrCreateSPIRVVectorType(CompType, ResLLT.getNumElements(),
+                                              MIB, false);
+      return CompType;
     }
   }
   return nullptr;
 }
 
-static SPIRVType *deduceTypeForGBuildVector(MachineInstr *I,
-                                            MachineFunction &MF,
-                                            SPIRVGlobalRegistry *GR,
-                                            MachineIRBuilder &MIB,
-                                            Register ResVReg) {
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  LLVM_DEBUG(dbgs() << "deduceTypeForGBuildVector: Processing " << *I << "\n");
-  // First check if any of the operands have a type.
-  for (unsigned i = 1; i < I->getNumOperands(); ++i) {
-    if (SPIRVType *OpType =
-            GR->getSPIRVTypeForVReg(I->getOperand(i).getReg())) {
-      const LLT &ResLLT = MRI.getType(ResVReg);
-      LLVM_DEBUG(dbgs() << "deduceTypeForGBuildVector: Found operand type "
-                        << *OpType << ", returning vector type\n");
-      return GR->getOrCreateSPIRVVectorType(OpType, ResLLT.getNumElements(),
-                                            MIB, false);
-    }
-  }
-  // If that did not work, then check the uses.
-  for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
-    if (Use.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
-      Register ExtractResReg = Use.getOperand(0).getReg();
-      if (SPIRVType *ScalarType = GR->getSPIRVTypeForVReg(ExtractResReg)) {
-        const LLT &ResLLT = MRI.getType(ResVReg);
-        LLVM_DEBUG(dbgs() << "deduceTypeForGBuildVector: Found use type "
-                          << *ScalarType << ", returning vector type\n");
-        return GR->getOrCreateSPIRVVectorType(
-            ScalarType, ResLLT.getNumElements(), MIB, false);
-      }
-    }
-  }
-  LLVM_DEBUG(dbgs() << "deduceTypeForGBuildVector: Could not deduce type\n");
-  return nullptr;
-}
-
-static SPIRVType *deduceTypeForGShuffleVector(MachineInstr *I,
-                                              MachineFunction &MF,
-                                              SPIRVGlobalRegistry *GR,
-                                              MachineIRBuilder &MIB,
-                                              Register ResVReg) {
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const LLT &ResLLT = MRI.getType(ResVReg);
-  assert(ResLLT.isVector() && "G_SHUFFLE_VECTOR result must be a vector");
-
-  // The result element type should be the same as the input vector element
-  // types.
-  for (unsigned i = 1; i <= 2; ++i) {
-    Register VReg = I->getOperand(i).getReg();
-    if (auto *VType = GR->getSPIRVTypeForVReg(VReg)) {
-      if (auto *ScalarType = GR->getScalarOrVectorComponentType(VType))
-        return GR->getOrCreateSPIRVVectorType(
-            ScalarType, ResLLT.getNumElements(), MIB, false);
-    }
+static SPIRVType *deduceTypeFromOperands(MachineInstr *I, MachineIRBuilder &MIB,
+                                         SPIRVGlobalRegistry *GR,
+                                         unsigned StartOp, unsigned EndOp) {
+  for (unsigned i = StartOp; i < EndOp; ++i) {
+    if (SPIRVType *Type = deduceTypeFromOperand(I, MIB, GR, i))
+      return Type;
   }
   return nullptr;
 }
 
-static SPIRVType *deduceTypeForGImplicitDef(MachineInstr *I,
-                                            MachineFunction &MF,
-                                            SPIRVGlobalRegistry *GR,
-                                            Register ResVReg) {
+static SPIRVType *deduceTypeForGBuildVectorFromUses(const MachineInstr &Use,
+                                                    SPIRVGlobalRegistry *GR) {
+  Register BuildVecResReg = Use.getOperand(0).getReg();
+  if (SPIRVType *BuildVecType = GR->getSPIRVTypeForVReg(BuildVecResReg))
+    return GR->getScalarOrVectorComponentType(BuildVecType);
+  return nullptr;
+}
+
+static SPIRVType *deduceTypeForGExtractVectorEltFromUses(
+    const MachineInstr &Use, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB) {
+  Register ExtractResReg = Use.getOperand(0).getReg();
+  if (SPIRVType *ScalarType = GR->getSPIRVTypeForVReg(ExtractResReg)) {
+    const LLT &ResLLT = MIB.getMRI()->getType(Use.getOperand(0).getReg());
+    return GR->getOrCreateSPIRVVectorType(ScalarType, ResLLT.getNumElements(),
+                                          MIB, false);
+  }
+  return nullptr;
+}
+
+static SPIRVType *deduceTypeFromUses(Register Reg, MachineFunction &MF,
+                                     SPIRVGlobalRegistry *GR,
+                                     MachineIRBuilder &MIB) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (const MachineInstr &Use : MRI.use_nodbg_instructions(ResVReg)) {
-    SPIRVType *ScalarType = nullptr;
+  for (const MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
+    SPIRVType *ResType = nullptr;
     switch (Use.getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
-    case TargetOpcode::G_UNMERGE_VALUES:
-      // It's possible that the use instruction has not been processed yet.
-      // We should look at the operands of the use to determine the type.
-      for (unsigned i = 1; i < Use.getNumOperands(); ++i) {
-        if (SPIRVType *OpType =
-                GR->getSPIRVTypeForVReg(Use.getOperand(i).getReg()))
-          ScalarType = GR->getScalarOrVectorComponentType(OpType);
-      }
+      ResType = deduceTypeForGBuildVectorFromUses(Use, GR);
       break;
-    case TargetOpcode::G_SHUFFLE_VECTOR:
-      // For G_SHUFFLE_VECTOR, only look at the vector input operands.
-      if (auto *Type = GR->getSPIRVTypeForVReg(Use.getOperand(1).getReg()))
-        ScalarType = GR->getScalarOrVectorComponentType(Type);
-      if (auto *Type = GR->getSPIRVTypeForVReg(Use.getOperand(2).getReg()))
-        ScalarType = GR->getScalarOrVectorComponentType(Type);
+    case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+      ResType = deduceTypeForGExtractVectorEltFromUses(Use, GR, MIB);
       break;
     }
-    if (ScalarType) {
-      const LLT &ResLLT = MRI.getType(ResVReg);
-      if (!ResLLT.isVector())
-        return ScalarType;
-      return GR->getOrCreateSPIRVVectorType(
-          ScalarType, ResLLT.getNumElements(), *I,
-          *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo());
-    }
+    if (ResType)
+      return ResType;
   }
   return nullptr;
 }
 
-static SPIRVType *deduceTypeForGIntrinsic(MachineInstr *I, MachineFunction &MF,
-                                          SPIRVGlobalRegistry *GR,
-                                          MachineIRBuilder &MIB,
-                                          Register ResVReg) {
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (!isSpvIntrinsic(*I, Intrinsic::spv_bitcast))
-    return nullptr;
-
-  for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
-    const unsigned UseOpc = Use.getOpcode();
-    assert(UseOpc == TargetOpcode::G_EXTRACT_VECTOR_ELT ||
-           UseOpc == TargetOpcode::G_SHUFFLE_VECTOR ||
-           UseOpc == TargetOpcode::G_BUILD_VECTOR ||
-           UseOpc == TargetOpcode::G_UNMERGE_VALUES);
-    Register UseResultReg = Use.getOperand(0).getReg();
-    if (SPIRVType *UseResType = GR->getSPIRVTypeForVReg(UseResultReg)) {
-      SPIRVType *ScalarType = GR->getScalarOrVectorComponentType(UseResType);
-      const LLT &BitcastLLT = MRI.getType(ResVReg);
-      if (BitcastLLT.isVector())
-        return GR->getOrCreateSPIRVVectorType(
-            ScalarType, BitcastLLT.getNumElements(), MIB, false);
-      return ScalarType;
-    }
+static SPIRVType *deduceTypeFromOperands(MachineInstr *I,
+                                         SPIRVGlobalRegistry *GR,
+                                         MachineIRBuilder &MIB) {
+  Register ResVReg = I->getOperand(0).getReg();
+  switch (I->getOpcode()) {
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_ANYEXT:
+    return deduceIntTypeFromRes(ResVReg, MIB, GR);
+  case TargetOpcode::G_BUILD_VECTOR:
+    return deduceTypeFromOperands(I, MIB, GR, 1, I->getNumOperands());
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return deduceTypeFromOperands(I, MIB, GR, 1, 3);
+  default:
+    return deduceTypeFromOperand(I, MIB, GR, 1);
   }
-  return nullptr;
-}
-
-static SPIRVType *deduceTypeForGAnyExt(MachineInstr *I, MachineFunction &MF,
-                                       SPIRVGlobalRegistry *GR,
-                                       MachineIRBuilder &MIB,
-                                       Register ResVReg) {
-  // The result type of G_ANYEXT cannot be inferred from its operand.
-  // We use the result register's LLT to determine the correct integer type.
-  const LLT &ResLLT = MIB.getMRI()->getType(ResVReg);
-  if (!ResLLT.isScalar())
-    return nullptr;
-  return GR->getOrCreateSPIRVIntegerType(ResLLT.getSizeInBits(), MIB);
-}
-
-static SPIRVType *deduceTypeForDefault(MachineInstr *I, MachineFunction &MF,
-                                       SPIRVGlobalRegistry *GR) {
-  if (I->getNumDefs() != 1 || I->getNumOperands() <= 1 ||
-      !I->getOperand(1).isReg())
-    return nullptr;
-
-  SPIRVType *OpType = GR->getSPIRVTypeForVReg(I->getOperand(1).getReg());
-  if (!OpType)
-    return nullptr;
-  return OpType;
 }
 
 static bool deduceAndAssignSpirvType(MachineInstr *I, MachineFunction &MF,
@@ -301,50 +185,17 @@ static bool deduceAndAssignSpirvType(MachineInstr *I, MachineFunction &MF,
                                      MachineIRBuilder &MIB) {
   LLVM_DEBUG(dbgs() << "Processing instruction: " << *I);
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const unsigned Opcode = I->getOpcode();
   Register ResVReg = I->getOperand(0).getReg();
-  SPIRVType *ResType = nullptr;
 
-  switch (Opcode) {
-  case TargetOpcode::G_CONSTANT: {
-    ResType = deduceTypeForGConstant(I, MF, GR, MIB, ResVReg);
-    break;
-  }
-  case TargetOpcode::G_UNMERGE_VALUES: {
-    // This one is special as it defines multiple registers.
-    if (deduceAndAssignTypeForGUnmerge(I, MF, GR))
-      return true;
-    break;
-  }
-  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
-    ResType = deduceTypeForGExtractVectorElt(I, MF, GR, ResVReg);
-    break;
-  }
-  case TargetOpcode::G_BUILD_VECTOR: {
-    ResType = deduceTypeForGBuildVector(I, MF, GR, MIB, ResVReg);
-    break;
-  }
-  case TargetOpcode::G_SHUFFLE_VECTOR: {
-    ResType = deduceTypeForGShuffleVector(I, MF, GR, MIB, ResVReg);
-    break;
-  }
-  case TargetOpcode::G_ANYEXT: {
-    ResType = deduceTypeForGAnyExt(I, MF, GR, MIB, ResVReg);
-    break;
-  }
-  case TargetOpcode::G_IMPLICIT_DEF: {
-    ResType = deduceTypeForGImplicitDef(I, MF, GR, ResVReg);
-    break;
-  }
-  case TargetOpcode::G_INTRINSIC:
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
-    ResType = deduceTypeForGIntrinsic(I, MF, GR, MIB, ResVReg);
-    break;
-  }
-  default:
-    ResType = deduceTypeForDefault(I, MF, GR);
-    break;
-  }
+  // G_UNMERGE_VALUES is handled separately because it has multiple definitions,
+  // unlike the other instructions which have a single result register. The main
+  // deduction logic is designed for the single-definition case.
+  if (I->getOpcode() == TargetOpcode::G_UNMERGE_VALUES)
+    return deduceAndAssignTypeForGUnmerge(I, MF, GR);
+
+  SPIRVType *ResType = deduceTypeFromOperands(I, GR, MIB);
+  if (!ResType)
+    ResType = deduceTypeFromUses(ResVReg, MF, GR, MIB);
 
   if (ResType) {
     LLVM_DEBUG(dbgs() << "Assigned type to " << *I << ": " << *ResType << "\n");
@@ -367,8 +218,9 @@ static bool requiresSpirvType(MachineInstr &I, SPIRVGlobalRegistry *GR,
     LLVM_DEBUG(dbgs() << "Instruction does not have a definition.\n");
     return false;
   }
-  if (!mayBeInserted(I.getOpcode())) {
-    LLVM_DEBUG(dbgs() << "Instruction may not be inserted.\n");
+
+  if (!I.isPreISelOpcode()) {
+    LLVM_DEBUG(dbgs() << "Instruction is not a generic instruction.\n");
     return false;
   }
 
