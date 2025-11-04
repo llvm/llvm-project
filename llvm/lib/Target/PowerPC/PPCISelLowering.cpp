@@ -1049,17 +1049,17 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       // so we can only code-gen them with fpexcept.ignore.
       setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f64, Custom);
       setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f32, Custom);
+      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v2f64, Custom);
+      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v4f32, Custom);
 
       setOperationAction(ISD::FFLOOR, MVT::v2f64, Legal);
       setOperationAction(ISD::FCEIL, MVT::v2f64, Legal);
       setOperationAction(ISD::FTRUNC, MVT::v2f64, Legal);
-      setOperationAction(ISD::FNEARBYINT, MVT::v2f64, Legal);
       setOperationAction(ISD::FRINT, MVT::v2f64, Legal);
       setOperationAction(ISD::FROUND, MVT::v2f64, Legal);
       setOperationAction(ISD::FROUND, MVT::f64, Legal);
       setOperationAction(ISD::FRINT, MVT::f64, Legal);
 
-      setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Legal);
       setOperationAction(ISD::FRINT, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::f32, Legal);
