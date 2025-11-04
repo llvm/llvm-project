@@ -231,7 +231,6 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
-#  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/type_identity.h>
@@ -535,21 +534,14 @@ protected:
     return const_iterator(__end_as_link());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void swap(__list_imp& __c)
-#  if _LIBCPP_STD_VER >= 14
-      _NOEXCEPT;
-#  else
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
-#  endif
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void swap(__list_imp& __c) _NOEXCEPT;
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __list_imp& __c) {
     __copy_assign_alloc(
         __c, integral_constant<bool, __node_alloc_traits::propagate_on_container_copy_assignment::value>());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp& __c)
-      _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_move_assignment::value ||
-                 is_nothrow_move_assignable<__node_allocator>::value) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp& __c) _NOEXCEPT {
     __move_assign_alloc(
         __c, integral_constant<bool, __node_alloc_traits::propagate_on_container_move_assignment::value>());
   }
@@ -589,8 +581,7 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __list_imp&, false_type) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp& __c, true_type) _NOEXCEPT {
     __node_alloc_ = std::move(__c.__node_alloc_);
   }
 
@@ -646,13 +637,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __list_imp<_Tp, _Alloc>::clear() _NOEXCEPT {
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
-#  if _LIBCPP_STD_VER >= 14
-    _NOEXCEPT
-#  else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
-#  endif
-{
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c) _NOEXCEPT {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
       __alloc_traits::propagate_on_container_swap::value || this->__node_alloc_ == __c.__node_alloc_,
       "list::swap: Either propagate_on_container_swap must be true"
@@ -744,13 +729,10 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI
   list(initializer_list<value_type> __il, const allocator_type& __a);
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI list(list&& __c)
-      _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value);
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI list(list&& __c) noexcept;
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI list(list&& __c, const __type_identity_t<allocator_type>& __a);
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI list& operator=(list&& __c) noexcept(
-      (__node_alloc_traits::propagate_on_container_move_assignment::value &&
-       is_nothrow_move_assignable<__node_allocator>::value) ||
-      allocator_traits<allocator_type>::is_always_equal::value);
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI list&
+  operator=(list&& __c) noexcept(__is_allocator_aware_container_move_nothrow_v<allocator_type>);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI list& operator=(initializer_list<value_type> __il) {
     assign(__il.begin(), __il.end());
@@ -901,15 +883,7 @@ public:
   }
 #  endif
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void swap(list& __c)
-#  if _LIBCPP_STD_VER >= 14
-      _NOEXCEPT
-#  else
-      _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
-#  endif
-  {
-    __base::swap(__c);
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void swap(list& __c) _NOEXCEPT { __base::swap(__c); }
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __base::clear(); }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void pop_front();
@@ -981,8 +955,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDDEN static iterator
   __sort(iterator __f1, iterator __e2, size_type __n, _Comp& __comp);
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign(list& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value);
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign(list& __c, true_type);
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign(list& __c, false_type);
 };
 
@@ -1111,8 +1084,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 list<_Tp, _Alloc>::list(initializer_list<value_typ
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline list<_Tp, _Alloc>::list(list&& __c) noexcept(
-    is_nothrow_move_constructible<__node_allocator>::value)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline list<_Tp, _Alloc>::list(list&& __c) noexcept
     : __base(std::move(__c.__node_alloc_)) {
   splice(end(), __c);
 }
@@ -1129,10 +1101,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 inline list<_Tp, _Alloc>::list(list&& __c, const _
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(list&& __c) noexcept(
-    (__node_alloc_traits::propagate_on_container_move_assignment::value &&
-     is_nothrow_move_assignable<__node_allocator>::value) ||
-    allocator_traits<allocator_type>::is_always_equal::value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline list<_Tp, _Alloc>&
+list<_Tp, _Alloc>::operator=(list&& __c) noexcept(__is_allocator_aware_container_move_nothrow_v<allocator_type>) {
   __move_assign(__c, integral_constant<bool, __node_alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1147,8 +1117,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void list<_Tp, _Alloc>::__move_assign(list& __c, f
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 void
-list<_Tp, _Alloc>::__move_assign(list& __c, true_type) noexcept(is_nothrow_move_assignable<__node_allocator>::value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void list<_Tp, _Alloc>::__move_assign(list& __c, true_type) {
   clear();
   __base::__move_assign_alloc(__c);
   splice(end(), __c);
@@ -1748,8 +1717,8 @@ operator<=>(const list<_Tp, _Allocator>& __x, const list<_Tp, _Allocator>& __y) 
 #  endif // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline _LIBCPP_HIDE_FROM_ABI void swap(list<_Tp, _Alloc>& __x, list<_Tp, _Alloc>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline
+    _LIBCPP_HIDE_FROM_ABI void swap(list<_Tp, _Alloc>& __x, list<_Tp, _Alloc>& __y) _NOEXCEPT {
   __x.swap(__y);
 }
 

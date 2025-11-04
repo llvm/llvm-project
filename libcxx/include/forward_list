@@ -227,7 +227,6 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_const.h>
-#  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
@@ -498,8 +497,7 @@ protected:
 
 public:
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI
-  __forward_list_base(__forward_list_base&& __x) noexcept(is_nothrow_move_constructible<__node_allocator>::value);
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __forward_list_base(__forward_list_base&& __x) noexcept;
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI
   __forward_list_base(__forward_list_base&& __x, const allocator_type& __a);
 #  endif // _LIBCPP_CXX03_LANG
@@ -514,9 +512,7 @@ protected:
     __copy_assign_alloc(__x, integral_constant<bool, __node_traits::propagate_on_container_copy_assignment::value>());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__forward_list_base& __x)
-      _NOEXCEPT_(!__node_traits::propagate_on_container_move_assignment::value ||
-                 is_nothrow_move_assignable<__node_allocator>::value) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__forward_list_base& __x) _NOEXCEPT {
     __move_assign_alloc(__x, integral_constant<bool, __node_traits::propagate_on_container_move_assignment::value>());
   }
 
@@ -546,12 +542,7 @@ protected:
   }
 
 public:
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void swap(__forward_list_base& __x)
-#  if _LIBCPP_STD_VER >= 14
-      _NOEXCEPT;
-#  else
-      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>);
-#  endif
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void swap(__forward_list_base& __x) _NOEXCEPT;
 
 protected:
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT;
@@ -568,8 +559,8 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void
   __move_assign_alloc(__forward_list_base&, false_type) _NOEXCEPT {}
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__forward_list_base& __x, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void
+  __move_assign_alloc(__forward_list_base& __x, true_type) _NOEXCEPT {
     __alloc_ = std::move(__x.__alloc_);
   }
 };
@@ -578,7 +569,7 @@ private:
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 inline __forward_list_base<_Tp, _Alloc>::__forward_list_base(
-    __forward_list_base&& __x) noexcept(is_nothrow_move_constructible<__node_allocator>::value)
+    __forward_list_base&& __x) noexcept
     : __before_begin_(std::move(__x.__before_begin_)), __alloc_(std::move(__x.__alloc_)) {
   __x.__before_begin()->__next_ = nullptr;
 }
@@ -601,13 +592,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __forward_list_base<_Tp, _Alloc>::~__forward_list_
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline void __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x)
-#  if _LIBCPP_STD_VER >= 14
-    _NOEXCEPT
-#  else
-    _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
-#  endif
-{
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline void __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x) _NOEXCEPT {
   std::__swap_allocator(__alloc_, __x.__alloc_);
   using std::swap;
   swap(__before_begin()->__next_, __x.__before_begin()->__next_);
@@ -698,8 +683,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI forward_list& operator=(const forward_list& __x);
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI
-  forward_list(forward_list&& __x) noexcept(is_nothrow_move_constructible<__base>::value)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI forward_list(forward_list&& __x) noexcept
       : __base(std::move(__x)) {}
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI
   forward_list(forward_list&& __x, const __type_identity_t<allocator_type>& __a);
@@ -708,10 +692,8 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI
   forward_list(initializer_list<value_type> __il, const allocator_type& __a);
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI forward_list& operator=(forward_list&& __x) noexcept(
-      (__node_traits::propagate_on_container_move_assignment::value &&
-       is_nothrow_move_assignable<allocator_type>::value) ||
-      allocator_traits<allocator_type>::is_always_equal::value);
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI forward_list&
+  operator=(forward_list&& __x) noexcept(__is_allocator_aware_container_move_nothrow_v<allocator_type>);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI forward_list& operator=(initializer_list<value_type> __il);
 
@@ -835,15 +817,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __p);
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __f, const_iterator __l);
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void swap(forward_list& __x)
-#  if _LIBCPP_STD_VER >= 14
-      _NOEXCEPT
-#  else
-      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
-#  endif
-  {
-    __base::swap(__x);
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void swap(forward_list& __x) _NOEXCEPT { __base::swap(__x); }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void resize(size_type __n);
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void resize(size_type __n, const value_type& __v);
@@ -882,8 +856,7 @@ public:
 
 private:
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign(forward_list& __x, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign(forward_list& __x, true_type) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __move_assign(forward_list& __x, false_type);
 #  endif // _LIBCPP_CXX03_LANG
 
@@ -1016,8 +989,7 @@ forward_list<_Tp, _Alloc>::forward_list(initializer_list<value_type> __il, const
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::__move_assign(forward_list& __x, true_type)
-    _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::__move_assign(forward_list& __x, true_type) _NOEXCEPT {
   clear();
   __base::__move_assign_alloc(__x);
   __base::__before_begin()->__next_ = __x.__before_begin()->__next_;
@@ -1035,11 +1007,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::__move_assign(forw
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline forward_list<_Tp, _Alloc>&
-forward_list<_Tp, _Alloc>::operator=(forward_list&& __x) noexcept(
-    (__node_traits::propagate_on_container_move_assignment::value &&
-     is_nothrow_move_assignable<allocator_type>::value) ||
-    allocator_traits<allocator_type>::is_always_equal::value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline forward_list<_Tp, _Alloc>& forward_list<_Tp, _Alloc>::operator=(
+    forward_list&& __x) noexcept(__is_allocator_aware_container_move_nothrow_v<allocator_type>) {
   __move_assign(__x, integral_constant<bool, __node_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1556,8 +1525,8 @@ operator<=>(const forward_list<_Tp, _Allocator>& __x, const forward_list<_Tp, _A
 #  endif // #if _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline _LIBCPP_HIDE_FROM_ABI void
-swap(forward_list<_Tp, _Alloc>& __x, forward_list<_Tp, _Alloc>& __y) _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline
+    _LIBCPP_HIDE_FROM_ABI void swap(forward_list<_Tp, _Alloc>& __x, forward_list<_Tp, _Alloc>& __y) _NOEXCEPT {
   __x.swap(__y);
 }
 

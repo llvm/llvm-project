@@ -51,7 +51,6 @@
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
-#include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
@@ -132,14 +131,8 @@ public:
   //
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector()
       _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value) {}
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(const allocator_type& __a)
-#if _LIBCPP_STD_VER <= 14
-      _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
-#else
-      noexcept
-#endif
-      : __alloc_(__a) {
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20
+  _LIBCPP_HIDE_FROM_ABI explicit vector(const allocator_type& __a) _NOEXCEPT : __alloc_(__a) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
@@ -286,17 +279,11 @@ public:
   }
 #endif // !_LIBCPP_CXX03_LANG
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(vector&& __x)
-#if _LIBCPP_STD_VER >= 17
-      noexcept;
-#else
-      _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
-#endif
-
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(vector&& __x) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(vector&& __x, const __type_identity_t<allocator_type>& __a);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(vector&& __x)
-      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
+      _NOEXCEPT_(__is_allocator_aware_container_move_nothrow_v<allocator_type>) {
     __move_assign(__x, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
     return *this;
   }
@@ -553,12 +540,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz, const_reference __x);
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(vector&)
-#if _LIBCPP_STD_VER >= 14
-      _NOEXCEPT;
-#else
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
-#endif
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(vector&) _NOEXCEPT;
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const;
 
@@ -697,8 +679,7 @@ private:
   __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __move_range(pointer __from_s, pointer __from_e, pointer __to);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, true_type) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, false_type)
       _NOEXCEPT_(__alloc_traits::is_always_equal::value);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __destruct_at_end(pointer __new_last) _NOEXCEPT {
@@ -771,9 +752,7 @@ private:
     __copy_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_copy_assignment::value>());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector& __c)
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_move_assignment::value ||
-                 is_nothrow_move_assignable<allocator_type>::value) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector& __c) _NOEXCEPT {
     __move_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   }
 
@@ -793,8 +772,7 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector&, false_type) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector& __c, true_type) _NOEXCEPT {
     this->__alloc_ = std::move(__c.__alloc_);
   }
 
@@ -964,12 +942,7 @@ vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocator>::vector(vector&& __x)
-#if _LIBCPP_STD_VER >= 17
-    noexcept
-#else
-    _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-#endif
+_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocator>::vector(vector&& __x) _NOEXCEPT
     : __alloc_(std::move(__x.__alloc_)) {
   this->__begin_ = __x.__begin_;
   this->__end_   = __x.__end_;
@@ -1003,8 +976,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector& __c, true_type)
-    _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector& __c, true_type) _NOEXCEPT {
   __vdeallocate();
   __move_assign_alloc(__c); // this can throw
   this->__begin_ = __c.__begin_;
@@ -1396,13 +1368,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __n
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::swap(vector& __x)
-#if _LIBCPP_STD_VER >= 14
-    _NOEXCEPT
-#else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
-#endif
-{
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::swap(vector& __x) _NOEXCEPT {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
       __alloc_traits::propagate_on_container_swap::value || this->__alloc_ == __x.__alloc_,
       "vector::swap: Either propagate_on_container_swap must be true"
