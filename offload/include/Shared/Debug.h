@@ -241,8 +241,8 @@ inline uint32_t getDebugLevel() {
 // LIBOFFLOAD_DEBUG=init:3,mapping:2 (Print messages of type "init" of level 3
 //                                   or lower and messages of type "mapping" of
 //                                   level 2 or lower)
-// LIBOFFLOAD_DEBUG=omptarget:4, init (Print messages from component "omptarget" of
-//                                   level 4 or lower and messages of type
+// LIBOFFLOAD_DEBUG=omptarget:4, init (Print messages from component "omptarget" 
+//                                   of level 4 or lower and messages of type
 //                                   "init" of level 1 or lower)
 //
 // For very specific cases where more control is needed, use OFFLOAD_DEBUG_RAW
