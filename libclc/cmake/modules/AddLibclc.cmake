@@ -92,7 +92,8 @@ function(link_bc)
     ${ARGN}
   )
 
-  if( ARG_INTERNALIZE )
+  string( FIND "${ARG_INPUTS}" "/generic/" has_generic )
+  if( ARG_INTERNALIZE OR has_generic LESS 0 )
     set( inputs_with_flag ${ARG_INPUTS} )
   else()
     # Add the --override flag for non-generic bitcode files so that their
