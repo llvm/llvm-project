@@ -466,15 +466,16 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       }
       if (iter->second.empty())
         continue;
-      parent = iter->second.back();
 
       // For structs, if the new fields come after the already added ones
       // without overlap, go back to the root struct.
-      if (parent != &record && iter->first <= offset &&
-          record.kind == Member::Struct && is_last_end_offset(iter))
+      if (iter->first <= offset && record.kind == Member::Struct &&
+          is_last_end_offset(iter))
         parent = &record;
-      else
+      else {
+        parent = iter->second.back();
         iter->second.pop_back();
+      }
     }
     // If it's a field, then the field is inside a union, so we can safely
     // increase its size by converting it to a struct to hold multiple fields.
