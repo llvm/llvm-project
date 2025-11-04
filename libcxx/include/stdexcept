@@ -57,9 +57,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #  ifndef _LIBCPP_ABI_VCRUNTIME
 class _LIBCPP_HIDDEN __libcpp_refstring {
-  const char* __imp_;
-
-  bool __uses_refcount() const;
+  struct __rep;
+  __rep* __imp_;
 
 public:
   explicit __libcpp_refstring(const char* __msg);
@@ -67,7 +66,7 @@ public:
   __libcpp_refstring& operator=(const __libcpp_refstring& __s) _NOEXCEPT;
   ~__libcpp_refstring();
 
-  _LIBCPP_HIDE_FROM_ABI const char* c_str() const _NOEXCEPT { return __imp_; }
+  _LIBCPP_HIDE_FROM_ABI const char* c_str() const _NOEXCEPT;
 };
 #  endif // !_LIBCPP_ABI_VCRUNTIME
 
