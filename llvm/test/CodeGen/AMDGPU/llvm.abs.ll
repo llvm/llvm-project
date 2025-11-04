@@ -72,11 +72,13 @@ define amdgpu_cs i16 @abs_sgpr_i16(i16 inreg %arg) {
 }
 
 define amdgpu_ps i16 @abs_sgpr_i16_neg(i16 inreg %arg) {
+; COM: Suboptimal code generation on Tahiti.
 ; SDAG6-LABEL: abs_sgpr_i16_neg:
 ; SDAG6:       ; %bb.0:
-; SDAG6-NEXT:    s_sext_i32_i16 s0, s0
-; SDAG6-NEXT:    s_abs_i32 s0, s0
-; SDAG6-NEXT:    s_sub_i32 s0, 0, s0
+; SDAG6-NEXT:    s_sext_i32_i16 s1, s0
+; SDAG6-NEXT:    s_ashr_i32 s1, s1, 15
+; SDAG6-NEXT:    s_xor_b32 s0, s0, s1
+; SDAG6-NEXT:    s_sub_i32 s0, s1, s0
 ; SDAG6-NEXT:    ; return to shader part epilog
 ;
 ; SDAG8-LABEL: abs_sgpr_i16_neg:
