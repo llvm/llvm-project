@@ -1,7 +1,7 @@
-// RUN: %clangxx %gmlt -fsanitize=alignment %s -o %t
+// RUN: %clangxx %gmlt -std=c++17 -m64 -fsanitize=alignment %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-// UNSUPPORTED: i386
+// UNSUPPORTED: i386, i686
 // UNSUPPORTED: armv7l
 
 // These sanitizers already overload the new operator so won't compile this test
@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <cstddef>
 
 void *operator new(std::size_t count) {
   constexpr const size_t offset = 8;

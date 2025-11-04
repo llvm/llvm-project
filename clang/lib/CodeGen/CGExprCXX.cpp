@@ -17,6 +17,7 @@
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
+#include "clang/AST/CharUnits.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1756,12 +1757,15 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // return misaligned memory from a replaced operator new without knowing
   // about default alignment.
   TypeCheckKind checkKind = CodeGenFunction::TCK_ConstructorCall;
+  CharUnits checkAlignment = result.getAlignment();
   const TargetInfo &TI = getContext().getTargetInfo();
   unsigned DefaultTargetAlignment = TI.getNewAlign() / TI.getCharWidth();
   if (SanOpts.has(SanitizerKind::Alignment) &&
       (DefaultTargetAlignment >
-       CGM.getContext().getTypeAlignInChars(allocType).getQuantity()))
+       CGM.getContext().getTypeAlignInChars(allocType).getQuantity())){
     checkKind = CodeGenFunction::TCK_ConstructorCallMinimumAlign;
+    checkAlignment = CharUnits::fromQuantity(DefaultTargetAlignment);
+  }
 
   // Emit sanitizer checks for pointer value now, so that in the case of an
   // array it was checked only once and not at each constructor call. We may
@@ -1772,7 +1776,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   SkippedChecks.set(SanitizerKind::Null, nullCheck);
   EmitTypeCheck(
       checkKind, E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-      result, allocType, result.getAlignment(), SkippedChecks, numElements);
+      result, allocType, checkAlignment, SkippedChecks, numElements);
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
