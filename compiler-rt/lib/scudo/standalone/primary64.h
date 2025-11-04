@@ -1146,17 +1146,27 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str, uptr ClassId,
         BytesInFreeList - Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
   }
   const uptr TotalChunks = Region->MemMapInfo.AllocatedUser / BlockSize;
+  const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
+  const u64 IntervalNs = static_cast<u64>(IntervalMs) * 1000000;
+  const u64 CurTimeNs = getMonotonicTime();
+  const u64 DiffSinceLastReleaseNs =
+      CurTimeNs - Region->ReleaseInfo.LastReleaseAtNs;
+
   Str->append(
       "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
       "inuse: %6zu total: %6zu releases attempted: %6zu last "
       "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
-      "(0x%zx)\n",
+      "(0x%zx) ",
       Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
       Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
       Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
       Region->ReleaseInfo.NumReleasesAttempted,
       Region->ReleaseInfo.LastReleasedBytes >> 10, RegionPushedBytesDelta >> 10,
       Region->RegionBeg, getRegionBaseByClassId(ClassId));
+  if (DiffSinceLastReleaseNs > IntervalNs)
+    Str->append("Last page release > ReleaseToOsInterval\n");
+  else
+    Str->append("Last page release <= ReleaseToOsInterval\n");
 }
 
 template <typename Config>
