@@ -250,6 +250,8 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptr23__do_decrement_refcountEPv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptr23__do_increment_refcountEPv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptr31__from_native_exception_pointerEPv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptrC1ERKS_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptrC2ERKS_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
