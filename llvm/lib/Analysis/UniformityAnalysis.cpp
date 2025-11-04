@@ -113,7 +113,7 @@ template <>
 bool GenericUniformityAnalysisImpl<SSAContext>::isOperandUniform(
     const Instruction &I, InstructionUniformity IU) const {
   switch (IU) {
-  case InstructionUniformity::EitherOfFirstTwoOp:
+  case InstructionUniformity::AnyOfFirstTwoUseOp:
     return !isDivergentUse(I.getOperandUse(0)) ||
            !isDivergentUse(I.getOperandUse(1));
   default:
