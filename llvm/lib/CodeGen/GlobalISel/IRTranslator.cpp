@@ -294,6 +294,10 @@ void IRTranslator::addMachineCFGPred(CFGEdge Edge, MachineBasicBlock *NewPred) {
   MachinePreds[Edge].push_back(NewPred);
 }
 
+static bool targetSupportsBF16Type(const MachineFunction *MF) {
+  return MF->getTarget().getTargetTriple().isSPIRV();
+}
+
 static bool containsBF16Type(const User &U) {
   // BF16 cannot currently be represented by LLT, to avoid miscompiles we
   // prevent any instructions using them. FIXME: This can be removed once LLT
@@ -306,7 +310,7 @@ static bool containsBF16Type(const User &U) {
 
 bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
                                      MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   // Get or create a virtual register for each value.
@@ -328,7 +332,7 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
 
 bool IRTranslator::translateUnaryOp(unsigned Opcode, const User &U,
                                     MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
@@ -348,7 +352,7 @@ bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
 
 bool IRTranslator::translateCompare(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   auto *CI = cast<CmpInst>(&U);
@@ -1569,7 +1573,7 @@ bool IRTranslator::translateBitCast(const User &U,
 
 bool IRTranslator::translateCast(unsigned Opcode, const User &U,
                                  MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   uint32_t Flags = 0;
@@ -2688,7 +2692,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
 bool IRTranslator::translateInlineAsm(const CallBase &CB,
                                       MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(CB))
+  if (containsBF16Type(CB) && !targetSupportsBF16Type(MF))
     return false;
 
   const InlineAsmLowering *ALI = MF->getSubtarget().getInlineAsmLowering();
@@ -2779,7 +2783,7 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
 }
 
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
-  if (!MF->getTarget().getTargetTriple().isSPIRV() && containsBF16Type(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   const CallInst &CI = cast<CallInst>(U);
