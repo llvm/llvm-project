@@ -1299,6 +1299,10 @@ bool PreRARematStage::initGCNSchedStage() {
 
   if (!GCNSchedStage::initGCNSchedStage() || DAG.Regions.size() <= 1)
     return false;
+  if (DAG.MinOccupancy >= MFI.getMaxWavesPerEU() &&
+      !MF.getFunction().hasFnAttribute("amdgpu-num-sgpr") &&
+      !MF.getFunction().hasFnAttribute("amdgpu-num-vgpr"))
+    return false;
 
   // Maps all MIs (except lone terminators, which are not part of any region) to
   // their parent region. Non-lone terminators are considered part of the region
