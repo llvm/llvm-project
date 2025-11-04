@@ -303,7 +303,8 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   ///
   /// Example walkthrough for linearId=22, sgLayout=[2,4,4], order=[2,1,0]:
   ///
-  /// Initial: remaining=22, result=[?,?,?]
+  /// Initial: remaining=22, dimIdx = order[i], dimSize = sgLayout[dimIdx],
+  /// result=[?,?,?]
   ///
   /// i=0 (process columns, dimIdx=2, dimSize=4):
   ///   result[2] = 22 % 4 = 2  (column coordinate)
