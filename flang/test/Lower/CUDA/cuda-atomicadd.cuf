@@ -1,0 +1,19 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran atmoicadd functions available cudadevice module
+
+attributes(global) subroutine atomicaddvector_r2()
+  real(2), device :: a(2), tmp1(2), tmp2(2)
+  tmp1 = atomicAddVector(a, tmp2)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPatomicaddvector_r2() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<2xf16>
+
+attributes(global) subroutine atomicaddvector_r4()
+  real(4), device :: a(2), tmp1(2), tmp2(2)
+  tmp1 = atomicAddVector(a, tmp2)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPatomicaddvector_r4() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<2xf32>
