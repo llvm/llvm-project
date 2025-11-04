@@ -2097,6 +2097,13 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     Wait.DsCnt = 0;
   }
 
+  // Since the translation for VMEM addresses occur in-order, we can skip the
+  // XCnt if the current instruction is of VMEM type and has a memory
+  // dependency with another VMEM instruction in flight.
+  if (isVmemAccess(MI)) {
+    Wait.XCnt = ~0u;
+  }
+
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
 
@@ -2166,13 +2173,6 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n"
                       << "Update Instr: " << *It);
-  }
-
-  // Since the translation for VMEM addresses occur in-order, we can skip the
-  // XCnt if the current instruction is of VMEM type and has a memory
-  // dependency with another VMEM instruction in flight.
-  if (Wait.XCnt != ~0u && isVmemAccess(*It)) {
-    Wait.XCnt = ~0u;
   }
 
   if (WCG->createNewWaitcnt(Block, It, Wait))
