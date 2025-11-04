@@ -4,6 +4,26 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize32 -verify-machineinstrs -run-pass=prologepilog %s -o - | FileCheck -check-prefixes=FLATSCRW32 %s
 
 
+--- |
+  define void @v_add_co_u32_e64__inline_imm__fi_offset0() #0 { unreachable }
+  define void @v_add_co_u32_e64__inline_imm__fi_offset0__live_vcc() #0 { unreachable }
+  define void @v_add_co_u32_e64__inline_imm__fi_offset0__clamp() #0 { unreachable }
+  define void @v_add_co_u32_e64__inline_imm__fi_offset0__live_vcc_clamp() #0 { unreachable }
+  define void @v_add_co_u32_e64__fi_literal_offset__sgpr() #0 { unreachable }
+  define void @v_add_co_u32_e64__fi_literal_offset__sgpr_clamp() #0 { unreachable }
+  define void @v_add_co_u32_e64__fi_literal_offset__vgpr() #0 { unreachable }
+  define void @v_add_co_u32_e64__fi_literal_offset__vgpr__clamp() #0 { unreachable }
+  define void @v_add_co_u32_e64__fi_literal_offset__vgpr__live_vcc() #0 { unreachable }
+  define void @v_add_co_u32_e64__inline_imm__fi_offset_literal__kernel__clamp() #0 { unreachable }
+  define void @v_add_co_u32_e64__fi_literal_offset__sgpr__scavenge_spill_required() #0 { unreachable }
+  define void @v_add_co_u32_e64__kernel_fi_offset0__other_vgpr_live_after() #0 { unreachable }
+  define void @v_add_co_u32_e64__kernel__other_vgpr_live_after__fi_offset0() #0 { unreachable }
+  define void @v_add_co_u32_e64__identity_vgpr__fi_offset0__kernel() #0 { unreachable }
+  define void @v_add_co_u32_e64__fi_offset0__identity_vgpr__kernel() #0 { unreachable }
+  define void @v_add_co_u32_e64__identity_vgpr__fi_offset32__kernel() #0 { unreachable }
+  attributes #0 = { nounwind }
+...
+---
 ---
 name: v_add_co_u32_e64__inline_imm__fi_offset0
 tracksRegLiveness: true
@@ -274,15 +294,11 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; MUBUFW32-LABEL: name: v_add_co_u32_e64__inline_imm__fi_offset_literal__kernel__clamp
-    ; MUBUFW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; MUBUFW32-NEXT: renamable $vgpr0, dead $vcc_lo = V_ADD_CO_U32_e64 84, 0, 1, implicit $exec
+    ; MUBUFW32: renamable $vgpr0, dead $vcc_lo = V_ADD_CO_U32_e64 84, 0, 1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_co_u32_e64__inline_imm__fi_offset_literal__kernel__clamp
-    ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0, dead $vcc_lo = V_ADD_CO_U32_e64 84, 0, 1, implicit $exec
+    ; FLATSCRW32: renamable $vgpr0, dead $vcc_lo = V_ADD_CO_U32_e64 84, 0, 1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0, dead $vcc_lo = V_ADD_CO_U32_e64 12, %stack.1, 1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -341,16 +357,12 @@ body:             |
     ; MUBUFW32-LABEL: name: v_add_co_u32_e64__kernel_fi_offset0__other_vgpr_live_after
     ; MUBUFW32: liveins: $vgpr1
     ; MUBUFW32-NEXT: {{  $}}
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: renamable $vgpr0, renamable $sgpr8 = V_ADD_CO_U32_e64 $vgpr1, 0, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; FLATSCRW32-LABEL: name: v_add_co_u32_e64__kernel_fi_offset0__other_vgpr_live_after
     ; FLATSCRW32: liveins: $vgpr1
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; FLATSCRW32-NEXT: renamable $vgpr0, renamable $sgpr8 = V_ADD_CO_U32_e64 $vgpr1, 0, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     renamable $vgpr0, renamable $sgpr8 = V_ADD_CO_U32_e64 renamable $vgpr1, %stack.0, 0, implicit $exec
@@ -374,16 +386,12 @@ body:             |
     ; MUBUFW32-LABEL: name: v_add_co_u32_e64__kernel__other_vgpr_live_after__fi_offset0
     ; MUBUFW32: liveins: $vgpr1
     ; MUBUFW32-NEXT: {{  $}}
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: renamable $vgpr0, renamable $sgpr8 = V_ADD_CO_U32_e64 0, $vgpr1, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; FLATSCRW32-LABEL: name: v_add_co_u32_e64__kernel__other_vgpr_live_after__fi_offset0
     ; FLATSCRW32: liveins: $vgpr1
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; FLATSCRW32-NEXT: renamable $vgpr0, renamable $sgpr8 = V_ADD_CO_U32_e64 0, $vgpr1, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     renamable $vgpr0, renamable $sgpr8 = V_ADD_CO_U32_e64 %stack.0, renamable $vgpr1, 0, implicit $exec
@@ -408,15 +416,11 @@ body:             |
     ; MUBUFW32-LABEL: name: v_add_co_u32_e64__identity_vgpr__fi_offset0__kernel
     ; MUBUFW32: liveins: $vgpr0
     ; MUBUFW32-NEXT: {{  $}}
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_co_u32_e64__identity_vgpr__fi_offset0__kernel
     ; FLATSCRW32: liveins: $vgpr0
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0, renamable dead $vcc_lo = V_ADD_CO_U32_e64 $vgpr0, %stack.0, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -440,15 +444,11 @@ body:             |
     ; MUBUFW32-LABEL: name: v_add_co_u32_e64__fi_offset0__identity_vgpr__kernel
     ; MUBUFW32: liveins: $vgpr0
     ; MUBUFW32-NEXT: {{  $}}
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_co_u32_e64__fi_offset0__identity_vgpr__kernel
     ; FLATSCRW32: liveins: $vgpr0
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0, renamable dead $vcc_lo = V_ADD_CO_U32_e64 %stack.0, $vgpr0, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -473,16 +473,12 @@ body:             |
     ; MUBUFW32-LABEL: name: v_add_co_u32_e64__identity_vgpr__fi_offset32__kernel
     ; MUBUFW32: liveins: $vgpr0
     ; MUBUFW32-NEXT: {{  $}}
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: renamable $vgpr0, dead renamable $vcc_lo = V_ADD_CO_U32_e64 $vgpr0, 32, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_co_u32_e64__identity_vgpr__fi_offset32__kernel
     ; FLATSCRW32: liveins: $vgpr0
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; FLATSCRW32-NEXT: renamable $vgpr0, dead renamable $vcc_lo = V_ADD_CO_U32_e64 $vgpr0, 32, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0, renamable dead $vcc_lo = V_ADD_CO_U32_e64 $vgpr0, %stack.1, 0, implicit $exec

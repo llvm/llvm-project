@@ -45,15 +45,6 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
-static bool needsFrameMoves(const MachineFunction &MF) {
-  // FIXME: There are some places in the compiler which are sensitive to the CFI
-  // pseudos and so using MachineFunction::needsFrameMoves has the unintended
-  // effect of making enabling debug info affect codegen. Once we have
-  // identified and fixed those cases this should be replaced with
-  // MF.needsFrameMoves()
-  return true;
-}
-
 // Find a scratch register that we can use in the prologue. We avoid using
 // callee-save registers since they may appear to be free when this is called
 // from canUseAsPrologue (during shrink wrapping), but then no longer be free
@@ -635,7 +626,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   DebugLoc DL;
   MachineBasicBlock::iterator I = MBB.begin();
 
-  if (needsFrameMoves(MF)) {
+  if (MF.needsFrameMoves()) {
     // On entry the SP/FP are not set up, so we need to define the CFA in terms
     // of a literal location expression.
     static const char CFAEncodedInstUserOpsArr[] = {
