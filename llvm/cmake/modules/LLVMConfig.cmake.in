@@ -22,7 +22,11 @@ set(LLVM_COMMON_DEPENDS @LLVM_COMMON_DEPENDS@)
 
 set(LLVM_AVAILABLE_LIBS @LLVM_AVAILABLE_LIBS@)
 
-@LLVM_CONFIG_LINK_LLVM_DYLIB@
+# By only exporting the setting if it was not yet defined, out-of-tree
+# clients get the correct default, but may still choose if they can.
+if(@LLVM_LINK_LLVM_DYLIB@ AND NOT DEFINED LLVM_LINK_LLVM_DYLIB)
+  set(LLVM_LINK_LLVM_DYLIB @LLVM_LINK_LLVM_DYLIB@)
+endif()
 
 set(LLVM_DYLIB_COMPONENTS @LLVM_DYLIB_COMPONENTS@)
 
