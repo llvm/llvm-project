@@ -53369,8 +53369,7 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
   //
   // BitInsert: (X & ~(1 << ShAmt)) | (InsertBit << ShAmt)
   SDValue SrcVal, InsertBit, ShAmt;
-  if (!StoredVal.hasOneUse() ||
-      !(sd_match(StoredVal, m_And(m_Value(SrcVal),
+  if (!(sd_match(StoredVal, m_And(m_Value(SrcVal),
                                   m_Not(m_Shl(m_One(), m_Value(ShAmt))))) ||
         sd_match(StoredVal,
                  m_Or(m_Value(SrcVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
@@ -53441,8 +53440,20 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
     Res = DAG.getNode(StoredVal.getOpcode(), DL, MVT::i32, X, Mask);
   }
 
-  return DAG.getStore(St->getChain(), DL, Res, NewPtr, St->getPointerInfo(),
-                      Align(), St->getMemOperand()->getFlags());
+  SDValue NewStore =
+      DAG.getStore(St->getChain(), DL, Res, NewPtr, St->getPointerInfo(),
+                   Align(), St->getMemOperand()->getFlags());
+
+  // If there are other uses of StoredVal, replace with a new load of the
+  // whole (updated) value and ensure that any chained dependencies on the
+  // original store are updated to come AFTER the new load.
+  if (!StoredVal.hasOneUse()) {
+    SDValue NewLoad =
+        DAG.getLoad(VT, DL, NewStore, Ld->getBasePtr(), Ld->getMemOperand());
+    DAG.ReplaceAllUsesWith(StoredVal, NewLoad);
+    DAG.ReplaceAllUsesWith(SDValue(St, 0), NewLoad.getValue(1));
+  }
+  return NewStore;
 }
 
 static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
