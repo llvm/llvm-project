@@ -111,6 +111,8 @@ Code completion
   allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting 
   macros. ``ExactPrefix`` is the default, which retains previous 
   behavior of suggesting macros which match the prefix exactly.  
+- Now also provides include files without extension, if they are in a directory
+  only called ``include``.
 
 Code actions
 ^^^^^^^^^^^^
