@@ -4446,7 +4446,23 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
 void Parser::ParseAnnotationSpecifier(ParsedAttributes &Attrs,
                                       SourceLocation *EndLoc)
 {
-  // TODO
+  assert(Tok.is(tok::equal) && "not an annotation");
+  SourceLocation EqLoc = ConsumeToken();
+
+  ExprResult AnnotExpr = ParseConstantExpression();
+  if (AnnotExpr.isInvalid() || AnnotExpr.get()->containsErrors())
+    return;
+
+  IdentifierTable &IT = Actions.PP.getIdentifierTable();
+  IdentifierInfo &Placeholder = IT.get("__annotation_placeholder");
+
+  ArgsVector ArgExprs;
+  ArgExprs.push_back(AnnotExpr.get());
+  Attrs.addNew(&Placeholder, EqLoc, {}, ArgExprs.data(), 1,
+               ParsedAttr::Form::Annotation());
+
+  if (EndLoc)
+    *EndLoc = AnnotExpr.get()->getEndLoc();
 }
 
 bool Parser::ParseCXXAssumeAttributeArg(
@@ -4712,7 +4728,10 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     SourceLocation ScopeLoc, AttrLoc;
     IdentifierInfo *ScopeName = nullptr, *AttrName = nullptr;
 
-    // '=' token marks the beginning of an annotation
+    // A '=' token marks the beginning of an annotation
+    //  - We must not be in C++ < 26
+    //  - We must not have seen 'using X::'
+    //  - We must not mix with an attribute
     if (Tok.is(tok::equal)) {
       if (!getLangOpts().CPlusPlus26) {
         Diag(Tok.getLocation(), diag::warn_cxx26_compat_annotation);
@@ -4721,6 +4740,11 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       }
       if (CommonScopeName) {
         Diag(Tok.getLocation(), diag::err_annotation_with_using);
+        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
+        continue;
+      }
+      if (hasAttribute) {
+        Diag(Tok.getLocation(), diag::err_mixed_attributes_and_annotations);
         SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
         continue;
       }

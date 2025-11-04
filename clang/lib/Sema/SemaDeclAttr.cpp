@@ -6409,6 +6409,59 @@ static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
   D->addAttr(RCA);
 }
 
+static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  Expr *CE = AL.getArgAsExpr(0);
+  if (CE->isLValue()) {
+    if (CE->getType()->isRecordType()) {
+      InitializedEntity Entity =
+          InitializedEntity::InitializeTemporary(
+              CE->getType().getUnqualifiedType());
+      InitializationKind Kind =
+          InitializationKind::CreateCopy(CE->getExprLoc(), SourceLocation());
+      InitializationSequence Seq(S, Entity, Kind, CE);
+
+      ExprResult CopyResult = Seq.Perform(S, Entity, Kind, CE);
+      if (CopyResult.isInvalid())
+        return;
+
+      CE = CopyResult.get();
+    } else {
+      ExprResult RVExprResult = S.DefaultLvalueConversion(AL.getArgAsExpr(0));
+      assert(!RVExprResult.isInvalid() && RVExprResult.get());
+
+      CE = RVExprResult.get();
+    }
+  }
+
+  Expr::EvalResult Result;
+
+  SmallVector<PartialDiagnosticAt, 4> Notes;
+  Result.Diag = &Notes;
+
+  if (!CE->isValueDependent()) {
+    ConstantExprKind CEKind = (CE->getType()->isClassType() ?
+                               ConstantExprKind::ClassTemplateArgument :
+                               ConstantExprKind::NonClassTemplateArgument);
+
+    if (!CE->EvaluateAsConstantExpr(Result, S.Context, CEKind)) {
+      S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
+          << "C++26 annotation" << 4 << CE->getSourceRange();
+      for (auto P : Notes)
+        S.Diag(P.first, P.second);
+
+      return;
+    } else if (!CE->getType()->isStructuralType()) {
+      S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
+          << "C++26 annotation" << 5 << CE->getSourceRange();
+      return;
+    }
+  }
+  auto *Annot = CXX26AnnotationAttr::Create(S.Context, CE, AL);
+  Annot->setValue(Result.Val);
+  Annot->setEqLoc(AL.getLoc());
+  D->addAttr(Annot);
+}
+
 static void handleDeprecatedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *NSD = dyn_cast<NamespaceDecl>(D)) {
     if (NSD->isAnonymousNamespace()) {
@@ -7178,6 +7231,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Constructor:
       handleConstructorAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_CXX26Annotation:
+    handleCxx26AnnotationAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Deprecated:
     handleDeprecatedAttr(S, D, AL);
