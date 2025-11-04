@@ -338,46 +338,53 @@ static mlir::AffineExpr getAffineMapDim(ArrayAttr indexingMaps,
   return nullptr;
 }
 
-// Check if `expr` is either:
-// - a dimension expr alone (implying *1), or
-// - a multiplication of dimension expr by constant.
-static bool isDimTimesConstantOrDimOnly(AffineExpr expr, AffineExpr &dim,
-                                        int64_t &constantValue) {
-  if (auto dExpr = dyn_cast<AffineDimExpr>(expr)) {
-    dim = dExpr;
-    constantValue = 1;
-    return true;
-  }
+/// Check if `expr` is either:
+/// - a dimension expr alone (implying multiplication by 1), or
+/// - a multiplication of dimension expr by any positive constant != 1
+/// In both cases we will capture the dimension expression into `dim` and
+/// return the constant multiplier. Returns -1 in case of a match failure.
+static int64_t isDimTimesConstantOrDimOnly(AffineExpr expr, AffineExpr &dim) {
+  if ((dim = dyn_cast<AffineDimExpr>(expr)))
+    return 1;
 
   auto mulExpr = dyn_cast<AffineBinaryOpExpr>(expr);
   if (!mulExpr || mulExpr.getKind() != AffineExprKind::Mul)
-    return false;
+    return -1;
 
   AffineExpr lhs = mulExpr.getLHS();
   AffineExpr rhs = mulExpr.getRHS();
 
-  if (auto dExpr = dyn_cast<AffineDimExpr>(lhs)) {
-    if (auto cst = dyn_cast<AffineConstantExpr>(rhs)) {
-      dim = dExpr;
-      constantValue = cst.getValue();
-      return true;
-    }
-  }
-  if (auto cst = dyn_cast<AffineConstantExpr>(lhs)) {
-    if (auto dExpr = dyn_cast<AffineDimExpr>(rhs)) {
-      dim = dExpr;
-      constantValue = cst.getValue();
-      return true;
-    }
-  }
-  return false;
+  AffineConstantExpr cst = nullptr;
+  if (((dim = dyn_cast<AffineDimExpr>(lhs)) &&
+       (cst = dyn_cast<AffineConstantExpr>(rhs))) ||
+      ((dim = dyn_cast<AffineDimExpr>(rhs)) &&
+       (cst = dyn_cast<AffineConstantExpr>(lhs))))
+    return cst.getValue();
+  return -1;
 }
 
-/// Given an array of AffineMaps `indexingMaps` verify the following :-
+/// Given an array of AffineMaps `indexingMaps` verify the following
+/// commutatively:-
 ///   indexingMaps[0].getResult(iDim) ==
-///         indexingMaps[1].getResult(fDim) * <CST_1> +
-///         indexingMaps[n-1].getResult(oDim) * <CST_2>
-///  where, CST_1 and CST_2 can be any constant.
+///         indexingMaps[1].getResult(fDim) * <c0> +
+///         indexingMaps[n-1].getResult(oDim) * <c1>
+///  where,
+///       - c0 and c1 can be any constant,
+///       - n is the size of the indexingMaps' array,
+///       - 0, 1 and n-1 are input, filter and output map indices respectively,
+///       - iDim, fDim and oDim are the input, filter and output dimension
+///         indices in their respective indexing maps
+///  Example:
+///   #inputMap = affine_map<(d0, d1, d2, d3, d4, d5, d6)
+///                     -> (d0, d1 * 2 + d4 * 3, d2 + d5, d6)>
+///   #filterMap = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
+///   #outputMap = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+///
+///   Here,
+///     #inputMap[1] = #outputMap[1] * 2 + #filterMap[0] * 3
+///   Therefore,
+///     matchConvDimAddExprPattern(indexingMaps, 1, 0, 1, dilation, stride)
+///     would return true and update dilation = 3 and stride = 2
 static bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim,
                                        unsigned fDim, unsigned oDim,
                                        int64_t &dilation, int64_t &stride) {
@@ -389,10 +396,10 @@ static bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim,
     return false;
 
   AffineExpr dim0, dim1;
-  int64_t c0, c1;
+  int64_t c0 = isDimTimesConstantOrDimOnly(addExpr.getLHS(), dim0);
+  int64_t c1 = isDimTimesConstantOrDimOnly(addExpr.getRHS(), dim1);
 
-  if (isDimTimesConstantOrDimOnly(addExpr.getLHS(), dim0, c0) &&
-      isDimTimesConstantOrDimOnly(addExpr.getRHS(), dim1, c1)) {
+  if (c0 != -1 && c1 != -1) {
     // Pattern matched with dims and constants extracted.
     AffineExpr fExpr = getAffineMapDim(indexingMaps, filterMapIdx, fDim);
     AffineExpr oExpr = getAffineMapDim(indexingMaps, outputMapIdx, oDim);
