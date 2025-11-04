@@ -193,10 +193,10 @@ _LIBCPP_HARDENING_MODE_DEBUG
 // Notes:
 // - Continuing execution after a hardening check fails results in undefined behavior; the `observe` semantic is meant
 //   to make adopting hardening easier but should not be used outside of this scenario;
-// - C++26 wording for Library Hardening precludes a conforming Hardened implementation from using the Contracts
-//   `ignore` semantic when evaluating hardened preconditions in the Library. Libc++ allows using this semantic for
-//   hardened preconditions, however, be aware that using `ignore` does not produce a conforming "Hardened"
-//   implementation, unlike the other semantics above.
+// - C++26 wording for Library Hardening precludes a conforming Hardened implementation from using a Contracts'
+//   non-terminating semantic (i.e., `ignore` or ``observe``) when evaluating hardened preconditions in the Library.
+//   Libc++ allows using these semantics for hardened preconditions, however, be aware that using `ignore` or `observe`
+//   does not produce a conforming "Hardened" implementation, unlike the terminating semantics above.
 // clang-format off
 #  define _LIBCPP_ASSERTION_SEMANTIC_IGNORE        (1 << 1)
 #  define _LIBCPP_ASSERTION_SEMANTIC_OBSERVE       (1 << 2)
