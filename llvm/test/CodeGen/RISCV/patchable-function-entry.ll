@@ -1,8 +1,8 @@
 ;; Test the function attribute "patchable-function-entry".
-; RUN: llc -mtriple=riscv32 --riscv-no-aliases < %s | FileCheck %s --check-prefixes=CHECK,RV32,NORVC
-; RUN: llc -mtriple=riscv64 --riscv-no-aliases < %s | FileCheck %s --check-prefixes=CHECK,RV64,NORVC
-; RUN: llc -mtriple=riscv32 -mattr=+c --riscv-no-aliases < %s | FileCheck %s --check-prefixes=CHECK,RV32,RVC
-; RUN: llc -mtriple=riscv64 -mattr=+c --riscv-no-aliases < %s | FileCheck %s --check-prefixes=CHECK,RV64,RVC
+; RUN: llc -mtriple=riscv32 -M no-aliases < %s | FileCheck %s --check-prefixes=CHECK,RV32,NORVC
+; RUN: llc -mtriple=riscv64 -M no-aliases < %s | FileCheck %s --check-prefixes=CHECK,RV64,NORVC
+; RUN: llc -mtriple=riscv32 -mattr=+c -M no-aliases < %s | FileCheck %s --check-prefixes=CHECK,RV32,RVC
+; RUN: llc -mtriple=riscv64 -mattr=+c -M no-aliases < %s | FileCheck %s --check-prefixes=CHECK,RV64,RVC
 
 define void @f0() "patchable-function-entry"="0" {
 ; CHECK-LABEL: f0:

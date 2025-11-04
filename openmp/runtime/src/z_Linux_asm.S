@@ -18,6 +18,7 @@
 #include "kmp_config.h"
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
+.att_syntax
 
 # if defined(__ELF__) && defined(__CET__) && defined(__has_include)
 # if __has_include(<cet.h>)
@@ -120,7 +121,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
+#if KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM
 
 # if KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) _##x  // extra underscore for OS X* symbols
@@ -188,7 +189,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .endm
 # endif // KMP_OS_DARWIN
 
-# if KMP_OS_LINUX
+# if KMP_OS_LINUX || KMP_OS_OPENBSD
 // BTI and PAC gnu property note
 #  define NT_GNU_PROPERTY_TYPE_0 5
 #  define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
@@ -235,7 +236,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 #  define PACBTI_RET
 #  define GNU_PROPERTY_BTI_PAC
 # endif
-#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
+#endif // KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM
 
 .macro COMMON name, size, align_power
 #if KMP_OS_DARWIN
@@ -1299,7 +1300,7 @@ KMP_LABEL(kmp_no_args):
 #endif /* KMP_ARCH_X86_64 */
 
 // '
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
+#if KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32
 
 //------------------------------------------------------------------------
 // int
@@ -1357,10 +1358,10 @@ __tid = 8
 	PROC __kmp_invoke_microtask
 	PACBTI_C
 
-	stp	x29, x30, [sp, #-16]!
 # if OMPT_SUPPORT
 	stp	x19, x20, [sp, #-16]!
 # endif
+	stp	x29, x30, [sp, #-16]!
 	mov	x29, sp
 
 	orr	w9, wzr, #1
@@ -1414,20 +1415,20 @@ KMP_LABEL(kmp_1):
 	blr	x8
 	orr	w0, wzr, #1
 	mov	sp, x29
+	ldp	x29, x30, [sp], #16
 # if OMPT_SUPPORT
 	str	xzr, [x19]
 	ldp	x19, x20, [sp], #16
 # endif
-	ldp	x29, x30, [sp], #16
 	PACBTI_RET
 	ret
 
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32) */
+#endif /* KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 */
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_ARM
+#if KMP_ARCH_ARM
 
 //------------------------------------------------------------------------
 // int
@@ -1570,7 +1571,7 @@ KMP_LABEL(kmp_1):
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_ARM */
+#endif /* KMP_ARCH_ARM */
 
 #if KMP_ARCH_PPC64
 
@@ -2470,7 +2471,7 @@ __kmp_invoke_microtask:
 
 #endif /* KMP_ARCH_S390X */
 
-#if KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
+#if KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32
 #ifndef KMP_PREFIX_UNDERSCORE
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
@@ -2482,13 +2483,14 @@ __kmp_invoke_microtask:
 KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .4byte .gomp_critical_user_
 #ifdef __ELF__
+    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),%object
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),4
 #endif
-#endif /* KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32 */
+#endif /* KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32 */
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||                   \
     KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE ||                 \
-    KMP_ARCH_S390X
+    KMP_ARCH_S390X || KMP_ARCH_SPARC64
 #ifndef KMP_PREFIX_UNDERSCORE
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
@@ -2500,11 +2502,12 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .8byte .gomp_critical_user_
 #ifdef __ELF__
+    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),%object
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),8
 #endif
 #endif /* KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||
           KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE || 
-          KMP_ARCH_S390X */
+          KMP_ARCH_S390X || KMP_ARCH_SPARC64 */
 
 #if KMP_OS_LINUX
 # if KMP_ARCH_ARM || KMP_ARCH_AARCH64
@@ -2514,6 +2517,7 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 # endif
 #endif
 
-#if KMP_OS_LINUX && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
+#if (KMP_OS_LINUX || KMP_OS_OPENBSD) &&                                        \
+    (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
 GNU_PROPERTY_BTI_PAC
 #endif

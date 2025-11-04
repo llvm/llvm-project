@@ -22,10 +22,10 @@ C::C() {} // force emission
 // CHECK32-NEXT: ret void
 
 // CHECK64-LABEL: define linkonce_odr dso_local void @"?foo@C@byval_thunk@@W7EAAXUAgg@2@@Z"
-// CHECK64:             (ptr noundef %this, ptr noundef %x)
+// CHECK64:             (ptr noundef %this, ptr dead_on_return noundef %x)
 // CHECK64:   getelementptr i8, ptr %{{.*}}, i32 -8
 // CHECK64:   call void @"?foo@C@byval_thunk@@UEAAXUAgg@2@@Z"
-// CHECK64:       (ptr {{[^,]*}} %{{.*}}, ptr noundef %x)
+// CHECK64:       (ptr {{[^,]*}} %{{.*}}, ptr dead_on_return noundef %x)
 // CHECK64-NOT: call
 // CHECK64:   ret void
 }
@@ -54,10 +54,10 @@ C::C() {} // force emission
 // CHECK32-NEXT: ret void
 
 // CHECK64-LABEL: define linkonce_odr dso_local void @"?foo@C@stdcall_thunk@@W7EAAXUAgg@2@@Z"
-// CHECK64:             (ptr noundef %this, ptr noundef %x)
+// CHECK64:             (ptr noundef %this, ptr dead_on_return noundef %x)
 // CHECK64:   getelementptr i8, ptr %{{.*}}, i32 -8
 // CHECK64:   call void @"?foo@C@stdcall_thunk@@UEAAXUAgg@2@@Z"
-// CHECK64:       (ptr {{[^,]*}} %{{.*}}, ptr noundef %x)
+// CHECK64:       (ptr {{[^,]*}} %{{.*}}, ptr dead_on_return noundef %x)
 // CHECK64-NOT: call
 // CHECK64:   ret void
 }
@@ -86,10 +86,10 @@ C::C() {} // force emission
 // CHECK32-NEXT: ret ptr %[[rv]]
 
 // CHECK64-LABEL: define linkonce_odr dso_local void @"?foo@C@sret_thunk@@W7EAA?AUAgg@2@U32@@Z"
-// CHECK64:             (ptr noundef %this, ptr dead_on_unwind noalias writable sret(%"struct.sret_thunk::Agg") align 4 %agg.result, ptr noundef %x)
+// CHECK64:             (ptr noundef %this, ptr dead_on_unwind noalias writable sret(%"struct.sret_thunk::Agg") align 4 %agg.result, ptr dead_on_return noundef %x)
 // CHECK64:   getelementptr i8, ptr %{{.*}}, i32 -8
 // CHECK64:   call void @"?foo@C@sret_thunk@@UEAA?AUAgg@2@U32@@Z"
-// CHECK64:       (ptr {{[^,]*}} %{{.*}}, ptr dead_on_unwind writable sret(%"struct.sret_thunk::Agg") align 4 %agg.result, ptr noundef %x)
+// CHECK64:       (ptr {{[^,]*}} %{{.*}}, ptr dead_on_unwind writable sret(%"struct.sret_thunk::Agg") align 4 %agg.result, ptr dead_on_return noundef %x)
 // CHECK64-NOT: call
 // CHECK64:   ret void
 }

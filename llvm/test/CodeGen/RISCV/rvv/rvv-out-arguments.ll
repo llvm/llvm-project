@@ -159,7 +159,7 @@ entry:
   %0 = call i64 @llvm.riscv.vsetvli.i64(i64 4, i64 2, i64 3)
   store i64 %0, ptr %vl, align 8
   %1 = load i64, ptr %vl, align 8
-  %2 = call <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32> undef, ptr %input, i64 %1)
+  %2 = call <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32> poison, ptr %input, i64 %1)
   store <vscale x 16 x i32> %2, ptr %v0, align 4
   store i32 1, ptr %x0, align 4
   store i32 1, ptr %x1, align 4

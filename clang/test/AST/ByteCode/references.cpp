@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1                                         -verify=ref,both      %s
 
 
 constexpr int a = 10;
@@ -177,4 +177,20 @@ namespace Params {
   }
 
   static_assert(foo());
+}
+
+namespace ReadFromNullBlockPtr {
+  struct S {
+    int *const &t;
+  };
+
+  void foo(int x) {
+    constexpr S s = {&x}; // both-error {{must be initialized by a constant expression}} \
+                          // both-note {{reference to temporary}} \
+                          // both-note {{created here}} \
+                          // ref-note {{declared here}}
+    static_assert(s.t == &x, ""); // both-error {{not an integral constant expression}} \
+                                  // expected-note {{read of dereferenced null pointer}} \
+                                  // ref-note {{initializer of 's' is not a constant expression}}
+  }
 }

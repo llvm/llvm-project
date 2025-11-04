@@ -277,9 +277,9 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
   DILineInfo LineInfo;
-  if (std::optional<DILineInfo> DBGLineInfo =
-          DebugInfoContext->getLineInfoForAddress(ModuleOffset,
-                                                  LineInfoSpecifier))
+  std::optional<DILineInfo> DBGLineInfo =
+      DebugInfoContext->getLineInfoForAddress(ModuleOffset, LineInfoSpecifier);
+  if (DBGLineInfo)
     LineInfo = *DBGLineInfo;
 
   // Override function name from symbol table if necessary.
@@ -290,7 +290,9 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
                                FileName)) {
       LineInfo.FunctionName = FunctionName;
       LineInfo.StartAddress = Start;
-      if (LineInfo.FileName == DILineInfo::BadString && !FileName.empty())
+      // Only use the filename from symbol table if the debug info for the
+      // address is missing.
+      if (!DBGLineInfo && !FileName.empty())
         LineInfo.FileName = FileName;
     }
   }
@@ -307,8 +309,11 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
       ModuleOffset, LineInfoSpecifier);
 
   // Make sure there is at least one frame in context.
-  if (InlinedContext.getNumberOfFrames() == 0)
+  bool EmptyFrameAdded = false;
+  if (InlinedContext.getNumberOfFrames() == 0) {
+    EmptyFrameAdded = true;
     InlinedContext.addFrame(DILineInfo());
+  }
 
   // Override the function name in lower frame with name from symbol table.
   if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
@@ -320,7 +325,9 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
           InlinedContext.getNumberOfFrames() - 1);
       LI->FunctionName = FunctionName;
       LI->StartAddress = Start;
-      if (LI->FileName == DILineInfo::BadString && !FileName.empty())
+      // Only use the filename from symbol table if the debug info for the
+      // address is missing.
+      if (EmptyFrameAdded && !FileName.empty())
         LI->FileName = FileName;
     }
   }

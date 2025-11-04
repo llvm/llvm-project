@@ -90,17 +90,29 @@ cl::opt<bool> Edit{
     cl::desc("Apply edits to analyzed source files"),
     cl::cat(IncludeCleaner),
 };
-
 cl::opt<bool> Insert{
     "insert",
-    cl::desc("Allow header insertions"),
+    cl::desc(
+        "Allow header insertions (deprecated. Use -disable-insert instead)"),
     cl::init(true),
     cl::cat(IncludeCleaner),
 };
 cl::opt<bool> Remove{
     "remove",
-    cl::desc("Allow header removals"),
+    cl::desc("Allow header removals (deprecated. Use -disable-remove instead)"),
     cl::init(true),
+    cl::cat(IncludeCleaner),
+};
+cl::opt<bool> DisableInsert{
+    "disable-insert",
+    cl::desc("Disable header insertions"),
+    cl::init(false),
+    cl::cat(IncludeCleaner),
+};
+cl::opt<bool> DisableRemove{
+    "disable-remove",
+    cl::desc("Disable header removals"),
+    cl::init(false),
     cl::cat(IncludeCleaner),
 };
 
@@ -183,9 +195,26 @@ private:
     auto Results =
         analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
                 getCompilerInstance().getPreprocessor(), HeaderFilter);
-    if (!Insert)
+
+    if (!Insert) {
+      llvm::errs()
+          << "warning: '-insert=0' is deprecated in favor of "
+             "'-disable-insert'. "
+             "The old flag was confusing since it suggested that inserts "
+             "were disabled by default, when they were actually enabled.\n";
+    }
+
+    if (!Remove) {
+      llvm::errs()
+          << "warning: '-remove=0' is deprecated in favor of "
+             "'-disable-remove'. "
+             "The old flag was confusing since it suggested that removes "
+             "were disabled by default, when they were actually enabled.\n";
+    }
+
+    if (!Insert || DisableInsert)
       Results.Missing.clear();
-    if (!Remove)
+    if (!Remove || DisableRemove)
       Results.Unused.clear();
     std::string Final = fixIncludes(Results, AbsPath, Code, getStyle(AbsPath));
 
@@ -283,11 +312,11 @@ std::function<bool(llvm::StringRef)> headerFilter() {
 
 // Maps absolute path of each files of each compilation commands to the
 // absolute path of the input file.
-llvm::Expected<std::map<std::string, std::string>>
+llvm::Expected<std::map<std::string, std::string, std::less<>>>
 mapInputsToAbsPaths(clang::tooling::CompilationDatabase &CDB,
                     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                     const std::vector<std::string> &Inputs) {
-  std::map<std::string, std::string> CDBToAbsPaths;
+  std::map<std::string, std::string, std::less<>> CDBToAbsPaths;
   // Factory.editedFiles()` will contain the final code, along with the
   // path given in the compilation database. That path can be
   // absolute or relative, and if it is relative, it is relative to the
@@ -315,8 +344,7 @@ mapInputsToAbsPaths(clang::tooling::CompilationDatabase &CDB,
     }
     for (const auto &Cmd : Cmds) {
       llvm::SmallString<256> CDBPath(Cmd.Filename);
-      std::string Directory(Cmd.Directory);
-      llvm::sys::fs::make_absolute(Cmd.Directory, CDBPath);
+      llvm::sys::path::make_absolute(Cmd.Directory, CDBPath);
       CDBToAbsPaths[std::string(CDBPath)] = std::string(AbsPath);
     }
   }
@@ -367,8 +395,7 @@ int main(int argc, const char **argv) {
   if (Edit) {
     for (const auto &NameAndContent : Factory.editedFiles()) {
       llvm::StringRef FileName = NameAndContent.first();
-      if (auto It = CDBToAbsPaths->find(FileName.str());
-          It != CDBToAbsPaths->end())
+      if (auto It = CDBToAbsPaths->find(FileName); It != CDBToAbsPaths->end())
         FileName = It->second;
 
       const std::string &FinalCode = NameAndContent.second;

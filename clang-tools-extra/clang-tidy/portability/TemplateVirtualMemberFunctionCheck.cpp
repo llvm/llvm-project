@@ -1,4 +1,4 @@
-//===--- TemplateVirtualMemberFunctionCheck.cpp - clang-tidy --------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,10 +18,11 @@ AST_MATCHER(CXXMethodDecl, isUsed) { return Node.isUsed(); }
 
 void TemplateVirtualMemberFunctionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxMethodDecl(ofClass(classTemplateSpecializationDecl(
+      cxxMethodDecl(isVirtual(),
+                    ofClass(classTemplateSpecializationDecl(
                                 unless(isExplicitTemplateSpecialization()))
                                 .bind("specialization")),
-                    isVirtual(), unless(isUsed()),
+                    unless(isUsed()), unless(isPure()),
                     unless(cxxDestructorDecl(isDefaulted())))
           .bind("method"),
       this);

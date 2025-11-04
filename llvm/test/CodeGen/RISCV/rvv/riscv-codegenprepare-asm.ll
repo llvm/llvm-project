@@ -42,3 +42,459 @@ vector.body:
 exit:
   ret float %acc
 }
+
+define i32 @vp_reduce_add(ptr %a) {
+; CHECK-LABEL: vp_reduce_add:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB1_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredsum.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB1_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 0, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.add.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_and(ptr %a) {
+; CHECK-LABEL: vp_reduce_and:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB2_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredand.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB2_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ -2147483648, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.and.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_or(ptr %a) {
+; CHECK-LABEL: vp_reduce_or:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB3_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredor.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB3_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 0, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.or.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_xor(ptr %a) {
+; CHECK-LABEL: vp_reduce_xor:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB4_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredxor.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB4_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 0, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.xor.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_smax(ptr %a) {
+; CHECK-LABEL: vp_reduce_smax:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB5_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredmax.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB5_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ -2147483648, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.smax.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_smin(ptr %a) {
+; CHECK-LABEL: vp_reduce_smin:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB6_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredmin.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB6_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 2147483647, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.smin.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_umax(ptr %a) {
+; CHECK-LABEL: vp_reduce_umax:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB7_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredmaxu.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB7_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 0, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.umax.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_umin(ptr %a) {
+; CHECK-LABEL: vp_reduce_umin:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB8_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredminu.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB8_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ -2147483648, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.umin.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define float @vp_reduce_fadd(ptr %a) {
+; CHECK-LABEL: vp_reduce_fadd:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB9_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vfredosum.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB9_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi float [ 0.000000e+00, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds float, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call float @llvm.vp.reduce.fadd.nxv4f32(float %red.phi, <vscale x 4 x float> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret float %red
+}
+
+define float @vp_reduce_fmax(ptr %a) {
+; CHECK-LABEL: vp_reduce_fmax:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB10_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vfredmax.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB10_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi float [ 0.000000e+00, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds float, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call float @llvm.vp.reduce.fmax.nxv4f32(float %red.phi, <vscale x 4 x float> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret float %red
+}
+
+define float @vp_reduce_fmin(ptr %a) {
+; CHECK-LABEL: vp_reduce_fmin:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:  .LBB11_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vfredmin.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB11_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi float [ 0.000000e+00, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds float, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call float @llvm.vp.reduce.fmin.nxv4f32(float %red.phi, <vscale x 4 x float> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret float %red
+}

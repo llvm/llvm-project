@@ -108,3 +108,17 @@ qc.c.setint
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
 qc.c.setint x8
+
+
+# CHECK: :[[@LINE+1]]:11: error: invalid operand for instruction
+qc.c.mret x8
+
+# CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
+qc.c.mret
+
+
+# CHECK: :[[@LINE+1]]:12: error: invalid operand for instruction
+qc.c.mnret 10
+
+# CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
+qc.c.mnret

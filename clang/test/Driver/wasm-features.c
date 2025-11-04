@@ -41,6 +41,12 @@
 // HALF-PRECISION: "-target-feature" "+fp16"
 // NO-HALF-PRECISION: "-target-feature" "-fp16"
 
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mgc 2>&1 | FileCheck %s -check-prefix=GC
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-gc 2>&1 | FileCheck %s -check-prefix=NO-GC
+
+// GC: "-target-feature" "+gc"
+// NO-GC: "-target-feature" "-gc"
+
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mmultimemory 2>&1 | FileCheck %s -check-prefix=MULTIMEMORY
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-multimemory 2>&1 | FileCheck %s -check-prefix=NO-MULTIMEMORY
 

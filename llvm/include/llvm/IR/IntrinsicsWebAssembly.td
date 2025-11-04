@@ -43,6 +43,10 @@ def int_wasm_ref_is_null_exn :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_exnref_ty], [IntrNoMem],
                         "llvm.wasm.ref.is_null.exn">;
 
+def int_wasm_ref_test_func
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_vararg_ty],
+                            [IntrNoMem]>;
+
 //===----------------------------------------------------------------------===//
 // Table intrinsics
 //===----------------------------------------------------------------------===//
@@ -385,78 +389,78 @@ def int_wasm_tls_base :
 //===----------------------------------------------------------------------===//
 
 def int_wasm_memtag_status :
-  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem], "llvm.wasm.memtag.status">;
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_tagbits :
-  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem], "llvm.wasm.memtag.tagbits">;
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_startbit :
-  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem], "llvm.wasm.memtag.startbit">;
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_extract :
-  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memtag.extract">;
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_ptr_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_insert :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrNoMem], "llvm.wasm.memtag.insert">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_copy :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memtag.copy">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_sub :
-  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memtag.sub">;
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_load :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty], [IntrReadMem], "llvm.wasm.memtag.load">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty], [IntrReadMem]>;
 
 def int_wasm_memtag_untag :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memtag.untag">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_untagstore :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.untagstore">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem]>;
 
 def int_wasm_memtag_untagstorez :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.untagstorez">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem]>;
 
 def int_wasm_memtag_store :
-  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.store">;
+  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem]>;
 
 def int_wasm_memtag_storez :
-  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.storez">;
+  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem]>;
 
 def int_wasm_memtag_random :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty], [IntrNoMem, IntrHasSideEffects], "llvm.wasm.memtag.random">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty], [IntrNoMem, IntrHasSideEffects]>;
 
 def int_wasm_memtag_randomstore :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrHasSideEffects, IntrWriteMem], "llvm.wasm.memtag.randomstore">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrHasSideEffects, IntrWriteMem]>;
 
 def int_wasm_memtag_randomstorez :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrHasSideEffects, IntrWriteMem], "llvm.wasm.memtag.randomstorez">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrHasSideEffects, IntrWriteMem]>;
 
 def int_wasm_memtag_randommask :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects], "llvm.wasm.memtag.randommask">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects]>;
 
 def int_wasm_memtag_randommaskstore :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrHasSideEffects, IntrWriteMem], "llvm.wasm.memtag.randommaskstore">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrHasSideEffects, IntrWriteMem]>;
 
 def int_wasm_memtag_randommaskstorez :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrHasSideEffects, IntrWriteMem], "llvm.wasm.memtag.randommaskstorez">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrHasSideEffects, IntrWriteMem]>;
 
 def int_wasm_memtag_add :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrNoMem], "llvm.wasm.memtag.add">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_addstore :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.addstore">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrWriteMem]>;
 
 def int_wasm_memtag_addstorez :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.addstorez">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty], [IntrWriteMem]>;
 
 def int_wasm_memtag_hint :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrNoMem], "llvm.wasm.memtag.hint">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrNoMem]>;
 
 def int_wasm_memtag_hintstore :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.hintstore">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem]>;
 
 def int_wasm_memtag_hintstorez :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.hintstorez">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem]>;
 
 } // TargetPrefix = "wasm"

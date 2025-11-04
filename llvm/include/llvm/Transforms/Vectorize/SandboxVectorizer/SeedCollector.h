@@ -18,6 +18,7 @@
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/SandboxIR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <iterator>
 #include <memory>
 
@@ -35,7 +36,7 @@ public:
   /// No need to allow copies.
   SeedBundle(const SeedBundle &) = delete;
   SeedBundle &operator=(const SeedBundle &) = delete;
-  virtual ~SeedBundle() {}
+  virtual ~SeedBundle() = default;
 
   using iterator = SmallVector<Instruction *>::iterator;
   using const_iterator = SmallVector<Instruction *>::const_iterator;
@@ -67,7 +68,7 @@ public:
   /// the seeds in a bundle. This allows constant time evaluation
   /// and "removal" from the list.
   void setUsed(Instruction *I) {
-    auto It = std::find(begin(), end(), I);
+    auto It = llvm::find(*this, I);
     assert(It != end() && "Instruction not in the bundle!");
     auto Idx = It - begin();
     setUsed(Idx, 1, /*VerifyUnused=*/false);
@@ -95,8 +96,8 @@ public:
   /// with a total size <= \p MaxVecRegBits, or an empty slice if the
   /// requirements cannot be met . If \p ForcePowOf2 is true, then the returned
   /// slice will have a total number of bits that is a power of 2.
-  ArrayRef<Instruction *> getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
-                                   bool ForcePowOf2);
+  LLVM_ABI ArrayRef<Instruction *>
+  getSlice(unsigned StartIdx, unsigned MaxVecRegBits, bool ForcePowOf2);
 
   /// \Returns the number of seed elements in the bundle.
   std::size_t size() const { return Seeds.size(); }
@@ -160,7 +161,7 @@ public:
                                    cast<LoadOrStoreT>(I1), SE);
     };
     // Find the first element after I in mem. Then insert I before it.
-    insertAt(std::upper_bound(begin(), end(), I, Cmp), I);
+    insertAt(llvm::upper_bound(*this, I, Cmp), I);
   }
 };
 
@@ -190,7 +191,8 @@ class SeedContainer {
 
   ScalarEvolution &SE;
 
-  template <typename LoadOrStoreT> KeyT getKey(LoadOrStoreT *LSI) const;
+  template <typename LoadOrStoreT>
+  KeyT getKey(LoadOrStoreT *LSI, bool AllowDiffTypes) const;
 
 public:
   SeedContainer(ScalarEvolution &SE) : SE(SE) {}
@@ -266,10 +268,11 @@ public:
     bool operator!=(const iterator &Other) const { return !(*this == Other); }
   };
   using const_iterator = BundleMapT::const_iterator;
-  template <typename LoadOrStoreT> void insert(LoadOrStoreT *LSI);
+  template <typename LoadOrStoreT>
+  void insert(LoadOrStoreT *LSI, bool AllowDiffTypes);
   // To support constant-time erase, these just mark the element used, rather
   // than actually removing them from the bundle.
-  bool erase(Instruction *I);
+  LLVM_ABI bool erase(Instruction *I);
   bool erase(const KeyT &Key) { return Bundles.erase(Key); }
   iterator begin() {
     if (Bundles.empty())
@@ -288,6 +291,12 @@ public:
 #endif // NDEBUG
 };
 
+// Explicit instantiations
+extern template LLVM_TEMPLATE_ABI void
+SeedContainer::insert<LoadInst>(LoadInst *, bool);
+extern template LLVM_TEMPLATE_ABI void
+SeedContainer::insert<StoreInst>(StoreInst *, bool);
+
 class SeedCollector {
   SeedContainer StoreSeeds;
   SeedContainer LoadSeeds;
@@ -300,8 +309,10 @@ class SeedCollector {
   }
 
 public:
-  SeedCollector(BasicBlock *BB, ScalarEvolution &SE);
-  ~SeedCollector();
+  LLVM_ABI SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
+                         bool CollectStores, bool CollectLoads,
+                         bool AllowDiffTypes = false);
+  LLVM_ABI ~SeedCollector();
 
   iterator_range<SeedContainer::iterator> getStoreSeeds() {
     return {StoreSeeds.begin(), StoreSeeds.end()};

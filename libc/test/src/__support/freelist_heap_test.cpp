@@ -13,6 +13,15 @@
 #include "src/string/memcpy.h"
 #include "test/UnitTest/Test.h"
 
+asm(R"(
+.globl _end, __llvm_libc_heap_limit
+
+.bss
+_end:
+  .fill 1024
+__llvm_libc_heap_limit:
+)");
+
 using LIBC_NAMESPACE::Block;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
@@ -48,7 +57,7 @@ using LIBC_NAMESPACE::cpp::span;
     RunTest(*freelist_heap, freelist_heap->region().size());                   \
   }                                                                            \
   void LlvmLibcFreeListHeapTest##TestCase::RunTest(FreeListHeap &allocator,    \
-                                                   size_t N)
+                                                   [[maybe_unused]] size_t N)
 
 TEST_FOR_EACH_ALLOCATOR(CanAllocate, 2048) {
   constexpr size_t ALLOC_SIZE = 512;

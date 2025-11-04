@@ -434,8 +434,19 @@ let test_global_values () =
   group "dll_storage_class";
   let g = define_global "GVal06" zero32 m ++
           set_dll_storage_class DLLStorageClass.DLLExport in
-  insist (DLLStorageClass.DLLExport = dll_storage_class g)
+  insist (DLLStorageClass.DLLExport = dll_storage_class g);
 
+  (* CHECK: GVal07{{.*}}!test !0
+   * See metadata check at the end of the file.
+   *)
+  group "metadata";
+  let g = define_global "GVal07" zero32 m in
+  let md_string = mdstring context "global test metadata" in
+  let md_node = mdnode context [| zero32; md_string |] |> value_as_metadata in
+  let mdkind_test = mdkind_id context "test" in
+  global_set_metadata g mdkind_test md_node;
+  let md' = global_copy_all_metadata g in
+  insist (md' = [| mdkind_test, md_node |])
 
 (*===-- Global Variables --------------------------------------------------===*)
 
@@ -1115,8 +1126,8 @@ let test_builder () =
   end;
 
   group "metadata"; begin
-    (* CHECK: %metadata = add i32 %P1, %P2, !test !1
-     * !1 is metadata emitted at EOF.
+    (* CHECK: %metadata = add i32 %P1, %P2, !test !2
+     * !2 is metadata emitted at EOF.
      *)
     let i = build_add p1 p2 "metadata" atentry in
     insist ((has_metadata i) = false);
@@ -1432,9 +1443,10 @@ let test_builder () =
   end
 
 (* End-of-file checks for things like metdata and attributes.
- * CHECK: !llvm.module.flags = !{!0}
- * CHECK: !0 = !{i32 1, !"Debug Info Version", i32 3}
- * CHECK: !1 = !{i32 1, !"metadata test"}
+ * CHECK: !llvm.module.flags = !{!1}
+ * CHECK: !0 = !{i32 0, !"global test metadata"}
+ * CHECK: !1 = !{i32 1, !"Debug Info Version", i32 3}
+ * CHECK: !2 = !{i32 1, !"metadata test"}
  *)
 
 

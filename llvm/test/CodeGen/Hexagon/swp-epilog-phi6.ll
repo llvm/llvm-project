@@ -13,7 +13,7 @@
 ; CHECK: epilog:
 ; CHECK: %{{[0-9]+}}:intregs = PHI %{{.*}}, %[[REG]]
 
-define void @f0(i32 %a0, i32 %a1) #0 {
+define void @f0(i32 %a0, i32 %a1, ptr noalias %p0, ptr noalias %p1) #0 {
 b0:
   %v0 = icmp sgt i32 %a0, 64
   br i1 %v0, label %b1, label %b3
@@ -23,7 +23,7 @@ b1:                                               ; preds = %b0
 
 b2:                                               ; preds = %b2, %b1
   %v1 = phi i32 [ %a0, %b1 ], [ %v13, %b2 ]
-  %v2 = phi ptr [ null, %b1 ], [ %v3, %b2 ]
+  %v2 = phi ptr [ %p0, %b1 ], [ %v3, %b2 ]
   %v3 = getelementptr inbounds <16 x i32>, ptr %v2, i32 1
   %v4 = load <16 x i32>, ptr %v2, align 64
   %v5 = load <16 x i32>, ptr undef, align 64
@@ -34,7 +34,7 @@ b2:                                               ; preds = %b2, %b1
   %v10 = tail call <32 x i32> @llvm.hexagon.V6.vmpybus.acc(<32 x i32> %v9, <16 x i32> zeroinitializer, i32 undef)
   %v11 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v10)
   %v12 = tail call <16 x i32> @llvm.hexagon.V6.vasrhubsat(<16 x i32> undef, <16 x i32> %v11, i32 %a1)
-  store <16 x i32> %v12, ptr null, align 64
+  store <16 x i32> %v12, ptr %p1, align 64
   %v13 = add nsw i32 %v1, -64
   %v14 = icmp sgt i32 %v13, 64
   br i1 %v14, label %b2, label %b3

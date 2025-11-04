@@ -185,15 +185,15 @@ body:             |
     successors: %bb.5(0x80000000)
     liveins: $q0, $r0, $r1, $r2, $r4
 
-    renamable $s4 = nnan ninf nsz VADDS renamable $s0, renamable $s1, 14, $noreg
+    renamable $s4 = nnan ninf nsz VADDS renamable $s0, renamable $s1, 14, $noreg, implicit $fpscr_rm
     $lr = tMOVr $r4, 14, $noreg
     $r3 = tMOVr $r1, 14, $noreg
-    renamable $s4 = nnan ninf nsz VADDS renamable $s2, killed renamable $s4, 14, $noreg
-    renamable $s0 = nnan ninf nsz VADDS killed renamable $s3, killed renamable $s4, 14, $noreg, implicit $q0
+    renamable $s4 = nnan ninf nsz VADDS renamable $s2, killed renamable $s4, 14, $noreg, implicit $fpscr_rm
+    renamable $s0 = nnan ninf nsz VADDS killed renamable $s3, killed renamable $s4, 14, $noreg, implicit $q0, implicit $fpscr_rm
     $s2 = VMOVSR $r1, 14, $noreg
     renamable $s2 = VUITOS killed renamable $s2, 14, $noreg
     $lr = t2DoLoopStart killed $r4
-    renamable $s4 = nnan ninf nsz VDIVS killed renamable $s0, killed renamable $s2, 14, $noreg
+    renamable $s4 = nnan ninf nsz VDIVS killed renamable $s0, killed renamable $s2, 14, $noreg, implicit $fpscr_rm
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
 
   bb.5:
@@ -215,13 +215,13 @@ body:             |
   bb.6:
     liveins: $q0, $r1, $r2
 
-    renamable $s4 = nnan ninf nsz VADDS renamable $s0, renamable $s1, 14, $noreg
+    renamable $s4 = nnan ninf nsz VADDS renamable $s0, renamable $s1, 14, $noreg, implicit $fpscr_rm
     renamable $r0, dead $cpsr = tSUBi3 killed renamable $r1, 1, 14, $noreg
-    renamable $s4 = nnan ninf nsz VADDS renamable $s2, killed renamable $s4, 14, $noreg
-    renamable $s0 = nnan ninf nsz VADDS killed renamable $s3, killed renamable $s4, 14, $noreg, implicit $q0
+    renamable $s4 = nnan ninf nsz VADDS renamable $s2, killed renamable $s4, 14, $noreg, implicit $fpscr_rm
+    renamable $s0 = nnan ninf nsz VADDS killed renamable $s3, killed renamable $s4, 14, $noreg, implicit $q0, implicit $fpscr_rm
     $s2 = VMOVSR killed $r0, 14, $noreg
     renamable $s2 = VUITOS killed renamable $s2, 14, $noreg
-    renamable $s0 = nnan ninf nsz VDIVS killed renamable $s0, killed renamable $s2, 14, $noreg
+    renamable $s0 = nnan ninf nsz VDIVS killed renamable $s0, killed renamable $s2, 14, $noreg, implicit $fpscr_rm
     VSTRS killed renamable $s0, killed renamable $r2, 0, 14, $noreg
     tPOP_RET 14, $noreg, def $r4, def $pc
 

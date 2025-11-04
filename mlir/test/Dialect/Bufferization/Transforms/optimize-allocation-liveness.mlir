@@ -209,3 +209,28 @@ func.func private @test_conditional_deallocation() -> memref<32xf32, 1> {
   return %3 : memref<32xf32, 1>
 }
 
+
+// -----
+// CHECK-LABEL:   func.func private @test_alloc_with_multiple_results() {
+// CHECK:           %[[ID1:.+]], %[[ALLOC1:.+]] = test.alloc_with_multiple_results : index, memref<64xf32>
+// CHECK:           memref.expand_shape %[[ALLOC1]]
+// CHECK:           memref.dealloc %[[ALLOC1]] : memref<64xf32>
+// CHECK:           %[[ID2:.+]], %[[ALLOC2:.+]] = test.alloc_with_multiple_results : index, memref<64xf32>
+// CHECK:           memref.expand_shape %[[ALLOC2]]
+// CHECK:           memref.dealloc %[[ALLOC2]] : memref<64xf32>
+// CHECK:           return
+// CHECK:         }
+
+// This test will check that allocations with multiple results and allocated
+// buffer at non-zero position are accepted.
+func.func private @test_alloc_with_multiple_results() -> () {
+  %id1, %alloc1 = test.alloc_with_multiple_results : index, memref<64xf32>
+  %expand_shape1 = memref.expand_shape %alloc1 [[0, 1]] output_shape [8, 8] : memref<64xf32> into memref<8x8xf32>
+
+  %id2, %alloc2 = test.alloc_with_multiple_results : index, memref<64xf32>
+  %expand_shape2 = memref.expand_shape %alloc2 [[0, 1]] output_shape [8, 8] : memref<64xf32> into memref<8x8xf32>
+
+  memref.dealloc %alloc1 : memref<64xf32>
+  memref.dealloc %alloc2 : memref<64xf32>
+  return
+}

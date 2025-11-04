@@ -1,4 +1,3 @@
-# REQUIRES: shell
 # UNSUPPORTED: system-windows
 
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
@@ -8,8 +7,9 @@
 # CHECK-SAME: "-internal-isystem" "[[SYSROOT:[^"]*]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/include/c++/v1"
 # CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/include"
 # CHECK-SAME: "-x" "c++" "{{.*}}baremetal-multilib.yaml"
-# CHECK-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
+# CHECK-NEXT: ld{{(.exe)?}}" "-Bstatic"
 # CHECK-SAME: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/lib"
+# CHECK-SAME: "{{.*}}.o"
 # CHECK-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 # CHECK-SAME: "-lc"
 # CHECK-SAME: "-o" "{{.*}}.tmp.out"

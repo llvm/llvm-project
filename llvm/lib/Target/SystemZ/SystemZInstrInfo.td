@@ -424,8 +424,10 @@ defm CondStore64 : CondStores<GR64, simple_store,
 //===----------------------------------------------------------------------===//
 
 // Register moves.
-def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
-def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+let isMoveReg = 1 in {
+  def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
+  def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+}
 
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTR  : UnaryRR <"ltr",  0x12,   null_frag, GR32, GR32>;

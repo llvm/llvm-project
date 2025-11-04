@@ -18,9 +18,9 @@ entry:
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 !dx.rootsignatures = !{!2, !5} ; list of function/root signature pairs
-!2 = !{ ptr @main, i32 -1 } ; function, root signature
+!2 = !{ ptr @main, i32 -1, i32 2 } ; function, root signature
 !3 = !{ !4 } ; list of root signature elements
 !4 = !{ !"RootFlags", i32 1 } ; 1 = allow_input_assembler_input_layout
-!5 = !{ i32 -1, !6 } ; function, root signature
+!5 = !{ i32 -1, !6, i32 2 } ; function, root signature
 !6 = !{ !7 } ; list of root signature elements
 !7 = !{ !"RootFlags", i32 2 } ; 1 = allow_input_assembler_input_layout

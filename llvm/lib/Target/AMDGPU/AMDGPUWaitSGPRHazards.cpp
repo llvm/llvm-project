@@ -54,7 +54,7 @@ public:
   bool CullSGPRHazardsAtMemWait;
   unsigned CullSGPRHazardsMemWaitThreshold;
 
-  AMDGPUWaitSGPRHazards() {}
+  AMDGPUWaitSGPRHazards() = default;
 
   // Return the numeric ID 0-127 for a given SGPR.
   static std::optional<unsigned> sgprNumber(Register Reg,
@@ -232,7 +232,9 @@ public:
         State.ActiveFlat = true;
 
       // SMEM or VMEM clears hazards
-      if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isSMRD(*MI)) {
+      // FIXME: adapt to add FLAT without VALU (so !isLDSDMA())?
+      if ((SIInstrInfo::isVMEM(*MI) && !SIInstrInfo::isFLAT(*MI)) ||
+          SIInstrInfo::isSMRD(*MI)) {
         State.VCCHazard = HazardState::None;
         State.SALUHazards.reset();
         State.VALUHazards.reset();
@@ -355,10 +357,8 @@ public:
 
       // Only consider implicit VCC specified by instruction descriptor.
       const bool HasImplicitVCC =
-          llvm::any_of(MI->getDesc().implicit_uses(),
-                       [](MCPhysReg Reg) { return isVCC(Reg); }) ||
-          llvm::any_of(MI->getDesc().implicit_defs(),
-                       [](MCPhysReg Reg) { return isVCC(Reg); });
+          llvm::any_of(MI->getDesc().implicit_uses(), isVCC) ||
+          llvm::any_of(MI->getDesc().implicit_defs(), isVCC);
 
       if (IsSetPC) {
         // All SGPR writes before a call/return must be flushed as the

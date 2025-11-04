@@ -40,7 +40,7 @@ parallel environment. To eliminate this assumption:
   instruction can be examined for uniformity across multiple threads only if the
   corresponding executions of that instruction are converged.
 
-This document decribes a static analysis for determining convergence at each
+This document describes a static analysis for determining convergence at each
 instruction in a function. The analysis extends previous work on divergence
 analysis [DivergenceSPMD]_ to cover irreducible control-flow. The described
 analysis is used in LLVM to implement a UniformityAnalysis that determines the

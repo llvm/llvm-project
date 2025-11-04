@@ -17,6 +17,9 @@
 // RUN: lld-link -out:out3.dll -machine:arm64x -dll -noentry crt2-amd64.obj crt1-arm64ec.obj crt2-arm64.obj crt1-arm64.obj
 // RUN: llvm-readobj --hex-dump=.CRT out3.dll | FileCheck %s
 
+// RUN: lld-link -out:out4.dll -machine:arm64ec -dll -noentry crt2-amd64.obj crt1-arm64ec.obj crt2-arm64.obj crt1-arm64.obj
+// RUN: llvm-readobj --hex-dump=.CRT out4.dll | FileCheck %s
+
 // CHECK:      0x180002000 01000000 00000000 02000000 00000000
 // CHECK-NEXT: 0x180002010 03000000 00000000 11000000 00000000
 // CHECK-NEXT: 0x180002020 12000000 00000000 13000000 00000000

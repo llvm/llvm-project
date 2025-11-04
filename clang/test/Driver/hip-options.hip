@@ -115,11 +115,6 @@
 // OMP-NOT: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp"
 // OMP: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fopenmp"
 
-// RUN: not %clang --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --offload-arch=gfx906 -fopenmp=libomp -fopenmp-targets=amdgcn %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=OMPTGT %s
-// OMPTGT: unsupported option '-fopenmp-targets=' for language mode 'HIP'
-
 // Check -Xoffload-linker option is passed to lld.
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
@@ -242,3 +237,26 @@
 // NO-WARN-ATOMIC: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-Werror=atomic-alignment" {{.*}} "-Wno-error=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Werror=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Wno-error=atomic-alignment"
+
+// Check --offload-compress --offload-jobs=N does not cause warning.
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-compress --offload-host-only -M %s \
+// RUN:   --offload-jobs=4 --offload-new-driver
+
+// Check --offload-jobs=N option.
+
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=4 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=JOBS %s
+// JOBS: clang-linker-wrapper{{.*}} "--wrapper-jobs=4"
+
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=0x4 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVJOBS %s
+// INVJOBS: clang: error: invalid integral value '0x4' in '--offload-jobs=0x4'
+
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=jobserver %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=JOBSV %s
+// JOBSV: clang-linker-wrapper{{.*}} "--wrapper-jobs=jobserver"
+

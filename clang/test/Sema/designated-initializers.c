@@ -368,3 +368,10 @@ struct {
     .b = 0, // expected-warning {{initializer overrides prior initialization of this subobject}}
   },
 };
+
+void gh154046(void) {
+  (void)(const char[]) {
+    [0] = "", // expected-error {{incompatible pointer to integer conversion initializing 'const char' with an expression of type 'char[1]'}}
+    [1] = ""  // expected-error {{incompatible pointer to integer conversion initializing 'const char' with an expression of type 'char[1]'}}
+  }[1];
+}

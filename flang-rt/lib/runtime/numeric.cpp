@@ -229,6 +229,24 @@ RT_API_ATTRS BTy FPowI(BTy base, ETy exp) {
   return result;
 }
 
+// Exponentiation operator for (Unsigned ** Unsigned) cases
+template <typename Ty> RT_API_ATTRS Ty UPow(Ty base, Ty exp) {
+  if (exp == Ty{0})
+    return Ty{1};
+  Ty result{1};
+  while (true) {
+    if (exp & Ty{1}) {
+      result *= base;
+    }
+    exp >>= 1;
+    if (exp == Ty{0}) {
+      break;
+    }
+    base *= base;
+  }
+  return result;
+}
+
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
@@ -932,6 +950,27 @@ CppTypeFor<TypeCategory::Real, 16> RTDEF(FPow16k)(
   return FPowI(b, e);
 }
 #endif
+
+CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(UPow1)(
+    CppTypeFor<TypeCategory::Unsigned, 1> b,
+    CppTypeFor<TypeCategory::Unsigned, 1> e) {
+  return UPow(b, e);
+}
+CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(UPow2)(
+    CppTypeFor<TypeCategory::Unsigned, 2> b,
+    CppTypeFor<TypeCategory::Unsigned, 2> e) {
+  return UPow(b, e);
+}
+CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(UPow4)(
+    CppTypeFor<TypeCategory::Unsigned, 4> b,
+    CppTypeFor<TypeCategory::Unsigned, 4> e) {
+  return UPow(b, e);
+}
+CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(UPow8)(
+    CppTypeFor<TypeCategory::Unsigned, 8> b,
+    CppTypeFor<TypeCategory::Unsigned, 8> e) {
+  return UPow(b, e);
+}
 
 RT_EXT_API_GROUP_END
 } // extern "C"

@@ -155,6 +155,12 @@ struct AliasAnalysis {
     /// Return true, if Target or Pointer attribute is set.
     bool isTargetOrPointer() const;
 
+    /// Return true, if Target attribute is set.
+    bool isTarget() const;
+
+    /// Return true, if Pointer attribute is set.
+    bool isPointer() const;
+
     bool isDummyArgument() const;
     bool isData() const;
     bool isBoxData() const;

@@ -75,10 +75,9 @@ define void @vector_loop_with_icmp(ptr nocapture noundef writeonly %dest) {
 ; CHECK-LABEL: vector_loop_with_icmp:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    mov w8, #2 // =0x2
-; CHECK-NEXT:    mov w9, #16 // =0x10
-; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    mov z1.d, #2 // =0x2
 ; CHECK-NEXT:    add x8, x0, #4
+; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    mov w10, #1 // =0x1
 ; CHECK-NEXT:    b .LBB5_2
 ; CHECK-NEXT:  .LBB5_1: // %pred.store.continue6
@@ -142,14 +141,12 @@ for.cond.cleanup:
 }
 
 
-; TODO: Combine the sbfx(cset) into a csetm
 define i32 @issue_121372(<4 x i32> %v) {
 ; CHECK-LABEL: issue_121372:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx w8, w8, #0, #1
+; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    csetm w0, lt
 ; CHECK-NEXT:    ret
@@ -184,17 +181,16 @@ define i1 @extract_icmp_v4i32_splat_rhs_mul_use(<4 x i32> %a, ptr %p) {
 ; CHECK-LABEL: extract_icmp_v4i32_splat_rhs_mul_use:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #235
-; CHECK-NEXT:    adrp x9, .LCPI8_0
+; CHECK-NEXT:    adrp x8, .LCPI8_0
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI8_0]
 ; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI8_0]
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    xtn v1.4h, v0.4s
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    umov w9, v1.h[1]
-; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    str b0, [x8]
 ; CHECK-NEXT:    and w0, w9, #0x1
-; CHECK-NEXT:    strb w10, [x8]
 ; CHECK-NEXT:    ret
   %icmp = icmp ult <4 x i32> %a, splat(i32 235)
   %ext = extractelement <4 x i1> %icmp, i32 1

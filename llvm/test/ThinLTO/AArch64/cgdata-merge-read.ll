@@ -30,6 +30,20 @@
 ; RUN: llvm-objdump -d %tout-read.1 | FileCheck %s --check-prefix=THUNK1
 ; RUN: llvm-objdump -d %tout-read.2 | FileCheck %s --check-prefix=THUNK2
 
+; It runs the same if we use -indexed-codegen-data-read-function-map-names=false.
+; RUN: llvm-lto2 run -enable-global-merge-func=true \
+; RUN:    -indexed-codegen-data-read-function-map-names=false \
+; RUN:    -codegen-data-use-path=%tout.cgdata \
+; RUN:    %t-foo.bc %t-goo.bc -o %tout-read \
+; RUN:    -r %t-foo.bc,_f1,px \
+; RUN:    -r %t-goo.bc,_f2,px \
+; RUN:    -r %t-foo.bc,_g,l -r %t-foo.bc,_g1,l -r %t-foo.bc,_g2,l \
+; RUN:    -r %t-goo.bc,_g,l -r %t-goo.bc,_g1,l -r %t-goo.bc,_g2,l
+; RUN: llvm-nm %tout-read.1 | FileCheck %s --check-prefix=READ1
+; RUN: llvm-nm %tout-read.2 | FileCheck %s --check-prefix=READ2
+; RUN: llvm-objdump -d %tout-read.1 | FileCheck %s --check-prefix=THUNK1
+; RUN: llvm-objdump -d %tout-read.2 | FileCheck %s --check-prefix=THUNK2
+
 ; READ1: _f1.Tgm
 ; READ2: _f2.Tgm
 

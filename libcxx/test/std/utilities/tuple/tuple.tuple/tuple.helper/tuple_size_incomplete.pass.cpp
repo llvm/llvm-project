@@ -45,9 +45,11 @@ void test_complete() {
 template <class T>
 void test_incomplete() {
   static_assert(!is_complete<T>(), "");
-  static_assert(!is_complete<const T>(), "");
-  static_assert(!is_complete<volatile T>(), "");
-  static_assert(!is_complete<const volatile T>(), "");
+  // https://cplusplus.github.io/LWG/issue4040
+  // It is controversial whether these specializations are incomplete.
+  LIBCPP_STATIC_ASSERT(!is_complete<const T>(), "");
+  LIBCPP_STATIC_ASSERT(!is_complete<volatile T>(), "");
+  LIBCPP_STATIC_ASSERT(!is_complete<const volatile T>(), "");
 }
 
 

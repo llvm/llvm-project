@@ -1,4 +1,4 @@
-# RUN: llc -start-after=livedebugvalues -filetype=obj -o - %s \
+# RUN: llc -start-before=aarch64-asm-printer -filetype=obj -o - %s \
 # RUN:   | llvm-dwarfdump - | FileCheck %s
 # CHECK: .debug_info contents:
 # CHECK: DW_TAG_formal_parameter

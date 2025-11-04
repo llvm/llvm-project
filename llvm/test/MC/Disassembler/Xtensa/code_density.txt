@@ -1,11 +1,9 @@
 # RUN: llvm-mc -triple=xtensa -mattr=+density -disassemble %s | FileCheck -check-prefixes=CHECK-DENSITY %s
 # RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
 
-#------------------------------------------------------------------------------
-# Verify that binary code is correctly disassembled with
-# code density option enabled. Also verify that dissasembling without
-# density option generates warnings.
-#------------------------------------------------------------------------------
+## Verify that binary code is correctly disassembled with
+## code density option enabled. Also verify that dissasembling without
+## density option generates warnings.
 
 [0x4a, 0x23]
 # CHECK-DENSITY: add.n  a2, a3, a4

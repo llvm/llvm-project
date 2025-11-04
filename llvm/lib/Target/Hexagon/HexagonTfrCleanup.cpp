@@ -25,7 +25,7 @@
 //    r0 = zxtb(r3)
 //  }
 
-#define DEBUG_TYPE "tfr-cleanup"
+#include "Hexagon.h"
 #include "HexagonTargetMachine.h"
 
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -37,19 +37,13 @@
 
 using namespace llvm;
 
-namespace llvm {
-FunctionPass *createHexagonTfrCleanup();
-void initializeHexagonTfrCleanupPass(PassRegistry &);
-} // namespace llvm
+#define DEBUG_TYPE "tfr-cleanup"
 
 namespace {
 class HexagonTfrCleanup : public MachineFunctionPass {
 public:
   static char ID;
-  HexagonTfrCleanup() : MachineFunctionPass(ID), HII(0), TRI(0) {
-    PassRegistry &R = *PassRegistry::getPassRegistry();
-    initializeHexagonTfrCleanupPass(R);
-  }
+  HexagonTfrCleanup() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return "Hexagon TFR Cleanup"; }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -58,8 +52,8 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  const HexagonInstrInfo *HII;
-  const TargetRegisterInfo *TRI;
+  const HexagonInstrInfo *HII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
   typedef DenseMap<unsigned, uint64_t> ImmediateMap;
 
@@ -166,11 +160,8 @@ bool HexagonTfrCleanup::updateImmMap(MachineInstr *MI, ImmediateMap &IMap) {
     if (!Mo->isReg() || !Mo->isDef())
       continue;
     unsigned R = Mo->getReg();
-    for (MCRegAliasIterator AR(R, TRI, true); AR.isValid(); ++AR) {
-      ImmediateMap::iterator F = IMap.find(*AR);
-      if (F != IMap.end())
-        IMap.erase(F);
-    }
+    for (MCRegAliasIterator AR(R, TRI, true); AR.isValid(); ++AR)
+      IMap.erase(*AR);
   }
   return true;
 }

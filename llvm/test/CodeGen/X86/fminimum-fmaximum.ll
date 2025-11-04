@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx      | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f  | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq | FileCheck %s --check-prefixes=AVX,AVX512,AVX512DQ
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.2-256 | FileCheck %s --check-prefixes=AVX10_2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.2  | FileCheck %s --check-prefixes=AVX10_2
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx        | FileCheck %s --check-prefixes=X86
 
 declare float @llvm.maximum.f32(float, float)
@@ -1854,9 +1854,9 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; AVX512-NEXT:    cmovpl %ecx, %r8d
 ; AVX512-NEXT:    movl $0, %r11d
 ; AVX512-NEXT:    cmoval %ecx, %r11d
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[3,3,3,3,4,5,6,7]
+; AVX512-NEXT:    vpsrlq $48, %xmm1, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[3,3,3,3,4,5,6,7]
+; AVX512-NEXT:    vpsrlq $48, %xmm0, %xmm3
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm3
 ; AVX512-NEXT:    movl $0, %r10d
@@ -1872,9 +1872,9 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; AVX512-NEXT:    cmovpl %ecx, %ebx
 ; AVX512-NEXT:    movl $0, %r14d
 ; AVX512-NEXT:    cmoval %ecx, %r14d
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[1,1,1,1,4,5,6,7]
+; AVX512-NEXT:    vpsrld $16, %xmm1, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[1,1,1,1,4,5,6,7]
+; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm3
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm3
 ; AVX512-NEXT:    movl $0, %r15d
@@ -1916,7 +1916,7 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; AVX512-NEXT:    vpinsrw $7, %edx, %xmm3, %xmm3
 ; AVX512-NEXT:    vpbroadcastw {{.*#+}} xmm4 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vpblendvb %xmm3, %xmm4, %xmm2, %xmm2
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm2[1,1,1,1,4,5,6,7]
+; AVX512-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX512-NEXT:    vucomiss %xmm4, %xmm3
@@ -1930,21 +1930,21 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; AVX512-NEXT:    cmovpl %eax, %esi
 ; AVX512-NEXT:    vmovd %esi, %xmm3
 ; AVX512-NEXT:    vpinsrw $1, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,1,1]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
 ; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512-NEXT:    vucomiss %xmm4, %xmm5
 ; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
 ; AVX512-NEXT:    cmovnel %eax, %edx
 ; AVX512-NEXT:    cmovpl %eax, %edx
 ; AVX512-NEXT:    vpinsrw $2, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm2[3,3,3,3,4,5,6,7]
+; AVX512-NEXT:    vpsrlq $48, %xmm2, %xmm5
 ; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512-NEXT:    vucomiss %xmm4, %xmm5
 ; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
 ; AVX512-NEXT:    cmovnel %eax, %edx
 ; AVX512-NEXT:    cmovpl %eax, %edx
 ; AVX512-NEXT:    vpinsrw $3, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,0,1]
 ; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512-NEXT:    vucomiss %xmm4, %xmm5
 ; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
@@ -2648,4 +2648,103 @@ define <4 x bfloat> @test_fmaximum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) {
 ; X86-NEXT:    retl
   %r = call <4 x bfloat> @llvm.maximum.v4bf16(<4 x bfloat> %x, <4 x bfloat> %y)
   ret <4 x bfloat> %r
+}
+
+; nnan minimum(Y, +inf) -> Y
+define float @test_fminimum_inf_nnan(float %x, float %y) nounwind {
+; SSE2-LABEL: test_fminimum_inf_nnan:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_fminimum_inf_nnan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX10_2-LABEL: test_fminimum_inf_nnan:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovaps %xmm1, %xmm0
+; AVX10_2-NEXT:    retq
+;
+; X86-LABEL: test_fminimum_inf_nnan:
+; X86:       # %bb.0:
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    retl
+  %1 = call nnan float @llvm.minimum.f32(float %y, float 0x7ff0000000000000)
+  ret float %1
+}
+
+; nnan maximum(Y, -inf) -> Y
+define float @test_fmaximum_neg_inf_nnan(float %x, float %y) nounwind {
+; SSE2-LABEL: test_fmaximum_neg_inf_nnan:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_fmaximum_neg_inf_nnan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX10_2-LABEL: test_fmaximum_neg_inf_nnan:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovaps %xmm1, %xmm0
+; AVX10_2-NEXT:    retq
+;
+; X86-LABEL: test_fmaximum_neg_inf_nnan:
+; X86:       # %bb.0:
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    retl
+  %1 = call nnan float @llvm.maximum.f32(float %y, float 0xfff0000000000000)
+  ret float %1
+}
+
+; Test SNaN quieting
+define float @test_fmaximum_snan(float %x) {
+; SSE2-LABEL: test_fmaximum_snan:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_fmaximum_snan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    retq
+;
+; AVX10_2-LABEL: test_fmaximum_snan:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX10_2-NEXT:    retq
+;
+; X86-LABEL: test_fmaximum_snan:
+; X86:       # %bb.0:
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    retl
+  %1 = tail call float @llvm.maximum.f32(float 0x7ff4000000000000, float %x)
+  ret float %1
+}
+
+define float @test_fminimum_snan(float %x) {
+; SSE2-LABEL: test_fminimum_snan:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_fminimum_snan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    retq
+;
+; AVX10_2-LABEL: test_fminimum_snan:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX10_2-NEXT:    retq
+;
+; X86-LABEL: test_fminimum_snan:
+; X86:       # %bb.0:
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    retl
+  %1 = tail call float @llvm.minimum.f32(float 0x7ff4000000000000, float %x)
+  ret float %1
 }

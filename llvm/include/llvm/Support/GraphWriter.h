@@ -25,6 +25,7 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -37,11 +38,11 @@ namespace llvm {
 
 namespace DOT {  // Private functions...
 
-std::string EscapeString(const std::string &Label);
+LLVM_ABI std::string EscapeString(const std::string &Label);
 
 /// Get a color string for this node number. Simply round-robin selects
 /// from a reasonable number of colors.
-StringRef getColorString(unsigned NodeNumber);
+LLVM_ABI StringRef getColorString(unsigned NodeNumber);
 
 } // end namespace DOT
 
@@ -57,11 +58,11 @@ enum Name {
 
 } // end namespace GraphProgram
 
-bool DisplayGraph(StringRef Filename, bool wait = true,
-                  GraphProgram::Name program = GraphProgram::DOT);
+LLVM_ABI bool DisplayGraph(StringRef Filename, bool wait = true,
+                           GraphProgram::Name program = GraphProgram::DOT);
 
-template<typename GraphType>
-class GraphWriter {
+template <typename GraphType, typename Derived> class GraphWriterBase {
+protected:
   raw_ostream &O;
   const GraphType &G;
   bool RenderUsingHTML = false;
@@ -74,9 +75,15 @@ class GraphWriter {
   DOTTraits DTraits;
 
   static_assert(std::is_pointer_v<NodeRef>,
-                "FIXME: Currently GraphWriter requires the NodeRef type to be "
-                "a pointer.\nThe pointer usage should be moved to "
-                "DOTGraphTraits, and removed from GraphWriter itself.");
+                "FIXME: Currently GraphWriterBase requires the NodeRef type to "
+                "be a pointer.\nThe pointer usage should be moved to "
+                "DOTGraphTraits, and removed from GraphWriterBase itself.");
+
+  // Cast the 'this' pointer to the derived type and return a reference.
+  Derived &getDerived() { return *static_cast<Derived *>(this); }
+  const Derived &getDerived() const {
+    return *static_cast<const Derived *>(this);
+  }
 
   // Writes the edge labels of the node to O and returns true if there are any
   // edge labels not equal to the empty string "".
@@ -117,23 +124,24 @@ class GraphWriter {
   }
 
 public:
-  GraphWriter(raw_ostream &o, const GraphType &g, bool SN) : O(o), G(g) {
+  GraphWriterBase(raw_ostream &o, const GraphType &g, bool SN) : O(o), G(g) {
     DTraits = DOTTraits(SN);
     RenderUsingHTML = DTraits.renderNodesUsingHTML();
   }
+  virtual ~GraphWriterBase() = default;
 
   void writeGraph(const std::string &Title = "") {
     // Output the header for the graph...
-    writeHeader(Title);
+    getDerived().writeHeader(Title);
 
     // Emit all of the nodes in the graph...
-    writeNodes();
+    getDerived().writeNodes();
 
     // Output any customizations on the graph
-    DOTGraphTraits<GraphType>::addCustomGraphFeatures(G, *this);
+    DOTGraphTraits<GraphType>::addCustomGraphFeatures(G, getDerived());
 
     // Output the end of the graph
-    writeFooter();
+    getDerived().writeFooter();
   }
 
   void writeHeader(const std::string &Title) {
@@ -165,8 +173,8 @@ public:
   void writeNodes() {
     // Loop over the graph, printing it out...
     for (const auto Node : nodes<GraphType>(G))
-      if (!isNodeHidden(Node))
-        writeNode(Node);
+      if (!getDerived().isNodeHidden(Node))
+        getDerived().writeNode(Node);
   }
 
   bool isNodeHidden(NodeRef Node) { return DTraits.isNodeHidden(Node, G); }
@@ -199,8 +207,9 @@ public:
       O << "<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\""
         << " cellpadding=\"0\"><tr><td align=\"text\" colspan=\"" << ColSpan
         << "\">";
-    } else
+    } else {
       O << "\"{";
+    }
 
     if (!DTraits.renderGraphFromBottomUp()) {
       if (RenderUsingHTML)
@@ -300,9 +309,9 @@ public:
       if (DTraits.getEdgeSourceLabel(Node, EI).empty())
         edgeidx = -1;
 
-      emitEdge(static_cast<const void*>(Node), edgeidx,
-               static_cast<const void*>(TargetNode), DestPort,
-               DTraits.getEdgeAttributes(Node, EI, G));
+      getDerived().emitEdge(static_cast<const void *>(Node), edgeidx,
+                            static_cast<const void *>(TargetNode), DestPort,
+                            DTraits.getEdgeAttributes(Node, EI, G));
     }
   }
 
@@ -334,7 +343,7 @@ public:
                 const void *DestNodeID, int DestNodePort,
                 const std::string &Attrs) {
     if (SrcNodePort  > 64) return;             // Eminating from truncated part?
-    if (DestNodePort > 64) DestNodePort = 64;  // Targeting the truncated part?
+    DestNodePort = std::min(DestNodePort, 64); // Targeting the truncated part?
 
     O << "\tNode" << SrcNodeID;
     if (SrcNodePort >= 0)
@@ -355,10 +364,17 @@ public:
   }
 };
 
-template<typename GraphType>
+template <typename GraphType>
+class GraphWriter : public GraphWriterBase<GraphType, GraphWriter<GraphType>> {
+public:
+  GraphWriter(raw_ostream &o, const GraphType &g, bool SN)
+      : GraphWriterBase<GraphType, GraphWriter<GraphType>>(o, g, SN) {}
+  ~GraphWriter() override = default;
+};
+
+template <typename GraphType>
 raw_ostream &WriteGraph(raw_ostream &O, const GraphType &G,
-                        bool ShortNames = false,
-                        const Twine &Title = "") {
+                        bool ShortNames = false, const Twine &Title = "") {
   // Start the graph emission process...
   GraphWriter<GraphType> W(O, G, ShortNames);
 
@@ -368,7 +384,7 @@ raw_ostream &WriteGraph(raw_ostream &O, const GraphType &G,
   return O;
 }
 
-std::string createGraphFilename(const Twine &Name, int &FD);
+LLVM_ABI std::string createGraphFilename(const Twine &Name, int &FD);
 
 /// Writes graph into a provided @c Filename.
 /// If @c Filename is empty, generates a random one.

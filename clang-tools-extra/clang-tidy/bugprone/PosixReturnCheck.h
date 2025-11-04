@@ -1,4 +1,4 @@
-//===--- PosixReturnCheck.h - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 
 namespace clang::tidy::bugprone {
 
-class PosixReturnCheck: public ClangTidyCheck {
+class PosixReturnCheck : public ClangTidyCheck {
 public:
   PosixReturnCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}

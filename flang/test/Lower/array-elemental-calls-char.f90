@@ -240,8 +240,8 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_5]]) typeparams %[[VAL_2]]#1 dummy_scope %[[VAL_1]] {uniq_name = "_QMchar_elemFfoo6Ec"} : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<10x!fir.char<1,?>>>, !fir.ref<!fir.array<10x!fir.char<1,?>>>)
-! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.array<10x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_2]]#1 {uniq_name = "dummy.tmp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:           %[[VAL_7:.*]] = fir.convert %c1_i64 : (i64) -> !fir.ref<!fir.char<1,?>>
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_2]]#1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMchar_elemFelem_return_charEc"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_2]]#1 : (index) -> i64
 ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i64) -> i32
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> i64
@@ -252,18 +252,9 @@ end subroutine
 ! CHECK:           %[[VAL_16:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_15]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<10x!fir.char<1,?>> {
 ! CHECK:           ^bb0(%[[VAL_17:.*]]: index):
 ! CHECK:             %[[VAL_18:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_17]])  typeparams %[[VAL_2]]#1 : (!fir.box<!fir.array<10x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-! CHECK:             %[[VAL_19:.*]]:2 = fir.unboxchar %[[VAL_18]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]]#0 typeparams %[[VAL_19]]#1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMchar_elemFelem_return_charEc"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_19]]#1 : (index) -> i64
-! CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (i64) -> i32
-! CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (i32) -> i64
-! CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (i64) -> index
-! CHECK:             %[[VAL_25:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_26:.*]] = arith.cmpi sgt, %[[VAL_24]], %[[VAL_25]] : index
-! CHECK:             %[[VAL_27:.*]] = arith.select %[[VAL_26]], %[[VAL_24]], %[[VAL_25]] : index
-! CHECK:             %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_27]] : index) {bindc_name = ".result"}
-! CHECK:             %[[VAL_29:.*]] = fir.call @_QMchar_elemPelem_return_char(%[[VAL_28]], %[[VAL_27]], %[[VAL_18]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
-! CHECK:             %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_27]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:             %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_15]] : index) {bindc_name = ".result"}
+! CHECK:             %[[VAL_29:.*]] = fir.call @_QMchar_elemPelem_return_char(%[[VAL_28]], %[[VAL_15]], %[[VAL_18]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
+! CHECK:             %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_15]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:             %[[VAL_31:.*]] = arith.constant false
 ! CHECK:             %[[VAL_32:.*]] = hlfir.as_expr %[[VAL_30]]#0 move %[[VAL_31]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             hlfir.yield_element %[[VAL_32]] : !hlfir.expr<!fir.char<1,?>>

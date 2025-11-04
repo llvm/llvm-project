@@ -8,7 +8,7 @@ cv.elw 0, 0(x6)
 # CHECK-ERROR: invalid operand for instruction
 
 cv.elw x12, 2048(x6)
-# CHECK-ERROR: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.elw x12, x1(2047)
 # CHECK-ERROR: unexpected token

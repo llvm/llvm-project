@@ -460,3 +460,31 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+func.func @move_isolated_from_above() -> () {
+  %1 = "before"() : () -> (f32)
+  %2 = "moved0"() : () -> (f32)
+  %3 = test.isolated_one_region_op %2 {} : f32 -> f32
+  %4 = "moved1"(%3) : (f32) -> (f32)
+  return
+}
+// CHECK-LABEL: func @move_isolated_from_above()
+//       CHECK:   %[[MOVED0:.+]] = "moved0"
+//       CHECK:   %[[ISOLATED:.+]] = test.isolated_one_region_op %[[MOVED0]]
+//       CHECK:   %[[MOVED1:.+]] = "moved1"(%[[ISOLATED]])
+//       CHECK:   %[[BEFORE:.+]] = "before"
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match ops{["moved1"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %v1 = transform.get_result %op2[0] : (!transform.any_op) -> !transform.any_value
+    transform.test.move_value_defns %v1 before %op1
+        : (!transform.any_value), !transform.any_op
+    transform.yield
+  }
+}

@@ -24,19 +24,19 @@ int main(int argc, char **argv) {
 
 // CHECK: (lldb) thread backtrace
 // CHECK-NEXT: * thread #1, stop reason = breakpoint 1.1
-// CHECK-NEXT:   * frame #0: {{.*}} stack_unwinding01.cpp.tmp.exe`Struct::simple_method(this={{.*}}, a=2, b=2) at stack_unwinding01.cpp:12
+// CHECK-NEXT:   * frame #0: {{.*}} stack_unwinding01.cpp.tmp.exe`void Struct::simple_method(this={{.*}}, a=2, b=2) at stack_unwinding01.cpp:12
 // CHECK-NEXT:     frame #1: {{.*}} stack_unwinding01.cpp.tmp.exe`main(argc={{.*}}, argv={{.*}}) at stack_unwinding01.cpp:20
 
 
 // CHECK: (lldb) thread backtrace
 // CHECK-NEXT: * thread #1, stop reason = breakpoint 1.1
-// CHECK-NEXT:   * frame #0: {{.*}} stack_unwinding01.cpp.tmp.exe`Struct::simple_method(this={{.*}}, a=3, b=2) at stack_unwinding01.cpp:12
-// CHECK-NEXT:     frame #1: {{.*}} stack_unwinding01.cpp.tmp.exe`Struct::simple_method(this={{.*}}, a=2, b=2) at stack_unwinding01.cpp:12
+// CHECK-NEXT:   * frame #0: {{.*}} stack_unwinding01.cpp.tmp.exe`void Struct::simple_method(this={{.*}}, a=3, b=2) at stack_unwinding01.cpp:12
+// CHECK-NEXT:     frame #1: {{.*}} stack_unwinding01.cpp.tmp.exe`void Struct::simple_method(this={{.*}}, a=2, b=2) at stack_unwinding01.cpp:12
 // CHECK-NEXT:     frame #2: {{.*}} stack_unwinding01.cpp.tmp.exe`main(argc={{.*}}, argv={{.*}}) at stack_unwinding01.cpp:20
 
 // CHECK: (lldb) thread backtrace
 // CHECK-NEXT: * thread #1, stop reason = breakpoint 1.1
-// CHECK-NEXT:   * frame #0: {{.*}} stack_unwinding01.cpp.tmp.exe`Struct::simple_method(this={{.*}}, a=4, b=2) at stack_unwinding01.cpp:12
-// CHECK-NEXT:     frame #1: {{.*}} stack_unwinding01.cpp.tmp.exe`Struct::simple_method(this={{.*}}, a=3, b=2) at stack_unwinding01.cpp:12
-// CHECK-NEXT:     frame #2: {{.*}} stack_unwinding01.cpp.tmp.exe`Struct::simple_method(this={{.*}}, a=2, b=2) at stack_unwinding01.cpp:12
+// CHECK-NEXT:   * frame #0: {{.*}} stack_unwinding01.cpp.tmp.exe`void Struct::simple_method(this={{.*}}, a=4, b=2) at stack_unwinding01.cpp:12
+// CHECK-NEXT:     frame #1: {{.*}} stack_unwinding01.cpp.tmp.exe`void Struct::simple_method(this={{.*}}, a=3, b=2) at stack_unwinding01.cpp:12
+// CHECK-NEXT:     frame #2: {{.*}} stack_unwinding01.cpp.tmp.exe`void Struct::simple_method(this={{.*}}, a=2, b=2) at stack_unwinding01.cpp:12
 // CHECK-NEXT:     frame #3: {{.*}} stack_unwinding01.cpp.tmp.exe`main(argc={{.*}}, argv={{.*}}) at stack_unwinding01.cpp:20

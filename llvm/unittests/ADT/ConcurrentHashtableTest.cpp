@@ -21,7 +21,7 @@ using namespace parallel;
 namespace {
 class String {
 public:
-  String() {}
+  String() = default;
   const std::string &getKey() const { return Data; }
 
   template <typename AllocatorTy>

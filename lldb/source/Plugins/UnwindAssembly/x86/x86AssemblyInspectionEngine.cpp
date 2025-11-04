@@ -1338,25 +1338,25 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
   if (unwind_plan.GetRowCount() < 2)
     return false;
 
-  const UnwindPlan::Row *first_row = unwind_plan.GetRowAtIndex(0);
-  if (first_row->GetOffset() != 0)
+  UnwindPlan::Row first_row = *unwind_plan.GetRowAtIndex(0);
+  if (first_row.GetOffset() != 0)
     return false;
-  uint32_t cfa_reg = first_row->GetCFAValue().GetRegisterNumber();
+  uint32_t cfa_reg = first_row.GetCFAValue().GetRegisterNumber();
   if (unwind_plan.GetRegisterKind() != eRegisterKindLLDB) {
     cfa_reg = reg_ctx->ConvertRegisterKindToRegisterNumber(
         unwind_plan.GetRegisterKind(),
-        first_row->GetCFAValue().GetRegisterNumber());
+        first_row.GetCFAValue().GetRegisterNumber());
   }
   if (cfa_reg != m_lldb_sp_regnum ||
-      first_row->GetCFAValue().GetOffset() != m_wordsize)
+      first_row.GetCFAValue().GetOffset() != m_wordsize)
     return false;
 
-  const UnwindPlan::Row *original_last_row = unwind_plan.GetLastRow();
+  UnwindPlan::Row original_last_row = *unwind_plan.GetLastRow();
 
   size_t offset = 0;
   int row_id = 1;
   bool unwind_plan_updated = false;
-  UnwindPlan::Row row = *first_row;
+  UnwindPlan::Row row = first_row;
 
   // After a mid-function epilogue we will need to re-insert the original
   // unwind rules so unwinds work for the remainder of the function.  These
@@ -1380,7 +1380,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
       continue;
 
     if (reinstate_unwind_state) {
-      row = *original_last_row;
+      row = original_last_row;
       row.SetOffset(offset);
       unwind_plan.AppendRow(row);
       reinstate_unwind_state = false;
@@ -1390,11 +1390,12 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
 
     // If we already have one row for this instruction, we can continue.
     while (row_id < unwind_plan.GetRowCount() &&
-           unwind_plan.GetRowAtIndex(row_id)->GetOffset() <= offset) {
+           unwind_plan.GetRowAtIndex(row_id)->GetOffset() <=
+               static_cast<int64_t>(offset)) {
       row_id++;
     }
     const UnwindPlan::Row *original_row = unwind_plan.GetRowAtIndex(row_id - 1);
-    if (original_row->GetOffset() == offset) {
+    if (original_row->GetOffset() == static_cast<int64_t>(offset)) {
       row = *original_row;
       continue;
     }
@@ -1521,7 +1522,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
         if (ret_pattern_p()) {
           row.SetOffset(offset);
           row.GetCFAValue().SetIsRegisterPlusOffset(
-              first_row->GetCFAValue().GetRegisterNumber(), m_wordsize);
+              first_row.GetCFAValue().GetRegisterNumber(), m_wordsize);
 
           unwind_plan.InsertRow(row);
           unwind_plan_updated = true;

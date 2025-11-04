@@ -50,24 +50,6 @@ namespace clang {
 
 namespace ast_matchers {
 
-/// A struct defining options for configuring the MatchFinder.
-struct MatchFinderOptions {
-  struct Profiling {
-    Profiling(llvm::StringMap<llvm::TimeRecord> &Records) : Records(Records) {}
-
-    /// Per bucket timing information.
-    llvm::StringMap<llvm::TimeRecord> &Records;
-  };
-
-  /// Enables per-check timers.
-  ///
-  /// It prints a report after match.
-  std::optional<Profiling> CheckProfiling;
-
-  /// Avoids matching declarations in system headers.
-  bool SkipSystemHeaders = false;
-};
-
 /// A class to allow finding matches over the Clang AST.
 ///
 /// After creation, you can add multiple matchers to the MatchFinder via
@@ -142,6 +124,26 @@ public:
   public:
     virtual ~ParsingDoneTestCallback();
     virtual void run() = 0;
+  };
+
+  struct MatchFinderOptions {
+    struct Profiling {
+      Profiling(llvm::StringMap<llvm::TimeRecord> &Records)
+          : Records(Records) {}
+
+      /// Per bucket timing information.
+      llvm::StringMap<llvm::TimeRecord> &Records;
+    };
+
+    MatchFinderOptions() {}
+
+    /// Enables per-check timers.
+    ///
+    /// It prints a report after match.
+    std::optional<Profiling> CheckProfiling;
+
+    /// Avoids matching declarations in system headers.
+    bool IgnoreSystemHeaders{false};
   };
 
   MatchFinder(MatchFinderOptions Options = MatchFinderOptions());
@@ -271,7 +273,7 @@ SmallVector<BoundNodes, 1> match(MatcherT Matcher, ASTContext &Context);
 /// Returns \c NULL if there is no match, or if the matching node cannot be
 /// casted to \c NodeT.
 ///
-/// This is useful in combanation with \c match():
+/// This is useful in combination with \c match():
 /// \code
 ///   const Decl *D = selectFirst<Decl>("id", match(Matcher.bind("id"),
 ///                                                 Node, Context));

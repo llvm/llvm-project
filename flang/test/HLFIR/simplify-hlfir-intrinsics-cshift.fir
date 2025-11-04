@@ -38,22 +38,14 @@ func.func @cshift_vector(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<i32
 // CHECK:               %[[VAL_24:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_2]]:%[[VAL_6]]#1:%[[VAL_2]])  shape %[[VAL_23]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:               %[[VAL_25:.*]] = fir.box_addr %[[VAL_24]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 // CHECK:               %[[VAL_26:.*]] = fir.embox %[[VAL_25]](%[[VAL_23]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:               %[[VAL_36:.*]] = arith.subi %[[VAL_8]], %[[VAL_17]] overflow<nsw, nuw> : i64
 // CHECK:               %[[VAL_27:.*]] = fir.convert %[[VAL_17]] : (i64) -> index
 // CHECK:               fir.do_loop %[[VAL_28:.*]] = %[[VAL_2]] to %[[VAL_27]] step %[[VAL_2]] unordered {
 // CHECK:                 %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (index) -> i64
-// CHECK:                 %[[VAL_30:.*]]:3 = fir.box_dims %[[VAL_26]], %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:                 %[[VAL_31:.*]] = fir.convert %[[VAL_29]] : (i64) -> index
-// CHECK:                 %[[VAL_32:.*]] = arith.subi %[[VAL_30]]#0, %[[VAL_2]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_33:.*]] = arith.addi %[[VAL_31]], %[[VAL_32]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_34:.*]] = hlfir.designate %[[VAL_26]] (%[[VAL_33]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:                 %[[VAL_34:.*]] = hlfir.designate %[[VAL_26]] (%[[VAL_29]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
 // CHECK:                 %[[VAL_35:.*]] = fir.load %[[VAL_34]] : !fir.ref<i32>
-// CHECK:                 %[[VAL_36:.*]] = arith.subi %[[VAL_8]], %[[VAL_17]] overflow<nsw, nuw> : i64
 // CHECK:                 %[[VAL_37:.*]] = arith.addi %[[VAL_29]], %[[VAL_36]] overflow<nsw, nuw> : i64
-// CHECK:                 %[[VAL_38:.*]]:3 = fir.box_dims %[[VAL_20]], %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:                 %[[VAL_39:.*]] = fir.convert %[[VAL_37]] : (i64) -> index
-// CHECK:                 %[[VAL_40:.*]] = arith.subi %[[VAL_38]]#0, %[[VAL_2]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_41:.*]] = arith.addi %[[VAL_39]], %[[VAL_40]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_42:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_41]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:                 %[[VAL_42:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_37]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
 // CHECK:                 hlfir.assign %[[VAL_35]] to %[[VAL_42]] : i32, !fir.ref<i32>
 // CHECK:               }
 // CHECK:               %[[VAL_43:.*]] = arith.subi %[[VAL_8]], %[[VAL_17]] overflow<nsw, nuw> : i64
@@ -61,20 +53,13 @@ func.func @cshift_vector(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<i32
 // CHECK:               fir.do_loop %[[VAL_45:.*]] = %[[VAL_2]] to %[[VAL_44]] step %[[VAL_2]] unordered {
 // CHECK:                 %[[VAL_46:.*]] = fir.convert %[[VAL_45]] : (index) -> i64
 // CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_17]] overflow<nsw, nuw> : i64
-// CHECK:                 %[[VAL_48:.*]]:3 = fir.box_dims %[[VAL_26]], %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:                 %[[VAL_49:.*]] = fir.convert %[[VAL_47]] : (i64) -> index
-// CHECK:                 %[[VAL_50:.*]] = arith.subi %[[VAL_48]]#0, %[[VAL_2]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_51:.*]] = arith.addi %[[VAL_49]], %[[VAL_50]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_52:.*]] = hlfir.designate %[[VAL_26]] (%[[VAL_51]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:                 %[[VAL_52:.*]] = hlfir.designate %[[VAL_26]] (%[[VAL_47]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
 // CHECK:                 %[[VAL_53:.*]] = fir.load %[[VAL_52]] : !fir.ref<i32>
-// CHECK:                 %[[VAL_54:.*]]:3 = fir.box_dims %[[VAL_20]], %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:                 %[[VAL_55:.*]] = fir.convert %[[VAL_46]] : (i64) -> index
-// CHECK:                 %[[VAL_56:.*]] = arith.subi %[[VAL_54]]#0, %[[VAL_2]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_57:.*]] = arith.addi %[[VAL_55]], %[[VAL_56]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_58:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_57]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:                 %[[VAL_58:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_46]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
 // CHECK:                 hlfir.assign %[[VAL_53]] to %[[VAL_58]] : i32, !fir.ref<i32>
 // CHECK:               }
 // CHECK:             } else {
+// CHECK:               %[[VAL_68:.*]] = arith.subi %[[VAL_8]], %[[VAL_17]] overflow<nsw, nuw> : i64
 // CHECK:               %[[VAL_59:.*]] = fir.convert %[[VAL_17]] : (i64) -> index
 // CHECK:               fir.do_loop %[[VAL_60:.*]] = %[[VAL_2]] to %[[VAL_59]] step %[[VAL_2]] unordered {
 // CHECK:                 %[[VAL_61:.*]] = fir.convert %[[VAL_60]] : (index) -> i64
@@ -84,13 +69,8 @@ func.func @cshift_vector(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<i32
 // CHECK:                 %[[VAL_65:.*]] = arith.addi %[[VAL_63]], %[[VAL_64]] overflow<nsw, nuw> : index
 // CHECK:                 %[[VAL_66:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_65]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:                 %[[VAL_67:.*]] = fir.load %[[VAL_66]] : !fir.ref<i32>
-// CHECK:                 %[[VAL_68:.*]] = arith.subi %[[VAL_8]], %[[VAL_17]] overflow<nsw, nuw> : i64
 // CHECK:                 %[[VAL_69:.*]] = arith.addi %[[VAL_61]], %[[VAL_68]] overflow<nsw, nuw> : i64
-// CHECK:                 %[[VAL_70:.*]]:3 = fir.box_dims %[[VAL_20]], %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:                 %[[VAL_71:.*]] = fir.convert %[[VAL_69]] : (i64) -> index
-// CHECK:                 %[[VAL_72:.*]] = arith.subi %[[VAL_70]]#0, %[[VAL_2]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_73:.*]] = arith.addi %[[VAL_71]], %[[VAL_72]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_74:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_73]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:                 %[[VAL_74:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_69]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
 // CHECK:                 hlfir.assign %[[VAL_67]] to %[[VAL_74]] : i32, !fir.ref<i32>
 // CHECK:               }
 // CHECK:               %[[VAL_75:.*]] = arith.subi %[[VAL_8]], %[[VAL_17]] overflow<nsw, nuw> : i64
@@ -104,11 +84,7 @@ func.func @cshift_vector(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<i32
 // CHECK:                 %[[VAL_83:.*]] = arith.addi %[[VAL_81]], %[[VAL_82]] overflow<nsw, nuw> : index
 // CHECK:                 %[[VAL_84:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_83]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:                 %[[VAL_85:.*]] = fir.load %[[VAL_84]] : !fir.ref<i32>
-// CHECK:                 %[[VAL_86:.*]]:3 = fir.box_dims %[[VAL_20]], %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:                 %[[VAL_87:.*]] = fir.convert %[[VAL_78]] : (i64) -> index
-// CHECK:                 %[[VAL_88:.*]] = arith.subi %[[VAL_86]]#0, %[[VAL_2]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_89:.*]] = arith.addi %[[VAL_87]], %[[VAL_88]] overflow<nsw, nuw> : index
-// CHECK:                 %[[VAL_90:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_89]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:                 %[[VAL_90:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_78]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
 // CHECK:                 hlfir.assign %[[VAL_85]] to %[[VAL_90]] : i32, !fir.ref<i32>
 // CHECK:               }
 // CHECK:             }

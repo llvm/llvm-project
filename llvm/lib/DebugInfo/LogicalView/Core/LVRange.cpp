@@ -139,7 +139,7 @@ void LVRange::sort() {
   };
 
   // Sort the ranges using low address and range size.
-  std::stable_sort(RangeEntries.begin(), RangeEntries.end(), CompareRangeEntry);
+  llvm::stable_sort(RangeEntries, CompareRangeEntry);
 }
 
 void LVRange::print(raw_ostream &OS, bool Full) const {

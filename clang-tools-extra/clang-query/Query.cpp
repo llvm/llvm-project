@@ -114,7 +114,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     Profiler.emplace();
 
   for (auto &AST : QS.ASTs) {
-    ast_matchers::MatchFinderOptions FinderOptions;
+    ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
     std::optional<llvm::StringMap<llvm::TimeRecord>> Records;
     if (QS.EnableProfile) {
       Records.emplace();
@@ -172,7 +172,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
           clang::SourceRange R = BI->second.getSourceRange();
           if (R.isValid()) {
             TextDiagnostic TD(OS, AST->getASTContext().getLangOpts(),
-                              &AST->getDiagnostics().getDiagnosticOptions());
+                              AST->getDiagnostics().getDiagnosticOptions());
             TD.emitDiagnostic(
                 FullSourceLoc(R.getBegin(), AST->getSourceManager()),
                 DiagnosticsEngine::Note, "\"" + BI->first + "\" binds here",
