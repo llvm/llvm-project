@@ -3386,13 +3386,12 @@ IntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
   assert(args.size() == 2);
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::Value token = fir::AllocaOp::create(builder, loc, resultType);
-  // TODO: the MBarrierArriveExpectTxOp is not taking the state argument and
-  // currently just the sink symbol `_`.
-  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive
-  mlir::NVVM::MBarrierArriveExpectTxOp::create(builder, loc, barrier, args[1],
-                                               {});
-  return fir::LoadOp::create(builder, loc, token);
+  return mlir::NVVM::InlinePtxOp::create(builder, loc, {resultType},
+                                         {barrier, args[1]}, {},
+                                         "mbarrier.arrive.expect_tx.release."
+                                         "cta.shared::cta.b64 %0, [%1], %2;",
+                                         {})
+      .getResult(0);
 }
 
 // BARRIER_INIT (CUDA)
