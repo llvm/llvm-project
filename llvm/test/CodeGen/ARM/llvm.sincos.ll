@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 < %s | FileCheck -check-prefix=GNUEABI %s
 ; RUN: llc -mtriple=armv7-apple-ios6 -mcpu=cortex-a8 < %s | FileCheck -check-prefixes=IOS,IOS-NO-STRET %s
 ; RUN: llc -mtriple=armv7-apple-ios7 -mcpu=cortex-a8 < %s | FileCheck -check-prefixes=IOS,IOS-WITH-STRET %s
+; RUN: llc -mtriple=thumbv7k-apple-watchos2.0 < %s | FileCheck -check-prefix=WATCHABI %s
 
 define { half, half } @test_sincos_f16(half %a) {
 ; GNU-LABEL: test_sincos_f16:
@@ -75,6 +76,23 @@ define { half, half } @test_sincos_f16(half %a) {
 ; IOS-WITH-STRET-NEXT:    mov r0, r5
 ; IOS-WITH-STRET-NEXT:    add sp, sp, #8
 ; IOS-WITH-STRET-NEXT:    pop {r4, r5, pc}
+;
+; WATCHABI-LABEL: test_sincos_f16:
+; WATCHABI:         .cfi_startproc
+; WATCHABI-NEXT:  @ %bb.0:
+; WATCHABI-NEXT:    push {r7, lr}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 8
+; WATCHABI-NEXT:    .cfi_offset lr, -4
+; WATCHABI-NEXT:    .cfi_offset r7, -8
+; WATCHABI-NEXT:    sub sp, #8
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 16
+; WATCHABI-NEXT:    vcvtb.f32.f16 s0, s0
+; WATCHABI-NEXT:    bl ___sincosf_stret
+; WATCHABI-NEXT:    vcvtb.f16.f32 s0, s0
+; WATCHABI-NEXT:    vcvtb.f16.f32 s1, s1
+; WATCHABI-NEXT:    add sp, #8
+; WATCHABI-NEXT:    pop {r7, pc}
+; WATCHABI-NEXT:    .cfi_endproc
   %result = call { half, half } @llvm.sincos.f16(half %a)
   ret { half, half } %result
 }
@@ -130,6 +148,22 @@ define half @test_sincos_f16_only_use_sin(half %a) {
 ; IOS-WITH-STRET-NEXT:    add sp, sp, #8
 ; IOS-WITH-STRET-NEXT:    pop {lr}
 ; IOS-WITH-STRET-NEXT:    bx lr
+;
+; WATCHABI-LABEL: test_sincos_f16_only_use_sin:
+; WATCHABI:         .cfi_startproc
+; WATCHABI-NEXT:  @ %bb.0:
+; WATCHABI-NEXT:    push {r7, lr}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 8
+; WATCHABI-NEXT:    .cfi_offset lr, -4
+; WATCHABI-NEXT:    .cfi_offset r7, -8
+; WATCHABI-NEXT:    sub sp, #8
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 16
+; WATCHABI-NEXT:    vcvtb.f32.f16 s0, s0
+; WATCHABI-NEXT:    bl ___sincosf_stret
+; WATCHABI-NEXT:    vcvtb.f16.f32 s0, s0
+; WATCHABI-NEXT:    add sp, #8
+; WATCHABI-NEXT:    pop {r7, pc}
+; WATCHABI-NEXT:    .cfi_endproc
   %result = call { half, half } @llvm.sincos.f16(half %a)
   %result.0 = extractvalue { half, half } %result, 0
   ret half %result.0
@@ -186,6 +220,22 @@ define half @test_sincos_f16_only_use_cos(half %a) {
 ; IOS-WITH-STRET-NEXT:    add sp, sp, #8
 ; IOS-WITH-STRET-NEXT:    pop {lr}
 ; IOS-WITH-STRET-NEXT:    bx lr
+;
+; WATCHABI-LABEL: test_sincos_f16_only_use_cos:
+; WATCHABI:         .cfi_startproc
+; WATCHABI-NEXT:  @ %bb.0:
+; WATCHABI-NEXT:    push {r7, lr}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 8
+; WATCHABI-NEXT:    .cfi_offset lr, -4
+; WATCHABI-NEXT:    .cfi_offset r7, -8
+; WATCHABI-NEXT:    sub sp, #8
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 16
+; WATCHABI-NEXT:    vcvtb.f32.f16 s0, s0
+; WATCHABI-NEXT:    bl ___sincosf_stret
+; WATCHABI-NEXT:    vcvtb.f16.f32 s0, s1
+; WATCHABI-NEXT:    add sp, #8
+; WATCHABI-NEXT:    pop {r7, pc}
+; WATCHABI-NEXT:    .cfi_endproc
   %result = call { half, half } @llvm.sincos.f16(half %a)
   %result.1 = extractvalue { half, half } %result, 1
   ret half %result.1
@@ -366,6 +416,54 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) {
 ; IOS-WITH-STRET-NEXT:    add sp, sp, #24
 ; IOS-WITH-STRET-NEXT:    vpop {d8}
 ; IOS-WITH-STRET-NEXT:    pop {r4, r5, pc}
+;
+; WATCHABI-LABEL: test_sincos_v2f16:
+; WATCHABI:         .cfi_startproc
+; WATCHABI-NEXT:  @ %bb.0:
+; WATCHABI-NEXT:    push {r7, lr}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 8
+; WATCHABI-NEXT:    .cfi_offset lr, -4
+; WATCHABI-NEXT:    .cfi_offset r7, -8
+; WATCHABI-NEXT:    vpush {d10}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 16
+; WATCHABI-NEXT:    vpush {d8}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 24
+; WATCHABI-NEXT:    .cfi_offset d10, -16
+; WATCHABI-NEXT:    .cfi_offset d8, -24
+; WATCHABI-NEXT:    sub sp, #8
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 32
+; WATCHABI-NEXT:    vmov.f32 s16, s0
+; WATCHABI-NEXT:    vcvtb.f32.f16 s0, s1
+; WATCHABI-NEXT:    bl ___sincosf_stret
+; WATCHABI-NEXT:    vcvtb.f16.f32 s0, s0
+; WATCHABI-NEXT:    vcvtb.f32.f16 s4, s16
+; WATCHABI-NEXT:    vmov r0, s0
+; WATCHABI-NEXT:    vmov.f32 s0, s4
+; WATCHABI-NEXT:    vmov.f32 s20, s1
+; WATCHABI-NEXT:    strh.w r0, [sp, #6]
+; WATCHABI-NEXT:    bl ___sincosf_stret
+; WATCHABI-NEXT:    vcvtb.f16.f32 s0, s0
+; WATCHABI-NEXT:    vmov r0, s0
+; WATCHABI-NEXT:    vcvtb.f16.f32 s0, s20
+; WATCHABI-NEXT:    strh.w r0, [sp, #4]
+; WATCHABI-NEXT:    add r0, sp, #4
+; WATCHABI-NEXT:    vld1.32 {d16[0]}, [r0:32]
+; WATCHABI-NEXT:    vmov r0, s0
+; WATCHABI-NEXT:    vcvtb.f16.f32 s0, s1
+; WATCHABI-NEXT:    strh.w r0, [sp, #2]
+; WATCHABI-NEXT:    vmov r0, s0
+; WATCHABI-NEXT:    vmovl.u16 q0, d16
+; WATCHABI-NEXT:    strh.w r0, [sp]
+; WATCHABI-NEXT:    mov r0, sp
+; WATCHABI-NEXT:    vld1.32 {d18[0]}, [r0:32]
+; WATCHABI-NEXT:    vmovl.u16 q1, d18
+; WATCHABI-NEXT:    vmov.f32 s2, s4
+; WATCHABI-NEXT:    vmov.f32 s3, s5
+; WATCHABI-NEXT:    add sp, #8
+; WATCHABI-NEXT:    vpop {d8}
+; WATCHABI-NEXT:    vpop {d10}
+; WATCHABI-NEXT:    pop {r7, pc}
+; WATCHABI-NEXT:    .cfi_endproc
   %result = call { <2 x half>, <2 x half> } @llvm.sincos.v2f16(<2 x half> %a)
   ret { <2 x half>, <2 x half> } %result
 }
@@ -416,6 +514,20 @@ define { float, float } @test_sincos_f32(float %a) {
 ; IOS-WITH-STRET-NEXT:    pop {r0, r1}
 ; IOS-WITH-STRET-NEXT:    pop {lr}
 ; IOS-WITH-STRET-NEXT:    bx lr
+;
+; WATCHABI-LABEL: test_sincos_f32:
+; WATCHABI:         .cfi_startproc
+; WATCHABI-NEXT:  @ %bb.0:
+; WATCHABI-NEXT:    push {r7, lr}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 8
+; WATCHABI-NEXT:    .cfi_offset lr, -4
+; WATCHABI-NEXT:    .cfi_offset r7, -8
+; WATCHABI-NEXT:    sub sp, #8
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 16
+; WATCHABI-NEXT:    bl ___sincosf_stret
+; WATCHABI-NEXT:    add sp, #8
+; WATCHABI-NEXT:    pop {r7, pc}
+; WATCHABI-NEXT:    .cfi_endproc
   %result = call { float, float } @llvm.sincos.f32(float %a)
   ret { float, float } %result
 }
@@ -519,6 +631,33 @@ define { <2 x float>, <2 x float> } @test_sincos_v2f32(<2 x float> %a) {
 ; IOS-WITH-STRET-NEXT:    vpop {d8}
 ; IOS-WITH-STRET-NEXT:    pop {lr}
 ; IOS-WITH-STRET-NEXT:    bx lr
+;
+; WATCHABI-LABEL: test_sincos_v2f32:
+; WATCHABI:         .cfi_startproc
+; WATCHABI-NEXT:  @ %bb.0:
+; WATCHABI-NEXT:    push {r7, lr}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 8
+; WATCHABI-NEXT:    .cfi_offset lr, -4
+; WATCHABI-NEXT:    .cfi_offset r7, -8
+; WATCHABI-NEXT:    vpush {d8, d9, d10}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 32
+; WATCHABI-NEXT:    .cfi_offset d10, -16
+; WATCHABI-NEXT:    .cfi_offset d9, -24
+; WATCHABI-NEXT:    .cfi_offset d8, -32
+; WATCHABI-NEXT:    vmov.f64 d8, d0
+; WATCHABI-NEXT:    vmov.f32 s0, s17
+; WATCHABI-NEXT:    bl ___sincosf_stret
+; WATCHABI-NEXT:    vmov.f32 s19, s0
+; WATCHABI-NEXT:    vmov.f32 s0, s16
+; WATCHABI-NEXT:    vmov.f32 s21, s1
+; WATCHABI-NEXT:    bl ___sincosf_stret
+; WATCHABI-NEXT:    vmov.f32 s20, s1
+; WATCHABI-NEXT:    vmov.f32 s18, s0
+; WATCHABI-NEXT:    vmov.f64 d1, d10
+; WATCHABI-NEXT:    vmov.f64 d0, d9
+; WATCHABI-NEXT:    vpop {d8, d9, d10}
+; WATCHABI-NEXT:    pop {r7, pc}
+; WATCHABI-NEXT:    .cfi_endproc
   %result = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> %a)
   ret { <2 x float>, <2 x float> } %result
 }
@@ -581,6 +720,20 @@ define { double, double } @test_sincos_f64(double %a) {
 ; IOS-WITH-STRET-NEXT:    add sp, sp, #16
 ; IOS-WITH-STRET-NEXT:    pop {lr}
 ; IOS-WITH-STRET-NEXT:    bx lr
+;
+; WATCHABI-LABEL: test_sincos_f64:
+; WATCHABI:         .cfi_startproc
+; WATCHABI-NEXT:  @ %bb.0:
+; WATCHABI-NEXT:    push {r7, lr}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 8
+; WATCHABI-NEXT:    .cfi_offset lr, -4
+; WATCHABI-NEXT:    .cfi_offset r7, -8
+; WATCHABI-NEXT:    sub sp, #8
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 16
+; WATCHABI-NEXT:    bl ___sincos_stret
+; WATCHABI-NEXT:    add sp, #8
+; WATCHABI-NEXT:    pop {r7, pc}
+; WATCHABI-NEXT:    .cfi_endproc
   %result = call { double, double } @llvm.sincos.f64(double %a)
   ret { double, double } %result
 }
@@ -692,6 +845,39 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
 ; IOS-WITH-STRET-NEXT:    vst1.32 {d18, d19}, [r6]
 ; IOS-WITH-STRET-NEXT:    add sp, sp, #32
 ; IOS-WITH-STRET-NEXT:    pop {r4, r5, r6, pc}
+;
+; WATCHABI-LABEL: test_sincos_v2f64:
+; WATCHABI:         .cfi_startproc
+; WATCHABI-NEXT:  @ %bb.0:
+; WATCHABI-NEXT:    push {r7, lr}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 8
+; WATCHABI-NEXT:    .cfi_offset lr, -4
+; WATCHABI-NEXT:    .cfi_offset r7, -8
+; WATCHABI-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 56
+; WATCHABI-NEXT:    .cfi_offset d13, -16
+; WATCHABI-NEXT:    .cfi_offset d12, -24
+; WATCHABI-NEXT:    .cfi_offset d11, -32
+; WATCHABI-NEXT:    .cfi_offset d10, -40
+; WATCHABI-NEXT:    .cfi_offset d9, -48
+; WATCHABI-NEXT:    .cfi_offset d8, -56
+; WATCHABI-NEXT:    sub sp, #8
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 64
+; WATCHABI-NEXT:    vorr q4, q0, q0
+; WATCHABI-NEXT:    vorr d0, d9, d9
+; WATCHABI-NEXT:    bl ___sincos_stret
+; WATCHABI-NEXT:    vorr d11, d0, d0
+; WATCHABI-NEXT:    vorr d0, d8, d8
+; WATCHABI-NEXT:    vorr d13, d1, d1
+; WATCHABI-NEXT:    bl ___sincos_stret
+; WATCHABI-NEXT:    vorr d12, d1, d1
+; WATCHABI-NEXT:    vorr d10, d0, d0
+; WATCHABI-NEXT:    vorr q1, q6, q6
+; WATCHABI-NEXT:    vorr q0, q5, q5
+; WATCHABI-NEXT:    add sp, #8
+; WATCHABI-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
+; WATCHABI-NEXT:    pop {r7, pc}
+; WATCHABI-NEXT:    .cfi_endproc
   %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result
 }
@@ -778,6 +964,41 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) {
 ; IOS-NEXT:    bl _sinl
 ; IOS-NEXT:    stm r4, {r0, r1, r2, r3}
 ; IOS-NEXT:    pop {r4, r5, r6, r7, r8, pc}
+;
+; WATCHABI-LABEL: test_sincos_f128:
+; WATCHABI:         .cfi_startproc
+; WATCHABI-NEXT:  @ %bb.0:
+; WATCHABI-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 24
+; WATCHABI-NEXT:    .cfi_offset lr, -4
+; WATCHABI-NEXT:    .cfi_offset r7, -8
+; WATCHABI-NEXT:    .cfi_offset r6, -12
+; WATCHABI-NEXT:    .cfi_offset r5, -16
+; WATCHABI-NEXT:    .cfi_offset r4, -20
+; WATCHABI-NEXT:    .cfi_offset r8, -24
+; WATCHABI-NEXT:    sub sp, #8
+; WATCHABI-NEXT:    .cfi_def_cfa_offset 32
+; WATCHABI-NEXT:    ldr.w r8, [sp, #32]
+; WATCHABI-NEXT:    mov r4, r0
+; WATCHABI-NEXT:    mov r5, r3
+; WATCHABI-NEXT:    mov r6, r2
+; WATCHABI-NEXT:    mov r7, r1
+; WATCHABI-NEXT:    mov r0, r1
+; WATCHABI-NEXT:    mov r1, r2
+; WATCHABI-NEXT:    mov r2, r3
+; WATCHABI-NEXT:    mov r3, r8
+; WATCHABI-NEXT:    bl _cosl
+; WATCHABI-NEXT:    add.w r9, r4, #16
+; WATCHABI-NEXT:    stm.w r9, {r0, r1, r2, r3}
+; WATCHABI-NEXT:    mov r0, r7
+; WATCHABI-NEXT:    mov r1, r6
+; WATCHABI-NEXT:    mov r2, r5
+; WATCHABI-NEXT:    mov r3, r8
+; WATCHABI-NEXT:    bl _sinl
+; WATCHABI-NEXT:    stm r4!, {r0, r1, r2, r3}
+; WATCHABI-NEXT:    add sp, #8
+; WATCHABI-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; WATCHABI-NEXT:    .cfi_endproc
   %result = call { fp128, fp128 } @llvm.sincos.f16(fp128 %a)
   ret { fp128, fp128 } %result
 }
