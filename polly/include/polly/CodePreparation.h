@@ -15,12 +15,6 @@
 
 #include "llvm/IR/PassManager.h"
 
-namespace llvm {
-class DominatorTree;
-class LoopInfo;
-class RegionInfo;
-} // namespace llvm
-
 namespace polly {
 struct CodePreparationPass final : llvm::PassInfoMixin<CodePreparationPass> {
   llvm::PreservedAnalyses run(llvm::Function &F,
