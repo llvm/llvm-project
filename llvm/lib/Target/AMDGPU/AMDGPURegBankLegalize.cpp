@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
@@ -34,8 +35,16 @@
 
 using namespace llvm;
 using namespace AMDGPU;
+using namespace llvm::MIPatternMatch;
 
 namespace {
+
+// AMDGPU-specific pattern matchers
+template <typename SrcTy>
+inline UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_READANYLANE>
+m_GAMDGPUReadAnyLane(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_READANYLANE>(Src);
+}
 
 class AMDGPURegBankLegalize : public MachineFunctionPass {
 public:
@@ -160,9 +169,17 @@ AMDGPURegBankLegalizeCombiner::tryMatchRALFromUnmerge(Register Src) {
 
 Register AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrc(Register Src) {
   // Src = G_AMDGPU_READANYLANE RALSrc
-  auto [RAL, RALSrc] = tryMatch(Src, AMDGPU::G_AMDGPU_READANYLANE);
-  if (RAL)
+  Register RALSrc;
+  if (mi_match(Src, MRI, m_GAMDGPUReadAnyLane(m_Reg(RALSrc))))
     return RALSrc;
+
+  // TruncSrc = G_AMDGPU_READANYLANE RALSrc
+  // AextSrc = G_TRUNC TruncSrc
+  // Src = G_ANYEXT AextSrc
+  if (mi_match(Src, MRI,
+               m_GAnyExt(m_GTrunc(m_GAMDGPUReadAnyLane(m_Reg(RALSrc)))))) {
+    return RALSrc;
+  }
 
   // LoVgpr, HiVgpr = G_UNMERGE_VALUES UnmergeSrc
   // LoSgpr = G_AMDGPU_READANYLANE LoVgpr

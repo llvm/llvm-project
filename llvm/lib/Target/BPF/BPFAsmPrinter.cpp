@@ -88,6 +88,16 @@ bool BPFAsmPrinter::doFinalization(Module &M) {
     }
   }
 
+  for (GlobalObject &GO : M.global_objects()) {
+    if (!GO.hasExternalWeakLinkage())
+      continue;
+
+    if (!SawTrapCall && GO.getName() == BPF_TRAP) {
+      GO.eraseFromParent();
+      break;
+    }
+  }
+
   return AsmPrinter::doFinalization(M);
 }
 
@@ -160,6 +170,20 @@ bool BPFAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  if (MI->isCall()) {
+    for (const MachineOperand &Op : MI->operands()) {
+      if (Op.isGlobal()) {
+        if (const GlobalValue *GV = Op.getGlobal())
+          if (GV->getName() == BPF_TRAP)
+            SawTrapCall = true;
+      } else if (Op.isSymbol()) {
+        if (const MCSymbol *Sym = Op.getMCSymbol())
+          if (Sym->getName() == BPF_TRAP)
+            SawTrapCall = true;
+      }
+    }
+  }
+
   BPF_MC::verifyInstructionPredicates(MI->getOpcode(),
                                       getSubtargetInfo().getFeatureBits());
 

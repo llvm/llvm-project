@@ -1336,6 +1336,14 @@ mlir::LogicalResult CIRToLLVMATanOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMCeilOpLowering::matchAndRewrite(
+    cir::CeilOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::FCeilOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1693,6 +1701,15 @@ static uint64_t getTypeSize(mlir::Type type, mlir::Operation &op) {
   if (isa<cir::VoidType>(type))
     type = cir::IntType::get(type.getContext(), 8, /*isSigned=*/false);
   return llvm::divideCeil(layout.getTypeSizeInBits(type), 8);
+}
+
+mlir::LogicalResult CIRToLLVMPrefetchOpLowering::matchAndRewrite(
+    cir::PrefetchOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::Prefetch>(
+      op, adaptor.getAddr(), adaptor.getIsWrite(), adaptor.getLocality(),
+      /*DataCache=*/1);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(

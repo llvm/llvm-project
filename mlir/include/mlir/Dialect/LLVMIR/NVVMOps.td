@@ -476,9 +476,9 @@ def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
 def ReduxKindAttr : EnumAttr<NVVM_Dialect, ReduxKind, "redux_kind">;
 
 def NVVM_ReduxOp :
-  NVVM_Op<"redux.sync", [NVVMRequiresSM<80>]>,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_Type:$val,
+  NVVM_Op<"redux.sync", [NVVMRequiresSM<80>, AllTypesMatch<["res", "val"]>]>,
+  Results<(outs AnyTypeOf<[I32, F32]>:$res)>,
+  Arguments<(ins AnyTypeOf<[I32, F32]>:$val,
                  ReduxKindAttr:$kind,
                  I32:$mask_and_clamp,
                  DefaultValuedAttr<BoolAttr, "false">:$abs,
@@ -496,6 +496,8 @@ def NVVM_ReduxOp :
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-redux-sync)
   }];
+  let hasVerifier = 1;
+
   string llvmBuilder = [{
       auto intId = getReduxIntrinsicId($_resultType, $kind, $abs, $nan);
       $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
@@ -579,7 +581,8 @@ def NVVM_PMEventOp : NVVM_PTXBuilder_Op<"pmevent">,
 
 /// mbarrier.init instruction with generic pointer type
 def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
-  Arguments<(ins LLVM_AnyPointer:$addr, I32:$count, PtxPredicate:$predicate)> {
+  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+                 I32:$count, PtxPredicate:$predicate)> {
   let summary = "MBarrier Initialization Op";
   let description = [{
     The `nvvm.mbarrier.init` operation initializes an *mbarrier object* at the specified 
@@ -592,48 +595,35 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
     - Transaction count (tx-count): 0
 
     The operation takes the following operands:
-    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
-      addressing, but the address must still be in the shared memory space.
+    - `addr`: A pointer to the memory location of the *mbarrier object*. The `addr`
+      must be a pointer to generic or shared::cta memory. When it is generic, the
+      underlying address must be within the shared::cta memory space; otherwise
+      the behavior is undefined.
     - `count`: Integer specifying the number of threads that will participate in barrier
       synchronization. Must be in the range [1, 2²⁰ - 1].
     - `predicate`: Optional predicate for conditional execution.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-init)
   }];
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init, {$addr, $count});
-  }];
   let assemblyFormat = "$addr `,` $count (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
+
   let extraClassDeclaration = [{
     bool hasIntrinsic() { if(getPredicate()) return false; return true; }
-  }];
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.init.b64 [%0], %1;"); }
-  }];
-}
 
-/// mbarrier.init instruction with shared pointer type
-def NVVM_MBarrierInitSharedOp : NVVM_PTXBuilder_Op<"mbarrier.init.shared", [NVVMRequiresSM<80>, DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Arguments<(ins LLVM_PointerShared:$addr, I32:$count, PtxPredicate:$predicate)> {
-  let summary = "Shared MBarrier Initialization Op";
-  let description = [{
-    This Op is the same as `nvvm.mbarrier.init` except that the *mbarrier object*
-    should be accessed using a shared-memory pointer instead of a generic-memory pointer.
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-init)
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
   }];
+
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init_shared, {$addr, $count});
-  }];
-  let assemblyFormat = "$addr `,` $count (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
-  let extraClassDeclaration = "bool hasIntrinsic() { return !getPredicate(); }";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.init.shared.b64 [%0], %1;"); }
+    auto [id, args] = NVVM::MBarrierInitOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 
 def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
-  Arguments<(ins LLVM_AnyPointer:$addr)> {
+  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr)> {
   let summary = "MBarrier Invalidation Operation";
   let description = [{
     The `nvvm.mbarrier.inval` operation invalidates an *mbarrier object* at the 
@@ -644,30 +634,27 @@ def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
     It is undefined behavior if the *mbarrier object* is already invalid.
     
     The operation takes the following operand:
-    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
-      addressing, but the address must still be in the shared memory space.
+    - `addr`: A pointer to the memory location of the *mbarrier object*. The `addr`
+      must be a pointer to generic or shared::cta memory. When it is generic, the
+      underlying address must be within the shared::cta memory space; otherwise
+      the behavior is undefined.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-inval)
   }];
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_inval, {$addr});
-  }];
-  let assemblyFormat = "$addr attr-dict `:` type(operands)";
-}
 
-def NVVM_MBarrierInvalSharedOp : NVVM_Op<"mbarrier.inval.shared">,
-  Arguments<(ins LLVM_PointerShared:$addr)> {
-  let summary = "Shared MBarrier Invalidation Operation";
-  let description = [{
-    This Op is the same as `nvvm.mbarrier.inval` except that the *mbarrier object*
-    should be accessed using a shared-memory pointer instead of a generic-memory pointer.
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-inval)
-  }];
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_inval_shared, {$addr});
-  }];
   let assemblyFormat = "$addr attr-dict `:` type(operands)";
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierInvalOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
 }
 
 def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
@@ -1604,10 +1591,11 @@ def FPRoundingModeRM   : I32EnumAttrCase<"RM",   2, "rm">;
 def FPRoundingModeRP   : I32EnumAttrCase<"RP",   3, "rp">;
 def FPRoundingModeRZ   : I32EnumAttrCase<"RZ",   4, "rz">;
 def FPRoundingModeRNA  : I32EnumAttrCase<"RNA",  5, "rna">;
+def FPRoundingModeRS   : I32EnumAttrCase<"RS",   6, "rs">;
 
 def FPRoundingMode : I32EnumAttr<"FPRoundingMode", "NVVM FPRoundingMode kind",
   [FPRoundingModeNone, FPRoundingModeRN, FPRoundingModeRM,
-    FPRoundingModeRP, FPRoundingModeRZ, FPRoundingModeRNA]> {
+    FPRoundingModeRP, FPRoundingModeRZ, FPRoundingModeRNA, FPRoundingModeRS]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -1922,6 +1910,96 @@ def NVVM_ConvertF4x2ToF16x2Op :
   NVVM_ConvertToFP16x2Op_Base<"F4", I8, "F16">;
 
 //===----------------------------------------------------------------------===//
+// NVVM Stochastic Rounding Conversion Ops
+//===----------------------------------------------------------------------===//
+
+// Base class for conversions from F32x2 to FPx2 formats
+// (F16x2, BF16x2)
+// TODO: In separate PR, add .rn and .rz rounding variants for this conversion
+// as currently only support .rs rounding mode
+class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstType> :
+  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
+  Results<(outs dstType:$dst)>,
+  Arguments<(ins F32:$src_hi, F32:$src_lo, I32:$rbits,
+                 DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::RS">:$rnd,
+                 DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+                 DefaultValuedAttr<BoolAttr, "false">:$relu)> {
+  let summary = "Convert two F32 values to packed " # dstFormat # " with stochastic rounding (.rs)";
+  let description = [{
+    Converts two F32 values to packed }] # dstFormat # [{ format using stochastic 
+    rounding (.rs) mode with randomness provided by the `rbits` parameter. The 
+    `relu` attribute clamps negative results to 0. The `sat` attribute determines 
+    saturation behavior. The `src_hi` and `src_lo` parameters correspond to operands 
+    `a` and `b` in the PTX ISA, respectively.
+    
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+  
+  let assemblyFormat = "$src_hi `,` $src_lo `,` $rbits attr-dict `:` type($dst)";
+
+  let hasVerifier = 1;
+  
+  let extraClassDeclaration = [{
+    llvm::Intrinsic::ID getIntrinsicID();
+  }];
+  
+  string llvmBuilder = [{
+    auto intId = op.getIntrinsicID();
+    $dst = createIntrinsicCall(builder, intId, {$src_hi, $src_lo, $rbits});
+  }];
+  }
+
+// F32x2 -> F16x2 with stochastic rounding
+def NVVM_ConvertF32x2ToF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"f16x2", "convert.f32x2.to.f16x2", VectorOfLengthAndType<[2], [F16]>>;
+
+// F32x2 -> BF16x2 with stochastic rounding
+def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"bf16x2", "convert.f32x2.to.bf16x2", VectorOfLengthAndType<[2], [BF16]>>;
+
+// Base class for stochastic rounding conversions from F32x4 to FPx4 formats
+// (E4M3x4, E5M2x4, E2M3x4, E3M2x4, E2M1x4)
+// These operations always use RS (stochastic rounding) mode with SATFINITE saturation.
+class NVVM_ConvertF32x4ToFPx4OpBase<string dstFormat, string mnemonic, Type dstType> :
+  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
+  Results<(outs dstType:$dst)>,
+  Arguments<(ins VectorOfLengthAndType<[4], [F32]>:$src, I32:$rbits,
+                 DefaultValuedAttr<BoolAttr, "false">:$relu,
+                 TypeAttr:$dstTy)> {
+  let summary = "Convert vector<4xf32> to packed " # dstFormat # " with stochastic rounding (.rs) and satfinite";
+  let description = [{
+    Converts a vector<4xf32> to packed }] # dstFormat # [{ format using 
+    stochastic rounding (.rs) mode with SATFINITE saturation. Randomness is 
+    provided by the `rbits` parameter. The `dstTy` attribute specifies the 
+    target floating-point format. The `relu` attribute clamps negative results to 0.
+    
+    Note: These operations always use RS rounding mode and SATFINITE saturation mode.
+    
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+  
+  let assemblyFormat = "$src `,` $rbits attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`";
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    llvm::Intrinsic::ID getIntrinsicID();
+  }];
+  
+  string llvmBuilder = [{
+    auto intId = op.getIntrinsicID();
+    $dst = createIntrinsicCall(builder, intId, {$src, $rbits});
+  }];
+}
+
+// F32x4 -> F8x4 with stochastic rounding (supports E4M3FN, E5M2)
+def NVVM_ConvertF32x4ToF8x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f8x4", "convert.f32x4.to.f8x4", VectorOfLengthAndType<[4], [I8]>>;
+
+// F32x4 -> F6x4 with stochastic rounding (supports E2M3FN, E3M2FN)
+def NVVM_ConvertF32x4ToF6x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f6x4", "convert.f32x4.to.f6x4", VectorOfLengthAndType<[4], [I8]>>;
+
+// F32x4 -> F4x4 with stochastic rounding (supports E2M1FN)
+def NVVM_ConvertF32x4ToF4x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f4x4", "convert.f32x4.to.f4x4", I16>;
+
+//===----------------------------------------------------------------------===//
 // NVVM MMA Ops
 //===----------------------------------------------------------------------===//
 /// Helpers to instantiate different version of wmma intrinsics.
@@ -2014,6 +2092,9 @@ class MMA_LDST_OPS<list<GEOM> Geom, list<string> Frags, list<string> Types> {
 // llvm supports and can be extended as needed.
 class NVVM_MMA_OPS {
   // "wmma" operations
+  list<list<WMMA_REGS>> fp64_wmma_ops = MMA_OPS<
+            [GEOM<8, 8, 4>],
+            ["f64"], [], ["f64"], []>.ret;
   list<list<WMMA_REGS>> tf32_wmma_ops = MMA_OPS<
             [GEOM<16, 16, 8>],
             ["tf32"], [], ["f32"], []>.ret;
@@ -2024,6 +2105,7 @@ class NVVM_MMA_OPS {
             [GEOM<16, 16, 16>, GEOM<32, 8, 16>, GEOM<8, 32, 16>],
             ["s8","u8"], [], ["s32"], []>.ret;
   list<list<WMMA_REGS>> all_wmma_ops = !listconcat(
+            fp64_wmma_ops,
             tf32_wmma_ops,
             fp_wmma_ops,
             i8_wmma_ops);
@@ -2040,9 +2122,17 @@ class NVVM_MMA_OPS {
   list<WMMA_REGS> ldst_tf32_cd_ops = MMA_LDST_OPS<
             [GEOM<16, 16, 8>],
             ["c", "d"], ["f32"]>.ret;
+  list<WMMA_REGS> ldst_f64_ab_ops = MMA_LDST_OPS<
+            [GEOM<8, 8, 4>],
+            ["a", "b"], ["f64"]>.ret;
+  list<WMMA_REGS> ldst_f64_cd_ops = MMA_LDST_OPS<
+            [GEOM<8, 8, 4>],
+            ["c", "d"], ["f64"]>.ret;
   list<WMMA_REGS> all_ldst_ops = !listconcat(ldst_ab_ops, ldst_cd_ops,
                                              ldst_tf32_ab_ops,
-                                             ldst_tf32_cd_ops);
+                                             ldst_tf32_cd_ops, 
+                                             ldst_f64_ab_ops,
+                                             ldst_f64_cd_ops);
   // Separate A/B/C fragments (loads) from D (stores).
   list<WMMA_REGS> all_ld_ops = !filter(op, all_ldst_ops, !ne(op.frag, "d"));
   list<WMMA_REGS> all_st_ops = !filter(op, all_ldst_ops, !eq(op.frag, "d"));
@@ -2349,7 +2439,7 @@ def MMAFragAttr : EnumAttr<NVVM_Dialect, MMAFrag, "mma_frag"> {
 }
 
 def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
-  Results<(outs LLVM_AnyStruct:$res)>,
+  Results<(outs AnyTypeOf<[LLVM_AnyStruct, F64]>:$res)>,
   Arguments<(ins LLVM_AnyPointer: $ptr, I32: $stride, I32Attr:$m,
              I32Attr:$n, I32Attr:$k, MMALayoutAttr:$layout,
              MMATypesAttr:$eltype, MMAFragAttr:$frag)> {

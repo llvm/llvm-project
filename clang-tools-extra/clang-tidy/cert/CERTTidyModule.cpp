@@ -11,7 +11,9 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
+#include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
+#include "../bugprone/RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
@@ -34,12 +36,10 @@
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "DefaultOperatorNewAlignmentCheck.h"
 #include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
 #include "LimitedRandomnessCheck.h"
 #include "MutatingCopyCheck.h"
-#include "NonTrivialTypesLibcMemoryCallsCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 
@@ -265,8 +265,9 @@ public:
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
     // MEM
-    CheckFactories.registerCheck<DefaultOperatorNewAlignmentCheck>(
-        "cert-mem57-cpp");
+    CheckFactories
+        .registerCheck<bugprone::DefaultOperatorNewOnOveralignedTypeCheck>(
+            "cert-mem57-cpp");
     // MSC
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
     CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
@@ -278,7 +279,7 @@ public:
         "cert-oop11-cpp");
     CheckFactories.registerCheck<bugprone::UnhandledSelfAssignmentCheck>(
         "cert-oop54-cpp");
-    CheckFactories.registerCheck<NonTrivialTypesLibcMemoryCallsCheck>(
+    CheckFactories.registerCheck<bugprone::RawMemoryCallOnNonTrivialTypeCheck>(
         "cert-oop57-cpp");
     CheckFactories.registerCheck<MutatingCopyCheck>("cert-oop58-cpp");
 
