@@ -1583,6 +1583,8 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // Expressions are copy-in, but not copy-out.
     return forCopyIn;
   }
+  auto maybeContigActual{IsContiguous(*actual, fc)};
+  bool isContiguousActual{maybeContigActual.has_value() && maybeContigActual.value()};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {
@@ -1605,9 +1607,8 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     if (!check.HaveArrayOrAssumedRankArgs()) {
       return false;
     }
-    bool actualTreatAsContiguous{
-        dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
-        IsSimplyContiguous(*actual, fc)};
+    bool actualTreatAsContiguous{isContiguousActual ||
+        dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous)};
     if (!actualTreatAsContiguous && check.DummyNeedsContiguity()) {
       return true;
     }
@@ -1615,7 +1616,7 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
       return true;
     }
   } else { // Implicit interface
-    if (auto maybeContig{IsContiguous(*actual, fc)}; *maybeContig) {
+    if (isContiguousActual) {
       // Known contiguous, don't copy in/out
       return false;
     }
