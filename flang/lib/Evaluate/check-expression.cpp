@@ -1584,7 +1584,8 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     return forCopyIn;
   }
   auto maybeContigActual{IsContiguous(*actual, fc)};
-  bool isContiguousActual{maybeContigActual.has_value() && maybeContigActual.value()};
+  bool isContiguousActual{
+      maybeContigActual.has_value() && maybeContigActual.value()};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {

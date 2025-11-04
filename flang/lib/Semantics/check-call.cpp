@@ -796,7 +796,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       characteristics::TypeAndShape::Attr::AssumedShape)};
   bool copyOutNeeded{
       evaluate::ActualArgNeedsCopy(&arg, &dummyArg, foldingContext,
-      /*forCopyOut=*/true).value_or(false)};
+          /*forCopyOut=*/true)
+          .value_or(false)};
   if (copyOutNeeded && !dummyIsValue &&
       (dummyIsAsynchronous || dummyIsVolatile)) {
     if (actualIsAsynchronous || actualIsVolatile) {
