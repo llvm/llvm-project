@@ -114,7 +114,8 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
   // Compute the list of subgroup-relative offsets for sub-tensors or sub-memory
   // descriptors to be accessed, based on the layout information.
   ArrayRef<int64_t> wgShape = op.getDataShape();
-  auto maybeDescOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+  auto maybeDescOffsets =
+      layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
   if (failed(maybeDescOffsets))
     return failure();
 
@@ -830,8 +831,8 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       // Get subgroup id
       Value sgId =
           gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-
-      auto sgOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+      auto sgOffsets =
+          layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
       if (failed(sgOffsets))
         return failure();
 
@@ -888,8 +889,8 @@ struct WgToSgLoadGatherOpWithOffset
       return failure();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::DistributeLayoutAttr layout =
-        xegpu::getDistributeLayoutAttr(op.getResult());
+    xegpu::LayoutAttr layout = dyn_cast_if_present<xegpu::LayoutAttr>(
+        xegpu::getDistributeLayoutAttr(op.getResult()));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -914,9 +915,8 @@ struct WgToSgLoadGatherOpWithOffset
          llvm::zip(adaptor.getOffsets(), adaptor.getMask())) {
       auto newLoadOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr());
-      xegpu::setDistributeLayoutAttr(newLoadOp->getResult(0),
-                                     layout.dropSgLayoutAndData());
+          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
+          layout.dropSgLayoutAndData());
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -941,8 +941,8 @@ struct WgToSgStoreScatterOpWithOffset
     if (!valueType)
       return failure();
 
-    xegpu::DistributeLayoutAttr layout =
-        xegpu::getDistributeLayoutAttr(op.getOperand(0));
+    xegpu::LayoutAttr layout = dyn_cast_if_present<xegpu::LayoutAttr>(
+        xegpu::getDistributeLayoutAttr(op.getOperand(0)));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -964,7 +964,8 @@ struct WgToSgStoreScatterOpWithOffset
              adaptor.getValue(), adaptor.getOffsets(), adaptor.getMask())) {
       auto store = xegpu::StoreScatterOp::create(
           rewriter, loc, val, op.getDest(), offs, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr());
+          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
+          layout.dropSgLayoutAndData());
       // Update the layout attribute to drop sg_layout and sg_data.
       if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
           !layout.getEffectiveInstDataAsInt().empty()) {
@@ -1052,7 +1053,8 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
 
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-    auto sgOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+    auto sgOffsets =
+        layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
     if (failed(sgOffsets))
       return failure();
 

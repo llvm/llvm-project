@@ -41,7 +41,7 @@ ObjDumper::ObjDumper(ScopedPrinter &Writer, StringRef ObjName) : W(Writer) {
   };
 }
 
-ObjDumper::~ObjDumper() {}
+ObjDumper::~ObjDumper() = default;
 
 void ObjDumper::reportUniqueWarning(Error Err) const {
   reportUniqueWarning(toString(std::move(Err)));

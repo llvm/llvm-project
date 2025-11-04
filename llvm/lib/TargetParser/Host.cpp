@@ -1179,7 +1179,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
                                                  const unsigned *Features,
                                                  unsigned *Type,
                                                  unsigned *Subtype) {
-  const char *CPU = 0;
+  const char *CPU = nullptr;
 
   switch (Family) {
   case 4:
@@ -2192,7 +2192,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf1E = MaxLevel >= 0x1e &&
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
-  Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
   Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
