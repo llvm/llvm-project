@@ -16485,7 +16485,8 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Op, DL, VT, Shift1, Shift2);
 }
 
-static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, int ShX, int ShY) {
+static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
+                               unsigned ShY) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue X = N->getOperand(0);
