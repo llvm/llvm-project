@@ -4395,7 +4395,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           }
 
           if (IsValidImm) {
-            SDValue Imm = DAG.getSignedConstant(SplatImm, DL, XLenVT);
+            SDValue Imm = DAG.getSignedTargetConstant(SplatImm, DL, XLenVT);
             return DAG.getNode(RISCVISD::PLI, DL, VT, Imm);
           }
         }
