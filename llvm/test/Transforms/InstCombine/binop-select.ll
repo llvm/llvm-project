@@ -563,3 +563,28 @@ define i8 @commonArgWithAdd0(i1 %arg0) {
   %v3 = or i8 %v2, 16
   ret i8 %v3
 }
+
+define i32 @OrSelectIcmpZero(i32 %a, i32 %b) {
+; CHECK-LABEL: @OrSelectIcmpZero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP]], i32 [[B:%.*]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %sel = select i1 %cmp, i32 %b, i32 0
+  %or = or i32 %sel, %a
+  ret i32 %or
+}
+
+define i32 @OrSelectIcmpNonZero(i32 %a, i32 %b) {
+; CHECK-LABEL: @OrSelectIcmpNonZero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[B:%.*]], i32 42
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL]], [[A]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %sel = select i1 %cmp, i32 %b, i32 42
+  %or = or i32 %sel, %a
+  ret i32 %or
+}
