@@ -55,7 +55,7 @@ LLVM_LIBC_FUNCTION(int, vprintf,
     return -1;
   }
 
-  if (retval.value() > cpp::numeric_limits<int>::max()) {
+  if (retval.value() > static_cast<size_t>(cpp::numeric_limits<int>::max())) {
     libc_errno =
         printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
     return -1;
