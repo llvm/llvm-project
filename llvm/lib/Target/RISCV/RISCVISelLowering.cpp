@@ -16519,27 +16519,16 @@ static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
     return getShlAddShlAdd(N, DAG, 3, 2, false);
   case 9 * 9:
     return getShlAddShlAdd(N, DAG, 3, 3, false);
-  case 2 * 3 + 1:
-    return getShlAddShlAdd(N, DAG, 1, 1, true);
-  case 4 * 3 + 1:
-    return getShlAddShlAdd(N, DAG, 2, 1, true);
-  // case 8 * 3 + 1:
-  // Prefer 5 * 5 above because it doesn't require a register to hold X.
-  case 2 * 5 + 1:
-    return getShlAddShlAdd(N, DAG, 1, 2, true);
-  case 4 * 5 + 1:
-    return getShlAddShlAdd(N, DAG, 2, 2, true);
-  case 8 * 5 + 1:
-    return getShlAddShlAdd(N, DAG, 3, 2, true);
-  case 2 * 9 + 1:
-    return getShlAddShlAdd(N, DAG, 1, 3, true);
-  case 4 * 9 + 1:
-    return getShlAddShlAdd(N, DAG, 2, 3, true);
-  case 8 * 9 + 1:
-    return getShlAddShlAdd(N, DAG, 3, 3, true);
   default:
-    return SDValue();
+    break;
   }
+  int ShX;
+  if (int ShY = isShifted359(MulAmt - 1, ShX)) {
+    assert(ShX != 0 && "MulAmt=4,6,10 handled before");
+    if (ShX <= 3)
+      return getShlAddShlAdd(N, DAG, ShX, ShY, true);
+  }
+  return SDValue();
 }
 
 // Try to expand a scalar multiply to a faster sequence.
