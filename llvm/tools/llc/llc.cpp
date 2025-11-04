@@ -44,6 +44,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -171,6 +172,11 @@ static cl::opt<bool>
                       cl::desc("Print MIR2Vec vocabulary contents"),
                       cl::init(false));
 
+static cl::opt<bool>
+    PrintMIR2Vec("print-mir2vec", cl::Hidden,
+                 cl::desc("Print MIR2Vec embeddings for functions"),
+                 cl::init(false));
+
 static cl::list<std::string> IncludeDirs("I", cl::desc("include search path"));
 
 static cl::opt<bool> RemarksWithHotness(
@@ -217,13 +223,12 @@ static cl::opt<std::string> PassPipeline(
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 
-namespace {
-
-std::vector<std::string> &getRunPassNames() {
+static std::vector<std::string> &getRunPassNames() {
   static std::vector<std::string> RunPassNames;
   return RunPassNames;
 }
 
+namespace {
 struct RunPassOption {
   void operator=(const std::string &Val) const {
     if (Val.empty())
@@ -242,6 +247,39 @@ static cl::opt<RunPassOption, true, cl::parser<std::string>> RunPass(
     "run-pass",
     cl::desc("Run compiler only for specified passes (comma separated list)"),
     cl::value_desc("pass-name"), cl::location(RunPassOpt));
+
+// PGO command line options
+enum PGOKind {
+  NoPGO,
+  SampleUse,
+};
+
+static cl::opt<PGOKind>
+    PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
+                cl::desc("The kind of profile guided optimization"),
+                cl::values(clEnumValN(NoPGO, "nopgo", "Do not use PGO."),
+                           clEnumValN(SampleUse, "pgo-sample-use-pipeline",
+                                      "Use sampled profile to guide PGO.")));
+
+// Function to set PGO options on TargetMachine based on command line flags.
+static void setPGOOptions(TargetMachine &TM) {
+  std::optional<PGOOptions> PGOOpt;
+
+  switch (PGOKindFlag) {
+  case SampleUse:
+    // Use default values for other PGOOptions parameters. This parameter
+    // is used to test that PGO data is preserved at -O0.
+    PGOOpt = PGOOptions("", "", "", "", PGOOptions::SampleUse,
+                        PGOOptions::NoCSAction);
+    break;
+  case NoPGO:
+    PGOOpt = std::nullopt;
+    break;
+  }
+
+  if (PGOOpt)
+    TM.setPGOOption(PGOOpt);
+}
 
 static int compileModule(char **, LLVMContext &);
 
@@ -558,6 +596,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
           TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
       assert(Target && "Could not allocate target machine!");
 
+      // Set PGO options based on command line flags
+      setPGOOptions(*Target);
+
       return Target->createDataLayout().getStringRepresentation();
     };
     if (InputLanguage == "mir" ||
@@ -600,6 +641,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
         TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
     assert(Target && "Could not allocate target machine!");
+
+    // Set PGO options based on command line flags
+    setPGOOptions(*Target);
 
     // If we don't have a module then just exit now. We do this down
     // here since the CPU/Feature help is underneath the target machine
@@ -736,6 +780,11 @@ static int compileModule(char **argv, LLVMContext &Context) {
         PM.add(createMIR2VecVocabPrinterLegacyPass(errs()));
       }
 
+      // Add MIR2Vec printer if requested
+      if (PrintMIR2Vec) {
+        PM.add(createMIR2VecPrinterLegacyPass(errs()));
+      }
+
       PM.add(createFreeMachineFunctionPass());
     } else {
       if (Target->addPassesToEmitFile(PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
@@ -748,6 +797,11 @@ static int compileModule(char **argv, LLVMContext &Context) {
       // Add MIR2Vec vocabulary printer if requested
       if (PrintMIR2VecVocab) {
         PM.add(createMIR2VecVocabPrinterLegacyPass(errs()));
+      }
+
+      // Add MIR2Vec printer if requested
+      if (PrintMIR2Vec) {
+        PM.add(createMIR2VecPrinterLegacyPass(errs()));
       }
     }
 

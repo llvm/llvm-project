@@ -378,7 +378,7 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
 
 public:
   // For legacy pass only.
-  RegisterCoalescer() {}
+  RegisterCoalescer() = default;
   RegisterCoalescer &operator=(RegisterCoalescer &&Other) = default;
 
   RegisterCoalescer(LiveIntervals *LIS, SlotIndexes *SI,
@@ -2051,6 +2051,12 @@ bool RegisterCoalescer::joinCopy(
   }
 
   if (CP.getNewRC()) {
+    if (RegClassInfo.getNumAllocatableRegs(CP.getNewRC()) == 0) {
+      LLVM_DEBUG(dbgs() << "\tNo " << TRI->getRegClassName(CP.getNewRC())
+                        << "are available for allocation\n");
+      return false;
+    }
+
     auto SrcRC = MRI->getRegClass(CP.getSrcReg());
     auto DstRC = MRI->getRegClass(CP.getDstReg());
     unsigned SrcIdx = CP.getSrcIdx();

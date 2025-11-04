@@ -44,38 +44,70 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
 
   // If the type is variably-modified, emit all the VLA sizes for it.
   if (ty->isVariablyModifiedType())
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarDecl: variably modified type");
+    emitVariablyModifiedType(ty);
 
   assert(!cir::MissingFeatures::openMP());
 
   Address address = Address::invalid();
-  if (!ty->isConstantSizeType())
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarDecl: non-constant size type");
+  if (ty->isConstantSizeType()) {
+    // A normal fixed sized variable becomes an alloca in the entry block,
+    // unless:
+    // - it's an NRVO variable.
+    // - we are compiling OpenMP and it's an OpenMP local variable.
+    if (nrvo) {
+      // The named return value optimization: allocate this variable in the
+      // return slot, so that we can elide the copy when returning this
+      // variable (C++0x [class.copy]p34).
+      address = returnValue;
 
-  // A normal fixed sized variable becomes an alloca in the entry block,
-  // unless:
-  // - it's an NRVO variable.
-  // - we are compiling OpenMP and it's an OpenMP local variable.
-  if (nrvo) {
-    // The named return value optimization: allocate this variable in the
-    // return slot, so that we can elide the copy when returning this
-    // variable (C++0x [class.copy]p34).
-    address = returnValue;
-
-    if (const RecordDecl *rd = ty->getAsRecordDecl()) {
-      if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
-          (cxxrd && !cxxrd->hasTrivialDestructor()) ||
-          rd->isNonTrivialToPrimitiveDestroy())
-        cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: set NRVO flag");
+      if (const RecordDecl *rd = ty->getAsRecordDecl()) {
+        if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
+            (cxxrd && !cxxrd->hasTrivialDestructor()) ||
+            rd->isNonTrivialToPrimitiveDestroy())
+          cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: set NRVO flag");
+      }
+    } else {
+      // A normal fixed sized variable becomes an alloca in the entry block,
+      mlir::Type allocaTy = convertTypeForMem(ty);
+      // Create the temp alloca and declare variable using it.
+      address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
+                                 /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
+      declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()),
+              alignment);
     }
   } else {
-    // A normal fixed sized variable becomes an alloca in the entry block,
-    mlir::Type allocaTy = convertTypeForMem(ty);
-    // Create the temp alloca and declare variable using it.
-    address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
-                               /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
-    declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()),
-            alignment);
+    // Non-constant size type
+    assert(!cir::MissingFeatures::openMP());
+    if (!didCallStackSave) {
+      // Save the stack.
+      cir::PointerType defaultTy = allocaInt8PtrTy;
+      CharUnits align = CharUnits::fromQuantity(
+          cgm.getDataLayout().getAlignment(defaultTy, false));
+      Address stack = createTempAlloca(defaultTy, align, loc, "saved_stack");
+
+      mlir::Value v = builder.createStackSave(loc, defaultTy);
+      assert(v.getType() == allocaInt8PtrTy);
+      builder.createStore(loc, v, stack);
+
+      didCallStackSave = true;
+
+      // Push a cleanup block and restore the stack there.
+      // FIXME: in general circumstances, this should be an EH cleanup.
+      pushStackRestore(NormalCleanup, stack);
+    }
+
+    VlaSizePair vlaSize = getVLASize(ty);
+    mlir::Type memTy = convertTypeForMem(vlaSize.type);
+
+    // Allocate memory for the array.
+    address =
+        createTempAlloca(memTy, alignment, loc, d.getName(), vlaSize.numElts,
+                         /*alloca=*/nullptr, builder.saveInsertionPoint());
+
+    // If we have debug info enabled, properly describe the VLA dimensions for
+    // this type by registering the vla size expression for each of the
+    // dimensions.
+    assert(!cir::MissingFeatures::generateDebugInfo());
   }
 
   emission.addr = address;
@@ -695,14 +727,28 @@ struct DestroyObject final : EHScopeStack::Cleanup {
   void emit(CIRGenFunction &cgf) override {
     cgf.emitDestroy(addr, type, destroyer);
   }
+};
 
-  // This is a placeholder until EHCleanupScope is implemented.
-  size_t getSize() const override {
-    assert(!cir::MissingFeatures::ehCleanupScope());
-    return sizeof(DestroyObject);
+struct CallStackRestore final : EHScopeStack::Cleanup {
+  Address stack;
+  CallStackRestore(Address stack) : stack(stack) {}
+  void emit(CIRGenFunction &cgf) override {
+    mlir::Location loc = stack.getPointer().getLoc();
+    mlir::Value v = cgf.getBuilder().createLoad(loc, stack);
+    cgf.getBuilder().createStackRestore(loc, v);
   }
 };
 } // namespace
+
+/// Push the standard destructor for the given type as
+/// at least a normal cleanup.
+void CIRGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
+                                 Address addr, QualType type) {
+  assert(dtorKind && "cannot push destructor for trivial type");
+
+  CleanupKind cleanupKind = getCleanupKind(dtorKind);
+  pushDestroy(cleanupKind, addr, type, getDestroyer(dtorKind));
+}
 
 void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                  QualType type, Destroyer *destroyer) {
@@ -809,6 +855,10 @@ CIRGenFunction::getDestroyer(QualType::DestructionKind kind) {
     return nullptr;
   }
   llvm_unreachable("Unknown DestructionKind");
+}
+
+void CIRGenFunction::pushStackRestore(CleanupKind kind, Address spMem) {
+  ehStack.pushCleanup<CallStackRestore>(kind, spMem);
 }
 
 /// Enter a destroy cleanup for the given local variable.

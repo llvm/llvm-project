@@ -38,7 +38,7 @@ entry:
   ret ptr %ptr1
 }
 
-!0 = !{!"int"}
+!0 = !{!"int", i1 0}
 ;.
-; CHECK: [[META0]] = !{!"int"}
+; CHECK: [[META0]] = !{!"int", i1 false}
 ;.

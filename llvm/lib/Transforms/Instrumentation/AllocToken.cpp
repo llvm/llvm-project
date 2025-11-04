@@ -31,10 +31,12 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/AllocToken.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -53,35 +55,13 @@
 #include <variant>
 
 using namespace llvm;
+using TokenMode = AllocTokenMode;
 
 #define DEBUG_TYPE "alloc-token"
 
 namespace {
 
-//===--- Constants --------------------------------------------------------===//
-
-enum class TokenMode : unsigned {
-  /// Incrementally increasing token ID.
-  Increment = 0,
-
-  /// Simple mode that returns a statically-assigned random token ID.
-  Random = 1,
-
-  /// Token ID based on allocated type hash.
-  TypeHash = 2,
-};
-
 //===--- Command-line options ---------------------------------------------===//
-
-cl::opt<TokenMode>
-    ClMode("alloc-token-mode", cl::Hidden, cl::desc("Token assignment mode"),
-           cl::init(TokenMode::TypeHash),
-           cl::values(clEnumValN(TokenMode::Increment, "increment",
-                                 "Incrementally increasing token ID"),
-                      clEnumValN(TokenMode::Random, "random",
-                                 "Statically-assigned random token ID"),
-                      clEnumValN(TokenMode::TypeHash, "typehash",
-                                 "Token ID based on allocated type hash")));
 
 cl::opt<std::string> ClFuncPrefix("alloc-token-prefix",
                                   cl::desc("The allocation function prefix"),
@@ -120,21 +100,38 @@ cl::opt<uint64_t> ClFallbackToken(
 
 //===--- Statistics -------------------------------------------------------===//
 
-STATISTIC(NumFunctionsInstrumented, "Functions instrumented");
+STATISTIC(NumFunctionsModified, "Functions modified");
 STATISTIC(NumAllocationsInstrumented, "Allocations instrumented");
 
 //===----------------------------------------------------------------------===//
 
 /// Returns the !alloc_token metadata if available.
 ///
-/// Expected format is: !{<type-name>}
+/// Expected format is: !{<type-name>, <contains-pointer>}
 MDNode *getAllocTokenMetadata(const CallBase &CB) {
-  MDNode *Ret = CB.getMetadata(LLVMContext::MD_alloc_token);
-  if (!Ret)
-    return nullptr;
-  assert(Ret->getNumOperands() == 1 && "bad !alloc_token");
+  MDNode *Ret = nullptr;
+  if (auto *II = dyn_cast<IntrinsicInst>(&CB);
+      II && II->getIntrinsicID() == Intrinsic::alloc_token_id) {
+    auto *MDV = cast<MetadataAsValue>(II->getArgOperand(0));
+    Ret = cast<MDNode>(MDV->getMetadata());
+    // If the intrinsic has an empty MDNode, type inference failed.
+    if (Ret->getNumOperands() == 0)
+      return nullptr;
+  } else {
+    Ret = CB.getMetadata(LLVMContext::MD_alloc_token);
+    if (!Ret)
+      return nullptr;
+  }
+  assert(Ret->getNumOperands() == 2 && "bad !alloc_token");
   assert(isa<MDString>(Ret->getOperand(0)));
+  assert(isa<ConstantAsMetadata>(Ret->getOperand(1)));
   return Ret;
+}
+
+bool containsPointer(const MDNode *MD) {
+  ConstantAsMetadata *C = cast<ConstantAsMetadata>(MD->getOperand(1));
+  auto *CI = cast<ConstantInt>(C->getValue());
+  return CI->getValue().getBoolValue();
 }
 
 class ModeBase {
@@ -188,14 +185,19 @@ public:
   using ModeBase::ModeBase;
 
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
+
     if (MDNode *N = getAllocTokenMetadata(CB)) {
       MDString *S = cast<MDString>(N->getOperand(0));
-      return boundedToken(getStableSipHash(S->getString()));
+      AllocTokenMetadata Metadata{S->getString(), containsPointer(N)};
+      if (auto Token = getAllocToken(TokenMode::TypeHash, Metadata, MaxTokens))
+        return *Token;
     }
+    // Fallback.
     remarkNoMetadata(CB, ORE);
     return ClFallbackToken;
   }
 
+protected:
   /// Remark that there was no precise type information.
   static void remarkNoMetadata(const CallBase &CB,
                                OptimizationRemarkEmitter &ORE) {
@@ -207,6 +209,27 @@ public:
              << "Call to '" << CalleeNV << "' in '" << FuncNV
              << "' without source-level type token";
     });
+  }
+};
+
+/// Implementation for TokenMode::TypeHashPointerSplit.
+class TypeHashPointerSplitMode : public TypeHashMode {
+public:
+  using TypeHashMode::TypeHashMode;
+
+  uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
+    if (MDNode *N = getAllocTokenMetadata(CB)) {
+      MDString *S = cast<MDString>(N->getOperand(0));
+      AllocTokenMetadata Metadata{S->getString(), containsPointer(N)};
+      if (auto Token = getAllocToken(TokenMode::TypeHashPointerSplit, Metadata,
+                                     MaxTokens))
+        return *Token;
+    }
+    // Pick the fallback token (ClFallbackToken), which by default is 0, meaning
+    // it'll fall into the pointer-less bucket. Override by setting
+    // -alloc-token-fallback if that is the wrong choice.
+    remarkNoMetadata(CB, ORE);
+    return ClFallbackToken;
   }
 };
 
@@ -226,7 +249,7 @@ public:
       : Options(transformOptionsFromCl(std::move(Opts))), Mod(M),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         Mode(IncrementMode(*IntPtrTy, *Options.MaxTokens)) {
-    switch (ClMode.getValue()) {
+    switch (Options.Mode) {
     case TokenMode::Increment:
       break;
     case TokenMode::Random:
@@ -235,6 +258,9 @@ public:
       break;
     case TokenMode::TypeHash:
       Mode.emplace<TypeHashMode>(*IntPtrTy, *Options.MaxTokens);
+      break;
+    case TokenMode::TypeHashPointerSplit:
+      Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, *Options.MaxTokens);
       break;
     }
   }
@@ -263,6 +289,9 @@ private:
   FunctionCallee getTokenAllocFunction(const CallBase &CB, uint64_t TokenID,
                                        LibFunc OriginalFunc);
 
+  /// Lower alloc_token_* intrinsics.
+  void replaceIntrinsicInst(IntrinsicInst *II, OptimizationRemarkEmitter &ORE);
+
   /// Return the token ID from metadata in the call.
   uint64_t getToken(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
     return std::visit([&](auto &&Mode) { return Mode(CB, ORE); }, Mode);
@@ -275,28 +304,41 @@ private:
   // Cache for replacement functions.
   DenseMap<std::pair<LibFunc, uint64_t>, FunctionCallee> TokenAllocFunctions;
   // Selected mode.
-  std::variant<IncrementMode, RandomMode, TypeHashMode> Mode;
+  std::variant<IncrementMode, RandomMode, TypeHashMode,
+               TypeHashPointerSplitMode>
+      Mode;
 };
 
 bool AllocToken::instrumentFunction(Function &F) {
   // Do not apply any instrumentation for naked functions.
   if (F.hasFnAttribute(Attribute::Naked))
     return false;
-  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
-    return false;
   // Don't touch available_externally functions, their actual body is elsewhere.
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
-    return false;
-  // Only instrument functions that have the sanitize_alloc_token attribute.
-  if (!F.hasFnAttribute(Attribute::SanitizeAllocToken))
     return false;
 
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
   SmallVector<std::pair<CallBase *, LibFunc>, 4> AllocCalls;
+  SmallVector<IntrinsicInst *, 4> IntrinsicInsts;
+
+  // Only instrument functions that have the sanitize_alloc_token attribute.
+  const bool InstrumentFunction =
+      F.hasFnAttribute(Attribute::SanitizeAllocToken) &&
+      !F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation);
 
   // Collect all allocation calls to avoid iterator invalidation.
   for (Instruction &I : instructions(F)) {
+    // Collect all alloc_token_* intrinsics.
+    if (auto *II = dyn_cast<IntrinsicInst>(&I);
+        II && II->getIntrinsicID() == Intrinsic::alloc_token_id) {
+      IntrinsicInsts.emplace_back(II);
+      continue;
+    }
+
+    if (!InstrumentFunction)
+      continue;
+
     auto *CB = dyn_cast<CallBase>(&I);
     if (!CB)
       continue;
@@ -305,11 +347,21 @@ bool AllocToken::instrumentFunction(Function &F) {
   }
 
   bool Modified = false;
-  for (auto &[CB, Func] : AllocCalls)
-    Modified |= replaceAllocationCall(CB, Func, ORE, TLI);
 
-  if (Modified)
-    NumFunctionsInstrumented++;
+  if (!AllocCalls.empty()) {
+    for (auto &[CB, Func] : AllocCalls)
+      Modified |= replaceAllocationCall(CB, Func, ORE, TLI);
+    if (Modified)
+      NumFunctionsModified++;
+  }
+
+  if (!IntrinsicInsts.empty()) {
+    for (auto *II : IntrinsicInsts)
+      replaceIntrinsicInst(II, ORE);
+    Modified = true;
+    NumFunctionsModified++;
+  }
+
   return Modified;
 }
 
@@ -327,7 +379,7 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   if (TLI.getLibFunc(*Callee, Func)) {
     if (isInstrumentableLibFunc(Func, CB, TLI))
       return Func;
-  } else if (Options.Extended && getAllocTokenMetadata(CB)) {
+  } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {
     return NotLibFunc;
   }
 
@@ -472,6 +524,16 @@ FunctionCallee AllocToken::getTokenAllocFunction(const CallBase &CB,
   if (Key.has_value())
     TokenAllocFunctions[*Key] = TokenAlloc;
   return TokenAlloc;
+}
+
+void AllocToken::replaceIntrinsicInst(IntrinsicInst *II,
+                                      OptimizationRemarkEmitter &ORE) {
+  assert(II->getIntrinsicID() == Intrinsic::alloc_token_id);
+
+  uint64_t TokenID = getToken(*II, ORE);
+  Value *V = ConstantInt::get(IntPtrTy, TokenID);
+  II->replaceAllUsesWith(V);
+  II->eraseFromParent();
 }
 
 } // namespace

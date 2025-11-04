@@ -782,18 +782,16 @@ define void @test_fccmp(half %in, ptr %out) {
 ;
 ; CHECK-CVT-GI-LABEL: test_fccmp:
 ; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI29_0
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-CVT-GI-NEXT:    fcvt s2, h0
-; CHECK-CVT-GI-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI29_1
-; CHECK-CVT-GI-NEXT:    ldr h4, [x8, :lo12:.LCPI29_1]
+; CHECK-CVT-GI-NEXT:    fcvt s1, h0
+; CHECK-CVT-GI-NEXT:    fmov s2, #5.00000000
+; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI29_0
+; CHECK-CVT-GI-NEXT:    fmov s3, #8.00000000
+; CHECK-CVT-GI-NEXT:    fcmp s1, s2
+; CHECK-CVT-GI-NEXT:    ldr h2, [x8, :lo12:.LCPI29_0]
 ; CHECK-CVT-GI-NEXT:    fmov w8, s0
-; CHECK-CVT-GI-NEXT:    fcvt s3, h1
-; CHECK-CVT-GI-NEXT:    fmov w9, s1
-; CHECK-CVT-GI-NEXT:    fcvt s4, h4
-; CHECK-CVT-GI-NEXT:    fcmp s2, s3
-; CHECK-CVT-GI-NEXT:    fccmp s2, s4, #4, mi
+; CHECK-CVT-GI-NEXT:    fmov w9, s2
+; CHECK-CVT-GI-NEXT:    fccmp s1, s3, #4, mi
 ; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, gt
 ; CHECK-CVT-GI-NEXT:    strh w8, [x0]
 ; CHECK-CVT-GI-NEXT:    ret

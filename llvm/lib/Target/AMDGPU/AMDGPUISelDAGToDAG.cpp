@@ -1112,8 +1112,7 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
         {N->getOperand(0), N->getOperand(1),
          CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
   } else {
-    unsigned Opc = N->getOpcode() == ISD::UADDO ? AMDGPU::S_UADDO_PSEUDO
-                                                : AMDGPU::S_USUBO_PSEUDO;
+    unsigned Opc = IsAdd ? AMDGPU::S_UADDO_PSEUDO : AMDGPU::S_USUBO_PSEUDO;
 
     CurDAG->SelectNodeTo(N, Opc, N->getVTList(),
                          {N->getOperand(0), N->getOperand(1)});

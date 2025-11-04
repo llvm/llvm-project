@@ -183,6 +183,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::i32, MVT::i64})
         setOperationAction(Op, T, Custom);
 
+  if (Subtarget->hasRelaxedSIMD()) {
+    setOperationAction(
+        {ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM},
+        {MVT::v4f32, MVT::v2f64}, Legal);
+  }
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
 
@@ -315,6 +320,15 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Custom);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Custom);
+    }
+
+    if (Subtarget->hasFP16()) {
+      setOperationAction(ISD::FMA, MVT::v8f16, Legal);
+    }
+
+    if (Subtarget->hasRelaxedSIMD()) {
+      setOperationAction(ISD::FMULADD, MVT::v4f32, Legal);
+      setOperationAction(ISD::FMULADD, MVT::v2f64, Legal);
     }
 
     // Partial MLA reductions.
@@ -592,6 +606,29 @@ static MachineBasicBlock *LowerMemcpy(MachineInstr &MI, DebugLoc DL,
   MachineOperand Src = MI.getOperand(3);
   MachineOperand Len = MI.getOperand(4);
 
+  // If the length is a constant, we don't actually need the check.
+  if (MachineInstr *Def = MRI.getVRegDef(Len.getReg())) {
+    if (Def->getOpcode() == WebAssembly::CONST_I32 ||
+        Def->getOpcode() == WebAssembly::CONST_I64) {
+      if (Def->getOperand(1).getImm() == 0) {
+        // A zero-length memcpy is a no-op.
+        MI.eraseFromParent();
+        return BB;
+      }
+      // A non-zero-length memcpy doesn't need a zero check.
+      unsigned MemoryCopy =
+          Int64 ? WebAssembly::MEMORY_COPY_A64 : WebAssembly::MEMORY_COPY_A32;
+      BuildMI(*BB, MI, DL, TII.get(MemoryCopy))
+          .add(DstMem)
+          .add(SrcMem)
+          .add(Dst)
+          .add(Src)
+          .add(Len);
+      MI.eraseFromParent();
+      return BB;
+    }
+  }
+
   // We're going to add an extra use to `Len` to test if it's zero; that
   // use shouldn't be a kill, even if the original use is.
   MachineOperand NoKillLen = Len;
@@ -659,6 +696,28 @@ static MachineBasicBlock *LowerMemset(MachineInstr &MI, DebugLoc DL,
   MachineOperand Dst = MI.getOperand(1);
   MachineOperand Val = MI.getOperand(2);
   MachineOperand Len = MI.getOperand(3);
+
+  // If the length is a constant, we don't actually need the check.
+  if (MachineInstr *Def = MRI.getVRegDef(Len.getReg())) {
+    if (Def->getOpcode() == WebAssembly::CONST_I32 ||
+        Def->getOpcode() == WebAssembly::CONST_I64) {
+      if (Def->getOperand(1).getImm() == 0) {
+        // A zero-length memset is a no-op.
+        MI.eraseFromParent();
+        return BB;
+      }
+      // A non-zero-length memset doesn't need a zero check.
+      unsigned MemoryFill =
+          Int64 ? WebAssembly::MEMORY_FILL_A64 : WebAssembly::MEMORY_FILL_A32;
+      BuildMI(*BB, MI, DL, TII.get(MemoryFill))
+          .add(Mem)
+          .add(Dst)
+          .add(Val)
+          .add(Len);
+      MI.eraseFromParent();
+      return BB;
+    }
+  }
 
   // We're going to add an extra use to `Len` to test if it's zero; that
   // use shouldn't be a kill, even if the original use is.
@@ -1118,6 +1177,18 @@ WebAssemblyTargetLowering::getPreferredVectorAction(MVT VT) const {
   }
 
   return TargetLoweringBase::getPreferredVectorAction(VT);
+}
+
+bool WebAssemblyTargetLowering::isFMAFasterThanFMulAndFAdd(
+    const MachineFunction &MF, EVT VT) const {
+  if (!Subtarget->hasFP16() || !VT.isVector())
+    return false;
+
+  EVT ScalarVT = VT.getScalarType();
+  if (!ScalarVT.isSimple())
+    return false;
+
+  return ScalarVT.getSimpleVT().SimpleTy == MVT::f16;
 }
 
 bool WebAssemblyTargetLowering::shouldSimplifyDemandedVectorElts(

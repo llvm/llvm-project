@@ -110,6 +110,7 @@ libc_test_library(
         "//libc:__support_fputil_rounding_mode",
         "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
+        "//libc:__support_macros_optimization",
         "//libc:__support_macros_properties_architectures",
         "//libc:hdr_fenv_macros",
         "//libc:hdr_math_macros",

@@ -21,13 +21,13 @@ define void @load_store_interleave_group_with_gaps(ptr noalias %data, i64 nounde
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[STRIDED_VEC]], <4 x ptr> [[TMP1]], i32 8, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[STRIDED_VEC]], <4 x ptr> align 8 [[TMP1]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint <4 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], <4 x i64> [[TMP3]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[STRIDED_VEC1]], <4 x ptr> [[TMP4]], i32 8, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[STRIDED_VEC1]], <4 x ptr> align 8 [[TMP4]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint <4 x i64> [[TMP0]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[DATA]], <4 x i64> [[TMP5]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[STRIDED_VEC2]], <4 x ptr> [[TMP6]], i32 8, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[STRIDED_VEC2]], <4 x ptr> align 8 [[TMP6]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

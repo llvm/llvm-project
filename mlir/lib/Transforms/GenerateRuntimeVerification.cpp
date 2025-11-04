@@ -51,9 +51,11 @@ public:
     stream << "ERROR: Runtime op verification failed\n";
     if (vLevel == 1) {
       op->print(stream, state);
-      stream << "\n";
+      stream << "\n^ " << msg;
+    } else {
+      stream << "^ " << msg;
     }
-    stream << "^\nLocation: ";
+    stream << "\nLocation: ";
     op->getLoc().print(stream);
     return buffer;
   }

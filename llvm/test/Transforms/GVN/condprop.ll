@@ -360,7 +360,7 @@ define i1 @test6_phi2(i1 %c, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB2]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP_NOT]], [[BB1]] ], [ true, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[BB1]] ], [ true, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[PHI]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i1 false

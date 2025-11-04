@@ -130,6 +130,8 @@ FLAGS_ENUM(LaunchFlags){
     eLaunchFlagInheritTCCFromParent =
         (1u << 12), ///< Don't make the inferior responsible for its own TCC
                     ///< permissions but instead inherit them from its parent.
+    eLaunchFlagMemoryTagging =
+        (1u << 13), ///< Launch process with memory tagging explicitly enabled.
 };
 
 /// Thread Run Modes.

@@ -768,7 +768,7 @@ def BGE  : BranchCC_rri<0b101, "bge">;
 def BLTU : BranchCC_rri<0b110, "bltu">;
 def BGEU : BranchCC_rri<0b111, "bgeu">;
 
-let IsSignExtendingOpW = 1 in {
+let IsSignExtendingOpW = 1, canFoldAsLoad = 1 in {
 def LB  : Load_ri<0b000, "lb">, Sched<[WriteLDB, ReadMemBase]>;
 def LH  : Load_ri<0b001, "lh">, Sched<[WriteLDH, ReadMemBase]>;
 def LW  : Load_ri<0b010, "lw">, Sched<[WriteLDW, ReadMemBase]>;
@@ -889,8 +889,10 @@ def CSRRCI : CSR_ii<0b111, "csrrci">;
 /// RV64I instructions
 
 let Predicates = [IsRV64] in {
+let canFoldAsLoad = 1 in {
 def LWU   : Load_ri<0b110, "lwu">, Sched<[WriteLDW, ReadMemBase]>;
 def LD    : Load_ri<0b011, "ld">, Sched<[WriteLDD, ReadMemBase]>;
+}
 def SD    : Store_rri<0b011, "sd">, Sched<[WriteSTD, ReadStoreData, ReadMemBase]>;
 
 let IsSignExtendingOpW = 1 in {
@@ -1367,9 +1369,8 @@ def : InstAlias<".insn_s $opcode, $funct3, $rs2, (${rs1})",
 
 class PatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1))), (Inst GPR:$rs1)>;
-class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt1 = XLenVT,
-                ValueType vt2 = XLenVT>
-    : Pat<(vt1 (OpNode (vt1 GPR:$rs1), (vt2 GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
+class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
+    : Pat<(vt (OpNode (vt GPR:$rs1), (vt GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
 
 class PatGprImm<SDPatternOperator OpNode, RVInst Inst, ImmLeaf ImmType,
                 ValueType vt = XLenVT>
@@ -1512,16 +1513,16 @@ def GIShiftMask32 :
     GIComplexOperandMatcher<s64, "selectShiftMask32">,
     GIComplexPatternEquiv<shiftMask32>;
 
-class shiftop<SDPatternOperator operator>
-    : PatFrag<(ops node:$val, node:$count),
-              (operator node:$val, (XLenVT (shiftMaskXLen node:$count)))>;
-class shiftopw<SDPatternOperator operator>
-    : PatFrag<(ops node:$val, node:$count),
-              (operator node:$val, (i64 (shiftMask32 node:$count)))>;
+class PatGprShiftMaskXLen<SDPatternOperator OpNode, RVInst Inst>
+    : Pat<(OpNode GPR:$rs1, shiftMaskXLen:$rs2),
+          (Inst GPR:$rs1, shiftMaskXLen:$rs2)>;
+class PatGprShiftMask32<SDPatternOperator OpNode, RVInst Inst>
+    : Pat<(OpNode GPR:$rs1, shiftMask32:$rs2),
+          (Inst GPR:$rs1, shiftMask32:$rs2)>;
 
-def : PatGprGpr<shiftop<shl>, SLL>;
-def : PatGprGpr<shiftop<srl>, SRL>;
-def : PatGprGpr<shiftop<sra>, SRA>;
+def : PatGprShiftMaskXLen<shl, SLL>;
+def : PatGprShiftMaskXLen<srl, SRL>;
+def : PatGprShiftMaskXLen<sra, SRA>;
 
 // This is a special case of the ADD instruction used to facilitate the use of a
 // fourth operand to emit a relocation on a symbol relating to this instruction.
@@ -1653,17 +1654,18 @@ def riscv_selectcc_frag : PatFrag<(ops node:$lhs, node:$rhs, node:$cc,
                                                   node:$falsev), [{}],
                                   IntCCtoRISCVCC>;
 
-multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
+multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt,
+                              ValueType cmpvt = XLenVT> {
   let usesCustomInserter = 1 in
   def _Using_CC_GPR : Pseudo<(outs valty:$dst),
                              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                               valty:$truev, valty:$falsev),
                              [(set valty:$dst,
-                               (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), GPR:$rhs, cond,
+                               (riscv_selectcc_frag:$cc (cmpvt GPR:$lhs), GPR:$rhs, cond,
                                                         (vt valty:$truev), valty:$falsev))]>;
   // Explicitly select 0 in the condition to X0. The register coalescer doesn't
   // always do it.
-  def : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), 0, cond, (vt valty:$truev),
+  def : Pat<(riscv_selectcc_frag:$cc (cmpvt GPR:$lhs), 0, cond, (vt valty:$truev),
                                      valty:$falsev),
             (!cast<Instruction>(NAME#"_Using_CC_GPR") GPR:$lhs, (XLenVT X0),
              (IntCCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
@@ -1972,8 +1974,9 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 
 /// Loads
 
-class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (LoadOp (AddrRegImm (XLenVT GPRMem:$rs1), simm12_lo:$imm12))),
+class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT,
+            ValueType PtrVT = XLenVT>
+    : Pat<(vt (LoadOp (AddrRegImm (PtrVT GPRMem:$rs1), simm12_lo:$imm12))),
           (Inst GPRMem:$rs1, simm12_lo:$imm12)>;
 
 def : LdPat<sextloadi8, LB>;
@@ -1987,8 +1990,8 @@ def : LdPat<zextloadi16, LHU>;
 /// Stores
 
 class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
-            ValueType vt>
-    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (XLenVT GPRMem:$rs1),
+            ValueType vt, ValueType PtrVT = XLenVT>
+    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (PtrVT GPRMem:$rs1),
                    simm12_lo:$imm12)),
           (Inst StTy:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
 
@@ -2202,9 +2205,9 @@ def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 def : Pat<(i64 (sra (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt)),
           (SRAIW GPR:$rs1, (ImmSub32 uimm6gt32:$shamt))>;
 
-def : PatGprGpr<shiftopw<riscv_sllw>, SLLW>;
-def : PatGprGpr<shiftopw<riscv_srlw>, SRLW>;
-def : PatGprGpr<shiftopw<riscv_sraw>, SRAW>;
+def : PatGprShiftMask32<riscv_sllw, SLLW>;
+def : PatGprShiftMask32<riscv_srlw, SRLW>;
+def : PatGprShiftMask32<riscv_sraw, SRAW>;
 
 // Select W instructions if only the lower 32 bits of the result are used.
 def : PatGprGpr<binop_allwusers<add>, ADDW>;

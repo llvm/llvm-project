@@ -1673,7 +1673,7 @@ static llvm::Value *EmitX86BitTestIntrinsic(CodeGenFunction &CGF,
       CGF.getLLVMContext(),
       CGF.getContext().getTypeSize(E->getArg(1)->getType()));
   llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGF.Int8Ty, {CGF.UnqualPtrTy, IntType}, false);
+      llvm::FunctionType::get(CGF.Int8Ty, {CGF.DefaultPtrTy, IntType}, false);
 
   llvm::InlineAsm *IA =
       llvm::InlineAsm::get(FTy, Asm, Constraints, /*hasSideEffects=*/true);
@@ -4283,15 +4283,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     CharUnits Align = CGM.getNaturalTypeAlignment(
         E->getType()->getAs<VectorType>()->getElementType(), nullptr);
-    llvm::Value *AlignVal =
-        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
     llvm::Value *Result;
     if (BuiltinID == Builtin::BI__builtin_masked_load) {
-      Function *F =
-          CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, Ptr->getType()});
-      Result =
-          Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
+      Result = Builder.CreateMaskedLoad(RetTy, Ptr, Align.getAsAlign(), Mask,
+                                        PassThru, "masked_load");
     } else {
       Function *F = CGM.getIntrinsic(Intrinsic::masked_expandload, {RetTy});
       Result =
@@ -4307,8 +4303,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *RetTy = CGM.getTypes().ConvertType(E->getType());
     CharUnits Align = CGM.getNaturalTypeAlignment(
         E->getType()->getAs<VectorType>()->getElementType(), nullptr);
-    llvm::Value *AlignVal =
-        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
     llvm::Value *PassThru = llvm::PoisonValue::get(RetTy);
     if (E->getNumArgs() > 3)
@@ -4318,12 +4312,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         E->getType()->getAs<VectorType>()->getElementType());
     llvm::Value *PtrVec = Builder.CreateGEP(ElemTy, Ptr, Idx);
 
-    llvm::Value *Result;
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::masked_gather, {RetTy, PtrVec->getType()});
-
-    Result = Builder.CreateCall(F, {PtrVec, AlignVal, Mask, PassThru},
-                                "masked_gather");
+    llvm::Value *Result = Builder.CreateMaskedGather(
+        RetTy, PtrVec, Align.getAsAlign(), Mask, PassThru, "masked_gather");
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_masked_store:
@@ -4338,13 +4328,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     CharUnits Align = CGM.getNaturalTypeAlignment(
         E->getArg(1)->getType()->getAs<VectorType>()->getElementType(),
         nullptr);
-    llvm::Value *AlignVal =
-        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
     if (BuiltinID == Builtin::BI__builtin_masked_store) {
-      llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::masked_store,
-                                           {ValLLTy, Ptr->getType()});
-      Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
+      Builder.CreateMaskedStore(Val, Ptr, Align.getAsAlign(), Mask);
     } else {
       llvm::Function *F =
           CGM.getIntrinsic(llvm::Intrinsic::masked_compressstore, {ValLLTy});
@@ -4361,17 +4347,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     CharUnits Align = CGM.getNaturalTypeAlignment(
         E->getArg(2)->getType()->getAs<VectorType>()->getElementType(),
         nullptr);
-    llvm::Value *AlignVal =
-        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
     llvm::Type *ElemTy = CGM.getTypes().ConvertType(
         E->getArg(1)->getType()->getAs<VectorType>()->getElementType());
     llvm::Value *PtrVec = Builder.CreateGEP(ElemTy, Ptr, Idx);
 
-    Function *F = CGM.getIntrinsic(Intrinsic::masked_scatter,
-                                   {Val->getType(), PtrVec->getType()});
-
-    Builder.CreateCall(F, {Val, PtrVec, AlignVal, Mask});
+    Builder.CreateMaskedScatter(Val, PtrVec, Align.getAsAlign(), Mask);
     return RValue();
   }
   case Builtin::BI__builtin_isinf_sign: {
@@ -4523,6 +4504,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           getTargetHooks().performAddrSpaceCast(*this, AI, AAS, Ty));
     }
     return RValue::get(AI);
+  }
+
+  case Builtin::BI__builtin_infer_alloc_token: {
+    llvm::MDNode *MDN = buildAllocToken(E);
+    llvm::Value *MDV = MetadataAsValue::get(getLLVMContext(), MDN);
+    llvm::Function *F =
+        CGM.getIntrinsic(llvm::Intrinsic::alloc_token_id, {IntPtrTy});
+    llvm::CallBase *TokenID = Builder.CreateCall(F, MDV);
+    return RValue::get(TokenID);
   }
 
   case Builtin::BIbzero:
