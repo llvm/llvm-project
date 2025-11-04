@@ -5330,6 +5330,15 @@ bool AMDGPUAsmParser::validateDS(const MCInst &Inst,
 // DS_GWS opcodes must use even aligned registers.
 bool AMDGPUAsmParser::validateGWS(const MCInst &Inst,
                                   const OperandVector &Operands) {
+  // Disallow "nogds".
+  // In ds_gws_* instructions, gds is always the last operand.
+  auto GDSOprnd = static_cast<AMDGPUOperand &>(*Operands.back());
+  assert(GDSOprnd.isGDS());
+  if (GDSOprnd.getImm() == 0) {
+    Error(GDSOprnd.getStartLoc(), "nogds is not allowed");
+    return false;
+  }
+
   if (!getFeatureBits()[AMDGPU::FeatureGFX90AInsts])
     return true;
 
