@@ -15,9 +15,8 @@
 
 #include "test_macros.h"
 
-struct NoSizeRange : std::ranges::view_base {
-  constexpr auto size() { return 0; }
-};
+template <typename... Ts>
+concept ViewWithAtLeastOneElement = requires(Ts...&& a) { std::views::concat(a...); };
 
 int main(int, char**) {
   {
@@ -36,9 +35,13 @@ int main(int, char**) {
   }
 
   {
-    // input is a view but has 0 size
-    auto c = std::views::concat(NoSizeRange{});
-    // expected-error@*:* {{}}
+    // input is a view and has 0 size
+    static_assert(!ViewWithAtLeastOneElement<>);
+  }
+
+  {
+    // input is a view and has at least an element
+    static_assert(ViewWithAtLeastOneElement<std::vector<int>>);
   }
 
   {

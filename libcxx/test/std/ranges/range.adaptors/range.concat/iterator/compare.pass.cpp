@@ -58,6 +58,23 @@ constexpr void test() {
   }
 
   {
+    // test with more than one view and iterators are in different range
+    constexpr static std::array<int, 3> array1{0, 1, 2};
+    constexpr static std::array<int, 3> array2{4, 5, 6};
+    constexpr static std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
+    decltype(auto) it1 = view.begin();
+    decltype(auto) it2 = view.begin() + 3;
+
+    assert(it1 != it2);
+    assert(*it1 = 0);
+    assert(*it1 = 4);
+    it1++;
+    it2++;
+    assert(*it1 = 1);
+    assert(*it1 = 5);
+  }
+
+  {
     std::array<int, 5> array{0, 1, 2, 3, 4};
     ConcatView view = make_concat_view(array.data(), array.data() + array.size());
     assert(!(view.begin() == view.end()));
