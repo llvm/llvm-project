@@ -148,13 +148,27 @@ template <typename T> constexpr T ldexp_impl(T X, T Exp) {
   return exp2(Exp) * X;
 }
 
-template <typename T, int Bitwidth> constexpr uint firstbithigh_impl(T X) {
-  return (Bitwidth - 1) - __builtin_hlsl_elementwise_firstbithigh(X);
+template <typename T, int BitWidth> constexpr uint firstbithigh_impl(T X) {
+  uint FBH = __builtin_hlsl_elementwise_firstbithigh(X);
+#if defined(__DIRECTX__)
+  // The firstbithigh DXIL ops count bits from the wrong side, so we need to
+  // invert it for DirectX.
+  uint Inversion = (BitWidth - 1) - FBH;
+  FBH = select(FBH == -1, FBH, Inversion);
+#endif
+  return FBH;
 }
 
-template <typename T, int N, int Bitwidth>
+template <typename T, int N, int BitWidth>
 constexpr vector<uint, N> firstbithigh_impl(vector<T, N> X) {
-  return (Bitwidth - 1) - __builtin_hlsl_elementwise_firstbithigh(X);
+  vector<uint, N> FBH = __builtin_hlsl_elementwise_firstbithigh(X);
+#if defined(__DIRECTX__)
+  // The firstbithigh DXIL ops count bits from the wrong side, so we need to
+  // invert it for DirectX.
+  vector<uint, N> Inversion = (BitWidth - 1) - FBH;
+  FBH = select(FBH == -1, FBH, Inversion);
+#endif
+  return FBH;
 }
 
 } // namespace __detail
