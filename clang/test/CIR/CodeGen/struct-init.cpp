@@ -233,25 +233,23 @@ void init_expr(int a, int b, int c) {
 
 void cxx_default_init_with_struct_field() {
   struct Parent {
-    struct {
-      int a;
-    } child;
+    int getA();
+    int a = getA();
   };
   Parent p = Parent{};
 }
 
 // CIR: %[[P_ADDR:.*]] = cir.alloca !rec_Parent, !cir.ptr<!rec_Parent>, ["p", init]
-// CIR: %[[P_ELEM_0_PTR:.*]] = cir.get_member %[[P_ADDR]][0] {name = "child"} : !cir.ptr<!rec_Parent> -> !cir.ptr<!rec_anon2E0>
-// CIR: %[[CHILD_ELEM_0_PTR:.*]] = cir.get_member %[[P_ELEM_0_PTR]][0] {name = "a"} : !cir.ptr<!rec_anon2E0> -> !cir.ptr<!s32i>
-// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR: cir.store{{.*}} %3, %[[CHILD_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
-
-// TODO(cir): zero-initialize the padding
+// CIR: %[[P_ELEM_0_PTR:.*]] = cir.get_member %[[P_ADDR]][0] {name = "a"} : !cir.ptr<!rec_Parent> -> !cir.ptr<!s32i>
+// CIR: %[[METHOD_CALL:.*]] = cir.call @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(%[[P_ADDR]]) : (!cir.ptr<!rec_Parent>) -> !s32i
+// CIR: cir.store{{.*}} %[[METHOD_CALL]], %[[P_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, i64 1, align 4
 // LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
-// LLVM: %[[CHILD_ELEM_0_PTR:.*]] = getelementptr %struct.anon.0, ptr %[[P_ELEM_0_PTR]], i32 0, i32 0
-// LLVM: store i32 0, ptr %[[CHILD_ELEM_0_PTR]], align 4
+// LLVM: %[[METHOD_CALL:.*]] = call i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr %[[P_ADDR]])
+// LLVM: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4
 
 // OGCG: %[[P_ADDR:.*]] = alloca %struct.Parent, align 4
-// OGCG: call void @llvm.memset.p0.i64(ptr align 4 %[[P_ADDR]], i8 0, i64 4, i1 false)
+// OGCG: %[[P_ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
+// OGCG: %[[METHOD_CALL:.*]] = call noundef i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr {{.*}} %[[P_ADDR]])
+// OGCG: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4
