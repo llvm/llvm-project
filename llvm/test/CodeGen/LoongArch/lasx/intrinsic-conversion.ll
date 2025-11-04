@@ -4,231 +4,300 @@
 
 declare <8 x float> @llvm.loongarch.lasx.cast.128.s(<4 x float>)
 
-define <8 x float> @lasx_cast_128_s(<4 x float> %va) {
+define void @lasx_cast_128_s(ptr %vd, ptr %va) {
 ; CHECK-LABEL: lasx_cast_128_s:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <8 x float> @llvm.loongarch.lasx.cast.128.s(<4 x float> %va)
-  ret <8 x float> %res
+  %a = load <4 x float>, ptr %va
+  %b = call <8 x float> @llvm.loongarch.lasx.cast.128.s(<4 x float> %a)
+  store <8 x float> %b, ptr %vd
+  ret void
 }
 
 declare <4 x double> @llvm.loongarch.lasx.cast.128.d(<2 x double>)
 
-define <4 x double> @lasx_cast_128_d(<2 x double> %va) {
+define void @lasx_cast_128_d(ptr %vd, ptr %va) {
 ; CHECK-LABEL: lasx_cast_128_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x double> @llvm.loongarch.lasx.cast.128.d(<2 x double> %va)
-  ret <4 x double> %res
+  %a = load <2 x double>, ptr %va
+  %b = call <4 x double> @llvm.loongarch.lasx.cast.128.d(<2 x double> %a)
+  store <4 x double> %b, ptr %vd
+  ret void
 }
 
 declare <4 x i64> @llvm.loongarch.lasx.cast.128(<2 x i64>)
 
-define <4 x i64> @lasx_cast_128(<2 x i64> %va) {
+define void @lasx_cast_128(ptr %vd, ptr %va) {
 ; CHECK-LABEL: lasx_cast_128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x i64> @llvm.loongarch.lasx.cast.128(<2 x i64> %va)
-  ret <4 x i64> %res
+  %a = load <2 x i64>, ptr %va
+  %b = call <4 x i64> @llvm.loongarch.lasx.cast.128(<2 x i64> %a)
+  store <4 x i64> %b, ptr %vd
+  ret void
 }
 
 declare <8 x float> @llvm.loongarch.lasx.concat.128.s(<4 x float>, <4 x float>)
 
-define <8 x float> @lasx_concat_128_s(<4 x float> %va, <4 x float> %vb) {
+define void @lasx_concat_128_s(ptr %vd, ptr %va, ptr %vb) {
 ; CHECK-LABEL: lasx_concat_128_s:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <8 x float> @llvm.loongarch.lasx.concat.128.s(<4 x float> %va, <4 x float> %vb)
-  ret <8 x float> %res
+  %a = load <4 x float>, ptr %va
+  %b = load <4 x float>, ptr %vb
+  %c = call <8 x float> @llvm.loongarch.lasx.concat.128.s(<4 x float> %a, <4 x float> %b)
+  store <8 x float> %c, ptr %vd
+  ret void
 }
 
 declare <4 x double> @llvm.loongarch.lasx.concat.128.d(<2 x double>, <2 x double>)
 
-define <4 x double> @lasx_concat_128_d(<2 x double> %va, <2 x double> %vb) {
+define void @lasx_concat_128_d(ptr %vd, ptr %va, ptr %vb) {
 ; CHECK-LABEL: lasx_concat_128_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x double> @llvm.loongarch.lasx.concat.128.d(<2 x double> %va, <2 x double> %vb)
-  ret <4 x double> %res
+  %a = load <2 x double>, ptr %va
+  %b = load <2 x double>, ptr %vb
+  %c = call <4 x double> @llvm.loongarch.lasx.concat.128.d(<2 x double> %a, <2 x double> %b)
+  store <4 x double> %c, ptr %vd
+  ret void
 }
 
 declare <4 x i64> @llvm.loongarch.lasx.concat.128(<2 x i64>, <2 x i64>)
 
-define <4 x i64> @lasx_concat_128(<2 x i64> %va, <2 x i64> %vb) {
+define void @lasx_concat_128(ptr %vd, ptr %va, ptr %vb) {
 ; CHECK-LABEL: lasx_concat_128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x i64> @llvm.loongarch.lasx.concat.128(<2 x i64> %va, <2 x i64> %vb)
-  ret <4 x i64> %res
+  %a = load <2 x i64>, ptr %va
+  %b = load <2 x i64>, ptr %vb
+  %c = call <4 x i64> @llvm.loongarch.lasx.concat.128(<2 x i64> %a, <2 x i64> %b)
+  store <4 x i64> %c, ptr %vd
+  ret void
 }
 
 declare <4 x float> @llvm.loongarch.lasx.extract.128.lo.s(<8 x float>)
 
-define <4 x float> @lasx_extract_128_lo_s(<8 x float> %va) {
+define void @lasx_extract_128_lo_s(ptr %vd, ptr %va) {
 ; CHECK-LABEL: lasx_extract_128_lo_s:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x float> @llvm.loongarch.lasx.extract.128.lo.s(<8 x float> %va)
-  ret <4 x float> %res
+  %a = load <8 x float>, ptr %va
+  %c = call <4 x float> @llvm.loongarch.lasx.extract.128.lo.s(<8 x float> %a)
+  store <4 x float> %c, ptr %vd
+  ret void
 }
 
 declare <2 x double> @llvm.loongarch.lasx.extract.128.lo.d(<4 x double>)
 
-define <2 x double> @lasx_extract_128_lo_d(<4 x double> %va) {
+define void @lasx_extract_128_lo_d(ptr %vd, ptr %va) {
 ; CHECK-LABEL: lasx_extract_128_lo_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <2 x double> @llvm.loongarch.lasx.extract.128.lo.d(<4 x double> %va)
-  ret <2 x double> %res
+  %a = load <4 x double>, ptr %va
+  %c = call <2 x double> @llvm.loongarch.lasx.extract.128.lo.d(<4 x double> %a)
+  store <2 x double> %c, ptr %vd
+  ret void
 }
 
 declare <2 x i64> @llvm.loongarch.lasx.extract.128.lo(<4 x i64>)
 
-define <2 x i64> @lasx_extract_128_lo(<4 x i64> %va) {
+define void @lasx_extract_128_lo(ptr %vd, ptr %va) {
 ; CHECK-LABEL: lasx_extract_128_lo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <2 x i64> @llvm.loongarch.lasx.extract.128.lo(<4 x i64> %va)
-  ret <2 x i64> %res
+  %a = load <4 x i64>, ptr %va
+  %c = call <2 x i64> @llvm.loongarch.lasx.extract.128.lo(<4 x i64> %a)
+  store <2 x i64> %c, ptr %vd
+  ret void
 }
 
 declare <4 x float> @llvm.loongarch.lasx.extract.128.hi.s(<8 x float>)
 
-define <4 x float> @lasx_extract_128_hi_s(<8 x float> %va) {
+define void @lasx_extract_128_hi_s(ptr %vd, ptr %va) {
 ; CHECK-LABEL: lasx_extract_128_hi_s:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x float> @llvm.loongarch.lasx.extract.128.hi.s(<8 x float> %va)
-  ret <4 x float> %res
+  %a = load <8 x float>, ptr %va
+  %c = call <4 x float> @llvm.loongarch.lasx.extract.128.hi.s(<8 x float> %a)
+  store <4 x float> %c, ptr %vd
+  ret void
 }
 
 declare <2 x double> @llvm.loongarch.lasx.extract.128.hi.d(<4 x double>)
 
-define <2 x double> @lasx_extract_128_hi_d(<4 x double> %va) {
+define void @lasx_extract_128_hi_d(ptr %vd, ptr %va) {
 ; CHECK-LABEL: lasx_extract_128_hi_d:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <2 x double> @llvm.loongarch.lasx.extract.128.hi.d(<4 x double> %va)
-  ret <2 x double> %res
+  %a = load <4 x double>, ptr %va
+  %c = call <2 x double> @llvm.loongarch.lasx.extract.128.hi.d(<4 x double> %a)
+  store <2 x double> %c, ptr %vd
+  ret void
 }
 
 declare <2 x i64> @llvm.loongarch.lasx.extract.128.hi(<4 x i64>)
 
-define <2 x i64> @lasx_extract_128_hi(<4 x i64> %va) {
+define void @lasx_extract_128_hi(ptr %vd, ptr %va) {
 ; CHECK-LABEL: lasx_extract_128_hi:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
-; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <2 x i64> @llvm.loongarch.lasx.extract.128.hi(<4 x i64> %va)
-  ret <2 x i64> %res
+  %a = load <4 x i64>, ptr %va
+  %c = call <2 x i64> @llvm.loongarch.lasx.extract.128.hi(<4 x i64> %a)
+  store <2 x i64> %c, ptr %vd
+  ret void
 }
 
 declare <8 x float> @llvm.loongarch.lasx.insert.128.lo.s(<8 x float>, <4 x float>)
 
-define <8 x float> @lasx_insert_128_lo_s(<8 x float> %va, <4 x float> %vb) {
+define void @lasx_insert_128_lo_s(ptr %vd, ptr %va, ptr %vb) {
 ; CHECK-LABEL: lasx_insert_128_lo_s:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <8 x float> @llvm.loongarch.lasx.insert.128.lo.s(<8 x float> %va, <4 x float> %vb)
-  ret <8 x float> %res
+  %a = load <8 x float>, ptr %va
+  %b = load <4 x float>, ptr %vb
+  %c = call <8 x float> @llvm.loongarch.lasx.insert.128.lo.s(<8 x float> %a, <4 x float> %b)
+  store <8 x float> %c, ptr %vd
+  ret void
 }
 
 declare <4 x double> @llvm.loongarch.lasx.insert.128.lo.d(<4 x double>, <2 x double>)
 
-define <4 x double> @lasx_insert_128_lo_d(<4 x double> %va, <2 x double> %vb) {
+define void @lasx_insert_128_lo_d(ptr %vd, ptr %va, ptr %vb) {
 ; CHECK-LABEL: lasx_insert_128_lo_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x double> @llvm.loongarch.lasx.insert.128.lo.d(<4 x double> %va, <2 x double> %vb)
-  ret <4 x double> %res
+  %a = load <4 x double>, ptr %va
+  %b = load <2 x double>, ptr %vb
+  %c = call <4 x double> @llvm.loongarch.lasx.insert.128.lo.d(<4 x double> %a, <2 x double> %b)
+  store <4 x double> %c, ptr %vd
+  ret void
 }
 
 declare <4 x i64> @llvm.loongarch.lasx.insert.128.lo(<4 x i64>, <2 x i64>)
 
-define <4 x i64> @lasx_insert_128_lo(<4 x i64> %va, <2 x i64> %vb) {
+define void @lasx_insert_128_lo(ptr %vd, ptr %va, ptr %vb) {
 ; CHECK-LABEL: lasx_insert_128_lo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x i64> @llvm.loongarch.lasx.insert.128.lo(<4 x i64> %va, <2 x i64> %vb)
-  ret <4 x i64> %res
+  %a = load <4 x i64>, ptr %va
+  %b = load <2 x i64>, ptr %vb
+  %c = call <4 x i64> @llvm.loongarch.lasx.insert.128.lo(<4 x i64> %a, <2 x i64> %b)
+  store <4 x i64> %c, ptr %vd
+  ret void
 }
 
 declare <8 x float> @llvm.loongarch.lasx.insert.128.hi.s(<8 x float>, <4 x float>)
 
-define <8 x float> @lasx_insert_128_hi_s(<8 x float> %va, <4 x float> %vb) {
+define void @lasx_insert_128_hi_s(ptr %vd, ptr %va, ptr %vb) {
 ; CHECK-LABEL: lasx_insert_128_hi_s:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <8 x float> @llvm.loongarch.lasx.insert.128.hi.s(<8 x float> %va, <4 x float> %vb)
-  ret <8 x float> %res
+  %a = load <8 x float>, ptr %va
+  %b = load <4 x float>, ptr %vb
+  %c = call <8 x float> @llvm.loongarch.lasx.insert.128.hi.s(<8 x float> %a, <4 x float> %b)
+  store <8 x float> %c, ptr %vd
+  ret void
 }
 
 declare <4 x double> @llvm.loongarch.lasx.insert.128.hi.d(<4 x double>, <2 x double>)
 
-define <4 x double> @lasx_insert_128_hi_d(<4 x double> %va, <2 x double> %vb) {
+define void @lasx_insert_128_hi_d(ptr %vd, ptr %va, ptr %vb) {
 ; CHECK-LABEL: lasx_insert_128_hi_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x double> @llvm.loongarch.lasx.insert.128.hi.d(<4 x double> %va, <2 x double> %vb)
-  ret <4 x double> %res
+  %a = load <4 x double>, ptr %va
+  %b = load <2 x double>, ptr %vb
+  %c = call <4 x double> @llvm.loongarch.lasx.insert.128.hi.d(<4 x double> %a, <2 x double> %b)
+  store <4 x double> %c, ptr %vd
+  ret void
 }
 
 declare <4 x i64> @llvm.loongarch.lasx.insert.128.hi(<4 x i64>, <2 x i64>)
 
-define <4 x i64> @lasx_insert_128_hi(<4 x i64> %va, <2 x i64> %vb) {
+define void @lasx_insert_128_hi(ptr %vd, ptr %va, ptr %vb) {
 ; CHECK-LABEL: lasx_insert_128_hi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
-  %res = call <4 x i64> @llvm.loongarch.lasx.insert.128.hi(<4 x i64> %va, <2 x i64> %vb)
-  ret <4 x i64> %res
+  %a = load <4 x i64>, ptr %va
+  %b = load <2 x i64>, ptr %vb
+  %c = call <4 x i64> @llvm.loongarch.lasx.insert.128.hi(<4 x i64> %a, <2 x i64> %b)
+  store <4 x i64> %c, ptr %vd
+  ret void
 }
