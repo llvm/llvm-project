@@ -30978,7 +30978,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.reloc.none(ptrty %ptr)
+      declare void @llvm.reloc.none(metadata !<name_str>)
 
 Overview:
 """""""""
