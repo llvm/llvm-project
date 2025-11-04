@@ -203,6 +203,11 @@ OPTIONS
             File to use as the baseline for variable coverage statistics
             (implies :option:`--show-variable-coverage`)
 
+.. option:: --variable-coverage-bitcode-file
+
+            File containing bitcode used for calculating variable definedness
+            in coverage statistics (implies :option:`--show-variable-coverage`)
+
 .. option:: --combine-inline-variable-instances
 
             Use with :option:`--show-variable-coverage` to average variable
