@@ -257,18 +257,18 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
     if (strncmp(sc->segname, "__LINKEDIT", sizeof("__LINKEDIT")) == 0) {
-      // The LINKEDIT sections alias, so we ignore these sections to
-      // ensure our mappings are disjoint.
+      // The LINKEDIT sections are for internal linker use, and may alias
+      // with the LINKEDIT section for other modules. (If we included them,
+      // our memory map would contain overlappping sections.)
       return false;
     }
 
     uptr base_virt_addr;
-    if (layout_data->current_image == kDyldImageIdx) {
+    if (layout_data->current_image == kDyldImageIdx)
       base_virt_addr = (uptr)_dyld_get_image_slide(get_dyld_hdr());
-    } else {
+    else
       base_virt_addr =
           (uptr)_dyld_get_image_vmaddr_slide(layout_data->current_image);
-    }
 
     segment->start = sc->vmaddr + base_virt_addr;
     segment->end = segment->start + sc->vmsize;
