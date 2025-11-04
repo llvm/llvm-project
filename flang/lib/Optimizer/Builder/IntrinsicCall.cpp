@@ -290,12 +290,12 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
-    {"atomicadd_r2x2",
-     &I::genAtomicAddVector,
+    {"atomicadd_r4x2",
+     &I::genAtomicAddVector<2>,
      {{{"a", asAddr}, {"v", asAddr}}},
      false},
-    {"atomicadd_r4x2",
-     &I::genAtomicAddVector,
+    {"atomicadd_r4x4",
+     &I::genAtomicAddVector<4>,
      {{{"a", asAddr}, {"v", asAddr}}},
      false},
     {"atomicaddd", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
@@ -304,6 +304,14 @@ static constexpr IntrinsicHandler handlers[]{
     {"atomicaddl", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddr2",
      &I::genAtomicAddR2,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
+    {"atomicaddvector_r2x2",
+     &I::genAtomicAddVector<2>,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
+    {"atomicaddvector_r4x2",
+     &I::genAtomicAddVector<2>,
      {{{"a", asAddr}, {"v", asAddr}}},
      false},
     {"atomicandi", &I::genAtomicAnd, {{{"a", asAddr}, {"v", asValue}}}, false},
@@ -3176,44 +3184,51 @@ IntrinsicLibrary::genAtomicAddR2(mlir::Type resultType,
                                          mlir::ArrayRef<int64_t>{0});
 }
 
+template <int extent>
 fir::ExtendedValue
 IntrinsicLibrary::genAtomicAddVector(mlir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
   mlir::Value res = fir::AllocaOp::create(
-      builder, loc, fir::SequenceType::get({2}, resultType));
+      builder, loc, fir::SequenceType::get({extent}, resultType));
   mlir::Value a = fir::getBase(args[0]);
   if (mlir::isa<fir::BaseBoxType>(a.getType())) {
     a = fir::BoxAddrOp::create(builder, loc, a);
   }
-  auto vecTy = mlir::VectorType::get({2}, resultType);
+  auto vecTy = mlir::VectorType::get({extent}, resultType);
   auto refTy = fir::ReferenceType::get(resultType);
   mlir::Type i32Ty = builder.getI32Type();
   mlir::Type idxTy = builder.getIndexType();
-  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  mlir::Value v1Coord = fir::CoordinateOp::create(builder, loc, refTy,
-                                                  fir::getBase(args[1]), zero);
-  mlir::Value v2Coord = fir::CoordinateOp::create(builder, loc, refTy,
-                                                  fir::getBase(args[1]), one);
-  mlir::Value v1 = fir::LoadOp::create(builder, loc, v1Coord);
-  mlir::Value v2 = fir::LoadOp::create(builder, loc, v2Coord);
+
+  // Extract the values from the array.
+  llvm::SmallVector<mlir::Value> values;
+  for (unsigned i = 0; i < extent; ++i) {
+    mlir::Value pos = builder.createIntegerConstant(loc, idxTy, i);
+    mlir::Value coord = fir::CoordinateOp::create(builder, loc, refTy,
+                                                  fir::getBase(args[1]), pos);
+    mlir::Value value = fir::LoadOp::create(builder, loc, coord);
+    values.push_back(value);
+  }
+  // Pack extracted values into a vector to call the atomic add.
   mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecTy);
-  mlir::Value vec1 = mlir::LLVM::InsertElementOp::create(
-      builder, loc, undef, v1, builder.createIntegerConstant(loc, i32Ty, 0));
-  mlir::Value vec2 = mlir::LLVM::InsertElementOp::create(
-      builder, loc, vec1, v2, builder.createIntegerConstant(loc, i32Ty, 1));
+  for (unsigned i = 0; i < extent; ++i) {
+    mlir::Value insert = mlir::LLVM::InsertElementOp::create(
+        builder, loc, undef, values[i],
+        builder.createIntegerConstant(loc, i32Ty, i));
+    undef = insert;
+  }
+  // Atomic operation with a vector of values.
   mlir::Value add =
-      genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, vec2);
-  mlir::Value r1 = mlir::LLVM::ExtractElementOp::create(
-      builder, loc, add, builder.createIntegerConstant(loc, i32Ty, 0));
-  mlir::Value r2 = mlir::LLVM::ExtractElementOp::create(
-      builder, loc, add, builder.createIntegerConstant(loc, i32Ty, 1));
-  mlir::Value c1 = fir::CoordinateOp::create(builder, loc, refTy, res, zero);
-  mlir::Value c2 = fir::CoordinateOp::create(builder, loc, refTy, res, one);
-  fir::StoreOp::create(builder, loc, r1, c1);
-  fir::StoreOp::create(builder, loc, r2, c2);
-  mlir::Value ext = builder.createIntegerConstant(loc, idxTy, 2);
+      genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, undef);
+  // Store results in the result array.
+  for (unsigned i = 0; i < extent; ++i) {
+    mlir::Value r = mlir::LLVM::ExtractElementOp::create(
+        builder, loc, add, builder.createIntegerConstant(loc, i32Ty, i));
+    mlir::Value c = fir::CoordinateOp::create(
+        builder, loc, refTy, res, builder.createIntegerConstant(loc, idxTy, i));
+    fir::StoreOp::create(builder, loc, r, c);
+  }
+  mlir::Value ext = builder.createIntegerConstant(loc, idxTy, extent);
   return fir::ArrayBoxValue(res, {ext});
 }
 
