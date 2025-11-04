@@ -1047,10 +1047,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       Imm = SignExtend64<32>(Imm);
 
     if (hasAllWUsers(Node) && isApplicableToPLI(Imm) &&
-        Subtarget->hasStdExtP() && Subtarget->enablePExtCodeGen()) {
-      // If its 4 packed 8 bit integer or 2 packed signed integer, we can simply
-      // copy lower 32 bits to higher 32 bits to make it able to rematerialize
-      // to PLI_B or PLI_H
+        Subtarget->enablePExtCodeGen()) {
+      // If its 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
+      // can simply copy lower 32 bits to higher 32 bits to make it able to
+      // rematerialize to PLI_B or PLI_H
       Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
     }
 
@@ -2674,7 +2674,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-    if (Subtarget->hasStdExtP() && Subtarget->enablePExtCodeGen()) {
+    if (Subtarget->enablePExtCodeGen()) {
       if (((VT == MVT::v4i16 || VT == MVT::v8i8) && SrcVT == MVT::i64) ||
           ((SrcVT == MVT::v4i16 || SrcVT == MVT::v8i8) && VT == MVT::i64)) {
         ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
