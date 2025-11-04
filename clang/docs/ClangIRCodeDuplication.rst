@@ -205,19 +205,20 @@ of the code is needed to enable better code sharing between CIR and classic
 codegen. Each of these areas is relatively self-contained in the codegen
 implementation, making the path to a shared implementation relatively clear.
 
-Constant expression evaluation
-Complex multiplication and division expansion
-Builtin function handling
-Exception Handling and C++ Cleanups
-Inline assembly handling
-C++ ABI Handling
-  VTable generation
-  Virtual function calls
-  Constructor and destructor arguments
-  Dynamic casts
-  Base class address calculation
-  Type descriptors
-  Array new and delete
+- Constant expression evaluation
+- Complex multiplication and division expansion
+- Builtin function handling
+- Exception Handling and C++ Cleanups
+- Inline assembly handling
+- C++ ABI Handling
+
+  - VTable generation
+  - Virtual function calls
+  - Constructor and destructor arguments
+  - Dynamic casts
+  - Base class address calculation
+  - Type descriptors
+  - Array new and delete
 
 Pervasive Low-Level Issues
 ==========================
@@ -227,9 +228,9 @@ is shared between CIR and classic codegen, but the handling of the feature
 is distributed across the codegen implementation, making it more difficult
 to design an abstraction that can easily be shared.
 
-Global variable and function linkage
-Alignment management
-Debug information
-TBAA handling
-Sanitizer integration
-Lifetime markers
+- Global variable and function linkage
+- Alignment management
+- Debug information
+- TBAA handling
+- Sanitizer integration
+- Lifetime markers
