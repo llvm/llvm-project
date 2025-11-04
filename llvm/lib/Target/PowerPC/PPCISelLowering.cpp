@@ -5182,11 +5182,9 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   return true;
 }
 
-static void calculeStackSlotSizeForParameter_AIX(const PPCSubtarget &Subtarget,
-                                                 MVT ArgVT,
-                                                 ISD::ArgFlagsTy ArgFlags,
-                                                 unsigned &StackSize,
-                                                 Align &MaxStackArgAlign) {
+static void calculateStackSlotSizeForParameter_AIX(
+    const PPCSubtarget &Subtarget, MVT ArgVT, ISD::ArgFlagsTy ArgFlags,
+    unsigned &StackSize, Align &MaxStackArgAlign) {
   const bool IsPPC64 = Subtarget.isPPC64();
   const Align PtrAlign = IsPPC64 ? Align(8) : Align(4);
   unsigned Size = 0;
@@ -5199,7 +5197,7 @@ static void calculeStackSlotSizeForParameter_AIX(const PPCSubtarget &Subtarget,
   } else {
     switch (ArgVT.SimpleTy) {
     default:
-      report_fatal_error("Unhandled value type for argument.");
+      llvm_unreachable("Unhandled value type for argument.");
     case MVT::i64:
       // i64 arguments should have been split to i32 for PPC32.
       assert(IsPPC64 && "PPC32 should have split i64 values.");
@@ -5210,6 +5208,9 @@ static void calculeStackSlotSizeForParameter_AIX(const PPCSubtarget &Subtarget,
       break;
     case MVT::f32:
     case MVT::f64:
+      // According the comment in the function CC_AIX,
+      // Floats are always 4-byte aligned in the PSA on AIX.
+      // This includes f64 in 64-bit mode for ABI compatibility.
       Size = IsPPC64 ? 8 : ArgVT.getStoreSize();
       Alignment = Align(4);
       break;
@@ -5265,8 +5266,8 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
   unsigned CalleeArgSize = 0;
   Align MaxAligment = Align(1);
   for (auto OutArg : Outs)
-    calculeStackSlotSizeForParameter_AIX(Subtarget, OutArg.VT, OutArg.Flags,
-                                         CalleeArgSize, MaxAligment);
+    calculateStackSlotSizeForParameter_AIX(Subtarget, OutArg.VT, OutArg.Flags,
+                                           CalleeArgSize, MaxAligment);
   CalleeArgSize = alignTo(CalleeArgSize, MaxAligment);
 
   // TODO: In the future, calculate the actual caller argument size
