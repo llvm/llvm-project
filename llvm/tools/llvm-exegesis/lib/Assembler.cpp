@@ -44,8 +44,8 @@
 namespace llvm {
 namespace exegesis {
 
-static constexpr const char ModuleID[] = "ExegesisInfoTest";
-static constexpr const char FunctionID[] = "foo";
+static constexpr char ModuleID[] = "ExegesisInfoTest";
+static constexpr char FunctionID[] = "foo";
 static const Align kFunctionAlignment(4096);
 
 // Fills the given basic block with register setup code, and returns true if
