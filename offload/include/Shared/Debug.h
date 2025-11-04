@@ -292,7 +292,6 @@ inline DebugSettings &getDebugSettings() {
   static DebugSettings Settings;
   static std::once_flag Flag{};
   std::call_once(Flag, []() {
-    printf("Configuring debug settings\n");
     // Eventually, we probably should allow the upper layers to set
     // debug settings directly according to their own env var or
     // other methods.
