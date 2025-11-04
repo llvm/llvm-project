@@ -110,6 +110,7 @@ def PseudoCCMAX : SFBALU_rr;
 def PseudoCCMIN : SFBALU_rr;
 def PseudoCCMAXU : SFBALU_rr;
 def PseudoCCMINU : SFBALU_rr;
+def PseudoCCMUL : SFBALU_rr;
 
 def PseudoCCADDI : SFBALU_ri;
 def PseudoCCANDI : SFBALU_ri;
