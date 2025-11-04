@@ -394,7 +394,7 @@ def executeBuiltinEcho(cmd, shenv):
         is_redirected = False
         stdout = StringIO()
     elif kIsWindows:
-        # Reopen stdout with specifying `newline` to avoid CRLF translation.
+        # Reopen stdout with `newline=""` to avoid CRLF translation.
         # The versions of echo we are replacing on Windows all emit plain LF,
         # and the LLVM tests now depend on this.
         stdout = open(stdout.name, stdout.mode, encoding="utf-8", newline="")
