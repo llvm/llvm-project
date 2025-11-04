@@ -83,9 +83,9 @@ llvm::createUnpackMachineBundles(
   return new UnpackMachineBundles(std::move(Ftor));
 }
 
-/// Return the first found DebugLoc that has a DILocation, given a range of
-/// instructions. The search range is from FirstMI to LastMI (exclusive). If no
-/// DILocation is found, then an empty location is returned.
+/// Return the first good DebugLoc that has line number information, given a
+/// range of instructions. The search range is from FirstMI to LastMI (exclusive).
+/// If no such DebugLoc is found, get the one with DILocation
 static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
                             MachineBasicBlock::instr_iterator LastMI) {
   DebugLoc DL;
