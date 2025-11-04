@@ -97,7 +97,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
   initializeX86OptimizeLEAPassPass(PR);
-  initializeX86PartialReductionPass(PR);
+  initializeX86PartialReductionLegacyPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
@@ -429,7 +429,7 @@ void X86PassConfig::addIRPasses() {
 
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createInterleavedAccessPass());
-    addPass(createX86PartialReductionPass());
+    addPass(createX86PartialReductionLegacyPass());
   }
 
   // Add passes that handle indirect branch removal and insertion of a retpoline
