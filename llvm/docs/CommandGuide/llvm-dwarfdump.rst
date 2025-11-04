@@ -138,7 +138,10 @@ OPTIONS
 
             Only dump children whose DWARF tag is one of the specified tags.
             Example usage:
-            `llvm-dwarfdump -t DW_TAG_structure_type -t DW_TAG_member -c`
+
+            .. code-block:: c
+
+              llvm-dwarfdump -t DW_TAG_structure_type -t DW_TAG_member -c
 
 .. option:: -x, --regex
 
