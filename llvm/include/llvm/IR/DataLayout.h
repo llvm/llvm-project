@@ -400,9 +400,7 @@ public:
 
   /// Returns if the null pointer for this address space has an all-zero bit
   /// representation.
-  bool isNullPointerAllZeroes(unsigned AddrSpace) const {
-    return AddrSpace == 0;
-  }
+  bool isNullPointerAllZeroes(unsigned AddrSpace) const { return true; }
 
   /// Returns whether this address space has an "unstable" pointer
   /// representation. The bitwise pattern of such pointers is allowed to change
