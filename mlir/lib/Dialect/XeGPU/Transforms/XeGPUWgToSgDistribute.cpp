@@ -114,7 +114,8 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
   // Compute the list of subgroup-relative offsets for sub-tensors or sub-memory
   // descriptors to be accessed, based on the layout information.
   ArrayRef<int64_t> wgShape = op.getDataShape();
-  auto maybeDescOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+  auto maybeDescOffsets =
+      layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
   if (failed(maybeDescOffsets))
     return failure();
 
@@ -825,37 +826,38 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 
       auto tileAttr = DenseElementsAttr::get(VectorType::get(sgShape, eltType),
                                              baseTileValues);
-      auto baseConstVec = rewriter.create<arith::ConstantOp>(loc, tileAttr);
+      auto baseConstVec = arith::ConstantOp::create(rewriter, loc, tileAttr);
 
       // Get subgroup id
       Value sgId =
           gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-
-      auto sgOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+      auto sgOffsets =
+          layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
       if (failed(sgOffsets))
         return failure();
 
       SmallVector<Value, 2> strideConsts;
       strideConsts.push_back(
-          rewriter.create<arith::ConstantIndexOp>(loc, colStride));
+          arith::ConstantIndexOp::create(rewriter, loc, colStride));
       if (rows > 1)
         strideConsts.insert(
             strideConsts.begin(),
-            rewriter.create<arith::ConstantIndexOp>(loc, rowStride));
+            arith::ConstantIndexOp::create(rewriter, loc, rowStride));
 
       SmallVector<Value> newConstOps;
       for (auto offsets : *sgOffsets) {
         // Multiply offset with stride, broadcast it and add to baseConstVec
-        Value mulOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+        Value mulOffset = arith::ConstantIndexOp::create(rewriter, loc, 0);
         for (size_t i = 0; i < strideConsts.size(); ++i) {
-          Value mul = rewriter.create<arith::MulIOp>(
-              loc, rewriter.getIndexType(), offsets[i], strideConsts[i]);
-          mulOffset = rewriter.create<arith::AddIOp>(
-              loc, rewriter.getIndexType(), mulOffset, mul);
+          Value mul =
+              arith::MulIOp::create(rewriter, loc, rewriter.getIndexType(),
+                                    offsets[i], strideConsts[i]);
+          mulOffset = arith::AddIOp::create(
+              rewriter, loc, rewriter.getIndexType(), mulOffset, mul);
         }
         // Broadcast to baseConstVec size
-        auto bcastOffset = rewriter.create<vector::BroadcastOp>(
-            loc, baseConstVec.getType(), mulOffset);
+        auto bcastOffset = vector::BroadcastOp::create(
+            rewriter, loc, baseConstVec.getType(), mulOffset);
         auto finalConst =
             arith::AddIOp::create(rewriter, loc, baseConstVec, bcastOffset);
         setLayoutIfNeeded(baseConstVec);
@@ -887,8 +889,8 @@ struct WgToSgLoadGatherOpWithOffset
       return failure();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::DistributeLayoutAttr layout =
-        xegpu::getDistributeLayoutAttr(op.getResult());
+    xegpu::LayoutAttr layout = dyn_cast_if_present<xegpu::LayoutAttr>(
+        xegpu::getDistributeLayoutAttr(op.getResult()));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -913,9 +915,8 @@ struct WgToSgLoadGatherOpWithOffset
          llvm::zip(adaptor.getOffsets(), adaptor.getMask())) {
       auto newLoadOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr());
-      xegpu::setDistributeLayoutAttr(newLoadOp->getResult(0),
-                                     layout.dropSgLayoutAndData());
+          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
+          layout.dropSgLayoutAndData());
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -940,8 +941,8 @@ struct WgToSgStoreScatterOpWithOffset
     if (!valueType)
       return failure();
 
-    xegpu::DistributeLayoutAttr layout =
-        xegpu::getDistributeLayoutAttr(op.getOperand(0));
+    xegpu::LayoutAttr layout = dyn_cast_if_present<xegpu::LayoutAttr>(
+        xegpu::getDistributeLayoutAttr(op.getOperand(0)));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -963,7 +964,8 @@ struct WgToSgStoreScatterOpWithOffset
              adaptor.getValue(), adaptor.getOffsets(), adaptor.getMask())) {
       auto store = xegpu::StoreScatterOp::create(
           rewriter, loc, val, op.getDest(), offs, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr());
+          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
+          layout.dropSgLayoutAndData());
       // Update the layout attribute to drop sg_layout and sg_data.
       if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
           !layout.getEffectiveInstDataAsInt().empty()) {
@@ -991,7 +993,8 @@ struct WgToSgLoadMatrixOp : public OpConversionPattern<xegpu::LoadMatrixOp> {
       return failure();
 
     ArrayRef<int64_t> wgShape = op.getDataShape();
-    VectorType valueTy = op.getRes().getType();
+    VectorType valueTy = llvm::dyn_cast<VectorType>(op.getRes().getType());
+    assert(valueTy && "the value type must be vector type!");
     Type elemTy = valueTy.getElementType();
 
     xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
@@ -1050,7 +1053,8 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
 
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-    auto sgOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+    auto sgOffsets =
+        layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
     if (failed(sgOffsets))
       return failure();
 
@@ -1137,8 +1141,8 @@ struct WgToSgVectorShapeCastOp
 
     SmallVector<Value> newShapeCastOps;
     for (auto src : adaptor.getSource()) {
-      auto newShapeCast =
-          rewriter.create<vector::ShapeCastOp>(op.getLoc(), newResultType, src);
+      auto newShapeCast = vector::ShapeCastOp::create(rewriter, op.getLoc(),
+                                                      newResultType, src);
       if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
           !layout.getEffectiveInstDataAsInt().empty())
         xegpu::setDistributeLayoutAttr(newShapeCast->getResult(0),
@@ -1200,9 +1204,9 @@ struct WgToSgMultiDimReductionOp
 
     SmallVector<Value> newReductions;
     for (auto sgSrc : adaptor.getSource()) {
-      auto newOp = rewriter.create<vector::MultiDimReductionOp>(
-          op.getLoc(), newDstType, op.getKind(), sgSrc, adaptor.getAcc()[0],
-          op.getReductionDims());
+      auto newOp = vector::MultiDimReductionOp::create(
+          rewriter, op.getLoc(), newDstType, op.getKind(), sgSrc,
+          adaptor.getAcc()[0], op.getReductionDims());
       if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
           !layout.getEffectiveInstDataAsInt().empty())
         xegpu::setDistributeLayoutAttr(newOp->getResult(0),

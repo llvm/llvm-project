@@ -32,7 +32,7 @@ namespace rt_bootstrap {
 /// Simple page-based allocator.
 class LLVM_ABI SimpleExecutorMemoryManager : public ExecutorBootstrapService {
 public:
-  virtual ~SimpleExecutorMemoryManager();
+  ~SimpleExecutorMemoryManager() override;
 
   Expected<ExecutorAddr> reserve(uint64_t Size);
   Expected<ExecutorAddr> initialize(tpctypes::FinalizeRequest &FR);

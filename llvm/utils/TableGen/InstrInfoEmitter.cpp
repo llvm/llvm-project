@@ -29,6 +29,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
@@ -284,7 +285,7 @@ emitGetNamedOperandIdx(raw_ostream &OS,
 
 static void
 emitGetOperandIdxName(raw_ostream &OS,
-                      MapVector<StringRef, unsigned> OperandNameToID,
+                      const MapVector<StringRef, unsigned> &OperandNameToID,
                       const MapVector<SmallVector<int>, unsigned> &OperandMap,
                       unsigned MaxNumOperands, unsigned NumOperandNames) {
   OS << "LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx) "
@@ -1134,6 +1135,22 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
      << "  ~" << ClassName << "() override = default;\n";
 
   OS << "\n};\n} // end namespace llvm\n";
+
+  {
+    NamespaceEmitter LlvmNS(OS, "llvm");
+    NamespaceEmitter TargetNS(OS, Target.getInstNamespace());
+    for (const Record *R : Records.getAllDerivedDefinitions("Operand")) {
+      if (R->isAnonymous())
+        continue;
+      if (const DagInit *D = R->getValueAsDag("MIOperandInfo")) {
+        for (unsigned i = 0, e = D->getNumArgs(); i < e; ++i) {
+          if (const StringInit *Name = D->getArgName(i))
+            OS << "constexpr unsigned SUBOP_" << R->getName() << "_"
+               << Name->getValue() << " = " << i << ";\n";
+        }
+      }
+    }
+  }
 
   OS << "#endif // GET_INSTRINFO_HEADER\n\n";
 

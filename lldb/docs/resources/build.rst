@@ -95,37 +95,31 @@ commands below.
 Windows
 *******
 
-* Visual Studio 2019.
-* The latest Windows SDK.
-* The Active Template Library (ATL).
-* `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
-* `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
-  the x64 variant if that's what you're targeting and (2) install the debug
-  library if you want to build a debug lldb. The standalone installer is the
-  easiest way to get the debug library.
-* `Python Tools for Visual Studio
-  <https://github.com/Microsoft/PTVS/>`_. If you plan to debug test failures
-  or even write new tests at all, PTVS is an indispensable debugging
-  extension to VS that enables full editing and debugging support for Python
-  (including mixed native/managed debugging).
-* `SWIG for Windows <http://www.swig.org/download.html>`_
+The steps outlined here describe how to set up your system and install the
+required dependencies for building and testing LLDB on Windows. They only need
+to be performed once.
 
-The steps outlined here describes how to set up your system and install the
-required dependencies such that they can be found when needed during the build
-process. They only need to be performed once.
+Build Requirements
+^^^^^^^^^^^^^^^^^^
 
-#. Install Visual Studio with the "Desktop Development with C++" workload and
-   the "Python Development" workload.
-#. Install GnuWin32, making sure ``<GnuWin32 install dir>\bin`` is added to
-   your PATH environment variable. Verify that utilities like ``dirname`` and
-   ``make`` are available from your terminal.
-#. Install SWIG for Windows, making sure ``<SWIG install dir>`` is added to
-   your PATH environment variable. Verify that ``swig`` is available from your
-   terminal.
-#. Install Python 3 from the standalone installer and include the debug libraries
-   in the install, making sure the Python install path is added to your PATH
-   environment variable.
-#. Register the Debug Interface Access DLLs with the Registry from a privileged
+Please follow the steps below if you only want to **build** lldb.
+
+1. Install `Visual Studio <https://visualstudio.microsoft.com>` with the
+   "Desktop Development with C++" workload. Make sure that the latest Windows
+   SDK and the Active Template Library (ATL) are installed.
+2. Install `Git Bash <https://git-scm.com/install/windows>`_ and add
+   ``<Git install dir>\usr\bin`` to your ``PATH``. Verify that utilities like
+   ``dirname`` are available from your terminal.
+3. Install `make <https://sourceforge.net/projects/ezwinports/files/>`_ and
+   verify that it's in your ``PATH``.
+4. Install `Python 3 <https://www.python.org/downloads/windows/>`_ from the
+   GUI installer. If you will be building LLDB in Debug mode, **include the
+   debug libraries** during the install. Make sure ``python`` is added to your
+   ``PATH``.
+5. Install `SWIG for Windows <http://www.swig.org/download.html>`_. Make sure
+   ``swig`` is added to your ``PATH`` and that ``swig -swiglib`` points to the
+   correct directory.
+6. Register the Debug Interface Access DLLs with the Registry from a privileged
    terminal.
 
 ::
@@ -138,6 +132,16 @@ environment setup. This means you should open an appropriate `Developer Command
 Prompt for VS <https://docs.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2019>`_
 corresponding to the version you wish to use or run ``vcvarsall.bat`` or
 ``VsDevCmd.bat``.
+
+Test Requirements
+^^^^^^^^^^^^^^^^^
+
+Please follow the steps above and below if you want to **test** `lldb`.
+
+* Install `Python Tools for Visual Studio <https://github.com/Microsoft/PTVS/>`_,
+  an indispensable debugging extension to Visual Studio which enables full
+  editing and debugging support for Python (including mixed native/managed
+  debugging).
 
 macOS
 *****

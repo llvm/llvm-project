@@ -80,13 +80,13 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
     assert(!cir::MissingFeatures::openMP());
     if (!didCallStackSave) {
       // Save the stack.
-      cir::PointerType defaultTy = AllocaInt8PtrTy;
+      cir::PointerType defaultTy = allocaInt8PtrTy;
       CharUnits align = CharUnits::fromQuantity(
           cgm.getDataLayout().getAlignment(defaultTy, false));
       Address stack = createTempAlloca(defaultTy, align, loc, "saved_stack");
 
       mlir::Value v = builder.createStackSave(loc, defaultTy);
-      assert(v.getType() == AllocaInt8PtrTy);
+      assert(v.getType() == allocaInt8PtrTy);
       builder.createStore(loc, v, stack);
 
       didCallStackSave = true;
@@ -739,6 +739,16 @@ struct CallStackRestore final : EHScopeStack::Cleanup {
   }
 };
 } // namespace
+
+/// Push the standard destructor for the given type as
+/// at least a normal cleanup.
+void CIRGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
+                                 Address addr, QualType type) {
+  assert(dtorKind && "cannot push destructor for trivial type");
+
+  CleanupKind cleanupKind = getCleanupKind(dtorKind);
+  pushDestroy(cleanupKind, addr, type, getDestroyer(dtorKind));
+}
 
 void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                  QualType type, Destroyer *destroyer) {

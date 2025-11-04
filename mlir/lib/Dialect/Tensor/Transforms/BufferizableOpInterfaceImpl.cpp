@@ -579,6 +579,7 @@ static Value lowerGenerateLikeOpBody(RewriterBase &rewriter, Location loc,
       linalg::MapOp::create(rewriter, loc, tensorType, /*inputs=*/ValueRange(),
                             /*init=*/tensorDestination);
   Block &linalgBody = linalgOp.getMapper().emplaceBlock();
+  linalgBody.addArgument(tensorType.getElementType(), loc);
 
   // Create linalg::IndexOps.
   rewriter.setInsertionPointToStart(&linalgBody);
@@ -1068,6 +1069,7 @@ struct SplatOpInterface
                                           /*inputs=*/ValueRange(),
                                           /*init=*/*tensorAlloc);
     Block &linalgBody = linalgOp.getMapper().emplaceBlock();
+    linalgBody.addArgument(tensorType.getElementType(), loc);
 
     // Create linalg::IndexOps.
     rewriter.setInsertionPointToStart(&linalgBody);

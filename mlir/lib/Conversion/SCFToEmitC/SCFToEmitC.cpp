@@ -394,9 +394,9 @@ private:
       if (!convertedType)
         return rewriter.notifyMatchFailure(whileOp, "type conversion failed");
 
-      emitc::VariableOp var = rewriter.create<emitc::VariableOp>(
-          loc, emitc::LValueType::get(convertedType), noInit);
-      rewriter.create<emitc::AssignOp>(loc, var.getResult(), init);
+      auto var = emitc::VariableOp::create(
+          rewriter, loc, emitc::LValueType::get(convertedType), noInit);
+      emitc::AssignOp::create(rewriter, loc, var.getResult(), init);
       loopVars.push_back(var);
     }
 
@@ -411,11 +411,11 @@ private:
     // Create a global boolean variable to store the loop condition state.
     Type i1Type = IntegerType::get(context, 1);
     auto globalCondition =
-        rewriter.create<emitc::VariableOp>(loc, emitc::LValueType::get(i1Type),
-                                           emitc::OpaqueAttr::get(context, ""));
+        emitc::VariableOp::create(rewriter, loc, emitc::LValueType::get(i1Type),
+                                  emitc::OpaqueAttr::get(context, ""));
     Value conditionVal = globalCondition.getResult();
 
-    auto loweredDo = rewriter.create<emitc::DoOp>(loc);
+    auto loweredDo = emitc::DoOp::create(rewriter, loc);
 
     // Convert region types to match the target dialect type system.
     if (failed(rewriter.convertRegionTypes(&whileOp.getBefore(),
@@ -450,12 +450,12 @@ private:
 
     // Convert scf.condition to condition variable assignment.
     Value condition = rewriter.getRemappedValue(condOp.getCondition());
-    rewriter.create<emitc::AssignOp>(loc, conditionVal, condition);
+    emitc::AssignOp::create(rewriter, loc, conditionVal, condition);
 
     // Wrap body region in conditional to preserve scf semantics. Only create
     // ifOp if after-region is non-empty.
     if (whileOp.getAfterBody()->getOperations().size() > 1) {
-      auto ifOp = rewriter.create<emitc::IfOp>(loc, condition, false, false);
+      auto ifOp = emitc::IfOp::create(rewriter, loc, condition, false, false);
 
       // Prepare the after region (loop body) for merging.
       Block *afterBlock = &whileOp.getAfter().front();
@@ -480,8 +480,8 @@ private:
     Block *condBlock = rewriter.createBlock(&condRegion);
     rewriter.setInsertionPointToStart(condBlock);
 
-    auto exprOp = rewriter.create<emitc::ExpressionOp>(
-        loc, i1Type, conditionVal, /*do_not_inline=*/false);
+    auto exprOp = emitc::ExpressionOp::create(
+        rewriter, loc, i1Type, conditionVal, /*do_not_inline=*/false);
     Block *exprBlock = rewriter.createBlock(&exprOp.getBodyRegion());
 
     // Set up the expression block to load the condition variable.
@@ -490,12 +490,12 @@ private:
 
     // Load the condition value and yield it as the expression result.
     Value cond =
-        rewriter.create<emitc::LoadOp>(loc, i1Type, exprBlock->getArgument(0));
-    rewriter.create<emitc::YieldOp>(loc, cond);
+        emitc::LoadOp::create(rewriter, loc, i1Type, exprBlock->getArgument(0));
+    emitc::YieldOp::create(rewriter, loc, cond);
 
     // Yield the expression as the condition region result.
     rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<emitc::YieldOp>(loc, exprOp);
+    emitc::YieldOp::create(rewriter, loc, exprOp);
 
     return success();
   }

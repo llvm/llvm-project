@@ -2167,7 +2167,7 @@ following keys and values:
          be outside the watchpoint that was triggered, the remote
          stub should determine which watchpoint was triggered and
          report an address from within its range.
-      2. Wwatchpoint hardware register index number.
+      2. Watchpoint hardware register index number.
       3. Actual watchpoint trap address, which may be outside
          the range of any watched region of memory. On MIPS, an addr
          outside a watched range means lldb should disable the wp,
@@ -2491,9 +2491,10 @@ The packet below are supported by the
 ### qWasmCallStack
 
 Get the Wasm call stack for the given thread id. This returns a hex-encoded
-list of PC values, one for each frame of the call stack. To match the Wasm
-specification, the addresses are encoded in little endian byte order, even if
-the endian of the Wasm runtime's host is not little endian.
+list (with no delimiters) of 64-bit PC values, one for each frame of the call
+stack. To match the Wasm specification, the addresses are encoded in little
+endian byte order, even if the endian of the Wasm runtime's host is not little
+endian.
 
 ```
 send packet: $qWasmCallStack:202dbe040#08

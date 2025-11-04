@@ -33,6 +33,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
@@ -44,7 +45,6 @@
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -944,8 +944,7 @@ getDefaultmapIfPresent(const DefaultMapsTy &defaultMaps, mlir::Type varType) {
   return DefMap::ImplicitBehavior::Default;
 }
 
-static std::pair<llvm::omp::OpenMPOffloadMappingFlags,
-                 mlir::omp::VariableCaptureKind>
+static std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
 getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           lower::AbstractConverter &converter,
                           const DefaultMapsTy &defaultMaps, mlir::Type varType,
@@ -966,8 +965,7 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
     return size <= ptrSize && align <= ptrAlign;
   };
 
-  llvm::omp::OpenMPOffloadMappingFlags mapFlag =
-      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::implicit;
 
   auto implicitBehaviour = getDefaultmapIfPresent(defaultMaps, varType);
   if (implicitBehaviour == DefMap::ImplicitBehavior::Default) {
@@ -985,8 +983,8 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
               mlir::omp::DeclareTargetCaptureClause::link &&
           declareTargetOp.getDeclareTargetDeviceType() !=
               mlir::omp::DeclareTargetDeviceType::nohost) {
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+        mapFlag |= mlir::omp::ClauseMapFlags::to;
+        mapFlag |= mlir::omp::ClauseMapFlags::from;
       }
     } else if (fir::isa_trivial(varType) || fir::isa_char(varType)) {
       // Scalars behave as if they were "firstprivate".
@@ -995,18 +993,18 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       if (isLiteralType(varType)) {
         captureKind = mlir::omp::VariableCaptureKind::ByCopy;
       } else {
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+        mapFlag |= mlir::omp::ClauseMapFlags::to;
       }
     } else if (!fir::isa_builtin_cptr_type(varType)) {
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
+      mapFlag |= mlir::omp::ClauseMapFlags::from;
     }
     return std::make_pair(mapFlag, captureKind);
   }
 
   switch (implicitBehaviour) {
   case DefMap::ImplicitBehavior::Alloc:
-    return std::make_pair(llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
+    return std::make_pair(mlir::omp::ClauseMapFlags::storage,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Firstprivate:
@@ -1015,26 +1013,22 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
               "behaviour");
     break;
   case DefMap::ImplicitBehavior::From:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Present:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::present,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::To:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::to,
                           (fir::isa_trivial(varType) || fir::isa_char(varType))
                               ? mlir::omp::VariableCaptureKind::ByCopy
                               : mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Tofrom:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM |
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from |
+                                     mlir::omp::ClauseMapFlags::to,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Default:
@@ -1043,9 +1037,8 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
     break;
   }
 
-  return std::make_pair(mapFlag |=
-                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM |
-                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO,
+  return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from |
+                                   mlir::omp::ClauseMapFlags::to,
                         mlir::omp::VariableCaptureKind::ByRef);
 }
 
@@ -2066,37 +2059,38 @@ static void genCanonicalLoopNest(
     // Start lowering
     mlir::Value zero = firOpBuilder.createIntegerConstant(loc, loopVarType, 0);
     mlir::Value one = firOpBuilder.createIntegerConstant(loc, loopVarType, 1);
-    mlir::Value isDownwards = firOpBuilder.create<mlir::arith::CmpIOp>(
-        loc, mlir::arith::CmpIPredicate::slt, loopStepVar, zero);
+    mlir::Value isDownwards = mlir::arith::CmpIOp::create(
+        firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, loopStepVar, zero);
 
     // Ensure we are counting upwards. If not, negate step and swap lb and ub.
     mlir::Value negStep =
-        firOpBuilder.create<mlir::arith::SubIOp>(loc, zero, loopStepVar);
-    mlir::Value incr = firOpBuilder.create<mlir::arith::SelectOp>(
-        loc, isDownwards, negStep, loopStepVar);
-    mlir::Value lb = firOpBuilder.create<mlir::arith::SelectOp>(
-        loc, isDownwards, loopUBVar, loopLBVar);
-    mlir::Value ub = firOpBuilder.create<mlir::arith::SelectOp>(
-        loc, isDownwards, loopLBVar, loopUBVar);
+        mlir::arith::SubIOp::create(firOpBuilder, loc, zero, loopStepVar);
+    mlir::Value incr = mlir::arith::SelectOp::create(
+        firOpBuilder, loc, isDownwards, negStep, loopStepVar);
+    mlir::Value lb = mlir::arith::SelectOp::create(
+        firOpBuilder, loc, isDownwards, loopUBVar, loopLBVar);
+    mlir::Value ub = mlir::arith::SelectOp::create(
+        firOpBuilder, loc, isDownwards, loopLBVar, loopUBVar);
 
     // Compute the trip count assuming lb <= ub. This guarantees that the result
     // is non-negative and we can use unsigned arithmetic.
-    mlir::Value span = firOpBuilder.create<mlir::arith::SubIOp>(
-        loc, ub, lb, ::mlir::arith::IntegerOverflowFlags::nuw);
+    mlir::Value span = mlir::arith::SubIOp::create(
+        firOpBuilder, loc, ub, lb, ::mlir::arith::IntegerOverflowFlags::nuw);
     mlir::Value tcMinusOne =
-        firOpBuilder.create<mlir::arith::DivUIOp>(loc, span, incr);
-    mlir::Value tcIfLooping = firOpBuilder.create<mlir::arith::AddIOp>(
-        loc, tcMinusOne, one, ::mlir::arith::IntegerOverflowFlags::nuw);
+        mlir::arith::DivUIOp::create(firOpBuilder, loc, span, incr);
+    mlir::Value tcIfLooping =
+        mlir::arith::AddIOp::create(firOpBuilder, loc, tcMinusOne, one,
+                                    ::mlir::arith::IntegerOverflowFlags::nuw);
 
     // Fall back to 0 if lb > ub
-    mlir::Value isZeroTC = firOpBuilder.create<mlir::arith::CmpIOp>(
-        loc, mlir::arith::CmpIPredicate::slt, ub, lb);
-    mlir::Value tripcount = firOpBuilder.create<mlir::arith::SelectOp>(
-        loc, isZeroTC, zero, tcIfLooping);
+    mlir::Value isZeroTC = mlir::arith::CmpIOp::create(
+        firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, ub, lb);
+    mlir::Value tripcount = mlir::arith::SelectOp::create(
+        firOpBuilder, loc, isZeroTC, zero, tcIfLooping);
     tripcounts.push_back(tripcount);
 
     // Create the CLI handle.
-    auto newcli = firOpBuilder.create<mlir::omp::NewCliOp>(loc);
+    auto newcli = mlir::omp::NewCliOp::create(firOpBuilder, loc);
     mlir::Value cli = newcli.getResult();
     clis.push_back(cli);
 
@@ -2129,10 +2123,10 @@ static void genCanonicalLoopNest(
                "Expecting all block args to have been collected by now");
         for (auto j : llvm::seq<size_t>(numLoops)) {
           mlir::Value natIterNum = fir::getBase(blockArgs[j]);
-          mlir::Value scaled = firOpBuilder.create<mlir::arith::MulIOp>(
-              loc, natIterNum, loopStepVars[j]);
-          mlir::Value userVal = firOpBuilder.create<mlir::arith::AddIOp>(
-              loc, loopLBVars[j], scaled);
+          mlir::Value scaled = mlir::arith::MulIOp::create(
+              firOpBuilder, loc, natIterNum, loopStepVars[j]);
+          mlir::Value userVal = mlir::arith::AddIOp::create(
+              firOpBuilder, loc, loopLBVars[j], scaled);
 
           mlir::OpBuilder::InsertPoint insPt =
               firOpBuilder.saveInsertionPoint();
@@ -2205,9 +2199,9 @@ static void genTileOp(Fortran::lower::AbstractConverter &converter,
   gridGeneratees.reserve(numLoops);
   intratileGeneratees.reserve(numLoops);
   for ([[maybe_unused]] auto i : llvm::seq<int>(0, sizesClause.sizes.size())) {
-    auto gridCLI = firOpBuilder.create<mlir::omp::NewCliOp>(loc);
+    auto gridCLI = mlir::omp::NewCliOp::create(firOpBuilder, loc);
     gridGeneratees.push_back(gridCLI.getResult());
-    auto intratileCLI = firOpBuilder.create<mlir::omp::NewCliOp>(loc);
+    auto intratileCLI = mlir::omp::NewCliOp::create(firOpBuilder, loc);
     intratileGeneratees.push_back(intratileCLI.getResult());
   }
 
@@ -2216,8 +2210,8 @@ static void genTileOp(Fortran::lower::AbstractConverter &converter,
   generatees.append(gridGeneratees);
   generatees.append(intratileGeneratees);
 
-  firOpBuilder.create<mlir::omp::TileOp>(loc, generatees, applyees,
-                                         sizesClause.sizes);
+  mlir::omp::TileOp::create(firOpBuilder, loc, generatees, applyees,
+                            sizesClause.sizes);
 }
 
 static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
@@ -2611,18 +2605,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
         eleType = refType.getElementType();
 
-      std::pair<llvm::omp::OpenMPOffloadMappingFlags,
-                mlir::omp::VariableCaptureKind>
+      std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
           mapFlagAndKind = getImplicitMapTypeAndKind(
               firOpBuilder, converter, defaultMaps, eleType, loc, sym);
 
       mlir::Value mapOp = createMapInfoOp(
           firOpBuilder, converter.getCurrentLocation(), baseOp,
           /*varPtrPtr=*/mlir::Value{}, name.str(), bounds, /*members=*/{},
-          /*membersIndex=*/mlir::ArrayAttr{},
-          static_cast<
-              std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-              std::get<0>(mapFlagAndKind)),
+          /*membersIndex=*/mlir::ArrayAttr{}, std::get<0>(mapFlagAndKind),
           std::get<1>(mapFlagAndKind), baseOp.getType(),
           /*partialMap=*/false, mapperId);
 
@@ -3513,12 +3503,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPUtilityConstruct &);
 
-static void
-genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-       const parser::OpenMPDeclarativeAllocate &declarativeAllocate) {
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OmpAllocateDirective &allocate) {
   if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
+    TODO(converter.getCurrentLocation(), "OmpAllocateDirective");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -3884,7 +3874,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     assert(object && "Expecting object as argument");
     auto *designator = semantics::omp::GetDesignatorFromObj(*object);
     assert(designator && "Expecting desginator in argument");
-    auto *name = semantics::getDesignatorNameIfDataRef(*designator);
+    auto *name = parser::GetDesignatorNameIfDataRef(*designator);
     assert(name && "Expecting dataref in designator");
     critName = *name;
   }
@@ -3907,14 +3897,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPDispatchConstruct &) {
   if (!semaCtx.langOptions().OpenMPSimd)
     TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
-}
-
-static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                   semantics::SemanticsContext &semaCtx,
-                   lower::pft::Evaluation &eval,
-                   const parser::OpenMPExecutableAllocate &execAllocConstruct) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPExecutableAllocate");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

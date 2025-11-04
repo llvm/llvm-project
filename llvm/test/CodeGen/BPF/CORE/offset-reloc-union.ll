@@ -31,17 +31,17 @@ target triple = "bpf"
 %union.anon = type { i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @bpf_prog(ptr) local_unnamed_addr #0 !dbg !15 {
+define dso_local i32 @bpf_prog(ptr) local_unnamed_addr !dbg !15 {
   %2 = alloca i32, align 4
   call void @llvm.dbg.value(metadata ptr %0, metadata !32, metadata !DIExpression()), !dbg !34
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2) #4, !dbg !35
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2), !dbg !35
   %3 = tail call ptr @llvm.preserve.union.access.index.p0.sk_buffs.p0.sk_buffs(ptr %0, i32 1), !dbg !36, !llvm.preserve.access.index !19
   %4 = tail call ptr @llvm.preserve.struct.access.index.p0.anons.p0.anons(ptr elementtype(%struct.anon) %3, i32 1, i32 1), !dbg !36, !llvm.preserve.access.index !23
   %5 = tail call ptr @llvm.preserve.union.access.index.p0.anons.p0.anons(ptr %4, i32 0), !dbg !36, !llvm.preserve.access.index !27
-  %6 = call i32 inttoptr (i64 4 to ptr)(ptr nonnull %2, i32 4, ptr %5) #4, !dbg !37
+  %6 = call i32 inttoptr (i64 4 to ptr)(ptr nonnull %2, i32 4, ptr %5), !dbg !37
   %7 = load i32, ptr %2, align 4, !dbg !38, !tbaa !39
   call void @llvm.dbg.value(metadata i32 %7, metadata !33, metadata !DIExpression()), !dbg !34
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2) #4, !dbg !43
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2), !dbg !43
   ret i32 %7, !dbg !44
 }
 
@@ -145,28 +145,22 @@ define dso_local i32 @bpf_prog(ptr) local_unnamed_addr #0 !dbg !15 {
 ; CHECK-NEXT:        .long   0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.union.access.index.p0.sk_buffs.p0.sk_buffs(ptr, i32 immarg) #2
+declare ptr @llvm.preserve.union.access.index.p0.sk_buffs.p0.sk_buffs(ptr, i32 immarg)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.anons.p0.anons(ptr, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.anons.p0.anons(ptr, i32 immarg, i32 immarg)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.union.access.index.p0.anons.p0.anons(ptr, i32 immarg) #2
+declare ptr @llvm.preserve.union.access.index.p0.anons.p0.anons(ptr, i32 immarg)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #3
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind }
-attributes #2 = { nounwind readnone }
-attributes #3 = { nounwind readnone speculatable }
-attributes #4 = { nounwind }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !12, !13}
