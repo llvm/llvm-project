@@ -205,26 +205,31 @@ define i128 @test4(i128 noundef %x, i128 noundef %y, i128 %out) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    orr x8, x1, x3
-; CHECK-NEXT:    cbz x8, .LBB3_4
+; CHECK-NEXT:    cbz x8, .LBB3_2
 ; CHECK-NEXT:  // %bb.1: // %overflow
-; CHECK-NEXT:    mul x9, x3, x0
+; CHECK-NEXT:    mul x8, x3, x0
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ccmp x3, #0, #4, ne
 ; CHECK-NEXT:    umulh x10, x1, x2
-; CHECK-NEXT:    umulh x8, x3, x0
-; CHECK-NEXT:    madd x9, x1, x2, x9
+; CHECK-NEXT:    umulh x9, x3, x0
+; CHECK-NEXT:    madd x11, x1, x2, x8
 ; CHECK-NEXT:    ccmp xzr, x10, #0, eq
-; CHECK-NEXT:    umulh x11, x0, x2
-; CHECK-NEXT:    ccmp xzr, x8, #0, eq
-; CHECK-NEXT:    mul x12, x0, x2
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-NEXT:    adds x0, x12, x4
+; CHECK-NEXT:    umulh x12, x0, x2
+; CHECK-NEXT:    ccmp xzr, x9, #0, eq
+; CHECK-NEXT:    mul x8, x0, x2
+; CHECK-NEXT:    cset w10, ne
+; CHECK-NEXT:    adds x9, x12, x11
+; CHECK-NEXT:    csinc w10, w10, wzr, lo
+; CHECK-NEXT:    b .LBB3_3
+; CHECK-NEXT:  .LBB3_2: // %overflow.no
+; CHECK-NEXT:    umulh x9, x0, x2
+; CHECK-NEXT:    mov w10, wzr
+; CHECK-NEXT:    mul x8, x0, x2
+; CHECK-NEXT:  .LBB3_3: // %overflow.res
+; CHECK-NEXT:    adds x0, x8, x4
 ; CHECK-NEXT:    adc x1, x9, x5
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    b.ne .LBB3_3
-; CHECK-NEXT:  // %bb.2: // %if.then
+; CHECK-NEXT:    cbz w10, .LBB3_5
+; CHECK-NEXT:  // %bb.4: // %if.then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -233,13 +238,7 @@ define i128 @test4(i128 noundef %x, i128 noundef %y, i128 %out) {
 ; CHECK-NEXT:    sxtw x0, w0
 ; CHECK-NEXT:    asr x1, x0, #63
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB3_3: // %cleanup
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB3_4: // %overflow.no
-; CHECK-NEXT:    mul x8, x0, x2
-; CHECK-NEXT:    umulh x9, x0, x2
-; CHECK-NEXT:    adds x0, x8, x4
-; CHECK-NEXT:    adc x1, x9, x5
+; CHECK-NEXT:  .LBB3_5: // %cleanup
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %x, i128 %y)

@@ -6402,27 +6402,19 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
 // not doable there, we do it here.
 bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                              ModifyDT &ModifiedDT) {
-  if (!TLI->shouldOptimizeMulOverflowIntrinsic(
-          I->getContext(),
-          TLI->getValueType(*DL, I->getType()->getContainedType(0))))
+  if (!TLI->shouldOptimizeMulOverflowWithZeroHighBits(I->getContext(), TLI->getValueType(*DL, I->getType()->getContainedType(0))))
     return false;
+    LLVM_DEBUG(dbgs() << "CGP: before any change: "; I->getFunction()->dump(););
 
   Value *LHS = I->getOperand(0);
   Value *RHS = I->getOperand(1);
   Type *Ty = LHS->getType();
-  unsigned VTBitWidth = Ty->getScalarSizeInBits();
-  unsigned VTHalfBitWidth = VTBitWidth / 2;
+  unsigned VTHalfBitWidth = Ty->getScalarSizeInBits() / 2;
   IntegerType *LegalTy =
       IntegerType::getIntNTy(I->getContext(), VTHalfBitWidth);
 
-  // Skip the optimization if the type with HalfBitWidth is not legal for the
-  // target.
-  if (TLI->getTypeAction(I->getContext(), TLI->getValueType(*DL, LegalTy)) !=
-      TargetLowering::TypeLegal)
-    return false;
-
   // Check the pattern we are interested in where there are maximum 2 uses
-  // of the intrinsic which are the extracts instructions.
+  // of the intrinsic which are the extract instructions.
   if (I->getNumUses() > 2)
     return false;
   ExtractValueInst *MulExtract = nullptr;
@@ -6441,7 +6433,6 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
 
   // Keep track of the instruction to stop reoptimizing it again.
   InsertedInsts.insert(I);
-  // ----------------------------
 
   // For the simple case where IR just checks the overflow flag, new blocks
   // should be:
@@ -6537,21 +6528,31 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
         NoOverflowBrBB = Br->getSuccessor(1) /*if.end*/;
     }
   }
-  if (NoOverflowBrBB) {
-    // Duplicate instructions from I's BB to the NoOverflowBB:
-    ValueToValueMapTy VMap;
-    for (auto It = std::next(BasicBlock::iterator(I));
-         &*It != I->getParent()->getTerminator(); ++It) {
-      Instruction *OrigInst = &*It;
-      if (isa<DbgInfoIntrinsic>(OrigInst) || OrigInst == MulExtract ||
+  // Duplicate instructions from I's BB to the NoOverflowBB:
+  // For now, only duplicate store instruction as in most of the cases there will
+  // be a store instruction for storing the multiplication result.
+  SmallVector<Instruction *, 1> ToBeClonedInsts;
+  for (auto It = std::next(BasicBlock::iterator(I));
+        &*It != I->getParent()->getTerminator(); ++It) {
+    Instruction *OrigInst = &*It;
+    if (isa<DbgInfoIntrinsic>(OrigInst) || OrigInst == MulExtract ||
           OrigInst == OverflowExtract)
-        continue;
-      Instruction *NewInst = nullptr;
-      NewInst = OrigInst->clone();
-      Builder.Insert(NewInst);
-      VMap[OrigInst] = NewInst;
-      RemapInstruction(NewInst, VMap, RF_IgnoreMissingLocals);
+      continue;
+    if (!isa<StoreInst>(OrigInst)) {
+      // We have an instruction that is not supported for cloning yet.
+      // Avoid the fast path optimization.
+      NoOverflowBrBB = nullptr;
+      ToBeClonedInsts.clear();
+      break;
     }
+    ToBeClonedInsts.push_back(OrigInst);
+  }
+  if (NoOverflowBrBB) {
+    for (auto *Inst : ToBeClonedInsts) {
+      Instruction *NewInst = Inst->clone();
+      Builder.Insert(NewInst);
+    }
+    ToBeClonedInsts.clear();
     // Replace uses of MulExtract at the 'overflow.no' BB
     if (MulExtract)
       MulExtract->replaceUsesWithIf(Mul, [&](Use &U) {
@@ -6585,18 +6586,12 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
           // Replace the old block by the new 'overflow' BB:
           PN->setIncomingBlock(i, OverflowBB);
           Value *IncomingValue = PN->getIncomingValue(i);
-          // Check if the incoming value is a constant, duplicate it.
+           // Check if the incoming value is a constant, duplicate it.
           if (isa<Constant>(IncomingValue)) {
             PN->addIncoming(IncomingValue, NoOverflowBB);
             continue;
           }
-          // Check if this instruction was cloned to the 'overflow.no' BB:
-          Instruction *ClonedInstr =
-              cast_or_null<Instruction>(VMap.lookup(IncomingValue));
-          if (ClonedInstr) {
-            PN->addIncoming(ClonedInstr, NoOverflowBB);
-            continue;
-          } else if (isa<Instruction>(IncomingValue)) {
+          if (isa<Instruction>(IncomingValue)) {
             if (cast<Instruction>(IncomingValue) == MulExtract) {
               PN->addIncoming(Mul, NoOverflowBB);
               continue;
@@ -6606,29 +6601,31 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                               NoOverflowBB);
               continue;
             }
+           llvm_unreachable("Unexpected incoming value to PHI node");
           }
           llvm_unreachable("Unexpected incoming value to PHI node");
         }
       }
     }
+
     if (!PN) {
       // Create PHI node to get the results of multiplication from 'overflow.no'
       // and 'overflow' BBs:
       if (MulExtract) {
         Builder.SetInsertPoint(NoOverflowBrBB,
-                               NoOverflowBrBB->getFirstInsertionPt());
+                                NoOverflowBrBB->getFirstInsertionPt());
         PN = Builder.CreatePHI(Ty, 2);
         PN->addIncoming(Mul, NoOverflowBB);
         if (MulExtract->getParent() == OverflowBB) {
-          // Replace all uses of MulExtract out of 'Overflow' BB
+          // Replace all uses of MulExtract in the 'NoOverflowBrBB' BB
           MulExtract->replaceUsesWithIf(PN, [&](Use &U) {
-            return cast<Instruction>(U.getUser())->getParent() != OverflowBB;
+              return cast<Instruction>(U.getUser())->getParent() == NoOverflowBrBB;
           });
           PN->addIncoming(MulExtract, OverflowBB);
-        } else {
+        } else if (MulExtract->getParent() == NoOverflowBrBB) {
           Builder.SetInsertPoint(OverflowBB, OverflowBB->end());
           Value *IntrinsicMulRes =
-              Builder.CreateExtractValue(I, {0}, "mul.extract");
+                Builder.CreateExtractValue(I, {0}, "mul.extract");
           cast<Instruction>(IntrinsicMulRes)->moveAfter(I);
           PN->addIncoming(IntrinsicMulRes, OverflowBB);
           MulExtract->replaceAllUsesWith(PN);
@@ -6640,7 +6637,6 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
     ToBeRemoveBB->eraseFromParent();
     // Restore the original name of the overflow.entry BB:
     OverflowEntryBB->setName(KeepBBName);
-
     ModifiedDT = ModifyDT::ModifyBBDT;
     return true;
   }
@@ -6688,6 +6684,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   // Restore the original name of the overflow.entry BB:
   OverflowEntryBB->setName(KeepBBName);
 
+  LLVM_DEBUG(dbgs() << "CGP: Optimized mul.with.overflow in COMPLEX case: "; I->getFunction()->dump(););
   ModifiedDT = ModifyDT::ModifyBBDT;
   return true;
 }
