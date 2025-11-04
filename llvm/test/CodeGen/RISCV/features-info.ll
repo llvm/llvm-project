@@ -154,6 +154,7 @@
 ; CHECK-NEXT:   smepmp                           - 'Smepmp' (Enhanced Physical Memory Protection).
 ; CHECK-NEXT:   smmpm                            - 'Smmpm' (Machine-level Pointer Masking for M-mode).
 ; CHECK-NEXT:   smnpm                            - 'Smnpm' (Machine-level Pointer Masking for next lower privilege mode).
+; CHECK-NEXT:   smpmpmt                          - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   smrnmi                           - 'Smrnmi' (Resumable Non-Maskable Interrupts).
 ; CHECK-NEXT:   smstateen                        - 'Smstateen' (Machine-mode view of the state-enable extension).
 ; CHECK-NEXT:   ssaia                            - 'Ssaia' (Advanced Interrupt Architecture Supervisor Level).

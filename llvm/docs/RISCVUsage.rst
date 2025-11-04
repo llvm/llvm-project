@@ -139,6 +139,7 @@ on support follow.
      ``Smepmp``        Supported
      ``Smmpm``         Supported
      ``Smnpm``         Supported
+     ``Smpmpmt``       Supported
      ``Smrnmi``        Supported
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
