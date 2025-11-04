@@ -1898,9 +1898,9 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
 
   const ConstantMatrixType *MT = DeclType->castAs<ConstantMatrixType>();
 
-  // For HLSL The error for this case is handled in SemaHLSL's initializer
-  // list diagnostics, That means the execution should require
-  // getNumElementsFlattened to equal getNumInits. In other words execution
+  // For HLSL, the error reporting for this case is handled in SemaHLSL's initializer
+  // list diagnostics. That means the execution should require
+  // getNumElementsFlattened to equal getNumInits. In other words the execution
   // should never reach this point if this condition is not true".
   assert(IList->getNumInits() == MT->getNumElementsFlattened() &&
          "Inits must equal Matrix element count");
