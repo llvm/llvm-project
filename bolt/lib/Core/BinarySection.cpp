@@ -78,6 +78,11 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
   MCSectionELF *ELFSection =
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());
 
+      DEBUG_WITH_TYPE("bolt-flags", {
+  dbgs() << "[flags] emitAsData " << SectionName
+         << " flags=0x" << llvm::format_hex(getELFFlags(), 8) << "\n";
+});
+
   Streamer.switchSection(ELFSection);
   Streamer.emitValueToAlignment(getAlign());
 
