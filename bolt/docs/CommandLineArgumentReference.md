@@ -381,11 +381,6 @@
 
   Set verbosity level for diagnostic output
 
-- `--write-dwp`
-
-  Output a single dwarf package file (dwp) instead of multiple non-relocatable
-  dwarf object files (dwo).
-
 ### BOLT optimization options:
 
 - `--align-blocks`
