@@ -107,6 +107,13 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
   if ((size_t)A.getParsedKind() < std::size(AttrInfoMap))
     return *AttrInfoMap[A.getParsedKind()];
 
+  // If this is an annotation then return an appropriate ParsedAttrInfo.
+  static const ParsedAttrInfo AnnotationAttrInfo(
+      AttributeCommonInfo::AT_CXX26Annotation, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, {},
+      nullptr);
+  if (A.getSyntax() == AttributeCommonInfo::AS_Annotation)
+    return AnnotationAttrInfo;
+
   // If this is an ignored attribute then return an appropriate ParsedAttrInfo.
   static const ParsedAttrInfo IgnoredParsedAttrInfo(
       AttributeCommonInfo::IgnoredAttribute);
