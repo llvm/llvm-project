@@ -13,20 +13,113 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/CAS/UnifiedOnDiskCache.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
-#include <system_error>
 
 using namespace llvm;
 using namespace llvm::cas;
 
-static cl::list<std::string> Inputs(cl::Positional, cl::desc("Input object"));
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Options.inc"
+#undef OPTION
+};
+
+#define OPTTABLE_STR_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
+
+using namespace llvm::opt;
+static constexpr opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#include "Options.inc"
+#undef OPTION
+};
+
+class LLVMCASOptTable : public opt::GenericOptTable {
+public:
+  LLVMCASOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+};
+
+enum class CommandKind {
+  Invalid,
+  Dump,
+  CatNodeData,
+  MakeBlob,
+  MakeNode,
+  ListObjectReferences,
+  Import,
+  PutCacheKey,
+  GetCacheResult,
+  Validate,
+  ValidateObject,
+  ValidateIfNeeded,
+  Prune,
+};
+
+struct CommandOptions {
+  CommandKind Command = CommandKind::Invalid;
+  std::vector<std::string> Inputs;
+  std::string CASPath;
+  std::string UpstreamCASPath;
+  std::string DataPath;
+  bool CheckHash;
+  bool AllowRecovery;
+  bool Force;
+  bool InProcess;
+
+  static CommandKind getCommandKind(opt::Arg &A) {
+    switch (A.getOption().getID()) {
+    case OPT_cas_dump:
+      return CommandKind::Dump;
+    case OPT_cat_node_data:
+      return CommandKind::CatNodeData;
+    case OPT_make_blob:
+      return CommandKind::MakeBlob;
+    case OPT_make_node:
+      return CommandKind::MakeNode;
+    case OPT_ls_node_refs:
+      return CommandKind::ListObjectReferences;
+    case OPT_import:
+      return CommandKind::Import;
+    case OPT_put_cache_key:
+      return CommandKind::PutCacheKey;
+    case OPT_get_cache_result:
+      return CommandKind::GetCacheResult;
+    case OPT_validate:
+      return CommandKind::Validate;
+    case OPT_validate_object:
+      return CommandKind::ValidateObject;
+    case OPT_validate_if_needed:
+      return CommandKind::ValidateIfNeeded;
+    case OPT_prune:
+      return CommandKind::Prune;
+    }
+    return CommandKind::Invalid;
+  }
+
+  // Command requires input.
+  static bool requiresInput(CommandKind Kind) {
+    return Kind != CommandKind::ValidateIfNeeded &&
+           Kind != CommandKind::Validate && Kind != CommandKind::MakeBlob &&
+           Kind != CommandKind::MakeNode && Kind != CommandKind::Dump &&
+           Kind != CommandKind::Prune;
+  }
+};
+} // namespace
 
 static int dump(ObjectStore &CAS);
 static int listObjectReferences(ObjectStore &CAS, const CASID &ID);
@@ -46,138 +139,123 @@ static int validateIfNeeded(StringRef Path, bool CheckHash, bool Force,
                             const char *Argv0);
 static int prune(cas::ObjectStore &CAS);
 
+static Expected<CommandOptions> parseOptions(int Argc, char **Argv) {
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+  SmallVector<const char *> ExpanedArgs;
+  if (!cl::expandResponseFiles(Argc, Argv, nullptr, Saver, ExpanedArgs))
+    return createStringError("cannot expand response file");
+
+  LLVMCASOptTable T;
+  unsigned MI, MC;
+  opt::InputArgList Args = T.ParseArgs(ExpanedArgs, MI, MC);
+
+  for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
+    llvm::errs() << "ignoring unknown option: " << Arg->getSpelling() << '\n';
+  }
+
+  if (Args.hasArg(OPT_help)) {
+    T.printHelp(
+        outs(),
+        (std::string(Argv[0]) + " [action] [options] <input files>").c_str(),
+        "llvm-cas tool that performs CAS actions.", false);
+    exit(0);
+  }
+
+  CommandOptions Opts;
+  for (auto *A : Args.filtered(OPT_grp_action))
+    Opts.Command = CommandOptions::getCommandKind(*A);
+
+  if (Opts.Command == CommandKind::Invalid)
+    return createStringError("no command action is specified");
+
+  for (auto *File : Args.filtered(OPT_INPUT))
+    Opts.Inputs.push_back(File->getValue());
+  Opts.CASPath = Args.getLastArgValue(OPT_cas_path);
+  Opts.UpstreamCASPath = Args.getLastArgValue(OPT_upstream_cas);
+  Opts.DataPath = Args.getLastArgValue(OPT_data);
+  Opts.CheckHash = Args.hasArg(OPT_check_hash);
+  Opts.AllowRecovery = Args.hasArg(OPT_allow_recovery);
+  Opts.Force = Args.hasArg(OPT_force);
+  Opts.InProcess = Args.hasArg(OPT_in_process);
+
+  // Validate options.
+  if (Opts.CASPath.empty())
+    return createStringError("missing --cas <path>");
+
+  if (Opts.Inputs.empty() && CommandOptions::requiresInput(Opts.Command))
+    return createStringError("missing <input> to operate on");
+
+  return Opts;
+}
+
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
-  cl::opt<std::string> CASPath("cas", cl::desc("Path to CAS on disk."),
-                               cl::value_desc("path"));
-  cl::opt<std::string> UpstreamCASPath(
-      "upstream-cas", cl::desc("Path to another CAS."), cl::value_desc("path"));
-  cl::opt<std::string> DataPath("data",
-                                cl::desc("Path to data or '-' for stdin."),
-                                cl::value_desc("path"));
-  cl::opt<bool> CheckHash("check-hash",
-                          cl::desc("check all hashes during validation"));
-  cl::opt<bool> AllowRecovery("allow-recovery",
-                              cl::desc("allow recovery of cas data"));
-  cl::opt<bool> Force("force",
-                      cl::desc("force validation even if unnecessary"));
-  cl::opt<bool> InProcess("in-process", cl::desc("validate in-process"));
 
-  enum CommandKind {
-    Invalid,
-    Dump,
-    CatNodeData,
-    MakeBlob,
-    MakeNode,
-    ListObjectReferences,
-    Import,
-    PutCacheKey,
-    GetCacheResult,
-    Validate,
-    ValidateObject,
-    ValidateIfNeeded,
-    Prune,
-  };
-  cl::opt<CommandKind> Command(
-      cl::desc("choose command action:"),
-      cl::values(
-          clEnumValN(Dump, "dump", "dump internal contents"),
-          clEnumValN(CatNodeData, "cat-node-data", "cat node data"),
-          clEnumValN(MakeBlob, "make-blob", "make blob"),
-          clEnumValN(MakeNode, "make-node", "make node"),
-          clEnumValN(ListObjectReferences, "ls-node-refs", "list node refs"),
-          clEnumValN(Import, "import", "import objects from another CAS"),
-          clEnumValN(PutCacheKey, "put-cache-key",
-                     "set a value for a cache key"),
-          clEnumValN(GetCacheResult, "get-cache-result",
-                     "get the result value from a cache key"),
-          clEnumValN(Validate, "validate", "validate ObjectStore"),
-          clEnumValN(ValidateObject, "validate-object",
-                     "validate the object for CASID"),
-          clEnumValN(ValidateIfNeeded, "validate-if-needed",
-                     "validate cas contents if needed"),
-          clEnumValN(Prune, "prune", "prune local cas storage")),
-      cl::init(CommandKind::Invalid));
+  ExitOnError ExitOnErr;
+  auto Opts = ExitOnErr(parseOptions(Argc, Argv));
 
-  cl::ParseCommandLineOptions(Argc, Argv, "llvm-cas CAS tool\n");
-  ExitOnError ExitOnErr("llvm-cas: ");
+  if (Opts.Command == CommandKind::ValidateIfNeeded)
+    return validateIfNeeded(Opts.CASPath, Opts.CheckHash, Opts.Force,
+                            Opts.AllowRecovery, Opts.InProcess, Argv[0]);
 
-  if (Command == CommandKind::Invalid)
-    ExitOnErr(createStringError(inconvertibleErrorCode(),
-                                "no command action is specified"));
-
-  // FIXME: Consider creating an in-memory CAS.
-  if (CASPath.empty())
-    ExitOnErr(
-        createStringError(inconvertibleErrorCode(), "missing --cas=<path>"));
-
-  if (Command == ValidateIfNeeded)
-    return validateIfNeeded(CASPath, CheckHash, Force, AllowRecovery, InProcess,
-                            Argv[0]);
-
-  auto [CAS, AC] = ExitOnErr(createOnDiskUnifiedCASDatabases(CASPath));
+  auto [CAS, AC] = ExitOnErr(createOnDiskUnifiedCASDatabases(Opts.CASPath));
   assert(CAS);
 
-  if (Command == Dump)
+  if (Opts.Command == CommandKind::Dump)
     return dump(*CAS);
 
-  if (Command == Validate)
-    return validate(*CAS, *AC, CheckHash);
+  if (Opts.Command == CommandKind::Validate)
+    return validate(*CAS, *AC, Opts.CheckHash);
 
-  if (Command == MakeBlob)
-    return makeBlob(*CAS, DataPath);
+  if (Opts.Command == CommandKind::MakeBlob)
+    return makeBlob(*CAS, Opts.DataPath);
 
-  if (Command == MakeNode)
-    return makeNode(*CAS, Inputs, DataPath);
+  if (Opts.Command == CommandKind::MakeNode)
+    return makeNode(*CAS, Opts.Inputs, Opts.DataPath);
 
-  if (Command == Prune)
+  if (Opts.Command == CommandKind::Prune)
     return prune(*CAS);
 
-  if (Inputs.empty())
-    ExitOnErr(createStringError(inconvertibleErrorCode(),
-                                "missing <object> to operate on"));
-
-  if (Command == Import) {
-    if (UpstreamCASPath.empty())
-      ExitOnErr(createStringError(inconvertibleErrorCode(),
-                                  "missing '-upstream-cas'"));
+  if (Opts.Command == CommandKind::Import) {
+    if (Opts.UpstreamCASPath.empty())
+      ExitOnErr(createStringError("missing '-upstream-cas'"));
 
     auto [UpstreamCAS, _] =
-        ExitOnErr(createOnDiskUnifiedCASDatabases(UpstreamCASPath));
-    return import(*UpstreamCAS, *CAS, Inputs);
+        ExitOnErr(createOnDiskUnifiedCASDatabases(Opts.UpstreamCASPath));
+    return import(*UpstreamCAS, *CAS, Opts.Inputs);
   }
 
-  if (Command == PutCacheKey || Command == GetCacheResult) {
+  if (Opts.Command == CommandKind::PutCacheKey ||
+      Opts.Command == CommandKind::GetCacheResult) {
     if (!AC)
-      ExitOnErr(createStringError(inconvertibleErrorCode(),
-                                  "no action-cache available"));
+      ExitOnErr(createStringError("no action-cache available"));
   }
 
-  if (Command == PutCacheKey)
-    return putCacheKey(*CAS, *AC, Inputs);
+  if (Opts.Command == CommandKind::PutCacheKey)
+    return putCacheKey(*CAS, *AC, Opts.Inputs);
 
   // Remaining commands need exactly one CAS object.
-  if (Inputs.size() > 1)
-    ExitOnErr(createStringError(inconvertibleErrorCode(),
-                                "too many <object>s, expected 1"));
-  CASID ID = ExitOnErr(CAS->parseID(Inputs.front()));
+  if (Opts.Inputs.size() > 1)
+    ExitOnErr(createStringError("too many <object>s, expected 1"));
+  CASID ID = ExitOnErr(CAS->parseID(Opts.Inputs.front()));
 
-  if (Command == GetCacheResult)
+  if (Opts.Command == CommandKind::GetCacheResult)
     return getCacheResult(*CAS, *AC, ID);
 
-  if (Command == ListObjectReferences)
+  if (Opts.Command == CommandKind::ListObjectReferences)
     return listObjectReferences(*CAS, ID);
 
-  if (Command == CatNodeData)
+  if (Opts.Command == CommandKind::CatNodeData)
     return catNodeData(*CAS, ID);
 
-  assert(Command == ValidateObject);
+  assert(Opts.Command == CommandKind::ValidateObject);
   return validateObject(*CAS, ID);
 }
 
 static Expected<std::unique_ptr<MemoryBuffer>> openBuffer(StringRef DataPath) {
   if (DataPath.empty())
-    return createStringError(inconvertibleErrorCode(), "--data missing");
+    return createStringError("--data missing");
   return errorOrToExpected(DataPath == "-"
                                ? llvm::MemoryBuffer::getSTDIN()
                                : llvm::MemoryBuffer::getFile(DataPath));
@@ -227,8 +305,7 @@ static int makeNode(ObjectStore &CAS, ArrayRef<std::string> Objects,
     std::optional<ObjectRef> ID =
         CAS.getReference(ObjectErr(CAS.parseID(Object)));
     if (!ID)
-      ObjectErr(createStringError(inconvertibleErrorCode(),
-                                  "unknown object '" + Object + "'"));
+      ObjectErr(createStringError("unknown object '" + Object + "'"));
     IDs.push_back(*ID);
   }
 
@@ -245,11 +322,8 @@ static int import(ObjectStore &FromCAS, ObjectStore &ToCAS,
   for (StringRef Object : Objects) {
     CASID ID = ExitOnErr(FromCAS.parseID(Object));
     auto Ref = FromCAS.getReference(ID);
-    if (!Ref) {
-      ExitOnErr(createStringError(inconvertibleErrorCode(),
-                                  "input not found: " + ID.toString()));
-      return 1;
-    }
+    if (!Ref)
+      ExitOnErr(createStringError("input not found: " + ID.toString()));
 
     auto Imported = ExitOnErr(ToCAS.importObject(FromCAS, *Ref));
     llvm::outs() << ToCAS.getID(Imported).toString() << "\n";
@@ -262,8 +336,7 @@ static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
   ExitOnError ExitOnErr("llvm-cas: put-cache-key: ");
 
   if (Objects.size() % 2 != 0)
-    ExitOnErr(createStringError(inconvertibleErrorCode(),
-                                "expected pairs of inputs"));
+    ExitOnErr(createStringError("expected pairs of inputs"));
   while (!Objects.empty()) {
     CASID Key = ExitOnErr(CAS.parseID(Objects[0]));
     CASID Result = ExitOnErr(CAS.parseID(Objects[1]));
