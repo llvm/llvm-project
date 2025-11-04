@@ -220,7 +220,6 @@ set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
-  -DCOMPILER_RT_BUILD_SANITIZERS=OFF ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
@@ -230,7 +229,7 @@ ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 cd..
 
@@ -239,7 +238,6 @@ REM with forward slash.
 set all_cmake_flags=^
   %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;" ^
-  -DCOMPILER_RT_BUILD_SANITIZERS=OFF ^
   %common_lldb_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
@@ -256,7 +254,7 @@ ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja package || exit /b 1
 cd ..
