@@ -351,6 +351,15 @@ const char *const Runtimes = R"(
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
+const char *const OOPRuntimes = R"(
+  #include <stdio.h>
+  __attribute__((constructor))
+  static void __clang_repl_ioinit(void) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+  }
+)";
+
 llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
 Interpreter::outOfProcessJITBuilder(JITConfig Config) {
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
@@ -462,6 +471,11 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
   // go through that.
   if (auto E = Interp->ParseAndExecute(Runtimes))
     return std::move(E);
+
+  if (Config.IsOutOfProcess) {
+    if (auto E = Interp->ParseAndExecute(OOPRuntimes))
+      return std::move(E);
+  }
 
   Interp->markUserCodeStart();
 
