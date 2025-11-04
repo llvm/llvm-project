@@ -1,12 +1,11 @@
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck -check-prefix=CHECK-ERROR %s
+; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics %s -o %t.spvt 2>&1 | FileCheck -check-prefix=CHECK-ERROR %s
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=notllvm %s -o %t.spvt 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=llvm.some.custom %s -o %t.spvt 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics %s -o - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=llvm. %s -o - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=llvm.,random.prefix %s -o - | FileCheck %s
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=llvm %s -o - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=llvm. %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | spirv-val %}
 
 ; The test checks command-line option which allows to represent unknown
