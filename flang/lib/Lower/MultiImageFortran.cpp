@@ -20,31 +20,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 
-/// Initializes values for STAT and ERRMSG
-static std::pair<mlir::Value, mlir::Value> getStatAndErrmsg(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList) {
-  Fortran::lower::StatementContext stmtCtx;
-
-  mlir::Value errMsgExpr, statExpr;
-  for (const Fortran::parser::StatOrErrmsg &statOrErr : statOrErrList) {
-    std::visit(Fortran::common::visitors{
-                   [&](const Fortran::parser::StatVariable &statVar) {
-                     statExpr = fir::getBase(converter.genExprAddr(
-                         loc, Fortran::semantics::GetExpr(statVar), stmtCtx));
-                   },
-                   [&](const Fortran::parser::MsgVariable &errMsgVar) {
-                     const Fortran::semantics::SomeExpr *expr =
-                         Fortran::semantics::GetExpr(errMsgVar);
-                     errMsgExpr = fir::getBase(
-                         converter.genExprBox(loc, *expr, stmtCtx));
-                   }},
-               statOrErr.u);
-  }
-
-  return {statExpr, errMsgExpr};
-}
-
 //===----------------------------------------------------------------------===//
 // Synchronization statements
 //===----------------------------------------------------------------------===//
@@ -57,7 +32,7 @@ void Fortran::lower::genSyncAllStatement(
 
   // Handle STAT and ERRMSG values
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList = stmt.v;
-  auto [statAddr, errMsgAddr] = getStatAndErrmsg(converter, loc, statOrErrList);
+  auto [statAddr, errMsgAddr] = converter.genStatAndErrmsg(loc, statOrErrList);
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mif::SyncAllOp::create(builder, loc, statAddr, errMsgAddr);
@@ -73,7 +48,7 @@ void Fortran::lower::genSyncImagesStatement(
   // Handle STAT and ERRMSG values
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
       std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t);
-  auto [statAddr, errMsgAddr] = getStatAndErrmsg(converter, loc, statOrErrList);
+  auto [statAddr, errMsgAddr] = converter.genStatAndErrmsg(loc, statOrErrList);
 
   // SYNC_IMAGES(*) is passed as count == -1 while  SYNC IMAGES([]) has count
   // == 0. Note further that SYNC IMAGES(*) is not semantically equivalent to
@@ -105,7 +80,7 @@ void Fortran::lower::genSyncMemoryStatement(
 
   // Handle STAT and ERRMSG values
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList = stmt.v;
-  auto [statAddr, errMsgAddr] = getStatAndErrmsg(converter, loc, statOrErrList);
+  auto [statAddr, errMsgAddr] = converter.genStatAndErrmsg(loc, statOrErrList);
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mif::SyncMemoryOp::create(builder, loc, statAddr, errMsgAddr);
@@ -128,7 +103,7 @@ void Fortran::lower::genSyncTeamStatement(
   // Handle STAT and ERRMSG values
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
       std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t);
-  auto [statAddr, errMsgAddr] = getStatAndErrmsg(converter, loc, statOrErrList);
+  auto [statAddr, errMsgAddr] = converter.genStatAndErrmsg(loc, statOrErrList);
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mif::SyncTeamOp::create(builder, loc, team, statAddr, errMsgAddr);
