@@ -798,6 +798,8 @@ bool ABISysV_riscv::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
           .Cases({"f8", "f9", "f18", "f19", "f20", "f21", "f22", "f23"},
                  is_hw_fp)
           .Cases({"f24", "f25", "f26", "f27"}, is_hw_fp)
+          // vlenb is constant and needed for vector unwinding.
+          .Case("vlenb", true)
           .Default(false);
 
   return is_callee_saved;
