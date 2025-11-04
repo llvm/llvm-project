@@ -275,24 +275,21 @@ TEST_F(UdtRecordCompleterRecordTests, TestNestedStructInUnionInStructInUnion) {
   //       m4;
   //       union {
   //           m5;
-  //           struct {
-  //               m6;
-  //               m7;
-  //           };
+  //           m6;
   //       };
+  //       m7;
   //   };
   // };
   Record record;
   record.start_offset = 0;
   AddField(&record.record, "m1", 0, 4, Member::Field);
   AddField(&record.record, "m2", 0, 2, Member::Field);
-  Member *s1 = AddField(&record.record, "", 0, 0, Member::Struct);
-  AddField(s1, "m3", 0, 2, Member::Field);
-  AddField(s1, "m4", 2, 4, Member::Field);
-  Member *u1 = AddField(s1, "", 6, 0, Member::Union);
-  AddField(u1, "m5", 6, 2, Member::Field);
-  Member *s2 = AddField(u1, "", 0, 0, Member::Struct, 6);
-  AddField(s2, "m6", 6, 2, Member::Field);
-  AddField(s2, "m7", 8, 2, Member::Field);
+  Member *s = AddField(&record.record, "", 0, 0, Member::Struct);
+  AddField(s, "m3", 0, 2, Member::Field);
+  AddField(s, "m4", 2, 4, Member::Field);
+  Member *u = AddField(s, "", 6, 0, Member::Union);
+  AddField(u, "m5", 6, 2, Member::Field);
+  AddField(u, "m6", 6, 2, Member::Field);
+  AddField(s, "m7", 8, 2, Member::Field);
   EXPECT_EQ(WrappedRecord(this->record), WrappedRecord(record));
 }

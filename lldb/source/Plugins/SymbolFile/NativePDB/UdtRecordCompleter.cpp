@@ -467,12 +467,19 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       if (iter->second.empty())
         continue;
 
-      // For structs, if the new fields come after the already added ones
-      // without overlap, go back to the root struct.
-      if (iter->first <= offset && record.kind == Member::Struct &&
-          is_last_end_offset(iter))
-        parent = &record;
-      else {
+      // If the new fields come after the already added ones
+      // without overlap, go back to the root.
+      if (iter->first <= offset && is_last_end_offset(iter)) {
+        if (record.kind == Member::Struct)
+          parent = &record;
+        else {
+          lldbassert(record.kind == Member::Union &&
+                     "Current record must be a union");
+          lldbassert(!record.fields.empty());
+          // For unions, append the field to the last struct
+          parent = record.fields.back().get();
+        }
+      } else {
         parent = iter->second.back();
         iter->second.pop_back();
       }
