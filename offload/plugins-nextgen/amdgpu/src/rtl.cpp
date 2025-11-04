@@ -2083,6 +2083,20 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     ComputeUnitKind = GPUName;
 
+    // From the ROCm HSA documentation:
+    // Query the UUID of the agent. The value is an Ascii string with a maximum
+    // of 21 chars including NUL. The string value consists of two parts: header
+    // and body. The header identifies the device type (GPU, CPU, DSP) while the
+    // body encodes the UUID as a 16 digit hex string.
+    //
+    // Agents that do not support UUID will return the string "GPU-XX" or
+    // "CPU-XX" or "DSP-XX" depending on their device type.
+    char UUID[24] = {0};
+    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_UUID, UUID))
+      return Err;
+    if (!StringRef(UUID).ends_with("-XX"))
+      setDeviceUidFromVendorUid(UUID);
+
     // Get the wavefront size.
     uint32_t WavefrontSize = 0;
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_WAVEFRONT_SIZE, WavefrontSize))
