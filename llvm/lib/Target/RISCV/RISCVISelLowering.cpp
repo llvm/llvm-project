@@ -16496,29 +16496,47 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
-                               unsigned ShY) {
+                               unsigned ShY, bool AddX) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue X = N->getOperand(0);
   SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                                DAG.getTargetConstant(ShY, DL, VT), X);
   return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                     DAG.getTargetConstant(ShX, DL, VT), Mul359);
+                     DAG.getTargetConstant(ShX, DL, VT), AddX ? X : Mul359);
 }
 
 static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
                                        uint64_t MulAmt) {
   switch (MulAmt) {
   case 5 * 3:
-    return getShlAddShlAdd(N, DAG, 2, 1);
+    return getShlAddShlAdd(N, DAG, 2, 1, false);
   case 9 * 3:
-    return getShlAddShlAdd(N, DAG, 3, 1);
+    return getShlAddShlAdd(N, DAG, 3, 1, false);
   case 5 * 5:
-    return getShlAddShlAdd(N, DAG, 2, 2);
+    return getShlAddShlAdd(N, DAG, 2, 2, false);
   case 9 * 5:
-    return getShlAddShlAdd(N, DAG, 3, 2);
+    return getShlAddShlAdd(N, DAG, 3, 2, false);
   case 9 * 9:
-    return getShlAddShlAdd(N, DAG, 3, 3);
+    return getShlAddShlAdd(N, DAG, 3, 3, false);
+  case 2 * 3 + 1:
+    return getShlAddShlAdd(N, DAG, 1, 1, true);
+  case 4 * 3 + 1:
+    return getShlAddShlAdd(N, DAG, 2, 1, true);
+  // case 8 * 3 + 1:
+  // Prefer 5 * 5 above because it doesn't require a register to hold X.
+  case 2 * 5 + 1:
+    return getShlAddShlAdd(N, DAG, 1, 2, true);
+  case 4 * 5 + 1:
+    return getShlAddShlAdd(N, DAG, 2, 2, true);
+  case 8 * 5 + 1:
+    return getShlAddShlAdd(N, DAG, 3, 2, true);
+  case 2 * 9 + 1:
+    return getShlAddShlAdd(N, DAG, 1, 3, true);
+  case 4 * 9 + 1:
+    return getShlAddShlAdd(N, DAG, 2, 3, true);
+  case 8 * 9 + 1:
+    return getShlAddShlAdd(N, DAG, 3, 3, true);
   default:
     return SDValue();
   }
@@ -16581,7 +16599,8 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                          DAG.getConstant(Shift, DL, VT));
     }
 
-    // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
+    // 3/5/9 * 3/5/9 -> (shXadd (shYadd X, X), (shYadd X, X))
+    // 2/4/8 * 3/5/9 + 1 -> (shXadd (shYadd X, X), X)
     if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt))
       return V;
 
@@ -16600,22 +16619,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
       }
     }
 
-    // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
-    // This is the two instruction form, there are also three instruction
-    // variants we could implement.  e.g.
-    //   (2^(1,2,3) * 3,5,9 + 1) << C2
-    //   2^(C1>3) * 3,5,9 +/- 1
-    if (int ShXAmount = isShifted359(MulAmt - 1, Shift)) {
-      assert(Shift != 0 && "MulAmt=4,6,10 handled before");
-      if (Shift <= 3) {
-        SDLoc DL(N);
-        SDValue Mul359 =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getTargetConstant(ShXAmount, DL, VT), X);
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                           DAG.getTargetConstant(Shift, DL, VT), X);
-      }
-    }
+    // TODO: 2^(C1>3) * 3,5,9 +/- 1
 
     // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
     if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
@@ -16650,6 +16654,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
     // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
     // of 25 which happen to be quite common.
+    // (2/4/8 * 3/5/9 + 1) * 2^N
     Shift = llvm::countr_zero(MulAmt);
     if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt >> Shift)) {
       SDLoc DL(N);
