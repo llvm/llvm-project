@@ -20,7 +20,7 @@
 
 @f = common dso_local local_unnamed_addr addrspace(1) global bfloat 0.000000e+00, align 8
 
-define dso_local spir_func void @test1() local_unnamed_addr {
+define spir_func void @test1() {
 entry:
   %minval = atomicrmw fmin ptr addrspace(1) @f, bfloat 42.0e+00 seq_cst
   %maxval = atomicrmw fmax ptr addrspace(1) @f, bfloat 42.0e+00 seq_cst
