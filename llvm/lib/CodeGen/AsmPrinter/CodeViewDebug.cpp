@@ -625,13 +625,15 @@ void CodeViewDebug::beginModule(Module *M) {
   if (Asm->hasDebugInfo()) {
     Node = *M->debug_compile_units_begin();
   } else {
-    auto DebugCompileUnits = MMI->getModule()->debug_compile_units();
-    if (DebugCompileUnits.empty())
-      return;
-
     // When emitting only compiler information, we may have only NoDebug CUs,
     // which would be skipped by debug_compile_units_begin.
-    Node = *DebugCompileUnits.begin();
+    NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+    if (CUs->operands().empty()) {
+      Asm = nullptr;
+      return;
+    }
+
+    Node = *CUs->operands().begin();
   }
   const auto *CU = cast<DICompileUnit>(Node);
   DISourceLanguageName Lang = CU->getSourceLanguage();
@@ -903,18 +905,19 @@ void CodeViewDebug::emitCompilerInformation() {
   OS.AddComment("CPUType");
   OS.emitInt16(static_cast<uint64_t>(TheCPU));
 
-  StringRef CompilerVersion = "0";
-  auto CUs = MMI->getModule()->debug_compile_units();
-  if (!CUs.empty()) {
-    const MDNode *Node = *CUs.begin();
-    const auto *CU = cast<DICompileUnit>(Node);
+  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
 
+  StringRef CompilerVersion = "0";
+  if (!CUs->operands().empty()) {
+    const MDNode *Node = *CUs->operands().begin();
+    const auto *CU = cast<DICompileUnit>(Node);
     CompilerVersion = CU->getProducer();
-    Version FrontVer = parseVersion(CompilerVersion);
-    OS.AddComment("Frontend version");
-    for (int N : FrontVer.Part) {
-      OS.emitInt16(N);
-    }
+  }
+
+  Version FrontVer = parseVersion(CompilerVersion);
+  OS.AddComment("Frontend version");
+  for (int N : FrontVer.Part) {
+    OS.emitInt16(N);
   }
 
   // Some Microsoft tools, like Binscope, expect a backend version number of at
@@ -954,11 +957,8 @@ void CodeViewDebug::emitBuildInfo() {
   // not clear if the compiler path should refer to the executable for the
   // frontend or the backend. Leave it blank for now.
   TypeIndex BuildInfoArgs[BuildInfoRecord::MaxArgs] = {};
-  auto CUs = MMI->getModule()->debug_compile_units();
-  if (CUs.empty())
-    return;
-
-  const MDNode *Node = *CUs.begin(); // FIXME: Multiple CUs.
+  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+  const MDNode *Node = *CUs->operands().begin(); // FIXME: Multiple CUs.
   const auto *CU = cast<DICompileUnit>(Node);
   const DIFile *MainSourceFile = CU->getFile();
   BuildInfoArgs[BuildInfoRecord::CurrentDirectory] =
