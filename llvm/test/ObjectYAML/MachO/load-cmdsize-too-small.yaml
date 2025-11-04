@@ -1,18 +1,13 @@
 ## Test that yaml2obj handles load commands with cmdsize smaller than the
 ## actual structure size without crashing (due to integer underflow).
 
+## Test with a known load command (LC_SEGMENT_64).
 # RUN: yaml2obj %s --docnum=1 -o %t1 2>&1 | FileCheck %s --check-prefix=WARNING-KNOWN
 # RUN: not llvm-readobj --file-headers %t1 2>&1 | FileCheck %s --check-prefix=MALFORMED
-
-# RUN: yaml2obj %s --docnum=2 -o %t2 2>&1 | FileCheck %s --check-prefix=WARNING-UNKNOWN
 
 # WARNING-KNOWN: warning: load command 0 LC_SEGMENT_64 cmdsize too small (56 bytes) for actual size (72 bytes)
 
 # MALFORMED: error: {{.*}}: truncated or malformed object (load command 0 LC_SEGMENT_64 cmdsize too small)
-
-# WARNING-UNKNOWN: warning: load command 0 (0xdeadbeef) cmdsize too small (8 bytes) for actual size (20 bytes)
-
-## Test with a known load command (LC_SEGMENT_64)
 --- !mach-o
 FileHeader:
   magic:           0xFEEDFACF
@@ -37,7 +32,10 @@ LoadCommands:
     flags:           0
 ...
 
-## Test with an unknown load command value
+## Test with an unknown load command value.
+# RUN: yaml2obj %s --docnum=2 -o %t2 2>&1 | FileCheck %s --check-prefix=WARNING-UNKNOWN
+
+# WARNING-UNKNOWN: warning: load command 0 (0xdeadbeef) cmdsize too small (8 bytes) for actual size (20 bytes)
 --- !mach-o
 FileHeader:
   magic:           0xFEEDFACF
