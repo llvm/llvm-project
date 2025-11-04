@@ -4681,6 +4681,54 @@ public:
   LLVM_ABI void handleChangedOperand(void *Ref, Metadata *New);
 };
 
+/// This holds a DIExpression and a list of variables that are
+/// referenced by that expression.
+class DIVariableExpression : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DIVariableExpression(LLVMContext &C, StorageType Storage,
+                       ArrayRef<Metadata *> Ops)
+      : MDNode(C, DIVariableExpressionKind, Storage, Ops) {}
+
+  static DIVariableExpression *getImpl(LLVMContext &Context, DIExpression *Expr,
+                                       DINodeArray VarArray,
+                                       StorageType Storage,
+                                       bool ShouldCreate = true) {
+    return getImpl(Context, static_cast<Metadata *>(Expr), VarArray.get(),
+                   Storage, ShouldCreate);
+  }
+  static DIVariableExpression *getImpl(LLVMContext &Context, Metadata *Expr,
+                                       Metadata *VarArray, StorageType Storage,
+                                       bool ShouldCreate = true);
+
+  TempDIVariableExpression cloneImpl() const {
+    return getTemporary(getContext(), getExpression(), getVariableArray());
+  }
+
+public:
+  DEFINE_MDNODE_GET(DIVariableExpression,
+                    (DIExpression * Expr, DINodeArray Vars), (Expr, Vars))
+  DEFINE_MDNODE_GET(DIVariableExpression, (Metadata * Expr, Metadata *Vars),
+                    (Expr, Vars))
+
+  DIExpression *getExpression() const {
+    return cast<DIExpression>(getRawExpression());
+  }
+
+  Metadata *getRawExpression() const { return getOperand(0); }
+
+  DINodeArray getVariableArray() const {
+    return cast_or_null<MDTuple>(getRawVariableArray());
+  }
+
+  Metadata *getRawVariableArray() const { return getOperand(1); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIVariableExpressionKind;
+  }
+};
+
 /// Identifies a unique instance of a variable.
 ///
 /// Storage for identifying a potentially inlined instance of a variable,

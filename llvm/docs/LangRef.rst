@@ -6980,6 +6980,20 @@ Some examples of expressions:
     !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
     !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
+DIVariableExpression
+""""""""""""""""""""
+
+``DIVariableExpression`` holds a ``DIExpression`` and a list of
+references to other variables.  When DWARF is emitted for this sort of
+object, each instance of ``DW_OP_LLVM_arg`` in the expression is
+replaced with the DWARF extension operator
+``DW_OP_GNU_variable_value``.
+
+A ``DIVariableExpression`` is useful when a type depends on a
+variable's value.  Currently it can be used as the bit size or bit
+offset of a member of a type, or the bit size of a
+``DICompositeType``.
+
 DIAssignID
 """"""""""
 

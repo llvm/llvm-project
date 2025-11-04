@@ -40,6 +40,11 @@ void DwarfExpression::emitConstu(uint64_t Value) {
   }
 }
 
+void DwarfExpression::addVariableReference(DIE &Ref) {
+  emitOp(llvm::dwarf::DW_OP_GNU_variable_value);
+  emitDIERef(Ref);
+}
+
 void DwarfExpression::addReg(int64_t DwarfReg, const char *Comment) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
   assert((isUnknownLocation() || isRegisterLocation()) &&

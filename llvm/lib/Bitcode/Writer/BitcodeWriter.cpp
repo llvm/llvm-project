@@ -401,6 +401,9 @@ private:
                     SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIExpression(const DIExpression *N,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIVariableExpression(const DIVariableExpression *N,
+                                 SmallVectorImpl<uint64_t> &Record,
+                                 unsigned Abbrev);
   void writeDIGlobalVariableExpression(const DIGlobalVariableExpression *N,
                                        SmallVectorImpl<uint64_t> &Record,
                                        unsigned Abbrev);
@@ -2386,6 +2389,17 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
   Record.append(N->elements_begin(), N->elements_end());
 
   Stream.EmitRecord(bitc::METADATA_EXPRESSION, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIVariableExpression(
+    const DIVariableExpression *N, SmallVectorImpl<uint64_t> &Record,
+    unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(VE.getMetadataOrNullID(N->getExpression()));
+  Record.push_back(VE.getMetadataOrNullID(N->getVariableArray().get()));
+
+  Stream.EmitRecord(bitc::METADATA_VARIABLE_EXPR, Record, Abbrev);
   Record.clear();
 }
 

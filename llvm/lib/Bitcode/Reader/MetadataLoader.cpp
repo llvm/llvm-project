@@ -2367,6 +2367,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
+  case bitc::METADATA_VARIABLE_EXPR: {
+    if (Record.size() != 3)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    Metadata *Expr = getMDOrNull(Record[1]);
+    Metadata *Vars = getMDOrNull(Record[2]);
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIVariableExpression, (Context, Expr, Vars)),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_GLOBAL_VAR_EXPR: {
     if (Record.size() != 3)
       return error("Invalid record");

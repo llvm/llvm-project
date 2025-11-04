@@ -1363,6 +1363,22 @@ template <> struct MDNodeKeyImpl<DIExpression> {
   unsigned getHashValue() const { return hash_combine_range(Elements); }
 };
 
+template <> struct MDNodeKeyImpl<DIVariableExpression> {
+  Metadata *Expr;
+  Metadata *Vars;
+
+  MDNodeKeyImpl(Metadata *Expr, Metadata *Vars) : Expr(Expr), Vars(Vars) {}
+  MDNodeKeyImpl(const DIVariableExpression *N)
+      : Expr(N->getRawExpression()), Vars(N->getRawVariableArray()) {}
+
+  bool isKeyOf(const DIVariableExpression *RHS) const {
+    return Expr == RHS->getRawExpression() &&
+           Vars == RHS->getRawVariableArray();
+  }
+
+  unsigned getHashValue() const { return hash_combine(Expr, Vars); }
+};
+
 template <> struct MDNodeKeyImpl<DIGlobalVariableExpression> {
   Metadata *Variable;
   Metadata *Expression;

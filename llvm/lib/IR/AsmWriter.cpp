@@ -2645,6 +2645,16 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
   Out << ")";
 }
 
+static void writeDIVariableExpression(raw_ostream &Out,
+                                      const DIVariableExpression *N,
+                                      AsmWriterContext &WriterCtx) {
+  Out << "!DIVariableExpression(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printMetadata("expr", N->getRawExpression());
+  Printer.printMetadata("vars", N->getRawVariableArray());
+  Out << ")";
+}
+
 static void writeDIArgList(raw_ostream &Out, const DIArgList *N,
                            AsmWriterContext &WriterCtx,
                            bool FromValue = false) {

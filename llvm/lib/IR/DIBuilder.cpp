@@ -918,6 +918,14 @@ static void checkGlobalVariableScope(DIScope *Context) {
 #endif
 }
 
+DIVariableExpression *
+DIBuilder::createExpressionWithVariables(ArrayRef<uint64_t> Expr,
+                                         ArrayRef<Metadata *> Vars) {
+  DIExpression *EX = DIExpression::get(VMContext, Expr);
+  DINodeArray Ary = MDNode::get(VMContext, Vars);
+  return DIVariableExpression::get(VMContext, EX, Ary);
+}
+
 DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
     unsigned LineNumber, DIType *Ty, bool IsLocalToUnit, bool isDefined,

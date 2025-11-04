@@ -926,6 +926,10 @@ HANDLE_DW_OP(0xf8, PGI_omp_thread_num, -1, -1, 0, PGI)
 HANDLE_DW_OP(0xfb, GNU_addr_index, 1, 0, 0, GNU)
 HANDLE_DW_OP(0xfc, GNU_const_index, 1, 0, 0, GNU)
 
+// Allow an expression to use the value of a variable.
+// http://dwarfstd.org/ShowIssue.php?issue=161109.2
+HANDLE_DW_OP (0xfd, GNU_variable_value, 1, 0, 0, GNU)
+
 // DW_OP_LLVM_user has two operands:
 //   (1) An unsigned LEB128 "LLVM Vendor Extension Opcode".
 //   (2) Zero or more literal operands, the number and type of which are

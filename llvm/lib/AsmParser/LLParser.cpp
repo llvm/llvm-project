@@ -6477,6 +6477,19 @@ bool LLParser::parseDIArgList(Metadata *&MD, PerFunctionState *PFS) {
   return false;
 }
 
+/// parseDIVariableExpression:
+///   ::= !DIVariableExpression(expr: !0, vars: !1)
+bool LLParser::parseDIVariableExpression(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(expr, MDField, );                                                   \
+  REQUIRED(vars, MDField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DIVariableExpression, (Context, expr.Val, vars.Val));
+  return false;
+}
+
 /// parseDIGlobalVariableExpression:
 ///   ::= !DIGlobalVariableExpression(var: !0, expr: !1)
 bool LLParser::parseDIGlobalVariableExpression(MDNode *&Result,
