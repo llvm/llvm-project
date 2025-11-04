@@ -330,12 +330,12 @@ define void @test_versioned_with_non_ex_use(i32 %offset, ptr noalias %dst.1, ptr
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP15]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP17]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP12]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[TMP14]], align 8

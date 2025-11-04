@@ -173,7 +173,7 @@ public:
     llvm::SmallVector<uint64_t, 4> data;
     for (uint32_t i = 0; i != numWords; ++i)
       data.push_back(asImpl().readUInt64());
-    return llvm::APInt(bitWidth, numWords, &data[0]);
+    return llvm::APInt(bitWidth, data);
   }
 
   llvm::FixedPointSemantics readFixedPointSemantics() {

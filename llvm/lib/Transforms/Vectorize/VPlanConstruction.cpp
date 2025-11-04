@@ -406,7 +406,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // LatchExitVPB, taking care to preserve the original predecessor & successor
   // order of blocks. Set region entry and exiting after both HeaderVPB and
   // LatchVPBB have been disconnected from their predecessors/successors.
-  auto *R = Plan.createVPRegionBlock();
+  auto *R = Plan.createLoopRegion();
   VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
   VPBlockUtils::disconnectBlocks(LatchVPBB, R);
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
@@ -612,8 +612,7 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan,
   if (!RequiresScalarEpilogueCheck)
     Cmp = Plan.getFalse();
   else if (TailFolded)
-    Cmp = Plan.getOrAddLiveIn(
-        ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
+    Cmp = Plan.getTrue();
   else
     Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
                              &Plan.getVectorTripCount(), LatchDL, "cmp.n");
@@ -658,9 +657,11 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   }
 
   VPIRMetadata VPBranchWeights;
-  auto *Term = VPBuilder(CheckBlockVPBB)
-                   .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
-                                 Plan.getCanonicalIV()->getDebugLoc());
+  auto *Term =
+      VPBuilder(CheckBlockVPBB)
+          .createNaryOp(
+              VPInstruction::BranchOnCond, {CondVPV},
+              Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc());
   if (AddBranchWeights) {
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
@@ -710,8 +711,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // additional overflow check is required before entering the vector loop.
 
       // Get the maximum unsigned value for the type.
-      VPValue *MaxUIntTripCount = Plan.getOrAddLiveIn(ConstantInt::get(
-          TripCountTy, cast<IntegerType>(TripCountTy)->getMask()));
+      VPValue *MaxUIntTripCount =
+          Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
       VPValue *DistanceToMax = Builder.createNaryOp(
           Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
           DebugLoc::getUnknown());
@@ -921,8 +922,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
       if (DerivedIV->getNumUsers() == 1 &&
           DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
-        auto *NewSel = Builder.createSelect(AnyNaN, Plan.getCanonicalIV(),
-                                            &Plan.getVectorTripCount());
+        auto *NewSel = Builder.createSelect(
+            AnyNaN, LoopRegion->getCanonicalIV(), &Plan.getVectorTripCount());
         DerivedIV->moveAfter(&*Builder.getInsertPoint());
         DerivedIV->setOperand(1, NewSel);
         continue;
@@ -935,7 +936,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
                            "FMaxNum/FMinNum reduction.\n");
       return false;
     }
-    auto *NewSel = Builder.createSelect(AnyNaN, Plan.getCanonicalIV(), VecV);
+    auto *NewSel =
+        Builder.createSelect(AnyNaN, LoopRegion->getCanonicalIV(), VecV);
     ResumeR->setOperand(0, NewSel);
   }
 

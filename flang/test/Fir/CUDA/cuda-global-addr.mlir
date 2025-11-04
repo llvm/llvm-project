@@ -63,6 +63,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 
 // We cannot call _FortranACUFGetDeviceAddress on a constant global. 
 // There is no symbol for it and the call would result into an unresolved reference.
+// CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "arraysize"}
 // CHECK-NOT: fir.call {{.*}}GetDeviceAddress
 
 // -----
@@ -90,3 +91,22 @@ func.func @_QQmain() attributes {fir.bindc_name = "test"} {
 // CHECK-NOT: fir.call {{.*}}GetDeviceAddress
 
 }
+
+// -----
+
+// Check that we do not introduce call to _FortranACUFGetDeviceAddress when the
+// value has no user.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  func.func @_QQmain() attributes {fir.bindc_name = "T"} {
+    %0 = fir.dummy_scope : !fir.dscope
+    %1 = fir.address_of(@_QMcon2Ezzz) : !fir.ref<i32>
+    %2 = fir.declare %1 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon2Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    return
+  }
+  fir.global @_QMcon2Ezzz {data_attr = #cuf.cuda<constant>} : i32
+}
+
+// CHECK-LABEL:  func.func @_QQmain()
+// CHECK: fir.address_of(@_QMcon2Ezzz) : !fir.ref<i32>
+// CHECK-NOT: fir.call {{.*}}GetDeviceAddress

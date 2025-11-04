@@ -454,6 +454,8 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::DeclareOp op,
                   mlir::PatternRewriter &rewriter) const override {
+    if (op.getResult().getUsers().empty())
+      return success();
     if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {
       if (auto global = symTab.lookup<fir::GlobalOp>(
               addrOfOp.getSymbol().getRootReference().getValue())) {
@@ -741,6 +743,9 @@ struct CUFDataTransferOpConversion
         fir::StoreOp::create(builder, loc, val, box);
         return box;
       }
+      if (mlir::isa<fir::BaseBoxType>(val.getType()))
+        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(val.getDefiningOp()))
+          return loadOp.getMemref();
       return val;
     };
 
@@ -960,6 +965,8 @@ public:
     }
 
     target.addDynamicallyLegalOp<fir::DeclareOp>([&](fir::DeclareOp op) {
+      if (op.getResult().getUsers().empty())
+        return true;
       if (inDeviceContext(op))
         return true;
       if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {

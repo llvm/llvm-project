@@ -1907,7 +1907,7 @@ define float @v_log2_f32_fast(float %in) {
   ret float %result
 }
 
-define float @v_log2_f32_unsafe_math_attr(float %in) "unsafe-fp-math"="true" {
+define float @v_log2_f32_unsafe_math_attr(float %in) {
 ; SI-SDAG-LABEL: v_log2_f32_unsafe_math_attr:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

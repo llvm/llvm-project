@@ -2,7 +2,7 @@
 
 struct CompositeOfScalars {
   int I;
-  float F;
+  float F; // #COS_FLOAT
   short J;
   char C;
   double D;
@@ -30,6 +30,13 @@ void uses(unsigned Parm) {
   for(int i = 0; i < 5; ++i);
 
 #pragma acc serial loop reduction(&: CoS, I, F)
+  // expected-error@-1{{variable of type 'float' referenced in OpenACC 'reduction' clause does not have a valid operation available}}
+  // expected-note@-2{{while forming binary operator '&='}}
+  // expected-error@-3{{invalid operands to binary expression ('float' and 'float')}}
+  // expected-error@-4{{variable of type 'float' referenced in OpenACC 'reduction' clause does not have a valid operation available}}
+  // expected-note@#COS_FLOAT{{while forming combiner for compound type 'CompositeOfScalars'}}
+  // expected-note@-6{{while forming binary operator '&='}}
+  // expected-error@-7{{invalid operands to binary expression ('float' and 'float')}}
   for(int i = 0; i < 5; ++i);
 
 #pragma acc kernels loop reduction(min: CoS, Array[I], Array[0:I])

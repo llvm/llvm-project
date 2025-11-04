@@ -60,7 +60,7 @@ namespace llvm {
 namespace bolt {
 
 // Align function to the specified byte-boundary (typically, 64) offsetting
-// the fuction by not more than the corresponding value
+// the function by not more than the corresponding value
 static void alignMaxBytes(BinaryFunction &Function) {
   Function.setAlignment(opts::AlignFunctions);
   Function.setMaxAlignmentBytes(opts::AlignFunctionsMaxBytes);
@@ -68,7 +68,7 @@ static void alignMaxBytes(BinaryFunction &Function) {
 }
 
 // Align function to the specified byte-boundary (typically, 64) offsetting
-// the fuction by not more than the minimum over
+// the function by not more than the minimum over
 // -- the size of the function
 // -- the specified number of bytes
 static void alignCompact(BinaryFunction &Function,

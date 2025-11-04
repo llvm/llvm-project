@@ -60,8 +60,7 @@ define void @f_sadd_overflow(ptr %a) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[CONT:.*]] ], [ 2147483645, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV]], 2147483647
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[TRAP:.*]], label %[[CONT]], !nosanitize [[META0]]
+; CHECK-NEXT:    br i1 true, label %[[TRAP:.*]], label %[[CONT]], !nosanitize [[META0]]
 ; CHECK:       [[TRAP]]:
 ; CHECK-NEXT:    tail call void @llvm.trap(), !nosanitize [[META0]]
 ; CHECK-NEXT:    unreachable, !nosanitize [[META0]]
@@ -150,8 +149,7 @@ define void @f_uadd_overflow(ptr %a) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[CONT:.*]] ], [ -6, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[TRAP:.*]], label %[[CONT]], !nosanitize [[META0]]
+; CHECK-NEXT:    br i1 true, label %[[TRAP:.*]], label %[[CONT]], !nosanitize [[META0]]
 ; CHECK:       [[TRAP]]:
 ; CHECK-NEXT:    tail call void @llvm.trap(), !nosanitize [[META0]]
 ; CHECK-NEXT:    unreachable, !nosanitize [[META0]]
@@ -243,10 +241,7 @@ define void @f_ssub_overflow(ptr nocapture %a) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[CONT:.*]] ], [ -2147483642, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nsw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 [[TMP0]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[TRAP:.*]], label %[[CONT]], !nosanitize [[META0]]
+; CHECK-NEXT:    br i1 true, label %[[TRAP:.*]], label %[[CONT]], !nosanitize [[META0]]
 ; CHECK:       [[TRAP]]:
 ; CHECK-NEXT:    tail call void @llvm.trap(), !nosanitize [[META0]]
 ; CHECK-NEXT:    unreachable, !nosanitize [[META0]]
@@ -339,10 +334,7 @@ define void @f_usub_overflow(ptr nocapture %a) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[CONT:.*]] ], [ 15, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[TMP0]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[TRAP:.*]], label %[[CONT]], !nosanitize [[META0]]
+; CHECK-NEXT:    br i1 true, label %[[TRAP:.*]], label %[[CONT]], !nosanitize [[META0]]
 ; CHECK:       [[TRAP]]:
 ; CHECK-NEXT:    tail call void @llvm.trap(), !nosanitize [[META0]]
 ; CHECK-NEXT:    unreachable, !nosanitize [[META0]]

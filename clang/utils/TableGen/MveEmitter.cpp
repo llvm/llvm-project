@@ -1684,7 +1684,8 @@ void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
         OS << "  case ARM::BI__builtin_arm_" << OI.Int->builtinExtension()
            << "_" << OI.Name << ":\n";
         for (size_t i = 0, e = MG.ParamTypes.size(); i < e; ++i)
-          OS << "    Param" << utostr(i) << " = " << OI.ParamValues[i] << ";\n";
+          OS << "    Param" << utostr(i) << " = static_cast<"
+             << MG.ParamTypes[i] << ">(" << OI.ParamValues[i] << ");\n";
         OS << "    break;\n";
       }
       OS << "  }\n";
