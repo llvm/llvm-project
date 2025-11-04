@@ -872,7 +872,7 @@ LogicalResult ShflOp::verify() {
   auto verifyTypeError = [&](Twine desc, Type expectedType,
                              Type actualType) -> LogicalResult {
     return emitOpError("expected " + desc + " to be of type ")
-           << expectedType << " but got " << actualType << " instead.";
+           << expectedType << " but got " << actualType << " instead";
   };
 
   if (returnStructType) {
