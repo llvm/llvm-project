@@ -2104,10 +2104,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpFUnordLessThanEqual:
   case SPIRV::OpFUnordGreaterThan:
   case SPIRV::OpFUnordGreaterThanEqual: {
-    const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
-    SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-    SPIRVType *TypeDef = GR->getSPIRVTypeForVReg(MI.getOperand(2).getReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    MachineInstr *OperandDef = MRI.getVRegDef(MI.getOperand(2).getReg());
+    SPIRVType *TypeDef = MRI.getVRegDef(OperandDef->getOperand(1).getReg());
     if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {
