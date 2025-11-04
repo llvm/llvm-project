@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -disable-llvm-passes -emit-llvm -finclude-default-header -fnative-half-type -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -disable-llvm-passes -emit-llvm -finclude-default-header -fnative-half-type -fnative-int16-type -o - %s | FileCheck %s
 
 // CHECK-LABEL: case1
 // CHECK: [[ToBool:%.*]] = icmp ne <2 x i32> {{.*}}, zeroinitializer

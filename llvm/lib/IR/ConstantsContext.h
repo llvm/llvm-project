@@ -535,7 +535,7 @@ struct ConstantPtrAuthKeyType {
 
   unsigned getHash() const { return hash_combine_range(Operands); }
 
-  using TypeClass = typename ConstantInfo<ConstantPtrAuth>::TypeClass;
+  using TypeClass = ConstantInfo<ConstantPtrAuth>::TypeClass;
 
   ConstantPtrAuth *create(TypeClass *Ty) const {
     return new ConstantPtrAuth(Operands[0], cast<ConstantInt>(Operands[1]),

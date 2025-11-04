@@ -1558,6 +1558,10 @@ defm : PatXrXrF<fmul, "XVFMUL">;
 // XVFDIV_{S/D}
 defm : PatXrXrF<fdiv, "XVFDIV">;
 
+// XVFMAX_{S/D}, XVFMIN_{S/D}
+defm : PatXrXrF<fmaxnum, "XVFMAX">;
+defm : PatXrXrF<fminnum, "XVFMIN">;
+
 // XVFMADD_{S/D}
 def : Pat<(fma v8f32:$xj, v8f32:$xk, v8f32:$xa),
           (XVFMADD_S v8f32:$xj, v8f32:$xk, v8f32:$xa)>;
@@ -2423,6 +2427,12 @@ def : Pat<(int_loongarch_lasx_xvpickve_w_f v8f32:$xj, timm:$imm),
           (XVPICKVE_W v8f32:$xj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvpickve_d_f v4f64:$xj, timm:$imm),
           (XVPICKVE_D v4f64:$xj, (to_valid_timm timm:$imm))>;
+
+// Vector floating-point conversion
+defm : PatXrF<fceil, "XVFRINTRP">;
+defm : PatXrF<ffloor, "XVFRINTRM">;
+defm : PatXrF<ftrunc, "XVFRINTRZ">;
+defm : PatXrF<froundeven, "XVFRINTRNE">;
 
 // load
 def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),

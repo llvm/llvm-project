@@ -10118,7 +10118,7 @@ TEST(APFloatTest, Float4E2M1FNToFloat) {
 }
 
 TEST(APFloatTest, AddOrSubtractSignificand) {
-  typedef detail::IEEEFloatUnitTestHelper Helper;
+  using Helper = detail::IEEEFloatUnitTestHelper;
   // Test cases are all combinations of:
   // {equal exponents, LHS larger exponent, RHS larger exponent}
   // {equal significands, LHS larger significand, RHS larger significand}
