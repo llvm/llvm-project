@@ -92,6 +92,8 @@ enum KeywordStatus {
   KS_Enabled,   // Enabled
 };
 
+/// Translates flags as specified in TokenKinds.def into keyword status
+/// in the given language standard.
 KeywordStatus getKeywordStatus(const LangOptions &LangOpts, unsigned Flags);
 
 enum class ReservedIdentifierStatus {

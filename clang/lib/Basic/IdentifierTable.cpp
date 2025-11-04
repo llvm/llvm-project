@@ -169,8 +169,6 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
   }
 }
 
-/// Translates flags as specified in TokenKinds.def into keyword status
-/// in the given language standard.
 KeywordStatus clang::getKeywordStatus(const LangOptions &LangOpts,
                                       unsigned Flags) {
   // KEYALL means always enabled, so special case this one.
