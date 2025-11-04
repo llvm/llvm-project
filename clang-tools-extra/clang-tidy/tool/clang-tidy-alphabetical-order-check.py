@@ -322,7 +322,9 @@ def _handle_release_notes_out(out_path: str, rn_doc: str) -> int:
 
     # Prefer reporting ordering issues first; let diff fail the test.
     if "".join(lines) != normalized:
-        sys.stderr.write("Note: 'ReleaseNotes.rst' section is not normalized; Please fix ordering first.\n")
+        sys.stderr.write(
+            "Note: 'ReleaseNotes.rst' section is not normalized; Please fix ordering first.\n"
+        )
         return 0
 
     # Ordering is clean then enforce duplicates.
