@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.6-library %s -fnative-int16-type -emit-llvm-only -disable-llvm-passes -verify
 
 float builtin_f16tof32_too_few_arg() {
   return __builtin_hlsl_elementwise_f16tof32();
@@ -22,12 +22,12 @@ float builtin_f16tof32_bool4(bool4 p0) {
   // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'bool4' (aka 'vector<bool, 4>')}}
 }
 
-float builtin_f16tof32_int16_t(int16_t p0) {
+float builtin_f16tof32_short(short p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'int16_t' (aka 'short'))}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'short')}}
 }
 
-float builtin_f16tof32_int16_t(unsigned short p0) {
+float builtin_f16tof32_unsigned_short(unsigned short p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
   // expected-error@-1 {{incorrect number of bits in integer (expected 32 bits, have 16)}}
 }
@@ -84,13 +84,13 @@ float f16tof32_bool(bool p0) {
 
 float f16tof32_bool3(bool3 p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'bool3' (aka 'vector<bool, 3>')}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'bool3' (aka 'vector<bool, 3>'))}}
 }
 
 
-float f16tof32_int16_t(int16_t p0) {
+float f16tof32_int16_t(short p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'int16_t' (aka 'short'))}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'short')}}
 }
 
 float f16tof32_int16_t(unsigned short p0) {
