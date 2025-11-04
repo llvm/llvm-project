@@ -5425,7 +5425,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
         PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                             "number of indirect target type IDs");
 
-      // Read unique indirect target type IDs  and populate FuncCGInfos.
+      // Read unique indirect target type IDs and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
         uint64_t TargetType = Data.getU64(&Offset, &CGSectionErr);
         if (CGSectionErr)
