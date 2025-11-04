@@ -5982,10 +5982,6 @@ Type GatherOp::getExpectedMaskType() {
                          vecType.getScalableDims());
 }
 
-std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
-}
-
 /// Cheeck if `indexVec` is constant 1D vec of consecutive values [0, 1, 2, ...]
 static LogicalResult isZeroBasedContiguousSeq(Value indexVec) {
   auto vecType = dyn_cast<VectorType>(indexVec.getType());
