@@ -2934,17 +2934,6 @@ static void GetSDLFromOffloadArchive(
   CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
 }
 
-// Wrapper function used by opaque-offload-linker  for adding SDLs
-// during link phase.
-void tools::AddStaticDeviceLibsLinking(
-    Compilation &C, const Tool &T, const JobAction &JA,
-    const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args, StringRef Arch, StringRef TargetID,
-    bool isBitCodeSDL, bool postClangLink, bool unpackage) {
-  AddStaticDeviceLibs(&C, &T, &JA, &Inputs, C.getDriver(), DriverArgs, CC1Args,
-                      Arch, TargetID, isBitCodeSDL, postClangLink, unpackage);
-}
-
 // Wrapper function used by driver for adding SDLs during link phase.
 void tools::AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
                                        const JobAction &JA,
