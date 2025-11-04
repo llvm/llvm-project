@@ -947,6 +947,16 @@ uptr MetaShadowBeg(void) { return SelectMapping<MappingField>(kMetaShadowBeg); }
 ALWAYS_INLINE
 uptr MetaShadowEnd(void) { return SelectMapping<MappingField>(kMetaShadowEnd); }
 
+ALWAYS_INLINE
+uptr StripTag(uptr addr) {
+#if SANITIZER_APPLE
+  constexpr uptr kTagMask = ((uptr)0x0f << 56);  // Lower half of top byte
+  return addr & ~kTagMask;
+#else
+  return addr;
+#endif
+}
+
 struct IsAppMemImpl {
   template <typename Mapping>
   static bool Apply(uptr mem) {
@@ -958,7 +968,7 @@ struct IsAppMemImpl {
 };
 
 ALWAYS_INLINE
-bool IsAppMem(uptr mem) { return SelectMapping<IsAppMemImpl>(mem); }
+bool IsAppMem(uptr mem) { return SelectMapping<IsAppMemImpl>(StripTag(mem)); }
 
 struct IsShadowMemImpl {
   template <typename Mapping>
@@ -997,7 +1007,8 @@ struct MemToShadowImpl {
 
 ALWAYS_INLINE
 RawShadow *MemToShadow(uptr x) {
-  return reinterpret_cast<RawShadow *>(SelectMapping<MemToShadowImpl>(x));
+  return reinterpret_cast<RawShadow*>(
+      SelectMapping<MemToShadowImpl>(StripTag(x)));
 }
 
 struct MemToMetaImpl {
@@ -1011,7 +1022,7 @@ struct MemToMetaImpl {
 };
 
 ALWAYS_INLINE
-u32 *MemToMeta(uptr x) { return SelectMapping<MemToMetaImpl>(x); }
+u32* MemToMeta(uptr x) { return SelectMapping<MemToMetaImpl>(StripTag(x)); }
 
 struct ShadowToMemImpl {
   template <typename Mapping>
