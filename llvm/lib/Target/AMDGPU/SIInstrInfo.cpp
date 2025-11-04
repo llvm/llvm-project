@@ -6153,7 +6153,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   // information.
   if (AMDGPU::isPackedFP32Inst(MI.getOpcode()) && AMDGPU::isGFX12Plus(ST) &&
       MO.isReg() && RI.isSGPRReg(MRI, MO.getReg())) {
-    constexpr const AMDGPU::OpName OpNames[] = {
+    constexpr AMDGPU::OpName OpNames[] = {
         AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2};
 
     for (auto [I, OpName] : enumerate(OpNames)) {
@@ -6215,8 +6215,8 @@ bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
 bool SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand(
     const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
     const MachineOperand *MO) const {
-  constexpr const unsigned NumOps = 3;
-  constexpr const AMDGPU::OpName OpNames[NumOps * 2] = {
+  constexpr unsigned NumOps = 3;
+  constexpr AMDGPU::OpName OpNames[NumOps * 2] = {
       AMDGPU::OpName::src0,           AMDGPU::OpName::src1,
       AMDGPU::OpName::src2,           AMDGPU::OpName::src0_modifiers,
       AMDGPU::OpName::src1_modifiers, AMDGPU::OpName::src2_modifiers};
