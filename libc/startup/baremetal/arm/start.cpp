@@ -131,6 +131,28 @@ namespace LIBC_NAMESPACE_DECL {
   __arm_wsr("CPSR_c", 0x13); // SVC
 #endif
 
+#ifdef __ARM_FP
+// Enable FPU
+#if __ARM_ARCH_PROFILE == 'M'
+  // Set CPACR cp10 and cp11
+  auto cpacr = (volatile uint32_t *const)0xE000ED88;
+  *cpacr |= (0xF << 20);
+  __dsb(0xF);
+  __isb(0xF);
+#elif __ARM_ARCH_PROFILE == 'A' || __ARM_ARCH_PROFILE == 'R'
+  // Set CPACR cp10 and cp11
+  uint32_t cpacr = __arm_rsr("p15:0:c1:c0:2");
+  cpacr |= (0xF << 20);
+  __arm_wsr("p15:0:c1:c0:2", cpacr);
+  // Set FPEXC.EN
+  uint32_t fpexc;
+  __asm__ __volatile__("vmrs %0, FPEXC" : "=r"(fpexc) : :);
+  fpexc |= (1 << 30);
+  __asm__ __volatile__("vmsr FPEXC, %0" : : "r"(fpexc) :);
+  __isb(0xF);
+#endif
+#endif
+
   // Perform the equivalent of scatterloading
   LIBC_NAMESPACE::memcpy(__data_start, __data_source,
                          reinterpret_cast<uintptr_t>(__data_size));
