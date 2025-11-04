@@ -230,6 +230,15 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // Don't break self-loops.
   if (PredBB == BB) return false;
 
+  // Don't break if both the basic block and the predecessor contain convergent
+  // intrinsics.
+  for (Instruction &I : *BB)
+    if (isa<ConvergenceControlInst>(I)) {
+      for (Instruction &I : *PredBB)
+        if (isa<ConvergenceControlInst>(I))
+          return false;
+    }
+
   // Don't break unwinding instructions or terminators with other side-effects.
   Instruction *PTI = PredBB->getTerminator();
   if (PTI->isSpecialTerminator() || PTI->mayHaveSideEffects())
