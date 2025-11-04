@@ -166,5 +166,8 @@
 /llvm/**/dsymutil/ @JDevlieghere
 /llvm/**/llvm-dwarfutil/ @JDevlieghere
 
+# AMDGPULowerBufferFatPointers
+/llvm/lib/Target/AMDGPU/AMDGPULowerBufferFatPointers.cpp @krzysz00
+
 # libclang/Python bindings
 /clang/bindings/python @DeinAlptraum
