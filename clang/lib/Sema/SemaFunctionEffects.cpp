@@ -1208,8 +1208,16 @@ private:
         return true;
       }
 
-      // No Decl, just an Expr. Just check based on its type.
-      checkIndirectCall(Call, CalleeExpr->getType());
+      // No Decl, just an Expr. Just check based on its type. Bound member
+      // functions are a special expression type and need to be specially
+      // unpacked.
+      QualType CalleeExprQT = CalleeExpr->getType();
+      if (CalleeExpr->isBoundMemberFunction(Outer.S.getASTContext())) {
+        QualType QT = Expr::findBoundMemberType(CalleeExpr);
+        if (!QT.isNull())
+          CalleeExprQT = QT;
+      }
+      checkIndirectCall(Call, CalleeExprQT);
 
       return true;
     }
