@@ -1501,7 +1501,8 @@ public:
     if (dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
       return false;
     }
-    if (auto actualType{characteristics::TypeAndShape::Characterize(actual_, fc_)}) {
+    if (auto actualType{
+            characteristics::TypeAndShape::Characterize(actual_, fc_)}) {
       bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
       bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
       if (actualIsPolymorphic && !dummyIsPolymorphic) {
