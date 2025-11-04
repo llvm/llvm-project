@@ -840,6 +840,16 @@ public:
     return false;
   }
 
+  virtual bool isLDRWl(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isLDRXl(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool isMOVW(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -1786,6 +1796,19 @@ public:
   /// ADRP+ADD instruction sequence.
   virtual InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
                                                     MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Take \p LDRInst and return ADRP+LDR instruction sequence - for
+  ///
+  ///     ldr  x0, [label]
+  ///
+  /// the following sequence will be generated:
+  ///
+  ///     adrp x0, PageBase(label)
+  ///     ldr  x0, [x0, PageOffset(label)]
+  virtual InstructionListType createAdrpLdr(const MCInst &LDRInst,
+                                            MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 

@@ -54,6 +54,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #include <utility>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
+// CHECK-EMPTY:
 // CHECK-NEXT:  namespace tdl {
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Association {
@@ -132,6 +133,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  LLVM_ABI Association getDirectiveAssociation(Directive D);
 // CHECK-NEXT:  LLVM_ABI Category getDirectiveCategory(Directive D);
 // CHECK-NEXT:  LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-EMPTY:
 // CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Association> {
@@ -149,6 +151,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Clause> {
 // CHECK-NEXT:    static constexpr bool is_iterable = true;
 // CHECK-NEXT:  };
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm
 // CHECK-EMPTY:
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC

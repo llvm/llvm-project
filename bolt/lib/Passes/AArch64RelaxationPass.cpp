@@ -1,4 +1,4 @@
-//===- bolt/Passes/ADRRelaxationPass.cpp ----------------------------------===//
+//===- bolt/Passes/AArch64RelaxationPass.cpp ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the ADRRelaxationPass class.
+// This file implements the AArch64RelaxationPass class.
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Passes/ADRRelaxationPass.h"
+#include "bolt/Passes/AArch64RelaxationPass.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include <iterator>
@@ -20,10 +20,10 @@ using namespace llvm;
 namespace opts {
 extern cl::OptionCategory BoltCategory;
 
-static cl::opt<bool>
-    AdrPassOpt("adr-relaxation",
-               cl::desc("Replace ARM non-local ADR instructions with ADRP"),
-               cl::init(true), cl::cat(BoltCategory), cl::ReallyHidden);
+static cl::opt<bool> AArch64PassOpt(
+    "aarch64-relaxation",
+    cl::desc("Replace ARM non-local ADR/LDR instructions with ADRP"),
+    cl::init(true), cl::cat(BoltCategory), cl::ReallyHidden);
 } // namespace opts
 
 namespace llvm {
@@ -35,7 +35,7 @@ namespace bolt {
 // jobs and checking the exit flag after it.
 static bool PassFailed = false;
 
-void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
+void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
   if (PassFailed)
     return;
 
@@ -43,10 +43,13 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
   for (BinaryBasicBlock &BB : BF) {
     for (auto It = BB.begin(); It != BB.end(); ++It) {
       MCInst &Inst = *It;
-      if (!BC.MIB->isADR(Inst))
+      bool IsADR = BC.MIB->isADR(Inst);
+
+      // TODO: Handle other types of LDR (literal, PC-relative) instructions.
+      if (!IsADR && !BC.MIB->isLDRXl(Inst) && !BC.MIB->isLDRWl(Inst))
         continue;
 
-      const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst);
+      const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, IsADR ? 0 : 1);
       if (!Symbol)
         continue;
 
@@ -56,25 +59,27 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
           continue;
       }
 
-      // Don't relax ADR if it points to the same function and is in the main
-      // fragment and BF initial size is < 1MB.
+      // Don't relax ADR/LDR if it points to the same function and is in the
+      // main fragment and BF initial size is < 1MB.
       const unsigned OneMB = 0x100000;
       if (BF.getSize() < OneMB) {
         BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
         if (TargetBF == &BF && !BB.isSplit())
           continue;
 
-        // No relaxation needed if ADR references a basic block in the same
+        // No relaxation needed if ADR/LDR references a basic block in the same
         // fragment.
         if (BinaryBasicBlock *TargetBB = BF.getBasicBlockForLabel(Symbol))
           if (BB.getFragmentNum() == TargetBB->getFragmentNum())
             continue;
       }
 
-      InstructionListType AdrpAdd;
+      InstructionListType AdrpMaterialization;
       {
         auto L = BC.scopeLock();
-        AdrpAdd = BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get());
+        AdrpMaterialization =
+            IsADR ? BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get())
+                  : BC.MIB->createAdrpLdr(Inst, BC.Ctx.get());
       }
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
@@ -88,18 +93,18 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
         // invalidate this offset, so we have to rely on linker-inserted NOP to
         // replace it with ADRP, and abort if it is not present.
         auto L = BC.scopeLock();
-        BC.errs() << "BOLT-ERROR: cannot relax ADR in non-simple function "
-                  << BF << '\n';
+        BC.errs() << "BOLT-ERROR: cannot relax " << (IsADR ? "ADR" : "LDR")
+                  << " in non-simple function " << BF << '\n';
         PassFailed = true;
         return;
       }
-      It = BB.replaceInstruction(It, AdrpAdd);
+      It = BB.replaceInstruction(It, AdrpMaterialization);
     }
   }
 }
 
-Error ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
-  if (!opts::AdrPassOpt || !BC.HasRelocations)
+Error AArch64RelaxationPass::runOnFunctions(BinaryContext &BC) {
+  if (!opts::AArch64PassOpt || !BC.HasRelocations)
     return Error::success();
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
@@ -108,7 +113,7 @@ Error ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
 
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, nullptr,
-      "ADRRelaxationPass");
+      "AArch64RelaxationPass");
 
   if (PassFailed)
     return createFatalBOLTError("");

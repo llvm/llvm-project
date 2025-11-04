@@ -1,5 +1,5 @@
 add_llvm_library(LLVMBOLTPasses
-  ADRRelaxationPass.cpp
+  AArch64RelaxationPass.cpp
   Aligner.cpp
   AllocCombiner.cpp
   AsmDump.cpp

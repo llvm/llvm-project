@@ -61,6 +61,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #include <utility>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
+// CHECK-EMPTY:
 // CHECK-NEXT:  namespace tdl {
 // CHECK-EMPTY:
 // CHECK-NEXT:  LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -176,6 +177,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Clause> {
 // CHECK-NEXT:    static constexpr bool is_iterable = true;
 // CHECK-NEXT:  };
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm
 // CHECK-EMPTY:
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC

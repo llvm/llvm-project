@@ -81,6 +81,7 @@ static void generateEnumExports(ArrayRef<const Record *> Records,
     std::string N = getIdentifierName(R, Prefix);
     OS << "constexpr auto " << N << " = " << Enum << "::" << N << ";\n";
   }
+  OS << "\n";
 }
 
 // Generate enum class. Entries are emitted in the order in which they appear
@@ -88,7 +89,6 @@ static void generateEnumExports(ArrayRef<const Record *> Records,
 static void generateEnumClass(ArrayRef<const Record *> Records, raw_ostream &OS,
                               StringRef Enum, StringRef Prefix,
                               bool ExportEnums) {
-  OS << "\n";
   OS << "enum class " << Enum << " {\n";
   if (!Records.empty()) {
     std::string N;
@@ -104,17 +104,15 @@ static void generateEnumClass(ArrayRef<const Record *> Records, raw_ostream &OS,
   OS << "};\n";
   OS << "\n";
   OS << "static constexpr std::size_t " << Enum
-     << "_enumSize = " << Records.size() << ";\n";
+     << "_enumSize = " << Records.size() << ";\n\n";
 
   // Make the enum values available in the defined namespace. This allows us to
   // write something like Enum_X if we have a `using namespace <CppNamespace>`.
   // At the same time we do not loose the strong type guarantees of the enum
   // class, that is we cannot pass an unsigned as Directive without an explicit
   // cast.
-  if (ExportEnums) {
-    OS << "\n";
+  if (ExportEnums)
     generateEnumExports(Records, OS, Enum, Prefix);
-  }
 }
 
 // Generate enum class with values corresponding to different bit positions.
@@ -127,7 +125,6 @@ static void generateEnumBitmask(ArrayRef<const Record *> Records,
   StringRef Type = Records.size() <= 32 ? "uint32_t" : "uint64_t";
   StringRef TypeSuffix = Records.size() <= 32 ? "U" : "ULL";
 
-  OS << "\n";
   OS << "enum class " << Enum << " : " << Type << " {\n";
   std::string LastName;
   for (auto [I, R] : llvm::enumerate(Records)) {
@@ -138,17 +135,15 @@ static void generateEnumBitmask(ArrayRef<const Record *> Records,
   OS << "};\n";
   OS << "\n";
   OS << "static constexpr std::size_t " << Enum
-     << "_enumSize = " << Records.size() << ";\n";
+     << "_enumSize = " << Records.size() << ";\n\n";
 
   // Make the enum values available in the defined namespace. This allows us to
   // write something like Enum_X if we have a `using namespace <CppNamespace>`.
   // At the same time we do not loose the strong type guarantees of the enum
   // class, that is we cannot pass an unsigned as Directive without an explicit
   // cast.
-  if (ExportEnums) {
-    OS << "\n";
+  if (ExportEnums)
     generateEnumExports(Records, OS, Enum, Prefix);
-  }
 }
 
 // Generate enums for values that clauses can take.
@@ -170,7 +165,6 @@ static void generateClauseEnumVal(ArrayRef<const Record *> Records,
       return;
     }
 
-    OS << "\n";
     OS << "enum class " << Enum << " {\n";
     for (const EnumVal Val : ClauseVals)
       OS << "  " << Val.getRecordName() << "=" << Val.getValue() << ",\n";
@@ -182,6 +176,7 @@ static void generateClauseEnumVal(ArrayRef<const Record *> Records,
         OS << "constexpr auto " << CV->getName() << " = " << Enum
            << "::" << CV->getName() << ";\n";
       }
+      OS << "\n";
       EnumHelperFuncs += (Twine("LLVM_ABI ") + Twine(Enum) + Twine(" get") +
                           Twine(Enum) + Twine("(StringRef Str);\n"))
                              .str();
@@ -284,7 +279,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   NamespaceEmitter DirLangNS(OS, DirLang.getCppNamespace());
 
   if (DirLang.hasEnableBitmaskEnumInNamespace())
-    OS << "\nLLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n";
+    OS << "LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n\n";
 
   // Emit Directive associations
   std::vector<const Record *> Associations;
@@ -315,7 +310,6 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
 
   // Generic function signatures
-  OS << "\n";
   OS << "// Enumeration helper functions\n";
 
   OS << "LLVM_ABI std::pair<Directive, directive::VersionRange> get" << Lang
@@ -353,10 +347,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "LLVM_ABI Association getDirectiveAssociation(Directive D);\n";
   OS << "LLVM_ABI Category getDirectiveCategory(Directive D);\n";
   OS << "LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);\n";
-  if (EnumHelperFuncs.length() > 0) {
-    OS << EnumHelperFuncs;
-    OS << "\n";
-  }
+  OS << EnumHelperFuncs;
 
   DirLangNS.close();
 
