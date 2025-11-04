@@ -1709,15 +1709,22 @@ Error GenericDeviceTy::prepopulatePageTable(void *ptr, int64_t size) {
   return prepopulatePageTableImpl(ptr, size);
 }
 
+Expected<InfoTreeNode> GenericDeviceTy::obtainInfo() {
+  auto InfoOrErr = obtainInfoImpl();
+  if (InfoOrErr)
+    InfoOrErr->add("UID", getDeviceUid(), "", DeviceInfo::UID);
+  return InfoOrErr;
+}
+
 Error GenericDeviceTy::printInfo() {
-  auto Info = obtainInfoImpl();
+  auto InfoOrErr = obtainInfo();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = Info.takeError())
+  if (auto Err = InfoOrErr.takeError())
     return Err;
 
   // Print all info entries.
-  Info->print();
+  InfoOrErr->print();
 
   return Plugin::success();
 }
@@ -1848,6 +1855,10 @@ void GenericDeviceTy::clear_ArgBufs() {
 
 Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
   return isAccessiblePtrImpl(Ptr, Size);
+}
+
+void GenericDeviceTy::setDeviceUidFromVendorUid(StringRef VendorUid) {
+  DeviceUid = std::string(Plugin.getName()) + "-" + std::string(VendorUid);
 }
 
 Error GenericPluginTy::init() {
