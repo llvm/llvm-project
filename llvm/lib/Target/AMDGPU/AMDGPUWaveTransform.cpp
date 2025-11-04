@@ -1841,8 +1841,8 @@ void ControlFlowRewriter::rewrite() {
         Register CondReg = Info.OrigCondition;
         if (!LMA.isSubsetOfExec(CondReg, *Node->Block)) {
           CondReg = LMU.createLaneMaskReg();
-          BuildMI(*Node->Block, Node->Block->end(), {},
-                  TII.get(LMC.AndOpc), CondReg)
+          BuildMI(*Node->Block, Node->Block->end(), {}, TII.get(LMC.AndOpc),
+                  CondReg)
               .addReg(LMC.ExecReg)
               .addReg(Info.OrigCondition);
         }

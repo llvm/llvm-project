@@ -35,13 +35,12 @@ private:
 
 public:
   GCNLaneMaskUtils() = delete;
-  explicit GCNLaneMaskUtils(MachineFunction &MF) : MF(MF),  
-    LMC(AMDGPU::LaneMaskConstants::get(MF.getSubtarget<GCNSubtarget>())) {}
+  explicit GCNLaneMaskUtils(MachineFunction &MF)
+      : MF(MF),
+        LMC(AMDGPU::LaneMaskConstants::get(MF.getSubtarget<GCNSubtarget>())) {}
 
   MachineFunction *function() const { return &MF; }
-  const AMDGPU::LaneMaskConstants &getLaneMaskConsts() const {
-    return LMC;
-  }
+  const AMDGPU::LaneMaskConstants &getLaneMaskConsts() const { return LMC; }
 
   bool maybeLaneMask(Register Reg) const;
   bool isConstantLaneMask(Register Reg, bool &Val) const;

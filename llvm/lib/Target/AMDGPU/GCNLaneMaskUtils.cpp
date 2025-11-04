@@ -151,10 +151,9 @@ void GCNLaneMaskUtils::buildMergeLaneMasks(MachineBasicBlock &MBB,
       CurMaskedReg = CurReg;
     } else {
       CurMaskedReg = createLaneMaskReg();
-      CurMaskedBuilt =
-          BuildMI(MBB, I, DL, TII->get(LMC.AndOpc), CurMaskedReg)
-              .addReg(CurReg)
-              .addReg(LMC.ExecReg);
+      CurMaskedBuilt = BuildMI(MBB, I, DL, TII->get(LMC.AndOpc), CurMaskedReg)
+                           .addReg(CurReg)
+                           .addReg(LMC.ExecReg);
     }
   }
 
@@ -268,7 +267,7 @@ bool GCNLaneMaskAnalysis::isSubsetOfExec(Register Reg,
 void GCNLaneMaskUpdater::init(Register Reg) {
   Processed = false;
   Blocks.clear();
-  //SSAUpdater.Initialize(LMU.getLaneMaskConsts().LaneMaskRC);
+  // SSAUpdater.Initialize(LMU.getLaneMaskConsts().LaneMaskRC);
   SSAUpdater.Initialize(Reg);
 }
 
@@ -418,8 +417,8 @@ void GCNLaneMaskUpdater::process() {
   // Prepare an all-zero value for the default and reset in accumulating mode.
   if (Accumulating && !ZeroReg) {
     ZeroReg = LMU.createLaneMaskReg();
-    BuildMI(Entry, Entry.getFirstTerminator(), {}, TII->get(LMU.getLaneMaskConsts().MovOpc),
-            ZeroReg)
+    BuildMI(Entry, Entry.getFirstTerminator(), {},
+            TII->get(LMU.getLaneMaskConsts().MovOpc), ZeroReg)
         .addImm(0);
   }
 
