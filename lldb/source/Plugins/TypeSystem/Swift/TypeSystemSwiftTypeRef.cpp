@@ -4084,13 +4084,11 @@ TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
                       (ReconstructType(type, exe_scope), exe_scope));
 }
 
-lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
-                                                   uint64_t &count) {
+lldb::Encoding
+TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type) {
   auto impl = [&]() -> lldb::Encoding {
     if (!type)
       return lldb::eEncodingInvalid;
-
-    count = 1;
 
     using namespace swift::Demangle;
     Demangler dem;
@@ -4113,13 +4111,10 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
           node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT ||
           node->getText() == swift::BUILTIN_TYPE_NAME_RAWUNSAFECONTINUATION)
         return lldb::eEncodingUint;
-      if (node->getText().starts_with(swift::BUILTIN_TYPE_NAME_VEC)) {
-        count = 0;
+      if (node->getText().starts_with(swift::BUILTIN_TYPE_NAME_VEC))
         return lldb::eEncodingInvalid;
-      }
 
       assert(false && "Unhandled builtin");
-      count = 0;
       return lldb::eEncodingInvalid;
     }
 
@@ -4145,7 +4140,7 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
       const auto *mangled_name = AsMangledName(type);
       auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
       auto referent_type = RemangleAsType(dem, referent_node, flavor);
-      return referent_type.GetEncoding(count);
+      return referent_type.GetEncoding();
     }
     default:
       LLDB_LOGF(GetLog(LLDBLog::Types), "No encoding for type %s",
@@ -4153,15 +4148,11 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
       break;
     }
 
-    count = 0;
     return lldb::eEncodingInvalid;
   };
 
-#ifndef NDEBUG
-  uint64_t validation_count = 0;
-#endif
   VALIDATE_AND_RETURN(impl, GetEncoding, type, g_no_exe_ctx,
-                      (ReconstructType(type), validation_count));
+                      (ReconstructType(type)));
 }
 
 llvm::Expected<uint32_t>
