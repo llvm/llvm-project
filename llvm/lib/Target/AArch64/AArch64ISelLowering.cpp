@@ -1052,15 +1052,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Lower READCYCLECOUNTER using an mrs from CNTVCT_EL0.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
 
-  if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
-      getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
-    // Issue __sincos_stret if available.
-    setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
-  } else {
-    setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-  }
+  // Issue __sincos_stret if available.
+  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   // Make floating-point constants legal for the large code model, so they don't
   // become loads from the constant pool.
@@ -5346,35 +5340,6 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
   return SDValue();
 }
 
-SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
-                                            SelectionDAG &DAG) const {
-  // For iOS, we want to call an alternative entry point: __sincos_stret,
-  // which returns the values in two S / D registers.
-  SDLoc DL(Op);
-  SDValue Arg = Op.getOperand(0);
-  EVT ArgVT = Arg.getValueType();
-  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-
-  ArgListTy Args;
-  Args.emplace_back(Arg, ArgTy);
-
-  RTLIB::Libcall LC = ArgVT == MVT::f64 ? RTLIB::SINCOS_STRET_F64
-                                        : RTLIB::SINCOS_STRET_F32;
-  const char *LibcallName = getLibcallName(LC);
-  SDValue Callee =
-      DAG.getExternalSymbol(LibcallName, getPointerTy(DAG.getDataLayout()));
-
-  StructType *RetTy = StructType::get(ArgTy, ArgTy);
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CallingConv::ID CC = getLibcallCallingConv(LC);
-  CLI.setDebugLoc(DL)
-      .setChain(DAG.getEntryNode())
-      .setLibCallee(CC, RetTy, Callee, std::move(Args));
-
-  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
-  return CallResult.first;
-}
-
 static MVT getSVEContainerType(EVT ContentTy);
 
 SDValue
@@ -7723,8 +7688,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return LowerFP_TO_INT_SAT(Op, DAG);
-  case ISD::FSINCOS:
-    return LowerFSINCOS(Op, DAG);
   case ISD::GET_ROUNDING:
     return LowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
