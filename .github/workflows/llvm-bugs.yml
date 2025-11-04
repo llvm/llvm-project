@@ -39,6 +39,12 @@ jobs:
               repo: context.repo.repo
             })
             .then((issue) => {
+              var maybeTruncatedBody = issue.data.body;
+              if (maybeTruncatedBody.length > 15000) {
+                maybeTruncatedBody = maybeTruncatedBody.substring(0,
+                    15000) +
+                  "<truncated>Please see the issue for the entire body."
+              }
               const payload = {
                 author : issue.data.user.login,
                 issue  : issue.data.number,

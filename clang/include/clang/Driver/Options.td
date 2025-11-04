@@ -741,6 +741,7 @@ def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
     "Specify a directory where Flang can find 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
     "Flang will use the GCC installation with the largest version">;
 def gcc_triple_EQ : Joined<["--"], "gcc-triple=">,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Search for the GCC installation with the specified triple.">;
 def CC : Flag<["-"], "CC">, Visibility<[ClangOption, CC1Option]>,
   Group<Preprocessor_Group>,
@@ -8622,6 +8623,10 @@ def aligned_alloc_unavailable : Flag<["-"], "faligned-alloc-unavailable">,
   HelpText<"Aligned allocation/deallocation functions are unavailable">,
   MarshallingInfoFlag<LangOpts<"AlignedAllocationUnavailable">>,
   ShouldParseIf<faligned_allocation.KeyPath>;
+
+def finitial_counter_value_EQ : Joined<["-"], "finitial-counter-value=">,
+  HelpText<"Sets the initial value for __COUNTER__, defaults to 0.">,
+  MarshallingInfoInt<PreprocessorOpts<"InitialCounterValue">, "0">;
 
 } // let Visibility = [CC1Option]
 

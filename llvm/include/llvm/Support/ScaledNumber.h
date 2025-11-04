@@ -498,10 +498,10 @@ public:
   static_assert(!std::numeric_limits<DigitsT>::is_signed,
                 "only unsigned floats supported");
 
-  typedef DigitsT DigitsType;
+  using DigitsType = DigitsT;
 
 private:
-  typedef std::numeric_limits<DigitsType> DigitsLimits;
+  using DigitsLimits = std::numeric_limits<DigitsType>;
 
   static constexpr int Width = sizeof(DigitsType) * 8;
   static_assert(Width <= 64, "invalid integer width for digits");
@@ -782,7 +782,7 @@ uint64_t ScaledNumber<DigitsT>::scale(uint64_t N) const {
 template <class DigitsT>
 template <class IntT>
 IntT ScaledNumber<DigitsT>::toInt() const {
-  typedef std::numeric_limits<IntT> Limits;
+  using Limits = std::numeric_limits<IntT>;
   if (*this < 1)
     return 0;
   if (*this >= Limits::max())
