@@ -175,7 +175,7 @@ define <8 x i16> @or_fshl_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsllw $5, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsrlw $11, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %or1 = or <8 x i16> %y, %x
   %sh1 = shl <8 x i16> %or1, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -198,7 +198,7 @@ define <4 x i32> @or_fshl_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vpslld $21, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsrld $11, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %or1 = or <4 x i32> %y, %x
   %sh1 = shl <4 x i32> %or1, <i32 21, i32 21, i32 21, i32 21>

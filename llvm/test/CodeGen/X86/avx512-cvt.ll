@@ -353,7 +353,7 @@ define <8 x double> @ulto8f64(<8 x i64> %a) {
 ; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
 ; NODQ-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm0 & m64bcst)
 ; NODQ-NEXT:    vpsrlq $32, %zmm0, %zmm0
-; NODQ-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; NODQ-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; NODQ-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; NODQ-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
 ; NODQ-NEXT:    retq
@@ -380,13 +380,13 @@ define <16 x double> @ulto16f64(<16 x i64> %a) {
 ; NODQ-NEXT:    vpternlogq {{.*#+}} zmm4 = zmm4 | (zmm0 & zmm2)
 ; NODQ-NEXT:    vpsrlq $32, %zmm0, %zmm0
 ; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm5 = [4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072]
-; NODQ-NEXT:    vporq %zmm5, %zmm0, %zmm0
+; NODQ-NEXT:    vpaddq %zmm5, %zmm0, %zmm0
 ; NODQ-NEXT:    vbroadcastsd {{.*#+}} zmm6 = [1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25]
 ; NODQ-NEXT:    vsubpd %zmm6, %zmm0, %zmm0
 ; NODQ-NEXT:    vaddpd %zmm0, %zmm4, %zmm0
 ; NODQ-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 | (zmm1 & zmm2)
 ; NODQ-NEXT:    vpsrlq $32, %zmm1, %zmm1
-; NODQ-NEXT:    vporq %zmm5, %zmm1, %zmm1
+; NODQ-NEXT:    vpaddq %zmm5, %zmm1, %zmm1
 ; NODQ-NEXT:    vsubpd %zmm6, %zmm1, %zmm1
 ; NODQ-NEXT:    vaddpd %zmm1, %zmm3, %zmm1
 ; NODQ-NEXT:    retq

@@ -130,7 +130,7 @@ define <32 x i16> @illegal_no_extract_mul(<32 x i16> %i) nounwind {
 ; X86-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0 # [10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10]
 ; X86-NEXT:    vpsrlw $10, %zmm0, %zmm1
 ; X86-NEXT:    vpsllw $6, %zmm0, %zmm0
-; X86-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpaddw %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: illegal_no_extract_mul:
@@ -138,7 +138,7 @@ define <32 x i16> @illegal_no_extract_mul(<32 x i16> %i) nounwind {
 ; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10]
 ; X64-NEXT:    vpsrlw $10, %zmm0, %zmm1
 ; X64-NEXT:    vpsllw $6, %zmm0, %zmm0
-; X64-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; X64-NEXT:    vpaddw %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %lhs_mul = mul <32 x i16> %i, <i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640>
   %rhs_mul = mul <32 x i16> %i, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -185,7 +185,7 @@ define <8 x i32> @no_extract_mul(<8 x i32> %i) nounwind {
 ; X86-NEXT:    vpslld $3, %ymm0, %ymm2
 ; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vpsrld $23, %ymm0, %ymm0
-; X86-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; X86-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: no_extract_mul:
@@ -194,7 +194,7 @@ define <8 x i32> @no_extract_mul(<8 x i32> %i) nounwind {
 ; X64-NEXT:    vpslld $3, %ymm0, %ymm2
 ; X64-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpsrld $23, %ymm0, %ymm0
-; X64-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; X64-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %lhs_mul = mul <8 x i32> %i, <i32 1536, i32 1536, i32 1536, i32 1536, i32 1536, i32 1536, i32 1536, i32 1536>
   %rhs_mul = mul <8 x i32> %i, <i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
@@ -271,7 +271,7 @@ define <2 x i64> @no_extract_udiv(<2 x i64> %i) nounwind {
 ; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; X64-NEXT:    vpsrlq $9, %xmm1, %xmm1
 ; X64-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X64-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %lhs_div = udiv <2 x i64> %i, <i64 3, i64 3>
   %rhs_div = udiv <2 x i64> %i, <i64 770, i64 770>
