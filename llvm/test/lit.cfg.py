@@ -57,8 +57,13 @@ if config.enable_profcheck:
     # so we just exclude llvm-reduce tests from this config altogether. This should
     # be fine though as profcheck config tests are mostly concerned with opt.
     config.excludes.append("llvm-reduce")
+    # Exclude llvm-objcopy tests - not the target of this effort, and some use
+    # cat in ways that conflict with how profcheck uses it.
+    config.excludes.append("llvm-objcopy")
     # (Issue #161235) Temporarily exclude LoopVectorize.
     config.excludes.append("LoopVectorize")
+    # exclude UpdateTestChecks - they fail because of inserted prof annotations
+    config.excludes.append("UpdateTestChecks")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -579,7 +584,7 @@ def have_cxx_shared_library():
         print("could not exec llvm-readobj")
         return False
 
-    readobj_out = readobj_cmd.stdout.read().decode("ascii")
+    readobj_out = readobj_cmd.stdout.read().decode("utf-8")
     readobj_cmd.wait()
 
     regex = re.compile(r"(libc\+\+|libstdc\+\+|msvcp).*\.(so|dylib|dll)")

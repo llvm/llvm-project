@@ -2143,6 +2143,20 @@ func.func @acc_loop_container() {
 
 // -----
 
+func.func @acc_unstructured_loop() {
+  acc.loop {
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>], unstructured}
+  return
+}
+
+// CHECK-LABEL: func.func @acc_unstructured_loop
+// CHECK:       acc.loop
+// CHECK:         acc.yield
+// CHECK:       } attributes {independent = [#acc.device_type<none>], unstructured}
+
+// -----
+
 // Test private recipe with data bounds for array slicing
 acc.private.recipe @privatization_memref_slice : memref<10x10xf32> init {
 ^bb0(%arg0: memref<10x10xf32>, %bounds0: !acc.data_bounds_ty, %bounds1: !acc.data_bounds_ty):
