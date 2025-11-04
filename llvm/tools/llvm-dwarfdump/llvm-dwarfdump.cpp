@@ -917,12 +917,6 @@ int main(int argc, char **argv) {
       Find.empty() && !FindAllApple)
     ShowChildren = true;
 
-  if (!ShowChildren && !FilterChildTag.empty()) {
-    WithColor::error() << "incompatible arguments: --filter-child-tag requires "
-                          "--show-children";
-    return 1;
-  }
-
   // Defaults to a.out if no filenames specified.
   if (InputFilenames.empty())
     InputFilenames.push_back("a.out");

@@ -54,9 +54,10 @@
 # FOO_MEM_WITH_PARENT-NOT: DW_TAG_structure_type
 # FOO_MEM_WITH_PARENT-NOT: DW_TAG_member
 
-# RUN: not llvm-dwarfdump %t.o --name=Foo -t DW_TAG_member 2>&1 | FileCheck %s --check-prefix=ERROR_NO_SHOW_CHILDREN
+## Not specifying --show-children ignores the --filter-child-tag option.
+# RUN: llvm-dwarfdump %t.o --name=Foo -t DW_TAG_member 2>&1 | FileCheck %s --check-prefix=NO_SHOW_CHILDREN
 
-# ERROR_NO_SHOW_CHILDREN: incompatible arguments: --filter-child-tag requires --show-children
+# NO_SHOW_CHILDREN: DW_TAG_structure_type
 
 --- !ELF
 FileHeader:
