@@ -778,8 +778,10 @@ private:
       return false;
 
     // Add all values from the range to the set
-    for (APInt Tmp = Span.getLower(); Tmp != Span.getUpper(); ++Tmp)
+    APInt Tmp = Span.getLower();
+    do
       Vals.push_back(ConstantInt::get(I->getContext(), Tmp));
+    while (++Tmp != Span.getUpper());
 
     UsedICmps++;
     return true;
