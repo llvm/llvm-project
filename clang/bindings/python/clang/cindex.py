@@ -4320,7 +4320,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_isAnonymousRecordDecl", [Cursor], c_uint),
     ("clang_Cursor_isBitField", [Cursor], c_uint),
     ("clang_Cursor_isFunctionInlined", [Cursor], c_uint),
-    ("clang_Location_isInSystemHeader", [SourceLocation], c_uint),
+    ("clang_Location_isInSystemHeader", [SourceLocation], c_int),
     ("clang_PrintingPolicy_dispose", [PrintingPolicy]),
     ("clang_PrintingPolicy_getProperty", [PrintingPolicy, c_int], c_uint),
     ("clang_PrintingPolicy_setProperty", [PrintingPolicy, c_int, c_uint]),
