@@ -155,7 +155,7 @@ private:
 #ifdef LLVM_ON_UNIX
         // See "Exit Status for Commands":
         // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
-        constexpr const int kSigOffset = 128;
+        constexpr int kSigOffset = 128;
         return make_error<SnippetSignal>(CRC.RetCode - kSigOffset);
 #else
         // The exit code of the process on windows is not meaningful as a
@@ -877,7 +877,7 @@ Error BenchmarkRunner::getValidationCountersToRun(
   return Error::success();
 }
 
-BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}
+BenchmarkRunner::FunctionExecutor::~FunctionExecutor() = default;
 
 } // namespace exegesis
 } // namespace llvm
