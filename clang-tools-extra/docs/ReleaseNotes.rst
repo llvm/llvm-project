@@ -264,6 +264,11 @@ New check aliases
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-mem57-cpp <clang-tidy/checks/cert/mem57-cpp>` to
+  :doc:`bugprone-default-operator-new-on-overaligned-type
+  <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
   :doc:`bugprone-raw-memory-call-on-non-trivial-type
   <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`
@@ -374,7 +379,8 @@ Changes in existing checks
   <clang-tidy/checks/misc/const-correctness>` check to avoid false
   positives when pointers is transferred to non-const references
   and avoid false positives of function pointer and fix false
-  positives on return of non-const pointer.
+  positives on return of non-const pointer and fix false positives on
+  pointer-to-member operator.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.

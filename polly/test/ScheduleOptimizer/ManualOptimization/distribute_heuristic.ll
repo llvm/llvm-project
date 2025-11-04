@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-reschedule=0 -polly-pragma-based-opts=1 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=ON
-; RUN: opt %loadNPMPolly -polly-reschedule=0 -polly-pragma-based-opts=0 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly-reschedule=0 -polly-pragma-based-opts=1 '-passes=polly-custom<opt-isl>' -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly-reschedule=0 -polly-pragma-based-opts=0 '-passes=polly-custom<opt-isl>' -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=OFF
 ;
 define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -disable-output "-passes=scop(print<polly-simplify>)" < %s -aa-pipeline=basic-aa < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -disable-output '-passes=polly-custom<simplify>' -polly-print-simplify -aa-pipeline=basic-aa < %s < %s | FileCheck %s
 ;
 ; Simple test for the existence of the Simplify pass.
 ;
