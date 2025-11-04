@@ -290,6 +290,14 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
+    {"atomicadd_r2x2",
+     &I::genAtomicAddVector,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
+    {"atomicadd_r4x2",
+     &I::genAtomicAddVector,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
     {"atomicaddd", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddf", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddi", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
@@ -3168,6 +3176,47 @@ IntrinsicLibrary::genAtomicAddR2(mlir::Type resultType,
                                          mlir::ArrayRef<int64_t>{0});
 }
 
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicAddVector(mlir::Type resultType,
+                                     llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value res = fir::AllocaOp::create(
+      builder, loc, fir::SequenceType::get({2}, resultType));
+  mlir::Value a = fir::getBase(args[0]);
+  if (mlir::isa<fir::BaseBoxType>(a.getType())) {
+    a = fir::BoxAddrOp::create(builder, loc, a);
+  }
+  auto vecTy = mlir::VectorType::get({2}, resultType);
+  auto refTy = fir::ReferenceType::get(resultType);
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  mlir::Value v1Coord = fir::CoordinateOp::create(builder, loc, refTy,
+                                                  fir::getBase(args[1]), zero);
+  mlir::Value v2Coord = fir::CoordinateOp::create(builder, loc, refTy,
+                                                  fir::getBase(args[1]), one);
+  mlir::Value v1 = fir::LoadOp::create(builder, loc, v1Coord);
+  mlir::Value v2 = fir::LoadOp::create(builder, loc, v2Coord);
+  mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecTy);
+  mlir::Value vec1 = mlir::LLVM::InsertElementOp::create(
+      builder, loc, undef, v1, builder.createIntegerConstant(loc, i32Ty, 0));
+  mlir::Value vec2 = mlir::LLVM::InsertElementOp::create(
+      builder, loc, vec1, v2, builder.createIntegerConstant(loc, i32Ty, 1));
+  mlir::Value add =
+      genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, vec2);
+  mlir::Value r1 = mlir::LLVM::ExtractElementOp::create(
+      builder, loc, add, builder.createIntegerConstant(loc, i32Ty, 0));
+  mlir::Value r2 = mlir::LLVM::ExtractElementOp::create(
+      builder, loc, add, builder.createIntegerConstant(loc, i32Ty, 1));
+  mlir::Value c1 = fir::CoordinateOp::create(builder, loc, refTy, res, zero);
+  mlir::Value c2 = fir::CoordinateOp::create(builder, loc, refTy, res, one);
+  fir::StoreOp::create(builder, loc, r1, c1);
+  fir::StoreOp::create(builder, loc, r2, c2);
+  mlir::Value ext = builder.createIntegerConstant(loc, idxTy, 2);
+  return fir::ArrayBoxValue(res, {ext});
+}
+
 mlir::Value IntrinsicLibrary::genAtomicSub(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
@@ -3386,13 +3435,12 @@ IntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
   assert(args.size() == 2);
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::Value token = fir::AllocaOp::create(builder, loc, resultType);
-  // TODO: the MBarrierArriveExpectTxOp is not taking the state argument and
-  // currently just the sink symbol `_`.
-  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive
-  mlir::NVVM::MBarrierArriveExpectTxOp::create(builder, loc, barrier, args[1],
-                                               {});
-  return fir::LoadOp::create(builder, loc, token);
+  return mlir::NVVM::InlinePtxOp::create(builder, loc, {resultType},
+                                         {barrier, args[1]}, {},
+                                         "mbarrier.arrive.expect_tx.release."
+                                         "cta.shared::cta.b64 %0, [%1], %2;",
+                                         {})
+      .getResult(0);
 }
 
 // BARRIER_INIT (CUDA)
