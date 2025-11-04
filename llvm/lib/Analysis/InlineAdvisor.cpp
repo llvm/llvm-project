@@ -14,6 +14,7 @@
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/EvolutionInlineAdvisor.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/IR2Vec.h"
@@ -269,6 +270,10 @@ bool InlineAdvisorAnalysis::Result::tryCreate(
     if (!InlineAdvisorAnalysis::initializeIR2VecVocabIfRequested(M, MAM))
       return false;
     Advisor = llvm::getReleaseModeAdvisor(M, MAM, GetDefaultAdvice);
+    break;
+  case InliningAdvisorMode::Evolution:
+    LLVM_DEBUG(dbgs() << "Using evolution-mode inliner policy.\n");
+    Advisor.reset(new EvolutionInlineAdvisor(M, FAM, IC));
     break;
   }
 

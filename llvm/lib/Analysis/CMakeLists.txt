@@ -74,6 +74,7 @@ add_llvm_component_library(LLVMAnalysis
   DXILResource.cpp
   DXILMetadataAnalysis.cpp
   EphemeralValuesCache.cpp
+  EvolutionInlineAdvisor.cpp
   FloatingPointPredicateUtils.cpp
   FunctionPropertiesAnalysis.cpp
   GlobalsModRef.cpp

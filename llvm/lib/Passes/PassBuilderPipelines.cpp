@@ -160,7 +160,9 @@ static cl::opt<InliningAdvisorMode> UseInlineAdvisor(
                clEnumValN(InliningAdvisorMode::Development, "development",
                           "Use development mode (runtime-loadable model)"),
                clEnumValN(InliningAdvisorMode::Release, "release",
-                          "Use release mode (AOT-compiled model)")));
+                          "Use release mode (AOT-compiled model)"),
+               clEnumValN(InliningAdvisorMode::Evolution, "evolution",
+                          "Use evolution mode (AlphaEvolve-like framework)")));
 
 /// Flag to enable inline deferral during PGO.
 static cl::opt<bool>
