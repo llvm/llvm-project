@@ -6775,11 +6775,9 @@ SwiftASTContext::GetTypeBitAlign(opaque_compiler_type_t type,
   return {};
 }
 
-lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
-                                            uint64_t &count) {
+lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, lldb::eEncodingInvalid);
 
-  count = 1;
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
@@ -6842,7 +6840,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return ToCompilerType(swift_can_type->getReferenceStorageReferent())
-        .GetEncoding(count);
+        .GetEncoding();
     break;
 
   case swift::TypeKind::ExistentialMetatype:
@@ -6877,7 +6875,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
     assert(false && "Not a canonical type");
     break;
   }
-  count = 0;
   return lldb::eEncodingInvalid;
 }
 
