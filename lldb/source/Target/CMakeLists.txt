@@ -80,7 +80,6 @@ add_lldb_library(lldbTarget
   UnixSignals.cpp
   UnwindAssembly.cpp
   UnwindLLDB.cpp
-  VerboseTrapFrameRecognizer.cpp
 
   ADDITIONAL_HEADER_DIRS
     ${LLDB_INCLUDE_DIR}/lldb/Target

@@ -1,4 +1,4 @@
-#include "lldb/Target/VerboseTrapFrameRecognizer.h"
+#include "VerboseTrapFrameRecognizer.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
