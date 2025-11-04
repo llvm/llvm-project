@@ -234,10 +234,18 @@ def process_source_lines(source_lines, note, args):
     source_split_re = re.compile(args.source_delim_regex)
 
     source_segments = [[]]
+    skip_next_empty_line = False
     for line in source_lines:
         # Remove previous note.
-        if line in note:
+        if line and line in note:
+            skip_next_empty_line = True
             continue
+        # Skip the first empty line after the note
+        if skip_next_empty_line and not line:
+            skip_next_empty_line = False
+            continue
+        if line:
+            skip_next_empty_line = False
         # Remove previous CHECK lines.
         if line.find(args.check_prefix) != -1:
             continue
