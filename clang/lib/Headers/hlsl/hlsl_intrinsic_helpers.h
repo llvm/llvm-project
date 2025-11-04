@@ -148,6 +148,15 @@ template <typename T> constexpr T ldexp_impl(T X, T Exp) {
   return exp2(Exp) * X;
 }
 
+template <typename T, int Bitwidth> constexpr uint firstbithigh_impl(T X) {
+  return (Bitwidth - 1) - __builtin_hlsl_elementwise_firstbithigh(X);
+}
+
+template <typename T, int N, int Bitwidth>
+constexpr vector<uint, N> firstbithigh_impl(vector<T, N> X) {
+  return (Bitwidth - 1) - __builtin_hlsl_elementwise_firstbithigh(X);
+}
+
 } // namespace __detail
 } // namespace hlsl
 
