@@ -721,7 +721,8 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   // one element
   unsigned NumDstElts = DstVecTy->getNumElements();
   unsigned NumSrcElts = SrcVecTy->getNumElements();
-  if (InsIdx >= NumDstElts || ExtIdx >= NumSrcElts || NumDstElts == 1)
+  if (ExtIdx > NumSrcElts || InsIdx >= NumDstElts ||
+      NumDstElts == 1)
     return false;
 
   // We are inserting the negated element into the same lane that we extracted
