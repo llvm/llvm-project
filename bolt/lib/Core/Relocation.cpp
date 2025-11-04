@@ -151,8 +151,10 @@ static bool isSupportedPPC64(uint32_t Type) {
   case ELF::R_PPC64_ADDR64:
   case ELF::R_PPC64_ADDR16_DS:
   case ELF::R_PPC64_ADDR16_LO_DS:
-  case ELF::R_PPC64_REL24:
   case ELF::R_PPC64_REL14:
+  case ELF::R_PPC64_REL14_BRTAKEN:
+  case ELF::R_PPC64_REL14_BRNTAKEN:
+  case ELF::R_PPC64_REL24:
   case ELF::R_PPC64_REL32:
   case ELF::R_PPC64_TOC16:
   case ELF::R_PPC64_TOC16_LO:
@@ -308,6 +310,8 @@ static size_t getSizeForTypePPC64(uint32_t Type) {
   case ELF::R_PPC64_ADDR32:
   case ELF::R_PPC64_REL24:
   case ELF::R_PPC64_REL14:
+  case ELF::R_PPC64_REL14_BRTAKEN:
+  case ELF::R_PPC64_REL14_BRNTAKEN:
     return 4;
   case ELF::R_PPC64_ADDR64:
   case ELF::R_PPC64_REL32:
@@ -347,6 +351,8 @@ static bool isPCRelativePPC64(uint32_t Type) {
   case ELF::R_PPC64_REL32:
   case ELF::R_PPC64_REL24:
   case ELF::R_PPC64_REL14:
+  case ELF::R_PPC64_REL14_BRTAKEN:
+  case ELF::R_PPC64_REL14_BRNTAKEN:
     return true;
   }
 }
