@@ -395,6 +395,9 @@ Improvements to Clang's diagnostics
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
 
+- Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
+  attributes are used with a negative size (#GH165463).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -457,6 +460,7 @@ Bug Fixes to Attribute Support
 - Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
 - Fixes crashes or missing diagnostics with the `device_kernel` attribute. (#GH161905)
 - Fix handling of parameter indexes when an attribute is applied to a C++23 explicit object member function.
+- Fixed several false positives and false negatives in function effect (`nonblocking`) analysis. (#GH166078) (#GH166101) (#GH166110)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
