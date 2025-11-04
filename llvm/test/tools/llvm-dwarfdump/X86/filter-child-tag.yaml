@@ -1,4 +1,4 @@
-# Tests the --filter-child-tag (-t) option.
+## Tests the --filter-child-tag (-t) option.
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-dwarfdump %t.o --filter-child-tag=DW_TAG_structure_type | FileCheck %s --check-prefix=ONLY_STRUCT
 # RUN: llvm-dwarfdump %t.o -t DW_TAG_structure_type -t DW_TAG_namespace | FileCheck %s --check-prefix=STRUCT_AND_NS --implicit-check-not=DW_TAG_subprogram --implicit-check-not=DW_TAG_member
