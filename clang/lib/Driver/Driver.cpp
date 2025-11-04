@@ -2096,8 +2096,7 @@ void Driver::generateCompilationDiagnostics(
   // If we only have IR inputs there's no need for preprocessing.
   if (!Inputs.empty()) {
     // Construct the list of abstract actions to perform for this compilation.
-    // On
-    // Darwin OSes this uses the driver-driver and builds universal actions.
+    // On Darwin OSes this uses the driver-driver and builds universal actions.
     const ToolChain &TC = C.getDefaultToolChain();
     if (TC.getTriple().isOSBinFormatMachO())
       BuildUniversalActions(C, TC, Inputs);
