@@ -82,6 +82,11 @@ public:
   bool Enter(const parser::BlockConstruct &);
   void Leave(const parser::BlockConstruct &);
 
+  void Enter(const parser::SpecificationPart &);
+  void Leave(const parser::SpecificationPart &);
+  void Enter(const parser::ExecutionPart &);
+  void Leave(const parser::ExecutionPart &);
+
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
   void Enter(const parser::OpenMPInteropConstruct &);
@@ -113,8 +118,8 @@ public:
   void Leave(const parser::OmpDeclareVariantDirective &);
   void Enter(const parser::OpenMPDeclareSimdConstruct &);
   void Leave(const parser::OpenMPDeclareSimdConstruct &);
-  void Enter(const parser::OpenMPDeclarativeAllocate &);
-  void Leave(const parser::OpenMPDeclarativeAllocate &);
+  void Enter(const parser::OmpAllocateDirective &);
+  void Leave(const parser::OmpAllocateDirective &);
   void Enter(const parser::OpenMPDeclareMapperConstruct &);
   void Leave(const parser::OpenMPDeclareMapperConstruct &);
   void Enter(const parser::OpenMPDeclareReductionConstruct &);
@@ -129,8 +134,6 @@ public:
   void Leave(const parser::OmpErrorDirective &);
   void Enter(const parser::OmpNothingDirective &);
   void Leave(const parser::OmpNothingDirective &);
-  void Enter(const parser::OpenMPExecutableAllocate &);
-  void Leave(const parser::OpenMPExecutableAllocate &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
   void Leave(const parser::OpenMPAllocatorsConstruct &);
   void Enter(const parser::OpenMPRequiresConstruct &);
@@ -263,9 +266,9 @@ private:
   bool CheckTargetBlockOnlyTeams(const parser::Block &);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
   void CheckWorkdistributeBlockStmts(const parser::Block &, parser::CharBlock);
-  void CheckAllocateDirective(parser::CharBlock source,
-      const parser::OmpObjectList &objects,
-      const parser::OmpClauseList &clauses);
+  void CheckIndividualAllocateDirective(
+      const parser::OmpAllocateDirective &x, bool isExecutable);
+  void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);
@@ -325,11 +328,6 @@ private:
       const std::optional<parser::OmpClauseList> &maybeClauses);
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
-  void CheckAllNamesInAllocateStmt(const parser::CharBlock &source,
-      const parser::OmpObjectList &ompObjectList,
-      const parser::AllocateStmt &allocate);
-  void CheckNameInAllocateStmt(const parser::CharBlock &source,
-      const parser::Name &ompObject, const parser::AllocateStmt &allocate);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
@@ -353,11 +351,6 @@ private:
       const parser::OmpObjectList &ompObjectList);
   void CheckIfContiguous(const parser::OmpObject &object);
   const parser::Name *GetObjectName(const parser::OmpObject &object);
-  void CheckPredefinedAllocatorRestriction(const parser::CharBlock &source,
-      const parser::OmpObjectList &ompObjectList);
-  void CheckPredefinedAllocatorRestriction(
-      const parser::CharBlock &source, const parser::Name &name);
-  bool isPredefinedAllocator{false};
 
   void CheckAllowedRequiresClause(llvmOmpClause clause);
   bool deviceConstructFound_{false};
@@ -383,7 +376,7 @@ private:
   };
   int directiveNest_[LastType + 1] = {0};
 
-  bool inExecutableAllocate_{false};
+  int allocateDirectiveLevel{0};
   parser::CharBlock visitedAtomicSource_;
   SymbolSourceMap deferredNonVariables_;
 
@@ -392,6 +385,14 @@ private:
   std::vector<LoopConstruct> loopStack_;
   // Scopes for scoping units.
   std::vector<const Scope *> scopeStack_;
+
+  enum class PartKind : int {
+    // There are also other "parts", such as internal-subprogram-part, etc,
+    // but we're keeping track of these two for now.
+    SpecificationPart,
+    ExecutionPart,
+  };
+  std::vector<PartKind> partStack_;
 };
 
 /// Find a duplicate entry in the range, and return an iterator to it.

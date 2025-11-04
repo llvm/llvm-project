@@ -290,10 +290,30 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
+    {"atomicadd_r4x2",
+     &I::genAtomicAddVector<2>,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
+    {"atomicadd_r4x4",
+     &I::genAtomicAddVector<4>,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
     {"atomicaddd", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddf", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddi", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddl", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddr2",
+     &I::genAtomicAddR2,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
+    {"atomicaddvector_r2x2",
+     &I::genAtomicAddVector<2>,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
+    {"atomicaddvector_r4x2",
+     &I::genAtomicAddVector<2>,
+     {{{"a", asAddr}, {"v", asAddr}}},
+     false},
     {"atomicandi", &I::genAtomicAnd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomiccasd",
      &I::genAtomicCas,
@@ -3119,12 +3139,97 @@ static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
 mlir::Value IntrinsicLibrary::genAtomicAdd(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-
   mlir::LLVM::AtomicBinOp binOp =
       mlir::isa<mlir::IntegerType>(args[1].getType())
           ? mlir::LLVM::AtomicBinOp::add
           : mlir::LLVM::AtomicBinOp::fadd;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicAddR2(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  mlir::Value a = fir::getBase(args[0]);
+
+  if (mlir::isa<fir::BaseBoxType>(a.getType())) {
+    a = fir::BoxAddrOp::create(builder, loc, a);
+  }
+
+  auto loc = builder.getUnknownLoc();
+  auto f16Ty = builder.getF16Type();
+  auto i32Ty = builder.getI32Type();
+  auto vecF16Ty = mlir::VectorType::get({2}, f16Ty);
+  mlir::Type idxTy = builder.getIndexType();
+  auto f16RefTy = fir::ReferenceType::get(f16Ty);
+  auto zero = builder.createIntegerConstant(loc, idxTy, 0);
+  auto one = builder.createIntegerConstant(loc, idxTy, 1);
+  auto v1Coord = fir::CoordinateOp::create(builder, loc, f16RefTy,
+                                           fir::getBase(args[1]), zero);
+  auto v2Coord = fir::CoordinateOp::create(builder, loc, f16RefTy,
+                                           fir::getBase(args[1]), one);
+  auto v1 = fir::LoadOp::create(builder, loc, v1Coord);
+  auto v2 = fir::LoadOp::create(builder, loc, v2Coord);
+  mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecF16Ty);
+  mlir::Value vec1 = mlir::LLVM::InsertElementOp::create(
+      builder, loc, undef, v1, builder.createIntegerConstant(loc, i32Ty, 0));
+  mlir::Value vec2 = mlir::LLVM::InsertElementOp::create(
+      builder, loc, vec1, v2, builder.createIntegerConstant(loc, i32Ty, 1));
+  auto res = genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, vec2);
+  auto i32VecTy = mlir::VectorType::get({1}, i32Ty);
+  mlir::Value vecI32 =
+      mlir::vector::BitCastOp::create(builder, loc, i32VecTy, res);
+  return mlir::vector::ExtractOp::create(builder, loc, vecI32,
+                                         mlir::ArrayRef<int64_t>{0});
+}
+
+template <int extent>
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicAddVector(mlir::Type resultType,
+                                     llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value res = fir::AllocaOp::create(
+      builder, loc, fir::SequenceType::get({extent}, resultType));
+  mlir::Value a = fir::getBase(args[0]);
+  if (mlir::isa<fir::BaseBoxType>(a.getType())) {
+    a = fir::BoxAddrOp::create(builder, loc, a);
+  }
+  auto vecTy = mlir::VectorType::get({extent}, resultType);
+  auto refTy = fir::ReferenceType::get(resultType);
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type idxTy = builder.getIndexType();
+
+  // Extract the values from the array.
+  llvm::SmallVector<mlir::Value> values;
+  for (unsigned i = 0; i < extent; ++i) {
+    mlir::Value pos = builder.createIntegerConstant(loc, idxTy, i);
+    mlir::Value coord = fir::CoordinateOp::create(builder, loc, refTy,
+                                                  fir::getBase(args[1]), pos);
+    mlir::Value value = fir::LoadOp::create(builder, loc, coord);
+    values.push_back(value);
+  }
+  // Pack extracted values into a vector to call the atomic add.
+  mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecTy);
+  for (unsigned i = 0; i < extent; ++i) {
+    mlir::Value insert = mlir::LLVM::InsertElementOp::create(
+        builder, loc, undef, values[i],
+        builder.createIntegerConstant(loc, i32Ty, i));
+    undef = insert;
+  }
+  // Atomic operation with a vector of values.
+  mlir::Value add =
+      genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, undef);
+  // Store results in the result array.
+  for (unsigned i = 0; i < extent; ++i) {
+    mlir::Value r = mlir::LLVM::ExtractElementOp::create(
+        builder, loc, add, builder.createIntegerConstant(loc, i32Ty, i));
+    mlir::Value c = fir::CoordinateOp::create(
+        builder, loc, refTy, res, builder.createIntegerConstant(loc, idxTy, i));
+    fir::StoreOp::create(builder, loc, r, c);
+  }
+  mlir::Value ext = builder.createIntegerConstant(loc, idxTy, extent);
+  return fir::ArrayBoxValue(res, {ext});
 }
 
 mlir::Value IntrinsicLibrary::genAtomicSub(mlir::Type resultType,
@@ -3345,13 +3450,12 @@ IntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
   assert(args.size() == 2);
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::Value token = fir::AllocaOp::create(builder, loc, resultType);
-  // TODO: the MBarrierArriveExpectTxOp is not taking the state argument and
-  // currently just the sink symbol `_`.
-  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive
-  mlir::NVVM::MBarrierArriveExpectTxOp::create(builder, loc, barrier, args[1],
-                                               {});
-  return fir::LoadOp::create(builder, loc, token);
+  return mlir::NVVM::InlinePtxOp::create(builder, loc, {resultType},
+                                         {barrier, args[1]}, {},
+                                         "mbarrier.arrive.expect_tx.release."
+                                         "cta.shared::cta.b64 %0, [%1], %2;",
+                                         {})
+      .getResult(0);
 }
 
 // BARRIER_INIT (CUDA)
@@ -3392,13 +3496,15 @@ IntrinsicLibrary::genBarrierTryWait(mlir::Type resultType,
   builder.setInsertionPointToStart(afterBlock);
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   auto barrier = builder.createConvert(loc, llvmPtrTy, args[0]);
-  mlir::Value ret =
-      mlir::NVVM::InlinePtxOp::create(
-          builder, loc, {resultType}, {barrier, args[1], ns}, {},
-          ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%1], %2, %3; "
-          "selp.b32 %0, 1, 0, p;",
-          {})
-          .getResult(0);
+  mlir::Value ret = mlir::NVVM::InlinePtxOp::create(
+                        builder, loc, {resultType}, {barrier, args[1], ns}, {},
+                        "{\n"
+                        "  .reg .pred p;\n"
+                        "  mbarrier.try_wait.shared.b64 p, [%1], %2, %3;\n"
+                        "  selp.b32 %0, 1, 0, p;\n"
+                        "}",
+                        {})
+                        .getResult(0);
   mlir::scf::YieldOp::create(builder, loc, ret);
   builder.setInsertionPointAfter(whileOp);
   return whileOp.getResult(0);
@@ -3413,8 +3519,11 @@ IntrinsicLibrary::genBarrierTryWaitSleep(mlir::Type resultType,
   auto barrier = builder.createConvert(loc, llvmPtrTy, args[0]);
   return mlir::NVVM::InlinePtxOp::create(
              builder, loc, {resultType}, {barrier, args[1], args[2]}, {},
-             ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%1], %2, %3; "
-             "selp.b32 %0, 1, 0, p;",
+             "{\n"
+             "  .reg .pred p;\n"
+             "  mbarrier.try_wait.shared.b64 p, [%1], %2, %3;\n"
+             "  selp.b32 %0, 1, 0, p;\n"
+             "}",
              {})
       .getResult(0);
 }
@@ -9455,7 +9564,7 @@ void IntrinsicLibrary::genTMABulkS2G(llvm::ArrayRef<fir::ExtendedValue> args) {
       builder, loc, dst, src, fir::getBase(args[2]), {}, {});
 
   mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
-                                  "cp.async.bulk.commit_group", {});
+                                  "cp.async.bulk.commit_group;", {});
   mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
                                              builder.getI32IntegerAttr(0), {});
 }
@@ -9471,7 +9580,7 @@ static void genTMABulkStore(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(builder, loc, dst, src,
                                                      size, {}, {});
   mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
-                                  "cp.async.bulk.commit_group", {});
+                                  "cp.async.bulk.commit_group;", {});
   mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
                                              builder.getI32IntegerAttr(0), {});
 }
