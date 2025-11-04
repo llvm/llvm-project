@@ -222,6 +222,9 @@ private:
   bool selectWaveReduceMax(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
+  bool selectWaveReduceMin(Register ResVReg, const SPIRVType *ResType,
+                           MachineInstr &I, bool IsUnsigned) const;
+
   bool selectWaveReduceSum(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
 
@@ -2456,6 +2459,35 @@ bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I,
+                                                   bool IsUnsigned) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+  Register InputRegister = I.getOperand(2).getReg();
+  SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
+
+  if (!InputType)
+    report_fatal_error("Input Type could not be determined.");
+
+  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  // Retreive the operation to use based on input type
+  bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
+  auto IntegerOpcodeType =
+      IsUnsigned ? SPIRV::OpGroupNonUniformUMin : SPIRV::OpGroupNonUniformSMin;
+  auto Opcode = IsFloatTy ? SPIRV::OpGroupNonUniformFMin : IntegerOpcodeType;
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
+                                     !STI.isShader()))
+      .addImm(SPIRV::GroupOperation::Reduce)
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I) const {
@@ -3119,6 +3151,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectInsertElt(ResVReg, ResType, I);
   case Intrinsic::spv_gep:
     return selectGEP(ResVReg, ResType, I);
+  case Intrinsic::spv_bitcast: {
+    Register OpReg = I.getOperand(2).getReg();
+    SPIRVType *OpType =
+        OpReg.isValid() ? GR.getSPIRVTypeForVReg(OpReg) : nullptr;
+    if (!GR.isBitcastCompatible(ResType, OpType))
+      report_fatal_error("incompatible result and operand types in a bitcast");
+    return selectOpWithSrcs(ResVReg, ResType, I, {OpReg}, SPIRV::OpBitcast);
+  }
   case Intrinsic::spv_unref_global:
   case Intrinsic::spv_init_global: {
     MachineInstr *MI = MRI->getVRegDef(I.getOperand(1).getReg());
@@ -3431,6 +3471,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ false);
+  case Intrinsic::spv_wave_reduce_umin:
+    return selectWaveReduceMin(ResVReg, ResType, I, /*IsUnsigned*/ true);
+  case Intrinsic::spv_wave_reduce_min:
+    return selectWaveReduceMin(ResVReg, ResType, I, /*IsUnsigned*/ false);
   case Intrinsic::spv_wave_reduce_sum:
     return selectWaveReduceSum(ResVReg, ResType, I);
   case Intrinsic::spv_wave_readlane:

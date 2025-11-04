@@ -69,7 +69,7 @@ public:
   SimpleRemoteEPC &operator=(const SimpleRemoteEPC &) = delete;
   SimpleRemoteEPC(SimpleRemoteEPC &&) = delete;
   SimpleRemoteEPC &operator=(SimpleRemoteEPC &&) = delete;
-  ~SimpleRemoteEPC();
+  ~SimpleRemoteEPC() override;
 
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;

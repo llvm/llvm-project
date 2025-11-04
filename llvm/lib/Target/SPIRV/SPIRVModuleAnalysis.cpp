@@ -613,8 +613,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
               << FinalFlags << "\n";
           MachineInstr *OrigMINonConst = const_cast<MachineInstr *>(OrigMI);
           MachineOperand &OrigFlagsOp = OrigMINonConst->getOperand(2);
-          OrigFlagsOp =
-              MachineOperand::CreateImm(static_cast<unsigned>(FinalFlags));
+          OrigFlagsOp = MachineOperand::CreateImm(FinalFlags);
           return; // Merge done, so we found a duplicate; don't add it to MAI.MS
         }
       }
@@ -2181,6 +2180,10 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::SubgroupSize, ST);
+    if (F.getMetadata("max_work_group_size"))
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL, ST);
     if (F.getMetadata("vec_type_hint"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
