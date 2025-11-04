@@ -70,6 +70,12 @@ static cl::opt<bool> ClVerifyOutlinedInstrumentation(
              "function calls. This verifies that they behave the same."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClUseTBAATypeNames(
+    "tysan-use-tbaa-type-names",
+    cl::desc("Print TBAA-style type names for pointers rather than C-style "
+             "names (e.g. 'p2 int' rather than 'int**')"),
+    cl::Hidden, cl::init(false));
+
 STATISTIC(NumInstrumentedAccesses, "Number of instrumented accesses");
 
 namespace {
@@ -260,6 +266,29 @@ static std::string encodeName(StringRef Name) {
   return Output;
 }
 
+/// Converts pointer type names from TBAA "p2 int" style to C style ("int**").
+/// Currently leaves "omnipotent char" unchanged - not sure of a user-friendly name for this type.
+/// If the type name was changed, returns true and stores the new type name in `Dest`.
+/// Otherwise, returns false (`Dest` is unchanged).
+static bool convertTBAAStyleTypeNamesToCStyle(StringRef TypeName, std::string &Dest) {
+  if (!TypeName.consume_front("p"))
+    return false;
+
+  int Indirection;
+  if (TypeName.consumeInteger(10, Indirection))
+    return false;
+
+  if (!TypeName.consume_front(" "))
+    return false;
+
+  Dest.clear();
+  Dest.reserve(TypeName.size() + Indirection); // One * per indirection
+  Dest.append(TypeName);
+  Dest.append(Indirection, '*');
+
+  return true;
+}
+
 std::string
 TypeSanitizer::getAnonymousStructIdentifier(const MDNode *MD,
                                             TypeNameMapTy &TypeNames) {
@@ -355,7 +384,16 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
   //   [2, member count, [type pointer, offset]..., name]
 
   LLVMContext &C = MD->getContext();
-  Constant *NameData = ConstantDataArray::getString(C, NameNode->getString());
+  StringRef TypeName = NameNode->getString();
+
+  // Convert LLVM-internal TBAA-style type names to C-style type names
+  // (more user-friendly)
+  std::string CStyleTypeName;
+  if (!ClUseTBAATypeNames)
+    if (convertTBAAStyleTypeNamesToCStyle(TypeName, CStyleTypeName))
+      TypeName = CStyleTypeName;
+
+  Constant *NameData = ConstantDataArray::getString(C, TypeName);
   SmallVector<Type *> TDSubTys;
   SmallVector<Constant *> TDSubData;
 
