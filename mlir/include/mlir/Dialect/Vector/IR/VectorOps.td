@@ -1653,7 +1653,7 @@ def Vector_TransferWriteOp :
 }
 
 def Vector_LoadOp : Vector_Op<"load", [
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]> {

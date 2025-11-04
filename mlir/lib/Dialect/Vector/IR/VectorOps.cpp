@@ -5762,10 +5762,6 @@ OpFoldResult LoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-std::optional<SmallVector<int64_t, 4>> LoadOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
-}
-
 FailureOr<std::optional<SmallVector<Value>>>
 LoadOp::bubbleDownCasts(OpBuilder &builder) {
   return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
