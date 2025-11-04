@@ -20,7 +20,7 @@
 
 using namespace llvm;
 
-MCGOFFStreamer::~MCGOFFStreamer() {}
+MCGOFFStreamer::~MCGOFFStreamer() = default;
 
 GOFFObjectWriter &MCGOFFStreamer::getWriter() {
   return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
