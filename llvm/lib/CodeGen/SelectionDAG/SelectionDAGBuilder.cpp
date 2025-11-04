@@ -8958,9 +8958,8 @@ bool SelectionDAGBuilder::canTailCall(const CallBase &CB) const {
   // Avoid emitting tail calls in functions with the disable-tail-calls
   // attribute.
   const Function *Caller = CB.getParent()->getParent();
-  if (Caller->getFnAttribute("disable-tail-calls").getValueAsString() ==
-          "true" &&
-      !isMustTailCall)
+  if (!isMustTailCall &&
+      Caller->getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
   // We can't tail call inside a function with a swifterror argument. Lowering

@@ -187,7 +187,7 @@ ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
   load();
 }
 
-ProfiledBinary::~ProfiledBinary() {}
+ProfiledBinary::~ProfiledBinary() = default;
 
 void ProfiledBinary::warnNoFuncEntry() {
   uint64_t NoFuncEntryNum = 0;

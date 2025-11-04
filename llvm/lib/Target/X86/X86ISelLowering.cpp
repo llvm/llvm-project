@@ -22861,6 +22861,13 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
   if (!OpVT.isScalarInteger() || OpSize < 128)
     return SDValue();
 
+  // Don't do this if we're not supposed to use the FPU.
+  bool NoImplicitFloatOps =
+      DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat);
+  if (Subtarget.useSoftFloat() || NoImplicitFloatOps)
+    return SDValue();
+
   // Ignore a comparison with zero because that gets special treatment in
   // EmitTest(). But make an exception for the special case of a pair of
   // logically-combined vector-sized operands compared to zero. This pattern may
@@ -22883,13 +22890,9 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
   // Use XOR (plus OR) and PTEST after SSE4.1 for 128/256-bit operands.
   // Use PCMPNEQ (plus OR) and KORTEST for 512-bit operands.
   // Otherwise use PCMPEQ (plus AND) and mask testing.
-  bool NoImplicitFloatOps =
-      DAG.getMachineFunction().getFunction().hasFnAttribute(
-          Attribute::NoImplicitFloat);
-  if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-      ((OpSize == 128 && Subtarget.hasSSE2()) ||
-       (OpSize == 256 && Subtarget.hasAVX()) ||
-       (OpSize == 512 && Subtarget.useAVX512Regs()))) {
+  if ((OpSize == 128 && Subtarget.hasSSE2()) ||
+      (OpSize == 256 && Subtarget.hasAVX()) ||
+      (OpSize == 512 && Subtarget.useAVX512Regs())) {
     bool HasPT = Subtarget.hasSSE41();
 
     // PTEST and MOVMSK are slow on Knights Landing and Knights Mill and widened
@@ -33031,12 +33034,13 @@ static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
       DAG.getExternalSymbol(LibcallName, TLI.getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = isF64 ? (Type *)StructType::get(ArgTy, ArgTy)
-                      : (Type *)FixedVectorType::get(ArgTy, 4);
+                      : (Type *)FixedVectorType::get(ArgTy, 2);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(DAG.getEntryNode())
-      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args));
+      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args))
+      .setIsPostTypeLegalization();
 
   std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
 
@@ -53351,21 +53355,11 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                               SelectionDAG &DAG,
                               const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
-
-  // Only handle normal stores and its chain was a matching normal load.
-  auto *Ld = dyn_cast<LoadSDNode>(St->getChain());
-  if (!ISD::isNormalStore(St) || !St->isSimple() || !Ld ||
-      !ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
-      Ld->getBasePtr() != St->getBasePtr() ||
-      Ld->getOffset() != St->getOffset())
-    return SDValue();
-
-  SDValue LoadVal(Ld, 0);
   SDValue StoredVal = St->getValue();
   EVT VT = StoredVal.getValueType();
 
-  // Only narrow larger than legal scalar integers.
-  if (!VT.isScalarInteger() ||
+  // Only narrow normal stores of larger than legal scalar integers.
+  if (!ISD::isNormalStore(St) || !St->isSimple() || !VT.isScalarInteger() ||
       VT.getSizeInBits() <= (Subtarget.is64Bit() ? 64 : 32))
     return SDValue();
 
@@ -53374,18 +53368,26 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
   // BTC: X ^ (1 << ShAmt)
   //
   // BitInsert: (X & ~(1 << ShAmt)) | (InsertBit << ShAmt)
-  SDValue InsertBit, ShAmt;
+  SDValue SrcVal, InsertBit, ShAmt;
   if (!StoredVal.hasOneUse() ||
-      !(sd_match(StoredVal, m_And(m_Specific(LoadVal),
+      !(sd_match(StoredVal, m_And(m_Value(SrcVal),
                                   m_Not(m_Shl(m_One(), m_Value(ShAmt))))) ||
         sd_match(StoredVal,
-                 m_Or(m_Specific(LoadVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
+                 m_Or(m_Value(SrcVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
         sd_match(StoredVal,
-                 m_Xor(m_Specific(LoadVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
-        sd_match(StoredVal,
-                 m_Or(m_And(m_Specific(LoadVal),
-                            m_Not(m_Shl(m_One(), m_Value(ShAmt)))),
-                      m_Shl(m_Value(InsertBit), m_Deferred(ShAmt))))))
+                 m_Xor(m_Value(SrcVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
+        sd_match(
+            StoredVal,
+            m_Or(m_And(m_Value(SrcVal), m_Not(m_Shl(m_One(), m_Value(ShAmt)))),
+                 m_Shl(m_Value(InsertBit), m_Deferred(ShAmt))))))
+    return SDValue();
+
+  // SrcVal must be a matching normal load further up the chain.
+  auto *Ld = dyn_cast<LoadSDNode>(SrcVal);
+  if (!Ld || !ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
+      Ld->getBasePtr() != St->getBasePtr() ||
+      Ld->getOffset() != St->getOffset() ||
+      !St->getChain().reachesChainWithoutSideEffects(SDValue(Ld, 1)))
     return SDValue();
 
   // Ensure the shift amount is in bounds.
@@ -53419,7 +53421,7 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                                             SDNodeFlags::NoUnsignedWrap);
 
   // Reconstruct the BTC/BTR/BTS pattern for the i32 block and store.
-  SDValue X = DAG.getNode(ISD::SRL, DL, VT, LoadVal, AlignAmt);
+  SDValue X = DAG.getNode(ISD::SRL, DL, VT, SrcVal, AlignAmt);
   X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, X);
 
   SDValue Mask = DAG.getNode(ISD::SHL, DL, MVT::i32,
@@ -54459,6 +54461,7 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
 static SDValue detectPMADDUBSW(SDValue In, EVT VT, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget,
                                const SDLoc &DL) {
+  using namespace SDPatternMatch;
   if (!VT.isVector() || !Subtarget.hasSSSE3())
     return SDValue();
 
@@ -54468,41 +54471,18 @@ static SDValue detectPMADDUBSW(SDValue In, EVT VT, SelectionDAG &DAG,
     return SDValue();
 
   SDValue SSatVal = detectSSatPattern(In, VT);
-  if (!SSatVal || SSatVal.getOpcode() != ISD::ADD)
+  if (!SSatVal)
     return SDValue();
 
-  // Ok this is a signed saturation of an ADD. See if this ADD is adding pairs
-  // of multiplies from even/odd elements.
-  SDValue N0 = SSatVal.getOperand(0);
-  SDValue N1 = SSatVal.getOperand(1);
-
-  if (N0.getOpcode() != ISD::MUL || N1.getOpcode() != ISD::MUL)
-    return SDValue();
-
-  SDValue N00 = N0.getOperand(0);
-  SDValue N01 = N0.getOperand(1);
-  SDValue N10 = N1.getOperand(0);
-  SDValue N11 = N1.getOperand(1);
-
+  // See if this is a signed saturation of an ADD, adding pairs of multiplies
+  // from even/odd elements, from zero_extend/sign_extend operands.
+  //
   // TODO: Handle constant vectors and use knownbits/computenumsignbits?
-  // Canonicalize zero_extend to LHS.
-  if (N01.getOpcode() == ISD::ZERO_EXTEND)
-    std::swap(N00, N01);
-  if (N11.getOpcode() == ISD::ZERO_EXTEND)
-    std::swap(N10, N11);
-
-  // Ensure we have a zero_extend and a sign_extend.
-  if (N00.getOpcode() != ISD::ZERO_EXTEND ||
-      N01.getOpcode() != ISD::SIGN_EXTEND ||
-      N10.getOpcode() != ISD::ZERO_EXTEND ||
-      N11.getOpcode() != ISD::SIGN_EXTEND)
+  SDValue N00, N01, N10, N11;
+  if (!sd_match(SSatVal,
+                m_Add(m_Mul(m_ZExt(m_Value(N00)), m_SExt(m_Value(N01))),
+                      m_Mul(m_ZExt(m_Value(N10)), m_SExt(m_Value(N11))))))
     return SDValue();
-
-  // Peek through the extends.
-  N00 = N00.getOperand(0);
-  N01 = N01.getOperand(0);
-  N10 = N10.getOperand(0);
-  N11 = N11.getOperand(0);
 
   // Ensure the extend is from vXi8.
   if (N00.getValueType().getVectorElementType() != MVT::i8 ||
@@ -54651,8 +54631,7 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
         SDValue NewLoad =
             DAG.getLoad(VT, DL, Ld->getChain(), NewPtr, Ld->getPointerInfo(),
                         Align(), Ld->getMemOperand()->getFlags());
-        DAG.ReplaceAllUsesOfValueWith(Src.getOperand(0).getValue(1),
-                                      NewLoad.getValue(1));
+        DAG.makeEquivalentMemoryOrdering(Ld, NewLoad);
         return NewLoad;
       }
     }

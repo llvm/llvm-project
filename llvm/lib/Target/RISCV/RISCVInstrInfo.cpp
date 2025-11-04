@@ -869,7 +869,7 @@ std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
   }
 }
 
-// This is the version used during inline spilling
+// This is the version used during InlineSpiller::spillAroundUses
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
@@ -1703,6 +1703,7 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::MAXU:  return RISCV::PseudoCCMAXU;
   case RISCV::MIN:   return RISCV::PseudoCCMIN;
   case RISCV::MINU:  return RISCV::PseudoCCMINU;
+  case RISCV::MUL:   return RISCV::PseudoCCMUL;
 
   case RISCV::ADDI:  return RISCV::PseudoCCADDI;
   case RISCV::SLLI:  return RISCV::PseudoCCSLLI;
@@ -1752,6 +1753,9 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   if (!STI.hasShortForwardBranchIMinMax() &&
       (MI->getOpcode() == RISCV::MAX || MI->getOpcode() == RISCV::MIN ||
        MI->getOpcode() == RISCV::MINU || MI->getOpcode() == RISCV::MAXU))
+    return nullptr;
+
+  if (!STI.hasShortForwardBranchIMul() && MI->getOpcode() == RISCV::MUL)
     return nullptr;
 
   // Check if MI can be predicated and folded into the CCMOV.
