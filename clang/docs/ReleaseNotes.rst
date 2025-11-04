@@ -390,7 +390,7 @@ Improvements to Clang's diagnostics
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
 
-- Fix false-positive unused label diagnostic when label used in a named break
+- Fix false-positive unused label diagnostic when a label is used in a named break
   or continue (#GH166013)
 
 Improvements to Clang's time-trace

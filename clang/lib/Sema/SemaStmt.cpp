@@ -3281,6 +3281,10 @@ static Scope *FindLabeledBreakContinueScope(Sema &S, Scope *CurScope,
                                             SourceLocation LabelLoc,
                                             bool IsContinue) {
   assert(Target && "not a named break/continue?");
+
+  S.MarkAnyDeclReferenced(Target->getLocation(), Target,
+                          /*MightBeOdrUse=*/false);
+
   Scope *Found = nullptr;
   for (Scope *Scope = CurScope; Scope; Scope = Scope->getParent()) {
     if (Scope->isFunctionScope())
@@ -3315,8 +3319,6 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
                                    LabelDecl *Target, SourceLocation LabelLoc) {
   Scope *S;
   if (Target) {
-    MarkAnyDeclReferenced(Target->getLocation(), Target,
-                          /*MightBeOdrUse=*/false);
     S = FindLabeledBreakContinueScope(*this, CurScope, ContinueLoc, Target,
                                       LabelLoc,
                                       /*IsContinue=*/true);
@@ -3354,8 +3356,6 @@ StmtResult Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
                                 LabelDecl *Target, SourceLocation LabelLoc) {
   Scope *S;
   if (Target) {
-    MarkAnyDeclReferenced(Target->getLocation(), Target,
-                          /*MightBeOdrUse=*/false);
     S = FindLabeledBreakContinueScope(*this, CurScope, BreakLoc, Target,
                                       LabelLoc,
                                       /*IsContinue=*/false);
