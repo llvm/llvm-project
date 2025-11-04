@@ -8266,6 +8266,37 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
                                                      << "/kernel";
  }
 
+  if (Args.hasArg(options::OPT__SLASH_vlen_default)) {
+    // Override /vlen= options.
+    for (const Arg *A : Args.filtered(options::OPT__SLASH_vlen))
+      A->claim();
+    // Nothing to do for AVX512F/AVX512.
+  } else if (const Arg *A = Args.getLastArg(options::OPT__SLASH_vlen)) {
+    StringRef VLen = A->getValue();
+    llvm::SmallSet<std::string, 4> Arch512 = {"AVX512F", "AVX512"};
+    llvm::SmallSet<std::string, 4> Arch256 = {"AVX", "AVX2"};
+
+    StringRef Arch = Args.getLastArgValue(options::OPT__SLASH_arch);
+    if (Arch != "") {
+      if (VLen == "=512") {
+        if (Arch512.contains(Arch.str()))
+          CmdArgs.push_back("-mprefer-vector-width=512");
+        else
+          D.Diag(diag::warn_drv_argument_not_allowed_with)
+              << "/vlen=512" << std::string("/arch:").append(Arch);
+      } else if (VLen == "=256") {
+        if (Arch512.contains(Arch.str()))
+          CmdArgs.push_back("-mprefer-vector-width=256");
+        else if (!Arch256.contains(Arch.str()))
+          D.Diag(diag::warn_drv_argument_not_allowed_with)
+              << "/vlen=256" << std::string("/arch:").append(Arch);
+      } else {
+          D.Diag(diag::warn_drv_unknown_argument_clang_cl)
+              << std::string("/vlen").append(VLen);
+      }
+    }
+  }
+
   Arg *MostGeneralArg = Args.getLastArg(options::OPT__SLASH_vmg);
   Arg *BestCaseArg = Args.getLastArg(options::OPT__SLASH_vmb);
   if (MostGeneralArg && BestCaseArg)
