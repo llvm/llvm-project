@@ -1,5 +1,13 @@
-#ifndef LLDB_TARGET_VERBOSETRAPFRAMERECOGNIZER_H
-#define LLDB_TARGET_VERBOSETRAPFRAMERECOGNIZER_H
+//===-- VerboseTrapFrameRecognizer.h --------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_C_PLUS_PLUS_VERBOSETRAPFRAMERECOGNIZER_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_C_PLUS_PLUS_VERBOSETRAPFRAMERECOGNIZER_H
 
 #include "lldb/Target/StackFrameRecognizer.h"
 
@@ -36,4 +44,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_VERBOSETRAPFRAMERECOGNIZER_H
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_C_PLUS_PLUS_VERBOSETRAPFRAMERECOGNIZER_H
