@@ -256,7 +256,7 @@ TEST_F(UdtRecordCompleterRecordTests, TestNestedUnionStructInUnion) {
   EXPECT_EQ(WrappedRecord(this->record), WrappedRecord(record));
 }
 
-TEST_F(UdtRecordCompleterRecordTests, TestNestedUnionStructInUnion2) {
+TEST_F(UdtRecordCompleterRecordTests, TestNestedStructInUnionInStructInUnion) {
   SetKind(Member::Kind::Union);
   CollectMember("m1", 0, 4);
   CollectMember("m2", 0, 2);
