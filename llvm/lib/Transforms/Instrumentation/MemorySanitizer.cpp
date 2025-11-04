@@ -5775,13 +5775,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
-                                 /*ZeroPurifies=*/true, /*EltSize=*/8);
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/8);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
-                                 /*ZeroPurifies=*/true, /*EltSize=*/16);
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/16);
       break;
 
     // AVX Vector Neural Network Instructions: bytes
@@ -5868,7 +5868,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpbuuds_256:
     case Intrinsic::x86_avx10_vpdpbuuds_512:
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4,
-                                 /*ZeroPurifies=*/true, /*EltSize=*/8);
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/8);
       break;
 
     // AVX Vector Neural Network Instructions: words
@@ -5922,7 +5922,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_vpdpwssds_256:
     case Intrinsic::x86_avx512_vpdpwssds_512:
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
-                                 /*ZeroPurifies=*/true, /*EltSize=*/16);
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/16);
       break;
 
       // TODO: Dot Product of BF16 Pairs Accumulated Into Packed Single
