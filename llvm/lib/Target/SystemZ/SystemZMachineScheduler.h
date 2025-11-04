@@ -46,7 +46,11 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   bool definesCmp0Src(const MachineInstr *MI, bool CCDef = true) const;
 
   // The highest SUs that are not to be scheduled "low" to reduce liveness.
-  std::set<const SUnit *> HighSUs;
+  struct : SmallPtrSet<const SUnit *, 12> {
+    bool count(const SUnit *SU) const {
+      return empty() || SmallPtrSet::count(SU);
+    }
+  } HighSUs;
 
   // Make sure a large group of stores do not all end up at the bottom.
   std::set<const SUnit *> StoresGroup;

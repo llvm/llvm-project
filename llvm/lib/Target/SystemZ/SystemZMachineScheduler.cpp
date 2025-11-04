@@ -55,28 +55,25 @@ static bool isVirtRegUse(const MachineOperand &MO) {
 
 void SystemZPreRASchedStrategy::initializeLivenessReduction() {
   HighSUs.clear();
-  if (!RegionPolicy.ShouldTrackPressure)
+  const unsigned NumHigh = TopCycles * SchedModel->getIssueWidth();
+  // Leave the set empty if all SUs would fit to save compile time.
+  if (!RegionPolicy.ShouldTrackPressure || DAG->SUnits.size() <= NumHigh)
     return;
 
-  struct SUSorter {
-    bool operator()(const SUnit *lhs, const SUnit *rhs) const {
-      if (lhs->getHeight() > rhs->getHeight())
-        return true;
-      else if (lhs->getHeight() < rhs->getHeight())
-        return false;
-      return lhs->NodeNum < rhs->NodeNum;
-    }
-  };
-  struct SUSet : std::set<const SUnit *, SUSorter> {} SUs;
+  std::vector<const SUnit *> SUs;
+  SUs.reserve(DAG->SUnits.size());
   for (auto &Itr : DAG->SUnits)
-    SUs.insert(&Itr);
+    SUs.push_back(&Itr);
 
-  // Find the highest SUs of the region.
-  for (auto Itr : SUs) {
-    if (HighSUs.size() == TopCycles * SchedModel->getIssueWidth())
-      break;
-    HighSUs.insert(Itr);
-  }
+  std::sort(SUs.begin(), SUs.end(), [](const SUnit *lhs, const SUnit *rhs) {
+    if (lhs->getHeight() > rhs->getHeight())
+      return true;
+    else if (lhs->getHeight() < rhs->getHeight())
+      return false;
+    return lhs->NodeNum < rhs->NodeNum;
+  });
+
+  HighSUs.insert(SUs.begin(), SUs.begin() + NumHigh);
 }
 
 static bool isStoreOfVReg(const MachineInstr *MI) {
