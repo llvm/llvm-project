@@ -587,6 +587,14 @@ StringRef index::getSymbolLanguageString(SymbolLanguage K) {
   llvm_unreachable("invalid symbol language kind");
 }
 
+std::optional<SymbolProperty>
+index::getSwiftAccessLevelFromSymbolPropertySet(SymbolPropertySet Props) {
+  if (uint32_t AccessLevel = Props & (1 << 19 | 1 << 18 | 1 << 17)) {
+    return (SymbolProperty)AccessLevel;
+  }
+  return std::nullopt;
+}
+
 void index::applyForEachSymbolProperty(SymbolPropertySet Props,
                                   llvm::function_ref<void(SymbolProperty)> Fn) {
 #define APPLY_FOR_PROPERTY(K)                                                  \
@@ -605,6 +613,11 @@ void index::applyForEachSymbolProperty(SymbolPropertySet Props,
   APPLY_FOR_PROPERTY(SwiftAsync);
 
 #undef APPLY_FOR_PROPERTY
+
+  /// Access levels are bit-packed, so we need to handle them explicitly.
+  if (auto AccessLevel = getSwiftAccessLevelFromSymbolPropertySet(Props)) {
+    Fn(*AccessLevel);
+  }
 }
 
 void index::printSymbolProperties(SymbolPropertySet Props, raw_ostream &OS) {
@@ -625,6 +638,18 @@ void index::printSymbolProperties(SymbolPropertySet Props, raw_ostream &OS) {
     case SymbolProperty::Local: OS << "local"; break;
     case SymbolProperty::ProtocolInterface: OS << "protocol"; break;
     case SymbolProperty::SwiftAsync: OS << "swift_async"; break;
+    case SymbolProperty::SwiftAccessControlLessThanFilePrivate:
+      OS << "less_than_private";
+      break;
+    case SymbolProperty::SwiftAccessControlFilePrivate: OS << "fileprivate"; break;
+    case SymbolProperty::SwiftAccessControlInternal: OS << "internal"; break;
+    case SymbolProperty::SwiftAccessControlPackage: OS << "package"; break;
+    case SymbolProperty::SwiftAccessControlSPI:
+      OS << "SPI";
+      break;
+    case SymbolProperty::SwiftAccessControlPublic:
+      OS << "public";
+      break;
     }
   });
 }
