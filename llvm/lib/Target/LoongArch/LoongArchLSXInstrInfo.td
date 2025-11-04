@@ -1271,9 +1271,27 @@ def PseudoVBZ_W : VecCond<loongarch_vall_zero, v4i32>;
 def PseudoVBZ_D : VecCond<loongarch_vall_zero, v2i64>;
 def PseudoVBZ : VecCond<loongarch_vany_zero, v16i8>;
 
-let usesCustomInserter = 1 in
-def PseudoCTPOP : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
-                         [(set GPR:$rd, (ctpop GPR:$rj))]>;
+let usesCustomInserter = 1 in {
+def PseudoCTPOP_B : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                           [(set GPR:$rd, (ctpop (and GPR:$rj, 255)))]>;
+def PseudoCTPOP_H : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                           [(set GPR:$rd, (ctpop (loongarch_bstrpick GRLenVT:$rj,
+                                              (GRLenVT 15), (GRLenVT 0))))]>;
+let Predicates = [IsLA32] in {
+def PseudoCTPOP_H_LA32 : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                                [(set GPR:$rd, (ctpop (and GPR:$rj, 65535)))]>;
+def PseudoCTPOP_W_LA32 : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                                [(set GPR:$rd, (ctpop GPR:$rj))]>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def PseudoCTPOP_W : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                           [(set GPR:$rd, (ctpop (loongarch_bstrpick i64:$rj,
+                                              (i64 31), (i64 0))))]>;
+def PseudoCTPOP_D : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                           [(set GPR:$rd, (ctpop GPR:$rj))]>;
+} // Predicates = [IsLA64]
+} // usesCustomInserter = 1
 
 let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 def PseudoVMSKLTZ_B : Pseudo<(outs GPR:$rd), (ins LSX128:$vj)>;
