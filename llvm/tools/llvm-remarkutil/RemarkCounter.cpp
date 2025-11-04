@@ -70,11 +70,11 @@ static cl::opt<GroupBy> GroupByOpt(
 /// integer value or 0 if it is has no integer value.
 static unsigned getValForKey(StringRef Key, const Remark &Remark) {
   auto *RemarkArg = find_if(Remark.Args, [&Key](const Argument &Arg) {
-    return Arg.Key == Key && Arg.isValInt();
+    return Arg.Key == Key && Arg.getValAsInt<unsigned>();
   });
   if (RemarkArg == Remark.Args.end())
     return 0;
-  return *RemarkArg->getValAsInt();
+  return *RemarkArg->getValAsInt<unsigned>();
 }
 
 Error ArgumentCounter::getAllMatchingArgumentsInRemark(
@@ -91,7 +91,7 @@ Error ArgumentCounter::getAllMatchingArgumentsInRemark(
       continue;
     for (auto &Key : Arguments) {
       for (Argument Arg : Remark.Args)
-        if (Key.match(Arg.Key) && Arg.isValInt())
+        if (Key.match(Arg.Key) && Arg.getValAsInt<unsigned>())
           ArgumentSetIdxMap.insert({Arg.Key, ArgumentSetIdxMap.size()});
     }
   }

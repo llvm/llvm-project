@@ -23,9 +23,9 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
   gridDim.y = gridY;
   gridDim.z = gridZ;
   dim3 blockDim;
-  blockDim.x = blockX > 1024 ? 1024 : blockX;
-  blockDim.y = blockY > 1024 ? 1024 : blockY;
-  blockDim.z = blockZ > 64 ? 64 : blockZ;
+  blockDim.x = blockX;
+  blockDim.y = blockY;
+  blockDim.z = blockZ;
   unsigned nbNegGridDim{0};
   if (gridX < 0) {
     ++nbNegGridDim;
@@ -76,8 +76,8 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
     terminator.Crash("Too many invalid grid dimensions");
   }
   cudaStream_t defaultStream = 0;
-  CUDA_REPORT_IF_ERROR(cudaLaunchKernel(kernel, gridDim, blockDim, params, smem,
-      stream != nullptr ? (cudaStream_t)(*stream) : defaultStream));
+  cudaLaunchKernel(kernel, gridDim, blockDim, params, smem,
+      stream != nullptr ? (cudaStream_t)(*stream) : defaultStream);
 }
 
 void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
@@ -88,9 +88,9 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
   config.gridDim.x = gridX;
   config.gridDim.y = gridY;
   config.gridDim.z = gridZ;
-  config.blockDim.x = blockX > 1024 ? 1024 : blockX;
-  config.blockDim.y = blockY > 1024 ? 1024 : blockY;
-  config.blockDim.z = blockZ > 64 ? 64 : blockZ;
+  config.blockDim.x = blockX;
+  config.blockDim.y = blockY;
+  config.blockDim.z = blockZ;
   unsigned nbNegGridDim{0};
   if (gridX < 0) {
     ++nbNegGridDim;
@@ -153,7 +153,7 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
   launchAttr[0].val.clusterDim.z = clusterZ;
   config.numAttrs = 1;
   config.attrs = launchAttr;
-  CUDA_REPORT_IF_ERROR(cudaLaunchKernelExC(&config, kernel, params));
+  cudaLaunchKernelExC(&config, kernel, params);
 }
 
 void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
@@ -165,9 +165,9 @@ void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
   gridDim.y = gridY;
   gridDim.z = gridZ;
   dim3 blockDim;
-  blockDim.x = blockX > 1024 ? 1024 : blockX;
-  blockDim.y = blockY > 1024 ? 1024 : blockY;
-  blockDim.z = blockZ > 64 ? 64 : blockZ;
+  blockDim.x = blockX;
+  blockDim.y = blockY;
+  blockDim.z = blockZ;
   unsigned nbNegGridDim{0};
   if (gridX < 0) {
     ++nbNegGridDim;
@@ -218,8 +218,8 @@ void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     terminator.Crash("Too many invalid grid dimensions");
   }
   cudaStream_t defaultStream = 0;
-  CUDA_REPORT_IF_ERROR(cudaLaunchCooperativeKernel(kernel, gridDim, blockDim,
-      params, smem, stream != nullptr ? (cudaStream_t)*stream : defaultStream));
+  cudaLaunchCooperativeKernel(kernel, gridDim, blockDim, params, smem,
+      stream != nullptr ? (cudaStream_t)*stream : defaultStream);
 }
 
 } // extern "C"

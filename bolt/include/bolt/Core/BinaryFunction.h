@@ -620,13 +620,11 @@ private:
   }
 
   /// Return a label at a given \p Address in the function. If the label does
-  /// not exist - create it. Assert if the \p Address does not belong to
-  /// the function. If \p CreatePastEnd is true, then return the function
-  /// end label when the \p Address points immediately past the last byte
-  /// of the function.
+  /// not exist - create it.
+  ///
   /// NOTE: the function always returns a local (temp) symbol, even if there's
   ///       a global symbol that corresponds to an entry at this address.
-  MCSymbol *getOrCreateLocalLabel(uint64_t Address, bool CreatePastEnd = false);
+  MCSymbol *getOrCreateLocalLabel(uint64_t Address);
 
   /// Register an data entry at a given \p Offset into the function.
   void markDataAtOffset(uint64_t Offset) {
@@ -2142,8 +2140,9 @@ public:
   }
 
   /// Detects whether \p Address is inside a data region in this function
-  /// (constant islands).
-  bool isInConstantIsland(uint64_t Address) const {
+  /// (constant islands), and optionally return the island size starting
+  /// from the given \p Address.
+  bool isInConstantIsland(uint64_t Address, uint64_t *Size = nullptr) const {
     if (!Islands)
       return false;
 
@@ -2161,10 +2160,15 @@ public:
     DataIter = std::prev(DataIter);
 
     auto CodeIter = Islands->CodeOffsets.upper_bound(Offset);
-    if (CodeIter == Islands->CodeOffsets.begin())
+    if (CodeIter == Islands->CodeOffsets.begin() ||
+        *std::prev(CodeIter) <= *DataIter) {
+      if (Size)
+        *Size = (CodeIter == Islands->CodeOffsets.end() ? getMaxSize()
+                                                        : *CodeIter) -
+                Offset;
       return true;
-
-    return *std::prev(CodeIter) <= *DataIter;
+    }
+    return false;
   }
 
   uint16_t getConstantIslandAlignment() const;

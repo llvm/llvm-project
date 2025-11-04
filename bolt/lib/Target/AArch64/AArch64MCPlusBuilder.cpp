@@ -157,6 +157,10 @@ public:
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
   MCPhysReg getFramePointer() const override { return AArch64::FP; }
 
+  bool isBreakpoint(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::BRK;
+  }
+
   bool isPush(const MCInst &Inst) const override {
     return isStoreToStack(Inst);
   };
@@ -2153,7 +2157,7 @@ public:
 
     --I;
     Address -= 4;
-    if (I->getOpcode() != AArch64::ADRP ||
+    if (I != Begin || I->getOpcode() != AArch64::ADRP ||
         MCPlus::getNumPrimeOperands(*I) < 2 || !I->getOperand(0).isReg() ||
         !I->getOperand(1).isImm() || I->getOperand(0).getReg() != AArch64::X16)
       return 0;

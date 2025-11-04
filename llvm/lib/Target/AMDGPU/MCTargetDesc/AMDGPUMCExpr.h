@@ -64,7 +64,7 @@ private:
   ArrayRef<const MCExpr *> Args;
 
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
-  ~AMDGPUMCExpr();
+  ~AMDGPUMCExpr() override;
 
   bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;

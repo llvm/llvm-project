@@ -1356,7 +1356,7 @@ bool operator==(const Status &lhs, const Status &rhs);
 bool operator!=(const Status &lhs, const Status &rhs);
 
 Status OkStatus();
-Status InvalidArgumentError(char *);
+Status InvalidArgumentError(const char *);
 
 #endif // STATUS_H
 )cc";

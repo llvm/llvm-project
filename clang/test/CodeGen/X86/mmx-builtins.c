@@ -602,23 +602,28 @@ __m64 test_mm_shuffle_pi16(__m64 a) {
   return _mm_shuffle_pi16(a, 3);
 }
 TEST_CONSTEXPR(match_v4hi(_mm_shuffle_pi16(((__m64)(__v4hi){0,1,2,3}), 3), 3,0,0,0));
+
 __m64 test_mm_sign_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sign_pi8
   // CHECK: call <16 x i8> @llvm.x86.ssse3.psign.b.128(
   return _mm_sign_pi8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_sign_pi8((__m64)(__v8qi){0,0,0,0, 0,0,0,0}, (__m64)(__v8qi){0,0,0,0, 0,0,0,0}), 0,0,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8qi(_mm_sign_pi8((__m64)(__v8qi){6,7,6,7, 6,7,6,7}, (__m64)(__v8qi){1,1,1,1, 0,0,0,0}), 6,7,6,7, 0,0,0,0));
 
 __m64 test_mm_sign_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sign_pi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.psign.w.128(
   return _mm_sign_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_sign_pi16((__m64)(__v4hi){-1,0,1,0}, (__m64)(__v4hi){1,0,-1,0}), -1,0,-1,0));
 
 __m64 test_mm_sign_pi32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sign_pi32
   // CHECK: call <4 x i32> @llvm.x86.ssse3.psign.d.128(
   return _mm_sign_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v2si(_mm_sign_pi32((__m64)(__v2si){0x7FFF, -1}, (__m64)(__v2si){-1, 0x7FFF}), -0x7FFF, -1));
 
 __m64 test_mm_sll_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sll_pi16
