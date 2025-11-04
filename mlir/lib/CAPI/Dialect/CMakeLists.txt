@@ -7,6 +7,15 @@ add_mlir_upstream_c_api_library(MLIRCAPIAMDGPU
   MLIRAMDGPUDialect
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPIAffine
+  Affine.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRAffineDialect
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPIArith
   Arith.cpp
 
@@ -14,6 +23,15 @@ add_mlir_upstream_c_api_library(MLIRCAPIArith
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRArithDialect
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIBufferization
+  Bufferization.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRBufferizationDialect
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIAsync
@@ -29,6 +47,15 @@ add_mlir_upstream_c_api_library(MLIRCAPIAsync
   MLIRAsyncDialect
   MLIRAsyncTransforms
   MLIRPass
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIComplex
+  Complex.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRComplexDialect
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIControlFlow
@@ -277,4 +304,22 @@ add_mlir_upstream_c_api_library(MLIRCAPISMT
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRSMT
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPITosa
+  Tosa.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRTosaDialect
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIUB
+  UB.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRUBDialect
 )

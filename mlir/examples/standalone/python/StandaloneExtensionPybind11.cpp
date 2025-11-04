@@ -31,7 +31,7 @@ PYBIND11_MODULE(_standaloneDialectsPybind11, m) {
         mlirDialectHandleRegisterDialect(standaloneHandle, context);
         if (load) {
           mlirDialectHandleLoadDialect(arithHandle, context);
-          mlirDialectHandleRegisterDialect(standaloneHandle, context);
+          mlirDialectHandleLoadDialect(standaloneHandle, context);
         }
       },
       py::arg("context") = py::none(), py::arg("load") = true);
