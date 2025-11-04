@@ -232,6 +232,8 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT {
 }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
 
+_LIBCPP_DIAGNOSTIC_POP
+
 #else // _LIBCPP_ABI_MICROSOFT
 
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
@@ -275,8 +277,6 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 
 #endif // _LIBCPP_ABI_MICROSOFT
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
-
-_LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_POP_MACROS
 
