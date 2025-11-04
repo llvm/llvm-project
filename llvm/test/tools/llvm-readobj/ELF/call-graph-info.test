@@ -1,84 +1,52 @@
 ## Tests how --call-graph-info prints the call graph information.
 # RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --allow-empty -DFILE=%t
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM -DFILE=%t
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON -DFILE=%t
 
-# Yaml input is obtained by compiling the below source to object with:
-#   clang -fexperimental-call-graph-section test.c -o test.o
-# then to yaml with:
-#   obj2yaml test.o > test.yaml
-# Remove ProgramHeaders if obj2yaml fails.
+## Yaml input is obtained by compiling the below source to object with:
+##   clang -fexperimental-call-graph-section test.c -o test.o
+## then to yaml with:
+##   obj2yaml test.o > test.yaml
+## Remove ProgramHeaders if obj2yaml fails.
 
-# The content of the .callgraph section is fixed with this yaml in raw format.
+## The content of the .callgraph section is fixed with this yaml in raw format.
 
-# Source:
-#   void foo() {}
-#
-#   void bar() {}
-#
-#   int baz(char a) {
-#     return 0;
-#   }
-#
-#   int main() {
-#     // Indirect calls.
-#     void (*fp_foo)() = foo;
-#     fp_foo();
-#
-#     void (*fp_bar)() = bar;
-#     fp_bar();
-#
-#     char a;
-#     int (*fp_baz)(char) = baz;
-#     fp_baz(a);
-#
-#     // Direct calls.
-#     foo();
-#     bar();
-#     baz(a);
-#
-#     return 0;
-#   }
+## Source:
+##   void foo() {}
+##
+##   void bar() {}
+##
+##   int baz(char a) {
+##     return 0;
+##   }
+##
+##   int main() {
+##     // Indirect calls.
+##     void (*fp_foo)() = foo;
+##     fp_foo();
+##
+##     void (*fp_bar)() = bar;
+##     fp_bar();
+##
+##     char a;
+##     int (*fp_baz)(char) = baz;
+##     fp_baz(a);
+##
+##     // Direct calls.
+##     foo();
+##     bar();
+##     baz(a);
+##
+##     return 0;
+##   }
 
-# CHECK: Call graph section '.llvm.callgraph' contains 4 entries:
-# CHECK-EMPTY:
-# CHECK-NEXT: Entry 0:
-# CHECK-NEXT:    Address:          0x1790 <foo>
-# CHECK-NEXT:    Indirect Target:  Yes
-# CHECK-NEXT:    Type ID:          0x3ecbeef531f74424
-# CHECK-NEXT:    Direct Callees (0):
-# CHECK-NEXT:    Indirect Callees by Type ID (0):
-# CHECK-EMPTY:
-# CHECK-NEXT: Entry 1:
-# CHECK-NEXT:    Address:          0x17a0 <bar>
-# CHECK-NEXT:    Indirect Target:  Yes
-# CHECK-NEXT:    Type ID:          0x3ecbeef531f74424
-# CHECK-NEXT:    Direct Callees (0):
-# CHECK-NEXT:    Indirect Callees by Type ID (0):
-# CHECK-EMPTY:
-# CHECK-NEXT: Entry 2:
-# CHECK-NEXT:    Address:          0x17b0 <baz>
-# CHECK-NEXT:    Indirect Target:  Yes
-# CHECK-NEXT:    Type ID:          0x308e4b8159bc8654
-# CHECK-NEXT:    Direct Callees (0):
-# CHECK-NEXT:    Indirect Callees by Type ID (0):
-# CHECK-EMPTY:
-# CHECK-NEXT: Entry 3:
-# CHECK-NEXT:    Address:          0x17c0 <main>
-# CHECK-NEXT:    Indirect Target:  Yes
-# CHECK-NEXT:    Type ID:          0xfa6809609a76afca
-# CHECK-NEXT:    Direct Callees (3):
-# CHECK-NEXT:       Address:          0x1790 <foo>
-# CHECK-NEXT:       Address:          0x17a0 <bar>
-# CHECK-NEXT:       Address:          0x17b0 <baz>
-# CHECK-NEXT:    Indirect Callees by Type ID (2):
-# CHECK-NEXT:      0x3ecbeef531f74424
-# CHECK-NEXT:      0x308e4b8159bc8654
+## We do not support GNU format console output for --call-graph-info as it is an LLVM only info.
+# CHECK-NOT: .
 
 # LLVM: callgraph_info [
 # LLVM-NEXT:     Function {
-# LLVM-NEXT:       Functions: [foo]
+# LLVM-NEXT:       Names: [foo]
 # LLVM-NEXT:       Address: 0x1790
 # LLVM-NEXT:       Version: 0
 # LLVM-NEXT:       IsIndirectTarget: Yes
@@ -87,11 +55,10 @@
 # LLVM-NEXT:       DirectCallees [
 # LLVM-NEXT:       ]
 # LLVM-NEXT:       NumIndirectTargetTypeIDs: 0
-# LLVM-NEXT:       IndirectTypeIDs [
-# LLVM-NEXT:       ]
+# LLVM-NEXT:       IndirectTypeIDs: []
 # LLVM-NEXT:     }
 # LLVM-NEXT:     Function {
-# LLVM-NEXT:       Functions: [bar]
+# LLVM-NEXT:       Names: [bar]
 # LLVM-NEXT:       Address: 0x17A0
 # LLVM-NEXT:       Version: 0
 # LLVM-NEXT:       IsIndirectTarget: Yes
@@ -100,11 +67,10 @@
 # LLVM-NEXT:       DirectCallees [
 # LLVM-NEXT:       ]
 # LLVM-NEXT:       NumIndirectTargetTypeIDs: 0
-# LLVM-NEXT:       IndirectTypeIDs [
-# LLVM-NEXT:       ]
+# LLVM-NEXT:       IndirectTypeIDs: []
 # LLVM-NEXT:     }
 # LLVM-NEXT:     Function {
-# LLVM-NEXT:       Functions: [baz]
+# LLVM-NEXT:       Names: [baz]
 # LLVM-NEXT:       Address: 0x17B0
 # LLVM-NEXT:       Version: 0
 # LLVM-NEXT:       IsIndirectTarget: Yes
@@ -113,39 +79,31 @@
 # LLVM-NEXT:       DirectCallees [
 # LLVM-NEXT:       ]
 # LLVM-NEXT:       NumIndirectTargetTypeIDs: 0
-# LLVM-NEXT:       IndirectTypeIDs [
-# LLVM-NEXT:       ]
+# LLVM-NEXT:       IndirectTypeIDs: []
 # LLVM-NEXT:     }
 # LLVM-NEXT:     Function {
-# LLVM-NEXT:       Functions: [main]
+# LLVM-NEXT:       Names: [main]
 # LLVM-NEXT:       Address: 0x17C0
 # LLVM-NEXT:       Version: 0
 # LLVM-NEXT:       IsIndirectTarget: Yes
 # LLVM-NEXT:       TypeId: 0xFA6809609A76AFCA
 # LLVM-NEXT:       NumDirectCallees: 3
 # LLVM-NEXT:       DirectCallees [
-# LLVM-NEXT:         Entry {
-# LLVM-NEXT:           Functions: [foo]
+# LLVM-NEXT:         {
+# LLVM-NEXT:           Names: [foo]
 # LLVM-NEXT:           Address: 0x1790
 # LLVM-NEXT:         }
-# LLVM-NEXT:         Entry {
-# LLVM-NEXT:           Functions: [bar]
+# LLVM-NEXT:         {
+# LLVM-NEXT:           Names: [bar]
 # LLVM-NEXT:           Address: 0x17A0
 # LLVM-NEXT:         }
-# LLVM-NEXT:         Entry {
-# LLVM-NEXT:           Functions: [baz]
+# LLVM-NEXT:         {
+# LLVM-NEXT:           Names: [baz]
 # LLVM-NEXT:           Address: 0x17B0
 # LLVM-NEXT:         }
 # LLVM-NEXT:       ]
 # LLVM-NEXT:       NumIndirectTargetTypeIDs: 2
-# LLVM-NEXT:       IndirectTypeIDs [
-# LLVM-NEXT:         Entry {
-# LLVM-NEXT:           TypeId: 0x3ECBEEF531F74424
-# LLVM-NEXT:         }
-# LLVM-NEXT:         Entry {
-# LLVM-NEXT:           TypeId: 0x308E4B8159BC8654
-# LLVM-NEXT:         }
-# LLVM-NEXT:       ]
+# LLVM-NEXT:       IndirectTypeIDs: [0x3ECBEEF531F74424, 0x308E4B8159BC8654]
 # LLVM-NEXT:     }
 # LLVM-NEXT:   ]
 
@@ -153,7 +111,7 @@
 # JSON:     "callgraph_info": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Functions": [
+# JSON-NEXT:          "Names": [
 # JSON-NEXT:            "foo"
 # JSON-NEXT:          ],
 # JSON-NEXT:          "Address": 6032,
@@ -168,7 +126,7 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Functions": [
+# JSON-NEXT:          "Names": [
 # JSON-NEXT:            "bar"
 # JSON-NEXT:          ],
 # JSON-NEXT:          "Address": 6048,
@@ -183,7 +141,7 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Functions": [
+# JSON-NEXT:          "Names": [
 # JSON-NEXT:            "baz"
 # JSON-NEXT:          ],
 # JSON-NEXT:          "Address": 6064,
@@ -198,7 +156,7 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Functions": [
+# JSON-NEXT:          "Names": [
 # JSON-NEXT:            "main"
 # JSON-NEXT:          ],
 # JSON-NEXT:          "Address": 6080,
@@ -208,42 +166,28 @@
 # JSON-NEXT:          "NumDirectCallees": 3,
 # JSON-NEXT:          "DirectCallees": [
 # JSON-NEXT:            {
-# JSON-NEXT:              "Entry": {
-# JSON-NEXT:                "Functions": [
-# JSON-NEXT:                  "foo"
-# JSON-NEXT:                ],
-# JSON-NEXT:                "Address": 6032
-# JSON-NEXT:              }
+# JSON-NEXT:              "Names": [
+# JSON-NEXT:                "foo"
+# JSON-NEXT:              ],
+# JSON-NEXT:              "Address": 6032
 # JSON-NEXT:            },
 # JSON-NEXT:            {
-# JSON-NEXT:              "Entry": {
-# JSON-NEXT:                "Functions": [
-# JSON-NEXT:                  "bar"
-# JSON-NEXT:                ],
-# JSON-NEXT:                "Address": 6048
-# JSON-NEXT:              }
+# JSON-NEXT:              "Names": [
+# JSON-NEXT:                "bar"
+# JSON-NEXT:              ],
+# JSON-NEXT:              "Address": 6048
 # JSON-NEXT:            },
 # JSON-NEXT:            {
-# JSON-NEXT:              "Entry": {
-# JSON-NEXT:                "Functions": [
-# JSON-NEXT:                  "baz"
-# JSON-NEXT:                ],
-# JSON-NEXT:                "Address": 6064
-# JSON-NEXT:              }
+# JSON-NEXT:              "Names": [
+# JSON-NEXT:                "baz"
+# JSON-NEXT:              ],
+# JSON-NEXT:              "Address": 6064
 # JSON-NEXT:            }
 # JSON-NEXT:          ],
 # JSON-NEXT:          "NumIndirectTargetTypeIDs": 2,
 # JSON-NEXT:          "IndirectTypeIDs": [
-# JSON-NEXT:            {
-# JSON-NEXT:              "Entry": {
-# JSON-NEXT:                "TypeId": 4524972987496481828
-# JSON-NEXT:              }
-# JSON-NEXT:            },
-# JSON-NEXT:            {
-# JSON-NEXT:              "Entry": {
-# JSON-NEXT:                "TypeId": 3498816979441845844
-# JSON-NEXT:              }
-# JSON-NEXT:            }
+# JSON-NEXT:            4524972987496481828,
+# JSON-NEXT:            3498816979441845844
 # JSON-NEXT:          ]
 # JSON-NEXT:        }
 # JSON-NEXT:      }

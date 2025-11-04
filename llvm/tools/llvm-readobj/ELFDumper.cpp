@@ -656,7 +656,6 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
-  void printCallGraphInfo() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
@@ -5476,100 +5475,6 @@ void ELFDumper<ELFT>::getCallGraphRelocations(
   }
 }
 
-template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
-  if (!this->processCallGraphSection() || this->FuncCGInfos.empty())
-    return;
-
-  std::vector<Relocation<ELFT>> Relocations;
-  const Elf_Shdr *RelocSymTab = nullptr;
-  this->getCallGraphRelocations(Relocations, RelocSymTab);
-
-  auto PrintFunc = [](uint64_t FuncEntryPC, ArrayRef<std::string> FuncNames,
-                      formatted_raw_ostream &OS) {
-    OS.PadToColumn(4);
-    OS << "Address:";
-    OS.PadToColumn(21);
-    OS << to_string(format_hex(FuncEntryPC, 1));
-    if (!FuncNames.empty())
-      OS << " <" << join(FuncNames.begin(), FuncNames.end(), ", ") << ">";
-    OS << "\n";
-  };
-
-  auto PrintReloc =
-      [&](uint64_t FuncEntryPC,
-          typename std::vector<Relocation<ELFT>>::iterator &Reloc) {
-        OS.PadToColumn(4);
-        if (Reloc == Relocations.end()) {
-          OS << "Offset:";
-          OS.PadToColumn(22);
-          OS << to_string(format_hex(FuncEntryPC, 1));
-          OS << "\n";
-          return;
-        }
-        Expected<RelSymbol<ELFT>> RelSym =
-            this->getRelocationTarget(*Reloc, RelocSymTab);
-        if (!RelSym) {
-          this->reportUniqueWarning(RelSym.takeError());
-          OS << "Offset:";
-          OS.PadToColumn(22);
-          OS << to_string(format_hex(FuncEntryPC, 1));
-          OS << "\n";
-          return;
-        }
-        SmallString<32> RelocName;
-        this->Obj.getRelocationTypeName(Reloc->Type, RelocName);
-        OS << RelSym->Name;
-        if (Reloc->Addend) {
-          if (*Reloc->Addend >= 0)
-            OS << " + " << *Reloc->Addend;
-          else
-            OS << " - " << -(*Reloc->Addend);
-        }
-        OS << " (" << RelocName << ")";
-        OS << "\n";
-      };
-
-  auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
-    if (this->Obj.getHeader().e_type != ELF::ET_REL) {
-      PrintFunc(FuncEntryPC, this->getFunctionNames(FuncEntryPC), OS);
-      return;
-    }
-    auto Reloc = llvm::lower_bound(
-        Relocations, FuncEntryPC,
-        [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
-    PrintReloc(FuncEntryPC, Reloc);
-  };
-
-  OS << "\nCall graph section '.llvm.callgraph' contains "
-     << this->FuncCGInfos.size() << " entries:\n";
-
-  int EntryIndex = 0;
-  for (const auto &CGInfo : this->FuncCGInfos) {
-    OS << "\n";
-    OS.PadToColumn(2);
-    OS << "Entry " << EntryIndex++ << ":\n";
-    PrintFunctionInfo(CGInfo.FunctionAddress);
-    OS.PadToColumn(4);
-    OS << "Indirect Target:  " << (CGInfo.IsIndirectTarget ? "Yes" : "No")
-       << "\n";
-    OS.PadToColumn(4);
-    OS << "Type ID:          " << format_hex(CGInfo.FunctionTypeId, 1) << "\n";
-    OS.PadToColumn(4);
-    OS << "Direct Callees (" << CGInfo.DirectCallees.size() << "):\n";
-    for (auto CalleePC : CGInfo.DirectCallees) {
-      OS.PadToColumn(6);
-      PrintFunctionInfo(CalleePC);
-    }
-    OS.PadToColumn(4);
-    OS << "Indirect Callees by Type ID (" << CGInfo.IndirectTypeIDs.size()
-       << "):\n";
-    for (auto TypeId : CGInfo.IndirectTypeIDs) {
-      OS.PadToColumn(6);
-      OS << format_hex(TypeId, 1) << "\n";
-    }
-  }
-}
-
 template <class ELFT>
 void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
@@ -8412,7 +8317,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   auto PrintFunc = [](uint64_t FuncEntryPC, ArrayRef<std::string> FuncNames,
                       ScopedPrinter &W) {
     if (!FuncNames.empty())
-      W.printList("Functions", FuncNames);
+      W.printList("Names", FuncNames);
     W.printHex("Address", FuncEntryPC);
   };
 
@@ -8430,7 +8335,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
           W.printHex("Offset", FuncEntryPC);
           return;
         }
-        DictScope DCs(W, "Entry");
+        DictScope DCs(W);
         SmallString<32> RelocName;
         this->Obj.getRelocationTypeName(Reloc->Type, RelocName);
         W.printString("Relocation", RelocName);
@@ -8461,18 +8366,14 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     {
       ListScope DCs(W, "DirectCallees");
       for (auto CalleePC : CGInfo.DirectCallees) {
-        DictScope D(W, "Entry");
+        DictScope D(W);
         PrintFunctionInfo(CalleePC);
       }
     }
     W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
-    {
-      ListScope ICSs(W, "IndirectTypeIDs");
-      for (auto TypeId : CGInfo.IndirectTypeIDs) {
-        DictScope ICS(W, "Entry");
-        W.printHex("TypeId", TypeId);
-      }
-    }
+    auto IndirectTypeIdsList = SmallVector<uint64_t, 4>(
+        CGInfo.IndirectTypeIDs.begin(), CGInfo.IndirectTypeIDs.end());
+    W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIdsList));
   }
 }
 
