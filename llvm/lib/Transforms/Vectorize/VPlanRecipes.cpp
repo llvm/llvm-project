@@ -311,18 +311,27 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   std::optional<unsigned> Opcode;
   VPValue *Op = getVecOp();
   uint64_t MulConst;
+
+  InstructionCost CondCost = 0;
+  if (isConditional()) {
+    CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+    auto *VecTy = Ctx.Types.inferScalarType(Op);
+    auto *CondTy = Ctx.Types.inferScalarType(getCondOp());
+    CondCost = Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CondTy,
+                                          Pred, Ctx.CostKind);
+  }
+
   // If the partial reduction is predicated, a select will be operand 1.
   // If it isn't predicated and the mul isn't operating on a constant, then it
   // should have been turned into a VPExpressionRecipe.
   // FIXME: Replace the entire function with this once all partial reduction
   // variants are bundled into VPExpressionRecipe.
-  if (!match(Op, m_Select(m_VPValue(), m_VPValue(Op), m_VPValue())) &&
-      !match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
+  if (!match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
     auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
     auto *InputType = Ctx.Types.inferScalarType(getVecOp());
-    return Ctx.TTI.getPartialReductionCost(getOpcode(), InputType, InputType,
-                                           PhiType, VF, TTI::PR_None,
-                                           TTI::PR_None, {}, Ctx.CostKind);
+    return CondCost + Ctx.TTI.getPartialReductionCost(
+                          getOpcode(), InputType, InputType, PhiType, VF,
+                          TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind);
   }
 
   VPRecipeBase *OpR = Op->getDefiningRecipe();
@@ -381,12 +390,13 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   } else if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
     HandleWiden(Widen);
   } else if (auto Reduction = dyn_cast<VPPartialReductionRecipe>(OpR)) {
-    return Reduction->computeCost(VF, Ctx);
+    return CondCost + Reduction->computeCost(VF, Ctx);
   }
   auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
-  return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
-                                         PhiType, VF, ExtAType, ExtBType,
-                                         Opcode, Ctx.CostKind);
+  return CondCost + Ctx.TTI.getPartialReductionCost(
+                        getOpcode(), InputTypeA, InputTypeB, PhiType, VF,
+                        ExtAType, ExtBType, Opcode, Ctx.CostKind);
+  ;
 }
 
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
