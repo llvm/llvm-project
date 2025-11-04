@@ -13,7 +13,7 @@
 // CHECK: @__tysan_v1_omnipotent_20char = linkonce_odr constant { i64, i64, ptr, i64, [16 x i8] } { i64 2, i64 1, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, i64 0, [16 x i8] c"omnipotent char\00" }, comdat
 // CHECK: @__tysan_v1_int = linkonce_odr constant { i64, i64, ptr, i64, [4 x i8] } { i64 2, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [4 x i8] c"int\00" }, comdat
 // CHECK: @__tysan_v1_any_20pointer = linkonce_odr constant { i64, i64, ptr, i64, [12 x i8] } { i64 2, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [12 x i8] c"any pointer\00" }, comdat
-// CHECK: @__tysan_v1_p1_20int = linkonce_odr constant { i64, i64, ptr, i64, [7 x i8] } { i64 2, i64 1, ptr @__tysan_v1_any_20pointer, i64 0, [7 x i8] c"p1 int\00" }, comdat
+// CHECK: @__tysan_v1_p1_20int = linkonce_odr constant { i64, i64, ptr, i64, [5 x i8] } { i64 2, i64 1, ptr @__tysan_v1_any_20pointer, i64 0, [5 x i8] c"int*\00" }, comdat
 // CHECK: @__tysan_v1___ZTS9CompleteS = linkonce_odr constant { i64, i64, ptr, i64, ptr, i64, [15 x i8] } { i64 2, i64 2, ptr @__tysan_v1_int, i64 0, ptr @__tysan_v1_p1_20int, i64 8, [15 x i8] c"_ZTS9CompleteS\00" }, comdat
 // CHECK: @__tysan_v1___ZTS1b = linkonce_odr constant { i64, i64, [7 x i8] } { i64 2, i64 0, [7 x i8] c"_ZTS1b\00" }, comdat
 // CHECK: @llvm.used = appending global [8 x ptr] [ptr @tysan.module_ctor, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, ptr @__tysan_v1_omnipotent_20char, ptr @__tysan_v1_int, ptr @__tysan_v1_any_20pointer, ptr @__tysan_v1_p1_20int, ptr @__tysan_v1___ZTS9CompleteS, ptr @__tysan_v1___ZTS1b], section "llvm.metadata"
