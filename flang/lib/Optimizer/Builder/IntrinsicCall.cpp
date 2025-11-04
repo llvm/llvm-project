@@ -3186,30 +3186,31 @@ IntrinsicLibrary::genAtomicAddVector(mlir::Type resultType,
   if (mlir::isa<fir::BaseBoxType>(a.getType())) {
     a = fir::BoxAddrOp::create(builder, loc, a);
   }
-  auto i32Ty = builder.getI32Type();
   auto vecTy = mlir::VectorType::get({2}, resultType);
-  mlir::Type idxTy = builder.getIndexType();
   auto refTy = fir::ReferenceType::get(resultType);
-  auto zero = builder.createIntegerConstant(loc, idxTy, 0);
-  auto one = builder.createIntegerConstant(loc, idxTy, 1);
-  auto v1Coord = fir::CoordinateOp::create(builder, loc, refTy,
-                                           fir::getBase(args[1]), zero);
-  auto v2Coord = fir::CoordinateOp::create(builder, loc, refTy,
-                                           fir::getBase(args[1]), one);
-  auto v1 = fir::LoadOp::create(builder, loc, v1Coord);
-  auto v2 = fir::LoadOp::create(builder, loc, v2Coord);
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  mlir::Value v1Coord = fir::CoordinateOp::create(builder, loc, refTy,
+                                                  fir::getBase(args[1]), zero);
+  mlir::Value v2Coord = fir::CoordinateOp::create(builder, loc, refTy,
+                                                  fir::getBase(args[1]), one);
+  mlir::Value v1 = fir::LoadOp::create(builder, loc, v1Coord);
+  mlir::Value v2 = fir::LoadOp::create(builder, loc, v2Coord);
   mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecTy);
   mlir::Value vec1 = mlir::LLVM::InsertElementOp::create(
       builder, loc, undef, v1, builder.createIntegerConstant(loc, i32Ty, 0));
   mlir::Value vec2 = mlir::LLVM::InsertElementOp::create(
       builder, loc, vec1, v2, builder.createIntegerConstant(loc, i32Ty, 1));
-  auto add = genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, vec2);
-  auto r1 = mlir::LLVM::ExtractElementOp::create(
+  mlir::Value add =
+      genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, vec2);
+  mlir::Value r1 = mlir::LLVM::ExtractElementOp::create(
       builder, loc, add, builder.createIntegerConstant(loc, i32Ty, 0));
-  auto r2 = mlir::LLVM::ExtractElementOp::create(
+  mlir::Value r2 = mlir::LLVM::ExtractElementOp::create(
       builder, loc, add, builder.createIntegerConstant(loc, i32Ty, 1));
-  auto c1 = fir::CoordinateOp::create(builder, loc, refTy, res, zero);
-  auto c2 = fir::CoordinateOp::create(builder, loc, refTy, res, one);
+  mlir::Value c1 = fir::CoordinateOp::create(builder, loc, refTy, res, zero);
+  mlir::Value c2 = fir::CoordinateOp::create(builder, loc, refTy, res, one);
   fir::StoreOp::create(builder, loc, r1, c1);
   fir::StoreOp::create(builder, loc, r2, c2);
   mlir::Value ext = builder.createIntegerConstant(loc, idxTy, 2);
