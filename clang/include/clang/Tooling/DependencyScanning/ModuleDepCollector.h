@@ -342,7 +342,8 @@ private:
   std::vector<P1689ModuleInfo> RequiredStdCXXModules;
 
   /// A pointer to the preprocessor callback so we can invoke it directly
-  /// if needed.
+  /// if needed. The callback is created and added to a Preprocessor instance by
+  /// attachToPreprocessor and the Preprocessor instance owns it.
   ModuleDepCollectorPP *CollectorPPPtr = nullptr;
 
   /// Checks whether the module is known as being prebuilt.

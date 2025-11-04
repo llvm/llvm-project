@@ -163,13 +163,13 @@ DependencyScanningTool::getModuleDependencies(
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
   if (auto Error =
-          Worker.initializeCompilerInstanceWithContext(CWD, CommandLine))
+          Worker.initializeCompilerInstanceWithContextOrError(CWD, CommandLine))
     return std::move(Error);
 
-  auto Result = Worker.computeDependenciesByNameWithContext(
+  auto Result = Worker.computeDependenciesByNameWithContextOrError(
       ModuleName, Consumer, Controller);
 
-  if (auto Error = Worker.finalizeCompilerInstanceWithContext())
+  if (auto Error = Worker.finalizeCompilerInstanceWithContextOrError())
     return std::move(Error);
 
   if (Result)
@@ -180,7 +180,7 @@ DependencyScanningTool::getModuleDependencies(
 
 llvm::Error DependencyScanningTool::initializeCompilerInstanceWithContext(
     StringRef CWD, const std::vector<std::string> &CommandLine) {
-  return Worker.initializeCompilerInstanceWithContext(CWD, CommandLine);
+  return Worker.initializeCompilerInstanceWithContextOrError(CWD, CommandLine);
 }
 
 llvm::Expected<TranslationUnitDeps>
@@ -189,7 +189,7 @@ DependencyScanningTool::computeDependenciesByNameWithContext(
     LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
-  llvm::Error Result = Worker.computeDependenciesByNameWithContext(
+  llvm::Error Result = Worker.computeDependenciesByNameWithContextOrError(
       ModuleName, Consumer, Controller);
   if (Result)
     return std::move(Result);
@@ -198,7 +198,7 @@ DependencyScanningTool::computeDependenciesByNameWithContext(
 }
 
 llvm::Error DependencyScanningTool::finalizeCompilerInstanceWithContext() {
-  return Worker.finalizeCompilerInstanceWithContext();
+  return Worker.finalizeCompilerInstanceWithContextOrError();
 }
 
 TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {

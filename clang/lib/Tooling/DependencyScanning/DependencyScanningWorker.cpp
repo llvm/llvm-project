@@ -44,6 +44,7 @@ DependencyScanningWorker::DependencyScanningWorker(
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
+DependencyActionController::~DependencyActionController() = default;
 
 llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
@@ -167,24 +168,43 @@ bool DependencyScanningWorker::computeDependencies(
   }
 }
 
-llvm::Error DependencyScanningWorker::initializeCompilerInstanceWithContext(
+llvm::Error
+DependencyScanningWorker::initializeCompilerInstanceWithContextOrError(
     StringRef CWD, const std::vector<std::string> &CommandLine) {
-  CIWithContext =
-      std::make_unique<CompilerInstanceWithContext>(*this, CWD, CommandLine);
-  return CIWithContext->initialize();
+  bool Success = initializeCompilerInstanceWithContext(CWD, CommandLine);
+  return CIWithContext->handleReturnStatus(Success);
 }
 
-llvm::Error DependencyScanningWorker::computeDependenciesByNameWithContext(
+llvm::Error
+DependencyScanningWorker::computeDependenciesByNameWithContextOrError(
+    StringRef ModuleName, DependencyConsumer &Consumer,
+    DependencyActionController &Controller) {
+  bool Success =
+      computeDependenciesByNameWithContext(ModuleName, Consumer, Controller);
+  return CIWithContext->handleReturnStatus(Success);
+}
+
+llvm::Error
+DependencyScanningWorker::finalizeCompilerInstanceWithContextOrError() {
+  bool Success = finalizeCompilerInstance();
+  return CIWithContext->handleReturnStatus(Success);
+}
+
+bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
+    StringRef CWD, const std::vector<std::string> &CommandLine,
+    DiagnosticConsumer *DC) {
+  CIWithContext =
+      std::make_unique<CompilerInstanceWithContext>(*this, CWD, CommandLine);
+  return CIWithContext->initialize(DC);
+}
+
+bool DependencyScanningWorker::computeDependenciesByNameWithContext(
     StringRef ModuleName, DependencyConsumer &Consumer,
     DependencyActionController &Controller) {
   assert(CIWithContext && "CompilerInstance with context required!");
   return CIWithContext->computeDependencies(ModuleName, Consumer, Controller);
 }
 
-llvm::Error DependencyScanningWorker::finalizeCompilerInstanceWithContext() {
-  llvm::Error E = CIWithContext->finalize();
-  CIWithContext.reset();
-  return E;
+bool DependencyScanningWorker::finalizeCompilerInstance() {
+  return CIWithContext->finalize();
 }
-
-DependencyActionController::~DependencyActionController() {}

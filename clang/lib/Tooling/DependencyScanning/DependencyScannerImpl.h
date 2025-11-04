@@ -163,6 +163,9 @@ class CompilerInstanceWithContext {
 
   // Context - Diagnostics engine.
   std::unique_ptr<TextDiagnosticsPrinterWithOutput> DiagPrinterWithOS;
+  // DiagConsumer may points to DiagPrinterWithOS->DiagPrinter, or a custom
+  // DiagnosticConsumer passed in from initialize.
+  DiagnosticConsumer *DiagConsumer = nullptr;
   std::unique_ptr<DignosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
 
   // Context - compiler invocation
@@ -191,11 +194,16 @@ public:
                               const std::vector<std::string> &CMD)
       : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
 
-  llvm::Error initialize();
-  llvm::Error computeDependencies(StringRef ModuleName,
-                                  DependencyConsumer &Consumer,
-                                  DependencyActionController &Controller);
-  llvm::Error finalize();
+  // The three methods below returns false when they fail, with the detail
+  // accumulated in DiagConsumer.
+  bool initialize(DiagnosticConsumer *DC);
+  bool computeDependencies(StringRef ModuleName, DependencyConsumer &Consumer,
+                           DependencyActionController &Controller);
+  bool finalize();
+
+  // The method below turns the return status from the above methods
+  // into an llvm::Error using a default DiagnosticConsumer.
+  llvm::Error handleReturnStatus(bool Success);
 };
 } // namespace dependencies
 } // namespace tooling

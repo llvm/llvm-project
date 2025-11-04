@@ -705,22 +705,26 @@ bool DependencyScanningAction::runInvocation(
   return Result;
 }
 
-llvm::Error CompilerInstanceWithContext::initialize() {
+bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
+  if (DC) {
+    DiagConsumer = DC;
+  } else {
+    DiagPrinterWithOS =
+        std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
+    DiagConsumer = &DiagPrinterWithOS->DiagPrinter;
+  }
+
+  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
+      CommandLine, OverlayFS, *DiagConsumer);
+
   std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
       Worker.BaseFS, CommandLine, CWD, "ScanningByName");
-
-  DiagPrinterWithOS =
-      std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
-  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
-      CommandLine, OverlayFS, DiagPrinterWithOS->DiagPrinter);
 
   std::tie(Driver, Compilation) = buildCompilation(
       CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS, Alloc);
 
-  if (!Compilation) {
-    return llvm::make_error<llvm::StringError>("Failed to build compilation",
-                                               llvm::inconvertibleErrorCode());
-  }
+  if (!Compilation)
+    return false;
 
   assert(Compilation->getJobs().size() &&
          "Must have a job list of non-zero size");
@@ -729,10 +733,7 @@ llvm::Error CompilerInstanceWithContext::initialize() {
   size_t ArgSize = CommandArgs.size();
   assert(ArgSize >= 1 && "Cannot have a command with 0 args");
   const char *FirstArg = CommandArgs[0];
-  if (StringRef(FirstArg) != "-cc1")
-    return llvm::make_error<llvm::StringError>(
-        "Incorrect compilation command, missing cc1",
-        llvm::inconvertibleErrorCode());
+  assert(StringRef(FirstArg) == "-cc1" && "Requires a cc1 job.");
   OriginalInvocation = std::make_unique<CompilerInvocation>();
 
   if (!CompilerInvocation::CreateFromArgs(
@@ -741,9 +742,7 @@ llvm::Error CompilerInstanceWithContext::initialize() {
     DiagEngineWithCmdAndOpts->DiagEngine->Report(
         diag::err_fe_expected_compiler_job)
         << llvm::join(CommandLine, " ");
-    return llvm::make_error<llvm::StringError>(
-        "Cannot create CompilerInvocation from Args",
-        llvm::inconvertibleErrorCode());
+    return false;
   }
 
   if (any(Worker.Service.getOptimizeArgs() & ScanningOptimizations::Macros))
@@ -759,18 +758,14 @@ llvm::Error CompilerInstanceWithContext::initialize() {
 
   if (!initializeScanCompilerInstance(
           CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
-          Worker.Service, Worker.DepFS)) {
-    return llvm::make_error<llvm::StringError>(
-        "Cannot initialize scanning compiler instance",
-        llvm::inconvertibleErrorCode());
-  }
+          Worker.Service, Worker.DepFS))
+    return false;
 
-  llvm::SmallVector<StringRef> StableDirs = getInitialStableDirs(CI);
+  StableDirs = getInitialStableDirs(CI);
   auto MaybePrebuiltModulesASTMap =
       computePrebuiltModulesASTMap(CI, StableDirs);
   if (!MaybePrebuiltModulesASTMap)
-    return llvm::make_error<llvm::StringError>(
-        "Prebuilt module scanning failed", llvm::inconvertibleErrorCode());
+    return false;
 
   PrebuiltModuleASTMap = std::move(*MaybePrebuiltModulesASTMap);
   OutputOpts = takeAndUpdateDependencyOutputOptionsFrom(CI);
@@ -782,12 +777,13 @@ llvm::Error CompilerInstanceWithContext::initialize() {
   // CompilerInstance::ExecuteAction to perform scanning.
   CI.createTarget();
 
-  return llvm::Error::success();
+  return true;
 }
 
-llvm::Error CompilerInstanceWithContext::computeDependencies(
+bool CompilerInstanceWithContext::computeDependencies(
     StringRef ModuleName, DependencyConsumer &Consumer,
     DependencyActionController &Controller) {
+  assert(CIPtr && "CIPtr must be initialized before calling this method");
   auto &CI = *CIPtr;
 
   // We create this cleanup object because computeDependencies may exit
@@ -800,7 +796,6 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
     CI.getPreprocessor().removePPCallbacks();
   });
 
-  CI.clearDependencyCollectors();
   auto MDC = initializeScanInstanceDependencyCollector(
       CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
       Worker.Service,
@@ -861,18 +856,25 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   CB->EndOfMainFile();
 
   if (!ModResult)
-    return llvm::make_error<llvm::StringError>(
-        DiagPrinterWithOS->DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
+    return false;
 
   CompilerInvocation ModuleInvocation(*OriginalInvocation);
   MDC->applyDiscoveredDependencies(ModuleInvocation);
   Consumer.handleBuildCommand(
       {CommandLine[0], ModuleInvocation.getCC1CommandLine()});
 
-  return llvm::Error::success();
+  return true;
 }
 
-llvm::Error CompilerInstanceWithContext::finalize() {
-  DiagPrinterWithOS->DiagPrinter.finish();
-  return llvm::Error::success();
+bool CompilerInstanceWithContext::finalize() {
+  DiagConsumer->finish();
+  return true;
+}
+
+llvm::Error CompilerInstanceWithContext::handleReturnStatus(bool Success) {
+  assert(DiagPrinterWithOS && "Must use the default DiagnosticConsumer.");
+  return Success ? llvm::Error::success()
+                 : llvm::make_error<llvm::StringError>(
+                       DiagPrinterWithOS->DiagnosticsOS.str(),
+                       llvm::inconvertibleErrorCode());
 }

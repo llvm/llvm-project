@@ -125,7 +125,7 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
-  llvm::Error initializeCompilerInstanceWithContext(
+  llvm::Error initializeCompilerInstanceWithContextOrError(
       StringRef CWD, const std::vector<std::string> &CommandLine);
 
   /// @brief Performaces dependency scanning for the module whose name is
@@ -135,14 +135,27 @@ public:
   /// @param Consumer The dependency consumer that stores the results.
   /// @param Controller The controller for the dependency scanning action.
   /// @return Error if the scanner incurs errors.
-  llvm::Error
-  computeDependenciesByNameWithContext(StringRef ModuleName,
-                                       DependencyConsumer &Consumer,
-                                       DependencyActionController &Controller);
+  llvm::Error computeDependenciesByNameWithContextOrError(
+      StringRef ModuleName, DependencyConsumer &Consumer,
+      DependencyActionController &Controller);
 
   /// @brief Finalizes the diagnostics engine and deletes the compiler instance.
   /// @return Error if errors occur during finalization.
-  llvm::Error finalizeCompilerInstanceWithContext();
+  llvm::Error finalizeCompilerInstanceWithContextOrError();
+
+  /// The three methods below provides the same functionality as the
+  /// three methods above. Instead of returning `llvm::Error`s, these
+  /// three methods return a flag to indicate if the call is successful.
+  /// The initialization function asks the client for a DiagnosticsConsumer
+  /// that it direct the diagnostics to.
+  bool initializeCompilerInstanceWithContext(
+      StringRef CWD, const std::vector<std::string> &CommandLine,
+      DiagnosticConsumer *DC = nullptr);
+  bool
+  computeDependenciesByNameWithContext(StringRef ModuleName,
+                                       DependencyConsumer &Consumer,
+                                       DependencyActionController &Controller);
+  bool finalizeCompilerInstance();
 
   llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
 
