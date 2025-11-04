@@ -2398,7 +2398,7 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
   // And finally, do it!
   LLVM_DEBUG(dbgs() << "  Threading edge from '" << PredBB->getName()
                     << "' to '" << SuccBB->getName()
-                    << ", across block:\n    " << *BB << "\n");
+                    << "', across block:\n    " << *BB << "\n");
 
   LVI->threadEdge(PredBB, BB, SuccBB);
 
