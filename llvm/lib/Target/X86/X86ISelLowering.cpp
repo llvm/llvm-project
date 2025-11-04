@@ -30983,7 +30983,6 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
                                 DAG.getConstant(0x00ff, dl, ExtVT));
     SDValue AmtHi = getTargetVShiftByConstNode(
         X86ISD::VSRLI, dl, ExtVT, DAG.getBitcast(ExtVT, Amt), 8, DAG);
-    unsigned int ShiftOp;
     switch (Opc) {
     case ISD::SHL:
       // Because we shift left, no bits from the high half can influence the low
@@ -30993,7 +30992,6 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       RLo = DAG.getBitcast(ExtVT, R);
       RHi = DAG.getNode(ISD::AND, dl, ExtVT, RLo,
                         DAG.getConstant(0xff00, dl, ExtVT));
-      ShiftOp = X86ISD::VSHLV;
       break;
     case ISD::SRL:
       // Same idea as above, but this time we need to make sure no low bits of
@@ -31001,7 +30999,6 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       RHi = DAG.getBitcast(ExtVT, R);
       RLo = DAG.getNode(ISD::AND, dl, ExtVT, RHi,
                         DAG.getConstant(0x00ff, dl, ExtVT));
-      ShiftOp = X86ISD::VSRLV;
       break;
     case ISD::SRA:
       // For arithmetic right shifts, we want to sign extend each even lane of R
@@ -31011,16 +31008,15 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       RHi = DAG.getBitcast(ExtVT, R);
       RLo = getTargetVShiftByConstNode(X86ISD::VSHLI, dl, ExtVT, RHi, 8, DAG);
       RLo = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, ExtVT, RLo, 8, DAG);
-      ShiftOp = X86ISD::VSRAV;
       break;
     default:
       llvm_unreachable("Unexpected Shift Op");
     }
 
     SDValue ShiftedLo =
-        DAG.getBitcast(VT, DAG.getNode(ShiftOp, dl, ExtVT, RLo, AmtLo));
+        DAG.getBitcast(VT, DAG.getNode(Opc, dl, ExtVT, RLo, AmtLo));
     SDValue ShiftedHi =
-        DAG.getBitcast(VT, DAG.getNode(ShiftOp, dl, ExtVT, RHi, AmtHi));
+        DAG.getBitcast(VT, DAG.getNode(Opc, dl, ExtVT, RHi, AmtHi));
 
     // To merge the shifted vectors back together, we select even lanes
     // from ShiftedLo and odd lanes from ShiftedHi.
