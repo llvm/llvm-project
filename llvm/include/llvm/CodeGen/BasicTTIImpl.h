@@ -324,13 +324,7 @@ private:
       LC = RTLIB::getSINCOSPI(ScalarVT);
       break;
     case Intrinsic::sincos:
-      // TODO: Account for sincos_stret not always using a memory operation for
-      // the out argument
-      LC = RTLIB::getSINCOS_STRET(ScalarVT);
-
-      if (getTLI()->getLibcallImpl(LC) == RTLIB::Unsupported)
-        LC = RTLIB::getSINCOS(ScalarVT);
-
+      LC = RTLIB::getSINCOS(ScalarVT);
       break;
     default:
       return std::nullopt;
