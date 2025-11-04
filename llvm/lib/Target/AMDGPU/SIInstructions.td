@@ -2701,14 +2701,6 @@ def : GCNPat<(DivergentTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
                                   $src2, /* clamp */ 0, /* op_sel */ 0)
 >;
 
-def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
-     (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
->;
-
-def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:$src2)),
-     (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), $src2), sub0))
->;
-
 } // isGFX9GFX10
 } // end True16Predicate = NotHasTrue16BitInsts
 
@@ -2737,14 +2729,6 @@ def : GCNPat<(DivergentTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
                           /* src2_modifiers */ 0,
                           (EXTRACT_SUBREG VGPR_32:$src2, lo16),
                           /* clamp */ 0, /* op_sel */ 0)>;
-
-def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
-     (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
->;
-
-def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:$src2)),
-     (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), $src2), sub0))
->;
 
 } // end True16Predicate = UseRealTrue16Insts
 
@@ -2780,14 +2764,6 @@ def : GCNPat<(DivergentTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
                                 /* src1_modifiers */ 0, $src1,
                                 /* src2_modifiers */ 0,
                                 $src2, /* clamp */ 0, /* op_sel */ 0)
->;
-
-def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
-     (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
->;
-
-def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:$src2)),
-     (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), $src2), sub0))
 >;
 
 } // end True16Predicate = UseFakeTrue16Insts
@@ -3879,6 +3855,14 @@ class PackB32Pat<Instruction inst> : GCNPat <
 >;
 }
 let SubtargetPredicate = isGFX9Plus in {
+  def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
+      (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
+  >;
+
+  def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:$src2)),
+      (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), $src2), sub0))
+  >;
+  
 let True16Predicate = NotHasTrue16BitInsts in
   def : PackB32Pat<V_PACK_B32_F16_e64>;
 
