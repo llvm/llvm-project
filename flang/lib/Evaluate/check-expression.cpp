@@ -1498,20 +1498,15 @@ public:
   }
 
   bool HavePolymorphicDifferences() const {
-    // These cases require temporary of non-polymorphic type. (For example,
-    // the actual argument could be polymorphic array of child type,
-    // while the dummy argument could be non-polymorphic array of parent
-    // type.)
     if (dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
       return false;
     }
-    auto actualType{characteristics::TypeAndShape::Characterize(actual_, fc_)};
-    if (actualType && actualType->type().IsPolymorphic() &&
-        !actualType->type().IsAssumedType() &&
-        !dummyObj_.IsPassedByDescriptor(/*isBindC*/ false)) {
-      // Not passing a descriptor, so will need to make a copy of the data
-      // with a proper type.
-      return true;
+    if (auto actualType{characteristics::TypeAndShape::Characterize(actual_, fc_)}) {
+      bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
+      bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
+      if (actualIsPolymorphic && !dummyIsPolymorphic) {
+        return true;
+      }
     }
     return false;
   }
@@ -1610,10 +1605,8 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     }
     bool actualTreatAsContiguous{isContiguousActual ||
         dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous)};
-    if (!actualTreatAsContiguous && check.DummyNeedsContiguity()) {
-      return true;
-    }
-    if (check.HavePolymorphicDifferences()) {
+    if ((!actualTreatAsContiguous || check.HavePolymorphicDifferences()) &&
+        check.DummyNeedsContiguity()) {
       return true;
     }
   } else { // Implicit interface
