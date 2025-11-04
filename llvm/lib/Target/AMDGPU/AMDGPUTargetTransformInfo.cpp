@@ -1581,7 +1581,7 @@ GCNTTIImpl::getInstructionUniformity(const Instruction &I) const {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16:
-      return InstructionUniformity::EitherOfFirstTwoOp;
+      return InstructionUniformity::AnyOfFirstTwoUseOp;
     default:
       break;
     }

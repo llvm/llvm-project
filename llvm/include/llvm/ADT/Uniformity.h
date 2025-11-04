@@ -25,8 +25,9 @@ enum class InstructionUniformity {
   /// The result values can never be assumed to be uniform.
   NeverUniform,
 
-  /// Result value can be uniform if either of first two operand are uniform.
-  EitherOfFirstTwoOp
+  /// Result value can be uniform if any of the first two use operand are
+  /// uniform.
+  AnyOfFirstTwoUseOp
 };
 
 } // namespace llvm
