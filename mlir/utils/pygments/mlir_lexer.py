@@ -31,79 +31,69 @@ class MlirLexer(RegexLexer):
         "root": [
             # Comments
             (r"//.*?$", Comment.Single),
-
             # Attribute alias definition:  #name =
-            (r"^\s*(#[_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
-             bygroups(Name.Constant, Text, Operator)),
-
+            (
+                r"^\s*(#[_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
+                bygroups(Name.Constant, Text, Operator),
+            ),
             # Type alias definition: !name =
-            (r"^\s*(![_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
-             bygroups(Keyword.Type, Text, Operator)),
-
+            (
+                r"^\s*(![_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
+                bygroups(Keyword.Type, Text, Operator),
+            ),
             # SSA values (results, uses) - allow many characters MLIR uses
             (r"%[%_A-Za-z0-9\.\$:\-]+", Name.Variable),
-
             # attribute refs, constants and named attributes
             (r"#[_A-Za-z0-9\$\-\.]+\b", Name.Constant),
-
             # symbol refs / function-like names
             (r"@[_A-Za-z][_A-Za-z0-9\$\-\.]*\b", Name.Function),
-
             # blocks
             (r"\^[A-Za-z0-9_\$\.\-]+", Name.Label),
-
             # types by exclamation or builtin names
             (r"![_A-Za-z0-9\$\-\.]+\b", Keyword.Type),
             (r"\b(bf16|f16|f32|f64|f80|f128|index|none|(u|s)?i[0-9]+)\b", Keyword.Type),
-
             # container-like dialect types (tensor<...>, memref<...>, vector<...>)
-            (r"\b(complex|memref|tensor|tuple|vector)\s*(<)", bygroups(Keyword.Type, Punctuation), 'angled-type'),
-
+            (
+                r"\b(complex|memref|tensor|tuple|vector)\s*(<)",
+                bygroups(Keyword.Type, Punctuation),
+                "angled-type",
+            ),
             # affine constructs
             (r"\b(affine_map|affine_set)\b", Keyword.Reserved),
-
             # common builtin operators / functions inside affine_map
             (r"\b(ceildiv|floordiv|mod|symbol)\b", Name.Builtin),
-
             # operation definitions with assignment: %... = op.name
-            (r"^\s*(%[\%_A-Za-z0-9\:\,\s]+)\s*(=)\s*([A-Za-z0-9_\.\$\-]+)\b",
-             bygroups(Name.Variable, Operator, Name.Function)),
-
+            (
+                r"^\s*(%[\%_A-Za-z0-9\:\,\s]+)\s*(=)\s*([A-Za-z0-9_\.\$\-]+)\b",
+                bygroups(Name.Variable, Operator, Name.Function),
+            ),
             # operation name without result
             (r"^\s*([A-Za-z0-9_\.\$\-]+)\b(?=[^<:])", Name.Function),
-
             # identifiers / bare words
             (r"\b[_A-Za-z][_A-Za-z0-9\.-]*\b", Name.Other),
-
             # numbers: hex, float (with exponent), integer
             (r"\b0x[0-9A-Fa-f]+\b", Number.Hex),
             (r"\b([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?\b", Number.Float),
             (r"\b[0-9]+\b", Number.Integer),
-
             # strings
-            (r'"', String.Double, 'string'),
-
+            (r'"', String.Double, "string"),
             # punctuation and arrow-like tokens
             (r"->|>=|<=|\>=|\<=|\->|\=>", Operator),
             (r"[()\[\]{}<>,.:=]", Punctuation),
-
             # operators
             (r"[-+*/%]", Operator),
         ],
-
         # string state with common escapes
-        'string': [
+        "string": [
             (r'\\[ntr"\\]', String.Escape),
             (r'[^"\\]+', String.Double),
-            (r'"', String.Double, '#pop'),
+            (r'"', String.Double, "#pop"),
         ],
-
         # angled-type content (simple nested handling)
-        'angled-type': [
+        "angled-type": [
             # match nested '<' and '>'
-            (r"<", Punctuation, '#push'),
-            (r">", Punctuation, '#pop'),
-
+            (r"<", Punctuation, "#push"),
+            (r">", Punctuation, "#pop"),
             # dimensions like 3x or 3x3x... and standalone numbers:
             # - match numbers that are followed by an 'x' (dimension separator)
             (r"([0-9]+)(?=(?:[xX]))", Number.Integer),
@@ -111,20 +101,20 @@ class MlirLexer(RegexLexer):
             (r"[0-9]+", Number.Integer),
             # dynamic dimension '?'
             (r"\?", Name.Constant),
-
             # the 'x' dimension separator (treat as punctuation)
             (r"[xX]", Punctuation),
-
             # element / builtin types inside angle brackets (no word-boundary)
-            (r"(?:bf16|f16|f32|f64|f80|f128|index|none|(?:[us]?i[0-9]+))",
-            Keyword.Type),
-
+            (
+                r"(?:bf16|f16|f32|f64|f80|f128|index|none|(?:[us]?i[0-9]+))",
+                Keyword.Type,
+            ),
             # also allow nested container-like types to be recognized
-            (r"\b(complex|memref|tensor|tuple|vector)\s*(<)",
-            bygroups(Keyword.Type, Punctuation), 'angled-type'),
-
+            (
+                r"\b(complex|memref|tensor|tuple|vector)\s*(<)",
+                bygroups(Keyword.Type, Punctuation),
+                "angled-type",
+            ),
             # fall back to root rules for anything else
-            include('root'),
+            include("root"),
         ],
-
     }
