@@ -997,8 +997,11 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       // Iterate over the outputs of the producer and over the loop bbArgs and
       // check if any bbArg points to the same value as the producer output. In
       // such case, make the producer output point to the bbArg directly.
-      for (OpOperand &initOperandPtr :
-           cast<DestinationStyleOpInterface>(clone).getDpsInitsMutable()) {
+      auto dpsInterface = dyn_cast<DestinationStyleOpInterface>(clone);
+      if (!dpsInterface)
+        return;
+
+      for (OpOperand &initOperandPtr : dpsInterface.getDpsInitsMutable()) {
         Value producerOperand =
             clone->getOperand(initOperandPtr.getOperandNumber());
         for (BlockArgument containerIterArg :
