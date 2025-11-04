@@ -243,10 +243,10 @@ enum EdgeKind_systemz : Edge::Kind {
   ///     an out-of-range error will be returned.
   RequestGOTAndTransformToDelta16FromGOT,
 
-  /// A 32-bit PC-relative branch.
+  /// A 32-bit PC rel. PLT shifted by 1.
   ///
-  /// Represents a PC-relative call or branch to a target. This can be used to
-  /// identify, record, and/or patch call sites.
+  /// Delta from the fixup to the target. This will lead to creation of a
+  /// PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend) >> 1 : int32
@@ -259,7 +259,10 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT32dbl,
 
-  /// A 24-bit PC-relative branch.
+  /// A 24-bit PC rel. PLT shifted by 1.
+  ///
+  /// Delta from the fixup to the target. This will lead to creation of a
+  /// PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend) >> 1 : int24
@@ -272,7 +275,10 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT24dbl,
 
-  /// A 16-bit PC-relative branch.
+  /// A 16-bit  PC rel. PLT shifted by 1.
+  ///
+  /// Delta from the fixup to the target. This will lead to creation of a
+  /// PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend) >> 1 : int16
@@ -285,7 +291,10 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT16dbl,
 
-  /// A 12-bit PC-relative branch.
+  /// A 12-bit PC rel. PLT shifted by 1.
+  ///
+  /// Delta from the fixup to the target. This will lead to creation of a
+  /// PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend) >> 1 : int12
@@ -298,14 +307,20 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT12dbl,
 
-  /// A 64-bit PC-relative PLT address.
+  /// A 64-bit PC rel. PLT address.
+  ///
+  /// Delta from the fixup to the target. This will lead to creation of a
+  /// PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- Target - Fixup + Addend : int64
   ///
   DeltaPLT64,
 
-  /// A 32-bit PC-relative PLT address.
+  /// A 32-bit PC rel. PLT address.
+  ///
+  /// Delta from the fixup to the target. This will lead to creation of a
+  /// PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- Target - Fixup + Addend : int32
@@ -316,24 +331,10 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT32,
 
-  /// A 32-bit PC-relative branch to a pointer jump stub.
-  /// Create a jump stub block that jumps via the pointer at the given symbol.
-  ///
-  /// Stub Content:
-  ///   lgrl %r1, ptr
-  ///   j     %r1
-  ///
-  ///  Fixup expression at offset 2 of branch Instruction:
-  ///    Fixup <- (Target - Fixup + Addend) >> 1 : int32
-  ///
-  ///  Errors:
-  ///   - The result of the fixup expression before shifting right by 1 must
-  ///     fit into an int33, otherwise an out-of-range error will be returned.
-  ///     an out-of-range error will be returned.
-  ///
-  Branch32dblToStub,
-
   /// A 64-bit offset from GOT to PLT.
+  ///
+  /// Delta from the fixup to the target. This will lead to creation of a
+  /// PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- Target - GOTBase + Addend : int64
@@ -357,6 +358,19 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT32FromGOT,
 
+  /// A 20-bit offset from GOT to PLT.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - GOTBase + Addend : int20
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
+  ///     symbol was not been defined.
+  ///   - The result of the fixup expression must fit into an int16, otherwise
+  ///     an out-of-range error will be returned.
+  ///
+  DeltaPLT20FromGOT,
+
   /// A 16-bit offset from GOT to PLT.
   ///
   /// Fixup expression:
@@ -370,57 +384,7 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT16FromGOT,
 
-  /// A 64-bit GOT offset.
-  ///
-  /// Fixup expression:
-  ///   Fixup <- Target - GOTBase + Addend : int64
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
-  ///     symbol was not been defined.
-  ///
-  RequestGOTAndTransformToDelta64,
-
-  /// A 32-bit GOT offset.
-  ///
-  /// Fixup expression:
-  ///   Fixup <- Target - GOTBase + Addend : int32
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
-  ///     symbol was not been defined.
-  ///   - The result of the fixup expression must fit into an int32, otherwise
-  ///     an out-of-range error will be returned.
-  ///
-  RequestGOTAndTransformToDelta32,
-
-  /// A 20-bit GOT offset.
-  ///
-  /// Fixup expression:
-  ///   Fixup <- Target - GOTBase + Addend : int20
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
-  ///     symbol was not been defined.
-  ///   - The result of the fixup expression must fit into an int20, otherwise
-  ///     an out-of-range error will be returned.
-  ///
-  RequestGOTAndTransformToDelta20,
-
-  /// A 16-bit GOT offset.
-  ///
-  /// Fixup expression:
-  ///   Fixup <- Target - GOTBase + Addend : int16
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
-  ///     symbol was not been defined.
-  ///   - The result of the fixup expression must fit into an int16, otherwise
-  ///     an out-of-range error will be returned.
-  ///
-  RequestGOTAndTransformToDelta16,
-
-  /// A 12-bit GOT offset.
+  /// A 12-bit offset from GOT to PLT.
   ///
   /// Fixup expression:
   ///   Fixup <- Target - GOTBase + Addend : int12
@@ -428,10 +392,130 @@ enum EdgeKind_systemz : Edge::Kind {
   /// Errors:
   ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
   ///     symbol was not been defined.
-  ///   - The result of the fixup expression must fit into an int12, otherwise
+  ///   - The result of the fixup expression must fit into an int16, otherwise
   ///     an out-of-range error will be returned.
   ///
+  DeltaPLT12FromGOT,
+
+  /// A GOT entry getter/constructor, transformed to Delta64 pointing at the GOT
+  /// entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToDelta64,
+
+  /// A GOT entry getter/constructor, transformed to Delta32 pointing at the GOT
+  /// entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToDelta32,
+
+  /// A GOT entry getter/constructor, transformed to Delta20 pointing at the GOT
+  /// entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToDelta20,
+
+  /// A GOT entry getter/constructor, transformed to Delta16 pointing at the GOT
+  /// entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToDelta16,
+
+  /// A GOT entry getter/constructor, transformed to Delta12 pointing at the GOT
+  /// entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
   RequestGOTAndTransformToDelta12,
+
+  /// A GOT entry getter/constructor, transformed to Delta32 pointing at the GOT
+  /// entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToDelta32dbl,
 
   /// A 32-bit PC rel. offset to GOT.
   ///
@@ -444,7 +528,7 @@ enum EdgeKind_systemz : Edge::Kind {
   ///   - The result of the fixup expression must fit into an int32, otherwise
   ///     an out-of-range error will be returned.
   ///
-  RequestGOTAndTransformToDelta32GOTBase,
+  Delta32GOTBase,
 
   /// A 32-bit PC rel. offset to GOT shifted by 1.
   ///
@@ -459,20 +543,7 @@ enum EdgeKind_systemz : Edge::Kind {
   ///   - The result of the fixup expression  before shifting right by 1 must
   ///     be multiple of 2, otherwise an alignment error will be returned.
   ///
-  RequestGOTAndTransformToDelta32GOTBasedbl,
-
-  /// A 32-bit PC rel. to GOT entry >> 1.
-  ///
-  /// Fixup expression:
-  ///   Fixup <- (Target - Fixup + Addend) >> 1 : int32
-  ///
-  /// Errors:
-  ///   - The result of the fixup expression before shifting right by 1 must
-  ///     fit into an int33, otherwise an out-of-range error will be returned.
-  ///   - The result of the fixup expression  before shifting right by 1 must
-  ///     be multiple of 2, otherwise an alignment error will be returned.
-  ///
-  RequestGOTAndTransformToDelta32dbl,
+  Delta32dblGOTBase,
 
 };
 
@@ -547,12 +618,14 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     *(uint8_t *)FixupPtr = Value;
     break;
   }
-  case Delta64: {
+  case Delta64:
+  case DeltaPLT64: {
     int64_t Value = S + A - P;
     write64be(FixupPtr, Value);
     break;
   }
-  case Delta32: {
+  case Delta32:
+  case DeltaPLT32: {
     int64_t Value = S + A - P;
     if (!LLVM_UNLIKELY(isInt<32>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
@@ -573,85 +646,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     write32be(FixupPtr, Value);
     break;
   }
-  case Delta32dbl: {
-    int64_t Value = (S + A - P);
-    if (!LLVM_UNLIKELY(isInt<33>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
-      return makeAlignmentError(FixupAddress, Value, 2, E);
-    write32be(FixupPtr, Value >> 1);
-    break;
-  }
-  case Delta24dbl: {
-    int64_t Value = (S + A - P);
-    if (!LLVM_UNLIKELY(isInt<25>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
-      return makeAlignmentError(FixupAddress, Value, 2, E);
-    FixupPtr[0] = Value >> 17;
-    FixupPtr[1] = Value >> 9;
-    FixupPtr[2] = Value >> 1;
-    break;
-  }
-  case Delta16dbl: {
-    int64_t Value = (S + A - P);
-    if (!LLVM_UNLIKELY(isInt<17>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
-      return makeAlignmentError(FixupAddress, Value, 2, E);
-    write16be(FixupPtr, Value >> 1);
-    break;
-  }
-  case Delta12dbl: {
-    int64_t Value = (S + A - P);
-    if (!LLVM_UNLIKELY(isInt<13>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
-      return makeAlignmentError(FixupAddress, Value, 2, E);
-    write16be(FixupPtr,
-              (read16be(FixupPtr) & 0xF000) | ((Value >> 1) & 0x0FFF));
-    break;
-  }
-  case RequestGOTAndTransformToDelta64FromGOT: {
-    assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = S - GOTBase + A;
-    write64be(FixupPtr, Value);
-    break;
-  }
-  case RequestGOTAndTransformToDelta32FromGOT: {
-    assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = S - GOTBase + A;
-    if (!LLVM_UNLIKELY(isInt<32>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    write32be(FixupPtr, Value);
-    break;
-  }
-  case RequestGOTAndTransformToDelta16FromGOT: {
-    assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = S - GOTBase + A;
-    if (!LLVM_UNLIKELY(isInt<16>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    write16be(FixupPtr, Value);
-    break;
-  }
-  case RequestGOTAndTransformToDelta32GOTBase: {
-    assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = GOTBase + A - P;
-    if (!LLVM_UNLIKELY(isInt<32>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    write32be(FixupPtr, Value);
-    break;
-  }
-  case RequestGOTAndTransformToDelta32GOTBasedbl: {
-    assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = (GOTBase + A - P);
-    if (!LLVM_UNLIKELY(isInt<33>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
-      return makeAlignmentError(FixupAddress, Value, 2, E);
-    write32be(FixupPtr, Value >> 1);
-    break;
-  }
+  case Delta32dbl:
   case DeltaPLT32dbl: {
     int64_t Value = (S + A - P);
     if (!LLVM_UNLIKELY(isInt<33>(Value)))
@@ -661,15 +656,19 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     write32be(FixupPtr, Value >> 1);
     break;
   }
+  case Delta24dbl:
   case DeltaPLT24dbl: {
     int64_t Value = (S + A - P);
     if (!LLVM_UNLIKELY(isInt<25>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
+    if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
+      return makeAlignmentError(FixupAddress, Value, 2, E);
     FixupPtr[0] = Value >> 17;
     FixupPtr[1] = Value >> 9;
     FixupPtr[2] = Value >> 1;
     break;
   }
+  case Delta16dbl:
   case DeltaPLT16dbl: {
     int64_t Value = (S + A - P);
     if (!LLVM_UNLIKELY(isInt<17>(Value)))
@@ -679,6 +678,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     write16be(FixupPtr, Value >> 1);
     break;
   }
+  case Delta12dbl:
   case DeltaPLT12dbl: {
     int64_t Value = (S + A - P);
     if (!LLVM_UNLIKELY(isInt<13>(Value)))
@@ -689,16 +689,22 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
               (read16be(FixupPtr) & 0xF000) | ((Value >> 1) & 0x0FFF));
     break;
   }
-  case DeltaPLT64: {
-    int64_t Value = (S + A - P);
-    write64be(FixupPtr, Value);
-    break;
-  }
-  case DeltaPLT32: {
-    int64_t Value = (S + A - P);
+  case Delta32GOTBase: {
+    assert(GOTSymbol && "No GOT section symbol");
+    int64_t Value = GOTBase + A - P;
     if (!LLVM_UNLIKELY(isInt<32>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
     write32be(FixupPtr, Value);
+    break;
+  }
+  case Delta32dblGOTBase: {
+    assert(GOTSymbol && "No GOT section symbol");
+    int64_t Value = (GOTBase + A - P);
+    if (!LLVM_UNLIKELY(isInt<33>(Value)))
+      return makeTargetOutOfRangeError(G, B, E);
+    if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
+      return makeAlignmentError(FixupAddress, Value, 2, E);
+    write32be(FixupPtr, Value >> 1);
     break;
   }
   case DeltaPLT64FromGOT: {
@@ -723,38 +729,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     write16be(FixupPtr, Value);
     break;
   }
-  case Branch32dblToStub: {
-    int64_t Value = (S + A - P);
-    if (!LLVM_UNLIKELY(isInt<33>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    char *AddrToPatch = FixupPtr + 2;
-    write32be(AddrToPatch, Value >> 1);
-    break;
-  }
-  case RequestGOTAndTransformToDelta32dbl: {
-    int64_t Value = (S + A - P);
-    if (!LLVM_UNLIKELY(isInt<33>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
-      return makeAlignmentError(FixupAddress, Value, 2, E);
-    write32be(FixupPtr, Value >> 1);
-    break;
-  }
-  case RequestGOTAndTransformToDelta64: {
-    assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = S - GOTBase + A;
-    write64be(FixupPtr, Value);
-    break;
-  }
-  case RequestGOTAndTransformToDelta32: {
-    assert(GOTSymbol && "No GOT section symbol");
-    uint64_t Value = S - GOTBase + A;
-    if (!LLVM_UNLIKELY(isUInt<32>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    write32be(FixupPtr, Value);
-    break;
-  }
-  case RequestGOTAndTransformToDelta20: {
+  case DeltaPLT20FromGOT: {
     assert(GOTSymbol && "No GOT section symbol");
     uint64_t Value = S - GOTBase + A;
     if (!LLVM_UNLIKELY(isInt<20>(Value)))
@@ -763,15 +738,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                             ((Value & 0xFFF) << 16) | ((Value & 0xFF000) >> 4));
     break;
   }
-  case RequestGOTAndTransformToDelta16: {
-    assert(GOTSymbol && "No GOT section symbol");
-    uint64_t Value = S - GOTBase + A;
-    if (!LLVM_UNLIKELY(isUInt<16>(Value)))
-      return makeTargetOutOfRangeError(G, B, E);
-    write16be(FixupPtr, Value);
-    break;
-  }
-  case RequestGOTAndTransformToDelta12: {
+  case DeltaPLT12FromGOT: {
     assert(GOTSymbol && "No GOT section symbol");
     uint64_t Value = S - GOTBase + A;
     if (!LLVM_UNLIKELY(isUInt<12>(Value)))
@@ -832,7 +799,7 @@ inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
                                          Symbol &PointerSymbol) {
   auto &B = G.createContentBlock(StubSection, getStubBlockContent(G),
                                  orc::ExecutorAddr(), 8, 0);
-  B.addEdge(Branch32dblToStub, 0, PointerSymbol, 0);
+  B.addEdge(Delta32dbl, 0, PointerSymbol, 0);
   return B;
 }
 
@@ -859,16 +826,28 @@ public:
     Edge::Kind KindToSet = Edge::Invalid;
     switch (E.getKind()) {
     case systemz::RequestGOTAndTransformToDelta12:
+      KindToSet = systemz::DeltaPLT12FromGOT;
+      break;
     case systemz::RequestGOTAndTransformToDelta16:
-    case systemz::RequestGOTAndTransformToDelta20:
-    case systemz::RequestGOTAndTransformToDelta32:
-    case systemz::RequestGOTAndTransformToDelta64:
     case systemz::RequestGOTAndTransformToDelta16FromGOT:
+      KindToSet = systemz::DeltaPLT16FromGOT;
+      break;
+    case systemz::RequestGOTAndTransformToDelta20:
+      KindToSet = systemz::DeltaPLT20FromGOT;
+      break;
+    case systemz::RequestGOTAndTransformToDelta32:
     case systemz::RequestGOTAndTransformToDelta32FromGOT:
+      KindToSet = systemz::DeltaPLT32FromGOT;
+      break;
+    case systemz::RequestGOTAndTransformToDelta64:
     case systemz::RequestGOTAndTransformToDelta64FromGOT:
-    case systemz::RequestGOTAndTransformToDelta32GOTBase:
-    case systemz::RequestGOTAndTransformToDelta32GOTBasedbl:
+      KindToSet = systemz::DeltaPLT64FromGOT;
+      break;
     case systemz::RequestGOTAndTransformToDelta32dbl:
+      KindToSet = systemz::DeltaPLT32dbl;
+      break;
+    case systemz::Delta32GOTBase:
+    case systemz::Delta32dblGOTBase:
       KindToSet = E.getKind();
       break;
     default:
@@ -881,6 +860,7 @@ public:
              << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
              << formatv("{0:x}", E.getOffset()) << ")\n";
     });
+    E.setKind(KindToSet);
     E.setTarget(getEntryForTarget(G, E.getTarget()));
     return true;
   }

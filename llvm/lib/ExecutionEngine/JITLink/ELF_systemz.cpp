@@ -314,11 +314,11 @@ private:
       break;
     }
     case ELF::R_390_GOTPC: {
-      Kind = systemz::RequestGOTAndTransformToDelta32GOTBase;
+      Kind = systemz::Delta32GOTBase;
       break;
     }
     case ELF::R_390_GOTPCDBL: {
-      Kind = systemz::RequestGOTAndTransformToDelta32GOTBasedbl;
+      Kind = systemz::Delta32dblGOTBase;
       break;
     }
     case ELF::R_390_GOTENT:

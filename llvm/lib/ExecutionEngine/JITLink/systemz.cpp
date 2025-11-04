@@ -100,10 +100,10 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "RequestGOTAndTransformToDelta16";
   case RequestGOTAndTransformToDelta12:
     return "RequestGOTAndTransformToDelta12";
-  case RequestGOTAndTransformToDelta32GOTBase:
-    return "RequestGOTAndTransformToDelta32GOTBase";
-  case RequestGOTAndTransformToDelta32GOTBasedbl:
-    return "RequestGOTAndTransformToDelta32GOTBasedbl";
+  case Delta32GOTBase:
+    return "Delta32GOTBase";
+  case Delta32dblGOTBase:
+    return "Delta32dblGOTBase";
   default:
     return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
   }
