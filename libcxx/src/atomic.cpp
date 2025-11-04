@@ -129,7 +129,7 @@ static void* win32_get_synch_api_function(const char* function_name) {
   // Attempt to locate the function in the API and return the result to the caller. Note that the NULL return from this
   // method is documented as being interchangeable with nullptr.
   // https://devblogs.microsoft.com/oldnewthing/20180307-00/?p=98175
-  return GetProcAddress(module_handle.get(), function_name);
+  return reinterpret_cast<void*>(GetProcAddress(module_handle, function_name));
 }
 
 static void
