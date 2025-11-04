@@ -825,30 +825,43 @@ public:
 private:
   static_assert(CHAR_BIT == 8, "This implementation assumes that one byte contains 8 bits");
 
-#  ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-
+  // Attribute 'packed' is used to keep the layout compatible with the
+  // previous definition that did not use bit fields. This is because on
+  // some platforms bit fields have a default size rather than the actual
+  // size used, e.g., it is 4 bytes on AIX. See D128285 for details.
   struct __long {
     __long() = default;
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __long(__alloc_result __alloc, size_type __size)
-        : __data_(__alloc.ptr), __size_(__size), __cap_(__alloc.count / __endian_factor), __is_long_(true) {
-      _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__alloc.count), "Long capacity should always be larger than the SSO");
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __long(_Allocator& __alloc, size_type __size)
+        : __is_long_(true), __size_(__size) {
+      _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__size), "Long capacity should always be larger than the SSO");
+      auto __allocation = std::__allocate_at_least(__alloc, __recommend(__size) + 1);
+
+      __cap_  = __allocation.count / __endian_factor;
+      __data_ = __allocation.ptr;
+
+      if (__libcpp_is_constant_evaluated()) {
+        for (size_type __i = 0; __i != __allocation.count; ++__i)
+          std::__construct_at(std::addressof(__allocation.ptr[__i]));
+      }
     }
 
+#  ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
     pointer __data_;
     size_type __size_;
-    size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
+    size_type __cap_     : sizeof(size_type) * CHAR_BIT - 1;
     size_type __is_long_ : 1;
+#  else
+    struct _LIBCPP_PACKED {
+      size_type __is_long_ : 1;
+      size_type __cap_     : sizeof(size_type) * CHAR_BIT - 1;
+    };
+    size_type __size_;
+    pointer __data_;
+#  endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
   };
 
   enum { __min_cap = (sizeof(__long) - 1) / sizeof(value_type) > 2 ? (sizeof(__long) - 1) / sizeof(value_type) : 2 };
-
-  struct __short {
-    value_type __data_[__min_cap];
-    _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
-    unsigned char __size_    : 7;
-    unsigned char __is_long_ : 1;
-  };
 
   // The __endian_factor is required because the field we use to store the size
   // has one fewer bit than it would if it were not a bitfield.
@@ -862,42 +875,22 @@ private:
   // If the MSB is used for the short-flag, the max_size() is numeric_limits<size_type>::max() / 2.
   // This does not impact the short string representation, since we never need the MSB
   // for representing the size of a short string anyway.
-
-#    ifdef _LIBCPP_BIG_ENDIAN
+#if defined(_LIBCPP_BIG_ENDIAN) == defined(_LIBCPP_ABI_ALTERNATE_STRING_LAYOUT)
   static const size_type __endian_factor = 2;
-#    else
+#else
   static const size_type __endian_factor = 1;
-#    endif
+#endif
 
-#  else // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+#  ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
-#    ifdef _LIBCPP_BIG_ENDIAN
-  static const size_type __endian_factor = 1;
-#    else
-  static const size_type __endian_factor = 2;
-#    endif
-
-  // Attribute 'packed' is used to keep the layout compatible with the
-  // previous definition that did not use bit fields. This is because on
-  // some platforms bit fields have a default size rather than the actual
-  // size used, e.g., it is 4 bytes on AIX. See D128285 for details.
-  struct __long {
-    __long() = default;
-
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __long(__alloc_result __alloc, size_type __size)
-        : __is_long_(true), __cap_(__alloc.count / __endian_factor), __size_(__size), __data_(__alloc.ptr) {
-      _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__alloc.count), "Long capacity should always be larger than the SSO");
-    }
-
-    struct _LIBCPP_PACKED {
-      size_type __is_long_ : 1;
-      size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
-    };
-    size_type __size_;
-    pointer __data_;
+  struct __short {
+    value_type __data_[__min_cap];
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
+    unsigned char __size_    : 7;
+    unsigned char __is_long_ : 1;
   };
 
-  enum { __min_cap = (sizeof(__long) - 1) / sizeof(value_type) > 2 ? (sizeof(__long) - 1) / sizeof(value_type) : 2 };
+#  else // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
   struct __short {
     struct _LIBCPP_PACKED {
@@ -2255,19 +2248,6 @@ private:
   // These functions are only responsible for managing the buffer itself, not the value inside the buffer. As such,
   // none of these facilities ensure that there is a null terminator at `data()[size()]`.
 
-  // Allocate a buffer of __capacity size with __alloc and return it
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX20 __long
-  __allocate_long_buffer(_Allocator& __alloc, size_type __capacity) {
-    auto __buffer = std::__allocate_at_least(__alloc, __recommend(__capacity) + 1);
-
-    if (__libcpp_is_constant_evaluated()) {
-      for (size_type __i = 0; __i != __buffer.count; ++__i)
-        std::__construct_at(std::addressof(__buffer.ptr[__i]));
-    }
-
-    return __long(__buffer, __capacity);
-  }
-
   // Replace the current buffer with __new_rep. Deallocate the old long buffer if it exists.
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __reset_internal_buffer(__rep __new_rep = __short()) {
     __annotate_delete();
@@ -2290,7 +2270,7 @@ private:
       __annotate_new(__size);
       return __get_short_pointer();
     } else {
-      __rep_.__l = __allocate_long_buffer(__alloc_, __size);
+      __rep_ = __long(__alloc_, __size);
       __annotate_new(__size);
       return __get_long_pointer();
     }
@@ -2447,7 +2427,7 @@ private:
         __annotate_delete();
         auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
         auto __alloc = __str.__alloc_;
-        __reset_internal_buffer(__allocate_long_buffer(__alloc, __str.size()));
+        __reset_internal_buffer(__long(__alloc, __str.size()));
         __alloc_ = std::move(__alloc);
       }
     }
@@ -2700,8 +2680,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
   __annotate_delete();
-  auto __guard    = std::__make_scope_guard(__annotate_new_size(*this));
-  __long __buffer = __allocate_long_buffer(__alloc_, __cap);
+  auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
+  __long __buffer(__alloc_, __cap);
   if (__n_copy != 0)
     traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
   if (__n_add != 0)
@@ -2737,7 +2717,7 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
   pointer __old_p = __get_pointer();
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
-  __long __buffer = __allocate_long_buffer(__alloc_, __cap);
+  __long __buffer(__alloc_, __cap);
   if (__n_copy != 0)
     traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
   size_type __sec_cp_sz = __old_sz - __n_del - __n_copy;
@@ -3394,7 +3374,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::re
     return;
 
   __annotation_guard __g(*this);
-  __long __buffer  = __allocate_long_buffer(__alloc_, __requested_capacity);
+  __long __buffer(__alloc_, __requested_capacity);
   __buffer.__size_ = size();
   traits_type::copy(std::__to_address(__buffer.__data_), data(), __buffer.__size_ + 1);
   __reset_internal_buffer(__buffer);
@@ -3425,7 +3405,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
   try {
 #  endif // _LIBCPP_HAS_EXCEPTIONS
     __annotation_guard __g(*this);
-    __long __buffer = __allocate_long_buffer(__alloc_, __size);
+    __long __buffer(__alloc_, __size);
 
     // The Standard mandates shrink_to_fit() does not increase the capacity.
     // With equal capacity keep the existing buffer. This avoids extra work
