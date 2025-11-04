@@ -16588,24 +16588,27 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                          DAG.getConstant(Shift, DL, VT));
     }
 
-    // 3/5/9 * 3/5/9 -> (shXadd (shYadd X, X), (shYadd X, X))
-    // 2/4/8 * 3/5/9 + 1 -> (shXadd (shYadd X, X), X)
-    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt))
-      return V;
+    // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
+    // of 25 which happen to be quite common.
+    // (2/4/8 * 3/5/9 + 1) * 2^N
+    Shift = llvm::countr_zero(MulAmt);
+    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt >> Shift)) {
+      if (Shift == 0)
+        return V;
+      SDLoc DL(N);
+      return DAG.getNode(ISD::SHL, DL, VT, V, DAG.getConstant(Shift, DL, VT));
+    }
 
     // If this is a power 2 + 2/4/8, we can use a shift followed by a single
     // shXadd. First check if this a sum of two power of 2s because that's
     // easy. Then count how many zeros are up to the first bit.
-    if (isPowerOf2_64(MulAmt & (MulAmt - 1))) {
-      unsigned ScaleShift = llvm::countr_zero(MulAmt);
-      if (ScaleShift >= 1 && ScaleShift < 4) {
-        unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
-        SDLoc DL(N);
-        SDValue Shift1 =
-            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                           DAG.getTargetConstant(ScaleShift, DL, VT), Shift1);
-      }
+    if (Shift >= 1 && Shift <= 3 && isPowerOf2_64(MulAmt & (MulAmt - 1))) {
+      unsigned ShiftAmt = llvm::countr_zero((MulAmt & (MulAmt - 1)));
+      SDLoc DL(N);
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                         DAG.getTargetConstant(Shift, DL, VT), Shift1);
     }
 
     // TODO: 2^(C1>3) * 3,5,9 +/- 1
@@ -16639,15 +16642,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                         DAG.getTargetConstant(Log2_64(Offset - 1), DL, VT), X);
         return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
       }
-    }
-
-    // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
-    // of 25 which happen to be quite common.
-    // (2/4/8 * 3/5/9 + 1) * 2^N
-    Shift = llvm::countr_zero(MulAmt);
-    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt >> Shift)) {
-      SDLoc DL(N);
-      return DAG.getNode(ISD::SHL, DL, VT, V, DAG.getConstant(Shift, DL, VT));
     }
   }
 
