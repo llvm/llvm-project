@@ -55,6 +55,10 @@ static StringRef knownBundleName(unsigned BundleTagID) {
     return "convergencectrl";
   case LLVMContext::OB_align:
     return "align";
+  case LLVMContext::OB_fp_round:
+    return "fp.round";
+  case LLVMContext::OB_fp_except:
+    return "fp.except";
   default:
     llvm_unreachable("unknown bundle id");
   }
@@ -83,6 +87,16 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
         pImpl->getOrInsertBundleTag(knownBundleName(BundleTagID));
     assert(Entry->second == BundleTagID && "operand bundle id drifted!");
   }
+
+  auto *RoundingEntry = pImpl->getOrInsertBundleTag("fp.round");
+  assert(RoundingEntry->second == LLVMContext::OB_fp_round &&
+         "fp.round operand bundle id drifted!");
+  (void)RoundingEntry;
+
+  auto *ExceptionEntry = pImpl->getOrInsertBundleTag("fp.except");
+  assert(ExceptionEntry->second == LLVMContext::OB_fp_except &&
+         "fp.except operand bundle id drifted!");
+  (void)ExceptionEntry;
 
   SyncScope::ID SingleThreadSSID =
       pImpl->getOrInsertSyncScopeID("singlethread");
