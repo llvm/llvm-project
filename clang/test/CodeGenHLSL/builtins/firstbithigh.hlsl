@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
-// RUN:   -fnative-int16-type -emit-llvm -o - | FileCheck %s -DTARGET=dx --check-prefixes=CHECK,DXCHECK
+// RUN:   -fnative-int16-type -emit-llvm -o - | FileCheck %s -DTARGET=dx \
+// RUN:   --check-prefixes=CHECK,DXCHECK
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
-// RUN:   -fnative-int16-type -emit-llvm -o - | FileCheck %s -DTARGET=spv --check-prefixes=CHECK,SPVCHECK
+// RUN:   -fnative-int16-type -emit-llvm -o - | FileCheck %s -DTARGET=spv \
+// RUN:   --check-prefixes=CHECK,SPVCHECK
 
 #ifdef __HLSL_ENABLE_16_BIT
 // CHECK-LABEL: test_firstbithigh_ushort
