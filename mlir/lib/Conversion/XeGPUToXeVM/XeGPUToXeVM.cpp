@@ -186,9 +186,6 @@ class CreateNdDescToXeVMPattern
     SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
     // Descriptor shape is expected to be 2D.
     int64_t rank = mixedSizes.size();
-    if (rank != 2)
-      return rewriter.notifyMatchFailure(op, "Expected 2D shape.");
-
     auto sourceTy = source.getType();
     auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
     // If source is a memref, we need to extract the aligned pointer as index.
@@ -199,8 +196,19 @@ class CreateNdDescToXeVMPattern
       }
       baseAddr =
           memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
+      // Cast index to i64.
+      baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
     } else {
       baseAddr = adaptor.getSource();
+      if (baseAddr.getType() != i64Ty) {
+        // Pointer type may be i32. Cast to i64 if needed.
+        baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
+      }
+    }
+    // 1D tensor descriptor is just the base address.
+    if (rank == 1) {
+      rewriter.replaceOp(op, baseAddr);
+      return success();
     }
     // Utility for creating offset values from op fold result.
     auto createOffset = [&](SmallVector<OpFoldResult> &ofrVec,
@@ -215,13 +223,6 @@ class CreateNdDescToXeVMPattern
     // Get shape values from op fold results.
     baseShapeW = createOffset(mixedSizes, 1);
     baseShapeH = createOffset(mixedSizes, 0);
-    if (sourceMemrefTy) {
-      // Cast index to i64.
-      baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
-    } else if (baseAddr.getType() != i64Ty) {
-      // Pointer type may be i32. Cast to i64 if needed.
-      baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
-    }
     // Populate payload.
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
@@ -257,57 +258,57 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
                   ConversionPatternRewriter &rewriter) const override {
     auto mixedOffsets = op.getMixedOffsets();
     int64_t opOffsetsSize = mixedOffsets.size();
-    if (opOffsetsSize != 2)
-      return rewriter.notifyMatchFailure(op, "Expected 2D offsets.");
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
 
     auto tdesc = adaptor.getTensorDesc();
     auto tdescTy = op.getTensorDescType();
+    auto tileRank = tdescTy.getRank();
+    if (opOffsetsSize != tileRank)
+      return rewriter.notifyMatchFailure(
+          op, "Expected offset rank to match descriptor rank.");
     auto elemType = tdescTy.getElementType();
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
     if (elemBitSize % 8 != 0)
       return rewriter.notifyMatchFailure(
           op, "Expected element type bit width to be multiple of 8.");
 
-    VectorType payloadI64Ty = VectorType::get(4, rewriter.getI64Type());
-    Value payLoadAsI64 =
-        vector::BitCastOp::create(rewriter, loc, payloadI64Ty, tdesc);
-    Value basePtr = vector::ExtractOp::create(
-        rewriter, loc, payLoadAsI64, static_cast<int>(NdTdescOffset::BasePtr));
-    Value baseShapeW = vector::ExtractOp::create(
-        rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeW));
-    Value baseShapeH = vector::ExtractOp::create(
-        rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeH));
-    // Offsets are provided by the op.
-    // convert them to i32.
-    Value offsetW =
-        getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
-    offsetW = getValueOrCreateCastToIndexLike(rewriter, loc,
-                                              rewriter.getI32Type(), offsetW);
-    Value offsetH =
-        getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
-    offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
-                                              rewriter.getI32Type(), offsetH);
     // Get address space from tensor descriptor memory space.
     auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
-    // Compute element byte size.
-    Value elemByteSize = arith::ConstantIntOp::create(
-        rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
-    auto tileRank = tdescTy.getRank();
-    // Get tile width from the tensor descriptor type.
-    auto tileW = tdescTy.getDimSize(tileRank - 1);
     if (tileRank == 2) {
+      // Compute element byte size.
+      Value elemByteSize = arith::ConstantIntOp::create(
+          rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
+      VectorType payloadI64Ty = VectorType::get(4, rewriter.getI64Type());
+      Value payLoadAsI64 =
+          vector::BitCastOp::create(rewriter, loc, payloadI64Ty, tdesc);
+      Value basePtr =
+          vector::ExtractOp::create(rewriter, loc, payLoadAsI64,
+                                    static_cast<int>(NdTdescOffset::BasePtr));
+      Value baseShapeW = vector::ExtractOp::create(
+          rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeW));
+      Value baseShapeH = vector::ExtractOp::create(
+          rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeH));
+      // Offsets are provided by the op.
+      // convert them to i32.
+      Value offsetW =
+          getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
+      offsetW = getValueOrCreateCastToIndexLike(rewriter, loc,
+                                                rewriter.getI32Type(), offsetW);
+      Value offsetH =
+          getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
+      offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
+                                                rewriter.getI32Type(), offsetH);
       // Convert base pointer (i64) to LLVM pointer type.
       Value basePtrLLVM =
           LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
       // Compute width in bytes.
-      Value elemByteSize = arith::ConstantIntOp::create(
-          rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
       Value surfaceW =
           arith::MulIOp::create(rewriter, loc, baseShapeW, elemByteSize);
 
+      // Get tile width from the tensor descriptor type.
+      auto tileW = tdescTy.getDimSize(tileRank - 1);
       // Get tile height from the tensor descriptor type.
       auto tileH = tdescTy.getDimSize(0);
       // Get vblocks from the tensor descriptor type.
@@ -367,21 +368,23 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         }
       }
     } else {
-      // Get address from base address and offsets.
+      // 1D tensor descriptor.
+      // `tdesc` represents base address as i64
       // Offset in number of elements, need to multiply by element byte size.
-      // Compute linear offset.
-      // linearOffset = offsetH * baseShapeW + offsetW
-      Value offsetHInElems =
-          rewriter.createOrFold<arith::MulIOp>(loc, offsetH, baseShapeW);
-      Value linearOffset =
-          rewriter.createOrFold<arith::AddIOp>(loc, offsetHInElems, offsetW);
-      // Then compute byte offset by multiplying with element byte size.
-      // byteOffset = linearOffset * elemByteSize
+      // Compute byte offset.
+      //   byteOffset = offset * elementByteSize
+      Value offset =
+          getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
+      offset = getValueOrCreateCastToIndexLike(rewriter, loc,
+                                               rewriter.getI64Type(), offset);
+      // Compute element byte size.
+      Value elemByteSize = arith::ConstantIntOp::create(
+          rewriter, loc, rewriter.getI64Type(), elemBitSize / 8);
       Value byteOffset =
-          rewriter.createOrFold<arith::MulIOp>(loc, linearOffset, elemByteSize);
+          rewriter.createOrFold<arith::MulIOp>(loc, offset, elemByteSize);
       // Final address = basePtr + byteOffset
       Value finalAddrI64 = rewriter.createOrFold<arith::AddIOp>(
-          loc, basePtr,
+          loc, tdesc,
           getValueOrCreateCastToIndexLike(rewriter, loc, rewriter.getI64Type(),
                                           byteOffset));
       // Convert base pointer (i64) to LLVM pointer type.
@@ -992,7 +995,10 @@ struct ConvertXeGPUToXeVMPass
       return VectorType::get(sum, elemType);
     });
     typeConverter.addConversion([&](xegpu::TensorDescType type) -> Type {
+      // Scattered descriptors are not supported in XeVM lowering.
       if (type.isScattered())
+        return {};
+      if (type.getRank() == 1)
         return IntegerType::get(&getContext(), 64);
       auto i32Type = IntegerType::get(&getContext(), 32);
       return VectorType::get(8, i32Type);
