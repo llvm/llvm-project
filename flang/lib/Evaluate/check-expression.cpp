@@ -1475,13 +1475,9 @@ public:
       const characteristics::DummyDataObject &dummyObj)
       : fc_{fc}, actual_{actual}, dummyObj_{dummyObj} {}
 
-  // Returns true, if actual and dummy have different contiguity requirements
-  bool HaveContiguityDifferences() const {
-    // Check actual contiguity, unless dummy doesn't care
+  // Returns true if dummy arg needs to be contiguous
+  bool DummyNeedsContiguity() const {
     bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
-    bool actualTreatAsContiguous{
-        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
-        IsSimplyContiguous(actual_, fc_)};
     bool dummyIsExplicitShape{dummyObj_.type.IsExplicitShape()};
     bool dummyIsAssumedSize{dummyObj_.type.attrs().test(
         characteristics::TypeAndShape::Attr::AssumedSize)};
@@ -1498,7 +1494,7 @@ public:
         (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
         dummyObj_.attrs.test(
             characteristics::DummyDataObject::Attr::Contiguous)};
-    return !actualTreatAsContiguous && dummyNeedsContiguity;
+    return dummyNeedsContiguity;
   }
 
   bool HavePolymorphicDifferences() const {
@@ -1561,6 +1557,10 @@ private:
 // procedures with explicit interface, it's expected that "dummy" is not null.
 // For procedures with implicit interface dummy may be null.
 //
+// Returns std::optional<bool> indicating whether the copy is known to be
+// needed (true) or not needed (false); returns std::nullopt if the necessity
+// of the copy is undetermined.
+//
 // Note that these copy-in and copy-out checks are done from the caller's
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
@@ -1580,8 +1580,7 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
           : nullptr};
   const bool forCopyIn = !forCopyOut;
   if (!evaluate::IsVariable(*actual)) {
-    // Actual argument expressions that aren’t variables are copy-in, but
-    // not copy-out.
+    // Expressions are copy-in, but not copy-out.
     return forCopyIn;
   }
   if (dummyObj) { // Explict interface
@@ -1604,28 +1603,21 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // Note: contiguity and polymorphic checks deal with array or assumed rank
     // arguments
     if (!check.HaveArrayOrAssumedRankArgs()) {
-      return unknown;
+      return false;
     }
-    if (check.HaveContiguityDifferences()) {
+    bool actualTreatAsContiguous{
+        dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
+        IsSimplyContiguous(*actual, fc)};
+    if (!actualTreatAsContiguous && check.DummyNeedsContiguity()) {
       return true;
     }
     if (check.HavePolymorphicDifferences()) {
       return true;
     }
   } else { // Implicit interface
-    bool hasVectorSubscript{HasVectorSubscript(*actual)};
-    if (forCopyOut && hasVectorSubscript) {
-      // Vector subscripts could refer to duplicate elments, can't copy out
+    if (auto maybeContig{IsContiguous(*actual, fc)}; *maybeContig) {
+      // Known contiguous, don't copy in/out
       return false;
-    }
-    if (forCopyIn && hasVectorSubscript) {
-      return true;
-    }
-    if (auto isContig{IsContiguous(*actual, fc)}) {
-      // If we are pretty sure the actual argument is contiguous, then we
-      // don't need to copy it. On the other hand, if we are pretty sure the
-      // actual argument is not contiguous, then we need to copy it.
-      return !isContig.value();
     }
   }
   return unknown;
