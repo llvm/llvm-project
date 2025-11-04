@@ -67,8 +67,8 @@ TEST(ConstantsTest, hasNUsesInvalid) {
                      "gv_user1");
 
   for (int I = 0; I != 3; ++I) {
-    EXPECT_DEATH(Zero->hasNUses(I), "hasUseList()");
-    EXPECT_DEATH(Zero->hasNUsesOrMore(I), "hasUseList()");
+    EXPECT_DEATH(Zero->hasNUses(I), "hasUseList\(\)");
+    EXPECT_DEATH(Zero->hasNUsesOrMore(I), "hasUseList\(\)");
   }
 }
 
