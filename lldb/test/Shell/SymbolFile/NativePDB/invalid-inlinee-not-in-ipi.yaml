@@ -6,7 +6,7 @@
 # CHECK-NEXT:    Block{{.*}}
 # CHECK-NEXT:      Variable{{.*}}, name = "argc", type = {{.*}} (int), scope = parameter
 # CHECK-NEXT:      Variable{{.*}}, name = "argv", type = {{.*}} (char **), scope = parameter
-# CHECK-NEXT:      Block{{.*}}, parent = {{.*}}, name = "foo", decl = inline_sites_live.cpp:14
+# CHECK-NEXT:      Block{{.*}}, parent = {{.*}}, name = "[error reading function name: Type index too high (2147418112)]", decl = inline_sites_live.cpp:14
 # CHECK-NEXT:        Variable{{.*}}, name = "param", type = {{.*}} (int), scope = parameter
 # CHECK-NEXT:        Variable{{.*}}, name = "local", type = {{.*}} (int), scope = local
 ---
@@ -75,7 +75,7 @@ DbiStream:
           Sites:
             - FileName:        'F:\Dev\llvm-project\lldb\test\Shell\SymbolFile\NativePDB\inline_sites_live.cpp'
               LineNum:         14
-              Inlinee:         0x7FFF0000
+              Inlinee:         0x7FFF0000 # An index that is not in IPI stream, also present in "Records"
         - !Lines
           CodeSize:        17
           Flags:           [  ]
@@ -221,7 +221,7 @@ DbiStream:
             InlineSiteSym:
               PtrParent:       268
               PtrEnd:          508
-              Inlinee:         0x7FFF0000
+              Inlinee:         0x7FFF0000 # An index which is not in IPI stream, also present in "InlineeLines"
               AnnotationData:  [ 6, 2, 3, 21, 4, 11, 0, 0 ]
           - Kind:            S_LOCAL
             LocalSym:
