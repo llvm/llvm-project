@@ -56,6 +56,13 @@ public:
   }
 };
 
+static cl::list<std::string> SPVAllowUnknownIntrinsics(
+    "spv-allow-unknown-intrinsics", cl::CommaSeparated,
+    cl::desc("Emit unknown intrinsics as calls to external functions. If a "
+             "comma-separated input list of intrinsic prefixes is provided, "
+             "only intrinsics carrying a listed prefix get emitted. Otherwise, "
+             "all unknown intrinsics are emitted"),
+    cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
 char SPIRVPrepareFunctions::ID = 0;
@@ -444,6 +451,20 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerConstrainedFPCmpIntrinsic(dyn_cast<ConstrainedFPCmpIntrinsic>(II),
                                        EraseFromParent);
         Changed = true;
+        break;
+      default:
+        if (TM.getTargetTriple().getVendor() == Triple::AMD ||
+            any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
+              return II->getCalledFunction()->getName().starts_with(Prefix);
+            }))
+          Changed |= lowerIntrinsicToFunction(II);
+        else
+          report_fatal_error(
+              "Encountered unknown intrinsic: " +
+                II->getCalledFunction()->getName() +
+                ", which requires the --spv-allow-unknown-intrinsics option, "
+                "in function: " + II->getParent()->getParent()->getName(),
+              false);
         break;
       }
     }
