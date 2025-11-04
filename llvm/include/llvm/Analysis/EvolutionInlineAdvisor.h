@@ -27,7 +27,7 @@ public:
 
 private:
   std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
-  std::unique_ptr<InlineAdvice> getEvolutionAdviceImpl(CallBase &CB);
+  std::unique_ptr<InlineAdvice> getEvolvableAdvice(CallBase &CB);
 };
 
 } // namespace llvm

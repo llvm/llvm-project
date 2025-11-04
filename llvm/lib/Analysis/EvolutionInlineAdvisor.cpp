@@ -1,4 +1,4 @@
-//-------------------===//
+//===- EvolutionInlineAdvisor.cpp - skeleton implementation   ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ using namespace llvm;
 // You can include additional LLVM headers here.
 
 std::unique_ptr<InlineAdvice>
-EvolutionInlineAdvisor::getEvolutionAdviceImpl(CallBase &CB) {
+EvolutionInlineAdvisor::getEvolvableAdvice(CallBase &CB) {
   // Implementation of inlining strategy. Do not change the function interface.
   bool IsInliningRecommended = false;
   return std::make_unique<InlineAdvice>(
@@ -35,8 +35,8 @@ EvolutionInlineAdvisor::getEvolutionAdviceImpl(CallBase &CB) {
 
 std::unique_ptr<InlineAdvice>
 EvolutionInlineAdvisor::getAdviceImpl(CallBase &CB) {
-  // legality check
-  // reference: MLInlineAdvisor::getAdviceImpl
+  // TODO: refactor the legality check to make them common with
+  // MLInlineAdvisor::getAdviceImpl
   auto &Caller = *CB.getCaller();
   auto &Callee = *CB.getCalledFunction();
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
@@ -60,5 +60,5 @@ EvolutionInlineAdvisor::getAdviceImpl(CallBase &CB) {
   if (Mandatory)
     return std::make_unique<InlineAdvice>(this, CB, ORE, true);
 
-  return getEvolutionAdviceImpl(CB);
+  return getEvolvableAdvice(CB);
 }
