@@ -127,6 +127,7 @@ private:
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
   void processVariable(DIVariable *DV);
+  void processVariableExpression(DIVariableExpression *DV);
   void processImportedEntity(const DIImportedEntity *Import);
   void processMacroNode(DIMacroNode *Macro, DIMacroFile *CurrentMacroFile);
   bool addCompileUnit(DICompileUnit *CU);
