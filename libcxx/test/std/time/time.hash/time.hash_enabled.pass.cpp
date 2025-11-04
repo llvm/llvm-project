@@ -14,6 +14,7 @@
 
 #include <chrono>
 #include "poisoned_hash_helper.h"
+#include "test_macros.h"
 
 int main(int, char**) {
   test_hash_enabled<std::chrono::nanoseconds>();
@@ -55,7 +56,18 @@ int main(int, char**) {
   test_hash_enabled(std::chrono::year_month_weekday_last(
       std::chrono::year{}, std::chrono::month{}, std::chrono::weekday_last(std::chrono::weekday{})));
 
+#ifndef TEST_HAS_NO_EXPERIMENTAL_TZDB
+
   test_hash_enabled(std::chrono::leap_second({}, std::chrono::sys_seconds{}, std::chrono::seconds{}));
+
+#  if !defined(TEST_HAS_NO_LOCALIZATION) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) && !defined(TEST_HAS_NO_FILESYSTEM)
+
+  test_hash_enabled<std::chrono::zoned_time<std::chrono::milliseconds>>();
+
+#  endif // !defined(TEST_HAS_NO_LOCALIZATION) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) &&
+         // !defined(TEST_HAS_NO_FILESYSTEM)
+
+#endif // TEST_HAS_NO_EXPERIMENTAL_TZDB
 
   return 0;
 }
