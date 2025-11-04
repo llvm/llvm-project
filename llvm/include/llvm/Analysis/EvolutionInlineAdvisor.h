@@ -1,4 +1,4 @@
-//===- EvolutionInlineAdvisor.h - LLM+Evolution-based InlineAdvisor factories
+//===- EvolutionInlineAdvisor.h - LLM+Evolutionary Algorithm-based InlineAdvisor
 //---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_EvolutionInlineAdvisor_H
-#define LLVM_ANALYSIS_EvolutionInlineAdvisor_H
+#ifndef LLVM_ANALYSIS_EVOLUTIONINLINEADVISOR_H
+#define LLVM_ANALYSIS_EVOLUTIONINLINEADVISOR_H
 
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/InlineAdvisor.h"
@@ -32,4 +32,4 @@ private:
 
 } // namespace llvm
 
-#endif // LLVM_ANALYSIS_EvolutionInlineAdvisor_H
+#endif // LLVM_ANALYSIS_EVOLUTIONINLINEADVISOR_H
