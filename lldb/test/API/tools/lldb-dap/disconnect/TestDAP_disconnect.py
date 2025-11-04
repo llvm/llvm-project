@@ -3,17 +3,15 @@ Test lldb-dap disconnect request
 """
 
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbdap_testcase
-import subprocess
 import time
 import os
 
 
-class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_disconnect(lldbdap_testcase.DAPTestCaseBase):
     source = "main.cpp"
 
     def disconnect_and_assert_no_output_printed(self):
@@ -67,10 +65,11 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             lambda: self.run_platform_command("rm %s" % (sync_file_path))
         )
 
-        self.process = subprocess.Popen([program, sync_file_path])
+        proc = self.spawnSubprocess(program, [sync_file_path])
         lldbutil.wait_for_file_on_target(self, sync_file_path)
 
-        self.attach(pid=self.process.pid, disconnectAutomatically=False)
+        self.attach(pid=proc.pid, disconnectAutomatically=False, stopOnEntry=True)
+        self.continue_to_next_stop()
         response = self.dap_server.request_evaluate("wait_for_attach = false;")
         self.assertTrue(response["success"])
 
