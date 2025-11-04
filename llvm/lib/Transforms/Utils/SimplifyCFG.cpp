@@ -5013,109 +5013,9 @@ bool SimplifyCFGOpt::simplifyIndirectBrOnSelect(IndirectBrInst *IBI,
 /// the PHI, merging the third icmp into the switch.
 bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
     ICmpInst *ICI, IRBuilder<> &Builder) {
-  BasicBlock *BB = ICI->getParent();
-
-  // If the block has any PHIs in it or the icmp has multiple uses, it is too
-  // complex.
-  if (isa<PHINode>(BB->begin()) || !ICI->hasOneUse())
-    return false;
-
-  Value *V = ICI->getOperand(0);
-  ConstantInt *Cst = cast<ConstantInt>(ICI->getOperand(1));
-
-  // The pattern we're looking for is where our only predecessor is a switch on
-  // 'V' and this block is the default case for the switch.  In this case we can
-  // fold the compared value into the switch to simplify things.
-  BasicBlock *Pred = BB->getSinglePredecessor();
-  if (!Pred || !isa<SwitchInst>(Pred->getTerminator()))
-    return false;
-
-  SwitchInst *SI = cast<SwitchInst>(Pred->getTerminator());
-  if (SI->getCondition() != V)
-    return false;
-
-  // If BB is reachable on a non-default case, then we simply know the value of
-  // V in this block.  Substitute it and constant fold the icmp instruction
-  // away.
-  if (SI->getDefaultDest() != BB) {
-    ConstantInt *VVal = SI->findCaseDest(BB);
-    assert(VVal && "Should have a unique destination value");
-    ICI->setOperand(0, VVal);
-
-    if (Value *V = simplifyInstruction(ICI, {DL, ICI})) {
-      ICI->replaceAllUsesWith(V);
-      ICI->eraseFromParent();
-    }
-    // BB is now empty, so it is likely to simplify away.
-    return requestResimplify();
-  }
-
-  // Ok, the block is reachable from the default dest.  If the constant we're
-  // comparing exists in one of the other edges, then we can constant fold ICI
-  // and zap it.
-  if (SI->findCaseValue(Cst) != SI->case_default()) {
-    Value *V;
-    if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
-      V = ConstantInt::getFalse(BB->getContext());
-    else
-      V = ConstantInt::getTrue(BB->getContext());
-
-    ICI->replaceAllUsesWith(V);
-    ICI->eraseFromParent();
-    // BB is now empty, so it is likely to simplify away.
-    return requestResimplify();
-  }
-
-  // The use of the icmp has to be in the 'end' block, by the only PHI node in
-  // the block.
-  BasicBlock *SuccBlock = BB->getTerminator()->getSuccessor(0);
-  PHINode *PHIUse = dyn_cast<PHINode>(ICI->user_back());
-  if (PHIUse == nullptr || PHIUse != &SuccBlock->front() ||
-      isa<PHINode>(++BasicBlock::iterator(PHIUse)))
-    return false;
-
-  // If the icmp is a SETEQ, then the default dest gets false, the new edge gets
-  // true in the PHI.
-  Constant *DefaultCst = ConstantInt::getTrue(BB->getContext());
-  Constant *NewCst = ConstantInt::getFalse(BB->getContext());
-
-  if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
-    std::swap(DefaultCst, NewCst);
-
-  // Replace ICI (which is used by the PHI for the default value) with true or
-  // false depending on if it is EQ or NE.
-  ICI->replaceAllUsesWith(DefaultCst);
-  ICI->eraseFromParent();
-
-  SmallVector<DominatorTree::UpdateType, 2> Updates;
-
-  // Okay, the switch goes to this block on a default value.  Add an edge from
-  // the switch to the merge point on the compared value.
-  BasicBlock *NewBB =
-      BasicBlock::Create(BB->getContext(), "switch.edge", BB->getParent(), BB);
-  {
-    SwitchInstProfUpdateWrapper SIW(*SI);
-    auto W0 = SIW.getSuccessorWeight(0);
-    SwitchInstProfUpdateWrapper::CaseWeightOpt NewW;
-    if (W0) {
-      NewW = ((uint64_t(*W0) + 1) >> 1);
-      SIW.setSuccessorWeight(0, *NewW);
-    }
-    SIW.addCase(Cst, NewBB, NewW);
-    if (DTU)
-      Updates.push_back({DominatorTree::Insert, Pred, NewBB});
-  }
-
-  // NewBB branches to the phi block, add the uncond branch and the phi entry.
-  Builder.SetInsertPoint(NewBB);
-  Builder.SetCurrentDebugLocation(SI->getDebugLoc());
-  Builder.CreateBr(SuccBlock);
-  PHIUse->addIncoming(NewCst, NewBB);
-  if (DTU) {
-    Updates.push_back({DominatorTree::Insert, NewBB, SuccBlock});
-    DTU->applyUpdates(Updates);
-  }
-  return true;
+  // Select == nullptr means we assume that there is a hidden no-op select
+  // instruction of _ = `select %icmp, true, false` just after `%icmp = ...`
+  return tryToSimplifyUncondBranchWithICmpSelectInIt(ICI, nullptr, Builder);
 }
 
 /// Similar to tryToSimplifyUncondBranchWithICmpInIt, but handle a more generic
@@ -5167,7 +5067,8 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
 
   // If the block has any PHIs in it or the icmp/select has multiple uses, it is
   // too complex.
-  if (isa<PHINode>(BB->begin()) || !ICI->hasOneUse() || !Select->hasOneUse())
+  if (isa<PHINode>(BB->begin()) || !ICI->hasOneUse() ||
+      (Select && !Select->hasOneUse()))
     return false;
 
   // The pattern we're looking for is where our only predecessor is a switch on
@@ -5187,14 +5088,23 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
     return false;
 
   Value *SelectCond, *SelectTrueVal, *SelectFalseVal;
-  // Match select Cond, TrueVal, FalseVal
-  if (!match(Select, m_Select(m_Value(SelectCond), m_Value(SelectTrueVal),
-                              m_Value(SelectFalseVal))))
-    return false;
-
-  // Check if the select condition is the same as the icmp condition.
-  if (SelectCond != ICI)
-    return false;
+  Instruction *User;
+  if (!Select) {
+    // If Select == nullptr, we can assume that there is a hidden no-op select
+    // just after icmp
+    SelectCond = ICI;
+    SelectTrueVal = Builder.getTrue();
+    SelectFalseVal = Builder.getFalse();
+    User = ICI->user_back();
+  } else {
+    SelectCond = Select->getCondition();
+    // Check if the select condition is the same as the icmp condition.
+    if (SelectCond != ICI)
+      return false;
+    SelectTrueVal = Select->getTrueValue();
+    SelectFalseVal = Select->getFalseValue();
+    User = Select->user_back();
+  }
 
   SwitchInst *SI = cast<SwitchInst>(Pred->getTerminator());
   if (SI->getCondition() != IcmpCond)
@@ -5235,7 +5145,7 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
   // The use of the select has to be in the 'end' block, by the only PHI node in
   // the block.
   BasicBlock *SuccBlock = BB->getTerminator()->getSuccessor(0);
-  PHINode *PHIUse = dyn_cast<PHINode>(Select->user_back());
+  PHINode *PHIUse = dyn_cast<PHINode>(User);
   if (PHIUse == nullptr || PHIUse != &SuccBlock->front() ||
       isa<PHINode>(++BasicBlock::iterator(PHIUse)))
     return false;
@@ -5250,8 +5160,12 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
 
   // Replace Select (which is used by the PHI for the default value) with
   // SelectFalseVal or SelectTrueVal depending on if ICI is EQ or NE.
-  Select->replaceAllUsesWith(DefaultCst);
-  Select->eraseFromParent();
+  if (!Select) {
+    Select->replaceAllUsesWith(DefaultCst);
+    Select->eraseFromParent();
+  } else {
+    ICI->replaceAllUsesWith(DefaultCst);
+  }
   ICI->eraseFromParent();
 
   SmallVector<DominatorTree::UpdateType, 2> Updates;
