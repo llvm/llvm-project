@@ -231,12 +231,6 @@ getZAStateBeforeInst(const TargetRegisterInfo &TRI, MachineInstr &MI,
   if (MI.getOpcode() == AArch64::RequiresZASavePseudo)
     return {ZAState::LOCAL_SAVED, std::prev(InsertPt)};
 
-  // TLS-descriptor calls don't use the standard call lowering, so handle them
-  // as a special case here. Assume a private ZA interface.
-  if (MI.getOpcode() == AArch64::TLSDESC_CALLSEQ ||
-      MI.getOpcode() == AArch64::TLSDESC_AUTH_CALLSEQ)
-    return {ZAState::LOCAL_SAVED, InsertPt};
-
   if (MI.isReturn())
     return {ZAOffAtReturn ? ZAState::OFF : ZAState::ACTIVE, InsertPt};
 
@@ -387,6 +381,17 @@ static void setPhysLiveRegs(LiveRegUnits &LiveUnits, LiveRegs PhysLiveRegs) {
     LiveUnits.addReg(AArch64::W0_HI);
 }
 
+[[maybe_unused]] bool isCallStartOpcode(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::TLSDESC_CALLSEQ:
+  case AArch64::TLSDESC_AUTH_CALLSEQ:
+  case AArch64::ADJCALLSTACKDOWN:
+    return true;
+  default:
+    return false;
+  }
+}
+
 FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
   assert((SMEFnAttrs.hasAgnosticZAInterface() || SMEFnAttrs.hasZT0State() ||
           SMEFnAttrs.hasZAState()) &&
@@ -430,8 +435,7 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
       // Note: We treat Agnostic ZA as inout_za with an alternate save/restore.
       auto [NeededState, InsertPt] = getZAStateBeforeInst(
           *TRI, MI, /*ZAOffAtReturn=*/SMEFnAttrs.hasPrivateZAInterface());
-      assert((InsertPt == MBBI ||
-              InsertPt->getOpcode() == AArch64::ADJCALLSTACKDOWN) &&
+      assert((InsertPt == MBBI || isCallStartOpcode(InsertPt->getOpcode())) &&
              "Unexpected state change insertion point!");
       // TODO: Do something to avoid state changes where NZCV is live.
       if (MBBI == FirstTerminatorInsertPt)
