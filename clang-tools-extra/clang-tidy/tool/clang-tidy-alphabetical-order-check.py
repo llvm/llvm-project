@@ -10,10 +10,10 @@
 
 """
 
-ClangTidy Alphabetical Order Checker
-====================================
+Clang-Tidy Alphabetical Order Checker
+=====================================
 
-Normalize clang-tidy docs with deterministic sorting for linting/tests.
+Normalize Clang-Tidy documentation with deterministic sorting for linting/tests.
 
 Behavior:
 - Sort entries in docs/clang-tidy/checks/list.rst csv-table.
@@ -55,7 +55,7 @@ def write_text(path: str, content: str) -> None:
         f.write(content)
 
 
-def normalize_list_rst(lines: List[str]) -> str:
+def normalize_list_rst(lines: Sequence[str]) -> str:
     """Return normalized content of checks list.rst from given lines.
 
     Input: full file content split into lines.
@@ -205,7 +205,7 @@ def _find_section_bounds(
 
 
 def _normalize_release_notes_section(
-    lines: List[str], title: str, next_title: Optional[str]
+    lines: Sequence[str], title: str, next_title: Optional[str]
 ) -> List[str]:
     """Normalize a single release-notes section and return updated lines."""
     bounds = _find_section_bounds(lines, title, next_title)
@@ -226,10 +226,10 @@ def _normalize_release_notes_section(
         new_section.extend(b)
     new_section.extend(suffix)
 
-    return lines[:sec_start] + new_section + lines[sec_end:]
+    return list(lines[:sec_start]) + new_section + list(lines[sec_end:])
 
 
-def normalize_release_notes(lines: List[str]) -> str:
+def normalize_release_notes(lines: Sequence[str]) -> str:
     sections = ["New checks", "New check aliases", "Changes in existing checks"]
 
     out = list(lines)
