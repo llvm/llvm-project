@@ -87,7 +87,6 @@ cc_library(
         "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
-        "//clang:codegen",
     ],
 )
 
