@@ -300,18 +300,18 @@ void MachOWriter::writeLoadCommands(raw_ostream &OS) {
     // specified test cases.
     // Prevent integer underflow if BytesWritten exceeds cmdsize.
     if (BytesWritten > LC.Data.load_command_data.cmdsize) {
-      const char *name = getLoadCommandName(LC.Data.load_command_data.cmd);
-      if (name)
-        WithColor::warning()
-            << "load command " << i << " " << name << " cmdsize too small ("
-            << LC.Data.load_command_data.cmdsize << " bytes) for actual size ("
-            << BytesWritten << " bytes)\n";
+      std::string Name;
+      const char *NameCStr = getLoadCommandName(LC.Data.load_command_data.cmd);
+      if (NameCStr)
+        Name = NameCStr;
       else
-        WithColor::warning()
-            << "load command " << i << " (0x"
-            << Twine::utohexstr(LC.Data.load_command_data.cmd)
-            << ") cmdsize too small (" << LC.Data.load_command_data.cmdsize
-            << " bytes) for actual size (" << BytesWritten << " bytes)\n";
+        Name = "(0x" + Twine::utohexstr(LC.Data.load_command_data.cmd).str() + ")";
+
+      WithColor::warning() << "load command " << i << " " << Name
+                           << " cmdsize too small ("
+                           << LC.Data.load_command_data.cmdsize
+                           << " bytes) for actual size (" << BytesWritten
+                           << " bytes)\n";
     }
     auto BytesRemaining = (BytesWritten < LC.Data.load_command_data.cmdsize)
                               ? LC.Data.load_command_data.cmdsize - BytesWritten
