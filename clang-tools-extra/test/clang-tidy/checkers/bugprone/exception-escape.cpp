@@ -964,12 +964,26 @@ void throw_in_function_arg() noexcept {
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:17: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_in_function_arg' here
 
+int g(int, int, int);
+void throw_in_last_function_arg() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_last_function_arg' which should not throw exceptions
+  g(42, 67, false ? 0 : throw 1);
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:25: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_in_last_function_arg' here
+
 void indirect_throw_in_function_arg() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_throw_in_function_arg' which should not throw exceptions
   f(thrower());
 }
-// CHECK-MESSAGES: :[[@LINE-19]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES: :[[@LINE-26]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
 // CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #1: function 'indirect_throw_in_function_arg' calls function 'thrower' here
+
+void indirect_throw_from_lambda_in_function_arg() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_throw_from_lambda_in_function_arg' which should not throw exceptions
+  f([] { throw 1; return 0; }());
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:10: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+// CHECK-MESSAGES: :[[@LINE-3]]:30: note: frame #1: function 'indirect_throw_from_lambda_in_function_arg' calls function 'operator()' here
 
 struct S {
   S(int) noexcept {}
@@ -985,7 +999,7 @@ void indirect_throw_in_constructor_arg() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_throw_in_constructor_arg' which should not throw exceptions
   S s = thrower();
 }
-// CHECK-MESSAGES: :[[@LINE-36]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES: :[[@LINE-50]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
 // CHECK-MESSAGES: :[[@LINE-3]]:9: note: frame #1: function 'indirect_throw_in_constructor_arg' calls function 'thrower' here
 
 void weird_throw_in_call_subexpression() noexcept {

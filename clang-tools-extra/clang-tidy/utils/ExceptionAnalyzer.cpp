@@ -591,11 +591,14 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
       Results.merge(Excs);
     }
   } else {
+    // Check whether any of this node's subexpressions throws.
     for (const Stmt *Child : St->children()) {
       ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
       Results.merge(Excs);
     }
 
+    // If this node is a call to a function or constructor, also check
+    // whether the call itself throws.
     if (const auto *Call = dyn_cast<CallExpr>(St)) {
       if (const FunctionDecl *Func = Call->getDirectCallee()) {
         ExceptionInfo Excs =
