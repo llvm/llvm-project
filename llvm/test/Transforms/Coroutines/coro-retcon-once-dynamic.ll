@@ -3,34 +3,36 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "arm64-apple-macos99.99"
 
-%coro_func_pointer = type <{ i32, i32 }>
+%coro_func_pointer = type <{ i32, i32, i64 }>
 
 ; CHECK-LABEL: %func.Frame = type { ptr }
 ; CHECK-LABEL: %big_types.Frame = type { <32 x i8>, [16 x i8], i64, ptr, %Integer8 }
 
-; CHECK-LABEL: @func_cfp = constant <{ i32, i32 }>
+; CHECK-LABEL: @func_cfp = constant <{ i32, i32, i64 }>
 ; CHECK-SAME:  <{
 ; CHECK-SAME:    i32 trunc
 ; CHECK-SAME:    i32 16
 ; CHECK-SAME:  }>
-@func_cfp = constant <{ i32, i32 }>
+@func_cfp = constant <{ i32, i32, i64 }>
   <{ i32 trunc ( ; offset to @func from @func_cfp
        i64 sub (
          i64 ptrtoint (ptr @func to i64),
          i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, ptr @func_cfp, i32 0, i32 1) to i64)
        )
      to i32),
-     i32 64 ; frame size
+     i32 64, ; frame size
+     i64 1010101010 ; type_id
 }>
 
-@big_types_cfp = constant <{ i32, i32 }>
+@big_types_cfp = constant <{ i32, i32, i64 }>
   <{ i32 trunc ( ; offset to @func from @big_types_cfp
        i64 sub (
          i64 ptrtoint (ptr @big_types to i64),
          i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, ptr @big_types_cfp, i32 0, i32 1) to i64)
        )
      to i32),
-     i32 64 ; frame size
+     i32 64, ; frame size
+     i64 1010101010 ; type_id
 }>
 
 
@@ -90,7 +92,8 @@ entry:
     ptr nonnull @allocate,
     ptr nonnull @deallocate,
     ptr nonnull @allocate_frame,
-    ptr nonnull @deallocate_frame
+    ptr nonnull @deallocate_frame,
+    i64 1010101010
   )
   %handle = call ptr @llvm.coro.begin(token %id, ptr null)
   %load = load i32, ptr %array
@@ -114,9 +117,9 @@ cleanup:
 
 declare void @continuation_prototype(ptr, ptr)
 
-declare swiftcorocc noalias ptr @allocate(ptr %frame, ptr swiftcoro %cator, i32 %size)
+declare swiftcorocc noalias ptr @allocate(ptr %frame, ptr swiftcoro %cator, i32 %size, i64 %typeid)
 declare void @deallocate(ptr %frame, ptr swiftcoro %cator, ptr %ptr)
-declare swiftcorocc noalias ptr @allocate_frame(ptr %frame, ptr swiftcoro %cator, i32 %size)
+declare swiftcorocc noalias ptr @allocate_frame(ptr %frame, ptr swiftcoro %cator, i32 %size, i64 %typeid)
 declare void @deallocate_frame(ptr %frame, ptr swiftcoro %cator, ptr %ptr)
 
 declare void @use(ptr %ptr)
@@ -146,7 +149,8 @@ define swiftcorocc { ptr, ptr } @big_types(ptr noalias %frame, ptr swiftcoro %al
     ptr nonnull @allocate,
     ptr nonnull @deallocate,
     ptr nonnull @allocate_frame,
-    ptr nonnull @deallocate_frame
+    ptr nonnull @deallocate_frame,
+    i64 1010101010
   )
   %handle = tail call ptr @llvm.coro.begin(token %id, ptr null)
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %element_addr)
@@ -168,14 +172,15 @@ define swiftcorocc { ptr, ptr } @big_types(ptr noalias %frame, ptr swiftcoro %al
 }
 
 declare i32 @getSize()
-@allocating_something_else_cfp = constant <{ i32, i32 }>
+@allocating_something_else_cfp = constant <{ i32, i32, i64 }>
   <{ i32 trunc ( ; offset to @func from @allocating_something_else_cfp
        i64 sub (
          i64 ptrtoint (ptr @allocating_something_else to i64),
          i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, ptr @allocating_something_else_cfp, i32 0, i32 1) to i64)
        )
      to i32),
-     i32 64 ; frame size
+     i32 64, ; frame size
+     i64 1010101010 ; type_id
 }>
 declare { ptr, ptr } @allocating_something_else(ptr noalias %frame, ptr swiftcoro %allocator)
 
@@ -210,14 +215,15 @@ declare { ptr, ptr } @allocating_something_else(ptr noalias %frame, ptr swiftcor
 ; CHECK-SAME:      ptr swiftcoro %1,
 ; CHECK-SAME:      ptr
 ; CHECK-SAME:    )
-@allocating_something_cfp = constant <{ i32, i32 }>
+@allocating_something_cfp = constant <{ i32, i32, i64 }>
   <{ i32 trunc ( ; offset to @func from @allocating_something_cfp
        i64 sub (
          i64 ptrtoint (ptr @allocating_something to i64),
          i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, ptr @allocating_something_cfp, i32 0, i32 1) to i64)
        )
      to i32),
-     i32 64 ; frame size
+     i32 64, ; frame size
+     i64 1010101010 ; type_id
 }>
 define { ptr, ptr } @allocating_something(ptr noalias %frame, ptr swiftcoro %allocator) {
 entry:
@@ -231,7 +237,8 @@ entry:
     ptr nonnull @allocate,
     ptr nonnull @deallocate,
     ptr nonnull @allocate_frame,
-    ptr nonnull @deallocate_frame
+    ptr nonnull @deallocate_frame,
+    i64 1010101010
   )
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %size = call i32 @getSize()
@@ -240,7 +247,7 @@ entry:
 
   %callee_frame_size = load i32, ptr getelementptr inbounds nuw (%coro_func_pointer, ptr @allocating_something_else_cfp, i32 0, i32 1), align 8
   %callee_frame_size_64 = zext i32 %callee_frame_size to i64
-  %callee_frame_token = call token @llvm.coro.alloca.alloc.frame.i64(i64 %callee_frame_size_64, i32 16)
+  %callee_frame_token = call token @llvm.coro.alloca.alloc.frame.i64(i64 %callee_frame_size_64, i32 16, i64 1010101010)
   %callee_frame = call ptr @llvm.coro.alloca.get(token %callee_frame_token)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %callee_frame)
   %allocating_something_else = call ptr @llvm.coro.prepare.retcon(ptr @allocating_something_else)

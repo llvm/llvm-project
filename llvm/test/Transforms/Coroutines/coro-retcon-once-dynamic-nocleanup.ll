@@ -4,14 +4,15 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "arm64-apple-macos99.99"
 
 
-@func_cfp = constant <{ i32, i32 }>
+@func_cfp = constant <{ i32, i32, i64 }>
   <{ i32 trunc (
        i64 sub (
          i64 ptrtoint (ptr @func to i64),
          i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, ptr @func_cfp, i32 0, i32 1) to i64)
        )
      to i32),
-     i32 64
+     i32 64, ; frame size
+     i64 1010101010 ; type_id
 }>
 
 
@@ -45,7 +46,8 @@ entry:
     ptr nonnull @allocate,
     ptr nonnull @deallocate,
     ptr nonnull @allocate_frame,
-    ptr nonnull @deallocate_frame
+    ptr nonnull @deallocate_frame,
+    i64 1010101010
   )
   %handle = call ptr @llvm.coro.begin(token %3, ptr null)
   %yielded = getelementptr inbounds %func_self, ptr %2, i32 0, i32 0
