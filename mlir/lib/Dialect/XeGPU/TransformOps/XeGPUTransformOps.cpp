@@ -125,13 +125,12 @@ xegpu::LayoutAttr createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
 xegpu::CreateNdDescOp setDescLayout(transform::TransformRewriter &rewriter,
                                     xegpu::CreateNdDescOp descOp,
                                     xegpu::LayoutAttr layout) {
-  auto oldTensorDesc = descOp.getResult();
-  auto descShapedType = cast<ShapedType>(oldTensorDesc.getType());
+  auto oldTensorDesc = descOp.getType();
   auto descType = xegpu::TensorDescType::get(
-      descShapedType.getShape(), descShapedType.getElementType(),
-      /*array_length=*/1,
-      /*boundary_check=*/true,
-      /*memory_space=*/xegpu::MemorySpace::Global,
+      oldTensorDesc.getShape(), oldTensorDesc.getElementType(),
+      /*array_length=*/oldTensorDesc.getArrayLength(),
+      /*boundary_check=*/oldTensorDesc.getBoundaryCheck(),
+      /*memory_space=*/oldTensorDesc.getMemorySpace(),
       /*layout=*/layout);
 
   rewriter.setInsertionPointAfter(descOp);
