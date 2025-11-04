@@ -21,6 +21,8 @@
 
 #if __has_bf16__
 
+extern "C" {
+
 /// \brief extracts either the 16-bit even (oe=e) or odd (oe=o) elements of x
 #define split(x, oe) Q6_Vh_vpack##oe##_VwVw(Q6_V_hi_W((x)), Q6_V_lo_W((x)))
 
@@ -85,5 +87,6 @@ RIPPLE_INTRIN_INLINE v64bf16 ripple_ew_pure_to_bf16_round(v64f32 Vin) {
   v64i32 PreRounded = hvx_cast_to_i32(ripple_to_vec<64, uint32_t>(b, bits));
   return shiftNan(PreRounded, b);
 }
+} // extern "C"
 
 #endif // __has_bf16__
