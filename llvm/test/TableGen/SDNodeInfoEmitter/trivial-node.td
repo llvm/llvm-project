@@ -7,11 +7,13 @@ def MyTarget : Target;
 def my_noop : SDNode<"MyTargetISD::NOOP", SDTypeProfile<0, 0, []>>;
 
 // CHECK:       namespace llvm::MyTargetISD {
+// CHECK-EMPTY:
 // CHECK-NEXT:  enum GenNodeType : unsigned {
 // CHECK-NEXT:    NOOP = ISD::BUILTIN_OP_END,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr unsigned GENERATED_OPCODE_END = NOOP + 1;
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyTargetISD
 
 // CHECK:       static constexpr char MyTargetSDNodeNamesStorage[] =

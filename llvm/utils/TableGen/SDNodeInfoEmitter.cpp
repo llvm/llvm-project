@@ -322,7 +322,7 @@ void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
   StringRef TargetName = Target.getName();
 
   IfDefEmitter IfDef(OS, "GET_SDNODE_DESC");
-  NamespaceEmitter LlvmNs(OS, "llvm");
+  NamespaceEmitter NS(OS, "llvm");
 
   std::vector<unsigned> NameOffsets = emitNodeNames(OS);
   std::vector<std::pair<unsigned, unsigned>> ConstraintOffsetsAndCounts =
@@ -339,7 +339,7 @@ void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
 
   OS << formatv("static const SDNodeInfo {0}GenSDNodeInfo(\n"
                 "    /*NumOpcodes=*/{1}, {0}SDNodeDescs,\n"
-                "    {0}SDNodeNames, {0}SDTypeConstraints);\n\n",
+                "    {0}SDNodeNames, {0}SDTypeConstraints);\n",
                 TargetName, NodesByName.size());
 }
 

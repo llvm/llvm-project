@@ -14,7 +14,9 @@ def node_1 : SDNode<"MyTargetISD::NODE", SDTypeProfile<1, 0, [SDTCisVT<0, i1>]>>
 def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>;
 
 // EMPTY:        namespace llvm::EmptyISD {
+// EMPTY-EMPTY:
 // EMPTY-NEXT:   static constexpr unsigned GENERATED_OPCODE_END = ISD::BUILTIN_OP_END;
+// EMPTY-EMPTY:
 // EMPTY-NEXT:   } // namespace llvm::EmptyISD
 
 // EMPTY:        static constexpr char MyTargetSDNodeNamesStorage[] =
@@ -33,11 +35,13 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // EMPTY-NEXT:       MyTargetSDNodeNames, MyTargetSDTypeConstraints);
 
 // COMMON:       namespace llvm::[[NS]] {
+// COMMON-EMPTY:
 // COMMON-NEXT:  enum GenNodeType : unsigned {
 // COMMON-NEXT:    NODE = ISD::BUILTIN_OP_END,
 // COMMON-NEXT:  };
 // COMMON-EMPTY:
 // COMMON-NEXT:  static constexpr unsigned GENERATED_OPCODE_END = NODE + 1;
+// COMMON-EMPTY:
 // COMMON-NEXT:  } // namespace llvm::[[NS]]
 
 // COMMON:       static constexpr char MyTargetSDNodeNamesStorage[] =

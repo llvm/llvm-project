@@ -10,12 +10,14 @@ def my_node_2a : SDNode<"MyTargetISD::NODE_2", SDTypeProfile<1, 0, [SDTCisVT<0, 
 def my_node_2b : SDNode<"MyTargetISD::NODE_2", SDTypeProfile<1, 0, [SDTCisVT<0, untyped>]>>;
 
 // CHECK:       namespace llvm::MyTargetISD {
+// CHECK-EMPTY:
 // CHECK-NEXT:  enum GenNodeType : unsigned {
 // CHECK-NEXT:    NODE_1 = ISD::BUILTIN_OP_END,
 // CHECK-NEXT:    NODE_2,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr unsigned GENERATED_OPCODE_END = NODE_2 + 1;
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyTargetISD
 
 // CHECK:       static constexpr char MyTargetSDNodeNamesStorage[] =
