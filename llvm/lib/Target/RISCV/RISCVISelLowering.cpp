@@ -25327,5 +25327,5 @@ bool RISCVTargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
   if (VT.isVector())
     return false;
 
-  return VT.getScalarSizeInBits() <= Subtarget.getXLen();
+  return VT.getSizeInBits() <= Subtarget.getXLen();
 }
