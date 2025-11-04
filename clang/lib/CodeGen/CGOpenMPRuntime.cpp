@@ -1872,6 +1872,13 @@ void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
     const VarDecl *VD = nullptr;
     if (auto *DRE = dyn_cast<DeclRefExpr>(E))
       VD = cast<VarDecl>(DRE->getDecl());
+<<<<<<< Updated upstream
+=======
+    else if (auto *MRE = dyn_cast<MemberExpr>(E))
+      if (auto *BaseDRE = dyn_cast<DeclRefExpr>(MRE->getBase()))
+        if (auto *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl()))
+          VD = BaseVD;
+>>>>>>> Stashed changes
     return std::pair<CXXRecordDecl *, const VarDecl *>(CXXRecord, VD);
   };
   // Collect VTable from OpenMP map clause.
