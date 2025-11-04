@@ -78,11 +78,12 @@ struct BinOpInfo {
 class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
   CIRGenFunction &cgf;
   CIRGenBuilderTy &builder;
-  bool ignoreResultAssign = false;
+  bool ignoreResultAssign;
 
 public:
-  ScalarExprEmitter(CIRGenFunction &cgf, CIRGenBuilderTy &builder)
-      : cgf(cgf), builder(builder) {}
+  ScalarExprEmitter(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
+                    bool ignoreResultAssign = false)
+      : cgf(cgf), builder(builder), ignoreResultAssign(ignoreResultAssign) {}
 
   //===--------------------------------------------------------------------===//
   //                               Utilities
@@ -1410,11 +1411,13 @@ CIRGenFunction::emitCompoundAssignmentLValue(const CompoundAssignOperator *e) {
 }
 
 /// Emit the computation of the specified expression of scalar type.
-mlir::Value CIRGenFunction::emitScalarExpr(const Expr *e) {
+mlir::Value CIRGenFunction::emitScalarExpr(const Expr *e,
+                                           bool ignoreResultAssign) {
   assert(e && hasScalarEvaluationKind(e->getType()) &&
          "Invalid scalar expression to emit");
 
-  return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
+  return ScalarExprEmitter(*this, builder, ignoreResultAssign)
+      .Visit(const_cast<Expr *>(e));
 }
 
 mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
