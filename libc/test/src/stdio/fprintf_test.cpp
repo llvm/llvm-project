@@ -88,7 +88,8 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
   ASSERT_EQ(printf_test::fclose(file), 0);
 }
 
-#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+#if !defined(LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS) &&                            \
+    !defined(LIBC_COPT_PRINTF_DISABLE_WRITE_INT)
 TEST(LlvmLibcFPrintfTest, NullPtrCheck) {
   const char *FILENAME = APPEND_LIBC_TEST("fprintf_nullptr.test");
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
@@ -97,7 +98,7 @@ TEST(LlvmLibcFPrintfTest, NullPtrCheck) {
   ASSERT_FALSE(file == nullptr);
 
   int ret =
-      LIBC_NAMESPACE::fprintf(file, "hello %s", static_cast<int *>(nullptr));
+      LIBC_NAMESPACE::fprintf(file, "hello %n", static_cast<int *>(nullptr));
   EXPECT_LT(ret, 0);
   ASSERT_ERRNO_EQ(EINVAL);
 
