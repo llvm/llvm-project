@@ -1,4 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S -polly-allow-differing-element-types < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S \
+; RUN: -polly-allow-differing-element-types < %s | FileCheck %s
 
 ; CHECK: polly
 

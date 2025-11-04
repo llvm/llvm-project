@@ -1,5 +1,6 @@
 add_lldb_library(lldbPluginCPPRuntime
   CPPLanguageRuntime.cpp
+  VerboseTrapFrameRecognizer.cpp
 
   LINK_LIBS
     lldbCore

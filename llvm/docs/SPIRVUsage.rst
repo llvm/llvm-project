@@ -189,6 +189,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds decorations that can be applied to global (module scope) variables.
    * - ``SPV_INTEL_global_variable_fpga_decorations``
      - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
+   * - ``SPV_INTEL_kernel_attributes``
+     - Adds execution modes that can be applied to entry points to inform scheduling.
    * - ``SPV_INTEL_media_block_io``
      - Adds additional subgroup block read and write functionality that allow applications to flexibly specify the width and height of the block to read from or write to a 2D image.
    * - ``SPV_INTEL_memory_access_aliasing``
