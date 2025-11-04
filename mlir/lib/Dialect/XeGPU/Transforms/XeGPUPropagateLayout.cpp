@@ -204,28 +204,6 @@ struct LayoutInfoLattice : public Lattice<LayoutInfo> {
   using Lattice::Lattice;
 };
 
-/// Helper Function to find a proper instruction multiple for the user-supplied
-/// sg-level data shape. `candidates` are uArch allowed shapes.
-/// `candidateMultiples` are uArch multiples of such shapes (e.g., block count).
-template <typename T>
-int getLargestDivisor(T dim, ArrayRef<T> candidates,
-                      ArrayRef<T> candidateMultiples = {}) {
-  static_assert(std::is_integral<T>::value, "T must be an integer type");
-  int largest = -1;
-  SmallVector<T> multiples = {1};
-  if (!candidateMultiples.empty())
-    multiples =
-        SmallVector<T>(candidateMultiples.begin(), candidateMultiples.end());
-  for (T candidate : candidates) {
-    for (T multiple : multiples) {
-      int value = static_cast<int>(candidate * multiple);
-      if (value != 0 && dim % value == 0 && value > largest)
-        largest = value;
-    }
-  }
-  return largest;
-}
-
 /// Helper Functions to get default layouts. A `default layout` is a layout that
 /// is assigned to a value when the layout is not fixed by some anchor operation
 /// (like DPAS).
@@ -505,7 +483,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     prefetch.emitWarning("No known block params found for the element type.");
   auto [bWidth, bHeight, bCount] = blockWHC.value();
   SmallVector<int> instData;
-  int instWidth = getLargestDivisor(
+  int instWidth = xegpu::getLargestDivisor(
       static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 1)), bWidth,
       bCount);
   if (instWidth == -1)
@@ -514,7 +492,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
   if (tdescTy.getRank() == 1)
     instData = {instWidth};
   else {
-    int instHeight = getLargestDivisor(
+    int instHeight = xegpu::getLargestDivisor(
         static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 2)), bHeight);
     if (instHeight == -1)
       prefetch.emitWarning(
@@ -634,7 +612,7 @@ void LayoutInfoPropagation::visitDpasOp(
   const unsigned dataALen = aTy.getShape().front();
   auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
   const int maxALen =
-      getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
+      xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
   if (maxALen == -1)
     dpas.emitWarning(
         "No suitable instruction multiple found for the given shape.");
@@ -642,7 +620,7 @@ void LayoutInfoPropagation::visitDpasOp(
   const unsigned dataBLen = bTy.getShape().back();
   auto supportedBLen = uArchInstruction->getSupportedK(bTy.getElementType());
   const int maxBLen =
-      getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
+      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
   if (maxBLen == -1)
     dpas.emitWarning(
         "No suitable instruction multiple found for the given shape.");
@@ -662,7 +640,7 @@ void LayoutInfoPropagation::visitDpasOp(
     const unsigned dataCLen = bTy.getShape().back();
     auto supportedCLen = uArchInstruction->getSupportedN(bTy.getElementType());
     const int maxCLen =
-        getLargestDivisor(dataCLen, ArrayRef<unsigned>(supportedCLen));
+        xegpu::getLargestDivisor(dataCLen, ArrayRef<unsigned>(supportedCLen));
     if (maxCLen == -1)
       dpas.emitWarning(
           "No suitable instruction multiple found for the given shape.");
@@ -691,7 +669,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
     store.emitWarning("No known block params found for the element type.");
   auto [bWidth, bHeight, bCount] = blockWHC.value();
   SmallVector<int> instData;
-  int instWidth = getLargestDivisor(
+  int instWidth = xegpu::getLargestDivisor(
       static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth,
       bCount);
   if (instWidth == -1)
@@ -700,7 +678,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
   if (dataTy.getRank() == 1)
     instData = {instWidth};
   else {
-    int instHeight = getLargestDivisor(
+    int instHeight = xegpu::getLargestDivisor(
         static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 2)), bHeight);
     if (instHeight == -1)
       store.emitWarning(

@@ -51,7 +51,7 @@ static Accessor splitMustacheString(StringRef Str, MustacheContext &Ctx) {
       std::tie(Part, Str) = Str.split('.');
       // Each part of the accessor needs to be saved to the arena
       // to ensure it has a stable address.
-      Tokens.push_back(Ctx.Saver.save(Part.trim()));
+      Tokens.push_back(Part.trim());
     }
   }
   // Now, allocate memory for the array of StringRefs in the arena.

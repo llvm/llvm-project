@@ -601,6 +601,12 @@ def CSR_Win_AArch64_AAPCS_SwiftError
 def CSR_Win_AArch64_AAPCS_SwiftTail
     : CalleeSavedRegs<(sub CSR_Win_AArch64_AAPCS, X20, X22)>;
 
+def CSR_Win_AArch64_RT_MostRegs
+    : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS, (sequence "X%u", 9, 15))>;
+
+def CSR_Win_AArch64_RT_AllRegs
+    : CalleeSavedRegs<(add CSR_Win_AArch64_RT_MostRegs, (sequence "Q%u", 8, 31))>;
+
 // The Control Flow Guard check call uses a custom calling convention that also
 // preserves X0-X8 and Q0-Q7.
 def CSR_Win_AArch64_CFGuard_Check : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS,
