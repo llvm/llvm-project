@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
@@ -34,7 +33,6 @@ public:
 void XeGPUTransformDialectExtension::init() {
   declareGeneratedDialect<scf::SCFDialect>();
   declareGeneratedDialect<arith::ArithDialect>();
-  declareGeneratedDialect<gpu::GPUDialect>();
   declareGeneratedDialect<xegpu::XeGPUDialect>();
 
   registerTransformOps<
@@ -173,7 +171,6 @@ DiagnosedSilenceableFailure
 transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
                                   transform::TransformResults &results,
                                   transform::TransformState &state) {
-
   auto targetOps = state.getPayloadOps(getTarget());
   if (!llvm::hasSingleElement(targetOps)) {
     return emitDefiniteFailure() << "requires exactly one targetOp handle (got "
@@ -181,17 +178,14 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
   }
   Operation *target = *targetOps.begin();
 
-  auto transformOp = cast<TransformOpInterface>(getOperation());
-
   SmallVector<int32_t> sgLayout;
   DiagnosedSilenceableFailure status =
-      convertMixedValuesToInt(state, transformOp, sgLayout, getMixedSgLayout());
+      convertMixedValuesToInt(state, (*this), sgLayout, getMixedSgLayout());
   if (!status.succeeded())
     return status;
 
   SmallVector<int32_t> sgData;
-  status =
-      convertMixedValuesToInt(state, transformOp, sgData, getMixedSgData());
+  status = convertMixedValuesToInt(state, (*this), sgData, getMixedSgData());
   if (!status.succeeded())
     return status;
   auto maybeSgData =
@@ -199,7 +193,7 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
 
   SmallVector<int32_t> instData;
   status =
-      convertMixedValuesToInt(state, transformOp, instData, getMixedInstData());
+      convertMixedValuesToInt(state, (*this), instData, getMixedInstData());
   if (!status.succeeded())
     return status;
   auto maybeInstData = instData.empty()

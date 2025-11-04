@@ -17,7 +17,7 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Union
+from typing import Union, Optional
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -29,8 +29,8 @@ class SetDescLayoutOp(SetDescLayoutOp):
         target: Union[Operation, Value],
         sg_layout: MixedValues,
         *,
-        sg_data: MixedValues = None,
-        inst_data: MixedValues = None,
+        sg_data: Optional[MixedValues] = None,
+        inst_data: Optional[MixedValues] = None,
         loc=None,
         ip=None,
     ):
