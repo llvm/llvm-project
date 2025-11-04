@@ -2007,8 +2007,8 @@ loop:
   %add = add i32 %res2, %mul.ext
   %load.ext = sext i16 %load to i32
   %load.ext.ext = sext i32 %load.ext to i64
-  %exitcond740.not = icmp eq i64 %iv, %n
-  br i1 %exitcond740.not, label %exit, label %loop
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret i32 %add
@@ -2135,8 +2135,8 @@ loop:
   %add = add i64 %res2, %mul.ext
   %load.ext = sext i16 %load to i32
   %load.ext.ext = sext i32 %load.ext to i64
-  %exitcond740.not = icmp eq i64 %iv, %n
-  br i1 %exitcond740.not, label %exit, label %loop
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret i64 %add
@@ -2260,8 +2260,8 @@ loop:
   %add = add i32 %res2, %mul.ext
   %load.ext = sext i16 %load to i32
   %load.ext.ext = sext i32 %load.ext to i64
-  %exitcond740.not = icmp eq i64 %iv, %n
-  br i1 %exitcond740.not, label %exit, label %loop
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret i32 %add
@@ -2388,8 +2388,8 @@ loop:
   %add = add i32 %res2, %mul.ext
   %load.ext = sext i16 %load to i32
   %load.ext.ext = sext i32 %load.ext to i64
-  %exitcond740.not = icmp eq i64 %iv, %n
-  br i1 %exitcond740.not, label %exit, label %loop
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret i32 %add
