@@ -4096,8 +4096,11 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
 def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
   let summary = "Implements the llvm.objsize builtin";
   let description = [{
-    The `cir.objsize` operation models the behavior of the `llvm.objectsize`
-    intrinsic in Clang. It returns the number of accessible bytes past ptr.
+    The `cir.objsize` operation is designed to provide information to the
+    optimizer to determine whether a) an operation (like memcpy) will
+    overflow a buffer that corresponds to an object, or b) that a runtime
+    check for overflow isn’t necessary. An object in this context means an
+    allocation of a specific class, structure, array, or other object.
 
     When the `min` attribute is present, the operation returns the minimum
     guaranteed accessible size. When absent (max mode), it returns the maximum

@@ -666,7 +666,7 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
                                                   bool isDynamic) {
   assert(!cir::MissingFeatures::opCallImplicitObjectSizeArgs());
 
-  // LLVM can't handle Type=3 appropriately, and __builtin_object_size shouldn't
+  // LLVM can't handle type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate e for side-effects. In either case, just like original LLVM
   // lowering, we shouldn't lower to `cir.objsize`.
   if (type == 3 || (!emittedE && e->HasSideEffects(getContext())))
@@ -679,7 +679,7 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
 
   assert(!cir::MissingFeatures::countedBySize());
 
-  // LLVM intrinsics (which CIR lowers to at some point, only supports 0
+  // `cir.objectsize` only supports 0
   // and 2, account for that right now.
   const bool min = ((type & 2) != 0);
   auto op = cir::ObjSizeOp::create(builder, getLoc(e->getSourceRange()),
