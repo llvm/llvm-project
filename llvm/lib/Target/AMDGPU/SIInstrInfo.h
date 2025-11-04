@@ -1288,6 +1288,10 @@ public:
 
   bool isNeverCoissue(MachineInstr &MI) const;
 
+  bool getDowncastSequence(const MachineInstr &MI,
+                           SmallVectorImpl<unsigned> &Sequence,
+                           const GCNSubtarget &ST) const;
+
   /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
   bool isLegalAV64PseudoImm(uint64_t Imm) const;
 
