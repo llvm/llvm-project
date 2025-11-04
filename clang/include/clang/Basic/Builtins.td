@@ -4934,8 +4934,8 @@ def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLResourceGetPointerWithStatus : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_resource_getpointer_with_status"];
+def HLSLResourceLoadWithStatus : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_load_with_status"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }

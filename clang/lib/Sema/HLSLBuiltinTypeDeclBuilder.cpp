@@ -1140,7 +1140,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
   addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
-  addHandleAccessFunctionWithStatus(Load, /*IsConst=*/false, /*IsRef=*/false);
+  addLoadWithStatusFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
 
   return *this;
 }
@@ -1234,9 +1234,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleAccessFunctionWithStatus(DeclarationName &Name,
-                                                          bool IsConst,
-                                                          bool IsRef) {
+BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
+                                                  bool IsConst, bool IsRef) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1262,7 +1261,7 @@ BuiltinTypeDeclBuilder::addHandleAccessFunctionWithStatus(DeclarationName &Name,
   return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
       .addParam("Index", AST.UnsignedIntTy)
       .addParam("Status", StatusRefTy)
-      .callBuiltin("__builtin_hlsl_resource_getpointer_with_status", ElemPtrTy,
+      .callBuiltin("__builtin_hlsl_resource_load_with_status", ElemPtrTy,
                    PH::Handle, PH::_0, PH::_1)
       .dereference(PH::LastStmt)
       .finalize();

@@ -353,16 +353,53 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         ArrayRef<Value *>{HandleOp, IndexOp});
   }
-  case Builtin::BI__builtin_hlsl_resource_getpointer_with_status: {
+  case Builtin::BI__builtin_hlsl_resource_load_with_status: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
-    Value *StatusOp = EmitScalarExpr(E->getArg(2));
 
-    llvm::Type *RetTy = ConvertType(E->getType());
-    return Builder.CreateIntrinsic(
-        RetTy,
-        CGM.getHLSLRuntime().getCreateResourceGetPointerWithStatusIntrinsic(),
-        ArrayRef<Value *>{HandleOp, IndexOp, StatusOp});
+    // Get the *address* of the status argument (since it's a reference)
+    LValue StatusLVal = EmitLValue(E->getArg(2));
+    Address StatusAddr = StatusLVal.getAddress();
+
+    QualType HandleTy = E->getArg(0)->getType();
+    const HLSLAttributedResourceType *RT =
+        HandleTy->getAs<HLSLAttributedResourceType>();
+    assert(RT && "Expected a resource type as first parameter");
+
+    Intrinsic::ID IntrID = RT->getAttrs().RawBuffer
+                               ? llvm::Intrinsic::dx_resource_load_rawbuffer
+                               : llvm::Intrinsic::dx_resource_load_typedbuffer;
+
+    llvm::Type *DataTy = ConvertType(E->getType());
+    llvm::Type *RetTy = llvm::StructType::get(Builder.getContext(),
+                                              {DataTy, Builder.getInt1Ty()});
+
+    SmallVector<Value *, 3> Args;
+    Args.push_back(HandleOp);
+    Args.push_back(IndexOp);
+
+    if (RT->getAttrs().RawBuffer) {
+      Args.push_back(Builder.getInt32(0)); // dummy offset
+    }
+
+    // Call the intrinsic (returns a struct)
+    Value *ResRet =
+        Builder.CreateIntrinsic(RetTy, IntrID, Args, {}, "ld.struct");
+
+    // Extract the loaded data (first element of the struct)
+    Value *LoadedValue = Builder.CreateExtractValue(ResRet, {0}, "ld.value");
+
+    // Extract the status bit (second element of the struct)
+    Value *StatusBit = Builder.CreateExtractValue(ResRet, {1}, "ld.status");
+
+    // Extend the status bit to a 32-bit integer
+    Value *ExtendedStatus =
+        Builder.CreateZExt(StatusBit, Builder.getInt32Ty(), "ld.status.ext");
+
+    // Store the extended status into the user's reference variable
+    Builder.CreateStore(ExtendedStatus, StatusAddr);
+
+    return LoadedValue;
   }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());

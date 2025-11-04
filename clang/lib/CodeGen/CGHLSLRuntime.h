@@ -126,8 +126,9 @@ public:
 
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateResourceGetPointer,
                                    resource_getpointer)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateResourceGetPointerWithStatus,
-                                   resource_getpointer_with_status)
+
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateResourceLoadTypedBuffer,
+                                   resource_load_typedbuffer)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,

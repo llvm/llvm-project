@@ -657,7 +657,7 @@ public:
     return false;
   }
 
-  [[nodiscard]] bool lowerGetPointerWithStatus(Function &F) {
+  [[nodiscard]] bool lowerLoadWithStatus(Function &F) {
     // These should have already been handled in DXILResourceAccess, so we can
     // just clean up the dead prototype.
     assert(F.user_empty() && "getpointer operations should have been removed");
@@ -941,8 +941,8 @@ public:
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
         break;
-      case Intrinsic::dx_resource_getpointer_with_status:
-        HasErrors |= lowerGetPointerWithStatus(F);
+      case Intrinsic::dx_resource_load_with_status:
+        HasErrors |= lowerLoadWithStatus(F);
         break;
       case Intrinsic::dx_resource_nonuniformindex:
         assert(!CleanupNURI &&
