@@ -2572,8 +2572,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   // Combine sin / cos into _sincos_stret if it is available.
-  setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-  setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
+  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   if (Subtarget.isTargetWin64()) {
     setOperationAction(ISD::SDIV, MVT::i128, Custom);
@@ -33004,61 +33004,6 @@ static SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
 }
 
-static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
-                            SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue Arg = Op.getOperand(0);
-  EVT ArgVT = Arg.getValueType();
-  bool isF64 = ArgVT == MVT::f64;
-
-  RTLIB::Libcall LC = isF64 ? RTLIB::SINCOS_STRET_F64 : RTLIB::SINCOS_STRET_F32;
-  const char *LibcallName = TLI.getLibcallName(LC);
-  if (!LibcallName)
-    return SDValue();
-
-  assert(Subtarget.isTargetDarwin() && Subtarget.is64Bit());
-
-  // For MacOSX, we want to call an alternative entry point: __sincos_stret,
-  // which returns the values as { float, float } (in XMM0) or
-  // { double, double } (which is returned in XMM0, XMM1).
-  SDLoc dl(Op);
-  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-
-  TargetLowering::ArgListTy Args;
-  Args.emplace_back(Arg, ArgTy);
-
-  // Only optimize x86_64 for now. i386 is a bit messy. For f32,
-  // the small struct {f32, f32} is returned in (eax, edx). For f64,
-  // the results are returned via SRet in memory.
-  SDValue Callee =
-      DAG.getExternalSymbol(LibcallName, TLI.getPointerTy(DAG.getDataLayout()));
-
-  Type *RetTy = isF64 ? (Type *)StructType::get(ArgTy, ArgTy)
-                      : (Type *)FixedVectorType::get(ArgTy, 2);
-
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl)
-      .setChain(DAG.getEntryNode())
-      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args))
-      .setIsPostTypeLegalization();
-
-  std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
-
-  if (isF64)
-    // Returned in xmm0 and xmm1.
-    return CallResult.first;
-
-  // Returned in bits 0:31 and 32:64 xmm0.
-  SDValue SinVal =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ArgVT, CallResult.first,
-                  DAG.getVectorIdxConstant(0, dl));
-  SDValue CosVal =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ArgVT, CallResult.first,
-                  DAG.getVectorIdxConstant(1, dl));
-  SDVTList Tys = DAG.getVTList(ArgVT, ArgVT);
-  return DAG.getNode(ISD::MERGE_VALUES, dl, Tys, SinVal, CosVal);
-}
-
 /// Widen a vector input to a vector of NVT.  The
 /// input vector must have the same element type as NVT.
 static SDValue ExtendToType(SDValue InOp, MVT NVT, SelectionDAG &DAG,
@@ -33663,7 +33608,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ABDS:
   case ISD::ABDU:               return LowerABD(Op, Subtarget, DAG);
   case ISD::AVGCEILU:           return LowerAVG(Op, Subtarget, DAG);
-  case ISD::FSINCOS:            return LowerFSINCOS(Op, Subtarget, DAG);
   case ISD::MLOAD:              return LowerMLOAD(Op, Subtarget, DAG);
   case ISD::MSTORE:             return LowerMSTORE(Op, Subtarget, DAG);
   case ISD::MGATHER:            return LowerMGATHER(Op, Subtarget, DAG);
