@@ -154,6 +154,132 @@ bees:
   unreachable
 }
 
+define void @pr165179(i1 %cond) {
+; CHECK-LABEL: @pr165179(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @bees.a() #[[ATTR0]]
+; CHECK-NEXT:    br label [[SWITCHBB:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    tail call void @bees.b() #[[ATTR0]]
+; CHECK-NEXT:    br label [[SWITCHBB]]
+; CHECK:       exit:
+; CHECK-NEXT:    tail call void @bees.a() #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  tail call void @bees.a() nounwind
+  br label %switchbb
+
+if.else:
+  tail call void @bees.b() nounwind
+  br label %switchbb
+
+switchbb:
+  %cond1 = phi i32 [ 1, %if.else ], [ -1, %if.then ]
+  switch i32 %cond1, label %default [
+  i32 1, label %exit
+  i32 -1, label %exit
+  ]
+
+exit:
+  tail call void @bees.a() nounwind
+  ret void
+
+default:
+  tail call void @bees.b() nounwind
+  ret void
+}
+
+define void @switch_remove_dead_case_phi(i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @switch_remove_dead_case_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @bees.a() #[[ATTR0]]
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[SWITCHBB:%.*]], label [[IF_ELSE]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 3, [[ENTRY:%.*]] ], [ -1, [[IF_THEN]] ]
+; CHECK-NEXT:    tail call void @bees.b() #[[ATTR0]]
+; CHECK-NEXT:    br label [[SWITCHBB]]
+; CHECK:       switchbb:
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[PHI]], [[IF_ELSE]] ], [ 5, [[IF_THEN]] ]
+; CHECK-NEXT:    [[COND3:%.*]] = icmp eq i32 [[COND]], -1
+; CHECK-NEXT:    br i1 [[COND3]], label [[EXIT:%.*]], label [[DEFAULT:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    tail call void @bees.a() #[[ATTR0]]
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       default:
+; CHECK-NEXT:    tail call void @bees.b() #[[ATTR0]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  br i1 %cond1, label %if.then, label %if.else
+
+if.then:
+  tail call void @bees.a() nounwind
+  br i1 %cond2, label %switchbb, label %if.else
+
+if.else:
+  %phi = phi i32 [ 3, %entry ], [ -1, %if.then ]
+  tail call void @bees.b() nounwind
+  br label %switchbb
+
+switchbb:
+  %cond = phi i32 [ %phi, %if.else ], [ 5, %if.then ]
+  switch i32 %cond, label %default [
+  i32 1, label %exit
+  i32 -1, label %exit
+  ]
+
+exit:
+  tail call void @bees.a() nounwind
+  ret void
+
+default:
+  tail call void @bees.b() nounwind
+  ret void
+}
+
+define void @switch_remove_dead_case_select(i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @switch_remove_dead_case_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[COND1:%.*]], i32 -1, i32 3
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[COND2:%.*]], i32 [[X]], i32 5
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[Y]], -1
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[DEFAULT:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    tail call void @bees.a() #[[ATTR0]]
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       default:
+; CHECK-NEXT:    tail call void @bees.b() #[[ATTR0]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  %x = select i1 %cond1, i32 -1, i32 3
+  %y = select i1 %cond2, i32 %x, i32 5
+  switch i32 %y, label %default [
+  i32 1, label %exit
+  i32 -1, label %exit
+  ]
+
+exit:
+  tail call void @bees.a() nounwind
+  ret void
+
+default:
+  tail call void @bees.b() nounwind
+  ret void
+}
+
 declare void @llvm.trap() nounwind noreturn
 declare void @bees.a() nounwind
 declare void @bees.b() nounwind
