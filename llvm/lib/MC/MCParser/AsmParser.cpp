@@ -3080,22 +3080,34 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
 }
 
 /// parseDirectiveBase64:
-//    ::= .base64 "string"
+//    ::= .base64 "string" (, "string" )*
 bool AsmParser::parseDirectiveBase64() {
-  if (checkForValidSection() ||
-      check(getTok().isNot(AsmToken::String), "expected string")) {
-    return true;
-  }
+  auto parseOp = [&]() -> bool {
+    if (checkForValidSection())
+      return true;
 
-  std::vector<char> Decoded;
-  std::string const str = getTok().getStringContents().str();
-  if (str.empty() || decodeBase64(str, Decoded)) {
-    return true;
-  }
+    if (getTok().isNot(AsmToken::String)) {
+      return true;
+    }
 
-  getStreamer().emitBytes(std::string(Decoded.begin(), Decoded.end()));
-  Lex();
-  return false;
+    std::vector<char> Decoded;
+    std::string const str = getTok().getStringContents().str();
+    if (check(str.empty(), "expected nonempty string")) {
+      return true;
+    }
+
+    llvm::Error e = decodeBase64(str, Decoded);
+    if (e) {
+      consumeError(std::move(e));
+      return Error(Lexer.getLoc(), "failed to base64 decode string data");
+    }
+
+    getStreamer().emitBytes(std::string(Decoded.begin(), Decoded.end()));
+    Lex();
+    return false;
+  };
+
+  return check(parseMany(parseOp), "expected string");
 }
 
 /// parseDirectiveReloc
