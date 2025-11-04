@@ -134,6 +134,15 @@ OPTIONS
 
             Abbreviate the description of type unit entries.
 
+.. option:: -t, --filter-child-tag
+
+            Only dump children whose DWARF tag is one of the specified tags.
+            Example usage:
+
+            .. code-block:: c
+
+              llvm-dwarfdump -t DW_TAG_structure_type -t DW_TAG_member -c
+
 .. option:: -x, --regex
 
             Treat any <name> strings as regular expressions when searching

@@ -704,7 +704,9 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
           DIDumpOptions ChildDumpOpts = DumpOpts;
           ChildDumpOpts.ShowParents = false;
           while (Child) {
-            Child.dump(OS, Indent + 2, ChildDumpOpts);
+            if (DumpOpts.FilterChildTag.empty() ||
+                llvm::is_contained(DumpOpts.FilterChildTag, Child.getTag()))
+              Child.dump(OS, Indent + 2, ChildDumpOpts);
             Child = Child.getSibling();
           }
         }
