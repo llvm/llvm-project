@@ -7,6 +7,7 @@
 declare <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x float>)
 declare <16 x float> @llvm.masked.expandload.v16f32(ptr, <16 x i1>, <16 x float>)
 declare <8 x float> @llvm.masked.expandload.v8f32(ptr, <8 x i1>, <8 x float>)
+declare <16 x i32> @llvm.masked.expandload.v16i32(ptr, <16 x i1>, <16 x i32>)
 
 ; Test case 1: Direct v8i1 all-ones mask (should use kxnorb on AVX512DQ)
 define <8 x float> @mask_v8i1_allones(ptr %ptr) {
@@ -134,4 +135,25 @@ define <16 x float> @gather_lower(ptr %base, <16 x i32> %ind, i16 %mask) {
   ret <16 x float> %res
 }
 
+; Test case 5: v32i1 mask via bitconvert, lower 16 bits set (tests bitconvert pattern)
+define <32 x i16> @mask_v32i1_lower16(<32 x i16> %a, <32 x i16> %b) {
+; AVX512-LABEL: mask_v32i1_lower16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
+; AVX512-NEXT:    retq
+  %mask = bitcast i32 65535 to <32 x i1>
+  %res = select <32 x i1> %mask, <32 x i16> %a, <32 x i16> %b
+  ret <32 x i16> %res
+}
+
+; Test case 6: v64i1 mask via bitconvert, lower 32 bits set (tests bitconvert pattern)
+define <64 x i8> @mask_v64i1_lower32(<64 x i8> %a, <64 x i8> %b) {
+; AVX512-LABEL: mask_v64i1_lower32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
+; AVX512-NEXT:    retq
+  %mask = bitcast i64 4294967295 to <64 x i1>
+  %res = select <64 x i1> %mask, <64 x i8> %a, <64 x i8> %b
+  ret <64 x i8> %res
+}
 
