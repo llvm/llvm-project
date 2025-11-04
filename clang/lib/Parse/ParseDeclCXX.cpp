@@ -4703,17 +4703,17 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       Diag(Tok.getLocation(), diag::err_expected) << tok::colon;
   }
 
-  bool hasAttribute = false;
-  bool hasAnnotation = false;
+  bool HasAttribute = false;
+  bool HasAnnotation = false;
   while (!Tok.isOneOf(tok::r_square, tok::semi, tok::eof)) {
     // If we parsed an attribute/annotation, a comma is required before parsing
     //  any additional ones.
-    if (hasAttribute || hasAnnotation) {
+    if (HasAttribute || HasAnnotation) {
       if (ExpectAndConsume(tok::comma)) {
         SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
         continue;
       }
-      if (hasAttribute && hasAnnotation) {
+      if (HasAttribute && HasAnnotation) {
         Diag(Tok.getLocation(), diag::err_mixed_attributes_and_annotations);
         SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
         continue;
@@ -4742,13 +4742,13 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
         SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
         continue;
       }
-      if (hasAttribute) {
+      if (HasAttribute) {
         Diag(Tok.getLocation(), diag::err_mixed_attributes_and_annotations);
         SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
         continue;
       }
       ParseAnnotationSpecifier(Attrs, EndLoc);
-      hasAnnotation = true;
+      HasAnnotation = true;
       continue;
     }
 
@@ -4785,11 +4785,11 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     }
 
     // Parse attribute arguments
-    hasAttribute = Tok.is(tok::l_paren) &&
+    HasAttribute = Tok.is(tok::l_paren) &&
                    ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
                                            ScopeName, ScopeLoc, OpenMPTokens);
 
-    if (!hasAttribute) {
+    if (!HasAttribute) {
       Attrs.addNew(AttrName,
                    SourceRange(ScopeLoc.isValid() && CommonScopeLoc.isInvalid()
                                    ? ScopeLoc
@@ -4799,7 +4799,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                    nullptr, 0,
                    getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
                                            : ParsedAttr::Form::C23());
-      hasAttribute = true;
+      HasAttribute = true;
     }
 
     if (TryConsumeToken(tok::ellipsis))

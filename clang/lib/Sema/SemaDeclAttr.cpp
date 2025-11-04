@@ -6450,7 +6450,8 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         S.Diag(P.first, P.second);
 
       return;
-    } else if (!CE->getType()->isStructuralType()) {
+    }
+    if (!CE->getType()->isStructuralType()) {
       S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
           << "C++26 annotation" << 5 << CE->getSourceRange();
       return;
