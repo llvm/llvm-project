@@ -48,6 +48,8 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 
 FROM base AS ci-container-build-tools
+ARG LLVM_VERSION
+ARG LLVM_VERSION_MAJOR
 
 COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-${LLVM_VERSION_MAJOR} \
                             ${LLVM_SYSROOT}/bin/
@@ -83,7 +85,7 @@ USER gha
 WORKDIR /home/gha
 
 
-FROM base AS ci-container-build-tools
+FROM ci-container-build-tools AS ci-container-code-lint
 ARG LLVM_VERSION
 ARG LLVM_VERSION_MAJOR
 
@@ -97,3 +99,24 @@ RUN pip install -r requirements_linting.txt --break-system-packages && \
     rm requirements_linting.txt
 USER gha
 WORKDIR /home/gha
+
+
+FROM ci-container-build-tools as ci-container-abi-tests
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    abi-compliance-checker \
+    abi-dumper \
+    autoconf \
+    pkg-config && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/universal-ctags/ctags.git && \
+    cd ctags && \
+    ./autogen.sh && \
+    ./configure && \
+    sudo make install && \
+    rm -Rf ../ctags
+
+
