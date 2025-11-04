@@ -340,9 +340,8 @@ private:
 
     // Search for a corresponding vector variant.
     //
-    // FIXME: CodeGen use RuntimeLibcallsInfo, not TargetLibraryInfo and has no
-    // path to using the vector libcalls. So this guess at how legalization will
-    // work is just wrong.
+    // FIXME: Should use RuntimeLibcallsInfo, not TargetLibraryInfo to get the
+    // vector mapping.
     LLVMContext &Ctx = RetTy->getContext();
     ElementCount VF = getVectorizedTypeVF(RetTy);
     VecDesc const *VD = nullptr;
