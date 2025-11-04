@@ -208,8 +208,8 @@ define i64 @test_loop_with_div_order_1(i64 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[DUMMY:%.*]] = load volatile i64, ptr null, align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[UPPER_BOUND]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ult i64 [[IV_NEXT]], [[UPPER_BOUND]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -262,8 +262,8 @@ define i64 @test_loop_with_div_order_2(i64 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[DUMMY:%.*]] = load volatile i64, ptr null, align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[UPPER_BOUND]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ult i64 [[IV_NEXT]], [[UPPER_BOUND]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
