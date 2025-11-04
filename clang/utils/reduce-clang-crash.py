@@ -80,7 +80,7 @@ def write_to_script(text, filename):
     os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
 
 
-def extract_opt_level(args_list: List[str]) -> Optional[str]:
+def extract_opt_level(args_list: List[str]) -> str:
     """
     Finds the last optimization flag (-O...) from a list of arguments.
 
@@ -88,15 +88,15 @@ def extract_opt_level(args_list: List[str]) -> Optional[str]:
       args_list: A list of string arguments passed to the compiler.
 
     Returns:
-      The last matching optimization flag string if found, otherwise None.
+      The last matching optimization flag string if found, otherwise -O2.
     """
-    valid_opt_flags = {"-O0", "-O1", "-O2", "-O3", "-Os", "-Oz", "-Og", "-Ofast"}
+    valid_opt_flags = {"-O0", "-O1", "-O2", "-O3", "-Os", "-Oz"}
 
     # Iterate in reverse to find the last occurrence
     for arg in reversed(args_list):
         if arg in valid_opt_flags:
             return arg
-    return None
+    return "-O2"
 
 
 def remove_first_line(file_path):
@@ -237,16 +237,10 @@ class Reduce(object):
 
         self.expected_output = result
 
-    def check_expected_output(self, cmd=None, args=None, filename=None):
-        if not cmd:
-            cmd = self.clang
-        if not args:
-            args = self.clang_args
-        if not filename:
-            filename = self.file_to_reduce
-
+    def check_expected_output(self, cmd, args, filename):
+        cmd = self.get_crash_cmd(cmd=cmd, args=args, filename=filename)
         p = subprocess.Popen(
-            self.get_crash_cmd(cmd=cmd, args=args, filename=filename),
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
@@ -300,7 +294,7 @@ fi
         with tempfile.NamedTemporaryFile() as empty_file:
             new_args = cmd[1:] if use_llvm_reduce else cmd[1:-1]
             is_interesting = self.check_expected_output(
-                cmd=cmd[0], args=new_args, filename=empty_file.name
+                cmd[0], new_args, empty_file.name
             )
         if is_interesting:
             sys.exit("The interestingness test passes for an empty file.")
@@ -312,12 +306,16 @@ fi
             cmd_preprocess_no_lines = cmd_preprocess + ["-P"]
             try:
                 subprocess.check_call(cmd_preprocess_no_lines)
-                if self.check_expected_output(filename=tmpfile.name):
+                if self.check_expected_output(
+                    self.clang, self.clang_args, tmpfile.name
+                ):
                     print("Successfully preprocessed with line markers removed")
                     shutil.copy(tmpfile.name, self.file_to_reduce)
                 else:
                     subprocess.check_call(cmd_preprocess)
-                    if self.check_expected_output(filename=tmpfile.name):
+                    if self.check_expected_output(
+                        self.clang, self.clang_args, tmpfile.name
+                    ):
                         print("Successfully preprocessed without removing line markers")
                         shutil.copy(tmpfile.name, self.file_to_reduce)
                     else:
@@ -356,7 +354,9 @@ fi
                 new_args.remove(extra_arg)
             new_args.append(extra_arg)
 
-        if new_args != args and self.check_expected_output(args=new_args):
+        if new_args != args and self.check_expected_output(
+            self.clang, new_args, self.file_to_reduce
+        ):
             if msg:
                 verbose_print(msg)
             return new_args
@@ -372,7 +372,7 @@ fi
             del new_args[index]
             removed_arg += " " + args[index + 1]
 
-        if self.check_expected_output(args=new_args):
+        if self.check_expected_output(self.clang, new_args, self.file_to_reduce):
             verbose_print("Removed", removed_arg)
             return new_args, index
         return args, index + 1
@@ -507,13 +507,15 @@ fi
 
     def classify_crash(self) -> FailureType:
         print("Classifying crash ...")
-        if self.check_expected_output(args=self.clang_args + ["-fsyntax-only"]):
+        if self.check_expected_output(
+            self.clang, self.clang_args + ["-fsyntax-only"], self.file_to_reduce
+        ):
             print("Found Frontend Crash")
             return FailureType.FrontEnd
 
         print("Found Middle/Backend failure")
 
-        self.opt_level = extract_opt_level(self.clang_args) or "-O2"
+        self.opt_level = extract_opt_level(self.clang_args)
         backend_result = self.check_backend()
         if backend_result == FailureType.BackEnd:
             return backend_result
@@ -524,12 +526,14 @@ fi
 
     def check_llc_failure(self) -> bool:
         return self.check_expected_output(
-            cmd=self.llc, args=[self.opt_level, "-filetype=obj"], filename=self.ir_file
+            self.llc, [self.opt_level, "-filetype=obj"], self.ir_file
         )
 
     def extract_backend_ir(self) -> bool:
         return not self.check_expected_output(
-            args=self.clang_args + ["-emit-llvm", "-o", self.ir_file]
+            self.clang,
+            self.clang_args + ["-emit-llvm", "-o", self.ir_file],
+            self.file_to_reduce,
         )
 
     def check_backend(self) -> Optional[FailureType]:
@@ -539,38 +543,67 @@ fi
             print("Checking llc for failure")
             if self.check_llc_failure():
                 print("Found BackEnd Crash")
+                self.new_cmd = [self.llc, self.opt_level, "-filetype=obj"]
                 return FailureType.BackEnd
 
-    def extract_crashing_ir(self):
+    def extract_crashing_ir(self, use_print_on_crash=False):
         """
         Extract IR just before the crash using --print-on-crash
         """
+        if use_print_on_crash:
+            args = self.clang_args + [
+                "-mllvm",
+                "--print-on-crash",
+                "-mllvm",
+                f"--print-on-crash-path={self.ir_file}",
+                "-mllvm",
+                "--print-module-scope",
+            ]
+
+            if not self.check_expected_output(self.clang, args, self.file_to_reduce):
+                sys.exit(
+                    "The interestingness test does not pass with '--print-on-crash'."
+                )
+
+            # The output from --print-on-crash has an invalid first line (pass name).
+            remove_first_line(self.ir_file)
+            return
         args = self.clang_args + [
-            "-mllvm",
-            "--print-on-crash",
-            "-mllvm",
-            f"--print-on-crash-path={self.ir_file}",
-            "-mllvm",
-            "--print-module-scope",
+            "-disable-llvm-passes",
+            "-S",
+            "-emit-llvm",
+            "-o",
+            self.ir_file,
         ]
-
-        if not self.check_expected_output(args=args):
-            sys.exit("The interestingness test does not pass with '--print-on-crash'.")
-
-        # The output from --print-on-crash has an invalid first line (pass name).
-        remove_first_line(self.ir_file)
+        if self.check_expected_output(self.clang, args, self.file_to_reduce):
+            sys.exit("The interestingness test does not pass when generating llvm ir.")
+        # print(quote_cmd(self.get_crash_cmd(self.clang, args, self.file_to_reduce)))
 
     def check_middle_end(self) -> FailureType:
         # TODO: parse the exact pass from the backtrace and set the pass
         # pipeline directly via -passes="...".
         print("Checking opt for failure")
+        args = [self.opt_level, "-disable-output"]
         if self.check_expected_output(
-            cmd=self.opt,
-            args=[self.opt_level, "-disable-output"],
-            filename=self.ir_file,
+            self.opt,
+            args,
+            self.ir_file,
         ):
             print("Found MiddleEnd Crash")
+            self.new_cmd = [self.opt] + args
             return FailureType.MiddleEnd
+
+        print("Check clang on IR file")
+        args = self.clang_args[:-1] + ["ir"]
+        if self.check_expected_output(
+            self.clang,
+            args,
+            self.ir_file,
+        ):
+            print("Found MiddleEnd Crash")
+            self.new_cmd = [self.clang] + args
+            return FailureType.MiddleEnd
+
         print(
             "Could not automatically detect crash type, falling back to creduce/cvise."
         )
@@ -671,12 +704,10 @@ def main():
                 print("Starting reduction with creduce/cvise")
                 pass
             case FailureType.MiddleEnd:
-                new_cmd = [opt_cmd, "-disable-output", r.opt_level]
-                r.reduce_ir_crash(new_cmd)
+                r.reduce_ir_crash(r.new_cmd)
                 return
             case FailureType.BackEnd:
-                new_cmd = [llc_cmd, "-filetype=obj", r.opt_level]
-                r.reduce_ir_crash(new_cmd)
+                r.reduce_ir_crash(r.new_cmd)
                 return
 
     r.simplify_clang_args()
