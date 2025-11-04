@@ -19,12 +19,12 @@
 ; ((1LL << 62) - 1 and 2) overflows in a signed sense.
 define void @strongsiv_const_ovfl(ptr %A) {
 ; CHECK-LABEL: 'strongsiv_const_ovfl'
-; CHECK-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
 ;
 entry:
   br label %loop.header
