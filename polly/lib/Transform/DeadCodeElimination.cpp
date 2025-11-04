@@ -33,7 +33,6 @@
 
 #include "polly/DeadCodeElimination.h"
 #include "polly/DependenceInfo.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -50,20 +49,6 @@ cl::opt<int> DCEPreciseSteps(
              "iterations. (A value of -1 schedules another approximation stage "
              "before the actual dead code elimination."),
     cl::init(-1), cl::cat(PollyCategory));
-
-class DeadCodeElimWrapperPass final : public ScopPass {
-public:
-  static char ID;
-  explicit DeadCodeElimWrapperPass() : ScopPass(ID) {}
-
-  /// Remove dead iterations from the schedule of @p S.
-  bool runOnScop(Scop &S) override;
-
-  /// Register all analyses and transformation required.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-};
-
-char DeadCodeElimWrapperPass::ID = 0;
 
 /// Return the set of live iterations.
 ///
@@ -144,29 +129,19 @@ static bool runDeadCodeElimination(Scop &S, int PreciseSteps,
   return S.restrictDomains(Live);
 }
 
-bool DeadCodeElimWrapperPass::runOnScop(Scop &S) {
-  auto &DI = getAnalysis<DependenceInfo>();
-  const Dependences &Deps = DI.getDependences(Dependences::AL_Statement);
+} // namespace
+
+bool polly::runDeadCodeElim(Scop &S, DependenceAnalysis::Result &DA) {
+  const Dependences &Deps = DA.getDependences(Dependences::AL_Statement);
 
   bool Changed = runDeadCodeElimination(S, DCEPreciseSteps, Deps);
 
   // FIXME: We can probably avoid the recomputation of all dependences by
   // updating them explicitly.
   if (Changed)
-    DI.recomputeDependences(Dependences::AL_Statement);
+    DA.recomputeDependences(Dependences::AL_Statement);
 
-  return false;
-}
-
-void DeadCodeElimWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  ScopPass::getAnalysisUsage(AU);
-  AU.addRequired<DependenceInfo>();
-}
-
-} // namespace
-
-Pass *polly::createDeadCodeElimWrapperPass() {
-  return new DeadCodeElimWrapperPass();
+  return Changed;
 }
 
 llvm::PreservedAnalyses DeadCodeElimPass::run(Scop &S, ScopAnalysisManager &SAM,
@@ -191,10 +166,3 @@ llvm::PreservedAnalyses DeadCodeElimPass::run(Scop &S, ScopAnalysisManager &SAM,
   PA.preserveSet<AllAnalysesOn<Loop>>();
   return PA;
 }
-
-INITIALIZE_PASS_BEGIN(DeadCodeElimWrapperPass, "polly-dce",
-                      "Polly - Remove dead iterations", false, false)
-INITIALIZE_PASS_DEPENDENCY(DependenceInfo)
-INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass)
-INITIALIZE_PASS_END(DeadCodeElimWrapperPass, "polly-dce",
-                    "Polly - Remove dead iterations", false, false)

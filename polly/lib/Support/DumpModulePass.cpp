@@ -12,7 +12,6 @@
 
 #include "polly/Support/DumpModulePass.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -47,56 +46,10 @@ static void runDumpModule(llvm::Module &M, StringRef Filename, bool IsSuffix) {
   M.print(Out->os(), nullptr);
   Out->keep();
 }
-
-class DumpModuleWrapperPass final : public ModulePass {
-private:
-  DumpModuleWrapperPass(const DumpModuleWrapperPass &) = delete;
-  const DumpModuleWrapperPass &
-  operator=(const DumpModuleWrapperPass &) = delete;
-
-  std::string Filename;
-  bool IsSuffix;
-
-public:
-  static char ID;
-
-  /// This constructor is used e.g. if using opt -polly-dump-module.
-  ///
-  /// Provide a default suffix to not overwrite the original file.
-  explicit DumpModuleWrapperPass()
-      : ModulePass(ID), Filename("-dump"), IsSuffix(true) {}
-
-  explicit DumpModuleWrapperPass(std::string Filename, bool IsSuffix)
-      : ModulePass(ID), Filename(std::move(Filename)), IsSuffix(IsSuffix) {}
-
-  /// @name ModulePass interface
-  //@{
-  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-  bool runOnModule(llvm::Module &M) override {
-    runDumpModule(M, Filename, IsSuffix);
-    return false;
-  }
-  //@}
-};
-
-char DumpModuleWrapperPass::ID;
 } // namespace
-
-ModulePass *polly::createDumpModuleWrapperPass(std::string Filename,
-                                               bool IsSuffix) {
-  return new DumpModuleWrapperPass(std::move(Filename), IsSuffix);
-}
 
 llvm::PreservedAnalyses DumpModulePass::run(llvm::Module &M,
                                             llvm::ModuleAnalysisManager &AM) {
   runDumpModule(M, Filename, IsSuffix);
   return PreservedAnalyses::all();
 }
-
-INITIALIZE_PASS_BEGIN(DumpModuleWrapperPass, "polly-dump-module",
-                      "Polly - Dump Module", false, false)
-INITIALIZE_PASS_END(DumpModuleWrapperPass, "polly-dump-module",
-                    "Polly - Dump Module", false, false)

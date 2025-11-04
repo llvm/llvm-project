@@ -776,6 +776,7 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
       SlabSize, SREPC, SAs);
 }
 
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
 static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
   switch (UseMemMgr) {
   case MemMgr::Default:
@@ -789,6 +790,7 @@ static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
     break;
   }
 }
+#endif
 
 static Expected<MaterializationUnit::Interface>
 getTestObjectFileInterface(Session &S, MemoryBufferRef O) {

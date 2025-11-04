@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-optree-max-ops=1 '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
-; RUN: opt %loadNPMPolly -polly-optree-max-ops=1 -passes=polly-optree -disable-output -stats < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=STATS
+; RUN: opt %loadNPMPolly -polly-optree-max-ops=1 '-passes=polly-custom<optree>' -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-optree-max-ops=1 '-passes=polly-custom<optree>' -disable-output -stats < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=STATS
 ; REQUIRES: asserts
 ;
 ; for (int j = 0; j < n; j += 1) {

@@ -365,6 +365,59 @@ LogicalResult ConvertF4x2ToF16x2Op::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// Stochastic Rounding Conversion Ops
+//===----------------------------------------------------------------------===//
+
+LogicalResult ConvertF32x2ToF16x2Op::verify() {
+  if (getRnd() != FPRoundingMode::RS)
+    return emitOpError("Only RS rounding mode is supported for "
+                       "conversions from f32x2 to f16x2.");
+  return success();
+}
+
+LogicalResult ConvertF32x2ToBF16x2Op::verify() {
+  if (getRnd() != FPRoundingMode::RS)
+    return emitOpError("Only RS rounding mode is supported for "
+                       "conversions from f32x2 to bf16x2.");
+  return success();
+}
+
+LogicalResult ConvertF32x4ToF8x4Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+
+  if (!llvm::isa<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(getDstTy()))
+    return emitOpError("Only ")
+           << mlir::Float8E4M3FNType::get(ctx) << " and "
+           << mlir::Float8E5M2Type::get(ctx)
+           << " types are supported for conversions from f32x4 to f8x4.";
+
+  return success();
+}
+
+LogicalResult ConvertF32x4ToF6x4Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+
+  if (!llvm::isa<mlir::Float6E2M3FNType, mlir::Float6E3M2FNType>(getDstTy()))
+    return emitOpError("Only ")
+           << mlir::Float6E2M3FNType::get(ctx) << " and "
+           << mlir::Float6E3M2FNType::get(ctx)
+           << " types are supported for conversions from f32x4 to f6x4.";
+
+  return success();
+}
+
+LogicalResult ConvertF32x4ToF4x4Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+
+  if (!llvm::isa<mlir::Float4E2M1FNType>(getDstTy()))
+    return emitOpError("Only ") << mlir::Float4E2M1FNType::get(ctx)
+                                << " type is supported for conversions from "
+                                   "f32x4 to f4x4.";
+
+  return success();
+}
+
 LogicalResult BulkStoreOp::verify() {
   if (getInitVal() != 0)
     return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
@@ -2468,6 +2521,85 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
       return TCGEN05_CP_2CTA(shape_mc, _b4x16_p64, is_2cta);                   \
     return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
   }()
+
+llvm::Intrinsic::ID ConvertF32x2ToF16x2Op::getIntrinsicID() {
+  bool hasRelu = getRelu();
+  bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
+
+  if (hasRelu && hasSatFinite)
+    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite;
+  if (hasRelu)
+    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu;
+  if (hasSatFinite)
+    return llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite;
+  return llvm::Intrinsic::nvvm_ff2f16x2_rs;
+}
+
+llvm::Intrinsic::ID ConvertF32x2ToBF16x2Op::getIntrinsicID() {
+  bool hasRelu = getRelu();
+  bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
+
+  if (hasRelu && hasSatFinite)
+    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite;
+  if (hasRelu)
+    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu;
+  if (hasSatFinite)
+    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite;
+  return llvm::Intrinsic::nvvm_ff2bf16x2_rs;
+}
+
+llvm::Intrinsic::ID ConvertF32x4ToF8x4Op::getIntrinsicID() {
+  mlir::Type dstTy = getDstTy();
+  bool hasRelu = getRelu();
+
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+        return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite
+                       : llvm::Intrinsic::nvvm_f32x4_to_e4m3x4_rs_satfinite;
+      })
+      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+        return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e5m2x4_rs_relu_satfinite
+                       : llvm::Intrinsic::nvvm_f32x4_to_e5m2x4_rs_satfinite;
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid F8 type in ConvertF32x4ToF8x4Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
+}
+
+llvm::Intrinsic::ID ConvertF32x4ToF6x4Op::getIntrinsicID() {
+  mlir::Type dstTy = getDstTy();
+  bool hasRelu = getRelu();
+
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+        return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e2m3x4_rs_relu_satfinite
+                       : llvm::Intrinsic::nvvm_f32x4_to_e2m3x4_rs_satfinite;
+      })
+      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+        return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e3m2x4_rs_relu_satfinite
+                       : llvm::Intrinsic::nvvm_f32x4_to_e3m2x4_rs_satfinite;
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid F6 type in ConvertF32x4ToF6x4Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
+}
+
+llvm::Intrinsic::ID ConvertF32x4ToF4x4Op::getIntrinsicID() {
+  mlir::Type dstTy = getDstTy();
+  bool hasRelu = getRelu();
+
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float4E2M1FNType>([&](mlir::Float4E2M1FNType) {
+        return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite
+                       : llvm::Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite;
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid F4 type in ConvertF32x4ToF4x4Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
+}
 
 llvm::Intrinsic::ID Tcgen05CpOp::getIntrinsicID(Operation &op) {
   auto curOp = cast<NVVM::Tcgen05CpOp>(op);
