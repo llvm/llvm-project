@@ -226,19 +226,18 @@ void LibraryResolver::resolveSymbolsInLibrary(
           return EnumerateResult::Continue;
         },
         Opts);
-
-    if (DiscoveredSymbols.empty()) {
-      LLVM_DEBUG(dbgs() << "  No symbols and remove library : "
-                        << Lib.getFullPath() << "\n";);
-      LibMgr.removeLibrary(Lib.getFullPath());
-      return;
-    }
   };
 
   if (!Lib.hasFilter()) {
     LLVM_DEBUG(dbgs() << "Building filter for library: " << Lib.getFullPath()
                       << "\n";);
     enumerateSymbolsIfNeeded();
+    if (DiscoveredSymbols.empty()) {
+      LLVM_DEBUG(dbgs() << "  No symbols and remove library : "
+                        << Lib.getFullPath() << "\n";);
+      LibMgr.removeLibrary(Lib.getFullPath());
+      return;
+    }
     SmallVector<StringRef> SymbolVec;
     SymbolVec.reserve(DiscoveredSymbols.size());
     for (const auto &KV : DiscoveredSymbols)
@@ -288,8 +287,8 @@ void LibraryResolver::searchSymbolsInLibraries(
 
     SymbolSearchContext Ctx(Q);
     while (!Ctx.allResolved()) {
-
-      for (auto &Lib : LibMgr.getView(S, K)) {
+      auto Libs = LibMgr.getLibraries(S, K);
+      for (auto &Lib : Libs) {
         if (Ctx.hasSearched(Lib.get()))
           continue;
 

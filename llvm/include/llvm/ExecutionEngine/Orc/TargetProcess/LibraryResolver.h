@@ -211,6 +211,17 @@ public:
     return FilteredView(Libraries.begin(), Libraries.end(), S, K);
   }
 
+  std::vector<std::shared_ptr<LibraryInfo>> getLibraries(LibState S,
+                                                         PathType K) const {
+    std::vector<std::shared_ptr<LibraryInfo>> Outs;
+    std::shared_lock<std::shared_mutex> Lock(Mtx);
+    for (const auto &[_, Entry] : Libraries) {
+      if (Entry->getKind() == K && Entry->getState() == S)
+        Outs.push_back(Entry);
+    }
+    return Outs;
+  }
+
   void forEachLibrary(const LibraryVisitor &visitor) const {
     std::unique_lock<std::shared_mutex> Lock(Mtx);
     for (const auto &[_, entry] : Libraries) {
@@ -220,14 +231,14 @@ public:
   }
 
   bool isLoaded(StringRef Path) const {
-    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    std::shared_lock<std::shared_mutex> Lock(Mtx);
     if (auto It = Libraries.find(Path.str()); It != Libraries.end())
       return It->second->getState() == LibState::Loaded;
     return false;
   }
 
   bool isQueried(StringRef Path) const {
-    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    std::shared_lock<std::shared_mutex> Lock(Mtx);
     if (auto It = Libraries.find(Path.str()); It != Libraries.end())
       return It->second->getState() == LibState::Queried;
     return false;
