@@ -33034,12 +33034,13 @@ static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
       DAG.getExternalSymbol(LibcallName, TLI.getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = isF64 ? (Type *)StructType::get(ArgTy, ArgTy)
-                      : (Type *)FixedVectorType::get(ArgTy, 4);
+                      : (Type *)FixedVectorType::get(ArgTy, 2);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(DAG.getEntryNode())
-      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args));
+      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args))
+      .setIsPostTypeLegalization();
 
   std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
 

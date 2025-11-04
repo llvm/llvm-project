@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Verify we do not create a SCoP in the presence of infinite loops.
 ;
