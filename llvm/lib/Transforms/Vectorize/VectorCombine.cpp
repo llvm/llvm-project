@@ -2018,10 +2018,10 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   Value *ScalarV = Ext->getOperand(0);
   if (!isGuaranteedNotToBePoison(ScalarV, &AC, dyn_cast<Instruction>(ScalarV),
                                  &DT)) {
-    // Check wether all lanes are extracted, all extracts trigger UB on
-    // poison, and the last extract (and hence all previous ones)
-    // are guaranteed to execute if Ext executes.
-    // If so, we do not need to insert a freeze.
+    // Check wether all lanes are extracted, all extracts trigger UB
+    // on poison, and the last extract (and hence all previous ones)
+    // are guaranteed to execute if Ext executes.  If so, we do not
+    // need to insert a freeze.
     SmallDenseSet<ConstantInt *, 8> ExtractedLanes;
     bool AllExtractsTriggerUB = true;
     ExtractElementInst *LastExtract = nullptr;
