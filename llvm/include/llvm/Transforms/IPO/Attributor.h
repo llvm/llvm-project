@@ -5341,6 +5341,8 @@ struct AAPotentialConstantValues
 
   /// Return the minimum trailing zeros of potential constants
   unsigned getAssumedMinTrailingZeros() const {
+    if (!isValidState() || getAssumedSet().empty())
+      return 0;
     unsigned TrailingZeros = getAssumedSet().begin()->getBitWidth() + 1;
     for (const APInt &It : getAssumedSet()) {
       if (It.countTrailingZeros() < TrailingZeros)
