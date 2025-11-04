@@ -244,7 +244,8 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
     cl::Optional, cl::init(false));
 
 void SPIRVPassConfig::addPreEmitPass() {
-  if (SPVEnableNonSemanticDI) {
+  if (SPVEnableNonSemanticDI ||
+      getSPIRVTargetMachine().getTargetTriple().getVendor() == Triple::AMD) {
     addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
   }
 }

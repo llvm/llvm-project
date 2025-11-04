@@ -1082,3 +1082,237 @@ define i32 @reset_multiload_i128(ptr %word, i32 %position, ptr %p) nounwind {
   %ret = select i1 %cmp, i32 %sel, i32 0
   ret i32 %ret
 }
+
+; BTC/BT/BTS sequence on same i128
+define i1 @sequence_i128(ptr %word, i32 %pos0, i32 %pos1, i32 %pos2) nounwind {
+; X86-LABEL: sequence_i128:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $144, %esp
+; X86-NEXT:    movb 20(%ebp), %ch
+; X86-NEXT:    movb 12(%ebp), %cl
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrb $3, %al
+; X86-NEXT:    andb $12, %al
+; X86-NEXT:    negb %al
+; X86-NEXT:    movsbl %al, %eax
+; X86-NEXT:    movl 56(%esp,%eax), %edx
+; X86-NEXT:    movl 60(%esp,%eax), %esi
+; X86-NEXT:    shldl %cl, %edx, %esi
+; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 48(%esp,%eax), %edi
+; X86-NEXT:    movl 52(%esp,%eax), %ebx
+; X86-NEXT:    shldl %cl, %ebx, %edx
+; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    shldl %cl, %edi, %ebx
+; X86-NEXT:    shll %cl, %edi
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movb %ch, %al
+; X86-NEXT:    shrb $3, %al
+; X86-NEXT:    andb $12, %al
+; X86-NEXT:    negb %al
+; X86-NEXT:    movsbl %al, %eax
+; X86-NEXT:    movl 84(%esp,%eax), %edx
+; X86-NEXT:    movl 88(%esp,%eax), %esi
+; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movzbl 20(%ebp), %ecx
+; X86-NEXT:    shldl %cl, %edx, %esi
+; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 80(%esp,%eax), %esi
+; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 92(%esp,%eax), %eax
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-NEXT:    shldl %cl, %esi, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    shldl %cl, %esi, %edx
+; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X86-NEXT:    xorl 8(%eax), %edx
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-NEXT:    xorl 12(%eax), %esi
+; X86-NEXT:    xorl (%eax), %edi
+; X86-NEXT:    xorl 4(%eax), %ebx
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    andb $96, %al
+; X86-NEXT:    shrb $3, %al
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    movl 96(%esp,%eax), %eax
+; X86-NEXT:    movl 16(%ebp), %ecx
+; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    setae %al
+; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
+; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Folded Reload
+; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    movl %edx, 8(%ecx)
+; X86-NEXT:    movl %esi, 12(%ecx)
+; X86-NEXT:    movl %edi, (%ecx)
+; X86-NEXT:    movl %ebx, 4(%ecx)
+; X86-NEXT:    leal -12(%ebp), %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; SSE-LABEL: sequence_i128:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl %ecx, %eax
+; SSE-NEXT:    movl %esi, %ecx
+; SSE-NEXT:    movl $1, %r8d
+; SSE-NEXT:    xorl %esi, %esi
+; SSE-NEXT:    shldq %cl, %r8, %rsi
+; SSE-NEXT:    movl $1, %r9d
+; SSE-NEXT:    shlq %cl, %r9
+; SSE-NEXT:    xorl %r11d, %r11d
+; SSE-NEXT:    testb $64, %cl
+; SSE-NEXT:    cmovneq %r9, %rsi
+; SSE-NEXT:    cmovneq %r11, %r9
+; SSE-NEXT:    xorl %r10d, %r10d
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shldq %cl, %r8, %r10
+; SSE-NEXT:    shlq %cl, %r8
+; SSE-NEXT:    testb $64, %al
+; SSE-NEXT:    cmovneq %r8, %r10
+; SSE-NEXT:    cmovneq %r11, %r8
+; SSE-NEXT:    xorq 8(%rdi), %rsi
+; SSE-NEXT:    xorq (%rdi), %r9
+; SSE-NEXT:    movl %edx, %ecx
+; SSE-NEXT:    andb $32, %cl
+; SSE-NEXT:    movq %r9, %rax
+; SSE-NEXT:    shrdq %cl, %rsi, %rax
+; SSE-NEXT:    movq %rsi, %r11
+; SSE-NEXT:    shrq %cl, %r11
+; SSE-NEXT:    testb $64, %dl
+; SSE-NEXT:    cmoveq %rax, %r11
+; SSE-NEXT:    btl %edx, %r11d
+; SSE-NEXT:    setae %al
+; SSE-NEXT:    orq %r10, %rsi
+; SSE-NEXT:    orq %r8, %r9
+; SSE-NEXT:    movq %r9, (%rdi)
+; SSE-NEXT:    movq %rsi, 8(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: sequence_i128:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movl %esi, %ecx
+; AVX2-NEXT:    xorl %r9d, %r9d
+; AVX2-NEXT:    movl $1, %r10d
+; AVX2-NEXT:    xorl %esi, %esi
+; AVX2-NEXT:    shldq %cl, %r10, %rsi
+; AVX2-NEXT:    shlxq %rcx, %r10, %r8
+; AVX2-NEXT:    testb $64, %cl
+; AVX2-NEXT:    cmovneq %r8, %rsi
+; AVX2-NEXT:    cmovneq %r9, %r8
+; AVX2-NEXT:    xorl %r11d, %r11d
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    shldq %cl, %r10, %r11
+; AVX2-NEXT:    shlxq %rax, %r10, %r10
+; AVX2-NEXT:    testb $64, %al
+; AVX2-NEXT:    cmovneq %r10, %r11
+; AVX2-NEXT:    cmovneq %r9, %r10
+; AVX2-NEXT:    xorq 8(%rdi), %rsi
+; AVX2-NEXT:    xorq (%rdi), %r8
+; AVX2-NEXT:    movl %edx, %ecx
+; AVX2-NEXT:    andb $32, %cl
+; AVX2-NEXT:    movq %r8, %rax
+; AVX2-NEXT:    shrdq %cl, %rsi, %rax
+; AVX2-NEXT:    shrxq %rcx, %rsi, %rcx
+; AVX2-NEXT:    testb $64, %dl
+; AVX2-NEXT:    cmoveq %rax, %rcx
+; AVX2-NEXT:    btl %edx, %ecx
+; AVX2-NEXT:    setae %al
+; AVX2-NEXT:    orq %r11, %rsi
+; AVX2-NEXT:    orq %r10, %r8
+; AVX2-NEXT:    movq %r8, (%rdi)
+; AVX2-NEXT:    movq %rsi, 8(%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: sequence_i128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    movl %ecx, %eax
+; AVX512-NEXT:    movl %esi, %ecx
+; AVX512-NEXT:    movl $1, %r9d
+; AVX512-NEXT:    xorl %esi, %esi
+; AVX512-NEXT:    shldq %cl, %r9, %rsi
+; AVX512-NEXT:    xorl %r10d, %r10d
+; AVX512-NEXT:    shlxq %rcx, %r9, %r8
+; AVX512-NEXT:    testb $64, %cl
+; AVX512-NEXT:    cmovneq %r8, %rsi
+; AVX512-NEXT:    cmovneq %r10, %r8
+; AVX512-NEXT:    xorl %r11d, %r11d
+; AVX512-NEXT:    movl %eax, %ecx
+; AVX512-NEXT:    shldq %cl, %r9, %r11
+; AVX512-NEXT:    shlxq %rax, %r9, %r9
+; AVX512-NEXT:    testb $64, %al
+; AVX512-NEXT:    cmovneq %r9, %r11
+; AVX512-NEXT:    cmovneq %r10, %r9
+; AVX512-NEXT:    xorq 8(%rdi), %rsi
+; AVX512-NEXT:    xorq (%rdi), %r8
+; AVX512-NEXT:    movl %edx, %ecx
+; AVX512-NEXT:    andb $32, %cl
+; AVX512-NEXT:    movq %r8, %rax
+; AVX512-NEXT:    shrdq %cl, %rsi, %rax
+; AVX512-NEXT:    shrxq %rcx, %rsi, %rcx
+; AVX512-NEXT:    testb $64, %dl
+; AVX512-NEXT:    cmoveq %rax, %rcx
+; AVX512-NEXT:    btl %edx, %ecx
+; AVX512-NEXT:    setae %al
+; AVX512-NEXT:    orq %r11, %rsi
+; AVX512-NEXT:    orq %r9, %r8
+; AVX512-NEXT:    movq %r8, (%rdi)
+; AVX512-NEXT:    movq %rsi, 8(%rdi)
+; AVX512-NEXT:    retq
+  %rem0 = and i32 %pos0, 127
+  %rem1 = and i32 %pos1, 127
+  %rem2 = and i32 %pos2, 127
+  %ofs0 = zext nneg i32 %rem0 to i128
+  %ofs1 = zext nneg i32 %rem1 to i128
+  %ofs2 = zext nneg i32 %rem2 to i128
+  %bit0 = shl nuw i128 1, %ofs0
+  %bit1 = shl nuw i128 1, %ofs1
+  %bit2 = shl nuw i128 1, %ofs2
+  %ld = load i128, ptr %word
+  %res0 = xor i128 %ld, %bit0
+  %test1 = and i128 %res0, %bit1
+  %cmp1 = icmp eq i128 %test1, 0
+  %res2 = or i128 %res0, %bit2
+  store i128 %res2, ptr %word
+  ret i1 %cmp1
+}

@@ -1,3 +1,5 @@
+# UNSUPPORTED: system-windows
+
 # Checks that the recognizers that should work across language runtimes
 # are only registered once with the target.
 

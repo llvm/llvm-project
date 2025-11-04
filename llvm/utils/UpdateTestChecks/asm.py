@@ -51,9 +51,9 @@ ASM_FUNCTION_AARCH64_RE = re.compile(
 )
 
 ASM_FUNCTION_AMDGPU_RE = re.compile(
-    r"\.type\s+_?(?P<func>[^,\n]+),@function\n"
+    r"\.type\s+(_|\.L)?(?P<func>[^,\n]+),@function\n"
     r"(^\s*\.amdgpu_hsa_kernel (?P=func)\n)?"
-    r'^_?(?P=func):(?:[ \t]*;+[ \t]*@"?(?P=func)"?)?\n'
+    r'^(_|\.L)?(?P=func):(?:[ \t]*;+[ \t]*@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"  # (body of the function)
     # This list is incomplete
     r"^\s*(\.Lfunc_end[0-9]+:\n|\.section)",
