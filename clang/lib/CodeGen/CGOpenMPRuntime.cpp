@@ -1872,20 +1872,19 @@ void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
     const VarDecl *VD = nullptr;
     if (auto *DRE = dyn_cast<DeclRefExpr>(E))
       VD = cast<VarDecl>(DRE->getDecl());
-<<<<<<< Updated upstream
-=======
     else if (auto *MRE = dyn_cast<MemberExpr>(E))
       if (auto *BaseDRE = dyn_cast<DeclRefExpr>(MRE->getBase()))
         if (auto *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl()))
           VD = BaseVD;
->>>>>>> Stashed changes
     return std::pair<CXXRecordDecl *, const VarDecl *>(CXXRecord, VD);
   };
   // Collect VTable from OpenMP map clause.
   for (const auto *C : D.getClausesOfKind<OMPMapClause>()) {
     for (const auto *E : C->varlist()) {
       auto DeclPair = GetVTableDecl(E);
-      emitAndRegisterVTable(CGM, DeclPair.first, DeclPair.second);
+      // Ensure VD is not null
+      if (DeclPair.second)
+        emitAndRegisterVTable(CGM, DeclPair.first, DeclPair.second);
     }
   }
 }
@@ -10072,14 +10071,12 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   // Register vtable from device for target data and target directives.
   // Add this block here since scanForTargetRegionsFunctions ignores
   // target data by checking if S is a executable directive (target).
-  if (isa<OMPExecutableDirective>(S) &&
-      isOpenMPTargetDataManagementDirective(
-          dyn_cast<OMPExecutableDirective>(S)->getDirectiveKind())) {
-    auto &E = *dyn_cast<OMPExecutableDirective>(S);
+  if (auto *E = dyn_cast<OMPExecutableDirective>(S);
+      E && isOpenMPTargetDataManagementDirective(E->getDirectiveKind())) {
     // Don't need to check if it's device compile
     // since scanForTargetRegionsFunctions currently only called
     // in device compilation.
-    registerVTable(E);
+    registerVTable(*E);
   }
 
   // Codegen OMP target directives that offload compute to the device.
