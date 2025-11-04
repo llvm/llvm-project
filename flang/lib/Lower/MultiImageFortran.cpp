@@ -1,4 +1,4 @@
-//===-- Coarray.cpp -------------------------------------------------------===//
+//===-- MultiImageFortran.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/Coarray.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -68,8 +68,7 @@ void Fortran::lower::genChangeTeamStmt(
   const std::list<Fortran::parser::CoarrayAssociation> &coarrayAssocList =
       std::get<std::list<Fortran::parser::CoarrayAssociation>>(stmt.t);
   if (coarrayAssocList.size())
-    mlir::emitWarning(loc,
-                      "Coarrays provided in the association list are ignored.");
+    TODO(loc, "Coarrays provided in the association list.");
 
   // Handle TEAM-VALUE
   const auto *teamExpr =

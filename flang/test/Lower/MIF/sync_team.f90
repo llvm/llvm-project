@@ -4,7 +4,7 @@
 program test_sync_team
   use, intrinsic :: iso_fortran_env, only: team_type
   implicit none
-  ! NOCOARRAY: Coarrays disabled, use '-fcoarray' to enable.
+  ! NOCOARRAY: Not yet implemented: Multi-image features are experimental and are disabled by default, use '-fcoarray' to enable.
  
   integer sync_status
   character(len=128) :: error_message
