@@ -904,9 +904,16 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     if (dstTdescTy.getChunkSizeAsInt() > 1)
       instData.push_back(chunkSize);
   }
-  LayoutInfo payloadLayout = getDefaultSIMTLayoutInfo(
-      payloadTy, uArch, instData, uArch->getGeneralPackedFormatBitSize(),
-      /*scattered=*/true);
+
+  LayoutInfo payloadLayout;
+
+  if (auto layout = storeScatter.getLayoutAttr()) {
+    payloadLayout = LayoutInfo(layout);
+  } else {
+    payloadLayout = getDefaultSIMTLayoutInfo(
+        payloadTy, uArch, instData, uArch->getGeneralPackedFormatBitSize(),
+        /*scattered=*/true);
+  }
 
   LayoutInfo maskLayout =
       getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
@@ -1041,7 +1048,7 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    xegpu::setDistributeLayoutAttr(result, layout);
+    xegpu::setDistributeLayoutAttr(result, layout, /*respectPermLayout*/ true);
   }
   return success();
 }

@@ -10,10 +10,7 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/error_mapper.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
@@ -33,19 +30,9 @@ LLVM_LIBC_FUNCTION(int, vsprintf,
       wb(buffer, cpp::numeric_limits<size_t>::max());
   printf_core::Writer writer(wb);
 
-  auto ret_val = printf_core::printf_main(&writer, format, args);
-  if (!ret_val.has_value()) {
-    libc_errno = printf_core::internal_error_to_errno(ret_val.error());
-    return -1;
-  }
+  int ret_val = printf_core::printf_main(&writer, format, args);
   wb.buff[wb.buff_cur] = '\0';
-
-  if (ret_val.value() > cpp::numeric_limits<int>::max()) {
-    libc_errno =
-        printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
-    return -1;
-  }
-  return static_cast<int>(ret_val.value());
+  return ret_val;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

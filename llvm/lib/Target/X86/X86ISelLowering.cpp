@@ -33034,12 +33034,13 @@ static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
       DAG.getExternalSymbol(LibcallName, TLI.getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = isF64 ? (Type *)StructType::get(ArgTy, ArgTy)
-                      : (Type *)FixedVectorType::get(ArgTy, 4);
+                      : (Type *)FixedVectorType::get(ArgTy, 2);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(DAG.getEntryNode())
-      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args));
+      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args))
+      .setIsPostTypeLegalization();
 
   std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
 
@@ -53348,46 +53349,58 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 }
 
 // Look for a RMW operation that only touches one bit of a larger than legal
-// type and fold it to a BTC/BTR/BTS pattern acting on a single i32 sub value.
+// type and fold it to a BTC/BTR/BTS or bit insertion pattern acting on a single
+// i32 sub value.
 static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                               SelectionDAG &DAG,
                               const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
-
-  // Only handle normal stores and its chain was a matching normal load.
-  auto *Ld = dyn_cast<LoadSDNode>(St->getChain());
-  if (!ISD::isNormalStore(St) || !St->isSimple() || !Ld ||
-      !ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
-      Ld->getBasePtr() != St->getBasePtr() ||
-      Ld->getOffset() != St->getOffset())
-    return SDValue();
-
-  SDValue LoadVal(Ld, 0);
   SDValue StoredVal = St->getValue();
   EVT VT = StoredVal.getValueType();
 
-  // Only narrow larger than legal scalar integers.
-  if (!VT.isScalarInteger() ||
+  // Only narrow normal stores of larger than legal scalar integers.
+  if (!ISD::isNormalStore(St) || !St->isSimple() || !VT.isScalarInteger() ||
       VT.getSizeInBits() <= (Subtarget.is64Bit() ? 64 : 32))
     return SDValue();
 
   // BTR: X & ~(1 << ShAmt)
   // BTS: X | (1 << ShAmt)
   // BTC: X ^ (1 << ShAmt)
-  SDValue ShAmt;
+  //
+  // BitInsert: (X & ~(1 << ShAmt)) | (InsertBit << ShAmt)
+  SDValue SrcVal, InsertBit, ShAmt;
   if (!StoredVal.hasOneUse() ||
-      !(sd_match(StoredVal, m_And(m_Specific(LoadVal),
+      !(sd_match(StoredVal, m_And(m_Value(SrcVal),
                                   m_Not(m_Shl(m_One(), m_Value(ShAmt))))) ||
         sd_match(StoredVal,
-                 m_Or(m_Specific(LoadVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
+                 m_Or(m_Value(SrcVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
         sd_match(StoredVal,
-                 m_Xor(m_Specific(LoadVal), m_Shl(m_One(), m_Value(ShAmt))))))
+                 m_Xor(m_Value(SrcVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
+        sd_match(
+            StoredVal,
+            m_Or(m_And(m_Value(SrcVal), m_Not(m_Shl(m_One(), m_Value(ShAmt)))),
+                 m_Shl(m_Value(InsertBit), m_Deferred(ShAmt))))))
+    return SDValue();
+
+  // SrcVal must be a matching normal load further up the chain.
+  auto *Ld = dyn_cast<LoadSDNode>(SrcVal);
+  if (!Ld || !ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
+      Ld->getBasePtr() != St->getBasePtr() ||
+      Ld->getOffset() != St->getOffset() ||
+      !St->getChain().reachesChainWithoutSideEffects(SDValue(Ld, 1)))
     return SDValue();
 
   // Ensure the shift amount is in bounds.
   KnownBits KnownAmt = DAG.computeKnownBits(ShAmt);
   if (KnownAmt.getMaxValue().uge(VT.getSizeInBits()))
     return SDValue();
+
+  // If we're inserting a bit then it must be the LSB.
+  if (InsertBit) {
+    KnownBits KnownInsert = DAG.computeKnownBits(InsertBit);
+    if (KnownInsert.countMinLeadingZeros() < (VT.getSizeInBits() - 1))
+      return SDValue();
+  }
 
   // Split the shift into an alignment shift that moves the active i32 block to
   // the bottom bits for truncation and a modulo shift that can act on the i32.
@@ -53396,6 +53409,7 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                                  DAG.getSignedConstant(-32LL, DL, AmtVT));
   SDValue ModuloAmt =
       DAG.getNode(ISD::AND, DL, AmtVT, ShAmt, DAG.getConstant(31, DL, AmtVT));
+  ModuloAmt = DAG.getZExtOrTrunc(ModuloAmt, DL, MVT::i8);
 
   // Compute the byte offset for the i32 block that is changed by the RMW.
   // combineTruncate will adjust the load for us in a similar way.
@@ -53407,16 +53421,26 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                                             SDNodeFlags::NoUnsignedWrap);
 
   // Reconstruct the BTC/BTR/BTS pattern for the i32 block and store.
-  SDValue X = DAG.getNode(ISD::SRL, DL, VT, LoadVal, AlignAmt);
+  SDValue X = DAG.getNode(ISD::SRL, DL, VT, SrcVal, AlignAmt);
   X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, X);
 
-  SDValue Mask =
-      DAG.getNode(ISD::SHL, DL, MVT::i32, DAG.getConstant(1, DL, MVT::i32),
-                  DAG.getZExtOrTrunc(ModuloAmt, DL, MVT::i8));
-  if (StoredVal.getOpcode() == ISD::AND)
-    Mask = DAG.getNOT(DL, Mask, MVT::i32);
+  SDValue Mask = DAG.getNode(ISD::SHL, DL, MVT::i32,
+                             DAG.getConstant(1, DL, MVT::i32), ModuloAmt);
 
-  SDValue Res = DAG.getNode(StoredVal.getOpcode(), DL, MVT::i32, X, Mask);
+  SDValue Res;
+  if (InsertBit) {
+    SDValue BitMask =
+        DAG.getNode(ISD::SHL, DL, MVT::i32,
+                    DAG.getZExtOrTrunc(InsertBit, DL, MVT::i32), ModuloAmt);
+    Res =
+        DAG.getNode(ISD::AND, DL, MVT::i32, X, DAG.getNOT(DL, Mask, MVT::i32));
+    Res = DAG.getNode(ISD::OR, DL, MVT::i32, Res, BitMask);
+  } else {
+    if (StoredVal.getOpcode() == ISD::AND)
+      Mask = DAG.getNOT(DL, Mask, MVT::i32);
+    Res = DAG.getNode(StoredVal.getOpcode(), DL, MVT::i32, X, Mask);
+  }
+
   return DAG.getStore(St->getChain(), DL, Res, NewPtr, St->getPointerInfo(),
                       Align(), St->getMemOperand()->getFlags());
 }
