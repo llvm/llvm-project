@@ -305,7 +305,8 @@ void MachOWriter::writeLoadCommands(raw_ostream &OS) {
       if (NameCStr)
         Name = NameCStr;
       else
-        Name = "(0x" + Twine::utohexstr(LC.Data.load_command_data.cmd).str() + ")";
+        Name =
+            "(0x" + Twine::utohexstr(LC.Data.load_command_data.cmd).str() + ")";
 
       WithColor::warning() << "load command " << i << " " << Name
                            << " cmdsize too small ("
