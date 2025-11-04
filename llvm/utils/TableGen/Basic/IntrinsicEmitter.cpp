@@ -62,6 +62,10 @@ public:
                                     raw_ostream &OS);
   void EmitIntrinsicToPrettyPrintTable(const CodeGenIntrinsicTable &Ints,
                                        raw_ostream &OS);
+  void EmitIntrinsicBitTable(
+      const CodeGenIntrinsicTable &Ints, raw_ostream &OS, StringRef Guard,
+      StringRef TableName, StringRef Comment,
+      function_ref<bool(const CodeGenIntrinsic &Int)> GetProperty);
   void EmitGenerator(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitAttributes(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitPrettyPrintArguments(const CodeGenIntrinsicTable &Ints,
@@ -250,6 +254,29 @@ static constexpr IntrinsicTargetInfo TargetInfos[] = {
 )";
 }
 
+/// Helper function to emit a bit table for intrinsic properties.
+/// This is used for both overload and pretty print bit tables.
+void IntrinsicEmitter::EmitIntrinsicBitTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS, StringRef Guard,
+    StringRef TableName, StringRef Comment,
+    function_ref<bool(const CodeGenIntrinsic &Int)> GetProperty) {
+  OS << formatv("// {}\n", Comment);
+  OS << formatv("#ifdef {}\n", Guard);
+  OS << formatv("static constexpr uint8_t {}[] = {{\n", TableName);
+  OS << "  0\n  ";
+  for (auto [I, Int] : enumerate(Ints)) {
+    // Add one to the index so we emit a null bit for the invalid #0 intrinsic.
+    size_t Idx = I + 1;
+    if (Idx % 8 == 0)
+      OS << ",\n  0";
+    if (GetProperty(Int))
+      OS << " | (1<<" << Idx % 8 << ')';
+  }
+  OS << "\n};\n\n";
+  OS << formatv("return ({}[id/8] & (1 << (id%8))) != 0;\n", TableName);
+  OS << formatv("#endif // {}\n\n", Guard);
+}
+
 void IntrinsicEmitter::EmitIntrinsicToNameTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
   // Built up a table of the intrinsic names.
@@ -286,24 +313,10 @@ static constexpr unsigned IntrinsicNameOffsetTable[] = {
 
 void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  OS << R"(// Intrinsic ID to overload bitset.
-#ifdef GET_INTRINSIC_OVERLOAD_TABLE
-static constexpr uint8_t OTable[] = {
-  0
-  )";
-  for (auto [I, Int] : enumerate(Ints)) {
-    // Add one to the index so we emit a null bit for the invalid #0 intrinsic.
-    size_t Idx = I + 1;
-
-    if (Idx % 8 == 0)
-      OS << ",\n  0";
-    if (Int.isOverloaded)
-      OS << " | (1<<" << Idx % 8 << ')';
-  }
-  OS << "\n};\n\n";
-  // OTable contains a true bit at the position if the intrinsic is overloaded.
-  OS << "return (OTable[id/8] & (1 << (id%8))) != 0;\n";
-  OS << "#endif\n\n";
+  EmitIntrinsicBitTable(
+      Ints, OS, "GET_INTRINSIC_OVERLOAD_TABLE", "OTable",
+      "Intrinsic ID to overload bitset.",
+      [](const CodeGenIntrinsic &Int) { return Int.isOverloaded; });
 }
 
 using TypeSigTy = SmallVector<unsigned char>;
@@ -817,64 +830,44 @@ AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
 
 void IntrinsicEmitter::EmitIntrinsicToPrettyPrintTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  OS << R"(// Intrinsic ID to pretty print bitset.
-)"
-        R"(#ifdef GET_INTRINSIC_PRETTY_PRINT_TABLE
-static constexpr uint8_t PPTable[] = {
-  0
-  )";
-  int CountPerLine = 0;
-  for (auto [I, Int] : enumerate(Ints)) {
-    size_t Idx = I + 1;
-
-    if (Idx % 8 == 0) {
-      OS << ",  0";
-      CountPerLine++;
-      if (CountPerLine == 8) {
-        OS << "\n  ";
-        CountPerLine = 0;
-      }
-    }
-    if (!Int.PrettyPrintFunctions.empty())
-      OS << " | (1<<" << Idx % 8 << ')';
-  }
-  OS << "\n};\n\n";
-  OS << "return (PPTable[id/8] & (1 << (id%8))) != 0;\n";
-  OS << "#endif // GET_INTRINSIC_PRETTY_PRINT_TABLE\n\n";
+  EmitIntrinsicBitTable(Ints, OS, "GET_INTRINSIC_PRETTY_PRINT_TABLE", "PPTable",
+                        "Intrinsic ID to pretty print bitset.",
+                        [](const CodeGenIntrinsic &Int) {
+                          return !Int.PrettyPrintFunctions.empty();
+                        });
 }
 
 void IntrinsicEmitter::EmitPrettyPrintArguments(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
   OS << R"(
 #ifdef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
-
 void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Constant *ImmArgVal) {
   using namespace Intrinsic;
   switch (IID) {
 )";
 
-  for (const auto &Int : Ints) {
+  for (const CodeGenIntrinsic &Int : Ints) {
     if (Int.PrettyPrintFunctions.empty())
       continue;
 
     OS << "  case " << Int.EnumName << ":\n";
     OS << "    switch (ArgIdx) {\n";
-    for (const auto &Info : Int.PrettyPrintFunctions) {
-      OS << "    case " << Info.ArgIdx << ":\n";
-      OS << "      OS << \"" << Info.ArgName << "=\";\n";
-      if (!Info.FuncName.empty()) {
+    for (const auto &[ArgIdx, ArgName, FuncName] : Int.PrettyPrintFunctions) {
+      OS << "    case " << ArgIdx << ":\n";
+      OS << "      OS << \"" << ArgName << "=\";\n";
+      if (!FuncName.empty()) {
         OS << "      ";
         if (!Int.TargetPrefix.empty())
           OS << Int.TargetPrefix << "::";
-        OS << Info.FuncName << "(OS, ImmArgVal);\n";
+        OS << FuncName << "(OS, ImmArgVal);\n";
       }
       OS << "      return;\n";
     }
     OS << "    }\n";
     OS << "    break;\n";
   }
-  OS << R"(    default:
-     break;
+  OS << R"(  default:
+    break;
   }
 }
 #endif // GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS

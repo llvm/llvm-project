@@ -156,7 +156,7 @@ class ImmArgPrinter<string funcname> : ArgProperty {
 }
 
 // ArgInfo - The specified argument has properties defined by a list of ArgProperty objects.
-class ArgInfo<AttrIndex idx, list<ArgProperty> arg_properties> : IntrinsicProperty {
+class ArgInfo<ArgIndex idx, list<ArgProperty> arg_properties> : IntrinsicProperty {
   int ArgNo = idx.Value;
   list<ArgProperty> Properties = arg_properties;
 }

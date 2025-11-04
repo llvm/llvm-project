@@ -38,4 +38,13 @@ define void @tcgen05_mma_f8f6f4_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %
   ret void
 }
 
+; This test verifies that printImmArg is safe to call on all constant arguments, but only prints comments for arguments that have pretty printing configured.
+define void @test_mixed_constants_edge_case(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor) {
+  ; CHECK-LABEL: define void @test_mixed_constants_edge_case(
+  ; CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 42, i32 100, i1 true, /* kind=i8 */ i32 0, /* cta_group= */ i32 1, /* collector=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 42, i32 100, i1 true, i32 3, i32 1, i32 0)
+
+  ret void
+}
+
 declare void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6), ptr addrspace(6), i64, i32, i1, i32, i32, i32)

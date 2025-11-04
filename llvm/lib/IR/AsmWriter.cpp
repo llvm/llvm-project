@@ -4587,21 +4587,20 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
         Intrinsic::hasPrettyPrintedArgs(CI->getIntrinsicID());
 
     ListSeparator LS;
+    Function *CalledFunc = CI->getCalledFunction();
+    auto PrintArgComment = [&](unsigned ArgNo) {
+      const Constant *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
+      if (!ConstArg)
+        return;
+      std::string ArgComment;
+      raw_string_ostream ArgCommentStream(ArgComment);
+      Intrinsic::ID IID = CalledFunc->getIntrinsicID();
+      Intrinsic::printImmArg(IID, ArgNo, ArgCommentStream, ConstArg);
+      if (ArgComment.empty())
+        return;
+      Out << "/* " << ArgComment << " */ ";
+    };
     if (HasPrettyPrintedArgs) {
-      Function *CalledFunc = CI->getCalledFunction();
-      auto PrintArgComment = [&](unsigned ArgNo) {
-        const Constant *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
-        if (!ConstArg)
-          return;
-        std::string ArgComment;
-        raw_string_ostream ArgCommentStream(ArgComment);
-        Intrinsic::ID IID = CalledFunc->getIntrinsicID();
-        Intrinsic::printImmArg(IID, ArgNo, ArgCommentStream, ConstArg);
-        if (ArgComment.empty())
-          return;
-        Out << "/* " << ArgComment << " */ ";
-      };
-
       for (unsigned ArgNo = 0, NumArgs = CI->arg_size(); ArgNo < NumArgs;
            ++ArgNo) {
         Out << LS;
@@ -4609,9 +4608,10 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
         writeParamOperand(CI->getArgOperand(ArgNo), PAL.getParamAttrs(ArgNo));
       }
     } else {
-      for (unsigned op = 0, Eop = CI->arg_size(); op < Eop; ++op) {
+      for (unsigned ArgNo = 0, NumArgs = CI->arg_size(); ArgNo < NumArgs;
+           ++ArgNo) {
         Out << LS;
-        writeParamOperand(CI->getArgOperand(op), PAL.getParamAttrs(op));
+        writeParamOperand(CI->getArgOperand(ArgNo), PAL.getParamAttrs(ArgNo));
       }
     }
     // Emit an ellipsis if this is a musttail call in a vararg function.  This
