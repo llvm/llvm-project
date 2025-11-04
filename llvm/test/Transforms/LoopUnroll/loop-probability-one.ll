@@ -2,10 +2,12 @@
 ; not crash or otherwise break LoopUnroll behavior when it tries to compute new
 ; probabilities from it.
 ;
-; That case indicates an infinite loop, but runtime loop unrolling is not
-; possible for an actual infinite loop as infinity % UnrollCount is undefined.
-; The implementation then arbitrarily chooses probabilities indicating that all
-; remainder loop iterations will always execute.
+; That case indicates an always infinite loop.  A remainder loop cannot be
+; calculated at run time when the original loop is infinite as infinity %
+; UnrollCount is undefined, so consistent remainder loop probabilities are
+; difficult or impossible to reason about.  The implementation chooses
+; probabilities indicating that all remainder loop iterations will always
+; execute.
 
 ; DEFINE: %{unroll} = opt < %s -unroll-count=3 -passes=loop-unroll -S
 ; DEFINE: %{rt} = %{unroll} -unroll-runtime
