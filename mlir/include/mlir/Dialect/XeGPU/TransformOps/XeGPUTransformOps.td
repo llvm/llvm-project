@@ -16,11 +16,6 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
-def TransformAnyParamTypeOrAnyHandle : Type<
-    Or<[TransformHandleTypeInterface.predicate,
-        TransformParamTypeInterface.predicate]>,
-    "transform any param type or any handle type">;
-
 def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
