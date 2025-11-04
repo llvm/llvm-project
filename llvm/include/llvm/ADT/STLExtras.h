@@ -1516,8 +1516,8 @@ template <class Iterator, class RNG>
 void shuffle(Iterator first, Iterator last, RNG &&g) {
   // It would be better to use a std::uniform_int_distribution,
   // but that would be stdlib dependent.
-  typedef
-      typename std::iterator_traits<Iterator>::difference_type difference_type;
+  using difference_type =
+      typename std::iterator_traits<Iterator>::difference_type;
   for (auto size = last - first; size > 1; ++first, (void)--size) {
     difference_type offset = g() % size;
     // Avoid self-assignment due to incorrect assertions in libstdc++

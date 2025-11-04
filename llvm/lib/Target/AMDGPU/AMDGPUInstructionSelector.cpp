@@ -224,13 +224,12 @@ bool AMDGPUInstructionSelector::selectCOPY_SCC_VCC(MachineInstr &I) const {
   Register VCCReg = I.getOperand(1).getReg();
   MachineInstr *Cmp;
 
-  if (STI.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+  // Set SCC as a side effect with S_CMP or S_OR.
+  if (STI.hasScalarCompareEq64()) {
     unsigned CmpOpc =
         STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
     Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc)).addReg(VCCReg).addImm(0);
   } else {
-    // For gfx7 and earlier, S_CMP_LG_U64 doesn't exist, so we use S_OR_B64
-    // which sets SCC as a side effect.
     Register DeadDst = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
     Cmp = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_OR_B64), DeadDst)
               .addReg(VCCReg)

@@ -22861,6 +22861,13 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
   if (!OpVT.isScalarInteger() || OpSize < 128)
     return SDValue();
 
+  // Don't do this if we're not supposed to use the FPU.
+  bool NoImplicitFloatOps =
+      DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat);
+  if (Subtarget.useSoftFloat() || NoImplicitFloatOps)
+    return SDValue();
+
   // Ignore a comparison with zero because that gets special treatment in
   // EmitTest(). But make an exception for the special case of a pair of
   // logically-combined vector-sized operands compared to zero. This pattern may
@@ -22883,13 +22890,9 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
   // Use XOR (plus OR) and PTEST after SSE4.1 for 128/256-bit operands.
   // Use PCMPNEQ (plus OR) and KORTEST for 512-bit operands.
   // Otherwise use PCMPEQ (plus AND) and mask testing.
-  bool NoImplicitFloatOps =
-      DAG.getMachineFunction().getFunction().hasFnAttribute(
-          Attribute::NoImplicitFloat);
-  if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-      ((OpSize == 128 && Subtarget.hasSSE2()) ||
-       (OpSize == 256 && Subtarget.hasAVX()) ||
-       (OpSize == 512 && Subtarget.useAVX512Regs()))) {
+  if ((OpSize == 128 && Subtarget.hasSSE2()) ||
+      (OpSize == 256 && Subtarget.hasAVX()) ||
+      (OpSize == 512 && Subtarget.useAVX512Regs())) {
     bool HasPT = Subtarget.hasSSE41();
 
     // PTEST and MOVMSK are slow on Knights Landing and Knights Mill and widened
@@ -33031,12 +33034,13 @@ static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
       DAG.getExternalSymbol(LibcallName, TLI.getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = isF64 ? (Type *)StructType::get(ArgTy, ArgTy)
-                      : (Type *)FixedVectorType::get(ArgTy, 4);
+                      : (Type *)FixedVectorType::get(ArgTy, 2);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(DAG.getEntryNode())
-      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args));
+      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args))
+      .setIsPostTypeLegalization();
 
   std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
 
@@ -54629,8 +54633,7 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
         SDValue NewLoad =
             DAG.getLoad(VT, DL, Ld->getChain(), NewPtr, Ld->getPointerInfo(),
                         Align(), Ld->getMemOperand()->getFlags());
-        DAG.ReplaceAllUsesOfValueWith(Src.getOperand(0).getValue(1),
-                                      NewLoad.getValue(1));
+        DAG.makeEquivalentMemoryOrdering(Ld, NewLoad);
         return NewLoad;
       }
     }
