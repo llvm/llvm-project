@@ -454,7 +454,7 @@ define void @nosync_convergent_callee_test() {
 ; CHECK: attributes #[[ATTR14:[0-9]+]] = { convergent memory(none) }
 ; CHECK: attributes #[[ATTR15]] = { memory(none) }
 ; CHECK: attributes #[[ATTR16]] = { nounwind }
-; CHECK: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR17:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR18]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR19]] = { nosync memory(none) }
 ; CHECK: attributes #[[ATTR20]] = { nofree nounwind }
