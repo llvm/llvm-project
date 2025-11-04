@@ -6,21 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_DEFAULTOPERATORNEWALIGNMENTCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_DEFAULTOPERATORNEWALIGNMENTCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DEFAULTOPERATORNEWONOVERALIGNEDTYPECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DEFAULTOPERATORNEWONOVERALIGNEDTYPECHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
 /// Checks if an object of type with extended alignment is allocated by using
 /// the default operator new.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/cert/mem57-cpp.html
-class DefaultOperatorNewAlignmentCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/bugprone-default-operator-new-on-overaligned-type.html
+class DefaultOperatorNewOnOveralignedTypeCheck : public ClangTidyCheck {
 public:
-  DefaultOperatorNewAlignmentCheck(StringRef Name, ClangTidyContext *Context)
+  DefaultOperatorNewOnOveralignedTypeCheck(StringRef Name,
+                                           ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return !LangOpts.CPlusPlus17;
@@ -29,6 +30,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_DEFAULTOPERATORNEWALIGNMENTCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DEFAULTOPERATORNEWONOVERALIGNEDTYPECHECK_H
