@@ -8078,8 +8078,12 @@ bool VPRecipeBuilder::getScaledReductions(
   // For example, reduce.add(ext(mul(ext(A), ext(B)))) is still a valid partial
   // reduction since the inner extends will be widened. We already have oneUse
   // checks on the inner extends so widening them is safe.
-  if (match(Op, m_ZExtOrSExt(m_Mul(m_Value(), m_Value()))))
-    Op = cast<Instruction>(Op)->getOperand(0);
+  std::optional<TTI::PartialReductionExtendKind> OuterExtKind = std::nullopt;
+  if (match(Op, m_ZExtOrSExt(m_Mul(m_Value(), m_Value())))) {
+    auto *Cast = cast<CastInst>(Op);
+    OuterExtKind = TTI::getPartialReductionExtendKind(Cast->getOpcode());
+    Op = Cast->getOperand(0);
+  }
 
   // Try and get a scaled reduction from the first non-phi operand.
   // If one is found, we use the discovered reduction instruction in
@@ -8106,7 +8110,7 @@ bool VPRecipeBuilder::getScaledReductions(
   Type *ExtOpTypes[2] = {nullptr};
   TTI::PartialReductionExtendKind ExtKinds[2] = {TTI::PR_None};
 
-  auto CollectExtInfo = [this, &Exts, &ExtOpTypes,
+  auto CollectExtInfo = [this, OuterExtKind, &Exts, &ExtOpTypes,
                          &ExtKinds](SmallVectorImpl<Value *> &Ops) -> bool {
     for (const auto &[I, OpI] : enumerate(Ops)) {
       const APInt *C;
@@ -8127,6 +8131,14 @@ bool VPRecipeBuilder::getScaledReductions(
 
       ExtOpTypes[I] = ExtOp->getType();
       ExtKinds[I] = TTI::getPartialReductionExtendKind(Exts[I]);
+      // Make sure that the outer extend is either sext or the same kind as the
+      // inner extend.
+      if (OuterExtKind.has_value()) {
+        TTI::PartialReductionExtendKind OuterKind = OuterExtKind.value();
+        if (OuterKind != TTI::PartialReductionExtendKind::PR_SignExtend &&
+            OuterKind != ExtKinds[I])
+          return false;
+      }
     }
     return true;
   };
