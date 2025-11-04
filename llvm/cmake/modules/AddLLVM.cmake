@@ -1747,6 +1747,31 @@ function(add_llvm_implicit_projects)
   llvm_add_implicit_projects(LLVM)
 endfunction(add_llvm_implicit_projects)
 
+function(set_unittest_link_flags target_name)
+  # The runtime benefits of LTO don't outweight the compile time costs for
+  # tests.
+  if(LLVM_ENABLE_LTO)
+    if((UNIX OR MINGW) AND LINKER_IS_LLD)
+      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
+        # When using FatLTO, just use relocatable linking.
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
+      else()
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--lto-O0")
+      endif()
+    elseif(LINKER_IS_LLD_LINK)
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " /opt:lldlto=0")
+    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " -Wl,-mllvm,-O0")
+    endif()
+  endif()
+
+  target_link_options(${target_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+endfunction(set_unittest_link_flags)
+
 # Generic support for adding a unittest.
 function(add_unittest test_suite test_name)
   if( NOT LLVM_BUILD_TESTS )
@@ -1770,27 +1795,7 @@ function(add_unittest test_suite test_name)
   get_subproject_title(subproject_title)
   set_target_properties(${test_name} PROPERTIES FOLDER "${subproject_title}/Tests/Unit")
 
-  # The runtime benefits of LTO don't outweight the compile time costs for tests.
-  if(LLVM_ENABLE_LTO)
-    if((UNIX OR MINGW) AND LINKER_IS_LLD)
-      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
-        # When using FatLTO, just use relocatable linking.
-        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
-      else()
-        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--lto-O0")
-      endif()
-    elseif(LINKER_IS_LLD_LINK)
-      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " /opt:lldlto=0")
-    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
-      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " -Wl,-mllvm,-O0")
-    endif()
-  endif()
-
-  target_link_options(${test_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+  set_unittest_link_flags(${test_name})
 
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})

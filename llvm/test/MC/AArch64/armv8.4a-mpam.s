@@ -1,5 +1,4 @@
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a < %s 2> %t | FileCheck %s --check-prefix=CHECK
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=-v8.4a < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 //------------------------------------------------------------------------------
 // ARMV8.4-A MPAM Extensions
@@ -74,59 +73,3 @@ mrs x0, MPAMIDR_EL1
 //CHECK:  mrs x0, MPAMIDR_EL1         // encoding: [0x80,0xa4,0x38,0xd5]
 
 
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: msr MPAMVPMV_EL2, x0
-//CHECK-ERROR:     ^
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: msr MPAMVPM0_EL2, x0
-//CHECK-ERROR:     ^
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: msr MPAMVPM1_EL2, x0
-//CHECK-ERROR:     ^
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: msr MPAMVPM2_EL2, x0
-//CHECK-ERROR:     ^
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: msr MPAMVPM3_EL2, x0
-//CHECK-ERROR:     ^
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: msr MPAMVPM4_EL2, x0
-//CHECK-ERROR:     ^
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: msr MPAMVPM5_EL2, x0
-//CHECK-ERROR:     ^
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: msr MPAMVPM6_EL2, x0
-//CHECK-ERROR:     ^
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: msr MPAMVPM7_EL2, x0
-//CHECK-ERROR:     ^
-
-
-//CHECK-ERROR: error: expected readable system register
-//CHECK-ERROR: mrs x0, MPAMVPMV_EL2
-//CHECK-ERROR:         ^
-//CHECK-ERROR: error: expected readable system register
-//CHECK-ERROR: mrs x0, MPAMVPM0_EL2
-//CHECK-ERROR:         ^
-//CHECK-ERROR: error: expected readable system register
-//CHECK-ERROR: mrs x0, MPAMVPM1_EL2
-//CHECK-ERROR:         ^
-//CHECK-ERROR: error: expected readable system register
-//CHECK-ERROR: mrs x0, MPAMVPM2_EL2
-//CHECK-ERROR:         ^
-//CHECK-ERROR: error: expected readable system register
-//CHECK-ERROR: mrs x0, MPAMVPM3_EL2
-//CHECK-ERROR:         ^
-//CHECK-ERROR: error: expected readable system register
-//CHECK-ERROR: mrs x0, MPAMVPM4_EL2
-//CHECK-ERROR:         ^
-//CHECK-ERROR: error: expected readable system register
-//CHECK-ERROR: mrs x0, MPAMVPM5_EL2
-//CHECK-ERROR:         ^
-//CHECK-ERROR: error: expected readable system register
-//CHECK-ERROR: mrs x0, MPAMVPM6_EL2
-//CHECK-ERROR:         ^
-//CHECK-ERROR: error: expected readable system register
-//CHECK-ERROR: mrs x0, MPAMVPM7_EL2
-//CHECK-ERROR:         ^

@@ -59,9 +59,17 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
     VECTOR_LDST_FOUR_ELEMENTS
   };
 
-  bool isWideningInstruction(Type *DstTy, unsigned Opcode,
-                             ArrayRef<const Value *> Args,
-                             Type *SrcOverrideTy = nullptr) const;
+  /// Given a add/sub/mul operation, detect a widening addl/subl/mull pattern
+  /// where both operands can be treated like extends. Returns the minimal type
+  /// needed to compute the operation.
+  Type *isBinExtWideningInstruction(unsigned Opcode, Type *DstTy,
+                                    ArrayRef<const Value *> Args,
+                                    Type *SrcOverrideTy = nullptr) const;
+  /// Given a add/sub operation with a single extend operand, detect a
+  /// widening addw/subw pattern.
+  bool isSingleExtWideningInstruction(unsigned Opcode, Type *DstTy,
+                                      ArrayRef<const Value *> Args,
+                                      Type *SrcOverrideTy = nullptr) const;
 
   // A helper function called by 'getVectorInstrCost'.
   //
@@ -84,7 +92,7 @@ public:
                            const Function *Callee) const override;
 
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
-                             const ArrayRef<Type *> &Types) const override;
+                             ArrayRef<Type *> Types) const override;
 
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const override;

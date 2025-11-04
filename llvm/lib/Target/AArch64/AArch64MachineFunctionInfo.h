@@ -651,7 +651,7 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~AArch64FunctionInfo() = default;
+  ~AArch64FunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<AArch64FunctionInfo> {

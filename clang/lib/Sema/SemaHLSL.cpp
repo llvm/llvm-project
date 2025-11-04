@@ -21,6 +21,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -2801,6 +2802,23 @@ static bool CheckUnsignedIntRepresentation(Sema *S, SourceLocation Loc,
   return false;
 }
 
+static bool CheckExpectedBitWidth(Sema *S, CallExpr *TheCall,
+                                  unsigned ArgOrdinal, unsigned Width) {
+  QualType ArgTy = TheCall->getArg(0)->getType();
+  if (auto *VTy = ArgTy->getAs<VectorType>())
+    ArgTy = VTy->getElementType();
+  // ensure arg type has expected bit width
+  uint64_t ElementBitCount =
+      S->getASTContext().getTypeSizeInChars(ArgTy).getQuantity() * 8;
+  if (ElementBitCount != Width) {
+    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+            diag::err_integer_incorrect_bit_count)
+        << Width << ElementBitCount;
+    return true;
+  }
+  return false;
+}
+
 static void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                        QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
@@ -2960,24 +2978,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                    CheckUnsignedIntVecRepresentation))
       return true;
 
-    auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
     // ensure arg integers are 32-bits
-    uint64_t ElementBitCount = getASTContext()
-                                   .getTypeSizeInChars(VTy->getElementType())
-                                   .getQuantity() *
-                               8;
-    if (ElementBitCount != 32) {
-      SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_integer_incorrect_bit_count)
-          << 32 << ElementBitCount;
+    if (CheckExpectedBitWidth(&SemaRef, TheCall, 0, 32))
       return true;
-    }
 
     // ensure both args are vectors of total bit size of a multiple of 64
+    auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
     int NumElementsArg = VTy->getNumElements();
     if (NumElementsArg != 2 && NumElementsArg != 4) {
       SemaRef.Diag(TheCall->getBeginLoc(), diag::err_vector_incorrect_bit_count)
-          << 1 /*a multiple of*/ << 64 << NumElementsArg * ElementBitCount;
+          << 1 /*a multiple of*/ << 64 << NumElementsArg * 32;
       return true;
     }
 
@@ -3278,6 +3288,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_active_max:
+  case Builtin::BI__builtin_hlsl_wave_active_min:
   case Builtin::BI__builtin_hlsl_wave_active_sum: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
@@ -3293,7 +3304,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic
-  // generation. Normal handling of these builitns will occur elsewhere.
+  // generation. Normal handling of these builtins will occur elsewhere.
   case Builtin::BI__builtin_elementwise_bitreverse: {
     // does not include a check for number of arguments
     // because that is done previously
@@ -3403,6 +3414,30 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_f16tof32: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                   CheckUnsignedIntRepresentation))
+      return true;
+    // ensure arg integers are 32 bits
+    if (CheckExpectedBitWidth(&SemaRef, TheCall, 0, 32))
+      return true;
+    // check it wasn't a bool type
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (auto *VTy = ArgTy->getAs<VectorType>())
+      ArgTy = VTy->getElementType();
+    if (ArgTy->isBooleanType()) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* scalar or vector of */ 5 << /* unsigned int */ 3
+          << /* no fp */ 0 << TheCall->getArg(0)->getType();
+      return true;
+    }
+
+    SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().FloatTy);
+    break;
+  }
   }
   return false;
 }
@@ -3430,6 +3465,11 @@ static void BuildFlattenedTypeList(QualType BaseTy,
     // add directly to the list instead of to the WorkList.
     if (const auto *VT = dyn_cast<VectorType>(T)) {
       List.insert(List.end(), VT->getNumElements(), VT->getElementType());
+      continue;
+    }
+    if (const auto *MT = dyn_cast<ConstantMatrixType>(T)) {
+      List.insert(List.end(), MT->getNumElementsFlattened(),
+                  MT->getElementType());
       continue;
     }
     if (const auto *RD = T->getAsCXXRecordDecl()) {
@@ -4230,6 +4270,32 @@ class InitListTransformer {
       }
       return true;
     }
+    if (auto *MTy = Ty->getAs<ConstantMatrixType>()) {
+      unsigned Rows = MTy->getNumRows();
+      unsigned Cols = MTy->getNumColumns();
+      QualType ElemTy = MTy->getElementType();
+
+      for (unsigned C = 0; C < Cols; ++C) {
+        for (unsigned R = 0; R < Rows; ++R) {
+          // row index literal
+          Expr *RowIdx = IntegerLiteral::Create(
+              Ctx, llvm::APInt(Ctx.getIntWidth(Ctx.IntTy), R), Ctx.IntTy,
+              E->getBeginLoc());
+          // column index literal
+          Expr *ColIdx = IntegerLiteral::Create(
+              Ctx, llvm::APInt(Ctx.getIntWidth(Ctx.IntTy), C), Ctx.IntTy,
+              E->getBeginLoc());
+          ExprResult ElExpr = S.CreateBuiltinMatrixSubscriptExpr(
+              E, RowIdx, ColIdx, E->getEndLoc());
+          if (ElExpr.isInvalid())
+            return false;
+          if (!castInitializer(ElExpr.get()))
+            return false;
+          ElExpr.get()->setType(ElemTy);
+        }
+      }
+      return true;
+    }
 
     if (auto *ArrTy = dyn_cast<ConstantArrayType>(Ty.getTypePtr())) {
       uint64_t Size = ArrTy->getZExtSize();
@@ -4283,14 +4349,17 @@ class InitListTransformer {
       return *(ArgIt++);
 
     llvm::SmallVector<Expr *> Inits;
-    assert(!isa<MatrixType>(Ty) && "Matrix types not yet supported in HLSL");
     Ty = Ty.getDesugaredType(Ctx);
-    if (Ty->isVectorType() || Ty->isConstantArrayType()) {
+    if (Ty->isVectorType() || Ty->isConstantArrayType() ||
+        Ty->isConstantMatrixType()) {
       QualType ElTy;
       uint64_t Size = 0;
       if (auto *ATy = Ty->getAs<VectorType>()) {
         ElTy = ATy->getElementType();
         Size = ATy->getNumElements();
+      } else if (auto *CMTy = Ty->getAs<ConstantMatrixType>()) {
+        ElTy = CMTy->getElementType();
+        Size = CMTy->getNumElementsFlattened();
       } else {
         auto *VTy = cast<ConstantArrayType>(Ty.getTypePtr());
         ElTy = VTy->getElementType();

@@ -11,6 +11,7 @@
 #include "TestTypes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
+#include "mlir/Dialect/ControlFlow/Transforms/StructuralTypeConversions.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
@@ -1552,8 +1553,7 @@ struct TestLegalizePatternDriver
                            [](Type type) { return type.isF32(); });
     });
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-      return converter.isSignatureLegal(op.getFunctionType()) &&
-             converter.isLegal(&op.getBody());
+      return converter.isSignatureLegal(op.getFunctionType());
     });
     target.addDynamicallyLegalOp<func::CallOp>(
         [&](func::CallOp op) { return converter.isLegal(op); });
@@ -2042,6 +2042,10 @@ struct TestTypeConversionDriver
     });
     converter.addConversion([](IndexType type) { return type; });
     converter.addConversion([](IntegerType type, SmallVectorImpl<Type> &types) {
+      if (type.isInteger(1)) {
+        // i1 is legal.
+        types.push_back(type);
+      }
       if (type.isInteger(38)) {
         // i38 is legal.
         types.push_back(type);
@@ -2151,8 +2155,7 @@ struct TestTypeConversionDriver
               recursiveType.getName() == "outer_converted_type");
     });
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-      return converter.isSignatureLegal(op.getFunctionType()) &&
-             converter.isLegal(&op.getBody());
+      return converter.isSignatureLegal(op.getFunctionType());
     });
     target.addDynamicallyLegalOp<TestCastOp>([&](TestCastOp op) {
       // Allow casts from F64 to F32.
@@ -2175,6 +2178,8 @@ struct TestTypeConversionDriver
                                                               converter);
     mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
         converter, patterns, target);
+    mlir::cf::populateCFStructuralTypeConversionsAndLegality(converter,
+                                                             patterns, target);
 
     ConversionConfig config;
     config.allowPatternRollback = allowPatternRollback;

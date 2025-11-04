@@ -2408,11 +2408,16 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   if (CacheEntry == NormalizationCache.end()) {
     auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
         *this, ND, AssociatedConstraints);
+    if (!Normalized) {
+      NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
+      return nullptr;
+    }
+    // substitute() can invalidate iterators of NormalizationCache.
+    bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
     CacheEntry =
         NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
             .first;
-    if (!Normalized ||
-        SubstituteParameterMappings(*this).substitute(*Normalized))
+    if (Failed)
       return nullptr;
   }
   return CacheEntry->second;

@@ -582,6 +582,18 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
           IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, C, Op1);
       return BinaryOperator::CreateSub(ConstCtlz, X);
     }
+
+    // ctlz(~x & (x - 1)) -> bitwidth - cttz(x, false)
+    if (Op0->hasOneUse() &&
+        match(Op0,
+              m_c_And(m_Not(m_Value(X)), m_Add(m_Deferred(X), m_AllOnes())))) {
+      Type *Ty = II.getType();
+      unsigned BitWidth = Ty->getScalarSizeInBits();
+      auto *Cttz = IC.Builder.CreateIntrinsic(Intrinsic::cttz, Ty,
+                                              {X, IC.Builder.getFalse()});
+      auto *Bw = ConstantInt::get(Ty, APInt(BitWidth, BitWidth));
+      return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Bw, Cttz));
+    }
   }
 
   // cttz(Pow2) -> Log2(Pow2)
@@ -3484,7 +3496,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (isPowerOf2_64(AlignMask + 1)) {
         uint64_t Offset = 0;
         match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
-        if (match(A, m_PtrToInt(m_Value(A)))) {
+        if (match(A, m_PtrToIntOrAddr(m_Value(A)))) {
           /// Note: this doesn't preserve the offset information but merges
           /// offset and alignment.
           /// TODO: we can generate a GEP instead of merging the alignment with
