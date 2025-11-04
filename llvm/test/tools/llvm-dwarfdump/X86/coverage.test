@@ -1,0 +1,24 @@
+; RUN: llc %S/Inputs/coverage.ll -o %t.o -filetype=obj
+; RUN: llc %S/Inputs/coverage-opt.ll -o %t-opt.o -filetype=obj
+
+; RUN: llvm-dwarfdump --show-variable-coverage %t.o | FileCheck %s
+
+; CHECK:      Variable coverage statistics:
+; CHECK-NEXT: Function InlChain Variable Decl LinesCovered
+; CHECK-NEXT: f k test.c:22 5
+; CHECK-NEXT: f l test.c:22 5
+; CHECK-NEXT: fn1 a test.c:14 11
+; CHECK-NEXT: fn1 u test.c:7 11
+; CHECK-NEXT: fn1 x test.c:5 11
+; CHECK-NEXT: fn1 y test.c:5 11
+
+; RUN: llvm-dwarfdump --show-variable-coverage --combine-instances %t-opt.o | FileCheck %s --check-prefix=COMBINE
+
+; COMBINE:      Variable coverage statistics:
+; COMBINE-NEXT: Function InstanceCount Variable Decl LinesCovered
+; COMBINE-NEXT: f 1 k test.c:22 2
+; COMBINE-NEXT: f 1 l test.c:22 3
+; COMBINE-NEXT: fn1 1 a test.c:14 1
+; COMBINE-NEXT: fn1 1 u test.c:7 1
+; COMBINE-NEXT: fn1 1 x test.c:5 1
+; COMBINE-NEXT: fn1 1 y test.c:5 1
