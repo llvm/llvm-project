@@ -3473,7 +3473,7 @@ public:
   // Return true if the target wants to optimize the mul overflow intrinsic
   // for the given \p VT.
   virtual bool shouldOptimizeMulOverflowWithZeroHighBits(LLVMContext &Context,
-                                                  EVT VT) const {
+                                                         EVT VT) const {
     return false;
   }
 

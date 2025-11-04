@@ -324,7 +324,7 @@ public:
   // Return true if the target wants to optimize the mul overflow intrinsic
   // for the given \p VT.
   bool shouldOptimizeMulOverflowWithZeroHighBits(LLVMContext &Context,
-                                          EVT VT) const override;
+                                                 EVT VT) const override;
 
   Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
