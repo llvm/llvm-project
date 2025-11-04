@@ -70,9 +70,6 @@ struct DOTGraphTraits<polly::ScopDetection *> : DOTGraphTraits<RegionNode *> {
 
 namespace polly {
 
-extern std::string ViewFilter;
-extern bool ViewAll;
-
 struct ScopViewer final : llvm::DOTGraphTraitsViewer<ScopAnalysis, false> {
   ScopViewer() : llvm::DOTGraphTraitsViewer<ScopAnalysis, false>("scops") {}
 
