@@ -165,6 +165,7 @@ def sort_blocks(blocks: List[Tuple[str, List[str]]]) -> List[List[str]]:
     """
     return [b for _, b in sorted(blocks, key=lambda kb: kb[0])]
 
+
 def find_duplicate_block_details(
     lines: Sequence[str], title: str
 ) -> List[Tuple[str, List[Tuple[int, List[str]]]]]:
