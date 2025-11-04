@@ -64,11 +64,11 @@ class MlirLexer(RegexLexer):
             (r"\b(ceildiv|floordiv|mod|symbol)\b", Name.Builtin),
             # operation definitions with assignment: %... = op.name
             (
-                r"^\s*(%[\%_A-Za-z0-9\:\,\s]+)\s*(=)\s*([A-Za-z0-9_\.\$\-]+)\b",
-                bygroups(Name.Variable, Operator, Name.Function),
+                r"^(\s*)(%[\%_A-Za-z0-9\:\,\s]+)(\s*=\s*)([A-Za-z0-9_\.\$\-]+)\b",
+                bygroups(Text, Name.Variable, Operator, Name.Function),
             ),
             # operation name without result
-            (r"^\s*([A-Za-z0-9_\.\$\-]+)\b(?=[^<:])", Name.Function),
+            (r"^(\s*)([A-Za-z0-9_\.\$\-]+)\b(?=[^<:])", bygroups(Text, Name.Function)),
             # identifiers / bare words
             (r"\b[_A-Za-z][_A-Za-z0-9\.-]*\b", Name.Other),
             # numbers: hex, float (with exponent), integer
