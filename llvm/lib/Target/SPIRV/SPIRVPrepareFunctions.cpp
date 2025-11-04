@@ -458,14 +458,6 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
               return II->getCalledFunction()->getName().starts_with(Prefix);
             }))
           Changed |= lowerIntrinsicToFunction(II);
-        else
-          report_fatal_error(
-              "Encountered unknown intrinsic: " +
-                  II->getCalledFunction()->getName() +
-                  ", which requires the --spv-allow-unknown-intrinsics option, "
-                  "in function: " +
-                  II->getParent()->getParent()->getName(),
-              false);
         break;
       }
     }

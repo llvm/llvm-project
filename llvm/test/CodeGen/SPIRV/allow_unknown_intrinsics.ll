@@ -1,7 +1,6 @@
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck -check-prefix=CHECK-ERROR %s
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=notllvm %s -o %t.spvt 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=llvm.some.custom %s -o %t.spvt 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
-; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=llvm.readcyclecounter %s -o %t.spvt 2>&1 | FileCheck --check-prefix=CHECK-ERROR1 %s
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics %s -o - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=llvm. %s -o - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spv-allow-unknown-intrinsics=llvm.,random.prefix %s -o - | FileCheck %s
@@ -13,8 +12,7 @@
 ; The test checks command-line option which allows to represent unknown
 ; intrinsics as external function calls in SPIR-V.
 
-; CHECK-ERROR: LLVM ERROR: Encountered unknown intrinsic: llvm.readcyclecounter, which requires the --spv-allow-unknown-intrinsics option, in function: foo
-; CHECK-ERROR1: LLVM ERROR: Encountered unknown intrinsic: llvm.some.custom.intrinsic, which requires the --spv-allow-unknown-intrinsics option, in function: foo
+; CHECK-ERROR: LLVM ERROR: unable to legalize instruction: %3:iid(s64) = G_READCYCLECOUNTER (in function: foo)
 
 ; CHECK: Name %[[READCYCLECOUNTER:[0-9]+]] "spirv.llvm_readcyclecounter"
 ; CHECK: Name %[[SOME_CUSTOM_INTRINSIC:[0-9]+]] "spirv.llvm_some_custom_intrinsic"
