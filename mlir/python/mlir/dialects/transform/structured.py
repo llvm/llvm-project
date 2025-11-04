@@ -713,6 +713,8 @@ class VectorizeChildrenAndApplyPatternsOp(VectorizeChildrenAndApplyPatternsOp):
         disable_transfer_permutation_map_lowering_patterns: bool = False,
         vectorize_nd_extract: bool = False,
         vectorize_padding: bool = False,
+        flatten_1d_depthwise_conv: bool = False,
+        fold_type_extensions_into_contract: bool = False,
         loc=None,
         ip=None,
     ):
@@ -722,8 +724,10 @@ class VectorizeChildrenAndApplyPatternsOp(VectorizeChildrenAndApplyPatternsOp):
             target,
             disable_multi_reduction_to_contract_patterns=disable_multi_reduction_to_contract_patterns,
             disable_transfer_permutation_map_lowering_patterns=disable_transfer_permutation_map_lowering_patterns,
+            flatten_1d_depthwise_conv=flatten_1d_depthwise_conv,
             vectorize_nd_extract=vectorize_nd_extract,
             vectorize_padding=vectorize_padding,
+            fold_type_extensions_into_contract=fold_type_extensions_into_contract,
             loc=loc,
             ip=ip,
         )

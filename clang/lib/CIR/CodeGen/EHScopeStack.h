@@ -155,6 +155,9 @@ private:
   /// The innermost normal cleanup on the stack.
   stable_iterator innermostNormalCleanup = stable_end();
 
+  /// The innermost EH scope on the stack.
+  stable_iterator innermostEHScope = stable_end();
+
   /// The CGF this Stack belong to
   CIRGenFunction *cgf = nullptr;
 
@@ -226,12 +229,17 @@ public:
   }
   stable_iterator getInnermostActiveNormalCleanup() const;
 
+  stable_iterator getInnermostEHScope() const { return innermostEHScope; }
+
   /// An unstable reference to a scope-stack depth.  Invalidated by
   /// pushes but not pops.
   class iterator;
 
   /// Returns an iterator pointing to the innermost EH scope.
   iterator begin() const;
+
+  /// Returns an iterator pointing to the outermost EH scope.
+  iterator end() const;
 
   /// Create a stable reference to the top of the EH stack.  The
   /// returned reference is valid until that scope is popped off the
