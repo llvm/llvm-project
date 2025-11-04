@@ -61,7 +61,7 @@ int operation(int index) {
 
 // CHECK-DAG: [[TRAP_LOC:![0-9]+]] = !DILocation(line: 0, scope: [[TRAP_SCOPE]], inlinedAt: [[SRC_LOC:![0-9]+]])
 // PLAIN-DAG: [[SRC_LOC]] = !DILocation(line: 49, column: 10, scope: {{![0-9]+}})
-// MACRO-DAG: [[SRC_LOC]] = !DILocation(line: 51, column: 10, scope: {{![0-9]+}})
+// MACRO-DAG: [[SRC_LOC]] = !DILocation(line: 51, column: 16, scope: {{![0-9]+}})
 
 // In the detailed mode the address space overflow gets its own trap reason.
 // FIXME: Basic mode should probably be making this distinction too.

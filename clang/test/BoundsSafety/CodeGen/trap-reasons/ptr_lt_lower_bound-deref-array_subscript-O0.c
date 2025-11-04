@@ -49,4 +49,4 @@ int operation(int index) {
 // DETAILED-DAG: [[TRAP_SCOPE]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$indexing below lower bound in 'array[index]'", scope: [[FILE_SCOPE:![0-9]+]], file: [[FILE_SCOPE]], type: {{.+}}, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: {{![0-9]+}}
 
 // PLAIN-DAG: [[LOC]] = !DILocation(line: 32, column: 10, scope: {{![0-9]+}})
-// MACRO-DAG: [[LOC]] = !DILocation(line: 34, column: 10, scope: {{![0-9]+}})
+// MACRO-DAG: [[LOC]] = !DILocation(line: 34, column: 16, scope: {{![0-9]+}})

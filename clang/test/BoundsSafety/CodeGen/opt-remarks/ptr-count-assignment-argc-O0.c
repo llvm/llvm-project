@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
 // OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
-// OPT-REM-NEXT:                    Line: 11, Column: 11 }
+// OPT-REM-NEXT:                    Line: 11, Column: 24 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
 // OPT-REM-NEXT:   - String:          'Inserted '
