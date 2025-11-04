@@ -100,22 +100,17 @@ define void @bitcast_v2i16(ptr %a, ptr %b) {
 ;
 ; NONEON-NOSVE-LABEL: bitcast_v2i16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #32
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
-; NONEON-NOSVE-NEXT:    ldrh w8, [x0, #2]
-; NONEON-NOSVE-NEXT:    str w8, [sp, #4]
+; NONEON-NOSVE-NEXT:    sub sp, sp, #16
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    ldrh w8, [x0]
-; NONEON-NOSVE-NEXT:    str w8, [sp]
+; NONEON-NOSVE-NEXT:    ldrh w9, [x0, #2]
+; NONEON-NOSVE-NEXT:    strh w9, [sp, #2]
+; NONEON-NOSVE-NEXT:    strh w8, [sp]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp]
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #8]
-; NONEON-NOSVE-NEXT:    strh w9, [sp, #18]
-; NONEON-NOSVE-NEXT:    strh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #16]
-; NONEON-NOSVE-NEXT:    str d0, [sp, #24]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #8]
 ; NONEON-NOSVE-NEXT:    str w8, [x1]
-; NONEON-NOSVE-NEXT:    add sp, sp, #32
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %load = load volatile <2 x i16>, ptr %a
   %cast = bitcast <2 x i16> %load to <2 x half>

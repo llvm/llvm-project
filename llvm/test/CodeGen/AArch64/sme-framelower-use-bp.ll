@@ -65,7 +65,8 @@ define void @quux() #1 {
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    sub x10, x29, #104
 ; CHECK-NEXT:    stur x9, [x10, #-256] // 8-byte Folded Spill
-; CHECK-NEXT:    addvl x9, x8, #1
+; CHECK-NEXT:    mov x9, x8
+; CHECK-NEXT:    incb x9
 ; CHECK-NEXT:    mov w0, w9
 ; CHECK-NEXT:    // implicit-def: $x9
 ; CHECK-NEXT:    mov w9, w0
@@ -160,7 +161,8 @@ define void @quux() #1 {
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    subs x9, x9, #16
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    addvl x9, x8, #2
+; CHECK-NEXT:    mov x9, x8
+; CHECK-NEXT:    incb x9, all, mul #2
 ; CHECK-NEXT:    mov w0, w9
 ; CHECK-NEXT:    // implicit-def: $x9
 ; CHECK-NEXT:    mov w9, w0

@@ -22,12 +22,12 @@ module m
   end
   pure subroutine test
     !ERROR: 'x0' may not be a local variable in a pure subprogram
-    !BECAUSE: 'x0' is polymorphic in a pure subprogram
+    !BECAUSE: 'x0' is a whole polymorphic object in a pure subprogram
     class(t0), allocatable :: x0
     !ERROR: 'x1' may not be a local variable in a pure subprogram
     !BECAUSE: 'x1' has an impure FINAL procedure 'final'
     type(t1) x1
-    !WARNING: 'x1a' of derived type 't1' does not have a FINAL subroutine for its rank (1)
+    !WARNING: 'x1a' of derived type 't1' does not have a FINAL subroutine for its rank (1) [-Wfinal]
     type(t1), allocatable :: x1a(:)
     type(t1), parameter :: namedConst = t1() ! ok
     !ERROR: 'x2' may not be a local variable in a pure subprogram

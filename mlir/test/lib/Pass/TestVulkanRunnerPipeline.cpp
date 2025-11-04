@@ -13,6 +13,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
@@ -29,7 +30,7 @@ using namespace mlir;
 namespace mlir::test {
 std::unique_ptr<Pass> createTestConvertToSPIRVPass(bool convertGPUModules,
                                                    bool nestInGPUModule);
-}
+} // namespace mlir::test
 
 namespace {
 
@@ -65,13 +66,15 @@ void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
   passManager.addPass(createGpuModuleToBinaryPass());
 
   passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
-  passManager.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
+  passManager.nest<func::FuncOp>().addPass(
+      LLVM::createLLVMRequestCWrappersPass());
   // VulkanRuntimeWrappers.cpp requires these calling convention options.
   GpuToLLVMConversionPassOptions opt;
   opt.hostBarePtrCallConv = false;
   opt.kernelBarePtrCallConv = true;
   opt.kernelIntersperseSizeCallConv = true;
   passManager.addPass(createGpuToLLVMConversionPass(opt));
+  passManager.addPass(createReconcileUnrealizedCastsPass());
 }
 
 } // namespace

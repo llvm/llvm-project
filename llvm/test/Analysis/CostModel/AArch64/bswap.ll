@@ -44,7 +44,7 @@ define void @neon() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2i64 = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4i64 = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v3i32 = call <3 x i32> @llvm.bswap.v3i32(<3 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %v4i48 = call <4 x i48> @llvm.bswap.v4i48(<4 x i48> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:12 SizeLat:12 for: %v4i48 = call <4 x i48> @llvm.bswap.v4i48(<4 x i48> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %v4i16 = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> undef)

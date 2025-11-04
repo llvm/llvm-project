@@ -46,6 +46,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/UniqueVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <string>
 
@@ -58,21 +59,21 @@ public:
   struct Chunk {
     int64_t Begin;
     int64_t End;
-    void print(llvm::raw_ostream &OS);
-    bool contains(int64_t Idx) { return Idx >= Begin && Idx <= End; }
+    LLVM_ABI void print(llvm::raw_ostream &OS);
+    bool contains(int64_t Idx) const { return Idx >= Begin && Idx <= End; }
   };
 
-  static void printChunks(raw_ostream &OS, ArrayRef<Chunk>);
+  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Chunk>);
 
   /// Return true on parsing error and print the error message on the
   /// llvm::errs()
-  static bool parseChunks(StringRef Str, SmallVector<Chunk> &Res);
+  LLVM_ABI static bool parseChunks(StringRef Str, SmallVector<Chunk> &Res);
 
   /// Returns a reference to the singleton instance.
-  static DebugCounter &instance();
+  LLVM_ABI static DebugCounter &instance();
 
   // Used by the command line option parser to push a new value it parsed.
-  void push_back(const std::string &);
+  LLVM_ABI void push_back(const std::string &);
 
   // Register a counter with the specified name.
   //
@@ -82,7 +83,7 @@ public:
   static unsigned registerCounter(StringRef Name, StringRef Desc) {
     return instance().addCounter(std::string(Name), std::string(Desc));
   }
-  static bool shouldExecuteImpl(unsigned CounterName);
+  LLVM_ABI static bool shouldExecuteImpl(unsigned CounterName);
 
   inline static bool shouldExecute(unsigned CounterName) {
     if (!isCountingEnabled())
@@ -118,10 +119,12 @@ public:
     Counter.CurrChunkIdx = State.ChunkIdx;
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Dump or print the current counter set into llvm::dbgs().
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   // Get the counter ID for a given named counter, or return 0 if none is found.
   unsigned getCounterId(const std::string &Name) const {
@@ -133,11 +136,11 @@ public:
 
   // Return the name and description of the counter with the given ID.
   std::pair<std::string, std::string> getCounterInfo(unsigned ID) const {
-    return std::make_pair(RegisteredCounters[ID], Counters.lookup(ID).Desc);
+    return {RegisteredCounters[ID], Counters.lookup(ID).Desc};
   }
 
   // Iterate through the registered counters
-  typedef UniqueVector<std::string> CounterVector;
+  using CounterVector = UniqueVector<std::string>;
   CounterVector::const_iterator begin() const {
     return RegisteredCounters.begin();
   }
@@ -175,6 +178,7 @@ protected:
     std::string Desc;
     SmallVector<Chunk> Chunks;
   };
+  bool handleCounterIncrement(CounterInfo &Info);
 
   DenseMap<unsigned, CounterInfo> Counters;
   CounterVector RegisteredCounters;
@@ -184,6 +188,8 @@ protected:
   bool Enabled = false;
 
   bool ShouldPrintCounter = false;
+
+  bool ShouldPrintCounterQueries = false;
 
   bool BreakOnLast = false;
 };

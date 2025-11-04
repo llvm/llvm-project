@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "memory_utils/memory_check_utils.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h" // LIBC_TARGET_OS_IS_LINUX
@@ -71,5 +72,13 @@ TEST(LlvmLibcMemcpyTest, CheckAccess) {
 }
 
 #endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcMemcpyTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memcpy(nullptr, nullptr, 1); },
+               WITH_SIGNAL(-1));
+}
+#endif // defined(LIBC_ADD_NULL_CHECKS)
 
 } // namespace LIBC_NAMESPACE_DECL

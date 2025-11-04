@@ -90,11 +90,11 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
   CheckDirectAccess(handler);
   WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + furthestAfter, handler);
   if (positionInRecord > furthestPositionInRecord) {
-    std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord, ' ',
-        positionInRecord - furthestPositionInRecord);
+    runtime::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
+        ' ', positionInRecord - furthestPositionInRecord);
   }
   char *to{Frame() + recordOffsetInFrame_ + positionInRecord};
-  std::memcpy(to, data, bytes);
+  runtime::memcpy(to, data, bytes);
   if (swapEndianness_) {
     SwapEndianness(to, bytes, elementBytes);
   }
@@ -119,7 +119,8 @@ bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
   auto need{recordOffsetInFrame_ + furthestAfter};
   auto got{ReadFrame(frameOffsetInFile_, need, handler)};
   if (got >= need) {
-    std::memcpy(data, Frame() + recordOffsetInFrame_ + positionInRecord, bytes);
+    runtime::memcpy(
+        data, Frame() + recordOffsetInFrame_ + positionInRecord, bytes);
     if (swapEndianness_) {
       SwapEndianness(data, bytes, elementBytes);
     }
@@ -135,6 +136,13 @@ bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
 std::size_t ExternalFileUnit::GetNextInputBytes(
     const char *&p, IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input);
+  if (access == Access::Sequential &&
+      positionInRecord < recordLength.value_or(positionInRecord)) {
+    // Fast path for variable-length formatted input: the whole record
+    // must be in frame as a result of newline detection for record length.
+    p = Frame() + recordOffsetInFrame_ + positionInRecord;
+    return *recordLength - positionInRecord;
+  }
   std::size_t length{1};
   if (auto recl{EffectiveRecordLength()}) {
     if (positionInRecord < *recl) {
@@ -303,7 +311,8 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         // Pad remainder of fixed length record
         WriteFrame(
             frameOffsetInFile_, recordOffsetInFrame_ + *openRecl, handler);
-        std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
+        runtime::memset(
+            Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
             isUnformatted.value_or(false) ? 0 : ' ',
             *openRecl - furthestPositionInRecord);
         furthestPositionInRecord = *openRecl;
@@ -443,7 +452,6 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
     DoImpliedEndfile(handler);
     SetPosition(0);
     currentRecordNumber = 1;
-    leftTabLimit.reset();
     anyWriteSinceLastPositioning_ = false;
   }
 }
@@ -455,6 +463,8 @@ void ExternalFileUnit::SetPosition(std::int64_t pos) {
     directAccessRecWasSet_ = true;
   }
   BeginRecord();
+  beganReadingRecord_ = false; // for positioning after nonadvancing input
+  leftTabLimit.reset();
 }
 
 void ExternalFileUnit::Sought(std::int64_t zeroBasedPos) {
@@ -817,6 +827,7 @@ ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {
   Terminator &terminator{parent.GetIoErrorHandler()};
   OwningPtr<ChildIo> next{New<ChildIo>{terminator}(parent, std::move(current))};
   child_.reset(next.release());
+  leftTabLimit = positionInRecord;
   return *child_;
 }
 
@@ -831,7 +842,7 @@ void ExternalFileUnit::PopChildIo(ChildIo &child) {
 std::uint32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
   std::uint32_t word;
   char *wordPtr{reinterpret_cast<char *>(&word)};
-  std::memcpy(wordPtr, Frame() + frameOffset, sizeof word);
+  runtime::memcpy(wordPtr, Frame() + frameOffset, sizeof word);
   if (swapEndianness_) {
     SwapEndianness(wordPtr, sizeof word, sizeof word);
   }

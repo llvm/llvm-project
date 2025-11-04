@@ -14,15 +14,18 @@
 //   explicit flat_set(const Allocator& a);
 
 #include <cassert>
+#include <deque>
 #include <flat_set>
 #include <functional>
 #include <vector>
 
+#include "MinSequenceContainer.h"
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "../../../test_compare.h"
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -30,8 +33,8 @@ void test() {
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
     using A2 = other_allocator<int>;
-    using V1 = std::vector<int, A1>;
-    using V2 = std::vector<int, A2>;
+    using V1 = KeyContainer<int, A1>;
+    using V2 = KeyContainer<int, A2>;
     using M1 = std::flat_set<int, C, V1>;
     using M2 = std::flat_set<int, C, V2>;
     static_assert(std::is_constructible_v<M1, const A1&>);
@@ -41,14 +44,14 @@ void test() {
   }
   {
     // explicit
-    using M = std::flat_set<int, std::less<int>, std::vector<int, test_allocator<int>>>;
+    using M = std::flat_set<int, std::less<int>, KeyContainer<int, test_allocator<int>>>;
 
     static_assert(std::is_constructible_v<M, test_allocator<int>>);
     static_assert(!std::is_convertible_v<test_allocator<int>, M>);
   }
   {
     using A = test_allocator<short>;
-    using M = std::flat_set<int, std::less<int>, std::vector<int, test_allocator<int>>>;
+    using M = std::flat_set<int, std::less<int>, KeyContainer<int, test_allocator<int>>>;
     M m(A(0, 5));
     assert(m.empty());
     assert(m.begin() == m.end());
@@ -57,8 +60,21 @@ void test() {
   }
 }
 
+constexpr bool test() {
+  test<std::vector>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
+
+  return true;
+}
+
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

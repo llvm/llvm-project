@@ -45,7 +45,7 @@ class HexagonInstrInfo : public HexagonGenInstrInfo {
   virtual void anchor();
 
 public:
-  explicit HexagonInstrInfo(HexagonSubtarget &ST);
+  explicit HexagonInstrInfo(const HexagonSubtarget &ST);
 
   /// TargetInstrInfo overrides.
 
@@ -533,6 +533,13 @@ public:
 
   MCInst getNop() const override;
 };
+
+/// \brief Create RegSubRegPair from a register MachineOperand
+inline TargetInstrInfo::RegSubRegPair
+getRegSubRegPair(const MachineOperand &O) {
+  assert(O.isReg());
+  return TargetInstrInfo::RegSubRegPair(O.getReg(), O.getSubReg());
+}
 
 } // end namespace llvm
 

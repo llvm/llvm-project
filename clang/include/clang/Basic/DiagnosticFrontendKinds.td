@@ -115,6 +115,8 @@ def err_fe_unable_to_load_plugin : Error<
     "unable to load plugin '%0': '%1'">;
 def err_fe_unable_to_create_target : Error<
     "unable to create target: '%0'">;
+def err_fe_unable_to_create_subtarget : Error<
+    "unable to create subtarget: '%0'%select{ with features '%2'|}1">;
 def err_fe_unable_to_interface_with_target : Error<
     "unable to interface with target machine">;
 def err_fe_unable_to_open_output : Error<
@@ -132,6 +134,8 @@ def err_fe_no_pch_in_dir : Error<
     "no suitable precompiled header file found in directory '%0'">;
 def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
+def err_fe_cir_not_built : Error<"clang IR support not available, rebuild "
+                                 "clang with -DCLANG_ENABLE_CIR=ON">;
 def err_fe_invalid_multiple_actions : Error<
     "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
@@ -260,6 +264,10 @@ def err_modules_embed_file_not_found :
   DefaultFatal;
 def err_module_header_file_not_found :
   Error<"module header file '%0' not found">, DefaultFatal;
+def err_frontend_action_unsupported_input_format
+    : Error<"%0 does not support input file format of file '%1': "
+            "'%select{Source|ModuleMap|Precompiled|Unknown}2'">,
+      DefaultFatal;
 
 def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
@@ -283,6 +291,10 @@ def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
 
+def err_flatten_function_needs_feature : Error<
+  "flatten function %0 calls %1 which requires target feature '%2', but the "
+  "caller is compiled without support for '%2'">;
+
 let CategoryName = "Codegen ABI Check" in {
 def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
@@ -304,6 +316,9 @@ def err_target_unsupported_type_for_abi
     : Error<"%0 requires %1 type support, but ABI '%2' does not support it">;
 }
 
+def err_omp_host_ir_file_not_found : Error<
+  "provided host compiler IR file '%0' is required to generate code for OpenMP "
+  "target regions but cannot be found">;
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "
   "%select{variable or |}1function">;

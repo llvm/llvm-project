@@ -82,11 +82,11 @@ constexpr bool is_uint_64_bit_v =
 
 /// Returns true if \p S is valid UTF-8, which is required for use as JSON.
 /// If it returns false, \p Offset is set to a byte offset near the first error.
-bool isUTF8(llvm::StringRef S, size_t *ErrOffset = nullptr);
+LLVM_ABI bool isUTF8(llvm::StringRef S, size_t *ErrOffset = nullptr);
 /// Replaces invalid UTF-8 sequences in \p S with the replacement character
 /// (U+FFFD). The returned string is valid UTF-8.
 /// This is much slower than isUTF8, so test that first.
-std::string fixUTF8(llvm::StringRef S);
+LLVM_ABI std::string fixUTF8(llvm::StringRef S);
 
 class Array;
 class ObjectKey;
@@ -136,25 +136,27 @@ public:
   iterator find(StringRef K) { return M.find_as(K); }
   const_iterator find(StringRef K) const { return M.find_as(K); }
   // operator[] acts as if Value was default-constructible as null.
-  Value &operator[](const ObjectKey &K);
-  Value &operator[](ObjectKey &&K);
+  LLVM_ABI Value &operator[](const ObjectKey &K);
+  LLVM_ABI Value &operator[](ObjectKey &&K);
   // Look up a property, returning nullptr if it doesn't exist.
-  Value *get(StringRef K);
-  const Value *get(StringRef K) const;
+  LLVM_ABI Value *get(StringRef K);
+  LLVM_ABI const Value *get(StringRef K) const;
   // Typed accessors return std::nullopt/nullptr if
   //   - the property doesn't exist
   //   - or it has the wrong type
-  std::optional<std::nullptr_t> getNull(StringRef K) const;
-  std::optional<bool> getBoolean(StringRef K) const;
-  std::optional<double> getNumber(StringRef K) const;
-  std::optional<int64_t> getInteger(StringRef K) const;
-  std::optional<llvm::StringRef> getString(StringRef K) const;
-  const json::Object *getObject(StringRef K) const;
-  json::Object *getObject(StringRef K);
-  const json::Array *getArray(StringRef K) const;
-  json::Array *getArray(StringRef K);
+  LLVM_ABI std::optional<std::nullptr_t> getNull(StringRef K) const;
+  LLVM_ABI std::optional<bool> getBoolean(StringRef K) const;
+  LLVM_ABI std::optional<double> getNumber(StringRef K) const;
+  LLVM_ABI std::optional<int64_t> getInteger(StringRef K) const;
+  LLVM_ABI std::optional<llvm::StringRef> getString(StringRef K) const;
+  LLVM_ABI const json::Object *getObject(StringRef K) const;
+  LLVM_ABI json::Object *getObject(StringRef K);
+  LLVM_ABI const json::Array *getArray(StringRef K) const;
+  LLVM_ABI json::Array *getArray(StringRef K);
+
+  friend LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
 };
-bool operator==(const Object &LHS, const Object &RHS);
+LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
 inline bool operator!=(const Object &LHS, const Object &RHS) {
   return !(LHS == RHS);
 }
@@ -170,7 +172,7 @@ public:
   using const_iterator = std::vector<Value>::const_iterator;
 
   Array() = default;
-  explicit Array(std::initializer_list<Value> Elements);
+  LLVM_ABI explicit Array(std::initializer_list<Value> Elements);
   template <typename Collection> explicit Array(const Collection &C) {
     for (const auto &V : C)
       emplace_back(V);
@@ -301,7 +303,7 @@ public:
   // It would be nice to have Value() be null. But that would make {} null too.
   Value(const Value &M) { copyFrom(M); }
   Value(Value &&M) { moveFrom(std::move(M)); }
-  Value(std::initializer_list<Value> Elements);
+  LLVM_ABI Value(std::initializer_list<Value> Elements);
   Value(json::Array &&Elements) : Type(T_Array) {
     create<json::Array>(std::move(Elements));
   }
@@ -316,7 +318,7 @@ public:
   Value(std::string V) : Type(T_String) {
     if (LLVM_UNLIKELY(!isUTF8(V))) {
       assert(false && "Invalid UTF-8 in value used as JSON");
-      V = fixUTF8(std::move(V));
+      V = fixUTF8(V);
     }
     create<std::string>(std::move(V));
   }
@@ -472,7 +474,7 @@ public:
     return LLVM_LIKELY(Type == T_Array) ? &as<json::Array>() : nullptr;
   }
 
-  void print(llvm::raw_ostream &OS) const;
+  LLVM_ABI void print(llvm::raw_ostream &OS) const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     print(llvm::dbgs());
@@ -481,12 +483,12 @@ public:
 #endif // !NDEBUG || LLVM_ENABLE_DUMP
 
 private:
-  void destroy();
-  void copyFrom(const Value &M);
+  LLVM_ABI void destroy();
+  LLVM_ABI void copyFrom(const Value &M);
   // We allow moving from *const* Values, by marking all members as mutable!
   // This hack is needed to support initializer-list syntax efficiently.
   // (std::initializer_list<T> is a container of const T).
-  void moveFrom(const Value &&M);
+  LLVM_ABI void moveFrom(const Value &&M);
   friend class Array;
   friend class Object;
 
@@ -531,10 +533,10 @@ private:
                                       llvm::StringRef, std::string, json::Array,
                                       json::Object>
       Union;
-  friend bool operator==(const Value &, const Value &);
+  LLVM_ABI friend bool operator==(const Value &, const Value &);
 };
 
-bool operator==(const Value &, const Value &);
+LLVM_ABI bool operator==(const Value &, const Value &);
 inline bool operator!=(const Value &L, const Value &R) { return !(L == R); }
 
 // Array Methods
@@ -547,10 +549,10 @@ inline const Value &Array::back() const { return V.back(); }
 inline Value *Array::data() { return V.data(); }
 inline const Value *Array::data() const { return V.data(); }
 
-inline typename Array::iterator Array::begin() { return V.begin(); }
-inline typename Array::const_iterator Array::begin() const { return V.begin(); }
-inline typename Array::iterator Array::end() { return V.end(); }
-inline typename Array::const_iterator Array::end() const { return V.end(); }
+inline Array::iterator Array::begin() { return V.begin(); }
+inline Array::const_iterator Array::begin() const { return V.begin(); }
+inline Array::iterator Array::end() { return V.end(); }
+inline Array::const_iterator Array::end() const { return V.end(); }
 
 inline bool Array::empty() const { return V.empty(); }
 inline size_t Array::size() const { return V.size(); }
@@ -563,18 +565,18 @@ template <typename... Args> inline void Array::emplace_back(Args &&...A) {
   V.emplace_back(std::forward<Args>(A)...);
 }
 inline void Array::pop_back() { V.pop_back(); }
-inline typename Array::iterator Array::insert(const_iterator P, const Value &E) {
+inline Array::iterator Array::insert(const_iterator P, const Value &E) {
   return V.insert(P, E);
 }
-inline typename Array::iterator Array::insert(const_iterator P, Value &&E) {
+inline Array::iterator Array::insert(const_iterator P, Value &&E) {
   return V.insert(P, std::move(E));
 }
 template <typename It>
-inline typename Array::iterator Array::insert(const_iterator P, It A, It Z) {
+inline Array::iterator Array::insert(const_iterator P, It A, It Z) {
   return V.insert(P, A, Z);
 }
 template <typename... Args>
-inline typename Array::iterator Array::emplace(const_iterator P, Args &&...A) {
+inline Array::iterator Array::emplace(const_iterator P, Args &&...A) {
   return V.emplace(P, std::forward<Args>(A)...);
 }
 inline bool operator==(const Array &L, const Array &R) { return L.V == R.V; }
@@ -589,7 +591,7 @@ public:
   ObjectKey(std::string S) : Owned(new std::string(std::move(S))) {
     if (LLVM_UNLIKELY(!isUTF8(*Owned))) {
       assert(false && "Invalid UTF-8 in value used as JSON");
-      *Owned = fixUTF8(std::move(*Owned));
+      *Owned = fixUTF8(*Owned);
     }
     Data = *Owned;
   }
@@ -655,7 +657,8 @@ inline bool Object::erase(StringRef K) {
   return M.erase(ObjectKey(K));
 }
 
-std::vector<const Object::value_type *> sortedElements(const Object &O);
+LLVM_ABI std::vector<const Object::value_type *>
+sortedElements(const Object &O);
 
 /// A "cursor" marking a position within a Value.
 /// The Value is a tree, and this is the path from the root to the current node.
@@ -667,7 +670,7 @@ public:
   /// Records that the value at the current path is invalid.
   /// Message is e.g. "expected number" and becomes part of the final error.
   /// This overwrites any previously written error message in the root.
-  void report(llvm::StringLiteral Message);
+  LLVM_ABI void report(llvm::StringLiteral Message);
 
   /// The root may be treated as a Path.
   Path(Root &R) : Parent(nullptr), Seg(&R) {}
@@ -712,7 +715,7 @@ class Path::Root {
   llvm::StringLiteral ErrorMessage;
   std::vector<Path::Segment> ErrorPath; // Only valid in error state. Reversed.
 
-  friend void Path::report(llvm::StringLiteral Message);
+  LLVM_ABI friend void Path::report(llvm::StringLiteral Message);
 
 public:
   Root(llvm::StringRef Name = "") : Name(Name), ErrorMessage("") {}
@@ -723,7 +726,7 @@ public:
   Root &operator=(const Root &) = delete;
 
   /// Returns the last error reported, or else a generic error.
-  Error getError() const;
+  LLVM_ABI Error getError() const;
   /// Print the root value with the error shown inline as a comment.
   /// Unrelated parts of the value are elided for brevity, e.g.
   ///   {
@@ -731,7 +734,7 @@ public:
   ///      "name": /* expected string */ null,
   ///      "properties": { ... }
   ///   }
-  void printErrorContext(const Value &, llvm::raw_ostream &) const;
+  LLVM_ABI void printErrorContext(const Value &, llvm::raw_ostream &) const;
 };
 
 // Standard deserializers are provided for primitive types.
@@ -774,6 +777,14 @@ inline bool fromJSON(const Value &E, bool &Out, Path P) {
     return true;
   }
   P.report("expected boolean");
+  return false;
+}
+inline bool fromJSON(const Value &E, unsigned int &Out, Path P) {
+  if (auto S = E.getAsInteger()) {
+    Out = *S;
+    return true;
+  }
+  P.report("expected unsigned integer");
   return false;
 }
 inline bool fromJSON(const Value &E, uint64_t &Out, Path P) {
@@ -898,14 +909,14 @@ private:
 /// Parses the provided JSON source, or returns a ParseError.
 /// The returned Value is self-contained and owns its strings (they do not refer
 /// to the original source).
-llvm::Expected<Value> parse(llvm::StringRef JSON);
+LLVM_ABI llvm::Expected<Value> parse(llvm::StringRef JSON);
 
 class ParseError : public llvm::ErrorInfo<ParseError> {
   const char *Msg;
   unsigned Line, Column, Offset;
 
 public:
-  static char ID;
+  LLVM_ABI static char ID;
   ParseError(const char *Msg, unsigned Line, unsigned Column, unsigned Offset)
       : Msg(Msg), Line(Line), Column(Column), Offset(Offset) {}
   void log(llvm::raw_ostream &OS) const override {
@@ -1006,7 +1017,7 @@ class OStream {
   // or in an array (any number of times).
 
   /// Emit a self-contained value (number, string, vector<string> etc).
-  void value(const Value &V);
+  LLVM_ABI void value(const Value &V);
   /// Emit an array whose elements are emitted in the provided Block.
   void array(Block Contents) {
     arrayBegin();
@@ -1033,7 +1044,7 @@ class OStream {
   /// Emit a JavaScript comment associated with the next printed value.
   /// The string must be valid until the next attribute or value is emitted.
   /// Comments are not part of standard JSON, and many parsers reject them!
-  void comment(llvm::StringRef);
+  LLVM_ABI void comment(llvm::StringRef);
 
   // High level functions to output object attributes.
   // Valid only within an object (any number of times).
@@ -1054,14 +1065,14 @@ class OStream {
   // Low-level begin/end functions to output arrays, objects, and attributes.
   // Must be correctly paired. Allowed contexts are as above.
 
-  void arrayBegin();
-  void arrayEnd();
-  void objectBegin();
-  void objectEnd();
-  void attributeBegin(llvm::StringRef Key);
-  void attributeEnd();
-  raw_ostream &rawValueBegin();
-  void rawValueEnd();
+  LLVM_ABI void arrayBegin();
+  LLVM_ABI void arrayEnd();
+  LLVM_ABI void objectBegin();
+  LLVM_ABI void objectEnd();
+  LLVM_ABI void attributeBegin(llvm::StringRef Key);
+  LLVM_ABI void attributeEnd();
+  LLVM_ABI raw_ostream &rawValueBegin();
+  LLVM_ABI void rawValueEnd();
 
 private:
   void attributeImpl(llvm::StringRef Key, Block Contents) {
@@ -1070,9 +1081,9 @@ private:
     attributeEnd();
   }
 
-  void valueBegin();
-  void flushComment();
-  void newline();
+  LLVM_ABI void valueBegin();
+  LLVM_ABI void flushComment();
+  LLVM_ABI void newline();
 
   enum Context {
     Singleton, // Top level, or object attribute.
@@ -1104,7 +1115,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Value &V) {
 /// The default style is basic/compact formatting, like operator<<.
 /// A format string like formatv("{0:2}", Value) pretty-prints with indent 2.
 template <> struct format_provider<llvm::json::Value> {
-  static void format(const llvm::json::Value &, raw_ostream &, StringRef);
+  LLVM_ABI static void format(const llvm::json::Value &, raw_ostream &,
+                              StringRef);
 };
 } // namespace llvm
 

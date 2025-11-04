@@ -15,15 +15,32 @@ module m
     print*,'from device'
     print '(f10.5)', (x(ivar), ivar = 1, 10)
     write(*,*), "Hello world from device!"
-    !WARNING: I/O statement might not be supported on device
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
     write(12,'(10F4.1)'), x
   end
+  attributes(global) subroutine devsub3(n)
+    implicit none
+    integer :: n
+    integer :: i, ig, iGrid
+    iGrid = gridDim%x*blockDim%x
+    ig = (blockIdx%x-1)*blockDim%x + threadIdx%x
+ 
+    !dir$ nounroll
+    do i = ig, n, iGrid
+    end do
+  end subroutine
   attributes(global) subroutine hostglobal(a)
     integer :: a(*)
     i = threadIdx%x
     !ERROR: Host array 'm' cannot be present in device context
     if (i .le. N) a(i) = m(i)
   end subroutine
+
+  attributes(device) function devfct(r1, r2) result(res)
+    real(4), intent(in) :: r1(3), r2(3)
+    real(4) :: res(3)
+    res = r1 - r2 ! Do not error on function result
+  end function
 
   attributes(global) subroutine hostparameter(a)
     integer :: a(*)
@@ -228,3 +245,14 @@ attributes(host,device) subroutine do2(a,b,c,i)
   c(i) = a(i) - b(i) ! ok. Should not error with Host array 
                      ! cannot be present in device context
 end
+
+attributes(global) subroutine blockTest
+block
+  integer(8) :: xloc
+  integer(8) :: s(7)
+  integer(4) :: i
+  do i = 1, 7
+    s = xloc ! ok.
+  end do
+end block
+end subroutine

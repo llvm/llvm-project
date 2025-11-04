@@ -9,7 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaDirectX.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {

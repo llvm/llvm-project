@@ -374,14 +374,19 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
     return true;
   }
 
-  unsigned ReturnOpc =
-      IsShader ? AMDGPU::SI_RETURN_TO_EPILOG : AMDGPU::SI_RETURN;
+  const bool IsWholeWave = MFI->isWholeWaveFunction();
+  unsigned ReturnOpc = IsWholeWave ? AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_RETURN
+                       : IsShader  ? AMDGPU::SI_RETURN_TO_EPILOG
+                                   : AMDGPU::SI_RETURN;
   auto Ret = B.buildInstrNoInsert(ReturnOpc);
 
   if (!FLI.CanLowerReturn)
     insertSRetStores(B, Val->getType(), VRegs, FLI.DemoteRegister);
   else if (!lowerReturnVal(B, Val, VRegs, Ret))
     return false;
+
+  if (IsWholeWave)
+    addOriginalExecToReturn(B.getMF(), Ret);
 
   // TODO: Handle CalleeSavedRegsViaCopy.
 
@@ -493,6 +498,12 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(FlatScratchInitReg);
   }
 
+  if (UserSGPRInfo.hasPrivateSegmentSize()) {
+    Register PrivateSegmentSizeReg = Info.addPrivateSegmentSize(TRI);
+    MF.addLiveIn(PrivateSegmentSizeReg, &AMDGPU::SGPR_32RegClass);
+    CCInfo.AllocateReg(PrivateSegmentSizeReg);
+  }
+
   // TODO: Add GridWorkGroupCount user SGPRs when used. For now with HSA we read
   // these from the dispatch pointer.
 }
@@ -569,6 +580,9 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
     ++i;
   }
 
+  if (Info->getNumKernargPreloadedSGPRs())
+    Info->setNumWaveDispatchSGPRs(Info->getNumUserSGPRs());
+
   TLI.allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
   TLI.allocateSystemSGPRs(CCInfo, MF, *Info, F.getCallingConv(), false);
   return true;
@@ -625,6 +639,17 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   for (auto &Arg : F.args()) {
     if (DL.getTypeStoreSize(Arg.getType()) == 0)
       continue;
+
+    if (Info->isWholeWaveFunction() && Idx == 0) {
+      assert(VRegs[Idx].size() == 1 && "Expected only one register");
+
+      // The first argument for whole wave functions is the original EXEC value.
+      B.buildInstr(AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_SETUP)
+          .addDef(VRegs[Idx][0]);
+
+      ++Idx;
+      continue;
+    }
 
     const bool InReg = Arg.hasAttribute(Attribute::InReg);
 
@@ -721,6 +746,15 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (!determineAssignments(Assigner, SplitArgs, CCInfo))
     return false;
 
+  if (IsEntryFunc) {
+    // This assumes the registers are allocated by CCInfo in ascending order
+    // with no gaps.
+    Info->setNumWaveDispatchSGPRs(
+        CCInfo.getFirstUnallocated(AMDGPU::SGPR_32RegClass.getRegisters()));
+    Info->setNumWaveDispatchVGPRs(
+        CCInfo.getFirstUnallocated(AMDGPU::VGPR_32RegClass.getRegisters()));
+  }
+
   FormalArgHandler Handler(B, MRI);
   if (!handleAssignments(Handler, SplitArgs, CCInfo, ArgLocs, B))
     return false;
@@ -775,15 +809,15 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     AMDGPUFunctionArgInfo::LDS_KERNEL_ID,
   };
 
-  static constexpr StringLiteral ImplicitAttrNames[] = {
-    "amdgpu-no-dispatch-ptr",
-    "amdgpu-no-queue-ptr",
-    "amdgpu-no-implicitarg-ptr",
-    "amdgpu-no-dispatch-id",
-    "amdgpu-no-workgroup-id-x",
-    "amdgpu-no-workgroup-id-y",
-    "amdgpu-no-workgroup-id-z",
-    "amdgpu-no-lds-kernel-id",
+  static constexpr StringLiteral ImplicitAttrNames[][2] = {
+      {"amdgpu-no-dispatch-ptr", ""},
+      {"amdgpu-no-queue-ptr", ""},
+      {"amdgpu-no-implicitarg-ptr", ""},
+      {"amdgpu-no-dispatch-id", ""},
+      {"amdgpu-no-workgroup-id-x", "amdgpu-no-cluster-id-x"},
+      {"amdgpu-no-workgroup-id-y", "amdgpu-no-cluster-id-y"},
+      {"amdgpu-no-workgroup-id-z", "amdgpu-no-cluster-id-z"},
+      {"amdgpu-no-lds-kernel-id", ""},
   };
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -799,7 +833,9 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     LLT ArgTy;
 
     // If the callee does not use the attribute value, skip copying the value.
-    if (Info.CB->hasFnAttr(ImplicitAttrNames[I++]))
+    if (all_of(ImplicitAttrNames[I++], [&](StringRef AttrName) {
+          return AttrName.empty() || Info.CB->hasFnAttr(AttrName);
+        }))
       continue;
 
     std::tie(OutgoingArg, ArgRC, ArgTy) =
@@ -970,8 +1006,14 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
     return IsWave32 ? AMDGPU::SI_CS_CHAIN_TC_W32 : AMDGPU::SI_CS_CHAIN_TC_W64;
   }
 
-  return CC == CallingConv::AMDGPU_Gfx ? AMDGPU::SI_TCRETURN_GFX :
-                                         AMDGPU::SI_TCRETURN;
+  if (CallerF.getFunction().getCallingConv() ==
+      CallingConv::AMDGPU_Gfx_WholeWave)
+    return AMDGPU::SI_TCRETURN_GFX_WholeWave;
+
+  if (CC == CallingConv::AMDGPU_Gfx || CC == CallingConv::AMDGPU_Gfx_WholeWave)
+    return AMDGPU::SI_TCRETURN_GFX;
+
+  return AMDGPU::SI_TCRETURN;
 }
 
 // Add operands to call instruction to track the callee.
@@ -1084,22 +1126,6 @@ bool AMDGPUCallLowering::areCalleeOutgoingArgsTailCallable(
   return parametersInCSRMatch(MRI, CallerPreservedMask, OutLocs, OutArgs);
 }
 
-/// Return true if the calling convention is one that we can guarantee TCO for.
-static bool canGuaranteeTCO(CallingConv::ID CC) {
-  return CC == CallingConv::Fast;
-}
-
-/// Return true if we might ever do TCO for calls with this calling convention.
-static bool mayTailCallThisCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::C:
-  case CallingConv::AMDGPU_Gfx:
-    return true;
-  default:
-    return canGuaranteeTCO(CC);
-  }
-}
-
 bool AMDGPUCallLowering::isEligibleForTailCallOptimization(
     MachineIRBuilder &B, CallLoweringInfo &Info,
     SmallVectorImpl<ArgInfo> &InArgs, SmallVectorImpl<ArgInfo> &OutArgs) const {
@@ -1124,7 +1150,7 @@ bool AMDGPUCallLowering::isEligibleForTailCallOptimization(
   if (!CallerPreserved)
     return false;
 
-  if (!mayTailCallThisCC(CalleeCC)) {
+  if (!AMDGPU::mayTailCallThisCC(CalleeCC)) {
     LLVM_DEBUG(dbgs() << "... Calling convention cannot be tail called.\n");
     return false;
   }
@@ -1138,8 +1164,10 @@ bool AMDGPUCallLowering::isEligibleForTailCallOptimization(
   }
 
   // If we have -tailcallopt, then we're done.
-  if (MF.getTarget().Options.GuaranteedTailCallOpt)
-    return canGuaranteeTCO(CalleeCC) && CalleeCC == CallerF.getCallingConv();
+  if (MF.getTarget().Options.GuaranteedTailCallOpt) {
+    return AMDGPU::canGuaranteeTCO(CalleeCC) &&
+           CalleeCC == CallerF.getCallingConv();
+  }
 
   // Verify that the incoming and outgoing arguments from the callee are
   // safe to tail call.
@@ -1264,6 +1292,13 @@ bool AMDGPUCallLowering::lowerTailCall(
   unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), /*IsTailCall*/ true,
                                ST.isWave32(), CalleeCC, IsDynamicVGPRChainCall);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+
+  if (FuncInfo->isWholeWaveFunction())
+    addOriginalExecToReturn(MF, MIB);
+
+  // Keep track of the index of the next operand to be added to the call
+  unsigned CalleeIdx = MIB->getNumOperands();
+
   if (!addCallTargetOperands(MIB, MIRBuilder, Info, IsDynamicVGPRChainCall))
     return false;
 
@@ -1355,6 +1390,7 @@ bool AMDGPUCallLowering::lowerTailCall(
   SmallVector<std::pair<MCRegister, Register>, 12> ImplicitArgRegs;
 
   if (Info.CallConv != CallingConv::AMDGPU_Gfx &&
+      Info.CallConv != CallingConv::AMDGPU_Gfx_WholeWave &&
       !AMDGPU::isChainCC(Info.CallConv)) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
@@ -1380,7 +1416,7 @@ bool AMDGPUCallLowering::lowerTailCall(
   // If we have -tailcallopt, we need to adjust the stack. We'll do the call
   // sequence start and end here.
   if (!IsSibCall) {
-    MIB->getOperand(1).setImm(FPDiff);
+    MIB->getOperand(CalleeIdx + 1).setImm(FPDiff);
     CallSeqStart.addImm(NumBytes).addImm(0);
     // End the call sequence *before* emitting the call. Normally, we would
     // tidy the frame up after the call. However, here, we've laid out the
@@ -1392,16 +1428,24 @@ bool AMDGPUCallLowering::lowerTailCall(
   // Now we can add the actual call instruction to the correct basic block.
   MIRBuilder.insertInstr(MIB);
 
+  // If this is a whole wave tail call, we need to constrain the register for
+  // the original EXEC.
+  if (MIB->getOpcode() == AMDGPU::SI_TCRETURN_GFX_WholeWave) {
+    MIB->getOperand(0).setReg(
+        constrainOperandRegClass(MF, *TRI, MRI, *TII, *ST.getRegBankInfo(),
+                                 *MIB, MIB->getDesc(), MIB->getOperand(0), 0));
+  }
+
   // If Callee is a reg, since it is used by a target specific
   // instruction, it must have a register class matching the
   // constraint of that instruction.
 
   // FIXME: We should define regbankselectable call instructions to handle
   // divergent call targets.
-  if (MIB->getOperand(0).isReg()) {
-    MIB->getOperand(0).setReg(
-        constrainOperandRegClass(MF, *TRI, MRI, *TII, *ST.getRegBankInfo(),
-                                 *MIB, MIB->getDesc(), MIB->getOperand(0), 0));
+  if (MIB->getOperand(CalleeIdx).isReg()) {
+    MIB->getOperand(CalleeIdx).setReg(constrainOperandRegClass(
+        MF, *TRI, MRI, *TII, *ST.getRegBankInfo(), *MIB, MIB->getDesc(),
+        MIB->getOperand(CalleeIdx), CalleeIdx));
   }
 
   MF.getFrameInfo().setHasTailCall();
@@ -1455,9 +1499,22 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    CallLoweringInfo &Info) const {
   if (Function *F = Info.CB->getCalledFunction())
     if (F->isIntrinsic()) {
-      assert(F->getIntrinsicID() == Intrinsic::amdgcn_cs_chain &&
-             "Unexpected intrinsic");
-      return lowerChainCall(MIRBuilder, Info);
+      switch (F->getIntrinsicID()) {
+      case Intrinsic::amdgcn_cs_chain:
+        return lowerChainCall(MIRBuilder, Info);
+      case Intrinsic::amdgcn_call_whole_wave:
+        Info.CallConv = CallingConv::AMDGPU_Gfx_WholeWave;
+
+        // Get the callee from the original instruction, so it doesn't look like
+        // this is an indirect call.
+        Info.Callee = MachineOperand::CreateGA(
+            cast<GlobalValue>(Info.CB->getOperand(0)), /*Offset=*/0);
+        Info.OrigArgs.erase(Info.OrigArgs.begin());
+        Info.IsVarArg = false;
+        break;
+      default:
+        llvm_unreachable("Unexpected intrinsic call");
+      }
     }
 
   if (Info.IsVarArg) {
@@ -1532,15 +1589,14 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // after the ordinary user argument registers.
   SmallVector<std::pair<MCRegister, Register>, 12> ImplicitArgRegs;
 
-  if (Info.CallConv != CallingConv::AMDGPU_Gfx) {
+  if (Info.CallConv != CallingConv::AMDGPU_Gfx &&
+      Info.CallConv != CallingConv::AMDGPU_Gfx_WholeWave) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
       return false;
   }
 
   // Do the actual argument marshalling.
-  SmallVector<Register, 8> PhysRegs;
-
   OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg);
   if (!determineAssignments(Assigner, OutArgs, CCInfo))
     return false;
@@ -1601,4 +1657,12 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   return true;
+}
+
+void AMDGPUCallLowering::addOriginalExecToReturn(
+    MachineFunction &MF, MachineInstrBuilder &Ret) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const MachineInstr *Setup = TII->getWholeWaveFunctionSetup(MF);
+  Ret.addReg(Setup->getOperand(0).getReg());
 }

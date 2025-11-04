@@ -4,8 +4,10 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10,GFX10-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10,GFX10-GISEL %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-SDAG,GFX11-SDAG-TRUE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-SDAG,GFX11-SDAG-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
 
 declare float @llvm.rint.f32(float)
 declare i32 @llvm.lrint.i32.f32(float)
@@ -491,11 +493,41 @@ entry:
 }
 
 define half @intrinsic_frint_half(half %arg) {
-; GCN-LABEL: intrinsic_frint_half:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_rndne_f16_e32 v0, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: intrinsic_frint_half:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_rndne_f16_e32 v0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: intrinsic_frint_half:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_rndne_f16_e32 v0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-TRUE16-LABEL: intrinsic_frint_half:
+; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    v_rndne_f16_e32 v0.l, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-FAKE16-LABEL: intrinsic_frint_half:
+; GFX11-SDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    v_rndne_f16_e32 v0, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-TRUE16-LABEL: intrinsic_frint_half:
+; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_rndne_f16_e32 v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-FAKE16-LABEL: intrinsic_frint_half:
+; GFX11-GISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_rndne_f16_e32 v0, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = tail call half @llvm.rint.f16(half %arg)
   ret half %res
@@ -518,14 +550,41 @@ define i32 @intrinsic_lrint_i32_f16(half %arg) {
 ; GFX10-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: intrinsic_lrint_i32_f16:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_rndne_f16_e32 v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX11-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-TRUE16-LABEL: intrinsic_lrint_i32_f16:
+; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    v_rndne_f16_e32 v0.l, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-FAKE16-LABEL: intrinsic_lrint_i32_f16:
+; GFX11-SDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    v_rndne_f16_e32 v0, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX11-SDAG-FAKE16-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-TRUE16-LABEL: intrinsic_lrint_i32_f16:
+; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_rndne_f16_e32 v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-FAKE16-LABEL: intrinsic_lrint_i32_f16:
+; GFX11-GISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_rndne_f16_e32 v0, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = tail call i32 @llvm.lrint.i32.f16(half %arg)
   ret i32 %res

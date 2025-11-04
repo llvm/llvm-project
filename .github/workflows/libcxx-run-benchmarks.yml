@@ -1,0 +1,116 @@
+# This file defines a workflow that runs the libc++ benchmarks when a comment is added to the PR.
+#
+# The comment is of the form:
+#
+#   /libcxx-bot benchmark <path-to-benchmarks-to-run>
+#
+# That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
+# their results to be compared.
+
+name: Benchmark libc++
+
+permissions:
+  contents: read
+
+on:
+  issue_comment:
+    types:
+      - created
+      - edited
+
+env:
+  CC: clang-22
+  CXX: clang++-22
+
+jobs:
+  run-benchmarks:
+    permissions:
+      pull-requests: write
+
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/libcxx-bot benchmark')
+
+    runs-on: llvm-premerge-libcxx-next-runners # TODO: This should run on a dedicated set of machines
+    steps:
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.14'
+
+      - name: Extract information from the PR
+        id: vars
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install pygithub
+
+          cat <<EOF | python >> ${GITHUB_OUTPUT}
+          import github
+          repo = github.Github("${{ github.token }}").get_repo("${{ github.repository }}")
+          pr = repo.get_pull(${{ github.event.issue.number }})
+          print(f"pr_base={pr.base.sha}")
+          print(f"pr_head={pr.head.sha}")
+          EOF
+          BENCHMARKS=$(echo "$COMMENT_BODY" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
+          echo "benchmarks=${BENCHMARKS}" >> ${GITHUB_OUTPUT}
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ steps.vars.outputs.pr_head }}
+          fetch-depth: 0
+          fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
+          path: repo # Avoid nuking the workspace, where we have the Python virtualenv
+
+      - name: Run baseline
+        env:
+          BENCHMARKS: ${{ steps.vars.outputs.benchmarks }}
+        run: |
+          source .venv/bin/activate && cd repo
+          python -m pip install -r libcxx/utils/requirements.txt
+          baseline_commit=$(git merge-base ${{ steps.vars.outputs.pr_base }} ${{ steps.vars.outputs.pr_head }})
+          ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks build/baseline | tee baseline.lnt
+
+      - name: Run candidate
+        env:
+          BENCHMARKS: ${{ steps.vars.outputs.benchmarks }}
+        run: |
+          source .venv/bin/activate && cd repo
+          ./libcxx/utils/test-at-commit --commit ${{ steps.vars.outputs.pr_head }} -B build/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks build/candidate | tee candidate.lnt
+
+      - name: Compare baseline and candidate runs
+        run: |
+          source .venv/bin/activate && cd repo
+          ./libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt | tee results.txt
+
+      - name: Update comment with results
+        run: |
+          source .venv/bin/activate && cd repo
+          cat <<EOF | python
+          import github
+          repo = github.Github("${{ github.token }}").get_repo("${{ github.repository }}")
+          pr = repo.get_pull(${{ github.event.issue.number }})
+          comment = pr.get_issue_comment(${{ github.event.comment.id }})
+          with open('results.txt', 'r') as f:
+            benchmark_results = f.read()
+
+          new_comment_text = f"""
+          {comment.body}
+
+          <details>
+          <summary>
+          Benchmark results:
+          </summary>
+
+          \`\`\`
+          {benchmark_results}
+          \`\`\`
+
+          </details>
+          """
+
+          comment.edit(new_comment_text)
+          EOF

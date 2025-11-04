@@ -9,15 +9,16 @@
 #include "src/math/sinpif16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "sincosf16_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/math/sincosf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
+  using namespace sincosf16_internal;
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
 

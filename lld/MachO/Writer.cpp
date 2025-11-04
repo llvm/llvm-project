@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
+#include "LinkerOptimizationHints.h"
 #include "MapFile.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -25,7 +26,6 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1210,14 +1210,15 @@ void Writer::writeSections() {
 }
 
 void Writer::applyOptimizationHints() {
-  if (config->arch() != AK_arm64 || config->ignoreOptimizationHints)
+  if (!is_contained({AK_arm64, AK_arm64e, AK_arm64_32}, config->arch()) ||
+      config->ignoreOptimizationHints)
     return;
 
   uint8_t *buf = buffer->getBufferStart();
   TimeTraceScope timeScope("Apply linker optimization hints");
   parallelForEach(inputFiles, [buf](const InputFile *file) {
     if (const auto *objFile = dyn_cast<ObjFile>(file))
-      target->applyOptimizationHints(buf, *objFile);
+      macho::applyOptimizationHints(buf, *objFile);
   });
 }
 
@@ -1376,13 +1377,11 @@ void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
-  if (config->dedupStrings)
-    in.cStringSection =
-        make<DeduplicatedCStringSection>(section_names::cString);
-  else
-    in.cStringSection = make<CStringSection>(section_names::cString);
-  in.objcMethnameSection =
-      make<DeduplicatedCStringSection>(section_names::objcMethname);
+  // Materialize cstring and objcMethname sections
+  in.cStringSection = in.getOrCreateCStringSection(section_names::cString);
+  in.objcMethnameSection = cast<DeduplicatedCStringSection>(
+      in.getOrCreateCStringSection(section_names::objcMethname,
+                                   /*forceDedupStrings=*/true));
   in.wordLiteralSection = make<WordLiteralSection>();
   if (config->emitChainedFixups) {
     in.chainedFixups = make<ChainedFixupsSection>();

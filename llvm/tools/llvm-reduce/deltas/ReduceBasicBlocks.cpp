@@ -13,9 +13,7 @@
 
 #include "ReduceBasicBlocks.h"
 #include "Utils.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -31,9 +29,11 @@
 
 using namespace llvm;
 
+using BlockSet = SetVector<BasicBlock *>;
+
 /// Replaces BB Terminator with one that only contains Chunk BBs
 static void replaceBranchTerminator(BasicBlock &BB,
-                                    const DenseSet<BasicBlock *> &BBsToDelete) {
+                                    const BlockSet &BBsToDelete) {
   auto *Term = BB.getTerminator();
   std::vector<BasicBlock *> ChunkSuccessors;
   for (auto *Succ : successors(&BB)) {
@@ -49,7 +49,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
   if (isa<CatchSwitchInst>(Term))
     return;
 
-  bool IsBranch = isa<BranchInst>(Term);
+  bool IsBranch = isa<BranchInst>(Term) || isa<CallBrInst>(Term);
   if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Term)) {
     BasicBlock *UnwindDest = Invoke->getUnwindDest();
     BasicBlock::iterator LP = UnwindDest->getFirstNonPHIIt();
@@ -104,9 +104,8 @@ static void replaceBranchTerminator(BasicBlock &BB,
 /// Removes uninteresting BBs from switch, if the default case ends up being
 /// uninteresting, the switch is replaced with a void return (since it has to be
 /// replace with something)
-static void
-removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
-                                 const DenseSet<BasicBlock *> &BBsToDelete) {
+static void removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
+                                             const BlockSet &BBsToDelete) {
   for (int I = 0, E = SwInst.getNumCases(); I != E; ++I) {
     auto Case = SwInst.case_begin() + I;
     if (BBsToDelete.count(Case->getCaseSuccessor())) {
@@ -142,7 +141,8 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 void llvm::reduceBasicBlocksDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
-  DenseSet<BasicBlock *> BBsToDelete;
+  BlockSet BBsToDelete;
+
   df_iterator_default_set<BasicBlock *> Reachable;
 
   for (auto &F : WorkItem.getModule()) {
@@ -183,7 +183,8 @@ void llvm::reduceBasicBlocksDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
     // Cleanup any blocks that are now dead after eliminating this set. This
     // will likely be larger than the number of blocks the oracle told us to
     // delete.
-    EliminateUnreachableBlocks(F);
+    simpleSimplifyCFG(F, BBsToDelete.getArrayRef());
+
     BBsToDelete.clear();
   }
 }

@@ -43,8 +43,8 @@ namespace llvm {
   template <typename T>
   class Registry {
   public:
-    typedef T type;
-    typedef SimpleRegistryEntry<T> entry;
+    using type = T;
+    using entry = SimpleRegistryEntry<T>;
 
     class node;
     class iterator;
@@ -58,8 +58,8 @@ namespace llvm {
     // declaration causing error C2487 "member of dll interface class may not
     // be declared with dll interface".
     // https://developercommunity.visualstudio.com/t/c2487-in-dllexport-class-with-static-members/69878
-    static node *Head;
-    static node *Tail;
+    static inline node *Head = nullptr;
+    static inline node *Tail = nullptr;
 
   public:
     /// Node in linked list of entries.
@@ -143,19 +143,11 @@ namespace llvm {
 /// Instantiate a registry class.
 #define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
   namespace llvm {                                                             \
-  template <typename T>                                                        \
-  typename Registry<T>::node *Registry<T>::Head = nullptr;                     \
-  template <typename T>                                                        \
-  typename Registry<T>::node *Registry<T>::Tail = nullptr;                     \
   template class LLVM_ABI_EXPORT Registry<REGISTRY_CLASS::type>;               \
   }
 #else
 #define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
   namespace llvm {                                                             \
-  template <typename T>                                                        \
-  typename Registry<T>::node *Registry<T>::Head = nullptr;                     \
-  template <typename T>                                                        \
-  typename Registry<T>::node *Registry<T>::Tail = nullptr;                     \
   template class Registry<REGISTRY_CLASS::type>;                               \
   }
 #endif

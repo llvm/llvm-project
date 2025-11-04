@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=ALL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck -check-prefix=ALL %s
 
 ; FIXME: Vectorization can increase required SGPR count beyond limit.
 
 ; ALL-LABEL: {{^}}max_10_sgprs:
 
-; ALL: SGPRBlocks: 1
-; ALL: NumSGPRsForWavesPerEU: 10
+; ALL: SGPRBlocks: 2
+; ALL: NumSGPRsForWavesPerEU: 24
 define amdgpu_kernel void @max_10_sgprs() #0 {
   %one = load volatile i32, ptr addrspace(4) poison
   %two = load volatile i32, ptr addrspace(4) poison

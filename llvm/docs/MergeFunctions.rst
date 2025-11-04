@@ -7,34 +7,34 @@ MergeFunctions pass, how it works
 
 Introduction
 ============
-Sometimes code contains equal functions, or functions that does exactly the same
-thing even though they are non-equal on the IR level (e.g.: multiplication on 2
-and 'shl 1'). It could happen due to several reasons: mainly, the usage of
-templates and automatic code generators. Though, sometimes the user itself could
+Sometimes code contains equal functions, or functions that do exactly the same
+thing even though they are non-equal on the IR level (e.g.,: multiplication on 2
+and ``shl 1``). This can happen for several reasons: mainly, the usage of
+templates and automatic code generators. However, sometimes the user itself could
 write the same thing twice :-)
 
 The main purpose of this pass is to recognize such functions and merge them.
 
-This document is the extension to pass comments and describes the pass logic. It
-describes the algorithm that is used in order to compare functions and
+This document is an extension to pass comments and describes the pass logic. It
+describes the algorithm used to compare functions and
 explains how we could combine equal functions correctly to keep the module
 valid.
 
-Material is brought in a top-down form, so the reader could start to learn pass
+The material is presented in a top-down form, so the reader could start to learn pass
 from high level ideas and end with low-level algorithm details, thus preparing
 him or her for reading the sources.
 
 The main goal is to describe the algorithm and logic here and the concept. If
 you *don't want* to read the source code, but want to understand pass
 algorithms, this document is good for you. The author tries not to repeat the
-source-code and covers only common cases to avoid the cases of needing to
+source code and covers only common cases to avoid the cases of needing to
 update this document after any minor code changes.
 
 
 What should I know to be able to follow along with this document?
 -----------------------------------------------------------------
 
-The reader should be familiar with common compile-engineering principles and
+The reader should be familiar with common compiler-engineering principles and
 LLVM code fundamentals. In this article, we assume the reader is familiar with
 `Single Static Assignment
 <http://en.wikipedia.org/wiki/Static_single_assignment_form>`_
@@ -54,11 +54,11 @@ As a good starting point, the Kaleidoscope tutorial can be used:
 
 :doc:`tutorial/index`
 
-It's especially important to understand chapter 3 of tutorial:
+It's especially important to understand Chapter 3 of the tutorial:
 
 :doc:`tutorial/LangImpl03`
 
-The reader should also know how passes work in LLVM. They could use this
+The reader should also know how passes work in LLVM. They can use this
 article as a reference and start point here:
 
 :doc:`WritingAnLLVMPass`
@@ -68,7 +68,7 @@ debugging and bug-fixing.
 
 Narrative structure
 -------------------
-The article consists of three parts. The first part explains pass functionality
+This article consists of three parts. The first part explains pass functionality
 on the top-level. The second part describes the comparison procedure itself.
 The third part describes the merging process.
 
@@ -99,7 +99,7 @@ and a ``void*`` as equal.
 This is just an example; more possible details are described a bit below.
 
 As another example, the reader may imagine two more functions. The first
-function performs a multiplication by 2, while the second one performs an
+function performs a multiplication by 2, while the second one performs a
 logical left shift by 1.
 
 Possible solutions
@@ -130,8 +130,8 @@ access lookup? The answer is: "yes".
 
 Random-access
 """""""""""""
-How it could this be done? Just convert each function to a number, and gather
-all of them in a special hash-table. Functions with equal hashes are equal.
+How can this be done? Just convert each function to a number, and gather
+all of them in a special hash table. Functions with equal hashes are equal.
 Good hashing means, that every function part must be taken into account. That
 means we have to convert every function part into some number, and then add it
 into the hash. The lookup-up time would be small, but such an approach adds some
@@ -175,7 +175,7 @@ merged with each other. It is defined as:
 
 ``std::set<FunctionNode> FnTree;``
 
-Here ``FunctionNode`` is a wrapper for ``llvm::Function`` class, with
+Here, ``FunctionNode`` is a wrapper for ``llvm::Function`` class, with an
 implemented “<” operator among the functions set (below we explain how it works
 exactly; this is a key point in fast functions comparison).
 
@@ -190,24 +190,24 @@ The algorithm is pretty simple:
 
 1. Put all module's functions into the *worklist*.
 
-2. Scan *worklist*'s functions twice: first enumerate only strong functions and
+2. Scan *worklist*'s functions twice: first, enumerate only strong functions and
 then only weak ones:
 
    2.1. Loop body: take a function from *worklist*  (call it *FCur*) and try to
    insert it into *FnTree*: check whether *FCur* is equal to one of functions
    in *FnTree*. If there *is* an equal function in *FnTree*
-   (call it *FExists*): merge function *FCur* with *FExists*. Otherwise add
+   (call it *FExists*): merge function *FCur* with *FExists*. Otherwise, add
    the function from the *worklist* to *FnTree*.
 
 3. Once the *worklist* scanning and merging operations are complete, check the
-*Deferred* list. If it is not empty: refill the *worklist* contents with
+*Deferred* list. If it is not empty, refill the *worklist* contents with
 *Deferred* list and redo step 2, if the *Deferred* list is empty, then exit
 from method.
 
 Comparison and logarithmical search
 """""""""""""""""""""""""""""""""""
 Let's recall our task: for every function *F* from module *M*, we have to find
-equal functions *F`* in the shortest time possible , and merge them into a
+equal functions *F`* in the shortest time possible and merge them into a
 single function.
 
 Defining total ordering among the functions set allows us to organize
@@ -225,7 +225,7 @@ possible values:
 
 1, left is *greater* than right.
 
-Of course it means, that we have to maintain
+Of course, it means that we have to maintain
 *strict and non-strict order relation properties*:
 
 * reflexivity (``a <= a``, ``a == a``, ``a >= a``),
@@ -235,7 +235,7 @@ Of course it means, that we have to maintain
 
 As mentioned before, the comparison routine consists of
 "sub-comparison-routines", with each of them also consisting of
-"sub-comparison-routines", and so on. Finally, it ends up with primitive
+"sub-comparison-routines", and so on. Finally, it ends up with a primitive
 comparison.
 
 Below, we will use the following operations:
@@ -249,14 +249,14 @@ Below, we will use the following operations:
 
 The rest of the article is based on *MergeFunctions.cpp* source code
 (found in *<llvm_dir>/lib/Transforms/IPO/MergeFunctions.cpp*). We would like
-to ask reader to keep this file open, so we could use it as a reference
+to ask the reader to keep this file open, so we could use it as a reference
 for further explanations.
 
 Now, we're ready to proceed to the next chapter and see how it works.
 
 Functions comparison
 ====================
-At first, let's define how exactly we compare complex objects.
+First, let's define exactly how we compare complex objects.
 
 Complex object comparison (function, basic-block, etc) is mostly based on its
 sub-object comparison results. It is similar to the next "tree" objects
@@ -275,7 +275,7 @@ A brief look at the source code tells us that the comparison starts in the
 “``int FunctionComparator::compare(void)``” method.
 
 1. The first parts to be compared are the function's attributes and some
-properties that is outside the “attributes” term, but still could make the
+properties that are outside the “attributes” term, but still could make the
 function different without changing its body. This part of the comparison is
 usually done within simple *cmpNumbers* or *cmpFlags* operations (e.g.
 ``cmpFlags(F1->hasGC(), F2->hasGC())``). Below is a full list of function's
@@ -307,14 +307,14 @@ to those we met later in function body (value we met first would be *less*).
 This is done by “``FunctionComparator::cmpValues(const Value*, const Value*)``”
 method (will be described a bit later).
 
-4. Function body comparison. As it written in method comments:
+4. Function body comparison. As written in method comments:
 
 “We do a CFG-ordered walk since the actual ordering of the blocks in the linked
 list is immaterial. Our walk starts at the entry block for both functions, then
 takes each block from each terminator in order. As an artifact, this also means
 that unreachable blocks are ignored.”
 
-So, using this walk we get BBs from *left* and *right* in the same order, and
+So, using this walk, we get BBs from *left* and *right* in the same order, and
 compare them by “``FunctionComparator::compare(const BasicBlock*, const
 BasicBlock*)``” method.
 
@@ -325,17 +325,17 @@ FunctionComparator::cmpType
 ---------------------------
 Consider how type comparison works.
 
-1. Coerce pointer to integer. If left type is a pointer, try to coerce it to the
+1. Coerce pointer to integer. If the left type is a pointer, try to coerce it to the
 integer type. It could be done if its address space is 0, or if address spaces
 are ignored at all. Do the same thing for the right type.
 
-2. If left and right types are equal, return 0. Otherwise we need to give
+2. If the left and right types are equal, return 0. Otherwise, we need to give
 preference to one of them. So proceed to the next step.
 
-3. If types are of different kind (different type IDs). Return result of type
+3. If the types are of different kind (different type IDs). Return result of type
 IDs comparison, treating them as numbers (use ``cmpNumbers`` operation).
 
-4. If types are vectors or integers, return result of their pointers comparison,
+4. If the types are vectors or integers, return result of their pointers comparison,
 comparing them as numbers.
 
 5. Check whether type ID belongs to the next group (call it equivalent-group):
@@ -365,7 +365,7 @@ comparing them as numbers.
 7. Complex types (structures, arrays, etc.). Follow complex objects comparison
 technique (see the very first paragraph of this chapter). Both *left* and
 *right* are to be expanded and their element types will be checked the same
-way. If we get -1 or 1 on some stage, return it. Otherwise return 0.
+way. If we get -1 or 1 on some stage, return it. Otherwise, return 0.
 
 8. Steps 1-6 describe all the possible cases, if we passed steps 1-6 and didn't
 get any conclusions, then invoke ``llvm_unreachable``, since it's quite an
@@ -391,7 +391,7 @@ equal to the corresponding part of *right* place, and (!) both parts use
 
 So, now our conclusion depends on *Value* instances comparison.
 
-The main purpose of this method is to determine relation between such values.
+The main purpose of this method is to determine the relation between such values.
 
 What can we expect from equal functions? At the same place, in functions
 "*FL*" and "*FR*" we expect to see *equal* values, or values *defined* at
@@ -445,7 +445,7 @@ How to implement cmpValues?
 but, in general, we need to implement antisymmetric relation. As mentioned
 above, to understand what is *less*, we can use order in which we
 meet values. If both values have the same order in a function (met at the same
-time), we then treat values as *associated*. Otherwise – it depends on who was
+time), we then treat values as *associated*. Otherwise, it depends on who was
 first.
 
 Every time we run the top-level compare method, we initialize two identical
@@ -453,17 +453,17 @@ maps (one for the left side, another one for the right side):
 
 ``map<Value, int> sn_mapL, sn_mapR;``
 
-The key of the map is the *Value* itself, the *value* – is its order (call it
+The key of the map is the *Value* itself; the *value* – is its order (call it
 *serial number*).
 
 To add value *V* we need to perform the next procedure:
 
 ``sn_map.insert(std::make_pair(V, sn_map.size()));``
 
-For the first *Value*, map will return *0*, for the second *Value* map will
+For the first *Value*, the map will return *0*, for the second *Value*, the map will
 return *1*, and so on.
 
-We can then check whether left and right values met at the same time with
+We can then check whether the left and right values met at the same time with
 a simple comparison:
 
 ``cmpNumbers(sn_mapL[Left], sn_mapR[Right]);``
@@ -477,7 +477,7 @@ Of course, we can combine insertion and comparison:
     = sn_mapR.insert(std::make_pair(Right, sn_mapR.size()));
   return cmpNumbers(LeftRes.first->second, RightRes.first->second);
 
-Let's look, how whole method could be implemented.
+Let's look at how the whole method could be implemented.
 
 1. We have to start with the bad news. Consider function self and
 cross-referencing cases:
@@ -519,13 +519,13 @@ the result of numbers comparison:
    if (LeftRes.first->second < RightRes.first->second) return -1;
    return 1;
 
-Now when *cmpValues* returns 0, we can proceed the comparison procedure.
+Now, when *cmpValues* returns 0, we can proceed with the comparison procedure.
 Otherwise, if we get (-1 or 1), we need to pass this result to the top level,
 and finish comparison procedure.
 
 cmpConstants
 ------------
-Performs constants comparison as follows:
+Performs a constant comparison as follows:
 
 1. Compare constant types using ``cmpType`` method. If the result is -1 or 1,
 goto step 2, otherwise proceed to step 3.
@@ -549,7 +549,7 @@ losslessly bitcasted to each other. The further explanation is modification of
    2.1.3.1. If types are vectors, compare their bitwidth using the
    *cmpNumbers*. If result is not 0, return it.
 
-   2.1.3.2. Different types, but not a vectors:
+   2.1.3.2. Different types, but not vectors:
 
    * if both of them are pointers, good for us, we can proceed to step 3.
    * if one of types is pointer, return result of *isPointer* flags
@@ -623,7 +623,7 @@ to use ``accumulateConstantOffset`` method.
 So, if we get constant offset for both left and right *GEPs*, then compare it as
 numbers, and return comparison result.
 
-Otherwise treat it like a regular operation (see previous paragraph).
+Otherwise, treat it like a regular operation (see previous paragraph).
 
 cmpOperation
 ------------
@@ -654,17 +654,17 @@ O(N*N) to O(log(N)).
 
 Merging process, mergeTwoFunctions
 ==================================
-Once *MergeFunctions* detected that current function (*G*) is equal to one that
-were analyzed before (function *F*) it calls ``mergeTwoFunctions(Function*,
+Once *MergeFunctions* detects that current function (*G*) is equal to one that
+was analyzed before (function *F*) it calls ``mergeTwoFunctions(Function*,
 Function*)``.
 
-Operation affects ``FnTree`` contents with next way: *F* will stay in
+Operation affects ``FnTree`` contents in the following way: *F* will stay in
 ``FnTree``. *G* being equal to *F* will not be added to ``FnTree``. Calls of
 *G* would be replaced with something else. It changes bodies of callers. So,
 functions that calls *G* would be put into ``Deferred`` set and removed from
 ``FnTree``, and analyzed again.
 
-The approach is next:
+The approach is as follows:
 
 1. Most wished case: when we can use alias and both of *F* and *G* are weak. We
 make both of them with aliases to the third strong function *H*. Actually *H*
@@ -691,20 +691,20 @@ ok: we can use alias to *F* instead of *G* or change call instructions itself.
 
 HasGlobalAliases, removeUsers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-First consider the case when we have global aliases of one function name to
-another. Our purpose is  make both of them with aliases to the third strong
-function. Though if we keep *F* alive and without major changes we can leave it
+First, consider the case when we have global aliases of one function name to
+another. Our purpose is to make both of them with aliases to the third strong
+function. However, if we keep *F* alive and without major changes, we can leave it
 in ``FnTree``. Try to combine these two goals.
 
-Do stub replacement of *F* itself with an alias to *F*.
+Do a stub replacement of *F* itself with an alias to *F*.
 
 1. Create stub function *H*, with the same name and attributes like function
 *F*. It takes maximum alignment of *F* and *G*.
 
-2. Replace all uses of function *F* with uses of function *H*. It is the two
-steps procedure instead. First of all, we must take into account, all functions
-from whom *F* is called would be changed: since we change the call argument
-(from *F* to *H*). If so we must to review these caller functions again after
+2. Replace all uses of function *F* with uses of function *H*. It is a
+two-step procedure instead. First of all, we must take into account that all functions
+that call *F* would be changed because we change the call argument
+(from *F* to *H*). If so, we must review these caller functions again after
 this procedure. We remove callers from ``FnTree``, method with name
 ``removeUsers(F)`` does that (don't confuse with ``replaceAllUsesWith``):
 
@@ -725,7 +725,7 @@ also have alias to *F*.
 
 No global aliases, replaceDirectCallers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If global aliases are not supported. We call ``replaceDirectCallers``. Just
+If global aliases are not supported, we call ``replaceDirectCallers``. Just
 go through all calls of *G* and replace it with calls of *F*. If you look into
 the method you will see that it scans all uses of *G* too, and if use is callee
 (if user is call instruction and *G* is used as what to be called), we replace
@@ -735,14 +735,14 @@ If “F” could not be overridden, fix it!
 """""""""""""""""""""""""""""""""""""""
 
 We call ``writeThunkOrAlias(Function *F, Function *G)``. Here we try to replace
-*G* with alias to *F* first. The next conditions are essential:
+*G* with an alias to *F* first. The next conditions are essential:
 
 * target should support global aliases,
 * the address itself of  *G* should be not significant, not named and not
   referenced anywhere,
 * function should come with external, local or weak linkage.
 
-Otherwise we write thunk: some wrapper that has *G's* interface and calls *F*,
+Otherwise, we write thunk: some wrapper that has *G's* interface and calls *F*,
 so *G* could be replaced with this wrapper.
 
 *writeAlias*
@@ -772,10 +772,10 @@ As it written in method comments:
 “Replace G with a simple tail call to bitcast(F). Also replace direct uses of G
 with bitcast(F). Deletes G.”
 
-In general it does the same as usual when we want to replace callee, except the
+In general, it does the same as usual when we want to replace callee, except the
 first point:
 
-1. We generate tail call wrapper around *F*, but with interface that allows use
+1. We generate tail call wrapper around *F*, but with an interface that allows using
 it instead of *G*.
 
 2. “As-usual”: ``removeUsers`` and ``replaceAllUsesWith`` then.

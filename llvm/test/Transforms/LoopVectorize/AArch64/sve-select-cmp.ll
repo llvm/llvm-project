@@ -10,9 +10,8 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-VF4IC1:      vector.body:
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
 ; CHECK-VF4IC1:        [[VEC_LOAD:%.*]] = load <vscale x 4 x i32>
-; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = icmp eq <vscale x 4 x i32> [[VEC_LOAD]], splat (i32 3)
-; CHECK-VF4IC1-NEXT:   [[NOT:%*]] = xor <vscale x 4 x i1> [[VEC_ICMP]], splat (i1 true)
-; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
+; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = icmp ne <vscale x 4 x i32> [[VEC_LOAD]], splat (i32 3)
+; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <vscale x 4 x i1> [[VEC_PHI]], [[VEC_ICMP]]
 ; CHECK-VF4IC1:      middle.block:
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR:%.*]] = freeze i1 [[OR_RDX]]
@@ -25,18 +24,14 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-VF4IC4:        [[VEC_PHI2:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL2:%.*]], %vector.body ]
 ; CHECK-VF4IC4:        [[VEC_PHI3:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL3:%.*]], %vector.body ]
 ; CHECK-VF4IC4:        [[VEC_PHI4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL4:%.*]], %vector.body ]
-; CHECK-VF4IC4:        [[VEC_ICMP1:%.*]] = icmp eq <vscale x 4 x i32> {{.*}}, splat (i32 3)
-; CHECK-VF4IC4-NEXT:   [[VEC_ICMP2:%.*]] = icmp eq <vscale x 4 x i32> {{.*}}, splat (i32 3)
-; CHECK-VF4IC4-NEXT:   [[VEC_ICMP3:%.*]] = icmp eq <vscale x 4 x i32> {{.*}}, splat (i32 3)
-; CHECK-VF4IC4-NEXT:   [[VEC_ICMP4:%.*]] = icmp eq <vscale x 4 x i32> {{.*}}, splat (i32 3)
-; CHECK-VF4IC4-NEXT:    [[NOT1:%.*]] = xor <vscale x 4 x i1> [[VEC_ICMP1]], splat (i1 true)
-; CHECK-VF4IC4-NEXT:    [[NOT2:%.*]] = xor <vscale x 4 x i1> [[VEC_ICMP2]], splat (i1 true)
-; CHECK-VF4IC4-NEXT:    [[NOT3:%.*]] = xor <vscale x 4 x i1> [[VEC_ICMP3]], splat (i1 true)
-; CHECK-VF4IC4-NEXT:    [[NOT4:%.*]] = xor <vscale x 4 x i1> [[VEC_ICMP4]], splat (i1 true)
-; CHECK-VF4IC4-NEXT:   [[VEC_SEL1:%.*]] = or <vscale x 4 x i1> [[VEC_PHI1]], [[NOT1]]
-; CHECK-VF4IC4-NEXT:   [[VEC_SEL2:%.*]] = or <vscale x 4 x i1> [[VEC_PHI2]], [[NOT2]]
-; CHECK-VF4IC4-NEXT:   [[VEC_SEL3:%.*]] = or <vscale x 4 x i1> [[VEC_PHI3]], [[NOT3]]
-; CHECK-VF4IC4-NEXT:   [[VEC_SEL4:%.*]] = or <vscale x 4 x i1> [[VEC_PHI4]], [[NOT4]]
+; CHECK-VF4IC4:        [[VEC_ICMP1:%.*]] = icmp ne <vscale x 4 x i32> {{.*}}, splat (i32 3)
+; CHECK-VF4IC4-NEXT:   [[VEC_ICMP2:%.*]] = icmp ne <vscale x 4 x i32> {{.*}}, splat (i32 3)
+; CHECK-VF4IC4-NEXT:   [[VEC_ICMP3:%.*]] = icmp ne <vscale x 4 x i32> {{.*}}, splat (i32 3)
+; CHECK-VF4IC4-NEXT:   [[VEC_ICMP4:%.*]] = icmp ne <vscale x 4 x i32> {{.*}}, splat (i32 3)
+; CHECK-VF4IC4-NEXT:   [[VEC_SEL1:%.*]] = or <vscale x 4 x i1> [[VEC_PHI1]], [[VEC_ICMP1]]
+; CHECK-VF4IC4-NEXT:   [[VEC_SEL2:%.*]] = or <vscale x 4 x i1> [[VEC_PHI2]], [[VEC_ICMP2]]
+; CHECK-VF4IC4-NEXT:   [[VEC_SEL3:%.*]] = or <vscale x 4 x i1> [[VEC_PHI3]], [[VEC_ICMP3]]
+; CHECK-VF4IC4-NEXT:   [[VEC_SEL4:%.*]] = or <vscale x 4 x i1> [[VEC_PHI4]], [[VEC_ICMP4]]
 ; CHECK-VF4IC4:      middle.block:
 ; CHECK-VF4IC4-NEXT:   [[OR1:%.*]] = or <vscale x 4 x i1> [[VEC_SEL2]], [[VEC_SEL1]]
 ; CHECK-VF4IC4-NEXT:   [[OR2:%.*]] = or <vscale x 4 x i1> [[VEC_SEL3]], [[OR1]]
@@ -71,9 +66,8 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; CHECK-VF4IC1:      vector.body:
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
 ; CHECK-VF4IC1:        [[VEC_LOAD:%.*]] = load <vscale x 4 x i32>
-; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = icmp eq <vscale x 4 x i32> [[VEC_LOAD]], splat (i32 3)
-; CHECK-VF4IC1-NEXT:   [[NOT:%*]] = xor <vscale x 4 x i1> [[VEC_ICMP]], splat (i1 true)
-; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
+; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = icmp ne <vscale x 4 x i32> [[VEC_LOAD]], splat (i32 3)
+; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <vscale x 4 x i1> [[VEC_PHI]], [[VEC_ICMP]]
 ; CHECK-VF4IC1:      middle.block:
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR:%.*]] = freeze i1 [[OR_RDX]]
@@ -105,9 +99,8 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-VF4IC1:      vector.body:
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
 ; CHECK-VF4IC1:        [[VEC_LOAD:%.*]] = load <vscale x 4 x float>
-; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = fcmp fast ueq <vscale x 4 x float> [[VEC_LOAD]], splat (float 3.000000e+00)
-; CHECK-VF4IC1-NEXT:   [[NOT:%*]] = xor <vscale x 4 x i1> [[VEC_ICMP]], splat (i1 true)
-; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
+; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = fcmp fast one <vscale x 4 x float> [[VEC_LOAD]], splat (float 3.000000e+00)
+; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <vscale x 4 x i1> [[VEC_PHI]], [[VEC_ICMP]]
 ; CHECK-VF4IC1:      middle.block:
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR:%.*]] = freeze i1 [[OR_RDX]]
@@ -163,7 +156,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
 ; CHECK-VF4IC1:        [[VEC_LOAD:%.*]] = load <vscale x 4 x i32>
 ; CHECK-VF4IC1:        [[MASK:%.*]] = icmp sgt <vscale x 4 x i32> [[VEC_LOAD]], splat (i32 35)
-; CHECK-VF4IC1:        [[MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr {{%.*}}, i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x i32> poison)
+; CHECK-VF4IC1:        [[MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 {{%.*}}, <vscale x 4 x i1> [[MASK]], <vscale x 4 x i32> poison)
 ; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = icmp eq <vscale x 4 x i32> [[MASKED_LOAD]], splat (i32 2)
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL_TMP:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[VEC_ICMP]]
 ; CHECK-VF4IC1:        [[VEC_SEL:%.*]] = select <vscale x 4 x i1> [[MASK]], <vscale x 4 x i1> [[VEC_SEL_TMP]], <vscale x 4 x i1> [[VEC_PHI]]

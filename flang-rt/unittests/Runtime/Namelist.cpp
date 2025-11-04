@@ -334,4 +334,35 @@ TEST(NamelistTests, RealValueForInt) {
   EXPECT_EQ(got, expect);
 }
 
+TEST(NamelistTests, NanInputAmbiguity) {
+  OwningPtr<Descriptor> xDesc{// real :: x(5) = 0.
+      MakeArray<TypeCategory::Real, static_cast<int>(sizeof(float))>(
+          std::vector<int>{5}, std::vector<float>{{0, 0, 0, 0, 0}})};
+  OwningPtr<Descriptor> nanDesc{// real :: nan(2) = 0.
+      MakeArray<TypeCategory::Real, static_cast<int>(sizeof(float))>(
+          std::vector<int>{2}, std::vector<float>{{0, 0}})};
+  const NamelistGroup::Item items[]{{"x", *xDesc}, {"nan", *nanDesc}};
+  const NamelistGroup group{"nml", 2, items};
+  static char t1[]{"&nml x=1 2 nan(q) 4 nan(1)=5 nan(q)/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist real input for nans";
+  char out[40];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{" &NML X= 1. 2. NaN 4. 0.,NAN= 5. NaN/   "};
+  EXPECT_EQ(got, expect);
+}
+
 // TODO: Internal NAMELIST error tests

@@ -46,6 +46,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <memory>
 #include <optional>
 #include <pwd.h>
 
@@ -188,7 +189,7 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
             exe_spec.GetFileSpec() = module_spec.GetFileSpec();
             exe_spec.GetUUID() = module_spec.GetUUID();
             ModuleSP module_sp;
-            module_sp.reset(new Module(exe_spec));
+            module_sp = std::make_shared<Module>(exe_spec);
             if (module_sp && module_sp->GetObjectFile() &&
                 module_sp->MatchesModuleSpec(exe_spec)) {
               success = true;
@@ -630,7 +631,7 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
             exe_spec.GetFileSpec() = module_spec.GetFileSpec();
             exe_spec.GetUUID() = module_spec.GetUUID();
             ModuleSP module_sp;
-            module_sp.reset(new Module(exe_spec));
+            module_sp = std::make_shared<Module>(exe_spec);
             if (module_sp && module_sp->GetObjectFile() &&
                 module_sp->MatchesModuleSpec(exe_spec)) {
               success = true;

@@ -22,6 +22,7 @@ class ConsecutiveWatchpointsTestCase(TestBase):
 
     # debugserver only gained the ability to watch larger regions
     # with this patch.
+    @skipIfOutOfTreeDebugserver
     def test_consecutive_watchpoints(self):
         """Test watchpoint that covers a large region of memory."""
         self.build()

@@ -13,7 +13,6 @@
 
 #include "ReduceGlobalVars.h"
 #include "Utils.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"

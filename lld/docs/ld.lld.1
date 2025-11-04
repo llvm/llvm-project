@@ -91,8 +91,13 @@ Bind default visibility defined function symbols locally for
 .It Fl Bsymbolic-non-weak-functions
 Bind default visibility defined STB_GLOBAL function symbols locally for
 .Fl shared.
-.It Fl --be8
+.It Fl -be8
 Write a Big Endian ELF File using BE8 format(AArch32 only)
+.It Fl -branch-to-branch
+Enable the branch-to-branch optimizations: a branch whose target is
+another branch instruction is rewritten to point to the latter branch
+target (AArch64 and X86_64 only). Enabled by default at
+.Fl O2 Ns .
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -414,7 +419,7 @@ If not specified,
 .Dv a.out
 is used as a default.
 .It Fl O Ns Ar value
-Optimize output file size.
+Optimize output file.
 .Ar value
 may be:
 .Pp
@@ -424,7 +429,7 @@ Disable string merging.
 .It Cm 1
 Enable string merging.
 .It Cm 2
-Enable string tail merging.
+Enable string tail merging and branch-to-branch optimization.
 .El
 .Pp
 .Fl O Ns Cm 1
@@ -517,6 +522,8 @@ Don't use.
 
 .It Fl -print-gc-sections
 List removed unused sections.
+.It Fl -print-gc-sections Ns = Ns Ar file
+List removed unused sections to the specified file.
 .It Fl -print-icf-sections
 List identical folded sections.
 .It Fl -print-map
@@ -712,6 +719,19 @@ a given pattern are handled as if they were given as arguments of
 Creates a separate output section for every orphan input section.
 .It Fl -unresolved-symbols Ns = Ns Ar value
 Determine how to handle unresolved symbols.
+.Ar value
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm report-all
+Report unresolved symbols (default).
+.It Cm ignore-in-object-files
+Only report unresolved symbols contained in shared libraries.
+.It Cm ignore-in-shared-libs
+Only report unresolved symbols contained in object files.
+.It Cm ignore-all
+Do not report unresolved symbols.
+.El
 .It Fl -use-android-relr-tags
 Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*.
 .It Fl v , Fl V
@@ -792,6 +812,21 @@ is the default, linker will not report the missing property otherwise will be re
 Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY_X86_FEATURE_1_SHSTK properties.
 .Cm none
 is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm gcs-report Ns = Ns Ar [none|warning|error]
+Specify how to report missing
+.Cm GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+property. GNU_PROPERTY_AARCH64_FEATURE_1_GCS indicates object file support for the Guarded Control Stack security feature.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm dynamic-undefined-weak
+Make undefined weak symbols dynamic when the dynamic symbol table is present, if they are referenced from
+relocatable object files and not forced local by symbol visibility or versioning. Do not make them dynamic when
+.Cm nodynamic-undefined-weak
+is specified.
+.Cm dynamic-undefined-weak
+is the default when building a shared object, or when an input shared object is present.
 .Pp
 .It Cm pauth-report Ns = Ns Ar [none|warning|error]
 Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_PAUTH property.
@@ -939,6 +974,17 @@ disallows overlap.
 .Pp
 .It Cm shstk
 x86 only, use shadow stack.
+.Pp
+.It Cm gcs Ns = Ns Ar [implicit|never|always]
+Specifies how the
+.Cm GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+bit is set in the output ELF file. When set, it indicates support for the Guarded Control Stack (GCS) security feature.
+.Cm implicit
+(default) The GCS feature bit is set if all input relocatable files have a .note.gnu.property section containing the GNU_PROPERTY_AARCH64_FEATURE_1_GCS bit.
+.Cm never
+clears the GCS feature bit regardless of input relocatable files' markings.
+.Cm always
+sets the GCS feature bit regardless of input object markings.
 .Pp
 .It Cm stack-size Ns = Ns Ar size
 Set the main thread's stack size to

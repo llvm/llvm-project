@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 
 using namespace llvm;
 
@@ -99,6 +100,11 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
 
   setOperationAction(ISD::FSUB, MVT::f32, Expand);
+
+  setOperationAction(ISD::IS_FPCLASS,
+                     {MVT::f32, MVT::v2f32, MVT::v3f32, MVT::v4f32, MVT::v5f32,
+                      MVT::v6f32, MVT::v7f32, MVT::v8f32, MVT::v16f32},
+                     Expand);
 
   setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FROUNDEVEN, ISD::FFLOOR},
                      MVT::f64, Custom);
@@ -1123,12 +1129,9 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     if ((AS == AMDGPUAS::PRIVATE_ADDRESS) && TruncatingStore) {
       // Add an extra level of chain to isolate this vector
       SDValue NewChain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, Chain);
-      // TODO: can the chain be replaced without creating a new store?
-      SDValue NewStore = DAG.getTruncStore(
-          NewChain, DL, Value, Ptr, StoreNode->getPointerInfo(), MemVT,
-          StoreNode->getAlign(), StoreNode->getMemOperand()->getFlags(),
-          StoreNode->getAAInfo());
-      StoreNode = cast<StoreSDNode>(NewStore);
+      SmallVector<SDValue, 4> NewOps(StoreNode->ops());
+      NewOps[0] = NewChain;
+      StoreNode = cast<StoreSDNode>(DAG.UpdateNodeOperands(StoreNode, NewOps));
     }
 
     return scalarizeVectorStore(StoreNode, DAG);
@@ -1443,7 +1446,7 @@ CCAssignFn *R600TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::AMDGPU_LS:
     return CC_R600;
   default:
-    report_fatal_error("Unsupported calling convention.");
+    reportFatalUsageError("unsupported calling convention");
   }
 }
 
@@ -1458,7 +1461,6 @@ SDValue R600TargetLowering::LowerFormalArguments(
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   MachineFunction &MF = DAG.getMachineFunction();
-  SmallVector<ISD::InputArg, 8> LocalIns;
 
   if (AMDGPU::isShader(CallConv)) {
     CCInfo.AnalyzeFormalArguments(Ins, CCAssignFnForCall(CallConv, isVarArg));

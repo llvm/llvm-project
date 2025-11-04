@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
 #include <clc/math/tables.h>
 
@@ -22,12 +21,6 @@
 #include "clc_log_base.h"
 #undef COMPILING_LOG10
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_log10, float);
-
-#ifdef cl_khr_fp64
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_log10, double);
-#endif // cl_khr_fp64
-
-#ifdef cl_khr_fp16
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_log10, half);
-#endif // cl_khr_fp16
+#define __CLC_FUNCTION __clc_log10
+#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#include <clc/math/gentype.inc>

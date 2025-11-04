@@ -15,7 +15,12 @@ namespace llvm {
 
 class Function;
 
-struct JumpTableToSwitchPass : PassInfoMixin<JumpTableToSwitchPass> {
+class JumpTableToSwitchPass : public PassInfoMixin<JumpTableToSwitchPass> {
+  // Necessary until we switch to GUIDs as metadata, after which we can drop it.
+  const bool InLTO;
+
+public:
+  explicit JumpTableToSwitchPass(bool InLTO = false) : InLTO(InLTO) {}
   /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

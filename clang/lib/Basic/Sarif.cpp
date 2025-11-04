@@ -17,7 +17,6 @@
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -68,7 +67,7 @@ static std::string percentEncodeURICharacter(char C) {
 /// \param Filename The filename to be represented as URI.
 ///
 /// \return RFC3986 URI representing the input file name.
-static std::string fileNameToURI(StringRef Filename) {
+std::string SarifDocumentWriter::fileNameToURI(StringRef Filename) {
   SmallString<32> Ret = StringRef("file://");
 
   // Get the root name to see if it has a URI authority.
@@ -118,7 +117,7 @@ static unsigned int adjustColumnPos(FullSourceLoc Loc,
                                     unsigned int TokenLen = 0) {
   assert(!Loc.isInvalid() && "invalid Loc when adjusting column position");
 
-  std::pair<FileID, unsigned> LocInfo = Loc.getDecomposedExpansionLoc();
+  FileIDAndOffset LocInfo = Loc.getDecomposedExpansionLoc();
   std::optional<MemoryBufferRef> Buf =
       Loc.getManager().getBufferOrNone(LocInfo.first);
   assert(Buf && "got an invalid buffer for the location's file");
@@ -392,6 +391,11 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
   json::Object Ret{{"message", createMessage(Result.DiagnosticMessage)},
                    {"ruleIndex", static_cast<int64_t>(RuleIdx)},
                    {"ruleId", Rule.Id}};
+
+  if (!Result.HostedViewerURI.empty()) {
+    Ret["hostedViewerUri"] = Result.HostedViewerURI;
+  }
+
   if (!Result.Locations.empty()) {
     json::Array Locs;
     for (auto &Range : Result.Locations) {
@@ -399,6 +403,15 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
     }
     Ret["locations"] = std::move(Locs);
   }
+
+  if (!Result.PartialFingerprints.empty()) {
+    json::Object fingerprints = {};
+    for (auto &pair : Result.PartialFingerprints) {
+      fingerprints[pair.first] = pair.second;
+    }
+    Ret["partialFingerprints"] = std::move(fingerprints);
+  }
+
   if (!Result.ThreadFlows.empty())
     Ret["codeFlows"] = json::Array{createCodeFlow(Result.ThreadFlows)};
 

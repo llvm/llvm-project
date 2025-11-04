@@ -6,8 +6,8 @@
 ; RUN: llvm-modextract -b -n 0 -o %t0.thinlink.bc %t2
 ; RUN: llvm-modextract -b -n 1 -o %t1.thinlink.bc %t2
 ; RUN: not llvm-modextract -b -n 2 -o - %t 2>&1 | FileCheck --check-prefix=ERROR %s
-; RUN: llvm-dis -o - %t0.bc | FileCheck --check-prefix=M0 %s
-; RUN: llvm-dis -o - %t1.bc | FileCheck --check-prefix=M1 %s
+; RUN: llvm-dis -preserve-ll-uselistorder -o - %t0.bc | FileCheck --check-prefix=M0 %s
+; RUN: llvm-dis -preserve-ll-uselistorder -o - %t1.bc | FileCheck --check-prefix=M1 %s
 ; RUN: llvm-bcanalyzer -dump %t0.bc | FileCheck --check-prefix=BCA0 %s
 ; RUN: llvm-bcanalyzer -dump %t1.bc | FileCheck --check-prefix=BCA1 %s
 
@@ -34,11 +34,31 @@ $g = comdat any
 ; M1: @g = global i8 42, comdat, !type !0
 @g = global i8 42, comdat, !type !0
 
+; M0: @g1 = external global i8{{$}}
+; M1: @g1 = global i8 43, !type !0
+@g1 = global i8 43, !type !0
+
 ; M0: define ptr @f()
 ; M1-NOT: @f()
 define ptr @f() {
   ret ptr @g
 }
+
+; M0: define void @h(ptr %ptr)
+; M1-NOT: @h(
+
+define void @h(ptr %ptr) {
+  store ptr @g1, ptr %ptr
+  store ptr @g1, ptr %ptr
+  store ptr @g1, ptr %ptr
+  store ptr @g1, ptr %ptr
+  ret void
+}
+
+; M0: uselistorder ptr @g1, { 3, 2, 0, 1 }
+; M1-NOT: uselistorder
+
+uselistorder ptr @g1, { 3, 2, 0, 1 }
 
 ; M1: !0 = !{i32 0, !"typeid"}
 !0 = !{i32 0, !"typeid"}

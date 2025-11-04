@@ -38,8 +38,6 @@ struct LegalityTest : public testing::Test {
 
   void getAnalyses(llvm::Function &LLVMF) {
     DT = std::make_unique<DominatorTree>(LLVMF);
-    TLII = std::make_unique<TargetLibraryInfoImpl>();
-    TLI = std::make_unique<TargetLibraryInfo>(*TLII);
     AC = std::make_unique<AssumptionCache>(LLVMF);
     LI = std::make_unique<LoopInfo>(*DT);
     SE = std::make_unique<ScalarEvolution>(LLVMF, *TLI, *AC, *DT, *LI);
@@ -52,8 +50,13 @@ struct LegalityTest : public testing::Test {
   void parseIR(LLVMContext &C, const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
-    if (!M)
+    if (!M) {
       Err.print("LegalityTest", errs());
+      return;
+    }
+
+    TLII = std::make_unique<TargetLibraryInfoImpl>(M->getTargetTriple());
+    TLI = std::make_unique<TargetLibraryInfo>(*TLII);
   }
 };
 

@@ -45,6 +45,7 @@ using ::testing::UnorderedElementsAre;
 // Helpers for matching call hierarchy data structures.
 MATCHER_P(withName, N, "") { return arg.name == N; }
 MATCHER_P(withDetail, N, "") { return arg.detail == N; }
+MATCHER_P(withFile, N, "") { return arg.uri.file() == N; }
 MATCHER_P(withSelectionRange, R, "") { return arg.selectionRange == R; }
 
 template <class ItemMatcher>
@@ -159,6 +160,43 @@ TEST(CallHierarchy, IncomingOneFileObjC) {
 
   auto IncomingLevel4 = incomingCalls(IncomingLevel3[0].from, Index.get());
   EXPECT_THAT(IncomingLevel4, IsEmpty());
+}
+
+TEST(CallHierarchy, IncomingIncludeOverrides) {
+  Annotations Source(R"cpp(
+    void call^ee() {}
+    struct Interface {
+      virtual void Func() = 0;
+    };
+    struct Implementation : public Interface {
+      void Func() override {
+          $Callee[[callee]]();
+      }
+    };
+    void Test(Interface& cls){
+      cls.$FuncCall[[Func]]();
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("callee")));
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
+  ASSERT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(AllOf(withName("Func"),
+                                           withDetail("Implementation::Func"))),
+                                iFromRanges(Source.range("Callee")))));
+  auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get());
+  ASSERT_THAT(
+      IncomingLevel2,
+      ElementsAre(AllOf(from(AllOf(withName("Test"), withDetail("Test"))),
+                        iFromRanges(Source.range("FuncCall")))));
+
+  auto IncomingLevel3 = incomingCalls(IncomingLevel2[0].from, Index.get());
+  EXPECT_THAT(IncomingLevel3, IsEmpty());
 }
 
 TEST(CallHierarchy, MainFileOnlyRef) {
@@ -383,18 +421,28 @@ TEST(CallHierarchy, MultiFileCpp) {
     EXPECT_THAT(IncomingLevel4, IsEmpty());
   };
 
-  auto CheckOutgoingCalls = [&](ParsedAST &AST, Position Pos, PathRef TUPath) {
+  auto CheckOutgoingCalls = [&](ParsedAST &AST, Position Pos, PathRef TUPath,
+                                bool IsDeclaration) {
     std::vector<CallHierarchyItem> Items =
         prepareCallHierarchy(AST, Pos, TUPath);
-    ASSERT_THAT(Items, ElementsAre(withName("caller3")));
+    ASSERT_THAT(
+        Items,
+        ElementsAre(AllOf(
+            withName("caller3"),
+            withFile(testPath(IsDeclaration ? "caller3.hh" : "caller3.cc")))));
     auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get());
     ASSERT_THAT(
         OutgoingLevel1,
+        // fromRanges are interpreted in the context of Items[0]'s file.
+        // If that's the header, we can't get ranges from the implementation
+        // file!
         ElementsAre(
             AllOf(to(AllOf(withName("caller1"), withDetail("nsa::caller1"))),
-                  oFromRanges(Caller3C.range("Caller1"))),
+                  IsDeclaration ? oFromRanges()
+                                : oFromRanges(Caller3C.range("Caller1"))),
             AllOf(to(AllOf(withName("caller2"), withDetail("nsb::caller2"))),
-                  oFromRanges(Caller3C.range("Caller2")))));
+                  IsDeclaration ? oFromRanges()
+                                : oFromRanges(Caller3C.range("Caller2")))));
 
     auto OutgoingLevel2 = outgoingCalls(OutgoingLevel1[1].to, Index.get());
     ASSERT_THAT(OutgoingLevel2,
@@ -423,7 +471,7 @@ TEST(CallHierarchy, MultiFileCpp) {
   CheckIncomingCalls(*AST, CalleeH.point(), testPath("callee.hh"));
   AST = Workspace.openFile("caller3.hh");
   ASSERT_TRUE(bool(AST));
-  CheckOutgoingCalls(*AST, Caller3H.point(), testPath("caller3.hh"));
+  CheckOutgoingCalls(*AST, Caller3H.point(), testPath("caller3.hh"), true);
 
   // Check that invoking from the definition site works.
   AST = Workspace.openFile("callee.cc");
@@ -431,7 +479,7 @@ TEST(CallHierarchy, MultiFileCpp) {
   CheckIncomingCalls(*AST, CalleeC.point(), testPath("callee.cc"));
   AST = Workspace.openFile("caller3.cc");
   ASSERT_TRUE(bool(AST));
-  CheckOutgoingCalls(*AST, Caller3C.point(), testPath("caller3.cc"));
+  CheckOutgoingCalls(*AST, Caller3C.point(), testPath("caller3.cc"), false);
 }
 
 TEST(CallHierarchy, IncomingMultiFileObjC) {
@@ -620,6 +668,35 @@ TEST(CallHierarchy, HierarchyOnVar) {
   ASSERT_THAT(IncomingLevel1,
               ElementsAre(AllOf(from(withName("caller")),
                                 iFromRanges(Source.range("Callee")))));
+}
+
+TEST(CallHierarchy, HierarchyOnEnumConstant) {
+  // Tests that the call hierarchy works on enum constants.
+  Annotations Source(R"cpp(
+    enum class Coin { heads$Heads^ , tai$Tails^ls };
+    void caller() {
+      Coin::$CallerH[[heads]];
+      Coin::$CallerT[[tails]];
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point("Heads"), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("heads")));
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
+  ASSERT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(withName("caller")),
+                                iFromRanges(Source.range("CallerH")))));
+  Items =
+      prepareCallHierarchy(AST, Source.point("Tails"), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("tails")));
+  IncomingLevel1 = incomingCalls(Items[0], Index.get());
+  ASSERT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(withName("caller")),
+                                iFromRanges(Source.range("CallerT")))));
 }
 
 TEST(CallHierarchy, CallInDifferentFileThanCaller) {

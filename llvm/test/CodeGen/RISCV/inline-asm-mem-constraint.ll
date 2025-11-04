@@ -273,7 +273,7 @@ define void @constraint_m_with_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI5_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -419,7 +419,7 @@ define void @constraint_m_with_extern_weak_global_3() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(ewg)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; RV64I-MEDIUM-NEXT:    lui a1, 2
-; RV64I-MEDIUM-NEXT:    addiw a1, a1, -192
+; RV64I-MEDIUM-NEXT:    addi a1, a1, -192
 ; RV64I-MEDIUM-NEXT:    add a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    #APP
 ; RV64I-MEDIUM-NEXT:    sw zero, 0(a0)
@@ -432,7 +432,7 @@ define void @constraint_m_with_extern_weak_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI8_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -796,7 +796,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV32I-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-NO-INTEGRATED-NEXT:    ret
-; RV32I-NO-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV32I-NO-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV32I-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -811,7 +811,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV64I-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-NO-INTEGRATED-NEXT:    ret
-; RV64I-NO-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV64I-NO-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV64I-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -827,7 +827,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -843,7 +843,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -860,7 +860,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 1
@@ -877,7 +877,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV32I-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-INTEGRATED-NEXT:    ret
-; RV32I-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV32I-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV32I-INTEGRATED-NEXT:    # %fail
 ; RV32I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-INTEGRATED-NEXT:    li a0, 1
@@ -894,7 +894,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV64I-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-INTEGRATED-NEXT:    ret
-; RV64I-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV64I-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV64I-INTEGRATED-NEXT:    # %fail
 ; RV64I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-INTEGRATED-NEXT:    li a0, 1
@@ -912,7 +912,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV32I-MEDIUM-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -930,7 +930,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV64I-MEDIUM-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -949,7 +949,7 @@ define i32 @constraint_m_with_callbr_multi_operands(i32 %a) {
 ; RV64I-LARGE-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-INTEGRATED-NEXT:  .LBB14_2: # Block address taken
+; RV64I-LARGE-INTEGRATED-NEXT:  .LBB14_2: # Inline asm indirect target
 ; RV64I-LARGE-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 1
@@ -978,7 +978,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV32I-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-NO-INTEGRATED-NEXT:    ret
-; RV32I-NO-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV32I-NO-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV32I-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -997,7 +997,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV64I-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-NO-INTEGRATED-NEXT:    ret
-; RV64I-NO-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV64I-NO-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV64I-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1017,7 +1017,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1037,7 +1037,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1058,7 +1058,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1079,7 +1079,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV32I-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-INTEGRATED-NEXT:    ret
-; RV32I-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV32I-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV32I-INTEGRATED-NEXT:    # %fail
 ; RV32I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-INTEGRATED-NEXT:    li a0, 1
@@ -1100,7 +1100,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV64I-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-INTEGRATED-NEXT:    ret
-; RV64I-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV64I-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV64I-INTEGRATED-NEXT:    # %fail
 ; RV64I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-INTEGRATED-NEXT:    li a0, 1
@@ -1122,7 +1122,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV32I-MEDIUM-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -1144,7 +1144,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV64I-MEDIUM-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -1167,7 +1167,7 @@ define i32 @constraint_m_with_multi_callbr_asm(i32 %a) {
 ; RV64I-LARGE-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-INTEGRATED-NEXT:  .LBB15_3: # Block address taken
+; RV64I-LARGE-INTEGRATED-NEXT:  .LBB15_3: # Inline asm indirect target
 ; RV64I-LARGE-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 1
@@ -1435,7 +1435,7 @@ define void @constraint_o_with_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI21_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi15)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -1581,7 +1581,7 @@ define void @constraint_o_with_extern_weak_global_3() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(ewg)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi18)(a0)
 ; RV64I-MEDIUM-NEXT:    lui a1, 2
-; RV64I-MEDIUM-NEXT:    addiw a1, a1, -192
+; RV64I-MEDIUM-NEXT:    addi a1, a1, -192
 ; RV64I-MEDIUM-NEXT:    add a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    #APP
 ; RV64I-MEDIUM-NEXT:    sw zero, 0(a0)
@@ -1594,7 +1594,7 @@ define void @constraint_o_with_extern_weak_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI24_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi18)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -1678,7 +1678,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV32I-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-NO-INTEGRATED-NEXT:    ret
-; RV32I-NO-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV32I-NO-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV32I-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1693,7 +1693,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV64I-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-NO-INTEGRATED-NEXT:    ret
-; RV64I-NO-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV64I-NO-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV64I-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1709,7 +1709,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1725,7 +1725,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1742,7 +1742,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1759,7 +1759,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV32I-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-INTEGRATED-NEXT:    ret
-; RV32I-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV32I-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV32I-INTEGRATED-NEXT:    # %fail
 ; RV32I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-INTEGRATED-NEXT:    li a0, 1
@@ -1776,7 +1776,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV64I-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-INTEGRATED-NEXT:    ret
-; RV64I-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV64I-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV64I-INTEGRATED-NEXT:    # %fail
 ; RV64I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-INTEGRATED-NEXT:    li a0, 1
@@ -1794,7 +1794,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV32I-MEDIUM-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -1812,7 +1812,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV64I-MEDIUM-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -1831,7 +1831,7 @@ define i32 @constraint_o_with_callbr_multi_operands(i32 %a) {
 ; RV64I-LARGE-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-INTEGRATED-NEXT:  .LBB26_2: # Block address taken
+; RV64I-LARGE-INTEGRATED-NEXT:  .LBB26_2: # Inline asm indirect target
 ; RV64I-LARGE-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 1
@@ -1860,7 +1860,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV32I-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-NO-INTEGRATED-NEXT:    ret
-; RV32I-NO-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV32I-NO-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV32I-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1879,7 +1879,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV64I-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-NO-INTEGRATED-NEXT:    ret
-; RV64I-NO-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV64I-NO-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV64I-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1899,7 +1899,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1919,7 +1919,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1940,7 +1940,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 1
@@ -1961,7 +1961,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV32I-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-INTEGRATED-NEXT:    ret
-; RV32I-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV32I-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV32I-INTEGRATED-NEXT:    # %fail
 ; RV32I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-INTEGRATED-NEXT:    li a0, 1
@@ -1982,7 +1982,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV64I-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-INTEGRATED-NEXT:    ret
-; RV64I-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV64I-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV64I-INTEGRATED-NEXT:    # %fail
 ; RV64I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-INTEGRATED-NEXT:    li a0, 1
@@ -2004,7 +2004,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV32I-MEDIUM-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -2026,7 +2026,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV64I-MEDIUM-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -2049,7 +2049,7 @@ define i32 @constraint_o_with_multi_callbr_asm(i32 %a) {
 ; RV64I-LARGE-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-INTEGRATED-NEXT:  .LBB27_3: # Block address taken
+; RV64I-LARGE-INTEGRATED-NEXT:  .LBB27_3: # Inline asm indirect target
 ; RV64I-LARGE-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 1
@@ -2500,7 +2500,7 @@ define void @constraint_A_with_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI35_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi27)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -2655,7 +2655,7 @@ define void @constraint_A_with_extern_weak_global_3() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(ewg)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi30)(a0)
 ; RV64I-MEDIUM-NEXT:    lui a1, 2
-; RV64I-MEDIUM-NEXT:    addiw a1, a1, -192
+; RV64I-MEDIUM-NEXT:    addi a1, a1, -192
 ; RV64I-MEDIUM-NEXT:    add a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    #APP
 ; RV64I-MEDIUM-NEXT:    sw zero, 0(a0)
@@ -2668,7 +2668,7 @@ define void @constraint_A_with_extern_weak_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI38_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi30)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -2757,7 +2757,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV32I-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-NO-INTEGRATED-NEXT:    ret
-; RV32I-NO-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV32I-NO-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV32I-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -2773,7 +2773,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV64I-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-NO-INTEGRATED-NEXT:    ret
-; RV64I-NO-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV64I-NO-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV64I-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -2790,7 +2790,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -2807,7 +2807,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -2824,7 +2824,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 1
@@ -2842,7 +2842,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV32I-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-INTEGRATED-NEXT:    ret
-; RV32I-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV32I-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV32I-INTEGRATED-NEXT:    # %fail
 ; RV32I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-INTEGRATED-NEXT:    li a0, 1
@@ -2860,7 +2860,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV64I-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-INTEGRATED-NEXT:    ret
-; RV64I-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV64I-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV64I-INTEGRATED-NEXT:    # %fail
 ; RV64I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-INTEGRATED-NEXT:    li a0, 1
@@ -2879,7 +2879,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV32I-MEDIUM-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -2898,7 +2898,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV64I-MEDIUM-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -2917,7 +2917,7 @@ define i32 @constraint_A_with_callbr_multi_operands(i32 %a) {
 ; RV64I-LARGE-INTEGRATED-NEXT:  # %bb.1: # %normal
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-INTEGRATED-NEXT:  .LBB40_2: # Block address taken
+; RV64I-LARGE-INTEGRATED-NEXT:  .LBB40_2: # Inline asm indirect target
 ; RV64I-LARGE-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 1
@@ -2947,7 +2947,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV32I-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-NO-INTEGRATED-NEXT:    ret
-; RV32I-NO-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV32I-NO-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV32I-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -2967,7 +2967,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV64I-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-NO-INTEGRATED-NEXT:    ret
-; RV64I-NO-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV64I-NO-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV64I-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-NO-INTEGRATED-NEXT:    li a0, 1
@@ -2988,7 +2988,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV32I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -3009,7 +3009,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV64I-MEDIUM-NO-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-NO-INTEGRATED-NEXT:    li a0, 1
@@ -3030,7 +3030,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV64I-LARGE-NO-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-NO-INTEGRATED-NEXT:    li a0, 1
@@ -3052,7 +3052,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV32I-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-INTEGRATED-NEXT:    ret
-; RV32I-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV32I-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV32I-INTEGRATED-NEXT:    # %fail
 ; RV32I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-INTEGRATED-NEXT:    li a0, 1
@@ -3074,7 +3074,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV64I-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-INTEGRATED-NEXT:    ret
-; RV64I-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV64I-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV64I-INTEGRATED-NEXT:    # %fail
 ; RV64I-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-INTEGRATED-NEXT:    li a0, 1
@@ -3097,7 +3097,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV32I-MEDIUM-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV32I-MEDIUM-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -3120,7 +3120,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV64I-MEDIUM-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    ret
-; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV64I-MEDIUM-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # %fail
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-MEDIUM-INTEGRATED-NEXT:    li a0, 1
@@ -3143,7 +3143,7 @@ define i32 @constraint_A_with_multi_callbr_asm(i32 %a) {
 ; RV64I-LARGE-INTEGRATED-NEXT:  # %bb.2: # %normal1
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 0
 ; RV64I-LARGE-INTEGRATED-NEXT:    ret
-; RV64I-LARGE-INTEGRATED-NEXT:  .LBB41_3: # Block address taken
+; RV64I-LARGE-INTEGRATED-NEXT:  .LBB41_3: # Inline asm indirect target
 ; RV64I-LARGE-INTEGRATED-NEXT:    # %fail
 ; RV64I-LARGE-INTEGRATED-NEXT:    # Label of block must be emitted
 ; RV64I-LARGE-INTEGRATED-NEXT:    li a0, 1

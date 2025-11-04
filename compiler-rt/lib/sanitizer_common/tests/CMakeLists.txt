@@ -134,6 +134,9 @@ append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread SANITIZER_TEST_LINK_FLAGS_COM
 if(CMAKE_SYSTEM MATCHES "FreeBSD-9.2-RELEASE")
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON "-lc++ -lm")
 endif()
+if(CMAKE_SYSTEM MATCHES "Haiku")
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON "-lbsd")
+endif()
 
 include_directories(..)
 include_directories(../..)

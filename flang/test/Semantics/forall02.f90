@@ -35,7 +35,7 @@ module m1
 
     ! Error to invoke an IMPURE FINAL procedure in a FORALL
     forall (i = 1:10)
-      !WARNING: FORALL index variable 'i' not used on left-hand side of assignment
+      !WARNING: FORALL index variable 'i' not used on left-hand side of assignment [-Wunused-forall-index]
       !ERROR: Impure procedure 'impuresub' is referenced by finalization in a FORALL
       ifvar = ifvar1
     end forall
@@ -46,7 +46,7 @@ module m1
     end forall
 
     forall (i = 1:5)
-      !WARNING: FORALL index variable 'i' not used on left-hand side of assignment
+      !WARNING: FORALL index variable 'i' not used on left-hand side of assignment [-Wunused-forall-index]
       !ERROR: Impure procedure 'impuresubrank1' is referenced by finalization in a FORALL
       ifArr1 = if0
     end forall
@@ -57,7 +57,7 @@ module m1
     end forall
 
     forall (i = 1:5)
-      !WARNING: FORALL index variable 'i' not used on left-hand side of assignment
+      !WARNING: FORALL index variable 'i' not used on left-hand side of assignment [-Wunused-forall-index]
       !ERROR: Impure procedure 'impuresubrank2' is referenced by finalization in a FORALL
       ifArr2(:,:) = if0
     end forall

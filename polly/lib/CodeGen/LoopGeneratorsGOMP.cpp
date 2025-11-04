@@ -148,7 +148,7 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
                          "polly.par.UBAdjusted");
 
   Builder.CreateBr(CheckNextBB);
-  Builder.SetInsertPoint(&*--Builder.GetInsertPoint());
+  Builder.SetInsertPoint(--Builder.GetInsertPoint());
   BasicBlock *AfterBB;
   Value *IV =
       createLoop(LB, UB, Stride, Builder, *SubFnLI, *SubFnDT, AfterBB,
@@ -161,7 +161,7 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
   createCallCleanupThread();
   Builder.CreateRetVoid();
 
-  Builder.SetInsertPoint(&*LoopBody);
+  Builder.SetInsertPoint(LoopBody);
 
   // FIXME: Call SubFnDT->verify() and SubFnLI->verify() to check that the
   // DominatorTree/LoopInfo has been created correctly. Alternatively, recreate

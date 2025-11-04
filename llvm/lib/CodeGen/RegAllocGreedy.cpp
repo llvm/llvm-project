@@ -107,14 +107,6 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
-static cl::opt<bool> EnableDeferredSpilling(
-    "enable-deferred-spilling", cl::Hidden,
-    cl::desc("Instead of spilling a variable right away, defer the actual "
-             "code insertion to the end of the allocation. That way the "
-             "allocator might still find a suitable coloring for this "
-             "variable because of other evicted variables."),
-    cl::init(false));
-
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
 CSRFirstTimeCost("regalloc-csr-first-time-cost",
@@ -166,20 +158,18 @@ public:
   bool runOnMachineFunction(MachineFunction &mf) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
 } // end anonymous namespace
 
 RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), F(F) {
+    : MachineFunctionPass(ID), F(std::move(F)) {
   initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
 }
 
@@ -328,7 +318,6 @@ const char *const RAGreedy::StageName[] = {
     "RS_Split",
     "RS_Split2",
     "RS_Spill",
-    "RS_Memory",
     "RS_Done"
 };
 #endif
@@ -456,13 +445,6 @@ unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
     // Unsplit ranges that couldn't be allocated immediately are deferred until
     // everything else has been allocated.
     Prio = Size;
-  } else if (Stage == RS_Memory) {
-    // Memory operand should be considered last.
-    // Change the priority such that Memory operand are assigned in
-    // the reverse order that they came in.
-    // TODO: Make this a member variable and probably do something about hints.
-    static unsigned MemOp = 0;
-    Prio = MemOp++;
   } else {
     // Giant live ranges fall back to the global assignment heuristic, which
     // prevents excessive spilling in pathological cases.
@@ -1401,21 +1383,53 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
   // Compute the cost of assigning a non Hint physical register to VirtReg.
   // We define it as the total frequency of broken COPY instructions to/from
   // Hint register, and after split, they can be deleted.
-  for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!TII->isFullCopyInstr(Instr))
+
+  // FIXME: This is miscounting the costs with subregisters. In particular, this
+  // should support recognizing SplitKit formed copy bundles instead of direct
+  // copy instructions, which will appear in the same block.
+  for (const MachineOperand &Opnd : MRI->reg_nodbg_operands(Reg)) {
+    const MachineInstr &Instr = *Opnd.getParent();
+    if (!Instr.isCopy() || Opnd.isImplicit())
       continue;
-    Register OtherReg = Instr.getOperand(1).getReg();
-    if (OtherReg == Reg) {
-      OtherReg = Instr.getOperand(0).getReg();
-      if (OtherReg == Reg)
-        continue;
-      // Check if VirtReg interferes with OtherReg after this COPY instruction.
-      if (VirtReg.liveAt(LIS->getInstructionIndex(Instr).getRegSlot()))
-        continue;
+
+    // Look for the other end of the copy.
+    const bool IsDef = Opnd.isDef();
+    const MachineOperand &OtherOpnd = Instr.getOperand(IsDef);
+    Register OtherReg = OtherOpnd.getReg();
+    assert(Reg == Opnd.getReg());
+    if (OtherReg == Reg)
+      continue;
+
+    unsigned SubReg = Opnd.getSubReg();
+    unsigned OtherSubReg = OtherOpnd.getSubReg();
+    if (SubReg && OtherSubReg && SubReg != OtherSubReg)
+      continue;
+
+    // Check if VirtReg interferes with OtherReg after this COPY instruction.
+    if (Opnd.readsReg()) {
+      SlotIndex Index = LIS->getInstructionIndex(Instr).getRegSlot();
+
+      if (SubReg) {
+        LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubReg);
+        if (IsDef)
+          Mask = ~Mask;
+
+        if (any_of(VirtReg.subranges(), [=](const LiveInterval::SubRange &S) {
+              return (S.LaneMask & Mask).any() && S.liveAt(Index);
+            })) {
+          continue;
+        }
+      } else {
+        if (VirtReg.liveAt(Index))
+          continue;
+      }
     }
+
     MCRegister OtherPhysReg =
         OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
-    if (OtherPhysReg == Hint)
+    MCRegister ThisHint =
+        SubReg ? TRI->getSubReg(Hint, SubReg) : MCRegister(Hint);
+    if (OtherPhysReg == ThisHint)
       Cost += MBFI->getBlockFreq(Instr.getParent());
   }
 
@@ -2405,22 +2419,44 @@ void RAGreedy::initializeCSRCost() {
 /// The results are stored into \p Out.
 /// \p Out is not cleared before being populated.
 void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
-  for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!TII->isFullCopyInstr(Instr))
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+
+  for (const MachineOperand &Opnd : MRI->reg_nodbg_operands(Reg)) {
+    const MachineInstr &Instr = *Opnd.getParent();
+    if (!Instr.isCopy() || Opnd.isImplicit())
       continue;
+
     // Look for the other end of the copy.
-    Register OtherReg = Instr.getOperand(0).getReg();
-    if (OtherReg == Reg) {
-      OtherReg = Instr.getOperand(1).getReg();
-      if (OtherReg == Reg)
+    const MachineOperand &OtherOpnd = Instr.getOperand(Opnd.isDef());
+    Register OtherReg = OtherOpnd.getReg();
+    if (OtherReg == Reg)
+      continue;
+    unsigned OtherSubReg = OtherOpnd.getSubReg();
+    unsigned SubReg = Opnd.getSubReg();
+
+    // Get the current assignment.
+    MCRegister OtherPhysReg;
+    if (OtherReg.isPhysical()) {
+      if (OtherSubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, OtherSubReg, RC);
+      else if (SubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, SubReg, RC);
+      else
+        OtherPhysReg = OtherReg;
+    } else {
+      OtherPhysReg = VRM->getPhys(OtherReg);
+      // TODO: Should find matching superregister, but applying this in the
+      // non-hint case currently causes regressions
+
+      if (SubReg && OtherSubReg && SubReg != OtherSubReg)
         continue;
     }
-    // Get the current assignment.
-    MCRegister OtherPhysReg =
-        OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
+
     // Push the collected information.
-    Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
-                           OtherPhysReg));
+    if (OtherPhysReg) {
+      Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
+                             OtherPhysReg));
+    }
   }
 }
 
@@ -2449,15 +2485,13 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   // We have a broken hint, check if it is possible to fix it by
   // reusing PhysReg for the copy-related live-ranges. Indeed, we evicted
   // some register and PhysReg may be available for the other live-ranges.
-  SmallSet<Register, 4> Visited;
-  SmallVector<Register, 2> RecoloringCandidates;
   HintsInfo Info;
   Register Reg = VirtReg.reg();
   MCRegister PhysReg = VRM->getPhys(Reg);
   // Start the recoloring algorithm from the input live-interval, then
   // it will propagate to the ones that are copy-related with it.
-  Visited.insert(Reg);
-  RecoloringCandidates.push_back(Reg);
+  SmallSet<Register, 4> Visited = {Reg};
+  SmallVector<Register, 2> RecoloringCandidates = {Reg};
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
                     << '(' << printReg(PhysReg, TRI) << ")\n");
@@ -2465,12 +2499,10 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   do {
     Reg = RecoloringCandidates.pop_back_val();
 
-    // We cannot recolor physical register.
-    if (Reg.isPhysical())
-      continue;
+    MCRegister CurrPhys = VRM->getPhys(Reg);
 
     // This may be a skipped register.
-    if (!VRM->hasPhys(Reg)) {
+    if (!CurrPhys) {
       assert(!shouldAllocateRegister(Reg) &&
              "We have an unallocated variable which should have been handled");
       continue;
@@ -2479,7 +2511,6 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Get the live interval mapped with this virtual register to be able
     // to check for the interference with the new color.
     LiveInterval &LI = LIS->getInterval(Reg);
-    MCRegister CurrPhys = VRM->getPhys(Reg);
     // Check that the new color matches the register class constraints and
     // that it is free for this live range.
     if (CurrPhys != PhysReg && (!MRI->getRegClass(Reg)->contains(PhysReg) ||
@@ -2516,7 +2547,8 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Push all copy-related live-ranges to keep reconciling the broken
     // hints.
     for (const HintInfo &HI : Info) {
-      if (Visited.insert(HI.Reg).second)
+      // We cannot recolor physical register.
+      if (HI.Reg.isVirtual() && Visited.insert(HI.Reg).second)
         RecoloringCandidates.push_back(HI.Reg);
     }
   } while (!RecoloringCandidates.empty());
@@ -2650,34 +2682,22 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   }
 
   // Finally spill VirtReg itself.
-  if ((EnableDeferredSpilling ||
-       TRI->shouldUseDeferredSpillingForVirtReg(*MF, VirtReg)) &&
-      ExtraInfo->getStage(VirtReg) < RS_Memory) {
-    // TODO: This is experimental and in particular, we do not model
-    // the live range splitting done by spilling correctly.
-    // We would need a deep integration with the spiller to do the
-    // right thing here. Anyway, that is still good for early testing.
-    ExtraInfo->setStage(VirtReg, RS_Memory);
-    LLVM_DEBUG(dbgs() << "Do as if this register is in memory\n");
-    NewVRegs.push_back(VirtReg.reg());
-  } else {
-    NamedRegionTimer T("spill", "Spiller", TimerGroupName,
-                       TimerGroupDescription, TimePassesIsEnabled);
-    LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-    spiller().spill(LRE);
-    ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
+  NamedRegionTimer T("spill", "Spiller", TimerGroupName,
+                     TimerGroupDescription, TimePassesIsEnabled);
+  LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  spiller().spill(LRE, &Order);
+  ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
 
-    // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
-    // the new regs are kept in LDV (still mapping to the old register), until
-    // we rewrite spilled locations in LDV at a later stage.
-    for (Register r : spiller().getSpilledRegs())
-      DebugVars->splitRegister(r, LRE.regs(), *LIS);
-    for (Register r : spiller().getReplacedRegs())
-      DebugVars->splitRegister(r, LRE.regs(), *LIS);
+  // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
+  // the new regs are kept in LDV (still mapping to the old register), until
+  // we rewrite spilled locations in LDV at a later stage.
+  for (Register r : spiller().getSpilledRegs())
+    DebugVars->splitRegister(r, LRE.regs(), *LIS);
+  for (Register r : spiller().getReplacedRegs())
+    DebugVars->splitRegister(r, LRE.regs(), *LIS);
 
-    if (VerifyEnabled)
-      MF->verify(LIS, Indexes, "After spilling", &errs());
-  }
+  if (VerifyEnabled)
+    MF->verify(LIS, Indexes, "After spilling", &errs());
 
   // The live virtual register requesting allocation was spilled, so tell
   // the caller not to allocate anything during this round.
@@ -2908,8 +2928,8 @@ bool RAGreedy::run(MachineFunction &mf) {
   PriorityAdvisor = PriorityProvider->getAdvisor(*MF, *this, *Indexes);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
-  SpillerInstance.reset(
-      createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF, *VRM, *VRAI));
+  SpillerInstance.reset(createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF,
+                                            *VRM, *VRAI, Matrix));
 
   VRAI->calculateSpillWeightsAndHints();
 

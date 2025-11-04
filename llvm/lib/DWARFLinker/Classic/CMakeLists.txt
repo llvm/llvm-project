@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMDWARFLinkerClassic
   CodeGen
   CodeGenTypes
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   DWARFLinker
   MC
   Object

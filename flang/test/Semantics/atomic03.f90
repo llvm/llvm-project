@@ -51,13 +51,13 @@ program test_atomic_cas
   call atomic_cas(non_scalar_coarray, old_int, compare_int, new_int)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_cas'
-  call atomic_cas(non_scalar_coarray[1], old_int, compare_int, new_int)
+  call atomic_cas(non_scalar_coarray(:)[1], old_int, compare_int, new_int)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_cas'
   call atomic_cas(non_scalar_logical_coarray, old_logical, compare_logical, new_logical)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_cas'
-  call atomic_cas(non_scalar_logical_coarray[1], old_logical, compare_logical, new_logical)
+  call atomic_cas(non_scalar_logical_coarray(:)[1], old_logical, compare_logical, new_logical)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_cas'
   call atomic_cas(non_coarray, old_int, compare_int, new_int)

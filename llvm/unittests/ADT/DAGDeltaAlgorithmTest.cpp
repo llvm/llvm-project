@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DAGDeltaAlgorithm.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <cstdarg>
@@ -14,7 +15,7 @@ using namespace llvm;
 
 namespace {
 
-typedef DAGDeltaAlgorithm::edge_ty edge_ty;
+using edge_ty = DAGDeltaAlgorithm::edge_ty;
 
 class FixedDAGDeltaAlgorithm : public DAGDeltaAlgorithm {
   changeset_ty FailingSet;
@@ -23,8 +24,7 @@ class FixedDAGDeltaAlgorithm : public DAGDeltaAlgorithm {
 protected:
   bool ExecuteOneTest(const changeset_ty &Changes) override {
     ++NumTests;
-    return std::includes(Changes.begin(), Changes.end(),
-                         FailingSet.begin(), FailingSet.end());
+    return llvm::includes(Changes, FailingSet);
   }
 
 public:

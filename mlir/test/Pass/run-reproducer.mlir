@@ -14,7 +14,12 @@ func.func @bar() {
   external_resources: {
     mlir_reproducer: {
       verify_each: true,
-      // CHECK:  builtin.module(func.func(cse,canonicalize{ max-iterations=1 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=false}))
+      // CHECK:       builtin.module(
+      // CHECK-NEXT:    func.func(
+      // CHECK-NEXT:      cse,
+      // CHECK-NEXT:      canonicalize{ max-iterations=1 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=false}
+      // CHECK-NEXT:    )
+      // CHECK-NEXT:  )
       pipeline: "builtin.module(func.func(cse,canonicalize{max-iterations=1 max-num-rewrites=-1 region-simplify=normal top-down=false}))",
       disable_threading: true
     }

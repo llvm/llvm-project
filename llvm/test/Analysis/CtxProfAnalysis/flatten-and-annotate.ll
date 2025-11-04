@@ -23,13 +23,13 @@
 ; PRELINK-LABEL: yes:
 ; PRELINK-NEXT:    call void @llvm.instrprof.increment(ptr @an_entrypoint, i64 [[#]], i32 2, i32 1)
 ; PRELINK:      ![[#]] = !{i32 1, !"ProfileSummary", !1}
-; PRELINK:      ![[#]] = !{!"TotalCount", i64 3595}
-; PRELINK:      ![[#]] = !{!"MaxCount", i64 3000}
-; PRELINK:      ![[#]] = !{!"MaxInternalCount", i64 3000}
-; PRELINK:      ![[#]] = !{!"MaxFunctionCount", i64 300}
+; PRELINK:      ![[#]] = !{!"TotalCount", i64 151600}
+; PRELINK:      ![[#]] = !{!"MaxCount", i64 102000}
+; PRELINK:      ![[#]] = !{!"MaxInternalCount", i64 102000}
+; PRELINK:      ![[#]] = !{!"MaxFunctionCount", i64 20100}
 ; PRELINK:      ![[#]] = !{!"NumCounts", i64 6}
 ; PRELINK:      ![[#]] = !{!"NumFunctions", i64 3}
-; PRELINK:       ![[PREPROF]] = !{!"branch_weights", i32 40, i32 60}
+; PRELINK:       ![[PREPROF]] = !{!"branch_weights", i32 4000, i32 6000}
 
 ; Check that the output has:
 ;  - no instrumentation
@@ -49,10 +49,10 @@
 ; The postlink summary is restricted to the stuff under the root - including the
 ; "unhandled" data.
 ; POSTLINK:      ![[#]] = !{i32 1, !"ProfileSummary", !1}
-; POSTLINK:      ![[#]] = !{!"TotalCount", i64 1495}
-; POSTLINK:      ![[#]] = !{!"MaxCount", i64 1000}
-; POSTLINK:      ![[#]] = !{!"MaxInternalCount", i64 1000}
-; POSTLINK:      ![[#]] = !{!"MaxFunctionCount", i64 200}
+; POSTLINK:      ![[#]] = !{!"TotalCount", i64 149500}
+; POSTLINK:      ![[#]] = !{!"MaxCount", i64 100000}
+; POSTLINK:      ![[#]] = !{!"MaxInternalCount", i64 100000}
+; POSTLINK:      ![[#]] = !{!"MaxFunctionCount", i64 20000}
 ; POSTLINK:      ![[#]] = !{!"NumCounts", i64 6}
 ; POSTLINK:      ![[#]] = !{!"NumFunctions", i64 3}
 
@@ -60,14 +60,14 @@
 ; @foo will be called both unconditionally and conditionally, on the "yes" branch
 ; which has a count of 40. So 140 times.
 
-; POSTLINK:       ![[FOO_EP]] = !{!"function_entry_count", i64 140} 
+; POSTLINK:       ![[FOO_EP]] = !{!"function_entry_count", i64 14000} 
 
 ; foo's "no" branch is taken 10+5 times (from the 2 contexts belonging to foo).
 ; Which means its "yes" branch is taken 140 - 15 times.
 
-; POSTLINK:       ![[FOO_BW]] = !{!"branch_weights", i32 125, i32 15} 
-; POSTLINK:       ![[AN_ENTRYPOINT_EP]] = !{!"function_entry_count", i64 100}
-; POSTLINK:       ![[AN_ENTRYPOINT_BW]] = !{!"branch_weights", i32 40, i32 60} 
+; POSTLINK:       ![[FOO_BW]] = !{!"branch_weights", i32 12500, i32 1500} 
+; POSTLINK:       ![[AN_ENTRYPOINT_EP]] = !{!"function_entry_count", i64 10000}
+; POSTLINK:       ![[AN_ENTRYPOINT_BW]] = !{!"branch_weights", i32 4000, i32 6000} 
 
 ;--- profile.yaml
 Contexts:

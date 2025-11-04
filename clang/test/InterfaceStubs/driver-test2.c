@@ -1,5 +1,4 @@
 // REQUIRES: x86-registered-target
-// REQUIRES: shell
 
 // NOTE: -fno-integrated-cc1 has been added to work around an ASAN failure
 //       caused by in-process cc1 invocation. Clang InterfaceStubs is not the

@@ -342,14 +342,6 @@ define %S.2 @t3.helper() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[S_2:%.*]], align 8
 ; CHECK-NEXT:    call void @ext1(ptr noundef nonnull align 8 dereferenceable(24) [[RETVAL]])
-; CHECK-NEXT:    [[DOTFCA_0_LOAD:%.*]] = load ptr, ptr [[RETVAL]], align 8
-; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [[S_2]] poison, ptr [[DOTFCA_0_LOAD]], 0
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[S_2]], ptr [[RETVAL]], i32 0, i32 1
-; CHECK-NEXT:    [[DOTFCA_1_LOAD:%.*]] = load i64, ptr [[DOTFCA_1_GEP]], align 8
-; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [[S_2]] [[DOTFCA_0_INSERT]], i64 [[DOTFCA_1_LOAD]], 1
-; CHECK-NEXT:    [[DOTFCA_2_GEP:%.*]] = getelementptr inbounds [[S_2]], ptr [[RETVAL]], i32 0, i32 2
-; CHECK-NEXT:    [[DOTFCA_2_LOAD:%.*]] = load i64, ptr [[DOTFCA_2_GEP]], align 8
-; CHECK-NEXT:    [[DOTFCA_2_INSERT:%.*]] = insertvalue [[S_2]] [[DOTFCA_1_INSERT]], i64 [[DOTFCA_2_LOAD]], 2
 ; CHECK-NEXT:    ret [[S_2]] zeroinitializer
 ;
 entry:

@@ -9,6 +9,8 @@
 #ifndef LLVM_OPTION_OPTSPECIFIER_H
 #define LLVM_OPTION_OPTSPECIFIER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 namespace opt {
 
@@ -22,7 +24,7 @@ public:
   OptSpecifier() = default;
   explicit OptSpecifier(bool) = delete;
   /*implicit*/ OptSpecifier(unsigned ID) : ID(ID) {}
-  /*implicit*/ OptSpecifier(const Option *Opt);
+  /*implicit*/ LLVM_ABI OptSpecifier(const Option *Opt);
 
   bool isValid() const { return ID != 0; }
 

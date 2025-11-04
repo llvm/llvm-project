@@ -12,14 +12,11 @@
 
 #include <__assert>
 #include <__config>
-#include <__iterator/access.h>
 #include <__memory/addressof.h>
 #include <__new/placement_new_delete.h>
-#include <__type_traits/enable_if.h>
 #include <__type_traits/is_array.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
-#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -35,7 +32,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp, class... _Args, class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...))>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp* construct_at(_Tp* __location, _Args&&... __args) {
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp* construct_at(_Tp* _LIBCPP_DIAGNOSE_NULLPTR __location, _Args&&... __args) {
   _LIBCPP_ASSERT_NON_NULL(__location != nullptr, "null pointer given to construct_at");
   return ::new (static_cast<void*>(__location)) _Tp(std::forward<_Args>(__args)...);
 }
@@ -57,36 +54,25 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* __construct_at(_Tp* __l
 // The internal functions are available regardless of the language version (with the exception of the `__destroy_at`
 // taking an array).
 
-template <class _Tp, __enable_if_t<!is_array<_Tp>::value, int> = 0>
+template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy_at(_Tp* __loc) {
   _LIBCPP_ASSERT_NON_NULL(__loc != nullptr, "null pointer given to destroy_at");
-  __loc->~_Tp();
-}
-
 #if _LIBCPP_STD_VER >= 20
-template <class _Tp, __enable_if_t<is_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy_at(_Tp* __loc) {
-  _LIBCPP_ASSERT_NON_NULL(__loc != nullptr, "null pointer given to destroy_at");
-  auto const __end = std::end(*__loc);
-  for (auto __it = std::begin(*__loc); __it != __end; ++__it)
-    std::__destroy_at(__it);
-}
+  if constexpr (is_array_v<_Tp>) {
+    for (auto&& __val : *__loc)
+      std::__destroy_at(std::addressof(__val));
+  } else
 #endif
+  {
+    __loc->~_Tp();
+  }
+}
 
 #if _LIBCPP_STD_VER >= 17
-
-template <class _Tp, enable_if_t<!is_array_v<_Tp>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy_at(_Tp* __loc) {
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy_at(_Tp* _LIBCPP_DIAGNOSE_NULLPTR __loc) {
   std::__destroy_at(__loc);
 }
-
-#  if _LIBCPP_STD_VER >= 20
-template <class _Tp, enable_if_t<is_array_v<_Tp>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy_at(_Tp* __loc) {
-  std::__destroy_at(__loc);
-}
-#  endif
-
 #endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD

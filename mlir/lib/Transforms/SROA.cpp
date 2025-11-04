@@ -12,6 +12,7 @@
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SROA
@@ -180,8 +181,7 @@ static void destructureSlot(
   assert(slot.ptr.use_empty() && "after destructuring, the original slot "
                                  "pointer should no longer be used");
 
-  LLVM_DEBUG(llvm::dbgs() << "[sroa] Destructured memory slot: " << slot.ptr
-                          << "\n");
+  LDBG() << "Destructured memory slot: " << slot.ptr;
 
   if (statistics.destructuredAmount)
     (*statistics.destructuredAmount)++;

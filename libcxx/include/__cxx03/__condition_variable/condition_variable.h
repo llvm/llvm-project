@@ -43,7 +43,7 @@ class _LIBCPP_EXPORTED_FROM_ABI condition_variable {
   __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR condition_variable() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI condition_variable() _NOEXCEPT = default;
 
 #  ifdef _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
   ~condition_variable() = default;

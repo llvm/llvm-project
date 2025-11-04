@@ -89,7 +89,7 @@ END
 ! CHECK-DAG: ![[CBF3]] = !DICommonBlock(scope: ![[F3]], declaration: null, name: "__BLNK__"{{.*}})
 ! CHECK-DAG: ![[CBAF3]] = !DICommonBlock(scope: ![[F3]], declaration: null, name: "a"{{.*}})
 
-! CHECK-DAG: ![[MAIN:[0-9]+]] = {{.*}}!DISubprogram(name: "test"{{.*}})
+! CHECK-DAG: ![[MAIN:[0-9]+]] = {{.*}}!DISubprogram(name: "TEST"{{.*}})
 ! CHECK-DAG: ![[CBM]] = !DICommonBlock(scope: ![[MAIN]], declaration: null, name: "__BLNK__"{{.*}})
 ! CHECK-DAG: ![[CBAM]] = !DICommonBlock(scope: ![[MAIN]], declaration: null, name: "a"{{.*}})
 

@@ -1,5 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-min-jump-table-entries=4 %s -o - | FileCheck %s --check-prefixes=CHECK,SYSV
-; RUN: llc -mtriple=aarch64-none-elf -aarch64-min-jump-table-entries=4 %s -o - | FileCheck %s --check-prefixes=CHECK,NONSYSV
+; RUN: llc -mtriple=aarch64 -aarch64-min-jump-table-entries=4 %s -o - | FileCheck %s
 
 define void @f0() "patchable-function-entry"="0" "branch-target-enforcement" {
 ; CHECK-LABEL: f0:
@@ -49,25 +48,18 @@ define void @f2_1() "patchable-function-entry"="1" "patchable-function-prefix"="
 }
 
 ;; -fpatchable-function-entry=1 -mbranch-protection=bti
-;; For SysV compliant targets, we don't add BTI (or create the .Lpatch0 symbol)
-;; because the function has internal linkage and isn't address-taken. For
-;; non-SysV targets, we do add the BTI, because outside SYSVABI64 there's no
-;; spec preventing the static linker from using an indirect call instruction in
-;; a long-branch thunk inserted at link time.
+;; We don't add BTI c, because the function has internal linkage
 define internal void @f1i(i64 %v) "patchable-function-entry"="1" "branch-target-enforcement" {
 ; CHECK-LABEL: f1i:
 ; CHECK-NEXT: .Lfunc_begin3:
 ; CHECK:      // %bb.0:
-; NONSYSV-NEXT:  hint #34
-; NONSYSV-NEXT:  .Lpatch1:
 ; CHECK-NEXT:  nop
 ;; Other basic blocks have BTI, but they don't affect our decision to not create .Lpatch0
 ; CHECK:      .LBB{{.+}} // %sw.bb1
 ; CHECK-NEXT:  hint #36
 ; CHECK:      .section __patchable_function_entries,"awo",@progbits,f1i{{$}}
 ; CHECK-NEXT: .p2align 3
-; NONSYSV-NEXT: .xword .Lpatch1
-; SYSV-NEXT: .xword .Lfunc_begin3
+; CHECK-NEXT: .xword .Lfunc_begin3
 entry:
   switch i64 %v, label %sw.bb0 [
     i64 1, label %sw.bb1

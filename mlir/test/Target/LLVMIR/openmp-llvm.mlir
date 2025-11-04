@@ -698,7 +698,7 @@ llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
 // CHECK-LABEL: @simd_simple_multiple
 llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   omp.simd {
-    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) inclusive step (%step1, %step2) {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) inclusive step (%step1, %step2) collapse(2) {
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       // The form of the emitted IR is controlled by OpenMPIRBuilder and
       // tested there. Just check that the right metadata is added and collapsed
@@ -736,7 +736,7 @@ llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64
 // CHECK-LABEL: @simd_simple_multiple_simdlen
 llvm.func @simd_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   omp.simd simdlen(2) {
-    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) collapse(2) {
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       // The form of the emitted IR is controlled by OpenMPIRBuilder and
       // tested there. Just check that the right metadata is added.
@@ -760,7 +760,7 @@ llvm.func @simd_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
 // CHECK-LABEL: @simd_simple_multiple_safelen
 llvm.func @simd_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   omp.simd safelen(2) {
-    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) collapse(2) {
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
       %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
@@ -779,7 +779,7 @@ llvm.func @simd_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
 // CHECK-LABEL: @simd_simple_multiple_simdlen_safelen
 llvm.func @simd_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   omp.simd simdlen(1) safelen(2) {
-    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) collapse(2) {
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
       %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
@@ -820,8 +820,6 @@ llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
 }
 // Be sure that llvm.loop.vectorize.enable metadata appears twice
 // CHECK: llvm.loop.parallel_accesses
-// CHECK-NEXT: llvm.loop.vectorize.enable
-// CHECK: llvm.loop.vectorize.enable
 
 // -----
 
@@ -1179,7 +1177,7 @@ llvm.func @collapse_wsloop(
     // CHECK: store i32 %[[TOTAL_SUB_1]], ptr
     // CHECK: call void @__kmpc_for_static_init_4u
     omp.wsloop {
-      omp.loop_nest (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) {
+      omp.loop_nest (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) collapse(3) {
         %31 = llvm.load %20 : !llvm.ptr -> i32
         %32 = llvm.add %31, %arg0 : i32
         %33 = llvm.add %32, %arg1 : i32
@@ -1241,7 +1239,7 @@ llvm.func @collapse_wsloop_dynamic(
     // CHECK: store i32 %[[TOTAL]], ptr
     // CHECK: call void @__kmpc_dispatch_init_4u
     omp.wsloop schedule(dynamic) {
-      omp.loop_nest (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) {
+      omp.loop_nest (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) collapse(3) {
         %31 = llvm.load %20 : !llvm.ptr -> i32
         %32 = llvm.add %31, %arg0 : i32
         %33 = llvm.add %32, %arg1 : i32
@@ -1396,42 +1394,35 @@ llvm.func @omp_atomic_read_implicit_cast () {
 
 //CHECK: call void @__atomic_load(i64 8, ptr %[[X_ELEMENT]], ptr %[[ATOMIC_LOAD_TEMP]], i32 0)
 //CHECK: %[[LOAD:.*]] = load { float, float }, ptr %[[ATOMIC_LOAD_TEMP]], align 8
-//CHECK: %[[EXT:.*]] = extractvalue { float, float } %[[LOAD]], 0
-//CHECK: store float %[[EXT]], ptr %[[Y]], align 4
+//CHECK: store { float, float } %[[LOAD]], ptr %[[Y]], align 4
   omp.atomic.read %3 = %17 : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i32, ptr %[[Z]] monotonic, align 4
 //CHECK: %[[CAST:.*]] = bitcast i32 %[[ATOMIC_LOAD_TEMP]] to float
-//CHECK: %[[LOAD:.*]] = fpext float %[[CAST]] to double
-//CHECK: store double %[[LOAD]], ptr %[[Y]], align 8
+//CHECK: store float %[[CAST]], ptr %[[Y]], align 4
   omp.atomic.read %3 = %1 : !llvm.ptr, !llvm.ptr, f32
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i32, ptr %[[W]] monotonic, align 4
-//CHECK: %[[LOAD:.*]] = sitofp i32 %[[ATOMIC_LOAD_TEMP]] to double
-//CHECK: store double %[[LOAD]], ptr %[[Y]], align 8
+//CHECK: store i32 %[[ATOMIC_LOAD_TEMP]], ptr %[[Y]], align 4
   omp.atomic.read %3 = %7 : !llvm.ptr, !llvm.ptr, i32
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i64, ptr %[[Y]] monotonic, align 4
 //CHECK: %[[CAST:.*]] = bitcast i64 %[[ATOMIC_LOAD_TEMP]] to double
-//CHECK: %[[LOAD:.*]] = fptrunc double %[[CAST]] to float
-//CHECK: store float %[[LOAD]], ptr %[[Z]], align 4
+//CHECK: store double %[[CAST]], ptr %[[Z]], align 8
   omp.atomic.read %1 = %3 : !llvm.ptr, !llvm.ptr, f64
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i32, ptr %[[W]] monotonic, align 4
-//CHECK: %[[LOAD:.*]] = sitofp i32 %[[ATOMIC_LOAD_TEMP]] to float
-//CHECK: store float %[[LOAD]], ptr %[[Z]], align 4
+//CHECK: store i32 %[[ATOMIC_LOAD_TEMP]], ptr %[[Z]], align 4
   omp.atomic.read %1 = %7 : !llvm.ptr, !llvm.ptr, i32
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i64, ptr %[[Y]] monotonic, align 4
 //CHECK: %[[CAST:.*]] = bitcast i64 %[[ATOMIC_LOAD_TEMP]] to double
-//CHECK: %[[LOAD:.*]] = fptosi double %[[CAST]] to i32
-//CHECK: store i32 %[[LOAD]], ptr %[[W]], align 4
+//CHECK: store double %[[CAST]], ptr %[[W]], align 8
   omp.atomic.read %7 = %3 : !llvm.ptr, !llvm.ptr, f64
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i32, ptr %[[Z]] monotonic, align 4
 //CHECK: %[[CAST:.*]] = bitcast i32 %[[ATOMIC_LOAD_TEMP]] to float
-//CHECK: %[[LOAD:.*]] = fptosi float %[[CAST]] to i32
-//CHECK: store i32 %[[LOAD]], ptr %[[W]], align 4
+//CHECK: store float %[[CAST]], ptr %[[W]], align 4
   omp.atomic.read %7 = %1 : !llvm.ptr, !llvm.ptr, f32
   llvm.return
 }
@@ -1477,6 +1468,49 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
     omp.yield(%newval : i32)
   }
   llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_write
+llvm.func @omp_atomic_write() {
+// CHECK: %[[ALLOCA0:.*]] = alloca { float, float }, align 8
+// CHECK: %[[ALLOCA1:.*]] = alloca { float, float }, align 8
+// CHECK: %[[X:.*]] = alloca float, i64 1, align 4
+// CHECK: %[[R1:.*]] = alloca float, i64 1, align 4
+// CHECK: %[[ALLOCA:.*]] = alloca { float, float }, i64 1, align 8
+// CHECK: %[[LOAD:.*]] = load float, ptr %[[R1]], align 4
+// CHECK: %[[IDX1:.*]] = insertvalue { float, float } undef, float %[[LOAD]], 0
+// CHECK: %[[IDX2:.*]] = insertvalue { float, float } %[[IDX1]], float 0.000000e+00, 1
+// CHECK: br label %entry
+
+// CHECK: entry:
+// CHECK: store { float, float } %[[IDX2]], ptr %[[ALLOCA1]], align 4
+// CHECK: call void @__atomic_store(i64 8, ptr %[[ALLOCA]], ptr %[[ALLOCA1]], i32 0)
+// CHECK: store { float, float } { float 1.000000e+00, float 1.000000e+00 }, ptr %[[ALLOCA0]], align 4
+// CHECK: call void @__atomic_store(i64 8, ptr %[[ALLOCA]], ptr %[[ALLOCA0]], i32 0)
+
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x f32 {bindc_name = "x"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x f32 {bindc_name = "r1"} : (i64) -> !llvm.ptr
+    %4 = llvm.mlir.constant(1 : i64) : i64
+    %5 = llvm.alloca %4 x !llvm.struct<(f32, f32)> {bindc_name = "c1"} : (i64) -> !llvm.ptr
+    %6 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %7 = llvm.mlir.constant(0.000000e+00 : f32) : f32
+    %8 = llvm.mlir.constant(1 : i64) : i64
+    %9 = llvm.mlir.constant(1 : i64) : i64
+    %10 = llvm.mlir.constant(1 : i64) : i64
+    %11 = llvm.load %3 : !llvm.ptr -> f32
+    %12 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %13 = llvm.insertvalue %11, %12[0] : !llvm.struct<(f32, f32)>
+    %14 = llvm.insertvalue %7, %13[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.write %5 = %14 : !llvm.ptr, !llvm.struct<(f32, f32)>
+    %15 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %16 = llvm.insertvalue %6, %15[0] : !llvm.struct<(f32, f32)>
+    %17 = llvm.insertvalue %6, %16[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.write %5 = %17 : !llvm.ptr, !llvm.struct<(f32, f32)>
+    llvm.return
 }
 
 // -----
@@ -3305,12 +3339,6 @@ llvm.func @distribute() {
 }
 
 // CHECK-LABEL: define void @distribute
-// CHECK:         call void @[[OUTLINED:.*]]({{.*}})
-// CHECK-NEXT:    br label %[[EXIT:.*]]
-// CHECK:       [[EXIT]]:
-// CHECK:         ret void
-
-// CHECK:       define internal void @[[OUTLINED]]({{.*}})
 // CHECK:         %[[LASTITER:.*]] = alloca i32
 // CHECK:         %[[LB:.*]] = alloca i64
 // CHECK:         %[[UB:.*]] = alloca i64
@@ -3347,9 +3375,7 @@ llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         call void{{.*}}@__kmpc_fork_call({{.*}}, ptr @[[OUTLINED_PARALLEL:.*]],
 
 // CHECK:       define internal void @[[OUTLINED_PARALLEL]]
-// CHECK:         call void @[[OUTLINED_DISTRIBUTE:.*]]({{.*}})
-
-// CHECK:       define internal void @[[OUTLINED_DISTRIBUTE]]
+// CHECK:       distribute.alloca:
 // CHECK:         %[[LASTITER:.*]] = alloca i32
 // CHECK:         %[[LB:.*]] = alloca i32
 // CHECK:         %[[UB:.*]] = alloca i32
