@@ -27890,23 +27890,24 @@ static SDValue performCTPOPCombine(SDNode *N,
 
   // ctpop(zext(bitcast(vector_mask))) -> neg(signed_reduce_add(vector_mask))
   SDValue Mask;
-  if (sd_match(N->getOperand(0), m_ZExt(m_BitCast(m_Value(Mask))))) {
-    EVT VT = N->getValueType(0);
-    EVT MaskVT = Mask.getValueType();
+  if (!sd_match(N->getOperand(0), m_ZExt(m_BitCast(m_Value(Mask)))))
+    return SDValue();
 
-    if (VT.isVector() || !MaskVT.isFixedLengthVector() ||
-        MaskVT.getVectorElementType() != MVT::i1)
-      return SDValue();
+  EVT VT = N->getValueType(0);
+  EVT MaskVT = Mask.getValueType();
 
-    SDLoc DL(N);
-    // Sign extend to best fit ZeroOrNegativeOneBooleanContent.
-    SDValue ExtMask =
-        DAG.getNode(ISD::SIGN_EXTEND, DL, MaskVT.changeElementType(VT), Mask);
-    SDValue NegPopCount = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, ExtMask);
-    return DAG.getNegative(NegPopCount, DL, VT);
-  }
+  if (VT.isVector() || !MaskVT.isFixedLengthVector() ||
+      MaskVT.getVectorElementType() != MVT::i1)
+    return SDValue();
 
-  return SDValue();
+  EVT ReduceInVT =
+      EVT::getVectorVT(*DAG.getContext(), VT, MaskVT.getVectorElementCount());
+
+  SDLoc DL(N);
+  // Sign extend to best fit ZeroOrNegativeOneBooleanContent.
+  SDValue ExtMask = DAG.getNode(ISD::SIGN_EXTEND, DL, ReduceInVT, Mask);
+  SDValue NegPopCount = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, ExtMask);
+  return DAG.getNegative(NegPopCount, DL, VT);
 }
 
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
