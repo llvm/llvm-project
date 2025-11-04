@@ -34,7 +34,7 @@ struct Evaluation;
 } // namespace pft
 
 //===----------------------------------------------------------------------===//
-// Synchronization
+// Synchronization statements
 //===----------------------------------------------------------------------===//
 
 void genSyncAllStatement(AbstractConverter &, const parser::SyncAllStmt &);
