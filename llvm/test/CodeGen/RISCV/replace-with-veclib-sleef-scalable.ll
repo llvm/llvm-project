@@ -488,5 +488,5 @@ declare <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float>)
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "target-features"="+v" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-features"="+v" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) "target-features"="+v" }
 ;.

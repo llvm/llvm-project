@@ -368,7 +368,7 @@ class CodeGenPrepare {
   std::unique_ptr<DominatorTree> DT;
 
 public:
-  CodeGenPrepare(){};
+  CodeGenPrepare() = default;
   CodeGenPrepare(const TargetMachine *TM) : TM(TM){};
   /// If encounter huge function, we need to limit the build time.
   bool IsHugeFunc = false;
