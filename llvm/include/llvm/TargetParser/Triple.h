@@ -696,9 +696,6 @@ public:
            isWindowsItaniumEnvironment();
   }
 
-  /// Tests whether the OS is NaCl (Native Client)
-  bool isOSNaCl() const { return getOS() == Triple::NaCl; }
-
   /// Tests whether the OS is Linux.
   bool isOSLinux() const { return getOS() == Triple::Linux; }
 

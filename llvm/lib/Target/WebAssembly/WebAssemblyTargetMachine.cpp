@@ -491,8 +491,6 @@ void WebAssemblyPassConfig::addIRPasses() {
   addPass(createWebAssemblyGlobalsTaggingPass());
   addPass(createWebAssemblyStackTaggingPass());
 
-  basicCheckForEHAndSjLj(TM);
-
   // If exception handling is not enabled and setjmp/longjmp handling is
   // enabled, we lower invokes into calls and delete unreachable landingpad
   // blocks. Lowering invokes when there is no EH support is done in

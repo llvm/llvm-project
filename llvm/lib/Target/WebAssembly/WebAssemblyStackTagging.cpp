@@ -93,8 +93,8 @@ Instruction *WebAssemblyStackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
-  Function *RdTag = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                              Intrinsic::wasm_memtag_random);
+  Function *RdTag = Intrinsic::getOrInsertDeclaration(
+      F->getParent(), Intrinsic::wasm_memtag_random);
   Instruction *Base =
       IRB.CreateCall(RdTag, {IRB.getInt32(0),
                              ::llvm::ConstantPointerNull::get(IRB.getPtrTy())});
@@ -175,7 +175,6 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
-        SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
                                    3) &&
         !SInfo.CallsReturnTwice;
@@ -236,8 +235,6 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     memtag::annotateDebugRecords(Info, static_cast<unsigned long>(Tag));
   }
 
-  for (auto *I : SInfo.UnrecognizedLifetimes)
-    I->eraseFromParent();
   return true;
 }
 
