@@ -939,7 +939,7 @@ class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
 public:
-  VPIRMetadata() {}
+  VPIRMetadata() = default;
 
   /// Adds metatadata that can be preserved from the original instruction
   /// \p I.
@@ -950,12 +950,9 @@ public:
   VPIRMetadata(Instruction &I, LoopVersioning *LVer);
 
   /// Copy constructor for cloning.
-  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
+  VPIRMetadata(const VPIRMetadata &Other) = default;
 
-  VPIRMetadata &operator=(const VPIRMetadata &Other) {
-    Metadata = Other.Metadata;
-    return *this;
-  }
+  VPIRMetadata &operator=(const VPIRMetadata &Other) = default;
 
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
@@ -1113,9 +1110,8 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPInstruction *clone() override {
-    SmallVector<VPValue *, 2> Operands(operands());
-    auto *New =
-        new VPInstruction(Opcode, Operands, *this, *this, getDebugLoc(), Name);
+    auto *New = new VPInstruction(Opcode, operands(), *this, *this,
+                                  getDebugLoc(), Name);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
@@ -1229,10 +1225,9 @@ public:
   }
 
   VPInstruction *clone() override {
-    SmallVector<VPValue *, 2> Operands(operands());
     auto *New =
-        new VPInstructionWithType(getOpcode(), Operands, getResultType(), *this,
-                                  getDebugLoc(), getName());
+        new VPInstructionWithType(getOpcode(), operands(), getResultType(),
+                                  *this, getDebugLoc(), getName());
     New->setUnderlyingValue(getUnderlyingValue());
     return New;
   }
@@ -3214,6 +3209,9 @@ protected:
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
         Alignment(Alignment), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
+    assert(isa<VPVectorEndPointerRecipe>(getAddr()) ||
+           !Reverse &&
+               "Reversed acccess without VPVectorEndPointerRecipe address?");
   }
 
 public:
@@ -3985,7 +3983,7 @@ class VPIRBasicBlock : public VPBasicBlock {
         IRBB(IRBB) {}
 
 public:
-  ~VPIRBasicBlock() override {}
+  ~VPIRBasicBlock() override = default;
 
   static inline bool classof(const VPBlockBase *V) {
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
@@ -4037,7 +4035,7 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
         IsReplicator(IsReplicator) {}
 
 public:
-  ~VPRegionBlock() override {}
+  ~VPRegionBlock() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
