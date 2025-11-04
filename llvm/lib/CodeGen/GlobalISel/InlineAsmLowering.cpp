@@ -465,8 +465,13 @@ bool InlineAsmLowering::lowerInlineAsm(
           // already indirect
           ArrayRef<Register> SourceRegs =
               GetOrCreateVRegs(*OpInfo.CallOperandVal);
-          assert(SourceRegs.size() == 1 && "Expected the memory input to fit "
-                                           "into a single virtual register");
+          if (SourceRegs.size() != 1) {
+            LLVM_DEBUG(dbgs() << "Expected the memory input to fit into a "
+                                 "single virtual register "
+                                 "for constraint '"
+                              << OpInfo.ConstraintCode << "'\n");
+            return false;
+          }
           Inst.addReg(SourceRegs[0]);
           break;
         }
@@ -485,8 +490,13 @@ bool InlineAsmLowering::lowerInlineAsm(
         auto Ptr = MIRBuilder.buildFrameIndex(FramePtrTy, FrameIdx).getReg(0);
         ArrayRef<Register> SourceRegs =
             GetOrCreateVRegs(*OpInfo.CallOperandVal);
-        assert(SourceRegs.size() == 1 && "Expected the memory input to fit "
-                                         "into a single virtual register");
+        if (SourceRegs.size() != 1) {
+          LLVM_DEBUG(dbgs() << "Expected the memory input to fit into a single "
+                               "virtual register "
+                               "for constraint '"
+                            << OpInfo.ConstraintCode << "'\n");
+          return false;
+        }
         MIRBuilder.buildStore(SourceRegs[0], Ptr,
                               MachinePointerInfo::getFixedStack(MF, FrameIdx),
                               Alignment);
