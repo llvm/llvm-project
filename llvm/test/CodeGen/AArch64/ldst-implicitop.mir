@@ -49,9 +49,31 @@ body:             |
     ; CHECK-NEXT: renamable $q5, renamable $q20 = LDPQi renamable $lr, 3, implicit-def $q4_q5, implicit-def $q20_q21 :: (load (s128))
     ; CHECK-NEXT: $q0 = ORRv16i8 $q4, killed $q4
     ; CHECK-NEXT: $q1 = ORRv16i8 $q5, killed $q5
+    ; CHECK-NEXT: $q2 = ORRv16i8 $q20, killed $q20
+    ; CHECK-NEXT: $q3 = ORRv16i8 $q21, killed $q21
     ; CHECK-NEXT: RET_ReallyLR
     renamable $q5 = LDRQui renamable $lr, 3, implicit-def $q4_q5 :: (load (s128))
     renamable $q20 = LDRQui renamable $lr, 4, implicit-def $q20_q21 :: (load (s128))
+    $q0 = ORRv16i8 $q4, killed $q4
+    $q1 = ORRv16i8 $q5, killed $q5
+    $q2 = ORRv16i8 $q20, killed $q20
+    $q3 = ORRv16i8 $q21, killed $q21
+    RET_ReallyLR
+...
+---
+name:            impdef_both_same
+body:             |
+  bb.0:
+    liveins: $lr
+    ; CHECK-LABEL: name: impdef_both_same
+    ; CHECK: liveins: $lr
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $q5, renamable $q20 = LDPQi renamable $lr, 3, implicit-def $q4_q5 :: (load (s128))
+    ; CHECK-NEXT: $q0 = ORRv16i8 $q4, killed $q4
+    ; CHECK-NEXT: $q1 = ORRv16i8 $q5, killed $q5
+    ; CHECK-NEXT: RET_ReallyLR
+    renamable $q5 = LDRQui renamable $lr, 3, implicit-def $q4_q5 :: (load (s128))
+    renamable $q20 = LDRQui renamable $lr, 4, implicit-def $q4_q5 :: (load (s128))
     $q0 = ORRv16i8 $q4, killed $q4
     $q1 = ORRv16i8 $q5, killed $q5
     RET_ReallyLR
