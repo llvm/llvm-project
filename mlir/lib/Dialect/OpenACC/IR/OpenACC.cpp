@@ -3068,8 +3068,12 @@ LogicalResult acc::LoopOp::verify() {
   if (getRegion().empty())
     return emitError("expected non-empty body.");
 
-  // When it is container-like - it is expected to hold a loop-like operation.
-  if (isContainerLike()) {
+  if (getUnstructured()) {
+    if (!isContainerLike())
+      return emitError(
+          "unstructured acc.loop must not have induction variables");
+  } else if (isContainerLike()) {
+    // When it is container-like - it is expected to hold a loop-like operation.
     // Obtain the maximum collapse count - we use this to check that there
     // are enough loops contained.
     uint64_t collapseCount = getCollapseValue().value_or(1);
