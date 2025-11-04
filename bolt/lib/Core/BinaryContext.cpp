@@ -39,6 +39,9 @@
 #include <functional>
 #include <iterator>
 #include <unordered_set>
+#define DEBUG_TYPE "bolt-sections"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 
 using namespace llvm;
 
@@ -2144,6 +2147,13 @@ BinaryContext::getSectionNameForAddress(uint64_t Address) const {
 }
 
 BinarySection &BinaryContext::registerSection(BinarySection *Section) {
+    LLVM_DEBUG(dbgs() << "[sect] create " << Section->getName()
+                    << " addr=0x" << format_hex(Section->getAddress(), 10)
+                    << " size=0x" << format_hex(Section->getSize(), 10)
+                    << " flags=0x" << format_hex(Section->getELFFlags(), 6)
+                    << " type=0x"  << format_hex(Section->getELFType(), 6)
+                    << (Section->isAllocatable() ? " alloc" : " !alloc")
+                    << "\n");
   auto Res = Sections.insert(Section);
   (void)Res;
   assert(Res.second && "can't register the same section twice.");
@@ -2177,28 +2187,50 @@ BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
                                        unsigned ELFFlags, uint8_t *Data,
                                        uint64_t Size, unsigned Alignment) {
   auto NamedSections = getSectionByName(Name);
+
   if (NamedSections.begin() != NamedSections.end()) {
+    // 1) Detect true duplicates (more than one object for the same name)
+    if (std::next(NamedSections.begin()) != NamedSections.end()) {
+      LLVM_DEBUG({
+        dbgs() << "[sect] DUP-NAME (" << Name << ") count="
+               << std::distance(NamedSections.begin(), NamedSections.end()) << "\n";
+        for (auto &P : NamedSections)
+          dbgs() << "  idx=" << P.first
+                 << " addr=0x" << format_hex(P.second->getAddress(), 10)
+                 << " size=0x" << format_hex(P.second->getSize(), 10)
+                 << " flags=0x" << format_hex(P.second->getELFFlags(), 6)
+                 << " type=0x"  << format_hex(P.second->getELFType(), 6) << "\n";
+      });
+      llvm::report_fatal_error("[sect] duplicate section objects with same name");
+    }
+
+    // 2) Now safe to assert uniqueness
     assert(std::next(NamedSections.begin()) == NamedSections.end() &&
            "can only update unique sections");
+
     BinarySection *Section = NamedSections.begin()->second;
 
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: updating " << *Section << " -> ");
-    const bool Flag = Section->isAllocatable();
-    (void)Flag;
+    const bool WasAlloc = Section->isAllocatable();
     Section->update(Data, Size, Alignment, ELFType, ELFFlags);
     LLVM_DEBUG(dbgs() << *Section << "\n");
-    // FIXME: Fix section flags/attributes for MachO.
+
     if (isELF())
-      assert(Flag == Section->isAllocatable() &&
+      assert(WasAlloc == Section->isAllocatable() &&
              "can't change section allocation status");
     return *Section;
   }
 
+  // Creation path (keep quiet, or add one-liner if you want):
+  // LLVM_DEBUG(dbgs() << "[sect] create " << Name << "\n");
   return registerSection(
       new BinarySection(*this, Name, Data, Size, Alignment, ELFType, ELFFlags));
 }
 
+
 void BinaryContext::deregisterSectionName(const BinarySection &Section) {
+    LLVM_DEBUG(dbgs() << "[sect] erase-name " << Section.getName()
+                    << " ptr=" << &Section << "\n");
   auto NameRange = NameToSection.equal_range(Section.getName().str());
   while (NameRange.first != NameRange.second) {
     if (NameRange.first->second == &Section) {
