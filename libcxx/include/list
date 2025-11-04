@@ -228,13 +228,11 @@ template <class T, class Allocator, class Predicate>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
-#  include <__type_traits/conditional.h>
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
-#  include <__type_traits/is_pointer.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/exception_guard.h>
