@@ -9,8 +9,6 @@
 #include "asan_util.h"
 #include "shadow_mapping.h"
 
-#define OPTNONE __attribute__((optnone))
-
 static const __constant uchar kAsanHeapLeftRedzoneMagic = (uchar)0xfa;
 static const __constant uint kAsanHeapLeftRedzoneMagicx4 = 0xfafafafaU;
 static const __constant ulong kAsanHeapLeftRedzoneMagicx8 = 0xfafafafafafafafaUL;
@@ -28,14 +26,16 @@ extern ulong __ockl_devmem_request(ulong addr, ulong size);
 // Magic at beginning of allocation
 #define ALLOC_MAGIC 0xfedcba1ee1abcdefUL
 
-#define AS(P,V) __opencl_atomic_store(P, V, memory_order_relaxed, memory_scope_device)
-#define AL(P) __opencl_atomic_load(P, memory_order_relaxed, memory_scope_device)
-#define AA(P,V) __opencl_atomic_fetch_add(P, V, memory_order_relaxed, memory_scope_device)
-#define AN(P,V) __opencl_atomic_fetch_and(P, V, memory_order_relaxed, memory_scope_device)
-#define AO(P,V) __opencl_atomic_fetch_or(P, V, memory_order_relaxed, memory_scope_device)
-#define ACE(P,E,V) __opencl_atomic_compare_exchange_strong(P, E, V, memory_order_relaxed, memory_order_relaxed, memory_scope_device)
+#define MEMORD memory_order_relaxed
 #define RF() __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent", "global")
 #define ARF() __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "agent", "global")
+
+#define AS(P,V) __opencl_atomic_store(P, V, MEMORD, memory_scope_device)
+#define AL(P) __opencl_atomic_load(P, MEMORD, memory_scope_device)
+#define AA(P,V) __opencl_atomic_fetch_add(P, V, MEMORD, memory_scope_device)
+#define AN(P,V) __opencl_atomic_fetch_and(P, V, MEMORD, memory_scope_device)
+#define AO(P,V) __opencl_atomic_fetch_or(P, V, MEMORD, memory_scope_device)
+#define ACE(P,E,V) __opencl_atomic_compare_exchange_strong(P, E, V, MEMORD, MEMORD, memory_scope_device)
 
 // An allocation
 #define ALLOC_HEADER_BYTES 32
@@ -55,6 +55,7 @@ typedef struct alloc_struct {
 #define SLAB_BYTES (1UL << 21)
 #define SLAB_THRESHOLD (SLAB_BYTES / 64)
 #define SLAB_HEADER_BYTES 32
+#define SLAB_USEABLE_BYTES (SLAB_BYTES - SLAB_HEADER_BYTES)
 
 // Assume SLAB_ALIGN so low 12 bits are already clear
 #define SLAB_SHIFT 6
@@ -63,18 +64,21 @@ typedef struct alloc_struct {
 #define LINE 128
 #define PAD(N,M) ulong pad##N[LINE/8 - M];
 
-#define F_POISON_NEEDED 0x01
-#define F_POISON_PENDING 0x02
-#define F_UNREADY 0x04
-#define F_MASK (F_POISON_NEEDED | F_POISON_PENDING | F_UNREADY)
+#define VF_POISON_NEEDED 0x01
+#define VF_POISON_PENDING 0x02
+#define VF_UNREADY 0x04
+#define VF_MASK (VF_POISON_NEEDED | VF_POISON_PENDING | VF_UNREADY)
+
+#define VABSHIFT 32
+#define VRBSHIFT 4
+#define VRBMASK (SLAB_BYTES - 1UL)
 
 // A slab of memory used to provide malloc returned blocks
 typedef struct slab_s {
     atomic_ulong next;   // link to next slab on queue chain, must be first
-    atomic_ulong ap;     // Pointer to next allocation and flags
-    atomic_uint rb;      // returned bytes
-    uint pad;
+    atomic_ulong v;      // Allocated bytes, returned bytes, and flags
     atomic_ulong sid;    // slab ID
+    ulong pad;
     ulong space[(SLAB_BYTES-SLAB_HEADER_BYTES)/8];  // Space for allocations.  Must  be aligned 16
 } slab_t;
 
@@ -196,7 +200,6 @@ slab_pause(void)
 
 
 // Intended to be called from only one lane of a wave
-OPTNONE
 NO_SANITIZE_ADDR
 static void
 put_free_slab(__global heap_t *hp, __global slab_t *sp)
@@ -206,6 +209,7 @@ put_free_slab(__global heap_t *hp, __global slab_t *sp)
     for (;;) {
         ulong top = AL(&lp->top);
         AS(&sp->next, (ulong)slabptr(top));
+        RF();
         if (ACE(&lp->top, &top, addcnt((ulong)sp, top))) {
             return;
         }
@@ -228,25 +232,13 @@ get_free_slab(__global heap_t *hp)
         __global slab_t *sp = slabptr(top);
         if (sp) {
             ulong next = AL(&sp->next);
-            if (ACE(&lp->top, &top, addcnt(next, top)))
+            if (ACE(&lp->top, &top, addcnt(next, top))) {
                 return sp;
+            }
         } else {
             return 0;
         }
         slab_pause();
-    }
-
-}
-
-NO_SANITIZE_ADDR
-static void
-ready_slab(__global slab_t *sp)
-{
-    AS(&sp->rb, 0U);
-    if (!(AL(&sp->ap) & (ulong)(F_POISON_PENDING | F_POISON_NEEDED))) {
-        AS(&sp->ap, (ulong)sp + SLAB_HEADER_BYTES);
-    } else {
-        AN(&sp->ap, ~(ulong)F_UNREADY);
     }
 }
 
@@ -258,6 +250,7 @@ unpublish_allocation(__global alloc_t *ap, ulong pc)
     __global uchar *s = (__global uchar *)MEM_TO_SHADOW((ulong)ap - arz);
     __builtin_memset(s, kAsanHeapFreeMagic, ap->asz / SHADOW_GRANULARITY);
     ap->pc = pc;
+    RF();
 }
 
 // Free a slab based allocation
@@ -276,8 +269,8 @@ slab_free(__global alloc_t *ap, ulong pc)
                 uint sz = __ockl_alisa_u32(ap->asz);
                 uint aid = __ockl_activelane_u32();
                 if (aid == 0) {
-                    uint rb = AA(&sp->rb, sz) + sz;
-                    if (rb == SLAB_BYTES - SLAB_HEADER_BYTES) {
+                    ulong v = AA(&sp->v, (ulong)sz << VRBSHIFT) + ((ulong)sz << VRBSHIFT);
+                    if (((v >> VRBSHIFT) & VRBMASK) == SLAB_USEABLE_BYTES) {
                         put_free_slab(hp, sp);
                     }
                 }
@@ -404,8 +397,7 @@ try_new_slab(__global heap_t *hp)
     __global slab_t *sp = obtain_new_slab(hp);
     if (sp) {
         AS(&sp->next, 0UL);
-        AS(&sp->rb, 0U);
-        AS(&sp->ap, (ulong)sp + (ulong)SLAB_HEADER_BYTES + (ulong)(F_UNREADY | F_POISON_PENDING | F_POISON_NEEDED));
+        AS(&sp->v, (ulong)(VF_UNREADY | VF_POISON_PENDING | VF_POISON_NEEDED));
 #if defined SLAB_IDENTITY
         AS(&sp->sid, AA(&hp->num_slab_allocations, 1UL));
 #else
@@ -428,7 +420,6 @@ new_slab_wait(__global heap_t *hp)
 }
 
 // Called by a single workitem
-OPTNONE
 NO_SANITIZE_ADDR
 static __global slab_t *
 get_current_slab(__global heap_t *hp)
@@ -453,17 +444,18 @@ get_current_slab(__global heap_t *hp)
         __global slab_t *fs = get_free_slab(hp);
         if (fs) {
             if (ACE(&hp->cs, &cs, (ulong)fs)) {
-                ready_slab(fs);
+                AN(&fs->v, (ulong)(VF_POISON_PENDING | VF_POISON_NEEDED));
                 return fs;
             }
             put_free_slab(hp, fs);
             continue;
         }
 
+
         __global slab_t *ns = try_new_slab(hp);
         if ((ulong)ns > (ulong)SLAB_BUSY) {
             if (ACE(&hp->cs, &cs, (ulong)ns)) {
-                AN(&ns->ap, ~(ulong)F_UNREADY);
+                AN(&ns->v, (ulong)(VF_POISON_PENDING | VF_POISON_NEEDED));
                 return ns;
             }
             put_free_slab(hp, ns);
@@ -488,7 +480,7 @@ poison_slab(__global slab_t *sp, int aid, int na)
     RF();
 
     if (!aid)
-        AN(&sp->ap, ~(ulong)F_POISON_PENDING);
+        AN(&sp->v, ~(ulong)VF_POISON_PENDING);
 }
 
 NO_SANITIZE_ADDR
@@ -542,41 +534,47 @@ slab_malloc(ulong lsz, ulong pc)
 
             ulong o = (ulong)__ockl_alisa_u32(asz);
 
-            ulong ap = 0;
+            ulong v = 0;
             if (!aid)
-                ap = AL(&cs->ap);
-            ap = first(ap);
+                v = AL(&cs->v);
+            v = first(v);
 
-            if (ap & (ulong)F_MASK) {
-                ulong p = 0;
+            if (v & (ulong)VF_MASK) {
+                ulong vv = 0;
                 if (!aid)
-                    p = AN(&cs->ap, ~(ulong)F_POISON_NEEDED);
-                p = first(p);
+                    vv = AN(&cs->v, ~(ulong)VF_POISON_NEEDED);
+                vv = first(vv);
 
-                if (p & (ulong)F_POISON_NEEDED)
+                if (vv & (ulong)VF_POISON_NEEDED)
                     poison_slab(cs, aid, active_lane_count());
                 else
                     slab_pause();
             } else {
-                ulong p = 0;
+                ulong vv = 0;
                 if (!aid)
-                    p = AA(&cs->ap, o);
-                p = first(p);
+                    vv = AA(&cs->v, o << VABSHIFT);
+                vv = first(vv);
 
-                if (!(p & (ulong)F_MASK)) {
-                    if (p + o <= (ulong)cs + SLAB_BYTES) {
-                        ret = publish_allocation(p + o - asz, (ulong)cs, pc, asz, arz, usz);
+                if (!(vv & (ulong)VF_MASK)) {
+                    ulong b = vv >> VABSHIFT;
+                    if (b + o <= SLAB_USEABLE_BYTES) {
+                        if (b + o == SLAB_USEABLE_BYTES) {
+                            ulong e = (ulong)cs;
+                            ACE(&hp->cs, &e, 0UL);
+                            AO(&cs->v, (ulong)VF_UNREADY);
+                        }
+                        ret = publish_allocation((ulong)cs + SLAB_HEADER_BYTES + b + o - asz, (ulong)cs, pc, asz, arz, usz);
                         go = 0;
                     } else {
                         if (!__ockl_activelane_u32()) {
                             ulong e = (ulong)cs;
                             ACE(&hp->cs, &e, 0UL);
-                            AO(&cs->ap, (ulong)F_UNREADY);
+                            AO(&cs->v, (ulong)VF_UNREADY);
                         }
-                        if (p + o - asz < (ulong)cs + SLAB_BYTES) {
-                            uint unused = (uint)((ulong)cs + SLAB_BYTES - (p + o - asz));
-                            uint rb = AA(&cs->rb, unused) + unused;
-                            if (rb == SLAB_BYTES - SLAB_HEADER_BYTES) {
+                        if (b + o - asz < SLAB_USEABLE_BYTES) {
+                            ulong pad = SLAB_USEABLE_BYTES - (b + o - asz);
+                            ulong vvv = AA(&cs->v, pad << VRBSHIFT) + (pad << VRBSHIFT);
+                            if (((vvv >> VRBSHIFT) & VRBMASK) == SLAB_USEABLE_BYTES) {
                                 put_free_slab(hp, cs);
                             }
                         }
