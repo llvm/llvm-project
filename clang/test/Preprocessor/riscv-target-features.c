@@ -1663,6 +1663,14 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVDOT4A8I-EXT %s
 // CHECK-ZVDOT4A8I-EXT: __riscv_zvdot4a8i 1000{{$}}
 
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_zve32x_zvzip0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVZVIP-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_zve32x_zvzip0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVZVIP-EXT %s
+// CHECK-ZVZVIP-EXT: __riscv_zvzip 1000{{$}}
+
 // RUN: %clang -target riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izicfiss1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICFISS-EXT %s
