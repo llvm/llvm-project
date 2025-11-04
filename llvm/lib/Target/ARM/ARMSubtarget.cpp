@@ -317,18 +317,23 @@ bool ARMSubtarget::isRWPI() const {
          TM.getRelocationModel() == Reloc::ROPI_RWPI;
 }
 
-bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
+bool ARMSubtarget::isGVIndirectSymbol(const TargetMachine &TM,
+                                      const GlobalValue *GV) {
   if (!TM.shouldAssumeDSOLocal(GV))
     return true;
 
   // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
   // the section that is being relocated. This means we have to use o load even
   // for GVs that are known to be local to the dso.
-  if (isTargetMachO() && TM.isPositionIndependent() &&
+  if (TM.getTargetTriple().isOSBinFormatMachO() && TM.isPositionIndependent() &&
       (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
     return true;
 
   return false;
+}
+
+bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
+  return isGVIndirectSymbol(TM, GV);
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {

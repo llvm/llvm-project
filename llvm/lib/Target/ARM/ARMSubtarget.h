@@ -464,6 +464,8 @@ public:
   }
 
   /// True if the GV will be accessed via an indirect symbol.
+  static bool isGVIndirectSymbol(const TargetMachine &TM,
+                                 const GlobalValue *GV);
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
   /// Returns the constant pool modifier needed to access the GV.
