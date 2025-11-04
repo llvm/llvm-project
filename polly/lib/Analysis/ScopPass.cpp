@@ -24,6 +24,42 @@
 using namespace llvm;
 using namespace polly;
 
+bool ScopPass::runOnRegion(Region *R, RGPassManager &RGM) {
+  S = nullptr;
+
+  if (skipRegion(*R))
+    return false;
+
+  if ((S = getAnalysis<ScopInfoRegionPass>().getScop()))
+    return runOnScop(*S);
+
+  return false;
+}
+
+void ScopPass::print(raw_ostream &OS, const Module *M) const {
+  if (S)
+    printScop(OS, *S);
+}
+
+void ScopPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<ScopInfoRegionPass>();
+
+  AU.addPreserved<AAResultsWrapperPass>();
+  AU.addPreserved<BasicAAWrapperPass>();
+  AU.addPreserved<LoopInfoWrapperPass>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
+  AU.addPreserved<GlobalsAAWrapperPass>();
+  AU.addPreserved<ScopDetectionWrapperPass>();
+  AU.addPreserved<ScalarEvolutionWrapperPass>();
+  AU.addPreserved<SCEVAAWrapperPass>();
+  AU.addPreserved<OptimizationRemarkEmitterWrapperPass>();
+  AU.addPreserved<LazyBlockFrequencyInfoPass>();
+  AU.addPreserved<LazyBranchProbabilityInfoPass>();
+  AU.addPreserved<RegionInfoPass>();
+  AU.addPreserved<ScopInfoRegionPass>();
+  AU.addPreserved<TargetTransformInfoWrapperPass>();
+}
+
 namespace polly {
 template class OwningInnerAnalysisManagerProxy<ScopAnalysisManager, Function>;
 }

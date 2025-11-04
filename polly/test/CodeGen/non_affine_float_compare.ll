@@ -1,4 +1,6 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-allow-nonaffine-branches -S -verify-dom-info < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen \
+; RUN:     -polly-allow-nonaffine-branches -S -verify-dom-info \
+; RUN:     < %s | FileCheck %s
 ;
 ;    void f(float *A) {
 ;      for (int i = 0; i < 1024; i++)
