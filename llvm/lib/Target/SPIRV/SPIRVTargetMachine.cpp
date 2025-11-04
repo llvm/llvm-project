@@ -69,7 +69,7 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 }
 
 // Pin SPIRVTargetObjectFile's vtables to this file.
-SPIRVTargetObjectFile::~SPIRVTargetObjectFile() {}
+SPIRVTargetObjectFile::~SPIRVTargetObjectFile() = default;
 
 SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,

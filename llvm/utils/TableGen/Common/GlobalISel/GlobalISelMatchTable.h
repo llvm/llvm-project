@@ -621,7 +621,7 @@ public:
   DefinedInsnVariablesMap::const_iterator defined_insn_vars_end() const {
     return InsnVariableIDs.end();
   }
-  iterator_range<typename DefinedInsnVariablesMap::const_iterator>
+  iterator_range<DefinedInsnVariablesMap::const_iterator>
   defined_insn_vars() const {
     return make_range(defined_insn_vars_begin(), defined_insn_vars_end());
   }
@@ -632,8 +632,7 @@ public:
   MutatableInsnSet::const_iterator mutatable_insns_end() const {
     return MutatableInsns.end();
   }
-  iterator_range<typename MutatableInsnSet::const_iterator>
-  mutatable_insns() const {
+  iterator_range<MutatableInsnSet::const_iterator> mutatable_insns() const {
     return make_range(mutatable_insns_begin(), mutatable_insns_end());
   }
   void reserveInsnMatcherForMutation(InstructionMatcher *InsnMatcher) {
@@ -1375,7 +1374,7 @@ class InstructionPredicateMatcher : public PredicateMatcher {
 public:
   InstructionPredicateMatcher(PredicateKind Kind, unsigned InsnVarID)
       : PredicateMatcher(Kind, InsnVarID) {}
-  ~InstructionPredicateMatcher() override {}
+  ~InstructionPredicateMatcher() override = default;
 
   /// Compare the priority of this object and B.
   ///
@@ -2319,7 +2318,7 @@ public:
 
   ActionKind getKind() const { return Kind; }
 
-  virtual ~MatchAction() {}
+  virtual ~MatchAction() = default;
 
   // Some actions may need to add extra predicates to ensure they can run.
   virtual void emitAdditionalPredicates(MatchTable &Table,

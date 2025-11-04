@@ -1171,6 +1171,27 @@ implicit none
     integer(8), intent(inout) :: address
     integer(8), value :: val
     end function
+    attributes(device) pure integer(4) function atomicaddr2(address, val)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(2), dimension(2), intent(inout) :: address
+      real(2), dimension(2), intent(in) :: val
+    end function
+  end interface
+
+  interface atomicaddvector
+    attributes(device) pure function atomicadd_r2x2(address, val) result(z)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(2), dimension(2), intent(inout) :: address
+      real(2), dimension(2), intent(in) :: val
+      real(2), dimension(2) :: z
+    end function
+
+    attributes(device) pure function atomicadd_r4x2(address, val) result(z)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(4), dimension(2), intent(inout) :: address
+      real(4), dimension(2), intent(in) :: val
+      real(4), dimension(2) :: z
+    end function
   end interface
 
   interface atomicsub
