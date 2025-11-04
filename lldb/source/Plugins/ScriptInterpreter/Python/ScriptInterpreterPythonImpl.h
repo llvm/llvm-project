@@ -99,6 +99,8 @@ public:
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 
+  lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() override;
+
   lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() override;
 
