@@ -12,7 +12,7 @@ RUN: obj2yaml %t.wasm | FileCheck %s
 RUN: wasm-ld -z stack-size=512 --stack-first --no-stack-first --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s --check-prefix=NOT-FIRST
 
-; Check that the default
+; Check that the default is no-stack-first
 RUN: wasm-ld -z stack-size=512 --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s --check-prefix=NOT-FIRST
 
