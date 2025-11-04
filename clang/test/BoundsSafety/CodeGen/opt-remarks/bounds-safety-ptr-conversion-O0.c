@@ -17,8 +17,8 @@ int main(int argc, char **argv) {
 // IR: store ptr %argv, ptr %[[ARGV_ALLOCA:[a-z0-9.]+]]
 // IR: %[[ARGV:[a-z0-9.]+]] = load ptr, ptr %[[ARGV_ALLOCA]]{{.*}}
 // IR: %[[ARGV_DEREF:[a-z0-9.]+]] = load ptr, ptr %[[ARGV]]{{.*}}
-// IR: %[[LEN_DEREF:[a-z0-9.]+]] = load i32, ptr %{{.*}}, !dbg ![[LOC_11_20:[0-9]+]]
-// IR: %[[LEN_EXT:[a-z0-9.]+]] = sext i32 %[[LEN_DEREF]] to i64, !dbg ![[LOC_11_20]]
+// IR: %[[LEN_DEREF:[a-z0-9.]+]] = load i32, ptr %{{.*}}, !dbg ![[LOC_11_33:[0-9]+]]
+// IR: %[[LEN_EXT:[a-z0-9.]+]] = sext i32 %[[LEN_DEREF]] to i64, !dbg ![[LOC_11_33]]
 // IR: icmp ule ptr %[[ARGV_DEREF]], {{.*}}, !dbg ![[LOC_11_37:[0-9]+]]
 // IR: br i1 {{.*}}, label %[[LABEL_CONT:[a-z0-9.]+]], label %[[LABEL_TRAP_RES:[a-z0-9.]+]], !dbg ![[LOC_11_37]]
 // ...
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 // IR-DAG: ![[TRAP_LOC_11_44]] = !DILocation(line: 0, scope: ![[TRAP_INFO_11_44:[0-9]+]], inlinedAt: ![[LOC_11_44]])
 // IR-DAG: ![[TRAP_INFO_11_44]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$"
 //
-// IR-DAG: ![[LOC_11_20]] = !DILocation(line: 11, column: 20
+// IR-DAG: ![[LOC_11_33]] = !DILocation(line: 11, column: 33
 
 // IR-DAG: ![[TRAP_LOC_MISSING]] = !DILocation(line: 0, scope: ![[MAIN_SCOPE:[0-9]+]])
 // IR-DAG: ![[MAIN_SCOPE]] = distinct !DISubprogram(name: "main", {{.*}} line: 9, {{.*}} scopeLine: 9
