@@ -9,7 +9,6 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror -Wsign-conversion -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <immintrin.h>
-#include "avx512-builtins.h"
 #include "builtin_test_helpers.h"
 
 __m512d test_mm512_sqrt_pd(__m512d a)
@@ -9042,25 +9041,24 @@ unsigned char test_kortest_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m5
 
 // Test constexpr handling.
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
-constexpr kortest_result
+constexpr unsigned char
 test_kortest_mask16_u8(unsigned short A, unsigned short B) {
   unsigned char all_ones{};
-  unsigned char result = _kortest_mask16_u8(A, B, &all_ones);
-  return {result, all_ones};
+  return (_kortest_mask16_u8(A, B, &all_ones) << 4) | all_ones;
 }
 
 void _kortest_mask16_u8() {
   constexpr unsigned short A1 = 0x0000;
   constexpr unsigned short B1 = 0x0000;
-  constexpr kortest_result expected_result_1{1, 0};
+  constexpr unsigned char expected_result_1 = 0x10;
   static_assert(test_kortest_mask16_u8(A1, B1) == expected_result_1);
   constexpr unsigned short A2 = 0x0000;
   constexpr unsigned short B2 = 0x8000;
-  constexpr kortest_result expected_result_2{0, 0};
+  constexpr unsigned char expected_result_2 = 0x00;
   static_assert(test_kortest_mask16_u8(A2, B2) == expected_result_2);
   constexpr unsigned short A3 = 0x0123;
   constexpr unsigned short B3 = 0xFEDC;
-  constexpr kortest_result expected_result_3{0, 1};
+  constexpr unsigned char expected_result_3 = 0x01;
   static_assert(test_kortest_mask16_u8(A3, B3) == expected_result_3);
 }
 #endif

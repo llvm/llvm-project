@@ -10,7 +10,6 @@
 
 
 #include <immintrin.h>
-#include "avx512-builtins.h"
 #include "builtin_test_helpers.h"
 
 __mmask32 test_knot_mask32(__mmask32 a) {
@@ -253,25 +252,24 @@ unsigned char test_kortest_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m5
 
 // Test constexpr handling.
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
-constexpr kortest_result
+constexpr unsigned char
 test_kortest_mask32_u8(unsigned int A, unsigned int B) {
   unsigned char all_ones{};
-  unsigned char result = _kortest_mask32_u8(A, B, &all_ones);
-  return {result, all_ones};
+  return (_kortest_mask32_u8(A, B, &all_ones) << 4) | all_ones;
 }
 
 void _kortest_mask32_u8() {
   constexpr unsigned int A1 = 0x0000'0000;
   constexpr unsigned int B1 = 0x0000'0000;
-  constexpr kortest_result expected_result_1{1, 0};
+  constexpr unsigned char expected_result_1 = 0x10;
   static_assert(test_kortest_mask32_u8(A1, B1) == expected_result_1);
   constexpr unsigned int A2 = 0x0000'0000;
   constexpr unsigned int B2 = 0x8000'0000;
-  constexpr kortest_result expected_result_2{0, 0};
+  constexpr unsigned char expected_result_2 = 0x00;
   static_assert(test_kortest_mask32_u8(A2, B2) == expected_result_2);
   constexpr unsigned int A3 = 0x0123'4567;
   constexpr unsigned int B3 = 0xFEDC'BA98;
-  constexpr kortest_result expected_result_3{0, 1};
+  constexpr unsigned char expected_result_3 = 0x01;
   static_assert(test_kortest_mask32_u8(A3, B3) == expected_result_3);
 }
 #endif
@@ -332,25 +330,24 @@ unsigned char test_kortest_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m5
 
 // Test constexpr handling.
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
-constexpr kortest_result
+constexpr unsigned char
 test_kortest_mask64_u8(unsigned long long A, unsigned long long B) {
   unsigned char all_ones{};
-  unsigned char result = _kortest_mask64_u8(A, B, &all_ones);
-  return {result, all_ones};
+  return (_kortest_mask64_u8(A, B, &all_ones) << 4) | all_ones;
 }
 
 void _kortest_mask64_u8() {
   constexpr unsigned long long A1 = 0x0000'0000'0000'0000;
   constexpr unsigned long long B1 = 0x0000'0000'0000'0000;
-  constexpr kortest_result expected_result_1{1, 0};
+  constexpr unsigned char expected_result_1 = 0x10;
   static_assert(test_kortest_mask64_u8(A1, B1) == expected_result_1);
   constexpr unsigned long long A2 = 0x0000'0000'0000'0000;
   constexpr unsigned long long B2 = 0x8000'0000'0000'0000;
-  constexpr kortest_result expected_result_2{0, 0};
+  constexpr unsigned char expected_result_2 = 0x00;
   static_assert(test_kortest_mask64_u8(A2, B2) == expected_result_2);
   constexpr unsigned long long A3 = 0x0123'4567'89AB'CDEF;
   constexpr unsigned long long B3 = 0xFEDC'BA98'7654'3210;
-  constexpr kortest_result expected_result_3{0, 1};
+  constexpr unsigned char expected_result_3 = 0x01;
   static_assert(test_kortest_mask64_u8(A3, B3) == expected_result_3);
 }
 #endif
@@ -401,29 +398,28 @@ unsigned char test_ktest_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m512
 
 // Test constexpr handling.
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
-constexpr ktest_result
+constexpr unsigned char
 test_ktest_mask32_u8(unsigned int A, unsigned int B) {
   unsigned char and_not{};
-  unsigned char result = _ktest_mask32_u8(A, B, &and_not);
-  return {result, and_not};
+  return (_ktest_mask32_u8(A, B, &and_not) << 4) | and_not;
 }
 
 void _ktest_mask32_u8() {
   constexpr unsigned int A1 = 0x0000'0000;
   constexpr unsigned int B1 = 0x0000'0000;
-  constexpr ktest_result expected_result_1{1, 1};
+  constexpr unsigned char expected_result_1 = 0x11;
   static_assert(test_ktest_mask32_u8(A1, B1) == expected_result_1);
   constexpr unsigned int A2 = 0x0000'0000;
   constexpr unsigned int B2 = 0x8000'0000;
-  constexpr ktest_result expected_result_2{1, 0};
+  constexpr unsigned char expected_result_2 = 0x10;
   static_assert(test_ktest_mask32_u8(A2, B2) == expected_result_2);
   constexpr unsigned int A3 = 0xF000'0000;
   constexpr unsigned int B3 = 0x8000'0000;
-  constexpr ktest_result expected_result_3{0, 1};
+  constexpr unsigned char expected_result_3 = 0x01;
   static_assert(test_ktest_mask32_u8(A3, B3) == expected_result_3);
   constexpr unsigned int A4 = 0x0123'4567;
   constexpr unsigned int B4 = 0x0123'4567;
-  constexpr ktest_result expected_result_4{0, 1};
+  constexpr unsigned char expected_result_4 = 0x01;
   static_assert(test_ktest_mask32_u8(A4, B4) == expected_result_4);
 }
 #endif
@@ -474,29 +470,28 @@ unsigned char test_ktest_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m512
 
 // Test constexpr handling.
 #if defined(__cplusplus) && (__cplusplus >= 201402L)
-constexpr ktest_result
+constexpr unsigned char
 test_ktest_mask64_u8(unsigned long long A, unsigned long long B) {
   unsigned char and_not{};
-  unsigned char result = _ktest_mask64_u8(A, B, &and_not);
-  return {result, and_not};
+  return (_ktest_mask64_u8(A, B, &and_not) << 4) | and_not;
 }
 
 void _ktest_mask64_u8() {
   constexpr unsigned long long A1 = 0x0000'0000'0000'0000;
   constexpr unsigned long long B1 = 0x0000'0000'0000'0000;
-  constexpr ktest_result expected_result_1{1, 1};
+  constexpr unsigned char expected_result_1 = 0x11;
   static_assert(test_ktest_mask64_u8(A1, B1) == expected_result_1);
   constexpr unsigned long long A2 = 0x0000'0000'0000'0000;
   constexpr unsigned long long B2 = 0x8000'0000'0000'0000;
-  constexpr ktest_result expected_result_2{1, 0};
+  constexpr unsigned char expected_result_2 = 0x10;
   static_assert(test_ktest_mask64_u8(A2, B2) == expected_result_2);
   constexpr unsigned long long A3 = 0xF000'0000'0000'0000;
   constexpr unsigned long long B3 = 0x8000'0000'0000'0000;
-  constexpr ktest_result expected_result_3{0, 1};
+  constexpr unsigned char expected_result_3 = 0x01;
   static_assert(test_ktest_mask64_u8(A3, B3) == expected_result_3);
   constexpr unsigned long long A4 = 0x0123'4567'89AB'CDEF;
   constexpr unsigned long long B4 = 0x0123'4567'89AB'CDEF;
-  constexpr ktest_result expected_result_4{0, 1};
+  constexpr unsigned char expected_result_4 = 0x01;
   static_assert(test_ktest_mask64_u8(A4, B4) == expected_result_4);
 }
 #endif
