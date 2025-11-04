@@ -10,10 +10,7 @@
 
 $test = comdat any
 
-declare i32 @__gxx_personality_v0(...)
-
-; Function Attrs: uwtable
-define dso_local void @test(ptr %p, i1 %arg) local_unnamed_addr #0 comdat align 2 personality ptr @__gxx_personality_v0 {
+define void @test(ptr %p, i1 %arg) {
 entry:
   br label %for.body51
 

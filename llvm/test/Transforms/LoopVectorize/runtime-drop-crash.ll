@@ -12,7 +12,7 @@ entry:
 
 loop:
   %tmp3 = phi i64 [ 0, %entry ], [ %tmp18, %loop ]
-  %tmp4 = getelementptr inbounds %struct.foo, ptr %ptr, i64 0
+  %tmp4 = getelementptr inbounds %struct.foo, ptr %ptr
   store i64 0, ptr %tmp4, align 8
   %tmp8 = add i64 1, %tmp3
   %tmp10 = getelementptr inbounds %struct.foo, ptr %ptr, i64 %tmp8
