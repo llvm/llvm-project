@@ -587,6 +587,11 @@ defm CooperativeMatrixBFloat16ComponentTypeINTEL : CapabilityOperand<6437, 0, 0,
 defm RoundToInfinityINTEL : CapabilityOperand<5582, 0, 0, [SPV_INTEL_float_controls2], []>;
 defm FloatingPointModeINTEL : CapabilityOperand<5583, 0, 0, [SPV_INTEL_float_controls2], []>;
 defm FunctionFloatControlINTEL : CapabilityOperand<5821, 0, 0, [SPV_INTEL_float_controls2], []>;
+defm KernelAttributesINTEL : CapabilityOperand<5892, 0, 0, [SPV_INTEL_kernel_attributes], [Kernel]>;
+// TODO-SPIRV: add these once they are used / tested.
+// defm FPGAKernelAttributesINTEL : CapabilityOperand<5897, 0, 0, [SPV_INTEL_kernel_attributes], [Kernel]>;
+// defm FPGAKernelAttributesv2INTEL : CapabilityOperand<6161, 0, 0, [SPV_INTEL_kernel_attributes], [Kernel]>;
+// END TODO-SPIRV
 defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composites], []>;
 defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
 defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory_access_aliasing], []>;
@@ -805,6 +810,15 @@ defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
 defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
 defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
 defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
+defm MaxWorkgroupSizeINTEL : ExecutionModeOperand<5893, [KernelAttributesINTEL]>;
+// TODO-SPIRV: Add the following once they are used / tested.
+// defm MaxWorkDimINTEL : ExecutionModeOperand<5894, [KernelAttributesINTEL]>;
+// defm NoGlobalOffsetINTEL : ExecutionModeOperand<5895, [KernelAttributesINTEL]>;
+// defm NumSIMDWorkitemsINTEL : ExecutionModeOperand<5896, [FPGAKernelAttributesINTEL]>;
+// defm SchedulerTargetFmaxMhzINTEL : ExecutionModeOperand<5903, [FPGAKernelAttributesINTEL]>;
+// defm StreamingInterfaceINTEL : ExecutionModeOperand<6154, [FPGAKernelAttributesv2INTEL]>;
+// defm RegisterMapInterfaceINTEL : ExecutionModeOperand<6160, [FPGAKernelAttributesv2INTEL]>;
+// END TODO-SPIRV
 defm FPFastMathDefault : ExecutionModeOperand<6028, [FloatControls2]>;
 defm MaximallyReconvergesKHR : ExecutionModeOperand<6023, [Shader]>;
 
@@ -1919,7 +1933,7 @@ defm GenericCastToPtr :  SpecConstantOpOperandsOperand<122, [], [Kernel]>;
 defm PtrCastToGeneric :  SpecConstantOpOperandsOperand<121, [], [Kernel]>;
 defm Bitcast :  SpecConstantOpOperandsOperand<124, [], []>;
 defm QuantizeToF16 :  SpecConstantOpOperandsOperand<116, [], [Shader]>;
-// Arithmetic 
+// Arithmetic
 defm SNegate :  SpecConstantOpOperandsOperand<126, [], []>;
 defm Not :  SpecConstantOpOperandsOperand<200, [], []>;
 defm IAdd :  SpecConstantOpOperandsOperand<128, [], []>;

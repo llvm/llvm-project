@@ -190,6 +190,8 @@ struct IntrinsicLibrary {
   mlir::Value genAtomicAdd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAtomicAddR2(mlir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genAtomicAddVector(mlir::Type,
+                                        llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtomicAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAtomicCas(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
