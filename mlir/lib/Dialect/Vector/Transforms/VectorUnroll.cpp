@@ -834,11 +834,100 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+/// Takes a 1 dimensional `vector.to_element` op and attempts to change it to
+/// the target shape.
+///
+/// ```
+/// // In SPIR-V's default environment vector of size 8
+/// // are not allowed.
+/// %elements:8 = vector.to_elements %v : vector<8xf32>
+///
+/// ===>
+///
+/// %v_0_to_3 = vector.extract %v[0] : vector<4xf32> from vector<8xf32>
+/// %v_4_to_7 = vector.extract %v[4] : vector<4xf32> from vector<8xf32>
+/// %elements_0:4 = vector.to_elements %v_0_to_3 : vector<4xf32>
+/// %elements_1:4 = vector.to_elements %v_4_to_7 : vector<4xf32>
+/// ```
+///
+/// This pattern may fail if the rank is not divisible by to a native shape
+/// or if the rank is already in the target shape and therefore it may be
+/// skipped.
+struct ToElementsToTargetShape final
+    : public OpRewritePattern<vector::ToElementsOp> {
+  ToElementsToTargetShape(MLIRContext *context,
+                          const vector::UnrollVectorOptions &options,
+                          PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::ToElementsOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::ToElementsOp op,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, op);
+    if (!targetShape)
+      return failure();
+
+    // We have
+    // source_rank = N * target_rank
+    int64_t source_rank = op.getSourceVectorType().getShape().front();
+    int64_t target_rank = targetShape->front();
+    int64_t N = source_rank / target_rank;
+
+    // Transformation where
+    // s = source_rank and
+    // t = target_rank
+    // ```
+    // %e:s = vector.to_elements %v : vector<sxf32>
+    //
+    // ===>
+    //
+    // // N vector.extract_strided_slice of size t
+    // %v0 = vector.extract_strided_slice %v
+    //   {offsets = [0*t], sizes = [t], strides = [1]}
+    //   : vector<txf32> from vector<sxf32>
+    // %v1 = vector.extract_strided_slice %v
+    //   {offsets = [1*t], sizes = [t], strides = [1]}
+    //   : vector<txf32> from vector<sxf32>
+    // ...
+    // %vNminus1 = vector.extract_strided_slice $v
+    //   {offsets = [(N-1)*t], sizes = [t], strides = [1]}
+    //   : vector<txf32> from vector<sxf32>
+    //
+    // // N vector.to_elements of size t vectors.
+    // %e0:t = vector.to_elements %v0 : vector<txf32>
+    // %e1:t = vector.to_elements %v1 : vector<txf32>
+    // ...
+    // %eNminus1:t = vector.to_elements %vNminus1 : vector<txf32>
+    // ```
+    SmallVector<Value> subVectors;
+    SmallVector<int64_t> strides(targetShape->size(), 1);
+    for (int64_t i = 0; i < N; i++) {
+      SmallVector<int64_t> elementOffsets = {i * target_rank};
+      Value subVector = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          op.getLoc(), op.getSource(), elementOffsets, *targetShape, strides);
+      subVectors.push_back(subVector);
+    }
+
+    SmallVector<Value> elements;
+    for (const Value subVector : subVectors) {
+      auto elementsOp =
+          vector::ToElementsOp::create(rewriter, op.getLoc(), subVector);
+      llvm::append_range(elements, elementsOp.getResults());
+    }
+
+    rewriter.replaceOp(op, elements);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 /// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
 /// outermost dimension of the operand. For example:
 ///
 /// ```
-/// %0:4 = vector.to_elements %v : vector<2x2xf32>
+/// %0:8 = vector.to_elements %v : vector<2x2x2xf32>
 ///
 /// ==>
 ///
@@ -865,6 +954,7 @@ struct UnrollToElements final : public OpRewritePattern<vector::ToElementsOp> {
     FailureOr<SmallVector<Value>> result =
         vector::unrollVectorValue(source, rewriter);
     if (failed(result)) {
+      // Only fails if operand is 1-dimensional.
       return failure();
     }
     SmallVector<Value> vectors = *result;
@@ -1013,8 +1103,8 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollReductionPattern, UnrollMultiReductionPattern,
                UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
                UnrollStorePattern, UnrollBroadcastPattern, UnrollFromElements,
-               UnrollToElements, UnrollStepPattern>(patterns.getContext(),
-                                                    options, benefit);
+               UnrollToElements, UnrollStepPattern, ToElementsToTargetShape>(
+      patterns.getContext(), options, benefit);
 }
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(

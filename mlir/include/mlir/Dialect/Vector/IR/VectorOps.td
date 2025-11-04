@@ -762,6 +762,7 @@ def Vector_FMAOp :
 
 def Vector_ToElementsOp : Vector_Op<"to_elements", [
     InferTypeOpAdaptor, Pure,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     ShapedTypeMatchesElementCountAndTypes<"source", "elements">]> {
   let summary = "operation that decomposes a vector into all its scalar elements";
   let description = [{
@@ -808,6 +809,13 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
   let assemblyFormat = "$source attr-dict `:` type($source)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let extraClassDeclaration = [{
+
+    VectorType getSourceVectorType() {
+      return ::llvm::cast<VectorType>(getSource().getType());
+    }
+
+  }];
 }
 
 def Vector_FromElementsOp : Vector_Op<"from_elements", [

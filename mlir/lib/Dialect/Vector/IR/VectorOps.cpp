@@ -2377,6 +2377,9 @@ static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
 //===----------------------------------------------------------------------===//
 // ToElementsOp
 //===----------------------------------------------------------------------===//
+std::optional<SmallVector<int64_t, 4>> ToElementsOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getSourceVectorType().getShape());
+}
 
 /// Returns true if all the `operands` are defined by `defOp`.
 /// Otherwise, returns false.
