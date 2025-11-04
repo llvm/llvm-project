@@ -105,7 +105,7 @@ void ExecutableFileMemoryManager::updateSection(
     const jitlink::Section &JLSection, uint8_t *Contents, size_t Size,
     size_t Alignment) {
       #define DEBUG_TYPE "bolt-sections"
-  LLVM_DEBUG(dbgs() << "[sect] updateSection " << S.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "[sect] updateSection " << JLSection.getName() << "\n");
 
   auto SectionID = JLSection.getName();
   auto SectionName = sectionName(JLSection, BC);
