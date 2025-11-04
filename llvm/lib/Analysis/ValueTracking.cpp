@@ -10341,3 +10341,55 @@ const Value *llvm::stripNullTest(const Value *V) {
 Value *llvm::stripNullTest(Value *V) {
   return const_cast<Value *>(stripNullTest(const_cast<const Value *>(V)));
 }
+
+bool llvm::collectPossibleValues(const Value *V,
+                                 SmallPtrSetImpl<const Constant *> &Constants,
+                                 unsigned MaxCount, bool AllowUndefOrPoison) {
+  SmallPtrSet<const Instruction *, 8> Visited;
+  SmallVector<const Instruction *, 8> Worklist;
+  auto Push = [&](const Value *V) -> bool {
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (!AllowUndefOrPoison && !isGuaranteedNotToBeUndefOrPoison(C))
+        return false;
+      // Check existence first to avoid unnecessary allocations.
+      if (Constants.contains(C))
+        return true;
+      if (Constants.size() == MaxCount)
+        return false;
+      Constants.insert(C);
+      return true;
+    }
+
+    if (auto *Inst = dyn_cast<Instruction>(V)) {
+      if (Visited.insert(Inst).second)
+        Worklist.push_back(Inst);
+      return true;
+    }
+    return false;
+  };
+  if (!Push(V))
+    return false;
+  while (!Worklist.empty()) {
+    const Instruction *CurInst = Worklist.pop_back_val();
+    switch (CurInst->getOpcode()) {
+    case Instruction::Select:
+      if (!Push(CurInst->getOperand(1)))
+        return false;
+      if (!Push(CurInst->getOperand(2)))
+        return false;
+      break;
+    case Instruction::PHI:
+      for (Value *IncomingValue : cast<PHINode>(CurInst)->incoming_values()) {
+        // Fast path for recurrence PHI.
+        if (IncomingValue == CurInst)
+          continue;
+        if (!Push(IncomingValue))
+          return false;
+      }
+      break;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
