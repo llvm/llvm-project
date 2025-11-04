@@ -16,47 +16,13 @@
 
 using namespace llvm;
 
-/// Obtain a reference to the global wavefront-size dependent constants
-/// based on \p wavefrontSize.
-const GCNLaneMaskConstants *
-GCNLaneMaskUtils::getConsts(unsigned WavefrontSize) {
-  static const GCNLaneMaskConstants Wave32 = {
-      AMDGPU::EXEC_LO,    AMDGPU::VCC_LO,         &AMDGPU::SReg_32RegClass,
-      AMDGPU::S_MOV_B32,  AMDGPU::S_MOV_B32_term, AMDGPU::S_AND_B32,
-      AMDGPU::S_OR_B32,   AMDGPU::S_XOR_B32,      AMDGPU::S_ANDN2_B32,
-      AMDGPU::S_ORN2_B32, AMDGPU::S_CSELECT_B32,
-  };
-  static const GCNLaneMaskConstants Wave64 = {
-      AMDGPU::EXEC,
-      AMDGPU::VCC,
-      &AMDGPU::SReg_64RegClass,
-      AMDGPU::S_MOV_B64,
-      AMDGPU::S_MOV_B64_term,
-      AMDGPU::S_AND_B64,
-      AMDGPU::S_OR_B64,
-      AMDGPU::S_XOR_B64,
-      AMDGPU::S_ANDN2_B64,
-      AMDGPU::S_ORN2_B64,
-      AMDGPU::S_CSELECT_B64,
-  };
-  assert(WavefrontSize == 32 || WavefrontSize == 64);
-  return WavefrontSize == 32 ? &Wave32 : &Wave64;
-}
-
-/// Obtain a reference to the global wavefront-size dependent constants
-/// based on the wavefront-size of \p function.
-const GCNLaneMaskConstants *GCNLaneMaskUtils::getConsts(MachineFunction &MF) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  return getConsts(ST.getWavefrontSize());
-}
-
 /// Check whether the register could be a lane-mask register.
 ///
 /// It does not distinguish between lane-masks and scalar registers that happen
 /// to have the right bitsize.
 bool GCNLaneMaskUtils::maybeLaneMask(Register Reg) const {
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   return TII->getRegisterInfo().isSGPRReg(MRI, Reg) &&
          TII->getRegisterInfo().getRegSizeInBits(Reg, MRI) ==
@@ -66,7 +32,7 @@ bool GCNLaneMaskUtils::maybeLaneMask(Register Reg) const {
 /// Determine whether the lane-mask register \p Reg is a wave-wide constant.
 /// If so, the value is stored in \p Val.
 bool GCNLaneMaskUtils::isConstantLaneMask(Register Reg, bool &Val) const {
-  MachineRegisterInfo &MRI = MF->getRegInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   const MachineInstr *MI;
   for (;;) {
@@ -90,7 +56,7 @@ bool GCNLaneMaskUtils::isConstantLaneMask(Register Reg, bool &Val) const {
       return false;
   }
 
-  if (MI->getOpcode() != Constants->OpMov)
+  if (MI->getOpcode() != LMC.MovOpc)
     return false;
 
   if (!MI->getOperand(1).isImm())
@@ -111,8 +77,8 @@ bool GCNLaneMaskUtils::isConstantLaneMask(Register Reg, bool &Val) const {
 
 /// Create a virtual lanemask register.
 Register GCNLaneMaskUtils::createLaneMaskReg() const {
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  return MRI.createVirtualRegister(Constants->RegClass);
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  return MRI.createVirtualRegister(LMC.LaneMaskRC);
 }
 
 /// Insert the moral equivalent of
@@ -140,7 +106,7 @@ void GCNLaneMaskUtils::buildMergeLaneMasks(MachineBasicBlock &MBB,
                                            Register PrevReg, Register CurReg,
                                            GCNLaneMaskAnalysis *LMA,
                                            bool accumulating) const {
-  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   bool PrevVal = false;
   bool PrevConstant = !PrevReg || isConstantLaneMask(PrevReg, PrevVal);
@@ -155,10 +121,10 @@ void GCNLaneMaskUtils::buildMergeLaneMasks(MachineBasicBlock &MBB,
     } else if (CurVal) {
       // If PrevReg is undef, prefer to propagate a full constant.
       BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg)
-          .addReg(PrevReg ? Constants->RegExec : CurReg);
+          .addReg(PrevReg ? LMC.ExecReg : CurReg);
     } else {
-      BuildMI(MBB, I, DL, TII->get(Constants->OpXor), DstReg)
-          .addReg(Constants->RegExec)
+      BuildMI(MBB, I, DL, TII->get(LMC.XorOpc), DstReg)
+          .addReg(LMC.ExecReg)
           .addImm(-1);
     }
     return;
@@ -174,9 +140,9 @@ void GCNLaneMaskUtils::buildMergeLaneMasks(MachineBasicBlock &MBB,
     } else {
       PrevMaskedReg = createLaneMaskReg();
       PrevMaskedBuilt =
-          BuildMI(MBB, I, DL, TII->get(Constants->OpAndN2), PrevMaskedReg)
+          BuildMI(MBB, I, DL, TII->get(LMC.AndN2Opc), PrevMaskedReg)
               .addReg(PrevReg)
-              .addReg(Constants->RegExec);
+              .addReg(LMC.ExecReg);
     }
   }
   if (!CurConstant) {
@@ -186,9 +152,9 @@ void GCNLaneMaskUtils::buildMergeLaneMasks(MachineBasicBlock &MBB,
     } else {
       CurMaskedReg = createLaneMaskReg();
       CurMaskedBuilt =
-          BuildMI(MBB, I, DL, TII->get(Constants->OpAnd), CurMaskedReg)
+          BuildMI(MBB, I, DL, TII->get(LMC.AndOpc), CurMaskedReg)
               .addReg(CurReg)
-              .addReg(Constants->RegExec);
+              .addReg(LMC.ExecReg);
     }
   }
 
@@ -208,13 +174,13 @@ void GCNLaneMaskUtils::buildMergeLaneMasks(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(PrevMaskedReg);
     }
   } else if (PrevConstant && PrevVal) {
-    BuildMI(MBB, I, DL, TII->get(Constants->OpOrN2), DstReg)
+    BuildMI(MBB, I, DL, TII->get(LMC.OrN2Opc), DstReg)
         .addReg(CurMaskedReg)
-        .addReg(Constants->RegExec);
+        .addReg(LMC.ExecReg);
   } else {
-    BuildMI(MBB, I, DL, TII->get(Constants->OpOr), DstReg)
+    BuildMI(MBB, I, DL, TII->get(LMC.OrOpc), DstReg)
         .addReg(PrevMaskedReg)
-        .addReg(CurMaskedReg ? CurMaskedReg : Constants->RegExec);
+        .addReg(CurMaskedReg ? CurMaskedReg : LMC.ExecReg);
   }
 }
 
@@ -226,10 +192,11 @@ bool GCNLaneMaskAnalysis::isSubsetOfExec(Register Reg,
                                          unsigned RemainingDepth) {
   MachineRegisterInfo &MRI = LMU.function()->getRegInfo();
   MachineInstr *DefInstr = nullptr;
+  const AMDGPU::LaneMaskConstants &LMC = LMU.getLaneMaskConsts();
 
   for (;;) {
     if (!Register::isVirtualRegister(Reg)) {
-      if (Reg == LMU.consts().RegExec &&
+      if (Reg == LMC.ExecReg &&
           (!DefInstr || DefInstr->getParent() == &UseBlock))
         return true;
       return false;
@@ -241,7 +208,7 @@ bool GCNLaneMaskAnalysis::isSubsetOfExec(Register Reg,
       continue;
     }
 
-    if (DefInstr->getOpcode() == LMU.consts().OpMov) {
+    if (DefInstr->getOpcode() == LMC.MovOpc) {
       if (DefInstr->getOperand(1).isImm() &&
           DefInstr->getOperand(1).getImm() == 0)
         return true;
@@ -268,11 +235,11 @@ bool GCNLaneMaskAnalysis::isSubsetOfExec(Register Reg,
   if (!RemainingDepth--)
     return false;
 
-  bool LikeOr = DefInstr->getOpcode() == LMU.consts().OpOr ||
-                DefInstr->getOpcode() == LMU.consts().OpXor ||
-                DefInstr->getOpcode() == LMU.consts().OpCSelect;
-  bool IsAnd = DefInstr->getOpcode() == LMU.consts().OpAnd;
-  bool IsAndN2 = DefInstr->getOpcode() == LMU.consts().OpAndN2;
+  bool LikeOr = DefInstr->getOpcode() == LMC.OrOpc ||
+                DefInstr->getOpcode() == LMC.XorOpc ||
+                DefInstr->getOpcode() == LMC.CSelectOpc;
+  bool IsAnd = DefInstr->getOpcode() == LMC.AndOpc;
+  bool IsAndN2 = DefInstr->getOpcode() == LMC.AndN2Opc;
   if ((LikeOr || IsAnd || IsAndN2) &&
       (DefInstr->getOperand(1).isReg() && DefInstr->getOperand(2).isReg())) {
     bool FirstIsSubset = isSubsetOfExec(DefInstr->getOperand(1).getReg(),
@@ -301,7 +268,7 @@ bool GCNLaneMaskAnalysis::isSubsetOfExec(Register Reg,
 void GCNLaneMaskUpdater::init(Register Reg) {
   Processed = false;
   Blocks.clear();
-  //SSAUpdater.Initialize(LMU.consts().RegClass);
+  //SSAUpdater.Initialize(LMU.getLaneMaskConsts().LaneMaskRC);
   SSAUpdater.Initialize(Reg);
 }
 
@@ -451,7 +418,7 @@ void GCNLaneMaskUpdater::process() {
   // Prepare an all-zero value for the default and reset in accumulating mode.
   if (Accumulating && !ZeroReg) {
     ZeroReg = LMU.createLaneMaskReg();
-    BuildMI(Entry, Entry.getFirstTerminator(), {}, TII->get(LMU.consts().OpMov),
+    BuildMI(Entry, Entry.getFirstTerminator(), {}, TII->get(LMU.getLaneMaskConsts().MovOpc),
             ZeroReg)
         .addImm(0);
   }

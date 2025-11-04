@@ -36,10 +36,12 @@ public:
   const unsigned MovTermOpc;
   const unsigned OrOpc;
   const unsigned OrTermOpc;
+  const unsigned OrN2Opc;
   const unsigned OrSaveExecOpc;
   const unsigned XorOpc;
   const unsigned XorTermOpc;
   const unsigned WQMOpc;
+  const TargetRegisterClass *LaneMaskRC;
 
   constexpr LaneMaskConstants(bool IsWave32)
       : ExecReg(IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC),
@@ -62,11 +64,13 @@ public:
         MovTermOpc(IsWave32 ? AMDGPU::S_MOV_B32_term : AMDGPU::S_MOV_B64_term),
         OrOpc(IsWave32 ? AMDGPU::S_OR_B32 : AMDGPU::S_OR_B64),
         OrTermOpc(IsWave32 ? AMDGPU::S_OR_B32_term : AMDGPU::S_OR_B64_term),
+        OrN2Opc(IsWave32 ? AMDGPU::S_ORN2_B32 : AMDGPU::S_ORN2_B64),
         OrSaveExecOpc(IsWave32 ? AMDGPU::S_OR_SAVEEXEC_B32
                                : AMDGPU::S_OR_SAVEEXEC_B64),
         XorOpc(IsWave32 ? AMDGPU::S_XOR_B32 : AMDGPU::S_XOR_B64),
         XorTermOpc(IsWave32 ? AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term),
-        WQMOpc(IsWave32 ? AMDGPU::S_WQM_B32 : AMDGPU::S_WQM_B64) {}
+        WQMOpc(IsWave32 ? AMDGPU::S_WQM_B32 : AMDGPU::S_WQM_B64),
+        LaneMaskRC(IsWave32 ? &AMDGPU::SReg_32RegClass : &AMDGPU::SReg_64RegClass) {}
 
   static inline const LaneMaskConstants &get(const GCNSubtarget &ST);
 };
