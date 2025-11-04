@@ -1530,20 +1530,20 @@ void AArch64EpilogueEmitter::emitEpilogue() {
         (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) ? AArch64::FP
                                                               : AArch64::SP;
     if (SVECalleeSavesSize && BaseForSVEDealloc == AArch64::FP) {
-      // The offset from the frame-pointer to the start of the ZPR saves.
-      StackOffset FPOffsetZPR =
-          -SVECalleeSavesSize - PPR.LocalsSize -
-          StackOffset::getFixed(AFI->getCalleeSaveBaseToFrameRecordOffset());
-      // The offset from the frame-pointer to the start of the PPR saves.
-      StackOffset FPOffsetPPR = -PPR.CalleeSavesSize;
-
       if (ZPR.CalleeSavesSize || SVELayout != SVEStackLayout::Split) {
+        // The offset from the frame-pointer to the start of the ZPR saves.
+        StackOffset FPOffsetZPR =
+            -SVECalleeSavesSize - PPR.LocalsSize -
+            StackOffset::getFixed(AFI->getCalleeSaveBaseToFrameRecordOffset());
         // Deallocate the stack space space by moving the SP to the start of the
         // ZPR/PPR callee-save area.
         moveSPBelowFP(ZPRRange.Begin, FPOffsetZPR);
       }
-
+      // With split SVE, the predicates are stored in a separate area above the
+      // ZPR saves, so we must adjust the stack to the start of the PPRs.
       if (PPR.CalleeSavesSize && SVELayout == SVEStackLayout::Split) {
+        // The offset from the frame-pointer to the start of the PPR saves.
+        StackOffset FPOffsetPPR = -PPR.CalleeSavesSize;
         // Move to the start of the PPR area.
         assert(!FPOffsetPPR.getFixed() && "expected only scalable offset");
         emitFrameOffset(MBB, ZPRRange.End, DL, AArch64::SP, AArch64::FP,

@@ -794,6 +794,8 @@ define void @zpr_and_ppr_local_stack_probing(<vscale x 16 x i1> %pred, <vscale x
 }
 
 ; Only PPR callee-saves + a VLA
+; Expect: No hazard padding. Frame pointer (x29), p4-p6 callee saves allocated
+; with `addvl #-1`, PPR saves restored using frame pointer `addvl sp, x29, #-1`.
 define aarch64_sve_vector_pcs void @only_ppr_csr_vla(i64 %n) {
 ; CHECK-LABEL: only_ppr_csr_vla:
 ; CHECK:       // %bb.0:
@@ -832,6 +834,8 @@ define aarch64_sve_vector_pcs void @only_ppr_csr_vla(i64 %n) {
 }
 
 ; Only ZPR callee-saves + a VLA
+; Expect: Hazard padding, Frame pointer (x29), z8-z10 callee saves allocated
+; with `addvl #-3`. ZPR saves restored from `FP - 1024 + addvl #-3`.
 define aarch64_sve_vector_pcs void @only_zpr_csr_vla(i64 %n) {
 ; CHECK-LABEL: only_zpr_csr_vla:
 ; CHECK:       // %bb.0:
@@ -879,6 +883,10 @@ define aarch64_sve_vector_pcs void @only_zpr_csr_vla(i64 %n) {
 }
 
 ; PPR+ZPR callee-saves + a VLA
+; Expect: Hazard padding, Frame pointer (x29), PPR (p4-p6) and ZPR (z8-z10)
+; callee-saves allocated separately, with hazard padding of 1024 between the
+; areas. ZPR callee saves restored by `FP - 1024 + addvl #-4`, PPR callee saves
+; restored by `FP + addvl #-1`.
 define aarch64_sve_vector_pcs void @zpr_ppr_csr_vla(i64 %n) {
 ; CHECK-LABEL: zpr_ppr_csr_vla:
 ; CHECK:       // %bb.0:
@@ -931,6 +939,10 @@ define aarch64_sve_vector_pcs void @zpr_ppr_csr_vla(i64 %n) {
 }
 
 ; Only PPR callee-saves (and ZPR/PPR locals) + a VLA
+; Expect: Hazard padding, Frame pointer (x29), PPR (p4-p6) callee-saves, with
+; hazard padding after the PPR callee saves (1024) and after the FPR local area
+; (1024) -- coeleased to 2048. Only PPRs restored by moving the SP to
+; `FP + addvl #-1`.
 define void @sve_locals_only_ppr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vscale x 16 x i8> %vector) {
 ; CHECK-LABEL: sve_locals_only_ppr_csr_vla:
 ; CHECK:       // %bb.0:
@@ -978,6 +990,9 @@ define void @sve_locals_only_ppr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vsca
 }
 
 ; Only ZPR callee-saves (and ZPR/PPR locals) + a VLA
+; Expect: Hazard padding, Frame pointer (x29), ZPR (z8-z10) callee-saves, with
+; hazard padding before the ZPR callee saves (1024) and after the ZPR local area
+; (1024). Only ZPRs restored by moving the SP to `FP - 1024 + addvl #-4`.
 define void @sve_locals_only_zpr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vscale x 16 x i8> %vector) {
 ; CHECK-LABEL: sve_locals_only_zpr_csr_vla:
 ; CHECK:       // %bb.0:
@@ -1029,6 +1044,10 @@ define void @sve_locals_only_zpr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vsca
 }
 
 ; PPR+ZPR callee-saves (and ZPR/PPR locals) + a VLA
+; Expect: Hazard padding, Frame pointer (x29), PPR (p4-p6) and ZPR (z8-z10)
+; callee-saves, with hazard padding before the ZPR callee saves (1024) and after
+; the ZPR local area (1024). ZPRs restored by moving the SP to
+; `FP - 1024 + addvl #-5`, PPRs restored by moving SP to `FP + addvl #-1`.
 define void @sve_locals_zpr_ppr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vscale x 16 x i8> %vector) {
 ; CHECK-LABEL: sve_locals_zpr_ppr_csr_vla:
 ; CHECK:       // %bb.0:
