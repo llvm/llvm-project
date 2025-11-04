@@ -14,7 +14,6 @@
 #include "llvm/IR/PassManager.h"
 
 namespace polly {
-class IslAstInfo;
 
 enum VectorizerChoice {
   VECTORIZER_NONE,
@@ -34,8 +33,6 @@ struct CodeGenerationPass final : PassInfoMixin<CodeGenerationPass> {
 };
 
 extern bool PerfMonitoring;
-
-bool runCodeGeneration(Scop &S, llvm::RegionInfo &RI, IslAstInfo &AI);
 } // namespace polly
 
 #endif // POLLY_CODEGENERATION_H

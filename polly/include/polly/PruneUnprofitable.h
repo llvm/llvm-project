@@ -15,7 +15,13 @@
 
 #include "polly/ScopPass.h"
 
+namespace llvm {
+class Pass;
+class PassRegistry;
+} // namespace llvm
+
 namespace polly {
+llvm::Pass *createPruneUnprofitableWrapperPass();
 
 struct PruneUnprofitablePass final
     : llvm::PassInfoMixin<PruneUnprofitablePass> {
@@ -24,8 +30,10 @@ struct PruneUnprofitablePass final
   llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
                               ScopStandardAnalysisResults &SAR, SPMUpdater &U);
 };
-
-bool runPruneUnprofitable(Scop &S);
 } // namespace polly
+
+namespace llvm {
+void initializePruneUnprofitableWrapperPassPass(PassRegistry &);
+}
 
 #endif // POLLY_PRUNEUNPROFITABLE_H
