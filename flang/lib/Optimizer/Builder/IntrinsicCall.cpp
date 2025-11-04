@@ -3186,12 +3186,10 @@ IntrinsicLibrary::genAtomicAddVector(mlir::Type resultType,
   if (mlir::isa<fir::BaseBoxType>(a.getType())) {
     a = fir::BoxAddrOp::create(builder, loc, a);
   }
-  auto eleTy = fir::unwrapSequenceType(resultType);
-  auto loc = builder.getUnknownLoc();
   auto i32Ty = builder.getI32Type();
-  auto vecTy = mlir::VectorType::get({2}, eleTy);
+  auto vecTy = mlir::VectorType::get({2}, resultType);
   mlir::Type idxTy = builder.getIndexType();
-  auto refTy = fir::ReferenceType::get(eleTy);
+  auto refTy = fir::ReferenceType::get(resultType);
   auto zero = builder.createIntegerConstant(loc, idxTy, 0);
   auto one = builder.createIntegerConstant(loc, idxTy, 1);
   auto v1Coord = fir::CoordinateOp::create(builder, loc, refTy,
