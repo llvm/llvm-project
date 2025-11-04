@@ -136,12 +136,12 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     // because we know the type can never be completed so there's no reason
     // to allow it.
     //
-    // Exception: In GNU mode, void has an implicit size of 1 byte for pointer
-    // arithmetic. Therefore, counted_by on void* is allowed as a GNU extension
+    // Exception: void has an implicit size of 1 byte for pointer arithmetic
+    // (following GNU convention). Therefore, counted_by on void* is allowed
     // and behaves equivalently to sized_by (treating the count as bytes).
-    bool IsVoidPtrInGNUMode = PointeeTy->isVoidType() && getLangOpts().GNUMode;
-    if (IsVoidPtrInGNUMode) {
-      // Emit a warning that this is a GNU extension
+    bool IsVoidPtr = PointeeTy->isVoidType();
+    if (IsVoidPtr) {
+      // Emit a warning that this is a GNU extension.
       Diag(FD->getBeginLoc(), diag::ext_gnu_counted_by_void_ptr) << Kind;
       Diag(FD->getBeginLoc(), diag::note_gnu_counted_by_void_ptr_use_sized_by)
           << Kind;
