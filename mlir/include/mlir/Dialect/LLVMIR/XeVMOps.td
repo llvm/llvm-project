@@ -450,15 +450,8 @@ def XeVM_PrefetchOp : XeVM_Op<"prefetch"> {
       * `cache_control` - specify caching options
   }];
 
-  // The ptr argument is labeled with a side effect to enforce a
-  // relative ordering of the prefetch and other memory operations targeting
-  // that memory stream.
-  // We need it to be a write otherwise the operation would be trivially removed
-  // since it does not produce a value.
-
-  let arguments = (ins Arg<AnyTypeOf<[LLVM_PointerInAddressSpace<1>,
-                                      LLVM_PointerInAddressSpace<4>]>,
-                           "", [MemWrite]>:$ptr,
+  let arguments = (ins AnyTypeOf<[LLVM_PointerInAddressSpace<1>,
+                                  LLVM_PointerInAddressSpace<4>]>:$ptr,
       OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control);
 
   let assemblyFormat = [{
@@ -499,16 +492,9 @@ def XeVM_BlockPrefetch2dOp : XeVM_Op<"blockprefetch2d"> {
     ```
   }];
 
-  // The ptr argument is labeled with a side effect to enforce a
-  // relative ordering of the prefetch and other memory operations targeting
-  // that memory stream.
-  // We need it to be a write otherwise the operation would be trivially removed
-  // since it does not produce a value.
-
-  let arguments = (ins Arg<LLVM_AnyPointer, "", [MemWrite]>:$ptr,
-      I32:$base_width, I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
-      I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
-      I32Attr:$v_blocks,
+  let arguments = (ins LLVM_AnyPointer:$ptr, I32:$base_width, I32:$base_height,
+      I32:$base_pitch, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
+      I32Attr:$tile_width, I32Attr:$tile_height, I32Attr:$v_blocks,
       OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control);
 
   let assemblyFormat = [{
