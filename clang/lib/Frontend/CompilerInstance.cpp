@@ -1058,7 +1058,11 @@ void CompilerInstance::printDiagnosticStats() {
       if (!getLangOpts().CUDAIsDevice) {
         OS << " when compiling for host";
       } else {
-        OS << " when compiling for " << getTargetOpts().CPU;
+        OS << " when compiling for ";
+        if (getTargetOpts().CPU.empty())
+          OS << getTarget().getTriple().str();//"SPIR-V";
+        else
+          OS << getTargetOpts().CPU;
       }
     }
     OS << ".\n";
