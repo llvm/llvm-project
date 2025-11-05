@@ -622,17 +622,17 @@ void ABISysV_loongarch::Terminate() {
 static uint32_t GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Cases("ra", "r1", LLDB_REGNUM_GENERIC_RA)
-      .Cases("sp", "r3", LLDB_REGNUM_GENERIC_SP)
-      .Cases("fp", "r22", LLDB_REGNUM_GENERIC_FP)
-      .Cases("a0", "r4", LLDB_REGNUM_GENERIC_ARG1)
-      .Cases("a1", "r5", LLDB_REGNUM_GENERIC_ARG2)
-      .Cases("a2", "r6", LLDB_REGNUM_GENERIC_ARG3)
-      .Cases("a3", "r7", LLDB_REGNUM_GENERIC_ARG4)
-      .Cases("a4", "r8", LLDB_REGNUM_GENERIC_ARG5)
-      .Cases("a5", "r9", LLDB_REGNUM_GENERIC_ARG6)
-      .Cases("a6", "r10", LLDB_REGNUM_GENERIC_ARG7)
-      .Cases("a7", "r11", LLDB_REGNUM_GENERIC_ARG8)
+      .Cases({"ra", "r1"}, LLDB_REGNUM_GENERIC_RA)
+      .Cases({"sp", "r3"}, LLDB_REGNUM_GENERIC_SP)
+      .Cases({"fp", "r22"}, LLDB_REGNUM_GENERIC_FP)
+      .Cases({"a0", "r4"}, LLDB_REGNUM_GENERIC_ARG1)
+      .Cases({"a1", "r5"}, LLDB_REGNUM_GENERIC_ARG2)
+      .Cases({"a2", "r6"}, LLDB_REGNUM_GENERIC_ARG3)
+      .Cases({"a3", "r7"}, LLDB_REGNUM_GENERIC_ARG4)
+      .Cases({"a4", "r8"}, LLDB_REGNUM_GENERIC_ARG5)
+      .Cases({"a5", "r9"}, LLDB_REGNUM_GENERIC_ARG6)
+      .Cases({"a6", "r10"}, LLDB_REGNUM_GENERIC_ARG7)
+      .Cases({"a7", "r11"}, LLDB_REGNUM_GENERIC_ARG8)
       .Default(LLDB_INVALID_REGNUM);
 }
 

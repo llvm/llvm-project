@@ -104,13 +104,6 @@ const std::map<unsigned short, unsigned short> QFPInstMap{
     {Hexagon::V6_vmpy_qf32_sf, Hexagon::V6_vmpy_qf32}};
 } // namespace
 
-namespace llvm {
-
-FunctionPass *createHexagonQFPOptimizer();
-void initializeHexagonQFPOptimizerPass(PassRegistry &);
-
-} // namespace llvm
-
 namespace {
 
 struct HexagonQFPOptimizer : public MachineFunctionPass {

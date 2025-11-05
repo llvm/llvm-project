@@ -46,6 +46,8 @@ ENUM_DEBUGOPT(EmitDwarfUnwind, EmitDwarfUnwindType, 2,
 DEBUGOPT(NoDwarfDirectoryAsm , 1, 0, Benign) ///< Set when -fno-dwarf-directory-asm
                                              ///< is enabled.
 
+DEBUGOPT(Dwarf2CFIAsm, 1, 0, NotCompatible) ///< Set when -fdwarf2-cfi-asm is enabled.
+
 DEBUGOPT(NoInlineLineTables, 1, 0, Benign) ///< Whether debug info should contain
                                            ///< inline line tables.
 
