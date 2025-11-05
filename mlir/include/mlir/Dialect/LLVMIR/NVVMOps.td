@@ -476,9 +476,9 @@ def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
 def ReduxKindAttr : EnumAttr<NVVM_Dialect, ReduxKind, "redux_kind">;
 
 def NVVM_ReduxOp :
-  NVVM_Op<"redux.sync", [NVVMRequiresSM<80>]>,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_Type:$val,
+  NVVM_Op<"redux.sync", [NVVMRequiresSM<80>, AllTypesMatch<["res", "val"]>]>,
+  Results<(outs AnyTypeOf<[I32, F32]>:$res)>,
+  Arguments<(ins AnyTypeOf<[I32, F32]>:$val,
                  ReduxKindAttr:$kind,
                  I32:$mask_and_clamp,
                  DefaultValuedAttr<BoolAttr, "false">:$abs,
@@ -496,6 +496,8 @@ def NVVM_ReduxOp :
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-redux-sync)
   }];
+  let hasVerifier = 1;
+
   string llvmBuilder = [{
       auto intId = getReduxIntrinsicId($_resultType, $kind, $abs, $nan);
       $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
@@ -1326,9 +1328,9 @@ def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 
 def NVVM_ShflOp :
   NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>]>,
-  Results<(outs LLVM_Type:$res)>,
+  Results<(outs AnyTypeOf<[I32, F32, LLVMStructType]>:$res)>,
   Arguments<(ins I32:$thread_mask,
-                 LLVM_Type:$val,
+                 AnyTypeOf<[I32, F32]>:$val,
                  I32:$offset,
                  I32:$mask_and_clamp,
                  ShflKindAttr:$kind,
@@ -1343,6 +1345,11 @@ def NVVM_ShflOp :
     the source. The `mask_and_clamp` contains two packed values specifying
     a mask for logically splitting warps into sub-segments and an upper bound
     for clamping the source lane index.
+    
+    The `return_value_and_is_valid` unit attribute can be specified to indicate 
+    that the return value is a two-element struct, where the first element is 
+    the result value and the second element is a predicate indicating if the 
+    computed source lane index is valid.
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-shfl-sync)
   }];
@@ -1589,10 +1596,11 @@ def FPRoundingModeRM   : I32EnumAttrCase<"RM",   2, "rm">;
 def FPRoundingModeRP   : I32EnumAttrCase<"RP",   3, "rp">;
 def FPRoundingModeRZ   : I32EnumAttrCase<"RZ",   4, "rz">;
 def FPRoundingModeRNA  : I32EnumAttrCase<"RNA",  5, "rna">;
+def FPRoundingModeRS   : I32EnumAttrCase<"RS",   6, "rs">;
 
 def FPRoundingMode : I32EnumAttr<"FPRoundingMode", "NVVM FPRoundingMode kind",
   [FPRoundingModeNone, FPRoundingModeRN, FPRoundingModeRM,
-    FPRoundingModeRP, FPRoundingModeRZ, FPRoundingModeRNA]> {
+    FPRoundingModeRP, FPRoundingModeRZ, FPRoundingModeRNA, FPRoundingModeRS]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -1905,6 +1913,96 @@ def NVVM_ConvertF6x2ToF16x2Op :
   NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "F16">;
 def NVVM_ConvertF4x2ToF16x2Op :
   NVVM_ConvertToFP16x2Op_Base<"F4", I8, "F16">;
+
+//===----------------------------------------------------------------------===//
+// NVVM Stochastic Rounding Conversion Ops
+//===----------------------------------------------------------------------===//
+
+// Base class for conversions from F32x2 to FPx2 formats
+// (F16x2, BF16x2)
+// TODO: In separate PR, add .rn and .rz rounding variants for this conversion
+// as currently only support .rs rounding mode
+class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstType> :
+  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
+  Results<(outs dstType:$dst)>,
+  Arguments<(ins F32:$src_hi, F32:$src_lo, I32:$rbits,
+                 DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::RS">:$rnd,
+                 DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+                 DefaultValuedAttr<BoolAttr, "false">:$relu)> {
+  let summary = "Convert two F32 values to packed " # dstFormat # " with stochastic rounding (.rs)";
+  let description = [{
+    Converts two F32 values to packed }] # dstFormat # [{ format using stochastic 
+    rounding (.rs) mode with randomness provided by the `rbits` parameter. The 
+    `relu` attribute clamps negative results to 0. The `sat` attribute determines 
+    saturation behavior. The `src_hi` and `src_lo` parameters correspond to operands 
+    `a` and `b` in the PTX ISA, respectively.
+    
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+  
+  let assemblyFormat = "$src_hi `,` $src_lo `,` $rbits attr-dict `:` type($dst)";
+
+  let hasVerifier = 1;
+  
+  let extraClassDeclaration = [{
+    llvm::Intrinsic::ID getIntrinsicID();
+  }];
+  
+  string llvmBuilder = [{
+    auto intId = op.getIntrinsicID();
+    $dst = createIntrinsicCall(builder, intId, {$src_hi, $src_lo, $rbits});
+  }];
+  }
+
+// F32x2 -> F16x2 with stochastic rounding
+def NVVM_ConvertF32x2ToF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"f16x2", "convert.f32x2.to.f16x2", VectorOfLengthAndType<[2], [F16]>>;
+
+// F32x2 -> BF16x2 with stochastic rounding
+def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"bf16x2", "convert.f32x2.to.bf16x2", VectorOfLengthAndType<[2], [BF16]>>;
+
+// Base class for stochastic rounding conversions from F32x4 to FPx4 formats
+// (E4M3x4, E5M2x4, E2M3x4, E3M2x4, E2M1x4)
+// These operations always use RS (stochastic rounding) mode with SATFINITE saturation.
+class NVVM_ConvertF32x4ToFPx4OpBase<string dstFormat, string mnemonic, Type dstType> :
+  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
+  Results<(outs dstType:$dst)>,
+  Arguments<(ins VectorOfLengthAndType<[4], [F32]>:$src, I32:$rbits,
+                 DefaultValuedAttr<BoolAttr, "false">:$relu,
+                 TypeAttr:$dstTy)> {
+  let summary = "Convert vector<4xf32> to packed " # dstFormat # " with stochastic rounding (.rs) and satfinite";
+  let description = [{
+    Converts a vector<4xf32> to packed }] # dstFormat # [{ format using 
+    stochastic rounding (.rs) mode with SATFINITE saturation. Randomness is 
+    provided by the `rbits` parameter. The `dstTy` attribute specifies the 
+    target floating-point format. The `relu` attribute clamps negative results to 0.
+    
+    Note: These operations always use RS rounding mode and SATFINITE saturation mode.
+    
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+  
+  let assemblyFormat = "$src `,` $rbits attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`";
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    llvm::Intrinsic::ID getIntrinsicID();
+  }];
+  
+  string llvmBuilder = [{
+    auto intId = op.getIntrinsicID();
+    $dst = createIntrinsicCall(builder, intId, {$src, $rbits});
+  }];
+}
+
+// F32x4 -> F8x4 with stochastic rounding (supports E4M3FN, E5M2)
+def NVVM_ConvertF32x4ToF8x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f8x4", "convert.f32x4.to.f8x4", VectorOfLengthAndType<[4], [I8]>>;
+
+// F32x4 -> F6x4 with stochastic rounding (supports E2M3FN, E3M2FN)
+def NVVM_ConvertF32x4ToF6x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f6x4", "convert.f32x4.to.f6x4", VectorOfLengthAndType<[4], [I8]>>;
+
+// F32x4 -> F4x4 with stochastic rounding (supports E2M1FN)
+def NVVM_ConvertF32x4ToF4x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f4x4", "convert.f32x4.to.f4x4", I16>;
 
 //===----------------------------------------------------------------------===//
 // NVVM MMA Ops
