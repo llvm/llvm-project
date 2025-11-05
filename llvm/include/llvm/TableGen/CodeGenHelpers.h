@@ -20,6 +20,7 @@
 #include <string>
 
 namespace llvm {
+
 // Simple RAII helper for emitting ifdef-undef-endif scope.
 class IfDefEmitter {
 public:
@@ -57,7 +58,7 @@ public:
   NamespaceEmitter(raw_ostream &OS, StringRef NameUntrimmed)
       : Name(trim(NameUntrimmed).str()), OS(OS) {
     if (!Name.empty())
-      OS << "namespace " << Name << " {\n";
+      OS << "namespace " << Name << " {\n\n";
   }
 
   ~NamespaceEmitter() { close(); }
@@ -65,7 +66,7 @@ public:
   // Explicit function to close the namespace scopes.
   void close() {
     if (!Closed && !Name.empty())
-      OS << "} // namespace " << Name << "\n";
+      OS << "\n} // namespace " << Name << "\n";
     Closed = true;
   }
 
