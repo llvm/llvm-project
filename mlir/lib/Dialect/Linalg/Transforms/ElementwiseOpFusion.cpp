@@ -217,15 +217,15 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
 /// Generate the region of the fused tensor operation. The region of the fused
 /// op must be empty.
 static void generateFusedElementwiseOpRegion(
-    RewriterBase &rewriter, LinalgOp fusedOp,
+    RewriterBase &rewriter, GenericOp fusedOp,
     AffineMap consumerToProducerLoopsMap, OpOperand *fusedOperand,
     unsigned nloops, llvm::SmallDenseSet<int> &preservedProducerResults) {
   auto producer = cast<LinalgOp>(fusedOperand->get().getDefiningOp());
   auto consumer = cast<LinalgOp>(fusedOperand->getOwner());
   // Build the region of the fused op.
 
-  Block &producerBlock = producer->getRegion(0).front();
-  Block &consumerBlock = consumer->getRegion(0).front();
+  Block &producerBlock = *producer.getBlock();
+  Block &consumerBlock = *consumer.getBlock();
   OpBuilder::InsertionGuard guard(rewriter);
   Block *fusedBlock = rewriter.createBlock(&fusedOp->getRegion(0));
   IRMapping mapper;
