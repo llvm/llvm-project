@@ -605,9 +605,11 @@ struct FancyAddFLowering : public ConvertOpToLLVMPattern<arith::AddFOp> {
     auto parent = op->getParentOfType<ModuleOp>();
     if (!parent)
       return failure();
+    auto floatTy = dyn_cast<FloatType>(op.getType());
+    if (!floatTy)
+      return failure();
     FailureOr<Operation *> adder =
         LLVM::lookupOrCreateApFloatAddFFn(rewriter, parent);
-    auto floatTy = cast<FloatType>(op.getType());
 
     // Cast operands to 64-bit integers.
     Location loc = op.getLoc();
