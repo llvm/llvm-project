@@ -937,7 +937,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       //     the next power-of-2
       Chain ExtendingLoadsStores;
       if (NumVecElems < TargetVF && !isPowerOf2_32(NumVecElems) &&
-          VecElemBits >= 8 && isPowerOf2_32(TargetVF)) {
+          VecElemBits >= 8) {
         // TargetVF may be a lot higher than NumVecElems,
         // so only extend to the next power of 2.
         assert(VecElemBits % 8 == 0);
@@ -945,7 +945,8 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         unsigned NewNumVecElems = PowerOf2Ceil(NumVecElems);
         unsigned NewSizeBytes = VecElemBytes * NewNumVecElems;
 
-        assert(NewNumVecElems <= TargetVF);
+        assert(isPowerOf2_32(TargetVF) && "TargetVF expected to be a power of 2");
+        assert(NewNumVecElems <= TargetVF && "Should not extend past TargetVF");
 
         LLVM_DEBUG(dbgs() << "LSV: attempting to extend chain of "
                           << NumVecElems << " "
