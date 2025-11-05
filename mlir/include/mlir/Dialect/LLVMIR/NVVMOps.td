@@ -449,7 +449,7 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
   let assemblyFormat = "$arg attr-dict `:` type($res)";
 }
 
-def NVVM_ex2ApproxFtzF32Op : NVVM_IntrOp<"ex2.approx.ftz.f", [Pure], 1> {
+def NVVM_lg2ApproxF32Op : NVVM_IntrOp<"lg2.approx.f", [Pure], 1> {
   let arguments = (ins F32:$arg);
   let results = (outs F32:$res);
   let assemblyFormat = "$arg attr-dict `:` type($res)";
