@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=aarch64-unknown-linux-gnu  -passes=vector-combine %s -S -o - | FileCheck %s
+; RUN: opt -passes=vector-combine %s -S -o - | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
