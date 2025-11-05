@@ -2510,9 +2510,44 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (isTailCall && VA.isMemLoc() && !AfterFormalArgLoads) {
       Chain = DAG.getStackArgumentTokenFactor(Chain);
-      if (ByValTempChain)
+      if (ByValTempChain) {
+        // In case of large byval copies, re-using the stackframe for tail-calls
+        // can lead to overwriting incoming arguments on the stack. Force
+        // loading these stack arguments before the copy to avoid that.
+        SmallVector<SDValue, 8> IncomingLoad;
+        for (unsigned I = 0; I < OutVals.size(); ++I) {
+          if (Outs[I].Flags.isByVal())
+            continue;
+
+          SDValue OutVal = OutVals[I];
+          LoadSDNode *OutLN = dyn_cast_or_null<LoadSDNode>(OutVal);
+          if (!OutLN)
+            continue;
+
+          FrameIndexSDNode *FIN =
+              dyn_cast_or_null<FrameIndexSDNode>(OutLN->getBasePtr());
+          if (!FIN)
+            continue;
+
+          if (!MFI.isFixedObjectIndex(FIN->getIndex()))
+            continue;
+
+          for (const CCValAssign &VA : ArgLocs) {
+            if (VA.isMemLoc())
+              IncomingLoad.push_back(OutVal.getValue(1));
+          }
+        }
+
+        // Update the chain to force loads for potentially clobbered argument
+        // loads to happen before the byval copy.
+        if (!IncomingLoad.empty()) {
+          IncomingLoad.push_back(Chain);
+          Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, IncomingLoad);
+        }
+
         Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chain,
                             ByValTempChain);
+      }
       AfterFormalArgLoads = true;
     }
 
