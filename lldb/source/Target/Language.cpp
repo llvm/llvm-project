@@ -593,3 +593,7 @@ bool SourceLanguage::IsObjC() const {
 bool SourceLanguage::IsCPlusPlus() const {
   return name == llvm::dwarf::DW_LNAME_C_plus_plus;
 }
+
+bool SourceLanguage::IsSwift() const {
+  return name == llvm::dwarf::DW_LNAME_Swift;
+}
