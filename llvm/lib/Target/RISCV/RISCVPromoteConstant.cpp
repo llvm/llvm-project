@@ -120,6 +120,9 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
           continue;
         }
       }
+      // Note: FP args to inline asm would be problematic if we had a
+      // constraint that required an immediate floating point operand. At the
+      // time of writing LLVM doesn't recognise such a constraint.
       ConstUsesMap[C].push_back(&U);
     }
   }
