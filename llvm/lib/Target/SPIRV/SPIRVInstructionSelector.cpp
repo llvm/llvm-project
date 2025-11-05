@@ -1210,11 +1210,11 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
     for (MachineRegisterInfo::def_instr_iterator DefIt =
              MRI->def_instr_begin(SrcReg);
          DefIt != MRI->def_instr_end(); DefIt = std::next(DefIt)) {
-      unsigned DefOpCode = (*DefIt).getOpcode();
+      unsigned DefOpCode = DefIt->getOpcode();
       if (DefOpCode == SPIRV::ASSIGN_TYPE) {
         // We need special handling to look through the type assignment and see
         // if this is a constant or a global
-        if (auto *VRD = getVRegDef(*MRI, (*DefIt).getOperand(1).getReg()))
+        if (auto *VRD = getVRegDef(*MRI, DefIt->getOperand(1).getReg()))
           DefOpCode = VRD->getOpcode();
       }
       if (DefOpCode == TargetOpcode::G_GLOBAL_VALUE ||
