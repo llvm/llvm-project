@@ -149,7 +149,7 @@ template <typename T> constexpr T ldexp_impl(T X, T Exp) {
 }
 
 template <typename K, typename T, int BitWidth>
-constexpr uint firstbithigh_impl(T X) {
+constexpr K firstbithigh_impl(T X) {
   K FBH = __builtin_hlsl_elementwise_firstbithigh(X);
 #if defined(__DIRECTX__)
   // The firstbithigh DXIL ops count bits from the wrong side, so we need to
