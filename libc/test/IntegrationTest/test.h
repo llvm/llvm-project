@@ -11,6 +11,7 @@
 
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/OSUtil/io.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #define __AS_STRING(val) #val
 #define __CHECK_TRUE(file, line, val, should_exit)                             \

@@ -11,6 +11,7 @@
 
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/Test.h"
 
 // Define macro to validate the value stored in the errno and restore it
