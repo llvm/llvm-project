@@ -1333,6 +1333,11 @@ public:
           TargetLowering::TypeSplitVector;
       if ((SplitSrc || SplitDst) && SrcVTy->getElementCount().isVector() &&
           DstVTy->getElementCount().isVector()) {
+        auto SrcEltCnt = SrcVTy->getElementCount();
+        auto DstEltCnt = DstVTy->getElementCount();
+        if (!SrcEltCnt.isKnownEven() || !DstEltCnt.isKnownEven()) {
+            return InstructionCost::getInvalid();
+        }
         Type *SplitDstTy = VectorType::getHalfElementsVectorType(DstVTy);
         Type *SplitSrcTy = VectorType::getHalfElementsVectorType(SrcVTy);
         const T *TTI = thisT();
