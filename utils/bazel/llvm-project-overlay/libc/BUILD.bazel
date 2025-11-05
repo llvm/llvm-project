@@ -1805,6 +1805,7 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":types_wchar_t",
         ":types_wint_t",
     ],
 )
