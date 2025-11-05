@@ -655,11 +655,6 @@ mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
   return cir::VAArgOp::create(builder, loc, type, vaList);
 }
 
-/// Returns a Value corresponding to the size of the given expression by
-/// emitting a `cir.objsize` operation.
-///
-/// emittedE is the result of emitting `e` as a scalar expr. If it's non-null,
-/// we'll call `cir.objsize` on emittedE, rather than emitting e.
 mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
                                                   cir::IntType resType,
                                                   mlir::Value emittedE,
@@ -668,7 +663,7 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
 
   // LLVM can't handle type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate e for side-effects. In either case, just like original LLVM
-  // lowering, we shouldn't lower to `cir.objsize`.
+  // lowering, we shouldn't lower to `cir.objsize` but to a constant instead.
   if (type == 3 || (!emittedE && e->HasSideEffects(getContext())))
     return builder.getConstInt(getLoc(e->getSourceRange()), resType,
                                (type & 2) ? 0 : -1);
@@ -679,11 +674,14 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
 
   assert(!cir::MissingFeatures::countedBySize());
 
-  // `cir.objectsize` only supports 0
-  // and 2, account for that right now.
+  // Extract the min/max mode from type. CIR only supports type 0
+  // (max, whole object) and type 2 (min, whole object), not type 1 or 3
+  // (closest subobject variants).
   const bool min = ((type & 2) != 0);
-  auto op = cir::ObjSizeOp::create(builder, getLoc(e->getSourceRange()),
-                                   resType, ptr, min, isDynamic);
+  // For GCC compatibility, __builtin_object_size treats NULL as unknown size.
+  auto op =
+      cir::ObjSizeOp::create(builder, getLoc(e->getSourceRange()), resType, ptr,
+                             min, /*nullUnknown=*/true, isDynamic);
   return op.getResult();
 }
 

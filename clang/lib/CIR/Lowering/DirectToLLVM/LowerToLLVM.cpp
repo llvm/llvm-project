@@ -2828,16 +2828,13 @@ mlir::LogicalResult CIRToLLVMObjSizeOpLowering::matchAndRewrite(
     return mlir::LLVM::ConstantOp::create(rewriter, loc, i1Ty, val);
   };
 
-  replaceOpWithCallLLVMIntrinsicOp(
-      rewriter, op, "llvm.objectsize", llvmResTy,
-      {
-          adaptor.getPtr(),
-          i1Val(op.getMin()),
-          // For GCC compatibility, __builtin_object_size treat NULL as unknown
-          // size.
-          i1Val(true),
-          i1Val(op.getDynamic()),
-      });
+  replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm.objectsize", llvmResTy,
+                                   {
+                                       adaptor.getPtr(),
+                                       i1Val(op.getMin()),
+                                       i1Val(op.getNullunknown()),
+                                       i1Val(op.getDynamic()),
+                                   });
 
   return mlir::LogicalResult::success();
 }

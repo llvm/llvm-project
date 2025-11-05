@@ -4104,24 +4104,29 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
 
     When the `min` attribute is present, the operation returns the minimum
     guaranteed accessible size. When absent (max mode), it returns the maximum
-    possible object size. Additionally, when the object size is unknown, min
-    mode returns 0 while max mode returns -1. Corresponds to `llvm.objectsize`'s
-    `min` argument.
+    possible object size. Corresponds to `llvm.objectsize`'s `min` argument.
     
     The `dynamic` attribute determines if the value should be evaluated at
     runtime. Corresponds to `llvm.objectsize`'s `dynamic` argument.
+
+    The `nullunknown` attribute controls how null pointers are handled. When
+    present, null pointers are treated as having unknown size. When absent,
+    null pointers are treated as having 0 size (in min mode) or -1 size
+    (in max mode). Corresponds to `llvm.objectsize`'s `nullunknown` argument.
 
     Example:
 
     ```mlir
     %size = cir.objsize min %ptr : !cir.ptr<i32> -> i64
     %dsize = cir.objsize max dynamic %ptr : !cir.ptr<i32> -> i64
+    %nsize = cir.objsize min nullunknown %ptr : !cir.ptr<i32> -> i64
     ```
   }];
 
   let arguments = (ins
     CIR_PointerType:$ptr,
     UnitAttr:$min,
+    UnitAttr:$nullunknown,
     UnitAttr:$dynamic
   );
 
@@ -4129,6 +4134,7 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
 
   let assemblyFormat = [{
       (`min` $min^) : (`max`)?
+      (`nullunknown` $nullunknown^)?
       (`dynamic` $dynamic^)?
       $ptr `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
   }];
