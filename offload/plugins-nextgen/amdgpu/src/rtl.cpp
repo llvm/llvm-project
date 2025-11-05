@@ -1084,9 +1084,14 @@ private:
 
       // If envar OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT is set and no
       // OMP_NUM_TEAMS or num_teams clause is specified, optimize the num of
-      // teams based on occupancy value.
+      // teams based on occupancy value. We apply this optimization only when
+      // the MaxOccupancy equals or exceeds the desirable waves per CU. The
+      // assumption is that anything lower is probably resource constrained
+      // already and this optimization may not be beneficial.
       if (OMPX_XTeamReductionOccupancyBasedOpt && NumTeamsEnvVar == 0 &&
-          NumTeamsClause[0] == 0) {
+          NumTeamsClause[0] == 0 &&
+          (MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU >=
+           llvm::omp::xteam_red::DesiredWavesPerCU)) {
         uint64_t newNumTeams =
             OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads);
         return std::min(newNumTeams, MaxNumGroups);
