@@ -26,8 +26,8 @@ uint test_firstbithigh_ushort(uint16_t p0) {
 // SPVCHECK-NOT: sub <2 x i32> splat (i32 15), {{.*}}
 // DXCHECK: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// DXCHECK: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// SPVCHECK-NOT: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
 uint2 test_firstbithigh_ushort2(uint16_t2 p0) {
   return firstbithigh(p0);
 }
@@ -38,8 +38,8 @@ uint2 test_firstbithigh_ushort2(uint16_t2 p0) {
 // SPVCHECK-NOT: sub <3 x i32> splat (i32 15), {{.*}}
 // DXCHECK: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// DXCHECK: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// SPVCHECK-NOT: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
 uint3 test_firstbithigh_ushort3(uint16_t3 p0) {
   return firstbithigh(p0);
 }
@@ -50,8 +50,8 @@ uint3 test_firstbithigh_ushort3(uint16_t3 p0) {
 // SPVCHECK-NOT: sub <4 x i32> splat (i32 15), {{.*}}
 // DXCHECK: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// DXCHECK: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// SPVCHECK-NOT: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
 uint4 test_firstbithigh_ushort4(uint16_t4 p0) {
   return firstbithigh(p0);
 }
@@ -74,8 +74,8 @@ uint test_firstbithigh_short(int16_t p0) {
 // SPVCHECK-NOT: sub <2 x i32> splat (i32 15), {{.*}}
 // DXCHECK: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// DXCHECK: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// SPVCHECK-NOT: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
 uint2 test_firstbithigh_short2(int16_t2 p0) {
   return firstbithigh(p0);
 }
@@ -86,8 +86,8 @@ uint2 test_firstbithigh_short2(int16_t2 p0) {
 // SPVCHECK-NOT: sub <3 x i32> splat (i32 15), {{.*}}
 // DXCHECK: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// DXCHECK: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// SPVCHECK-NOT: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
 uint3 test_firstbithigh_short3(int16_t3 p0) {
   return firstbithigh(p0);
 }
@@ -98,8 +98,8 @@ uint3 test_firstbithigh_short3(int16_t3 p0) {
 // SPVCHECK-NOT: sub <4 x i32> splat (i32 15), {{.*}}
 // DXCHECK: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// DXCHECK: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// SPVCHECK-NOT: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
 uint4 test_firstbithigh_short4(int16_t4 p0) {
   return firstbithigh(p0);
 }
@@ -123,8 +123,8 @@ uint test_firstbithigh_uint(uint p0) {
 // SPVCHECK-NOT: sub <2 x i32> splat (i32 31), {{.*}}
 // DXCHECK: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// DXCHECK: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// SPVCHECK-NOT: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
 uint2 test_firstbithigh_uint2(uint2 p0) {
   return firstbithigh(p0);
 }
@@ -135,8 +135,8 @@ uint2 test_firstbithigh_uint2(uint2 p0) {
 // SPVCHECK-NOT: sub <3 x i32> splat (i32 31), {{.*}}
 // DXCHECK: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// DXCHECK: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// SPVCHECK-NOT: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
 uint3 test_firstbithigh_uint3(uint3 p0) {
   return firstbithigh(p0);
 }
@@ -147,8 +147,8 @@ uint3 test_firstbithigh_uint3(uint3 p0) {
 // SPVCHECK-NOT: sub <4 x i32> splat (i32 31), {{.*}}
 // DXCHECK: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// DXCHECK: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// SPVCHECK-NOT: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
 uint4 test_firstbithigh_uint4(uint4 p0) {
   return firstbithigh(p0);
 }
@@ -171,8 +171,8 @@ uint test_firstbithigh_ulong(uint64_t p0) {
 // SPVCHECK-NOT: sub <2 x i32> splat (i32 63), {{.*}}
 // DXCHECK: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// DXCHECK: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// SPVCHECK-NOT: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
 uint2 test_firstbithigh_ulong2(uint64_t2 p0) {
   return firstbithigh(p0);
 }
@@ -183,8 +183,8 @@ uint2 test_firstbithigh_ulong2(uint64_t2 p0) {
 // SPVCHECK-NOT: sub <3 x i32> splat (i32 63), {{.*}}
 // DXCHECK: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// DXCHECK: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// SPVCHECK-NOT: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
 uint3 test_firstbithigh_ulong3(uint64_t3 p0) {
   return firstbithigh(p0);
 }
@@ -195,8 +195,8 @@ uint3 test_firstbithigh_ulong3(uint64_t3 p0) {
 // SPVCHECK-NOT: sub <4 x i32> splat (i32 63), {{.*}}
 // DXCHECK: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// DXCHECK: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// SPVCHECK-NOT: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
 uint4 test_firstbithigh_ulong4(uint64_t4 p0) {
   return firstbithigh(p0);
 }
@@ -219,8 +219,8 @@ uint test_firstbithigh_int(int p0) {
 // SPVCHECK-NOT: sub <2 x i32> splat (i32 31), {{.*}}
 // DXCHECK: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// DXCHECK: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// SPVCHECK-NOT: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
 uint2 test_firstbithigh_int2(int2 p0) {
   return firstbithigh(p0);
 }
@@ -231,8 +231,8 @@ uint2 test_firstbithigh_int2(int2 p0) {
 // SPVCHECK-NOT: sub <3 x i32> splat (i32 31), {{.*}}
 // DXCHECK: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// DXCHECK: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// SPVCHECK-NOT: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
 uint3 test_firstbithigh_int3(int3 p0) {
   return firstbithigh(p0);
 }
@@ -243,8 +243,8 @@ uint3 test_firstbithigh_int3(int3 p0) {
 // SPVCHECK-NOT: sub <4 x i32> splat (i32 31), {{.*}}
 // DXCHECK: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// DXCHECK: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// SPVCHECK-NOT: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
 uint4 test_firstbithigh_int4(int4 p0) {
   return firstbithigh(p0);
 }
@@ -267,8 +267,8 @@ uint test_firstbithigh_long(int64_t p0) {
 // SPVCHECK-NOT: sub <2 x i32> splat (i32 63), {{.*}}
 // DXCHECK: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <2 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// DXCHECK: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
+// SPVCHECK-NOT: select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> {{.*}}
 uint2 test_firstbithigh_long2(int64_t2 p0) {
   return firstbithigh(p0);
 }
@@ -279,8 +279,8 @@ uint2 test_firstbithigh_long2(int64_t2 p0) {
 // SPVCHECK-NOT: sub <3 x i32> splat (i32 63), {{.*}}
 // DXCHECK: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <3 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// DXCHECK: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
+// SPVCHECK-NOT: select <3 x i1> {{.*}}, <3 x i32> {{.*}}, <3 x i32> {{.*}}
 uint3 test_firstbithigh_long3(int64_t3 p0) {
   return firstbithigh(p0);
 }
@@ -291,8 +291,8 @@ uint3 test_firstbithigh_long3(int64_t3 p0) {
 // SPVCHECK-NOT: sub <4 x i32> splat (i32 63), {{.*}}
 // DXCHECK: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
 // SPVCHECK-NOT: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
-// DXCHECK: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
-// SPVCHECK-NOT: select i1 {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// DXCHECK: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// SPVCHECK-NOT: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
 uint4 test_firstbithigh_long4(int64_t4 p0) {
   return firstbithigh(p0);
 }
