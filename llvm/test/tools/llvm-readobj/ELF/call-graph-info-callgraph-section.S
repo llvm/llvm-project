@@ -12,7 +12,7 @@
 # CHECK-NOT: .
 
 # LLVM: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
-# LLVM-NEXT: callgraph_info [
+# LLVM-NEXT: CallGraph [
 # LLVM-NEXT:   Function {
 # LLVM-NEXT:     Offset: 0x2
 # LLVM-NEXT:     Version: 0
@@ -52,7 +52,7 @@
 # LLVM-NEXT: ]
 
 # JSON: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
-# JSON:     "callgraph_info": [
+# JSON:     "CallGraph": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
 # JSON-NEXT:          "Offset": 2,

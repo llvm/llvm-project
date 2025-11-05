@@ -44,7 +44,7 @@
 ## We do not support GNU format console output for --call-graph-info as it is an LLVM only info.
 # CHECK-NOT: .
 
-# LLVM: callgraph_info [
+# LLVM: CallGraph [
 # LLVM-NEXT:     Function {
 # LLVM-NEXT:       Names: [foo]
 # LLVM-NEXT:       Address: 0x1790
@@ -108,7 +108,7 @@
 # LLVM-NEXT:   ]
 
 
-# JSON:     "callgraph_info": [
+# JSON:     "CallGraph": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
 # JSON-NEXT:          "Names": [
