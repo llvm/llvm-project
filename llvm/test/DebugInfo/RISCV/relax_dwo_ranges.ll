@@ -30,7 +30,7 @@
 ; RUN: FileCheck --input-file=%t.txt %s --check-prefix=RELOCS --allow-empty --implicit-check-not=warning:
 ; RUN: llvm-objdump -h %t | FileCheck --check-prefix=HDR %s
 
-; RELOCS-NOT: warning: unexpected relocations for dwo section '.debug_info.dwo'
+; RELOCS-NOT: warning:
 
 ; Make sure we don't produce any relocations in any .dwo section
 ; HDR-NOT: .rela.{{.*}}.dwo
