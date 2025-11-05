@@ -706,38 +706,34 @@ define float @test_fmax_and_fmax(ptr %src.0, ptr %src.1, i64 %n) {
 ; CHECK-NEXT:    [[TMP3]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD2]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP6]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP8:%.*]] = freeze <4 x i1> [[TMP7]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze <4 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP8]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i1> poison, i1 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT3]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[BROADCAST_SPLAT4]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP3]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[BROADCAST_SPLAT4]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP2]]
-; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP10]], i64 [[IV]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP9]], i64 [[IV]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP13]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP14]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP10]], true
+; CHECK-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP9]], true
 ; CHECK-NEXT:    [[TMP19:%.*]] = and i1 [[CMP_N]], [[TMP18]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi float [ [[TMP17]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX3:%.*]] = phi float [ [[TMP17]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAX:%.*]] = phi float [ [[BC_MERGE_RDX5]], %[[SCALAR_PH]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX:%.*]] = phi float [ [[BC_MERGE_RDX3]], %[[SCALAR_PH]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds nuw float, ptr [[SRC_0]], i64 [[IV1]]
 ; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr inbounds nuw float, ptr [[SRC_1]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L_0:%.*]] = load float, ptr [[GEP_SRC_2]], align 4
