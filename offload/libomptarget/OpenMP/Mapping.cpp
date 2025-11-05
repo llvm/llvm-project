@@ -325,16 +325,16 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
 
   // Lambda to check if this pointer was newly allocated on the current region.
   // This is needed to handle cases when the TO entry is encounter after an
-  // alloc entry for the same pointer, which increased the ref-count from 0 to 1,
-  // has already been encountered before. But because the ref-count was already 1
-  // when TO was encountered, it wouldn't incur a transfer. e.g.
+  // alloc entry for the same pointer, which increased the ref-count from 0 to
+  // 1, has already been encountered before. But because the ref-count was
+  // already 1 when TO was encountered, it wouldn't incur a transfer. e.g.
   // ... map(alloc: x) map(to: x).
   auto WasNewlyAllocatedForCurrentRegion = [&]() {
     if (!StateInfo)
       return false;
     bool IsNewlyAllocated = StateInfo->NewAllocations.contains(HstPtrBegin);
     if (IsNewlyAllocated)
-    DP("HstPtrBegin " DPxMOD " was newly allocated for the current region\n",
+      DP("HstPtrBegin " DPxMOD " was newly allocated for the current region\n",
          DPxPTR(HstPtrBegin));
     return IsNewlyAllocated;
   };
