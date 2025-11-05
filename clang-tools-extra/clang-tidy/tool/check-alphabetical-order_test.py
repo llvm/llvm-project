@@ -17,9 +17,7 @@ from typing import Any, cast
 
 def _load_script_module():
     here = os.path.dirname(cast(str, __file__))
-    script_path = os.path.normpath(
-        os.path.join(here, "check-alphabetical-order.py")
-    )
+    script_path = os.path.normpath(os.path.join(here, "check-alphabetical-order.py"))
     loader = importlib.machinery.SourceFileLoader(
         "check_alphabetical_order", cast(str, script_path)
     )
@@ -76,14 +74,10 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             "- :doc:`alpha <clang-tidy/checks/alpha>`: more details\n",
             "\n",
         ]
-        prefix, blocks, suffix = _mod.collect_bullet_blocks(
-            lines, 0, len(lines)
-        )
+        prefix, blocks, suffix = _mod.collect_bullet_blocks(lines, 0, len(lines))
         # Prefix is the intro line until first bullet; suffix is trailing lines.
         self.assertEqual(prefix, ["Intro\n"])
-        # Access suffix to satisfy static analyzers and assert it matches expectation.
         self.assertEqual(suffix, [])
-        # Ensure sort by extracted label is deterministic and case-sensitive.
         sorted_blocks = _mod.sort_blocks(blocks)
         joined = "".join([l for b in sorted_blocks for l in b])
         # Uppercase Z sorts before lowercase a in ASCII.
@@ -116,22 +110,16 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             "- :doc:`Alpha <clang-tidy/checks/alpha>`: change two\n",
             "\n",
         ]
-        dups = _mod.find_duplicate_block_details(
-            lines, "Changes in existing checks"
-        )
+        dups = _mod.find_duplicate_block_details(lines, "Changes in existing checks")
         # Expect one duplicate group for 'Alpha' with two occurrences.
         self.assertEqual(len(dups), 1)
         key, occs = dups[0]
         self.assertEqual(key.strip(), "Alpha")
         self.assertEqual(len(occs), 2)
 
-        report = _mod._emit_duplicate_report(
-            lines, "Changes in existing checks"
-        )
+        report = _mod._emit_duplicate_report(lines, "Changes in existing checks")
         self.assertIsInstance(report, str)
-        self.assertIn(
-            "Duplicate entries in 'Changes in existing checks':", report
-        )
+        self.assertIn("Duplicate entries in 'Changes in existing checks':", report)
         self.assertIn("-- Duplicate: Alpha", report)
         self.assertEqual(report.count("- At line "), 2)
 
