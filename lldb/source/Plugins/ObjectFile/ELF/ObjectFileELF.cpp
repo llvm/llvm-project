@@ -142,6 +142,7 @@ lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
   lldb::ModuleSP lhs_module_parent = lhs->GetModule();
   lldb::ModuleSP rhs_module_parent = rhs->GetModule();
   assert(lhs_module_parent && rhs_module_parent);
+
   // Now that we're taking the lhs, we should do some sanity checks to warn the
   // user if this debuginfo/dwp looks invalid. However if RHS is SHT_NO_BITS
   // we want to ignore the size comparison.

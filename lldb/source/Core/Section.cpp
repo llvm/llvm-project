@@ -690,17 +690,18 @@ SectionList::Merge(SectionList &lhs, SectionList &rhs, MergeCallback filter) {
   // Iterate through all the sections in lhs and see if we have matches in
   // the rhs list.
   for (const auto &lhs_section : lhs) {
-    auto rhs_section = rhs.FindSectionByID(lhs_section->GetID());
-    if (rhs_section)
+    auto rhs_section = rhs.FindSectionByName(lhs_section->GetName());
+    if (rhs_section) {
+      assert(lhs_section->GetName() == rhs_section->GetName());
       output_sp->AddSection(filter(lhs_section, rhs_section));
-    else
+    } else
       output_sp->AddSection(lhs_section);
   }
 
   // Now that we've visited all possible duplicates, we can iterate over
   // the rhs and take any values not in lhs.
   for (const auto &rhs_section : rhs) {
-    auto lhs_section = lhs.FindSectionByID(rhs_section->GetID());
+    auto lhs_section = lhs.FindSectionByName(rhs_section->GetName());
     // Because we already visited everything overlapping between rhs
     // and lhs, any section not in lhs is unique and can be output.
     if (!lhs_section)

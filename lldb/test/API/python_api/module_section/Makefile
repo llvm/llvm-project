@@ -1,6 +1,8 @@
 CFLAGS_EXTRAS := -D__STDC_LIMIT_MACROS
 ENABLE_THREADS := YES
-CXX_SOURCES := main.cpp b.cpp c.cpp
+CXX_SOURCES := main.cpp
 MAKE_DSYM :=NO
+
+
 
 include Makefile.rules
