@@ -92,6 +92,7 @@ public:
   unsigned GetDefaultDwarfVersion() const override { return 4; }
 
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
+
 private:
   mutable std::unique_ptr<tools::hlsl::Validator> Validator;
   mutable std::unique_ptr<tools::hlsl::MetalConverter> MetalConverter;
