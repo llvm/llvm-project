@@ -127,7 +127,7 @@ template <WriteMode write_mode> struct WriteBuffer {
 
 template <WriteMode write_mode> class Writer final {
   WriteBuffer<write_mode> &wb;
-  int chars_written = 0;
+  size_t chars_written = 0;
 
   LIBC_INLINE int pad(char new_char, size_t length) {
     // First, fill as much of the buffer as possible with the padding char.
@@ -161,7 +161,7 @@ public:
   // Takes a string, copies it into the buffer if there is space, else passes it
   // to the overflow mechanism to be handled separately.
   LIBC_INLINE int write(cpp::string_view new_string) {
-    chars_written += static_cast<int>(new_string.size());
+    chars_written += new_string.size();
     if (LIBC_LIKELY(wb.buff_cur + new_string.size() <= wb.buff_len)) {
       inline_memcpy(wb.buff + wb.buff_cur, new_string.data(),
                     new_string.size());
@@ -175,7 +175,7 @@ public:
   // if there is space, else calls pad which will loop and call the overflow
   // mechanism on a secondary buffer.
   LIBC_INLINE int write(char new_char, size_t length) {
-    chars_written += static_cast<int>(length);
+    chars_written += length;
 
     if (LIBC_LIKELY(wb.buff_cur + length <= wb.buff_len)) {
       inline_memset(wb.buff + wb.buff_cur, static_cast<unsigned char>(new_char),
@@ -199,7 +199,7 @@ public:
     return wb.overflow_write(char_string_view);
   }
 
-  LIBC_INLINE int get_chars_written() { return chars_written; }
+  LIBC_INLINE size_t get_chars_written() { return chars_written; }
 };
 
 // Class-template auto deduction helpers.
