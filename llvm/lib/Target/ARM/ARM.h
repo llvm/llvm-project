@@ -81,6 +81,8 @@ void initializeMVEVPTBlockPass(PassRegistry &);
 void initializeThumb2ITBlockPass(PassRegistry &);
 void initializeThumb2SizeReducePass(PassRegistry &);
 
+void initializeARMVerifier();
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_ARM_ARM_H

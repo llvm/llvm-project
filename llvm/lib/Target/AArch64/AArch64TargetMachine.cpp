@@ -239,6 +239,7 @@ LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> V(getTheAArch64_32Target());
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
+  initializeAArch64Verifier();
   initializeAArch64A53Fix835769Pass(PR);
   initializeAArch64A57FPLoadBalancingPass(PR);
   initializeAArch64AdvSIMDScalarPass(PR);

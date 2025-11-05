@@ -42,6 +42,7 @@ set(NVPTXCodeGen_sources
   NVPTXUtilities.cpp
   NVVMIntrRange.cpp
   NVVMReflect.cpp
+  NVVMVerifier.cpp
   )
 
 add_llvm_target(NVPTXCodeGen

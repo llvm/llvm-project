@@ -22,6 +22,8 @@ class AMDGPUTargetMachine;
 class GCNTargetMachine;
 class TargetMachine;
 
+void initializeAMDGPUVerifier();
+
 // GlobalISel passes
 void initializeAMDGPUPreLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPreLegalizeCombiner(bool IsOptNone);
