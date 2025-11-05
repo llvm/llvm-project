@@ -75,15 +75,15 @@ define amdgpu_kernel void @no_clobber_ds_load_stores_x3(ptr addrspace(1) %arg, i
 ; GCN-LABEL: no_clobber_ds_load_stores_x3:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x2c
-; GCN-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 2
-; GCN-NEXT:    ds_write_b32 v1, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, 1
+; GCN-NEXT:    ds_write_b32 v1, v2 offset:256
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_lshl_b32 s0, s0, 2
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    ds_write_b32 v1, v2 offset:256
 ; GCN-NEXT:    v_mov_b32_e32 v2, 3
+; GCN-NEXT:    ds_write_b32 v1, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    ds_write_b32 v1, v2 offset:512
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    ds_read_b32 v3, v0 offset:256

@@ -538,9 +538,9 @@ llvm.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.p
   // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr %{{.*}})
   nvvm.cp.async.mbarrier.arrive %bar_gen {noinc = true} : !llvm.ptr
   // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.shared(ptr addrspace(3) %{{.*}})
-  nvvm.cp.async.mbarrier.arrive.shared %bar_shared : !llvm.ptr<3>
+  nvvm.cp.async.mbarrier.arrive %bar_shared : !llvm.ptr<3>
   // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc.shared(ptr addrspace(3) %{{.*}})
-  nvvm.cp.async.mbarrier.arrive.shared %bar_shared {noinc = true} : !llvm.ptr<3>
+  nvvm.cp.async.mbarrier.arrive %bar_shared {noinc = true} : !llvm.ptr<3>
   llvm.return
 }
 
