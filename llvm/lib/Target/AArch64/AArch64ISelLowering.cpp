@@ -505,12 +505,36 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f64, Custom);
   setOperationAction(ISD::SELECT, MVT::i32, Custom);
   setOperationAction(ISD::SELECT, MVT::i64, Custom);
+  setOperationAction(ISD::CTSELECT, MVT::i8, Promote);
+  setOperationAction(ISD::CTSELECT, MVT::i16, Promote);
+  setOperationAction(ISD::CTSELECT, MVT::i32, Custom);
+  setOperationAction(ISD::CTSELECT, MVT::i64, Custom);
   if (Subtarget->hasFPARMv8()) {
     setOperationAction(ISD::SELECT, MVT::f16, Custom);
     setOperationAction(ISD::SELECT, MVT::bf16, Custom);
   }
+  if (Subtarget->hasFullFP16()) {
+    setOperationAction(ISD::CTSELECT, MVT::f16, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::bf16, Custom);
+  } else {
+    setOperationAction(ISD::CTSELECT, MVT::f16, Promote);
+    setOperationAction(ISD::CTSELECT, MVT::bf16, Promote);
+  }
   setOperationAction(ISD::SELECT, MVT::f32, Custom);
   setOperationAction(ISD::SELECT, MVT::f64, Custom);
+  setOperationAction(ISD::CTSELECT, MVT::f32, Custom);
+  setOperationAction(ISD::CTSELECT, MVT::f64, Custom);
+  for (MVT VT : MVT::vector_valuetypes()) {
+    MVT elemType = VT.getVectorElementType();
+    if (elemType == MVT::i8 || elemType == MVT::i16) {
+      setOperationAction(ISD::CTSELECT, VT, Promote);
+    } else if ((elemType == MVT::f16 || elemType == MVT::bf16) &&
+               !Subtarget->hasFullFP16()) {
+      setOperationAction(ISD::CTSELECT, VT, Promote);
+    } else {
+      setOperationAction(ISD::CTSELECT, VT, Expand);
+    }
+  }
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f16, Custom);
@@ -3373,6 +3397,20 @@ void AArch64TargetLowering::fixupPtrauthDiscriminator(
 
   AddrDiscOp.setReg(AddrDisc);
   IntDiscOp.setImm(IntDisc);
+}
+
+MachineBasicBlock *AArch64TargetLowering::EmitCTSELECT(MachineInstr &MI,
+                                                       MachineBasicBlock *MBB,
+                                                       unsigned Opcode) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineInstrBuilder Builder = BuildMI(*MBB, MI, DL, TII->get(Opcode));
+  for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx) {
+    Builder.add(MI.getOperand(Idx));
+  }
+  Builder->setFlag(MachineInstr::NoMerge);
+  MBB->remove_instr(&MI);
+  return MBB;
 }
 
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
@@ -7862,6 +7900,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerSELECT(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
+  case ISD::CTSELECT:
+    return LowerCTSELECT(Op, DAG);
   case ISD::JumpTable:
     return LowerJumpTable(Op, DAG);
   case ISD::BR_JT:
@@ -12437,6 +12477,22 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
   }
 
   return Res;
+}
+
+SDValue AArch64TargetLowering::LowerCTSELECT(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDValue CCVal = Op->getOperand(0);
+  SDValue TVal = Op->getOperand(1);
+  SDValue FVal = Op->getOperand(2);
+  SDLoc DL(Op);
+
+  EVT VT = Op.getValueType();
+
+  SDValue Zero = DAG.getConstant(0, DL, CCVal.getValueType());
+  SDValue CC;
+  SDValue Cmp = getAArch64Cmp(CCVal, Zero, ISD::SETNE, CC, DAG, DL);
+
+  return DAG.getNode(AArch64ISD::CTSELECT, DL, VT, TVal, FVal, CC, Cmp);
 }
 
 SDValue AArch64TargetLowering::LowerJumpTable(SDValue Op,
