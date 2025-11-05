@@ -348,6 +348,16 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
         SpvType = GR->getOrCreateSPIRVIntegerType(
             MRI.getType(Reg).getScalarSizeInBits(), MIB);
         break;
+      case TargetOpcode::G_INTTOPTR:
+        // With opaque pointers it doesn't appear as if we can convert to
+        // anything but a pointer to i8
+        SpvType = GR->getOrCreateSPIRVPointerType(
+            GR->getOrCreateSPIRVIntegerType(8, MIB),
+            MIB,
+            addressSpaceToStorageClass(
+                MRI.getType(Reg).getAddressSpace(),
+                MIB.getMF().getSubtarget<SPIRVSubtarget>()));
+        break;
       case TargetOpcode::G_TRUNC:
       case TargetOpcode::G_ADDRSPACE_CAST:
       case TargetOpcode::G_PTR_ADD:
@@ -684,6 +694,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       case TargetOpcode::G_SEXT:
       case TargetOpcode::G_ZEXT:
       case TargetOpcode::G_PTRTOINT:
+      case TargetOpcode::G_INTTOPTR:
       case TargetOpcode::COPY:
       case TargetOpcode::G_ADDRSPACE_CAST:
         propagateSPIRVType(&MI, GR, MRI, MIB);
