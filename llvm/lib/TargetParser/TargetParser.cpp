@@ -433,6 +433,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["fp8e5m3-insts"] = true;
     Features["permlane16-swap"] = true;
     Features["ashr-pk-insts"] = true;
+    Features["add-min-max-insts"] = true;
+    Features["pk-add-min-max-insts"] = true;
     Features["atomic-buffer-pk-add-bf16-inst"] = true;
     Features["vmem-pref-insts"] = true;
     Features["atomic-fadd-rtn-insts"] = true;
@@ -444,6 +446,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-fmin-fmax-global-f32"] = true;
     Features["atomic-fmin-fmax-global-f64"] = true;
     Features["wavefrontsize32"] = true;
+    Features["clusters"] = true;
     break;
   case GK_GFX1201:
   case GK_GFX1200:

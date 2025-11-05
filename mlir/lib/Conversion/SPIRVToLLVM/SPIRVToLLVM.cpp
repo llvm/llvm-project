@@ -1118,10 +1118,7 @@ StringRef getTypeMangling(Type type, bool isSigned) {
           llvm_unreachable("Unsupported integer width");
         }
       })
-      .Default([](auto) {
-        llvm_unreachable("No mangling defined");
-        return "";
-      });
+      .DefaultUnreachable("No mangling defined");
 }
 
 template <typename ReduceOp>

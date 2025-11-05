@@ -117,7 +117,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     // Deduce CPU name from ABI name.
     CPUName = llvm::StringSwitch<const char *>(ABIName)
                   .Case("o32", DefMips32CPU)
-                  .Cases("n32", "n64", DefMips64CPU)
+                  .Cases({"n32", "n64"}, DefMips64CPU)
                   .Default("");
   }
 
@@ -442,6 +442,8 @@ bool mips::hasCompactBranches(StringRef &CPU) {
   return llvm::StringSwitch<bool>(CPU)
       .Case("mips32r6", true)
       .Case("mips64r6", true)
+      .Case("i6400", true)
+      .Case("i6500", true)
       .Default(false);
 }
 
@@ -465,7 +467,7 @@ bool mips::isNaN2008(const Driver &D, const ArgList &Args,
 
   // NaN2008 is the default for MIPS32r6/MIPS64r6.
   return llvm::StringSwitch<bool>(getCPUName(D, Args, Triple))
-      .Cases("mips32r6", "mips64r6", true)
+      .Cases({"mips32r6", "mips64r6"}, true)
       .Default(false);
 }
 
@@ -480,9 +482,9 @@ bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
     return false;
 
   return llvm::StringSwitch<bool>(CPUName)
-      .Cases("mips2", "mips3", "mips4", "mips5", true)
-      .Cases("mips32", "mips32r2", "mips32r3", "mips32r5", true)
-      .Cases("mips64", "mips64r2", "mips64r3", "mips64r5", true)
+      .Cases({"mips2", "mips3", "mips4", "mips5"}, true)
+      .Cases({"mips32", "mips32r2", "mips32r3", "mips32r5"}, true)
+      .Cases({"mips64", "mips64r2", "mips64r3", "mips64r5"}, true)
       .Default(false);
 }
 
@@ -500,8 +502,8 @@ bool mips::shouldUseFPXX(const ArgList &Args, const llvm::Triple &Triple,
   if (Arg *A = Args.getLastArg(options::OPT_mmsa))
     if (A->getOption().matches(options::OPT_mmsa))
       UseFPXX = llvm::StringSwitch<bool>(CPUName)
-                    .Cases("mips32r2", "mips32r3", "mips32r5", false)
-                    .Cases("mips64r2", "mips64r3", "mips64r5", false)
+                    .Cases({"mips32r2", "mips32r3", "mips32r5"}, false)
+                    .Cases({"mips64r2", "mips64r3", "mips64r5"}, false)
                     .Default(UseFPXX);
 
   return UseFPXX;

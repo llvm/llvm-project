@@ -96,8 +96,8 @@ class OpenACCClauseCIREmitter final
     mlir::IntegerType targetType = mlir::IntegerType::get(
         &cgf.getMLIRContext(), /*width=*/1,
         mlir::IntegerType::SignednessSemantics::Signless);
-    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-        exprLoc, targetType, condition);
+    auto conversionOp = mlir::UnrealizedConversionCastOp::create(
+        builder, exprLoc, targetType, condition);
     return conversionOp.getResult(0);
   }
 
@@ -107,8 +107,8 @@ class OpenACCClauseCIREmitter final
     mlir::IntegerType ty = mlir::IntegerType::get(
         &cgf.getMLIRContext(), width,
         mlir::IntegerType::SignednessSemantics::Signless);
-    auto constOp = builder.create<mlir::arith::ConstantOp>(
-        loc, builder.getIntegerAttr(ty, value));
+    auto constOp = mlir::arith::ConstantOp::create(
+        builder, loc, builder.getIntegerAttr(ty, value));
 
     return constOp;
   }
@@ -126,7 +126,7 @@ class OpenACCClauseCIREmitter final
         .CaseLower("default", mlir::acc::DeviceType::Default)
         .CaseLower("host", mlir::acc::DeviceType::Host)
         .CaseLower("multicore", mlir::acc::DeviceType::Multicore)
-        .CasesLower("nvidia", "acc_device_nvidia",
+        .CasesLower({"nvidia", "acc_device_nvidia"},
                     mlir::acc::DeviceType::Nvidia)
         .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
   }
@@ -217,8 +217,8 @@ class OpenACCClauseCIREmitter final
         cgf.getOpenACCDataOperandInfo(varOperand);
 
     auto beforeOp =
-        builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
-                                   implicit, opInfo.name, opInfo.bounds);
+        BeforeOpTy::create(builder, opInfo.beginLoc, opInfo.varValue,
+                           structured, implicit, opInfo.name, opInfo.bounds);
     operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
 
     AfterOpTy afterOp;
@@ -231,12 +231,12 @@ class OpenACCClauseCIREmitter final
         // Detach/Delete ops don't have the variable reference here, so they
         // take 1 fewer argument to their build function.
         afterOp =
-            builder.create<AfterOpTy>(opInfo.beginLoc, beforeOp, structured,
-                                      implicit, opInfo.name, opInfo.bounds);
+            AfterOpTy::create(builder, opInfo.beginLoc, beforeOp, structured,
+                              implicit, opInfo.name, opInfo.bounds);
       } else {
-        afterOp = builder.create<AfterOpTy>(
-            opInfo.beginLoc, beforeOp, opInfo.varValue, structured, implicit,
-            opInfo.name, opInfo.bounds);
+        afterOp = AfterOpTy::create(builder, opInfo.beginLoc, beforeOp,
+                                    opInfo.varValue, structured, implicit,
+                                    opInfo.name, opInfo.bounds);
       }
     }
 
@@ -258,8 +258,8 @@ class OpenACCClauseCIREmitter final
     CIRGenFunction::OpenACCDataOperandInfo opInfo =
         cgf.getOpenACCDataOperandInfo(varOperand);
     auto beforeOp =
-        builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
-                                   implicit, opInfo.name, opInfo.bounds);
+        BeforeOpTy::create(builder, opInfo.beginLoc, opInfo.varValue,
+                           structured, implicit, opInfo.name, opInfo.bounds);
     operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
 
     // Set the 'rest' of the info for the operation.
@@ -553,12 +553,15 @@ public:
   }
 
   void VisitIfClause(const OpenACCIfClause &clause) {
-    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::InitOp,
-                               mlir::acc::ShutdownOp, mlir::acc::SetOp,
-                               mlir::acc::DataOp, mlir::acc::WaitOp,
-                               mlir::acc::HostDataOp, mlir::acc::EnterDataOp,
-                               mlir::acc::ExitDataOp, mlir::acc::UpdateOp>) {
+    if constexpr (isOneOfTypes<
+                      OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                      mlir::acc::KernelsOp, mlir::acc::InitOp,
+                      mlir::acc::ShutdownOp, mlir::acc::SetOp,
+                      mlir::acc::DataOp, mlir::acc::WaitOp,
+                      mlir::acc::HostDataOp, mlir::acc::EnterDataOp,
+                      mlir::acc::ExitDataOp, mlir::acc::UpdateOp,
+                      mlir::acc::AtomicReadOp, mlir::acc::AtomicWriteOp,
+                      mlir::acc::AtomicUpdateOp, mlir::acc::AtomicCaptureOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
     } else if constexpr (isCombinedType<OpTy>) {
@@ -1001,11 +1004,11 @@ public:
               OpenACCRecipeBuilder<mlir::acc::PrivateRecipeOp>(cgf, builder)
                   .getOrCreateRecipe(
                       cgf.getContext(), recipeInsertLocation, varExpr,
-                      varRecipe.AllocaDecl, varRecipe.InitExpr,
+                      varRecipe.AllocaDecl,
                       /*temporary=*/nullptr, OpenACCReductionOperator::Invalid,
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
-                      privateOp);
+                      privateOp, /*reductionCombinerRecipes=*/{});
           // TODO: OpenACC: The dialect is going to change in the near future to
           // have these be on a different operation, so when that changes, we
           // probably need to change these here.
@@ -1036,24 +1039,17 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
-          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
-          // this, and won't work when we get to bounds/etc. Do this for now to
-          // limit the scope of this refactor.
-          VarDecl *allocaDecl = varRecipe.AllocaDecl;
-          allocaDecl->setInit(varRecipe.InitExpr);
-          allocaDecl->setInitStyle(VarDecl::CallInit);
 
           auto recipe =
               OpenACCRecipeBuilder<mlir::acc::FirstprivateRecipeOp>(cgf,
                                                                     builder)
                   .getOrCreateRecipe(
                       cgf.getContext(), recipeInsertLocation, varExpr,
-                      varRecipe.AllocaDecl, varRecipe.InitExpr,
-                      varRecipe.InitFromTemporary,
+                      varRecipe.AllocaDecl, varRecipe.InitFromTemporary,
                       OpenACCReductionOperator::Invalid,
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
-                      firstPrivateOp);
+                      firstPrivateOp, /*reductionCombinerRecipe=*/{});
 
           // TODO: OpenACC: The dialect is going to change in the near future to
           // have these be on a different operation, so when that changes, we
@@ -1086,22 +1082,16 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
-          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
-          // this, and won't work when we get to bounds/etc. Do this for now to
-          // limit the scope of this refactor.
-          VarDecl *allocaDecl = varRecipe.AllocaDecl;
-          allocaDecl->setInit(varRecipe.InitExpr);
-          allocaDecl->setInitStyle(VarDecl::CallInit);
 
           auto recipe =
               OpenACCRecipeBuilder<mlir::acc::ReductionRecipeOp>(cgf, builder)
                   .getOrCreateRecipe(
                       cgf.getContext(), recipeInsertLocation, varExpr,
-                      varRecipe.AllocaDecl, varRecipe.InitExpr,
+                      varRecipe.AllocaDecl,
                       /*temporary=*/nullptr, clause.getReductionOp(),
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
-                      reductionOp);
+                      reductionOp, varRecipe.CombinerRecipes);
 
           operation.addReduction(builder.getContext(), reductionOp, recipe);
         }
@@ -1157,6 +1147,10 @@ EXPL_SPEC(mlir::acc::HostDataOp)
 EXPL_SPEC(mlir::acc::EnterDataOp)
 EXPL_SPEC(mlir::acc::ExitDataOp)
 EXPL_SPEC(mlir::acc::UpdateOp)
+EXPL_SPEC(mlir::acc::AtomicReadOp)
+EXPL_SPEC(mlir::acc::AtomicWriteOp)
+EXPL_SPEC(mlir::acc::AtomicCaptureOp)
+EXPL_SPEC(mlir::acc::AtomicUpdateOp)
 #undef EXPL_SPEC
 
 template <typename ComputeOp, typename LoopOp>

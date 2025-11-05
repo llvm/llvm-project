@@ -975,6 +975,12 @@ public:
                            OpenMPDefaultClauseVariableCategory VCKind,
                            SourceLocation VCKindLoc, SourceLocation StartLoc,
                            SourceLocation LParenLoc, SourceLocation EndLoc);
+  /// Called on well-formed 'threadset' clause.
+  OMPClause *ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
+                                        SourceLocation KindLoc,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc);
   /// Called on well-formed 'proc_bind' clause.
   OMPClause *ActOnOpenMPProcBindClause(llvm::omp::ProcBindKind Kind,
                                        SourceLocation KindLoc,
@@ -1022,7 +1028,8 @@ public:
                                SourceLocation EndLoc);
   /// Called on well-formed 'nowait' clause.
   OMPClause *ActOnOpenMPNowaitClause(SourceLocation StartLoc,
-                                     SourceLocation EndLoc);
+                                     SourceLocation EndLoc,
+                                     SourceLocation LParenLoc, Expr *Condition);
   /// Called on well-formed 'untied' clause.
   OMPClause *ActOnOpenMPUntiedClause(SourceLocation StartLoc,
                                      SourceLocation EndLoc);

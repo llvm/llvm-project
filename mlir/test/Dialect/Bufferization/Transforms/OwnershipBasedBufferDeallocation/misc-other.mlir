@@ -18,3 +18,11 @@ func.func @func_with_assume_alignment(%arg0: memref<128xi8>) {
   %0 = memref.assume_alignment %arg0, 64 : memref<128xi8>
   return
 }
+
+// CHECK-LABEL: func @func_with_prefetch(
+//       CHECK: memref.prefetch %arg0[%c0, %c0], read, locality<1>, data : memref<4x8xf32>
+func.func @func_with_prefetch(%arg0: memref<4x8xf32>) {
+  %c0 = arith.constant 0 : index
+  memref.prefetch %arg0[%c0, %c0], read, locality<1>, data : memref<4x8xf32>
+  return
+}

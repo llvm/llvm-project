@@ -1,10 +1,10 @@
-; Testcase to check that module with different branch-target-enforcement can
-; be mixed.
-;
+;; Testcase to check that module with different branch-target-enforcement can
+;; be mixed.
+;;
 ; RUN: llvm-as %s -o %t1.bc
 ; RUN: llvm-as %p/Inputs/foo.ll -o %t2.bc
 ; RUN: llvm-lto -exported-symbol main \
-; RUN:          -exported-symbol foo \
+; RUN:          -exported-symbol foo_on \
 ; RUN:          -filetype=obj \
 ; RUN:           %t1.bc %t2.bc \
 ; RUN:           -o %t1.exe 2>&1 | FileCheck --allow-empty %s
@@ -14,11 +14,11 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
-declare i32 @foo();
+declare i32 @foo_on();
 
 define i32 @main() "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" {
 entry:
-  %add = call i32 @foo()
+  %add = call i32 @foo_on()
   ret i32 %add
 }
 
@@ -30,9 +30,12 @@ entry:
 
 ; CHECK-NOT: linking module flags 'branch-target-enforcement': IDs have conflicting values in
 ; CHECK-DUMP: <main>:
+; CHECK-DUMP:      paciasp
+; CHECK-DUMP:      str
 ; CHECK-DUMP:      bl      0x8 <main+0x8>
-; CHECK-DUMP: <foo>:
+; CHECK-DUMP: <foo_on>:
+; CHECK-DUMP:     pacibsp
 
-; `main` doesn't support BTI while `foo` does, so in the binary
-; we should see only PAC which is supported by both.
+;; `main` doesn't support BTI while `foo` does, so in the binary
+;; we should see only PAC which is supported by both.
 ; CHECK-PROP:   Properties: aarch64 feature: PAC

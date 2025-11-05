@@ -918,12 +918,17 @@ func.func @mmt4d_scalable_with_assume(%A: memref<16x16x8x1xf32>, %B: memref<16x1
 // CHECK-SAME:      %[[B:.*]]: memref<16x16x?x1xf32>,
 // CHECK-SAME:      %[[C_IN:.*]]: memref<16x16x8x?xf32>) {
 // CHECK-NOT:       mask
-// CHECK:           %[[VEC_A:.*]] = vector.transfer_read %[[A]]{{.*}} : memref<16x16x8x1xf32>, vector<16x16x16x8x[4]x1xf32>
-// CHECK:           %[[VEC_B:.*]] = vector.transfer_read %[[B]]{{.*}} : memref<16x16x?x1xf32>, vector<16x16x16x8x[4]x1xf32>
-// CHECK:           %[[VEC_C:.*]] = vector.transfer_read %[[C_IN]]{{.*}} : memref<16x16x8x?xf32>, vector<16x16x8x[4]xf32>
+// CHECK:           %[[VEC_A:.*]] = vector.transfer_read %[[A]]
+// CHECK-SAME:      memref<16x16x8x1xf32>, vector<16x16x16x8x[4]x1xf32>
+// CHECK:           %[[VEC_B:.*]] = vector.transfer_read %[[B]]
+// `in-bounds` are set to true for dynamic dims with assume, static sizes will be inferred elsewhere.
+// CHECK-SAME:      in_bounds = [false, false, false, false, true, false]{{.*}} : memref<16x16x?x1xf32>, vector<16x16x16x8x[4]x1xf32>
+// CHECK:           %[[VEC_C:.*]] = vector.transfer_read %[[C_IN]]
+// CHECK-SAME:      in_bounds = [false, false, false, true]{{.*}} : memref<16x16x8x?xf32>, vector<16x16x8x[4]xf32>
 // CHECK:           %[[MUL:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<16x16x16x8x[4]x1xf32>
 // CHECK:           %[[RED:.*]] = vector.multi_reduction <add>, %[[MUL]], %[[VEC_C]] [2, 5] : vector<16x16x16x8x[4]x1xf32> to vector<16x16x8x[4]xf32>
-// CHECK:           vector.transfer_write %[[RED]], %[[C_IN]]{{.*}} : vector<16x16x8x[4]xf32>, memref<16x16x8x?xf32>
+// CHECK:           vector.transfer_write %[[RED]], %[[C_IN]]
+// CHECK-SAME:      in_bounds = [false, false, false, true]{{.*}} : vector<16x16x8x[4]xf32>, memref<16x16x8x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -1011,12 +1016,17 @@ func.func @batch_mmt4d_scalable_with_assume(%A: memref<2x16x16x8x1xf32>, %B: mem
 // CHECK-SAME:      %[[B:.*]]: memref<2x16x16x?x1xf32>,
 // CHECK-SAME:      %[[C_IN:.*]]: memref<2x16x16x8x?xf32>) {
 // CHECK-NOT:       mask
-// CHECK:           %[[VEC_A:.*]] = vector.transfer_read %[[A]]{{.*}} : memref<2x16x16x8x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
-// CHECK:           %[[VEC_B:.*]] = vector.transfer_read %[[B]]{{.*}} : memref<2x16x16x?x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
-// CHECK:           %[[VEC_C:.*]] = vector.transfer_read %[[C_IN]]{{.*}} : memref<2x16x16x8x?xf32>, vector<2x16x16x8x[4]xf32>
+// CHECK:           %[[VEC_A:.*]] = vector.transfer_read %[[A]]
+// CHECK-SAME:      memref<2x16x16x8x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
+// CHECK:           %[[VEC_B:.*]] = vector.transfer_read %[[B]]
+// `in-bounds` are set to true for dynamic dims with assume, static sizes will be inferred elsewhere.
+// CHECK-SAME:      in_bounds = [false, false, false, false, false, true, false]{{.*}} : memref<2x16x16x?x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
+// CHECK:           %[[VEC_C:.*]] = vector.transfer_read %[[C_IN]]
+// CHECK-SAME:      in_bounds = [false, false, false, false, true]{{.*}} : memref<2x16x16x8x?xf32>, vector<2x16x16x8x[4]xf32>
 // CHECK:           %[[MUL:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<2x16x16x16x8x[4]x1xf32>
 // CHECK:           %[[RED:.*]] = vector.multi_reduction <add>, %[[MUL]], %[[VEC_C]] [3, 6] : vector<2x16x16x16x8x[4]x1xf32> to vector<2x16x16x8x[4]xf32>
-// CHECK:           vector.transfer_write %[[RED]], %[[C_IN]]{{.*}} : vector<2x16x16x8x[4]xf32>, memref<2x16x16x8x?xf32>
+// CHECK:           vector.transfer_write %[[RED]], %[[C_IN]]
+// CHECK-SAME:      in_bounds = [false, false, false, false, true]{{.*}} : vector<2x16x16x8x[4]xf32>, memref<2x16x16x8x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -1297,14 +1307,17 @@ func.func @test_vectorize_unpack_no_vector_sizes_permute(%source: tensor<4x7x4xf
 /// Tests for linalg.pack
 ///----------------------------------------------------------------------------------------
 
-// Input identical as the test in vectorization-with-patterns.mlir. Output is
-// different - vector sizes are inferred (rather than user-specified) and hence
-// masking was used.
+// This packing requires no padding, so no out-of-bounds read/write vector Ops.
 
-// CHECK-LABEL: func @test_vectorize_pack
+// Note, see a similar test in:
+//  * vectorization-with-patterns.mlir
+// The output is identical (the input vector sizes == the inferred vector
+// sizes, i.e. the tensor sizes).
+
+// CHECK-LABEL: func @pack_no_padding
 // CHECK-SAME:      %[[SRC:.*]]: tensor<32x8x16xf32>,
 // CHECK-SAME:      %[[DEST:.*]]: tensor<4x1x32x16x2xf32>
-func.func @test_vectorize_pack(%src: tensor<32x8x16xf32>, %dest: tensor<4x1x32x16x2xf32>) -> tensor<4x1x32x16x2xf32> {
+func.func @pack_no_padding(%src: tensor<32x8x16xf32>, %dest: tensor<4x1x32x16x2xf32>) -> tensor<4x1x32x16x2xf32> {
   %pack = linalg.pack %src outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %dest : tensor<32x8x16xf32> -> tensor<4x1x32x16x2xf32>
   return %pack : tensor<4x1x32x16x2xf32>
 }
@@ -1315,9 +1328,9 @@ func.func @test_vectorize_pack(%src: tensor<32x8x16xf32>, %dest: tensor<4x1x32x1
 //      CHECK: %[[SC:.*]] = vector.shape_cast %[[READ]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
 //      CHECK: %[[TR:.*]] = vector.transpose %[[SC]], [1, 3, 0, 4, 2] : vector<32x4x2x1x16xf32> to vector<4x1x32x16x2xf32>
 //  CHECK-DAG: %[[C0_1:.*]] = arith.constant 0 : index
-//      CHECK: %[[write:.*]] = vector.transfer_write %[[TR]], %[[DEST]][%[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]]]
+//      CHECK: %[[WRITE:.*]] = vector.transfer_write %[[TR]], %[[DEST]][%[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]]]
 // CHECK-SAME:   {in_bounds = [true, true, true, true, true]} : vector<4x1x32x16x2xf32>, tensor<4x1x32x16x2xf32>
-//      CHECK: return %[[write]] : tensor<4x1x32x16x2xf32>
+//      CHECK: return %[[WRITE]] : tensor<4x1x32x16x2xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%src: !transform.any_op {transform.readonly}) {
@@ -1329,14 +1342,18 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Input identical as the test in vectorization-with-patterns.mlir. Output is
-// different - vector sizes are inferred (rather than user-specified) and hence
-// masking was used.
+// This packing does require padding, so there are out-of-bounds read/write
+// vector Ops.
 
-// CHECK-LABEL: func @test_vectorize_padded_pack
+// Note, see a similar test in:
+//  * vectorization-with-patterns.mlir.
+// The output is different (the input vector sizes != inferred vector sizes,
+// i.e. the tensor sizes).
+
+// CHECK-LABEL: func @pack_with_padding
 // CHECK-SAME:      %[[SRC:.*]]: tensor<32x7x15xf32>,
 // CHECK-SAME:      %[[DEST:.*]]: tensor<32x4x1x16x2xf32>
-func.func @test_vectorize_padded_pack(%src: tensor<32x7x15xf32>, %dest: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
+func.func @pack_with_padding(%src: tensor<32x7x15xf32>, %dest: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
   %pad = arith.constant 0.000000e+00 : f32
   %pack = linalg.pack %src padding_value(%pad : f32) inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %dest : tensor<32x7x15xf32> -> tensor<32x4x1x16x2xf32>
   return %pack : tensor<32x4x1x16x2xf32>
@@ -1354,9 +1371,9 @@ func.func @test_vectorize_padded_pack(%src: tensor<32x7x15xf32>, %dest: tensor<3
 //      CHECK: %[[SC:.*]] = vector.shape_cast %[[READ]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
 //      CHECK: %[[TR:.*]] = vector.transpose %[[SC]], [0, 1, 3, 4, 2] : vector<32x4x2x1x16xf32> to vector<32x4x1x16x2xf32>
 //  CHECK-DAG: %[[C0_1:.*]] = arith.constant 0 : index
-//      CHECK: %[[write:.*]] = vector.transfer_write %[[TR]], %[[DEST]][%[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]]]
+//      CHECK: %[[WRITE:.*]] = vector.transfer_write %[[TR]], %[[DEST]][%[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]]]
 // CHECK-SAME:   {in_bounds = [true, true, true, true, true]} : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
-//      CHECK: return %[[write]] : tensor<32x4x1x16x2xf32>
+//      CHECK: return %[[WRITE]] : tensor<32x4x1x16x2xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
@@ -1368,10 +1385,46 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func @test_vectorize_dynamic_pack
+// This packing does require padding, so there are out-of-bounds read/write
+// vector Ops.
+
+// Note, see a similar test in:
+//  * vectorization-with-patterns.mlir.
+// The output is identical (in both cases the vector sizes are inferred).
+
+// CHECK-LABEL: func @pack_with_padding_no_vector_sizes
+// CHECK-SAME:      %[[SRC:.*]]: tensor<32x7x15xf32>,
+// CHECK-SAME:      %[[DEST:.*]]: tensor<32x4x1x16x2xf32>
+func.func @pack_with_padding_no_vector_sizes(%src: tensor<32x7x15xf32>, %dest: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
+  %pad = arith.constant 0.000000e+00 : f32
+  %pack = linalg.pack %src padding_value(%pad : f32) inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %dest : tensor<32x7x15xf32> -> tensor<32x4x1x16x2xf32>
+  return %pack : tensor<32x4x1x16x2xf32>
+}
+//  CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//      CHECK: %[[READ:.*]] =  vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]]], %[[CST]]
+// CHECK-SAME:   {in_bounds = [true, false, false]} : tensor<32x7x15xf32>, vector<32x8x16xf32>
+//      CHECK: %[[SC:.*]] = vector.shape_cast %[[READ]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
+//      CHECK: %[[TR:.*]] = vector.transpose %[[SC]], [0, 1, 3, 4, 2] : vector<32x4x2x1x16xf32> to vector<32x4x1x16x2xf32>
+//  CHECK-DAG: %[[C0_1:.*]] = arith.constant 0 : index
+//      CHECK: %[[WRITE:.*]] = vector.transfer_write %[[TR]], %[[DEST]][%[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]]]
+// CHECK-SAME:   {in_bounds = [true, true, true, true, true]} : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
+//      CHECK: return %[[WRITE]] : tensor<32x4x1x16x2xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func @pack_with_dynamic_dims
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:      %[[DEST:.*]]: tensor<?x?x16x2xf32>
-func.func @test_vectorize_dynamic_pack(%src: tensor<?x?xf32>, %dest: tensor<?x?x16x2xf32>) -> tensor<?x?x16x2xf32> {
+func.func @pack_with_dynamic_dims(%src: tensor<?x?xf32>, %dest: tensor<?x?x16x2xf32>) -> tensor<?x?x16x2xf32> {
   %pack = linalg.pack %src inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %dest : tensor<?x?xf32> -> tensor<?x?x16x2xf32>
   return %pack : tensor<?x?x16x2xf32>
 }
@@ -1407,64 +1460,6 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-
-// -----
-
-// CHECK-LABEL: func @test_vectorize_pack_no_vector_sizes
-// CHECK-SAME:      %[[SRC:.*]]: tensor<64x4xf32>,
-// CHECK-SAME:      %[[DEST:.*]]: tensor<2x4x16x2xf32>
-func.func @test_vectorize_pack_no_vector_sizes(%src: tensor<64x4xf32>, %dest: tensor<2x4x16x2xf32>) -> tensor<2x4x16x2xf32> {
-  %pack = linalg.pack %src outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [16, 2] into %dest : tensor<64x4xf32> -> tensor<2x4x16x2xf32>
-  return %pack : tensor<2x4x16x2xf32>
-}
-//  CHECK-DAG: %[[CST:.*]] = ub.poison : f32
-//  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-//      CHECK: %[[READ:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %[[CST]]
-// CHECK-SAME:    {in_bounds = [true, true]} : tensor<64x4xf32>, vector<64x4xf32>
-//      CHECK: %[[SC:.*]] = vector.shape_cast %[[READ]] : vector<64x4xf32> to vector<4x16x2x2xf32>
-//      CHECK: %[[TR:.*]] = vector.transpose %[[SC]], [2, 0, 1, 3] : vector<4x16x2x2xf32> to vector<2x4x16x2xf32>
-//  CHECK-DAG: %[[C0_1:.*]] = arith.constant 0 : index
-//      CHECK: %[[WRITE:.*]] = vector.transfer_write %[[TR]], %[[DEST]][%[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]]]
-// CHECK-SAME:   {in_bounds = [true, true, true, true]} : vector<2x4x16x2xf32>, tensor<2x4x16x2xf32>
-//      CHECK: return %[[WRITE]] : tensor<2x4x16x2xf32>
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 : !transform.any_op
-    transform.yield
-  }
-}
-
-// -----
-
-// CHECK-LABEL: test_vectorize_padded_pack_no_vector_sizes
-// CHECK-SAME:      %[[SRC:.*]]: tensor<32x7x15xf32>,
-// CHECK-SAME:      %[[DEST:.*]]: tensor<32x4x1x16x2xf32>
-func.func @test_vectorize_padded_pack_no_vector_sizes(%src: tensor<32x7x15xf32>, %dest: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
-  %pad = arith.constant 0.000000e+00 : f32
-  %pack = linalg.pack %src padding_value(%pad : f32) inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %dest : tensor<32x7x15xf32> -> tensor<32x4x1x16x2xf32>
-  return %pack : tensor<32x4x1x16x2xf32>
-}
-//  CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-//  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-//      CHECK: %[[READ:.*]] =  vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]]], %[[CST]]
-// CHECK-SAME:   {in_bounds = [true, false, false]} : tensor<32x7x15xf32>, vector<32x8x16xf32>
-//      CHECK: %[[SC:.*]] = vector.shape_cast %[[READ]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
-//      CHECK: %[[TR:.*]] = vector.transpose %[[SC]], [0, 1, 3, 4, 2] : vector<32x4x2x1x16xf32> to vector<32x4x1x16x2xf32>
-//  CHECK-DAG: %[[C0_1:.*]] = arith.constant 0 : index
-//      CHECK: %[[WRITE:.*]] = vector.transfer_write %[[TR]], %[[DEST]][%[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]], %[[C0_1]]]
-// CHECK-SAME:   {in_bounds = [true, true, true, true, true]} : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
-//      CHECK: return %[[WRITE]] : tensor<32x4x1x16x2xf32>
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 : !transform.any_op
-    transform.yield
-  }
-}
-
 
 ///----------------------------------------------------------------------------------------
 /// Tests for other Ops

@@ -229,6 +229,23 @@ int MachTask::GetMemoryRegionInfo(nub_addr_t addr, DNBRegionInfo *region_info) {
   return ret;
 }
 
+//----------------------------------------------------------------------
+// MachTask::GetMemoryTags
+//----------------------------------------------------------------------
+nub_bool_t MachTask::GetMemoryTags(nub_addr_t addr, nub_size_t size,
+                                   std::vector<uint8_t> &tags) {
+  task_t task = TaskPort();
+  if (task == TASK_NULL)
+    return false;
+
+  bool ok = m_vm_memory.GetMemoryTags(task, addr, size, tags);
+  DNBLogThreadedIf(LOG_MEMORY, "MachTask::GetMemoryTags ( addr = 0x%8.8llx, "
+                               "size = 0x%8.8llx ) => %s ( tag count = %llu)",
+                  (uint64_t)addr, (uint64_t)size, (ok ? "ok" : "err"),
+                  (uint64_t)tags.size());
+  return ok;
+}
+
 #define TIME_VALUE_TO_TIMEVAL(a, r)                                            \
   do {                                                                         \
     (r)->tv_sec = (a)->seconds;                                                \

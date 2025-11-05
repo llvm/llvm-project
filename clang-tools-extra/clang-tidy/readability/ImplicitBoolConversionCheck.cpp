@@ -29,6 +29,8 @@ AST_MATCHER(Stmt, isMacroExpansion) {
 
 AST_MATCHER(Stmt, isC23) { return Finder->getASTContext().getLangOpts().C23; }
 
+// Preserve same name as AST_MATCHER(isNULLMacroExpansion)
+// NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
 bool isNULLMacroExpansion(const Stmt *Statement, ASTContext &Context) {
   SourceManager &SM = Context.getSourceManager();
   const LangOptions &LO = Context.getLangOpts();
@@ -51,7 +53,7 @@ static StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
     return Type->isUnsignedIntegerType() ? "0u" : "0";
 
   case CK_FloatingToBoolean:
-    return Context.hasSameType(Type, Context.FloatTy) ? "0.0f" : "0.0";
+    return ASTContext::hasSameType(Type, Context.FloatTy) ? "0.0f" : "0.0";
 
   case CK_PointerToBoolean:
   case CK_MemberPointerToBoolean: // Fall-through on purpose.
@@ -89,7 +91,8 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
   const Expr *SubExpr = Cast->getSubExpr();
 
-  bool NeedInnerParens = utils::fixit::areParensNeededForStatement(*SubExpr);
+  bool NeedInnerParens =
+      utils::fixit::areParensNeededForStatement(*SubExpr->IgnoreImpCasts());
   bool NeedOuterParens =
       Parent != nullptr && utils::fixit::areParensNeededForStatement(*Parent);
 
@@ -214,7 +217,7 @@ getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
   }
 
   if (DestType->isFloatingType()) {
-    if (Context.hasSameType(DestType, Context.FloatTy)) {
+    if (ASTContext::hasSameType(DestType, Context.FloatTy)) {
       return BoolLiteral->getValue() ? "1.0f" : "0.0f";
     }
     return BoolLiteral->getValue() ? "1.0" : "0.0";

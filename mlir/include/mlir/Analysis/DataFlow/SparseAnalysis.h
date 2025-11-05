@@ -286,7 +286,7 @@ private:
   /// and propagating therefrom.
   virtual void
   visitRegionSuccessors(ProgramPoint *point, RegionBranchOpInterface branch,
-                        RegionBranchPoint successor,
+                        RegionSuccessor successor,
                         ArrayRef<AbstractSparseLattice *> lattices);
 };
 
@@ -518,6 +518,10 @@ private:
 template <typename StateT>
 class SparseBackwardDataFlowAnalysis
     : public AbstractSparseBackwardDataFlowAnalysis {
+  static_assert(
+      std::is_base_of<AbstractSparseLattice, StateT>::value,
+      "analysis state class expected to subclass AbstractSparseLattice");
+
 public:
   explicit SparseBackwardDataFlowAnalysis(DataFlowSolver &solver,
                                           SymbolTableCollection &symbolTable)
