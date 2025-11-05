@@ -5390,7 +5390,8 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     CGInfo.IsIndirectTarget = IsIndirectTarget;
     uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
     if (CGSectionErr)
-      PrintMalformedError(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+      PrintMalformedError(CGSectionErr,
+                          Twine::utohexstr(CGInfo.FunctionAddress),
                           "indirect type id");
     CGInfo.FunctionTypeId = TypeId;
     if (IsIndirectTarget && TypeId == 0)
@@ -5402,7 +5403,8 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       // Read number of direct call sites for this function.
       uint64_t NumDirectCallees = Data.getULEB128(&Offset, &CGSectionErr);
       if (CGSectionErr)
-        PrintMalformedError(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+        PrintMalformedError(CGSectionErr,
+                            Twine::utohexstr(CGInfo.FunctionAddress),
                             "number of direct callsites");
       // Read uniqeu direct callees and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumDirectCallees; ++I) {
@@ -5410,7 +5412,8 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
         typename ELFT::uint Callee =
             Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
         if (CGSectionErr)
-          PrintMalformedError(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+          PrintMalformedError(CGSectionErr,
+                              Twine::utohexstr(CGInfo.FunctionAddress),
                               "direct callee PC");
         CGInfo.DirectCallees.insert((IsETREL ? CalleeOffset : Callee));
       }
@@ -5422,14 +5425,16 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       uint64_t NumIndirectTargetTypeIDs =
           Data.getULEB128(&Offset, &CGSectionErr);
       if (CGSectionErr)
-        PrintMalformedError(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+        PrintMalformedError(CGSectionErr,
+                            Twine::utohexstr(CGInfo.FunctionAddress),
                             "number of indirect target type IDs");
 
       // Read unique indirect target type IDs and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
         uint64_t TargetType = Data.getU64(&Offset, &CGSectionErr);
         if (CGSectionErr)
-          PrintMalformedError(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+          PrintMalformedError(CGSectionErr,
+                              Twine::utohexstr(CGInfo.FunctionAddress),
                               "indirect type ID");
         CGInfo.IndirectTypeIDs.insert(TargetType);
       }
@@ -8317,38 +8322,30 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     W.printHex("Address", FuncEntryPC);
   };
 
-  auto PrintReloc =
-      [&](uint64_t FuncEntryPC,
-          typename std::vector<Relocation<ELFT>>::iterator &Reloc) {
-        if (Reloc == Relocations.end()) {
-          W.printHex("Offset", FuncEntryPC);
-          return;
-        }
-        Expected<RelSymbol<ELFT>> RelSymOrErr =
-            this->getRelocationTarget(*Reloc, RelocSymTab);
-        if (!RelSymOrErr) {
-          this->reportUniqueWarning(RelSymOrErr.takeError());
-          return;
-        }
-        if(!RelSymOrErr->Name.empty())
-          W.printString("Name", RelSymOrErr->Name);
-        if (Reloc->Addend)
-          W.printHex("Addend", (uintX_t)*Reloc->Addend);
-        SmallString<32> RelocName;
-        this->Obj.getRelocationTypeName(Reloc->Type, RelocName);
-        W.printString("Type", RelocName);
-        W.printHex("Offset", Reloc->Offset);
-      };
+  auto PrintReloc = [&](uint64_t RelocOffset) {
+    auto Reloc = llvm::find_if(Relocations, [&](const Relocation<ELFT> &R) {
+      return R.Offset == RelocOffset;
+    });
+    if (Reloc == Relocations.end()) {
+      W.printHex("Offset", RelocOffset);
+      return;
+    }
+    Expected<RelSymbol<ELFT>> RelSymOrErr =
+        this->getRelocationTarget(*Reloc, RelocSymTab);
+    if (!RelSymOrErr) {
+      this->reportUniqueWarning(RelSymOrErr.takeError());
+      return;
+    }
+    if (!RelSymOrErr->Name.empty())
+      W.printString("Name", RelSymOrErr->Name);
+  };
 
   auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
     if (this->Obj.getHeader().e_type != ELF::ET_REL) {
       PrintFunc(FuncEntryPC, this->getFunctionNames(FuncEntryPC), W);
       return;
     }
-    auto Reloc = llvm::find_if(
-        Relocations,
-        [&](const Relocation<ELFT> &R) { return R.Offset == FuncEntryPC; });
-    PrintReloc(FuncEntryPC, Reloc);
+    PrintReloc(FuncEntryPC);
   };
 
   ListScope CGI(W, "CallGraph");
