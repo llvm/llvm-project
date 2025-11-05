@@ -1212,12 +1212,15 @@ TYPE_CONTEXT_PARSER("image selector"_en_US,
 
 // R926 image-selector-spec ->
 //        STAT = stat-variable | TEAM = team-value |
-//        TEAM_NUMBER = scalar-int-expr
+//        TEAM_NUMBER = scalar-int-expr |
+//        NOTIFY = notify-variable
 TYPE_PARSER(construct<ImageSelectorSpec>(construct<ImageSelectorSpec::Stat>(
                 "STAT =" >> scalar(integer(indirect(variable))))) ||
     construct<ImageSelectorSpec>(construct<TeamValue>("TEAM =" >> teamValue)) ||
     construct<ImageSelectorSpec>(construct<ImageSelectorSpec::Team_Number>(
-        "TEAM_NUMBER =" >> scalarIntExpr)))
+        "TEAM_NUMBER =" >> scalarIntExpr)) ||
+    construct<ImageSelectorSpec>(construct<ImageSelectorSpec::Notify>(
+        "NOTIFY =" >> scalar(indirect(variable)))))
 
 // R927 allocate-stmt ->
 //        ALLOCATE ( [type-spec ::] allocation-list [, alloc-opt-list] )

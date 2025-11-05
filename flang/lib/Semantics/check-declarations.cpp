@@ -855,6 +855,15 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "Variable '%s' with EVENT_TYPE or LOCK_TYPE potential component '%s' must be a coarray"_err_en_US,
             symbol.name(), component.BuildResultDesignatorName());
+      } else if (IsNotifyType(derived)) { // C1612
+        messages_.Say(
+            "Variable '%s' with NOTIFY_TYPE must be a coarray"_err_en_US,
+            symbol.name());
+      } else if (auto component{FindNotifyPotentialComponent( // C1611
+                     *derived, /*ignoreCoarrays=*/true)}) {
+        messages_.Say(
+            "Variable '%s' with NOTIFY_TYPE potential component '%s' must be a coarray"_err_en_US,
+            symbol.name(), component.BuildResultDesignatorName());
       }
     }
   }
@@ -872,6 +881,10 @@ void CheckHelper::CheckObjectEntity(
       if (IsOrContainsEventOrLockComponent(symbol)) { // C847
         messages_.Say(
             "An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE"_err_en_US);
+      }
+      if (IsOrContainsNotifyComponent(symbol)) { // C1613
+        messages_.Say(
+            "An INTENT(OUT) dummy argument may not be, or contain, NOTIFY_TYPE"_err_en_US);
       }
       if (IsAssumedSizeArray(symbol)) { // C834
         if (type && type->IsPolymorphic()) {

@@ -107,6 +107,7 @@ bool IsBindCProcedure(const Scope &);
 // Returns a pointer to the function's symbol when true, else null
 const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
+bool IsOrContainsNotifyComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol &);
 // Does a non-PARAMETER symbol have explicit initialization with =value or
 // =>target in its declaration (but not in a DATA statement)? (Being
@@ -651,6 +652,8 @@ using PotentialAndPointerComponentIterator =
 // is returned. Otherwise, the returned iterator casts to true and can be
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
+    const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindNotifyPotentialComponent(
     const DerivedTypeSpec &, bool ignoreCoarrays = false);
 PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
     const DerivedTypeSpec &);

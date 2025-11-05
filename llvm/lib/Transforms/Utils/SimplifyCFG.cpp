@@ -5214,8 +5214,7 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
     // We don't have any info about this condition.
     auto *Br = TrueWhenEqual ? Builder.CreateCondBr(ExtraCase, EdgeBB, NewBB)
                              : Builder.CreateCondBr(ExtraCase, NewBB, EdgeBB);
-    setExplicitlyUnknownBranchWeightsIfProfiled(*Br, *NewBB->getParent(),
-                                                DEBUG_TYPE);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
 
     OldTI->eraseFromParent();
 

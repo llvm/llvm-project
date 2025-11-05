@@ -83,15 +83,21 @@ llvm::createUnpackMachineBundles(
   return new UnpackMachineBundles(std::move(Ftor));
 }
 
-/// Return the first found DebugLoc that has a DILocation, given a range of
-/// instructions. The search range is from FirstMI to LastMI (exclusive). If no
-/// DILocation is found, then an empty location is returned.
+/// Return the first DebugLoc that has line number information, given a
+/// range of instructions. The search range is from FirstMI to LastMI
+/// (exclusive). Otherwise return the first DILocation or an empty location if
+/// there are none.
 static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
                             MachineBasicBlock::instr_iterator LastMI) {
-  for (auto MII = FirstMI; MII != LastMI; ++MII)
-    if (MII->getDebugLoc())
-      return MII->getDebugLoc();
-  return DebugLoc();
+  DebugLoc DL;
+  for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    if (DebugLoc MIIDL = MII->getDebugLoc()) {
+      if (MIIDL.getLine() != 0)
+        return MIIDL;
+      DL = MIIDL.get();
+    }
+  }
+  return DL;
 }
 
 /// Check if target reg is contained in given lists, which are:

@@ -348,6 +348,7 @@ public:
   READ_FEATURE(TeamValue)
   READ_FEATURE(ImageSelector)
   READ_FEATURE(ImageSelectorSpec)
+  READ_FEATURE(ImageSelectorSpec::Notify)
   READ_FEATURE(ImageSelectorSpec::Stat)
   READ_FEATURE(ImageSelectorSpec::Team_Number)
   READ_FEATURE(ImplicitPart)

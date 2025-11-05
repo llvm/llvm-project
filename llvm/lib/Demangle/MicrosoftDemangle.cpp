@@ -15,6 +15,8 @@
 
 #include "llvm/Demangle/MicrosoftDemangle.h"
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
@@ -277,6 +279,15 @@ demanglePointerCVQualifiers(std::string_view &MangledName) {
   DEMANGLE_UNREACHABLE;
 }
 
+static NodeArrayNode *smallVecToNodeArray(ArenaAllocator &Arena,
+                                          ArrayRef<Node *> Vec) {
+  NodeArrayNode *Arr = Arena.alloc<NodeArrayNode>();
+  Arr->Count = Vec.size();
+  Arr->Nodes = Arena.allocArray<Node *>(Vec.size());
+  std::memcpy(Arr->Nodes, Vec.data(), Vec.size() * sizeof(Node *));
+  return Arr;
+}
+
 std::string_view Demangler::copyString(std::string_view Borrowed) {
   char *Stable = Arena.allocUnalignedBuffer(Borrowed.size());
   // This is not a micro-optimization, it avoids UB, should Borrowed be an null
@@ -323,8 +334,19 @@ Demangler::demangleSpecialTableSymbolNode(std::string_view &MangledName,
   }
 
   std::tie(STSN->Quals, IsMember) = demangleQualifiers(MangledName);
-  if (!consumeFront(MangledName, '@'))
-    STSN->TargetName = demangleFullyQualifiedTypeName(MangledName);
+
+  SmallVector<Node *, 1> TargetNames;
+  while (!consumeFront(MangledName, '@')) {
+    QualifiedNameNode *QN = demangleFullyQualifiedTypeName(MangledName);
+    if (Error)
+      return nullptr;
+    assert(QN);
+    TargetNames.push_back(QN);
+  }
+
+  if (!TargetNames.empty())
+    STSN->TargetNames = smallVecToNodeArray(Arena, TargetNames);
+
   return STSN;
 }
 

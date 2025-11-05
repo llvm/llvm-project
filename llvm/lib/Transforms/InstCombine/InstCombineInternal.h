@@ -479,7 +479,7 @@ private:
                                      const Twine &NameStr = "",
                                      InsertPosition InsertBefore = nullptr) {
     auto *Sel = SelectInst::Create(C, S1, S2, NameStr, InsertBefore, nullptr);
-    setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, F, DEBUG_TYPE);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, DEBUG_TYPE, &F);
     return Sel;
   }
 

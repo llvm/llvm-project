@@ -3620,10 +3620,7 @@ public:
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  const char *getMemcpyName() const {
-    // FIXME: Return StringRef
-    return Libcalls.getMemcpyName().data();
-  }
+  RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
 
   /// Check if this is valid libcall for the current module, otherwise
   /// RTLIB::Unsupported.

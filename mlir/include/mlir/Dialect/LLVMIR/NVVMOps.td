@@ -949,7 +949,7 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
   }];
 
   string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
+    auto [id, args] = NVVM::MBarrierTestWaitOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];

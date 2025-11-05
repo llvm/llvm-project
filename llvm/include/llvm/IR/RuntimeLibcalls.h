@@ -134,13 +134,13 @@ public:
 
   /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
   /// unsupported.
-  StringRef getMemcpyName() const {
+  RTLIB::LibcallImpl getMemcpyImpl() const {
     RTLIB::LibcallImpl Memcpy = getLibcallImpl(RTLIB::MEMCPY);
     if (Memcpy != RTLIB::Unsupported)
-      return getLibcallImplName(Memcpy);
+      return Memcpy;
 
     // Fallback to memmove if memcpy isn't available.
-    return getLibcallName(RTLIB::MEMMOVE);
+    return getLibcallImpl(RTLIB::MEMMOVE);
   }
 
   bool isAvailable(RTLIB::LibcallImpl Impl) const {
