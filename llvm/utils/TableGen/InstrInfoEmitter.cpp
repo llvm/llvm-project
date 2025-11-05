@@ -341,8 +341,6 @@ emitGetOperandIdxName(raw_ostream &OS,
 void InstrInfoEmitter::emitOperandNameMappings(
     raw_ostream &OS, const CodeGenTarget &Target,
     ArrayRef<const CodeGenInstruction *> TargetInstructions) {
-  StringRef Namespace = Target.getInstNamespace();
-
   // Map of operand names to their ID.
   MapVector<StringRef, unsigned> OperandNameToID;
 
@@ -383,10 +381,10 @@ void InstrInfoEmitter::emitOperandNameMappings(
   const size_t NumOperandNames = OperandNameToID.size();
   const unsigned MaxNumOperands = MaxOperandNo + 1;
 
-  const std::string LlvmNamespace = ("llvm::" + Namespace).str();
+  const SmallString<32> Namespace({"llvm::", Target.getInstNamespace()});
   {
     IfDefEmitter IfDef(OS, "GET_INSTRINFO_OPERAND_ENUM");
-    NamespaceEmitter NS(OS, LlvmNamespace);
+    NamespaceEmitter NS(OS, Namespace);
 
     assert(NumOperandNames <= UINT16_MAX &&
            "Too many operands for the operand index -> name table");
@@ -405,7 +403,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
 
   {
     IfDefEmitter IfDef(OS, "GET_INSTRINFO_NAMED_OPS");
-    NamespaceEmitter NS(OS, LlvmNamespace);
+    NamespaceEmitter NS(OS, Namespace);
     emitGetInstructionIndexForOpLookup(OS, OperandMap, InstructionIndex);
 
     emitGetNamedOperandIdx(OS, OperandMap, MaxOperandNo, NumOperandNames);
