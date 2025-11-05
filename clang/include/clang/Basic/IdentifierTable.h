@@ -46,6 +46,7 @@ class LangOptions;
 class MultiKeywordSelector;
 class SourceLocation;
 
+/// Constants for TokenKinds.def
 enum TokenKey : unsigned {
   KEYC99 = 0x1,
   KEYCXX = 0x2,
@@ -92,8 +93,9 @@ enum KeywordStatus {
   KS_Enabled,   // Enabled
 };
 
-KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
-                               unsigned Flags);
+/// Translates flags as specified in TokenKinds.def into keyword status
+/// in the given language standard.
+KeywordStatus getKeywordStatus(const LangOptions &LangOpts, unsigned Flags);
 
 enum class ReservedIdentifierStatus {
   NotReserved = 0,
