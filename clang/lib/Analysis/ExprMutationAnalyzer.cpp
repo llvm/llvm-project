@@ -746,11 +746,14 @@ ExprMutationAnalyzer::Analyzer::findPointeeMemberMutation(const Expr *Exp) {
                     Stm, Context));
   if (MemberCallExpr)
     return MemberCallExpr;
-  const auto Matches =
-      match(stmt(forEachDescendant(
-                memberExpr(hasObjectExpression(canResolveToExprPointee(Exp)))
-                    .bind(NodeID<Expr>::value))),
-            Stm, Context);
+  const auto Matches = match(
+      stmt(forEachDescendant(
+          expr(anyOf(memberExpr(
+                         hasObjectExpression(canResolveToExprPointee(Exp))),
+                     binaryOperator(hasOperatorName("->*"),
+                                    hasLHS(canResolveToExprPointee(Exp)))))
+              .bind(NodeID<Expr>::value))),
+      Stm, Context);
   return findExprMutation(Matches);
 }
 

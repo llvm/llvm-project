@@ -396,8 +396,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXFP8 = true;
     } else if (Feature == "+amx-movrs") {
       HasAMXMOVRS = true;
-    } else if (Feature == "+amx-transpose") {
-      HasAMXTRANSPOSE = true;
     } else if (Feature == "+amx-avx512") {
       HasAMXAVX512 = true;
     } else if (Feature == "+amx-tf32") {
@@ -925,8 +923,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_FP8__");
   if (HasAMXMOVRS)
     Builder.defineMacro("__AMX_MOVRS__");
-  if (HasAMXTRANSPOSE)
-    Builder.defineMacro("__AMX_TRANSPOSE__");
   if (HasAMXAVX512)
     Builder.defineMacro("__AMX_AVX512__");
   if (HasAMXTF32)
@@ -1068,7 +1064,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("amx-movrs", true)
       .Case("amx-tf32", true)
       .Case("amx-tile", true)
-      .Case("amx-transpose", true)
       .Case("avx", true)
       .Case("avx10.1", true)
       .Case("avx10.2", true)
@@ -1189,7 +1184,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-movrs", HasAMXMOVRS)
       .Case("amx-tf32", HasAMXTF32)
       .Case("amx-tile", HasAMXTILE)
-      .Case("amx-transpose", HasAMXTRANSPOSE)
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1", HasAVX10_1)
       .Case("avx10.2", HasAVX10_2)

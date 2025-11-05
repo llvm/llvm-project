@@ -6176,7 +6176,7 @@ int MipsAsmParser::matchCPURegisterName(StringRef Name) {
 
   CC = StringSwitch<unsigned>(Name)
            .Case("zero", 0)
-           .Cases("at", "AT", 1)
+           .Cases({"at", "AT"}, 1)
            .Case("a0", 4)
            .Case("a1", 5)
            .Case("a2", 6)

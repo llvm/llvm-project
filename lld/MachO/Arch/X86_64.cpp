@@ -104,7 +104,7 @@ int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
 void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
                          uint64_t relocVA) const {
   if (r.pcrel) {
-    uint64_t pc = relocVA + (1 << r.length) + pcrelOffset(r.type);
+    uint64_t pc = relocVA + (1ull << r.length) + pcrelOffset(r.type);
     value -= pc;
   }
 

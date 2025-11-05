@@ -30,9 +30,9 @@ namespace llvm {
   LLVM_ABI void MemoryFence();
 
 #ifdef _MSC_VER
-  typedef long cas_flag;
+  using cas_flag = long;
 #else
-  typedef uint32_t cas_flag;
+  using cas_flag = uint32_t;
 #endif
   LLVM_ABI cas_flag CompareAndSwap(volatile cas_flag *ptr, cas_flag new_value,
                                    cas_flag old_value);
