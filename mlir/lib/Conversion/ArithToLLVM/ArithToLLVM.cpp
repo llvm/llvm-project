@@ -605,9 +605,13 @@ struct FancyAddFLowering : public ConvertOpToLLVMPattern<arith::AddFOp> {
     auto parent = op->getParentOfType<ModuleOp>();
     if (!parent)
       return failure();
-    auto floatTy = dyn_cast<FloatType>(op.getType());
-    if (!floatTy)
+    if (!llvm::isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType,
+                   Float8E5M2FNUZType, Float8E4M3FNUZType,
+                   Float8E4M3B11FNUZType, Float8E3M4Type, Float4E2M1FNType,
+                   Float6E2M3FNType, Float6E3M2FNType, Float8E8M0FNUType>(
+            op.getType()))
       return failure();
+    auto floatTy = cast<FloatType>(op.getType());
     FailureOr<Operation *> adder =
         LLVM::lookupOrCreateApFloatAddFFn(rewriter, parent);
 
@@ -652,7 +656,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
 
   // clang-format off
   patterns.add<
-    //AddFOpLowering,
+    AddFOpLowering,
     FancyAddFLowering,
     AddIOpLowering,
     AndIOpLowering,
