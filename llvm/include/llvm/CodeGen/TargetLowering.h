@@ -527,7 +527,10 @@ public:
   /// and conditional branches. With multiple condition registers, the code
   /// generator will not aggressively sink comparisons into the blocks of their
   /// users.
-  virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
+  virtual bool hasMultipleConditionRegisters(EVT ResVT,
+                                             std::optional<EVT> CmpVT) const {
+    return false;
+  }
 
   /// Return true if the target has BitExtract instructions.
   bool hasExtractBitsInsn() const { return HasExtractBitsInsn; }
@@ -2493,7 +2496,7 @@ public:
                                                EVT VT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
-    if (hasMultipleConditionRegisters(VT))
+    if (hasMultipleConditionRegisters(VT, std::nullopt))
       return false;
     // Only do the transform if the value won't be split into multiple
     // registers.

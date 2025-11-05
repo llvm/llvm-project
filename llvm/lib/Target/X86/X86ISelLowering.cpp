@@ -3403,6 +3403,14 @@ bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
 }
 
+bool X86TargetLowering::hasMultipleConditionRegisters(
+    EVT ResVT, std::optional<EVT> CmpVT) const {
+  if (CmpVT.has_value())
+    return CmpVT->isScalarInteger() &&
+           CmpVT->getSizeInBits() > (Subtarget.is64Bit() ? 64 : 32);
+  return TargetLowering::hasMultipleConditionRegisters(ResVT, CmpVT);
+}
+
 bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT,
                                              bool) const {
   // TODO: Allow vectors?

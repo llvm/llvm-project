@@ -1542,6 +1542,11 @@ namespace llvm {
     /// supported.
     bool shouldScalarizeBinop(SDValue) const override;
 
+    /// If returns true the code generator will not aggressively sink
+    /// comparisons into the blocks of their users.
+    bool hasMultipleConditionRegisters(EVT ResVT,
+                                       std::optional<EVT> CmpVT) const override;
+
     /// Extract of a scalar FP value from index 0 of a vector is free.
     bool isExtractVecEltCheap(EVT VT, unsigned Index) const override {
       EVT EltVT = VT.getScalarType();

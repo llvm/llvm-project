@@ -1840,7 +1840,11 @@ bool CodeGenPrepare::unfoldPowerOf2Test(CmpInst *Cmp) {
 ///
 /// Return true if any changes are made.
 static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
-  if (TLI.hasMultipleConditionRegisters(EVT::getEVT(Cmp->getType())))
+  std::optional<EVT> CmpVT;
+  if (Cmp->getOperand(0)->getType()->isIntegerTy())
+    CmpVT = EVT::getEVT(Cmp->getOperand(0)->getType());
+
+  if (TLI.hasMultipleConditionRegisters(EVT::getEVT(Cmp->getType()), CmpVT))
     return false;
 
   // Avoid sinking soft-FP comparisons, since this can move them into a loop.

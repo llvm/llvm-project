@@ -395,7 +395,8 @@ public:
     return MVT::i32;
   }
 
-  bool hasMultipleConditionRegisters(EVT VT) const override {
+  bool hasMultipleConditionRegisters(EVT ResVT,
+                                     std::optional<EVT> CmpVT) const override {
     // FIXME: This is only partially true. If we have to do vector compares, any
     // SGPR pair can be a condition register. If we have a uniform condition, we
     // are better off doing SALU operations, where there is only one SCC. For
