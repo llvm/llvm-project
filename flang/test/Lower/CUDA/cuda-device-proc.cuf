@@ -440,7 +440,7 @@ end subroutine
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
-! CHECK: %{{.*}} = nvvm.mbarrier.arrive.shared %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
+! CHECK: %{{.*}} = nvvm.mbarrier.arrive %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
