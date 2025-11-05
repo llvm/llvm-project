@@ -71,7 +71,7 @@ class SVESIMDRegistersTestCase(TestBase):
         register_values = []
 
         if mode == Mode.SIMD:
-            # In streaming mode we have real V registers and no Z registers.
+            # In non-streaming mode we have real V registers and no Z registers.
 
             # V regs are {N <7 0s> N <7 0s>} because we set the bottom element to N
             # where N is 1 + the register index.
@@ -183,7 +183,7 @@ class SVESIMDRegistersTestCase(TestBase):
     def write_expected_reg_data(self, reg_data):
         # Write expected register values into program memory so it can be
         # verified in-process.
-        # This must be done via. memory write instead of expressions because
+        # This must be done using memory writes instead of expressions because
         # the latter may try to save/restore registers, which is part of what
         # this file tests so we can't rely on it here.
         # We will always write Z and ZA/ZTO, it's up to the program whether it
@@ -413,7 +413,7 @@ class SVESIMDRegistersTestCase(TestBase):
         z_value = ByteVector([0x12] * svl_b)
         self.runCmd(f'register write z0 "{z_value}"')
 
-        # z0 and z0 should change but nothing else. We check the rest because
+        # z0 and v0 should change but nothing else. We check the rest because
         # we are faking Z register data in this mode, and any offset mistake
         # could lead to modifying other registers.
         expected_registers["z0"] = ByteVector([0x12] * 16 + [0x00] * (svl_b - 16))
@@ -502,8 +502,9 @@ class SVESIMDRegistersTestCase(TestBase):
         # than the default). This will cover increasing and decreasing register
         # size.
         #
-        # Note that vector length applies to Z and to ZA/ZT0. Even if streaming
-        # mode is not enabled, ZA/ZT0 can change size.
+        # Note that vector length applies to Z and to ZA. Even if streaming
+        # mode is not enabled, ZA can change size. ZT0 is always 512-bits
+        # regardless of vector length.
         #
         # These tests take a very long time and in theory we could do them not
         # by re-running the program but by changing the state via. register
