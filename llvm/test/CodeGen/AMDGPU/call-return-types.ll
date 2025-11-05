@@ -2,9 +2,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=GCN,GFX7 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,GFX89 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,GFX11 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,GFX89 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,GFX89 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=GCN,GFX7 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX89 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,GFX89 %s
 
 declare void @external_void_func_void() #0
 
