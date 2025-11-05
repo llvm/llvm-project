@@ -116,6 +116,13 @@ jobs:
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
+      - name: Upload Comment
+        if: always()
+        continue-on-error: true
+        with:
+          name: workflow-args
+          path: |
+            comments
 
   premerge-checks-windows:
     name: Build and Test Windows
