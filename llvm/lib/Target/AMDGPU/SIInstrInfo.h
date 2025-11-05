@@ -172,7 +172,7 @@ private:
   void addUsersToMoveToVALUWorklist(Register Reg, MachineRegisterInfo &MRI,
                                     SIInstrWorklist &Worklist) const;
 
-  void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
+  void addSCCDefUsersToVALUWorklist(const MachineOperand &Op,
                                     MachineInstr &SCCDefInst,
                                     SIInstrWorklist &Worklist,
                                     Register NewCond = Register()) const;
