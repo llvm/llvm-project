@@ -2322,7 +2322,7 @@ body:             |
 
 ...
 ---
-# Do not delete s_or_b32 since because of intervening def of scc
+# Do not delete s_or_b32 because of intervening def of scc
 name:            s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000_cant_optimize_intervening
 body:             |
   ; GCN-LABEL: name: s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000_cant_optimize_intervening
