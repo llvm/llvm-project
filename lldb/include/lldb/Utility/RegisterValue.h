@@ -46,7 +46,7 @@ public:
     eTypeUInt16,
     eTypeUInt32,
     eTypeUInt64,
-    eTypeUInt, // an integer that has more than 64 bits
+    eTypeUInt, /// < An integer that has more than 64 bits.
     eTypeFloat,
     eTypeDouble,
     eTypeLongDouble,
