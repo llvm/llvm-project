@@ -948,7 +948,11 @@ static bool isIIFE(const UnwrappedLine &Line,
 }
 
 static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
-                                   const FormatToken &InitialToken) {
+                                   const FormatToken &InitialToken,
+                                   const bool IsJavaRecord) {
+  if (IsJavaRecord)
+    return Style.BraceWrapping.AfterClass;
+
   tok::TokenKind Kind = InitialToken.Tok.getKind();
   if (InitialToken.is(TT_NamespaceMacro))
     Kind = tok::kw_namespace;
@@ -3200,7 +3204,7 @@ void UnwrappedLineParser::parseNamespace() {
   if (FormatTok->is(tok::l_brace)) {
     FormatTok->setFinalizedType(TT_NamespaceLBrace);
 
-    if (ShouldBreakBeforeBrace(Style, InitialToken))
+    if (ShouldBreakBeforeBrace(Style, InitialToken, /*IsJavaRecord=*/false))
       addUnwrappedLine();
 
     unsigned AddLevels =
@@ -3865,7 +3869,7 @@ bool UnwrappedLineParser::parseEnum() {
   }
 
   if (!Style.AllowShortEnumsOnASingleLine &&
-      ShouldBreakBeforeBrace(Style, InitialToken)) {
+      ShouldBreakBeforeBrace(Style, InitialToken, /*IsJavaRecord=*/false)) {
     addUnwrappedLine();
   }
   // Parse enum body.
@@ -4160,7 +4164,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
     if (ParseAsExpr) {
       parseChildBlock();
     } else {
-      if (ShouldBreakBeforeBrace(Style, InitialToken))
+      if (ShouldBreakBeforeBrace(Style, InitialToken, IsJavaRecord))
         addUnwrappedLine();
 
       unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;

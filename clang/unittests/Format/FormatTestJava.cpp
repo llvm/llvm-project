@@ -848,6 +848,19 @@ TEST_F(FormatTestJava, TextBlock) {
                  "              Pat Q. Smith");
 }
 
+TEST_F(FormatTestJava, BreakAfterRecord) {
+  auto Style = getLLVMStyle(FormatStyle::LK_Java);
+  Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+  Style.BraceWrapping.SplitEmptyRecord = true;
+
+  verifyFormat("public record Foo(int i)\n"
+               "{\n"
+               "}",
+               "public record Foo(int i) {}", Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format
