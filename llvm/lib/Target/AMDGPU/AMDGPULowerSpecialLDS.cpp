@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass lowers the named barriers LDS globals which needs
-// special address assignment.
+// This pass performs lowering of LDS global variables with target extension
+// type "amdgpu.named.barrier" that require specialized address assignment. It
+// assigns a unique barrier identifier to each named-barrier LDS variable and
+// encodes this identifier within the !absolute_symbol metadata of that global.
+// This encoding ensures that subsequent LDS lowering passes can process these
+// barriers correctly without conflicts.
 //
 //===----------------------------------------------------------------------===//
 
@@ -77,8 +81,8 @@ static void recordLDSAbsoluteAddress(Module *M, GlobalVariable *GV,
                   MDNode::get(Ctx, {MinC, MaxC}));
 }
 
-template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
-  llvm::sort(V, [](const auto *L, const auto *R) {
+template <typename T> SmallVector<T> sortByName(SmallVector<T> &&V) {
+  sort(V, [](const auto *L, const auto *R) {
     return L->getName() < R->getName();
   });
   return {std::move(V)};
@@ -92,7 +96,7 @@ static bool lowerSpecialLDSVariables(
   const DataLayout &DL = M.getDataLayout();
   // The 1st round: give module-absolute assignments
   int NumAbsolutes = 0;
-  std::vector<GlobalVariable *> OrderedGVs;
+  SmallVector<GlobalVariable *> OrderedGVs;
   for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
     GlobalVariable *GV = K.first;
     if (!isNamedBarrier(*GV))
@@ -111,7 +115,7 @@ static bool lowerSpecialLDSVariables(
   }
   OrderedGVs = sortByName(std::move(OrderedGVs));
   for (GlobalVariable *GV : OrderedGVs) {
-    unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+    unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
     unsigned BarId = NumAbsolutes + 1;
     unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
     NumAbsolutes += BarCnt;
@@ -126,7 +130,7 @@ static bool lowerSpecialLDSVariables(
   // The 2nd round: give a kernel-relative assignment for GV that
   // either only indirectly accessed by single kernel or only directly
   // accessed by multiple kernels.
-  std::vector<Function *> OrderedKernels;
+  SmallVector<Function *> OrderedKernels;
   for (auto &K : LDSUsesInfo.direct_access) {
     Function *F = K.first;
     assert(isKernelLDS(F));
@@ -134,7 +138,7 @@ static bool lowerSpecialLDSVariables(
   }
   OrderedKernels = sortByName(std::move(OrderedKernels));
 
-  llvm::DenseMap<Function *, uint32_t> Kernel2BarId;
+  DenseMap<Function *, uint32_t> Kernel2BarId;
   for (Function *F : OrderedKernels) {
     for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
       if (!isNamedBarrier(*GV))
@@ -153,7 +157,7 @@ static bool lowerSpecialLDSVariables(
       // create a new GV used only by this kernel and its function.
       auto NewGV = uniquifyGVPerKernel(M, GV, F);
       Changed |= (NewGV != GV);
-      unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+      unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
       unsigned BarId = Kernel2BarId[F];
       BarId += NumAbsolutes + 1;
       unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
