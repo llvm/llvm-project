@@ -352,24 +352,32 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
 }
 
 VPSingleDefRecipe *vputils::getSingleScalarClone(VPSingleDefRecipe *R) {
-  // TODO: add ".cloned" suffix to name of Clone's VPValue.
   return TypeSwitch<VPSingleDefRecipe *, VPSingleDefRecipe *>(R)
       .Case<VPInstruction, VPWidenRecipe, VPWidenSelectRecipe,
             VPWidenCallRecipe, VPReplicateRecipe>([](auto *I) {
+        assert(I->getUnderlyingValue() &&
+               "Cannot narrow recipe without underlying value");
         return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
                                      /*IsSingleScalar*/ true,
                                      /*Mask*/ nullptr,
                                      /*Metadata*/ *I);
       })
       .Case<VPWidenGEPRecipe>([](auto *I) {
+        assert(I->getUnderlyingValue() &&
+               "Cannot narrow recipe without underlying value");
         // WidenGEP does not have metadata.
         return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
                                      /*IsSingleScalar*/ true, /*Mask*/ nullptr);
       })
-      .Case<VPScalarIVStepsRecipe>([](auto *I) { return I->clone(); })
+      .Case<VPWidenCastRecipe>([](auto *I) {
+        return new VPInstructionWithType(I->getOpcode(), I->operands(),
+                                         I->getResultType(), I->getDebugLoc(),
+                                         /*Flags*/ *I, /*Metadata*/ *I);
+      })
       .Default([](auto *I) {
-        llvm_unreachable("Don't know how to convert to single-scalar");
-        return nullptr;
+        assert(isa<VPScalarIVStepsRecipe>(I) &&
+               "Don't know how to convert to single-scalar");
+        return I->clone();
       });
 }
 
