@@ -212,6 +212,16 @@ public:
                  &ignored);
       return fv.bitwiseIsEqual(fpVal);
     }
+    if (const auto recordVal = mlir::dyn_cast<cir::ConstRecordAttr>(attr)) {
+      for (const auto elt : recordVal.getMembers()) {
+        // FIXME(cir): the record's ID should not be considered a member.
+        if (mlir::isa<mlir::StringAttr>(elt))
+          continue;
+        if (!isNullValue(elt))
+          return false;
+      }
+      return true;
+    }
 
     if (const auto arrayVal = mlir::dyn_cast<cir::ConstArrayAttr>(attr)) {
       if (mlir::isa<mlir::StringAttr>(arrayVal.getElts()))
