@@ -323,19 +323,27 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
   if (ReleaseHDTTMap)
     HDTTMap.destroy();
 
-  // If the target pointer is valid, and we need to transfer data, issue the
-  // data transfer.
-  auto WasNewlyAllocatedOnCurrentConstruct = [&]() {
+  // Lambda to check if this pointer was newly allocated on the current region.
+  // This is needed to handle cases when the TO entry is encounter after an
+  // alloc entry for the same pointer, which increased the ref-count from 0 to 1,
+  // has already been encountered before. But because the ref-count was already 1
+  // when TO was encountered, it wouldn't incur a transfer. e.g.
+  // ... map(alloc: x) map(to: x).
+  auto WasNewlyAllocatedForCurrentRegion = [&]() {
     if (!StateInfo)
       return false;
-    return StateInfo->NewAllocations.contains(HstPtrBegin);
+    bool IsNewlyAllocated = StateInfo->NewAllocations.contains(HstPtrBegin);
+    if (IsNewlyAllocated)
+    DP("HstPtrBegin " DPxMOD " was newly allocated for the current region\n",
+         DPxPTR(HstPtrBegin));
+    return IsNewlyAllocated;
   };
 
   // Even if this isn't a new entry, we still need to do a data-transfer if
-  // the pointer was newly allocated previously on the same construct.
+  // the pointer was newly allocated on the current target region.
   if (LR.TPR.TargetPointer && !LR.TPR.Flags.IsHostPointer && HasFlagTo &&
       (LR.TPR.Flags.IsNewEntry || HasFlagAlways ||
-       WasNewlyAllocatedOnCurrentConstruct()) &&
+       WasNewlyAllocatedForCurrentRegion()) &&
       Size != 0) {
 
     // If we have something like:

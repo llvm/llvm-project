@@ -14,8 +14,7 @@ int main() {
         x = 222;
       }
     }
-#pragma omp target exit data map(from : x) map(delete : x)
+#pragma omp target exit data map(delete : x) map(from : x) map(delete : x)
+    printf("%d\n", x); // CHECK: 222
   }
-
-  printf("%d\n", x); // CHECK: 222
 }

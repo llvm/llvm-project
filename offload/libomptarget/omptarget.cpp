@@ -1135,15 +1135,20 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const bool HasAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     const bool HasFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
     const bool IsMemberOf = ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF;
+    int64_t TransferSize = DataSize; // Size for FROM data-transfer.
+
     // Lambda to check if there was a previously deferred FROM for this pointer
-    // due to its ref-count not being zero.
+    // due to its ref-count not being zero. Updates TransferSize if found.
     auto HasDeferredMapFrom = [&]() -> bool {
-      if (!StateInfo->DeferredFromPtrs.contains(HstPtrBegin))
+      auto It = StateInfo->DeferredFromEntries.find(HstPtrBegin);
+      if (It == StateInfo->DeferredFromEntries.end())
         return false;
-      DP("Found previously deferred FROM transfer for HstPtr=" DPxMOD "\n",
-         DPxPTR(HstPtrBegin));
-      // Remove it so we don't look at it again
-      StateInfo->DeferredFromPtrs.erase(HstPtrBegin);
+      DP("Found previously deferred FROM transfer for HstPtr=" DPxMOD
+         ", with size "
+         "%" PRId64 "\n",
+         DPxPTR(HstPtrBegin), It->second);
+      TransferSize = It->second;
+      StateInfo->DeferredFromEntries.erase(It);
       return true;
     };
 
@@ -1151,6 +1156,11 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // Such a pointer would have had "IsLast" set to true when its DELETE entry
     // was processed. So, the flag wouldn't be set for any FROM entries seen
     // later on.
+    // This is needed to handle cases like the following:
+    //   p1 = p2 = &x;
+    //   ... map(delete: p1[:]) map(from: p2[0:1])
+    // The ref-count becomes zero before encountering the FROM entry, but we
+    // still need to do a transfer, if it went from non-zero to zero.
     auto WasPreviouslyMarkedForDeletion = [&]() -> bool {
       if (!StateInfo->MarkedForDeletionPtrs.contains(HstPtrBegin))
         return false;
@@ -1169,7 +1179,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if (!FromCopyBackAlreadyDone &&
         ((IsMapFromOnNonHostNonZeroData &&
           IsLastOrHasAlwaysOrWasForceDeleted) ||
-         // Even if are not looking at an entry with FROM map-type, if there
+         // Even if we're not looking at an entry with FROM map-type, if there
          // were any previously deferred FROM transfers for this pointer, we
          // should do them when the ref-count goes down to zero.
          (TPR.Flags.IsLast && HasDeferredMapFrom()))) {
@@ -1182,9 +1192,9 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       StateInfo->TransferredFromPtrs.insert(HstPtrBegin);
 
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-         DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
+         TransferSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
       TIMESCOPE_WITH_DETAILS_AND_IDENT(
-          "DevToHost", "Size=" + std::to_string(DataSize) + "B", Loc);
+          "DevToHost", "Size=" + std::to_string(TransferSize) + "B", Loc);
       // Wait for any previous transfer if an event is present.
       if (void *Event = TPR.getEntry()->getEvent()) {
         if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
@@ -1193,8 +1203,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         }
       }
 
-      Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize, AsyncInfo,
-                                TPR.getEntry());
+      Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, TransferSize,
+                                AsyncInfo, TPR.getEntry());
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT("Copying data from device failed.\n");
         return OFFLOAD_FAIL;
@@ -1213,24 +1223,19 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     } else if (!FromCopyBackAlreadyDone && IsMapFromOnNonHostNonZeroData &&
                !IsLastOrHasAlwaysOrWasForceDeleted && !IsMemberOf) {
       // We can have cases like the following:
-      //   map(alloc: p[0:1]) map(from: p[0:1])
+      //  ... map(storage: p1[0:1]) map(from: p1[0:1])
       //
-      // For such cases, if we have different entries for the two maps, we
-      // may not see the ref-count go down to zero when handling the From entry.
+      // where it's possible that when the FROM entry is processed, the
+      // ref count is not zero, so no data transfer happens for it. But
+      // the ref-count can go down to zero by the end of the directive
+      // in which case a transfer should happen.
       //
-      // So, we defer the FROM data-transfer until the ref-count goes down to
-      // zero (if it does).
+      // So, we keep track of any skipped FROM data-transfers, in case
+      // the ref-count goes down to zero later on.
       //
       // This should be limited to non-member-of entries because for member-of,
       // their ref-count should go down only once as part of the parent.
-      //
-      // Also, we don't need to worry about cases like:
-      //   map(alloc: p[0:10]) map(from: p[0:1])
-      //
-      // because that is not OpenMP 6.0 compliant, so we can just save the
-      // pointer without saving the size, and assume that the size for the
-      // "alloc" map will match that of "from".
-      StateInfo->DeferredFromPtrs.insert(HstPtrBegin);
+      StateInfo->DeferredFromEntries[HstPtrBegin] = DataSize;
       DP("Deferring FROM map transfer for HstPtr=" DPxMOD ", Size=%" PRId64
          "\n",
          DPxPTR(HstPtrBegin), DataSize);

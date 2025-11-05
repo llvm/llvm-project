@@ -497,7 +497,8 @@ struct StateInfoTy {
 
   /// Host pointers that had a FROM entry, but for which a data transfer didn't
   /// occur due to the ref-count not being zero.
-  llvm::SmallSet<void *, 32> DeferredFromPtrs;
+  /// Key: host pointer, Value: data size.
+  llvm::DenseMap<void *, int64_t> DeferredFromEntries;
 
   /// Host pointers for which we have attempted a FROM transfer at some point
   /// during targetDataEnd. Used to avoid duplicate transfers.
