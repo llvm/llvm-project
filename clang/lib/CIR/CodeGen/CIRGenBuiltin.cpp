@@ -58,6 +58,52 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(result);
 }
 
+namespace {
+struct WidthAndSignedness {
+  unsigned Width;
+  bool Signed;
+};
+} // namespace
+
+static WidthAndSignedness
+getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
+                             const clang::QualType Type) {
+  assert(Type->isIntegerType() && "Given type is not an integer.");
+  unsigned Width = Type->isBooleanType()  ? 1
+                   : Type->isBitIntType() ? astContext.getIntWidth(Type)
+                                          : astContext.getTypeInfo(Type).Width;
+  bool Signed = Type->isSignedIntegerType();
+  return {Width, Signed};
+}
+
+// Given one or more integer types, this function produces an integer type that
+// encompasses them: any value in one of the given types could be expressed in
+// the encompassing type.
+static struct WidthAndSignedness
+EncompassingIntegerType(ArrayRef<struct WidthAndSignedness> Types) {
+  assert(Types.size() > 0 && "Empty list of types.");
+
+  // If any of the given types is signed, we must return a signed type.
+  bool Signed = false;
+  for (const auto &Type : Types) {
+    Signed |= Type.Signed;
+  }
+
+  // The encompassing type must have a width greater than or equal to the width
+  // of the specified types.  Additionally, if the encompassing type is signed,
+  // its width must be strictly greater than the width of any unsigned types
+  // given.
+  unsigned Width = 0;
+  for (const auto &Type : Types) {
+    unsigned MinWidth = Type.Width + (Signed && !Type.Signed);
+    if (Width < MinWidth) {
+      Width = MinWidth;
+    }
+  }
+
+  return {Width, Signed};
+}
+
 RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   mlir::Value input = emitScalarExpr(e->getArg(0));
   mlir::Value amount = emitScalarExpr(e->getArg(1));
@@ -490,6 +536,154 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value address = emitScalarExpr(e->getArg(0));
     cir::PrefetchOp::create(builder, loc, address, locality, isWrite);
     return RValue::get(nullptr);
+  }
+  case Builtin::BI__builtin_add_overflow:
+  case Builtin::BI__builtin_sub_overflow:
+  case Builtin::BI__builtin_mul_overflow: {
+    const clang::Expr *LeftArg = e->getArg(0);
+    const clang::Expr *RightArg = e->getArg(1);
+    const clang::Expr *ResultArg = e->getArg(2);
+
+    clang::QualType ResultQTy =
+        ResultArg->getType()->castAs<clang::PointerType>()->getPointeeType();
+
+    WidthAndSignedness LeftInfo =
+        getIntegerWidthAndSignedness(cgm.getASTContext(), LeftArg->getType());
+    WidthAndSignedness RightInfo =
+        getIntegerWidthAndSignedness(cgm.getASTContext(), RightArg->getType());
+    WidthAndSignedness ResultInfo =
+        getIntegerWidthAndSignedness(cgm.getASTContext(), ResultQTy);
+
+    // Note we compute the encompassing type with the consideration to the
+    // result type, so later in LLVM lowering we don't get redundant integral
+    // extension casts.
+    WidthAndSignedness EncompassingInfo =
+        EncompassingIntegerType({LeftInfo, RightInfo, ResultInfo});
+
+    auto EncompassingCIRTy = cir::IntType::get(
+        &getMLIRContext(), EncompassingInfo.Width, EncompassingInfo.Signed);
+    auto ResultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(ResultQTy));
+
+    mlir::Value Left = emitScalarExpr(LeftArg);
+    mlir::Value Right = emitScalarExpr(RightArg);
+    Address ResultPtr = emitPointerWithAlignment(ResultArg);
+
+    // Extend each operand to the encompassing type, if necessary.
+    if (Left.getType() != EncompassingCIRTy)
+      Left =
+          builder.createCast(cir::CastKind::integral, Left, EncompassingCIRTy);
+    if (Right.getType() != EncompassingCIRTy)
+      Right =
+          builder.createCast(cir::CastKind::integral, Right, EncompassingCIRTy);
+
+    // Perform the operation on the extended values.
+    cir::BinOpOverflowKind OpKind;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unknown overflow builtin id.");
+    case Builtin::BI__builtin_add_overflow:
+      OpKind = cir::BinOpOverflowKind::Add;
+      break;
+    case Builtin::BI__builtin_sub_overflow:
+      OpKind = cir::BinOpOverflowKind::Sub;
+      break;
+    case Builtin::BI__builtin_mul_overflow:
+      OpKind = cir::BinOpOverflowKind::Mul;
+      break;
+    }
+
+    auto Loc = getLoc(e->getSourceRange());
+    auto ArithResult =
+        builder.createBinOpOverflowOp(Loc, ResultCIRTy, OpKind, Left, Right);
+
+    // Here is a slight difference from the original clang CodeGen:
+    //   - In the original clang CodeGen, the checked arithmetic result is
+    //     first computed as a value of the encompassing type, and then it is
+    //     truncated to the actual result type with a second overflow checking.
+    //   - In CIRGen, the checked arithmetic operation directly produce the
+    //     checked arithmetic result in its expected type.
+    //
+    // So we don't need a truncation and a second overflow checking here.
+
+    // Finally, store the result using the pointer.
+    bool isVolatile =
+        ResultArg->getType()->getPointeeType().isVolatileQualified();
+    builder.createStore(Loc, emitToMemory(ArithResult.result, ResultQTy),
+                        ResultPtr, isVolatile);
+
+    return RValue::get(ArithResult.overflow);
+  }
+
+  case Builtin::BI__builtin_uadd_overflow:
+  case Builtin::BI__builtin_uaddl_overflow:
+  case Builtin::BI__builtin_uaddll_overflow:
+  case Builtin::BI__builtin_usub_overflow:
+  case Builtin::BI__builtin_usubl_overflow:
+  case Builtin::BI__builtin_usubll_overflow:
+  case Builtin::BI__builtin_umul_overflow:
+  case Builtin::BI__builtin_umull_overflow:
+  case Builtin::BI__builtin_umulll_overflow:
+  case Builtin::BI__builtin_sadd_overflow:
+  case Builtin::BI__builtin_saddl_overflow:
+  case Builtin::BI__builtin_saddll_overflow:
+  case Builtin::BI__builtin_ssub_overflow:
+  case Builtin::BI__builtin_ssubl_overflow:
+  case Builtin::BI__builtin_ssubll_overflow:
+  case Builtin::BI__builtin_smul_overflow:
+  case Builtin::BI__builtin_smull_overflow:
+  case Builtin::BI__builtin_smulll_overflow: {
+    // Scalarize our inputs.
+    mlir::Value X = emitScalarExpr(e->getArg(0));
+    mlir::Value Y = emitScalarExpr(e->getArg(1));
+
+    const clang::Expr *ResultArg = e->getArg(2);
+    Address ResultPtr = emitPointerWithAlignment(ResultArg);
+
+    // Decide which of the arithmetic operation we are lowering to:
+    cir::BinOpOverflowKind ArithKind;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unknown overflow builtin id.");
+    case Builtin::BI__builtin_uadd_overflow:
+    case Builtin::BI__builtin_uaddl_overflow:
+    case Builtin::BI__builtin_uaddll_overflow:
+    case Builtin::BI__builtin_sadd_overflow:
+    case Builtin::BI__builtin_saddl_overflow:
+    case Builtin::BI__builtin_saddll_overflow:
+      ArithKind = cir::BinOpOverflowKind::Add;
+      break;
+    case Builtin::BI__builtin_usub_overflow:
+    case Builtin::BI__builtin_usubl_overflow:
+    case Builtin::BI__builtin_usubll_overflow:
+    case Builtin::BI__builtin_ssub_overflow:
+    case Builtin::BI__builtin_ssubl_overflow:
+    case Builtin::BI__builtin_ssubll_overflow:
+      ArithKind = cir::BinOpOverflowKind::Sub;
+      break;
+    case Builtin::BI__builtin_umul_overflow:
+    case Builtin::BI__builtin_umull_overflow:
+    case Builtin::BI__builtin_umulll_overflow:
+    case Builtin::BI__builtin_smul_overflow:
+    case Builtin::BI__builtin_smull_overflow:
+    case Builtin::BI__builtin_smulll_overflow:
+      ArithKind = cir::BinOpOverflowKind::Mul;
+      break;
+    }
+
+    clang::QualType ResultQTy =
+        ResultArg->getType()->castAs<clang::PointerType>()->getPointeeType();
+    auto ResultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(ResultQTy));
+
+    auto Loc = getLoc(e->getSourceRange());
+    auto ArithResult =
+        builder.createBinOpOverflowOp(Loc, ResultCIRTy, ArithKind, X, Y);
+
+    bool isVolatile =
+        ResultArg->getType()->getPointeeType().isVolatileQualified();
+    builder.createStore(Loc, emitToMemory(ArithResult.result, ResultQTy),
+                        ResultPtr, isVolatile);
+
+    return RValue::get(ArithResult.overflow);
   }
   }
 
