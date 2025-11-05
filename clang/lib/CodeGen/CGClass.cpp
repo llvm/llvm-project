@@ -1678,6 +1678,7 @@ namespace {
       return CGF.EmitScalarExpr(ThisArg);
     return CGF.LoadCXXThis();
   }
+
   /// Call the operator delete associated with the current destructor.
   struct CallDtorDelete final : EHScopeStack::Cleanup {
     CallDtorDelete() {}
