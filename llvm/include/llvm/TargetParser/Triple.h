@@ -1189,7 +1189,7 @@ public:
 
   /// True if the target uses TLSDESC by default.
   bool hasDefaultTLSDESC() const {
-    return isAArch64() || (isAndroid() && isRISCV64()) || isOSFuchsia();
+    return isAArch64() || isRISCV64() || isOSFuchsia();
   }
 
   /// Tests whether the target uses -data-sections as default.
