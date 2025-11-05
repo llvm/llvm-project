@@ -755,11 +755,11 @@ static const clang::LangOptions &GetLangOptions() {
 }
 
 static const llvm::StringMap<tok::TokenKind> GetKeywordsMap() {
-  using namespace clang;
   llvm::StringMap<tok::TokenKind> g_map;
 
   auto LangOpts = GetLangOptions();
 
+  using namespace clang;
   KeywordStatus AddResult;
 #define KEYWORD(NAME, FLAGS)                                                   \
   AddResult = getKeywordStatus(LangOpts, FLAGS);                               \
