@@ -3606,7 +3606,7 @@ SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
   unsigned NumElems = InVT.getVectorNumElements() * 2;
   EVT OutVT = EVT::getVectorVT(Ctx, InVT.getVectorElementType(), NumElems);
   SDValue Concat =
-      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getUNDEF(InVT));
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getPOISON(InVT));
   if (NumElems < RequiredNumElems) {
     return DoubleVectorWidth(Concat, RequiredNumElems, DAG);
   }
