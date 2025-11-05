@@ -1763,21 +1763,22 @@ static void genTaskgroupClauses(
   cp.processTaskReduction(loc, clauseOps, taskReductionSyms);
 }
 
-static void genTaskloopClauses(lower::AbstractConverter &converter,
-                               semantics::SemanticsContext &semaCtx,
-                               lower::StatementContext &stmtCtx,
-                               const List<Clause> &clauses, mlir::Location loc,
-                               mlir::omp::TaskloopOperands &clauseOps) {
+static void genTaskloopClauses(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    lower::StatementContext &stmtCtx, const List<Clause> &clauses,
+    mlir::Location loc, mlir::omp::TaskloopOperands &clauseOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &taskReductionSyms) {
 
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processGrainsize(stmtCtx, clauseOps);
   cp.processNumTasks(stmtCtx, clauseOps);
+  cp.processReduction(loc, clauseOps, taskReductionSyms);
 
   cp.processTODO<clause::Allocate, clause::Collapse, clause::Default,
                  clause::Final, clause::If, clause::InReduction,
                  clause::Lastprivate, clause::Mergeable, clause::Nogroup,
-                 clause::Priority, clause::Reduction, clause::Shared,
-                 clause::Untied>(loc, llvm::omp::Directive::OMPD_taskloop);
+                 clause::Priority, clause::Shared, clause::Untied>(
+      loc, llvm::omp::Directive::OMPD_taskloop);
 }
 
 static void genTaskwaitClauses(lower::AbstractConverter &converter,
@@ -2979,8 +2980,9 @@ static mlir::omp::TaskloopOp genStandaloneTaskloop(
     lower::pft::Evaluation &eval, mlir::Location loc,
     const ConstructQueue &queue, ConstructQueue::const_iterator item) {
   mlir::omp::TaskloopOperands taskloopClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> taskReductionSyms;
   genTaskloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
-                     taskloopClauseOps);
+                     taskloopClauseOps, taskReductionSyms);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
@@ -2994,6 +2996,8 @@ static mlir::omp::TaskloopOp genStandaloneTaskloop(
   EntryBlockArgs taskloopArgs;
   taskloopArgs.priv.syms = dsp.getDelayedPrivSymbols();
   taskloopArgs.priv.vars = taskloopClauseOps.privateVars;
+  taskloopArgs.reduction.syms = taskReductionSyms;
+  taskloopArgs.reduction.vars = taskloopClauseOps.reductionVars;
 
   auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
       converter, loc, taskloopClauseOps, taskloopArgs);
