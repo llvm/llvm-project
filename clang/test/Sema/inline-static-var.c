@@ -4,4 +4,3 @@ inline void f(void) { // expected-note {{use 'static' to give inline function 'f
   static int x; // expected-error {{non-constant static local variable in inline function may be different in different files}}
 }
 
-int main(void) { return 0; }
