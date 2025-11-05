@@ -45,6 +45,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -4100,6 +4101,7 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
   CheckInfNaNFunction(TheCall, FDecl);
+  CheckUseOfAtomicThreadFenceWithTSan(TheCall, FDecl);
 
   if (getLangOpts().ObjC)
     ObjC().DiagnoseCStringFormatDirectiveInCFAPI(FDecl, Args, NumArgs);
@@ -9820,6 +9822,38 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
   Diag(Call->getExprLoc(), diag::note_remove_max_call)
         << FixItHint::CreateRemoval(Call->getCallee()->getSourceRange())
         << FixItHint::CreateRemoval(RemovalRange);
+}
+
+//===--- CHECK: Warn on use of `std::atomic_thread_fence` with TSan. ------===//
+void Sema::CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
+                                               const FunctionDecl *FDecl) {
+  // Thread sanitizer currently does not support `std::atomic_thread_fence`,
+  // leading to false positive. Example issue:
+  // https://github.com/llvm/llvm-project/issues/52942
+
+  if (!Call || !FDecl)
+    return;
+
+  if (!IsStdFunction(FDecl, "atomic_thread_fence"))
+    return;
+
+  // See if TSan is enabled in this function
+  const auto EnabledTSanMask =
+      Context.getLangOpts().Sanitize.Mask & (SanitizerKind::Thread);
+  if (!EnabledTSanMask)
+    return;
+
+  const auto &NoSanitizeList = Context.getNoSanitizeList();
+  if (NoSanitizeList.containsLocation(EnabledTSanMask,
+                                      Call->getSourceRange().getBegin()))
+    // File is excluded
+    return;
+  if (NoSanitizeList.containsFunction(EnabledTSanMask,
+                                      FDecl->getQualifiedNameAsString()))
+    // Function is excluded
+    return;
+
+  Diag(Call->getExprLoc(), diag::warn_atomic_thread_fence_with_tsan);
 }
 
 //===--- CHECK: Standard memory functions ---------------------------------===//
