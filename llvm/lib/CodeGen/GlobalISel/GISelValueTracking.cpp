@@ -489,10 +489,11 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
     if (!MaybeAmtOp)
       break;
-    unsigned Amt = MaybeAmtOp->urem(BitWidth);
 
     Register SrcReg = MI.getOperand(1).getReg();
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+
+    unsigned Amt = MaybeAmtOp->urem(BitWidth);
 
     // Canonicalize to ROTR.
     if (Opcode == TargetOpcode::G_ROTL)
