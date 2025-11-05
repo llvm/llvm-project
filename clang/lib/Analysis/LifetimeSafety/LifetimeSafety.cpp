@@ -23,9 +23,11 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 namespace clang::lifetimes {
@@ -69,9 +71,12 @@ void LifetimeSafetyAnalysis::run() {
 }
 } // namespace internal
 
-void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
-  Analysis.run();
+std::unique_ptr<internal::LifetimeSafetyAnalysis>
+runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                          LifetimeSafetyReporter *Reporter) {
+  std::unique_ptr<internal::LifetimeSafetyAnalysis> Analysis =
+      std::make_unique<internal::LifetimeSafetyAnalysis>(AC, Reporter);
+  Analysis->run();
+  return Analysis;
 }
 } // namespace clang::lifetimes

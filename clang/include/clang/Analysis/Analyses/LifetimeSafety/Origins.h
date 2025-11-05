@@ -16,7 +16,10 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
 
@@ -76,6 +79,8 @@ public:
 
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
 
+  const llvm::StringMap<int> getMissingOrigins() const;
+
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
 
@@ -85,6 +90,7 @@ private:
   llvm::SmallVector<Origin> AllOrigins;
   llvm::DenseMap<const clang::ValueDecl *, OriginID> DeclToOriginID;
   llvm::DenseMap<const clang::Expr *, OriginID> ExprToOriginID;
+  llvm::StringMap<unsigned> ExprTypeToMissingOriginCount;
 };
 } // namespace clang::lifetimes::internal
 

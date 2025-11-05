@@ -23,7 +23,11 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
 
 namespace clang::lifetimes {
 
@@ -44,10 +48,6 @@ public:
                                   Confidence Confidence) {}
 };
 
-/// The main entry point for the analysis.
-void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter);
-
 namespace internal {
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
@@ -60,6 +60,7 @@ struct LifetimeFactory {
 /// Running the lifetime safety analysis and querying its results. It
 /// encapsulates the various dataflow analyses.
 class LifetimeSafetyAnalysis {
+
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                          LifetimeSafetyReporter *Reporter);
@@ -82,6 +83,12 @@ private:
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
 };
 } // namespace internal
+
+/// The main entry point for the analysis.
+std::unique_ptr<internal::LifetimeSafetyAnalysis>
+runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                          LifetimeSafetyReporter *Reporter);
+
 } // namespace clang::lifetimes
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
