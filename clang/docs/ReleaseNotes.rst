@@ -209,6 +209,8 @@ C23 Feature Support
   `WG14 N2710 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2710.htm>`_.
 - Fixed accepting as compatible unnamed tag types with the same fields within
   the same translation unit but from different types.
+- ``-MG`` now silences the "file not found" errors with ``#embed`` when
+  scanning for dependencies and encountering an unknown file. #GH165632
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -442,6 +444,7 @@ Bug Fixes in This Version
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
 - Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
+- Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 
 Bug Fixes to Compiler Builtins

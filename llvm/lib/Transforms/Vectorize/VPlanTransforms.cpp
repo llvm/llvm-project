@@ -167,8 +167,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (!isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(Candidate))
       return;
 
-    if (Candidate->getParent() == SinkTo || Candidate->mayHaveSideEffects() ||
-        Candidate->mayReadOrWriteMemory())
+    if (Candidate->getParent() == SinkTo || cannotHoistOrSinkRecipe(*Candidate))
       return;
 
     if (auto *RepR = dyn_cast<VPReplicateRecipe>(Candidate))
@@ -198,8 +197,8 @@ static bool sinkScalarOperands(VPlan &Plan) {
     VPSingleDefRecipe *SinkCandidate;
     std::tie(SinkTo, SinkCandidate) = WorkList[I];
 
-    // All recipe users of the sink candidate must be in the same block SinkTo
-    // or all users outside of SinkTo must have only their first lane used. In
+    // All recipe users of SinkCandidate must be in the same block SinkTo or all
+    // users outside of SinkTo must only use the first lane of SinkCandidate. In
     // the latter case, we need to duplicate SinkCandidate.
     auto UsersOutsideSinkTo =
         make_filter_range(SinkCandidate->users(), [SinkTo](VPUser *U) {

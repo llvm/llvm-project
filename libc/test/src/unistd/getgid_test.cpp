@@ -1,4 +1,4 @@
-//===-- Minidump.cpp - Minidump constants and structures ---------*- C++-*-===//
+//===-- Unittests for getgid ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/BinaryFormat/Minidump.h"
+#include "src/unistd/getgid.h"
+#include "test/UnitTest/Test.h"
 
-using namespace llvm::minidump;
-
-constexpr uint32_t Header::MagicSignature;
-constexpr uint16_t Header::MagicVersion;
+TEST(LlvmLibcGetGidTest, SmokeTest) {
+  // getgid always succeeds. So, we just call it as a smoke test.
+  LIBC_NAMESPACE::getgid();
+}

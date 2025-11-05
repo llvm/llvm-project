@@ -1260,9 +1260,15 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
-  std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
-                                        SDValue Dst, SDValue Src, SDValue Size,
-                                        const CallInst *CI);
+  /// Lower a memcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue Dst, SDValue Src,
+                                                 SDValue Size,
+                                                 const CallInst *CI);
+
+  /// Lower a strlen operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue>
   getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
 
