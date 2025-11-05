@@ -114,6 +114,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRAGreedyLegacyPass(Registry);
   initializeReachingDefInfoWrapperPassPass(Registry);
   initializeRegAllocFastPass(Registry);
+  initializeRegAllocPBQPPass(Registry);
   initializeRegUsageInfoCollectorLegacyPass(Registry);
   initializeRegUsageInfoPropagationLegacyPass(Registry);
   initializeRegisterCoalescerLegacyPass(Registry);

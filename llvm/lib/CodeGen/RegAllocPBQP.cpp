@@ -946,6 +946,9 @@ void PBQP::RegAlloc::PBQPRAGraph::printDot(raw_ostream &OS) const {
   OS << "}\n";
 }
 
+INITIALIZE_PASS(RegAllocPBQP, "regallocpbqp", "PBQP Register Allocator", false,
+                false)
+
 FunctionPass *llvm::createPBQPRegisterAllocator(char *customPassID) {
   return new RegAllocPBQP(customPassID);
 }

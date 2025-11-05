@@ -269,6 +269,7 @@ LLVM_ABI void initializeReassociateLegacyPassPass(PassRegistry &);
 LLVM_ABI void
 initializeRegAllocEvictionAdvisorAnalysisLegacyPass(PassRegistry &);
 LLVM_ABI void initializeRegAllocFastPass(PassRegistry &);
+LLVM_ABI void initializeRegAllocPBQPPass(PassRegistry &);
 LLVM_ABI void
 initializeRegAllocPriorityAdvisorAnalysisLegacyPass(PassRegistry &);
 LLVM_ABI void initializeRegAllocScoringPass(PassRegistry &);
