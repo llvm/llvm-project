@@ -598,12 +598,16 @@ private:
   // FlowAware embeddings would benefit from caching instruction embeddings as
   // they are reused while computing the embeddings of other instructions.
   mutable InstEmbeddingsMap InstVecMap;
+  static SmallVector<Function *, 15> FuncStack;
   Embedding computeEmbeddings(const Instruction &I) const override;
+  static SmallMapVector<const Function *, SmallVector<const Function *, 10>, 16>
+      FuncCallMap;
 
 public:
   FlowAwareEmbedder(const Function &F, const Vocabulary &Vocab)
       : Embedder(F, Vocab) {}
   void invalidateEmbeddings() override { InstVecMap.clear(); }
+  static void computeFuncCallMap(Module &M);
 };
 
 } // namespace ir2vec

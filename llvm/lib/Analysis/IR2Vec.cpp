@@ -26,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Analysis/CallGraph.h"
 
 using namespace llvm;
 using namespace ir2vec;
@@ -207,6 +208,24 @@ Embedding FlowAwareEmbedder::computeEmbeddings(const Instruction &I) const {
   // TODO: Handle call instructions differently.
   // For now, we treat them like other instructions
   Embedding ArgEmb(Dimension, 0);
+
+    if(isa<CallInst>(I)){
+    const auto* Ci = dyn_cast<CallInst>(&I);
+    Function* Func = Ci->getCalledFunction();
+    if(Func){
+      if(!Func->isDeclaration() &&
+        std::find(FuncStack.begin(),FuncStack.end(),Func)== 
+        FuncStack.end()){
+        FuncStack.push_back(Func);
+        auto Emb = Embedder::create(IR2VecEmbeddingKind, *Func, Vocab);
+        auto FuncVec = Emb->getFunctionVector();
+        std::transform(ArgEmb.begin(),ArgEmb.end(),
+                       FuncVec.begin(),FuncVec.end(),
+                       std::plus<double>());
+        FuncStack.pop_back();
+      }
+    }
+  }
   for (const auto &Op : I.operands()) {
     // If the operand is defined elsewhere, we use its embedding
     if (const auto *DefInst = dyn_cast<Instruction>(Op)) {
@@ -243,6 +262,24 @@ Embedding FlowAwareEmbedder::computeEmbeddings(const Instruction &I) const {
     InstVector += Vocab[IC->getPredicate()];
   InstVecMap[&I] = InstVector;
   return InstVector;
+}
+
+void FlowAwareEmbedder::computeFuncCallMap(Module &M){
+  CallGraph Cg = CallGraph(M);
+  for(auto CallItr=Cg.begin();CallItr != Cg.end();CallItr++){
+    if(CallItr->first && !CallItr->first->isDeclaration()){
+      const auto* ParentFunc = CallItr->first;
+      CallGraphNode *Cgn = CallItr->second.get();
+      if(Cgn){
+        for(auto It = Cgn->begin(); It!= Cgn->end(); It++){
+          const auto* Func = It->second->getFunction();
+          if(Func && !Func->isDeclaration()){
+            FuncCallMap[ParentFunc].push_back(Func);
+          }
+        }
+      }
+    }
+  }
 }
 
 // ==----------------------------------------------------------------------===//
