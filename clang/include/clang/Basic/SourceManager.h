@@ -1411,9 +1411,13 @@ public:
                            bool *Invalid = nullptr) const;
   unsigned getColumnNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getSpellingColumnNumber(SourceLocation Loc,
-                                   bool *Invalid = nullptr) const;
+                                   bool *Invalid = nullptr) const {
+    return getColumnNumber(getSpellingLoc(Loc), Invalid);
+  }
   unsigned getExpansionColumnNumber(SourceLocation Loc,
-                                    bool *Invalid = nullptr) const;
+                                    bool *Invalid = nullptr) const {
+    return getColumnNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedColumnNumber(SourceLocation Loc,
                                    bool *Invalid = nullptr) const;
 
@@ -1425,8 +1429,12 @@ public:
   /// diagnostic.
   unsigned getLineNumber(FileID FID, unsigned FilePos, bool *Invalid = nullptr) const;
   unsigned getLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
-  unsigned getSpellingLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
-  unsigned getExpansionLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  unsigned getSpellingLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const {
+    return getLineNumber(getSpellingLoc(Loc), Invalid);
+  }
+  unsigned getExpansionLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const {
+    return getLineNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
 
   /// Return the filename or buffer identifier of the buffer the

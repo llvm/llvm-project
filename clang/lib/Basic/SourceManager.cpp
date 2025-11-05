@@ -1167,16 +1167,6 @@ unsigned SourceManager::getColumnNumber(SourceLocation Loc,
   return getColumnNumber(LocInfo.first, LocInfo.second, Invalid);
 }
 
-unsigned SourceManager::getSpellingColumnNumber(SourceLocation Loc,
-                                                bool *Invalid) const {
-  return getColumnNumber(getSpellingLoc(Loc), Invalid);
-}
-
-unsigned SourceManager::getExpansionColumnNumber(SourceLocation Loc,
-                                                 bool *Invalid) const {
-  return getColumnNumber(getExpansionLoc(Loc), Invalid);
-}
-
 unsigned SourceManager::getPresumedColumnNumber(SourceLocation Loc,
                                                 bool *Invalid) const {
   PresumedLoc PLoc = getPresumedLoc(Loc);
@@ -1377,14 +1367,7 @@ unsigned SourceManager::getLineNumber(SourceLocation Loc, bool *Invalid) const {
   FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
   return getLineNumber(LocInfo.first, LocInfo.second);
 }
-unsigned SourceManager::getSpellingLineNumber(SourceLocation Loc,
-                                              bool *Invalid) const {
-  return getLineNumber(getSpellingLoc(Loc), Invalid);
-}
-unsigned SourceManager::getExpansionLineNumber(SourceLocation Loc,
-                                               bool *Invalid) const {
-  return getLineNumber(getExpansionLoc(Loc), Invalid);
-}
+
 unsigned SourceManager::getPresumedLineNumber(SourceLocation Loc,
                                               bool *Invalid) const {
   PresumedLoc PLoc = getPresumedLoc(Loc);
