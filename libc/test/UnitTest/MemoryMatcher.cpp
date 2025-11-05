@@ -41,8 +41,8 @@ bool MemoryMatcher::match(MemoryView actualValue) {
 
 static void display(char C) {
   const auto print = [](unsigned char i) {
-    tlog << static_cast<char>(LIBC_NAMESPACE::internal::toupper(
-        LIBC_NAMESPACE::internal::int_to_b36_char(i)));
+    tlog << LIBC_NAMESPACE::internal::toupper(
+        LIBC_NAMESPACE::internal::int_to_b36_char(i));
   };
   print(static_cast<unsigned char>(C) / 16);
   print(static_cast<unsigned char>(C) & 15);

@@ -11,11 +11,17 @@
 
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/Test.h"
 
 // Define macro to validate the value stored in the errno and restore it
 // to zero.
 
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+#define ASSERT_ERRNO_EQ(VAL)
+#define ASSERT_ERRNO_SUCCESS()
+#define ASSERT_ERRNO_FAILURE()
+#else
 #define ASSERT_ERRNO_EQ(VAL)                                                   \
   do {                                                                         \
     ASSERT_EQ(VAL, static_cast<int>(libc_errno));                              \
@@ -27,6 +33,7 @@
     ASSERT_NE(0, static_cast<int>(libc_errno));                                \
     libc_errno = 0;                                                            \
   } while (0)
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
