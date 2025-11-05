@@ -2796,7 +2796,6 @@ bool RISCVTargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT VT,
         N->getOpcode() == ISD::SELECT &&
         "shouldNormalizeToSelectSequence() called with non-SELECT operation");
     const SDValue CondV = N->getOperand(0);
-    const SDValue TrueV = N->getOperand(1);
     const SDValue FalseV = N->getOperand(2);
     if (CondV.hasOneUse() && isCzeroCompatible(CondV) && isNullConstant(FalseV))
       return true;
