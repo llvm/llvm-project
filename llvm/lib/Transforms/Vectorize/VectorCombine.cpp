@@ -743,7 +743,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 
   InstructionCost NewCost =
       TTI.getArithmeticInstrCost(Instruction::FNeg, SrcVecTy, CostKind) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, DstVecTy, Mask,
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, DstVecTy, DstVecTy, Mask,
                          CostKind);
 
   bool NeedLenChg = SrcVecTy->getNumElements() != NumDstElts;
@@ -754,7 +754,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
     SrcMask.assign(NumDstElts, PoisonMaskElem);
     SrcMask[ExtIdx % NumDstElts] = ExtIdx;
     NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                  VecTy, SrcVecTy, SrcMask, CostKind);
+                                  DstVecTy, SrcVecTy, SrcMask, CostKind);
   }
 
   LLVM_DEBUG(dbgs() << "Found an insertion of (extract)fneg : " << I
