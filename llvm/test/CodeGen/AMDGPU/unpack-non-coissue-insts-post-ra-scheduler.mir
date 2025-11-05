@@ -7,9 +7,6 @@
 name:            test_pk_mul_unpacking_f32
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -99,9 +96,6 @@ body:             |
 ---
 name:            test_op_sel_selection_unpacking_f32
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5'}
 
 body:             |
   bb.0.entry:
@@ -193,9 +187,6 @@ body:             |
 name:            test_op_sel_hi_selection_unpacking_f32
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5'}
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -285,9 +276,6 @@ body:             |
 ---
 name:            test_pk_add_unpacking_f32
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -443,9 +431,6 @@ body:             |
 name:            test_pk_fma_unpacking_f32
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -527,9 +512,6 @@ body:             |
 ---
 name:            test_unpacking_does_not_introduce_rw_dependency
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -617,9 +599,6 @@ body:             |
 name:            test_opcodes_not_supported_for_unpacking_are_skipped
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -641,6 +620,9 @@ body:             |
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_dpp $vgpr4, $vgpr4, 228, 15, 15, -1, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_CVT_PK_BF8_F32_e64 0, killed $vgpr4, 0, $vgpr4, $vgpr5, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX950-NEXT: $vgpr8_vgpr9 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX950-NEXT: $vgpr10_vgpr11 = V_PK_MOV_B32 12, killed $vgpr6_vgpr7, 8, killed $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
     ;
     ; GFX942-LABEL: name: test_opcodes_not_supported_for_unpacking_are_skipped
@@ -661,6 +643,9 @@ body:             |
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_dpp $vgpr4, $vgpr4, 228, 15, 15, -1, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_CVT_PK_BF8_F32_e64 0, killed $vgpr4, 0, $vgpr4, $vgpr5, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX942-NEXT: $vgpr8_vgpr9 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX942-NEXT: $vgpr10_vgpr11 = V_PK_MOV_B32 12, killed $vgpr6_vgpr7, 8, killed $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $exec
     ; GFX942-NEXT: S_ENDPGM 0
     ;
     ; GFX90A-LABEL: name: test_opcodes_not_supported_for_unpacking_are_skipped
@@ -681,6 +666,9 @@ body:             |
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_dpp $vgpr4, $vgpr4, 228, 15, 15, -1, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_CVT_PK_BF8_F32_e64 0, killed $vgpr4, 0, $vgpr4, $vgpr5, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX90A-NEXT: $vgpr8_vgpr9 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX90A-NEXT: $vgpr10_vgpr11 = V_PK_MOV_B32 12, killed $vgpr6_vgpr7, 8, killed $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0
     early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
     renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
@@ -697,15 +685,15 @@ body:             |
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     $vgpr4 = V_MOV_B32_dpp $vgpr4, $vgpr4, 228, 15, 15, -1, implicit $exec
     $vgpr5 = V_CVT_PK_BF8_F32_e64 0, killed $vgpr4, 0, $vgpr4, $vgpr5, 0, implicit $mode, implicit $exec
+    $vgpr6_vgpr7 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    $vgpr8_vgpr9 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    $vgpr10_vgpr11 = V_PK_MOV_B32 12, killed $vgpr6_vgpr7, 8, killed $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 ---
 name:            test_opsel_register_is_correctly_marked_as_killed
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -797,9 +785,6 @@ body:             |
 name:            test_inst_dependent_on_mfma_are_not_unpacked
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -888,9 +873,6 @@ body:             |
 name:            test_mfma_def_using_instr_blocks_unpacking
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -974,9 +956,6 @@ body:             |
 ---
 name:            test_unpacking_with_imm_input
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -1067,9 +1046,6 @@ body:             |
 ---
 name:            test_neg_lo_hi_post_unpacking
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -1242,9 +1218,6 @@ body:             |
 name:            test_v_pk_mov_with_neg_modifiers_not_unpacked_0
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
   liveins: $sgpr4_sgpr5
@@ -1325,9 +1298,6 @@ body:             |
 name:            test_v_pk_mov_with_neg_modifiers_not_unpacked_1
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
   liveins: $sgpr4_sgpr5
@@ -1407,9 +1377,6 @@ body:             |
 ---
 name:            test_v_pk_mov_with_neg_modifiers_correctly_unpacked_2
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -1493,9 +1460,6 @@ body:             |
 name:            test_v_pk_mov_with_neg_modifiers_correctly_unpacked_3
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
   liveins: $sgpr4_sgpr5
@@ -1578,9 +1542,6 @@ body:             |
 name:            test_v_pk_mov_with_neg_modifiers_correctly_unpacked_4
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
   liveins: $sgpr4_sgpr5
@@ -1660,9 +1621,6 @@ body:             |
 ---
 name:            test_v_pk_mov_op_sel_unpacking
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
