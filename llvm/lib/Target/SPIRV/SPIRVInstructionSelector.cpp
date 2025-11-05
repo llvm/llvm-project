@@ -1219,8 +1219,7 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
       }
       if (DefOpCode == TargetOpcode::G_GLOBAL_VALUE ||
           DefOpCode == TargetOpcode::G_CONSTANT ||
-          DefOpCode == SPIRV::OpVariable ||
-          DefOpCode == SPIRV::OpConstantI) {
+          DefOpCode == SPIRV::OpVariable || DefOpCode == SPIRV::OpConstantI) {
         IsGV = true;
         break;
       }

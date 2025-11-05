@@ -352,8 +352,7 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
         // With opaque pointers it doesn't appear as if we can convert to
         // anything but a pointer to i8
         SpvType = GR->getOrCreateSPIRVPointerType(
-            GR->getOrCreateSPIRVIntegerType(8, MIB),
-            MIB,
+            GR->getOrCreateSPIRVIntegerType(8, MIB), MIB,
             addressSpaceToStorageClass(
                 MRI.getType(Reg).getAddressSpace(),
                 MIB.getMF().getSubtarget<SPIRVSubtarget>()));
