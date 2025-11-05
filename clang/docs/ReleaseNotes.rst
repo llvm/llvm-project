@@ -402,9 +402,9 @@ Improvements to Clang's diagnostics
 - Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
   attributes are used with a negative size (#GH165463).
 
-- Clang now emits an extension warning (`ExtWarn`) instead of a regular warning
-  for static local variables declared inside `extern inline` functions
-  (#GH39524).
+- The warning about static local variables declared inside `extern inline` 
+  functions is now correctly converted to an error if `-pedantic-errors` is 
+  passed (#GH39524).
 
 Improvements to Clang's time-trace
 ----------------------------------
