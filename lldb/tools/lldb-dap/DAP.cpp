@@ -665,9 +665,7 @@ std::optional<protocol::Source> DAP::ResolveSource(const lldb::SBFrame &frame) {
   // EXAMPLE: If PC is at 0x1004 (frame return address after the call
   // instruction) with no line info, but 0x1003 (in the middle of previous call
   // instruction) is at line 42, symbol context returns line 42.
-  //
-  // NOTE: This issue is non-deterministic and depends on compiler debug info
-  // generation, making it difficult to create a reliable automated test.
+
   const lldb::SBLineEntry frame_line_entry = frame.GetLineEntry();
   if (DisplayAssemblySource(debugger, frame_line_entry)) {
     const lldb::SBAddress frame_pc = frame.GetPCAddress();
