@@ -1143,9 +1143,8 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   // Get module search paths from the target if available.
   lldb::TargetSP target_sp = module_spec.GetTargetSP();
   FileSpecList module_search_paths;
-  if (target_sp) {
+  if (target_sp)
     module_search_paths = target_sp->GetExecutableSearchPaths();
-  }
 
   if (!module_search_paths.IsEmpty()) {
     const auto num_directories = module_search_paths.GetSize();

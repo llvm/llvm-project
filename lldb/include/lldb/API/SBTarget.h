@@ -999,6 +999,7 @@ protected:
   friend class SBFunction;
   friend class SBInstruction;
   friend class SBModule;
+  friend class SBModuleSpec;
   friend class SBPlatform;
   friend class SBProcess;
   friend class SBSection;
@@ -1008,8 +1009,6 @@ protected:
   friend class SBTypeStaticField;
   friend class SBValue;
   friend class SBVariablesOptions;
-
-  friend class SBModuleSpec;
 
   friend class lldb_private::python::SWIGBridge;
 
