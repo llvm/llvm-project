@@ -690,8 +690,9 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
       return false;
 
     const MCInstrDesc &MCID = MI->getDesc();
-    if (MCID.getOperandConstraint(OpNo, MCOI::EARLY_CLOBBER) != -1)
-      MI->getOperand(OpNo).setIsEarlyClobber(true);
+    for (unsigned I = 0; I < MI->getNumDefs(); ++I)
+      if (MCID.getOperandConstraint(I, MCOI::EARLY_CLOBBER) != -1)
+        MI->getOperand(I).setIsEarlyClobber(true);
     Old.ChangeToImmediate(*ImmVal);
     return true;
   }
