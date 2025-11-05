@@ -169,7 +169,6 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
     for (Use *U : Uses) {
       Instruction *UserInst = cast<Instruction>(U->getUser());
       BasicBlock *InsertionBB;
-      BasicBlock::iterator InsertionPt;
 
       // If the user is a PHI node, we must insert the load in the
       // corresponding predecessor basic block. Otherwise, it's inserted into
@@ -179,9 +178,11 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
       else
         InsertionBB = UserInst->getParent();
 
-      // It is always safe to insert in the first insertion point in the BB,
-      // so do that and let other passes reorder.
-      InsertionPt = InsertionBB->getFirstInsertionPt();
+      if (isa<CatchSwitchInst>(InsertionBB->getTerminator())) {
+        LLVM_DEBUG(dbgs() << "Bailing out: catchswitch means thre is no valid "
+                             "insertion point.\n");
+        return false;
+      }
 
       auto CacheKey = std::make_pair(Const, InsertionBB);
       Value *LoadedVal = nullptr;
@@ -191,7 +192,9 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
         LoadedVal = LocalLoads.at(CacheKey);
       } else {
         // Otherwise, create a new GEP and Load at the correct insertion point.
-        IRBuilder<> Builder(InsertionBB, InsertionPt);
+        // It is always safe to insert in the first insertion point in the BB,
+        // so do that and let other passes reorder.
+        IRBuilder<> Builder(InsertionBB, InsertionBB->getFirstInsertionPt());
         Value *ElementPtr = Builder.CreateConstInBoundsGEP2_64(
             GlobalArray->getValueType(), GlobalArray, 0, Idx, "double.addr");
         LoadedVal = Builder.CreateLoad(DoubleTy, ElementPtr, "double.val");
