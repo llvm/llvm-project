@@ -4110,6 +4110,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       return replaceInstUsesWith(I, Res);
   }
 
+  // (X == 0 ? Y : 0) | X -> X == 0 ? Y : X
+  // X | (X == 0 ? Y : 0) -> X == 0 ? Y : X
+  for (Value *Op : {Op0, Op1}) {
+    if (auto *SI = dyn_cast<SelectInst>(Op)) {
+      if (auto *R = FoldOpIntoSelect(I, SI, /* FoldWithMultiUse */ false))
+        return R;
+    }
+  }
+
   Value *X, *Y;
   const APInt *CV;
   if (match(&I, m_c_Or(m_OneUse(m_Xor(m_Value(X), m_APInt(CV))), m_Value(Y))) &&
