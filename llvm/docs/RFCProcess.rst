@@ -63,8 +63,8 @@ Low Engagement Level
 If the proposal gets little or no engagement by the community, it is a sign that
 the proposal does not have consensus and is rejected. Engagement means comments
 on the proposal. If there are few or no comments but the are a lot of people
-pressing the like/heart button on the post, maintainers can make a value
-judgement on whether to accept or reject.
+pressing the like/heart button on the post, the appropriate area team can make
+a value judgement on whether to accept or reject.
 
 After Acceptance
 ----------------
