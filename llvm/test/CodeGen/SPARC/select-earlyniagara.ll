@@ -8,35 +8,25 @@
 define i32 @cinc(i32 %cond, i32 %num) #0 {
 ; SPARC-LABEL: cinc:
 ; SPARC:       ! %bb.0: ! %entry
+; SPARC-NEXT:    add %o1, 1, %o2
 ; SPARC-NEXT:    cmp %o0, 0
-; SPARC-NEXT:    bne %icc, .LBB0_2
-; SPARC-NEXT:    mov %o1, %o0
-; SPARC-NEXT:  ! %bb.1: ! %inc
-; SPARC-NEXT:    add %o0, 1, %o0
-; SPARC-NEXT:  .LBB0_2: ! %cont
+; SPARC-NEXT:    move %icc, %o2, %o1
 ; SPARC-NEXT:    retl
-; SPARC-NEXT:    nop
+; SPARC-NEXT:    mov %o1, %o0
 ;
 ; SPARC64-LABEL: cinc:
 ; SPARC64:       ! %bb.0: ! %entry
+; SPARC64-NEXT:    add %o1, 1, %o2
 ; SPARC64-NEXT:    cmp %o0, 0
-; SPARC64-NEXT:    bne %icc, .LBB0_2
-; SPARC64-NEXT:    mov %o1, %o0
-; SPARC64-NEXT:  ! %bb.1: ! %inc
-; SPARC64-NEXT:    add %o0, 1, %o0
-; SPARC64-NEXT:  .LBB0_2: ! %cont
+; SPARC64-NEXT:    move %icc, %o2, %o1
 ; SPARC64-NEXT:    retl
-; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    mov %o1, %o0
 entry:
+  %add = add nsw i32 %num, 1
   %cmp = icmp eq i32 %cond, 0
   %exp = call i1 @llvm.expect.i1(i1 %cmp, i1 0)
-  br i1 %exp, label %inc, label %cont
-inc:
-  %add = add nsw i32 %num, 1
-  br label %cont
-cont:
-  %phi = phi i32 [ %add, %inc ], [ %num, %entry ]
-  ret i32 %phi
+  %ret = select i1 %exp, i32 %add, i32 %num
+  ret i32 %ret
 }
 declare i1 @llvm.expect.i1(i1, i1)
 
