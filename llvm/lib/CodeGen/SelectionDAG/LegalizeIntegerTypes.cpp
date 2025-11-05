@@ -95,6 +95,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     Res = PromoteIntRes_VECTOR_COMPRESS(N);
     break;
   case ISD::SELECT:
+  case ISD::CTSELECT:
   case ISD::VSELECT:
   case ISD::VP_SELECT:
   case ISD::VP_MERGE:
@@ -2013,6 +2014,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::VSELECT:
   case ISD::SELECT:       Res = PromoteIntOp_SELECT(N, OpNo); break;
+  case ISD::CTSELECT:
+    Res = PromoteIntOp_CTSELECT(N, OpNo);
+    break;
   case ISD::SELECT_CC:    Res = PromoteIntOp_SELECT_CC(N, OpNo); break;
   case ISD::VP_SETCC:
   case ISD::SETCC:        Res = PromoteIntOp_SETCC(N, OpNo); break;
@@ -2388,6 +2392,19 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SELECT(SDNode *N, unsigned OpNo) {
 
   return SDValue(DAG.UpdateNodeOperands(N, Cond, N->getOperand(1),
                                         N->getOperand(2)), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_CTSELECT(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 0 && "Only know how to promote the condition!");
+  SDValue Cond = N->getOperand(0);
+  EVT OpTy = N->getOperand(1).getValueType();
+
+  // Promote all the way up to the canonical SetCC type.
+  EVT OpVT = N->getOpcode() == ISD::CTSELECT ? OpTy.getScalarType() : OpTy;
+  Cond = PromoteTargetBoolean(Cond, OpVT);
+
+  return SDValue(
+      DAG.UpdateNodeOperands(N, Cond, N->getOperand(1), N->getOperand(2)), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_SELECT_CC(SDNode *N, unsigned OpNo) {
@@ -2988,6 +3005,9 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ARITH_FENCE:  SplitRes_ARITH_FENCE(N, Lo, Hi); break;
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
+  case ISD::CTSELECT:
+    SplitRes_Select(N, Lo, Hi);
+    break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
   case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
