@@ -311,6 +311,12 @@ public:
     m_platform_sdk_path = path.str();
   }
 
+  void SetCASStorage(std::shared_ptr<llvm::cas::ObjectStore> cas,
+                     std::shared_ptr<llvm::cas::ActionCache> action_cache) {
+    m_cas = std::move(cas);
+    m_action_cache = std::move(action_cache);
+  }
+
   /// \return the ExtraArgs of the ClangImporterOptions.
   const std::vector<std::string> &GetClangArguments();
 
@@ -986,6 +992,9 @@ protected:
       library_load_cache;
   /// A cache for GetCompileUnitImports();
   llvm::DenseSet<std::pair<Module *, lldb::user_id_t>> m_cu_imports;
+  /// ObjectStore and ActionCache;
+  std::shared_ptr<llvm::cas::ObjectStore> m_cas;
+  std::shared_ptr<llvm::cas::ActionCache> m_action_cache;
 
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
   ASTFileDataMap m_ast_file_data_map;

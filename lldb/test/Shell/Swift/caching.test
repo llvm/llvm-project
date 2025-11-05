@@ -9,8 +9,21 @@
 # RUN:          -module-name main -o %t/main
 
 # RUN: %lldb %t/main -s %t/lldb.script 2>&1 | FileCheck %s
+
+## Setup CAS and try loading from CAS
+# RUN: sed "s|DIR|%/t|g" %t/lldb.script.template > %t/lldb_2.script
+# RUN: %lldb %t/main -s %t/lldb_2.script 2>&1 | FileCheck %s --check-prefix=CAS-LOAD --check-prefix=CHECK
+
+## Check fallback to file system.
+# RUN: rm -rf %t/cas
+# RUN: %lldb %t/main -s %t/lldb_2.script 2>&1 | FileCheck %s --check-prefix=CAS-FALLBACK --check-prefix=CHECK
+
+# CAS-FALLBACK:  operator()() -- module '{{.*}}' cannot be load from CAS using key
+# CAS-FALLBACK-SAME: fallback to load from file system
+# CAS-LOAD:      ConfigureCASStorage() -- Setup CAS from module list properties with cas path
 # CHECK:         LogConfiguration() --   Extra clang arguments
 # CHECK-COUNT-1: LogConfiguration() --     -triple
+# CAS-LOAD:      LogConfiguration() --     -fmodule-file-cache-key
 # CHECK:         (Int) ${{.*}} = 1
 
 //--- main.swift
@@ -22,6 +35,17 @@ test()
 //--- lldb.script
 # Force loading from interface to simulate no binary module available.
 settings set symbols.swift-module-loading-mode prefer-interface
+log enable lldb types
+b test
+run
+# Create a SwiftASTContext
+expr 1
+quit
+
+//--- lldb.script.template
+# Force loading from interface to simulate no binary module available.
+settings set symbols.swift-module-loading-mode prefer-interface
+settings set symbols.cas-path DIR/cas
 log enable lldb types
 b test
 run

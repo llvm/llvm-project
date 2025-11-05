@@ -913,6 +913,28 @@ static std::string GetClangModulesCacheProperty() {
   return std::string(path);
 }
 
+static void ConfigureCASStorage(SwiftASTContext *m_ast_context,
+                                FileSpec CandidateConfigSearchPath) {
+  std::string m_description;
+  auto cas_config = ModuleList::GetCASConfiguration(CandidateConfigSearchPath);
+  if (!cas_config) {
+    HEALTH_LOG_PRINTF("no CAS available");
+    return;
+  }
+  auto maybe_cas = cas_config->createDatabases();
+  if (!maybe_cas) {
+    Debugger::ReportWarning("failed to create CAS: " +
+                            toString(maybe_cas.takeError()));
+    return;
+  }
+  m_ast_context->SetCASStorage(std::move(maybe_cas->first),
+                               std::move(maybe_cas->second));
+  m_ast_context->GetCASOptions().Config = *cas_config;
+  LOG_PRINTF(GetLog(LLDBLog::Types),
+             "Setup CAS from module list properties with cas path: %s",
+             cas_config->CASPath.c_str());
+}
+
 SwiftASTContext::ScopedDiagnostics::ScopedDiagnostics(
     swift::DiagnosticConsumer &consumer)
     : m_consumer(consumer),
@@ -1930,41 +1952,81 @@ void SwiftASTContext::AddExtraClangCC1Args(
     return;
   }
 
-  // Clear module cache key and other CAS options to load modules from disk
-  // directly.
-  invocation.getFrontendOpts().ModuleCacheKeys.clear();
-  invocation.getCASOpts() = clang::CASOptions();
-
-  // Ignore CAS info inside modules when loading.
-  invocation.getFrontendOpts().ModuleLoadIgnoreCAS = true;
-
-  // Add options to allow clang importer to do implicit module build.
+  // Add options to allow ClangImporter to do implicit module build.
+  // This allows expression evaluator to load addition modules if needed.
   invocation.getLangOpts().ImplicitModules = true;
   invocation.getHeaderSearchOpts().ImplicitModuleMaps = true;
   invocation.getHeaderSearchOpts().ModuleCachePath =
       GetCompilerInvocation().getClangModuleCachePath().str();
 
-  // Remove non-existing modules in a systematic way.
-  auto CheckFileExists = [&](const std::string &file) -> bool {
-    if (llvm::sys::fs::exists(file))
-      return true;
-    std::string warn;
-    llvm::raw_string_ostream(warn)
-        << "Nonexistent explicit module file " << file;
-    AddDiagnostic(eSeverityWarning, warn);
-    return false;
-  };
-  for (auto it = invocation.getHeaderSearchOpts().PrebuiltModuleFiles.begin();
-       it != invocation.getHeaderSearchOpts().PrebuiltModuleFiles.end();) {
-    if (!CheckFileExists(it->second))
-      it = invocation.getHeaderSearchOpts().PrebuiltModuleFiles.erase(it);
-    else
-      ++it;
+  bool use_cas_module = m_cas && m_action_cache;
+  if (use_cas_module) {
+    // Load from CAS.
+    invocation.getCASOpts().CASPath = GetCASOptions().Config.CASPath;
+    invocation.getCASOpts().PluginPath = GetCASOptions().Config.PluginPath;
+    invocation.getCASOpts().PluginOptions =
+        GetCASOptions().Config.PluginOptions;
+
+    // Check the module availability in CAS, if not, fallback to regular load.
+    auto CheckModuleInCAS = [&](const std::string &key) {
+      auto id = m_cas->parseID(key);
+      if (!id) {
+        HEALTH_LOG_PRINTF("failed to parse CASID when loading module: %s",
+                          toString(id.takeError()).c_str());
+        return false;
+      }
+      auto lookup = m_action_cache->get(*id);
+      if (!lookup) {
+        HEALTH_LOG_PRINTF("module lookup failure through action cache: %s",
+                          toString(lookup.takeError()).c_str());
+        return false;
+      }
+      return (bool)*lookup;
+    };
+
+    use_cas_module = llvm::all_of(
+        invocation.getFrontendOpts().ModuleCacheKeys, [&](const auto &entry) {
+          auto exist = CheckModuleInCAS(entry.second);
+          if (!exist)
+            HEALTH_LOG_PRINTF("module '%s' cannot be load "
+                              "from CAS using key: %s, fallback to "
+                              "load from file system",
+                              entry.first.c_str(), entry.second.c_str());
+          return exist;
+        });
   }
-  invocation.getFrontendOpts().ModuleFiles.erase(
-      llvm::remove_if(invocation.getFrontendOpts().ModuleFiles,
-                      [&](const auto &mod) { return !CheckFileExists(mod); }),
-      invocation.getFrontendOpts().ModuleFiles.end());
+
+  if (!use_cas_module) {
+    // Clear module cache key and other CAS options to load modules from disk
+    // directly.
+    invocation.getFrontendOpts().ModuleCacheKeys.clear();
+    invocation.getCASOpts() = clang::CASOptions();
+
+    // Ignore CAS info inside modules when loading.
+    invocation.getFrontendOpts().ModuleLoadIgnoreCAS = true;
+
+    // Remove non-existing modules in a systematic way.
+    auto CheckFileExists = [&](const std::string &file) -> bool {
+      if (llvm::sys::fs::exists(file))
+        return true;
+      std::string warn;
+      llvm::raw_string_ostream(warn)
+          << "Nonexistent explicit module file " << file;
+      AddDiagnostic(eSeverityWarning, warn);
+      return false;
+    };
+    for (auto it = invocation.getHeaderSearchOpts().PrebuiltModuleFiles.begin();
+         it != invocation.getHeaderSearchOpts().PrebuiltModuleFiles.end();) {
+      if (!CheckFileExists(it->second))
+        it = invocation.getHeaderSearchOpts().PrebuiltModuleFiles.erase(it);
+      else
+        ++it;
+    }
+    invocation.getFrontendOpts().ModuleFiles.erase(
+        llvm::remove_if(invocation.getFrontendOpts().ModuleFiles,
+                        [&](const auto &mod) { return !CheckFileExists(mod); }),
+        invocation.getFrontendOpts().ModuleFiles.end());
+  }
 
   invocation.generateCC1CommandLine(
       [&](const llvm::Twine &arg) { dest.push_back(arg.str()); });
@@ -2546,6 +2608,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     }
   }
 
+  ConfigureCASStorage(swift_ast_sp.get(), module.GetFileSpec());
+
   // The serialized triple is the triple of the last binary
   // __swiftast section that was processed. Instead of relying on
   // the section contents order, we overwrite the triple in the
@@ -3026,6 +3090,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       LOG_PRINTF(GetLog(LLDBLog::Types), "Using SDK: %s", sdk_path.c_str());
     }
   }
+
+  ConfigureCASStorage(swift_ast_sp.get(), sc.module_sp->GetFileSpec());
 
   std::string resource_dir = HostInfo::GetSwiftResourceDir(
       triple, swift_ast_sp->GetPlatformSDKPath());
