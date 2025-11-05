@@ -134,13 +134,13 @@ public:
 
   /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
   /// unsupported.
-  StringRef getMemcpyName() const {
+  RTLIB::LibcallImpl getMemcpyImpl() const {
     RTLIB::LibcallImpl Memcpy = getLibcallImpl(RTLIB::MEMCPY);
     if (Memcpy != RTLIB::Unsupported)
-      return getLibcallImplName(Memcpy);
+      return Memcpy;
 
     // Fallback to memmove if memcpy isn't available.
-    return getLibcallName(RTLIB::MEMMOVE);
+    return getLibcallImpl(RTLIB::MEMMOVE);
   }
 
   bool isAvailable(RTLIB::LibcallImpl Impl) const {
@@ -185,6 +185,13 @@ public:
 
     return RTLIB::Unsupported;
   }
+
+  /// \returns the function type and attributes for the \p LibcallImpl,
+  /// depending on the target \p TT. If the function has incomplete type
+  /// information, return nullptr for the function type.
+  std::pair<FunctionType *, AttributeList>
+  getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+                RTLIB::LibcallImpl LibcallImpl) const;
 
 private:
   LLVM_ABI static iota_range<RTLIB::LibcallImpl>

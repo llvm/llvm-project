@@ -391,6 +391,9 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.RemarksKeepAll =
       !Args.hasArg(OPT_remarks_drop_without_debug);
 
+  Options.LinkOpts.IncludeSwiftModulesFromInterface =
+      Args.hasArg(OPT_include_swiftmodules_from_interface);
+
   if (opt::Arg *BuildVariantSuffix = Args.getLastArg(OPT_build_variant_suffix))
     Options.LinkOpts.BuildVariantSuffix = BuildVariantSuffix->getValue();
 
