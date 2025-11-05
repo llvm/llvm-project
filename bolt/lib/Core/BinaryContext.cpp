@@ -78,6 +78,11 @@ cl::opt<std::string> CompDirOverride(
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
 
+static cl::opt<bool> CloneConstantIsland("clone-constant-island",
+                                         cl::desc("clone constant islands"),
+                                         cl::Hidden, cl::init(true),
+                                         cl::ZeroOrMore, cl::cat(BoltCategory));
+
 static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
@@ -461,7 +466,8 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       // of dynamic relocs, as we currently do not support cloning them.
       // Notice: we might fail to link because of this, if the original constant
       // island we are referring would be emitted too far away.
-      if (IslandIter->second->hasDynamicRelocationAtIsland()) {
+      if (IslandIter->second->hasDynamicRelocationAtIsland() ||
+          !opts::CloneConstantIsland) {
         MCSymbol *IslandSym =
             IslandIter->second->getOrCreateIslandAccess(Address);
         if (IslandSym)
@@ -469,6 +475,12 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       } else if (MCSymbol *IslandSym =
                      IslandIter->second->getOrCreateProxyIslandAccess(Address,
                                                                       BF)) {
+        LLVM_DEBUG(
+            dbgs() << "BOLT-DEBUG: clone constant island at address 0x"
+                   << Twine::utohexstr(IslandIter->first) << " with size of 0x"
+                   << Twine::utohexstr(
+                          IslandIter->second->estimateConstantIslandSize())
+                   << " bytes, referenced by " << BF << "\n");
         BF.createIslandDependency(IslandSym, IslandIter->second);
         return std::make_pair(IslandSym, 0);
       }
