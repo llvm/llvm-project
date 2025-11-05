@@ -167,8 +167,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (!isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(Candidate))
       return;
 
-    if (Candidate->getParent() == SinkTo || Candidate->mayHaveSideEffects() ||
-        Candidate->mayReadOrWriteMemory())
+    if (Candidate->getParent() == SinkTo || cannotHoistOrSinkRecipe(*Candidate))
       return;
 
     if (auto *RepR = dyn_cast<VPReplicateRecipe>(Candidate))
