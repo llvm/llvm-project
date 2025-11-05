@@ -27,6 +27,21 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
   std::vector<Instruction *> ProfiledAddresses;
   PGOIndirectCallVisitor(InstructionType Type) : Type(Type) {}
 
+  static bool isVTableInstr(Instruction *Instr) {
+    for (User *U : Instr->users()) {
+      if (llvm::IntrinsicInst *II = llvm::dyn_cast<llvm::IntrinsicInst>(U)) {
+        llvm::Intrinsic::ID IID = II->getIntrinsicID();
+
+        if (IID == llvm::Intrinsic::instr_type_test ||
+            IID == llvm::Intrinsic::public_type_test ||
+            IID == llvm::Intrinsic::type_test) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   // Given an indirect call instruction, try to find the the following pattern
   //
   // %vtable = load ptr, ptr %obj
@@ -44,6 +59,8 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
     if (LI != nullptr) {
       Value *FuncPtr = LI->getPointerOperand(); // GEP (or bitcast)
       Value *VTablePtr = FuncPtr->stripInBoundsConstantOffsets();
+
+      // https://gcc.godbolt.org/z/hM76EGE17
       // FIXME: Add support in the frontend so LLVM type intrinsics are
       // emitted without LTO. This way, added intrinsics could filter
       // non-vtable instructions and reduce instrumentation overhead.
@@ -54,8 +71,10 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
       // of symbols). So the performance overhead from non-vtable profiled
       // address is negligible if exists at all. Comparing loaded address
       // with symbol address guarantees correctness.
-      if (VTablePtr != nullptr && isa<Instruction>(VTablePtr))
-        return cast<Instruction>(VTablePtr);
+      if (Instruction *VTableInstr = dyn_cast_or_null<Instruction>(VTablePtr)) {
+        if (isVTableInstr(VTableInstr))
+          return VTableInstr;
+      }
     }
     return nullptr;
   }
