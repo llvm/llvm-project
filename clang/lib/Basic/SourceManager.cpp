@@ -1159,18 +1159,22 @@ static bool isInvalid(LocType Loc, bool *Invalid) {
   return MyInvalid;
 }
 
+unsigned SourceManager::getColumnNumber(SourceLocation Loc,
+                                        bool *Invalid) const {
+  assert(Loc.isFileID());
+  if (isInvalid(Loc, Invalid)) return 0;
+  FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
+  return getColumnNumber(LocInfo.first, LocInfo.second, Invalid);
+}
+
 unsigned SourceManager::getSpellingColumnNumber(SourceLocation Loc,
                                                 bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedSpellingLoc(Loc);
-  return getColumnNumber(LocInfo.first, LocInfo.second, Invalid);
+  return getColumnNumber(getSpellingLoc(Loc), Invalid);
 }
 
 unsigned SourceManager::getExpansionColumnNumber(SourceLocation Loc,
                                                  bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedExpansionLoc(Loc);
-  return getColumnNumber(LocInfo.first, LocInfo.second, Invalid);
+  return getColumnNumber(getExpansionLoc(Loc), Invalid);
 }
 
 unsigned SourceManager::getPresumedColumnNumber(SourceLocation Loc,
@@ -1367,17 +1371,19 @@ unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
   return LineNo;
 }
 
+unsigned SourceManager::getLineNumber(SourceLocation Loc, bool *Invalid) const {
+  assert(Loc.isFileID());
+  if (isInvalid(Loc, Invalid)) return 0;
+  FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
+  return getLineNumber(LocInfo.first, LocInfo.second);
+}
 unsigned SourceManager::getSpellingLineNumber(SourceLocation Loc,
                                               bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedSpellingLoc(Loc);
-  return getLineNumber(LocInfo.first, LocInfo.second);
+  return getLineNumber(getSpellingLoc(Loc), Invalid);
 }
 unsigned SourceManager::getExpansionLineNumber(SourceLocation Loc,
                                                bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedExpansionLoc(Loc);
-  return getLineNumber(LocInfo.first, LocInfo.second);
+  return getLineNumber(getExpansionLoc(Loc), Invalid);
 }
 unsigned SourceManager::getPresumedLineNumber(SourceLocation Loc,
                                               bool *Invalid) const {

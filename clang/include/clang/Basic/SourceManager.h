@@ -1409,6 +1409,7 @@ public:
   /// before calling this method.
   unsigned getColumnNumber(FileID FID, unsigned FilePos,
                            bool *Invalid = nullptr) const;
+  unsigned getColumnNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getSpellingColumnNumber(SourceLocation Loc,
                                    bool *Invalid = nullptr) const;
   unsigned getExpansionColumnNumber(SourceLocation Loc,
@@ -1423,6 +1424,7 @@ public:
   /// MemoryBuffer, so this is not cheap: use only when about to emit a
   /// diagnostic.
   unsigned getLineNumber(FileID FID, unsigned FilePos, bool *Invalid = nullptr) const;
+  unsigned getLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getSpellingLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getExpansionLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getPresumedLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
