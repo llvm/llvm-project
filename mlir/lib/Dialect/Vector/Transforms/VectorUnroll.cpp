@@ -1109,8 +1109,9 @@ void mlir::vector::populateVectorUnrollPatterns(
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<UnrollToElements>(patterns.getContext(), UnrollVectorOptions(),
-                                 benefit);
+  auto options = UnrollVectorOptions().setNativeShape(SmallVector<int64_t>{4});
+  patterns.add<UnrollToElements, ToElementsToTargetShape>(patterns.getContext(),
+                                                          options, benefit);
 }
 
 void mlir::vector::populateVectorFromElementsUnrollPatterns(
