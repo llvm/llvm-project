@@ -221,6 +221,7 @@ define i1 @pr88607() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 false, i32 4, i32 1
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 false, i32 2, i32 [[COND]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32 [[SPEC_SELECT]], 1
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
