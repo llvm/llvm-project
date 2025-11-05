@@ -15,9 +15,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVector.h"
 
-#define GET_OP_CLASSES
-#include "flang/Optimizer/Dialect/MIF/MIFOps.cpp.inc"
-
 //===----------------------------------------------------------------------===//
 // NumImagesOp
 //===----------------------------------------------------------------------===//
@@ -190,71 +187,21 @@ void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
   result.addAttributes(attributes);
 }
 
-mlir::ParseResult mif::ChangeTeamOp::parse(mlir::OpAsmParser &parser,
-                                           mlir::OperationState &result) {
+static mlir::ParseResult parseChangeTeamOpBody(mlir::OpAsmParser &parser,
+                                               mlir::Region &body) {
+  if (parser.parseRegion(body))
+    return mlir::failure();
+
   auto &builder = parser.getBuilder();
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> opers;
-  llvm::SmallVector<mlir::Type> types;
-  int32_t statArg = 0, errmsgArg = 0;
-  if (parser.parseOperand(opers.emplace_back()))
-    return mlir::failure();
-
-  if (mlir::succeeded(parser.parseOptionalKeyword("stat"))) {
-    if (*parser.parseOptionalOperand(opers.emplace_back()))
-      return mlir::failure();
-    statArg++;
-  }
-  if (mlir::succeeded(parser.parseOptionalKeyword("errmsg"))) {
-    if (*parser.parseOptionalOperand(opers.emplace_back()))
-      return mlir::failure();
-    errmsgArg++;
-  }
-
-  // Set the operandSegmentSizes attribute
-  result.addAttribute(getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr({1, statArg, errmsgArg}));
-
-  if (parser.parseColon())
-    return mlir::failure();
-
-  if (parser.parseLParen())
-    return mlir::failure();
-  if (parser.parseTypeList(types))
-    return mlir::failure();
-  if (parser.parseRParen())
-    return mlir::failure();
-
-  if (opers.size() != types.size())
-    return mlir::failure();
-
-  if (parser.resolveOperands(opers, types, parser.getCurrentLocation(),
-                             result.operands))
-    return mlir::failure();
-
-  auto *body = result.addRegion();
-  if (parser.parseRegion(*body))
-    return mlir::failure();
-
-  ChangeTeamOp::ensureTerminator(*body, builder, result.location);
-
-  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
-    return mlir::failure();
-
+  mif::ChangeTeamOp::ensureTerminator(body, builder, builder.getUnknownLoc());
   return mlir::success();
 }
 
-void mif::ChangeTeamOp::print(mlir::OpAsmPrinter &p) {
-  p << ' ' << getTeam();
-  if (getStat())
-    p << " stat " << getStat();
-  if (getErrmsg())
-    p << " errmsg " << getErrmsg();
-  p << " : (";
-  llvm::interleaveComma(getOperands(), p,
-                        [&](mlir::Value v) { p << v.getType(); });
-  p << ") ";
-  p.printRegion(getRegion(), /*printEntryBlockArgs=*/true,
+static void printChangeTeamOpBody(mlir::OpAsmPrinter &p, mif::ChangeTeamOp op,
+                                  mlir::Region &body) {
+  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {ChangeTeamOp::getOperandSegmentSizeAttr()});
 }
+
+#define GET_OP_CLASSES
+#include "flang/Optimizer/Dialect/MIF/MIFOps.cpp.inc"

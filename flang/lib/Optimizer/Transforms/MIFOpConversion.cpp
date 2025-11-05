@@ -529,6 +529,7 @@ struct MIFChangeTeamOpConversion
                   mlir::PatternRewriter &rewriter) const override {
     auto mod = op->template getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
+    builder.setInsertionPoint(op);
 
     mlir::Location loc = op.getLoc();
     mlir::Type errmsgTy = getPRIFErrmsgType(builder);
@@ -545,13 +546,12 @@ struct MIFChangeTeamOpConversion
         genErrmsgPRIF(builder, loc, op.getErrmsg());
     llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, op.getTeam(), stat, errmsgArg, errmsgAllocArg);
-    fir::CallOp callOp = fir::CallOp::create(builder, loc, funcOp, args);
+    fir::CallOp::create(builder, loc, funcOp, args);
 
     mlir::Operation *changeOp = op.getOperation();
     auto &bodyRegion = op.getRegion();
     mlir::Block &bodyBlock = bodyRegion.front();
 
-    rewriter.moveOpBefore(callOp.getOperation(), changeOp);
     rewriter.inlineBlockBefore(&bodyBlock, changeOp);
     rewriter.eraseOp(op);
     return mlir::success();

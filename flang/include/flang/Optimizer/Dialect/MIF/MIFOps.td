@@ -23,9 +23,7 @@ class mif_Op<string mnemonic, list<Trait> traits>
 
 class region_Op<string mnemonic, list<Trait> traits = []>
     : mif_Op<mnemonic, !listconcat(traits, [RecursivelySpeculatable,
-                                            RecursiveMemoryEffects])> {
-  let hasCustomAssemblyFormat = 1;
-}
+                                            RecursiveMemoryEffects])> {}
 
 //===----------------------------------------------------------------------===//
 // Initialization and Finalization
@@ -381,6 +379,13 @@ def mif_ChangeTeamOp
   let extraClassDeclaration = [{
     /// Get the body of the CHANGE TEAM construct 
     mlir::Block *getBody() { return &getRegion().front(); }
+  }];
+
+  let assemblyFormat = [{
+    $team (`stat` $stat^)?
+    (`errmsg` $errmsg^)?
+    attr-dict `:` `(` type(operands) `)`
+    custom<ChangeTeamOpBody>($region)
   }];
 }
 
