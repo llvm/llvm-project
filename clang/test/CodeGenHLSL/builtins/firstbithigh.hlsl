@@ -301,6 +301,10 @@ uint4 test_firstbithigh_long4(int64_t4 p0) {
 // CHECK: call <4 x i32> @llvm.[[TARGET]].firstbituhigh.v4i32(<4 x i32> %{{.*}})
 // DXCHECK: sub <4 x i32> splat (i32 31), {{.*}}
 // SPVCHECK-NOT: sub <4 x i32> splat (i32 31), {{.*}}
+// DXCHECK: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
+// SPVCHECK-NOT: icmp eq <4 x i32> {{.*}}, splat (i32 -1)
+// DXCHECK: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
+// SPVCHECK-NOT: select <4 x i1> {{.*}}, <4 x i32> {{.*}}, <4 x i32> {{.*}}
 // CHECK: zext <4 x i32> {{.*}} to <4 x i64>
 // CHECK: ret <4 x i64> {{.*}}
 uint64_t4 test_firstbithigh_upcast(uint4 p0) {
