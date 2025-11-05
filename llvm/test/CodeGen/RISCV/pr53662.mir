@@ -18,15 +18,19 @@ body:             |
   ; CHECK-LABEL: name: b
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   DBG_VALUE $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $x10
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   PseudoRET implicit killed $x10
   bb.0 :
     PseudoBR %bb.1
