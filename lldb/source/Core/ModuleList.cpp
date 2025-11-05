@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Debugger.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -16,7 +16,6 @@
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
-#include "llvm/Support/ThreadPool.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeList.h"
@@ -30,6 +29,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
+#include "llvm/Support/ThreadPool.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
