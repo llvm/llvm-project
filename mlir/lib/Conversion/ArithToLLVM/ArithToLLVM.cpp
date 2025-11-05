@@ -613,16 +613,16 @@ struct FancyAddFLowering : public ConvertOpToLLVMPattern<arith::AddFOp> {
 
     // Cast operands to 64-bit integers.
     Location loc = op.getLoc();
-    Value lhsBits = rewriter.create<LLVM::ZExtOp>(loc, rewriter.getI64Type(),
-                                                  adaptor.getLhs());
-    Value rhsBits = rewriter.create<LLVM::ZExtOp>(loc, rewriter.getI64Type(),
-                                                  adaptor.getRhs());
+    Value lhsBits = LLVM::ZExtOp::create(rewriter, loc, rewriter.getI64Type(),
+                                         adaptor.getLhs());
+    Value rhsBits = LLVM::ZExtOp::create(rewriter, loc, rewriter.getI64Type(),
+                                         adaptor.getRhs());
 
     // Call software implementation of floating point addition.
     int32_t sem =
         llvm::APFloatBase::SemanticsToEnum(floatTy.getFloatSemantics());
-    Value semValue = rewriter.create<LLVM::ConstantOp>(
-        loc, rewriter.getI32Type(),
+    Value semValue = LLVM::ConstantOp::create(
+        rewriter, loc, rewriter.getI32Type(),
         rewriter.getIntegerAttr(rewriter.getI32Type(), sem));
     SmallVector<Value> params = {semValue, lhsBits, rhsBits};
     auto resultOp =
@@ -630,8 +630,8 @@ struct FancyAddFLowering : public ConvertOpToLLVMPattern<arith::AddFOp> {
                              SymbolRefAttr::get(*adder), params);
 
     // Truncate result to the original width.
-    Value truncatedBits = rewriter.create<LLVM::TruncOp>(
-        loc, rewriter.getIntegerType(floatTy.getWidth()),
+    Value truncatedBits = LLVM::TruncOp::create(
+        rewriter, loc, rewriter.getIntegerType(floatTy.getWidth()),
         resultOp->getResult(0));
     rewriter.replaceOp(op, truncatedBits);
     return success();
