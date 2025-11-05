@@ -46,6 +46,7 @@ class LangOptions;
 class MultiKeywordSelector;
 class SourceLocation;
 
+/// Constants for TokenKinds.def
 enum TokenKey : unsigned {
   KEYC99 = 0x1,
   KEYCXX = 0x2,
