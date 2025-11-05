@@ -435,3 +435,61 @@ exit:
 }
 
 declare void @fn(i32)
+
+define void @peel_int_eq_condition(i32 %start) {
+; CHECK-LABEL: @peel_int_eq_condition(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_PEEL_BEGIN:%.*]]
+; CHECK:       loop.peel.begin:
+; CHECK-NEXT:    br label [[LOOP_PEEL:%.*]]
+; CHECK:       loop.peel:
+; CHECK-NEXT:    [[C_0_PEEL:%.*]] = icmp eq i32 [[START:%.*]], [[START]]
+; CHECK-NEXT:    br i1 [[C_0_PEEL]], label [[IF_THEN_PEEL:%.*]], label [[LOOP_LATCH_PEEL:%.*]]
+; CHECK:       if.then.peel:
+; CHECK-NEXT:    call void @fn(i32 [[START]])
+; CHECK-NEXT:    br label [[LOOP_LATCH_PEEL]]
+; CHECK:       loop.latch.peel:
+; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add i32 [[START]], 1
+; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp slt i32 [[START]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL]], label [[LOOP_PEEL_NEXT:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.peel.next:
+; CHECK-NEXT:    br label [[LOOP_PEEL_NEXT1:%.*]]
+; CHECK:       loop.peel.next1:
+; CHECK-NEXT:    br label [[ENTRY_PEEL_NEWPH:%.*]]
+; CHECK:       entry.peel.newph:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[LOOP_LATCH]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @fn(i32 [[IV]])
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i32 [[IV]], 100
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop.latch ]
+  %c.0 = icmp eq i32 %iv, %start
+  br i1 %c.0, label %if.then, label %loop.latch
+
+if.then:
+  call void @fn(i32 %iv)
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i32 %iv, 1
+  %ec = icmp slt i32 %iv, 100
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
