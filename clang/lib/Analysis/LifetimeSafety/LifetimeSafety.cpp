@@ -68,7 +68,6 @@ void LifetimeSafetyAnalysis::run() {
                   LiveOrigins->dump(llvm::dbgs(), FactMgr.getTestPoints()));
 
   runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter);
-  UpdateMissingOriginCount(FactMgr.getOriginMgr());
 }
 } // namespace internal
 

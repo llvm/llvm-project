@@ -105,9 +105,4 @@ OriginID OriginManager::getOrCreate(const ValueDecl &D) {
   return NewID;
 }
 
-bool OriginManager::isOriginMissing(const Expr &E) const {
-  auto It = ExprToOriginID.find(&E);
-  return It == ExprToOriginID.end();
-}
-
 } // namespace clang::lifetimes::internal
