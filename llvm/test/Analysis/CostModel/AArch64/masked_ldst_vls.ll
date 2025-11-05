@@ -19,13 +19,13 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @fixed_sve_vls() #0 {
 ; CHECK-LABEL: 'fixed_sve_vls'
-; CHECK:  Cost Model: Found an estimated cost of [[#div(2047,VBITS)+1]] for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr undef, i32 8, <256 x i1> undef, <256 x i8> undef)
-; CHECK:  Cost Model: Found an estimated cost of [[#div(4091,VBITS)+1]] for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr undef, i32 8, <256 x i1> undef, <256 x i16> undef)
-; CHECK:  Cost Model: Found an estimated cost of [[#div(511,VBITS)+1]] for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr undef, i32 8, <16 x i1> undef, <16 x i32> undef)
-; CHECK:  Cost Model: Found an estimated cost of [[#div(1023,VBITS)+1]] for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr undef, i32 8, <16 x i1> undef, <16 x i64> undef)
-; CHECK:  Cost Model: Found an estimated cost of [[#div(8191,VBITS)+1]] for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr undef, i32 8, <512 x i1> undef, <512 x half> undef)
-; CHECK:  Cost Model: Found an estimated cost of [[#div(8191,VBITS)+1]] for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr undef, i32 8, <256 x i1> undef, <256 x float> undef)
-; CHECK:  Cost Model: Found an estimated cost of [[#div(8191,VBITS)+1]] for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr undef, i32 8, <128 x i1> undef, <128 x double> undef)
+; CHECK:  Cost Model: Found an estimated cost of [[#div(2047,VBITS)+1]] for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr align 8 undef, <256 x i1> undef, <256 x i8> undef)
+; CHECK:  Cost Model: Found an estimated cost of [[#div(4091,VBITS)+1]] for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr align 8 undef, <256 x i1> undef, <256 x i16> undef)
+; CHECK:  Cost Model: Found an estimated cost of [[#div(511,VBITS)+1]] for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 8 undef, <16 x i1> undef, <16 x i32> undef)
+; CHECK:  Cost Model: Found an estimated cost of [[#div(1023,VBITS)+1]] for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr align 8 undef, <16 x i1> undef, <16 x i64> undef)
+; CHECK:  Cost Model: Found an estimated cost of [[#div(8191,VBITS)+1]] for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr align 8 undef, <512 x i1> undef, <512 x half> undef)
+; CHECK:  Cost Model: Found an estimated cost of [[#div(8191,VBITS)+1]] for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr align 8 undef, <256 x i1> undef, <256 x float> undef)
+; CHECK:  Cost Model: Found an estimated cost of [[#div(8191,VBITS)+1]] for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr align 8 undef, <128 x i1> undef, <128 x double> undef)
 ; CHECK:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 entry:
   %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr undef, i32 8, <256 x i1> undef, <256 x i8> undef)

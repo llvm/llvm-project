@@ -137,6 +137,16 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/OpenACCOps.td
+  SOURCES
+    dialects/openacc.py
+  DIALECT_NAME acc
+  DEPENDS acc_common_td
+  )
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/GPUOps.td
   SOURCES_GLOB dialects/gpu/*.py
   DIALECT_NAME gpu
@@ -335,6 +345,15 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/memref.py
   DIALECT_NAME memref)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/ShardOps.td
+  SOURCES
+    dialects/shard.py
+  DIALECT_NAME shard
+  GEN_ENUM_BINDINGS)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -591,6 +610,8 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILLVM
+    # Misnomer - this is only the LLVMIR translation target.
+    MLIRCAPITarget
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind

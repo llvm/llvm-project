@@ -506,8 +506,8 @@ def : Pat<(XLenVT (xor GPR:$rs1, invLogicImm:$rs2)), (XNOR GPR:$rs1, invLogicImm
 } // Predicates = [HasStdExtZbbOrZbkb]
 
 let Predicates = [HasStdExtZbbOrZbkb] in {
-def : PatGprGpr<shiftop<rotl>, ROL>;
-def : PatGprGpr<shiftop<rotr>, ROR>;
+def : PatGprShiftMaskXLen<rotl, ROL>;
+def : PatGprShiftMaskXLen<rotr, ROR>;
 
 def : PatGprImm<rotr, RORI, uimmlog2xlen>;
 // There's no encoding for roli in the the 'B' extension as it can be
@@ -517,29 +517,29 @@ def : Pat<(XLenVT (rotl GPR:$rs1, uimmlog2xlen:$shamt)),
 } // Predicates = [HasStdExtZbbOrZbkb]
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
-def : PatGprGpr<shiftopw<riscv_rolw>, ROLW>;
-def : PatGprGpr<shiftopw<riscv_rorw>, RORW>;
+def : PatGprShiftMask32<riscv_rolw, ROLW>;
+def : PatGprShiftMask32<riscv_rorw, RORW>;
 def : PatGprImm<riscv_rorw, RORIW, uimm5>;
 def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
           (RORIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbs] in {
-def : Pat<(XLenVT (and (not (shiftop<shl> 1, (XLenVT GPR:$rs2))), GPR:$rs1)),
-          (BCLR GPR:$rs1, GPR:$rs2)>;
-def : Pat<(XLenVT (and (rotl -2, (XLenVT GPR:$rs2)), GPR:$rs1)),
-          (BCLR GPR:$rs1, GPR:$rs2)>;
-def : Pat<(XLenVT (or (shiftop<shl> 1, (XLenVT GPR:$rs2)), GPR:$rs1)),
-          (BSET GPR:$rs1, GPR:$rs2)>;
-def : Pat<(XLenVT (xor (shiftop<shl> 1, (XLenVT GPR:$rs2)), GPR:$rs1)),
-          (BINV GPR:$rs1, GPR:$rs2)>;
-def : Pat<(XLenVT (and (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)), 1)),
-          (BEXT GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (and (not (shl 1, shiftMaskXLen:$rs2)), GPR:$rs1)),
+          (BCLR GPR:$rs1, shiftMaskXLen:$rs2)>;
+def : Pat<(XLenVT (and (rotl -2, shiftMaskXLen:$rs2), GPR:$rs1)),
+          (BCLR GPR:$rs1, shiftMaskXLen:$rs2)>;
+def : Pat<(XLenVT (or (shl 1, shiftMaskXLen:$rs2), GPR:$rs1)),
+          (BSET GPR:$rs1, shiftMaskXLen:$rs2)>;
+def : Pat<(XLenVT (xor (shl 1, shiftMaskXLen:$rs2), GPR:$rs1)),
+          (BINV GPR:$rs1, shiftMaskXLen:$rs2)>;
+def : Pat<(XLenVT (and (srl GPR:$rs1, shiftMaskXLen:$rs2), 1)),
+          (BEXT GPR:$rs1, shiftMaskXLen:$rs2)>;
 
-def : Pat<(XLenVT (shiftop<shl> 1, (XLenVT GPR:$rs2))),
-          (BSET (XLenVT X0), GPR:$rs2)>;
-def : Pat<(XLenVT (not (shiftop<shl> -1, (XLenVT GPR:$rs2)))),
-          (ADDI (XLenVT (BSET (XLenVT X0), GPR:$rs2)), -1)>;
+def : Pat<(XLenVT (shl 1, shiftMaskXLen:$rs2)),
+          (BSET (XLenVT X0), shiftMaskXLen:$rs2)>;
+def : Pat<(XLenVT (not (shl -1, shiftMaskXLen:$rs2))),
+          (ADDI (XLenVT (BSET (XLenVT X0), shiftMaskXLen:$rs2)), -1)>;
 
 def : Pat<(XLenVT (and GPR:$rs1, BCLRMask:$mask)),
           (BCLRI GPR:$rs1, BCLRMask:$mask)>;

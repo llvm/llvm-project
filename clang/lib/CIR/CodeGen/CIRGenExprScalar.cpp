@@ -1734,9 +1734,9 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
   // LLVM we shall take VLA's, division by element size, etc.
   //
   // See more in `EmitSub` in CGExprScalar.cpp.
-  assert(!cir::MissingFeatures::ptrDiffOp());
-  cgf.cgm.errorNYI("ptrdiff");
-  return {};
+  assert(!cir::MissingFeatures::llvmLoweringPtrDiffConsidersPointee());
+  return cir::PtrDiffOp::create(builder, cgf.getLoc(ops.loc), cgf.PtrDiffTy,
+                                ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
@@ -2041,8 +2041,9 @@ mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
   assert(!cir::MissingFeatures::tryEmitAsConstant());
   Expr::EvalResult result;
   if (e->EvaluateAsInt(result, cgf.getContext(), Expr::SE_AllowSideEffects)) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "Constant interger member expr");
-    // Fall through to emit this as a non-constant access.
+    llvm::APSInt value = result.Val.getInt();
+    cgf.emitIgnoredExpr(e->getBase());
+    return builder.getConstInt(cgf.getLoc(e->getExprLoc()), value);
   }
   return emitLoadOfLValue(e);
 }

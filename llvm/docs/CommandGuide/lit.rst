@@ -641,7 +641,6 @@ TestRunner.py:
  %{S:real}               %S after expanding all symbolic links and substitute drives
  %{p:real}               %p after expanding all symbolic links and substitute drives
  %{t:real}               %t after expanding all symbolic links and substitute drives
- %{T:real}               %T after expanding all symbolic links and substitute drives
  %{/s:real}              %/s after expanding all symbolic links and substitute drives
  %{/S:real}              %/S after expanding all symbolic links and substitute drives
  %{/p:real}              %/p after expanding all symbolic links and substitute drives

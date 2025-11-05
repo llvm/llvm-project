@@ -184,4 +184,26 @@ TEST(TransformTest, ToUnderlying) {
   static_assert(llvm::to_underlying(E3::B3) == 0);
 }
 
+TEST(STLForwardCompatTest, IdentityCxx20) {
+  llvm::identity_cxx20 identity;
+
+  // Test with an lvalue.
+  int X = 42;
+  int &Y = identity(X);
+  EXPECT_EQ(&X, &Y);
+
+  // Test with a const lvalue.
+  const int CX = 10;
+  const int &CY = identity(CX);
+  EXPECT_EQ(&CX, &CY);
+
+  // Test with an rvalue.
+  EXPECT_EQ(identity(123), 123);
+
+  // Test perfect forwarding.
+  static_assert(std::is_same_v<int &, decltype(identity(X))>);
+  static_assert(std::is_same_v<const int &, decltype(identity(CX))>);
+  static_assert(std::is_same_v<int &&, decltype(identity(int(5)))>);
+}
+
 } // namespace

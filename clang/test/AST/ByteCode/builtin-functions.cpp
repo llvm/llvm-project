@@ -63,6 +63,19 @@ constexpr int test_address_of_incomplete_array_type() { // both-error {{never pr
 static_assert(test_address_of_incomplete_array_type() == 1234, ""); // both-error {{constant}} \
                                                                     // both-note {{in call}}
 
+namespace LocalExternRedecl {
+  constexpr int externRedecl1() {
+    extern int arr[];
+    return 0;
+  }
+  constexpr int externRedecl2() { // both-error {{never produces a constant expression}}
+    extern int arr[];
+    __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0])); // both-note 2{{incomplete type}}
+    return 1234;
+  }
+  static_assert(externRedecl2() == 1234); // both-error {{not an integral constant expression}} \
+                                          // both-note {{in call to}}
+}
 
   struct NonTrivial {
     constexpr NonTrivial() : n(0) {}

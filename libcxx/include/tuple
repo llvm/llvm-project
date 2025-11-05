@@ -234,7 +234,6 @@ template <class... Types>
 #  include <__tuple/ignore.h>
 #  include <__tuple/tuple_element.h>
 #  include <__tuple/tuple_like.h>
-#  include <__tuple/tuple_like_ext.h>
 #  include <__tuple/tuple_size.h>
 #  include <__tuple/tuple_types.h>
 #  include <__type_traits/common_reference.h>
@@ -1273,14 +1272,18 @@ operator<=(const tuple<_Tp...>& __x, const tuple<_Up...>& __y) {
 template <class... _Tuples>
 struct __tuple_cat_return_impl;
 
-template <class _Tuple>
-struct __tuple_cat_return_impl<_Tuple> {
-  using type _LIBCPP_NODEBUG = _Tuple;
+template <class... _Types>
+struct __tuple_cat_return_impl<tuple<_Types...>> {
+  using type _LIBCPP_NODEBUG = tuple<_Types...>;
 };
 
-template <class... _Types0, template <class...> class _Tuple, class... _Types1, class... _Tuples>
-struct __tuple_cat_return_impl<tuple<_Types0...>, _Tuple<_Types1...>, _Tuples...>
+template <class... _Types0, class... _Types1, class... _Tuples>
+struct __tuple_cat_return_impl<tuple<_Types0...>, tuple<_Types1...>, _Tuples...>
     : __tuple_cat_return_impl<tuple<_Types0..., _Types1...>, _Tuples...> {};
+
+template <class... _Types0, class _Tp, class _Up, class... _Tuples>
+struct __tuple_cat_return_impl<tuple<_Types0...>, pair<_Tp, _Up>, _Tuples...>
+    : __tuple_cat_return_impl<tuple<_Types0..., _Tp, _Up>, _Tuples...> {};
 
 template <class, class, class>
 struct __tuple_cat_array;
@@ -1369,11 +1372,7 @@ __tuple_cat_select_element_wise(_TupleSrc&& __src, __index_sequence<_Indices...>
   return _TupleDst(std::get<_Indices>(std::forward<_TupleSrc>(__src))...);
 }
 
-template <class _Tuple0,
-          class... _Tuples,
-          __enable_if_t<
-              _And<__tuple_like_ext<__remove_cvref_t<_Tuple0>>, __tuple_like_ext<__remove_cvref_t<_Tuples>>...>::value,
-              int> = 0>
+template <class _Tuple0, class... _Tuples>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_cat_return_t<_Tuple0, _Tuples...>
 tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls) {
   using _T0 _LIBCPP_NODEBUG          = __libcpp_remove_reference_t<_Tuple0>;

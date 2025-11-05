@@ -1368,13 +1368,13 @@ static void ComputeCrossModuleImportForModuleFromIndexForTest(
     FunctionImporter::ImportMapTy &ImportList) {
   for (const auto &GlobalList : Index) {
     // Ignore entries for undefined references.
-    if (GlobalList.second.SummaryList.empty())
+    if (GlobalList.second.getSummaryList().empty())
       continue;
 
     auto GUID = GlobalList.first;
-    assert(GlobalList.second.SummaryList.size() == 1 &&
+    assert(GlobalList.second.getSummaryList().size() == 1 &&
            "Expected individual combined index to have one summary per GUID");
-    auto &Summary = GlobalList.second.SummaryList[0];
+    auto &Summary = GlobalList.second.getSummaryList()[0];
     // Skip the summaries for the importing module. These are included to
     // e.g. record required linkage changes.
     if (Summary->modulePath() == ModulePath)
@@ -1423,7 +1423,7 @@ void updateValueInfoForIndirectCalls(ModuleSummaryIndex &Index,
 
 void llvm::updateIndirectCalls(ModuleSummaryIndex &Index) {
   for (const auto &Entry : Index) {
-    for (const auto &S : Entry.second.SummaryList) {
+    for (const auto &S : Entry.second.getSummaryList()) {
       if (auto *FS = dyn_cast<FunctionSummary>(S.get()))
         updateValueInfoForIndirectCalls(Index, FS);
     }
@@ -1456,7 +1456,7 @@ void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
   // Add values flagged in the index as live roots to the worklist.
   for (const auto &Entry : Index) {
     auto VI = Index.getValueInfo(Entry);
-    for (const auto &S : Entry.second.SummaryList) {
+    for (const auto &S : Entry.second.getSummaryList()) {
       if (auto *FS = dyn_cast<FunctionSummary>(S.get()))
         updateValueInfoForIndirectCalls(Index, FS);
       if (S->isLive()) {
@@ -2094,7 +2094,7 @@ static bool doImportingForModuleForTest(
   // is only enabled when testing importing via the 'opt' tool, which does
   // not do the ThinLink that would normally determine what values to promote.
   for (auto &I : *Index) {
-    for (auto &S : I.second.SummaryList) {
+    for (auto &S : I.second.getSummaryList()) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
         S->setLinkage(GlobalValue::ExternalLinkage);
     }

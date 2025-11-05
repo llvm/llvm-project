@@ -14,6 +14,7 @@
 #define OFFLOAD_PERTHREADTABLE_H
 
 #include <list>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/Error.h>
 #include <memory>
 #include <mutex>
@@ -21,11 +22,11 @@
 
 template <typename ObjectType> struct PerThread {
   struct PerThreadData {
-    std::unique_ptr<ObjectType> ThEntry;
+    std::unique_ptr<ObjectType> ThreadEntry;
   };
 
-  std::mutex Mtx;
-  std::list<std::shared_ptr<PerThreadData>> ThreadDataList;
+  std::mutex Mutex;
+  llvm::SmallVector<std::shared_ptr<PerThreadData>> ThreadDataList;
 
   // define default constructors, disable copy and move constructors
   PerThread() = default;
@@ -34,7 +35,8 @@ template <typename ObjectType> struct PerThread {
   PerThread &operator=(const PerThread &) = delete;
   PerThread &operator=(PerThread &&) = delete;
   ~PerThread() {
-    std::lock_guard<std::mutex> Lock(Mtx);
+    assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
+           "Cannot be deleted while other threads are adding entries");
     ThreadDataList.clear();
   }
 
@@ -43,7 +45,7 @@ private:
     static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
     if (!ThreadData) {
       ThreadData = std::make_shared<PerThreadData>();
-      std::lock_guard<std::mutex> Lock(Mtx);
+      std::lock_guard<std::mutex> Lock(Mutex);
       ThreadDataList.push_back(ThreadData);
     }
     return *ThreadData;
@@ -51,22 +53,23 @@ private:
 
 protected:
   ObjectType &getThreadEntry() {
-    auto &ThData = getThreadData();
-    if (ThData.ThEntry)
-      return *ThData.ThEntry;
-    ThData.ThEntry = std::make_unique<ObjectType>();
-    return *ThData.ThEntry;
+    PerThreadData &ThreadData = getThreadData();
+    if (ThreadData.ThreadEntry)
+      return *ThreadData.ThreadEntry;
+    ThreadData.ThreadEntry = std::make_unique<ObjectType>();
+    return *ThreadData.ThreadEntry;
   }
 
 public:
   ObjectType &get() { return getThreadEntry(); }
 
-  template <class F> void clear(F f) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    for (auto ThData : ThreadDataList) {
-      if (!ThData->ThEntry)
+  template <class ClearFuncTy> void clear(ClearFuncTy ClearFunc) {
+    assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
+           "Clear cannot be called while other threads are adding entries");
+    for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
+      if (!ThreadData->ThreadEntry)
         continue;
-      f(*ThData->ThEntry);
+      ClearFunc(*ThreadData->ThreadEntry);
     }
     ThreadDataList.clear();
   }
@@ -106,11 +109,11 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
 
   struct PerThreadData {
     size_t NElements = 0;
-    std::unique_ptr<ContainerType> ThEntry;
+    std::unique_ptr<ContainerType> ThreadEntry;
   };
 
-  std::mutex Mtx;
-  std::list<std::shared_ptr<PerThreadData>> ThreadDataList;
+  std::mutex Mutex;
+  llvm::SmallVector<std::shared_ptr<PerThreadData>> ThreadDataList;
 
   // define default constructors, disable copy and move constructors
   PerThreadTable() = default;
@@ -119,51 +122,52 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
   PerThreadTable &operator=(const PerThreadTable &) = delete;
   PerThreadTable &operator=(PerThreadTable &&) = delete;
   ~PerThreadTable() {
-    std::lock_guard<std::mutex> Lock(Mtx);
+    assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
+           "Cannot be deleted while other threads are adding entries");
     ThreadDataList.clear();
   }
 
 private:
   PerThreadData &getThreadData() {
-    static thread_local std::shared_ptr<PerThreadData> ThData = nullptr;
-    if (!ThData) {
-      ThData = std::make_shared<PerThreadData>();
-      std::lock_guard<std::mutex> Lock(Mtx);
-      ThreadDataList.push_back(ThData);
+    static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
+    if (!ThreadData) {
+      ThreadData = std::make_shared<PerThreadData>();
+      std::lock_guard<std::mutex> Lock(Mutex);
+      ThreadDataList.push_back(ThreadData);
     }
-    return *ThData;
+    return *ThreadData;
   }
 
 protected:
   ContainerType &getThreadEntry() {
-    auto &ThData = getThreadData();
-    if (ThData.ThEntry)
-      return *ThData.ThEntry;
-    ThData.ThEntry = std::make_unique<ContainerType>();
-    return *ThData.ThEntry;
+    PerThreadData &ThreadData = getThreadData();
+    if (ThreadData.ThreadEntry)
+      return *ThreadData.ThreadEntry;
+    ThreadData.ThreadEntry = std::make_unique<ContainerType>();
+    return *ThreadData.ThreadEntry;
   }
 
   size_t &getThreadNElements() {
-    auto &ThData = getThreadData();
-    return ThData.NElements;
+    PerThreadData &ThreadData = getThreadData();
+    return ThreadData.NElements;
   }
 
   void setNElements(size_t Size) {
-    auto &NElements = getThreadNElements();
+    size_t &NElements = getThreadNElements();
     NElements = Size;
   }
 
 public:
   void add(ObjectType obj) {
-    auto &Entry = getThreadEntry();
-    auto &NElements = getThreadNElements();
+    ContainerType &Entry = getThreadEntry();
+    size_t &NElements = getThreadNElements();
     NElements++;
     Entry.add(obj);
   }
 
   iterator erase(iterator it) {
-    auto &Entry = getThreadEntry();
-    auto &NElements = getThreadNElements();
+    ContainerType &Entry = getThreadEntry();
+    size_t &NElements = getThreadNElements();
     NElements--;
     return Entry.erase(it);
   }
@@ -173,50 +177,52 @@ public:
   // Iterators to traverse objects owned by
   // the current thread
   iterator begin() {
-    auto &Entry = getThreadEntry();
+    ContainerType &Entry = getThreadEntry();
     return Entry.begin();
   }
   iterator end() {
-    auto &Entry = getThreadEntry();
+    ContainerType &Entry = getThreadEntry();
     return Entry.end();
   }
 
-  template <class F> void clear(F f) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    for (auto ThData : ThreadDataList) {
-      if (!ThData->ThEntry || ThData->NElements == 0)
+  template <class ClearFuncTy> void clear(ClearFuncTy ClearFunc) {
+    assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
+           "Clear cannot be called while other threads are adding entries");
+    for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
+      if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
       if constexpr (has_clearAll<ContainerType>::value) {
-        ThData->ThEntry->clearAll(f);
+        ThreadData->ThreadEntry->clearAll(ClearFunc);
       } else if constexpr (has_iterator<ContainerType>::value &&
                            has_clear<ContainerType>::value) {
-        for (auto &Obj : *ThData->ThEntry) {
+        for (auto &Obj : *ThreadData->ThreadEntry) {
           if constexpr (is_associative<ContainerType>::value) {
-            f(Obj.second);
+            ClearFunc(Obj.second);
           } else {
-            f(Obj);
+            ClearFunc(Obj);
           }
         }
-        ThData->ThEntry->clear();
+        ThreadData->ThreadEntry->clear();
       } else {
         static_assert(true, "Container type not supported");
       }
-      ThData->NElements = 0;
+      ThreadData->NElements = 0;
     }
     ThreadDataList.clear();
   }
 
-  template <class F> llvm::Error deinit(F f) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    for (auto ThData : ThreadDataList) {
-      if (!ThData->ThEntry || ThData->NElements == 0)
+  template <class DeinitFuncTy> llvm::Error deinit(DeinitFuncTy DeinitFunc) {
+    assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
+           "Deinit cannot be called while other threads are adding entries");
+    for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
+      if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
-      for (auto &Obj : *ThData->ThEntry) {
+      for (auto &Obj : *ThreadData->ThreadEntry) {
         if constexpr (is_associative<ContainerType>::value) {
-          if (auto Err = f(Obj.second))
+          if (auto Err = DeinitFunc(Obj.second))
             return Err;
         } else {
-          if (auto Err = f(Obj))
+          if (auto Err = DeinitFunc(Obj))
             return Err;
         }
       }
@@ -262,7 +268,7 @@ struct PerThreadContainer
 
   // Get the object for the given index in the current thread
   ObjectType &get(IndexType Index) {
-    auto &Entry = this->getThreadEntry();
+    ContainerType &Entry = this->getThreadEntry();
 
     // specialized code for vector-like containers
     if constexpr (has_resize<ContainerType>::value) {

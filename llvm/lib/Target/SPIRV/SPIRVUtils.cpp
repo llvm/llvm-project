@@ -1040,4 +1040,19 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
                                                                      : VarPos;
 }
 
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
+  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+    return std::nullopt;
+
+  if (GV.isDeclarationForLinker())
+    return SPIRV::LinkageType::Import;
+
+  if (GV.hasLinkOnceODRLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
+    return SPIRV::LinkageType::LinkOnceODR;
+
+  return SPIRV::LinkageType::Export;
+}
+
 } // namespace llvm

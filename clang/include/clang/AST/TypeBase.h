@@ -4378,8 +4378,6 @@ protected:
   unsigned NumRows;
   unsigned NumColumns;
 
-  static constexpr unsigned MaxElementsPerDimension = (1 << 20) - 1;
-
   ConstantMatrixType(QualType MatrixElementType, unsigned NRows,
                      unsigned NColumns, QualType CanonElementType);
 
@@ -4396,16 +4394,6 @@ public:
   /// Returns the number of elements required to embed the matrix into a vector.
   unsigned getNumElementsFlattened() const {
     return getNumRows() * getNumColumns();
-  }
-
-  /// Returns true if \p NumElements is a valid matrix dimension.
-  static constexpr bool isDimensionValid(size_t NumElements) {
-    return NumElements > 0 && NumElements <= MaxElementsPerDimension;
-  }
-
-  /// Returns the maximum number of elements per dimension.
-  static constexpr unsigned getMaxElementsPerDimension() {
-    return MaxElementsPerDimension;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {

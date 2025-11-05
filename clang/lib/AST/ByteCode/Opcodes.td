@@ -612,12 +612,25 @@ class OverflowOpcode : Opcode {
   let HasGroup = 1;
 }
 
+class OverflowBitfieldOpcode : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgBool, ArgUint32];
+  let HasGroup = 1;
+}
+
 def Inc : OverflowOpcode;
+def IncBitfield : OverflowBitfieldOpcode;
 def IncPop : OverflowOpcode;
+def IncPopBitfield : OverflowBitfieldOpcode;
 def PreInc : OverflowOpcode;
+def PreIncBitfield : OverflowBitfieldOpcode;
+
 def Dec : OverflowOpcode;
+def DecBitfield : OverflowBitfieldOpcode;
 def DecPop : OverflowOpcode;
+def DecPopBitfield : OverflowBitfieldOpcode;
 def PreDec : OverflowOpcode;
+def PreDecBitfield : OverflowBitfieldOpcode;
 
 // Float increment and decrement.
 def Incf: FloatOpcode;

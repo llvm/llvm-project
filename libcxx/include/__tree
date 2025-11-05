@@ -1119,15 +1119,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI _InsertReturnType __node_handle_insert_unique(_NodeHandle&&);
   template <class _NodeHandle>
   _LIBCPP_HIDE_FROM_ABI iterator __node_handle_insert_unique(const_iterator, _NodeHandle&&);
-  template <class _Tree>
-  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_unique(_Tree& __source);
+  template <class _Comp2>
+  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_unique(__tree<_Tp, _Comp2, _Allocator>& __source);
 
   template <class _NodeHandle>
   _LIBCPP_HIDE_FROM_ABI iterator __node_handle_insert_multi(_NodeHandle&&);
   template <class _NodeHandle>
   _LIBCPP_HIDE_FROM_ABI iterator __node_handle_insert_multi(const_iterator, _NodeHandle&&);
-  template <class _Tree>
-  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_multi(_Tree& __source);
+  template <class _Comp2>
+  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_multi(__tree<_Tp, _Comp2, _Allocator>& __source);
 
   template <class _NodeHandle>
   _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(key_type const&);
@@ -2020,11 +2020,10 @@ _LIBCPP_HIDE_FROM_ABI _NodeHandle __tree<_Tp, _Compare, _Allocator>::__node_hand
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-template <class _Tree>
-_LIBCPP_HIDE_FROM_ABI void __tree<_Tp, _Compare, _Allocator>::__node_handle_merge_unique(_Tree& __source) {
-  static_assert(is_same<typename _Tree::__node_pointer, __node_pointer>::value, "");
-
-  for (typename _Tree::iterator __i = __source.begin(); __i != __source.end();) {
+template <class _Comp2>
+_LIBCPP_HIDE_FROM_ABI void
+__tree<_Tp, _Compare, _Allocator>::__node_handle_merge_unique(__tree<_Tp, _Comp2, _Allocator>& __source) {
+  for (iterator __i = __source.begin(); __i != __source.end();) {
     __node_pointer __src_ptr = __i.__get_np();
     auto [__parent, __child] = __find_equal(__src_ptr->__get_value());
     ++__i;
@@ -2065,11 +2064,10 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_multi(const_iterator __h
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-template <class _Tree>
-_LIBCPP_HIDE_FROM_ABI void __tree<_Tp, _Compare, _Allocator>::__node_handle_merge_multi(_Tree& __source) {
-  static_assert(is_same<typename _Tree::__node_pointer, __node_pointer>::value, "");
-
-  for (typename _Tree::iterator __i = __source.begin(); __i != __source.end();) {
+template <class _Comp2>
+_LIBCPP_HIDE_FROM_ABI void
+__tree<_Tp, _Compare, _Allocator>::__node_handle_merge_multi(__tree<_Tp, _Comp2, _Allocator>& __source) {
+  for (iterator __i = __source.begin(); __i != __source.end();) {
     __node_pointer __src_ptr = __i.__get_np();
     __end_node_pointer __parent;
     __node_base_pointer& __child = __find_leaf_high(__parent, __src_ptr->__get_value());

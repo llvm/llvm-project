@@ -2457,26 +2457,24 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
     }
 
     // Set options.
-    TilingInterface paddedOp;
     PadTilingInterfaceOptions options;
     options.setPaddingValues(paddingValues)
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
-    // Apply padding.
-    SmallVector<tensor::PadOp> newPadOps;
-    FailureOr<TilingInterface> maybePaddedOp = rewriteAsPaddedOp(
-        rewriter, cast<TilingInterface>(targetOp.getOperation()), options,
-        newPadOps);
-    if (failed(maybePaddedOp)) {
+    auto maybePadOps = rewriteAsPaddedOp(
+        rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
+    if (failed(maybePadOps)) {
       auto diag = emitSilenceableError() << "failed to pad op";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
+    const auto &[paddedOperands, paddedOp, slicedResults] = maybePadOps.value();
 
     // Set transform results.
-    paddedOps.push_back(cast<TilingInterface>(maybePaddedOp->getOperation()));
-    padOps.append(newPadOps.begin(), newPadOps.end());
+    paddedOps.push_back(paddedOp);
+    padOps.append(paddedOperands.begin(), paddedOperands.end());
+    rewriter.replaceOp(targetOp.getOperation(), slicedResults);
   }
 
   results.set(cast<OpResult>(getPadded()), paddedOps);
@@ -3024,10 +3022,10 @@ ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   }
   if (dynamicPointParseResult.has_value()) {
-    Type ChunkSizesType;
+    Type chunkSizesType;
     if (failed(*dynamicPointParseResult) || parser.parseComma() ||
-        parser.parseType(ChunkSizesType) ||
-        parser.resolveOperand(dynamicChunkSizes, ChunkSizesType,
+        parser.parseType(chunkSizesType) ||
+        parser.resolveOperand(dynamicChunkSizes, chunkSizesType,
                               result.operands)) {
       return failure();
     }
@@ -3399,9 +3397,9 @@ void transform::ContinuousTileSizesOp::getEffects(
 }
 
 static void printContinuousTileSizeTypes(OpAsmPrinter &printer, Operation *op,
-                                         Type targetType, Type tile_sizes,
+                                         Type targetType, Type tileSizes,
                                          Type) {
-  printer.printFunctionalType(TypeRange{targetType}, TypeRange{tile_sizes});
+  printer.printFunctionalType(TypeRange{targetType}, TypeRange{tileSizes});
 }
 
 static ParseResult parseContinuousTileSizeTypes(OpAsmParser &parser,

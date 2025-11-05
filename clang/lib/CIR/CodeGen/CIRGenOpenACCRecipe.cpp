@@ -398,6 +398,7 @@ void OpenACCRecipeBuilderBase::createRecipeDestroySection(
     emitDestroy(block->getArgument(1), elementTy);
   }
 
+  ls.forceCleanup();
   mlir::acc::YieldOp::create(builder, locEnd);
 }
 void OpenACCRecipeBuilderBase::makeBoundsInit(
@@ -480,6 +481,7 @@ void OpenACCRecipeBuilderBase::createInitRecipe(
                      /*isInitSection=*/true);
   }
 
+  ls.forceCleanup();
   mlir::acc::YieldOp::create(builder, locEnd);
 }
 
@@ -518,6 +520,7 @@ void OpenACCRecipeBuilderBase::createFirstprivateRecipeCopy(
   cgf.emitAutoVarInit(tempDeclEmission);
 
   builder.setInsertionPointToEnd(&copyRegion.back());
+  ls.forceCleanup();
   mlir::acc::YieldOp::create(builder, locEnd);
 }
 
@@ -587,15 +590,18 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
       } else {
         // else we have to handle each individual field after after a
         // get-element.
+        const CIRGenRecordLayout &layout =
+            cgf.cgm.getTypes().getCIRGenRecordLayout(rd);
         for (const auto &[field, combiner] :
              llvm::zip_equal(rd->fields(), combinerRecipes)) {
           mlir::Type fieldType = cgf.convertType(field->getType());
           auto fieldPtr = cir::PointerType::get(fieldType);
+          unsigned fieldIndex = layout.getCIRFieldNo(field);
 
           mlir::Value lhsField = builder.createGetMember(
-              loc, fieldPtr, lhsArg, field->getName(), field->getFieldIndex());
+              loc, fieldPtr, lhsArg, field->getName(), fieldIndex);
           mlir::Value rhsField = builder.createGetMember(
-              loc, fieldPtr, rhsArg, field->getName(), field->getFieldIndex());
+              loc, fieldPtr, rhsArg, field->getName(), fieldIndex);
 
           emitSingleCombiner(lhsField, rhsField, combiner);
         }
@@ -662,6 +668,7 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
   }
 
   builder.setInsertionPointToEnd(&recipe.getCombinerRegion().back());
+  ls.forceCleanup();
   mlir::acc::YieldOp::create(builder, locEnd, block->getArgument(0));
 }
 

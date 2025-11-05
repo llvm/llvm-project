@@ -22,6 +22,7 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -63,6 +64,7 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   case xegpu::MemorySpace::SLM:
     return static_cast<int>(xevm::AddrSpace::SHARED);
   }
+  llvm_unreachable("Unknown XeGPU memory space");
 }
 
 // Get same bitwidth flat vector type of new element type.
@@ -186,6 +188,7 @@ class CreateNdDescToXeVMPattern
     int64_t rank = mixedSizes.size();
     if (rank != 2)
       return rewriter.notifyMatchFailure(op, "Expected 2D shape.");
+
     auto sourceTy = source.getType();
     auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
     // If source is a memref, we need to extract the aligned pointer as index.
@@ -364,10 +367,11 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
 
 // Add a builder that creates
 // offset * elemByteSize + baseAddr
-static Value addOffset(ConversionPatternRewriter &rewriter, Location loc,
-                       Value baseAddr, Value offset, int64_t elemByteSize) {
+static Value addOffsetToBaseAddr(ConversionPatternRewriter &rewriter,
+                                 Location loc, Value baseAddr, Value offset,
+                                 int64_t elemByteSize) {
   Value byteSize = arith::ConstantIntOp::create(
-      rewriter, loc, rewriter.getI64Type(), elemByteSize);
+      rewriter, loc, baseAddr.getType(), elemByteSize);
   Value byteOffset = arith::MulIOp::create(rewriter, loc, offset, byteSize);
   Value newAddr = arith::AddIOp::create(rewriter, loc, baseAddr, byteOffset);
   return newAddr;
@@ -443,7 +447,8 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       // If offset is provided, we add them to the base pointer.
       // Offset is in number of elements, we need to multiply by
       // element byte size.
-      basePtrI64 = addOffset(rewriter, loc, basePtrI64, offset, elemByteSize);
+      basePtrI64 =
+          addOffsetToBaseAddr(rewriter, loc, basePtrI64, offset, elemByteSize);
     }
     // Convert base pointer (i64) to LLVM pointer type.
     Value basePtrLLVM =
@@ -506,6 +511,147 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
   }
 };
 
+// Lower xegpu::CreateMemDescOp to memref::ViewOp. Since SLM access instructions
+// on Xe2 and Xe3 operate on 32-bit or 64-bit units, all data types smaller than
+// 32 bits will be converted to 32 bits.
+class CreateMemDescOpPattern final
+    : public OpConversionPattern<xegpu::CreateMemDescOp> {
+public:
+  using OpConversionPattern<xegpu::CreateMemDescOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::CreateMemDescOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto resTy = op.getMemDesc();
+
+    // Create the result MemRefType with the same shape, element type, and
+    // memory space
+    auto newResTy = getTypeConverter()->convertType<MemRefType>(resTy);
+
+    Value zero = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
+    auto viewOp = memref::ViewOp::create(rewriter, op.getLoc(), newResTy,
+                                         op.getSource(), zero, ValueRange());
+    rewriter.replaceOp(op, viewOp);
+    return success();
+  }
+};
+
+template <typename OpType,
+          typename = std::enable_if_t<llvm::is_one_of<
+              OpType, xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>::value>>
+class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
+  using OpConversionPattern<OpType>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    SmallVector<OpFoldResult> offsets = op.getMixedOffsets();
+    if (offsets.empty())
+      return rewriter.notifyMatchFailure(op, "Expected offset to be provided.");
+
+    auto loc = op.getLoc();
+    auto ctxt = rewriter.getContext();
+    Value basePtrStruct = adaptor.getMemDesc();
+    Value mdescVal = op.getMemDesc();
+    // Load result or Store value Type can be vector or scalar.
+    Value data;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
+      data = op.getResult();
+    else
+      data = adaptor.getData();
+    VectorType valOrResVecTy = dyn_cast<VectorType>(data.getType());
+    if (!valOrResVecTy)
+      valOrResVecTy = VectorType::get(1, data.getType());
+
+    int64_t elemBitWidth =
+        valOrResVecTy.getElementType().getIntOrFloatBitWidth();
+    // Element type must be multiple of 8 bits.
+    if (elemBitWidth % 8 != 0)
+      return rewriter.notifyMatchFailure(
+          op, "Expected element type bit width to be multiple of 8.");
+    int64_t elemByteSize = elemBitWidth / 8;
+
+    // Default memory space is SLM.
+    LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
+        ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::SLM));
+
+    auto mdescTy = cast<xegpu::MemDescType>(mdescVal.getType());
+
+    Value basePtrLLVM = memref::ExtractAlignedPointerAsIndexOp::create(
+        rewriter, loc, basePtrStruct);
+
+    // Convert base pointer (ptr) to i32
+    Value basePtrI32 = arith::IndexCastUIOp::create(
+        rewriter, loc, rewriter.getI32Type(), basePtrLLVM);
+
+    Value linearOffset = mdescTy.getLinearOffsets(rewriter, loc, offsets);
+    linearOffset = arith::IndexCastUIOp::create(
+        rewriter, loc, rewriter.getI32Type(), linearOffset);
+    basePtrI32 = addOffsetToBaseAddr(rewriter, loc, basePtrI32, linearOffset,
+                                     elemByteSize);
+
+    // convert base pointer (i32) to LLVM pointer type
+    basePtrLLVM =
+        LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtrI32);
+
+    if (op.getSubgroupBlockIoAttr()) {
+      // if the attribute 'subgroup_block_io' is set to true, it lowers to
+      // xevm.blockload
+
+      Type intElemTy = rewriter.getIntegerType(elemBitWidth);
+      VectorType intVecTy =
+          VectorType::get(valOrResVecTy.getShape(), intElemTy);
+
+      if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+        Value loadOp =
+            xevm::BlockLoadOp::create(rewriter, loc, intVecTy, basePtrLLVM);
+        if (intVecTy != valOrResVecTy) {
+          loadOp =
+              vector::BitCastOp::create(rewriter, loc, valOrResVecTy, loadOp);
+        }
+        rewriter.replaceOp(op, loadOp);
+      } else {
+        Value dataToStore = adaptor.getData();
+        if (valOrResVecTy != intVecTy) {
+          dataToStore =
+              vector::BitCastOp::create(rewriter, loc, intVecTy, dataToStore);
+        }
+        xevm::BlockStoreOp::create(rewriter, loc, basePtrLLVM, dataToStore,
+                                   nullptr);
+        rewriter.eraseOp(op);
+      }
+      return success();
+    }
+
+    if (valOrResVecTy.getNumElements() >= 1) {
+      auto chipOpt = xegpu::getChipStr(op);
+      if (!chipOpt || (*chipOpt != "pvc" && *chipOpt != "bmg")) {
+        // the lowering for chunk load only works for pvc and bmg
+        return rewriter.notifyMatchFailure(
+            op, "The lowering is specific to pvc or bmg.");
+      }
+    }
+
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+      // if the size of valOrResVecTy is 1, it lowers to a scalar load/store
+      // operation. LLVM load/store does not support vector of size 1, so we
+      // need to handle this case separately.
+      auto scalarTy = valOrResVecTy.getElementType();
+      LLVM::LoadOp loadOp;
+      if (valOrResVecTy.getNumElements() == 1)
+        loadOp = LLVM::LoadOp::create(rewriter, loc, scalarTy, basePtrLLVM);
+      else
+        loadOp =
+            LLVM::LoadOp::create(rewriter, loc, valOrResVecTy, basePtrLLVM);
+      rewriter.replaceOp(op, loadOp);
+    } else {
+      LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
+      rewriter.eraseOp(op);
+    }
+    return success();
+  }
+};
+
 class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -548,8 +694,8 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
                 op, "Expected element type bit width to be multiple of 8.");
           elemByteSize = elemBitWidth / 8;
         }
-        basePtrI64 =
-            addOffset(rewriter, loc, basePtrI64, offsets, elemByteSize);
+        basePtrI64 = addOffsetToBaseAddr(rewriter, loc, basePtrI64, offsets,
+                                         elemByteSize);
       }
     }
     // Default memory space is global.
@@ -786,6 +932,13 @@ struct ConvertXeGPUToXeVMPass
       auto i32Type = IntegerType::get(&getContext(), 32);
       return VectorType::get(8, i32Type);
     });
+    // Convert MemDescType into flattened MemRefType for SLM
+    typeConverter.addConversion([&](xegpu::MemDescType type) -> Type {
+      Type elemTy = type.getElementType();
+      int numElems = type.getNumElements();
+      return MemRefType::get(numElems, elemTy, AffineMap(), 3);
+    });
+
     typeConverter.addConversion([&](MemRefType type) -> Type {
       // Convert MemRefType to i64 type.
       return IntegerType::get(&getContext(), 64);
@@ -940,6 +1093,9 @@ void mlir::populateXeGPUToXeVMConversionPatterns(
                LoadStoreToXeVMPattern<xegpu::LoadGatherOp>,
                LoadStoreToXeVMPattern<xegpu::StoreScatterOp>>(
       typeConverter, patterns.getContext());
+  patterns.add<LoadStoreMatrixToXeVMPattern<xegpu::LoadMatrixOp>,
+               LoadStoreMatrixToXeVMPattern<xegpu::StoreMatrixOp>,
+               CreateMemDescOpPattern>(typeConverter, patterns.getContext());
   patterns.add<FenceToXeVMPattern, DpasToXeVMPattern>(typeConverter,
                                                       patterns.getContext());
 }

@@ -514,8 +514,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
       MVT::i64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
 
-  setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, MVT::i32,
-                     Legal);
+  setOperationAction({ISD::ABS, ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
+                     MVT::i32, Legal);
 
   setOperationAction(
       {ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF},

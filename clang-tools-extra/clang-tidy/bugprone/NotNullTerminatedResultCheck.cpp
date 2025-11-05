@@ -309,10 +309,9 @@ static void lengthExprHandle(const Expr *LengthExpr,
   // Try to obtain an 'IntegerLiteral' and adjust it.
   if (!IsMacroDefinition) {
     if (const auto *LengthIL = dyn_cast<IntegerLiteral>(LengthExpr)) {
-      size_t NewLength = LengthIL->getValue().getZExtValue() +
-                         (LengthHandle == LengthHandleKind::Increase
-                              ? (isInjectUL(Result) ? 1UL : 1)
-                              : -1);
+      uint64_t NewLength =
+          LengthIL->getValue().getZExtValue() +
+          (LengthHandle == LengthHandleKind::Increase ? 1 : -1);
 
       const auto NewLengthFix = FixItHint::CreateReplacement(
           LengthIL->getSourceRange(),

@@ -1441,6 +1441,24 @@ void main() { Feeder<int>{}.feed<Cat<int>>(); }
 
 }
 
+namespace case9 {
+
+template <typename>
+concept a = requires { requires true; };
+template <typename T>
+concept b = a<typename T::EntitySpec>;
+template <typename T>
+concept c = requires { b<T>; };
+template <typename T>
+  requires c<T>
+struct s;
+template <typename> constexpr bool f() { return true; }
+template <typename T> constexpr bool d = f<T>();
+struct s2;
+static_assert(d<s<s2>>);
+
+}
+
 }
 
 namespace GH162125 {
@@ -1511,6 +1529,31 @@ concept C = sizeof(T) == 42;
 
 static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overloaded function could not be resolved;}}
 // expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
+
+}
+
+namespace GH162092 {
+
+template <typename T>
+struct vector;
+
+template <typename T, typename U>
+concept C = __is_same_as(T, U);
+
+template<class T, auto Cpt>
+concept generic_range_value = requires {
+    Cpt.template operator()<int>();
+};
+
+
+template<generic_range_value<[]<
+   C<int>
+   >() {}> T>
+void x() {}
+
+void foo() {
+  x<vector<int>>();
+}
 
 }
 

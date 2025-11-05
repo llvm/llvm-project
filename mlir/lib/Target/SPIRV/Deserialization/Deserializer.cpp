@@ -2619,6 +2619,11 @@ LogicalResult ControlFlowStructurizer::structurize() {
   // region. We cannot handle such cases given that once a value is sinked into
   // the SelectionOp/LoopOp's region, there is no escape for it.
   for (auto *block : constructBlocks) {
+    if (!block->use_empty())
+      return emitError(block->getParent()->getLoc(),
+                       "failed control flow structurization: "
+                       "block has uses outside of the "
+                       "enclosing selection/loop construct");
     for (Operation &op : *block)
       if (!op.use_empty())
         return op.emitOpError("failed control flow structurization: value has "

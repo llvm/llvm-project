@@ -1069,15 +1069,15 @@ define void @fshl() #0 {
 
 define <vscale x 4 x i32> @masked_gather_nxv4i32(<vscale x 4 x ptr> %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_nxv4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 40 for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ld, i32 0, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 40 for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 4 x i32> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_nxv4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 80 for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ld, i32 0, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 80 for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 4 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_nxv4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ld, i32 0, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 4 x i32> %res
 ;
   %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32(<vscale x 4 x ptr> %ld, i32 0, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
@@ -1086,15 +1086,15 @@ define <vscale x 4 x i32> @masked_gather_nxv4i32(<vscale x 4 x ptr> %ld, <vscale
 
 define <vscale x 8 x i32> @masked_gather_nxv8i32(<vscale x 8 x ptr> %ld, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_nxv8i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 80 for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> %ld, i32 0, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 80 for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> align 4 %ld, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 8 x i32> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_nxv8i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 160 for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> %ld, i32 0, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 160 for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> align 4 %ld, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 8 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_nxv8i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> %ld, i32 0, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> align 4 %ld, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 8 x i32> %res
 ;
   %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32(<vscale x 8 x ptr> %ld, i32 0, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
@@ -1103,15 +1103,15 @@ define <vscale x 8 x i32> @masked_gather_nxv8i32(<vscale x 8 x ptr> %ld, <vscale
 
 define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_v4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ld, <4 x i1> %masks, <4 x i32> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_v4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ld, <4 x i1> %masks, <4 x i32> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:20 Lat:36 SizeLat:36 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:20 Lat:36 SizeLat:36 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ld, <4 x i1> %masks, <4 x i32> %passthru)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %res
 ;
   %res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
@@ -1120,15 +1120,15 @@ define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> 
 
 define <1 x i128> @masked_gather_v1i128(<1 x ptr> %ld, <1 x i1> %masks, <1 x i128> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <1 x i128> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <1 x i128> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v1i128'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <1 x i128> %res
 ;
   %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
@@ -1137,15 +1137,15 @@ define <1 x i128> @masked_gather_v1i128(<1 x ptr> %ld, <1 x i1> %masks, <1 x i12
 
 define void @masked_scatter_nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %masks) {
 ; CHECK-VSCALE-1-LABEL: 'masked_scatter_nxv4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 40 for: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> %data, <vscale x 4 x ptr> %ptrs, i32 0, <vscale x 4 x i1> %masks)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 40 for: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> %data, <vscale x 4 x ptr> align 4 %ptrs, <vscale x 4 x i1> %masks)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatter_nxv4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 80 for: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> %data, <vscale x 4 x ptr> %ptrs, i32 0, <vscale x 4 x i1> %masks)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 80 for: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> %data, <vscale x 4 x ptr> align 4 %ptrs, <vscale x 4 x i1> %masks)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_nxv4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> %data, <vscale x 4 x ptr> %ptrs, i32 0, <vscale x 4 x i1> %masks)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> %data, <vscale x 4 x ptr> align 4 %ptrs, <vscale x 4 x i1> %masks)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
@@ -1155,15 +1155,15 @@ define void @masked_scatter_nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x ptr>
 
 define void @masked_scatter_nxv8i32(<vscale x 8 x i32> %data, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %masks) {
 ; CHECK-VSCALE-1-LABEL: 'masked_scatter_nxv8i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 80 for: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> %data, <vscale x 8 x ptr> %ptrs, i32 0, <vscale x 8 x i1> %masks)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 80 for: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> %data, <vscale x 8 x ptr> align 4 %ptrs, <vscale x 8 x i1> %masks)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatter_nxv8i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 160 for: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> %data, <vscale x 8 x ptr> %ptrs, i32 0, <vscale x 8 x i1> %masks)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 160 for: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> %data, <vscale x 8 x ptr> align 4 %ptrs, <vscale x 8 x i1> %masks)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_nxv8i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> %data, <vscale x 8 x ptr> %ptrs, i32 0, <vscale x 8 x i1> %masks)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> %data, <vscale x 8 x ptr> align 4 %ptrs, <vscale x 8 x i1> %masks)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
@@ -1173,15 +1173,15 @@ define void @masked_scatter_nxv8i32(<vscale x 8 x i32> %data, <vscale x 8 x ptr>
 
 define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %masks) {
 ; CHECK-VSCALE-1-LABEL: 'masked_scatter_v4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> align 4 %ptrs, <4 x i1> %masks)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatter_v4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> align 4 %ptrs, <4 x i1> %masks)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:16 Lat:28 SizeLat:28 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:16 Lat:28 SizeLat:28 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> align 4 %ptrs, <4 x i1> %masks)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
@@ -1191,15 +1191,15 @@ define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %ma
 
 define void @masked_scatter_v1i128(<1 x i128> %data, <1 x ptr> %ptrs, <1 x i1> %masks) {
 ; CHECK-VSCALE-1-LABEL: 'masked_scatter_v1i128'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> align 16 %ptrs, <1 x i1> %masks)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatter_v1i128'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> align 16 %ptrs, <1 x i1> %masks)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v1i128'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> align 16 %ptrs, <1 x i1> %masks)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 

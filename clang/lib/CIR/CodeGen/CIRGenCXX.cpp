@@ -171,7 +171,8 @@ cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl gd) {
   curCGF = nullptr;
 
   setNonAliasAttributes(gd, fn);
-  assert(!cir::MissingFeatures::opFuncAttributesForDefinition());
+  setCIRFunctionAttributesForDefinition(mlir::cast<FunctionDecl>(gd.getDecl()),
+                                        fn);
   return fn;
 }
 

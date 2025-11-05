@@ -2903,7 +2903,7 @@ bool MasmParser::parseIdentifier(StringRef &Res,
   if (Position == StartOfStatement &&
       StringSwitch<bool>(Res)
           .CaseLower("echo", true)
-          .CasesLower("ifdef", "ifndef", "elseifdef", "elseifndef", true)
+          .CasesLower({"ifdef", "ifndef", "elseifdef", "elseifndef"}, true)
           .Default(false)) {
     ExpandNextToken = DoNotExpandMacros;
   }

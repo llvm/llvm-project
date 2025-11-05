@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tosa/IR/TargetEnv.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
 namespace tosa {
@@ -27,7 +28,7 @@ TargetEnvAttr lookupTargetEnv(Operation *op) {
 }
 
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context) {
-  return TargetEnvAttr::get(context, Level::eightK,
+  return TargetEnvAttr::get(context, SpecificationVersion::V_1_0, Level::eightK,
                             {Profile::pro_int, Profile::pro_fp}, {});
 }
 
@@ -36,6 +37,10 @@ TargetEnvAttr lookupTargetEnvOrDefault(Operation *op) {
     return attr;
 
   return getDefaultTargetEnv(op->getContext());
+}
+
+llvm::SmallString<4> stringifyVersion(TosaSpecificationVersion version) {
+  return llvm::formatv("{0}.{1}", version.getMajor(), version.getMinor());
 }
 
 } // namespace tosa

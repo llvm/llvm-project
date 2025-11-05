@@ -55,9 +55,11 @@ start-group "ninja"
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
 
 if [[ "${runtime_targets}" != "" ]]; then
   start-group "ninja runtimes"
   
   ninja -C "${BUILD_DIR}" -k 0 ${runtimes_targets} |& tee ninja_runtimes.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes.ninja_log
 fi

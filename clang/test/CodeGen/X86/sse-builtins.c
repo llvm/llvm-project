@@ -561,6 +561,8 @@ int test_mm_movemask_ps(__m128 A) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse.movmsk.ps(<4 x float> %{{.*}})
   return _mm_movemask_ps(A);
 }
+TEST_CONSTEXPR(_mm_movemask_ps((__m128)(__v4sf){-2.0f, 3.0f, -5.5f, -0.0f}) == 0xD);
+TEST_CONSTEXPR(_mm_movemask_ps((__m128)(__v4sf){-7.348215e5, 0.00314159, -12.789, 2.7182818}) == 0x5);
 
 __m128 test_mm_mul_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_mul_ps

@@ -672,11 +672,12 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
           IsInStd = true;
       }
 
-      if (IsInStd && llvm::StringSwitch<bool>(R->getName())
-              .Cases("basic_string", "deque", "forward_list", true)
-              .Cases("list", "map", "multimap", "multiset", true)
-              .Cases("priority_queue", "queue", "set", "stack", true)
-              .Cases("unordered_map", "unordered_set", "vector", true)
+      if (IsInStd &&
+          llvm::StringSwitch<bool>(R->getName())
+              .Cases({"basic_string", "deque", "forward_list"}, true)
+              .Cases({"list", "map", "multimap", "multiset"}, true)
+              .Cases({"priority_queue", "queue", "set", "stack"}, true)
+              .Cases({"unordered_map", "unordered_set", "vector"}, true)
               .Default(false)) {
         InitSeq.InitializeFrom(
             SemaRef, Entity,

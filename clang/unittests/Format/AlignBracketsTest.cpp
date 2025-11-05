@@ -778,6 +778,19 @@ TEST_F(AlignBracketsTest, ParenthesesAndOperandAlignment) {
                Style);
 }
 
+TEST_F(AlignBracketsTest, BlockIndentAndNamespace) {
+  auto Style = getLLVMStyleWithColumns(120);
+  Style.AllowShortNamespacesOnASingleLine = true;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+
+  verifyNoCrash(
+      "namespace {\n"
+      "void xxxxxxxxxxxxxxxxxxxxx(nnnnn::TTTTTTTTTTTTT const *mmmm,\n"
+      "                           YYYYYYYYYYYYYYYYY &yyyyyyyyyyyyyy);\n"
+      "} //",
+      Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

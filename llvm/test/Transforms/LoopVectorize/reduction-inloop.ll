@@ -1207,11 +1207,11 @@ for.end:
 define i32 @reduction_sum_multiuse(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-LABEL: define i32 @reduction_sum_multiuse(
 ; CHECK-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]]) {
-; CHECK-NEXT:  [[_LR_PH1:.*]]:
+; CHECK-NEXT:  [[_LR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[DOTLR_PH:.*]]
-; CHECK:       [[_LR_PH:.*:]]
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH1]] ]
-; CHECK-NEXT:    [[SUM_02:%.*]] = phi i32 [ [[L10:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH1]] ]
+; CHECK:       [[_LR_PH1:.*:]]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH]] ]
+; CHECK-NEXT:    [[SUM_02:%.*]] = phi i32 [ [[L10:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH]] ]
 ; CHECK-NEXT:    [[L2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[L2]], align 4
 ; CHECK-NEXT:    [[L4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]
@@ -1231,11 +1231,11 @@ define i32 @reduction_sum_multiuse(ptr noalias nocapture %A, ptr noalias nocaptu
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @reduction_sum_multiuse(
 ; CHECK-INTERLEAVED-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]]) {
-; CHECK-INTERLEAVED-NEXT:  [[_LR_PH1:.*]]:
+; CHECK-INTERLEAVED-NEXT:  [[_LR_PH:.*]]:
 ; CHECK-INTERLEAVED-NEXT:    br label %[[DOTLR_PH:.*]]
-; CHECK-INTERLEAVED:       [[_LR_PH:.*:]]
-; CHECK-INTERLEAVED-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH1]] ]
-; CHECK-INTERLEAVED-NEXT:    [[SUM_02:%.*]] = phi i32 [ [[L10:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH1]] ]
+; CHECK-INTERLEAVED:       [[_LR_PH1:.*:]]
+; CHECK-INTERLEAVED-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH]] ]
+; CHECK-INTERLEAVED-NEXT:    [[SUM_02:%.*]] = phi i32 [ [[L10:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[L2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-INTERLEAVED-NEXT:    [[L3:%.*]] = load i32, ptr [[L2]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[L4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]
@@ -1947,7 +1947,7 @@ define i32 @predicated_not_dominates_reduction(ptr nocapture noundef readonly %h
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[H]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], zeroinitializer
@@ -1966,7 +1966,7 @@ define i32 @predicated_not_dominates_reduction(ptr nocapture noundef readonly %h
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END7:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ undef, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY2:.*]]
 ; CHECK:       [[FOR_BODY2]]:
 ; CHECK-NEXT:    [[A_117:%.*]] = phi i32 [ [[INC6:%.*]], %[[FOR_INC5:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -2002,7 +2002,7 @@ define i32 @predicated_not_dominates_reduction(ptr nocapture noundef readonly %h
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[H]], i32 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 4
@@ -2033,7 +2033,7 @@ define i32 @predicated_not_dominates_reduction(ptr nocapture noundef readonly %h
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label %[[FOR_END7:.*]], label %[[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       [[SCALAR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ undef, %[[ENTRY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-INTERLEAVED-NEXT:    br label %[[FOR_BODY2:.*]]
 ; CHECK-INTERLEAVED:       [[FOR_BODY2]]:
 ; CHECK-INTERLEAVED-NEXT:    [[A_117:%.*]] = phi i32 [ [[INC6:%.*]], %[[FOR_INC5:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -2063,7 +2063,7 @@ entry:
 
 for.body2:                                        ; preds = %entry, %for.inc5
   %a.117 = phi i32 [ %inc6, %for.inc5 ], [ 0, %entry ]
-  %g.016 = phi i32 [ %g.1, %for.inc5 ], [ undef, %entry ]
+  %g.016 = phi i32 [ %g.1, %for.inc5 ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %h, i32 %a.117
   %0 = load i8, ptr %arrayidx, align 1
   %tobool3.not = icmp eq i8 %0, 0
@@ -2100,7 +2100,7 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[H]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], zeroinitializer
@@ -2122,7 +2122,7 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END7:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ undef, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY2:.*]]
 ; CHECK:       [[FOR_BODY2]]:
 ; CHECK-NEXT:    [[A_117:%.*]] = phi i32 [ [[INC6:%.*]], %[[FOR_INC5:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -2159,7 +2159,7 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP20:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[H]], i32 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 4
@@ -2196,7 +2196,7 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label %[[FOR_END7:.*]], label %[[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       [[SCALAR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ undef, %[[ENTRY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-INTERLEAVED-NEXT:    br label %[[FOR_BODY2:.*]]
 ; CHECK-INTERLEAVED:       [[FOR_BODY2]]:
 ; CHECK-INTERLEAVED-NEXT:    [[A_117:%.*]] = phi i32 [ [[INC6:%.*]], %[[FOR_INC5:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -2227,7 +2227,7 @@ entry:
 
 for.body2:                                        ; preds = %entry, %for.inc5
   %a.117 = phi i32 [ %inc6, %for.inc5 ], [ 0, %entry ]
-  %g.016 = phi i32 [ %g.1, %for.inc5 ], [ undef, %entry ]
+  %g.016 = phi i32 [ %g.1, %for.inc5 ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %h, i32 %a.117
   %0 = load i8, ptr %arrayidx, align 1
   %tobool3.not = icmp eq i8 %0, 0
@@ -2263,7 +2263,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE6:.*]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, %[[VECTOR_PH]] ], [ [[TMP48:%.*]], %[[PRED_LOAD_CONTINUE6]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP48:%.*]], %[[PRED_LOAD_CONTINUE6]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
@@ -2340,7 +2340,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE15:.*]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, %[[VECTOR_PH]] ], [ [[TMP94:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP94:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP98:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
@@ -2480,7 +2480,7 @@ for.cond.cleanup:                                 ; preds = %for.inc
 
 for.body:                                         ; preds = %entry, %for.inc
   %g.09 = phi i32 [ 0, %entry ], [ %inc3, %for.inc ]
-  %a.08 = phi i32 [ undef, %entry ], [ %a.1, %for.inc ]
+  %a.08 = phi i32 [ 0, %entry ], [ %a.1, %for.inc ]
   %d = getelementptr inbounds [0 x %struct.e], ptr %b, i32 0, i32 %g.09, i32 1
   %0 = load i32, ptr %d, align 4
   %tobool.not = icmp eq i32 %0, 0

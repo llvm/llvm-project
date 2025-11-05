@@ -144,3 +144,103 @@ void throw_complex_expr() {
 // OGCG: store float 0x3FF19999A0000000, ptr %[[EXCEPTION_REAL]], align 16
 // OGCG: store float 0x40019999A0000000, ptr %[[EXCEPTION_IMAG]], align 4
 // OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTICf, ptr null)
+
+void throw_vector_type() {
+  typedef int vi4 __attribute__((vector_size(16)));
+  vi4 a;
+  throw a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 16 -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[TMP_A]], %[[EXCEPTION_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, @_ZTIDv4_i
+// CIR: cir.unreachable
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 16)
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: store <4 x i32> %[[TMP_A]], ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIDv4_i, ptr null)
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 16)
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: store <4 x i32> %[[TMP_A]], ptr %[[EXCEPTION_ADDR]], align 16
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIDv4_i, ptr null)
+// OGCG: unreachable
+
+void throw_ext_vector_type() {
+  typedef int vi4 __attribute__((ext_vector_type(4)));
+  vi4 a;
+  throw a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 16 -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[TMP_A]], %[[EXCEPTION_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, @_ZTIDv4_i
+// CIR: cir.unreachable
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 16)
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: store <4 x i32> %[[TMP_A]], ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIDv4_i, ptr null)
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 16)
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: store <4 x i32> %[[TMP_A]], ptr %[[EXCEPTION_ADDR]], align 16
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIDv4_i, ptr null)
+// OGCG: unreachable
+
+void throw_enum_expr() {
+  enum Test {
+    TestA,
+    TestB
+  };
+  throw Test::TestA;
+}
+
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 4 -> !cir.ptr<!u32i>
+// CIR: %[[EXCEPTION_VALUE:.*]] = cir.const #cir.int<0> : !u32i
+// CIR: cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !u32i, !cir.ptr<!u32i>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!u32i>, @_ZTIZ15throw_enum_exprvE4Test
+// CIR: cir.unreachable
+
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// LLVM: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIZ15throw_enum_exprvE4Test, ptr null)
+// LLVM: unreachable
+
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// OGCG: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIZ15throw_enum_exprvE4Test, ptr null)
+// OGCG: unreachable
+
+void throw_enum_class_expr() {
+  enum class Test {
+    TestA,
+    TestB
+  };
+  throw Test::TestA;
+}
+
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
+// CIR: %[[EXCEPTION_VALUE:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, @_ZTIZ21throw_enum_class_exprvE4Test
+// CIR: cir.unreachable
+
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// LLVM: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIZ21throw_enum_class_exprvE4Test, ptr null)
+// LLVM: unreachable
+
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// OGCG: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIZ21throw_enum_class_exprvE4Test, ptr null)
+// OGCG: unreachable

@@ -45,7 +45,7 @@ void TransportBase::SetUp() {
       /*client_name=*/"test_client",
       /*transport=*/*to_client, /*loop=*/loop);
 
-  auto server_handle = to_server->RegisterMessageHandler(loop, *dap.get());
+  auto server_handle = to_server->RegisterMessageHandler(loop, *dap);
   EXPECT_THAT_EXPECTED(server_handle, Succeeded());
   handles[0] = std::move(*server_handle);
 

@@ -121,6 +121,7 @@ enum attributeBits {
              "The Dynamic Duo!  Prefer over all else because this changes "    \
              "most operands' meaning")                                         \
   ENUM_ENTRY(IC_64BIT_REX2, 2, "requires a REX2 prefix")                       \
+  ENUM_ENTRY(IC_64BIT_REX2_REXW, 3, "requires a REX2 and the W prefix")        \
   ENUM_ENTRY(IC_VEX, 1, "requires a VEX prefix")                               \
   ENUM_ENTRY(IC_VEX_XS, 2, "requires VEX and the XS prefix")                   \
   ENUM_ENTRY(IC_VEX_XD, 2, "requires VEX and the XD prefix")                   \

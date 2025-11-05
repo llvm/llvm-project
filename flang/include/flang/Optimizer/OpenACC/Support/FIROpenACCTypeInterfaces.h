@@ -29,6 +29,20 @@ struct OpenACCPointerLikeModel
   getPointeeTypeCategory(mlir::Type pointer,
                          mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
                          mlir::Type varType) const;
+
+  mlir::Value genAllocate(mlir::Type pointer, mlir::OpBuilder &builder,
+                          mlir::Location loc, llvm::StringRef varName,
+                          mlir::Type varType, mlir::Value originalVar,
+                          bool &needsFree) const;
+
+  bool genFree(mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+               mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+               mlir::Value allocRes, mlir::Type varType) const;
+
+  bool genCopy(mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+               mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+               mlir::TypedValue<mlir::acc::PointerLikeType> source,
+               mlir::Type varType) const;
 };
 
 template <typename T>

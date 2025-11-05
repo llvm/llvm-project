@@ -181,6 +181,14 @@ public:
       llvm::function_ref<void(const SymbolID &Subject, const Symbol &Object)>
           Callback) const = 0;
 
+  /// Finds all relations (O, P, S) stored in the index such that S is among
+  /// Req.Subjects and P is Req.Predicate, and invokes \p Callback for (S, O) in
+  /// each. Currently only allows the OverriddenBy relation.
+  virtual void reverseRelations(
+      const RelationsRequest &Req,
+      llvm::function_ref<void(const SymbolID &Subject, const Symbol &Object)>
+          Callback) const = 0;
+
   /// Returns function which checks if the specified file was used to build this
   /// index or not. The function must only be called while the index is alive.
   using IndexedFiles =
@@ -212,6 +220,11 @@ public:
       llvm::function_ref<void(const ContainedRefsResult &)>) const override;
   void relations(const RelationsRequest &,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>)
+      const override;
+
+  void
+  reverseRelations(const RelationsRequest &,
+                   llvm::function_ref<void(const SymbolID &, const Symbol &)>)
       const override;
 
   llvm::unique_function<IndexContents(llvm::StringRef) const>
