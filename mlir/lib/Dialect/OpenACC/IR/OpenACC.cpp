@@ -1061,7 +1061,7 @@ struct RemoveEmptyKernelEnvironment
     if (!op.getWaitOperands().empty())
       rewriter.replaceOpWithNewOp<acc::WaitOp>(
           op,
-          /*waitOperands=*/op.getWaitOperands(),
+          op.getWaitOperands(),
           /*asyncOperand=*/Value(),
           /*waitDevnum=*/Value(),
           /*async=*/nullptr,
