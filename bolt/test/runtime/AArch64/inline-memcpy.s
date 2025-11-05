@@ -7,7 +7,7 @@
 # RUN: llvm-bolt %t.exe --inline-memcpy -o %t.bolt 2>&1 | FileCheck %s --check-prefix=CHECK-INLINE
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-ASM
 
-# Verify BOLT reports that it inlined memcpy calls (11 successful inlines out of 16 total calls)
+# Verify BOLT reports that it inlined memcpy calls (11 successful inlines out of 17 total calls)
 # CHECK-INLINE: BOLT-INFO: inlined 11 memcpy() calls
 
 # Each function should use optimal size-specific instructions and NO memcpy calls
@@ -82,6 +82,9 @@
 
 # Register move should NOT be inlined (size unknown at compile time)
 # CHECK-ASM-LABEL: <test_register_move_negative>:
+# CHECK-ASM: bl{{.*}}<memcpy
+
+# CHECK-ASM-LABEL: <test_x2_rewrite_negative>:
 # CHECK-ASM: bl{{.*}}<memcpy
 
 # Live-in parameter should NOT be inlined (size unknown at compile time)
@@ -272,6 +275,15 @@ test_register_move_negative:
 	ldp	x29, x30, [sp], #32
 	ret
 	.size	test_register_move_negative, .-test_register_move_negative
+
+	.globl  test_x2_rewrite_negative
+	.type   test_x2_rewrite_negative,@function
+test_x2_rewrite_negative:
+	mov     x2, #8
+	ldr     x2, [sp, #24]
+	bl      memcpy
+	ret
+	.size   test_x2_rewrite_negative, .-test_x2_rewrite_negative
 
 	.globl	test_live_in_negative
 	.type	test_live_in_negative,@function

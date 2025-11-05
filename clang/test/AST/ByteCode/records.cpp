@@ -1882,3 +1882,14 @@ namespace MethodWillHaveBody {
   }
   int n = f(0); // both-note {{instantiation of}}
 }
+
+namespace StaticRedecl {
+  struct T {
+    static T tt;
+    constexpr T() : p(&tt) {}
+    T *p;
+  };
+  T T::tt;
+  constexpr T t;
+  static_assert(t.p == &T::tt, "");
+}

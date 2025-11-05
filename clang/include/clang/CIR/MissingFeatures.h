@@ -180,6 +180,8 @@ struct MissingFeatures {
   static bool atomicSyncScopeID() { return false; }
   static bool atomicTypes() { return false; }
   static bool atomicUseLibCall() { return false; }
+  static bool atomicMicrosoftVolatile() { return false; }
+  static bool atomicOpenMP() { return false; }
 
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }

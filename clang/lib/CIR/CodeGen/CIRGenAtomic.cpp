@@ -27,6 +27,7 @@ class AtomicInfo {
   CharUnits atomicAlign;
   CharUnits valueAlign;
   TypeEvaluationKind evaluationKind = cir::TEK_Scalar;
+  bool useLibCall = true;
   LValue lvalue;
   mlir::Location loc;
 
@@ -62,8 +63,8 @@ public:
       assert(!cir::MissingFeatures::atomicInfo());
       cgf.cgm.errorNYI(loc, "AtomicInfo: non-simple lvalue");
     }
-
-    assert(!cir::MissingFeatures::atomicUseLibCall());
+    useLibCall = !ctx.getTargetInfo().hasBuiltinAtomic(
+        atomicSizeInBits, ctx.toBits(lvalue.getAlignment()));
   }
 
   QualType getValueType() const { return valueTy; }
@@ -75,6 +76,8 @@ public:
     assert(!cir::MissingFeatures::atomicInfoGetAtomicPointer());
     return nullptr;
   }
+  bool shouldUseLibCall() const { return useLibCall; }
+  const LValue &getAtomicLValue() const { return lvalue; }
   Address getAtomicAddress() const {
     mlir::Type elemTy;
     if (lvalue.isSimple()) {
@@ -96,6 +99,8 @@ public:
 
   bool emitMemSetZeroIfNecessary() const;
 
+  mlir::Value getScalarRValValueOrNull(RValue rvalue) const;
+
   /// Cast the given pointer to an integer pointer suitable for atomic
   /// operations on the source.
   Address castToAtomicIntPointer(Address addr) const;
@@ -104,6 +109,9 @@ public:
   /// operation, bitcast it. Otherwise, create a temporary that is suitable and
   /// copy the value across.
   Address convertToAtomicIntPointer(Address addr) const;
+
+  /// Converts a rvalue to integer value.
+  mlir::Value convertRValueToInt(RValue rvalue, bool cmpxchg = false) const;
 
   /// Copy an atomic r-value into atomic-layout memory.
   void emitCopyIntoMemory(RValue rvalue) const;
@@ -195,6 +203,12 @@ Address AtomicInfo::createTempAlloca() const {
   return tempAlloca;
 }
 
+mlir::Value AtomicInfo::getScalarRValValueOrNull(RValue rvalue) const {
+  if (rvalue.isScalar() && (!hasPadding() || !lvalue.isSimple()))
+    return rvalue.getValue();
+  return nullptr;
+}
+
 Address AtomicInfo::castToAtomicIntPointer(Address addr) const {
   auto intTy = mlir::dyn_cast<cir::IntType>(addr.getElementType());
   // Don't bother with int casts if the integer size is the same.
@@ -211,8 +225,36 @@ bool AtomicInfo::emitMemSetZeroIfNecessary() const {
     return false;
 
   cgf.cgm.errorNYI(loc,
-                   "AtomicInfo::emitMemSetZeroIfNecessary: emit memset zero");
+                   "AtomicInfo::emitMemSetZeroIfNecaessary: emit memset zero");
   return false;
+}
+
+/// Return true if \param valueTy is a type that should be casted to integer
+/// around the atomic memory operation. If \param cmpxchg is true, then the
+/// cast of a floating point type is made as that instruction can not have
+/// floating point operands.  TODO: Allow compare-and-exchange and FP - see
+/// comment in CIRGenAtomicExpandPass.cpp.
+static bool shouldCastToInt(mlir::Type valueTy, bool cmpxchg) {
+  if (cir::isAnyFloatingPointType(valueTy))
+    return isa<cir::FP80Type>(valueTy) || cmpxchg;
+  return !isa<cir::IntType>(valueTy) && !isa<cir::PointerType>(valueTy);
+}
+
+mlir::Value AtomicInfo::convertRValueToInt(RValue rvalue, bool cmpxchg) const {
+  // If we've got a scalar value of the right size, try to avoid going
+  // through memory. Floats get casted if needed by AtomicExpandPass.
+  if (mlir::Value value = getScalarRValValueOrNull(rvalue)) {
+    if (!shouldCastToInt(value.getType(), cmpxchg))
+      return cgf.emitToMemory(value, valueTy);
+
+    cgf.cgm.errorNYI(
+        loc, "AtomicInfo::convertRValueToInt: cast scalar rvalue to int");
+    return nullptr;
+  }
+
+  cgf.cgm.errorNYI(
+      loc, "AtomicInfo::convertRValueToInt: cast non-scalar rvalue to int");
+  return nullptr;
 }
 
 /// Copy an r-value into memory as part of storing to an atomic type.
@@ -813,6 +855,79 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   return convertTempToRValue(
       dest.withElementType(builder, convertTypeForMem(resultTy)), resultTy,
       e->getExprLoc());
+}
+
+void CIRGenFunction::emitAtomicStore(RValue rvalue, LValue dest, bool isInit) {
+  bool isVolatile = dest.isVolatileQualified();
+  auto order = cir::MemOrder::SequentiallyConsistent;
+  if (!dest.getType()->isAtomicType()) {
+    assert(!cir::MissingFeatures::atomicMicrosoftVolatile());
+  }
+  return emitAtomicStore(rvalue, dest, order, isVolatile, isInit);
+}
+
+/// Emit a store to an l-value of atomic type.
+///
+/// Note that the r-value is expected to be an r-value of the atomic type; this
+/// means that for aggregate r-values, it should include storage for any padding
+/// that was necessary.
+void CIRGenFunction::emitAtomicStore(RValue rvalue, LValue dest,
+                                     cir::MemOrder order, bool isVolatile,
+                                     bool isInit) {
+  // If this is an aggregate r-value, it should agree in type except
+  // maybe for address-space qualification.
+  mlir::Location loc = dest.getPointer().getLoc();
+  assert(!rvalue.isAggregate() ||
+         rvalue.getAggregateAddress().getElementType() ==
+             dest.getAddress().getElementType());
+
+  AtomicInfo atomics(*this, dest, loc);
+  LValue lvalue = atomics.getAtomicLValue();
+
+  if (lvalue.isSimple()) {
+    // If this is an initialization, just put the value there normally.
+    if (isInit) {
+      atomics.emitCopyIntoMemory(rvalue);
+      return;
+    }
+
+    // Check whether we should use a library call.
+    if (atomics.shouldUseLibCall()) {
+      assert(!cir::MissingFeatures::atomicUseLibCall());
+      cgm.errorNYI(loc, "emitAtomicStore: atomic store with library call");
+      return;
+    }
+
+    // Okay, we're doing this natively.
+    mlir::Value valueToStore = atomics.convertRValueToInt(rvalue);
+
+    // Do the atomic store.
+    Address addr = atomics.getAtomicAddress();
+    if (mlir::Value value = atomics.getScalarRValValueOrNull(rvalue)) {
+      if (shouldCastToInt(value.getType(), /*CmpXchg=*/false)) {
+        addr = atomics.castToAtomicIntPointer(addr);
+        valueToStore =
+            builder.createIntCast(valueToStore, addr.getElementType());
+      }
+    }
+    cir::StoreOp store = builder.createStore(loc, valueToStore, addr);
+
+    // Initializations don't need to be atomic.
+    if (!isInit) {
+      assert(!cir::MissingFeatures::atomicOpenMP());
+      store.setMemOrder(order);
+    }
+
+    // Other decoration.
+    if (isVolatile)
+      store.setIsVolatile(true);
+
+    assert(!cir::MissingFeatures::opLoadStoreTbaa());
+    return;
+  }
+
+  cgm.errorNYI(loc, "emitAtomicStore: non-simple atomic lvalue");
+  assert(!cir::MissingFeatures::opLoadStoreAtomic());
 }
 
 void CIRGenFunction::emitAtomicInit(Expr *init, LValue dest) {
