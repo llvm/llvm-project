@@ -6339,11 +6339,9 @@ def warn_c2y_compat_internal_in_extern_inline : Warning<
   "using static %select{function|variable}0 %1 in an inline function with "
   "external linkage is incompatible with standards before C2y">,
   InGroup<CPre2yCompat>, DefaultIgnore;
-def warn_static_local_in_extern_inline
-    : ExtWarn<"non-constant static local variable in inline function may be "
-              "different "
-              "in different files">,
-      InGroup<StaticLocalInInline>;
+def warn_static_local_in_extern_inline : ExtWarn<
+  "non-constant static local variable in inline function may be different "
+  "in different files">, InGroup<StaticLocalInInline>;
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
 
