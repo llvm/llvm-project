@@ -3437,8 +3437,8 @@ convertMLOADToLoadWithUsedBytesMask(MemSDNode *N, SelectionDAG &DAG) {
 
   for (SDValue Op : reverse(Mask->ops())) {
     // We technically only want to do this shift for every
-    // iteration *but* the first, but in the first iteration NewMask is 0, so
-    // this shift is a no-op.
+    // iteration *but* the first, but in the first iteration UsedBytesMask is 0,
+    // so this shift is a no-op.
     UsedBytesMask <<= ElementSizeInBytes;
 
     // Mask elements must be constants.

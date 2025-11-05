@@ -623,7 +623,12 @@ bool NVPTXTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
 
   if (Alignment < DL.getTypeStoreSize(DataTy))
     return false;
-  return true;
+
+  // We do not support sub-byte element type masked loads.
+  auto *VTy = dyn_cast<FixedVectorType>(DataTy);
+  if (!VTy)
+    return false;
+  return VTy->getElementType()->getScalarSizeInBits() >= 8;
 }
 
 unsigned NVPTXTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
