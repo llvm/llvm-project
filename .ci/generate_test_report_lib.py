@@ -100,6 +100,7 @@ def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
         )
     return output
 
+
 def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
     failures = {}
     for results in junit_objects:
