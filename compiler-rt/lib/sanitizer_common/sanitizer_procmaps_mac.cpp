@@ -56,14 +56,14 @@ static void NextSectionLoad(LoadedModule *module, MemoryMappedSegmentData *data,
                           sc->sectname);
 }
 
-static bool VerifyMemoryMapping(MemoryMappingLayout *mapping) {
+static bool VerifyMemoryMapping(MemoryMappingLayout* mapping) {
   InternalMmapVector<LoadedModule> modules;
-  modules.reserve(128); // matches DumpProcessMap
+  modules.reserve(128);  // matches DumpProcessMap
   mapping->DumpListOfModules(&modules);
 
   InternalMmapVector<LoadedModule::AddressRange> segments;
   for (uptr i = 0; i < modules.size(); ++i) {
-    for (auto &range : modules[i].ranges()) {
+    for (auto& range : modules[i].ranges()) {
       segments.push_back(range);
     }
   }
@@ -86,7 +86,8 @@ static bool VerifyMemoryMapping(MemoryMappingLayout *mapping) {
     if (cur_start < prev_end) {
       well_formed = false;
       VReport(2, "Overlapping mappings: %s start = %p, %s end = %p\n",
-              segments[i].name, (void*)cur_start, segments[i-1].name, (void*)prev_end);
+              segments[i].name, (void*)cur_start, segments[i - 1].name,
+              (void*)prev_end);
       if (!invalid_module_map_reported) {
         Report(
             "WARN: Invalid dyld module map detected. This is most likely a bug "
@@ -100,7 +101,6 @@ static bool VerifyMemoryMapping(MemoryMappingLayout *mapping) {
   mapping->Reset();
   return well_formed;
 }
-
 
 void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
   // Don't iterate over sections when the caller hasn't set up the
