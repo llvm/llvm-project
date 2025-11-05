@@ -4792,7 +4792,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
                 cast<ConstantInt>(CBArgCM->getValue())->getZExtValue();
             auto *LoopRegion = dyn_cast<Function>(
                 CB.getArgOperand(ArgNo)->stripPointerCasts());
-            if (LoopRegion) {
+            // Only analyze the callback if we have a concrete function
+            // definition. Declarations cannot be analyzed interprocedurally.
+            if (LoopRegion && !LoopRegion->isDeclaration()) {
+              LLVM_DEBUG(dbgs() << "[OpenMPOpt] Analyzing callback function: "
+                                << LoopRegion->getName() << "\n");
               auto *FnAA = A.getAAFor<AAKernelInfo>(
                   *this, IRPosition::function(*LoopRegion),
                   DepClassTy::OPTIONAL);
@@ -4805,7 +4809,24 @@ struct AAKernelInfoFunction : AAKernelInfo {
                 AllParallelRegionStatesWereFixed &=
                     FnAA->ReachedUnknownParallelRegions.isAtFixpoint();
               }
+            } else {
+              LLVM_DEBUG({
+                if (LoopRegion && LoopRegion->isDeclaration()) {
+                  dbgs() << "[OpenMPOpt] Skipping callback analysis for "
+                            "declaration-only function: "
+                         << LoopRegion->getName() << "\n";
+                }
+              });
             }
+#ifndef NDEBUG
+            // Verify our assumption: if it has callback metadata, we should
+            // typically be able to resolve the callback function.
+            if (!LoopRegion) {
+              LLVM_DEBUG(dbgs() << "[OpenMPOpt] Warning: Could not resolve "
+                                   "callback function for runtime call to "
+                                << Callee->getName() << "\n");
+            }
+#endif
           }
         }
       }
@@ -4980,14 +5001,28 @@ struct AAKernelInfoCallSite : AAKernelInfo {
           // won't be any change so we indicate a fixpoint.
           indicateOptimisticFixpoint();
         }
-        // If the callee is known and can be used in IPO, we will update the
-        // state based on the callee state in updateImpl.
-        return;
+      // If the callee is known and can be used in IPO, we will update the
+      // state based on the callee state in updateImpl.
+      return;
+    }
+    // Check if we have multiple possible callees. This usually indicates an
+    // indirect call where we don't know the target, requiring a pessimistic
+    // fixpoint. However, for callback functions, multiple edges are expected:
+    // one to the runtime function and edges through callback parameters. These
+    // are analyzable, so we exclude them from the pessimistic check.
+    if (NumCallees > 1 && !Callee->hasMetadata(LLVMContext::MD_callback)) {
+      LLVM_DEBUG(dbgs() << "[OpenMPOpt] Multiple callees found, forcing "
+                           "pessimistic fixpoint\n");
+      indicatePessimisticFixpoint();
+      return;
+    }
+    LLVM_DEBUG({
+      if (NumCallees > 1 && Callee->hasMetadata(LLVMContext::MD_callback)) {
+        dbgs() << "[OpenMPOpt] Allowing multiple callees for callback "
+                  "function: "
+               << Callee->getName() << "\n";
       }
-      if (NumCallees > 1 && !Callee->hasMetadata(LLVMContext::MD_callback)) {
-        indicatePessimisticFixpoint();
-        return;
-      }
+    });
 
       RuntimeFunction RF = It->getSecond();
       switch (RF) {
@@ -5150,13 +5185,28 @@ struct AAKernelInfoCallSite : AAKernelInfo {
             A.getAAFor<AAKernelInfo>(*this, FnPos, DepClassTy::REQUIRED);
         if (!FnAA)
           return indicatePessimisticFixpoint();
-        if (getState() == FnAA->getState())
-          return ChangeStatus::UNCHANGED;
-        getState() = FnAA->getState();
-        return ChangeStatus::CHANGED;
+      if (getState() == FnAA->getState())
+        return ChangeStatus::UNCHANGED;
+      getState() = FnAA->getState();
+      return ChangeStatus::CHANGED;
+    }
+    // Check if we have multiple possible callees. This usually indicates an
+    // indirect call where we don't know the target, requiring a pessimistic
+    // fixpoint. However, for callback functions, multiple edges are expected:
+    // one to the runtime function and edges through callback parameters. These
+    // are analyzable, so we exclude them from the pessimistic check.
+    if (NumCallees > 1 && !F->hasMetadata(LLVMContext::MD_callback)) {
+      LLVM_DEBUG(dbgs() << "[OpenMPOpt] Multiple callees in update, forcing "
+                           "pessimistic fixpoint\n");
+      return indicatePessimisticFixpoint();
+    }
+    LLVM_DEBUG({
+      if (NumCallees > 1 && F->hasMetadata(LLVMContext::MD_callback)) {
+        dbgs() << "[OpenMPOpt] Allowing multiple callees for callback "
+                  "function in update: "
+               << F->getName() << "\n";
       }
-      if (NumCallees > 1 && !F->hasMetadata(LLVMContext::MD_callback))
-        return indicatePessimisticFixpoint();
+    });
 
       CallBase &CB = cast<CallBase>(getAssociatedValue());
       if (It->getSecond() == OMPRTL___kmpc_parallel_51) {
