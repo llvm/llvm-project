@@ -1094,6 +1094,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       if (!RdxResult) {
         RdxResult = PartialReductions.front();
         IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
+        Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
           RdxResult = Builder.CreateBinOp(
@@ -1256,13 +1257,18 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.
-  // TODO: Handle additional reductions, including FP and min-max
-  // reductions.
-  if (!RecurrenceDescriptor::isIntegerRecurrenceKind(RK) ||
+  // TODO: Handle additional reductions, including min-max reductions.
+  if (!(RecurrenceDescriptor::isIntegerRecurrenceKind(RK) ||
+        RecurrenceDescriptor::isFloatingPointRecurrenceKind(RK)) ||
       RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
       RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
       RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
     return std::nullopt;
+
+  if (RecurrenceDescriptor::isFloatingPointRecurrenceKind(RK)) {
+    if (!RdxDesc.getFastMathFlags().allowReassoc())
+      return std::nullopt;
+  }
 
   if (RdxDesc.IntermediateStore)
     return std::nullopt;
