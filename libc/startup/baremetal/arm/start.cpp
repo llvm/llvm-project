@@ -144,12 +144,12 @@ namespace LIBC_NAMESPACE_DECL {
   uint32_t cpacr = __arm_rsr("p15:0:c1:c0:2");
   cpacr |= (0xF << 20);
   __arm_wsr("p15:0:c1:c0:2", cpacr);
+  __isb(0xF);
   // Set FPEXC.EN
   uint32_t fpexc;
   __asm__ __volatile__("vmrs %0, FPEXC" : "=r"(fpexc) : :);
   fpexc |= (1 << 30);
   __asm__ __volatile__("vmsr FPEXC, %0" : : "r"(fpexc) :);
-  __isb(0xF);
 #endif
 #endif
 
