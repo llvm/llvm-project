@@ -184,9 +184,9 @@ class SymbolSearchContext {
 public:
   SymbolSearchContext(SymbolQuery &Q) : Q(Q) {}
 
-  bool hasSearched(LibraryInfo *Lib) const { return Searched.count(Lib); }
+  bool hasSearched(const LibraryInfo *Lib) const { return Searched.count(Lib); }
 
-  void markSearched(LibraryInfo *Lib) { Searched.insert(Lib); }
+  void markSearched(const LibraryInfo *Lib) { Searched.insert(Lib); }
 
   inline bool allResolved() const { return Q.allResolved(); }
 
@@ -194,7 +194,7 @@ public:
 
 private:
   SymbolQuery &Q;
-  DenseSet<LibraryInfo *> Searched;
+  DenseSet<const LibraryInfo *> Searched;
 };
 
 void LibraryResolver::resolveSymbolsInLibrary(
@@ -287,11 +287,15 @@ void LibraryResolver::searchSymbolsInLibraries(
 
     SymbolSearchContext Ctx(Q);
     while (!Ctx.allResolved()) {
-      auto Libs = LibMgr.getLibraries(S, K);
-      for (auto &Lib : Libs) {
-        if (Ctx.hasSearched(Lib.get()))
-          continue;
+      std::vector<std::shared_ptr<LibraryInfo>> Libs;
+      LibMgr.getLibraries(S, K, Libs, [&](const LibraryInfo &Lib) {
+        return !Ctx.hasSearched(&Lib);
+      });
 
+      if (Libs.empty() && !scanLibrariesIfNeeded(K, scanBatchSize))
+        break; // no more new libs to scan
+
+      for (auto &Lib : Libs) {
         // can use Async here?
         resolveSymbolsInLibrary(*Lib, Ctx.query(), Config.Options);
         Ctx.markSearched(Lib.get());
@@ -299,12 +303,6 @@ void LibraryResolver::searchSymbolsInLibraries(
         if (Ctx.allResolved())
           return;
       }
-
-      if (Ctx.allResolved())
-        return;
-
-      if (!scanLibrariesIfNeeded(K, scanBatchSize))
-        break; // no more new libs to scan
     }
   };
 

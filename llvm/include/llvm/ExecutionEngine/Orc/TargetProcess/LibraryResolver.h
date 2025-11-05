@@ -211,15 +211,19 @@ public:
     return FilteredView(Libraries.begin(), Libraries.end(), S, K);
   }
 
-  std::vector<std::shared_ptr<LibraryInfo>> getLibraries(LibState S,
-                                                         PathType K) const {
-    std::vector<std::shared_ptr<LibraryInfo>> Outs;
+  using LibraryFilterFn = std::function<bool(const LibraryInfo &)>;
+  void getLibraries(LibState S, PathType K,
+                    std::vector<std::shared_ptr<LibraryInfo>> &Outs,
+                    LibraryFilterFn Filter = nullptr) const {
     std::shared_lock<std::shared_mutex> Lock(Mtx);
     for (const auto &[_, Entry] : Libraries) {
-      if (Entry->getKind() == K && Entry->getState() == S)
-        Outs.push_back(Entry);
+      const auto &Info = *Entry;
+      if (Info.getKind() != K || Info.getState() != S)
+        continue;
+      if (Filter && !Filter(Info))
+        continue;
+      Outs.push_back(Entry);
     }
-    return Outs;
   }
 
   void forEachLibrary(const LibraryVisitor &visitor) const {
