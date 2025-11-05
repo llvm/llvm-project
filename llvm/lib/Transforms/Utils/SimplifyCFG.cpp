@@ -5160,7 +5160,7 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
 
   // Replace Select (which is used by the PHI for the default value) with
   // SelectFalseVal or SelectTrueVal depending on if ICI is EQ or NE.
-  if (!Select) {
+  if (Select) {
     Select->replaceAllUsesWith(DefaultCst);
     Select->eraseFromParent();
   } else {
