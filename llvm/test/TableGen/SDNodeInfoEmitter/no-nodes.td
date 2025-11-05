@@ -20,6 +20,7 @@ def MyTarget : Target;
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
 // CHECK-EMPTY:
+// CHECK-EMPTY:
 // CHECK-NEXT:  #ifdef __GNUC__
 // CHECK-NEXT:  #pragma GCC diagnostic push
 // CHECK-NEXT:  #pragma GCC diagnostic ignored "-Woverlength-strings"
