@@ -145,6 +145,41 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   return std::move(Clang);
 }
 
+static llvm::Error HandleFrontendOptions(const CompilerInstance &CI) {
+  const auto &FrontendOpts = CI.getFrontendOpts();
+
+  // FIXME: Temporary duplication to honor -mllvm in clang-repl.
+  // clang/flang handle -mllvm in their tool-side ExecuteCompilerInvocation
+  // paths. clang-repl currently lacks that step, so we minimally parse
+  // FrontendOpts.LLVMArgs here to ensure -mllvm options take effect.
+  // Follow-up work:
+  // Move this -mllvm handling into a shared, driver/tool-level facility
+  // used by clang, clang-repl, flang, etc., and remove this library-side
+  // duplication.
+
+  if (!FrontendOpts.LLVMArgs.empty()) {
+    unsigned NumArgs = FrontendOpts.LLVMArgs.size();
+    auto Args = std::make_unique<const char *[]>(NumArgs + 2);
+    Args[0] = "clang-repl (LLVM option parsing)";
+    for (unsigned i = 0; i != NumArgs; ++i) {
+      Args[i + 1] = FrontendOpts.LLVMArgs[i].c_str();
+      if (Args[i + 1][0] == '-') {
+        auto *option = static_cast<llvm::cl::opt<bool> *>(
+            llvm::cl::getRegisteredOptions()[Args[i + 1] + 1]);
+        if (option) {
+          option->setInitialValue(true);
+        } else {
+          llvm::errs() << "Unknown LLVM option: " << Args[i + 1] << "\n";
+        }
+      }
+    }
+    Args[NumArgs + 1] = nullptr;
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+  }
+
+  return llvm::Error::success();
+}
+
 } // anonymous namespace
 
 namespace clang {
@@ -421,8 +456,6 @@ Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
 
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
-  llvm::Error Err = llvm::Error::success();
-
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 
   if (Config.IsOutOfProcess) {
@@ -451,6 +484,11 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
 
       Config.OrcRuntimePath = *OrcRuntimePathOrErr;
     }
+  }
+
+  llvm::Error Err = HandleFrontendOptions(*CI);
+  if (Err) {
+    return std::move(Err);
   }
 
   auto Interp = std::unique_ptr<Interpreter>(new Interpreter(
