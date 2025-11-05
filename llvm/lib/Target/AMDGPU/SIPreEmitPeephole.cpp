@@ -525,8 +525,6 @@ uint16_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
     return AMDGPU::V_FMA_F32_e64;
   case AMDGPU::V_PK_MOV_B32:
     // Source modifiers aren't handled for MOV due to prevailing restrictions.
-    // Hence, 64-bit encoding isn't necessary. Will create unnecessary
-    // instruction cache pressure.
     return AMDGPU::V_MOV_B32_e32;
   default:
     return std::numeric_limits<uint16_t>::max();
