@@ -17,6 +17,17 @@ declare <2 x i16> @llvm.abs.v2i16(<2 x i16>, i1)
 declare <3 x i16> @llvm.abs.v3i16(<3 x i16>, i1)
 declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
 
+define amdgpu_cs i8 @abs_sgpr_i8(i8 inreg %arg) {
+  %res = call i8 @llvm.abs.i8(i8 %arg, i1 false)
+  ret i8 %res
+}
+
+define amdgpu_cs i8 @abs_sgpr_i8_neg(i8 inreg %arg) {
+  %res1 = call i8 @llvm.abs.i8(i8 %arg, i1 false)
+  %res2 = sub i8 0, %res1
+  ret i8 %res2
+}
+
 define amdgpu_cs i16 @abs_sgpr_i16(i16 inreg %arg) {
 ; SDAG6-LABEL: abs_sgpr_i16:
 ; SDAG6:       ; %bb.0:
