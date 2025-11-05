@@ -9643,14 +9643,15 @@ may redirect the call to the identifier given as the first argument to the
 attribute (the modular implementation function).
 
 The second argument is a implementation name, and the remaining arguments are
-aspects of the format string for the compiler to report. If the compiler does
-not understand an aspect, it must summarily consider any call to require that
-aspect. 
+aspects of the format string for the compiler to report. The implementation
+name is an unevaluted identifier be in the C namespace.
 
 The compiler reports that a call requires an aspect by issuing a relocation for
 the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
 code and data needed to support the aspect of the implementation to be brought
 into the link to satisfy weak references in the modular implemenation function.
+If the compiler does not understand an aspect, it must summarily consider any
+call to require that aspect. 
 
 For example, say ``printf`` is annotated with
 ``modular_format(__modular_printf, "__printf", "float")``. Then, a call to
