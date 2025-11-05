@@ -77,7 +77,7 @@
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ABDU (opcode 67): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. opcode 67 is aliased to 66 
+# DEBUG-NEXT: .. opcode 67 is aliased to 66
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 #

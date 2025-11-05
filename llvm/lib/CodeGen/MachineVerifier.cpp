@@ -2434,7 +2434,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     const MachineOperand &LaneMaskOp = MI->getOperand(2);
     const Register SrcReg = SrcOp.getReg();
     const LaneBitmask LaneMask = LaneMaskOp.getLaneMask();
-    LaneBitmask SrcMaxLanemask = LaneBitmask::getAll();
+    LaneBitmask SrcMaxLaneMask = LaneBitmask::getAll();
 
     if (DstOp.getSubReg())
       report("COPY_LANEMASK must not use a subregister index", &DstOp, 0);
@@ -2448,15 +2448,23 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (SrcReg.isPhysical()) {
       const TargetRegisterClass *SrcRC = TRI->getMinimalPhysRegClass(SrcReg);
       if (SrcRC)
-        SrcMaxLanemask = SrcRC->getLaneMask();
+        SrcMaxLaneMask = SrcRC->getLaneMask();
     } else {
-      SrcMaxLanemask = MRI->getMaxLaneMaskForVReg(SrcReg);
+      SrcMaxLaneMask = MRI->getMaxLaneMaskForVReg(SrcReg);
     }
 
-    // If LaneMask is equal to OR greater than the SrcMaxLanemask, it
-    // impliess COPY_LANEMASK is trying to copy all lanes.
-    if (SrcMaxLanemask <= LaneMask)
-      report("COPY_LANEMASK cannot read all lanes", MI);
+    // COPY_LANEMASK should be used only for partial copy. For full
+    // copy, one should strictly use the COPY instruction.
+    if (SrcMaxLaneMask == LaneMask)
+      report("COPY_LANEMASK cannot be used to do full copy", MI);
+
+    // If LaneMask is equal to OR greater than the SrcMaxLaneMask, it
+    // implies COPY_LANEMASK is attempting to read from the lanes that
+    // don't exists in the source register.
+    if (SrcMaxLaneMask < LaneMask)
+      report("COPY_LANEMASK attempts to read from the lanes that "
+             "don't exist in the source register",
+             MI);
 
     break;
   }

@@ -1432,7 +1432,7 @@ public:
     return getOpcode() == TargetOpcode::COPY;
   }
 
-  bool isCopyLanemask() const {
+  bool isCopyLaneMask() const {
     return getOpcode() == TargetOpcode::COPY_LANEMASK;
   }
 
