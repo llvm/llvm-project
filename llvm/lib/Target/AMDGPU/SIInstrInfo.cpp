@@ -10625,6 +10625,8 @@ bool SIInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
 static bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
                         const SIRegisterInfo &RI) {
   MachineInstr *KillsSCC = nullptr;
+  if (SCCValid->getParent() != SCCRedefine->getParent())
+    return false;
   for (MachineInstr &MI : make_range(std::next(SCCValid->getIterator()),
                                      SCCRedefine->getIterator())) {
     if (MI.modifiesRegister(AMDGPU::SCC, &RI))
@@ -10670,7 +10672,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
 
     MachineInstr *Def = MRI->getVRegDef(SrcReg);
-    if (!Def || Def->getParent() != CmpInstr.getParent())
+    if (!Def)
       return false;
 
     // For S_OP that set SCC = DST!=0, do the transformation
@@ -10746,7 +10748,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     // s_cmp_lg_u64 (s_and_b64 $src, 1 << n), 1 << n => s_bitcmp0_b64 $src, n
 
     MachineInstr *Def = MRI->getVRegDef(SrcReg);
-    if (!Def || Def->getParent() != CmpInstr.getParent())
+    if (!Def)
       return false;
 
     if (Def->getOpcode() != AMDGPU::S_AND_B32 &&
