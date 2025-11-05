@@ -166,7 +166,6 @@ lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
 
   return lhs;
 }
-
 } // end anonymous namespace
 
 ELFRelocation::ELFRelocation(unsigned type) {
@@ -244,14 +243,16 @@ elf_sxword ELFRelocation::RelocAddend32(const ELFRelocation &rel) {
     return llvm::cast<ELFRela *>(rel.reloc)->r_addend;
 }
 
-elf_sxword ELFRelocation::RelocAddend64(const ELFRelocation &rel) {
+elf_sxword  ELFRelocation::RelocAddend64(const ELFRelocation &rel) {
   if (llvm::isa<ELFRel *>(rel.reloc))
     return 0;
   else
     return llvm::cast<ELFRela *>(rel.reloc)->r_addend;
 }
 
-static user_id_t SegmentID(size_t PHdrIndex) { return ~user_id_t(PHdrIndex); }
+static user_id_t SegmentID(size_t PHdrIndex) {
+  return ~user_id_t(PHdrIndex);
+}
 
 bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   // Read all fields.
@@ -284,7 +285,7 @@ bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   return true;
 }
 
-static uint32_t mipsVariantFromElfFlags(const elf::ELFHeader &header) {
+static uint32_t mipsVariantFromElfFlags (const elf::ELFHeader &header) {
   const uint32_t mips_arch = header.e_flags & llvm::ELF::EF_MIPS_ARCH;
   uint32_t endian = header.e_ident[EI_DATA];
   uint32_t arch_variant = ArchSpec::eMIPSSubType_unknown;
@@ -292,8 +293,7 @@ static uint32_t mipsVariantFromElfFlags(const elf::ELFHeader &header) {
 
   // If there aren't any elf flags available (e.g core elf file) then return
   // default
-  // 32 or 64 bit arch (without any architecture revision) based on object
-  // file's class.
+  // 32 or 64 bit arch (without any architecture revision) based on object file's class.
   if (header.e_type == ET_CORE) {
     switch (fileclass) {
     case llvm::ELF::ELFCLASS32:
@@ -862,6 +862,24 @@ bool ObjectFileELF::ParseHeader() {
 }
 
 UUID ObjectFileELF::GetUUID() {
+  if (m_uuid)
+    return m_uuid;
+
+  // Try loading note info from any PT_NOTE program headers. This is more
+  // friendly to ELF files that have no section headers, like ELF files that
+  // are loaded from memory.
+  for (const ELFProgramHeader &H : ProgramHeaders()) {
+    if (H.p_type == llvm::ELF::PT_NOTE) {
+      DataExtractor note_data = GetSegmentData(H);
+      if (note_data.GetByteSize()) {
+        lldb_private::ArchSpec arch_spec;
+        RefineModuleDetailsFromNote(note_data, arch_spec, m_uuid);
+        if (m_uuid)
+          return m_uuid;
+      }
+    }
+  }
+
   // Need to parse the section list to get the UUIDs, so make sure that's been
   // done.
   if (!ParseSectionHeaders() && GetType() != ObjectFile::eTypeCoreFile)
@@ -1236,8 +1254,7 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       // Set the elf OS version to NetBSD.  Also clear the vendor.
       arch_spec.GetTriple().setOSName(
           llvm::formatv("netbsd{0}.{1}.{2}", version_major, version_minor,
-                        version_patch)
-              .str());
+                        version_patch).str());
       arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::UnknownVendor);
     }
     // Process NetBSD ELF core(5) notes
@@ -1267,23 +1284,17 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       // count     = 0x000000000000000a (10)
       // page_size = 0x0000000000001000 (4096)
       // Index start              end                file_ofs           path
-      // ===== ------------------ ------------------ ------------------
-      // ------------------------------------- [  0] 0x0000000000401000
-      // 0x0000000000000000                    /tmp/a.out [  1]
-      // 0x0000000000600000 0x0000000000601000 0x0000000000000000 /tmp/a.out [
-      // 2] 0x0000000000601000 0x0000000000602000 0x0000000000000001 /tmp/a.out
-      // [  3] 0x00007fa79c9ed000 0x00007fa79cba8000 0x0000000000000000
-      // /lib/x86_64-linux-gnu/libc-2.19.so [  4] 0x00007fa79cba8000
-      // 0x00007fa79cda7000 0x00000000000001bb
-      // /lib/x86_64-linux-gnu/libc-2.19.so [  5] 0x00007fa79cda7000
-      // 0x00007fa79cdab000 0x00000000000001ba
-      // /lib/x86_64-linux-gnu/libc-2.19.so [  6] 0x00007fa79cdab000
-      // 0x00007fa79cdad000 0x00000000000001be
-      // /lib/x86_64-linux-gnu/libc-2.19.so [  7] 0x00007fa79cdb2000
-      // 0x00007fa79cdd5000 0x0000000000000000 /lib/x86_64-linux-gnu/ld-2.19.so
-      // [  8] 0x00007fa79cfd4000 0x00007fa79cfd5000 0x0000000000000022
-      // /lib/x86_64-linux-gnu/ld-2.19.so [  9] 0x00007fa79cfd5000
-      // 0x00007fa79cfd6000 0x0000000000000023 /lib/x86_64-linux-gnu/ld-2.19.so
+      // ===== ------------------ ------------------ ------------------ -------------------------------------
+      // [  0] 0x0000000000401000 0x0000000000000000                    /tmp/a.out
+      // [  1] 0x0000000000600000 0x0000000000601000 0x0000000000000000 /tmp/a.out
+      // [  2] 0x0000000000601000 0x0000000000602000 0x0000000000000001 /tmp/a.out
+      // [  3] 0x00007fa79c9ed000 0x00007fa79cba8000 0x0000000000000000 /lib/x86_64-linux-gnu/libc-2.19.so
+      // [  4] 0x00007fa79cba8000 0x00007fa79cda7000 0x00000000000001bb /lib/x86_64-linux-gnu/libc-2.19.so
+      // [  5] 0x00007fa79cda7000 0x00007fa79cdab000 0x00000000000001ba /lib/x86_64-linux-gnu/libc-2.19.so
+      // [  6] 0x00007fa79cdab000 0x00007fa79cdad000 0x00000000000001be /lib/x86_64-linux-gnu/libc-2.19.so
+      // [  7] 0x00007fa79cdb2000 0x00007fa79cdd5000 0x0000000000000000 /lib/x86_64-linux-gnu/ld-2.19.so
+      // [  8] 0x00007fa79cfd4000 0x00007fa79cfd5000 0x0000000000000022 /lib/x86_64-linux-gnu/ld-2.19.so
+      // [  9] 0x00007fa79cfd5000 0x00007fa79cfd6000 0x0000000000000023 /lib/x86_64-linux-gnu/ld-2.19.so
       //
       // In the 32 bit ELFs the count, page_size, start, end, file_ofs are
       // uint32_t.
@@ -1306,8 +1317,7 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             return error;
           }
           llvm::StringRef path(cstr);
-          if (path.contains("/lib/x86_64-linux-gnu") ||
-              path.contains("/lib/i386-linux-gnu")) {
+          if (path.contains("/lib/x86_64-linux-gnu") || path.contains("/lib/i386-linux-gnu")) {
             arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
             break;
           }
@@ -1611,8 +1621,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
           DataExtractor data;
 
           if (sheader.sh_type == SHT_ARM_ATTRIBUTES && section_size != 0 &&
-              data.SetData(object_data, sheader.sh_offset, section_size) ==
-                  section_size)
+              data.SetData(object_data, sheader.sh_offset, section_size) == section_size)
             ParseARMAttributes(data, section_size, arch_spec);
         }
 
@@ -1787,7 +1796,7 @@ struct SectionAddressInfo {
 // different sections to not overlap. This class handles that logic.
 class VMAddressProvider {
   using VMMap = llvm::IntervalMap<addr_t, SectionSP, 4,
-                                  llvm::IntervalMapHalfOpenInfo<addr_t>>;
+                                       llvm::IntervalMapHalfOpenInfo<addr_t>>;
 
   ObjectFile::Type ObjectType;
   addr_t NextVMAddress = 0;
@@ -1879,7 +1888,7 @@ public:
                     std::move(Sect));
   }
 };
-} // namespace
+}
 
 // We have to do this because ELF doesn't have section IDs, and also
 // doesn't require section names to be unique.  (We use the section index
@@ -2083,9 +2092,22 @@ static char FindArmAarch64MappingSymbol(const char *symbol_name) {
   return '\0';
 }
 
+static char FindRISCVMappingSymbol(const char *symbol_name) {
+  if (!symbol_name)
+    return '\0';
+
+  if (strcmp(symbol_name, "$d") == 0) {
+    return 'd';
+  }
+  if (strcmp(symbol_name, "$x") == 0) {
+    return 'x';
+  }
+  return '\0';
+}
+
 #define STO_MIPS_ISA (3 << 6)
 #define STO_MICROMIPS (2 << 6)
-#define IS_MICROMIPS(ST_OTHER) (((ST_OTHER) & STO_MIPS_ISA) == STO_MICROMIPS)
+#define IS_MICROMIPS(ST_OTHER) (((ST_OTHER)&STO_MIPS_ISA) == STO_MICROMIPS)
 
 // private
 std::pair<unsigned, ObjectFileELF::FileAddressToAddressClassMap>
@@ -2148,6 +2170,12 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     if (!symbol_name)
       symbol_name = "";
 
+    // Skip local symbols starting with ".L" because these are compiler
+    // generated local labels used for internal purposes (e.g. debugging,
+    // optimization) and are not relevant for symbol resolution or external
+    // linkage.
+    if (llvm::StringRef(symbol_name).starts_with(".L"))
+      continue;
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
         (symbol_name == nullptr || symbol_name[0] == '\0'))
@@ -2236,7 +2264,6 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     int64_t symbol_value_offset = 0;
     uint32_t additional_flags = 0;
-
     if (arch.IsValid()) {
       if (arch.GetMachine() == llvm::Triple::arm) {
         if (symbol.getBinding() == STB_LOCAL) {
@@ -2281,6 +2308,27 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
           if (mapping_symbol)
             continue;
         }
+      } else if (arch.GetTriple().isRISCV()) {
+        if (symbol.getBinding() == STB_LOCAL) {
+          char mapping_symbol = FindRISCVMappingSymbol(symbol_name);
+          if (symbol_type == eSymbolTypeCode) {
+            // Only handle $d and $x mapping symbols.
+            // Other mapping symbols are ignored as they don't affect address
+            // classification.
+            switch (mapping_symbol) {
+            case 'x':
+              // $x - marks a RISCV instruction sequence
+              address_class_map[symbol.st_value] = AddressClass::eCode;
+              break;
+            case 'd':
+              // $d - marks a RISCV data item sequence
+              address_class_map[symbol.st_value] = AddressClass::eData;
+              break;
+            }
+          }
+          if (mapping_symbol)
+            continue;
+        }
       }
 
       if (arch.GetMachine() == llvm::Triple::arm) {
@@ -2314,7 +2362,7 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
        * flag to check whether the symbol is microMIPS and then set the address
        * class
        * accordingly.
-       */
+      */
       if (arch.IsMIPS()) {
         if (IS_MICROMIPS(symbol.st_other))
           address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
@@ -2846,8 +2894,8 @@ unsigned ObjectFileELF::ApplyRelocations(
         case R_386_32:
           symbol = symtab->FindSymbolByID(reloc_symbol(rel));
           if (symbol) {
-            addr_t f_offset = rel_section->GetFileOffset() +
-                              ELFRelocation::RelocOffset32(rel);
+            addr_t f_offset =
+                rel_section->GetFileOffset() + ELFRelocation::RelocOffset32(rel);
             DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
             // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
             WritableDataBuffer *data_buffer =
@@ -2864,8 +2912,8 @@ unsigned ObjectFileELF::ApplyRelocations(
             *dst = value;
           } else {
             GetModule()->ReportError(".rel{0}[{1}] unknown symbol id: {2:d}",
-                                     rel_section->GetName().AsCString(), i,
-                                     reloc_symbol(rel));
+                                    rel_section->GetName().AsCString(), i,
+                                    reloc_symbol(rel));
           }
           break;
         case R_386_NONE:
@@ -2881,8 +2929,7 @@ unsigned ObjectFileELF::ApplyRelocations(
         }
         break;
       default:
-        GetModule()->ReportError("unsupported 32-bit ELF machine arch: {0}",
-                                 hdr->e_machine);
+        GetModule()->ReportError("unsupported 32-bit ELF machine arch: {0}", hdr->e_machine);
         break;
       }
     } else {
@@ -2929,8 +2976,7 @@ unsigned ObjectFileELF::ApplyRelocations(
         }
         break;
       default:
-        GetModule()->ReportError("unsupported 64-bit ELF machine arch: {0}",
-                                 hdr->e_machine);
+        GetModule()->ReportError("unsupported 64-bit ELF machine arch: {0}", hdr->e_machine);
         break;
       }
     }
@@ -3095,8 +3141,8 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
     bool is_valid_entry_point =
         entry_point_addr.IsValid() && entry_point_addr.IsSectionOffset();
     addr_t entry_point_file_addr = entry_point_addr.GetFileAddress();
-    if (is_valid_entry_point &&
-        !lldb_symtab.FindSymbolContainingFileAddress(entry_point_file_addr)) {
+    if (is_valid_entry_point && !lldb_symtab.FindSymbolContainingFileAddress(
+                                    entry_point_file_addr)) {
       uint64_t symbol_id = lldb_symtab.GetNumSymbols();
       // Don't set the name for any synthetic symbols, the Symbol
       // object will generate one if needed when the name is accessed
@@ -3133,7 +3179,8 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   }
 }
 
-void ObjectFileELF::RelocateSection(lldb_private::Section *section) {
+void ObjectFileELF::RelocateSection(lldb_private::Section *section)
+{
   static const char *debug_prefix = ".debug";
 
   // Set relocated bit so we stop getting called, regardless of whether we
@@ -3639,7 +3686,8 @@ ArchSpec ObjectFileELF::GetArchitecture() {
     ParseSectionHeaders();
   }
 
-  if (CalculateType() == eTypeCoreFile && !m_arch_spec.TripleOSWasSpecified()) {
+  if (CalculateType() == eTypeCoreFile &&
+      !m_arch_spec.TripleOSWasSpecified()) {
     // Core files don't have section headers yet they have PT_NOTE program
     // headers that might shed more light on the architecture
     for (const elf::ELFProgramHeader &H : ProgramHeaders()) {
@@ -3739,8 +3787,8 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
 }
 
 size_t ObjectFileELF::ReadSectionData(Section *section,
-                                      lldb::offset_t section_offset, void *dst,
-                                      size_t dst_len) {
+                       lldb::offset_t section_offset, void *dst,
+                       size_t dst_len) {
   // If some other objectfile owns this data, pass this to them.
   if (section->GetObjectFile() != this)
     return section->GetObjectFile()->ReadSectionData(section, section_offset,
