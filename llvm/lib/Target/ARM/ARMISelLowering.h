@@ -51,6 +51,7 @@ class TargetMachine;
 class TargetRegisterInfo;
 class VectorType;
 
+
   namespace ARM {
   /// Possible values of current rounding mode, which is specified in bits
   /// 23:22 of FPSCR.
@@ -577,6 +578,7 @@ class VectorType;
     SDValue LowerALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
@@ -593,6 +595,7 @@ class VectorType;
     SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                               const ARMSubtarget *ST) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDivRem(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed) const;
     void ExpandDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed,
@@ -727,6 +730,7 @@ class VectorType;
                                            MachineBasicBlock *MBB) const;
     MachineBasicBlock *EmitLowered__dbzchk(MachineInstr &MI,
                                            MachineBasicBlock *MBB) const;
+
     void addMVEVectorTypes(bool HasMVEFP);
     void addAllExtLoads(const MVT From, const MVT To, LegalizeAction Action);
     void setAllExpand(MVT VT);
