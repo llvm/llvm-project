@@ -90,7 +90,7 @@ private:
   llvm::SmallVector<Origin> AllOrigins;
   llvm::DenseMap<const clang::ValueDecl *, OriginID> DeclToOriginID;
   llvm::DenseMap<const clang::Expr *, OriginID> ExprToOriginID;
-  llvm::StringMap<int> ExprTypeToMissingOriginCount;
+  llvm::StringMap<unsigned> ExprTypeToMissingOriginCount;
 };
 } // namespace clang::lifetimes::internal
 

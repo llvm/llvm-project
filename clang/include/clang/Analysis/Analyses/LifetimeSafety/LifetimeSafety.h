@@ -48,10 +48,6 @@ public:
                                   Confidence Confidence) {}
 };
 
-/// The main entry point for the analysis.
-void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter);
-
 namespace internal {
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
@@ -64,8 +60,6 @@ struct LifetimeFactory {
 /// Running the lifetime safety analysis and querying its results. It
 /// encapsulates the various dataflow analyses.
 class LifetimeSafetyAnalysis {
-private:
-  static llvm::StringMap<int> MissingOriginCount;
 
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
@@ -80,10 +74,6 @@ public:
   LiveOriginsAnalysis &getLiveOrigins() const { return *LiveOrigins; }
   FactManager &getFactManager() { return FactMgr; }
 
-  static void PrintStats(llvm::raw_ostream &OS);
-
-  static void UpdateMissingOriginCount(const OriginManager &OM);
-
 private:
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
@@ -93,6 +83,12 @@ private:
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
 };
 } // namespace internal
+
+/// The main entry point for the analysis.
+std::unique_ptr<internal::LifetimeSafetyAnalysis>
+runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                          LifetimeSafetyReporter *Reporter);
+
 } // namespace clang::lifetimes
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H

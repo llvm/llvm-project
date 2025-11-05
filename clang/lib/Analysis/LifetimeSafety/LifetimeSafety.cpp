@@ -87,9 +87,12 @@ void LifetimeSafetyAnalysis::run() {
 }
 } // namespace internal
 
-void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
-  Analysis.run();
+std::unique_ptr<internal::LifetimeSafetyAnalysis>
+runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                          LifetimeSafetyReporter *Reporter) {
+  std::unique_ptr<internal::LifetimeSafetyAnalysis> Analysis =
+      std::make_unique<internal::LifetimeSafetyAnalysis>(AC, Reporter);
+  Analysis->run();
+  return Analysis;
 }
 } // namespace clang::lifetimes

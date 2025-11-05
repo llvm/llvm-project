@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/TypeBase.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -24,7 +25,7 @@ void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {
   OS << ")";
 }
 
-const llvm::StringMap<int> OriginManager::getMissingOrigins() const {
+const llvm::StringMap<unsigned> OriginManager::getMissingOrigins() const {
   return ExprTypeToMissingOriginCount;
 }
 
@@ -46,10 +47,12 @@ OriginID OriginManager::get(const Expr &E) {
 
   // if the expression has no specific origin, increment the missing origin
   // counter.
-  const QualType ExprType = E.getType();
-  auto CountIt = ExprTypeToMissingOriginCount.find(ExprType.getAsString());
+  // const QualType ExprType = E.getType();
+  std::string ExprStr(E.getStmtClassName());
+  ExprStr = ExprStr + "<" + E.getType().getAsString() + ">";
+  auto CountIt = ExprTypeToMissingOriginCount.find(ExprStr);
   if (CountIt == ExprTypeToMissingOriginCount.end()) {
-    ExprTypeToMissingOriginCount[ExprType.getAsString()] = 1;
+    ExprTypeToMissingOriginCount[ExprStr] = 1;
   } else {
     CountIt->second++;
   }
@@ -100,6 +103,11 @@ OriginID OriginManager::getOrCreate(const ValueDecl &D) {
   addOrigin(NewID, D);
   DeclToOriginID[&D] = NewID;
   return NewID;
+}
+
+bool OriginManager::isOriginMissing(const Expr &E) const {
+  auto It = ExprToOriginID.find(&E);
+  return It == ExprToOriginID.end();
 }
 
 } // namespace clang::lifetimes::internal
