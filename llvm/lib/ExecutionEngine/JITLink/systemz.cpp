@@ -64,12 +64,12 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "NegDelta64";
   case NegDelta32:
     return "NegDelta32";
-  case RequestGOTAndTransformToDelta64FromGOT:
-    return "RequestGOTAndTransformToDelta64FromGOT";
-  case RequestGOTAndTransformToDelta32FromGOT:
-    return "RequestGOTAndTransformToDelta32FromGOT";
-  case RequestGOTAndTransformToDelta16FromGOT:
-    return "RequestGOTAndTransformToDelta16FromGOT";
+  case RequestGOTAndTransformToDeltaPLT64FromGOT:
+    return "RequestGOTAndTransformToDeltaPLT64FromGOT";
+  case RequestGOTAndTransformToDeltaPLT32FromGOT:
+    return "RequestGOTAndTransformToDeltaPLT32FromGOT";
+  case RequestGOTAndTransformToDeltaPLT16FromGOT:
+    return "RequestGOTAndTransformToDeltaPLT16FromGOT";
   case DeltaPLT32dbl:
     return "DeltaPLT32dbl";
   case DeltaPLT24dbl:
@@ -90,16 +90,14 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "DeltaPLT32FromGOT";
   case DeltaPLT16FromGOT:
     return "DeltaPLT16FromGOT";
-  case RequestGOTAndTransformToDelta64:
-    return "RequestGOTAndTransformToDelta64";
-  case RequestGOTAndTransformToDelta32:
-    return "RequestGOTAndTransformToDelta32";
-  case RequestGOTAndTransformToDelta20:
-    return "RequestGOTAndTransformToDelta20";
-  case RequestGOTAndTransformToDelta16:
-    return "RequestGOTAndTransformToDelta16";
-  case RequestGOTAndTransformToDelta12:
-    return "RequestGOTAndTransformToDelta12";
+  case RequestGOTAndTransformToDeltaPLT20FromGOT:
+    return "RequestGOTAndTransformToDeltaPLT20FromGOT";
+  case RequestGOTAndTransformToDeltaPLT12FromGOT:
+    return "RequestGOTAndTransformToDeltaPLT12FromGOT";
+  case RequestGOTPCAndTransformToDelta32GOTBase:
+    return "RequestGOTPCAndTransformToDelta32GOTBase";
+  case RequestGOTPCAndTransformToDelta32dblGOTBase:
+    return "RequestGOTPCAndTransformToDelta32dblGOTBase";
   case Delta32GOTBase:
     return "Delta32GOTBase";
   case Delta32dblGOTBase:

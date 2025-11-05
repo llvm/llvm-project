@@ -49,7 +49,7 @@ enum EdgeKind_systemz : Edge::Kind {
   ///   Fixup <- Target + Addend : uint20
   ///
   /// Errors:
-  ///   - The target must reside in the mid 20-bits of the address space,
+  ///   - The target must reside in the low 20-bits of the address space,
   ///     otherwise an out-of-range error will be returned.
   ///
   Pointer20,
@@ -203,50 +203,67 @@ enum EdgeKind_systemz : Edge::Kind {
   ///     an out-of-range error will be returned.
   NegDelta32,
 
-  /// A 64-bit GOT delta.
+  /// A GOT entry getter/constructor, transformed to DeltaPLT64FromGOT pointing
+  /// at the GOT entry for the original target.
   ///
-  /// Delta from the global offset table to the target
+  /// Indicates that this edge should be transformed into a DeltaPLT64FromGOT
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does
+  /// not already exist.
   ///
-  /// Fixup expression:
-  ///   Fixup <- Target - GOTSymbol + Addend : int64
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
-  ///     symbol was not been defined.
-  RequestGOTAndTransformToDelta64FromGOT,
-
-  /// A 32-bit GOT delta.
-  ///
-  /// Delta from the global offset table to the target
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
   ///
   /// Fixup expression:
-  ///   Fixup <- Target - GOTSymbol + Addend : int32
+  ///   NONE
   ///
   /// Errors:
-  ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
-  ///     symbol was not been defined.
-  ///   - The result of the fixup expression must fit into an int32, otherwise
-  ///     an out-of-range error will be returned.
-  RequestGOTAndTransformToDelta32FromGOT,
-
-  /// A 16-bit GOT delta.
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
   ///
-  /// Delta from the global offset table to the target
+  RequestGOTAndTransformToDeltaPLT64FromGOT,
+
+  /// A GOT entry getter/constructor, transformed to DeltaPLT32FromGOT pointing
+  /// at the GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a DeltaPLT32FromGOT
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does
+  /// not already exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
   ///
   /// Fixup expression:
-  ///   Fixup <- Target - GOTSymbol + Addend : int16
+  ///   NONE
   ///
   /// Errors:
-  ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
-  ///     symbol was not been defined.
-  ///   - The result of the fixup expression must fit into an int16, otherwise
-  ///     an out-of-range error will be returned.
-  RequestGOTAndTransformToDelta16FromGOT,
-
-  /// A 32-bit PC rel. PLT shifted by 1.
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
   ///
-  /// Delta from the fixup to the target. This will lead to creation of a
-  /// PLT stub.
+  RequestGOTAndTransformToDeltaPLT32FromGOT,
+
+  /// A GOT entry getter/constructor, transformed to DeltaPLT16FromGOT pointing
+  /// at the GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a DeltaPLT16FromGOT
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does
+  /// not already exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///
+  RequestGOTAndTransformToDeltaPLT16FromGOT,
+
+  /// A 32-bit Delta shifted by 1.
+  ///
+  /// Delta from the fixup to the PLT slot for the target. This will lead to
+  /// creation of a PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend) >> 1 : int32
@@ -259,10 +276,10 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT32dbl,
 
-  /// A 24-bit PC rel. PLT shifted by 1.
+  /// A 24-bit Delta shifted by 1.
   ///
-  /// Delta from the fixup to the target. This will lead to creation of a
-  /// PLT stub.
+  /// Delta from the fixup to the PLT slot for the target. This will lead to
+  /// creation of a PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend) >> 1 : int24
@@ -275,10 +292,10 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT24dbl,
 
-  /// A 16-bit  PC rel. PLT shifted by 1.
+  /// A 16-bit Delta shifted by 1.
   ///
-  /// Delta from the fixup to the target. This will lead to creation of a
-  /// PLT stub.
+  /// Delta from the fixup to the PLT slot for the target. This will lead to
+  /// creation of a PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend) >> 1 : int16
@@ -291,10 +308,10 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT16dbl,
 
-  /// A 12-bit PC rel. PLT shifted by 1.
+  /// A 12-bit Delta shifted by 1.
   ///
-  /// Delta from the fixup to the target. This will lead to creation of a
-  /// PLT stub.
+  /// Delta from the fixup to the PLT slot for the target. This will lead to
+  /// creation of a PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend) >> 1 : int12
@@ -307,20 +324,20 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT12dbl,
 
-  /// A 64-bit PC rel. PLT address.
+  /// A 64-bit Delta.
   ///
-  /// Delta from the fixup to the target. This will lead to creation of a
-  /// PLT stub.
+  /// Delta from the fixup to the PLT slot for the target. This will lead to
+  /// creation of a PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- Target - Fixup + Addend : int64
   ///
   DeltaPLT64,
 
-  /// A 32-bit PC rel. PLT address.
+  /// A 32-bit Delta.
   ///
-  /// Delta from the fixup to the target. This will lead to creation of a
-  /// PLT stub.
+  /// Delta from the fixup to the PLT slot for the target. This will lead to
+  /// creation of a PLT stub.
   ///
   /// Fixup expression:
   ///   Fixup <- Target - Fixup + Addend : int32
@@ -397,13 +414,32 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT12FromGOT,
 
-  /// A GOT entry getter/constructor, transformed to Delta64 pointing at the GOT
-  /// entry for the original target.
+  /// A GOT entry getter/constructor, transformed to DeltaPLT20FromGOT pointing
+  /// at the GOT entry for the original target.
   ///
-  /// Indicates that this edge should be transformed into a Delta32 targeting
-  /// the GOT entry for the edge's current target, maintaining the same addend.
-  /// A GOT entry for the target should be created if one does not already
-  /// exist.
+  /// Indicates that this edge should be transformed into a DeltaPLT20FromGOT
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does
+  /// not already exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///
+  RequestGOTAndTransformToDeltaPLT20FromGOT,
+
+  /// A GOT entry getter/constructor, transformed to DeltaPLT12FromGOT pointing
+  /// at the GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a DeltaPLT12FromGOT
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does
+  /// not already exist.
   ///
   /// Edges of this kind are usually handled by a GOT builder pass inserted by
   /// default.
@@ -415,92 +451,12 @@ enum EdgeKind_systemz : Edge::Kind {
   ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
   ///     phase will result in an assert/unreachable during the fixup phase.
   ///
-  RequestGOTAndTransformToDelta64,
+  RequestGOTAndTransformToDeltaPLT12FromGOT,
 
-  /// A GOT entry getter/constructor, transformed to Delta32 pointing at the GOT
-  /// entry for the original target.
+  /// A GOT entry getter/constructor, transformed to Delta32dbl pointing at
+  /// the GOT entry for the original target.
   ///
-  /// Indicates that this edge should be transformed into a Delta32 targeting
-  /// the GOT entry for the edge's current target, maintaining the same addend.
-  /// A GOT entry for the target should be created if one does not already
-  /// exist.
-  ///
-  /// Edges of this kind are usually handled by a GOT builder pass inserted by
-  /// default.
-  ///
-  /// Fixup expression:
-  ///   NONE
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
-  ///     phase will result in an assert/unreachable during the fixup phase.
-  ///
-  RequestGOTAndTransformToDelta32,
-
-  /// A GOT entry getter/constructor, transformed to Delta20 pointing at the GOT
-  /// entry for the original target.
-  ///
-  /// Indicates that this edge should be transformed into a Delta32 targeting
-  /// the GOT entry for the edge's current target, maintaining the same addend.
-  /// A GOT entry for the target should be created if one does not already
-  /// exist.
-  ///
-  /// Edges of this kind are usually handled by a GOT builder pass inserted by
-  /// default.
-  ///
-  /// Fixup expression:
-  ///   NONE
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
-  ///     phase will result in an assert/unreachable during the fixup phase.
-  ///
-  RequestGOTAndTransformToDelta20,
-
-  /// A GOT entry getter/constructor, transformed to Delta16 pointing at the GOT
-  /// entry for the original target.
-  ///
-  /// Indicates that this edge should be transformed into a Delta32 targeting
-  /// the GOT entry for the edge's current target, maintaining the same addend.
-  /// A GOT entry for the target should be created if one does not already
-  /// exist.
-  ///
-  /// Edges of this kind are usually handled by a GOT builder pass inserted by
-  /// default.
-  ///
-  /// Fixup expression:
-  ///   NONE
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
-  ///     phase will result in an assert/unreachable during the fixup phase.
-  ///
-  RequestGOTAndTransformToDelta16,
-
-  /// A GOT entry getter/constructor, transformed to Delta12 pointing at the GOT
-  /// entry for the original target.
-  ///
-  /// Indicates that this edge should be transformed into a Delta32 targeting
-  /// the GOT entry for the edge's current target, maintaining the same addend.
-  /// A GOT entry for the target should be created if one does not already
-  /// exist.
-  ///
-  /// Edges of this kind are usually handled by a GOT builder pass inserted by
-  /// default.
-  ///
-  /// Fixup expression:
-  ///   NONE
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
-  ///     phase will result in an assert/unreachable during the fixup phase.
-  ///
-  RequestGOTAndTransformToDelta12,
-
-  /// A GOT entry getter/constructor, transformed to Delta32 pointing at the GOT
-  /// entry for the original target.
-  ///
-  /// Indicates that this edge should be transformed into a Delta32 targeting
+  /// Indicates that this edge should be transformed into a Delta32dbl targeting
   /// the GOT entry for the edge's current target, maintaining the same addend.
   /// A GOT entry for the target should be created if one does not already
   /// exist.
@@ -517,7 +473,45 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   RequestGOTAndTransformToDelta32dbl,
 
-  /// A 32-bit PC rel. offset to GOT.
+  /// A GOTPC entry getter/constructor, transformed to Delta32GOTBase
+  /// delta to GOT base.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32GOTBase
+  /// targeting the GOTPC entry for the edge's current target, maintaining
+  /// the same addend. A GOTPC entry for the target should be created if
+  /// one does not already exist.
+  ///
+  /// Edges of this kind are usually handled by a GOTPC builder pass inserted
+  /// by default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  RequestGOTPCAndTransformToDelta32GOTBase,
+
+  /// A GOTPC entry getter/constructor, transformed to Delta32dblGOTBase
+  /// delta to GOT base.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32dblGOTBase
+  /// targeting the GOTPC entry for the edge's current target, maintaining
+  /// the same addend. A GOTPC entry for the target should be created if
+  /// one does not already exist.
+  ///
+  /// Edges of this kind are usually handled by a GOTPC builder pass inserted
+  /// by default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  RequestGOTPCAndTransformToDelta32dblGOTBase,
+
+  /// A 32-bit Delta to GOT base.
   ///
   /// Fixup expression:
   ///   Fixup <- GOTBase - Fixup + Addend : int32
@@ -530,7 +524,7 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   Delta32GOTBase,
 
-  /// A 32-bit PC rel. offset to GOT shifted by 1.
+  /// A 32-bit Delta to GOT base shifted by 1.
   ///
   /// Fixup expression:
   ///   Fixup <- (GOTBase - Fixup + Addend) >> 1 : int32
@@ -799,7 +793,7 @@ inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
                                          Symbol &PointerSymbol) {
   auto &B = G.createContentBlock(StubSection, getStubBlockContent(G),
                                  orc::ExecutorAddr(), 8, 0);
-  B.addEdge(Delta32dbl, 0, PointerSymbol, 0);
+  B.addEdge(Delta32dbl, 2, PointerSymbol, 0);
   return B;
 }
 
@@ -825,30 +819,23 @@ public:
       return false;
     Edge::Kind KindToSet = Edge::Invalid;
     switch (E.getKind()) {
-    case systemz::RequestGOTAndTransformToDelta12:
+    case systemz::RequestGOTAndTransformToDeltaPLT12FromGOT:
       KindToSet = systemz::DeltaPLT12FromGOT;
       break;
-    case systemz::RequestGOTAndTransformToDelta16:
-    case systemz::RequestGOTAndTransformToDelta16FromGOT:
+    case systemz::RequestGOTAndTransformToDeltaPLT16FromGOT:
       KindToSet = systemz::DeltaPLT16FromGOT;
       break;
-    case systemz::RequestGOTAndTransformToDelta20:
+    case systemz::RequestGOTAndTransformToDeltaPLT20FromGOT:
       KindToSet = systemz::DeltaPLT20FromGOT;
       break;
-    case systemz::RequestGOTAndTransformToDelta32:
-    case systemz::RequestGOTAndTransformToDelta32FromGOT:
+    case systemz::RequestGOTAndTransformToDeltaPLT32FromGOT:
       KindToSet = systemz::DeltaPLT32FromGOT;
       break;
-    case systemz::RequestGOTAndTransformToDelta64:
-    case systemz::RequestGOTAndTransformToDelta64FromGOT:
+    case systemz::RequestGOTAndTransformToDeltaPLT64FromGOT:
       KindToSet = systemz::DeltaPLT64FromGOT;
       break;
     case systemz::RequestGOTAndTransformToDelta32dbl:
       KindToSet = systemz::DeltaPLT32dbl;
-      break;
-    case systemz::Delta32GOTBase:
-    case systemz::Delta32dblGOTBase:
-      KindToSet = E.getKind();
       break;
     default:
       return false;
@@ -929,6 +916,53 @@ public:
 
   GOTTableManager &GOT;
   Section *StubsSection = nullptr;
+};
+
+/// GOTPC Table Builder.
+class GOTPCTableManager : public TableManager<GOTPCTableManager> {
+public:
+  GOTPCTableManager(GOTTableManager &GOT) : GOT(GOT) {}
+
+  static StringRef getSectionName() { return "$__GOTPC"; }
+
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
+    Edge::Kind KindToSet = Edge::Invalid;
+    switch (E.getKind()) {
+    case systemz::RequestGOTPCAndTransformToDelta32GOTBase:
+      KindToSet = systemz::Delta32GOTBase;
+      break;
+    case systemz::RequestGOTPCAndTransformToDelta32dblGOTBase:
+      KindToSet = systemz::Delta32dblGOTBase;
+      break;
+    default:
+      return false;
+    }
+    assert(KindToSet != Edge::Invalid &&
+           "Fell through switch, but no new kind to set");
+    DEBUG_WITH_TYPE("jitlink", {
+      dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
+             << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
+             << formatv("{0:x}", E.getOffset()) << ")\n";
+    });
+    E.setKind(KindToSet);
+    E.setTarget(getEntryForTarget(G, E.getTarget()));
+    return true;
+  }
+
+  Symbol &createEntry(LinkGraph &G, Symbol &Target) {
+    return createAnonymousPointer(G, getGOTPCSection(G), &Target);
+  }
+
+private:
+  Section &getGOTPCSection(LinkGraph &G) {
+    if (!GOTPCSection)
+      GOTPCSection = &G.createSection(getSectionName(),
+                                      orc::MemProt::Read | orc::MemProt::Exec);
+    return *GOTPCSection;
+  }
+
+  GOTTableManager &GOT;
+  Section *GOTPCSection = nullptr;
 };
 
 } // namespace systemz

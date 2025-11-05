@@ -32,7 +32,8 @@ Error buildTables_ELF_systemz(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
   systemz::GOTTableManager GOT;
   systemz::PLTTableManager PLT(GOT);
-  visitExistingEdges(G, GOT, PLT);
+  systemz::GOTPCTableManager GOTPC(GOT);
+  visitExistingEdges(G, GOT, PLT, GOTPC);
   return Error::success();
 }
 
@@ -277,48 +278,48 @@ private:
     }
     // Relocations targeting the GOT entry associated with the symbol.
     case ELF::R_390_GOTOFF64: {
-      Kind = systemz::RequestGOTAndTransformToDelta64FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDeltaPLT64FromGOT;
       break;
     }
     case ELF::R_390_GOTOFF: {
-      Kind = systemz::RequestGOTAndTransformToDelta32FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDeltaPLT32FromGOT;
       break;
     }
     case ELF::R_390_GOTOFF16: {
-      Kind = systemz::RequestGOTAndTransformToDelta16FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDeltaPLT16FromGOT;
       break;
     }
     case ELF::R_390_GOT64:
     case ELF::R_390_GOTPLT64: {
-      Kind = systemz::RequestGOTAndTransformToDelta64;
+      Kind = systemz::RequestGOTAndTransformToDeltaPLT64FromGOT;
       break;
     }
     case ELF::R_390_GOT32:
     case ELF::R_390_GOTPLT32: {
-      Kind = systemz::RequestGOTAndTransformToDelta32;
+      Kind = systemz::RequestGOTAndTransformToDeltaPLT32FromGOT;
       break;
     }
     case ELF::R_390_GOT20:
     case ELF::R_390_GOTPLT20: {
-      Kind = systemz::RequestGOTAndTransformToDelta20;
+      Kind = systemz::RequestGOTAndTransformToDeltaPLT20FromGOT;
       break;
     }
     case ELF::R_390_GOT16:
     case ELF::R_390_GOTPLT16: {
-      Kind = systemz::RequestGOTAndTransformToDelta16;
+      Kind = systemz::RequestGOTAndTransformToDeltaPLT16FromGOT;
       break;
     }
     case ELF::R_390_GOT12:
     case ELF::R_390_GOTPLT12: {
-      Kind = systemz::RequestGOTAndTransformToDelta12;
+      Kind = systemz::RequestGOTAndTransformToDeltaPLT12FromGOT;
       break;
     }
     case ELF::R_390_GOTPC: {
-      Kind = systemz::Delta32GOTBase;
+      Kind = systemz::RequestGOTPCAndTransformToDelta32GOTBase;
       break;
     }
     case ELF::R_390_GOTPCDBL: {
-      Kind = systemz::Delta32dblGOTBase;
+      Kind = systemz::RequestGOTPCAndTransformToDelta32dblGOTBase;
       break;
     }
     case ELF::R_390_GOTENT:
