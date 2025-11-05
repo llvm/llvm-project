@@ -10711,7 +10711,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
             Def1->getOperand(1).getReg() == Def2->getOperand(1).getReg()) {
           MachineInstr *Select = MRI->getVRegDef(Def1->getOperand(1).getReg());
           if (Select && foldableSelect(*Select)) {
-            optimizeSCC(Def1, Def, RI);
+            optimizeSCC(Select, Def, RI);
           }
         }
       }
