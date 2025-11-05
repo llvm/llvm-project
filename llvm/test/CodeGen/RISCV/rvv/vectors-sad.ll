@@ -185,15 +185,14 @@ define signext i32 @PIXEL_SAD_C(ptr %pix1, i32 %i_stride_pix1, ptr %pix2, i32 %i
 ; ZVABD-NEXT:  .LBB0_7: # %vector.body
 ; ZVABD-NEXT:    # Parent Loop BB0_3 Depth=1
 ; ZVABD-NEXT:    # => This Inner Loop Header: Depth=2
-; ZVABD-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; ZVABD-NEXT:    vle8.v v14, (a5)
-; ZVABD-NEXT:    vle8.v v15, (t5)
+; ZVABD-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; ZVABD-NEXT:    vle8.v v14, (t5)
+; ZVABD-NEXT:    vle8.v v15, (a5)
 ; ZVABD-NEXT:    sub t6, t6, t2
 ; ZVABD-NEXT:    add t5, t5, t2
-; ZVABD-NEXT:    vabdu.vv v14, v14, v15
-; ZVABD-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; ZVABD-NEXT:    vzext.vf2 v15, v14
-; ZVABD-NEXT:    vwaddu.wv v10, v10, v15
+; ZVABD-NEXT:    vzext.vf2 v16, v14
+; ZVABD-NEXT:    vzext.vf2 v14, v15
+; ZVABD-NEXT:    vwabdau.vv v10, v14, v16
 ; ZVABD-NEXT:    add a5, a5, t2
 ; ZVABD-NEXT:    bnez t6, .LBB0_7
 ; ZVABD-NEXT:  # %bb.8: # %middle.block
