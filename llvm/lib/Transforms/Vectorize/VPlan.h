@@ -4114,11 +4114,6 @@ public:
     return const_cast<VPRegionBlock *>(this)->getCanonicalIV();
   }
 
-  VPEVLBasedIVPHIRecipe *getEVLBasedIV() {
-    return dyn_cast<VPEVLBasedIVPHIRecipe>(
-        std::next(getCanonicalIV()->getIterator()));
-  }
-
   /// Return the type of the canonical IV for loop regions.
   Type *getCanonicalIVType() { return getCanonicalIV()->getScalarType(); }
   const Type *getCanonicalIVType() const {

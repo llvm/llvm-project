@@ -605,8 +605,9 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     VPBuilder &Builder) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
-  VPValue *IV = LoopRegion->getCanonicalIV();
-  if (auto *EVLIV = LoopRegion->getEVLBasedIV())
+  VPHeaderPHIRecipe *IV = LoopRegion->getCanonicalIV();
+  if (auto *EVLIV =
+          dyn_cast<VPEVLBasedIVPHIRecipe>(std::next(IV->getIterator())))
     IV = EVLIV;
   VPSingleDefRecipe *BaseIV =
       Builder.createDerivedIV(Kind, FPBinOp, StartV, IV, Step, "offset.idx");
