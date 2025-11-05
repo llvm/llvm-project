@@ -82,10 +82,10 @@ def find_failure_in_ninja_logs(ninja_logs: list[list[str]]) -> list[tuple[str, s
     return failures
 
 
-def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
-    """Formats ninja failures into summary views for the report."""
+def _format_failures(failures: list[tuple[str, str]]) -> list[str]:
+    """Formats failures into summary views for the report."""
     output = []
-    for build_failure in ninja_failures:
+    for build_failure in failures:
         failed_action, failure_message = build_failure
         output.extend(
             [
@@ -176,7 +176,7 @@ def generate_report(
                         "",
                     ]
                 )
-                report.extend(_format_ninja_failures(ninja_failures))
+                report.extend(_format_failures(ninja_failures))
                 report.extend(
                     [
                         "",
@@ -212,18 +212,7 @@ def generate_report(
 
         for testsuite_name, failures in failures.items():
             report.extend(["", f"### {testsuite_name}"])
-            for name, output in failures:
-                report.extend(
-                    [
-                        "<details>",
-                        f"<summary>{name}</summary>",
-                        "",
-                        "```",
-                        output,
-                        "```",
-                        "</details>",
-                    ]
-                )
+            report.extend(_format_failures(failures))
     elif return_code != 0:
         # No tests failed but the build was in a failed state. Bring this to the user's
         # attention.
@@ -248,7 +237,7 @@ def generate_report(
                     "",
                 ]
             )
-            report.extend(_format_ninja_failures(ninja_failures))
+            report.extend(_format_failures(ninja_failures))
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])
