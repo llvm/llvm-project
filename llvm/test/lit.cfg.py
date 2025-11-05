@@ -64,7 +64,7 @@ if config.enable_profcheck:
     config.excludes.append("LoopVectorize")
     # exclude UpdateTestChecks - they fail because of inserted prof annotations
     config.excludes.append("UpdateTestChecks")
-    # issue #166655
+    # TODO(#166655): Reenable Instrumentation tests
     config.excludes.append("Instrumentation")
 
 # test_source_root: The root path where tests are located.
