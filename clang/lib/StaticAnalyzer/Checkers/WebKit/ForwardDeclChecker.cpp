@@ -263,18 +263,43 @@ public:
   void visitCallArg(const Expr *Arg, const ParmVarDecl *Param,
                     const Decl *DeclWithIssue) const {
     auto *ArgExpr = Arg->IgnoreParenCasts();
-    if (auto *InnerCE = dyn_cast<CallExpr>(Arg)) {
-      auto *InnerCallee = InnerCE->getDirectCallee();
-      if (InnerCallee && InnerCallee->isInStdNamespace() &&
-          safeGetName(InnerCallee) == "move" && InnerCE->getNumArgs() == 1) {
-        ArgExpr = InnerCE->getArg(0);
-        if (ArgExpr)
-          ArgExpr = ArgExpr->IgnoreParenCasts();
+    while (ArgExpr) {
+      ArgExpr = ArgExpr->IgnoreParenCasts();
+      if (auto *InnerCE = dyn_cast<CallExpr>(ArgExpr)) {
+        auto *InnerCallee = InnerCE->getDirectCallee();
+        if (InnerCallee && InnerCallee->isInStdNamespace() &&
+            safeGetName(InnerCallee) == "move" && InnerCE->getNumArgs() == 1) {
+          ArgExpr = InnerCE->getArg(0);
+          continue;
+        }
+      }
+      if (auto *UO = dyn_cast<UnaryOperator>(ArgExpr)) {
+        auto OpCode = UO->getOpcode();
+        if (OpCode == UO_Deref || OpCode == UO_AddrOf) {
+          ArgExpr = UO->getSubExpr();
+          continue;
+        }
+      }
+      break;
+    }
+
+    if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(ArgExpr)) {
+      if (isOwnerPtrType(MemberCallExpr->getObjectType()))
+        return;
+    }
+
+    if (auto *OpCE = dyn_cast<CXXOperatorCallExpr>(ArgExpr)) {
+      auto *Method = dyn_cast_or_null<CXXMethodDecl>(OpCE->getDirectCallee());
+      if (Method && isOwnerPtr(safeGetName(Method->getParent()))) {
+        if (OpCE->getOperator() == OO_Star && OpCE->getNumArgs() == 1)
+          return;
       }
     }
+
     if (isNullPtr(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
         isa<CXXDefaultArgExpr>(ArgExpr))
       return;
+
     if (auto *DRE = dyn_cast<DeclRefExpr>(ArgExpr)) {
       if (auto *ValDecl = DRE->getDecl()) {
         if (isa<ParmVarDecl>(ValDecl))

@@ -41,10 +41,12 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
         # touch test/4.stamp
         #
         # index will point to the line that starts with Failed:. The progress
-        # indicator is the line before this ([4/5] test/4.stamp) and contains a pretty
-        # printed version of the target being built (test/4.stamp). We use this line
-        # and remove the progress information to get a succinct name for the target.
-        failing_action = ninja_log[index - 1].split("] ")[1]
+        # indicator is sometimes the line before this ([4/5] test/4.stamp) and
+        # will contain a pretty printed version of the target being built
+        # (test/4.stamp) when accurate. We instead parse the failed line rather
+        # than the progress indicator as the progress indicator may not be
+        # aligned with the failure.
+        failing_action = ninja_log[index].split("FAILED: ")[1]
         failure_log = []
         while (
             index < len(ninja_log)
@@ -99,6 +101,24 @@ def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
     return output
 
 
+def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
+    failures = {}
+    for results in junit_objects:
+        for testsuite in results:
+            for test in testsuite:
+                if (
+                    not test.is_passed
+                    and test.result
+                    and isinstance(test.result[0], Failure)
+                ):
+                    if failures.get(testsuite.name) is None:
+                        failures[testsuite.name] = []
+                    failures[testsuite.name].append(
+                        (test.classname + "/" + test.name, test.result[0].text)
+                    )
+    return failures
+
+
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
 # is the most that can be put into an annotation. If the generated report exceeds
 # this limit and failures are listed, it will be generated again without failures
@@ -113,7 +133,7 @@ def generate_report(
     size_limit=1024 * 1024,
     list_failures=True,
 ):
-    failures = {}
+    failures = get_failures(junit_objects)
     tests_run = 0
     tests_skipped = 0
     tests_failed = 0
@@ -123,18 +143,6 @@ def generate_report(
             tests_run += testsuite.tests
             tests_skipped += testsuite.skipped
             tests_failed += testsuite.failures
-
-            for test in testsuite:
-                if (
-                    not test.is_passed
-                    and test.result
-                    and isinstance(test.result[0], Failure)
-                ):
-                    if failures.get(testsuite.name) is None:
-                        failures[testsuite.name] = []
-                    failures[testsuite.name].append(
-                        (test.classname + "/" + test.name, test.result[0].text)
-                    )
 
     report = [f"# {title}", ""]
 
@@ -258,7 +266,7 @@ def generate_report(
     return report
 
 
-def generate_report_from_files(title, return_code, build_log_files):
+def load_info_from_files(build_log_files):
     junit_files = [
         junit_file for junit_file in build_log_files if junit_file.endswith(".xml")
     ]
@@ -271,6 +279,9 @@ def generate_report_from_files(title, return_code, build_log_files):
             ninja_logs.append(
                 [log_line.strip() for log_line in ninja_log_file_handle.readlines()]
             )
-    return generate_report(
-        title, return_code, [JUnitXml.fromfile(p) for p in junit_files], ninja_logs
-    )
+    return [JUnitXml.fromfile(p) for p in junit_files], ninja_logs
+
+
+def generate_report_from_files(title, return_code, build_log_files):
+    junit_objects, ninja_logs = load_info_from_files(build_log_files)
+    return generate_report(title, return_code, junit_objects, ninja_logs)

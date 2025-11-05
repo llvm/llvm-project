@@ -326,6 +326,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # unistd.h entrypoints
     libc.src.unistd.access
     libc.src.unistd.chdir
+    libc.src.unistd.chown
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -344,6 +345,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getppid
     libc.src.unistd.getsid
     libc.src.unistd.gettid
+    libc.src.unistd.getgid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
     libc.src.unistd.link
@@ -1113,6 +1115,7 @@ if(LLVM_LIBC_FULL_BUILD)
     # arpa/inet.h entrypoints
     libc.src.arpa.inet.htonl
     libc.src.arpa.inet.htons
+    libc.src.arpa.inet.inet_aton
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
@@ -1373,6 +1376,11 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.wcstombs
     libc.src.wchar.wcsrtombs
     libc.src.wchar.wcsnrtombs
+
+    # nl_types.h entrypoints
+    libc.src.nl_types.catopen 
+    libc.src.nl_types.catclose
+    libc.src.nl_types.catgets
   )
 endif()
 

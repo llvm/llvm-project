@@ -53,6 +53,8 @@ def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   let OperandType = "OPERAND_UIMM5_GT3";
 }
 
+def tuimm5gt3 : TImmLeaf<XLenVT, [{return (Imm > 3) && isUInt<5>(Imm);}]>;
+
 def UImm5Plus1AsmOperand : AsmOperandClass {
   let Name = "UImm5Plus1";
   let RenderMethod = "addImmOperands";
@@ -1419,8 +1421,8 @@ def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12)>;
 def : Pat<(i32 (add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
-def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, (i32 uimm5gt3:$imm), GPRNoX0:$rs2)),
-          (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
+def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, (i32 tuimm5gt3:$imm), GPRNoX0:$rs2)),
+          (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, tuimm5gt3:$imm)>;
 } // Predicates = [HasVendorXqciac, IsRV32]
 
 /// Simple arithmetic operations
@@ -1648,10 +1650,10 @@ def : Pat<(qc_setwmi (i32 GPR:$rs3), GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb0
 } // Predicates = [HasVendorXqcilsm, IsRV32]
 
 let Predicates = [HasVendorXqcili, IsRV32] in {
-def: Pat<(qc_e_li tglobaladdr:$A), (QC_E_LI bare_simm32:$A)>;
-def: Pat<(qc_e_li tblockaddress:$A), (QC_E_LI bare_simm32:$A)>;
-def: Pat<(qc_e_li tjumptable:$A), (QC_E_LI bare_simm32:$A)>;
-def: Pat<(qc_e_li tconstpool:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(i32 (qc_e_li tglobaladdr:$A)), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(i32 (qc_e_li tblockaddress:$A)), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(i32 (qc_e_li tjumptable:$A)), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(i32 (qc_e_li tconstpool:$A)), (QC_E_LI bare_simm32:$A)>;
 } // Predicates = [HasVendorXqcili, IsRV32]
 
 //===----------------------------------------------------------------------===/i

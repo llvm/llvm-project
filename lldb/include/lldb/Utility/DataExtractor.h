@@ -994,7 +994,7 @@ protected:
     constexpr size_t src_size = sizeof(T);
     T val = fail_value;
 
-    const T *src = static_cast<const T *>(GetData(offset_ptr, src_size));
+    const void *src = GetData(offset_ptr, src_size);
     if (!src)
       return val;
 

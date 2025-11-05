@@ -1141,27 +1141,86 @@ define <2 x i32> @test_select_cc(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x 
   ret <2 x i32> %r
 }
 
-define <2 x i16> @test_trunc_2xi32(<2 x i32> %a) #0 {
-; CHECK-NOI32X2-LABEL: test_trunc_2xi32(
+define <2 x i16> @test_trunc_2xi32_to_2xi16(<2 x i32> %a) #0 {
+; CHECK-NOI32X2-LABEL: test_trunc_2xi32_to_2xi16(
 ; CHECK-NOI32X2:       {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_2xi32_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_2xi32_to_2xi16_param_0];
 ; CHECK-NOI32X2-NEXT:    prmt.b32 %r3, %r1, %r2, 0x5410U;
 ; CHECK-NOI32X2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
-; CHECK-I32X2-LABEL: test_trunc_2xi32(
+; CHECK-I32X2-LABEL: test_trunc_2xi32_to_2xi16(
 ; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<4>;
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_param_0];
-; CHECK-I32X2-NEXT:    st.param.b32 [func_retval0], %rd1;
+; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_to_2xi16_param_0];
+; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    prmt.b32 %r3, %r1, %r2, 0x5410U;
+; CHECK-I32X2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-I32X2-NEXT:    ret;
   %r = trunc <2 x i32> %a to <2 x i16>
   ret <2 x i16> %r
+}
+
+define <2 x i8> @test_trunc_2xi32_to_2xi8(<2 x i32> %a) #0 {
+; CHECK-NOI32X2-LABEL: test_trunc_2xi32_to_2xi8(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_2xi32_to_2xi8_param_0];
+; CHECK-NOI32X2-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NOI32X2-NEXT:    cvt.u16.u32 %rs2, %r1;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b8 [func_retval0], {%rs2, %rs1};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_trunc_2xi32_to_2xi8(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_to_2xi8_param_0];
+; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-I32X2-NEXT:    cvt.u16.u32 %rs2, %r1;
+; CHECK-I32X2-NEXT:    st.param.v2.b8 [func_retval0], {%rs2, %rs1};
+; CHECK-I32X2-NEXT:    ret;
+  %r = trunc <2 x i32> %a to <2 x i8>
+  ret <2 x i8> %r
+}
+
+define <2 x i1> @test_trunc_2xi32_to_2xi1(<2 x i32> %a) #0 {
+; CHECK-NOI32X2-LABEL: test_trunc_2xi32_to_2xi1(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_2xi32_to_2xi1_param_0];
+; CHECK-NOI32X2-NEXT:    st.param.b8 [func_retval0], %r1;
+; CHECK-NOI32X2-NEXT:    st.param.b8 [func_retval0+1], %r2;
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_trunc_2xi32_to_2xi1(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_to_2xi1_param_0];
+; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    st.param.b8 [func_retval0], %r1;
+; CHECK-I32X2-NEXT:    st.param.b8 [func_retval0+1], %r2;
+; CHECK-I32X2-NEXT:    ret;
+  %r = trunc <2 x i32> %a to <2 x i1>
+  ret <2 x i1> %r
 }
 
 define <2 x i32> @test_trunc_2xi64(<2 x i64> %a) #0 {
@@ -1180,20 +1239,61 @@ define <2 x i32> @test_trunc_2xi64(<2 x i64> %a) #0 {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @test_zext_2xi32(<2 x i16> %a) #0 {
-; CHECK-LABEL: test_zext_2xi32(
+define <2 x i32> @test_zext_2xi16_to_2xi32(<2 x i16> %a) #0 {
+; CHECK-LABEL: test_zext_2xi16_to_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_zext_2xi32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_zext_2xi16_to_2xi32_param_0];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
 ; CHECK-NEXT:    cvt.u32.u16 %r3, %rs1;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r2};
 ; CHECK-NEXT:    ret;
   %r = zext <2 x i16> %a to <2 x i32>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_zext_2xi8_to_2xi32(<2 x i8> %a) #0 {
+; CHECK-LABEL: test_zext_2xi8_to_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_zext_2xi8_to_2xi32_param_0];
+; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs1;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r2};
+; CHECK-NEXT:    ret;
+  %r = zext <2 x i8> %a to <2 x i32>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_zext_2xi1_to_2xi32(<2 x i1> %a) #0 {
+; CHECK-LABEL: test_zext_2xi1_to_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_zext_2xi1_to_2xi32_param_0+1];
+; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
+; CHECK-NEXT:    setp.ne.b16 %p2, %rs2, 0;
+; CHECK-NEXT:    ld.param.b8 %rs3, [test_zext_2xi1_to_2xi32_param_0];
+; CHECK-NEXT:    and.b16 %rs4, %rs3, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs4, 0;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
+; CHECK-NEXT:    and.b32 %r2, %r1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs3;
+; CHECK-NEXT:    and.b32 %r4, %r3, 1;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r2};
+; CHECK-NEXT:    ret;
+  %r = zext <2 x i1> %a to <2 x i32>
   ret <2 x i32> %r
 }
 
@@ -1564,6 +1664,55 @@ entry:
   %t6 = sext <2 x i1> %t5 to <2 x i32>
   store <2 x i32> %t6, ptr %c, align 4
   ret void
+}
+
+define <2 x i32> @test_sext_v2i8_to_v2i32 (<2 x i8> %a) {
+; CHECK-LABEL: test_sext_v2i8_to_v2i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_sext_v2i8_to_v2i32_param_0];
+; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-NEXT:    cvt.s32.s8 %r3, %r2;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs1;
+; CHECK-NEXT:    cvt.s32.s8 %r5, %r4;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r3};
+; CHECK-NEXT:    ret;
+  %r = sext <2 x i8> %a to <2 x i32>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_sext_v2i16_to_v2i32 (<2 x i16> %a) {
+; CHECK-NOI32X2-LABEL: test_sext_v2i16_to_v2i32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<4>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b32 %r1, [test_sext_v2i16_to_v2i32_param_0];
+; CHECK-NOI32X2-NEXT:    cvt.s32.s16 %r2, %r1;
+; CHECK-NOI32X2-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r1; }
+; CHECK-NOI32X2-NEXT:    cvt.s32.s16 %r3, %rs1;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r3};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_sext_v2i16_to_v2i32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<2>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<4>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param.b32 %r1, [test_sext_v2i16_to_v2i32_param_0];
+; CHECK-I32X2-NEXT:    cvt.s32.s16 %r2, %r1;
+; CHECK-I32X2-NEXT:    mov.b32 {_, %rs1}, %r1;
+; CHECK-I32X2-NEXT:    cvt.s32.s16 %r3, %rs1;
+; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r3};
+; CHECK-I32X2-NEXT:    ret;
+  %r = sext <2 x i16> %a to <2 x i32>
+  ret <2 x i32> %r
 }
 
 define <2 x float> @test_uitofp_v2i32(<2 x i32> %a) {

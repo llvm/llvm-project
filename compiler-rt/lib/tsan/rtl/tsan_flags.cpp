@@ -20,7 +20,7 @@
 #include "tsan_rtl.h"
 #include "ubsan/ubsan_flags.h"
 
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE && !SANITIZER_GO
 namespace __sanitizer {
 
 template <>
@@ -55,7 +55,7 @@ inline bool FlagHandler<LockDuringWriteSetting>::Format(char *buffer,
 }
 
 }  // namespace __sanitizer
-#endif
+#endif  // SANITIZER_APPLE && !SANITIZER_GO
 
 namespace __tsan {
 

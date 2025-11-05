@@ -729,15 +729,6 @@ func.func @test_mul_missing_shift(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x1
 
 // -----
 
-// CHECK-LABEL: test_unsupported_int64_data_type
-func.func @test_unsupported_int64_data_type(%arg0: tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64> {
-  // expected-error@+1 {{'tosa.argmax' op is not profile-aligned: element type 'i64' is not legal}}
-  %0 = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64>
-  return %0 : tensor<1x13x13xi64>
-}
-
-// -----
-
 // CHECK-LABEL: test_mismatch_in_out_data_type_clamp
 func.func @test_mismatch_in_out_data_type_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
   // expected-error@+1 {{'tosa.clamp' op requires the same element type for all operands and results}}

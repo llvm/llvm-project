@@ -61,9 +61,14 @@ struct UnrollOptions {
 
 /// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
 void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
-
+/// Appends patterns for optimizing block load operations into `patterns`.
+void populateXeGPUOptimizeBlockLoadsPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
+/// Appends patterns for moving function body into gpu.warp_execute_on_lane0 op.
+void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
+/// Appends patterns for XeGPU workgroup to subgroup distribution into
+/// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.

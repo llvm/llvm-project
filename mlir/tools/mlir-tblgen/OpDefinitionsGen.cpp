@@ -1629,7 +1629,7 @@ void OpEmitter::genPropertiesSupport() {
   // Hashing for the property
 
   const char *propHashFmt = R"decl(
-  auto hash_{0} = [] (const auto &propStorage) -> llvm::hash_code {
+  auto hash_{0}_ = [] (const auto &propStorage) -> llvm::hash_code {
     using ::llvm::hash_value;
     return {1};
   };
@@ -1655,7 +1655,7 @@ void OpEmitter::genPropertiesSupport() {
         if (const auto *namedProperty =
                 llvm::dyn_cast_if_present<const NamedProperty *>(attrOrProp)) {
           if (!namedProperty->prop.getHashPropertyCall().empty()) {
-            hashMethod << "\n    hash_" << namedProperty->name << "(prop."
+            hashMethod << "\n    hash_" << namedProperty->name << "_(prop."
                        << namedProperty->name << ")";
           } else {
             hashMethod << "\n    hash_value(prop." << namedProperty->name
@@ -2632,11 +2632,13 @@ void OpEmitter::genInlineCreateBody(
     interleaveComma(nonBuilderStateArgsList, nonBuilderStateArgsOS);
     nonBuilderStateArgs = ", " + nonBuilderStateArgs;
   }
-  cWithLoc->body() << llvm::formatv(inlineCreateBody, locParamName,
-                                    nonBuilderStateArgs,
-                                    opClass.getClassName());
-  cImplicitLoc->body() << llvm::formatv(inlineCreateBodyImplicitLoc,
-                                        nonBuilderStateArgs);
+  if (cWithLoc)
+    cWithLoc->body() << llvm::formatv(inlineCreateBody, locParamName,
+                                      nonBuilderStateArgs,
+                                      opClass.getClassName());
+  if (cImplicitLoc)
+    cImplicitLoc->body() << llvm::formatv(inlineCreateBodyImplicitLoc,
+                                          nonBuilderStateArgs);
 }
 
 void OpEmitter::genSeparateArgParamBuilder() {
@@ -3513,9 +3515,9 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
         body << "(" << operandName << " ? 1 : 0)";
       } else if (operand.isVariadicOfVariadic()) {
         body << llvm::formatv(
-            "static_cast<int32_t>(std::accumulate({0}.begin(), {0}.end(), 0, "
+            "llvm::accumulate({0}, int32_t(0), "
             "[](int32_t curSum, ::mlir::ValueRange range) {{ return curSum + "
-            "static_cast<int32_t>(range.size()); }))",
+            "static_cast<int32_t>(range.size()); })",
             operandName);
       } else {
         body << "static_cast<int32_t>(" << getArgumentName(op, i) << ".size())";
@@ -4896,7 +4898,7 @@ static void emitOpClassDefs(const RecordKeeper &records,
                                                       constraintPrefix);
   os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
   staticVerifierEmitter.collectOpConstraints(defs);
-  staticVerifierEmitter.emitOpConstraints(defs);
+  staticVerifierEmitter.emitOpConstraints();
 
   // Emit the classes.
   emitOpClasses(records, defs, os, staticVerifierEmitter,

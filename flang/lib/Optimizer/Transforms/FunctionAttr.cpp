@@ -99,10 +99,6 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoSignedZerosFpMathAttrName(llvmFuncOpName),
         mlir::BoolAttr::get(context, true));
-  if (unsafeFPMath)
-    func->setAttr(
-        mlir::LLVM::LLVMFuncOp::getUnsafeFpMathAttrName(llvmFuncOpName),
-        mlir::BoolAttr::get(context, true));
   if (!reciprocals.empty())
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getReciprocalEstimatesAttrName(llvmFuncOpName),

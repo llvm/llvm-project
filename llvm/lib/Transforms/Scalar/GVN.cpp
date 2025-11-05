@@ -2156,6 +2156,9 @@ bool GVNPass::processLoad(LoadInst *L) {
   if (!L->isUnordered())
     return false;
 
+  if (L->getType()->isTokenLikeTy())
+    return false;
+
   if (L->use_empty()) {
     salvageAndRemoveInstruction(L);
     return true;
@@ -2209,11 +2212,11 @@ bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
   if (!DepInst || !Dep.isLocal() || !Dep.isDef())
     return false;
 
-  Value *Mask = I->getOperand(2);
-  Value *Passthrough = I->getOperand(3);
+  Value *Mask = I->getOperand(1);
+  Value *Passthrough = I->getOperand(2);
   Value *StoreVal;
-  if (!match(DepInst, m_MaskedStore(m_Value(StoreVal), m_Value(), m_Value(),
-                                    m_Specific(Mask))) ||
+  if (!match(DepInst,
+             m_MaskedStore(m_Value(StoreVal), m_Value(), m_Specific(Mask))) ||
       StoreVal->getType() != I->getType())
     return false;
 

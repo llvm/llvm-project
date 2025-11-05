@@ -55,11 +55,7 @@ public:
     if (m_monitor_thread.joinable()) {
       m_stopped = true;
       SetEvent(m_ready);
-      // Keep trying to cancel ReadFile() until the thread exits.
-      do {
-        CancelIoEx(m_handle, /*lpOverlapped=*/NULL);
-      } while (WaitForSingleObject(m_monitor_thread.native_handle(), 1) ==
-               WAIT_TIMEOUT);
+      CancelIoEx(m_handle, /*lpOverlapped=*/NULL);
       m_monitor_thread.join();
     }
     CloseHandle(m_event);
@@ -276,4 +272,6 @@ Status MainLoopWindows::Run() {
   return Status();
 }
 
-void MainLoopWindows::Interrupt() { WSASetEvent(m_interrupt_event); }
+bool MainLoopWindows::Interrupt() {
+  return WSASetEvent(m_interrupt_event);
+}

@@ -233,7 +233,7 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
     // target supports 256-bit loads/stores
     if (!CanLowerTo256Bit)
       return std::nullopt;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2i8:
   case MVT::v2i64:
   case MVT::v2f64:
@@ -248,7 +248,7 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
     // global and the target supports 256-bit loads/stores.
     if (!CanLowerTo256Bit)
       return std::nullopt;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2i16:  // <1 x i16x2>
   case MVT::v2f16:  // <1 x f16x2>
   case MVT::v2bf16: // <1 x bf16x2>
@@ -270,7 +270,7 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
     // target supports 256-bit loads/stores
     if (!CanLowerTo256Bit)
       return std::nullopt;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2f32: // <1 x f32x2>
   case MVT::v4f32: // <2 x f32x2>
   case MVT::v2i32: // <1 x i32x2>
@@ -749,7 +749,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
 
-  // Disable generations of extload/truncstore for v2i16/v2i8. The generic
+  // Disable generations of extload/truncstore for v2i32/v2i16/v2i8. The generic
   // expansion for these nodes when they are unaligned is incorrect if the
   // type is a vector.
   //
@@ -757,7 +757,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   //       TargetLowering::expandUnalignedLoad/Store.
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i16,
                    MVT::v2i8, Expand);
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i32,
+                   {MVT::v2i8, MVT::v2i16}, Expand);
   setTruncStoreAction(MVT::v2i16, MVT::v2i8, Expand);
+  setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
+  setTruncStoreAction(MVT::v2i32, MVT::v2i8, Expand);
 
   // Register custom handling for illegal type loads/stores. We'll try to custom
   // lower almost all illegal types and logic in the lowering will discard cases
@@ -6749,7 +6753,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::BinOp::Xchg:
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AtomicRMWInst::BinOp::And:
   case AtomicRMWInst::BinOp::Or:
   case AtomicRMWInst::BinOp::Xor:

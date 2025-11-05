@@ -9,6 +9,7 @@
 #ifndef CLANG_INCLUDE_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_ENTRYPOINTSTATS_H
 #define CLANG_INCLUDE_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_ENTRYPOINTSTATS_H
 
+#include "clang/AST/ASTContext.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -25,7 +26,7 @@ class EntryPointStat {
 public:
   llvm::StringLiteral name() const { return Name; }
 
-  static void lockRegistry(llvm::StringRef CPPFileName);
+  static void lockRegistry(llvm::StringRef CPPFileName, ASTContext &Ctx);
 
   static void takeSnapshot(const Decl *EntryPoint);
   static void dumpStatsAsCSV(llvm::raw_ostream &OS);
@@ -85,7 +86,7 @@ class UnsignedEPStat : public EntryPointStat {
 
 public:
   explicit UnsignedEPStat(llvm::StringLiteral Name);
-  unsigned value() const { return Value.value_or(0); }
+  std::optional<unsigned> value() const { return Value; }
   void reset() { Value.reset(); }
   void set(unsigned V) {
     assert(!Value.has_value());

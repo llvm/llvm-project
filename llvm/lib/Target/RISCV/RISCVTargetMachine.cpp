@@ -139,10 +139,10 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandAtomicPseudoPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
+  initializeRISCVPromoteConstantPass(*PR);
 }
 
-static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           std::optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
@@ -154,7 +154,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
           T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT, CPU, FS,
-          Options, getEffectiveRelocModel(TT, RM),
+          Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
   initAsmInfo();
@@ -463,6 +463,8 @@ void RISCVPassConfig::addIRPasses() {
 }
 
 bool RISCVPassConfig::addPreISel() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createRISCVPromoteConstantPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     // Add a barrier before instruction selection so that we will not get
     // deleted block address after enabling default outlining. See D99707 for

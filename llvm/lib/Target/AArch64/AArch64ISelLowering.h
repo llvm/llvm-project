@@ -300,8 +300,7 @@ public:
   bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
 
   /// Return true if it is profitable to fold a pair of shifts into a mask.
-  bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                         CombineLevel Level) const override;
+  bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
   /// Return true if it is profitable to fold a pair of shifts into a mask.
   bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override {
@@ -367,7 +366,6 @@ public:
   Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
   void insertSSPDeclarations(Module &M) const override;
-  Function *getSSPStackGuardCheck(const Module &M) const override;
 
   /// If the target has a standard location for the unsafe stack pointer,
   /// returns the address of that location. Otherwise, returns nullptr.
@@ -747,12 +745,12 @@ private:
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLOOP_DEPENDENCE_MASK(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECREDUCE_MUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;

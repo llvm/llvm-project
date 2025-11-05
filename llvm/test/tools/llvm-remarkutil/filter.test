@@ -18,9 +18,19 @@ RUN: llvm-remarkutil filter --remark-type=analysis %p/Inputs/filter.yaml | FileC
 
 RUN: llvm-remarkutil yaml2bitstream -o %t.opt.bitstream %p/Inputs/filter.yaml
 RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream -o %t.r1.yamL
+RUN: cat %t.r1.yamL | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream -o %t.r1.yMl
+RUN: cat %t.r1.yMl | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream --serializer=yaml -o %t.r1.fake.opt.bitstream
+RUN: cat %t.r1.fake.opt.bitstream | FileCheck %s --strict-whitespace --check-prefix=REMARK1
 
 RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream -o %t.r1.opt.bitstream
 RUN: llvm-remarkutil bitstream2yaml %t.r1.opt.bitstream | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream -o %t.r1
+RUN: llvm-remarkutil bitstream2yaml %t.r1 | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %p/Inputs/filter.yaml --serializer=bitstream -o %t.r1.fake.yaml
+RUN: llvm-remarkutil bitstream2yaml %t.r1.fake.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK1
 
 RUN: llvm-remarkutil filter --function=func %p/Inputs/filter.yaml | FileCheck %s --allow-empty --strict-whitespace --check-prefix=EMPTY
 
