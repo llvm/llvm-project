@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===-- Unittests for getgid ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_cbrt.h>
-#include <clc/opencl/math/cbrt.h>
+#include "src/unistd/getgid.h"
+#include "test/UnitTest/Test.h"
 
-#define __CLC_FUNCTION cbrt
-#define __CLC_BODY <clc/shared/unary_def.inc>
-
-#include <clc/math/gentype.inc>
+TEST(LlvmLibcGetGidTest, SmokeTest) {
+  // getgid always succeeds. So, we just call it as a smoke test.
+  LIBC_NAMESPACE::getgid();
+}

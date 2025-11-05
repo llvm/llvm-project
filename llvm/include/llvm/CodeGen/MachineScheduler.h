@@ -1038,7 +1038,7 @@ public:
   getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
                        unsigned ReleaseAtCycle, unsigned AcquireAtCycle);
 
-  bool isUnbufferedGroup(unsigned PIdx) const {
+  bool isReservedGroup(unsigned PIdx) const {
     return SchedModel->getProcResource(PIdx)->SubUnitsIdxBegin &&
            !SchedModel->getProcResource(PIdx)->BufferSize;
   }

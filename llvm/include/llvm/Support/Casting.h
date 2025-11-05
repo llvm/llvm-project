@@ -816,6 +816,42 @@ template <typename... Types> struct IsaAndPresentCheckPredicate {
     return isa_and_present<Types...>(Val);
   }
 };
+
+//===----------------------------------------------------------------------===//
+// Casting Function Objects
+//===----------------------------------------------------------------------===//
+
+/// Usable in generic algorithms like map_range
+template <typename U> struct StaticCastFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return static_cast<U>(Val);
+  }
+};
+
+template <typename U> struct DynCastFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return dyn_cast<U>(Val);
+  }
+};
+
+template <typename U> struct CastFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return cast<U>(Val);
+  }
+};
+
+template <typename U> struct CastIfPresentFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return cast_if_present<U>(Val);
+  }
+};
+
+template <typename U> struct DynCastIfPresentFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return dyn_cast_if_present<U>(Val);
+  }
+};
+
 } // namespace detail
 
 /// Function object wrapper for the `llvm::isa` type check. The function call
@@ -840,6 +876,20 @@ inline constexpr detail::IsaCheckPredicate<Types...> IsaPred{};
 template <typename... Types>
 inline constexpr detail::IsaAndPresentCheckPredicate<Types...>
     IsaAndPresentPred{};
+
+/// Function objects corresponding to the Cast types defined above.
+template <typename From>
+inline constexpr detail::StaticCastFunc<From> StaticCastTo{};
+
+template <typename From> inline constexpr detail::CastFunc<From> CastTo{};
+
+template <typename From>
+inline constexpr detail::CastIfPresentFunc<From> CastIfPresentTo{};
+
+template <typename From>
+inline constexpr detail::DynCastIfPresentFunc<From> DynCastIfPresentTo{};
+
+template <typename From> inline constexpr detail::DynCastFunc<From> DynCastTo{};
 
 } // end namespace llvm
 
