@@ -300,17 +300,17 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK,
   return {collectMinMaxFMF(FPOp)};
 }
 
-static std::optional<RecurrenceDescriptor>
-getMultiUseMinMax(PHINode *Phi, Loop *TheLoop, FastMathFlags FuncFMF,
-                  ScalarEvolution *SE) {
+static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
+                                                FastMathFlags FuncFMF,
+                                                ScalarEvolution *SE) {
   if (Phi->getNumIncomingValues() != 2 ||
       Phi->getParent() != TheLoop->getHeader())
-    return std::nullopt;
+    return {};
 
   Type *Ty = Phi->getType();
   BasicBlock *Latch = TheLoop->getLoopLatch();
   if ((!Ty->isIntegerTy() && !Ty->isFloatingPointTy()) || !Latch)
-    return std::nullopt;
+    return {};
 
   auto Matches = [](Value *V, Value *&A, Value *&B) -> RecurKind {
     if (match(V, m_UMin(m_Value(A), m_Value(B))))
@@ -351,7 +351,7 @@ getMultiUseMinMax(PHINode *Phi, Loop *TheLoop, FastMathFlags FuncFMF,
       continue;
     auto *I = dyn_cast<Instruction>(Cur);
     if (!I || !TheLoop->contains(I))
-      return std::nullopt;
+      return {};
     if (auto *PN = dyn_cast<PHINode>(I)) {
       if (PN != Phi)
         append_range(WorkList, PN->operands());
@@ -360,7 +360,7 @@ getMultiUseMinMax(PHINode *Phi, Loop *TheLoop, FastMathFlags FuncFMF,
     Value *A, *B;
     RecurKind CurRK = Matches(Cur, A, B);
     if (CurRK == RecurKind::None || (RK != RecurKind::None && CurRK != RK))
-      return std::nullopt;
+      return {};
 
     RK = CurRK;
     // For floating point recurrences, check we have the required fast-math
@@ -370,7 +370,7 @@ getMultiUseMinMax(PHINode *Phi, Loop *TheLoop, FastMathFlags FuncFMF,
               hasRequiredFastMathFlags(cast<FPMathOperator>(Cur), RK, FuncFMF))
         FMF &= *CurFMF;
       else
-        return std::nullopt;
+        return {};
     }
 
     Chain.insert(I);
@@ -388,7 +388,7 @@ getMultiUseMinMax(PHINode *Phi, Loop *TheLoop, FastMathFlags FuncFMF,
     bool AMatches = IA && TheLoop->contains(IA) && Matches(A, X, Y) == RK;
     bool BMatches = IB && TheLoop->contains(IB) && Matches(B, X, Y) == RK;
     if (AMatches == BMatches) // Both or neither match
-      return std::nullopt;
+      return {};
     WorkList.push_back(AMatches ? A : B);
   }
 
@@ -401,21 +401,22 @@ getMultiUseMinMax(PHINode *Phi, Loop *TheLoop, FastMathFlags FuncFMF,
   for (Use &U : RdxNext->uses()) {
     auto *User = cast<Instruction>(U.getUser());
     if (!TheLoop->contains(User->getParent())) {
-      if (++IncOut > 1)
-        return std::nullopt;
+      if (IncOut > 0)
+        return {};
+      IncOut++;
     } else if (auto *SI = dyn_cast<StoreInst>(User)) {
       const SCEV *Ptr = SE->getSCEV(SI->getPointerOperand());
       if (U.getOperandNo() == SI->getPointerOperandIndex() ||
           !SE->isLoopInvariant(Ptr, TheLoop) ||
           (IntermediateStore &&
            SE->getSCEV(IntermediateStore->getPointerOperand()) != Ptr))
-        return std::nullopt;
+        return {};
       // Keep the store that appears last in the block, as it will be the final
       // reduction value.
       if (!IntermediateStore || IntermediateStore->comesBefore(SI))
         IntermediateStore = SI;
     } else if (Phi != User)
-      return std::nullopt;
+      return {};
   }
 
   // All ops on the chain from Phi to RdxNext must only be used by instructions
@@ -423,7 +424,7 @@ getMultiUseMinMax(PHINode *Phi, Loop *TheLoop, FastMathFlags FuncFMF,
   for (Value *Op : Chain)
     if (Op != RdxNext &&
         any_of(Op->users(), [&Chain](User *U) { return !Chain.contains(U); }))
-      return std::nullopt;
+      return {};
 
   SmallPtrSet<Instruction *, 4> Casts;
   return RecurrenceDescriptor(
@@ -1153,9 +1154,13 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found a XOR reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (auto RD = getMultiUseMinMax(Phi, TheLoop, FMF, SE)) {
+  auto RD = getMinMaxRecurrence(Phi, TheLoop, FMF, SE);
+  if (RD.getRecurrenceKind() != RecurKind::None) {
+    assert(
+        RecurrenceDescriptor::isMinMaxRecurrenceKind(RD.getRecurrenceKind()) &&
+        "must return a min/max recurrence kind");
     LLVM_DEBUG(dbgs() << "Found a min/max reduction PHI." << *Phi << "\n");
-    RedDes = *RD;
+    RedDes = RD;
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::AnyOf, TheLoop, FMF, RedDes, DB, AC, DT,
