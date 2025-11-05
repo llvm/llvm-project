@@ -1,0 +1,326 @@
+## Tests how --call-graph-info prints the call graph information.
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --allow-empty -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON -DFILE=%t
+
+## Yaml input is obtained by compiling the below source to object with:
+##   clang -fexperimental-call-graph-section test.c -o test.o
+## then to yaml with:
+##   obj2yaml test.o > test.yaml
+## Remove ProgramHeaders if obj2yaml fails.
+
+## YAML output was generated from the following source:
+##
+## void foo() {}
+## 
+## void bar() {}
+## 
+## int baz(char a) { return 0; }
+## 
+## int caller() {
+##   void (*fp_foo)() = foo;
+##   fp_foo();
+## 
+##   void (*fp_bar)() = bar;
+##   fp_bar();
+## 
+##   char a;
+##   int (*fp_baz)(char) = baz;
+##   fp_baz(a);
+##  
+##   foo();
+##   bar();
+##   baz(a);
+## 
+##   return 0;
+## }
+##
+
+## We do not support GNU format console output for --call-graph-info as it is an LLVM only info.
+# CHECK-NOT: .
+
+# LLVM: 		CallGraph [
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: _Z3foov
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     IsIndirectTarget: Yes
+# LLVM-NEXT:     TypeId: 0xF85C699BB8EF20A2
+# LLVM-NEXT:     NumDirectCallees: 0
+# LLVM-NEXT:     DirectCallees [
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-NEXT:     IndirectTypeIDs: []
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: _Z3barv
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     IsIndirectTarget: Yes
+# LLVM-NEXT:     TypeId: 0xF85C699BB8EF20A2
+# LLVM-NEXT:     NumDirectCallees: 0
+# LLVM-NEXT:     DirectCallees [
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-NEXT:     IndirectTypeIDs: []
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: _Z3bazc
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     IsIndirectTarget: Yes
+# LLVM-NEXT:     TypeId: 0x308E4B8159BC8654
+# LLVM-NEXT:     NumDirectCallees: 0
+# LLVM-NEXT:     DirectCallees [
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-NEXT:     IndirectTypeIDs: []
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: _Z6callerv
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     IsIndirectTarget: Yes
+# LLVM-NEXT:     TypeId: 0xA9494DEF81A01DC
+# LLVM-NEXT:     NumDirectCallees: 3
+# LLVM-NEXT:     DirectCallees [
+# LLVM-NEXT:       {
+# LLVM-NEXT:         Name: _Z3foov
+# LLVM-NEXT:       }
+# LLVM-NEXT:       {
+# LLVM-NEXT:         Name: _Z3barv
+# LLVM-NEXT:       }
+# LLVM-NEXT:       {
+# LLVM-NEXT:         Name: _Z3bazc
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     NumIndirectTargetTypeIDs: 2
+# LLVM-NEXT:     IndirectTypeIDs: [0xF85C699BB8EF20A2, 0x308E4B8159BC8654]
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+# JSON:     "CallGraph": [
+# JSON-NEXT:      {
+# JSON-NEXT:        "Function": {
+# JSON-NEXT:          "Name": "_Z3foov",
+# JSON-NEXT:          "Version": 0,
+# JSON-NEXT:          "IsIndirectTarget": true,
+# JSON-NEXT:          "TypeId": 17896295136807035042,
+# JSON-NEXT:          "NumDirectCallees": 0,
+# JSON-NEXT:          "DirectCallees": [],
+# JSON-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-NEXT:          "IndirectTypeIDs": []
+# JSON-NEXT:        }
+# JSON-NEXT:      },
+# JSON-NEXT:      {
+# JSON-NEXT:        "Function": {
+# JSON-NEXT:          "Name": "_Z3barv",
+# JSON-NEXT:          "Version": 0,
+# JSON-NEXT:          "IsIndirectTarget": true,
+# JSON-NEXT:          "TypeId": 17896295136807035042,
+# JSON-NEXT:          "NumDirectCallees": 0,
+# JSON-NEXT:          "DirectCallees": [],
+# JSON-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-NEXT:          "IndirectTypeIDs": []
+# JSON-NEXT:        }
+# JSON-NEXT:      },
+# JSON-NEXT:      {
+# JSON-NEXT:        "Function": {
+# JSON-NEXT:          "Name": "_Z3bazc",
+# JSON-NEXT:          "Version": 0,
+# JSON-NEXT:          "IsIndirectTarget": true,
+# JSON-NEXT:          "TypeId": 3498816979441845844,
+# JSON-NEXT:          "NumDirectCallees": 0,
+# JSON-NEXT:          "DirectCallees": [],
+# JSON-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-NEXT:          "IndirectTypeIDs": []
+# JSON-NEXT:        }
+# JSON-NEXT:      },
+# JSON-NEXT:      {
+# JSON-NEXT:        "Function": {
+# JSON-NEXT:          "Name": "_Z6callerv",
+# JSON-NEXT:          "Version": 0,
+# JSON-NEXT:          "IsIndirectTarget": true,
+# JSON-NEXT:          "TypeId": 762397922298560988,
+# JSON-NEXT:          "NumDirectCallees": 3,
+# JSON-NEXT:          "DirectCallees": [
+# JSON-NEXT:            {
+# JSON-NEXT:              "Name": "_Z3foov"
+# JSON-NEXT:            },
+# JSON-NEXT:            {
+# JSON-NEXT:              "Name": "_Z3barv"
+# JSON-NEXT:            },
+# JSON-NEXT:            {
+# JSON-NEXT:              "Name": "_Z3bazc"
+# JSON-NEXT:            }
+# JSON-NEXT:          ],
+# JSON-NEXT:          "NumIndirectTargetTypeIDs": 2,
+# JSON-NEXT:          "IndirectTypeIDs": [
+# JSON-NEXT:            17896295136807035042,
+# JSON-NEXT:            3498816979441845844
+# JSON-NEXT:          ]
+# JSON-NEXT:        }
+# JSON-NEXT:      }
+# JSON-NEXT:    ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         554889E55DC3662E0F1F840000000000554889E55DC3662E0F1F840000000000554889E54088F88845FF31C05DC36690554889E54883EC20488D0500000000488945F8FF55F8488D0500000000488945F0FF55F0488D0500000000488945E0488B45E00FBE7DEFFFD0E800000000E8000000000FBE7DEFE80000000031C04883C4205DC3
+  - Name:            .llvm.callgraph
+    Type:            SHT_LLVM_CALL_GRAPH
+    Flags:           [ SHF_LINK_ORDER ]
+    Link:            .text
+    AddressAlign:    0x1
+    Content:         00010000000000000000A220EFB89B695CF800010000000000000000A220EFB89B695CF8000100000000000000005486BC59814B8E3000070000000000000000DC011AF8DE94940A0300000000000000000000000000000000000000000000000002A220EFB89B695CF85486BC59814B8E30
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         004675636873696120636C616E672076657273696F6E2032322E302E306769742028676974406769746875622E636F6D3A5072616268756B2F6C6C766D2D70726F6A6563742E67697420366532323235343933303736346536613734323839613261633731616637633834333038356633622900
+  - Name:            .note.GNU-stack
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000000000000600000000410E108602430D06410C07080000001C0000003C000000000000000600000000410E108602430D06410C07080000001C0000005C000000000000000E00000000410E108602430D06490C07080000001C0000007C000000000000005400000000410E108602430D06024F0C07080000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x3B
+        Symbol:          _Z3foov
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x49
+        Symbol:          _Z3barv
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x57
+        Symbol:          _Z3bazc
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x6A
+        Symbol:          _Z3foov
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x6F
+        Symbol:          _Z3barv
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x78
+        Symbol:          _Z3bazc
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.llvm.callgraph
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .llvm.callgraph
+    Relocations:
+      - Offset:          0x2
+        Symbol:          _Z3foov
+        Type:            R_X86_64_64
+      - Offset:          0x14
+        Symbol:          _Z3barv
+        Type:            R_X86_64_64
+      - Offset:          0x26
+        Symbol:          _Z3bazc
+        Type:            R_X86_64_64
+      - Offset:          0x38
+        Symbol:          _Z6callerv
+        Type:            R_X86_64_64
+      - Offset:          0x49
+        Symbol:          _Z3foov
+        Type:            R_X86_64_64
+      - Offset:          0x51
+        Symbol:          _Z3barv
+        Type:            R_X86_64_64
+      - Offset:          0x59
+        Symbol:          _Z3bazc
+        Type:            R_X86_64_64
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x20
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+      - Offset:          0x40
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          16
+      - Offset:          0x60
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          32
+      - Offset:          0x80
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          48
+  - Name:            .llvm_addrsig
+    Type:            SHT_LLVM_ADDRSIG
+    Flags:           [ SHF_EXCLUDE ]
+    Link:            .symtab
+    AddressAlign:    0x1
+    Symbols:         [ _Z3foov, _Z3barv, _Z3bazc ]
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .llvm.callgraph
+      - Name:            .rela.llvm.callgraph
+      - Name:            .comment
+      - Name:            .note.GNU-stack
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .llvm_addrsig
+      - Name:            .symtab
+Symbols:
+  - Name:            cg.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            _Z3foov
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x6
+  - Name:            _Z3barv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10
+    Size:            0x6
+  - Name:            _Z3bazc
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x20
+    Size:            0xE
+  - Name:            _Z6callerv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x30
+    Size:            0x54
+...
