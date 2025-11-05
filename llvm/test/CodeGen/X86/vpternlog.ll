@@ -11,3 +11,15 @@ define <8 x i64> @foo(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c) {
   %and3 = xor <8 x i64> %and3.demorgan, splat (i64 -1)
   ret <8 x i64> %and3
 }
+
+define <8 x i64> @xorbitcast(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c) {
+; CHECK-LABEL: xorbitcast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~(zmm0 | zmm2 | zmm1)
+; CHECK-NEXT:    retq
+  %or1 = or <64 x i8> %a, %b
+  %or2 = or <64 x i8> %or1, %c
+  %cast = bitcast <64 x i8> %or2 to <8 x i64>
+  %xor = xor <8 x i64> %cast, splat (i64 -1)
+  ret <8 x i64> %xor
+}
