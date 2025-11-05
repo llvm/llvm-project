@@ -16751,8 +16751,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
     // memory accesses. We don't care if the original type was legal or not
     // as we assume software couldn't rely on the number of accesses of an
     // illegal type.
-    if (((LegalOperations || !LN0->isSimple()) &&
-         !TLI.isOperationLegal(ISD::LOAD, VT)))
+    if ((LegalOperations || !LN0->isSimple()) &&
+        !TLI.isOperationLegal(ISD::LOAD, VT))
       return SDValue();
 
     if (!TLI.isLoadBitCastBeneficial(N0.getValueType(), VT, DAG,
