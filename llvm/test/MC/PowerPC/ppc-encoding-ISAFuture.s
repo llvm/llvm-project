@@ -5,6 +5,22 @@
 # RUN: llvm-mc -triple powerpc-unknown-aix-gnu --show-encoding %s | \
 # RUN:   FileCheck -check-prefix=CHECK-BE %s
 
+#CHECK-BE: tlbiep 8, 10, 2, 1, 0          # encoding: [0x7d,0x4a,0x40,0x64]
+#CHECK-LE: tlbiep 8, 10, 2, 1, 0          # encoding: [0x64,0x40,0x4a,0x7d]
+           tlbiep 8, 10, 2, 1, 0
+
+# CHECK-BE: tlbieio 8, 10, 2              # encoding: [0x7d,0x48,0x40,0x24]
+# CHECK-LE: tlbieio 8, 10, 2              # encoding: [0x24,0x40,0x48,0x7d]
+            tlbieio 8, 10, 2
+
+# CHECK-BE: tlbsyncio 15                  # encoding: [0x7d,0xe0,0x04,0x68]
+# CHECK-LE: tlbsyncio 15                  # encoding: [0x68,0x04,0xe0,0x7d]
+            tlbsyncio 15
+
+# CHECK-BE: ptesyncio 15                  # encoding: [0x7d,0xe0,0x04,0xa8]
+# CHECK-LE: ptesyncio 15                  # encoding: [0xa8,0x04,0xe0,0x7d]
+            ptesyncio 15
+
 # CHECK-BE: dmxxextfdmr512 2, 34, 1, 0    # encoding: [0xf0,0x82,0x17,0x12]
 # CHECK-LE: dmxxextfdmr512 2, 34, 1, 0    # encoding: [0x12,0x17,0x82,0xf0]
             dmxxextfdmr512 2, 34, 1, 0
@@ -89,6 +105,10 @@
 # CHECK-LE: lxvprll 6, 2, 1               # encoding: [0xda,0x0c,0xc2,0x7c]
             lxvprll 6, 2, 1
 
+           lxvpb32x 2, 15, 16
+#CHECK-BE: lxvpb32x 2, 15, 16            # encoding: [0x7c,0x4f,0x86,0xda]
+#CHECK-LE: lxvpb32x 2, 15, 16            # encoding: [0xda,0x86,0x4f,0x7c]
+
 # CHECK-BE: stxvprl 0, 1, 2               # encoding: [0x7c,0x01,0x15,0x9a]
 # CHECK-LE: stxvprl 0, 1, 2               # encoding: [0x9a,0x15,0x01,0x7c]
             stxvprl 0, 1, 2
@@ -96,6 +116,10 @@
 # CHECK-BE: stxvprll 6, 0, 1              # encoding: [0x7c,0xc0,0x0d,0xda]
 # CHECK-LE: stxvprll 6, 0, 1              # encoding: [0xda,0x0d,0xc0,0x7c]
             stxvprll 6, 0, 1
+
+           stxvpb32x 2, 15, 16
+#CHECK-BE: stxvpb32x 2, 15, 16            # encoding: [0x7c,0x4f,0x87,0xda]
+#CHECK-LE: stxvpb32x 2, 15, 16            # encoding: [0xda,0x87,0x4f,0x7c]
 
             dmxvi8gerx4 1, 2, 4
 # CHECK-BE: dmxvi8gerx4 1, 2, 4                     # encoding: [0xec,0x82,0x20,0x58]
@@ -331,6 +355,10 @@
 #CHECK-BE: vucmprhh 1, 3, 6               # encoding: [0x10,0x23,0x31,0x03]
 #CHECK-LE: vucmprhh 1, 3, 6               # encoding: [0x03,0x31,0x23,0x10]
 
+           xvrlw 34, 15, 16
+#CHECK-BE: xvrlw 34, 15, 16              # encoding: [0xf0,0x4f,0x85,0xc1]
+#CHECK-LE: xvrlw 34, 15, 16              # encoding: [0xc1,0x85,0x4f,0xf0]
+
            xxaes192encp 8, 10, 14
 #CHECK-BE: xxaes192encp 8, 10, 14         # encoding: [0xf1,0x0b,0x76,0x10]
 #CHECK-LE: xxaes192encp 8, 10, 14         # encoding: [0x10,0x76,0x0b,0xf1]
@@ -386,6 +414,10 @@
            xvmulhuh 4, 5, 7
 #CHECK-BE: xvmulhuh 4, 5, 7              # encoding: [0xf0,0x85,0x3b,0xd0]
 #CHECK-LE: xvmulhuh 4, 5, 7              # encoding: [0xd0,0x3b,0x85,0xf0]
+
+           mtlpl 3, 4
+#CHECK-BE: mtlpl 3, 4                     # encoding: [0x7c,0x80,0x1a,0x26]
+#CHECK-LE: mtlpl 3, 4                     # encoding: [0x26,0x1a,0x80,0x7c]
 
            xxmulmul 8, 3, 4, 2
 #CHECK-BE: xxmulmul 8, 3, 4, 2          # encoding: [0xed,0x03,0x22,0x08]

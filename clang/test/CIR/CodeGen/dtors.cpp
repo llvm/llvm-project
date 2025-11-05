@@ -35,7 +35,7 @@ bool make_temp(const B &) { return false; }
 bool test_temp_or() { return make_temp(1) || make_temp(2); }
 
 // CIR: cir.func{{.*}} @_Z12test_temp_orv()
-// CIR:   %[[SCOPE:.*]] = cir.scope {
+// CIR:   cir.scope {
 // CIR:     %[[REF_TMP0:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:     cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
@@ -51,9 +51,9 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 // CIR:       cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
 // CIR:       cir.yield %[[MAKE_TEMP1]] : !cir.bool
 // CIR:     })
+// CIR:     cir.store{{.*}} %[[TERNARY]], %[[RETVAL:.*]]
 // CIR:     cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
-// CIR:     cir.yield %[[TERNARY]] : !cir.bool
-// CIR:   } : !cir.bool
+// CIR:   }
 
 // LLVM: define{{.*}} i1 @_Z12test_temp_orv(){{.*}} {
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B
@@ -105,7 +105,7 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 bool test_temp_and() { return make_temp(1) && make_temp(2); }
 
 // CIR: cir.func{{.*}} @_Z13test_temp_andv()
-// CIR:   %[[SCOPE:.*]] = cir.scope {
+// CIR:   cir.scope {
 // CIR:     %[[REF_TMP0:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:     cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
@@ -121,9 +121,9 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // CIR:       %[[FALSE:.*]] = cir.const #false
 // CIR:       cir.yield %[[FALSE]] : !cir.bool
 // CIR:     })
+// CIR:     cir.store{{.*}} %[[TERNARY]], %[[RETVAL:.*]]
 // CIR:     cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
-// CIR:     cir.yield %[[TERNARY]] : !cir.bool
-// CIR:   } : !cir.bool
+// CIR:   }
 
 // LLVM: define{{.*}} i1 @_Z13test_temp_andv(){{.*}} {
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B

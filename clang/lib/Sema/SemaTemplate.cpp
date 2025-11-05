@@ -949,11 +949,11 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
 
   switch (Arg.getKind()) {
   case ParsedTemplateArgument::Type: {
-    TypeSourceInfo *DI;
-    QualType T = SemaRef.GetTypeFromParser(Arg.getAsType(), &DI);
-    if (!DI)
-      DI = SemaRef.Context.getTrivialTypeSourceInfo(T, Arg.getNameLoc());
-    return TemplateArgumentLoc(TemplateArgument(T), DI);
+    TypeSourceInfo *TSI;
+    QualType T = SemaRef.GetTypeFromParser(Arg.getAsType(), &TSI);
+    if (!TSI)
+      TSI = SemaRef.Context.getTrivialTypeSourceInfo(T, Arg.getNameLoc());
+    return TemplateArgumentLoc(TemplateArgument(T), TSI);
   }
 
   case ParsedTemplateArgument::NonType: {
@@ -4329,7 +4329,7 @@ void Sema::CheckDeductionGuideTemplate(FunctionTemplateDecl *TD) {
 }
 
 DeclResult Sema::ActOnVarTemplateSpecialization(
-    Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
+    Scope *S, Declarator &D, TypeSourceInfo *TSI, LookupResult &Previous,
     SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
     StorageClass SC, bool IsPartialSpecialization) {
   // D must be variable template id.
@@ -4455,8 +4455,8 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     VarTemplatePartialSpecializationDecl *Partial =
         VarTemplatePartialSpecializationDecl::Create(
             Context, VarTemplate->getDeclContext(), TemplateKWLoc,
-            TemplateNameLoc, TemplateParams, VarTemplate, DI->getType(), DI, SC,
-            CTAI.CanonicalConverted);
+            TemplateNameLoc, TemplateParams, VarTemplate, TSI->getType(), TSI,
+            SC, CTAI.CanonicalConverted);
     Partial->setTemplateArgsAsWritten(TemplateArgs);
 
     if (!PrevPartial)
@@ -4474,7 +4474,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     // this explicit specialization or friend declaration.
     Specialization = VarTemplateSpecializationDecl::Create(
         Context, VarTemplate->getDeclContext(), TemplateKWLoc, TemplateNameLoc,
-        VarTemplate, DI->getType(), DI, SC, CTAI.CanonicalConverted);
+        VarTemplate, TSI->getType(), TSI, SC, CTAI.CanonicalConverted);
     Specialization->setTemplateArgsAsWritten(TemplateArgs);
 
     if (!PrevDecl)

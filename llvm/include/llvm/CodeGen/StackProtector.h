@@ -86,7 +86,7 @@ class StackProtectorPass : public PassInfoMixin<StackProtectorPass> {
   const TargetMachine *TM;
 
 public:
-  explicit StackProtectorPass(const TargetMachine *TM) : TM(TM) {}
+  explicit StackProtectorPass(const TargetMachine &TM) : TM(&TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 

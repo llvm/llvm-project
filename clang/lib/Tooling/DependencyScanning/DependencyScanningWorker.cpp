@@ -78,8 +78,10 @@ static bool forEachDriverJob(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     llvm::function_ref<bool(const driver::Command &Cmd)> Callback) {
   // Compilation holds a non-owning a reference to the Driver, hence we need to
-  // keep the Driver alive when we use Compilation.
-  auto [Driver, Compilation] = buildCompilation(ArgStrs, Diags, FS);
+  // keep the Driver alive when we use Compilation. Arguments to commands may be
+  // owned by Alloc when expanded from response files.
+  llvm::BumpPtrAllocator Alloc;
+  auto [Driver, Compilation] = buildCompilation(ArgStrs, Diags, FS, Alloc);
   if (!Compilation)
     return false;
   for (const driver::Command &Job : Compilation->getJobs()) {

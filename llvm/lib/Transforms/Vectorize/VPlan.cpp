@@ -304,18 +304,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   }
 
   bool IsSingleScalar = vputils::isSingleScalar(Def);
-
   VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
-  // Check if there is a scalar value for the selected lane.
-  if (!hasScalarValue(Def, LastLane)) {
-    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be a single scalar.
-    assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
-                VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
-           "unexpected recipe found to be invariant");
-    IsSingleScalar = true;
-    LastLane = 0;
-  }
 
   // We need to construct the vector value for a single-scalar value by
   // broadcasting the scalar to all lanes.
@@ -742,8 +731,12 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
-  auto *NewRegion = getPlan()->createVPRegionBlock(NewEntry, NewExiting,
-                                                   getName(), isReplicator());
+  VPlan &Plan = *getPlan();
+  VPRegionBlock *NewRegion =
+      isReplicator()
+          ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
+          : Plan.createLoopRegion(getName(), NewEntry, NewExiting);
+
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;
@@ -1187,7 +1180,6 @@ VPlan *VPlan::duplicate() {
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VF] = &NewPlan->VF;
-  Old2NewVPValues[&UF] = &NewPlan->UF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPValue();

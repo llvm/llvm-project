@@ -117,7 +117,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     // Deduce CPU name from ABI name.
     CPUName = llvm::StringSwitch<const char *>(ABIName)
                   .Case("o32", DefMips32CPU)
-                  .Cases("n32", "n64", DefMips64CPU)
+                  .Cases({"n32", "n64"}, DefMips64CPU)
                   .Default("");
   }
 
@@ -467,7 +467,7 @@ bool mips::isNaN2008(const Driver &D, const ArgList &Args,
 
   // NaN2008 is the default for MIPS32r6/MIPS64r6.
   return llvm::StringSwitch<bool>(getCPUName(D, Args, Triple))
-      .Cases("mips32r6", "mips64r6", true)
+      .Cases({"mips32r6", "mips64r6"}, true)
       .Default(false);
 }
 
@@ -502,8 +502,8 @@ bool mips::shouldUseFPXX(const ArgList &Args, const llvm::Triple &Triple,
   if (Arg *A = Args.getLastArg(options::OPT_mmsa))
     if (A->getOption().matches(options::OPT_mmsa))
       UseFPXX = llvm::StringSwitch<bool>(CPUName)
-                    .Cases("mips32r2", "mips32r3", "mips32r5", false)
-                    .Cases("mips64r2", "mips64r3", "mips64r5", false)
+                    .Cases({"mips32r2", "mips32r3", "mips32r5"}, false)
+                    .Cases({"mips64r2", "mips64r3", "mips64r5"}, false)
                     .Default(UseFPXX);
 
   return UseFPXX;

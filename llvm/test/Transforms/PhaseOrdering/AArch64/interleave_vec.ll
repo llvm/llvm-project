@@ -925,20 +925,20 @@ define void @same_op8_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x float>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC19:%.*]] = load <16 x float>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <16 x float> [[WIDE_VEC]], [[TMP1]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <16 x float> [[WIDE_VEC19]], [[TMP4]]
-; CHECK-NEXT:    store <16 x float> [[INTERLEAVED_VEC]], ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[WIDE_VEC19:%.*]] = load <32 x float>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <32 x float> [[WIDE_VEC]], [[TMP1]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <32 x float> [[WIDE_VEC19]], [[TMP4]]
+; CHECK-NEXT:    store <32 x float> [[INTERLEAVED_VEC]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 144
 ; CHECK-NEXT:    br i1 [[TMP25]], label %[[FOR_END11:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[FOR_END11]]:
@@ -1040,7 +1040,6 @@ define void @saxpy_5(i64 %n, float %a, ptr readonly %x, ptr noalias %y) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[LOOP_PREHEADER11:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], 9223372036854775806
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 5
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[A]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <10 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1058,10 +1057,11 @@ define void @saxpy_5(i64 %n, float %a, ptr readonly %x, ptr noalias %y) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[N_VEC]], 5
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT]], label %[[LOOP_PREHEADER11]]
 ; CHECK:       [[LOOP_PREHEADER11]]:
-; CHECK-NEXT:    [[I1_PH:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[I1_PH:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]

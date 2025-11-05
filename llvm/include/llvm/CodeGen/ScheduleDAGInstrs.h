@@ -18,7 +18,6 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
-#include "llvm/ADT/identity.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -90,7 +89,7 @@ namespace llvm {
   /// allocated once for the pass. It can be cleared in constant time and reused
   /// without any frees.
   using RegUnit2SUnitsMap =
-      SparseMultiSet<PhysRegSUOper, unsigned, identity_cxx20, uint16_t>;
+      SparseMultiSet<PhysRegSUOper, unsigned, identity, uint16_t>;
 
   /// Track local uses of virtual registers. These uses are gathered by the DAG
   /// builder and may be consulted by the scheduler to avoid iterating an entire

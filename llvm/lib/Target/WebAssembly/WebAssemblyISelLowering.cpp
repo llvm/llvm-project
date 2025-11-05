@@ -183,6 +183,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::i32, MVT::i64})
         setOperationAction(Op, T, Custom);
 
+  if (Subtarget->hasRelaxedSIMD()) {
+    setOperationAction(
+        {ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM},
+        {MVT::v4f32, MVT::v2f64}, Legal);
+  }
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
 
@@ -935,20 +940,6 @@ MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
   case WebAssembly::RET_CALL_RESULTS:
     return LowerCallResults(MI, DL, BB, Subtarget, TII);
   }
-}
-
-const char *
-WebAssemblyTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
-  case WebAssemblyISD::FIRST_NUMBER:
-    break;
-#define HANDLE_NODETYPE(NODE)                                                  \
-  case WebAssemblyISD::NODE:                                                   \
-    return "WebAssemblyISD::" #NODE;
-#include "WebAssemblyISD.def"
-#undef HANDLE_NODETYPE
-  }
-  return nullptr;
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
@@ -1825,11 +1816,8 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
 
     SDValue Idx = DAG.getTargetConstant(*Local, Base, MVT::i32);
     EVT LocalVT = LN->getValueType(0);
-    SDValue LocalGet = DAG.getNode(WebAssemblyISD::LOCAL_GET, DL, LocalVT,
-                                   {LN->getChain(), Idx});
-    SDValue Result = DAG.getMergeValues({LocalGet, LN->getChain()}, DL);
-    assert(Result->getNumValues() == 2 && "Loads must carry a chain!");
-    return Result;
+    return DAG.getNode(WebAssemblyISD::LOCAL_GET, DL, {LocalVT, MVT::Other},
+                       {LN->getChain(), Idx});
   }
 
   if (WebAssembly::isWasmVarAddressSpace(LN->getAddressSpace()))
