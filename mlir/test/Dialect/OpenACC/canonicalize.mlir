@@ -219,3 +219,29 @@ func.func @update_unnecessary_computations(%x: memref<i32>) {
 // CHECK-LABEL: func.func @update_unnecessary_computations
 // CHECK-NOT: acc.atomic.update
 // CHECK: acc.atomic.write
+
+// -----
+
+func.func @remove_empty_kernel_environment() {
+  acc.kernel_environment {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @remove_empty_kernel_environment
+// CHECK-NOT: acc.kernel_environment
+// CHECK: return
+
+// -----
+
+func.func @kernel_environment_with_wait(%q1: i32, %q2: i32) {
+  acc.kernel_environment wait({%q1 : i32, %q2 : i32}) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @kernel_environment_with_wait
+// CHECK-SAME: ([[Q1:%.*]]: i32, [[Q2:%.*]]: i32)
+// CHECK-NOT: acc.kernel_environment
+// CHECK: acc.wait([[Q1]], [[Q2]] : i32, i32)
+// CHECK: return
