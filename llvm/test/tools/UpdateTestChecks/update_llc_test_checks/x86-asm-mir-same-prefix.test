@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 ## Test that using the same prefix for both ASM and MIR outputs generates a warning
 ## and doesn't produce any checks.
 
