@@ -565,7 +565,7 @@ TEST(Casting, StaticCastPredicate) {
   uint32_t Value = 1;
 
   static_assert(
-      (std::is_same_v<decltype(StaticCastTo<uint64_t>(Value)), uint64_t>));
+      std::is_same_v<decltype(StaticCastTo<uint64_t>(Value)), uint64_t>);
 }
 
 TEST(Casting, LLVMRTTIPredicates) {
@@ -588,7 +588,7 @@ TEST(Casting, LLVMRTTIPredicates) {
   Base *BD = &D;
   Base *Null = nullptr;
 
-  // pointers
+  // Pointers.
   EXPECT_EQ(DynCastTo<Derived>(BD), &D);
   EXPECT_EQ(CastTo<Derived>(BD), &D);
   EXPECT_EQ(DynCastTo<Derived>(&B), nullptr);
