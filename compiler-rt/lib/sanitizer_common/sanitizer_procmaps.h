@@ -104,12 +104,6 @@ class MemoryMappingLayout : public MemoryMappingLayoutBase {
   // Adds all mapped objects into a vector.
   void DumpListOfModules(InternalMmapVectorNoCtor<LoadedModule> *modules);
 
-#  if SANITIZER_APPLE
-  // Verify that the memory mapping is well-formed. (e.g. mappings do not
-  // overlap)
-  bool Verify();
-#  endif
-
  protected:
 #if SANITIZER_APPLE
   virtual const ImageHeader *CurrentImageHeader();
