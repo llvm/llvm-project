@@ -82,7 +82,7 @@ class MipsFastISel final : public FastISel {
   // All possible address modes.
   class Address {
   public:
-    using BaseKind = enum { RegBase, FrameIndexBase };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;

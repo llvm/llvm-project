@@ -2540,10 +2540,14 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
   }
 
   if (C.getArgs().hasArg(options::OPT_print_runtime_dir)) {
-    if (std::optional<std::string> RuntimePath = TC.getRuntimePath())
-      llvm::outs() << *RuntimePath << '\n';
-    else
-      llvm::outs() << TC.getCompilerRTPath() << '\n';
+    for (auto RuntimePath :
+         {TC.getRuntimePath(), std::make_optional(TC.getCompilerRTPath())}) {
+      if (RuntimePath && getVFS().exists(*RuntimePath)) {
+        llvm::outs() << *RuntimePath << '\n';
+        return false;
+      }
+    }
+    llvm::outs() << "(runtime dir is not present)" << '\n';
     return false;
   }
 
@@ -3853,6 +3857,9 @@ class OffloadingActionBuilder final {
   /// Flag set to true if all valid builders allow file bundling/unbundling.
   bool CanUseBundler;
 
+  /// Flag set to false if an argument turns off bundling.
+  bool ShouldUseBundler;
+
 public:
   OffloadingActionBuilder(Compilation &C, DerivedArgList &Args,
                           const Driver::InputList &Inputs)
@@ -3887,6 +3894,9 @@ public:
     }
     CanUseBundler =
         ValidBuilders && ValidBuilders == ValidBuildersSupportingBundling;
+
+    ShouldUseBundler = Args.hasFlag(options::OPT_gpu_bundle_output,
+                                    options::OPT_no_gpu_bundle_output, true);
   }
 
   ~OffloadingActionBuilder() {
@@ -4038,11 +4048,11 @@ public:
       SB->appendTopLevelActions(OffloadAL);
     }
 
-    // If we can use the bundler, replace the host action by the bundling one in
-    // the resulting list. Otherwise, just append the device actions. For
-    // device only compilation, HostAction is a null pointer, therefore only do
-    // this when HostAction is not a null pointer.
-    if (CanUseBundler && HostAction &&
+    // If we can and should use the bundler, replace the host action by the
+    // bundling one in the resulting list. Otherwise, just append the device
+    // actions. For device only compilation, HostAction is a null pointer,
+    // therefore only do this when HostAction is not a null pointer.
+    if (CanUseBundler && ShouldUseBundler && HostAction &&
         HostAction->getType() != types::TY_Nothing && !OffloadAL.empty()) {
       // Add the host action to the list in order to create the bundling action.
       OffloadAL.push_back(HostAction);
@@ -6459,9 +6469,16 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
               (JA.getOffloadingDeviceKind() == Action::OFK_OpenMP && TC &&
                TC->getTriple().isAMDGPU()));
     };
-    if (!AtTopLevel && JA.getType() == types::TY_LLVM_BC &&
-        (C.getArgs().hasArg(options::OPT_emit_llvm) ||
-         IsAMDRDCInCompilePhase(JA, C.getArgs())))
+
+    // The linker wrapper may not support the input and output files to be the
+    // same one, and without it -save-temps can fail.
+    bool IsLinkerWrapper =
+        JA.getType() == types::TY_Object && isa<LinkerWrapperJobAction>(JA);
+    bool IsEmitBitcode = JA.getType() == types::TY_LLVM_BC &&
+                         (C.getArgs().hasArg(options::OPT_emit_llvm) ||
+                          IsAMDRDCInCompilePhase(JA, C.getArgs()));
+
+    if (!AtTopLevel && (IsLinkerWrapper || IsEmitBitcode))
       Suffixed += ".tmp";
     Suffixed += '.';
     Suffixed += Suffix;

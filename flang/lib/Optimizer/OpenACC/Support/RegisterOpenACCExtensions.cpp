@@ -11,8 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
+
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCOpsInterfaces.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCTypeInterfaces.h"
 
 namespace fir::acc {
@@ -37,7 +42,24 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
 
     fir::LLVMPointerType::attachInterface<
         OpenACCPointerLikeModel<fir::LLVMPointerType>>(*ctx);
+
+    fir::ArrayCoorOp::attachInterface<
+        PartialEntityAccessModel<fir::ArrayCoorOp>>(*ctx);
+    fir::CoordinateOp::attachInterface<
+        PartialEntityAccessModel<fir::CoordinateOp>>(*ctx);
+    fir::DeclareOp::attachInterface<PartialEntityAccessModel<fir::DeclareOp>>(
+        *ctx);
   });
+
+  // Register HLFIR operation interfaces
+  registry.addExtension(
+      +[](mlir::MLIRContext *ctx, hlfir::hlfirDialect *dialect) {
+        hlfir::DesignateOp::attachInterface<
+            PartialEntityAccessModel<hlfir::DesignateOp>>(*ctx);
+        hlfir::DeclareOp::attachInterface<
+            PartialEntityAccessModel<hlfir::DeclareOp>>(*ctx);
+      });
+
   registerAttrsExtensions(registry);
 }
 
