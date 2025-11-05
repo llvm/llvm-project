@@ -128,10 +128,14 @@ public:
 
   lldb::DataBufferSP GetData() const { return m_data; }
 
-  lldb::TargetSP GetTargetSP() { return m_target_wp.lock(); }
-
   lldb::TargetSP GetTargetSP() const { return m_target_wp.lock(); }
 
+  /// Set the target to be used when resolving a module.
+  ///
+  /// A target can help locate a module specified by a ModuleSpec. The target
+  /// settings, like the executable and debug info search paths, can be
+  /// essential. The target's platform can also be used to locate or download
+  /// the specified module.
   void SetTarget(std::shared_ptr<Target> target) { m_target_wp = target; }
 
   void Clear() {
@@ -274,8 +278,10 @@ protected:
   ArchSpec m_arch;
   UUID m_uuid;
   ConstString m_object_name;
-  /// This is set to take advantage of the target's search path and platform's
-  /// locate module callback
+  /// The target used when resolving a module. A target can help locate a module
+  /// specified by a ModuleSpec. The target settings, like the executable and
+  /// debug info search paths, can be essential. The target's platform can also
+  /// be used to locate or download the specified module.
   std::weak_ptr<Target> m_target_wp;
   uint64_t m_object_offset = 0;
   uint64_t m_object_size = 0;
