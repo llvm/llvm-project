@@ -119,7 +119,6 @@ struct SourceLanguage {
   bool IsC() const;
   bool IsObjC() const;
   bool IsCPlusPlus() const;
-  bool IsSwift() const;
   uint16_t name = 0;
   uint32_t version = 0;
 };

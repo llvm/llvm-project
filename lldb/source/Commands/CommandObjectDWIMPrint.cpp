@@ -119,7 +119,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         "^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
 
     if (GetDebugger().GetShowDontUsePoHint() && target_ptr &&
-        (language.IsSwift() || language.IsObjC()) &&
+        (language.AsLanguageType() == lldb::eLanguageTypeSwift ||
+         language.IsObjC()) &&
         std::regex_match(output.data(), swift_class_regex)) {
 
       result.AppendNote(
