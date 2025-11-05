@@ -773,7 +773,8 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
   // Produce a diagnostic if we're not tentatively parsing; otherwise track
   // that our parse has failed.
   auto Result = [&](llvm::function_ref<void()> Action,
-                    LambdaIntroducerTentativeParse State) {
+                    LambdaIntroducerTentativeParse State =
+                        LambdaIntroducerTentativeParse::Invalid) {
     if (Tentative) {
       *Tentative = State;
       return false;
@@ -825,11 +826,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           break;
         }
 
-        return Result(
-            [&] {
-              Diag(Tok.getLocation(), diag::err_expected_comma_or_rsquare);
-            },
-            LambdaIntroducerTentativeParse::Invalid);
+        return Result([&] {
+          Diag(Tok.getLocation(), diag::err_expected_comma_or_rsquare);
+        });
       }
       ConsumeToken();
     }
@@ -864,11 +863,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         ConsumeToken();
         Kind = LCK_StarThis;
       } else {
-        return Result(
-            [&] {
-              Diag(Tok.getLocation(), diag::err_expected_star_this_capture);
-            },
-            LambdaIntroducerTentativeParse::Invalid);
+        return Result([&] {
+          Diag(Tok.getLocation(), diag::err_expected_star_this_capture);
+        });
       }
     } else if (Tok.is(tok::kw_this)) {
       Kind = LCK_This;
@@ -905,16 +902,13 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         Id = Tok.getIdentifierInfo();
         Loc = ConsumeToken();
       } else if (Tok.is(tok::kw_this)) {
-        return Result(
-            [&] {
-              // FIXME: Suggest a fixit here.
-              Diag(Tok.getLocation(), diag::err_this_captured_by_reference);
-            },
-            LambdaIntroducerTentativeParse::Invalid);
+        return Result([&] {
+          // FIXME: Suggest a fixit here.
+          Diag(Tok.getLocation(), diag::err_this_captured_by_reference);
+        });
       } else {
         return Result(
-            [&] { Diag(Tok.getLocation(), diag::err_expected_capture); },
-            LambdaIntroducerTentativeParse::Invalid);
+            [&] { Diag(Tok.getLocation(), diag::err_expected_capture); });
       }
 
       TryConsumeToken(tok::ellipsis, EllipsisLocs[2]);
