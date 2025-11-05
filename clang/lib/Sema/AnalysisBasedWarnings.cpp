@@ -3151,14 +3151,14 @@ void clang::sema::AnalysisBasedWarnings::FindMissingOrigins(
 
 void clang::sema::AnalysisBasedWarnings::PrintStats() const {
   llvm::errs() << "\n*** LifetimeSafety Missing Origin Stats "
-                  "(expression_type : count) :\n";
+                  "(expression_type : count) :\n\n";
   unsigned totalMissingOrigins = 0;
   for (const auto &[expr, count] : MissingOriginCount) {
     llvm::errs() << expr << " : " << count << '\n';
     totalMissingOrigins += count;
   }
   llvm::errs() << "Total missing origins: " << totalMissingOrigins << "\n";
-  llvm::errs() << "****************************************\n";
+  llvm::errs() << "\n****************************************\n";
   llvm::errs() << "\n*** Analysis Based Warnings Stats:\n";
   unsigned NumCFGsBuilt = NumFunctionsAnalyzed - NumFunctionsWithBadCFGs;
   unsigned AvgCFGBlocksPerFunction =

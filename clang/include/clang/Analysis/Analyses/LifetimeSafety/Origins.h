@@ -79,7 +79,7 @@ public:
 
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
 
-  const llvm::StringMap<int> getMissingOrigins() const;
+  const llvm::StringMap<unsigned> getMissingOrigins() const;
 
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
