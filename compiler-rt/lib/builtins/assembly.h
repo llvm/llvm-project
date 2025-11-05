@@ -14,7 +14,7 @@
 #ifndef COMPILERRT_ASSEMBLY_H
 #define COMPILERRT_ASSEMBLY_H
 
-#if defined(__linux__) && defined(__CET__)
+#ifdef __CET__
 #if __has_include(<cet.h>)
 #include <cet.h>
 #endif

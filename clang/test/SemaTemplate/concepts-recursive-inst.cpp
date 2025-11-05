@@ -82,7 +82,6 @@ auto it = begin(rng); // #BEGIN_CALL
 // expected-error@#BEGIN_CALL {{no matching function for call to 'begin'}}
 // expected-note@#NOTINF_BEGIN {{candidate function}}
 // expected-note@#INF_BEGIN{{candidate template ignored: constraints not satisfied}}
-// expected-note@#INF_BEGIN{{because 'Inf auto' does not satisfy 'Inf}}
 }
 } // namespace DirectRecursiveCheck
 

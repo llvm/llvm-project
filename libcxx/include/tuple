@@ -301,7 +301,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __tuple_compare_equal(c
 template <class _Tp, class _Up, class _IndexSeq = make_index_sequence<tuple_size_v<_Tp>>>
 inline constexpr bool __can_tuple_compare_equal = false;
 
-// TODO(LLVM 22): Remove `tuple_size_v<_Tp> == tuple_size_v<_Up>` here once once LLVM-20 support ends
+// TODO(LLVM 23): Remove `tuple_size_v<_Tp> == tuple_size_v<_Up>` here once once LLVM-20 support ends
 // because the resolution of CWG2369 landed in LLVM-21.
 template <class _Tp, class _Up, size_t... _Is>
   requires(tuple_size_v<_Tp> == tuple_size_v<_Up>)
@@ -328,7 +328,7 @@ concept __tuple_like_no_tuple = __tuple_like<_Tp> && !__is_tuple_v<_Tp>;
 template <class _Tp, class _Up, class _IndexSeq>
 struct __tuple_common_comparison_category_impl {};
 
-// TODO(LLVM 22): Remove `tuple_size_v<_Tp> == tuple_size_v<_Up>` here once once LLVM-20 support ends
+// TODO(LLVM 23): Remove `tuple_size_v<_Tp> == tuple_size_v<_Up>` here once once LLVM-20 support ends
 // because the resolution of CWG2369 landed in LLVM-21.
 template <class _Tp, class _Up, size_t... _Is>
   requires(tuple_size_v<_Tp> == tuple_size_v<_Up>) && requires {
@@ -1443,7 +1443,7 @@ template <class _Tp, class _Tuple, class = enable_if_t<__can_make_from_tuple<_Tp
 inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp make_from_tuple(_Tuple&& __t)
   noexcept(noexcept(std::__make_from_tuple_impl<_Tp>(std::forward<_Tuple>(__t),
                     make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>()))) {
-#if _LIBCPP_STD_VER >= 23 && __has_builtin(__reference_constructs_from_temporary)
+#if _LIBCPP_STD_VER >= 23
   if constexpr (tuple_size_v<remove_reference_t<_Tuple>> == 1) {
     static_assert(!std::reference_constructs_from_temporary_v<_Tp, decltype(std::get<0>(std::declval<_Tuple>()))>,
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");

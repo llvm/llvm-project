@@ -634,6 +634,10 @@ Lnovec:
 
 #elif defined(__aarch64__)
 
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
+
 #if defined(__ARM_FEATURE_GCS_DEFAULT)
 .arch_extension gcs
 #endif

@@ -186,6 +186,13 @@ public:
     return RTLIB::Unsupported;
   }
 
+  /// \returns the function type and attributes for the \p LibcallImpl,
+  /// depending on the target \p TT. If the function has incomplete type
+  /// information, return nullptr for the function type.
+  std::pair<FunctionType *, AttributeList>
+  getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+                RTLIB::LibcallImpl LibcallImpl) const;
+
 private:
   LLVM_ABI static iota_range<RTLIB::LibcallImpl>
   lookupLibcallImplNameImpl(StringRef Name);
