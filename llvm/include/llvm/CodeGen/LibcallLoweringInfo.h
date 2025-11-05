@@ -54,11 +54,12 @@ public:
   /// unsupported.
   LLVM_ABI StringRef getMemcpyName() const {
     RTLIB::LibcallImpl Memcpy = getLibcallImpl(RTLIB::MEMCPY);
-    if (Memcpy != RTLIB::Unsupported)
-      return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Memcpy);
+    if (Memcpy == RTLIB::Unsupported) {
+      // Fallback to memmove if memcpy isn't available.
+      return getLibcallName(RTLIB::MEMMOVE);
+    }
 
-    // Fallback to memmove if memcpy isn't available.
-    return getLibcallName(RTLIB::MEMMOVE);
+    return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Memcpy);
   }
 };
 
