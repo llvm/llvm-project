@@ -50,7 +50,8 @@ void L0OptionsTy::processEnvironmentVars() {
       const std::array<int32_t, 3> DefaultValue{1, 4, 256};
       const int32_t AllMemType = INT32_MAX;
       std::array<int32_t, 3> AllInfo{1, 4, 256};
-      std::array<std::array<int32_t, 3>, 3> PoolInfo = {{{0, 0, 0}}};
+      std::array<std::array<int32_t, 3>, 3> PoolInfo;
+      PoolInfo.fill({-1, 0, 0});
       for (std::string Token; std::getline(Str, Token, ',') && Valid > 0;) {
         if (Token == "device") {
           MemType = TARGET_ALLOC_DEVICE;
@@ -98,11 +99,19 @@ void L0OptionsTy::processEnvironmentVars() {
           }
         } else {
           for (size_t Pool = 0; Pool < PoolInfo.size(); ++Pool) {
-            if (PoolInfo[Pool][0] == 0) {
+            switch (PoolInfo[Pool][0]) {
+            case -1:
+              // No value was specified, keep the default
+              break;
+            case 0:
+              // Pool disabled
               MemPoolConfig[Pool] = {false, 0, 0, 0};
-            } else {
+              break;
+            default:
+              // Use the user specified values
               MemPoolConfig[Pool] = {true, PoolInfo[Pool][0], PoolInfo[Pool][1],
                                      PoolInfo[Pool][2]};
+              break;
             }
           }
         }
