@@ -12,7 +12,6 @@ from lldbsuite.test.lldbutil import symbol_type_to_str
 
 
 class ModuleUnifiedSectionList(TestBase):
-
     @skipUnlessPlatform(["linux", "freebsd", "netbsd"])
     def test_unified_section_list(self):
         self.build()
