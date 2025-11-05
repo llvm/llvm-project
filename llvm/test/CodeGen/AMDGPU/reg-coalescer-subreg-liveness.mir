@@ -76,3 +76,56 @@ body:             |
   bb.2:
     S_ENDPGM 0
 ...
+---
+name:            reg_coalescer_subreg_liveness_2
+tracksRegLiveness: true
+liveins:
+body:             |
+  ; CHECK-LABEL: name: reg_coalescer_subreg_liveness_2
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   undef [[S_LOAD_DWORD_IMM:%[0-9]+]].sub2:sgpr_128 = S_LOAD_DWORD_IMM [[COPY]], 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]].sub1:sgpr_128 = S_LOAD_DWORD_IMM [[COPY]], 24, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 1
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_256 = S_MOV_B32 0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_LOAD_DWORD_IMM]], implicit [[S_MOV_B32_]]
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $sgpr4_sgpr5
+
+    %0:sgpr_64 = COPY killed $sgpr4_sgpr5
+    %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
+    %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0, 24, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+    %3:sreg_32 = S_MOV_B32 1
+    undef %4.sub0:sgpr_128 = COPY %3
+    %5:sgpr_128 = COPY %4
+    %5.sub1:sgpr_128 = COPY killed %2
+    %6:sgpr_128 = COPY %5
+    %6.sub2:sgpr_128 = COPY killed %1
+    %7:sreg_32 = S_MOV_B32 0
+    undef %8.sub0:sgpr_256 = COPY %7
+    %9:sreg_32 = COPY %3
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+    %10:sreg_32 = COPY killed %9
+    undef %11.sub0:sgpr_128 = COPY %3
+    %11.sub1:sgpr_128 = COPY killed %10
+    S_NOP 0, implicit %5, implicit %8
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
