@@ -10703,15 +10703,17 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       if (OrOpnd1.isReg() && OrOpnd2.isReg()) {
         MachineInstr *Def1 = MRI->getUniqueVRegDef(OrOpnd1.getReg());
         MachineInstr *Def2 = MRI->getUniqueVRegDef(OrOpnd2.getReg());
-        if (Def1->getOpcode() == AMDGPU::COPY &&
-            Def2->getOpcode() == AMDGPU::COPY && Def1->getOperand(1).isReg() &&
+        if (Def1 && Def1->getOpcode() == AMDGPU::COPY &&
+            Def2 && Def2->getOpcode() == AMDGPU::COPY &&
+	    Def1->getOperand(1).isReg() &&
             Def2->getOperand(1).isReg() &&
             Def1->getOperand(1).getSubReg() == AMDGPU::sub0 &&
             Def2->getOperand(1).getSubReg() == AMDGPU::sub1 &&
-            Def1->getOperand(1).getReg() == Def2->getOperand(1).getReg() &&
-            foldableSelect(
-                *MRI->getUniqueVRegDef(Def1->getOperand(1).getReg()))) {
-          optimizeSCC(Def1, Def, RI);
+            Def1->getOperand(1).getReg() == Def2->getOperand(1).getReg()) {
+	  MachineInstr *Select = MRI->getUniqueVRegDef(Def1->getOperand(1).getReg());
+	  if (Select && foldableSelect(*Select)) {
+	    optimizeSCC(Def1, Def, RI);
+	  }
         }
       }
     }
