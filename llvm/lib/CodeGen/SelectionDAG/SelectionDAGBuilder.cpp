@@ -365,17 +365,17 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
 
     assert(NumRegs == NumParts && "Part count doesn't match vector breakdown!");
     NumParts = NumRegs; // Silence a compiler warning.
-    
+
     // Check if the register type matches the part type
     if (RegisterVT != PartVT) {
-      diagnosePossiblyInvalidConstraint(
-          *DAG.getContext(), V,
-          "register type (" + EVT(RegisterVT).getEVTString() +
-              ") doesn't match operand type (" + EVT(PartVT).getEVTString() +
-              ")");
+      diagnosePossiblyInvalidConstraint(*DAG.getContext(), V,
+                                        "register type (" +
+                                            EVT(RegisterVT).getEVTString() +
+                                            ") doesn't match operand type (" +
+                                            EVT(PartVT).getEVTString() + ")");
       return DAG.getUNDEF(ValueVT);
     }
-    
+
     assert(RegisterVT.getSizeInBits() ==
            Parts[0].getSimpleValueType().getSizeInBits() &&
            "Part type sizes don't match!");
