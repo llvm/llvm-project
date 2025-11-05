@@ -865,6 +865,19 @@ static void yamlToPdb(StringRef Path) {
     }
   }
 
+  std::vector<object::coff_section> Sections;
+  if (!Dbi.SectionHeaders.empty()) {
+    for (const auto &Hdr : Dbi.SectionHeaders) {
+      Sections.emplace_back(Hdr.toCoffSection());
+    }
+
+    DbiBuilder.createSectionMap(Sections);
+    ExitOnErr(DbiBuilder.addDbgStream(
+        pdb::DbgHeaderType::SectionHdr,
+        ArrayRef<uint8_t>{(const uint8_t *)Sections.data(),
+                          Sections.size() * sizeof(object::coff_section)}));
+  }
+
   auto &TpiBuilder = Builder.getTpiBuilder();
   const auto &Tpi = YamlObj.TpiStream.value_or(DefaultTpiStream);
   TpiBuilder.setVersionHeader(Tpi.Version);
