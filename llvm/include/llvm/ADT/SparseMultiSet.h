@@ -21,9 +21,9 @@
 #ifndef LLVM_ADT_SPARSEMULTISET_H
 #define LLVM_ADT_SPARSEMULTISET_H
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
-#include "llvm/ADT/identity.h"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -77,11 +77,12 @@ namespace llvm {
 /// intuitive and fast removal.
 ///
 /// @tparam ValueT      The type of objects in the set.
+/// @tparam KeyT        The type of the key that identifies objects in the set.
 /// @tparam KeyFunctorT A functor that computes an unsigned index from KeyT.
 /// @tparam SparseT     An unsigned integer type. See above.
 ///
-template <typename ValueT, typename KeyFunctorT = identity<unsigned>,
-          typename SparseT = uint8_t>
+template <typename ValueT, typename KeyT = unsigned,
+          typename KeyFunctorT = identity, typename SparseT = uint8_t>
 class SparseMultiSet {
   static_assert(std::is_unsigned_v<SparseT>,
                 "SparseT must be an unsigned integer type");
@@ -112,7 +113,6 @@ class SparseMultiSet {
     bool isValid() const { return Prev != INVALID; }
   };
 
-  using KeyT = typename KeyFunctorT::argument_type;
   using DenseT = SmallVector<SMSNode, 8>;
   DenseT Dense;
   SparseT *Sparse = nullptr;

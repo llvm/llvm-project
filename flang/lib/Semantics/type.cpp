@@ -443,9 +443,9 @@ void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
 // Walks a parsed expression to prepare it for (re)analysis;
 // clears out the typedExpr analysis results and re-resolves
 // symbol table pointers of type parameters.
-class ComponentInitResetHelper {
+class ResetHelper {
 public:
-  explicit ComponentInitResetHelper(Scope &scope) : scope_{scope} {}
+  explicit ResetHelper(Scope &scope) : scope_{scope} {}
 
   template <typename A> bool Pre(const A &) { return true; }
 
@@ -498,7 +498,7 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
     }
     if (const auto *parsedExpr{details->unanalyzedPDTComponentInit()}) {
       // Analyze the parsed expression in this PDT instantiation context.
-      ComponentInitResetHelper resetter{scope_};
+      ResetHelper resetter{scope_};
       parser::Walk(*parsedExpr, resetter);
       auto restorer{foldingContext().messages().SetLocation(newSymbol.name())};
       details->set_init(evaluate::Fold(
@@ -564,16 +564,44 @@ static ParamValue FoldCharacterLength(evaluate::FoldingContext &foldingContext,
 // Apply type parameter values to an intrinsic type spec.
 const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
     SourceName symbolName, const DeclTypeSpec &spec) {
+  const parser::Expr *originalKindExpr{nullptr};
+  if (const DerivedTypeSpec *derived{scope_.derivedTypeSpec()}) {
+    if (const auto *details{derived->originalTypeSymbol()
+                .GetUltimate()
+                .detailsIf<DerivedTypeDetails>()}) {
+      const auto &originalKindMap{details->originalKindParameterMap()};
+      if (auto iter{originalKindMap.find(symbolName)};
+          iter != originalKindMap.end()) {
+        originalKindExpr = iter->second;
+      }
+    }
+  }
   const IntrinsicTypeSpec &intrinsic{DEREF(spec.AsIntrinsic())};
-  if (spec.category() != DeclTypeSpec::Character &&
+  if (spec.category() != DeclTypeSpec::Character && !originalKindExpr &&
       evaluate::IsActuallyConstant(intrinsic.kind())) {
     return spec; // KIND is already a known constant
   }
   // The expression was not originally constant, but now it must be so
   // in the context of a parameterized derived type instantiation.
-  KindExpr copy{Fold(common::Clone(intrinsic.kind()))};
+  std::optional<KindExpr> kindExpr;
+  if (originalKindExpr) {
+    ResetHelper resetter{scope_};
+    parser::Walk(*originalKindExpr, resetter);
+    auto restorer{foldingContext().messages().DiscardMessages()};
+    if (MaybeExpr analyzed{AnalyzeExpr(scope_.context(), *originalKindExpr)}) {
+      if (auto *intExpr{evaluate::UnwrapExpr<SomeIntExpr>(*analyzed)}) {
+        kindExpr = evaluate::ConvertToType<evaluate::SubscriptInteger>(
+            std::move(*intExpr));
+      }
+    }
+  }
+  if (!kindExpr) {
+    kindExpr = KindExpr{intrinsic.kind()};
+    CHECK(kindExpr.has_value());
+  }
+  KindExpr folded{Fold(std::move(*kindExpr))};
   int kind{context().GetDefaultKind(intrinsic.category())};
-  if (auto value{evaluate::ToInt64(copy)}) {
+  if (auto value{evaluate::ToInt64(folded)}) {
     if (foldingContext().targetCharacteristics().IsTypeEnabled(
             intrinsic.category(), *value)) {
       kind = *value;
@@ -586,7 +614,7 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
   } else {
     std::string exprString;
     llvm::raw_string_ostream sstream(exprString);
-    copy.AsFortran(sstream);
+    folded.AsFortran(sstream);
     foldingContext().messages().Say(symbolName,
         "KIND parameter expression (%s) of intrinsic type %s did not resolve to a constant value"_err_en_US,
         exprString,

@@ -25,6 +25,7 @@
 #include "PluginInterface.h"
 #include "Utils/ELF.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -292,6 +293,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUresult Res = cuDeviceGet(&Device, DeviceId);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
       return Err;
+
+    CUuuid UUID = {0};
+    Res = cuDeviceGetUuid(&UUID, Device);
+    if (auto Err = Plugin::check(Res, "error in cuDeviceGetUuid: %s"))
+      return Err;
+    setDeviceUidFromVendorUid(toHex(UUID.bytes, true));
 
     // Query the current flags of the primary context and set its flags if
     // it is inactive.
@@ -897,23 +904,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// operations. This is a no-op for CUDA devices as operations inserted into
   /// a queue are in-order.
   Error dataFence(__tgt_async_info *Async) override {
-    return Plugin::success();
-  }
-
-  /// Initialize the device info for interoperability purposes.
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    assert(Context && "Context is null");
-    assert(Device != CU_DEVICE_INVALID && "Invalid CUDA device");
-
-    if (auto Err = setContext())
-      return Err;
-
-    if (!DeviceInfo->Context)
-      DeviceInfo->Context = Context;
-
-    if (!DeviceInfo->Device)
-      DeviceInfo->Device = reinterpret_cast<void *>(Device);
-
     return Plugin::success();
   }
 

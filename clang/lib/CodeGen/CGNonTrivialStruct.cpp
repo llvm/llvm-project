@@ -464,8 +464,7 @@ template <class Derived> struct GenFuncBase {
 
       if (WrongType) {
         std::string FuncName = std::string(F->getName());
-        SourceLocation Loc =
-            QT->castAs<RecordType>()->getOriginalDecl()->getLocation();
+        SourceLocation Loc = QT->castAs<RecordType>()->getDecl()->getLocation();
         CGM.Error(Loc, "special function " + FuncName +
                            " for non-trivial C struct has incorrect type");
         return nullptr;

@@ -23,6 +23,8 @@ add_orc_rt_unittest(CoreTests
   MemoryFlagsTest.cpp
   RTTITest.cpp
   ScopeExitTest.cpp
+  SessionTest.cpp
+  SimpleNativeMemoryMapTest.cpp
   SimplePackedSerializationTest.cpp
   SPSAllocActionTest.cpp
   SPSMemoryFlagsTest.cpp

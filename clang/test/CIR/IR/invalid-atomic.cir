@@ -1,0 +1,7 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+cir.func @f1(%arg0: !cir.ptr<!cir.float>, %arg1: !cir.float) {
+  // expected-error @below {{only atomic add, sub, max, and min operation could operate on floating-point values}}
+  %0 = cir.atomic.fetch and seq_cst %arg0, %arg1 : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  cir.return
+}
