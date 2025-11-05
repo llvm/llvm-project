@@ -82,6 +82,7 @@ enum class EntryPropsTag {
   ASStateTag,
   WaveSize,
   EntryRootSig,
+  WaveRange = 23,
 };
 
 } // namespace
@@ -177,14 +178,15 @@ getTagValueAsMetadata(EntryPropsTag Tag, uint64_t Value, LLVMContext &Ctx) {
   case EntryPropsTag::ASStateTag:
   case EntryPropsTag::WaveSize:
   case EntryPropsTag::EntryRootSig:
+  case EntryPropsTag::WaveRange:
     llvm_unreachable("NYI: Unhandled entry property tag");
   }
   return MDVals;
 }
 
-static MDTuple *
-getEntryPropAsMetadata(const EntryProperties &EP, uint64_t EntryShaderFlags,
-                       const Triple::EnvironmentType ShaderProfile) {
+static MDTuple *getEntryPropAsMetadata(Module &M, const EntryProperties &EP,
+                                       uint64_t EntryShaderFlags,
+                                       const ModuleMetadataInfo &MMDI) {
   SmallVector<Metadata *> MDVals;
   LLVMContext &Ctx = EP.Entry->getContext();
   if (EntryShaderFlags != 0)
@@ -195,12 +197,13 @@ getEntryPropAsMetadata(const EntryProperties &EP, uint64_t EntryShaderFlags,
     // FIXME: support more props.
     // See https://github.com/llvm/llvm-project/issues/57948.
     // Add shader kind for lib entries.
-    if (ShaderProfile == Triple::EnvironmentType::Library &&
+    if (MMDI.ShaderProfile == Triple::EnvironmentType::Library &&
         EP.ShaderStage != Triple::EnvironmentType::Library)
       MDVals.append(getTagValueAsMetadata(EntryPropsTag::ShaderKind,
                                           getShaderStage(EP.ShaderStage), Ctx));
 
     if (EP.ShaderStage == Triple::EnvironmentType::Compute) {
+      // Handle mandatory "hlsl.numthreads"
       MDVals.emplace_back(ConstantAsMetadata::get(ConstantInt::get(
           Type::getInt32Ty(Ctx), static_cast<int>(EntryPropsTag::NumThreads))));
       Metadata *NumThreadVals[] = {ConstantAsMetadata::get(ConstantInt::get(
@@ -210,8 +213,48 @@ getEntryPropAsMetadata(const EntryProperties &EP, uint64_t EntryShaderFlags,
                                    ConstantAsMetadata::get(ConstantInt::get(
                                        Type::getInt32Ty(Ctx), EP.NumThreadsZ))};
       MDVals.emplace_back(MDNode::get(Ctx, NumThreadVals));
+
+      // Handle optional "hlsl.wavesize". The fields are optionally represented
+      // if they are non-zero.
+      if (EP.WaveSizeMin != 0) {
+        bool IsWaveRange = VersionTuple(6, 8) <= MMDI.ShaderModelVersion;
+        bool IsWaveSize =
+            !IsWaveRange && VersionTuple(6, 6) <= MMDI.ShaderModelVersion;
+
+        if (!IsWaveRange && !IsWaveSize) {
+          reportError(M, "Shader model 6.6 or greater is required to specify "
+                         "the \"hlsl.wavesize\" function attribute");
+          return nullptr;
+        }
+
+        // A range is being specified if EP.WaveSizeMax != 0
+        if (EP.WaveSizeMax && !IsWaveRange) {
+          reportError(
+              M, "Shader model 6.8 or greater is required to specify "
+                 "wave size range values of the \"hlsl.wavesize\" function "
+                 "attribute");
+          return nullptr;
+        }
+
+        EntryPropsTag Tag =
+            IsWaveSize ? EntryPropsTag::WaveSize : EntryPropsTag::WaveRange;
+        MDVals.emplace_back(ConstantAsMetadata::get(
+            ConstantInt::get(Type::getInt32Ty(Ctx), static_cast<int>(Tag))));
+
+        SmallVector<Metadata *> WaveSizeVals = {ConstantAsMetadata::get(
+            ConstantInt::get(Type::getInt32Ty(Ctx), EP.WaveSizeMin))};
+        if (IsWaveRange) {
+          WaveSizeVals.push_back(ConstantAsMetadata::get(
+              ConstantInt::get(Type::getInt32Ty(Ctx), EP.WaveSizeMax)));
+          WaveSizeVals.push_back(ConstantAsMetadata::get(
+              ConstantInt::get(Type::getInt32Ty(Ctx), EP.WaveSizePref)));
+        }
+
+        MDVals.emplace_back(MDNode::get(Ctx, WaveSizeVals));
+      }
     }
   }
+
   if (MDVals.empty())
     return nullptr;
   return MDNode::get(Ctx, MDVals);
@@ -236,12 +279,11 @@ static MDTuple *constructEntryMetadata(const Function *EntryFn,
   return MDNode::get(Ctx, MDVals);
 }
 
-static MDTuple *emitEntryMD(const EntryProperties &EP, MDTuple *Signatures,
-                            MDNode *MDResources,
+static MDTuple *emitEntryMD(Module &M, const EntryProperties &EP,
+                            MDTuple *Signatures, MDNode *MDResources,
                             const uint64_t EntryShaderFlags,
-                            const Triple::EnvironmentType ShaderProfile) {
-  MDTuple *Properties =
-      getEntryPropAsMetadata(EP, EntryShaderFlags, ShaderProfile);
+                            const ModuleMetadataInfo &MMDI) {
+  MDTuple *Properties = getEntryPropAsMetadata(M, EP, EntryShaderFlags, MMDI);
   return constructEntryMetadata(EP.Entry, Signatures, MDResources, Properties,
                                 EP.Entry->getContext());
 }
@@ -523,10 +565,8 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
                    Twine(Triple::getEnvironmentTypeName(MMDI.ShaderProfile) +
                          "'"));
     }
-
-    EntryFnMDNodes.emplace_back(emitEntryMD(EntryProp, Signatures, ResourceMD,
-                                            EntryShaderFlags,
-                                            MMDI.ShaderProfile));
+    EntryFnMDNodes.emplace_back(emitEntryMD(
+        M, EntryProp, Signatures, ResourceMD, EntryShaderFlags, MMDI));
   }
 
   NamedMDNode *EntryPointsNamedMD =

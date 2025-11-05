@@ -4945,7 +4945,7 @@ void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {
 
 SourceLanguage TargetProperties::GetLanguage() const {
   const uint32_t idx = ePropertyLanguage;
-  return {GetPropertyAtIndexAs<LanguageType>(idx, {})};
+  return SourceLanguage{GetPropertyAtIndexAs<LanguageType>(idx, {})};
 }
 
 llvm::StringRef TargetProperties::GetExpressionPrefixContents() {

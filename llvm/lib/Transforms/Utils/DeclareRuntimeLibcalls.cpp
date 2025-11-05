@@ -54,8 +54,8 @@ PreservedAnalyses DeclareRuntimeLibcallsPass::run(Module &M,
   const DataLayout &DL = M.getDataLayout();
   const Triple &TT = M.getTargetTriple();
 
-  for (RTLIB::LibcallImpl Impl : RTLCI.getLibcallImpls()) {
-    if (Impl == RTLIB::Unsupported)
+  for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+    if (!RTLCI.isAvailable(Impl))
       continue;
 
     auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(Ctx, TT, DL, Impl);

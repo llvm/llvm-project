@@ -1708,7 +1708,6 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   OutStreamer->pushSection();
   OutStreamer->switchSection(FuncCGSection);
 
-  const MCSymbol *FunctionSymbol = getFunctionBegin();
   const Function &F = MF.getFunction();
   // If this function has external linkage or has its address taken and
   // it is not a callback, then anything could call it.
@@ -1747,7 +1746,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // 8) Each unique indirect target type id.
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
   OutStreamer->emitInt8(static_cast<uint8_t>(CGFlags));
-  OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
+  OutStreamer->emitSymbolValue(getSymbol(&F), TM.getProgramPointerSize());
   const auto *TypeId = extractNumericCGTypeId(F);
   if (IsIndirectTarget && TypeId)
     OutStreamer->emitInt64(TypeId->getZExtValue());

@@ -285,6 +285,13 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
     PSV.BaseData.NumThreadsX = MMI.EntryPropertyVec[0].NumThreadsX;
     PSV.BaseData.NumThreadsY = MMI.EntryPropertyVec[0].NumThreadsY;
     PSV.BaseData.NumThreadsZ = MMI.EntryPropertyVec[0].NumThreadsZ;
+    if (MMI.EntryPropertyVec[0].WaveSizeMin) {
+      PSV.BaseData.MinimumWaveLaneCount = MMI.EntryPropertyVec[0].WaveSizeMin;
+      PSV.BaseData.MaximumWaveLaneCount =
+          MMI.EntryPropertyVec[0].WaveSizeMax
+              ? MMI.EntryPropertyVec[0].WaveSizeMax
+              : MMI.EntryPropertyVec[0].WaveSizeMin;
+    }
     break;
   default:
     break;
