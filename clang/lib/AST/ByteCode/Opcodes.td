@@ -866,19 +866,13 @@ def Free : Opcode {
   let Args = [ArgBool, ArgBool];
 }
 
-def CheckNewTypeMismatch : Opcode {
-  let Args = [ArgExpr];
-}
-
-def InvalidNewDeleteExpr : Opcode {
-  let Args = [ArgExpr];
-}
-
+def CheckNewTypeMismatch : Opcode { let Args = [ArgExpr]; }
 def CheckNewTypeMismatchArray : Opcode {
   let Types = [IntegerTypeClass];
   let Args = [ArgExpr];
   let HasGroup = 1;
 }
+def InvalidNewDeleteExpr : Opcode { let Args = [ArgExpr]; }
 
 def IsConstantContext: Opcode;
 def CheckAllocations : Opcode;

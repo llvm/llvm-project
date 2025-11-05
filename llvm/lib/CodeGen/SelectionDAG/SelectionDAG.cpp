@@ -8620,7 +8620,10 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
   if (TLI->shouldPreservePtrArith(this->getMachineFunction().getFunction(),
                                   BasePtrVT))
     return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
-  return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
+  // InBounds only applies to PTRADD, don't set it if we generate ADD.
+  SDNodeFlags AddFlags = Flags;
+  AddFlags.setInBounds(false);
+  return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, AddFlags);
 }
 
 /// Returns true if memcpy source is constant data.
@@ -9254,21 +9257,22 @@ SDValue SelectionDAG::getMemcpy(
   // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall = false;
-  const char *MemCpyName = TLI->getMemcpyName();
+  RTLIB::LibcallImpl MemCpyImpl = TLI->getMemcpyImpl();
 
   if (OverrideTailCall.has_value()) {
     IsTailCall = *OverrideTailCall;
   } else {
-    bool LowersToMemcpy = StringRef(MemCpyName) == StringRef("memcpy");
+    bool LowersToMemcpy = MemCpyImpl == RTLIB::impl_memcpy;
     IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemcpy);
   }
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallCallingConv(RTLIB::MEMCPY),
+          TLI->getLibcallImplCallingConv(MemCpyImpl),
           Dst.getValueType().getTypeForEVT(*getContext()),
-          getExternalSymbol(MemCpyName, TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(TLI->getLibcallImplName(MemCpyImpl).data(),
+                            TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(IsTailCall);
@@ -9358,22 +9362,24 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // FIXME:  pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
 
+  RTLIB::LibcallImpl MemmoveImpl = TLI->getLibcallImpl(RTLIB::MEMMOVE);
+
   bool IsTailCall = false;
   if (OverrideTailCall.has_value()) {
     IsTailCall = *OverrideTailCall;
   } else {
-    bool LowersToMemmove =
-        TLI->getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove");
+    bool LowersToMemmove = MemmoveImpl == RTLIB::impl_memmove;
     IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemmove);
   }
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMMOVE),
-                    Dst.getValueType().getTypeForEVT(*getContext()),
-                    getExternalSymbol(TLI->getLibcallName(RTLIB::MEMMOVE),
-                                      TLI->getPointerTy(getDataLayout())),
-                    std::move(Args))
+      .setLibCallee(
+          TLI->getLibcallImplCallingConv(MemmoveImpl),
+          Dst.getValueType().getTypeForEVT(*getContext()),
+          getExternalSymbol(TLI->getLibcallImplName(MemmoveImpl).data(),
+                            TLI->getPointerTy(getDataLayout())),
+          std::move(Args))
       .setDiscardResult()
       .setTailCall(IsTailCall);
 
@@ -9489,8 +9495,10 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                        TLI->getPointerTy(DL)),
                      std::move(Args));
   }
-  bool LowersToMemset =
-      TLI->getLibcallName(RTLIB::MEMSET) == StringRef("memset");
+
+  RTLIB::LibcallImpl MemsetImpl = TLI->getLibcallImpl(RTLIB::MEMSET);
+  bool LowersToMemset = MemsetImpl == RTLIB::impl_memset;
+
   // If we're going to use bzero, make sure not to tail call unless the
   // subsequent return doesn't need a value, as bzero doesn't return the first
   // arg unlike memset.

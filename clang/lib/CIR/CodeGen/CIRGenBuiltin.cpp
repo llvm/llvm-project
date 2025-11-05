@@ -211,6 +211,28 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::fastMathFlags());
     return emitUnaryMaybeConstrainedFPBuiltin<cir::CosOp>(*this, *e);
 
+  case Builtin::BIceil:
+  case Builtin::BIceilf:
+  case Builtin::BIceill:
+  case Builtin::BI__builtin_ceil:
+  case Builtin::BI__builtin_ceilf:
+  case Builtin::BI__builtin_ceilf16:
+  case Builtin::BI__builtin_ceill:
+  case Builtin::BI__builtin_ceilf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(*this, *e);
+
+  case Builtin::BIexp:
+  case Builtin::BIexpf:
+  case Builtin::BIexpl:
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ExpOp>(*this, *e);
+
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
   case Builtin::BIfabsl:
@@ -449,10 +471,36 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_coro_free:
   case Builtin::BI__builtin_coro_size: {
-    cgm.errorNYI(e->getSourceRange(),
-                 "BI__builtin_coro_free, BI__builtin_coro_size NYI");
-    assert(!cir::MissingFeatures::coroSizeBuiltinCall());
-    return getUndefRValue(e->getType());
+    GlobalDecl gd{fd};
+    mlir::Type ty = cgm.getTypes().getFunctionType(
+        cgm.getTypes().arrangeGlobalDeclaration(gd));
+    const auto *nd = cast<NamedDecl>(gd.getDecl());
+    cir::FuncOp fnOp =
+        cgm.getOrCreateCIRFunction(nd->getName(), ty, gd, /*ForVTable=*/false);
+    fnOp.setBuiltin(true);
+    return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
+                    returnValue);
+  }
+  case Builtin::BI__builtin_prefetch: {
+    auto evaluateOperandAsInt = [&](const Expr *arg) {
+      Expr::EvalResult res;
+      [[maybe_unused]] bool evalSucceed =
+          arg->EvaluateAsInt(res, cgm.getASTContext());
+      assert(evalSucceed && "expression should be able to evaluate as int");
+      return res.Val.getInt().getZExtValue();
+    };
+
+    bool isWrite = false;
+    if (e->getNumArgs() > 1)
+      isWrite = evaluateOperandAsInt(e->getArg(1));
+
+    int locality = 3;
+    if (e->getNumArgs() > 2)
+      locality = evaluateOperandAsInt(e->getArg(2));
+
+    mlir::Value address = emitScalarExpr(e->getArg(0));
+    cir::PrefetchOp::create(builder, loc, address, locality, isWrite);
+    return RValue::get(nullptr);
   }
   }
 

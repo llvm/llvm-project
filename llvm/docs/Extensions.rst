@@ -416,7 +416,36 @@ as offsets relative to prior addresses.
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
 
-Version 3 (newest): Capable of encoding callsite offsets. Enabled by the 6th bit
+Version 4 (newest): Capable of encoding basic block hashes. This feature is
+enabled by the 7th bit of the feature byte.
+
+Example:
+
+.. code-block:: gas
+
+  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
+  .byte     4                             # version number
+  .byte     96                            # feature byte
+  .quad     .Lfunc_begin0                 # address of the function
+  .byte     2                             # number of basic blocks
+  # BB record for BB_0
+   .byte     0                            # BB_0 ID
+   .uleb128  .Lfunc_begin0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+   .byte     0                            # number of callsites in this block
+   .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
+   .byte     x                            # BB_0 metadata
+   .quad     9080480745856761856          # BB_0 hash
+  # BB record for BB_1
+   .byte     1                            # BB_1 ID
+   .uleb128  .LBB0_1-.LBB_END0_0          # BB_1 offset relative to the end of last block (BB_0).
+   .byte     2                            # number of callsites in this block
+   .uleb128  .LBB0_1_CS0-.LBB0_1          # offset of callsite end relative to the previous offset (.LBB0_1)
+   .uleb128  .LBB0_1_CS1-.LBB0_1_CS0      # offset of callsite end relative to the previous offset (.LBB0_1_CS0)
+   .uleb128  .LBB_END0_1-.LBB0_1_CS1      # BB_1 size offset (Offset of the block end relative to the previous offset).
+   .byte     y                            # BB_1 metadata
+   .quad     2363478788702666771          # BB_1 hash
+
+Version 3: Capable of encoding callsite offsets. Enabled by the 6th bit
 of the feature byte.
 
 Example:

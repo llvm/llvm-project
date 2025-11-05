@@ -4829,36 +4829,33 @@ define amdgpu_ps <4 x float> @getresinfo_dmask0(<8 x i32> inreg %rsrc, <4 x floa
   ; GFX9: bb.1.main_body:
   ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
-  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   $vgpr0 = COPY [[DEF]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[DEF]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[DEF]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[DEF]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ;
   ; GFX10NSA-LABEL: name: getresinfo_dmask0
   ; GFX10NSA: bb.1.main_body:
   ; GFX10NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0
   ; GFX10NSA-NEXT: {{  $}}
-  ; GFX10NSA-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-  ; GFX10NSA-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
-  ; GFX10NSA-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10NSA-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10NSA-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10NSA-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10NSA-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10NSA-NEXT:   $vgpr0 = COPY [[DEF]](s32)
+  ; GFX10NSA-NEXT:   $vgpr1 = COPY [[DEF]](s32)
+  ; GFX10NSA-NEXT:   $vgpr2 = COPY [[DEF]](s32)
+  ; GFX10NSA-NEXT:   $vgpr3 = COPY [[DEF]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ;
   ; GFX12-LABEL: name: getresinfo_dmask0
   ; GFX12: bb.1.main_body:
   ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-  ; GFX12-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX12-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX12-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX12-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   $vgpr0 = COPY [[DEF]](s32)
+  ; GFX12-NEXT:   $vgpr1 = COPY [[DEF]](s32)
+  ; GFX12-NEXT:   $vgpr2 = COPY [[DEF]](s32)
+  ; GFX12-NEXT:   $vgpr3 = COPY [[DEF]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %mip = extractelement <2 x i16> %coords, i32 0

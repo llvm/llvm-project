@@ -75,7 +75,8 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 
 /// Checks if a value can be stored in a block.
-bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                bool WillBeActivated = false);
 
 /// Checks if a value can be initialized.
 bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
@@ -1914,6 +1915,9 @@ bool Load(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.isBlockPointer())
     return false;
+  if (const Descriptor *D = Ptr.getFieldDesc();
+      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
+    return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
 }
@@ -1924,6 +1928,9 @@ bool LoadPop(InterpState &S, CodePtr OpPC) {
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
   if (!Ptr.isBlockPointer())
+    return false;
+  if (const Descriptor *D = Ptr.getFieldDesc();
+      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -1977,13 +1984,12 @@ bool StoreActivate(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
+  if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
+    return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
   }
-
-  if (!CheckStore(S, OpPC, Ptr))
-    return false;
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -1993,12 +1999,12 @@ bool StoreActivatePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
+    return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
   }
-  if (!CheckStore(S, OpPC, Ptr))
-    return false;
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -2007,7 +2013,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool StoreBitField(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (!CheckStore(S, OpPC, Ptr))
+
+  if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized())
     Ptr.initialize();
@@ -2037,12 +2044,13 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool StoreBitFieldActivate(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
+    return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
   }
-  if (!CheckStore(S, OpPC, Ptr))
-    return false;
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2055,12 +2063,12 @@ bool StoreBitFieldActivatePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
+    return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
   }
-  if (!CheckStore(S, OpPC, Ptr))
-    return false;
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2281,7 +2289,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     }
   }
 
-  if (Invalid && S.getLangOpts().CPlusPlus)
+  if (Invalid && (S.getLangOpts().CPlusPlus || Ptr.inArray()))
     return std::nullopt;
 
   // Offset is valid - compute it on unsigned.
@@ -3286,12 +3294,18 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
                         bool Fatal) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
 
-  if (Kind == CastKind::Reinterpret) {
+  switch (Kind) {
+  case CastKind::Reinterpret:
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
-        << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
+        << diag::ConstexprInvalidCastKind::Reinterpret
+        << S.Current->getRange(OpPC);
     return !Fatal;
-  }
-  if (Kind == CastKind::Volatile) {
+  case CastKind::ReinterpretLike:
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+    return !Fatal;
+  case CastKind::Volatile:
     if (!S.checkingPotentialConstantExpression()) {
       const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
       if (S.getLangOpts().CPlusPlus)
@@ -3302,14 +3316,13 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     }
 
     return false;
-  }
-  if (Kind == CastKind::Dynamic) {
+  case CastKind::Dynamic:
     assert(!S.getLangOpts().CPlusPlus20);
-    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Dynamic;
     return true;
   }
-
+  llvm_unreachable("Unhandled CastKind");
   return false;
 }
 
