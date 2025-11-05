@@ -50,16 +50,16 @@ public:
     return RTLCI.LibcallImplCallingConvs[Call];
   }
 
-  /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
-  /// unsupported.
-  LLVM_ABI StringRef getMemcpyName() const {
+  /// Return a function impl compatible with RTLIB::MEMCPY, or
+  /// RTLIB::Unsupported if fully unsupported.
+  RTLIB::LibcallImpl getMemcpyImpl() const {
     RTLIB::LibcallImpl Memcpy = getLibcallImpl(RTLIB::MEMCPY);
     if (Memcpy == RTLIB::Unsupported) {
       // Fallback to memmove if memcpy isn't available.
-      return getLibcallName(RTLIB::MEMMOVE);
+      return getLibcallImpl(RTLIB::MEMMOVE);
     }
 
-    return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Memcpy);
+    return Memcpy;
   }
 };
 

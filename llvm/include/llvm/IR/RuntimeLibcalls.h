@@ -114,17 +114,6 @@ public:
     return ImplToLibcall[Impl];
   }
 
-  /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
-  /// unsupported.
-  RTLIB::LibcallImpl getMemcpyImpl() const {
-    RTLIB::LibcallImpl Memcpy = getLibcallImpl(RTLIB::MEMCPY);
-    if (Memcpy != RTLIB::Unsupported)
-      return Memcpy;
-
-    // Fallback to memmove if memcpy isn't available.
-    return getLibcallImpl(RTLIB::MEMMOVE);
-  }
-
   unsigned getNumAvailableLibcallImpls() const {
     return AvailableLibcallImpls.count();
   }
