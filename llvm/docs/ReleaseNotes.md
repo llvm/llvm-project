@@ -135,6 +135,7 @@ Changes to the RISC-V Backend
 * Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
 * Add support for Zvfofp8min (OFP8 conversion extension)
 * Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
 
 Changes to the WebAssembly Backend
 ----------------------------------
