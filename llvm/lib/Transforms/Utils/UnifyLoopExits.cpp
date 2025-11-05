@@ -158,6 +158,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   SmallVector<BasicBlock *, 8> CallBrTargetBlocksToFix;
   // Redirect exiting edges through a control flow hub.
   ControlFlowHub CHub;
+  bool Changed = false;
 
   for (unsigned I = 0; I < ExitingBlocks.size(); ++I) {
     BasicBlock *BB = ExitingBlocks[I];
@@ -182,6 +183,10 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
         bool UpdatedLI = false;
         BasicBlock *NewSucc =
             SplitCallBrEdge(BB, Succ, J, &DTU, nullptr, &LI, &UpdatedLI);
+        // SplitCallBrEdge modifies the CFG because it creates an intermediate
+        // block. So we need to set the changed flag no matter what the
+        // ControlFlowHub is going to do later.
+        Changed = true;
         // Even if CallBr and Succ do not have a common parent loop, we need to
         // add the new target block to the parent loop of the current loop.
         if (!UpdatedLI)
@@ -207,6 +212,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   bool ChangedCFG;
   std::tie(LoopExitBlock, ChangedCFG) = CHub.finalize(
       &DTU, GuardBlocks, "loop.exit", MaxBooleansInControlFlowHub.getValue());
+  ChangedCFG |= Changed;
   if (!ChangedCFG)
     return false;
 

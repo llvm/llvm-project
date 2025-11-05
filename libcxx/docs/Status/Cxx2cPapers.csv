@@ -18,7 +18,7 @@
 "`P2874R2 <https://wg21.link/P2874R2>`__","P2874R2: Mandating Annex D Require No More","2023-06 (Varna)","|Complete|","12","`#105377 <https://github.com/llvm/llvm-project/issues/105377>`__",""
 "`P2757R3 <https://wg21.link/P2757R3>`__","Type-checking format args","2023-06 (Varna)","","","`#105378 <https://github.com/llvm/llvm-project/issues/105378>`__",""
 "`P2637R3 <https://wg21.link/P2637R3>`__","Member ``visit``","2023-06 (Varna)","|Complete|","19","`#105380 <https://github.com/llvm/llvm-project/issues/105380>`__","Change of ``__cpp_lib_variant`` is completed in LLVM 20. Change of ``__cpp_lib_format`` is blocked by `P2419R2 <https://wg21.link/P2419R2>`__."
-"`P2641R4 <https://wg21.link/P2641R4>`__","Checking if a ``union`` alternative is active","2023-06 (Varna)","","","`#105381 <https://github.com/llvm/llvm-project/issues/105381>`__",""
+"`P2641R4 <https://wg21.link/P2641R4>`__","Checking if a ``union`` alternative is active","2023-06 (Varna)","|Complete|","22","`#105381 <https://github.com/llvm/llvm-project/issues/105381>`__",""
 "`P1759R6 <https://wg21.link/P1759R6>`__","Native handles and file streams","2023-06 (Varna)","|Complete|","18","`#105382 <https://github.com/llvm/llvm-project/issues/105382>`__",""
 "`P2697R1 <https://wg21.link/P2697R1>`__","Interfacing ``bitset`` with ``string_view``","2023-06 (Varna)","|Complete|","18","`#105384 <https://github.com/llvm/llvm-project/issues/105384>`__",""
 "`P1383R2 <https://wg21.link/P1383R2>`__","More ``constexpr`` for ``<cmath>`` and ``<complex>``","2023-06 (Varna)","","","`#105385 <https://github.com/llvm/llvm-project/issues/105385>`__",""
