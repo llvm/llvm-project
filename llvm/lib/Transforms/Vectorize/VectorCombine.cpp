@@ -721,8 +721,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   // one element
   unsigned NumDstElts = DstVecTy->getNumElements();
   unsigned NumSrcElts = SrcVecTy->getNumElements();
-  if (ExtIdx > NumSrcElts || InsIdx >= NumDstElts ||
-      NumDstElts == 1)
+  if (ExtIdx > NumSrcElts || InsIdx >= NumDstElts || NumDstElts == 1)
     return false;
 
   // We are inserting the negated element into the same lane that we extracted
@@ -743,8 +742,8 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 
   InstructionCost NewCost =
       TTI.getArithmeticInstrCost(Instruction::FNeg, SrcVecTy, CostKind) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, DstVecTy, DstVecTy, Mask,
-                         CostKind);
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, DstVecTy,
+                         DstVecTy, Mask, CostKind);
 
   bool NeedLenChg = SrcVecTy->getNumElements() != NumDstElts;
   // If the lengths of the two vectors are not equal,
