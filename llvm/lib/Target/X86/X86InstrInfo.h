@@ -721,6 +721,12 @@ private:
   bool isFrameOperand(const MachineInstr &MI, unsigned int Op,
                       int &FrameIndex) const;
 
+  /// Expand the CTSELECT pseudo-instructions.
+  bool expandCtSelectWithCMOV(MachineInstr &MI) const;
+  bool expandCtSelectIntWithoutCMOV(MachineInstr &MI) const;
+
+  bool expandCtSelectVector(MachineInstr &MI) const;
+
   /// Returns true iff the routine could find two commutable operands in the
   /// given machine instruction with 3 vector inputs.
   /// The 'SrcOpIdx1' and 'SrcOpIdx2' are INPUT and OUTPUT arguments. Their

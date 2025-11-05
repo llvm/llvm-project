@@ -629,10 +629,11 @@ void X86PassConfig::addPreEmitPass2() {
     // ObjC runtime functions present in the module.
     const Function &F = MF.getFunction();
     const Module *M = F.getParent();
-    return M->getModuleFlag("kcfi") ||
+    return M->getModuleFlag("kcfi") || F.hasFnAttribute("ct-select") ||
            (TT.isOSDarwin() &&
             (M->getFunction("objc_retainAutoreleasedReturnValue") ||
-             M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
+             M->getFunction("objc_unsafeClaimAutoreleasedReturnValue"))) ||
+             F.hasFnAttribute("ct-select");
   }));
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run

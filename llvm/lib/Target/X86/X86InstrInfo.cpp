@@ -474,6 +474,556 @@ bool X86InstrInfo::isFrameOperand(const MachineInstr &MI, unsigned int Op,
   return false;
 }
 
+struct CtSelectInstructions {
+  unsigned PAndOpc;
+  unsigned PAndnOpc;
+  unsigned POrOpc;
+  unsigned BroadcastOpc;
+  unsigned IntMoveOpc;
+  unsigned MoveOpc;
+  bool Use256;
+  bool UseBlendInstr;
+};
+
+static CtSelectInstructions
+getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
+  CtSelectInstructions Instructions = {};
+
+  switch (Opcode) {
+  case X86::CTSELECT_V2F64:
+    if (Subtarget.hasSSE2()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVAPDrr;
+      Instructions.UseBlendInstr = true;
+    } else {
+      llvm_unreachable("Double precision vectors require SSE2");
+    }
+    break;
+  case X86::CTSELECT_V4F32:
+    if (Subtarget.hasSSE41()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVAPSrr;
+      Instructions.UseBlendInstr = true;
+    } else if (Subtarget.hasSSE2()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVAPSrr;
+    } else {
+      // fallback to SSE1, only support four 32-bit single precision
+      // floating-point values
+      Instructions.PAndOpc = X86::ANDPSrr;
+      Instructions.PAndnOpc = X86::ANDNPSrr;
+      Instructions.POrOpc = X86::ORPSrr;
+      Instructions.BroadcastOpc = X86::SHUFPSrri;
+      Instructions.IntMoveOpc = X86::MOVSS2DIrr;
+      Instructions.MoveOpc = X86::MOVAPSrr;
+    }
+    break;
+  case X86::CTSELECT_V4I32:
+  case X86::CTSELECT_V2I64:
+  case X86::CTSELECT_V8I16:
+  case X86::CTSELECT_V16I8:
+    if (Subtarget.hasSSE2()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVDQArr;
+    } else {
+      llvm_unreachable("Integer vector operations require SSE2");
+    }
+    break;
+  case X86::CTSELECT_V8F16:
+    if (Subtarget.hasSSE2()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVDQArr;
+    } else {
+      llvm_unreachable("FP16 vector operations require SSE2");
+    }
+    break;
+  case X86::CTSELECT_V4F32X:
+  case X86::CTSELECT_V4I32X:
+  case X86::CTSELECT_V2F64X:
+  case X86::CTSELECT_V2I64X:
+  case X86::CTSELECT_V8I16X:
+  case X86::CTSELECT_V16I8X:
+  case X86::CTSELECT_V8F16X:
+    if (Subtarget.hasAVX()) {
+      Instructions.PAndOpc = X86::VPANDrr;
+      Instructions.PAndnOpc = X86::VPANDNrr;
+      Instructions.POrOpc = X86::VPORrr;
+      Instructions.BroadcastOpc = X86::VPSHUFDri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc = (Opcode == X86::CTSELECT_V4F32X) ? X86::VMOVAPSrr
+                             : (Opcode == X86::CTSELECT_V2F64X)
+                                 ? X86::VMOVAPDrr
+                                 : X86::VMOVDQArr;
+    } else {
+      llvm_unreachable("AVX variants require AVX support");
+    }
+    break;
+  case X86::CTSELECT_V8F32:
+  case X86::CTSELECT_V8I32:
+    if (Subtarget.hasAVX()) {
+      Instructions.PAndOpc = X86::VPANDYrr;
+      Instructions.PAndnOpc = X86::VPANDNYrr;
+      Instructions.POrOpc = X86::VPORYrr;
+      Instructions.BroadcastOpc = X86::VPERMILPSYri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc =
+          (Opcode == X86::CTSELECT_V8F32) ? X86::VMOVAPSYrr : X86::VMOVDQAYrr;
+      Instructions.Use256 = true;
+    } else {
+      llvm_unreachable("256-bit vectors require AVX");
+    }
+    break;
+  case X86::CTSELECT_V4F64:
+  case X86::CTSELECT_V4I64:
+    if (Subtarget.hasAVX()) {
+      Instructions.PAndOpc = X86::VPANDYrr;
+      Instructions.PAndnOpc = X86::VPANDNYrr;
+      Instructions.POrOpc = X86::VPORYrr;
+      Instructions.BroadcastOpc = X86::VPERMILPDYri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc =
+          (Opcode == X86::CTSELECT_V4F64) ? X86::VMOVAPDYrr : X86::VMOVDQAYrr;
+      Instructions.Use256 = true;
+    } else {
+      llvm_unreachable("256-bit vectors require AVX");
+    }
+    break;
+  case X86::CTSELECT_V16I16:
+  case X86::CTSELECT_V32I8:
+  case X86::CTSELECT_V16F16:
+    if (Subtarget.hasAVX2()) {
+      Instructions.PAndOpc = X86::VPANDYrr;
+      Instructions.PAndnOpc = X86::VPANDNYrr;
+      Instructions.POrOpc = X86::VPORYrr;
+      Instructions.BroadcastOpc = X86::VPERMILPSYri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc = X86::VMOVDQAYrr;
+      Instructions.Use256 = true;
+    } else if (Subtarget.hasAVX()) {
+      Instructions.PAndOpc = X86::VPANDYrr;
+      Instructions.PAndnOpc = X86::VPANDNYrr;
+      Instructions.POrOpc = X86::VPORYrr;
+      Instructions.BroadcastOpc = X86::VPERMILPSYri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc = X86::VMOVDQAYrr;
+      Instructions.Use256 = true;
+    } else {
+      llvm_unreachable("256-bit integer vectors require AVX");
+    }
+    break;
+  default:
+    llvm_unreachable("Unexpected CTSELECT opcode");
+  }
+
+  return Instructions;
+}
+
+bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  const DebugLoc &DL = MI.getDebugLoc();
+  auto Instruction = getCtSelectInstructions(Opcode, Subtarget);
+
+  MachineBasicBlock *MBB = MI.getParent();
+
+  // Operand layout matches the TableGen definition:
+  // (outs VR128:$dst, VR128:$tmpx, GR32:$tmpg),
+  // (ins  VR128:$t, VR128:$f, i8imm:$cond)
+  Register Dst = MI.getOperand(0).getReg();
+  Register MaskReg = MI.getOperand(1).getReg();  // vector mask temp
+  Register TmpGPR = MI.getOperand(2).getReg();   // scalar mask temp (GPR32)
+  Register FalseVal = MI.getOperand(3).getReg(); // true_value
+  Register TrueVal = MI.getOperand(4).getReg();  // false_value
+  X86::CondCode CC = X86::CondCode(MI.getOperand(5).getImm()); // condition
+
+  MachineInstr *FirstInstr = nullptr;
+  MachineInstr *LastInstr = nullptr;
+  auto recordInstr = [&](MachineInstrBuilder MIB) {
+    MachineInstr *NewMI = MIB.getInstr();
+    LastInstr = NewMI;
+    if (!FirstInstr)
+      FirstInstr = NewMI;
+  };
+
+  // Create scalar mask in tempGPR and broadcast to vector mask
+  recordInstr(BuildMI(*MBB, MI, DL, get(X86::MOV32ri), TmpGPR)
+                  .addImm(0)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  auto SubReg = TRI->getSubReg(TmpGPR, X86::sub_8bit);
+  recordInstr(BuildMI(*MBB, MI, DL, get(X86::SETCCr))
+                  .addReg(SubReg)
+                  .addImm(CC)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+  // Zero-extend byte to 32-bit register (movzbl %al, %eax)
+  recordInstr(BuildMI(*MBB, MI, DL, get(X86::MOVZX32rr8), TmpGPR)
+                  .addReg(SubReg)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+  if (Instruction.UseBlendInstr && Subtarget.hasSSE41()) {
+    // Shift left 31 bits to convert 1 -> 0x80000000, 0 -> 0x00000000 (shll $31,
+    // %eax)
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::SHL32ri), TmpGPR)
+                    .addReg(TmpGPR)
+                    .addImm(31));
+  } else {
+    // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR)
+                    .addReg(TmpGPR));
+  }
+
+  // Broadcast to TmpX (vector mask)
+  recordInstr(BuildMI(*MBB, MI, DL, get(X86::PXORrr), MaskReg)
+                  .addReg(MaskReg)
+                  .addReg(MaskReg)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+  // Move scalar mask to vector register
+  recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.IntMoveOpc), MaskReg)
+                  .addReg(TmpGPR)
+                  .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+  if (Instruction.Use256) {
+    // Broadcast to 256-bit vector register
+    recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
+                    .addReg(MaskReg)
+                    .addImm(0)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
+  } else {
+    if (Subtarget.hasSSE2() || Subtarget.hasAVX()) {
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
+                      .addReg(MaskReg)
+                      .addImm(0x00)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
+    } else {
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
+                      .addReg(MaskReg)
+                      .addReg(MaskReg)
+                      .addImm(0x00)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
+    }
+  }
+
+  if (Instruction.UseBlendInstr && Subtarget.hasSSE41()) {
+    // Use dedicated blend instructions for SSE4.1+
+    unsigned BlendOpc;
+    switch (Opcode) {
+    case X86::CTSELECT_V4F32:
+      BlendOpc = X86::BLENDVPSrr0;
+      break;
+    case X86::CTSELECT_V2F64:
+      BlendOpc = X86::BLENDVPDrr0;
+      break;
+    default:
+      // alias for pblendvb that takes xmm0 as implicit mask register
+      BlendOpc = X86::PBLENDVBrr0;
+      break;
+    }
+
+    // Check if XMM0 is used as one of source registers, if yes then save it
+    // in Dst register and update FalseVal and TrueVal to Dst register
+    bool DidSaveXMM0 = false;
+    Register SavedXMM0 = X86::XMM0;
+    if (FalseVal == X86::XMM0 || TrueVal == X86::XMM0) {
+      Register SrcXMM0 = (FalseVal == X86::XMM0) ? FalseVal : TrueVal;
+
+      // if XMM0 is one of the source registers, it will not match with Dst
+      // registers, so we need to move it to Dst register
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                      .addReg(SrcXMM0)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+      // update FalseVal and TrueVal to Dst register
+      if (FalseVal == X86::XMM0)
+        FalseVal = Dst;
+      if (TrueVal == X86::XMM0)
+        TrueVal = Dst;
+
+      // update SavedXMM0 to Dst register
+      SavedXMM0 = Dst;
+
+      // set DidSaveXMM0 to true to indicate that we saved XMM0 into Dst
+      // register
+      DidSaveXMM0 = true;
+    } else if (MaskReg != X86::XMM0 && Dst != X86::XMM0) {
+
+      // if XMM0 is not allocated for any of the register, we stil need to save
+      // and restore it after using as mask register
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                      .addReg(X86::XMM0)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
+      SavedXMM0 = Dst;
+      DidSaveXMM0 = true;
+    }
+
+    if (MaskReg != X86::XMM0) {
+      // BLENDV uses XMM0 as implicit mask register
+      // https://www.felixcloutier.com/x86/pblendvb
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), X86::XMM0)
+                      .addReg(MaskReg)
+                      .setMIFlag(MachineInstr::MIFlag::NoMerge));
+
+      // move FalseVal to mask (use MaskReg as the dst of the blend)
+      recordInstr(BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), MaskReg)
+                      .addReg(FalseVal)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+      // MaskReg := blend(MaskReg /*false*/, TrueVal /*true*/)  ; mask in
+      // xmm0
+      recordInstr(BuildMI(*MBB, MI, DL, get(BlendOpc), MaskReg)
+                      .addReg(MaskReg)
+                      .addReg(TrueVal)
+                      .addReg(X86::XMM0)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+      // restore XMM0 from SavedXMM0 if we saved it into Dst
+      if (DidSaveXMM0) {
+        recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), X86::XMM0)
+                        .addReg(SavedXMM0)
+                        .setMIFlags(MachineInstr::MIFlag::NoMerge));
+      }
+      // dst = result (now in MaskReg)
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                      .addReg(MaskReg)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
+    } else {
+      // move FalseVal to Dst register since MaskReg is XMM0 and Dst is not
+      recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                      .addReg(FalseVal)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+      // Dst := blend(Dst /*false*/, TrueVal /*true*/)  ; mask in
+      // xmm0
+      recordInstr(BuildMI(*MBB, MI, DL, get(BlendOpc), Dst)
+                      .addReg(Dst)
+                      .addReg(TrueVal)
+                      .addReg(X86::XMM0)
+                      .setMIFlags(MachineInstr::MIFlag::NoMerge));
+    }
+  } else {
+
+    // dst = mask
+    recordInstr(BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+                    .addReg(MaskReg)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+    // mask &= true_val
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::PANDrr), MaskReg)
+                    .addReg(MaskReg)
+                    .addReg(TrueVal)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+    // dst = ~mask & false_val
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::PANDNrr), Dst)
+                    .addReg(Dst)
+                    .addReg(FalseVal)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
+
+    // dst |= mask; (mask & t) | (~mask & f)
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::PORrr), Dst)
+                    .addReg(Dst)
+                    .addReg(MaskReg)
+                    .setMIFlags(MachineInstr::MIFlag::NoMerge));
+  }
+
+  assert(FirstInstr && LastInstr && "Expected at least one expanded instruction");
+  auto BundleEnd = LastInstr->getIterator();
+  finalizeBundle(*MBB, FirstInstr->getIterator(), std::next(BundleEnd));
+
+  MI.eraseFromParent();
+
+  return true;
+}
+
+bool X86InstrInfo::expandCtSelectWithCMOV(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // CTSELECT pseudo has: (outs dst), (ins true_val, false_val, cond)
+  MachineOperand &OperandRes = MI.getOperand(0);  // destination register
+  MachineOperand &OperandTrue = MI.getOperand(1); // true value
+  MachineOperand &OperandCond = MI.getOperand(3); // condition code
+
+  assert(OperandTrue.isReg() && OperandRes.isReg() && OperandCond.isImm() &&
+         "Invalid operand types");
+  assert(OperandTrue.getReg() == OperandRes.getReg() &&
+         "Result register different from True register");
+
+  assert(Subtarget.hasCMOV() && "target does not support CMOV instructions");
+
+  unsigned Opcode = 0;
+
+  switch (MI.getOpcode()) {
+  case X86::CTSELECT16rr:
+    Opcode = X86::CMOV16rr;
+    break;
+  case X86::CTSELECT32rr:
+    Opcode = X86::CMOV32rr;
+    break;
+  case X86::CTSELECT64rr:
+    Opcode = X86::CMOV64rr;
+    break;
+  case X86::CTSELECT16rm:
+    Opcode = X86::CMOV16rm;
+    break;
+  case X86::CTSELECT32rm:
+    Opcode = X86::CMOV32rm;
+    break;
+  case X86::CTSELECT64rm:
+    Opcode = X86::CMOV64rm;
+    break;
+  default:
+    llvm_unreachable("Invalid CTSELECT opcode");
+  }
+
+  if (!Subtarget.hasCMOV()) {
+    llvm_unreachable("target does not support cmov");
+  }
+
+  // Build CMOV instruction: copy the first 3 operands (dst, true, false)
+  // and add condition code
+  MachineInstrBuilder CmovBuilder = BuildMI(*MBB, MI, DL, get(Opcode));
+  for (unsigned i = 0u; i < MI.getNumOperands(); ++i) { // Copy
+    CmovBuilder.add(MI.getOperand(i));
+  }
+
+  // Remove the original CTSELECT instruction
+  MI.eraseFromParent();
+  return true;
+}
+
+/// Expand i386-specific CTSELECT pseudo instructions (post-RA, constant-time)
+/// These internal pseudos receive a pre-materialized condition byte from the
+/// custom inserter, avoiding EFLAGS corruption issues during i64 type legalization.
+bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // CTSELECT_I386_INT_GRxxrr has operands: (outs dst, tmp_byte, tmp_mask),
+  // (ins src1, src2, cond_byte)
+  // Note: cond_byte is pre-materialized by custom inserter, not EFLAGS-dependent
+  Register DstReg = MI.getOperand(0).getReg();
+  Register TmpByteReg = MI.getOperand(1).getReg();
+  Register TmpMaskReg = MI.getOperand(2).getReg();
+  Register Src1Reg = MI.getOperand(3).getReg();
+  Register Src2Reg = MI.getOperand(4).getReg();
+  Register CondByteReg = MI.getOperand(5).getReg();  // Pre-materialized condition byte
+
+  // Determine instruction opcodes based on register width
+  unsigned MovZXOp, NegOp, MovOp, AndOp, NotOp, OrOp;
+  if (MI.getOpcode() == X86::CTSELECT_I386_INT_GR8rr) {
+    MovZXOp = 0;  // No zero-extend needed for GR8
+    NegOp = X86::NEG8r;
+    MovOp = X86::MOV8rr;
+    AndOp = X86::AND8rr;
+    NotOp = X86::NOT8r;
+    OrOp = X86::OR8rr;
+  } else if (MI.getOpcode() == X86::CTSELECT_I386_INT_GR16rr) {
+    MovZXOp = X86::MOVZX16rr8;
+    NegOp = X86::NEG16r;
+    MovOp = X86::MOV16rr;
+    AndOp = X86::AND16rr;
+    NotOp = X86::NOT16r;
+    OrOp = X86::OR16rr;
+  } else { // X86::CTSELECT_I386_INT_GR32rr
+    MovZXOp = X86::MOVZX32rr8;
+    NegOp = X86::NEG32r;
+    MovOp = X86::MOV32rr;
+    AndOp = X86::AND32rr;
+    NotOp = X86::NOT32r;
+    OrOp = X86::OR32rr;
+  }
+
+  // 7-instruction constant-time selection bundle (no SETCC inside):
+  // result = (true_val & mask) | (false_val & ~mask)
+  // The condition byte is already materialized, avoiding EFLAGS dependency
+
+  // Step 1: Copy pre-materialized condition byte to TmpByteReg
+  // This allows the bundle to work with allocated temporaries
+  auto I1 = BuildMI(*MBB, MI, DL, get(X86::MOV8rr), TmpByteReg)
+      .addReg(CondByteReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  auto BundleStart = I1->getIterator();
+
+  // Step 2: Zero-extend condition byte to register width (0 or 1)
+  if (MI.getOpcode() != X86::CTSELECT_I386_INT_GR8rr) {
+    BuildMI(*MBB, MI, DL, get(MovZXOp), TmpMaskReg)
+        .addReg(TmpByteReg)
+        .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  }
+
+  // Step 3: Convert condition to bitmask (NEG: 1 -> 0xFFFF..., 0 -> 0x0000...)
+  Register MaskReg = (MI.getOpcode() == X86::CTSELECT_I386_INT_GR8rr) ? TmpByteReg : TmpMaskReg;
+  BuildMI(*MBB, MI, DL, get(NegOp), MaskReg)
+      .addReg(MaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 4,5: Apply mask to true value - copy src1 to dest, then AND with mask
+  BuildMI(*MBB, MI, DL, get(MovOp), DstReg)
+      .addReg(Src1Reg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  BuildMI(*MBB, MI, DL, get(AndOp), DstReg)
+      .addReg(DstReg)
+      .addReg(MaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 6: Create inverted mask inline (~mask)
+  BuildMI(*MBB, MI, DL, get(NotOp), MaskReg)
+      .addReg(MaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 7: Apply inverted mask to false value - reuse mask register directly
+  BuildMI(*MBB, MI, DL, get(AndOp), MaskReg)
+      .addReg(MaskReg)
+      .addReg(Src2Reg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 8: Final result: (src1 & mask) | (src2 & ~mask)
+  auto LI = BuildMI(*MBB, MI, DL, get(OrOp), DstReg)
+      .addReg(DstReg)
+      .addReg(MaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Bundle all generated instructions for atomic execution before removing MI
+  auto BundleEnd = std::next(LI->getIterator());
+  if (BundleStart != BundleEnd) {
+    // Only bundle if we have multiple instructions
+    finalizeBundle(*MBB, BundleStart, BundleEnd);
+  }
+
+  // TODO: Optimization opportunity - The register allocator may choose callee-saved
+  // registers (e.g., %ebx, %esi) for TmpByteReg/TmpMaskReg, causing unnecessary
+  // save/restore overhead. Consider constraining these to caller-saved register
+  // classes (e.g., GR8_AL, GR32_CallSaved) in the TableGen definitions to improve
+  // constant-time performance by eliminating prologue/epilogue instructions.
+
+  // Remove the original pseudo instruction
+  MI.eraseFromParent();
+  return true;
+}
+
 static bool isFrameLoadOpcode(int Opcode, TypeSize &MemBytes) {
   switch (Opcode) {
   default:
@@ -6434,6 +6984,43 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::ADD64ri32_DB:
     MIB->setDesc(get(X86::OR64ri32));
     break;
+
+  case X86::CTSELECT64rr:
+  case X86::CTSELECT32rr:
+  case X86::CTSELECT16rr:
+  case X86::CTSELECT64rm:
+  case X86::CTSELECT32rm:
+  case X86::CTSELECT16rm:
+    // These CTSELECT pseudos are only selected when CMOV is available
+    // Pattern matching ensures we use CTSELECT_I386 when CMOV is not available
+    return expandCtSelectWithCMOV(MI);
+
+  // non-cmov CTSELECT expansion (post-RA, constant-time)
+  // These are the internal pseudos with pre-materialized condition byte
+  case X86::CTSELECT_I386_INT_GR8rr:
+  case X86::CTSELECT_I386_INT_GR16rr:
+  case X86::CTSELECT_I386_INT_GR32rr:
+    return expandCtSelectIntWithoutCMOV(MI);
+
+  case X86::CTSELECT_V2F64:
+  case X86::CTSELECT_V4F32:
+  case X86::CTSELECT_V2I64:
+  case X86::CTSELECT_V4I32:
+  case X86::CTSELECT_V8I16:
+  case X86::CTSELECT_V16I8:
+  case X86::CTSELECT_V2F64X:
+  case X86::CTSELECT_V4F32X:
+  case X86::CTSELECT_V2I64X:
+  case X86::CTSELECT_V4I32X:
+  case X86::CTSELECT_V8I16X:
+  case X86::CTSELECT_V16I8X:
+  case X86::CTSELECT_V4I64:
+  case X86::CTSELECT_V8I32:
+  case X86::CTSELECT_V16I16:
+  case X86::CTSELECT_V32I8:
+  case X86::CTSELECT_V4F64:
+  case X86::CTSELECT_V8F32:
+    return expandCtSelectVector(MI);
   }
   return false;
 }
@@ -10836,27 +11423,39 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     if (!ST.hasSSE1())
       return;
 
-    BuildMI(MBB, Iter, DL, get(X86::V_SET0), Reg);
+    // PXOR is safe to use because it doesn't affect flags.
+    BuildMI(MBB, Iter, DL, get(X86::PXORrr), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
   } else if (X86::VR256RegClass.contains(Reg)) {
     // YMM#
     if (!ST.hasAVX())
       return;
 
-    BuildMI(MBB, Iter, DL, get(X86::AVX_SET0), Reg);
+    // VPXOR is safe to use because it doesn't affect flags.
+    BuildMI(MBB, Iter, DL, get(X86::VPXORrr), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
   } else if (X86::VR512RegClass.contains(Reg)) {
     // ZMM#
     if (!ST.hasAVX512())
       return;
 
-    BuildMI(MBB, Iter, DL, get(X86::AVX512_512_SET0), Reg);
+    // VPXORY is safe to use because it doesn't affect flags.
+    BuildMI(MBB, Iter, DL, get(X86::VPXORYrr), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
   } else if (X86::VK1RegClass.contains(Reg) || X86::VK2RegClass.contains(Reg) ||
              X86::VK4RegClass.contains(Reg) || X86::VK8RegClass.contains(Reg) ||
              X86::VK16RegClass.contains(Reg)) {
     if (!ST.hasVLX())
       return;
 
-    unsigned Op = ST.hasBWI() ? X86::KSET0Q : X86::KSET0W;
-    BuildMI(MBB, Iter, DL, get(Op), Reg);
+    // KXOR is safe to use because it doesn't affect flags.
+    unsigned Op = ST.hasBWI() ? X86::KXORQkk : X86::KXORWkk;
+    BuildMI(MBB, Iter, DL, get(Op), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
   }
 }
 

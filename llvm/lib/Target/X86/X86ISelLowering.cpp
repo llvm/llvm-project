@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86ISelLowering.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86ShuffleDecode.h"
 #include "X86.h"
 #include "X86FrameLowering.h"
@@ -30,6 +31,8 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -49,6 +52,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
@@ -489,6 +493,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // X86 wants to expand cmov itself.
   for (auto VT : { MVT::f32, MVT::f64, MVT::f80, MVT::f128 }) {
     setOperationAction(ISD::SELECT, VT, Custom);
+    setOperationAction(ISD::CTSELECT, VT, Custom);
     setOperationAction(ISD::SETCC, VT, Custom);
     setOperationAction(ISD::STRICT_FSETCC, VT, Custom);
     setOperationAction(ISD::STRICT_FSETCCS, VT, Custom);
@@ -497,11 +502,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (VT == MVT::i64 && !Subtarget.is64Bit())
       continue;
     setOperationAction(ISD::SELECT, VT, Custom);
+    setOperationAction(ISD::CTSELECT, VT, Custom);
     setOperationAction(ISD::SETCC,  VT, Custom);
   }
 
   // Custom action for SELECT MMX and expand action for SELECT_CC MMX
   setOperationAction(ISD::SELECT, MVT::x86mmx, Custom);
+  setOperationAction(ISD::CTSELECT, MVT::x86mmx, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::x86mmx, Expand);
 
   setOperationAction(ISD::EH_RETURN       , MVT::Other, Custom);
@@ -631,6 +638,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BR_CC, VT, Action);
     setOperationAction(ISD::SETCC, VT, Action);
     setOperationAction(ISD::SELECT, VT, Custom);
+    setOperationAction(ISD::CTSELECT, VT, Custom);
     setOperationAction(ISD::SELECT_CC, VT, Action);
     setOperationAction(ISD::FROUND, VT, Action);
     setOperationAction(ISD::FROUNDEVEN, VT, Action);
@@ -1077,6 +1085,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::VSELECT,            MVT::v4f32, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, Custom);
     setOperationAction(ISD::SELECT,             MVT::v4f32, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v4f32, Custom);
     setOperationAction(ISD::FCANONICALIZE, MVT::v4f32, Custom);
 
     setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
@@ -1243,6 +1252,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SELECT,             MVT::v8i16, Custom);
     setOperationAction(ISD::SELECT,             MVT::v8f16, Custom);
     setOperationAction(ISD::SELECT,             MVT::v16i8, Custom);
+
+    setOperationAction(ISD::CTSELECT, MVT::v2f64, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v2i64, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v4i32, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v8i16, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v8f16, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v16i8, Custom);
 
     setOperationAction(ISD::FP_TO_SINT,         MVT::v4i32, Custom);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v4i32, Custom);
@@ -1569,6 +1585,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SELECT,            MVT::v32i8, Custom);
     setOperationAction(ISD::SELECT,            MVT::v8f32, Custom);
 
+    setOperationAction(ISD::CTSELECT, MVT::v4f64, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v4i64, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v8i32, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v16i16, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v16f16, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v32i8, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v8f32, Custom);
+
     for (auto VT : { MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
       setOperationAction(ISD::SIGN_EXTEND,     VT, Custom);
       setOperationAction(ISD::ZERO_EXTEND,     VT, Custom);
@@ -1763,6 +1787,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v16i1,  &X86::VK16RegClass);
 
     setOperationAction(ISD::SELECT,             MVT::v1i1, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v1i1, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v1i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR,       MVT::v1i1, Custom);
 
@@ -1808,6 +1833,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto VT : { MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v16i1 }) {
       setOperationAction(ISD::SETCC,            VT, Custom);
       setOperationAction(ISD::SELECT,           VT, Custom);
+      setOperationAction(ISD::CTSELECT, VT, Custom);
       setOperationAction(ISD::TRUNCATE,         VT, Custom);
 
       setOperationAction(ISD::BUILD_VECTOR,     VT, Custom);
@@ -2078,6 +2104,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Legal);
       setOperationAction(ISD::SELECT,             VT, Custom);
+      setOperationAction(ISD::CTSELECT, VT, Custom);
       setOperationAction(ISD::VSELECT,            VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -2263,6 +2290,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT,  VT, Custom);
       setOperationAction(ISD::SELECT,             VT, Custom);
+      setOperationAction(ISD::CTSELECT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE,     VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
@@ -2329,6 +2357,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::VSELECT,            VT, Legal);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::SELECT,             VT, Custom);
+      setOperationAction(ISD::CTSELECT, VT, Custom);
 
       setOperationAction(ISD::FNEG,               VT, Custom);
       setOperationAction(ISD::FABS,               VT, Custom);
@@ -2598,6 +2627,22 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
 
+  // Handle 512-bit vector CTSELECT without AVX512 by setting them to Expand
+  // This allows type legalization to split them into smaller vectors
+  for (auto VT : {MVT::v64i8, MVT::v32i16, MVT::v16i32, MVT::v8i64, MVT::v32f16,
+                  MVT::v16f32, MVT::v8f64}) {
+    setOperationAction(ISD::CTSELECT, VT, Expand);
+  }
+
+  // Handle 256-bit vector CTSELECT without AVX by setting them to Expand
+  // This allows type legalization to split them into 128-bit vectors
+  if (!Subtarget.hasAVX()) {
+    for (auto VT : {MVT::v4f64, MVT::v4i64, MVT::v8i32, MVT::v16i16,
+                    MVT::v16f16, MVT::v32i8, MVT::v8f32}) {
+      setOperationAction(ISD::CTSELECT, VT, Expand);
+    }
+  }
+
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -2704,6 +2749,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::BITCAST,
                        ISD::VSELECT,
                        ISD::SELECT,
+                       ISD::CTSELECT,
                        ISD::SHL,
                        ISD::SRA,
                        ISD::SRL,
@@ -25680,6 +25726,174 @@ static SDValue LowerSIGN_EXTEND_Mask(SDValue Op, const SDLoc &dl,
   return V;
 }
 
+SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Cond = Op.getOperand(0); // condition
+  SDValue TrueOp = Op.getOperand(1);  // true_value
+  SDValue FalseOp = Op.getOperand(2); // false_value
+  SDLoc DL(Op);
+  MVT VT = TrueOp.getSimpleValueType();
+
+  // Special handling for i386 targets (no CMOV) - route to post-RA expansion
+  // pseudos Let standard type legalization handle i64 automatically (splits
+  // into EDX:EAX)
+
+  // Handle soft float16 by converting to integer operations
+  if (isSoftF16(VT, Subtarget)) {
+    MVT NVT = VT.changeTypeToInteger();
+    SDValue CtSelect =
+        DAG.getNode(ISD::CTSELECT, DL, NVT, Cond, DAG.getBitcast(NVT, FalseOp),
+                    DAG.getBitcast(NVT, TrueOp));
+    return DAG.getBitcast(VT, CtSelect);
+  }
+
+  // Handle vector types
+  if (VT.isVector()) {
+    // Handle soft float16 vectors
+    if (isSoftF16(VT, Subtarget)) {
+      MVT NVT = VT.changeVectorElementTypeToInteger();
+      SDValue CtSelect = DAG.getNode(ISD::CTSELECT, DL, NVT, Cond,
+                                     DAG.getBitcast(NVT, FalseOp),
+                                     DAG.getBitcast(NVT, TrueOp));
+      return DAG.getBitcast(VT, CtSelect);
+    }
+
+    unsigned VectorWidth = VT.getSizeInBits();
+    MVT EltVT = VT.getVectorElementType();
+
+    // 512-bit vectors without AVX512 are now handled by type legalization
+    // (Expand action) 256-bit vectors without AVX are now handled by type
+    // legalization (Expand action)
+
+    if (VectorWidth == 128 && !Subtarget.hasSSE1())
+      return SDValue();
+
+    // Handle special cases for floating point vectors
+    if (EltVT.isFloatingPoint()) {
+      // For vector floating point with AVX, use VBLENDV-style operations
+      if (Subtarget.hasAVX() && (VectorWidth == 256 || VectorWidth == 128)) {
+        // Convert to bitwise operations using the condition
+        MVT IntVT = VT.changeVectorElementTypeToInteger();
+        SDValue IntOp1 = DAG.getBitcast(IntVT, TrueOp);
+        SDValue IntOp2 = DAG.getBitcast(IntVT, FalseOp);
+
+        // Create the CTSELECT node with integer types
+        SDValue IntResult =
+            DAG.getNode(X86ISD::CTSELECT, DL, IntVT, IntOp2, IntOp1,
+                        DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8),
+                        EmitTest(Cond, X86::COND_NE, DL, DAG, Subtarget));
+        return DAG.getBitcast(VT, IntResult);
+      }
+    }
+
+    // For integer vectors or when we don't have advanced SIMD support,
+    // use the generic X86 CTSELECT node which will be matched by the patterns
+    SDValue CC = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
+    SDValue EFLAGS = EmitTest(Cond, X86::COND_NE, DL, DAG, Subtarget);
+    // Create the X86 CTSELECT node - note operand order: true, false, cc, flags
+    return DAG.getNode(X86ISD::CTSELECT, DL, VT, FalseOp, TrueOp, CC, EFLAGS);
+  }
+
+  // Look past (and (setcc_carry (cmp ...)), 1)
+  if (Cond.getOpcode() == ISD::AND &&
+      Cond.getOperand(0).getOpcode() == X86ISD::SETCC_CARRY &&
+      isOneConstant(Cond.getOperand(1)))
+    Cond = Cond.getOperand(0);
+
+  /// Process condition flags and prepare for CTSELECT node creation
+  auto ProcessConditionFlags =
+      [&](SDValue Cond, MVT VT, SDLoc DL, SelectionDAG &DAG,
+          const X86Subtarget &Subtarget) -> std::pair<SDValue, SDValue> {
+    SDValue CC;
+    bool AddTest = true;
+
+    unsigned CondOpcode = Cond.getOpcode();
+    if (CondOpcode == X86ISD::SETCC || CondOpcode == X86ISD::SETCC_CARRY) {
+      CC = Cond.getOperand(0);
+      SDValue Cmp = Cond.getOperand(1);
+
+      if ((isX86LogicalCmp(Cmp)) || Cmp.getOpcode() == X86ISD::BT) {
+        Cond = Cmp;
+        AddTest = false;
+      }
+    } else if (CondOpcode == ISD::USUBO || CondOpcode == ISD::SSUBO ||
+               CondOpcode == ISD::UADDO || CondOpcode == ISD::SADDO ||
+               CondOpcode == ISD::UMULO || CondOpcode == ISD::SMULO) {
+      SDValue Value;
+      X86::CondCode X86Cond;
+      std::tie(Value, Cond) = getX86XALUOOp(X86Cond, Cond.getValue(0), DAG);
+      CC = DAG.getTargetConstant(X86Cond, DL, MVT::i8);
+      AddTest = false;
+    }
+
+    if (AddTest) {
+      // Look past the truncate if the high bits are known zero
+      if (isTruncWithZeroHighBitsInput(Cond, DAG))
+        Cond = Cond.getOperand(0);
+
+      // Try to match AND to BT instruction
+      if (Cond.getOpcode() == ISD::AND && Cond.hasOneUse()) {
+        X86::CondCode X86CondCode;
+        if (SDValue BT = LowerAndToBT(Cond, ISD::SETNE, DL, DAG, X86CondCode)) {
+          CC = DAG.getTargetConstant(X86CondCode, DL, MVT::i8);
+          Cond = BT;
+          AddTest = false;
+        }
+      }
+    }
+
+    if (AddTest) {
+      CC = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
+      Cond = EmitTest(Cond, X86::COND_NE, DL, DAG, Subtarget);
+    }
+
+    return {CC, Cond};
+  };
+
+  // Process condition flags and prepare for CTSELECT
+  auto [CC, ProcessedCond] =
+      ProcessConditionFlags(Cond, VT, DL, DAG, Subtarget);
+
+  // Handle i8 CTSELECT with truncate optimization
+  if (Op.getValueType() == MVT::i8 && TrueOp.getOpcode() == ISD::TRUNCATE &&
+      FalseOp.getOpcode() == ISD::TRUNCATE) {
+    SDValue T1 = TrueOp.getOperand(0), T2 = FalseOp.getOperand(0);
+    if (T1.getValueType() == T2.getValueType() &&
+        T1.getOpcode() != ISD::CopyFromReg &&
+        T2.getOpcode() != ISD::CopyFromReg) {
+      SDValue CtSelect = DAG.getNode(X86ISD::CTSELECT, DL, T1.getValueType(),
+                                     T2, T1, CC, ProcessedCond);
+      return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), CtSelect);
+    }
+  }
+
+  // Promote small integer types to avoid partial register stalls
+  // Exception: For i8 without CMOV, we can generate a shorter instruction
+  // sequence without movzx so keep it as is.
+  if ((Op.getValueType() == MVT::i8 && Subtarget.hasCMOV()) ||
+      (Op.getValueType() == MVT::i16 && !X86::mayFoldLoad(TrueOp, Subtarget) &&
+       !X86::mayFoldLoad(FalseOp, Subtarget))) {
+    TrueOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, TrueOp);
+    FalseOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, FalseOp);
+    SDValue Ops[] = {FalseOp, TrueOp, CC, ProcessedCond};
+    SDValue CtSelect = DAG.getNode(X86ISD::CTSELECT, DL, MVT::i32, Ops);
+    return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), CtSelect);
+  }
+
+  if (isScalarFPTypeInSSEReg(VT)) {
+    MVT IntVT = (VT == MVT::f32) ? MVT::i32 : MVT::i64;
+    TrueOp = DAG.getBitcast(IntVT, TrueOp);
+    FalseOp = DAG.getBitcast(IntVT, FalseOp);
+    SDValue Ops[] = {FalseOp, TrueOp, CC, ProcessedCond};
+    SDValue CtSelect = DAG.getNode(X86ISD::CTSELECT, DL, IntVT, Ops);
+    return DAG.getBitcast(VT, CtSelect);
+  }
+
+  // Create final CTSELECT node
+  SDValue Ops[] = {FalseOp, TrueOp, CC, ProcessedCond};
+  return DAG.getNode(X86ISD::CTSELECT, DL, Op.getValueType(), Ops,
+                     Op->getFlags());
+}
+
 static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
                                SelectionDAG &DAG) {
   SDValue In = Op->getOperand(0);
@@ -30129,30 +30343,65 @@ static SDValue LowervXi8MulWithUNPCK(SDValue A, SDValue B, const SDLoc &dl,
                                      const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG,
                                      SDValue *Low = nullptr) {
+  unsigned NumElts = VT.getVectorNumElements();
+
   // For vXi8 we will unpack the low and high half of each 128 bit lane to widen
   // to a vXi16 type. Do the multiplies, shift the results and pack the half
   // lane results back together.
 
   // We'll take different approaches for signed and unsigned.
-  // For unsigned we'll use punpcklbw/punpckhbw to zero extend the bytes to
-  // words and use pmullw to calculate the full 16-bit product.
+  // For unsigned we'll use punpcklbw/punpckhbw to put zero extend the bytes
+  // and use pmullw to calculate the full 16-bit product.
   // For signed we'll use punpcklbw/punpckbw to extend the bytes to words and
   // shift them left into the upper byte of each word. This allows us to use
   // pmulhw to calculate the full 16-bit product. This trick means we don't
   // need to sign extend the bytes to use pmullw.
-  MVT ExVT = MVT::getVectorVT(MVT::i16, VT.getVectorNumElements() / 2);
+
+  MVT ExVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
   SDValue Zero = DAG.getConstant(0, dl, VT);
 
-  SDValue ALo, AHi, BLo, BHi;
+  SDValue ALo, AHi;
   if (IsSigned) {
     ALo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, Zero, A));
-    BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, Zero, B));
     AHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, Zero, A));
-    BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, Zero, B));
   } else {
     ALo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, A, Zero));
-    BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, B, Zero));
     AHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, A, Zero));
+  }
+
+  SDValue BLo, BHi;
+  if (ISD::isBuildVectorOfConstantSDNodes(B.getNode())) {
+    // If the RHS is a constant, manually unpackl/unpackh and extend.
+    SmallVector<SDValue, 16> LoOps, HiOps;
+    for (unsigned i = 0; i != NumElts; i += 16) {
+      for (unsigned j = 0; j != 8; ++j) {
+        SDValue LoOp = B.getOperand(i + j);
+        SDValue HiOp = B.getOperand(i + j + 8);
+
+        if (IsSigned) {
+          LoOp = DAG.getAnyExtOrTrunc(LoOp, dl, MVT::i16);
+          HiOp = DAG.getAnyExtOrTrunc(HiOp, dl, MVT::i16);
+          LoOp = DAG.getNode(ISD::SHL, dl, MVT::i16, LoOp,
+                             DAG.getConstant(8, dl, MVT::i16));
+          HiOp = DAG.getNode(ISD::SHL, dl, MVT::i16, HiOp,
+                             DAG.getConstant(8, dl, MVT::i16));
+        } else {
+          LoOp = DAG.getZExtOrTrunc(LoOp, dl, MVT::i16);
+          HiOp = DAG.getZExtOrTrunc(HiOp, dl, MVT::i16);
+        }
+
+        LoOps.push_back(LoOp);
+        HiOps.push_back(HiOp);
+      }
+    }
+
+    BLo = DAG.getBuildVector(ExVT, dl, LoOps);
+    BHi = DAG.getBuildVector(ExVT, dl, HiOps);
+  } else if (IsSigned) {
+    BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, Zero, B));
+    BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, Zero, B));
+  } else {
+    BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, B, Zero));
     BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, B, Zero));
   }
 
@@ -30165,7 +30414,7 @@ static SDValue LowervXi8MulWithUNPCK(SDValue A, SDValue B, const SDLoc &dl,
   if (Low)
     *Low = getPack(DAG, Subtarget, dl, VT, RLo, RHi);
 
-  return getPack(DAG, Subtarget, dl, VT, RLo, RHi, /*PackHiHalf=*/true);
+  return getPack(DAG, Subtarget, dl, VT, RLo, RHi, /*PackHiHalf*/ true);
 }
 
 static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
@@ -34100,6 +34349,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCCS:     return LowerSETCC(Op, DAG);
   case ISD::SETCCCARRY:         return LowerSETCCCARRY(Op, DAG);
   case ISD::SELECT:             return LowerSELECT(Op, DAG);
+  case ISD::CTSELECT:           return LowerCTSELECT(Op, DAG);
   case ISD::BRCOND:             return LowerBRCOND(Op, DAG);
   case ISD::JumpTable:          return LowerJumpTable(Op, DAG);
   case ISD::VASTART:            return LowerVASTART(Op, DAG);
@@ -34183,6 +34433,12 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
 }
 
+bool X86TargetLowering::isSelectSupported(SelectSupportKind Kind) const {
+  if (Kind == SelectSupportKind::CtSelect) {
+    return true;
+  }
+  return TargetLoweringBase::isSelectSupported(Kind);
+}
 /// Replace a node with an illegal result type with a new node built out of
 /// custom code.
 void X86TargetLowering::ReplaceNodeResults(SDNode *N,
@@ -35496,6 +35752,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_CMPM)
   NODE_NAME_CASE(CMPMM_SAE)
   NODE_NAME_CASE(SETCC)
+  NODE_NAME_CASE(CTSELECT)
   NODE_NAME_CASE(SETCC_CARRY)
   NODE_NAME_CASE(FSETCC)
   NODE_NAME_CASE(FSETCCM)
@@ -38279,6 +38536,480 @@ X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
   return BB;
 }
 
+/// Helper function to emit i386 CTSELECT with condition materialization.
+/// This converts EFLAGS-based CTSELECT into a condition byte that can be
+/// shared across multiple operations (critical for i64 type legalization).
+///
+/// Phase 1: Materialize condition byte from EFLAGS using SETCC
+/// Phase 2: Create internal pseudo with condition byte for post-RA expansion
+///
+/// This approach ensures that when i64 is type-legalized into two i32
+/// operations, both operations share the same condition byte rather than
+/// each independently reading (and destroying) EFLAGS.
+static MachineBasicBlock *
+emitCTSelectI386WithConditionMaterialization(MachineInstr &MI,
+                                              MachineBasicBlock *BB,
+                                              unsigned InternalPseudoOpcode) {
+  const TargetInstrInfo *TII = BB->getParent()->getSubtarget().getInstrInfo();
+  const MIMetadata MIMD(MI);
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  // Original pseudo operands: (outs dst), (ins src1, src2, cond)
+  Register Src1Reg = MI.getOperand(1).getReg();
+  Register Src2Reg = MI.getOperand(2).getReg();
+  X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(3).getImm());
+
+  // Get opposite condition (SETCC sets to 1 when condition is TRUE,
+  // but we want to select src1 when condition is FALSE for X86 semantics)
+  X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
+
+  // Step 1: Materialize condition byte from EFLAGS
+  // This is done OUTSIDE the constant-time bundle, before any EFLAGS corruption
+  Register CondByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+  BuildMI(*BB, MI, MIMD, TII->get(X86::SETCCr), CondByteReg).addImm(OppCC);
+
+  // Step 2: Create internal pseudo that takes condition byte as input
+  // This pseudo will be expanded post-RA into the actual constant-time bundle
+  // The condition byte can now be safely shared between multiple pseudos
+
+  // Internal pseudo has operands: (outs dst, tmp_byte, tmp_mask), (ins src1,
+  // src2, cond_byte)
+  Register DstReg = MI.getOperand(0).getReg();
+
+  // Create virtual registers for the temporary outputs
+  Register TmpByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+  Register TmpMaskReg;
+
+  // Determine the register class for tmp_mask based on the data type
+  if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR8rr) {
+    TmpMaskReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+  } else if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR16rr) {
+    TmpMaskReg = MRI.createVirtualRegister(&X86::GR16RegClass);
+  } else if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR32rr) {
+    TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+  } else {
+    llvm_unreachable("Unknown internal pseudo opcode");
+  }
+
+  BuildMI(*BB, MI, MIMD, TII->get(InternalPseudoOpcode))
+      .addDef(DstReg)         // dst (output)
+      .addDef(TmpByteReg)     // tmp_byte (output)
+      .addDef(TmpMaskReg)     // tmp_mask (output)
+      .addReg(Src1Reg)        // src1 (input)
+      .addReg(Src2Reg)        // src2 (input)
+      .addReg(CondByteReg);   // pre-materialized condition byte (input)
+
+  MI.eraseFromParent();
+  return BB;
+}
+
+// Helper structure to hold memory operand information for FP loads
+struct FPLoadMemOperands {
+  bool IsValid = false;
+  unsigned BaseReg = 0;
+  int64_t ScaleVal = 1;
+  unsigned IndexReg = 0;
+  int64_t Disp = 0;
+  unsigned SegReg = 0;
+  int FrameIndex = -1;
+  bool IsFrameIndex = false;
+  int ConstantPoolIndex = -1;
+  bool IsConstantPool = false;
+  const GlobalValue *Global = nullptr;
+  int64_t GlobalOffset = 0;
+  bool IsGlobal = false;
+};
+
+// Check if a virtual register is defined by a simple FP load instruction
+// Returns the memory operands if it's a simple load, otherwise returns invalid
+static FPLoadMemOperands getFPLoadMemOperands(Register Reg,
+                                               MachineRegisterInfo &MRI,
+                                               unsigned ExpectedLoadOpcode) {
+  FPLoadMemOperands Result;
+
+  if (!Reg.isVirtual())
+    return Result;
+
+  MachineInstr *DefMI = MRI.getVRegDef(Reg);
+  if (!DefMI)
+    return Result;
+
+  // Check if it's the expected load opcode (e.g., LD_Fp32m, LD_Fp64m, LD_Fp80m)
+  if (DefMI->getOpcode() != ExpectedLoadOpcode)
+    return Result;
+
+  // Check that this is a simple load - not volatile, not atomic, etc.
+  // FP loads have hasSideEffects = 0 in their definition for simple loads
+  if (DefMI->hasOrderedMemoryRef())
+    return Result;
+
+  // The load should have a single def (the destination register) and memory operands
+  // Format: %reg = LD_Fpxxm <fi#N>, 1, %noreg, 0, %noreg
+  // or: %reg = LD_Fpxxm %base, scale, %index, disp, %segment
+  if (DefMI->getNumOperands() < 6)
+    return Result;
+
+  // Operand 0 is the destination, operands 1-5 are the memory reference
+  MachineOperand &BaseMO = DefMI->getOperand(1);
+  MachineOperand &ScaleMO = DefMI->getOperand(2);
+  MachineOperand &IndexMO = DefMI->getOperand(3);
+  MachineOperand &DispMO = DefMI->getOperand(4);
+  MachineOperand &SegMO = DefMI->getOperand(5);
+
+  // Check if this is a frame index load
+  if (BaseMO.isFI()) {
+    Result.IsValid = true;
+    Result.IsFrameIndex = true;
+    Result.FrameIndex = BaseMO.getIndex();
+    Result.ScaleVal = ScaleMO.getImm();
+    Result.IndexReg = IndexMO.getReg();
+    Result.Disp = DispMO.getImm();
+    Result.SegReg = SegMO.getReg();
+    return Result;
+  }
+
+  // Check if this is a constant pool load
+  // Format: %reg = LD_Fpxxm $noreg, 1, $noreg, %const.N, $noreg
+  if (BaseMO.isReg() && BaseMO.getReg() == X86::NoRegister &&
+      ScaleMO.isImm() && IndexMO.isReg() &&
+      IndexMO.getReg() == X86::NoRegister &&
+      DispMO.isCPI() && SegMO.isReg()) {
+    Result.IsValid = true;
+    Result.IsConstantPool = true;
+    Result.ConstantPoolIndex = DispMO.getIndex();
+    Result.ScaleVal = ScaleMO.getImm();
+    Result.IndexReg = IndexMO.getReg();
+    Result.Disp = 0;
+    Result.SegReg = SegMO.getReg();
+    return Result;
+  }
+
+  // Check if this is a global variable load
+  // Format: %reg = LD_Fpxxm $noreg, 1, $noreg, @global_name, $noreg
+  if (BaseMO.isReg() && BaseMO.getReg() == X86::NoRegister &&
+      ScaleMO.isImm() && IndexMO.isReg() &&
+      IndexMO.getReg() == X86::NoRegister &&
+      DispMO.isGlobal() && SegMO.isReg()) {
+    Result.IsValid = true;
+    Result.IsGlobal = true;
+    Result.Global = DispMO.getGlobal();
+    Result.GlobalOffset = DispMO.getOffset();
+    Result.ScaleVal = ScaleMO.getImm();
+    Result.IndexReg = IndexMO.getReg();
+    Result.Disp = 0;
+    Result.SegReg = SegMO.getReg();
+    return Result;
+  }
+
+  // Regular memory operands (e.g., pointer loads)
+  if (BaseMO.isReg() && ScaleMO.isImm() && IndexMO.isReg() &&
+      DispMO.isImm() && SegMO.isReg()) {
+    Result.IsValid = true;
+    Result.IsFrameIndex = false;
+    Result.IsConstantPool = false;
+    Result.BaseReg = BaseMO.getReg();
+    Result.ScaleVal = ScaleMO.getImm();
+    Result.IndexReg = IndexMO.getReg();
+    Result.Disp = DispMO.getImm();
+    Result.SegReg = SegMO.getReg();
+    return Result;
+  }
+
+  return Result;
+}
+
+static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
+                                                     MachineBasicBlock *BB,
+                                                     unsigned pseudoInstr) {
+  const TargetInstrInfo *TII = BB->getParent()->getSubtarget().getInstrInfo();
+  const MIMetadata MIMD(MI);
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  unsigned RegSizeInByte = 4;
+
+  // Get operands
+  // MI operands: %result:rfp80 = CTSELECT_I386 %false:rfp80, %true:rfp80, %cond:i8imm
+  unsigned DestReg = MI.getOperand(0).getReg();
+  unsigned FalseReg = MI.getOperand(1).getReg();
+  unsigned TrueReg = MI.getOperand(2).getReg();
+  X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(3).getImm());
+  X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
+
+  // Materialize condition byte from EFLAGS
+  Register CondByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+  BuildMI(*BB, MI, MIMD, TII->get(X86::SETCCr), CondByteReg).addImm(OppCC);
+
+  auto storeFpToSlot = [&](unsigned Opcode, int Slot, Register Reg) {
+    addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(Opcode)), Slot)
+        .addReg(Reg, RegState::Kill);
+  };
+
+  // Helper to load integer from memory operands
+  auto loadIntFromMemOperands = [&](const FPLoadMemOperands &MemOps,
+                                     unsigned Offset) -> unsigned {
+    unsigned IntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+    MachineInstrBuilder MIB =
+        BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), IntReg);
+
+    if (MemOps.IsFrameIndex) {
+      // Frame index: addFrameIndex + scale + index + disp + segment
+      MIB.addFrameIndex(MemOps.FrameIndex)
+          .addImm(MemOps.ScaleVal)
+          .addReg(MemOps.IndexReg)
+          .addImm(MemOps.Disp + Offset)
+          .addReg(MemOps.SegReg);
+    } else if (MemOps.IsConstantPool) {
+      // Constant pool: base_reg + scale + index + CP_index + segment
+      // MOV32rm format: base, scale, index, displacement, segment
+      MIB.addReg(X86::NoRegister)  // Base register
+          .addImm(MemOps.ScaleVal)  // Scale
+          .addReg(MemOps.IndexReg)  // Index register
+          .addConstantPoolIndex(MemOps.ConstantPoolIndex, Offset)  // Displacement (CP index)
+          .addReg(MemOps.SegReg);  // Segment
+    } else if (MemOps.IsGlobal) {
+      // Global variable: base_reg + scale + index + global + segment
+      // MOV32rm format: base, scale, index, displacement, segment
+      MIB.addReg(X86::NoRegister)  // Base register
+          .addImm(MemOps.ScaleVal)  // Scale
+          .addReg(MemOps.IndexReg)  // Index register
+          .addGlobalAddress(MemOps.Global, MemOps.GlobalOffset + Offset)  // Displacement (global address)
+          .addReg(MemOps.SegReg);  // Segment
+    } else {
+      // Regular memory: base_reg + scale + index + disp + segment
+      MIB.addReg(MemOps.BaseReg)
+          .addImm(MemOps.ScaleVal)
+          .addReg(MemOps.IndexReg)
+          .addImm(MemOps.Disp + Offset)
+          .addReg(MemOps.SegReg);
+    }
+
+    return IntReg;
+  };
+
+  // Optimized path: load integers directly from memory when both operands are
+  // memory loads, avoiding FP register round-trip
+  auto emitCtSelectFromMemory = [&](unsigned NumValues,
+                                     const FPLoadMemOperands &TrueMemOps,
+                                     const FPLoadMemOperands &FalseMemOps,
+                                     int ResultSlot) {
+    for (unsigned Val = 0; Val < NumValues; ++Val) {
+      unsigned Offset = Val * RegSizeInByte;
+
+      // Load true and false values directly from their memory locations as integers
+      unsigned TrueIntReg = loadIntFromMemOperands(TrueMemOps, Offset);
+      unsigned FalseIntReg = loadIntFromMemOperands(FalseMemOps, Offset);
+
+      // Use CTSELECT_I386_INT_GR32 pseudo instruction for constant-time selection
+      unsigned ResultIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      unsigned TmpByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+      unsigned TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+
+      BuildMI(*BB, MI, MIMD, TII->get(X86::CTSELECT_I386_INT_GR32rr))
+          .addDef(ResultIntReg)    // dst (output)
+          .addDef(TmpByteReg)      // tmp_byte (output)
+          .addDef(TmpMaskReg)      // tmp_mask (output)
+          .addReg(FalseIntReg)     // src1 (input) - false value
+          .addReg(TrueIntReg)      // src2 (input) - true value
+          .addReg(CondByteReg);    // pre-materialized condition byte (input)
+
+      // Store result back to result slot
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32mr))
+          .addFrameIndex(ResultSlot)
+          .addImm(1)
+          .addReg(0)
+          .addImm(Offset)
+          .addReg(0)
+          .addReg(ResultIntReg, RegState::Kill);
+    }
+  };
+
+  auto emitCtSelectWithPseudo = [&](unsigned NumValues, int TrueSlot, int FalseSlot, int ResultSlot) {
+    for (unsigned Val = 0; Val < NumValues; ++Val) {
+      unsigned Offset = Val * RegSizeInByte;
+      
+      // Load true and false values from stack as 32-bit integers
+      unsigned TrueIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), TrueIntReg)
+          .addFrameIndex(TrueSlot)
+          .addImm(1)
+          .addReg(0)
+          .addImm(Offset)
+          .addReg(0);
+
+      unsigned FalseIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), FalseIntReg)
+          .addFrameIndex(FalseSlot)
+          .addImm(1)
+          .addReg(0)
+          .addImm(Offset)
+          .addReg(0);
+
+      // Use CTSELECT_I386_INT_GR32 pseudo instruction for constant-time selection
+      unsigned ResultIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      unsigned TmpByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+      unsigned TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      
+      BuildMI(*BB, MI, MIMD, TII->get(X86::CTSELECT_I386_INT_GR32rr))
+          .addDef(ResultIntReg)     // dst (output)
+          .addDef(TmpByteReg)       // tmp_byte (output)
+          .addDef(TmpMaskReg)       // tmp_mask (output)
+          .addReg(FalseIntReg)      // src1 (input) - false value
+          .addReg(TrueIntReg)       // src2 (input) - true value
+          .addReg(CondByteReg);     // pre-materialized condition byte (input)
+
+      // Store result back to result slot
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32mr))
+          .addFrameIndex(ResultSlot)
+          .addImm(1)
+          .addReg(0)
+          .addImm(Offset)
+          .addReg(0)
+          .addReg(ResultIntReg, RegState::Kill);
+    }
+  };
+
+  switch (pseudoInstr) {
+  case X86::CTSELECT_I386_FP32rr: {
+    // Check if both operands are simple memory loads
+    FPLoadMemOperands TrueMemOps =
+        getFPLoadMemOperands(TrueReg, MRI, X86::LD_Fp32m);
+    FPLoadMemOperands FalseMemOps =
+        getFPLoadMemOperands(FalseReg, MRI, X86::LD_Fp32m);
+
+    int ResultSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
+
+    if (TrueMemOps.IsValid && FalseMemOps.IsValid) {
+      // Optimized path: load directly from memory as integers
+      // Works for both frame index loads (stack parameters) and
+      // constant pool loads (constants)
+      emitCtSelectFromMemory(1, TrueMemOps, FalseMemOps, ResultSlot);
+
+      // Erase the original FP load instructions since we're not using them
+      // and have loaded the data directly as integers instead
+      if (MRI.hasOneUse(TrueReg)) {
+        if (MachineInstr *TrueDefMI = MRI.getVRegDef(TrueReg))
+          TrueDefMI->eraseFromParent();
+      }
+      if (MRI.hasOneUse(FalseReg)) {
+        if (MachineInstr *FalseDefMI = MRI.getVRegDef(FalseReg))
+          FalseDefMI->eraseFromParent();
+      }
+    } else {
+      // General path: spill FP registers to stack first
+      int TrueSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
+      int FalseSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
+
+      storeFpToSlot(X86::ST_Fp32m, TrueSlot, TrueReg);
+      storeFpToSlot(X86::ST_Fp32m, FalseSlot, FalseReg);
+
+      emitCtSelectWithPseudo(1, TrueSlot, FalseSlot, ResultSlot);
+    }
+
+    // Load result back as f32
+    addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp32m), DestReg),
+                      ResultSlot);
+    break;
+  }
+  case X86::CTSELECT_I386_FP64rr: {
+    unsigned StackSlotSize = 8;
+
+    // Check if both operands are simple memory loads
+    FPLoadMemOperands TrueMemOps =
+        getFPLoadMemOperands(TrueReg, MRI, X86::LD_Fp64m);
+    FPLoadMemOperands FalseMemOps =
+        getFPLoadMemOperands(FalseReg, MRI, X86::LD_Fp64m);
+
+    int ResultSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
+
+    if (TrueMemOps.IsValid && FalseMemOps.IsValid) {
+      // Optimized path: load directly from memory as integers
+      // Works for both frame index loads (stack parameters) and
+      // constant pool loads (constants)
+      emitCtSelectFromMemory(StackSlotSize / RegSizeInByte, TrueMemOps,
+                             FalseMemOps, ResultSlot);
+
+      // Erase the original FP load instructions since we're not using them
+      if (MRI.hasOneUse(TrueReg)) {
+        if (MachineInstr *TrueDefMI = MRI.getVRegDef(TrueReg))
+          TrueDefMI->eraseFromParent();
+      }
+      if (MRI.hasOneUse(FalseReg)) {
+        if (MachineInstr *FalseDefMI = MRI.getVRegDef(FalseReg))
+          FalseDefMI->eraseFromParent();
+      }
+    } else {
+      // General path: spill FP registers to stack first
+      int TrueSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
+      int FalseSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
+
+      storeFpToSlot(X86::ST_Fp64m, TrueSlot, TrueReg);
+      storeFpToSlot(X86::ST_Fp64m, FalseSlot, FalseReg);
+
+      emitCtSelectWithPseudo(StackSlotSize / RegSizeInByte, TrueSlot, FalseSlot,
+                             ResultSlot);
+    }
+
+    // Load result back as f64
+    addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp64m), DestReg),
+                      ResultSlot);
+    break;
+  }
+  case X86::CTSELECT_I386_FP80rr: {
+    // f80 is 80 bits (10 bytes), but stored with 12-byte alignment
+    unsigned StackObjectSize = 12;
+
+    // Check if both operands are simple memory loads
+    FPLoadMemOperands TrueMemOps =
+        getFPLoadMemOperands(TrueReg, MRI, X86::LD_Fp80m);
+    FPLoadMemOperands FalseMemOps =
+        getFPLoadMemOperands(FalseReg, MRI, X86::LD_Fp80m);
+
+    int ResultSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
+
+    if (TrueMemOps.IsValid && FalseMemOps.IsValid) {
+      // Optimized path: load directly from memory as integers
+      // Works for both frame index loads (stack parameters) and
+      // constant pool loads (constants)
+      emitCtSelectFromMemory(StackObjectSize / RegSizeInByte, TrueMemOps,
+                             FalseMemOps, ResultSlot);
+
+      // Erase the original FP load instructions since we're not using them
+      if (MRI.hasOneUse(TrueReg)) {
+        if (MachineInstr *TrueDefMI = MRI.getVRegDef(TrueReg))
+          TrueDefMI->eraseFromParent();
+      }
+      if (MRI.hasOneUse(FalseReg)) {
+        if (MachineInstr *FalseDefMI = MRI.getVRegDef(FalseReg))
+          FalseDefMI->eraseFromParent();
+      }
+    } else {
+      // General path: spill FP registers to stack first
+      int TrueSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
+      int FalseSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
+
+      storeFpToSlot(X86::ST_FpP80m, TrueSlot, TrueReg);
+      storeFpToSlot(X86::ST_FpP80m, FalseSlot, FalseReg);
+
+      emitCtSelectWithPseudo(StackObjectSize / RegSizeInByte, TrueSlot,
+                             FalseSlot, ResultSlot);
+    }
+
+    // Load result back as f80
+    addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp80m), DestReg),
+                      ResultSlot);
+    break;
+  }
+  default:
+    llvm_unreachable("Invalid CTSELECT opcode");
+  }
+
+  MI.eraseFromParent();
+
+  return BB;
+}
+
 MachineBasicBlock *
 X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
@@ -38336,6 +39067,25 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::CMOV_VK64:
     return EmitLoweredSelect(MI, BB);
 
+  case X86::CTSELECT_I386_GR8rr:
+    return emitCTSelectI386WithConditionMaterialization(
+        MI, BB, X86::CTSELECT_I386_INT_GR8rr);
+
+  case X86::CTSELECT_I386_GR16rr:
+    return emitCTSelectI386WithConditionMaterialization(
+        MI, BB, X86::CTSELECT_I386_INT_GR16rr);
+
+  case X86::CTSELECT_I386_GR32rr:
+    return emitCTSelectI386WithConditionMaterialization(
+        MI, BB, X86::CTSELECT_I386_INT_GR32rr);
+
+  case X86::CTSELECT_I386_FP32rr:
+    return emitCTSelectI386WithFpType(MI, BB, X86::CTSELECT_I386_FP32rr);
+  case X86::CTSELECT_I386_FP64rr:
+    return emitCTSelectI386WithFpType(MI, BB, X86::CTSELECT_I386_FP64rr);
+  case X86::CTSELECT_I386_FP80rr:
+    return emitCTSelectI386WithFpType(MI, BB, X86::CTSELECT_I386_FP80rr);
+    
   case X86::FP80_ADDr:
   case X86::FP80_ADDm32: {
     // Change the floating point control register to use double extended
@@ -42324,7 +43074,7 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
     if (!X86::mayFoldLoad(peekThroughOneUseBitcasts(N0), Subtarget) ||
         X86::mayFoldLoad(peekThroughOneUseBitcasts(N1), Subtarget))
       return SDValue();
-    Imm = llvm::rotl<uint8_t>(Imm, 4);
+    Imm = ((Imm & 0x0F) << 4) | ((Imm & 0xF0) >> 4);
     return DAG.getNode(X86ISD::SHUFP, DL, VT, N1, N0,
                        DAG.getTargetConstant(Imm, DL, MVT::i8));
   };
@@ -45354,16 +46104,10 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
-    if (ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode())) {
-      // iff we only need the signbit then we can use R directly.
-      if (OriginalDemandedBits.isSignMask())
-        return TLO.CombineTo(Op, Op.getOperand(1));
-      // otherwise we just need R's signbit for the comparison.
-      APInt SignMask = APInt::getSignMask(BitWidth);
-      if (SimplifyDemandedBits(Op.getOperand(1), SignMask, OriginalDemandedElts,
-                               Known, TLO, Depth + 1))
-        return true;
-    }
+    // iff we only need the sign bit then we can use R directly.
+    if (OriginalDemandedBits.isSignMask() &&
+        ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()))
+      return TLO.CombineTo(Op, Op.getOperand(1));
     break;
   case X86ISD::MOVMSK: {
     SDValue Src = Op.getOperand(0);
@@ -48294,15 +49038,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if (SDValue V = combineLogicBlendIntoConditionalNegate(VT, Cond, RHS, LHS,
                                                            DL, DAG, Subtarget))
       return V;
-
-  // If the sign bit is known then BLENDV can be folded away.
-  if (N->getOpcode() == X86ISD::BLENDV) {
-    KnownBits KnownCond = DAG.computeKnownBits(Cond);
-    if (KnownCond.isNegative())
-      return LHS;
-    if (KnownCond.isNonNegative())
-      return RHS;
-  }
 
   if (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV) {
     SmallVector<int, 64> CondMask;

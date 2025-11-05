@@ -53,6 +53,11 @@ def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
+// Predicates for native CMOV instruction (checks hasCMOV(), not canUseCMOV())
+// HasCMOV may be true even without native CMOV (e.g., via SSE emulation)
+// Use HasNativeCMOV/NoNativeCMOV for constant-time code that requires actual CMOV
+def HasNativeCMOV : Predicate<"Subtarget->hasCMOV()">;
+def NoNativeCMOV  : Predicate<"!Subtarget->hasCMOV()">;
 def HasNOPL      : Predicate<"Subtarget->hasNOPL()">;
 def HasMMX       : Predicate<"Subtarget->hasMMX()">;
 def HasSSE1      : Predicate<"Subtarget->hasSSE1()">;

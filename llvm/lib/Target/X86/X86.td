@@ -834,9 +834,10 @@ include "X86SchedSapphireRapids.td"
 
 def ProcessorFeatures {
   // x86-64 micro-architecture levels: x86-64 and x86-64-v[234]
-  list<SubtargetFeature> X86_64V1Features = [
-    FeatureX87, FeatureCX8, FeatureCMOV, FeatureMMX, FeatureSSE2,
-    FeatureFXSR, FeatureNOPL, FeatureX86_64,
+  list<SubtargetFeature> X86_64V1Features = [FeatureX87, FeatureCX8,
+                                             FeatureCMOV, FeatureMMX,
+                                             FeatureSSE2, FeatureFXSR,
+                                             FeatureNOPL, FeatureX86_64,
   ];
   list<SubtargetFeature> X86_64V1Tuning = [
     TuningMacroFusion,
@@ -1172,6 +1173,7 @@ def ProcessorFeatures {
                                                   FeatureAVXNECONVERT,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXVNNIINT16,
+                                                  FeatureUSERMSR,
                                                   FeatureSHA512,
                                                   FeatureSM3,
                                                   FeatureEGPR,

@@ -699,6 +699,87 @@ def : Pat<(v16f32 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
 def : Pat<(v8f64 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
           (CMOV_VR512 VR512:$t, VR512:$f, timm:$cond)>;
 
+// CTSELECT
+// Enhanced CTSELECT pseudos for i386 with temporary register allocation
+// These use a two-phase approach:
+// 1. Custom inserter materializes condition byte from EFLAGS
+// 2. Post-RA expansion generates constant-time instruction bundles
+
+let isPseudo = 1, isNotDuplicable = 1 in {
+  // Phase 1: Initial pseudos that consume EFLAGS (via custom inserter)
+  // These are matched by patterns and convert EFLAGS to condition byte
+  class CTSELECT_I386_INITIAL<RegisterClass RC, ValueType VT>
+      : PseudoI<(outs RC:$dst),
+                (ins RC:$src1, RC:$src2, i8imm:$cond),
+                [(set RC:$dst, (VT(X86ctselect RC:$src1, RC:$src2, timm:$cond,
+                                        EFLAGS)))]> {
+    let Uses = [EFLAGS];
+    let Defs = [EFLAGS];
+    let usesCustomInserter = 1;
+    let hasNoSchedulingInfo = 1;
+  }
+
+  // Phase 2: Internal pseudos with pre-materialized condition byte (post-RA expansion)
+  // These generate the actual constant-time instruction bundles
+  class CTSELECT_I386_INTERNAL<RegisterClass RC, RegisterClass ByteRC>
+      : PseudoI<(outs RC:$dst, ByteRC:$tmp_byte, RC:$tmp_mask),
+                (ins RC:$src1, RC:$src2, ByteRC:$cond_byte), []> {
+    let hasNoSchedulingInfo = 1;
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_byte,@earlyclobber $tmp_mask";
+    let Defs = [EFLAGS];  // NEG instruction in post-RA expansion clobbers EFLAGS
+  }
+}
+
+// Phase 1 pseudos for non-CMOV targets (custom inserter materializes condition)
+let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
+  let Predicates = [NoNativeCMOV] in {
+    def CTSELECT_I386_GR8rr : CTSELECT_I386_INITIAL<GR8, i8>;
+    def CTSELECT_I386_GR16rr : CTSELECT_I386_INITIAL<GR16, i16>;
+    def CTSELECT_I386_GR32rr : CTSELECT_I386_INITIAL<GR32, i32>;
+  }
+}
+
+// Phase 2 pseudos (post-RA expansion with pre-materialized condition byte)
+let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
+  let Predicates = [NoNativeCMOV] in {
+    def CTSELECT_I386_INT_GR8rr :
+        CTSELECT_I386_INTERNAL<GR8, GR8>;
+    def CTSELECT_I386_INT_GR16rr :
+        CTSELECT_I386_INTERNAL<GR16, GR8>;
+    def CTSELECT_I386_INT_GR32rr :
+        CTSELECT_I386_INTERNAL<GR32, GR8>;
+  }
+}
+
+let hasSideEffects = 1,
+    ForceDisassemble = 1,
+    Constraints = "$dst = $src1" in {
+
+  let Predicates = [FPStackf32] in
+    def CTSELECT_I386_FP32rr : CTSELECT_I386_INITIAL<RFP32, f32>;
+
+  let Predicates = [FPStackf64] in
+    def CTSELECT_I386_FP64rr : CTSELECT_I386_INITIAL<RFP64, f64>;
+
+  def CTSELECT_I386_FP80rr : CTSELECT_I386_INITIAL<RFP80, f80>;
+}
+
+// Pattern matching for non-native-CMOV CTSELECT (routes to custom inserter for condition materialization)
+// NoNativeCMOV ensures these patterns are used when actual CMOV instruction is not available
+// even if canUseCMOV() is true (e.g., i386 with SSE which can emulate CMOV)
+let Predicates = [NoNativeCMOV] in {
+  def : Pat<(i8(X86ctselect GR8:$src1, GR8:$src2, timm:$cond, EFLAGS)),
+            (CTSELECT_I386_GR8rr GR8:$src1, GR8:$src2, timm:$cond)>;
+
+  def : Pat<(i16(X86ctselect GR16:$src1, GR16:$src2, timm:$cond, EFLAGS)),
+            (CTSELECT_I386_GR16rr GR16:$src1, GR16:$src2, timm:$cond)>;
+
+  def : Pat<(i32(X86ctselect GR32:$src1, GR32:$src2, timm:$cond, EFLAGS)),
+            (CTSELECT_I386_GR32rr GR32:$src1, GR32:$src2, timm:$cond)>;
+
+  // i64 patterns handled automatically by type legalization
+}
+
 //===----------------------------------------------------------------------===//
 // Normal-Instructions-With-Lock-Prefix Pseudo Instructions
 //===----------------------------------------------------------------------===//
