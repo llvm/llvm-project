@@ -103,9 +103,23 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
       auto *C = dyn_cast<ConstantFP>(U.get());
       if (!C || !C->getType()->isDoubleTy())
         continue;
+      // Do not promote if it wouldn't be loaded from the constant pool.
       if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64,
                             /*ForCodeSize=*/false))
         continue;
+      // Do not promote a constant if it is used as an immediate argument
+      // for an intrinsic.
+      if (auto *II = dyn_cast<IntrinsicInst>(U.getUser())) {
+        Function *IntrinsicFunc = II->getFunction();
+        unsigned OperandIdx = U.getOperandNo();
+        if (IntrinsicFunc && IntrinsicFunc->getAttributes().hasParamAttr(
+                                 OperandIdx, Attribute::ImmArg)) {
+          LLVM_DEBUG(dbgs() << "Skipping promotion of constant in: " << *II
+                            << " because operand " << OperandIdx
+                            << " must be an immediate.\n");
+          continue;
+        }
+      }
       ConstUsesMap[C].push_back(&U);
     }
   }
