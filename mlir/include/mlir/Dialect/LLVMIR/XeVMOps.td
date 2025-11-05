@@ -441,7 +441,11 @@ def XeVM_MemfenceOp
   }];
 }
 
-def XeVM_PrefetchOp : XeVM_Op<"prefetch"> {
+def XeVM_PrefetchOp
+    : XeVM_Op<"prefetch">,
+      Arguments<(ins Arg<AnyTypeOf<[LLVM_PointerInAddressSpace<1>,
+                                    LLVM_PointerInAddressSpace<4>]>>:$ptr,
+          OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
   let summary = "Prefetch data into a cache subsystem.";
   let description = [{
     Work-item issues a prefetch from global memory to cache:
@@ -449,11 +453,6 @@ def XeVM_PrefetchOp : XeVM_Op<"prefetch"> {
         or 4 (generic)
       * `cache_control` - specify caching options
   }];
-
-  let arguments = (ins AnyTypeOf<[LLVM_PointerInAddressSpace<1>,
-                                  LLVM_PointerInAddressSpace<4>]>:$ptr,
-      OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control);
-
   let assemblyFormat = [{
     operands prop-dict attr-dict `:` `(` type(operands) `)`
   }];
@@ -462,7 +461,13 @@ def XeVM_PrefetchOp : XeVM_Op<"prefetch"> {
   }];
 }
 
-def XeVM_BlockPrefetch2dOp : XeVM_Op<"blockprefetch2d"> {
+def XeVM_BlockPrefetch2dOp
+    : XeVM_Op<"blockprefetch2d">,
+      Arguments<(ins LLVM_AnyPointer:$ptr, I32:$base_width,
+          I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
+          I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
+          I32Attr:$v_blocks,
+          OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
 
   let summary = "2D block prefetch";
 
@@ -491,11 +496,6 @@ def XeVM_BlockPrefetch2dOp : XeVM_Op<"blockprefetch2d"> {
         : (!llvm.ptr<1>, i32, i32, i32, i32, i32)
     ```
   }];
-
-  let arguments = (ins LLVM_AnyPointer:$ptr, I32:$base_width, I32:$base_height,
-      I32:$base_pitch, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
-      I32Attr:$tile_width, I32Attr:$tile_height, I32Attr:$v_blocks,
-      OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control);
 
   let assemblyFormat = [{
     operands prop-dict attr-dict `:` `(` type(operands) `)`
