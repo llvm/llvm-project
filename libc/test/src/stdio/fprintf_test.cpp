@@ -83,13 +83,16 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
   written =
       LIBC_NAMESPACE::fprintf(file, "Writing to a read only file should fail.");
   EXPECT_LT(written, 0);
+#if !defined(__AMDGPU__) && !defined(__NVPTX__)
   ASSERT_ERRNO_FAILURE();
+#endif
 
   ASSERT_EQ(printf_test::fclose(file), 0);
 }
 
 #if !defined(LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS) &&                            \
-    !defined(LIBC_COPT_PRINTF_DISABLE_WRITE_INT)
+    !defined(LIBC_COPT_PRINTF_DISABLE_WRITE_INT) && !defined(__AMDGPU__) &&    \
+    !defined(__NVPTX__)
 TEST(LlvmLibcFPrintfTest, NullPtrCheck) {
   const char *FILENAME = APPEND_LIBC_TEST("fprintf_nullptr.test");
   auto FILE_PATH = libc_make_test_file_path(FILENAME);

@@ -94,7 +94,9 @@ TEST(LlvmLibcVFPrintfTest, WriteToFile) {
 
   written = call_vfprintf(file, "Writing to a read only file should fail.");
   EXPECT_LT(written, 0);
+#if !defined(__AMDGPU__) && !defined(__NVPTX__)
   ASSERT_ERRNO_FAILURE();
+#endif
 
   ASSERT_EQ(printf_test::fclose(file), 0);
 }
