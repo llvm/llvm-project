@@ -47,26 +47,18 @@ public:
   /// tensor<?xindex> with a known rank and type, e.g. tensor<1xi32>, or
   /// replacing an operation with a constant.
   virtual void populateReductionPatterns(RewritePatternSet &patterns) const = 0;
-  virtual void populateReductionPatternsWithTester(RewritePatternSet &patterns, Tester &tester) const {}
+
+  /// This method extends `populateReductionPatterns` by allowing reduction
+  /// patterns to use a `Tester` instance. Some reduction patterns may need to
+  /// run tester to determine whether certain transformations preserve the
+  /// "interesting" behavior of the program. This is mostly useful when pattern
+  /// should choose between multiple modifications.
+  virtual void populateReductionPatternsWithTester(RewritePatternSet &patterns,
+                                                   Tester &tester) const {}
 
 protected:
   DialectReductionPatternInterface(Dialect *dialect) : Base(dialect) {}
 };
-
-/// This interface extends the `dialectreductionpatterninterface` by allowing
-/// reduction patterns to use a `Tester` instance. Some reduction patterns may
-/// need to run tester to determine whether certain transformations preserve the
-/// "interesting" behavior of the program. This is mostly useful when pattern
-/// should choose between multiple modifications.
-/// Implementation follows the same logic as the
-/// `dialectreductionpatterninterface`.
-///
-/// Example:
-///   MyDialectReductionPatternWithTester::populateReductionPatterns(
-///       RewritePatternSet &patterns, Tester &tester) {
-///       patterns.add<PatternWithTester>(patterns.getContext(), tester);
-///   }
-
 } // namespace mlir
 
 #endif // MLIR_REDUCER_REDUCTIONPATTERNINTERFACE_H
