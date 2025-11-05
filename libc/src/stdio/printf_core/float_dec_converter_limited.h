@@ -363,8 +363,8 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       // we made it from and doing the decimal conversion all over again.)
       for (size_t i = output.ndigits; i-- > 0;) {
         if (output.digits[i] != '9') {
-          output.digits[i] = static_cast<char>(internal::int_to_b36_char(
-              internal::b36_char_to_int(output.digits[i]) + 1));
+          output.digits[i] = internal::int_to_b36_char(
+              internal::b36_char_to_int(output.digits[i]) + 1);
           break;
         } else {
           output.digits[i] = '0';
