@@ -768,7 +768,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
                                           UnknownElemTypeI8);
     maybeAssignPtrType(Ty, I, RefTy, UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<IntToPtrInst>(I)) {
-    Ty = Ref->getDestTy();
+    maybeAssignPtrType(Ty, I, Ref->getDestTy(), UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<BitCastInst>(I)) {
     if (Type *Src = Ref->getSrcTy(), *Dest = Ref->getDestTy();
         isPointerTy(Src) && isPointerTy(Dest))
