@@ -540,6 +540,7 @@ public:
     return false;
   }
 
+  Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) override;
   Error dataFence(__tgt_async_info *Async) override;
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,

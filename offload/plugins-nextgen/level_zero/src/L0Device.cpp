@@ -1067,4 +1067,12 @@ Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
   return Plugin::success();
 }
 
+Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {
+  if (!Ptr || Size == 0)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "Invalid input to %s (Ptr = %p, Size = %zu)", __func__,
+                         Ptr, Size);
+  return getMemAllocator(Ptr).contains(Ptr, Size);
+}
+
 } // namespace llvm::omp::target::plugin
