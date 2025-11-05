@@ -2572,8 +2572,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   // Combine sin / cos into _sincos_stret if it is available.
-  setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-  setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
+  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   if (Subtarget.isTargetWin64()) {
     setOperationAction(ISD::SDIV, MVT::i128, Custom);
@@ -30908,6 +30908,63 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(X86ISD::PACKUS, dl, VT, LoR, HiR);
   }
 
+  if (VT == MVT::v64i8 && Subtarget.canExtendTo512BW()) {
+    // On AVX512BW, we can use variable 16-bit shifts to implement variable
+    // 8-bit shifts. For this, we split the input into two vectors, RLo and RHi.
+    // The i-th lane of RLo contains the (2*i)-th lane of R, and the i-th lane
+    // of RHi contains the (2*i+1)-th lane of R. After shifting, these vectors
+    // can efficiently be merged together using a masked move.
+    MVT ExtVT = MVT::v32i16;
+
+    SDValue RLo, RHi;
+    // Isolate lower and upper lanes of Amt by masking odd lanes in AmtLo and
+    // right shifting AmtHi.
+    SDValue AmtLo = DAG.getNode(ISD::AND, dl, ExtVT, DAG.getBitcast(ExtVT, Amt),
+                                DAG.getConstant(0x00ff, dl, ExtVT));
+    SDValue AmtHi = getTargetVShiftByConstNode(
+        X86ISD::VSRLI, dl, ExtVT, DAG.getBitcast(ExtVT, Amt), 8, DAG);
+    switch (Opc) {
+    case ISD::SHL:
+      // Because we shift left, no bits from the high half can influence the low
+      // half, so we don't need to mask RLo. We do however need to mask RHi, to
+      // prevent high bits of an even lane overflowing into low bits of an odd
+      // lane.
+      RLo = DAG.getBitcast(ExtVT, R);
+      RHi = DAG.getNode(ISD::AND, dl, ExtVT, RLo,
+                        DAG.getConstant(0xff00, dl, ExtVT));
+      break;
+    case ISD::SRL:
+      // Same idea as above, but this time we need to make sure no low bits of
+      // an odd lane can overflow into high bits of an even lane.
+      RHi = DAG.getBitcast(ExtVT, R);
+      RLo = DAG.getNode(ISD::AND, dl, ExtVT, RHi,
+                        DAG.getConstant(0x00ff, dl, ExtVT));
+      break;
+    case ISD::SRA:
+      // For arithmetic right shifts, we want to sign extend each even lane of R
+      // such that the upper half of the corresponding lane of RLo is 0 or -1
+      // depending on the sign bit of the original lane. We do this using 2
+      // immediate shifts.
+      RHi = DAG.getBitcast(ExtVT, R);
+      RLo = getTargetVShiftByConstNode(X86ISD::VSHLI, dl, ExtVT, RHi, 8, DAG);
+      RLo = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, ExtVT, RLo, 8, DAG);
+      break;
+    default:
+      llvm_unreachable("Unexpected Shift Op");
+    }
+
+    SDValue ShiftedLo =
+        DAG.getBitcast(VT, DAG.getNode(Opc, dl, ExtVT, RLo, AmtLo));
+    SDValue ShiftedHi =
+        DAG.getBitcast(VT, DAG.getNode(Opc, dl, ExtVT, RHi, AmtHi));
+
+    // To merge the shifted vectors back together, we select even lanes
+    // from ShiftedLo and odd lanes from ShiftedHi.
+    SDValue SelectMask = DAG.getBitcast(
+        MVT::v64i1, DAG.getConstant(0x5555555555555555, dl, MVT::i64));
+    return DAG.getSelect(dl, VT, SelectMask, ShiftedLo, ShiftedHi);
+  }
+
   if (VT == MVT::v16i8 ||
       (VT == MVT::v32i8 && Subtarget.hasInt256() && !Subtarget.hasXOP()) ||
       (VT == MVT::v64i8 && Subtarget.hasBWI())) {
@@ -33004,61 +33061,6 @@ static SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
 }
 
-static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
-                            SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue Arg = Op.getOperand(0);
-  EVT ArgVT = Arg.getValueType();
-  bool isF64 = ArgVT == MVT::f64;
-
-  RTLIB::Libcall LC = isF64 ? RTLIB::SINCOS_STRET_F64 : RTLIB::SINCOS_STRET_F32;
-  const char *LibcallName = TLI.getLibcallName(LC);
-  if (!LibcallName)
-    return SDValue();
-
-  assert(Subtarget.isTargetDarwin() && Subtarget.is64Bit());
-
-  // For MacOSX, we want to call an alternative entry point: __sincos_stret,
-  // which returns the values as { float, float } (in XMM0) or
-  // { double, double } (which is returned in XMM0, XMM1).
-  SDLoc dl(Op);
-  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-
-  TargetLowering::ArgListTy Args;
-  Args.emplace_back(Arg, ArgTy);
-
-  // Only optimize x86_64 for now. i386 is a bit messy. For f32,
-  // the small struct {f32, f32} is returned in (eax, edx). For f64,
-  // the results are returned via SRet in memory.
-  SDValue Callee =
-      DAG.getExternalSymbol(LibcallName, TLI.getPointerTy(DAG.getDataLayout()));
-
-  Type *RetTy = isF64 ? (Type *)StructType::get(ArgTy, ArgTy)
-                      : (Type *)FixedVectorType::get(ArgTy, 2);
-
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl)
-      .setChain(DAG.getEntryNode())
-      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args))
-      .setIsPostTypeLegalization();
-
-  std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
-
-  if (isF64)
-    // Returned in xmm0 and xmm1.
-    return CallResult.first;
-
-  // Returned in bits 0:31 and 32:64 xmm0.
-  SDValue SinVal =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ArgVT, CallResult.first,
-                  DAG.getVectorIdxConstant(0, dl));
-  SDValue CosVal =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ArgVT, CallResult.first,
-                  DAG.getVectorIdxConstant(1, dl));
-  SDVTList Tys = DAG.getVTList(ArgVT, ArgVT);
-  return DAG.getNode(ISD::MERGE_VALUES, dl, Tys, SinVal, CosVal);
-}
-
 /// Widen a vector input to a vector of NVT.  The
 /// input vector must have the same element type as NVT.
 static SDValue ExtendToType(SDValue InOp, MVT NVT, SelectionDAG &DAG,
@@ -33663,7 +33665,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ABDS:
   case ISD::ABDU:               return LowerABD(Op, Subtarget, DAG);
   case ISD::AVGCEILU:           return LowerAVG(Op, Subtarget, DAG);
-  case ISD::FSINCOS:            return LowerFSINCOS(Op, Subtarget, DAG);
   case ISD::MLOAD:              return LowerMLOAD(Op, Subtarget, DAG);
   case ISD::MSTORE:             return LowerMSTORE(Op, Subtarget, DAG);
   case ISD::MGATHER:            return LowerMGATHER(Op, Subtarget, DAG);

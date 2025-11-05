@@ -1387,9 +1387,9 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       // wrap around the address space we would do a memory access at nullptr
       // even without the transformation. The wrapping checks are therefore
       // deferred until after we've formed the interleaved groups.
-      int64_t Stride =
-        getPtrStride(PSE, ElementTy, Ptr, TheLoop, Strides,
-                     /*Assume=*/true, /*ShouldCheckWrap=*/false).value_or(0);
+      int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
+                                    /*Assume=*/true, /*ShouldCheckWrap=*/false)
+                           .value_or(0);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
@@ -1643,8 +1643,9 @@ void InterleavedAccessInfo::analyzeInterleaving(
     assert(Member && "Group member does not exist");
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
-    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true).value_or(0))
+    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
+                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
+            .value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "
                       << FirstOrLast
