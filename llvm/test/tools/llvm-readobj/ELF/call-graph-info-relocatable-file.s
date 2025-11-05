@@ -1,14 +1,16 @@
-## Tests --call-graph-info prints information from call graph section.
+## Tests how --call-graph-info prints the call graph information.
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --allow-empty -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON -DFILE=%t
 
-# REQUIRES: x86-registered-target
+## Yaml input is obtained by compiling the below source to object with:
+##   clang -fexperimental-call-graph-section test.c -o test.o
+## then to yaml with:
+##   obj2yaml test.o > test.yaml
+## Remove ProgramHeaders if obj2yaml fails.
 
-# RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
-# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --allow-empty -DFILE=%t
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=LLVM
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=JSON
-
-## Assembly output was generated from the following source using this command
-##      clang -fexperimental-call-graph-section -S test.cpp -o test.S
+## YAML output was generated from the following source:
 ##
 ## void foo() {}
 ## 
@@ -133,7 +135,7 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Name": "main",
+# JSON-NEXT:          "Name": "caller",
 # JSON-NEXT:          "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
 # JSON-NEXT:          "TypeId": 762397922298560988,
@@ -158,140 +160,167 @@
 # JSON-NEXT:      }
 # JSON-NEXT:    ]
 
-	.file	"cg.cpp"
-	.text
-	.globl	_Z3foov                         # -- Begin function _Z3foov
-	.p2align	4
-	.type	_Z3foov,@function
-_Z3foov:                                # @_Z3foov
-.Lfunc_begin0:
-	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
-	retq
-.Lfunc_end0:
-	.size	_Z3foov, .Lfunc_end0-_Z3foov
-	.cfi_endproc
-	.section	.llvm.callgraph,"o",@llvm_call_graph,.text
-	.byte	0
-	.byte	1
-	.quad	_Z3foov
-	.quad	-550448936902516574
-	.text
-                                        # -- End function
-	.globl	_Z3barv                         # -- Begin function _Z3barv
-	.p2align	4
-	.type	_Z3barv,@function
-_Z3barv:                                # @_Z3barv
-.Lfunc_begin1:
-	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
-	retq
-.Lfunc_end1:
-	.size	_Z3barv, .Lfunc_end1-_Z3barv
-	.cfi_endproc
-	.section	.llvm.callgraph,"o",@llvm_call_graph,.text
-	.byte	0
-	.byte	1
-	.quad	_Z3barv
-	.quad	-550448936902516574
-	.text
-                                        # -- End function
-	.globl	_Z3bazc                         # -- Begin function _Z3bazc
-	.p2align	4
-	.type	_Z3bazc,@function
-_Z3bazc:                                # @_Z3bazc
-.Lfunc_begin2:
-	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	movb	%dil, %al
-	movb	%al, -1(%rbp)
-	xorl	%eax, %eax
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
-	retq
-.Lfunc_end2:
-	.size	_Z3bazc, .Lfunc_end2-_Z3bazc
-	.cfi_endproc
-	.section	.llvm.callgraph,"o",@llvm_call_graph,.text
-	.byte	0
-	.byte	1
-	.quad	_Z3bazc
-	.quad	3498816979441845844
-	.text
-                                        # -- End function
-	.globl	main                            # -- Begin function main
-	.p2align	4
-	.type	main,@function
-main:                                   # @main
-.Lfunc_begin3:
-	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	subq	$48, %rsp
-	movl	$0, -4(%rbp)
-	leaq	_Z3foov(%rip), %rax
-	movq	%rax, -16(%rbp)
-	callq	*-16(%rbp)
-	leaq	_Z3barv(%rip), %rax
-	movq	%rax, -24(%rbp)
-	callq	*-24(%rbp)
-	leaq	_Z3bazc(%rip), %rax
-	movq	%rax, -40(%rbp)
-	movq	-40(%rbp), %rax
-	movsbl	-25(%rbp), %edi
-	callq	*%rax
-	callq	_Z3foov
-	callq	_Z3barv
-	movsbl	-25(%rbp), %edi
-	callq	_Z3bazc
-	xorl	%eax, %eax
-	addq	$48, %rsp
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
-	retq
-.Lfunc_end3:
-	.size	main, .Lfunc_end3-main
-	.cfi_endproc
-	.section	.llvm.callgraph,"o",@llvm_call_graph,.text
-	.byte	0
-	.byte	7
-	.quad	main
-	.quad	762397922298560988
-	.byte	3
-	.quad	_Z3foov
-	.quad	_Z3barv
-	.quad	_Z3bazc
-	.byte	2
-	.quad	-550448936902516574
-	.quad	3498816979441845844
-	.text
-                                        # -- End function
-	.ident	"Fuchsia clang version 22.0.0git (git@github.com:Prabhuk/llvm-project.git aaa2cd4fc523537be583bc5a2b2f4d447575a6b4)"
-	.section	".note.GNU-stack","",@progbits
-	.addrsig
-	.addrsig_sym _Z3foov
-	.addrsig_sym _Z3barv
-	.addrsig_sym _Z3bazc
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         554889E55DC3662E0F1F840000000000554889E55DC3662E0F1F840000000000554889E54088F88845FF31C05DC36690554889E54883EC20488D0500000000488945F8FF55F8488D0500000000488945F0FF55F0488D0500000000488945E0488B45E00FBE7DEFFFD0E800000000E8000000000FBE7DEFE80000000031C04883C4205DC3
+  - Name:            .llvm.callgraph
+    Type:            SHT_LLVM_CALL_GRAPH
+    Flags:           [ SHF_LINK_ORDER ]
+    Link:            .text
+    AddressAlign:    0x1
+    Content:         00010000000000000000A220EFB89B695CF800010000000000000000A220EFB89B695CF8000100000000000000005486BC59814B8E3000070000000000000000DC011AF8DE94940A0300000000000000000000000000000000000000000000000002A220EFB89B695CF85486BC59814B8E30
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         004675636873696120636C616E672076657273696F6E2032322E302E306769742028676974406769746875622E636F6D3A5072616268756B2F6C6C766D2D70726F6A6563742E67697420366532323235343933303736346536613734323839613261633731616637633834333038356633622900
+  - Name:            .note.GNU-stack
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000000000000600000000410E108602430D06410C07080000001C0000003C000000000000000600000000410E108602430D06410C07080000001C0000005C000000000000000E00000000410E108602430D06490C07080000001C0000007C000000000000005400000000410E108602430D06024F0C07080000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x3B
+        Symbol:          _Z3foov
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x49
+        Symbol:          _Z3barv
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x57
+        Symbol:          _Z3bazc
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x6A
+        Symbol:          _Z3foov
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x6F
+        Symbol:          _Z3barv
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x78
+        Symbol:          _Z3bazc
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.llvm.callgraph
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .llvm.callgraph
+    Relocations:
+      - Offset:          0x2
+        Symbol:          _Z3foov
+        Type:            R_X86_64_64
+      - Offset:          0x14
+        Symbol:          _Z3barv
+        Type:            R_X86_64_64
+      - Offset:          0x26
+        Symbol:          _Z3bazc
+        Type:            R_X86_64_64
+      - Offset:          0x38
+        Symbol:          _Z6callerv
+        Type:            R_X86_64_64
+      - Offset:          0x49
+        Symbol:          _Z3foov
+        Type:            R_X86_64_64
+      - Offset:          0x51
+        Symbol:          _Z3barv
+        Type:            R_X86_64_64
+      - Offset:          0x59
+        Symbol:          _Z3bazc
+        Type:            R_X86_64_64
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x20
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+      - Offset:          0x40
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          16
+      - Offset:          0x60
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          32
+      - Offset:          0x80
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          48
+  - Name:            .llvm_addrsig
+    Type:            SHT_LLVM_ADDRSIG
+    Flags:           [ SHF_EXCLUDE ]
+    Link:            .symtab
+    AddressAlign:    0x1
+    Symbols:         [ _Z3foov, _Z3barv, _Z3bazc ]
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .llvm.callgraph
+      - Name:            .rela.llvm.callgraph
+      - Name:            .comment
+      - Name:            .note.GNU-stack
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .llvm_addrsig
+      - Name:            .symtab
+Symbols:
+  - Name:            cg.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            _Z3foov
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x6
+  - Name:            _Z3barv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10
+    Size:            0x6
+  - Name:            _Z3bazc
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x20
+    Size:            0xE
+  - Name:            _Z6callerv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x30
+    Size:            0x54
+...
