@@ -67,6 +67,10 @@
 #include <optional>
 #include <system_error>
 #include <unordered_map>
+#define DEBUG_TYPE "bolt-ppc64"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Object/ELF.h"
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
@@ -4007,6 +4011,16 @@ void RewriteInstance::emitAndLink() {
   if (BC->HasRelocations && TextSection)
     BC->renameSection(*TextSection,
                       getOrgSecPrefix() + BC->getMainCodeSectionName());
+
+LLVM_DEBUG({
+  const auto Flags = TextSection->getELFFlags();
+  dbgs() << "[ppc64] backup section: " << TextSection->getName() << "\n"
+         << "  prefix=" << getOrgSecPrefix()
+         << "  flags=0x" << llvm::format_hex(Flags, 8)
+         << " (ALLOC=" << ((Flags & ELF::SHF_ALLOC) ? "yes" : "no")
+         << ", EXEC="  << ((Flags & ELF::SHF_EXECINSTR) ? "yes" : "no")
+         << ")\n";
+});
 
   //////////////////////////////////////////////////////////////////////////////
   // Assign addresses to new sections.
