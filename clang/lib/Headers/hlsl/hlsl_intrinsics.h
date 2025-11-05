@@ -277,7 +277,7 @@ _HLSL_AVAILABILITY(shadermodel, 6.2)
 const inline __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                        __detail::is_same<uint16_t, T>::value,
                                    uint> firstbithigh(T X) {
-  return __detail::firstbithigh_impl<T, 16>(X);
+  return __detail::firstbithigh_impl<uint, T, 16>(X);
 }
 
 template <typename T, int N>
@@ -286,7 +286,7 @@ const
     inline __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                      __detail::is_same<uint16_t, T>::value,
                                  vector<uint, N>> firstbithigh(vector<T, N> X) {
-  return __detail::firstbithigh_impl<T, N, 16>(X);
+  return __detail::firstbithigh_impl<vector<uint, N>, vector<T, N>, 16>(X);
 }
 
 #endif
@@ -295,7 +295,7 @@ template <typename T>
 const inline __detail::enable_if_t<
     __detail::is_same<int, T>::value || __detail::is_same<uint, T>::value, uint>
 firstbithigh(T X) {
-  return __detail::firstbithigh_impl<T, 32>(X);
+  return __detail::firstbithigh_impl<uint, T, 32>(X);
 }
 
 template <typename T, int N>
@@ -303,7 +303,7 @@ const inline __detail::enable_if_t<__detail::is_same<int, T>::value ||
                                        __detail::is_same<uint, T>::value,
                                    vector<uint, N>>
 firstbithigh(vector<T, N> X) {
-  return __detail::firstbithigh_impl<T, N, 32>(X);
+  return __detail::firstbithigh_impl<vector<uint, N>, vector<T, N>, 32>(X);
 }
 
 template <typename T>
@@ -311,7 +311,7 @@ const inline __detail::enable_if_t<__detail::is_same<int64_t, T>::value ||
                                        __detail::is_same<uint64_t, T>::value,
                                    uint>
 firstbithigh(T X) {
-  return __detail::firstbithigh_impl<T, 64>(X);
+  return __detail::firstbithigh_impl<uint, T, 64>(X);
 }
 
 template <typename T, int N>
@@ -319,7 +319,7 @@ const inline __detail::enable_if_t<__detail::is_same<int64_t, T>::value ||
                                        __detail::is_same<uint64_t, T>::value,
                                    vector<uint, N>>
 firstbithigh(vector<T, N> X) {
-  return __detail::firstbithigh_impl<T, N, 64>(X);
+  return __detail::firstbithigh_impl<vector<uint, N>, vector<T, N>, 64>(X);
 }
 
 //===----------------------------------------------------------------------===//
