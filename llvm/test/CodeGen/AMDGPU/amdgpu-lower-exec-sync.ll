@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-special-lds < %s 2>&1 | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-exec-sync < %s 2>&1 | FileCheck %s
 
 %class.ExpAmdWorkgroupWaveBarrier = type { target("amdgcn.named.barrier", 0) }
 

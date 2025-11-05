@@ -298,12 +298,12 @@ private:
   bool GlobalOpt;
 };
 
-void initializeAMDGPULowerSpecialLDSLegacyPass(PassRegistry &);
-extern char &AMDGPULowerSpecialLDSLegacyPassID;
-ModulePass *createAMDGPULowerSpecialLDSLegacyPass();
+void initializeAMDGPULowerExecSyncLegacyPass(PassRegistry &);
+extern char &AMDGPULowerExecSyncLegacyPassID;
+ModulePass *createAMDGPULowerExecSyncLegacyPass();
 
-struct AMDGPULowerSpecialLDSPass : PassInfoMixin<AMDGPULowerSpecialLDSPass> {
-  AMDGPULowerSpecialLDSPass() {}
+struct AMDGPULowerExecSyncPass : PassInfoMixin<AMDGPULowerExecSyncPass> {
+  AMDGPULowerExecSyncPass() {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

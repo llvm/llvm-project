@@ -1,4 +1,4 @@
-//===-- AMDGPULowerSpecialLDS.cpp -----------------------------------------===//
+//===-- AMDGPULowerExecSync.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass performs lowering of LDS global variables with target extension
-// type "amdgpu.named.barrier" that require specialized address assignment. It
-// assigns a unique barrier identifier to each named-barrier LDS variable and
-// encodes this identifier within the !absolute_symbol metadata of that global.
+// AMDGPU Lower Execution Synchronization pass performs lowering of
+// LDS global variables with target extension type "amdgpu.named.barrier"
+// that require specialized address assignment. It assigns a unique
+// barrier identifier to each named-barrier LDS variable and encodes
+// this identifier within the !absolute_symbol metadata of that global.
 // This encoding ensures that subsequent LDS lowering passes can process these
 // barriers correctly without conflicts.
 //
@@ -29,7 +30,7 @@
 
 #include <algorithm>
 
-#define DEBUG_TYPE "amdgpu-lower-special-lds"
+#define DEBUG_TYPE "amdgpu-lower-exec-sync"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -89,7 +90,7 @@ template <typename T> SmallVector<T> sortByName(SmallVector<T> &&V) {
 }
 
 // Main utility function for special LDS variables lowering.
-static bool lowerSpecialLDSVariables(
+static bool lowerExecSyncGlobalVariables(
     Module &M, LDSUsesInfoTy &LDSUsesInfo,
     VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
   bool Changed = false;
@@ -178,7 +179,7 @@ static bool lowerSpecialLDSVariables(
   return Changed;
 }
 
-static bool runLowerSpecialLDS(Module &M) {
+static bool runLowerExecSyncGlobals(Module &M) {
   CallGraph CG = CallGraph(M);
   bool Changed = false;
   Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
@@ -199,40 +200,40 @@ static bool runLowerSpecialLDS(Module &M) {
 
   if (LDSUsesInfo.HasSpecialGVs) {
     // Special LDS variables need special address assignment
-    Changed |= lowerSpecialLDSVariables(
+    Changed |= lowerExecSyncGlobalVariables(
         M, LDSUsesInfo, LDSToKernelsThatNeedToAccessItIndirectly);
   }
   return Changed;
 }
 
-class AMDGPULowerSpecialLDSLegacy : public ModulePass {
+class AMDGPULowerExecSyncLegacy : public ModulePass {
 public:
   static char ID;
-  AMDGPULowerSpecialLDSLegacy() : ModulePass(ID) {}
+  AMDGPULowerExecSyncLegacy() : ModulePass(ID) {}
   bool runOnModule(Module &M) override;
 };
 
 } // namespace
 
-char AMDGPULowerSpecialLDSLegacy::ID = 0;
-char &llvm::AMDGPULowerSpecialLDSLegacyPassID = AMDGPULowerSpecialLDSLegacy::ID;
+char AMDGPULowerExecSyncLegacy::ID = 0;
+char &llvm::AMDGPULowerExecSyncLegacyPassID = AMDGPULowerExecSyncLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(AMDGPULowerSpecialLDSLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPULowerExecSyncLegacy, DEBUG_TYPE,
                       "AMDGPU lowering of special LDS variables", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(AMDGPULowerSpecialLDSLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPULowerExecSyncLegacy, DEBUG_TYPE,
                     "AMDGPU lowering of special LDS variables", false, false)
 
-bool AMDGPULowerSpecialLDSLegacy::runOnModule(Module &M) {
-  return runLowerSpecialLDS(M);
+bool AMDGPULowerExecSyncLegacy::runOnModule(Module &M) {
+  return runLowerExecSyncGlobals(M);
 }
 
-ModulePass *llvm::createAMDGPULowerSpecialLDSLegacyPass() {
-  return new AMDGPULowerSpecialLDSLegacy();
+ModulePass *llvm::createAMDGPULowerExecSyncLegacyPass() {
+  return new AMDGPULowerExecSyncLegacy();
 }
 
-PreservedAnalyses AMDGPULowerSpecialLDSPass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
-  return runLowerSpecialLDS(M) ? PreservedAnalyses::none()
-                               : PreservedAnalyses::all();
+PreservedAnalyses AMDGPULowerExecSyncPass::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
+  return runLowerExecSyncGlobals(M) ? PreservedAnalyses::none()
+                                    : PreservedAnalyses::all();
 }
