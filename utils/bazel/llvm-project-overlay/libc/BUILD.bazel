@@ -2793,6 +2793,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fma",
+    hdrs = ["src/__support/math/fma.h"],
+    deps = [
+        ":__support_fputil_fma",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_frexpf128",
     hdrs = ["src/__support/math/frexpf128.h"],
     deps = [
@@ -3094,15 +3102,15 @@ libc_support_library(
     name = "__support_math_expm1f16",
     hdrs = ["src/__support/math/expm1f16.h"],
     deps = [
+        ":__support_fputil_except_value_utils",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
-        ":__support_fputil_except_value_utils",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":__support_math_expxf16_utils"
+        ":__support_math_expxf16_utils",
     ],
 )
 
@@ -4006,7 +4014,7 @@ libc_math_function(name = "floorf16")
 libc_math_function(
     name = "fma",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_fma",
     ],
 )
 
