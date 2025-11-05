@@ -1053,6 +1053,27 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
 float4 exp2(float4);
 
 //===----------------------------------------------------------------------===//
+// f16tof32 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn float f16tof32(uint x)
+/// \brief Returns the half value stored in the low 16 bits of the uint arg
+/// converted to a float.
+/// \param x The uint containing two half values.
+///
+/// The float value of the half value found in the low 16 bits of the \a xi
+/// parameter.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float f16tof32(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float2 f16tof32(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float3 f16tof32(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float4 f16tof32(uint4);
+
+//===----------------------------------------------------------------------===//
 // firstbithigh builtins
 //===----------------------------------------------------------------------===//
 
@@ -2090,9 +2111,17 @@ T select(bool, T, T);
 /// \param FalseVals The vector values are chosen from when conditions are
 /// false.
 
-template <typename T, int Sz>
+template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
+vector<T, 2> select(vector<bool, 2>, vector<T, 2>, vector<T, 2>);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 3> select(vector<bool, 3>, vector<T, 3>, vector<T, 3>);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 4> select(vector<bool, 4>, vector<T, 4>, vector<T, 4>);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVal,
 ///                         vector<T,Sz> FalseVals)
@@ -2102,9 +2131,17 @@ vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
 /// \param FalseVals The vector values are chosen from when conditions are
 /// false.
 
-template <typename T, int Sz>
+template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, Sz> select(vector<bool, Sz>, T, vector<T, Sz>);
+vector<T, 2> select(vector<bool, 2>, T, vector<T, 2>);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 3> select(vector<bool, 3>, T, vector<T, 3>);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 4> select(vector<bool, 4>, T, vector<T, 4>);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
 ///                         T FalseVal)
@@ -2113,9 +2150,17 @@ vector<T, Sz> select(vector<bool, Sz>, T, vector<T, Sz>);
 /// \param TrueVals The vector values are chosen from when conditions are true.
 /// \param FalseVal The scalar value to splat from when conditions are false.
 
-template <typename T, int Sz>
+template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, T);
+vector<T, 2> select(vector<bool, 2>, vector<T, 2>, T);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 3> select(vector<bool, 3>, vector<T, 3>, T);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 4> select(vector<bool, 4>, vector<T, 4>, T);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
 ///                         T FalseVal)
@@ -2124,10 +2169,20 @@ vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, T);
 /// \param TrueVal The scalar value to splat from when conditions are true.
 /// \param FalseVal The scalar value to splat from when conditions are false.
 
-template <typename T, int Sz>
+template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, Sz>> select(
-    vector<bool, Sz>, T, T);
+__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 2>> select(
+    vector<bool, 2>, T, T);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 3>> select(
+    vector<bool, 3>, T, T);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 4>> select(
+    vector<bool, 4>, T, T);
 
 //===----------------------------------------------------------------------===//
 // sin builtins
