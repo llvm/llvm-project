@@ -15653,7 +15653,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case clang::X86::BI__builtin_ia32_kortestzqi:
   case clang::X86::BI__builtin_ia32_kortestzhi:
   case clang::X86::BI__builtin_ia32_kortestzsi:
-  case clang::X86::BI__builtin_ia32_kortestzdi:  {
+  case clang::X86::BI__builtin_ia32_kortestzdi: {
     APSInt A, B;
     if (!EvaluateInteger(E->getArg(0), A, Info) ||
         !EvaluateInteger(E->getArg(1), B, Info))
