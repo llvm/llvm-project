@@ -59,6 +59,7 @@
 #include "math/expm1f16.h"
 #include "math/fma.h"
 #include "math/fmaf.h"
+#include "math/fmaf16.h"
 #include "math/frexpf.h"
 #include "math/frexpf128.h"
 #include "math/frexpf16.h"
