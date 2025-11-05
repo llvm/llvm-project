@@ -106,6 +106,211 @@ let Predicates = [HasCMOV, HasNDD] in {
   def : Pat<(X86cmov (loadi64 addr:$src1), GR64:$src2, timm:$cond, EFLAGS),
             (CMOV64rm_ND GR64:$src2, addr:$src1, (inv_cond_XFORM timm:$cond))>;
 }
+
+// Create pseudo instruction and do the pattern matching to them.
+// We use a machine pass to lower these pseudos into cmov, in order
+// to avoid backend optimizations
+let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
+
+  multiclass CT_SELECT<X86TypeInfo t> {
+    // register-only
+    let isCommutable = 0, SchedRW = [WriteCMOV], Predicates = [HasNativeCMOV],
+        AsmString = "ctselect\\t$dst, $src1, $src2, $cond" in {
+      def rr : PseudoI<(outs t.RegClass:$dst),
+                       (ins t.RegClass:$src1, t.RegClass:$src2, i8imm:$cond),
+                       [(set t.RegClass:$dst, (X86ct_select t.RegClass:$src1, t.RegClass:$src2, timm:$cond, EFLAGS))]>;
+    }
+
+    // register-memory
+    let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold], Predicates = [HasNativeCMOV],
+        AsmString = "ctselect\\t$dst, $src1, $src2, $cond" in {
+      def rm : PseudoI<(outs t.RegClass:$dst),
+                       (ins t.RegClass:$src1, t.MemOperand:$src2, i8imm:$cond),
+                       [(set t.RegClass:$dst, (X86ct_select t.RegClass:$src1, (t.LoadNode addr:$src2), timm:$cond, EFLAGS))]>;
+    }
+  }
+}
+
+let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
+  let Constraints = "$dst = $src1" in {
+    defm CT_SELECT16 : CT_SELECT<Xi16>;
+    defm CT_SELECT32 : CT_SELECT<Xi32>;
+    defm CT_SELECT64 : CT_SELECT<Xi64>;
+  }
+}
+
+// CT_SELECT_VEC base class
+class CT_SELECT_VEC<RegisterClass VRc, RegisterClass GRc>
+    : PseudoI<
+        (outs VRc:$dst, VRc:$tmpx, GRc:$tmpg),
+        (ins  VRc:$t,   VRc:$f,   i8imm:$cond),
+        []
+      > {
+  let Uses            = [EFLAGS];
+  let isPseudo        = 1;
+  let isNotDuplicable = 1;
+  let hasSideEffects  = 1;
+  let AsmString       = "ctselect\t$dst, $f, $t, $cond";
+  let SchedRW         = [];
+}
+
+// Width-specific class aliases
+class CT_SELECT_VEC128  : CT_SELECT_VEC<VR128,  GR32>;
+class CT_SELECT_VEC128X : CT_SELECT_VEC<VR128X, GR32>;
+class CT_SELECT_VEC256  : CT_SELECT_VEC<VR256,  GR32>;
+class CT_SELECT_VEC512  : CT_SELECT_VEC<VR512,  GR32>;
+
+
+//===----------------------------------------------------------------------===//
+// 128-bit pseudos (SSE2 baseline; we use PXOR/PAND/MOVD/PSHUFD in the expander)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasSSE1] in {
+
+  def CT_SELECT_V4F32 : CT_SELECT_VEC128 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+}
+
+let Predicates = [HasSSE2] in {
+
+  def CT_SELECT_V2F64 : CT_SELECT_VEC128 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V4I32 : CT_SELECT_VEC128 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V2I64 : CT_SELECT_VEC128 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V8I16 : CT_SELECT_VEC128 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V16I8 : CT_SELECT_VEC128 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+
+  // If your build has v8f16, keep this; otherwise comment it out.
+  def CT_SELECT_V8F16 : CT_SELECT_VEC128 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+}
+
+let Predicates = [HasAVX] in {
+
+  def CT_SELECT_V4F32X : CT_SELECT_VEC128X {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V2F64X : CT_SELECT_VEC128X {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V4I32X : CT_SELECT_VEC128X {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V2I64X : CT_SELECT_VEC128X {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V8I16X : CT_SELECT_VEC128X {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V16I8X : CT_SELECT_VEC128X {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+
+  // If your build has v8f16, keep this; otherwise comment it out.
+  def CT_SELECT_V8F16X : CT_SELECT_VEC128X {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// 256-bit pseudos
+//===----------------------------------------------------------------------===//
+let Predicates = [HasAVX] in {
+
+  def CT_SELECT_V8F32  : CT_SELECT_VEC256 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V4F64  : CT_SELECT_VEC256 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V8I32  : CT_SELECT_VEC256 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V4I64  : CT_SELECT_VEC256 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V16I16 : CT_SELECT_VEC256 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+  def CT_SELECT_V32I8  : CT_SELECT_VEC256 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+
+  // If your build has v16f16, keep this; otherwise comment it out.
+  def CT_SELECT_V16F16 : CT_SELECT_VEC256 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Selection patterns: X86ct_select(...), EFLAGS -> CT_SELECT_V*
+//
+// NOTE:
+//  * The SDNode carries Glue from CMP/TEST (due to SDNPInGlue).
+//  * We list EFLAGS explicitly in the pattern (X86 style) to model the arch read.
+//  * Temps (tmpx/tmpy,tmpg) are not in the pattern; they’re outs allocated by RA.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasSSE1] in {
+
+  // 128-bit float (bitwise-equivalent ops in expander)
+  def : Pat<(v4f32 (X86ct_select VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V4F32 VR128:$t, VR128:$f, timm:$cc)>;
+}
+
+let Predicates = [HasSSE2] in {
+
+  // 128-bit integer
+  def : Pat<(v4i32 (X86ct_select VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V4I32 VR128:$t, VR128:$f, timm:$cc)>;
+  def : Pat<(v2i64 (X86ct_select VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V2I64 VR128:$t, VR128:$f, timm:$cc)>;
+  def : Pat<(v8i16 (X86ct_select VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V8I16 VR128:$t, VR128:$f, timm:$cc)>;
+  def : Pat<(v16i8 (X86ct_select VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V16I8 VR128:$t, VR128:$f, timm:$cc)>;
+  def : Pat<(v2f64 (X86ct_select VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V2F64 VR128:$t, VR128:$f, timm:$cc)>;
+
+  // 128-bit f16 (optional)
+  def : Pat<(v8f16 (X86ct_select VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V8F16 VR128:$t, VR128:$f, timm:$cc)>;
+}
+
+let Predicates = [HasAVX] in {
+
+  // 256-bit integer
+  def : Pat<(v8i32  (X86ct_select VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V8I32  VR256:$t, VR256:$f, timm:$cc)>;
+  def : Pat<(v4i64  (X86ct_select VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V4I64  VR256:$t, VR256:$f, timm:$cc)>;
+  def : Pat<(v16i16 (X86ct_select VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V16I16 VR256:$t, VR256:$f, timm:$cc)>;
+  def : Pat<(v32i8  (X86ct_select VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V32I8  VR256:$t, VR256:$f, timm:$cc)>;
+
+  // 256-bit float (bitwise-equivalent ops in expander)
+  def : Pat<(v8f32 (X86ct_select VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V8F32 VR256:$t, VR256:$f, timm:$cc)>;
+  def : Pat<(v4f64 (X86ct_select VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V4F64 VR256:$t, VR256:$f, timm:$cc)>;
+
+  // 256-bit f16 (optional)
+  def : Pat<(v16f16 (X86ct_select VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
+            (CT_SELECT_V16F16 VR256:$t, VR256:$f, timm:$cc)>;
+}
+
 let Predicates = [HasCMOV, HasCF] in {
   def : Pat<(X86cmov GR16:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV16rr GR16:$src1, (inv_cond_XFORM timm:$cond))>;
