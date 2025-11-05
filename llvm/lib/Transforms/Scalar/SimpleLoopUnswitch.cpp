@@ -330,8 +330,7 @@ static void buildPartialUnswitchConditionalBranch(
       HasBranchWeights ? ComputeProfFrom.getMetadata(LLVMContext::MD_prof)
                        : nullptr);
   if (!HasBranchWeights)
-    setExplicitlyUnknownBranchWeightsIfProfiled(
-        *BR, *BR->getParent()->getParent(), DEBUG_TYPE);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
 }
 
 /// Copy a set of loop invariant values, and conditionally branch on them.
