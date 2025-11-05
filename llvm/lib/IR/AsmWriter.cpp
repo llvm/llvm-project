@@ -4589,7 +4589,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     ListSeparator LS;
     Function *CalledFunc = CI->getCalledFunction();
     auto PrintArgComment = [&](unsigned ArgNo) {
-      const Constant *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
+      const auto *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
       if (!ConstArg)
         return;
       std::string ArgComment;

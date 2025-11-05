@@ -852,7 +852,7 @@ void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Cons
 
     OS << "  case " << Int.EnumName << ":\n";
     OS << "    switch (ArgIdx) {\n";
-    for (const auto &[ArgIdx, ArgName, FuncName] : Int.PrettyPrintFunctions) {
+    for (const auto [ArgIdx, ArgName, FuncName] : Int.PrettyPrintFunctions) {
       OS << "    case " << ArgIdx << ":\n";
       OS << "      OS << \"" << ArgName << "=\";\n";
       if (!FuncName.empty()) {

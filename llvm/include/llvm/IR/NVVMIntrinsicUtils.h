@@ -663,7 +663,7 @@ inline APFloat::roundingMode GetFMARoundingMode(Intrinsic::ID IntrinsicID) {
 }
 
 inline void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
-  if (const ConstantInt *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
     switch (static_cast<Tcgen05MMAKind>(Val)) {
     case Tcgen05MMAKind::F16:
@@ -686,7 +686,7 @@ inline void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
 
 inline void printTcgen05CollectorUsageOp(raw_ostream &OS,
                                          const Constant *ImmArgVal) {
-  if (const ConstantInt *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
     switch (static_cast<Tcgen05CollectorUsageOp>(Val)) {
     case Tcgen05CollectorUsageOp::DISCARD:

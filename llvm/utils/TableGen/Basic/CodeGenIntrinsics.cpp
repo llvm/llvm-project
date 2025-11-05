@@ -457,7 +457,7 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     StringRef FuncName;
 
     for (const Init *PropInit : Properties->getElements()) {
-      if (const DefInit *PropDef = dyn_cast<DefInit>(PropInit)) {
+      if (const auto *PropDef = dyn_cast<DefInit>(PropInit)) {
         const Record *PropRec = PropDef->getDef();
 
         if (PropRec->isSubClassOf("ArgName"))
