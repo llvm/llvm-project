@@ -570,6 +570,7 @@ protected:
       FuncMetadataIndex;
 
   std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
+  bool IsProfileTypified = false;
 
   /// Whether the profile has attribute metadata.
   bool ProfileHasAttribute = false;
@@ -686,6 +687,10 @@ protected:
 
   /// Read the contents of the given profile instance.
   std::error_code readProfile(FunctionSamples &FProfile);
+
+  /// Read specific profile types.
+  std::error_code readLBRProfile(FunctionSamples &FProfile);
+  std::error_code readTypifiedProfile(FunctionSamples &FProfile);
 
   /// Read the contents of Magic number and Version number.
   std::error_code readMagicIdent();

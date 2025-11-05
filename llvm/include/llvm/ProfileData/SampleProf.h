@@ -128,9 +128,13 @@ enum SecType {
   SecFuncOffsetTable = 4,
   SecFuncMetadata = 5,
   SecCSNameTable = 6,
+  // Substitution to SecFuncOffsetTable when we have non-LBR profile types
+  SecTypifiedFuncOffsetTable = 7,
   // marker for the first type of profile.
   SecFuncProfileFirst = 32,
-  SecLBRProfile = SecFuncProfileFirst
+  SecLBRProfile = SecFuncProfileFirst,
+  // Substitution to SecLBRProfile when we have non-LBR profile types
+  SecTypifiedProfile = 33
 };
 
 static inline std::string getSecName(SecType Type) {
@@ -149,12 +153,19 @@ static inline std::string getSecName(SecType Type) {
     return "FunctionMetadata";
   case SecCSNameTable:
     return "CSNameTableSection";
+  case SecTypifiedFuncOffsetTable:
+    return "TypifiedFuncOffsetTableSection";
   case SecLBRProfile:
     return "LBRProfileSection";
+  case SecTypifiedProfile:
+    return "TypifiedProfileSection";
   default:
     return "UnknownSection";
   }
 }
+
+// Types of sample profile which can be in placed in SecTypifiedProfile
+enum ProfTypes { ProfTypeLBR = 0, ProfTypeNum };
 
 // Entry type of section header table used by SampleProfileExtBinaryBaseReader
 // and SampleProfileExtBinaryBaseWriter.
@@ -1341,6 +1352,12 @@ public:
     return !(*this == Other);
   }
 
+  bool hasNonLBRSamples() const {
+    // currently just a stub - should be implemented when
+    // first non-LBR profile is encountered
+    return false;
+  }
+
 private:
   /// CFG hash value for the function.
   uint64_t FunctionHash = 0;
@@ -1466,6 +1483,15 @@ public:
   size_t erase(const key_type &Key) { return base_type::erase(Key); }
 
   iterator erase(iterator It) { return base_type::erase(It); }
+
+  bool hasNonLBRProfile() const {
+    for (const auto &[Context, FuncSamples] : *this) {
+      if (FuncSamples.hasNonLBRSamples()) {
+        return true;
+      }
+    }
+    return false;
+  }
 };
 
 using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;

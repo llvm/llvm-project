@@ -710,7 +710,7 @@ SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
 }
 
 std::error_code
-SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
+SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile) {
   auto NumSamples = readNumber<uint64_t>();
   if (std::error_code EC = NumSamples.getError())
     return EC;
@@ -759,6 +759,52 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     }
 
     FProfile.addBodySamples(*LineOffset, DiscriminatorVal, *NumSamples);
+  }
+
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile) {
+  // read the number of profile types
+  auto ProfNum = readNumber<uint64_t>();
+  if (std::error_code EC = ProfNum.getError())
+    return EC;
+
+  // read specified number of typified profiles
+  for (uint64_t i = 0; i < *ProfNum; i++) {
+    auto Type = readNumber<uint64_t>();
+    if (std::error_code EC = Type.getError())
+      return EC;
+    auto Size = readUnencodedNumber<uint64_t>();
+    if (std::error_code EC = Size.getError())
+      return EC;
+
+    switch (*Type) {
+    case ProfTypeLBR:
+      if (std::error_code EC = readLBRProfile(FProfile))
+        return EC;
+      break;
+    default:
+      // skip unknown profile type for forward compatibility
+      Data += *Size;
+      if (Data > End)
+        return sampleprof_error::truncated;
+      break;
+    }
+  }
+
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
+  if (IsProfileTypified) {
+    if (std::error_code EC = readTypifiedProfile(FProfile))
+      return EC;
+  } else {
+    if (std::error_code EC = readLBRProfile(FProfile))
+      return EC;
   }
 
   // Read all the samples for inlined function calls.
@@ -876,11 +922,14 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     break;
   }
   case SecLBRProfile:
+  case SecTypifiedProfile:
     ProfileSecRange = std::make_pair(Data, End);
+    IsProfileTypified = Entry.Type == SecTypifiedProfile;
     if (std::error_code EC = readFuncProfiles())
       return EC;
     break;
   case SecFuncOffsetTable:
+  case SecTypifiedFuncOffsetTable:
     // If module is absent, we are using LLVM tools, and need to read all
     // profiles, so skip reading the function offset table.
     if (!M) {
