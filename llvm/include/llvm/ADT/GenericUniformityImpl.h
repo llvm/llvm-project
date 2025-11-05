@@ -428,7 +428,7 @@ protected:
 
   // Map containing tracked instruction that can be proven uniform based on its
   // operand Uniformity.
-  llvm::DenseMap<const InstructionT *, InstructionUniformity>
+  DenseMap<const InstructionT *, InstructionUniformity>
       UniformInstruction;
 
   /// \brief Mark \p Term as divergent and push all Instructions that become
