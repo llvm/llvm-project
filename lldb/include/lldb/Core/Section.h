@@ -96,8 +96,8 @@ public:
   /// information.
   uint64_t GetDebugInfoSize() const;
 
-  // Callback to decide of two matching sections should be used in the merged
-  // output.
+  // Callback to decide which of two matching sections should be used in the
+  // merged output.
   using MergeCallback =
       std::function<lldb::SectionSP(lldb::SectionSP, lldb::SectionSP)>;
 
