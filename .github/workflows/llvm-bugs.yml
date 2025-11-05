@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
-      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 18
           check-latest: true
@@ -39,6 +39,12 @@ jobs:
               repo: context.repo.repo
             })
             .then((issue) => {
+              var maybeTruncatedBody = issue.data.body;
+              if (maybeTruncatedBody.length > 15000) {
+                maybeTruncatedBody = maybeTruncatedBody.substring(0,
+                    15000) +
+                  "<truncated>Please see the issue for the entire body."
+              }
               const payload = {
                 author : issue.data.user.login,
                 issue  : issue.data.number,
@@ -46,7 +52,7 @@ jobs:
                 url    : issue.data.html_url,
                 labels : issue.data.labels.map((label) => label.name),
                 assignee : issue.data.assignees.map((assignee) => assignee.login),
-                body   : issue.data.body
+                body   : maybeTruncatedBody
               };
 
               const data = {

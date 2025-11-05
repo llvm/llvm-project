@@ -36,24 +36,18 @@ body:             |
   ; CHECK-NEXT:   SI_SPILL_AV128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.1, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.1, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $vgpr0 = V_FMA_F32_e64 0, $vgpr6, 0, $vgpr6, 0, killed $vgpr2, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   SI_SPILL_AV128_SAVE $vgpr4_vgpr5_vgpr6_vgpr7, %stack.4, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.4, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $vgpr0 = V_TRUNC_F32_e32 killed $vgpr0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   SI_SPILL_AV32_SAVE killed $vgpr0, %stack.3, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $vgpr0 = IMPLICIT_DEF
-  ; CHECK-NEXT:   renamable $vgpr2_vgpr3_vgpr4_vgpr5 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
-  ; CHECK-NEXT:   renamable $vgpr5 = nofpexcept V_DIV_FIXUP_F32_e64 0, killed $vgpr0, 0, killed $vgpr7, 0, killed $vgpr5, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr7 = nofpexcept V_DIV_FIXUP_F32_e64 0, killed $vgpr0, 0, $vgpr7, 0, killed $vgpr3, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $vgpr0 = SI_SPILL_AV32_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
-  ; CHECK-NEXT:   renamable $vgpr9 = COPY killed renamable $vgpr5
-  ; CHECK-NEXT:   renamable $vgpr4_vgpr5_vgpr6_vgpr7 = SI_SPILL_AV128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
-  ; CHECK-NEXT:   renamable $vgpr2_vgpr3_vgpr4_vgpr5 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
-  ; CHECK-NEXT:   renamable $vgpr8 = nofpexcept V_FMA_F32_e64 1, killed $vgpr0, 0, killed $vgpr6, 0, killed $vgpr4, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $vgpr2_vgpr3 = COPY killed renamable $vgpr8_vgpr9
+  ; CHECK-NEXT:   renamable $vgpr6 = nofpexcept V_FMA_F32_e64 1, killed $vgpr0, 0, $vgpr6, 0, killed $vgpr2, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr2_vgpr3 = COPY killed renamable $vgpr6_vgpr7
+  ; CHECK-NEXT:   renamable $vgpr6_vgpr7_vgpr8_vgpr9 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $vgpr0 = IMPLICIT_DEF
-  ; CHECK-NEXT:   renamable $vgpr4_vgpr5_vgpr6_vgpr7 = SI_SPILL_AV128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
-  ; CHECK-NEXT:   renamable $vgpr6_vgpr7_vgpr8_vgpr9 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
-  ; CHECK-NEXT:   renamable $vgpr0 = nofpexcept V_DIV_FIXUP_F32_e64 0, killed $vgpr0, 0, killed $vgpr4, 0, killed $vgpr6, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $vgpr4_vgpr5_vgpr6_vgpr7 = SI_SPILL_AV128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
-  ; CHECK-NEXT:   renamable $vgpr6_vgpr7_vgpr8_vgpr9 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
+  ; CHECK-NEXT:   renamable $vgpr0 = nofpexcept V_DIV_FIXUP_F32_e64 0, killed $vgpr0, 0, $vgpr4, 0, $vgpr6, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   dead renamable $vgpr1 = V_FMA_F32_e64 0, killed $vgpr5, 0, $vgpr5, 0, killed $vgpr7, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   dead renamable $vgpr4_vgpr5_vgpr6_vgpr7 = SCRATCH_LOAD_DWORDX4_SADDR %stack.0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load (s128), addrspace 5)
   ; CHECK-NEXT:   renamable $vgpr4_vgpr5 = IMPLICIT_DEF

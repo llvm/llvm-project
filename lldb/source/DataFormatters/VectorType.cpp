@@ -55,6 +55,8 @@ static CompilerType GetCompilerTypeForFormat(lldb::Format format,
 
   case lldb::eFormatFloat:
     return type_system->GetBasicTypeFromAST(lldb::eBasicTypeFloat);
+  case lldb::eFormatFloat128:
+    return type_system->GetBasicTypeFromAST(lldb::eBasicTypeFloat128);
 
   case lldb::eFormatHex:
   case lldb::eFormatHexUppercase:

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Parse/ParseHLSLRootSignature.h"
-
+#include "clang/AST/ASTConsumer.h"
 #include "clang/Lex/LiteralSupport.h"
+#include "clang/Parse/Parser.h"
+#include "clang/Sema/Sema.h"
 
 using namespace llvm::hlsl::rootsig;
 
@@ -27,18 +29,27 @@ static const TokenKind RootElementKeywords[] = {
 };
 
 RootSignatureParser::RootSignatureParser(
-    llvm::dxbc::RootSignatureVersion Version,
-    SmallVector<RootSignatureElement> &Elements, StringLiteral *Signature,
+    llvm::dxbc::RootSignatureVersion Version, StringLiteral *Signature,
     Preprocessor &PP)
-    : Version(Version), Elements(Elements), Signature(Signature),
-      Lexer(Signature->getString()), PP(PP), CurToken(0) {}
+    : Version(Version), Signature(Signature), Lexer(Signature->getString()),
+      PP(PP), CurToken(0) {}
 
 bool RootSignatureParser::parse() {
   // Iterate as many RootSignatureElements as possible, until we hit the
   // end of the stream
   bool HadError = false;
+  bool HasRootFlags = false;
   while (!peekExpectedToken(TokenKind::end_of_stream)) {
     if (tryConsumeExpectedToken(TokenKind::kw_RootFlags)) {
+      if (HasRootFlags) {
+        reportDiag(diag::err_hlsl_rootsig_repeat_param)
+            << TokenKind::kw_RootFlags;
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
+      HasRootFlags = true;
+
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Flags = parseRootFlags();
       if (!Flags.has_value()) {
@@ -235,15 +246,15 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
-    Descriptor.Type = DescriptorType::CBuffer;
+    Descriptor.Type = ResourceClass::CBuffer;
     ExpectedReg = TokenKind::bReg;
     break;
   case TokenKind::kw_SRV:
-    Descriptor.Type = DescriptorType::SRV;
+    Descriptor.Type = ResourceClass::SRV;
     ExpectedReg = TokenKind::tReg;
     break;
   case TokenKind::kw_UAV:
-    Descriptor.Type = DescriptorType::UAV;
+    Descriptor.Type = ResourceClass::UAV;
     ExpectedReg = TokenKind::uReg;
     break;
   }
@@ -361,19 +372,19 @@ RootSignatureParser::parseDescriptorTableClause() {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
-    Clause.Type = ClauseType::CBuffer;
+    Clause.Type = ResourceClass::CBuffer;
     ExpectedReg = TokenKind::bReg;
     break;
   case TokenKind::kw_SRV:
-    Clause.Type = ClauseType::SRV;
+    Clause.Type = ResourceClass::SRV;
     ExpectedReg = TokenKind::tReg;
     break;
   case TokenKind::kw_UAV:
-    Clause.Type = ClauseType::UAV;
+    Clause.Type = ResourceClass::UAV;
     ExpectedReg = TokenKind::uReg;
     break;
   case TokenKind::kw_Sampler:
-    Clause.Type = ClauseType::Sampler;
+    Clause.Type = ResourceClass::Sampler;
     ExpectedReg = TokenKind::sReg;
     break;
   }
@@ -473,6 +484,9 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
 
   if (Params->Visibility.has_value())
     Sampler.Visibility = Params->Visibility.value();
+
+  if (Params->Flags.has_value())
+    Sampler.Flags = Params->Flags.value();
 
   return Sampler;
 }
@@ -915,6 +929,20 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
+    } else if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
+      // `flags` `=` STATIC_SAMPLE_FLAGS
+      if (Params.Flags.has_value()) {
+        reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Flags = parseStaticSamplerFlags(TokenKind::kw_flags);
+      if (!Flags.has_value())
+        return std::nullopt;
+      Params.Flags = Flags;
     } else {
       consumeNextToken(); // let diagnostic be at the start of invalid token
       reportDiag(diag::err_hlsl_invalid_token)
@@ -1244,6 +1272,50 @@ RootSignatureParser::parseDescriptorRangeFlags(TokenKind Context) {
   return Flags;
 }
 
+std::optional<llvm::dxbc::StaticSamplerFlags>
+RootSignatureParser::parseStaticSamplerFlags(TokenKind Context) {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  // Handle the edge-case of '0' to specify no flags set
+  if (tryConsumeExpectedToken(TokenKind::int_literal)) {
+    if (!verifyZeroFlag()) {
+      reportDiag(diag::err_hlsl_rootsig_non_zero_flag);
+      return std::nullopt;
+    }
+    return llvm::dxbc::StaticSamplerFlags::None;
+  }
+
+  TokenKind Expected[] = {
+#define STATIC_SAMPLER_FLAG_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  std::optional<llvm::dxbc::StaticSamplerFlags> Flags;
+
+  do {
+    if (tryConsumeExpectedToken(Expected)) {
+      switch (CurToken.TokKind) {
+#define STATIC_SAMPLER_FLAG_ENUM(NAME, LIT)                                    \
+  case TokenKind::en_##NAME:                                                   \
+    Flags = maybeOrFlag<llvm::dxbc::StaticSamplerFlags>(                       \
+        Flags, llvm::dxbc::StaticSamplerFlags::NAME);                          \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+      default:
+        llvm_unreachable("Switch for consumed enum token was not provided");
+      }
+    } else {
+      consumeNextToken(); // consume token to point at invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*value=*/1 << /*value of*/ Context;
+      return std::nullopt;
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_or));
+
+  return Flags;
+}
+
 std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   // Parse the numeric value and do semantic checks on its specification
   clang::NumericLiteralParser Literal(
@@ -1447,6 +1519,62 @@ bool RootSignatureParser::skipUntilClosedParens(uint32_t NumParens) {
 SourceLocation RootSignatureParser::getTokenLocation(RootSignatureToken Tok) {
   return Signature->getLocationOfByte(Tok.LocOffset, PP.getSourceManager(),
                                       PP.getLangOpts(), PP.getTargetInfo());
+}
+
+IdentifierInfo *ParseHLSLRootSignature(Sema &Actions,
+                                       llvm::dxbc::RootSignatureVersion Version,
+                                       StringLiteral *Signature) {
+  // Construct our identifier
+  auto [DeclIdent, Found] =
+      Actions.HLSL().ActOnStartRootSignatureDecl(Signature->getString());
+  // If we haven't found an already defined DeclIdent then parse the root
+  // signature string and construct the in-memory elements
+  if (!Found) {
+    // Invoke the root signature parser to construct the in-memory constructs
+    hlsl::RootSignatureParser Parser(Version, Signature,
+                                     Actions.getPreprocessor());
+    if (Parser.parse())
+      return nullptr;
+
+    // Construct the declaration.
+    Actions.HLSL().ActOnFinishRootSignatureDecl(
+        Signature->getBeginLoc(), DeclIdent, Parser.getElements());
+  }
+
+  return DeclIdent;
+}
+
+void HandleRootSignatureTarget(Sema &S, StringRef EntryRootSig) {
+  ASTConsumer *Consumer = &S.getASTConsumer();
+
+  // Minimally initalize the parser. This does a couple things:
+  // - initializes Sema scope handling
+  // - invokes HLSLExternalSemaSource
+  // - invokes the preprocessor to lex the macros in the file
+  std::unique_ptr<Parser> P(new Parser(S.getPreprocessor(), S, true));
+  S.getPreprocessor().EnterMainSourceFile();
+
+  bool HaveLexer = S.getPreprocessor().getCurrentLexer();
+  if (HaveLexer) {
+    P->Initialize();
+    S.ActOnStartOfTranslationUnit();
+
+    // Skim through the file to parse to find the define
+    while (P->getCurToken().getKind() != tok::eof)
+      P->ConsumeAnyToken();
+
+    HLSLRootSignatureDecl *SignatureDecl =
+        S.HLSL().lookupRootSignatureOverrideDecl(
+            S.getASTContext().getTranslationUnitDecl());
+
+    if (SignatureDecl)
+      Consumer->HandleTopLevelDecl(DeclGroupRef(SignatureDecl));
+    else
+      S.getDiagnostics().Report(diag::err_hlsl_rootsignature_entry)
+          << EntryRootSig;
+  }
+
+  Consumer->HandleTranslationUnit(S.getASTContext());
 }
 
 } // namespace hlsl

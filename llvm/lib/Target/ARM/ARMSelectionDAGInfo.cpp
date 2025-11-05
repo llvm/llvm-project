@@ -47,9 +47,7 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
 
   // Only use a specialized AEABI function if the default version of this
   // Libcall is an AEABI function.
-  if (std::strncmp(TLI->getLibcallName(LC), "__aeabi", 7) != 0)
-    return SDValue();
-
+  //
   // Translate RTLIB::Libcall to AEABILibcall. We only do this in order to be
   // able to translate memset to memclr and use the value to index the function
   // name array.
@@ -61,12 +59,21 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   } AEABILibcall;
   switch (LC) {
   case RTLIB::MEMCPY:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memcpy)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMCPY;
     break;
   case RTLIB::MEMMOVE:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memmove)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMMOVE;
     break;
   case RTLIB::MEMSET:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memset)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMSET;
     if (isNullConstant(Src))
       AEABILibcall = AEABI_MEMCLR;
@@ -89,19 +96,15 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     AlignVariant = ALIGN1;
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
-  Entry.Node = Dst;
-  Args.push_back(Entry);
+  Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+  Args.emplace_back(Dst, IntPtrTy);
   if (AEABILibcall == AEABI_MEMCLR) {
-    Entry.Node = Size;
-    Args.push_back(Entry);
+    Args.emplace_back(Size, IntPtrTy);
   } else if (AEABILibcall == AEABI_MEMSET) {
     // Adjust parameters for memset, EABI uses format (ptr, size, value),
     // GNU library uses (ptr, value, size)
     // See RTABI section 4.3.4
-    Entry.Node = Size;
-    Args.push_back(Entry);
+    Args.emplace_back(Size, IntPtrTy);
 
     // Extend or truncate the argument to be an i32 value for the call.
     if (Src.getValueType().bitsGT(MVT::i32))
@@ -109,16 +112,13 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     else if (Src.getValueType().bitsLT(MVT::i32))
       Src = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Src);
 
-    Entry.Node = Src;
-    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(Src,
+                                       Type::getInt32Ty(*DAG.getContext()));
     Entry.IsSExt = false;
     Args.push_back(Entry);
   } else {
-    Entry.Node = Src;
-    Args.push_back(Entry);
-
-    Entry.Node = Size;
-    Args.push_back(Entry);
+    Args.emplace_back(Src, IntPtrTy);
+    Args.emplace_back(Size, IntPtrTy);
   }
 
   static const RTLIB::Libcall FunctionImpls[4][3] = {

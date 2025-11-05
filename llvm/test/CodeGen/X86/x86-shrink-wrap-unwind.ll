@@ -181,40 +181,38 @@ define zeroext i1 @segmentedStack(ptr readonly %vk1, ptr readonly %vk2, i64 %key
 ; CHECK-LABEL: segmentedStack:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    cmpq %gs:816, %rsp
-; CHECK-NEXT:    jbe LBB3_6
+; CHECK-NEXT:    jbe LBB3_7
 ; CHECK-NEXT:  LBB3_1: ## %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    orb %al, %cl
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne LBB3_4
-; CHECK-NEXT:  ## %bb.2: ## %if.end4.i
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    je LBB3_5
+; CHECK-NEXT:  ## %bb.2: ## %entry
+; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    je LBB3_5
+; CHECK-NEXT:  ## %bb.3: ## %if.end4.i
 ; CHECK-NEXT:    movq 8(%rdi), %rdx
 ; CHECK-NEXT:    cmpq 8(%rsi), %rdx
-; CHECK-NEXT:    jne LBB3_5
-; CHECK-NEXT:  ## %bb.3: ## %land.rhs.i.i
+; CHECK-NEXT:    jne LBB3_6
+; CHECK-NEXT:  ## %bb.4: ## %land.rhs.i.i
 ; CHECK-NEXT:    movq (%rsi), %rsi
 ; CHECK-NEXT:    movq (%rdi), %rdi
 ; CHECK-NEXT:    callq _memcmp
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:  LBB3_4: ## %__go_ptr_strings_equal.exit
-; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB3_5:
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  LBB3_5: ## %__go_ptr_strings_equal.exit
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB3_6:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  LBB3_7:
 ; CHECK-NEXT:    movl $8, %r10d
 ; CHECK-NEXT:    movl $0, %r11d
 ; CHECK-NEXT:    callq ___morestack
@@ -224,43 +222,41 @@ define zeroext i1 @segmentedStack(ptr readonly %vk1, ptr readonly %vk2, i64 %key
 ; NOCOMPACTUNWIND-LABEL: segmentedStack:
 ; NOCOMPACTUNWIND:       # %bb.0:
 ; NOCOMPACTUNWIND-NEXT:    cmpq %fs:112, %rsp
-; NOCOMPACTUNWIND-NEXT:    jbe .LBB3_6
+; NOCOMPACTUNWIND-NEXT:    jbe .LBB3_7
 ; NOCOMPACTUNWIND-NEXT:  .LBB3_1: # %entry
 ; NOCOMPACTUNWIND-NEXT:    pushq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
-; NOCOMPACTUNWIND-NEXT:    testq %rdi, %rdi
-; NOCOMPACTUNWIND-NEXT:    sete %al
-; NOCOMPACTUNWIND-NEXT:    testq %rsi, %rsi
-; NOCOMPACTUNWIND-NEXT:    sete %cl
-; NOCOMPACTUNWIND-NEXT:    orb %al, %cl
 ; NOCOMPACTUNWIND-NEXT:    movq %rdi, %rax
 ; NOCOMPACTUNWIND-NEXT:    orq %rsi, %rax
 ; NOCOMPACTUNWIND-NEXT:    sete %al
-; NOCOMPACTUNWIND-NEXT:    testb %cl, %cl
-; NOCOMPACTUNWIND-NEXT:    jne .LBB3_4
-; NOCOMPACTUNWIND-NEXT:  # %bb.2: # %if.end4.i
+; NOCOMPACTUNWIND-NEXT:    testq %rdi, %rdi
+; NOCOMPACTUNWIND-NEXT:    je .LBB3_5
+; NOCOMPACTUNWIND-NEXT:  # %bb.2: # %entry
+; NOCOMPACTUNWIND-NEXT:    testq %rsi, %rsi
+; NOCOMPACTUNWIND-NEXT:    je .LBB3_5
+; NOCOMPACTUNWIND-NEXT:  # %bb.3: # %if.end4.i
 ; NOCOMPACTUNWIND-NEXT:    movq 8(%rdi), %rdx
 ; NOCOMPACTUNWIND-NEXT:    cmpq 8(%rsi), %rdx
-; NOCOMPACTUNWIND-NEXT:    jne .LBB3_5
-; NOCOMPACTUNWIND-NEXT:  # %bb.3: # %land.rhs.i.i
+; NOCOMPACTUNWIND-NEXT:    jne .LBB3_6
+; NOCOMPACTUNWIND-NEXT:  # %bb.4: # %land.rhs.i.i
 ; NOCOMPACTUNWIND-NEXT:    movq (%rsi), %rsi
 ; NOCOMPACTUNWIND-NEXT:    movq (%rdi), %rdi
 ; NOCOMPACTUNWIND-NEXT:    callq memcmp@PLT
 ; NOCOMPACTUNWIND-NEXT:    testl %eax, %eax
 ; NOCOMPACTUNWIND-NEXT:    sete %al
-; NOCOMPACTUNWIND-NEXT:  .LBB3_4: # %__go_ptr_strings_equal.exit
+; NOCOMPACTUNWIND-NEXT:  .LBB3_5: # %__go_ptr_strings_equal.exit
 ; NOCOMPACTUNWIND-NEXT:    # kill: def $al killed $al killed $eax
 ; NOCOMPACTUNWIND-NEXT:    popq %rcx
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 8
 ; NOCOMPACTUNWIND-NEXT:    retq
-; NOCOMPACTUNWIND-NEXT:  .LBB3_5:
+; NOCOMPACTUNWIND-NEXT:  .LBB3_6:
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
 ; NOCOMPACTUNWIND-NEXT:    xorl %eax, %eax
 ; NOCOMPACTUNWIND-NEXT:    # kill: def $al killed $al killed $eax
 ; NOCOMPACTUNWIND-NEXT:    popq %rcx
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 8
 ; NOCOMPACTUNWIND-NEXT:    retq
-; NOCOMPACTUNWIND-NEXT:  .LBB3_6:
+; NOCOMPACTUNWIND-NEXT:  .LBB3_7:
 ; NOCOMPACTUNWIND-NEXT:    movl $8, %r10d
 ; NOCOMPACTUNWIND-NEXT:    movl $0, %r11d
 ; NOCOMPACTUNWIND-NEXT:    callq __morestack
@@ -317,13 +313,13 @@ define void @with_nounwind(i1 %cond) nounwind personality ptr @my_personality {
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB4_1: ## %throw
-; CHECK-NEXT:  Ltmp0:
+; CHECK-NEXT:  Ltmp0: ## EH_LABEL
 ; CHECK-NEXT:    callq _throw_exception
-; CHECK-NEXT:  Ltmp1:
+; CHECK-NEXT:  Ltmp1: ## EH_LABEL
 ; CHECK-NEXT:  ## %bb.2: ## %unreachable
 ; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  LBB4_3: ## %landing
-; CHECK-NEXT:  Ltmp2:
+; CHECK-NEXT:  Ltmp2: ## EH_LABEL
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  Lfunc_end0:
@@ -340,12 +336,12 @@ define void @with_nounwind(i1 %cond) nounwind personality ptr @my_personality {
 ; NOCOMPACTUNWIND-NEXT:    retq
 ; NOCOMPACTUNWIND-NEXT:  .LBB4_1: # %throw
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
-; NOCOMPACTUNWIND-NEXT:  .Ltmp0:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp0: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    callq throw_exception@PLT
-; NOCOMPACTUNWIND-NEXT:  .Ltmp1:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp1: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:  # %bb.2: # %unreachable
 ; NOCOMPACTUNWIND-NEXT:  .LBB4_3: # %landing
-; NOCOMPACTUNWIND-NEXT:  .Ltmp2:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp2: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    popq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 8
 ; NOCOMPACTUNWIND-NEXT:    retq
@@ -379,9 +375,9 @@ define void @with_nounwind_same_succ(i1 %cond) nounwind personality ptr @my_pers
 ; CHECK-NEXT:  ## %bb.1: ## %throw
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Ltmp3:
+; CHECK-NEXT:  Ltmp3: ## EH_LABEL
 ; CHECK-NEXT:    callq _throw_exception
-; CHECK-NEXT:  Ltmp4:
+; CHECK-NEXT:  Ltmp4: ## EH_LABEL
 ; CHECK-NEXT:  LBB5_3: ## %fallthrough
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    nop
@@ -390,7 +386,7 @@ define void @with_nounwind_same_succ(i1 %cond) nounwind personality ptr @my_pers
 ; CHECK-NEXT:  LBB5_4: ## %return
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB5_2: ## %landing
-; CHECK-NEXT:  Ltmp5:
+; CHECK-NEXT:  Ltmp5: ## EH_LABEL
 ; CHECK-NEXT:    jmp LBB5_3
 ; CHECK-NEXT:  Lfunc_end1:
 ;
@@ -401,9 +397,9 @@ define void @with_nounwind_same_succ(i1 %cond) nounwind personality ptr @my_pers
 ; NOCOMPACTUNWIND-NEXT:  # %bb.1: # %throw
 ; NOCOMPACTUNWIND-NEXT:    pushq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
-; NOCOMPACTUNWIND-NEXT:  .Ltmp3:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp3: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    callq throw_exception@PLT
-; NOCOMPACTUNWIND-NEXT:  .Ltmp4:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp4: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:  .LBB5_3: # %fallthrough
 ; NOCOMPACTUNWIND-NEXT:    #APP
 ; NOCOMPACTUNWIND-NEXT:    nop
@@ -414,7 +410,7 @@ define void @with_nounwind_same_succ(i1 %cond) nounwind personality ptr @my_pers
 ; NOCOMPACTUNWIND-NEXT:    retq
 ; NOCOMPACTUNWIND-NEXT:  .LBB5_2: # %landing
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
-; NOCOMPACTUNWIND-NEXT:  .Ltmp5:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp5: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    jmp .LBB5_3
 entry:
   br i1 %cond, label %throw, label %return

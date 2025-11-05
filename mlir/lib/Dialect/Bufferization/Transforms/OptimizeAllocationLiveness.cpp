@@ -18,11 +18,9 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "optimize-allocation-liveness"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 namespace mlir {
 namespace bufferization {
@@ -65,8 +63,8 @@ Operation *findUserWithFreeSideEffect(Value value) {
       for (const auto &effect : effects) {
         if (isa<MemoryEffects::Free>(effect.getEffect())) {
           if (freeOpUser) {
-            LDBG("Multiple users with free effect found: " << *freeOpUser
-                                                           << " and " << *user);
+            LDBG() << "Multiple users with free effect found: " << *freeOpUser
+                   << " and " << *user;
             return nullptr;
           }
           freeOpUser = user;
@@ -121,7 +119,7 @@ public:
         return WalkResult::advance();
 
       auto allocOp = memEffectOp;
-      LDBG("Checking alloc op: " << allocOp);
+      LDBG() << "Checking alloc op: " << allocOp;
 
       SmallVector<OpResult> allocationResults = collectAllocations(allocOp);
       // Multiple allocations from a single op are not considered here yet.
@@ -129,7 +127,7 @@ public:
         return WalkResult::advance();
 
       OpResult allocResult = allocationResults[0];
-      LDBG("On allocation result: " << allocResult);
+      LDBG() << "On allocation result: " << allocResult;
 
       auto *deallocOp = findUserWithFreeSideEffect(allocResult);
       if (!deallocOp || (deallocOp->getBlock() != allocOp->getBlock())) {
@@ -150,7 +148,7 @@ public:
             continue;
 
           // find the ancestor of user that is in the same block as the allocOp.
-          auto topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
+          auto *topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
           if (!lastUser || happensBefore(lastUser, topUser)) {
             lastUser = topUser;
           }
@@ -159,12 +157,12 @@ public:
       if (lastUser == nullptr) {
         return WalkResult::advance();
       }
-      LDBG("Last user found: " << *lastUser);
+      LDBG() << "Last user found: " << *lastUser;
       assert(lastUser->getBlock() == allocOp->getBlock());
       assert(lastUser->getBlock() == deallocOp->getBlock());
       // Move the dealloc op after the last user.
       deallocOp->moveAfter(lastUser);
-      LDBG("Moved dealloc op after: " << *lastUser);
+      LDBG() << "Moved dealloc op after: " << *lastUser;
 
       return WalkResult::advance();
     });

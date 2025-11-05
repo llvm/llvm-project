@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_cache() {
-  // CHECK: cir.func{{.*}} @acc_cache() {
+  // CHECK: cir.func{{.*}} @acc_cache()
 
   int iArr[10];
   // CHECK-NEXT: %[[IARR:.*]] = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["iArr"]

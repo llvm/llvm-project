@@ -20,5 +20,7 @@ static_library("llvm") {
     "PreferRegisterOverUnsignedCheck.cpp",
     "PreferStaticOverAnonymousNamespaceCheck.cpp",
     "TwineLocalCheck.cpp",
+    "UseNewMLIROpBuilderCheck.cpp",
+    "UseRangesCheck.cpp",
   ]
 }

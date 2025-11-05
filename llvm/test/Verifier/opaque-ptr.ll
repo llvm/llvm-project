@@ -40,21 +40,21 @@ define void @atomicrmw(ptr %a, i32 %i) {
 define void @opaque_mangle() {
 ; CHECK-LABEL: @opaque_mangle(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i64
-  call void @llvm.lifetime.start.p0(i64 8, ptr %a)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
 define void @intrinsic_calls(ptr %a) {
 ; CHECK-LABEL: @intrinsic_calls(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr [[A:%.*]], i32 4, <2 x i1> zeroinitializer, <2 x i32> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> zeroinitializer, ptr [[A]], i32 4, <2 x i1> zeroinitializer)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> zeroinitializer, i32 4, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4 [[A:%.*]], <2 x i1> zeroinitializer, <2 x i32> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> zeroinitializer, ptr align 4 [[A]], <2 x i1> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 4 zeroinitializer, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype(i32) null, i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -65,10 +65,8 @@ define void @intrinsic_calls(ptr %a) {
   ret void
 }
 
-; CHECK: @llvm.lifetime.start.p0
-; CHECK: @llvm.lifetime.end.p0
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
 declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)

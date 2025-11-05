@@ -32,6 +32,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -1714,7 +1715,7 @@ public:
   static SelectInst *Create(Value *C, Value *S1, Value *S2,
                             const Twine &NameStr = "",
                             InsertPosition InsertBefore = nullptr,
-                            Instruction *MDFrom = nullptr) {
+                            const Instruction *MDFrom = nullptr) {
     SelectInst *Sel =
         new (AllocMarker) SelectInst(C, S1, S2, NameStr, InsertBefore);
     if (MDFrom)
@@ -3536,8 +3537,6 @@ class SwitchInstProfUpdateWrapper {
   bool Changed = false;
 
 protected:
-  LLVM_ABI MDNode *buildProfBranchWeightsMD();
-
   LLVM_ABI void init();
 
 public:
@@ -3549,13 +3548,18 @@ public:
   SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 
   ~SwitchInstProfUpdateWrapper() {
-    if (Changed)
-      SI.setMetadata(LLVMContext::MD_prof, buildProfBranchWeightsMD());
+    if (Changed && Weights.has_value() && Weights->size() >= 2)
+      setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
   }
 
   /// Delegate the call to the underlying SwitchInst::removeCase() and remove
   /// correspondent branch weight.
   LLVM_ABI SwitchInst::CaseIt removeCase(SwitchInst::CaseIt I);
+
+  /// Replace the default destination by given case. Delegate the call to
+  /// the underlying SwitchInst::setDefaultDest and remove correspondent branch
+  /// weight.
+  LLVM_ABI void replaceDefaultDest(SwitchInst::CaseIt I);
 
   /// Delegate the call to the underlying SwitchInst::addCase() and set the
   /// specified branch weight for the added case.
@@ -4943,6 +4947,46 @@ public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == PtrToInt;
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+/// This class represents a cast from a pointer to an address (non-capturing
+/// ptrtoint).
+class PtrToAddrInst : public CastInst {
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+
+  /// Clone an identical PtrToAddrInst.
+  PtrToAddrInst *cloneImpl() const;
+
+public:
+  /// Constructor with insert-before-instruction semantics
+  PtrToAddrInst(Value *S,                  ///< The value to be converted
+                Type *Ty,                  ///< The type to convert to
+                const Twine &NameStr = "", ///< A name for the new instruction
+                InsertPosition InsertBefore =
+                    nullptr ///< Where to insert the new instruction
+  );
+
+  /// Gets the pointer operand.
+  Value *getPointerOperand() { return getOperand(0); }
+  /// Gets the pointer operand.
+  const Value *getPointerOperand() const { return getOperand(0); }
+  /// Gets the operand index of the pointer operand.
+  static unsigned getPointerOperandIndex() { return 0U; }
+
+  /// Returns the address space of the pointer operand.
+  unsigned getPointerAddressSpace() const {
+    return getPointerOperand()->getType()->getPointerAddressSpace();
+  }
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    return I->getOpcode() == PtrToAddr;
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));

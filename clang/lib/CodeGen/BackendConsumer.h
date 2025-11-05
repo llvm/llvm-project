@@ -40,11 +40,6 @@ class BackendConsumer : public ASTConsumer {
   llvm::Timer LLVMIRGeneration;
   unsigned LLVMIRGenerationRefCount = 0;
 
-  /// True if we've finished generating IR. This prevents us from generating
-  /// additional LLVM IR after emitting output in HandleTranslationUnit. This
-  /// can happen when Clang plugins trigger additional AST deserialization.
-  bool IRGenFinished = false;
-
   bool TimerIsEnabled = false;
 
   BackendAction Action;

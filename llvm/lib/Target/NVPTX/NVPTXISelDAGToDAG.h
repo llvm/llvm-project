@@ -35,20 +35,18 @@ struct NVPTXScopes {
 
 private:
   SmallMapVector<SyncScope::ID, NVPTX::Scope, 8> Scopes{};
+  LLVMContext *Context = nullptr;
 };
 
 class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   const NVPTXTargetMachine &TM;
 
-  // If true, generate mul.wide from sext and mul
-  bool doMulWide;
-
   NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
   bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
   bool allowFMA() const;
-  bool allowUnsafeFPMath() const;
   bool doRsqrtOpt() const;
+  bool doMADWideOpt() const;
 
   NVPTXScopes Scopes{};
 
@@ -78,8 +76,6 @@ private:
   bool tryLDG(MemSDNode *N);
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
-  bool tryLoadParam(SDNode *N);
-  bool tryStoreParam(SDNode *N);
   bool tryFence(SDNode *N);
   void SelectAddrSpaceCast(SDNode *N);
   bool tryBFE(SDNode *N);
@@ -91,11 +87,11 @@ private:
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
-  void SelectCpAsyncBulkTensorG2SCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorReduceCommon(SDNode *N, unsigned RedOp,
                                            bool IsIm2Col = false);
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
   void SelectTcgen05St(SDNode *N, bool hasOffset = false);
+  void selectAtomicSwap128(SDNode *N);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
@@ -107,8 +103,6 @@ private:
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
 
-  bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
-
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory
   // instruction, if needed to implement the instructions memory order. Required
@@ -119,6 +113,7 @@ private:
 
 public:
   static NVPTX::AddressSpace getAddrSpace(const MemSDNode *N);
+  static unsigned getFromTypeWidthForLoad(const MemSDNode *Mem);
 };
 
 class NVPTXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {

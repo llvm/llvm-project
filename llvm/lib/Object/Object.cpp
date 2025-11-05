@@ -124,6 +124,8 @@ LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR) {
         return LLVMBinaryTypeOffload;
       case ID_Wasm:
         return LLVMBinaryTypeWasm;
+      case ID_DXContainer:
+        return LLVMBinaryTypeDXcontainer;
       case ID_StartObjects:
       case ID_EndObjects:
         llvm_unreachable("Marker types are not valid binary kinds!");

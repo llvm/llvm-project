@@ -98,10 +98,10 @@ static Value genLaunchGPUFunc(OpBuilder &builder, gpu::GPUFuncOp gpuFunc,
   Value numT = constantIndex(builder, loc, numThreads);
   gpu::KernelDim3 gridSize = {one, one, one};
   gpu::KernelDim3 blckSize = {numT, one, one};
-  return builder
-      .create<gpu::LaunchFuncOp>(loc, gpuFunc, gridSize, blckSize,
-                                 /*dynSharedMemSz*/ none, args,
-                                 builder.getType<gpu::AsyncTokenType>(), tokens)
+  return gpu::LaunchFuncOp::create(builder, loc, gpuFunc, gridSize, blckSize,
+                                   /*dynSharedMemSz*/ none, args,
+                                   builder.getType<gpu::AsyncTokenType>(),
+                                   tokens)
       .getAsyncToken();
 }
 
@@ -1168,7 +1168,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
   using OpRewritePattern<scf::ParallelOp>::OpRewritePattern;
 
   ForallRewriter(MLIRContext *context, unsigned nT)
-      : OpRewritePattern(context), numThreads(nT){};
+      : OpRewritePattern(context), numThreads(nT) {};
 
   LogicalResult matchAndRewrite(scf::ParallelOp forallOp,
                                 PatternRewriter &rewriter) const override {

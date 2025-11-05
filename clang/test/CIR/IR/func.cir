@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
@@ -11,6 +11,14 @@ cir.func @empty() {
   cir.return
 }
 // CHECK: cir.func{{.*}} @empty() {
+// CHECK:   cir.return
+// CHECK: }
+
+// void empty() { }
+cir.func no_proto @noProto() {
+  cir.return
+}
+// CHECK: cir.func no_proto @noProto() {
 // CHECK:   cir.return
 // CHECK: }
 
@@ -91,4 +99,47 @@ cir.func @ullfunc() -> !u64i {
 // CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !u64i
 // CHECK:   cir.return %[[VAL:.*]] : !u64i
 // CHECK: }
+
+cir.func coroutine @coro() {
+  cir.return
+}
+// CHECK: cir.func{{.*}} coroutine @coro()
+
+cir.func builtin @builtin() {
+  cir.return
+}
+// CHECK: cir.func{{.*}} builtin @builtin()
+
+cir.func @global_ctor_func() global_ctor {
+  cir.return
+}
+
+// CHECK: cir.func @global_ctor_func() global_ctor {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_ctor_with_priority() global_ctor(200) {
+  cir.return
+}
+
+// CHECK: cir.func @global_ctor_with_priority() global_ctor(200) {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_dtor_func() global_dtor {
+  cir.return
+}
+
+// CHECK: cir.func @global_dtor_func() global_dtor {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_dtor_with_priority() global_dtor(201) {
+  cir.return
+}
+
+// CHECK: cir.func @global_dtor_with_priority() global_dtor(201) {
+// CHECK:   cir.return
+// CHECK: }
+
 }

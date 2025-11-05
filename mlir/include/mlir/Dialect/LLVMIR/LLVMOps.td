@@ -973,6 +973,7 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
     custom<ShuffleType>(ref(type($v1)), type($res), ref($mask))
   }];
 
+  let hasFolder = 1;
   let hasVerifier = 1;
 
   string llvmInstName = "ShuffleVector";
@@ -1313,7 +1314,8 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<SymbolRefAttr>:$comdat,
     OptionalAttr<DIGlobalVariableExpressionArrayAttr>:$dbg_exprs,
-    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
+    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
+    OptionalAttr<ArrayAttr>:$target_specific_attrs
   );
   let summary = "LLVM dialect global.";
   let description = [{
@@ -1411,6 +1413,21 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     llvm.mlir.global private constant @y(dense<1.0> : tensor<8xf32>) { alignment = 32 : i64 } : !llvm.array<8 x f32>
     ```
 
+    The `target_specific_attrs` attribute provides a mechanism to preserve
+    target-specific LLVM IR attributes that are not explicitly modeled in the
+    LLVM dialect.
+
+    The attribute is an array containing either string attributes or
+    two-element array attributes of strings. The value of a standalone string
+    attribute is interpreted as the name of an LLVM IR attribute on the global.
+    A two-element array is interpreted as a key-value pair.
+
+    Example:
+
+    ```mlir
+    llvm.mlir.global external @example() {
+      target_specific_attrs = ["value-less-attr", ["int-attr", "4"], ["string-attr", "string"]]} : f64
+    ```
   }];
   let regions = (region AnyRegion:$initializer);
 
@@ -1958,10 +1975,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$reciprocal_estimates,
     OptionalAttr<StrAttr>:$prefer_vector_width,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
-    OptionalAttr<BoolAttr>:$unsafe_fp_math,
     OptionalAttr<BoolAttr>:$no_infs_fp_math,
     OptionalAttr<BoolAttr>:$no_nans_fp_math,
-    OptionalAttr<BoolAttr>:$approx_func_fp_math,
     OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math,
     OptionalAttr<StrAttr>:$denormal_fp_math,
     OptionalAttr<StrAttr>:$denormal_fp_math_f32,
@@ -1970,6 +1985,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$instrument_function_exit,
     OptionalAttr<UnitAttr>:$no_inline,
     OptionalAttr<UnitAttr>:$always_inline,
+    OptionalAttr<UnitAttr>:$inline_hint,
     OptionalAttr<UnitAttr>:$no_unwind,
     OptionalAttr<UnitAttr>:$will_return,
     OptionalAttr<UnitAttr>:$optimize_none,
@@ -2021,6 +2037,9 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
 
     /// Returns true if the `always_inline` attribute is set, false otherwise.
     bool isAlwaysInline() { return bool(getAlwaysInlineAttr()); }
+
+    /// Returns true if the `inline_hint` attribute is set, false otherwise.
+    bool isInlineHint() { return bool(getInlineHintAttr()); }
 
     /// Returns true if the `optimize_none` attribute is set, false otherwise.
     bool isOptimizeNone() { return bool(getOptimizeNoneAttr()); }
@@ -2405,7 +2424,8 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
 
 def LLVM_CallIntrinsicOp
     : LLVM_Op<"call_intrinsic",
-              [AttrSizedOperandSegments,
+              [ArgAndResultAttrsOpInterface,
+               AttrSizedOperandSegments,
                DeclareOpInterfaceMethods<FastmathFlagsInterface>]> {
   let summary = "Call to an LLVM intrinsic function.";
   let description = [{

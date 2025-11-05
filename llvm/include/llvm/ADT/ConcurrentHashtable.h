@@ -177,7 +177,7 @@ public:
 
 #if LLVM_ENABLE_THREADS
     // Lock bucket.
-    CurBucket.Guard.lock();
+    std::scoped_lock<std::mutex> Lock(CurBucket.Guard);
 #endif
 
     HashesPtr BucketHashes = CurBucket.Hashes;
@@ -195,11 +195,6 @@ public:
 
         CurBucket.NumberOfEntries++;
         RehashBucket(CurBucket);
-
-#if LLVM_ENABLE_THREADS
-        CurBucket.Guard.unlock();
-#endif
-
         return {NewData, true};
       }
 
@@ -208,10 +203,6 @@ public:
         KeyDataTy *EntryData = BucketEntries[CurEntryIdx];
         if (Info::isEqual(Info::getKey(*EntryData), NewValue)) {
           // Already existed entry matched with inserted data is found.
-#if LLVM_ENABLE_THREADS
-          CurBucket.Guard.unlock();
-#endif
-
           return {EntryData, false};
         }
       }
@@ -253,9 +244,8 @@ public:
 
     OS << "\nOverall number of entries = " << OverallNumberOfEntries;
     OS << "\nOverall number of non empty buckets = " << NumberOfNonEmptyBuckets;
-    for (auto &BucketSize : BucketSizesMap)
-      OS << "\n Number of buckets with size " << BucketSize.first << ": "
-         << BucketSize.second;
+    for (auto [Size, Count] : BucketSizesMap)
+      OS << "\n Number of buckets with size " << Size << ": " << Count;
 
     std::stringstream stream;
     stream << std::fixed << std::setprecision(2)

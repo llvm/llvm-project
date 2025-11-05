@@ -39,7 +39,7 @@ public:
     LenParameter = 3
   };
   RT_API_ATTRS Genre genre() const { return genre_; }
-  RT_API_ATTRS Fortran::common::optional<TypeParameterValue> GetValue(
+  RT_API_ATTRS common::optional<TypeParameterValue> GetValue(
       const Descriptor *) const;
 
 private:
@@ -55,7 +55,9 @@ public:
     Data = 1,
     Pointer = 2,
     Allocatable = 3,
-    Automatic = 4
+    Automatic = 4,
+    PointerDevice = 5,
+    AllocatableDevice = 6
   };
 
   RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }
@@ -179,7 +181,7 @@ private:
   //     The passed-object argument (usually the "to") is always passed via a
   //     a descriptor in the cases where the runtime will call a defined
   //     assignment because these calls are to type-bound generics,
-  //     not generic interfaces, and type-bound generic defined assigment
+  //     not generic interfaces, and type-bound generic defined assignment
   //     may appear only in an extensible type and requires a passed-object
   //     argument (see C774), and passed-object arguments to TBPs must be
   //     both polymorphic and scalar (C760).  The non-passed-object argument

@@ -2,6 +2,8 @@
 
 #include "Inputs/cuda.h"
 
+#define INVALID_HIP_MEMORY_SCOPE (__HIP_MEMORY_SCOPE_CLUSTER+1)
+
 __device__ int test_hip_atomic_load(int *pi32, unsigned int *pu32, long long *pll, unsigned long long *pull, float *fp, double *dbl) {
   int val = __hip_atomic_load(0);      // expected-error {{too few arguments to function call, expected 3, have 1}}
   val = __hip_atomic_load(0, 0, 0, 0); // expected-error {{too many arguments to function call, expected 3, have 4}}
@@ -10,9 +12,10 @@ __device__ int test_hip_atomic_load(int *pi32, unsigned int *pu32, long long *pl
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
+  val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_CLUSTER);
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
-  val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, 6); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, INVALID_HIP_MEMORY_SCOPE); // expected-error {{synchronization scope argument to atomic operation is invalid}}
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_load(pi32, __ATOMIC_SEQ_CST, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_load(pi32, __ATOMIC_CONSUME, __HIP_MEMORY_SCOPE_SINGLETHREAD);
@@ -35,9 +38,10 @@ __device__ int test_hip_atomic_store(int *pi32, unsigned int *pu32, long long *p
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
+  __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_CLUSTER);
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
-  __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, 6); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, INVALID_HIP_MEMORY_SCOPE); // expected-error {{synchronization scope argument to atomic operation is invalid}}
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   __hip_atomic_store(pi32, 0, __ATOMIC_SEQ_CST, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   __hip_atomic_store(pi32, 0, __ATOMIC_CONSUME, __HIP_MEMORY_SCOPE_SINGLETHREAD); // expected-warning{{memory order argument to atomic operation is invalid}}
@@ -71,6 +75,7 @@ __device__ bool test_hip_atomic_cmpxchg_weak(int *ptr, int val, int desired) {
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_CONSUME, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
+  flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_CLUSTER);
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_SEQ_CST, __HIP_MEMORY_SCOPE_SINGLETHREAD);

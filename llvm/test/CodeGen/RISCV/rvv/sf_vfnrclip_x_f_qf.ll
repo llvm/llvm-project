@@ -19,7 +19,7 @@ define <vscale x 1 x i8> @intrinsic_sf_vfnrclip_x_f_qf_nxv1i8_nxv1f32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.sf.vfnrclip.x.f.qf.nxv1i8.nxv1f32.iXLen(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x float> %0,
     float %1,
     iXLen 7, iXLen %2)
@@ -70,7 +70,7 @@ define <vscale x 2 x i8> @intrinsic_sf_vfnrclip_x_f_qf_nxv2i8_nxv2f32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.sf.vfnrclip.x.f.qf.nxv2i8.nxv2f32.iXLen(
-    <vscale x 2 x i8> undef,
+    <vscale x 2 x i8> poison,
     <vscale x 2 x float> %0,
     float %1,
     iXLen 0, iXLen %2)
@@ -121,7 +121,7 @@ define <vscale x 4 x i8> @intrinsic_sf_vfnrclip_x_f_qf_nxv4i8_nxv4f32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.sf.vfnrclip.x.f.qf.nxv4i8.nxv4f32.iXLen(
-    <vscale x 4 x i8> undef,
+    <vscale x 4 x i8> poison,
     <vscale x 4 x float> %0,
     float %1,
     iXLen 0, iXLen %2)
@@ -172,7 +172,7 @@ define <vscale x 8 x i8> @intrinsic_sf_vfnrclip_x_f_qf_nxv8i8_nxv8f32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.sf.vfnrclip.x.f.qf.nxv8i8.nxv8f32.iXLen(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 8 x float> %0,
     float %1,
     iXLen 0, iXLen %2)
@@ -223,7 +223,7 @@ define <vscale x 16 x i8> @intrinsic_sf_vfnrclip_x_f_qf_nxv16i8_nxv16f32(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.sf.vfnrclip.x.f.qf.nxv16i8.nxv16f32.iXLen(
-    <vscale x 16 x i8> undef,
+    <vscale x 16 x i8> poison,
     <vscale x 16 x float> %0,
     float %1,
     iXLen 0, iXLen %2)

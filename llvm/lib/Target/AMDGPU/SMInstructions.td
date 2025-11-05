@@ -295,7 +295,6 @@ class SM_Pseudo_Atomic<string opName,
   let has_soffset = offsets.HasSOffset;
 
   let Constraints = !if(isRet, "$sdst = $sdata", "");
-  let DisableEncoding = !if(isRet, "$sdata", "");
 }
 
 multiclass SM_Pseudo_Atomics<RegisterClass baseClass,
@@ -678,7 +677,6 @@ class SMEM_Atomic_Real_vi <bits<8> op, SM_Atomic_Pseudo ps>
   bits<7> sdata;
 
   let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   let cpol{CPolBit.GLC} = ps.glc;
   let Inst{12-6} = !if(ps.glc, sdst{6-0}, sdata{6-0});
@@ -856,9 +854,9 @@ def smrd_sextloadi16 : SMRDLoadPat<sextloadi16>;
 
 def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                              (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
-                             [{ return !N->getOperand(1)->isDivergent();}]> {
+                             [{ return !N->getOperand(1)->isDivergent() && Subtarget->hasSafeSmemPrefetch();}]> {
   let GISelPredicateCode = [{
-    return isInstrUniform(MI);
+    return isInstrUniform(MI) && Subtarget->hasSafeSmemPrefetch();
   }];
 }
 
@@ -1152,6 +1150,7 @@ multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
 }
 
 defm : SMPrefetchPat<"INST", i32imm_zero>;
+let AddedComplexity = 12 in // Prefer scalar prefetch over global for r/o case.
 defm : SMPrefetchPat<"DATA", i32imm_one>;
 
 let SubtargetPredicate = isGFX12Plus in {
@@ -1294,7 +1293,6 @@ class SMEM_Atomic_Real_gfx10 <bits<8> op, SM_Atomic_Pseudo ps>
   bits<7> sdata;
 
   let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   let cpol{CPolBit.GLC} = ps.glc;
 

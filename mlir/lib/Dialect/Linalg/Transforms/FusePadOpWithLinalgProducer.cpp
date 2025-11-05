@@ -72,14 +72,14 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
     // Create the tensor of same size as output of the pad op.
     RankedTensorType padResultType = padOp.getResultType();
     auto resultSizes = resultShape[0];
-    auto emptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, resultSizes, padResultType.getElementType());
+    auto emptyTensor = tensor::EmptyOp::create(rewriter, loc, resultSizes,
+                                               padResultType.getElementType());
 
     // Fill the tensor with the pad value.
     // TODO: There is an option to fill only the boundaries. For now just
     // filling the whole tensor.
-    auto fillTensor =
-        rewriter.create<linalg::FillOp>(loc, padValue, emptyTensor.getResult());
+    auto fillTensor = linalg::FillOp::create(rewriter, loc, padValue,
+                                             emptyTensor.getResult());
 
     // Construct a slice of the fill result that is to be replaced with the
     // result of the generic op. The low pad values are the offsets, the size of
@@ -93,15 +93,15 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
          llvm::enumerate(cast<RankedTensorType>(source.getType()).getShape())) {
       if (ShapedType::isDynamic(shape.value())) {
         sizes.push_back(
-            rewriter.create<tensor::DimOp>(loc, source, shape.index())
+            tensor::DimOp::create(rewriter, loc, source, shape.index())
                 .getResult());
       } else {
         sizes.push_back(rewriter.getIndexAttr(shape.value()));
       }
     }
     SmallVector<OpFoldResult> strides(offsets.size(), rewriter.getIndexAttr(1));
-    auto slice = rewriter.create<tensor::ExtractSliceOp>(
-        loc, fillTensor.getResult(0), offsets, sizes, strides);
+    auto slice = tensor::ExtractSliceOp::create(
+        rewriter, loc, fillTensor.getResult(0), offsets, sizes, strides);
 
     // Clone the generic op.
     auto clonedOp =

@@ -9,7 +9,7 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; APPLE-NEXT:    [[TMP0:%.*]] = add i64 [[LEN]], -1
 ; APPLE-NEXT:    [[XTRAITER:%.*]] = and i64 [[LEN]], 7
 ; APPLE-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
-; APPLE-NEXT:    br i1 [[TMP1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; APPLE-NEXT:    br i1 [[TMP1]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; APPLE:       [[ENTRY_NEW]]:
 ; APPLE-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[LEN]], [[XTRAITER]]
 ; APPLE-NEXT:    br label %[[FOR_BODY:.*]]
@@ -66,18 +66,18 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; APPLE-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
 ; APPLE-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; APPLE-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; APPLE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[FOR_BODY]]
-; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; APPLE-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_7]], %[[FOR_BODY]] ]
-; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; APPLE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]]
 ; APPLE:       [[EXIT_UNR_LCSSA]]:
-; APPLE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; APPLE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_7]], %[[FOR_BODY]] ]
 ; APPLE-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; APPLE:       [[FOR_BODY_EPIL_PREHEADER]]:
+; APPLE-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; APPLE-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; APPLE-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; APPLE-NEXT:    br label %[[FOR_BODY_EPIL:.*]]
 ; APPLE:       [[FOR_BODY_EPIL]]:
-; APPLE-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ [[IV_UNR]], %[[FOR_BODY_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL:%.*]], %[[FOR_BODY_EPIL]] ]
+; APPLE-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ [[IV_EPIL_INIT]], %[[FOR_BODY_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL:%.*]], %[[FOR_BODY_EPIL]] ]
 ; APPLE-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, %[[FOR_BODY_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], %[[FOR_BODY_EPIL]] ]
 ; APPLE-NEXT:    [[TMP18:%.*]] = sub nsw i64 [[LEN]], [[IV_EPIL]]
 ; APPLE-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds <4 x float>, ptr [[SRC]], i64 [[TMP18]]
@@ -100,7 +100,7 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; CORTEXA55-NEXT:    [[TMP0:%.*]] = add i64 [[LEN]], -1
 ; CORTEXA55-NEXT:    [[XTRAITER:%.*]] = and i64 [[LEN]], 3
 ; CORTEXA55-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 3
-; CORTEXA55-NEXT:    br i1 [[TMP1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; CORTEXA55-NEXT:    br i1 [[TMP1]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; CORTEXA55:       [[ENTRY_NEW]]:
 ; CORTEXA55-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[LEN]], [[XTRAITER]]
 ; CORTEXA55-NEXT:    br label %[[FOR_BODY:.*]]
@@ -133,15 +133,15 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; CORTEXA55-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
 ; CORTEXA55-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
 ; CORTEXA55-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
-; CORTEXA55-NEXT:    br i1 [[NITER_NCMP_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[FOR_BODY]]
-; CORTEXA55:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; CORTEXA55-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_3]], %[[FOR_BODY]] ]
-; CORTEXA55-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; CORTEXA55-NEXT:    br i1 [[NITER_NCMP_3]], label %[[EXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]]
 ; CORTEXA55:       [[EXIT_UNR_LCSSA]]:
-; CORTEXA55-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CORTEXA55-NEXT:    [[IV_UNR1:%.*]] = phi i64 [ [[IV_NEXT_3]], %[[FOR_BODY]] ]
 ; CORTEXA55-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CORTEXA55-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; CORTEXA55-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; CORTEXA55:       [[FOR_BODY_EPIL_PREHEADER]]:
+; CORTEXA55-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR1]], %[[EXIT_UNR_LCSSA]] ]
+; CORTEXA55-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CORTEXA55-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CORTEXA55-NEXT:    br label %[[FOR_BODY_EPIL:.*]]
 ; CORTEXA55:       [[FOR_BODY_EPIL]]:
 ; CORTEXA55-NEXT:    [[TMP10:%.*]] = sub nsw i64 [[LEN]], [[IV_UNR]]
@@ -485,12 +485,206 @@ exit:                                 ; preds = %vector.body
 !0 = !{!0, !1}
 !1 = !{!"llvm.loop.isvectorized", i32 1}
 
+; On Cortex-A55 we should runtime unroll the scalar epilogue loop, but not the
+; vector loop.
+define void @scalar_epilogue(ptr %p, i8 %splat.scalar, i64 %n) {
+; APPLE-LABEL: define void @scalar_epilogue(
+; APPLE-SAME: ptr [[P:%.*]], i8 [[SPLAT_SCALAR:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; APPLE-NEXT:  [[ENTRY:.*]]:
+; APPLE-NEXT:    [[MIN_ITERS_CHECK7:%.*]] = icmp ult i64 [[N]], 32
+; APPLE-NEXT:    br i1 [[MIN_ITERS_CHECK7]], label %[[SCALAR_REMAINDER_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
+; APPLE:       [[VECTOR_PH]]:
+; APPLE-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -32
+; APPLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[SPLAT_SCALAR]], i64 0
+; APPLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
+; APPLE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; APPLE:       [[VECTOR_BODY]]:
+; APPLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; APPLE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INDEX]]
+; APPLE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
+; APPLE-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1
+; APPLE-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
+; APPLE-NEXT:    [[TMP2:%.*]] = add <16 x i8> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; APPLE-NEXT:    [[TMP3:%.*]] = add <16 x i8> [[WIDE_LOAD8]], [[BROADCAST_SPLAT]]
+; APPLE-NEXT:    store <16 x i8> [[TMP2]], ptr [[TMP0]], align 1
+; APPLE-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP1]], align 1
+; APPLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; APPLE-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; APPLE-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; APPLE:       [[MIDDLE_BLOCK]]:
+; APPLE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; APPLE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_REMAINDER_PREHEADER]]
+; APPLE:       [[SCALAR_REMAINDER_PREHEADER]]:
+; APPLE-NEXT:    [[IV_SCALAR_LOOP_PH:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
+; APPLE-NEXT:    br label %[[SCALAR_REMAINDER:.*]]
+; APPLE:       [[SCALAR_REMAINDER]]:
+; APPLE-NEXT:    [[I_06:%.*]] = phi i64 [ [[INC:%.*]], %[[SCALAR_REMAINDER]] ], [ [[IV_SCALAR_LOOP_PH]], %[[SCALAR_REMAINDER_PREHEADER]] ]
+; APPLE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[I_06]]
+; APPLE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; APPLE-NEXT:    [[ADD:%.*]] = add i8 [[TMP8]], [[SPLAT_SCALAR]]
+; APPLE-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX]], align 1
+; APPLE-NEXT:    [[INC]] = add nuw i64 [[I_06]], 1
+; APPLE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
+; APPLE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_REMAINDER]], !llvm.loop [[LOOP5:![0-9]+]]
+; APPLE:       [[EXIT_LOOPEXIT]]:
+; APPLE-NEXT:    br label %[[EXIT]]
+; APPLE:       [[EXIT]]:
+; APPLE-NEXT:    ret void
+;
+; CORTEXA55-LABEL: define void @scalar_epilogue(
+; CORTEXA55-SAME: ptr [[P:%.*]], i8 [[SPLAT_SCALAR:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CORTEXA55-NEXT:  [[ENTRY:.*]]:
+; CORTEXA55-NEXT:    [[MIN_ITERS_CHECK7:%.*]] = icmp ult i64 [[N]], 32
+; CORTEXA55-NEXT:    br i1 [[MIN_ITERS_CHECK7]], label %[[SCALAR_REMAINDER_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
+; CORTEXA55:       [[VECTOR_PH]]:
+; CORTEXA55-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -32
+; CORTEXA55-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[SPLAT_SCALAR]], i64 0
+; CORTEXA55-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
+; CORTEXA55-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CORTEXA55:       [[VECTOR_BODY]]:
+; CORTEXA55-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CORTEXA55-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INDEX]]
+; CORTEXA55-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
+; CORTEXA55-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1
+; CORTEXA55-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
+; CORTEXA55-NEXT:    [[TMP2:%.*]] = add <16 x i8> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CORTEXA55-NEXT:    [[TMP3:%.*]] = add <16 x i8> [[WIDE_LOAD8]], [[BROADCAST_SPLAT]]
+; CORTEXA55-NEXT:    store <16 x i8> [[TMP2]], ptr [[TMP0]], align 1
+; CORTEXA55-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP1]], align 1
+; CORTEXA55-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; CORTEXA55-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CORTEXA55-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CORTEXA55:       [[MIDDLE_BLOCK]]:
+; CORTEXA55-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CORTEXA55-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_REMAINDER_PREHEADER]]
+; CORTEXA55:       [[SCALAR_REMAINDER_PREHEADER]]:
+; CORTEXA55-NEXT:    [[I_06_PH:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
+; CORTEXA55-NEXT:    [[TMP8:%.*]] = sub i64 [[N]], [[I_06_PH]]
+; CORTEXA55-NEXT:    [[TMP9:%.*]] = add i64 [[N]], -1
+; CORTEXA55-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP9]], [[I_06_PH]]
+; CORTEXA55-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP8]], 3
+; CORTEXA55-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CORTEXA55-NEXT:    br i1 [[LCMP_MOD]], label %[[SCALAR_REMAINDER_PROL_PREHEADER:.*]], label %[[SCALAR_REMAINDER_PROL_LOOPEXIT:.*]]
+; CORTEXA55:       [[SCALAR_REMAINDER_PROL_PREHEADER]]:
+; CORTEXA55-NEXT:    br label %[[SCALAR_REMAINDER_PROL:.*]]
+; CORTEXA55:       [[SCALAR_REMAINDER_PROL]]:
+; CORTEXA55-NEXT:    [[ARRAYIDX_PROL:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[I_06_PH]]
+; CORTEXA55-NEXT:    [[TMP11:%.*]] = load i8, ptr [[ARRAYIDX_PROL]], align 1
+; CORTEXA55-NEXT:    [[ADD_PROL:%.*]] = add i8 [[TMP11]], [[SPLAT_SCALAR]]
+; CORTEXA55-NEXT:    store i8 [[ADD_PROL]], ptr [[ARRAYIDX_PROL]], align 1
+; CORTEXA55-NEXT:    [[INC_PROL:%.*]] = add nuw i64 [[I_06_PH]], 1
+; CORTEXA55-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 1, [[XTRAITER]]
+; CORTEXA55-NEXT:    br i1 [[PROL_ITER_CMP]], label %[[SCALAR_REMAINDER_PROL_1:.*]], label %[[SCALAR_REMAINDER_PROL_LOOPEXIT_UNR_LCSSA:.*]]
+; CORTEXA55:       [[SCALAR_REMAINDER_PROL_1]]:
+; CORTEXA55-NEXT:    [[ARRAYIDX_PROL_1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INC_PROL]]
+; CORTEXA55-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX_PROL_1]], align 1
+; CORTEXA55-NEXT:    [[ADD_PROL_1:%.*]] = add i8 [[TMP12]], [[SPLAT_SCALAR]]
+; CORTEXA55-NEXT:    store i8 [[ADD_PROL_1]], ptr [[ARRAYIDX_PROL_1]], align 1
+; CORTEXA55-NEXT:    [[INC_PROL_1:%.*]] = add nuw i64 [[I_06_PH]], 2
+; CORTEXA55-NEXT:    [[PROL_ITER_CMP_1:%.*]] = icmp ne i64 2, [[XTRAITER]]
+; CORTEXA55-NEXT:    br i1 [[PROL_ITER_CMP_1]], label %[[SCALAR_REMAINDER_PROL_2:.*]], label %[[SCALAR_REMAINDER_PROL_LOOPEXIT_UNR_LCSSA]]
+; CORTEXA55:       [[SCALAR_REMAINDER_PROL_2]]:
+; CORTEXA55-NEXT:    [[ARRAYIDX_PROL_2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INC_PROL_1]]
+; CORTEXA55-NEXT:    [[TMP13:%.*]] = load i8, ptr [[ARRAYIDX_PROL_2]], align 1
+; CORTEXA55-NEXT:    [[ADD_PROL_2:%.*]] = add i8 [[TMP13]], [[SPLAT_SCALAR]]
+; CORTEXA55-NEXT:    store i8 [[ADD_PROL_2]], ptr [[ARRAYIDX_PROL_2]], align 1
+; CORTEXA55-NEXT:    [[INC_PROL_2:%.*]] = add nuw i64 [[I_06_PH]], 3
+; CORTEXA55-NEXT:    br label %[[SCALAR_REMAINDER_PROL_LOOPEXIT_UNR_LCSSA]]
+; CORTEXA55:       [[SCALAR_REMAINDER_PROL_LOOPEXIT_UNR_LCSSA]]:
+; CORTEXA55-NEXT:    [[IV_SCALAR_LOOP_UNR_PH:%.*]] = phi i64 [ [[INC_PROL]], %[[SCALAR_REMAINDER_PROL]] ], [ [[INC_PROL_1]], %[[SCALAR_REMAINDER_PROL_1]] ], [ [[INC_PROL_2]], %[[SCALAR_REMAINDER_PROL_2]] ]
+; CORTEXA55-NEXT:    br label %[[SCALAR_REMAINDER_PROL_LOOPEXIT]]
+; CORTEXA55:       [[SCALAR_REMAINDER_PROL_LOOPEXIT]]:
+; CORTEXA55-NEXT:    [[IV_SCALAR_LOOP_UNR:%.*]] = phi i64 [ [[I_06_PH]], %[[SCALAR_REMAINDER_PREHEADER]] ], [ [[IV_SCALAR_LOOP_UNR_PH]], %[[SCALAR_REMAINDER_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; CORTEXA55-NEXT:    [[TMP14:%.*]] = icmp ult i64 [[TMP10]], 3
+; CORTEXA55-NEXT:    br i1 [[TMP14]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_REMAINDER_PREHEADER_NEW:.*]]
+; CORTEXA55:       [[SCALAR_REMAINDER_PREHEADER_NEW]]:
+; CORTEXA55-NEXT:    br label %[[SCALAR_REMAINDER:.*]]
+; CORTEXA55:       [[SCALAR_REMAINDER]]:
+; CORTEXA55-NEXT:    [[I_06:%.*]] = phi i64 [ [[IV_SCALAR_LOOP_UNR]], %[[SCALAR_REMAINDER_PREHEADER_NEW]] ], [ [[INC_3:%.*]], %[[SCALAR_REMAINDER]] ]
+; CORTEXA55-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[I_06]]
+; CORTEXA55-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CORTEXA55-NEXT:    [[ADD:%.*]] = add i8 [[TMP15]], [[SPLAT_SCALAR]]
+; CORTEXA55-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX]], align 1
+; CORTEXA55-NEXT:    [[INC:%.*]] = add nuw i64 [[I_06]], 1
+; CORTEXA55-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INC]]
+; CORTEXA55-NEXT:    [[TMP16:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
+; CORTEXA55-NEXT:    [[ADD_1:%.*]] = add i8 [[TMP16]], [[SPLAT_SCALAR]]
+; CORTEXA55-NEXT:    store i8 [[ADD_1]], ptr [[ARRAYIDX_1]], align 1
+; CORTEXA55-NEXT:    [[INC_1:%.*]] = add nuw i64 [[I_06]], 2
+; CORTEXA55-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INC_1]]
+; CORTEXA55-NEXT:    [[TMP17:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
+; CORTEXA55-NEXT:    [[ADD_2:%.*]] = add i8 [[TMP17]], [[SPLAT_SCALAR]]
+; CORTEXA55-NEXT:    store i8 [[ADD_2]], ptr [[ARRAYIDX_2]], align 1
+; CORTEXA55-NEXT:    [[INC_2:%.*]] = add nuw i64 [[I_06]], 3
+; CORTEXA55-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INC_2]]
+; CORTEXA55-NEXT:    [[TMP18:%.*]] = load i8, ptr [[ARRAYIDX_3]], align 1
+; CORTEXA55-NEXT:    [[ADD_3:%.*]] = add i8 [[TMP18]], [[SPLAT_SCALAR]]
+; CORTEXA55-NEXT:    store i8 [[ADD_3]], ptr [[ARRAYIDX_3]], align 1
+; CORTEXA55-NEXT:    [[INC_3]] = add nuw i64 [[I_06]], 4
+; CORTEXA55-NEXT:    [[EXITCOND_NOT_3:%.*]] = icmp eq i64 [[INC_3]], [[N]]
+; CORTEXA55-NEXT:    br i1 [[EXITCOND_NOT_3]], label %[[EXIT_LOOPEXIT_UNR_LCSSA:.*]], label %[[SCALAR_REMAINDER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CORTEXA55:       [[EXIT_LOOPEXIT_UNR_LCSSA]]:
+; CORTEXA55-NEXT:    br label %[[EXIT_LOOPEXIT]]
+; CORTEXA55:       [[EXIT_LOOPEXIT]]:
+; CORTEXA55-NEXT:    br label %[[EXIT]]
+; CORTEXA55:       [[EXIT]]:
+; CORTEXA55-NEXT:    ret void
+;
+entry:
+  %min.iters.check = icmp ult i64 %n, 32
+  br i1 %min.iters.check, label %scalar.remainder, label %vector.ph
+
+vector.ph:
+  %n.vec = and i64 %n, -32
+  %broadcast.splatinsert = insertelement <16 x i8> poison, i8 %splat.scalar, i64 0
+  %broadcast.splat = shufflevector <16 x i8> %broadcast.splatinsert, <16 x i8> poison, <16 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:
+  %iv = phi i64 [ 0, %vector.ph ], [ %iv.next, %vector.body ]
+  %gep.p.iv = getelementptr inbounds nuw i8, ptr %p, i64 %iv
+  %gep.p.iv.16 = getelementptr inbounds nuw i8, ptr %gep.p.iv, i64 16
+  %wide.load = load <16 x i8>, ptr %gep.p.iv, align 1
+  %wide.load.2 = load <16 x i8>, ptr %gep.p.iv.16, align 1
+  %add.broadcast = add <16 x i8> %wide.load, %broadcast.splat
+  %add.broadcast.2 = add <16 x i8> %wide.load.2, %broadcast.splat
+  store <16 x i8> %add.broadcast, ptr %gep.p.iv, align 1
+  store <16 x i8> %add.broadcast.2, ptr %gep.p.iv.16, align 1
+  %iv.next = add nuw i64 %iv, 32
+  %exit.cond = icmp eq i64 %iv.next, %n.vec
+  br i1 %exit.cond, label %middle.block, label %vector.body, !llvm.loop !2
+
+middle.block:
+  %cmp.n = icmp eq i64 %n, %n.vec
+  br i1 %cmp.n, label %exit, label %scalar.remainder
+
+scalar.remainder:
+  %iv.scalar.loop = phi i64 [ %inc, %scalar.remainder ], [ %n.vec, %middle.block ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %p, i64 %iv.scalar.loop
+  %scalar.load = load i8, ptr %arrayidx, align 1
+  %add = add i8 %scalar.load, %splat.scalar
+  store i8 %add, ptr %arrayidx, align 1
+  %inc = add nuw i64 %iv.scalar.loop, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %exit, label %scalar.remainder, !llvm.loop !3
+
+exit:
+  ret void
+}
+
+!2 = distinct !{!2, !1}
+!3 = distinct !{!3, !1}
+
 ;.
 ; APPLE: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; APPLE: [[META1]] = !{!"llvm.loop.unroll.disable"}
 ; APPLE: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
 ; APPLE: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
+; APPLE: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]]}
+; APPLE: [[LOOP5]] = distinct !{[[LOOP5]], [[META3]]}
 ;.
 ; CORTEXA55: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CORTEXA55: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CORTEXA55: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
+; CORTEXA55: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ;.

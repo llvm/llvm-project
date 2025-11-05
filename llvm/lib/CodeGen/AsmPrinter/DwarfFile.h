@@ -11,6 +11,7 @@
 
 #include "DwarfStringPool.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
@@ -27,6 +28,7 @@ class DbgVariable;
 class DbgLabel;
 class DINode;
 class DILocalScope;
+class DISubprogram;
 class DwarfCompileUnit;
 class DwarfUnit;
 class LexicalScope;
@@ -94,6 +96,9 @@ class DwarfFile {
   // Collection of abstract subprogram DIEs.
   DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
+  /// Keeps track of abstract subprograms to populate them only once.
+  // FIXME: merge creation and population of abstract scopes.
+  SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
 
   /// Maps MDNodes for type system with the corresponding DIEs. These DIEs can
   /// be shared across CUs, that is why we keep the map here instead
@@ -172,6 +177,10 @@ public:
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
     return AbstractEntities;
+  }
+
+  auto &getFinalizedAbstractSubprograms() {
+    return FinalizedAbstractSubprograms;
   }
 
   void insertDIE(const MDNode *TypeMD, DIE *Die) {

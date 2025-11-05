@@ -119,23 +119,23 @@ fir::runtime::genCharCompare(fir::FirOpBuilder &builder, mlir::Location loc,
   return mlir::arith::CmpIOp::create(builder, loc, cmp, tri, zero);
 }
 
+static mlir::Value allocateIfNotInMemory(fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Value base) {
+  if (fir::isa_ref_type(base.getType()))
+    return base;
+  auto mem =
+      fir::AllocaOp::create(builder, loc, base.getType(), /*pinned=*/false);
+  fir::StoreOp::create(builder, loc, base, mem);
+  return mem;
+}
+
 mlir::Value fir::runtime::genCharCompare(fir::FirOpBuilder &builder,
                                          mlir::Location loc,
                                          mlir::arith::CmpIPredicate cmp,
                                          const fir::ExtendedValue &lhs,
                                          const fir::ExtendedValue &rhs) {
-  if (lhs.getBoxOf<fir::BoxValue>() || rhs.getBoxOf<fir::BoxValue>())
-    TODO(loc, "character compare from descriptors");
-  auto allocateIfNotInMemory = [&](mlir::Value base) -> mlir::Value {
-    if (fir::isa_ref_type(base.getType()))
-      return base;
-    auto mem =
-        fir::AllocaOp::create(builder, loc, base.getType(), /*pinned=*/false);
-    fir::StoreOp::create(builder, loc, base, mem);
-    return mem;
-  };
-  auto lhsBuffer = allocateIfNotInMemory(fir::getBase(lhs));
-  auto rhsBuffer = allocateIfNotInMemory(fir::getBase(rhs));
+  auto lhsBuffer = allocateIfNotInMemory(builder, loc, fir::getBase(lhs));
+  auto rhsBuffer = allocateIfNotInMemory(builder, loc, fir::getBase(rhs));
   return genCharCompare(builder, loc, cmp, lhsBuffer, fir::getLen(lhs),
                         rhsBuffer, fir::getLen(rhs));
 }
@@ -166,6 +166,20 @@ mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
       fir::runtime::createArguments(builder, loc, fTy, stringBase, stringLen,
                                     substringBase, substringLen, back);
   return fir::CallOp::create(builder, loc, indexFunc, args).getResult(0);
+}
+
+mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
+                                   mlir::Location loc,
+                                   const fir::ExtendedValue &str,
+                                   const fir::ExtendedValue &substr,
+                                   mlir::Value back) {
+  assert(!substr.getBoxOf<fir::BoxValue>() && !str.getBoxOf<fir::BoxValue>() &&
+         "shall use genIndexDescriptor version");
+  auto strBuffer = allocateIfNotInMemory(builder, loc, fir::getBase(str));
+  auto substrBuffer = allocateIfNotInMemory(builder, loc, fir::getBase(substr));
+  int kind = discoverKind(strBuffer.getType());
+  return genIndex(builder, loc, kind, strBuffer, fir::getLen(str), substrBuffer,
+                  fir::getLen(substr), back);
 }
 
 void fir::runtime::genIndexDescriptor(fir::FirOpBuilder &builder,

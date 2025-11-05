@@ -1057,6 +1057,14 @@ TEST(Local, SimplifyCFGWithNullAC) {
                           RequireAndPreserveDomTree ? &DTU : nullptr, Options));
 }
 
+TEST(LocalTest, TargetTypeInfoHasNoReplacementProperty) {
+  LLVMContext Ctx;
+  SmallVector<unsigned, 3> Ints = {};
+  auto *TT = llvm::TargetExtType::get(Ctx, "dx.RawBuffer", {}, Ints);
+
+  EXPECT_TRUE(TT->hasProperty(TargetExtType::Property::IsTokenLike));
+}
+
 TEST(Local, CanReplaceOperandWithVariable) {
   LLVMContext Ctx;
   Module M("test_module", Ctx);
@@ -1145,7 +1153,7 @@ TEST(Local, ExpressionForConstant) {
   IntegerType *Int1Ty = Type::getInt1Ty(Context);
   Expr = createExpression(ConstantInt::getTrue(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 18446744073709551615U);
+  EXPECT_EQ(Expr->getElement(1), 1U);
 
   Expr = createExpression(ConstantInt::getFalse(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);

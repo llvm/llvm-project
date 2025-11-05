@@ -9,7 +9,7 @@ cmp x0, #4
 # CHECK-NEXT: Total Cycles:      54
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    3.70
 # CHECK-NEXT: IPC:               3.70
 # CHECK-NEXT: Block RThroughput: 0.5

@@ -10,6 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_DESUGARS_TO_H
 
 #include <__config>
+#include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -63,6 +64,9 @@ inline const bool __desugars_to_v<_CanonicalTag, _Operation&, _Args...> =
 template <class _CanonicalTag, class _Operation, class... _Args>
 inline const bool __desugars_to_v<_CanonicalTag, _Operation&&, _Args...> =
     __desugars_to_v<_CanonicalTag, _Operation, _Args...>;
+
+template <class _CanonicalTag, class _Operation, class... _Args>
+struct __desugars_to : integral_constant<bool, __desugars_to_v<_CanonicalTag, _Operation, _Args...> > {};
 
 _LIBCPP_END_NAMESPACE_STD
 

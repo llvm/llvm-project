@@ -6,13 +6,13 @@ define i32 @test0() {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT:%.*]] = callbr i32 asm "# $0", "=r,!i"()
-; CHECK-NEXT:    to label [[DIRECT:%.*]] [label %entry.indirect_crit_edge]
+; CHECK-NEXT:            to label [[DIRECT:%.*]] [label %entry.indirect_crit_edge]
 ; CHECK:       entry.indirect_crit_edge:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[OUT]])
 ; CHECK-NEXT:    br label [[INDIRECT:%.*]]
 ; CHECK:       direct:
 ; CHECK-NEXT:    [[OUT2:%.*]] = callbr i32 asm "# $0", "=r,!i"()
-; CHECK-NEXT:    to label [[DIRECT2:%.*]] [label %direct.indirect_crit_edge]
+; CHECK-NEXT:            to label [[DIRECT2:%.*]] [label %direct.indirect_crit_edge]
 ; CHECK:       direct.indirect_crit_edge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[OUT2]])
 ; CHECK-NEXT:    br label [[INDIRECT]]
@@ -42,7 +42,7 @@ define i32 @dont_split0() {
 ; CHECK-LABEL: @dont_split0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
-; CHECK-NEXT:    to label [[X:%.*]] [label %y]
+; CHECK-NEXT:            to label [[X:%.*]] [label %y]
 ; CHECK:       x:
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       y:
@@ -68,7 +68,7 @@ define i32 @dont_split1() {
 ; CHECK-LABEL: @dont_split1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[X:%.*]] [label %y]
+; CHECK-NEXT:            to label [[X:%.*]] [label %y]
 ; CHECK:       x:
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       y:
@@ -93,7 +93,7 @@ define i32 @dont_split2() {
 ; CHECK-LABEL: @dont_split2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
-; CHECK-NEXT:    to label [[X:%.*]] [label %y]
+; CHECK-NEXT:            to label [[X:%.*]] [label %y]
 ; CHECK:       x:
 ; CHECK-NEXT:    br label [[Y:%.*]]
 ; CHECK:       y:
@@ -119,7 +119,7 @@ define i32 @dont_split3() {
 ; CHECK-LABEL: @dont_split3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[X:%.*]] [label %v]
+; CHECK-NEXT:            to label [[X:%.*]] [label %v]
 ; CHECK:       x:
 ; CHECK-NEXT:    br label [[V:%.*]]
 ; CHECK:       v:
@@ -142,7 +142,7 @@ define i32 @split_me0() {
 ; CHECK-LABEL: @split_me0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[X:%.*]] [label %entry.y_crit_edge]
+; CHECK-NEXT:            to label [[X:%.*]] [label %entry.y_crit_edge]
 ; CHECK:       entry.y_crit_edge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[Y:%.*]]
@@ -173,7 +173,7 @@ define i32 @split_me1(i1 %z) {
 ; CHECK-NEXT:    br i1 [[Z:%.*]], label [[W:%.*]], label [[V:%.*]]
 ; CHECK:       w:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i,!i"()
-; CHECK-NEXT:    to label [[X:%.*]] [label [[W_V_CRIT_EDGE:%.*]], label %w.v_crit_edge]
+; CHECK-NEXT:            to label [[X:%.*]] [label [[W_V_CRIT_EDGE:%.*]], label %w.v_crit_edge]
 ; CHECK:       w.v_crit_edge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[V]]
@@ -206,7 +206,7 @@ define i32 @split_me2(i1 %z) {
 ; CHECK-NEXT:    br i1 [[Z:%.*]], label [[W:%.*]], label [[V:%.*]]
 ; CHECK:       w:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i,!i"()
-; CHECK-NEXT:    to label [[X:%.*]] [label [[W_V_CRIT_EDGE:%.*]], label %w.v_crit_edge]
+; CHECK-NEXT:            to label [[X:%.*]] [label [[W_V_CRIT_EDGE:%.*]], label %w.v_crit_edge]
 ; CHECK:       w.v_crit_edge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[V]]
@@ -236,7 +236,7 @@ define i32 @dont_split4() {
 ; CHECK-LABEL: @dont_split4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[X:%.*]] [label %y]
+; CHECK-NEXT:            to label [[X:%.*]] [label %y]
 ; CHECK:       x:
 ; CHECK-NEXT:    br label [[OUT:%.*]]
 ; CHECK:       y:
@@ -265,7 +265,7 @@ define i32 @dont_split5() {
 ; CHECK-LABEL: @dont_split5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[OUT:%.*]] [label %y]
+; CHECK-NEXT:            to label [[OUT:%.*]] [label %y]
 ; CHECK:       y:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[OUT]]
@@ -289,7 +289,7 @@ define i32 @split_me3() {
 ; CHECK-LABEL: @split_me3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[Y:%.*]] [label %entry.out_crit_edge]
+; CHECK-NEXT:            to label [[Y:%.*]] [label %entry.out_crit_edge]
 ; CHECK:       entry.out_crit_edge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[OUT:%.*]]
@@ -318,7 +318,7 @@ define i32 @dont_split6(i32 %0) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0:%.*]], [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = callbr i32 asm "", "=r,0,!i"(i32 [[TMP1]])
-; CHECK-NEXT:    to label [[EXIT:%.*]] [label %loop.loop_crit_edge]
+; CHECK-NEXT:            to label [[EXIT:%.*]] [label %loop.loop_crit_edge]
 ; CHECK:       loop.loop_crit_edge:
 ; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP2]])
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -339,7 +339,7 @@ define i32 @split_me4() {
 ; CHECK-LABEL: @split_me4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[SAME:%.*]] [label %entry.same_crit_edge]
+; CHECK-NEXT:            to label [[SAME:%.*]] [label %entry.same_crit_edge]
 ; CHECK:       entry.same_crit_edge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[SAME]]
@@ -358,7 +358,7 @@ define i32 @split_me5() {
 ; CHECK-LABEL: @split_me5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[SAME:%.*]] [label %entry.same_crit_edge]
+; CHECK-NEXT:            to label [[SAME:%.*]] [label %entry.same_crit_edge]
 ; CHECK:       entry.same_crit_edge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[SAME]]
@@ -379,13 +379,13 @@ define i64 @split_me6() {
 ; CHECK-LABEL: @split_me6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i64 asm "# $0 $1", "={dx},!i"()
-; CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label %entry.foo_crit_edge]
+; CHECK-NEXT:            to label [[ASM_FALLTHROUGH:%.*]] [label %entry.foo_crit_edge]
 ; CHECK:       entry.foo_crit_edge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.callbr.landingpad.i64(i64 [[TMP0]])
 ; CHECK-NEXT:    br label [[FOO:%.*]]
 ; CHECK:       asm.fallthrough:
 ; CHECK-NEXT:    [[TMP2:%.*]] = callbr i64 asm "# $0 $1", "={bx},!i"()
-; CHECK-NEXT:    to label [[FOO]] [label %asm.fallthrough.foo_crit_edge]
+; CHECK-NEXT:            to label [[FOO]] [label %asm.fallthrough.foo_crit_edge]
 ; CHECK:       asm.fallthrough.foo_crit_edge:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.callbr.landingpad.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    br label [[FOO]]
@@ -412,7 +412,7 @@ define i32 @multiple_split() {
 ; CHECK-LABEL: @multiple_split(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[X:%.*]] [label %y]
+; CHECK-NEXT:            to label [[X:%.*]] [label %y]
 ; CHECK:       x:
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       y:

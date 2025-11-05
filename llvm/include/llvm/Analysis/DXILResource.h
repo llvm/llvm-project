@@ -12,6 +12,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/PassManager.h"
@@ -242,6 +243,25 @@ public:
   }
 };
 
+/// The dx.Padding target extension type
+///
+/// `target("dx.Padding", NumBytes)`
+class PaddingExtType : public TargetExtType {
+public:
+  PaddingExtType() = delete;
+  PaddingExtType(const PaddingExtType &) = delete;
+  PaddingExtType &operator=(const PaddingExtType &) = delete;
+
+  unsigned getNumBytes() const { return getIntParameter(0); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Padding";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
 //===----------------------------------------------------------------------===//
 
 class ResourceTypeInfo {
@@ -273,6 +293,7 @@ public:
 
   struct TypedInfo {
     dxil::ElementType ElementTy;
+    dxil::ElementType DXILStorageTy;
     uint32_t ElementCount;
 
     bool operator==(const TypedInfo &RHS) const {
@@ -359,7 +380,11 @@ public:
              std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
     bool overlapsWith(const ResourceBinding &RHS) const {
-      return Space == RHS.Space && LowerBound + Size - 1 >= RHS.LowerBound;
+      if (Space != RHS.Space)
+        return false;
+      if (Size == UINT32_MAX)
+        return LowerBound < RHS.LowerBound;
+      return LowerBound + Size - 1 >= RHS.LowerBound;
     }
   };
 
@@ -631,86 +656,25 @@ LLVM_ABI ModulePass *createDXILResourceWrapperPassPass();
 // register slots to resources with implicit bindings, and in a
 // post-optimization validation pass that will raise diagnostic about
 // overlapping bindings.
-//
-// For example for these resource bindings:
-//
-// RWBuffer<float> A[10] : register(u3);
-// RWBuffer<float> B[] : register(u5, space2)
-//
-// The analysis result for UAV binding type will look like this:
-//
-// UAVSpaces {
-//   ResClass = ResourceClass::UAV,
-//   Spaces = {
-//     { Space = 0, FreeRanges = {{ 0, 2 }, { 13, UINT32_MAX }} },
-//     { Space = 2, FreeRanges = {{ 0, 4 }} }
-//   }
-// }
-//
 class DXILResourceBindingInfo {
-public:
-  struct BindingRange {
-    uint32_t LowerBound;
-    uint32_t UpperBound;
-    BindingRange(uint32_t LB, uint32_t UB) : LowerBound(LB), UpperBound(UB) {}
-  };
-
-  struct RegisterSpace {
-    uint32_t Space;
-    SmallVector<BindingRange> FreeRanges;
-    RegisterSpace(uint32_t Space) : Space(Space) {
-      FreeRanges.emplace_back(0, UINT32_MAX);
-    }
-    // Size == -1 means unbounded array
-    LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);
-  };
-
-  struct BindingSpaces {
-    dxil::ResourceClass RC;
-    llvm::SmallVector<RegisterSpace> Spaces;
-    BindingSpaces(dxil::ResourceClass RC) : RC(RC) {}
-    LLVM_ABI RegisterSpace &getOrInsertSpace(uint32_t Space);
-  };
-
-private:
-  BindingSpaces SRVSpaces, UAVSpaces, CBufferSpaces, SamplerSpaces;
-  bool ImplicitBinding;
-  bool OverlappingBinding;
+  hlsl::BindingInfo Bindings;
+  bool HasImplicitBinding = false;
+  bool HasOverlappingBinding = false;
 
   // Populate the resource binding info given explicit resource binding calls
   // in the module.
   void populate(Module &M, DXILResourceTypeMap &DRTM);
 
 public:
-  DXILResourceBindingInfo()
-      : SRVSpaces(dxil::ResourceClass::SRV),
-        UAVSpaces(dxil::ResourceClass::UAV),
-        CBufferSpaces(dxil::ResourceClass::CBuffer),
-        SamplerSpaces(dxil::ResourceClass::Sampler), ImplicitBinding(false),
-        OverlappingBinding(false) {}
+  bool hasImplicitBinding() const { return HasImplicitBinding; }
+  void setHasImplicitBinding(bool Value) { HasImplicitBinding = Value; }
+  bool hasOverlappingBinding() const { return HasOverlappingBinding; }
+  void setHasOverlappingBinding(bool Value) { HasOverlappingBinding = Value; }
 
-  bool hasImplicitBinding() const { return ImplicitBinding; }
-  void setHasImplicitBinding(bool Value) { ImplicitBinding = Value; }
-  bool hasOverlappingBinding() const { return OverlappingBinding; }
-
-  BindingSpaces &getBindingSpaces(dxil::ResourceClass RC) {
-    switch (RC) {
-    case dxil::ResourceClass::SRV:
-      return SRVSpaces;
-    case dxil::ResourceClass::UAV:
-      return UAVSpaces;
-    case dxil::ResourceClass::CBuffer:
-      return CBufferSpaces;
-    case dxil::ResourceClass::Sampler:
-      return SamplerSpaces;
-    }
-
-    llvm_unreachable("Invalid resource class");
+  std::optional<uint32_t> findAvailableBinding(dxil::ResourceClass RC,
+                                               uint32_t Space, int32_t Size) {
+    return Bindings.findAvailableBinding(RC, Space, Size);
   }
-
-  // Size == -1 means unbounded array
-  LLVM_ABI std::optional<uint32_t>
-  findAvailableBinding(dxil::ResourceClass RC, uint32_t Space, int32_t Size);
 
   friend class DXILResourceBindingAnalysis;
   friend class DXILResourceBindingWrapperPass;

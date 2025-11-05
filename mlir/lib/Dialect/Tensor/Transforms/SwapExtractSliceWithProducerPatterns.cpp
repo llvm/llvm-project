@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -78,7 +77,7 @@ FailureOr<TilingResult> tensor::replaceInsertSlicesWithTiledConsumer(
       dyn_cast<TilingInterface>(consumerOperands.front()->getOwner());
   if (!consumerOp)
     return failure();
-  for (auto opOperand : consumerOperands.drop_front()) {
+  for (auto *opOperand : consumerOperands.drop_front()) {
     if (opOperand->getOwner() != consumerOp) {
       LLVM_DEBUG({
         llvm::dbgs()

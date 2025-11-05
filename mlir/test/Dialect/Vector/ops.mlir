@@ -45,11 +45,11 @@ func.func @vector_transfer_ops(%arg0: memref<?x?xf32>,
   %i0 = arith.constant 0 : index
   %i1 = arith.constant 1 : i1
 
-  %vf0 = vector.splat %f0 : vector<4x3xf32>
-  %v0 = vector.splat %c0 : vector<4x3xi32>
-  %vi0 = vector.splat %i0 : vector<4x3xindex>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
+  %v0 = vector.broadcast %c0 : i32 to vector<4x3xi32>
+  %vi0 = vector.broadcast %i0 : index to vector<4x3xindex>
   %m = arith.constant dense<[0, 0, 1, 0, 1]> : vector<5xi1>
-  %m2 = vector.splat %i1 : vector<4x5xi1>
+  %m2 = vector.broadcast %i1 : i1 to vector<4x5xi1>
   //
   // CHECK: vector.transfer_read
   %0 = vector.transfer_read %arg0[%c3, %c3], %f0 {permutation_map = affine_map<(d0, d1)->(d0)>} : memref<?x?xf32>, vector<128xf32>
@@ -106,9 +106,9 @@ func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
   %c0 = arith.constant 0 : i32
   %i0 = arith.constant 0 : index
 
-  %vf0 = vector.splat %f0 : vector<4x3xf32>
-  %v0 = vector.splat %c0 : vector<4x3xi32>
-  %vi0 = vector.splat %i0 : vector<4x3xindex>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
+  %v0 = vector.broadcast %c0 : i32 to vector<4x3xi32>
+  %vi0 = vector.broadcast %i0 : index to vector<4x3xindex>
 
   //
   // CHECK: vector.transfer_read
@@ -149,7 +149,7 @@ func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
 }
 
 // CHECK-LABEL: @vector_broadcast
-func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>, %f: vector<8x1x!llvm.ptr<1>>) {
+func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>, %f: vector<8x1x!llvm.ptr<1>>, %g: !llvm.ptr<1>) {
   // CHECK: vector.broadcast %{{.*}} : f32 to vector<f32>
   %0 = vector.broadcast %a : f32 to vector<f32>
   // CHECK: vector.broadcast %{{.*}} : vector<f32> to vector<4xf32>
@@ -164,6 +164,8 @@ func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: ve
   %5 = vector.broadcast %e : vector<8x1xf32> to vector<8x16xf32>
   // CHECK-NEXT: vector.broadcast %{{.*}} : vector<8x1x!llvm.ptr<1>> to vector<8x16x!llvm.ptr<1>>
   %6 = vector.broadcast %f : vector<8x1x!llvm.ptr<1>> to vector<8x16x!llvm.ptr<1>>
+  // CHECK-NEXT: vector.broadcast %{{.*}} : !llvm.ptr<1> to vector<8x16x!llvm.ptr<1>>
+  %7 = vector.broadcast %g : !llvm.ptr<1> to vector<8x16x!llvm.ptr<1>>
   return
 }
 
@@ -197,22 +199,6 @@ func.func @shuffle_poison_mask(%a: vector<4xf32>, %b: vector<4xf32>) -> vector<4
   // CHECK: vector.shuffle %{{.*}}, %{{.*}}[1, -1, 6, -1] : vector<4xf32>, vector<4xf32>
   %1 = vector.shuffle %a, %a[1, -1, 6, -1] : vector<4xf32>, vector<4xf32>
   return %1 : vector<4xf32>
-}
-
-// CHECK-LABEL: @extract_element_0d
-func.func @extract_element_0d(%a: vector<f32>) -> f32 {
-  // CHECK-NEXT: vector.extractelement %{{.*}}[] : vector<f32>
-  %1 = vector.extractelement %a[] : vector<f32>
-  return %1 : f32
-}
-
-// CHECK-LABEL: @extract_element
-func.func @extract_element(%a: vector<16xf32>) -> f32 {
-  // CHECK:      %[[C15:.*]] = arith.constant 15 : i32
-  %c = arith.constant 15 : i32
-  // CHECK-NEXT: vector.extractelement %{{.*}}[%[[C15]] : i32] : vector<16xf32>
-  %1 = vector.extractelement %a[%c : i32] : vector<16xf32>
-  return %1 : f32
 }
 
 // CHECK-LABEL: @extract_const_idx
@@ -254,22 +240,6 @@ func.func @extract_poison_idx(%a: vector<4x5xf32>) -> f32 {
   // CHECK-NEXT: vector.extract %{{.*}}[-1, 0] : f32 from vector<4x5xf32>
   %0 = vector.extract %a[-1, 0] : f32 from vector<4x5xf32>
   return %0 : f32
-}
-
-// CHECK-LABEL: @insert_element_0d
-func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
-  // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[] : vector<f32>
-  %1 = vector.insertelement %a, %b[] : vector<f32>
-  return %1 : vector<f32>
-}
-
-// CHECK-LABEL: @insert_element
-func.func @insert_element(%a: f32, %b: vector<16xf32>) -> vector<16xf32> {
-  // CHECK:      %[[C15:.*]] = arith.constant 15 : i32
-  %c = arith.constant 15 : i32
-  // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[%[[C15]] : i32] : vector<16xf32>
-  %1 = vector.insertelement %a, %b[%c : i32] : vector<16xf32>
-  return %1 : vector<16xf32>
 }
 
 // CHECK-LABEL: @insert_const_idx
@@ -951,28 +921,6 @@ func.func @vector_scan(%0: vector<4x8x16x32xf32>) -> vector<4x8x16x32xf32> {
     vector<4x8x16x32xf32>, vector<4x16x32xf32>
   return %2#0 : vector<4x8x16x32xf32>
 }
-
-// CHECK-LABEL: func @test_splat_op
-// CHECK-SAME: %[[s:.*]]: f32, %[[s2:.*]]: !llvm.ptr<1>
-func.func @test_splat_op(%s : f32, %s2 : !llvm.ptr<1>) {
-  // CHECK: vector.splat %[[s]] : vector<8xf32>
-  %v = vector.splat %s : vector<8xf32>
-
-  // CHECK: vector.splat %[[s]] : vector<4xf32>
-  %u = "vector.splat"(%s) : (f32) -> vector<4xf32>
-
-  // CHECK: vector.splat %[[s2]] : vector<16x!llvm.ptr<1>>
-  %w = vector.splat %s2 : vector<16x!llvm.ptr<1>>
-  return
-}
-
-// CHECK-LABEL: func @vector_splat_0d(
-func.func @vector_splat_0d(%a: f32) -> vector<f32> {
-  // CHECK: vector.splat %{{.*}} : vector<f32>
-  %0 = vector.splat %a : vector<f32>
-  return %0 : vector<f32>
-}
-
 
 // CHECK-LABEL: func @vector_mask
 func.func @vector_mask(%a: vector<8xi32>, %m0: vector<8xi1>) -> i32 {

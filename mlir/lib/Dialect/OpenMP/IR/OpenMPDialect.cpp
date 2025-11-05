@@ -14,7 +14,6 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -25,7 +24,6 @@
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -34,8 +32,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -59,6 +56,11 @@ makeDenseBoolArrayAttr(MLIRContext *ctx, const ArrayRef<bool> boolArray) {
   return boolArray.empty() ? nullptr : DenseBoolArrayAttr::get(ctx, boolArray);
 }
 
+static DenseI64ArrayAttr
+makeDenseI64ArrayAttr(MLIRContext *ctx, const ArrayRef<int64_t> intArray) {
+  return intArray.empty() ? nullptr : DenseI64ArrayAttr::get(ctx, intArray);
+}
+
 namespace {
 struct MemRefPointerLikeModel
     : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
@@ -74,6 +76,232 @@ struct LLVMPointerPointerLikeModel
   Type getElementType(Type pointer) const { return Type(); }
 };
 } // namespace
+
+/// Generate a name of a canonical loop nest of the format
+/// `<prefix>(_r<idx>_s<idx>)*`. Hereby, `_r<idx>` identifies the region
+/// argument index of an operation that has multiple regions, if the operation
+/// has multiple regions.
+/// `_s<idx>` identifies the position of an operation within a region, where
+/// only operations that may potentially contain loops ("container operations"
+/// i.e. have region arguments) are counted. Again, it is omitted if there is
+/// only one such operation in a region. If there are canonical loops nested
+/// inside each other, also may also use the format `_d<num>` where <num> is the
+/// nesting depth of the loop.
+///
+/// The generated name is a best-effort to make canonical loop unique within an
+/// SSA namespace. This also means that regions with IsolatedFromAbove property
+/// do not consider any parents or siblings.
+static std::string generateLoopNestingName(StringRef prefix,
+                                           CanonicalLoopOp op) {
+  struct Component {
+    /// If true, this component describes a region operand of an operation (the
+    /// operand's owner) If false, this component describes an operation located
+    /// in a parent region
+    bool isRegionArgOfOp;
+    bool skip = false;
+    bool isUnique = false;
+
+    size_t idx;
+    Operation *op;
+    Region *parentRegion;
+    size_t loopDepth;
+
+    Operation *&getOwnerOp() {
+      assert(isRegionArgOfOp && "Must describe a region operand");
+      return op;
+    }
+    size_t &getArgIdx() {
+      assert(isRegionArgOfOp && "Must describe a region operand");
+      return idx;
+    }
+
+    Operation *&getContainerOp() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return op;
+    }
+    size_t &getOpPos() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return idx;
+    }
+    bool isLoopOp() const {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return isa<CanonicalLoopOp>(op);
+    }
+    Region *&getParentRegion() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return parentRegion;
+    }
+    size_t &getLoopDepth() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return loopDepth;
+    }
+
+    void skipIf(bool v = true) { skip = skip || v; }
+  };
+
+  // List of ancestors, from inner to outer.
+  // Alternates between
+  //  * region argument of an operation
+  //  * operation within a region
+  SmallVector<Component> components;
+
+  // Gather a list of parent regions and operations, and the position within
+  // their parent
+  Operation *o = op.getOperation();
+  while (o) {
+    // Operation within a region
+    Region *r = o->getParentRegion();
+    if (!r)
+      break;
+
+    llvm::ReversePostOrderTraversal<Block *> traversal(&r->getBlocks().front());
+    size_t idx = 0;
+    bool found = false;
+    size_t sequentialIdx = -1;
+    bool isOnlyContainerOp = true;
+    for (Block *b : traversal) {
+      for (Operation &op : *b) {
+        if (&op == o && !found) {
+          sequentialIdx = idx;
+          found = true;
+        }
+        if (op.getNumRegions()) {
+          idx += 1;
+          if (idx > 1)
+            isOnlyContainerOp = false;
+        }
+        if (found && !isOnlyContainerOp)
+          break;
+      }
+    }
+
+    Component &containerOpInRegion = components.emplace_back();
+    containerOpInRegion.isRegionArgOfOp = false;
+    containerOpInRegion.isUnique = isOnlyContainerOp;
+    containerOpInRegion.getContainerOp() = o;
+    containerOpInRegion.getOpPos() = sequentialIdx;
+    containerOpInRegion.getParentRegion() = r;
+
+    Operation *parent = r->getParentOp();
+
+    // Region argument of an operation
+    Component &regionArgOfOperation = components.emplace_back();
+    regionArgOfOperation.isRegionArgOfOp = true;
+    regionArgOfOperation.isUnique = true;
+    regionArgOfOperation.getArgIdx() = 0;
+    regionArgOfOperation.getOwnerOp() = parent;
+
+    // The IsolatedFromAbove trait of the parent operation implies that each
+    // individual region argument has its own separate namespace, so no
+    // ambiguity.
+    if (!parent || parent->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
+      break;
+
+    // Component only needed if operation has multiple region operands. Region
+    // arguments may be optional, but we currently do not consider this.
+    if (parent->getRegions().size() > 1) {
+      auto getRegionIndex = [](Operation *o, Region *r) {
+        for (auto [idx, region] : llvm::enumerate(o->getRegions())) {
+          if (&region == r)
+            return idx;
+        }
+        llvm_unreachable("Region not child of its parent operation");
+      };
+      regionArgOfOperation.isUnique = false;
+      regionArgOfOperation.getArgIdx() = getRegionIndex(parent, r);
+    }
+
+    // next parent
+    o = parent;
+  }
+
+  // Determine whether a region-argument component is not needed
+  for (Component &c : components)
+    c.skipIf(c.isRegionArgOfOp && c.isUnique);
+
+  // Find runs of nested loops and determine each loop's depth in the loop nest
+  size_t numSurroundingLoops = 0;
+  for (Component &c : llvm::reverse(components)) {
+    if (c.skip)
+      continue;
+
+    // non-skipped multi-argument operands interrupt the loop nest
+    if (c.isRegionArgOfOp) {
+      numSurroundingLoops = 0;
+      continue;
+    }
+
+    // Multiple loops in a region means each of them is the outermost loop of a
+    // new loop nest
+    if (!c.isUnique)
+      numSurroundingLoops = 0;
+
+    c.getLoopDepth() = numSurroundingLoops;
+
+    // Next loop is surrounded by one more loop
+    if (isa<CanonicalLoopOp>(c.getContainerOp()))
+      numSurroundingLoops += 1;
+  }
+
+  // In loop nests, skip all but the innermost loop that contains the depth
+  // number
+  bool isLoopNest = false;
+  for (Component &c : components) {
+    if (c.skip || c.isRegionArgOfOp)
+      continue;
+
+    if (!isLoopNest && c.getLoopDepth() >= 1) {
+      // Innermost loop of a loop nest of at least two loops
+      isLoopNest = true;
+    } else if (isLoopNest) {
+      // Non-innermost loop of a loop nest
+      c.skipIf(c.isUnique);
+
+      // If there is no surrounding loop left, this must have been the outermost
+      // loop; leave loop-nest mode for the next iteration
+      if (c.getLoopDepth() == 0)
+        isLoopNest = false;
+    }
+  }
+
+  // Skip non-loop unambiguous regions (but they should interrupt loop nests, so
+  // we mark them as skipped only after computing loop nests)
+  for (Component &c : components)
+    c.skipIf(!c.isRegionArgOfOp && c.isUnique &&
+             !isa<CanonicalLoopOp>(c.getContainerOp()));
+
+  // Components can be skipped if they are already disambiguated by their parent
+  // (or does not have a parent)
+  bool newRegion = true;
+  for (Component &c : llvm::reverse(components)) {
+    c.skipIf(newRegion && c.isUnique);
+
+    // non-skipped components disambiguate unique children
+    if (!c.skip)
+      newRegion = true;
+
+    // ...except canonical loops that need a suffix for each nest
+    if (!c.isRegionArgOfOp && c.getContainerOp())
+      newRegion = false;
+  }
+
+  // Compile the nesting name string
+  SmallString<64> Name{prefix};
+  llvm::raw_svector_ostream NameOS(Name);
+  for (auto &c : llvm::reverse(components)) {
+    if (c.skip)
+      continue;
+
+    if (c.isRegionArgOfOp)
+      NameOS << "_r" << c.getArgIdx();
+    else if (c.getLoopDepth() >= 1)
+      NameOS << "_d" << c.getLoopDepth();
+    else
+      NameOS << "_s" << c.getOpPos();
+  }
+
+  return NameOS.str().str();
+}
 
 void OpenMPDialect::initialize() {
   addOperations<
@@ -180,7 +408,7 @@ static ParseResult parseClauseAttr(AsmParser &parser, ClauseAttr &attr) {
 }
 
 template <typename ClauseAttr>
-void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
+static void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
   p << stringifyEnum(attr.getValue());
 }
 
@@ -1508,10 +1736,10 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 // Parser, printer and verifier for Target
 //===----------------------------------------------------------------------===//
 
-// Helper function to get bitwise AND of `value` and 'flag'
-uint64_t mapTypeToBitFlag(uint64_t value,
-                          llvm::omp::OpenMPOffloadMappingFlags flag) {
-  return value & llvm::to_underlying(flag);
+// Helper function to get bitwise AND of `value` and 'flag' then return it as a
+// boolean
+static bool mapTypeToBool(ClauseMapFlags value, ClauseMapFlags flag) {
+  return (value & flag) == flag;
 }
 
 /// Parses a map_entries map type from a string format back into its numeric
@@ -1519,10 +1747,9 @@ uint64_t mapTypeToBitFlag(uint64_t value,
 ///
 /// map-clause = `map_clauses (  ( `(` `always, `? `implicit, `? `ompx_hold, `?
 /// `close, `? `present, `? ( `to` | `from` | `delete` `)` )+ `)` )
-static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
-  llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-
+static ParseResult parseMapClause(OpAsmParser &parser,
+                                  ClauseMapFlagsAttr &mapType) {
+  ClauseMapFlags mapTypeBits = ClauseMapFlags::none;
   // This simply verifies the correct keyword is read in, the
   // keyword itself is stored inside of the operation
   auto parseTypeAndMod = [&]() -> ParseResult {
@@ -1531,35 +1758,64 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
       return failure();
 
     if (mapTypeMod == "always")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+      mapTypeBits |= ClauseMapFlags::always;
 
     if (mapTypeMod == "implicit")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+      mapTypeBits |= ClauseMapFlags::implicit;
 
     if (mapTypeMod == "ompx_hold")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
+      mapTypeBits |= ClauseMapFlags::ompx_hold;
 
     if (mapTypeMod == "close")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+      mapTypeBits |= ClauseMapFlags::close;
 
     if (mapTypeMod == "present")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
+      mapTypeBits |= ClauseMapFlags::present;
 
     if (mapTypeMod == "to")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+      mapTypeBits |= ClauseMapFlags::to;
 
     if (mapTypeMod == "from")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapTypeBits |= ClauseMapFlags::from;
 
     if (mapTypeMod == "tofrom")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                     llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapTypeBits |= ClauseMapFlags::to | ClauseMapFlags::from;
 
     if (mapTypeMod == "delete")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
+      mapTypeBits |= ClauseMapFlags::del;
+
+    if (mapTypeMod == "storage")
+      mapTypeBits |= ClauseMapFlags::storage;
 
     if (mapTypeMod == "return_param")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+      mapTypeBits |= ClauseMapFlags::return_param;
+
+    if (mapTypeMod == "private")
+      mapTypeBits |= ClauseMapFlags::priv;
+
+    if (mapTypeMod == "literal")
+      mapTypeBits |= ClauseMapFlags::literal;
+
+    if (mapTypeMod == "attach")
+      mapTypeBits |= ClauseMapFlags::attach;
+
+    if (mapTypeMod == "attach_always")
+      mapTypeBits |= ClauseMapFlags::attach_always;
+
+    if (mapTypeMod == "attach_none")
+      mapTypeBits |= ClauseMapFlags::attach_none;
+
+    if (mapTypeMod == "attach_auto")
+      mapTypeBits |= ClauseMapFlags::attach_auto;
+
+    if (mapTypeMod == "ref_ptr")
+      mapTypeBits |= ClauseMapFlags::ref_ptr;
+
+    if (mapTypeMod == "ref_ptee")
+      mapTypeBits |= ClauseMapFlags::ref_ptee;
+
+    if (mapTypeMod == "ref_ptr_ptee")
+      mapTypeBits |= ClauseMapFlags::ref_ptr_ptee;
 
     return success();
   };
@@ -1567,9 +1823,8 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
   if (parser.parseCommaSeparatedList(parseTypeAndMod))
     return failure();
 
-  mapType = parser.getBuilder().getIntegerAttr(
-      parser.getBuilder().getIntegerType(64, /*isSigned=*/false),
-      llvm::to_underlying(mapTypeBits));
+  mapType =
+      parser.getBuilder().getAttr<mlir::omp::ClauseMapFlagsAttr>(mapTypeBits);
 
   return success();
 }
@@ -1577,60 +1832,62 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
 /// Prints a map_entries map type from its numeric value out into its string
 /// format.
 static void printMapClause(OpAsmPrinter &p, Operation *op,
-                           IntegerAttr mapType) {
-  uint64_t mapTypeBits = mapType.getUInt();
-
-  bool emitAllocRelease = true;
+                           ClauseMapFlagsAttr mapType) {
   llvm::SmallVector<std::string, 4> mapTypeStrs;
+  ClauseMapFlags mapFlags = mapType.getValue();
 
   // handling of always, close, present placed at the beginning of the string
   // to aid readability
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::always))
     mapTypeStrs.push_back("always");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::implicit))
     mapTypeStrs.push_back("implicit");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ompx_hold))
     mapTypeStrs.push_back("ompx_hold");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::close))
     mapTypeStrs.push_back("close");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::present))
     mapTypeStrs.push_back("present");
 
   // special handling of to/from/tofrom/delete and release/alloc, release +
   // alloc are the abscense of one of the other flags, whereas tofrom requires
   // both the to and from flag to be set.
-  bool to = mapTypeToBitFlag(mapTypeBits,
-                             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
-  bool from = mapTypeToBitFlag(
-      mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
-  if (to && from) {
-    emitAllocRelease = false;
+  bool to = mapTypeToBool(mapFlags, ClauseMapFlags::to);
+  bool from = mapTypeToBool(mapFlags, ClauseMapFlags::from);
+
+  if (to && from)
     mapTypeStrs.push_back("tofrom");
-  } else if (from) {
-    emitAllocRelease = false;
+  else if (from)
     mapTypeStrs.push_back("from");
-  } else if (to) {
-    emitAllocRelease = false;
+  else if (to)
     mapTypeStrs.push_back("to");
-  }
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE)) {
-    emitAllocRelease = false;
+
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::del))
     mapTypeStrs.push_back("delete");
-  }
-  if (mapTypeToBitFlag(
-          mapTypeBits,
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM)) {
-    emitAllocRelease = false;
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::return_param))
     mapTypeStrs.push_back("return_param");
-  }
-  if (emitAllocRelease)
-    mapTypeStrs.push_back("exit_release_or_enter_alloc");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::storage))
+    mapTypeStrs.push_back("storage");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::priv))
+    mapTypeStrs.push_back("private");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::literal))
+    mapTypeStrs.push_back("literal");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach))
+    mapTypeStrs.push_back("attach");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_always))
+    mapTypeStrs.push_back("attach_always");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_none))
+    mapTypeStrs.push_back("attach_none");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_auto))
+    mapTypeStrs.push_back("attach_auto");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr))
+    mapTypeStrs.push_back("ref_ptr");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptee))
+    mapTypeStrs.push_back("ref_ptee");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr_ptee))
+    mapTypeStrs.push_back("ref_ptr_ptee");
+  if (mapFlags == ClauseMapFlags::none)
+    mapTypeStrs.push_back("none");
 
   for (unsigned int i = 0; i < mapTypeStrs.size(); ++i) {
     p << mapTypeStrs[i];
@@ -1733,23 +1990,16 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
     if (!mapOp.getDefiningOp())
       return emitError(op->getLoc(), "missing map operation");
 
-    if (auto mapInfoOp =
-            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
-      uint64_t mapTypeBits = mapInfoOp.getMapType();
+    if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
+      mlir::omp::ClauseMapFlags mapTypeBits = mapInfoOp.getMapType();
 
-      bool to = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
-      bool from = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
-      bool del = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE);
+      bool to = mapTypeToBool(mapTypeBits, ClauseMapFlags::to);
+      bool from = mapTypeToBool(mapTypeBits, ClauseMapFlags::from);
+      bool del = mapTypeToBool(mapTypeBits, ClauseMapFlags::del);
 
-      bool always = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS);
-      bool close = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
-      bool implicit = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
+      bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
+      bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
 
       if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
         return emitError(op->getLoc(),
@@ -2110,6 +2360,31 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
       });
 }
 
+/// Check if we can promote SPMD kernel to No-Loop kernel.
+static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
+                               WsloopOp *wsLoopOp) {
+  // num_teams clause can break no-loop teams/threads assumption.
+  if (teamsOp.getNumTeamsUpper())
+    return false;
+
+  // Reduction kernels are slower in no-loop mode.
+  if (teamsOp.getNumReductionVars())
+    return false;
+  if (wsLoopOp->getNumReductionVars())
+    return false;
+
+  // Check if the user allows the promotion of kernels to no-loop mode.
+  OffloadModuleInterface offloadMod =
+      capturedOp->getParentOfType<omp::OffloadModuleInterface>();
+  if (!offloadMod)
+    return false;
+  auto ompFlags = offloadMod.getFlags();
+  if (!ompFlags)
+    return false;
+  return ompFlags.getAssumeTeamsOversubscription() &&
+         ompFlags.getAssumeThreadsOversubscription();
+}
+
 TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
   // A non-null captured op is only valid if it resides inside of a TargetOp
   // and is the result of calling getInnermostCapturedOmpOp() on it.
@@ -2138,7 +2413,8 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
 
   // Detect target-teams-distribute-parallel-wsloop[-simd].
   if (numWrappers == 2) {
-    if (!isa<WsloopOp>(innermostWrapper))
+    WsloopOp *wsloopOp = dyn_cast<WsloopOp>(innermostWrapper);
+    if (!wsloopOp)
       return TargetRegionFlags::generic;
 
     innermostWrapper = std::next(innermostWrapper);
@@ -2149,12 +2425,17 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
     if (!isa_and_present<ParallelOp>(parallelOp))
       return TargetRegionFlags::generic;
 
-    Operation *teamsOp = parallelOp->getParentOp();
-    if (!isa_and_present<TeamsOp>(teamsOp))
+    TeamsOp teamsOp = dyn_cast<TeamsOp>(parallelOp->getParentOp());
+    if (!teamsOp)
       return TargetRegionFlags::generic;
 
-    if (teamsOp->getParentOp() == targetOp.getOperation())
-      return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+    if (teamsOp->getParentOp() == targetOp.getOperation()) {
+      TargetRegionFlags result =
+          TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+      if (canPromoteToNoLoop(capturedOp, teamsOp, wsloopOp))
+        result = result | TargetRegionFlags::no_loop;
+      return result;
+    }
   }
   // Detect target-teams-distribute[-simd] and target-teams-loop.
   else if (isa<DistributeOp, LoopOp>(innermostWrapper)) {
@@ -2960,16 +3241,45 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
   for (auto &iv : ivs)
     iv.type = loopVarType;
 
+  auto *ctx = parser.getBuilder().getContext();
   // Parse "inclusive" flag.
   if (succeeded(parser.parseOptionalKeyword("inclusive")))
-    result.addAttribute("loop_inclusive",
-                        UnitAttr::get(parser.getBuilder().getContext()));
+    result.addAttribute("loop_inclusive", UnitAttr::get(ctx));
 
   // Parse step values.
   SmallVector<OpAsmParser::UnresolvedOperand> steps;
   if (parser.parseKeyword("step") ||
       parser.parseOperandList(steps, ivs.size(), OpAsmParser::Delimiter::Paren))
     return failure();
+
+  // Parse collapse
+  int64_t value = 0;
+  if (!parser.parseOptionalKeyword("collapse") &&
+      (parser.parseLParen() || parser.parseInteger(value) ||
+       parser.parseRParen()))
+    return failure();
+  if (value > 1)
+    result.addAttribute(
+        "collapse_num_loops",
+        IntegerAttr::get(parser.getBuilder().getI64Type(), value));
+
+  // Parse tiles
+  SmallVector<int64_t> tiles;
+  auto parseTiles = [&]() -> ParseResult {
+    int64_t tile;
+    if (parser.parseInteger(tile))
+      return failure();
+    tiles.push_back(tile);
+    return success();
+  };
+
+  if (!parser.parseOptionalKeyword("tiles") &&
+      (parser.parseLParen() || parser.parseCommaSeparatedList(parseTiles) ||
+       parser.parseRParen()))
+    return failure();
+
+  if (tiles.size() > 0)
+    result.addAttribute("tile_sizes", DenseI64ArrayAttr::get(ctx, tiles));
 
   // Parse the body.
   Region *region = result.addRegion();
@@ -2994,14 +3304,23 @@ void LoopNestOp::print(OpAsmPrinter &p) {
   if (getLoopInclusive())
     p << "inclusive ";
   p << "step (" << getLoopSteps() << ") ";
+  if (int64_t numCollapse = getCollapseNumLoops())
+    if (numCollapse > 1)
+      p << "collapse(" << numCollapse << ") ";
+
+  if (const auto tiles = getTileSizes())
+    p << "tiles(" << tiles.value() << ") ";
+
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
 void LoopNestOp::build(OpBuilder &builder, OperationState &state,
                        const LoopNestOperands &clauses) {
-  LoopNestOp::build(builder, state, clauses.loopLowerBounds,
-                    clauses.loopUpperBounds, clauses.loopSteps,
-                    clauses.loopInclusive);
+  MLIRContext *ctx = builder.getContext();
+  LoopNestOp::build(builder, state, clauses.collapseNumLoops,
+                    clauses.loopLowerBounds, clauses.loopUpperBounds,
+                    clauses.loopSteps, clauses.loopInclusive,
+                    makeDenseI64ArrayAttr(ctx, clauses.tileSizes));
 }
 
 LogicalResult LoopNestOp::verify() {
@@ -3016,6 +3335,17 @@ LogicalResult LoopNestOp::verify() {
       return emitOpError()
              << "range argument type does not match corresponding IV type";
   }
+
+  uint64_t numIVs = getIVs().size();
+
+  if (const auto &numCollapse = getCollapseNumLoops())
+    if (numCollapse > numIVs)
+      return emitOpError()
+             << "collapse value is larger than the number of loops";
+
+  if (const auto &tiles = getTileSizes())
+    if (tiles.value().size() > numIVs)
+      return emitOpError() << "too few canonical loops for tile dimensions";
 
   if (!llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp()))
     return emitOpError() << "expects parent op to be a loop wrapper";
@@ -3078,6 +3408,9 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
   Value result = getResult();
   auto [newCli, gen, cons] = decodeCli(result);
 
+  // Structured binding `gen` cannot be captured in lambdas before C++20
+  OpOperand *generator = gen;
+
   // Derive the CLI variable name from its generator:
   //  * "canonloop" for omp.canonical_loop
   //  * custom name for loop transformation generatees
@@ -3091,75 +3424,30 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
     cliName =
         TypeSwitch<Operation *, std::string>(gen->getOwner())
             .Case([&](CanonicalLoopOp op) {
-              // Find the canonical loop nesting: For each ancestor add a
-              // "+_r<idx>" suffix (in reverse order)
-              SmallVector<std::string> components;
-              Operation *o = op.getOperation();
-              while (o) {
-                if (o->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
-                  break;
-
-                Region *r = o->getParentRegion();
-                if (!r)
-                  break;
-
-                auto getSequentialIndex = [](Region *r, Operation *o) {
-                  llvm::ReversePostOrderTraversal<Block *> traversal(
-                      &r->getBlocks().front());
-                  size_t idx = 0;
-                  for (Block *b : traversal) {
-                    for (Operation &op : *b) {
-                      if (&op == o)
-                        return idx;
-                      // Only consider operations that are containers as
-                      // possible children
-                      if (!op.getRegions().empty())
-                        idx += 1;
-                    }
-                  }
-                  llvm_unreachable("Operation not part of the region");
-                };
-                size_t sequentialIdx = getSequentialIndex(r, o);
-                components.push_back(("s" + Twine(sequentialIdx)).str());
-
-                Operation *parent = r->getParentOp();
-                if (!parent)
-                  break;
-
-                // If the operation has more than one region, also count in
-                // which of the regions
-                if (parent->getRegions().size() > 1) {
-                  auto getRegionIndex = [](Operation *o, Region *r) {
-                    for (auto [idx, region] :
-                         llvm::enumerate(o->getRegions())) {
-                      if (&region == r)
-                        return idx;
-                    }
-                    llvm_unreachable("Region not child its parent operation");
-                  };
-                  size_t regionIdx = getRegionIndex(parent, r);
-                  components.push_back(("r" + Twine(regionIdx)).str());
-                }
-
-                // next parent
-                o = parent;
-              }
-
-              SmallString<64> Name("canonloop");
-              for (std::string s : reverse(components)) {
-                Name += '_';
-                Name += s;
-              }
-
-              return Name;
+              return generateLoopNestingName("canonloop", op);
             })
             .Case([&](UnrollHeuristicOp op) -> std::string {
               llvm_unreachable("heuristic unrolling does not generate a loop");
             })
-            .Default([&](Operation *op) {
-              assert(false && "TODO: Custom name for this operation");
-              return "transformed";
-            });
+            .Case([&](TileOp op) -> std::string {
+              auto [generateesFirst, generateesCount] =
+                  op.getGenerateesODSOperandIndexAndLength();
+              unsigned firstGrid = generateesFirst;
+              unsigned firstIntratile = generateesFirst + generateesCount / 2;
+              unsigned end = generateesFirst + generateesCount;
+              unsigned opnum = generator->getOperandNumber();
+              // In the OpenMP apply and looprange clauses, indices are 1-based
+              if (firstGrid <= opnum && opnum < firstIntratile) {
+                unsigned gridnum = opnum - firstGrid + 1;
+                return ("grid" + Twine(gridnum)).str();
+              }
+              if (firstIntratile <= opnum && opnum < end) {
+                unsigned intratilenum = opnum - firstIntratile + 1;
+                return ("intratile" + Twine(intratilenum)).str();
+              }
+              llvm_unreachable("Unexpected generatee argument");
+            })
+            .DefaultUnreachable("TODO: Custom name for this operation");
   }
 
   setNameFn(result, cliName);
@@ -3242,7 +3530,8 @@ void CanonicalLoopOp::getAsmBlockNames(OpAsmSetBlockNameFn setNameFn) {
 
 void CanonicalLoopOp::getAsmBlockArgumentNames(Region &region,
                                                OpAsmSetValueNameFn setNameFn) {
-  setNameFn(region.getArgument(0), "iv");
+  std::string ivName = generateLoopNestingName("iv", *this);
+  setNameFn(region.getArgument(0), ivName);
 }
 
 void CanonicalLoopOp::print(OpAsmPrinter &p) {
@@ -3381,6 +3670,138 @@ UnrollHeuristicOp ::getApplyeesODSOperandIndexAndLength() {
 std::pair<unsigned, unsigned>
 UnrollHeuristicOp::getGenerateesODSOperandIndexAndLength() {
   return {0, 0};
+}
+
+//===----------------------------------------------------------------------===//
+// TileOp
+//===----------------------------------------------------------------------===//
+
+static void printLoopTransformClis(OpAsmPrinter &p, TileOp op,
+                                   OperandRange generatees,
+                                   OperandRange applyees) {
+  if (!generatees.empty())
+    p << '(' << llvm::interleaved(generatees) << ')';
+
+  if (!applyees.empty())
+    p << " <- (" << llvm::interleaved(applyees) << ')';
+}
+
+static ParseResult parseLoopTransformClis(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &generateesOperands,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &applyeesOperands) {
+  if (parser.parseOptionalLess()) {
+    // Syntax 1: generatees present
+
+    if (parser.parseOperandList(generateesOperands,
+                                mlir::OpAsmParser::Delimiter::Paren))
+      return failure();
+
+    if (parser.parseLess())
+      return failure();
+  } else {
+    // Syntax 2: generatees omitted
+  }
+
+  // Parse `<-` (`<` has already been parsed)
+  if (parser.parseMinus())
+    return failure();
+
+  if (parser.parseOperandList(applyeesOperands,
+                              mlir::OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  return success();
+}
+
+LogicalResult TileOp::verify() {
+  if (getApplyees().empty())
+    return emitOpError() << "must apply to at least one loop";
+
+  if (getSizes().size() != getApplyees().size())
+    return emitOpError() << "there must be one tile size for each applyee";
+
+  if (!getGeneratees().empty() &&
+      2 * getSizes().size() != getGeneratees().size())
+    return emitOpError()
+           << "expecting two times the number of generatees than applyees";
+
+  DenseSet<Value> parentIVs;
+
+  Value parent = getApplyees().front();
+  for (auto &&applyee : llvm::drop_begin(getApplyees())) {
+    auto [parentCreate, parentGen, parentCons] = decodeCli(parent);
+    auto [create, gen, cons] = decodeCli(applyee);
+
+    if (!parentGen)
+      return emitOpError() << "applyee CLI has no generator";
+
+    auto parentLoop = dyn_cast_or_null<CanonicalLoopOp>(parentGen->getOwner());
+    if (!parentGen)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+
+    parentIVs.insert(parentLoop.getInductionVar());
+
+    if (!gen)
+      return emitOpError() << "applyee CLI has no generator";
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    if (!loop)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+
+    // Canonical loop must be perfectly nested, i.e. the body of the parent must
+    // only contain the omp.canonical_loop of the nested loops, and
+    // omp.terminator
+    bool isPerfectlyNested = [&]() {
+      auto &parentBody = parentLoop.getRegion();
+      if (!parentBody.hasOneBlock())
+        return false;
+      auto &parentBlock = parentBody.getBlocks().front();
+
+      auto nestedLoopIt = parentBlock.begin();
+      if (nestedLoopIt == parentBlock.end() ||
+          (&*nestedLoopIt != loop.getOperation()))
+        return false;
+
+      auto termIt = std::next(nestedLoopIt);
+      if (termIt == parentBlock.end() || !isa<TerminatorOp>(termIt))
+        return false;
+
+      if (std::next(termIt) != parentBlock.end())
+        return false;
+
+      return true;
+    }();
+    if (!isPerfectlyNested)
+      return emitOpError() << "tiled loop nest must be perfectly nested";
+
+    if (parentIVs.contains(loop.getTripCount()))
+      return emitOpError() << "tiled loop nest must be rectangular";
+
+    parent = applyee;
+  }
+
+  // TODO: The tile sizes must be computed before the loop, but checking this
+  // requires dominance analysis. For instance:
+  //
+  //      %canonloop = omp.new_cli
+  //      omp.canonical_loop(%canonloop) %iv : i32 in range(%tc) {
+  //        // write to %x
+  //        omp.terminator
+  //      }
+  //      %ts = llvm.load %x
+  //      omp.tile <- (%canonloop) sizes(%ts : i32)
+
+  return success();
+}
+
+std::pair<unsigned, unsigned> TileOp ::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyees);
+}
+
+std::pair<unsigned, unsigned> TileOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_generatees);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3875,6 +4296,159 @@ LogicalResult AllocateDirOp::verify() {
                          << " must be power of 2";
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAllocMemOp
+//===----------------------------------------------------------------------===//
+
+mlir::Type omp::TargetAllocMemOp::getAllocatedType() {
+  return getInTypeAttr().getValue();
+}
+
+/// operation ::= %res = (`omp.target_alloc_mem`) $device : devicetype,
+///                      $in_type ( `(` $typeparams `)` )? ( `,` $shape )?
+///                      attr-dict-without-keyword
+static mlir::ParseResult parseTargetAllocMemOp(mlir::OpAsmParser &parser,
+                                               mlir::OperationState &result) {
+  auto &builder = parser.getBuilder();
+  bool hasOperands = false;
+  std::int32_t typeparamsSize = 0;
+
+  // Parse device number as a new operand
+  mlir::OpAsmParser::UnresolvedOperand deviceOperand;
+  mlir::Type deviceType;
+  if (parser.parseOperand(deviceOperand) || parser.parseColonType(deviceType))
+    return mlir::failure();
+  if (parser.resolveOperand(deviceOperand, deviceType, result.operands))
+    return mlir::failure();
+  if (parser.parseComma())
+    return mlir::failure();
+
+  mlir::Type intype;
+  if (parser.parseType(intype))
+    return mlir::failure();
+  result.addAttribute("in_type", mlir::TypeAttr::get(intype));
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
+  llvm::SmallVector<mlir::Type> typeVec;
+  if (!parser.parseOptionalLParen()) {
+    // parse the LEN params of the derived type. (<params> : <types>)
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(typeVec) || parser.parseRParen())
+      return mlir::failure();
+    typeparamsSize = operands.size();
+    hasOperands = true;
+  }
+  std::int32_t shapeSize = 0;
+  if (!parser.parseOptionalComma()) {
+    // parse size to scale by, vector of n dimensions of type index
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None))
+      return mlir::failure();
+    shapeSize = operands.size() - typeparamsSize;
+    auto idxTy = builder.getIndexType();
+    for (std::int32_t i = typeparamsSize, end = operands.size(); i != end; ++i)
+      typeVec.push_back(idxTy);
+    hasOperands = true;
+  }
+  if (hasOperands &&
+      parser.resolveOperands(operands, typeVec, parser.getNameLoc(),
+                             result.operands))
+    return mlir::failure();
+
+  mlir::Type restype = builder.getIntegerType(64);
+  if (!restype) {
+    parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
+    return mlir::failure();
+  }
+  llvm::SmallVector<std::int32_t> segmentSizes{1, typeparamsSize, shapeSize};
+  result.addAttribute("operandSegmentSizes",
+                      builder.getDenseI32ArrayAttr(segmentSizes));
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.addTypeToList(restype, result.types))
+    return mlir::failure();
+  return mlir::success();
+}
+
+mlir::ParseResult omp::TargetAllocMemOp::parse(mlir::OpAsmParser &parser,
+                                               mlir::OperationState &result) {
+  return parseTargetAllocMemOp(parser, result);
+}
+
+void omp::TargetAllocMemOp::print(mlir::OpAsmPrinter &p) {
+  p << " ";
+  p.printOperand(getDevice());
+  p << " : ";
+  p << getDevice().getType();
+  p << ", ";
+  p << getInType();
+  if (!getTypeparams().empty()) {
+    p << '(' << getTypeparams() << " : " << getTypeparams().getTypes() << ')';
+  }
+  for (auto sh : getShape()) {
+    p << ", ";
+    p.printOperand(sh);
+  }
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {"in_type", "operandSegmentSizes"});
+}
+
+llvm::LogicalResult omp::TargetAllocMemOp::verify() {
+  mlir::Type outType = getType();
+  if (!mlir::dyn_cast<IntegerType>(outType))
+    return emitOpError("must be a integer type");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// WorkdistributeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WorkdistributeOp::verify() {
+  // Check that region exists and is not empty
+  Region &region = getRegion();
+  if (region.empty())
+    return emitOpError("region cannot be empty");
+  // Verify single entry point.
+  Block &entryBlock = region.front();
+  if (entryBlock.empty())
+    return emitOpError("region must contain a structured block");
+  // Verify single exit point.
+  bool hasTerminator = false;
+  for (Block &block : region) {
+    if (isa<TerminatorOp>(block.back())) {
+      if (hasTerminator) {
+        return emitOpError("region must have exactly one terminator");
+      }
+      hasTerminator = true;
+    }
+  }
+  if (!hasTerminator) {
+    return emitOpError("region must be terminated with omp.terminator");
+  }
+  auto walkResult = region.walk([&](Operation *op) -> WalkResult {
+    // No implicit barrier at end
+    if (isa<BarrierOp>(op)) {
+      return emitOpError(
+          "explicit barriers are not allowed in workdistribute region");
+    }
+    // Check for invalid nested constructs
+    if (isa<ParallelOp>(op)) {
+      return emitOpError(
+          "nested parallel constructs not allowed in workdistribute");
+    }
+    if (isa<TeamsOp>(op)) {
+      return emitOpError(
+          "nested teams constructs not allowed in workdistribute");
+    }
+    return WalkResult::advance();
+  });
+  if (walkResult.wasInterrupted())
+    return failure();
+
+  Operation *parentOp = (*this)->getParentOp();
+  if (!llvm::dyn_cast<TeamsOp>(parentOp))
+    return emitOpError("workdistribute must be nested under teams");
   return success();
 }
 

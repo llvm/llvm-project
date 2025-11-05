@@ -100,13 +100,8 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
     break;
   case common::RoundingMode::TiesAwayFromZero:
     fesetround(FE_TONEAREST);
-    if (context.languageFeatures().ShouldWarn(
-            common::UsageWarning::FoldingFailure)) {
-      context.messages().Say(common::UsageWarning::FoldingFailure,
-          "TiesAwayFromZero rounding mode is not available when folding "
-          "constants"
-          " with host runtime; using TiesToEven instead"_warn_en_US);
-    }
+    context.Warn(common::UsageWarning::FoldingFailure,
+        "TiesAwayFromZero rounding mode is not available when folding constants with host runtime; using TiesToEven instead"_warn_en_US);
     break;
   }
   flags_.clear();
@@ -145,8 +140,8 @@ void HostFloatingPointEnvironment::CheckAndRestoreFloatingPointEnvironment(
   }
 
   if (!flags_.empty()) {
-    RealFlagWarnings(
-        context, flags_, "evaluation of intrinsic function or operation");
+    context.RealFlagWarnings(
+        flags_, "evaluation of intrinsic function or operation");
   }
   errno = 0;
   if (fesetenv(&originalFenv_) != 0) {

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/acoshf.h"
-
 #include "src/__support/math/acoshf.h"
 
 namespace LIBC_NAMESPACE_DECL {

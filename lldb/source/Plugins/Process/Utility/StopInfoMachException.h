@@ -27,6 +27,8 @@ class StopInfoMachException : public StopInfo {
   /// is auth-related failure, and returns false otherwise.
   bool DeterminePtrauthFailure(ExecutionContext &exe_ctx);
 
+  bool DetermineTagMismatch(ExecutionContext &exe_ctx);
+
 public:
   // Constructors and Destructors
   StopInfoMachException(Thread &thread, uint32_t exc_type,

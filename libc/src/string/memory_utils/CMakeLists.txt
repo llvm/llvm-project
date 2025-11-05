@@ -34,6 +34,7 @@ add_header_library(
     x86_64/inline_memmove.h
     x86_64/inline_memset.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.cstddef
@@ -41,6 +42,7 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(

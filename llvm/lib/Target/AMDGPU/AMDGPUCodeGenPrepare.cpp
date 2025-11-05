@@ -15,9 +15,11 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -26,6 +28,8 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -89,10 +93,6 @@ static cl::opt<bool> DisableFDivExpand(
   cl::ReallyHidden,
   cl::init(false));
 
-static bool hasUnsafeFPMath(const Function &F) {
-  return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
-}
-
 class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
 public:
@@ -104,11 +104,11 @@ public:
   const DominatorTree *DT;
   const UniformityInfo &UA;
   const DataLayout &DL;
-  const bool HasUnsafeFPMath;
   const bool HasFP32DenormalFlush;
   bool FlowChanged = false;
   mutable Function *SqrtF32 = nullptr;
   mutable Function *LdexpF32 = nullptr;
+  mutable SmallVector<WeakVH> DeadVals;
 
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
 
@@ -117,7 +117,6 @@ public:
                            const DominatorTree *DT, const UniformityInfo &UA)
       : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), AC(AC),
         DT(DT), UA(UA), DL(F.getDataLayout()),
-        HasUnsafeFPMath(hasUnsafeFPMath(F)),
         HasFP32DenormalFlush(SIModeRegisterDefaults(F, ST).FP32Denormals ==
                              DenormalMode::getPreserveSign()) {}
 
@@ -246,6 +245,8 @@ public:
   Value *emitSqrtIEEE2ULP(IRBuilder<> &Builder, Value *Src,
                           FastMathFlags FMF) const;
 
+  bool tryNarrowMathIfNoOverflow(Instruction *I);
+
 public:
   bool visitFDiv(BinaryOperator &I);
 
@@ -285,28 +286,21 @@ bool AMDGPUCodeGenPrepareImpl::run() {
   BreakPhiNodesCache.clear();
   bool MadeChange = false;
 
-  Function::iterator NextBB;
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; FI = NextBB) {
-    BasicBlock *BB = &*FI;
-    NextBB = std::next(FI);
-
-    BasicBlock::iterator Next;
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;
-         I = Next) {
-      Next = std::next(I);
-
-      MadeChange |= visit(*I);
-
-      if (Next != E) { // Control flow changed
-        BasicBlock *NextInstBB = Next->getParent();
-        if (NextInstBB != BB) {
-          BB = NextInstBB;
-          E = BB->end();
-          FE = F.end();
-        }
-      }
+  // Need to use make_early_inc_range because integer division expansion is
+  // handled by Transform/Utils, and it can delete instructions such as the
+  // terminator of the BB.
+  for (BasicBlock &BB : reverse(F)) {
+    for (Instruction &I : make_early_inc_range(reverse(BB))) {
+      if (!isInstructionTriviallyDead(&I, TLI))
+        MadeChange |= visit(I);
     }
   }
+
+  while (!DeadVals.empty()) {
+    if (auto *I = dyn_cast_or_null<Instruction>(DeadVals.pop_back_val()))
+      RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
+  }
+
   return MadeChange;
 }
 
@@ -426,7 +420,7 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
   Value *NewVal = insertValues(Builder, Ty, ResultVals);
   NewVal->takeName(&I);
   I.replaceAllUsesWith(NewVal);
-  I.eraseFromParent();
+  DeadVals.push_back(&I);
 
   return true;
 }
@@ -500,10 +494,10 @@ bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
                                           FoldedT, FoldedF);
   NewSelect->takeName(&BO);
   BO.replaceAllUsesWith(NewSelect);
-  BO.eraseFromParent();
+  DeadVals.push_back(&BO);
   if (CastOp)
-    CastOp->eraseFromParent();
-  Sel->eraseFromParent();
+    DeadVals.push_back(CastOp);
+  DeadVals.push_back(Sel);
   return true;
 }
 
@@ -637,8 +631,7 @@ bool AMDGPUCodeGenPrepareImpl::canOptimizeWithRsq(const FPMathOperator *SqrtOp,
     return false;
 
   // v_rsq_f32 gives 1ulp
-  return SqrtFMF.approxFunc() || HasUnsafeFPMath ||
-         SqrtOp->getFPAccuracy() >= 1.0f;
+  return SqrtFMF.approxFunc() || SqrtOp->getFPAccuracy() >= 1.0f;
 }
 
 Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
@@ -664,7 +657,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(DivFMF | SqrtFMF);
 
-    if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) || HasUnsafeFPMath ||
+    if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) ||
         canIgnoreDenormalInput(Den, CtxI)) {
       Value *Result = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rsq, Den);
       // -1.0 / sqrt(x) -> fneg(rsq(x))
@@ -680,7 +673,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
 // Optimize fdiv with rcp:
 //
 // 1/x -> rcp(x) when rcp is sufficiently accurate or inaccurate rcp is
-//               allowed with unsafe-fp-math or afn.
+//               allowed with afn.
 //
 // a/b -> a*rcp(b) when arcp is allowed, and we only need provide ULP 1.0
 Value *
@@ -803,9 +796,9 @@ Value *AMDGPUCodeGenPrepareImpl::visitFDivElement(
 //
 // With rcp:
 //   1/x -> rcp(x) when rcp is sufficiently accurate or inaccurate rcp is
-//                 allowed with unsafe-fp-math or afn.
+//                 allowed with afn.
 //
-//   a/b -> a*rcp(b) when inaccurate rcp is allowed with unsafe-fp-math or afn.
+//   a/b -> a*rcp(b) when inaccurate rcp is allowed with afn.
 //
 // With fdiv.fast:
 //   a/b -> fdiv.fast(a, b) when !fpmath >= 2.5ulp with denormals flushed.
@@ -843,7 +836,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
       RsqOp = SqrtOp->getOperand(0);
   }
 
-  // Inaccurate rcp is allowed with unsafe-fp-math or afn.
+  // Inaccurate rcp is allowed with afn.
   //
   // Defer to codegen to handle this.
   //
@@ -852,7 +845,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   // expansion of afn to codegen. The current interpretation is so aggressive we
   // don't need any pre-consideration here when we have better information. A
   // more conservative interpretation could use handling here.
-  const bool AllowInaccurateRcp = HasUnsafeFPMath || DivFMF.approxFunc();
+  const bool AllowInaccurateRcp = DivFMF.approxFunc();
   if (!RsqOp && AllowInaccurateRcp)
     return false;
 
@@ -900,7 +893,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   if (NewVal) {
     FDiv.replaceAllUsesWith(NewVal);
     NewVal->takeName(&FDiv);
-    RecursivelyDeleteTriviallyDeadInstructions(&FDiv, TLI);
+    DeadVals.push_back(&FDiv);
   }
 
   return true;
@@ -1307,10 +1300,7 @@ it will create `s_and_b32 s0, s0, 0xff`.
 We accept this change since the non-byte load assumes the upper bits
 within the byte are all 0.
 */
-static bool tryNarrowMathIfNoOverflow(Instruction *I,
-                                      const SITargetLowering *TLI,
-                                      const TargetTransformInfo &TTI,
-                                      const DataLayout &DL) {
+bool AMDGPUCodeGenPrepareImpl::tryNarrowMathIfNoOverflow(Instruction *I) {
   unsigned Opc = I->getOpcode();
   Type *OldType = I->getType();
 
@@ -1335,6 +1325,7 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
   NewType = I->getType()->getWithNewBitWidth(NewBit);
 
   // Old cost
+  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(F);
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Opc, OldType, TTI::TCK_RecipThroughput);
   // New cost of new op
@@ -1365,7 +1356,7 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
 
   Value *Zext = Builder.CreateZExt(Arith, OldType);
   I->replaceAllUsesWith(Zext);
-  I->eraseFromParent();
+  DeadVals.push_back(I);
   return true;
 }
 
@@ -1375,8 +1366,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
   if (UseMul24Intrin && replaceMulWithMul24(I))
     return true;
-  if (tryNarrowMathIfNoOverflow(&I, ST.getTargetLowering(),
-                                TM.getTargetTransformInfo(F), DL))
+  if (tryNarrowMathIfNoOverflow(&I))
     return true;
 
   bool Changed = false;
@@ -1441,7 +1431,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
     if (NewDiv) {
       I.replaceAllUsesWith(NewDiv);
-      I.eraseFromParent();
+      DeadVals.push_back(&I);
       Changed = true;
     }
   }
@@ -1497,7 +1487,7 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
     Value *ValTrunc = Builder.CreateTrunc(WidenLoad, IntNTy);
     Value *ValOrig = Builder.CreateBitCast(ValTrunc, I.getType());
     I.replaceAllUsesWith(ValOrig);
-    I.eraseFromParent();
+    DeadVals.push_back(&I);
     return true;
   }
 
@@ -1539,7 +1529,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
 
   Fract->takeName(&I);
   I.replaceAllUsesWith(Fract);
-  RecursivelyDeleteTriviallyDeadInstructions(&I, TLI);
+  DeadVals.push_back(&I);
   return true;
 }
 
@@ -1827,7 +1817,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   }
 
   I.replaceAllUsesWith(Vec);
-  I.eraseFromParent();
+  DeadVals.push_back(&I);
   return true;
 }
 
@@ -1908,7 +1898,7 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   auto *Intrin = B.CreateIntrinsic(
       I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
   I.replaceAllUsesWith(Intrin);
-  I.eraseFromParent();
+  DeadVals.push_back(&I);
   return true;
 }
 
@@ -2005,14 +1995,8 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
   Value *Fract = applyFractPat(Builder, FractArg);
   Fract->takeName(&I);
   I.replaceAllUsesWith(Fract);
-
-  RecursivelyDeleteTriviallyDeadInstructions(&I, TLI);
+  DeadVals.push_back(&I);
   return true;
-}
-
-static bool isOneOrNegOne(const Value *Val) {
-  const APFloat *C;
-  return match(Val, m_APFloat(C)) && C->getExactLog2Abs() == 0;
 }
 
 // Expand llvm.sqrt.f32 calls with !fpmath metadata in a semi-fast way.
@@ -2026,25 +2010,13 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
 
   // We're trying to handle the fast-but-not-that-fast case only. The lowering
   // of fast llvm.sqrt will give the raw instruction anyway.
-  if (SqrtFMF.approxFunc() || HasUnsafeFPMath)
+  if (SqrtFMF.approxFunc())
     return false;
 
   const float ReqdAccuracy = FPOp->getFPAccuracy();
 
   // Defer correctly rounded expansion to codegen.
   if (ReqdAccuracy < 1.0f)
-    return false;
-
-  // FIXME: This is an ugly hack for this pass using forward iteration instead
-  // of reverse. If it worked like a normal combiner, the rsq would form before
-  // we saw a sqrt call.
-  auto *FDiv =
-      dyn_cast_or_null<FPMathOperator>(Sqrt.getUniqueUndroppableUser());
-  if (FDiv && FDiv->getOpcode() == Instruction::FDiv &&
-      FDiv->getFPAccuracy() >= 1.0f &&
-      canOptimizeWithRsq(FPOp, FDiv->getFastMathFlags(), SqrtFMF) &&
-      // TODO: We should also handle the arcp case for the fdiv with non-1 value
-      isOneOrNegOne(FDiv->getOperand(0)))
     return false;
 
   Value *SrcVal = Sqrt.getOperand(0);
@@ -2070,7 +2042,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   Value *NewSqrt = insertValues(Builder, Sqrt.getType(), ResultVals);
   NewSqrt->takeName(&Sqrt);
   Sqrt.replaceAllUsesWith(NewSqrt);
-  Sqrt.eraseFromParent();
+  DeadVals.push_back(&Sqrt);
   return true;
 }
 

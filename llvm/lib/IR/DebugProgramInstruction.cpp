@@ -665,11 +665,11 @@ void DbgMarker::eraseFromParent() {
 }
 
 iterator_range<DbgRecord::self_iterator> DbgMarker::getDbgRecordRange() {
-  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
+  return StoredDbgRecords;
 }
 iterator_range<DbgRecord::const_self_iterator>
 DbgMarker::getDbgRecordRange() const {
-  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
+  return StoredDbgRecords;
 }
 
 void DbgRecord::removeFromParent() {

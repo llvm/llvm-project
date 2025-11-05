@@ -1047,7 +1047,7 @@ constexpr int S = sum(Cs); // expected-error{{must be initialized by a constant 
 constexpr void PR28739(int n) { // cxx14_20-error {{never produces a constant}}
   int *p = &n;                  // expected-note {{array 'p' declared here}}
   p += (__int128)(unsigned long)-1; // cxx14_20-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
-  // expected-warning@-1 {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4611686018427387904 elements)}}
+  // expected-warning@-1 {{the pointer incremented by 18'446'744'073'709'551'615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4'611'686'018'427'387'904 elements)}}
 }
 
 constexpr void Void(int n) {
@@ -1449,4 +1449,10 @@ static_assert(test_member_null(), "");
 namespace GH149500 {
   unsigned int * p = &(*(unsigned int *)0x400);
   static const void *q = &(*(const struct sysrq_key_op *)0);
+}
+
+constexpr bool missingCase() {
+  switch (1) {
+    1u: return false; // expected-error {{expected 'case' keyword before expression}}
+  }
 }

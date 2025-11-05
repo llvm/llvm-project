@@ -30,9 +30,6 @@ class RecordKeeper;
 struct CodeGenIntrinsicContext {
   explicit CodeGenIntrinsicContext(const RecordKeeper &RC);
   std::vector<const Record *> DefaultProperties;
-
-  // Maximum number of values an intrinsic can return.
-  unsigned MaxNumReturn;
 };
 
 struct CodeGenIntrinsic {
@@ -116,6 +113,9 @@ struct CodeGenIntrinsic {
 
   // True if the intrinsic is marked as strictfp.
   bool isStrictFP = false;
+
+  // True if the intrinsic is marked as IntrNoCreateUndefOrPoison.
+  bool isNoCreateUndefOrPoison = false;
 
   enum ArgAttrKind {
     NoCapture,

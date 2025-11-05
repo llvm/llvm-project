@@ -259,7 +259,9 @@ public:
       break;
     case Value::FunctionVal:
       if (const Function *constant_func = dyn_cast<Function>(constant)) {
-        lldb_private::ConstString name(constant_func->getName());
+        lldb_private::ConstString name(
+            llvm::GlobalValue::dropLLVMManglingEscape(
+                constant_func->getName()));
         bool missing_weak = false;
         lldb::addr_t addr = m_execution_unit.FindSymbol(name, missing_weak);
         if (addr == LLDB_INVALID_ADDRESS)

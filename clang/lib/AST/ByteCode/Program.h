@@ -19,10 +19,7 @@
 #include "Record.h"
 #include "Source.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include <map>
 #include <vector>
 
 namespace clang {
@@ -76,22 +73,26 @@ public:
     return Globals[Idx]->block();
   }
 
+  bool isGlobalInitialized(unsigned Index) const {
+    return getPtrGlobal(Index).isInitialized();
+  }
+
   /// Finds a global's index.
-  std::optional<unsigned> getGlobal(const ValueDecl *VD);
-  std::optional<unsigned> getGlobal(const Expr *E);
+  UnsignedOrNone getGlobal(const ValueDecl *VD);
+  UnsignedOrNone getGlobal(const Expr *E);
 
   /// Returns or creates a global an creates an index to it.
-  std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,
-                                            const Expr *Init = nullptr);
+  UnsignedOrNone getOrCreateGlobal(const ValueDecl *VD,
+                                   const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for unknown declarations.
   unsigned getOrCreateDummy(const DeclTy &D);
 
   /// Creates a global and returns its index.
-  std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *Init);
+  UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init);
 
   /// Creates a global from a lifetime-extended temporary.
-  std::optional<unsigned> createGlobal(const Expr *E);
+  UnsignedOrNone createGlobal(const Expr *E);
 
   /// Creates a new function from a code range.
   template <typename... Ts>
@@ -155,7 +156,7 @@ public:
   };
 
   /// Returns the current declaration ID.
-  std::optional<unsigned> getCurrentDecl() const {
+  UnsignedOrNone getCurrentDecl() const {
     if (CurrentDeclaration == NoDeclaration)
       return std::nullopt;
     return CurrentDeclaration;
@@ -164,9 +165,9 @@ public:
 private:
   friend class DeclScope;
 
-  std::optional<unsigned> createGlobal(const DeclTy &D, QualType Ty,
-                                       bool IsStatic, bool IsExtern,
-                                       bool IsWeak, const Expr *Init = nullptr);
+  UnsignedOrNone createGlobal(const DeclTy &D, QualType Ty, bool IsStatic,
+                              bool IsExtern, bool IsWeak,
+                              const Expr *Init = nullptr);
 
   /// Reference to the VM context.
   Context &Ctx;
@@ -174,9 +175,6 @@ private:
   llvm::DenseMap<const FunctionDecl *, std::unique_ptr<Function>> Funcs;
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
-
-  /// Function relocation locations.
-  llvm::DenseMap<const FunctionDecl *, std::vector<unsigned>> Relocs;
 
   /// Native pointers referenced by bytecode.
   std::vector<const void *> NativePointers;
@@ -207,7 +205,6 @@ private:
     const Block *block() const { return &B; }
 
   private:
-    /// Required metadata - does not actually track pointers.
     Block B;
   };
 

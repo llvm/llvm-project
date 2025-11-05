@@ -336,7 +336,11 @@ LLVM_ABI std::optional<InlineCostFeatures> getInliningCostFeatures(
     ProfileSummaryInfo *PSI = nullptr,
     OptimizationRemarkEmitter *ORE = nullptr);
 
-/// Minimal filter to detect invalid constructs for inlining.
+/// Check if it is mechanically possible to inline the function \p Callee, based
+/// on the contents of the function.
+///
+/// See also \p CanInlineCallSite as an additional precondition necessary to
+/// perform a valid inline in a particular use context.
 LLVM_ABI InlineResult isInlineViable(Function &Callee);
 
 // This pass is used to annotate instructions during the inline process for

@@ -175,9 +175,8 @@ llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST) {
   return collectFoldingRanges(SyntaxTree, TM);
 }
 
-// FIXME( usaxena95): Collect PP conditional regions, includes and other code
-// regions (e.g. public/private/protected sections of classes, control flow
-// statement bodies).
+// FIXME( usaxena95): Collect includes and other code regions (e.g.
+// public/private/protected sections of classes, control flow statement bodies).
 // Related issue: https://github.com/clangd/clangd/issues/310
 llvm::Expected<std::vector<FoldingRange>>
 getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
@@ -185,12 +184,6 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
 
   auto DirectiveStructure = DirectiveTree::parse(OrigStream);
   chooseConditionalBranches(DirectiveStructure, OrigStream);
-
-  // FIXME: Provide ranges in the disabled-PP regions as well.
-  auto Preprocessed = DirectiveStructure.stripDirectives(OrigStream);
-
-  auto ParseableStream = cook(Preprocessed, genericLangOpts());
-  pairBrackets(ParseableStream);
 
   std::vector<FoldingRange> Result;
   auto AddFoldingRange = [&](Position Start, Position End,
@@ -220,7 +213,32 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
   auto EndPosition = [&](const Token &T) {
     return offsetToPosition(Code, EndOffset(T));
   };
+
+  // Preprocessor directives
+  auto PPRanges = pairDirectiveRanges(DirectiveStructure, OrigStream);
+  for (const auto &R : PPRanges) {
+    auto BTok = OrigStream.tokens()[R.Begin];
+    auto ETok = OrigStream.tokens()[R.End];
+    if (ETok.Kind == tok::eof)
+      continue;
+    if (BTok.Line >= ETok.Line)
+      continue;
+
+    Position Start = EndPosition(BTok);
+    Position End = StartPosition(ETok);
+    if (LineFoldingOnly)
+      End.line--;
+    AddFoldingRange(Start, End, FoldingRange::REGION_KIND);
+  }
+
+  // FIXME: Provide ranges in the disabled-PP regions as well.
+  auto Preprocessed = DirectiveStructure.stripDirectives(OrigStream);
+
+  auto ParseableStream = cook(Preprocessed, genericLangOpts());
+  pairBrackets(ParseableStream);
+
   auto Tokens = ParseableStream.tokens();
+
   // Brackets.
   for (const auto &Tok : Tokens) {
     if (auto *Paired = Tok.pair()) {
@@ -240,6 +258,7 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
     return OriginalToken(T).Length >= 2 &&
            Code.substr(StartOffset(T), 2) == "/*";
   };
+
   // Multi-line comments.
   for (auto *T = Tokens.begin(); T != Tokens.end();) {
     if (T->Kind != tok::comment) {

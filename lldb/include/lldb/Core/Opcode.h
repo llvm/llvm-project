@@ -12,7 +12,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/lldb-enumerations.h"
 
-#include "llvm/Support/SwapByteOrder.h"
+#include "llvm/ADT/bit.h"
 
 #include <cassert>
 #include <cstdint>
@@ -211,7 +211,7 @@ public:
     if (bytes != nullptr && length > 0) {
       m_type = type;
       m_data.inst.length = length;
-      assert(length < sizeof(m_data.inst.bytes));
+      assert(length <= sizeof(m_data.inst.bytes));
       memcpy(m_data.inst.bytes, bytes, length);
       m_byte_order = order;
     } else {
@@ -223,7 +223,9 @@ public:
   int Dump(Stream *s, uint32_t min_byte_width) const;
 
   const void *GetOpcodeBytes() const {
-    return ((m_type == Opcode::eTypeBytes) ? m_data.inst.bytes : nullptr);
+    return ((m_type == Opcode::eTypeBytes || m_type == Opcode::eType16_32Tuples)
+                ? m_data.inst.bytes
+                : nullptr);
   }
 
   uint32_t GetByteSize() const {

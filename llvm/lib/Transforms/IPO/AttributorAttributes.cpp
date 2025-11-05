@@ -1044,15 +1044,13 @@ struct AAPointerInfoImpl
     return AAPointerInfo::manifest(A);
   }
 
-  virtual const_bin_iterator begin() const override { return State::begin(); }
-  virtual const_bin_iterator end() const override { return State::end(); }
-  virtual int64_t numOffsetBins() const override {
-    return State::numOffsetBins();
-  }
-  virtual bool reachesReturn() const override {
+  const_bin_iterator begin() const override { return State::begin(); }
+  const_bin_iterator end() const override { return State::end(); }
+  int64_t numOffsetBins() const override { return State::numOffsetBins(); }
+  bool reachesReturn() const override {
     return !ReturnedOffsets.isUnassigned();
   }
-  virtual void addReturnedOffsetsTo(OffsetInfo &OI) const override {
+  void addReturnedOffsetsTo(OffsetInfo &OI) const override {
     if (ReturnedOffsets.isUnknown()) {
       OI.setUnknown();
       return;
@@ -2008,9 +2006,8 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     // destination) and second (=source) arguments as we know how they are
     // accessed.
     if (auto *MI = dyn_cast_or_null<MemIntrinsic>(getCtxI())) {
-      ConstantInt *Length = dyn_cast<ConstantInt>(MI->getLength());
       int64_t LengthVal = AA::RangeTy::Unknown;
-      if (Length)
+      if (auto Length = MI->getLengthInBytes())
         LengthVal = Length->getSExtValue();
       unsigned ArgNo = getIRPosition().getCallSiteArgNo();
       ChangeStatus Changed = ChangeStatus::UNCHANGED;
@@ -3622,7 +3619,7 @@ struct AAIntraFnReachabilityFunction final
       return true;
 
     RQITy StackRQI(A, From, To, ExclusionSet, false);
-    typename RQITy::Reachable Result;
+    RQITy::Reachable Result;
     if (!NonConstThis->checkQueryCache(A, StackRQI, Result))
       return NonConstThis->isReachableImpl(A, StackRQI,
                                            /*IsTemporaryRQI=*/true);
@@ -5188,6 +5185,7 @@ struct AADereferenceableCallSiteReturned final
 // ------------------------ Align Argument Attribute ------------------------
 
 namespace {
+
 static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
                                     Value &AssociatedValue, const Use *U,
                                     const Instruction *I, bool &TrackUse) {
@@ -5203,6 +5201,28 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       TrackUse = true;
     return 0;
   }
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::ptrmask: {
+      // Is it appropriate to pull attribute in initialization?
+      const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
+          QueryingAA, IRPosition::value(*II->getOperand(1)), DepClassTy::NONE);
+      const auto *AlignAA = A.getAAFor<AAAlign>(
+          QueryingAA, IRPosition::value(*II), DepClassTy::NONE);
+      if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
+        unsigned ShiftValue = std::min(ConstVals->getAssumedMinTrailingZeros(),
+                                       Value::MaxAlignmentExponent);
+        Align ConstAlign(UINT64_C(1) << ShiftValue);
+        if (ConstAlign >= AlignAA->getKnownAlign())
+          return Align(1).value();
+      }
+      if (AlignAA)
+        return AlignAA->getKnownAlign().value();
+      break;
+    }
+    default:
+      break;
+    }
 
   MaybeAlign MA;
   if (const auto *CB = dyn_cast<CallBase>(I)) {
@@ -5502,6 +5522,44 @@ struct AAAlignCallSiteReturned final
   AAAlignCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
+  ChangeStatus updateImpl(Attributor &A) override {
+    Instruction *I = getIRPosition().getCtxI();
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ptrmask: {
+        Align Alignment;
+        bool Valid = false;
+
+        const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
+            *this, IRPosition::value(*II->getOperand(1)), DepClassTy::REQUIRED);
+        if (ConstVals && ConstVals->isValidState()) {
+          unsigned ShiftValue =
+              std::min(ConstVals->getAssumedMinTrailingZeros(),
+                       Value::MaxAlignmentExponent);
+          Alignment = Align(UINT64_C(1) << ShiftValue);
+          Valid = true;
+        }
+
+        const auto *AlignAA =
+            A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
+                                DepClassTy::REQUIRED);
+        if (AlignAA && AlignAA->isValidState()) {
+          Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
+          Valid = true;
+        }
+
+        if (Valid)
+          return clampStateAndIndicateChange<StateType>(
+              this->getState(),
+              std::min(this->getAssumedAlign(), Alignment).value());
+        break;
+      }
+      default:
+        break;
+      }
+    }
+    return Base::updateImpl(A);
+  };
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(align); }
 };
@@ -6654,7 +6712,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
   AAHeapToStackFunction(const IRPosition &IRP, Attributor &A)
       : AAHeapToStack(IRP, A) {}
 
-  ~AAHeapToStackFunction() {
+  ~AAHeapToStackFunction() override {
     // Ensure we call the destructor so we release any memory allocated in the
     // sets.
     for (auto &It : AllocationInfos)
@@ -8375,7 +8433,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
     AccessKind2Accesses.fill(nullptr);
   }
 
-  ~AAMemoryLocationImpl() {
+  ~AAMemoryLocationImpl() override {
     // The AccessSets are allocated via a BumpPtrAllocator, we call
     // the destructor manually.
     for (AccessSet *AS : AccessKind2Accesses)
@@ -8562,7 +8620,8 @@ protected:
   /// Mapping from *single* memory location kinds, e.g., LOCAL_MEM with the
   /// value of NO_LOCAL_MEM, to the accesses encountered for this memory kind.
   using AccessSet = SmallSet<AccessInfo, 2, AccessInfo>;
-  std::array<AccessSet *, llvm::CTLog2<VALID_STATE>()> AccessKind2Accesses;
+  std::array<AccessSet *, llvm::ConstantLog2<VALID_STATE>()>
+      AccessKind2Accesses;
 
   /// Categorize the pointer arguments of CB that might access memory in
   /// AccessedLoc and update the state and access map accordingly.
@@ -10703,7 +10762,7 @@ struct AAInterFnReachabilityFunction
     auto *NonConstThis = const_cast<AAInterFnReachabilityFunction *>(this);
 
     RQITy StackRQI(A, From, To, ExclusionSet, false);
-    typename RQITy::Reachable Result;
+    RQITy::Reachable Result;
     if (!NonConstThis->checkQueryCache(A, StackRQI, Result))
       return NonConstThis->isReachableImpl(A, StackRQI,
                                            /*IsTemporaryRQI=*/true);
@@ -13404,7 +13463,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
       return indicatePessimisticFixpoint();
 
     if (BinSize == 0) {
-      auto NewAllocationSize = std::optional<TypeSize>(TypeSize(0, false));
+      auto NewAllocationSize = std::make_optional<TypeSize>(0, false);
       if (!changeAllocationSize(NewAllocationSize))
         return ChangeStatus::UNCHANGED;
       return ChangeStatus::CHANGED;
@@ -13422,8 +13481,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     if (SizeOfBin >= *AllocationSize)
       return indicatePessimisticFixpoint();
 
-    auto NewAllocationSize =
-        std::optional<TypeSize>(TypeSize(SizeOfBin * 8, false));
+    auto NewAllocationSize = std::make_optional<TypeSize>(SizeOfBin * 8, false);
 
     if (!changeAllocationSize(NewAllocationSize))
       return ChangeStatus::UNCHANGED;

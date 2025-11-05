@@ -1,4 +1,4 @@
-//===--- MoveConstructorInitCheck.h - clang-tidy-----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::performance {
 /// initializing a member or base class through a copy constructor instead of a
 /// move constructor.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/move-constructor-init.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/move-constructor-init.html
 class MoveConstructorInitCheck : public ClangTidyCheck {
 public:
   MoveConstructorInitCheck(StringRef Name, ClangTidyContext *Context);

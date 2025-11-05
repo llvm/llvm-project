@@ -57,6 +57,11 @@
 
 #define DEBUG_TYPE "hexagon-vc"
 
+// This is a const that represents default HVX VTCM page size.
+// It is boot time configurable, so we probably want an API to
+// read it, but for now assume 128KB
+#define DEFAULT_HVX_VTCM_PAGE_SIZE 131072
+
 using namespace llvm;
 
 namespace {
@@ -300,7 +305,6 @@ private:
     const_iterator end() const { return Blocks.end(); }
   };
 
-  Align getAlignFromValue(const Value *V) const;
   std::optional<AddrInfo> getAddrInfo(Instruction &In) const;
   bool isHvx(const AddrInfo &AI) const;
   // This function is only used for assertions at the moment.
@@ -364,7 +368,7 @@ private:
   const HexagonVectorCombine &HVC;
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   OS << "Inst: " << AI.Inst << "  " << *AI.Inst << '\n';
   OS << "Addr: " << *AI.Addr << '\n';
@@ -375,7 +379,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   OS << "IsLoad:" << (MG.IsLoad ? "yes" : "no");
   OS << ", IsHvx:" << (MG.IsHvx ? "yes" : "no") << '\n';
@@ -394,7 +398,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS,
                         const AlignVectors::ByteSpan::Block &B) {
   OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] ";
@@ -408,7 +412,7 @@ raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
   OS << "ByteSpan[size=" << BS.size() << ", extent=" << BS.extent() << '\n';
   for (const AlignVectors::ByteSpan::Block &B : BS)
@@ -419,6 +423,18 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
 
 class HvxIdioms {
 public:
+  enum DstQualifier {
+    Undefined = 0,
+    Arithmetic,
+    LdSt,
+    LLVM_Gather,
+    LLVM_Scatter,
+    HEX_Gather_Scatter,
+    HEX_Gather,
+    HEX_Scatter,
+    Call
+  };
+
   HvxIdioms(const HexagonVectorCombine &HVC_) : HVC(HVC_) {
     auto *Int32Ty = HVC.getIntTy(32);
     HvxI32Ty = HVC.getHvxTy(Int32Ty, /*Pair=*/false);
@@ -474,6 +490,11 @@ private:
   auto createMulLong(IRBuilderBase &Builder, ArrayRef<Value *> WordX,
                      Signedness SgnX, ArrayRef<Value *> WordY,
                      Signedness SgnY) const -> SmallVector<Value *>;
+  // Vector manipulations for Ripple
+  bool matchScatter(Instruction &In) const;
+  bool matchGather(Instruction &In) const;
+  Value *processVScatter(Instruction &In) const;
+  Value *processVGather(Instruction &In) const;
 
   VectorType *HvxI32Ty;
   VectorType *HvxP32Ty;
@@ -612,12 +633,6 @@ auto AlignVectors::ByteSpan::values() const -> SmallVector<Value *, 8> {
   return Values;
 }
 
-auto AlignVectors::getAlignFromValue(const Value *V) const -> Align {
-  const auto *C = dyn_cast<ConstantInt>(V);
-  assert(C && "Alignment must be a compile-time constant integer");
-  return C->getAlignValue();
-}
-
 auto AlignVectors::getAddrInfo(Instruction &In) const
     -> std::optional<AddrInfo> {
   if (auto *L = isCandidate<LoadInst>(&In))
@@ -631,11 +646,11 @@ auto AlignVectors::getAddrInfo(Instruction &In) const
     switch (ID) {
     case Intrinsic::masked_load:
       return AddrInfo(HVC, II, II->getArgOperand(0), II->getType(),
-                      getAlignFromValue(II->getArgOperand(1)));
+                      II->getParamAlign(0).valueOrOne());
     case Intrinsic::masked_store:
       return AddrInfo(HVC, II, II->getArgOperand(1),
                       II->getArgOperand(0)->getType(),
-                      getAlignFromValue(II->getArgOperand(2)));
+                      II->getParamAlign(1).valueOrOne());
     }
   }
   return std::nullopt;
@@ -660,9 +675,9 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
   if (auto *II = dyn_cast<IntrinsicInst>(Val)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::masked_load:
-      return II->getArgOperand(2);
+      return II->getArgOperand(1);
     case Intrinsic::masked_store:
-      return II->getArgOperand(3);
+      return II->getArgOperand(2);
     }
   }
 
@@ -675,7 +690,7 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
 auto AlignVectors::getPassThrough(Value *Val) const -> Value * {
   if (auto *II = dyn_cast<IntrinsicInst>(Val)) {
     if (II->getIntrinsicID() == Intrinsic::masked_load)
-      return II->getArgOperand(3);
+      return II->getArgOperand(2);
   }
   return UndefValue::get(getPayload(Val)->getType());
 }
@@ -1552,7 +1567,7 @@ auto AlignVectors::isSectorTy(Type *Ty) const -> bool {
 }
 
 auto AlignVectors::run() -> bool {
-  LLVM_DEBUG(dbgs() << "Running HVC::AlignVectors on " << HVC.F.getName()
+  LLVM_DEBUG(dbgs() << "\nRunning HVC::AlignVectors on " << HVC.F.getName()
                     << '\n');
   if (!createAddressGroups())
     return false;
@@ -1677,9 +1692,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return m_CombineOr(m_LShr(V, S), m_AShr(V, S));
   };
 
-  const APInt *Qn = nullptr;
-  if (Value * T; match(Exp, m_Shr(m_Value(T), m_APInt(Qn)))) {
-    Op.Frac = Qn->getZExtValue();
+  uint64_t Qn = 0;
+  if (Value *T; match(Exp, m_Shr(m_Value(T), m_ConstantInt(Qn)))) {
+    Op.Frac = Qn;
     Exp = T;
   } else {
     Op.Frac = 0;
@@ -1689,9 +1704,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return std::nullopt;
 
   // Check if there is rounding added.
-  const APInt *C = nullptr;
-  if (Value * T; Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_APInt(C)))) {
-    uint64_t CV = C->getZExtValue();
+  uint64_t CV;
+  if (Value *T;
+      Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_ConstantInt(CV)))) {
     if (CV != 0 && !isPowerOf2_64(CV))
       return std::nullopt;
     if (CV != 0)
@@ -1802,6 +1817,846 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
                    ? Builder.CreateSExt(Cat, VecTy, "sxt")
                    : Builder.CreateZExt(Cat, VecTy, "zxt");
   return Ext;
+}
+
+inline bool HvxIdioms::matchScatter(Instruction &In) const {
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(&In);
+  if (!II)
+    return false;
+  return (II->getIntrinsicID() == Intrinsic::masked_scatter);
+}
+
+inline bool HvxIdioms::matchGather(Instruction &In) const {
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(&In);
+  if (!II)
+    return false;
+  return (II->getIntrinsicID() == Intrinsic::masked_gather);
+}
+
+Instruction *locateDestination(Instruction *In, HvxIdioms::DstQualifier &Qual);
+
+// Binary instructions we want to handle as users of gather/scatter.
+inline bool isArithmetic(unsigned Opc) {
+  switch (Opc) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::AShr:
+  case Instruction::LShr:
+  case Instruction::Shl:
+  case Instruction::UDiv:
+    return true;
+  }
+  return false;
+}
+
+// TODO: Maybe use MemoryLocation for this. See getLocOrNone above.
+inline Value *getPointer(Value *Ptr) {
+  assert(Ptr && "Unable to extract pointer");
+  if (isa<AllocaInst>(Ptr) || isa<Argument>(Ptr) || isa<GlobalValue>(Ptr))
+    return Ptr;
+  if (isa<LoadInst>(Ptr) || isa<StoreInst>(Ptr))
+    return getLoadStorePointerOperand(Ptr);
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr)) {
+    if (II->getIntrinsicID() == Intrinsic::masked_store)
+      return II->getOperand(1);
+  }
+  return nullptr;
+}
+
+static Instruction *selectDestination(Instruction *In,
+                                      HvxIdioms::DstQualifier &Qual) {
+  Instruction *Destination = nullptr;
+  if (!In)
+    return Destination;
+  if (isa<StoreInst>(In)) {
+    Destination = In;
+    Qual = HvxIdioms::LdSt;
+  } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(In)) {
+    if (II->getIntrinsicID() == Intrinsic::masked_gather) {
+      Destination = In;
+      Qual = HvxIdioms::LLVM_Gather;
+    } else if (II->getIntrinsicID() == Intrinsic::masked_scatter) {
+      Destination = In;
+      Qual = HvxIdioms::LLVM_Scatter;
+    } else if (II->getIntrinsicID() == Intrinsic::masked_store) {
+      Destination = In;
+      Qual = HvxIdioms::LdSt;
+    } else if (II->getIntrinsicID() ==
+               Intrinsic::hexagon_V6_vgather_vscattermh) {
+      Destination = In;
+      Qual = HvxIdioms::HEX_Gather_Scatter;
+    } else if (II->getIntrinsicID() == Intrinsic::hexagon_V6_vscattermh_128B) {
+      Destination = In;
+      Qual = HvxIdioms::HEX_Scatter;
+    } else if (II->getIntrinsicID() == Intrinsic::hexagon_V6_vgathermh_128B) {
+      Destination = In;
+      Qual = HvxIdioms::HEX_Gather;
+    }
+  } else if (isa<ZExtInst>(In)) {
+    return locateDestination(In, Qual);
+  } else if (isa<CastInst>(In)) {
+    return locateDestination(In, Qual);
+  } else if (isa<CallInst>(In)) {
+    Destination = In;
+    Qual = HvxIdioms::Call;
+  } else if (isa<GetElementPtrInst>(In)) {
+    return locateDestination(In, Qual);
+  } else if (isArithmetic(In->getOpcode())) {
+    Destination = In;
+    Qual = HvxIdioms::Arithmetic;
+  } else {
+    LLVM_DEBUG(dbgs() << "Unhandled destination : " << *In << "\n");
+  }
+  return Destination;
+}
+
+// This method attempts to find destination (user) for a given intrinsic.
+// Given that these are produced only by Ripple, the number of options is
+// limited. Simplest case is explicit store which in fact is redundant (since
+// HVX gater creates its own store during packetization). Nevertheless we need
+// to figure address where we storing. Other cases are more complicated, but
+// still few.
+Instruction *locateDestination(Instruction *In, HvxIdioms::DstQualifier &Qual) {
+  Instruction *Destination = nullptr;
+  if (!In)
+    return Destination;
+  // Get all possible destinations
+  SmallVector<Instruction *> Users;
+  // Iterate over the uses of the instruction
+  for (auto &U : In->uses()) {
+    if (auto *UI = dyn_cast<Instruction>(U.getUser())) {
+      Destination = selectDestination(UI, Qual);
+      if (Destination)
+        Users.push_back(Destination);
+    }
+  }
+  // Now see which of the users (if any) is a memory destination.
+  for (auto *I : Users)
+    if (getPointer(I))
+      return I;
+  return Destination;
+}
+
+// The two intrinsics we handle here have GEP in a different position.
+inline GetElementPtrInst *locateGepFromIntrinsic(Instruction *In) {
+  assert(In && "Bad instruction");
+  IntrinsicInst *IIn = dyn_cast<IntrinsicInst>(In);
+  assert((IIn && (IIn->getIntrinsicID() == Intrinsic::masked_gather ||
+                  IIn->getIntrinsicID() == Intrinsic::masked_scatter)) &&
+         "Not a gather Intrinsic");
+  GetElementPtrInst *GEPIndex = nullptr;
+  if (IIn->getIntrinsicID() == Intrinsic::masked_gather)
+    GEPIndex = dyn_cast<GetElementPtrInst>(IIn->getOperand(0));
+  else
+    GEPIndex = dyn_cast<GetElementPtrInst>(IIn->getOperand(1));
+  return GEPIndex;
+}
+
+// Given the intrinsic find its GEP argument and extract base address it uses.
+// The method relies on the way how Ripple typically forms the GEP for
+// scatter/gather.
+static Value *locateAddressFromIntrinsic(Instruction *In) {
+  GetElementPtrInst *GEPIndex = locateGepFromIntrinsic(In);
+  if (!GEPIndex) {
+    LLVM_DEBUG(dbgs() << "  No GEP in intrinsic\n");
+    return nullptr;
+  }
+  Value *BaseAddress = GEPIndex->getPointerOperand();
+  auto *IndexLoad = dyn_cast<LoadInst>(BaseAddress);
+  if (IndexLoad)
+    return IndexLoad;
+
+  auto *IndexZEx = dyn_cast<ZExtInst>(BaseAddress);
+  if (IndexZEx) {
+    IndexLoad = dyn_cast<LoadInst>(IndexZEx->getOperand(0));
+    if (IndexLoad)
+      return IndexLoad;
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(IndexZEx->getOperand(0));
+    if (II && II->getIntrinsicID() == Intrinsic::masked_gather)
+      return locateAddressFromIntrinsic(II);
+  }
+  auto *BaseShuffle = dyn_cast<ShuffleVectorInst>(BaseAddress);
+  if (BaseShuffle) {
+    IndexLoad = dyn_cast<LoadInst>(BaseShuffle->getOperand(0));
+    if (IndexLoad)
+      return IndexLoad;
+    auto *IE = dyn_cast<InsertElementInst>(BaseShuffle->getOperand(0));
+    if (IE) {
+      auto *Src = IE->getOperand(1);
+      IndexLoad = dyn_cast<LoadInst>(Src);
+      if (IndexLoad)
+        return IndexLoad;
+      auto *Alloca = dyn_cast<AllocaInst>(Src);
+      if (Alloca)
+        return Alloca;
+      if (isa<Argument>(Src)) {
+        return Src;
+      }
+      if (isa<GlobalValue>(Src)) {
+        return Src;
+      }
+    }
+  }
+  LLVM_DEBUG(dbgs() << "  Unable to locate Address from intrinsic\n");
+  return nullptr;
+}
+
+static Type *getIndexType(Value *In) {
+  if (!In)
+    return nullptr;
+
+  if (isa<LoadInst>(In) || isa<StoreInst>(In))
+    return getLoadStoreType(In);
+
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(In)) {
+    if (II->getIntrinsicID() == Intrinsic::masked_load)
+      return II->getType();
+    if (II->getIntrinsicID() == Intrinsic::masked_store)
+      return II->getOperand(0)->getType();
+  }
+  return In->getType();
+}
+
+static Value *locateIndexesFromGEP(Value *In) {
+  if (!In)
+    return nullptr;
+  if (isa<LoadInst>(In))
+    return In;
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(In)) {
+    if (II->getIntrinsicID() == Intrinsic::masked_load)
+      return In;
+    if (II->getIntrinsicID() == Intrinsic::masked_gather)
+      return In;
+  }
+  if (auto *IndexZEx = dyn_cast<ZExtInst>(In))
+    return locateIndexesFromGEP(IndexZEx->getOperand(0));
+  if (auto *IndexSEx = dyn_cast<SExtInst>(In))
+    return locateIndexesFromGEP(IndexSEx->getOperand(0));
+  if (auto *BaseShuffle = dyn_cast<ShuffleVectorInst>(In))
+    return locateIndexesFromGEP(BaseShuffle->getOperand(0));
+  if (auto *IE = dyn_cast<InsertElementInst>(In))
+    return locateIndexesFromGEP(IE->getOperand(1));
+  if (auto *cstDataVector = dyn_cast<ConstantDataVector>(In))
+    return cstDataVector;
+  if (auto *GEPIndex = dyn_cast<GetElementPtrInst>(In))
+    return GEPIndex->getOperand(0);
+  return nullptr;
+}
+
+// Given the intrinsic find its GEP argument and extract offsetts from the base
+// address it uses.
+static Value *locateIndexesFromIntrinsic(Instruction *In) {
+  GetElementPtrInst *GEPIndex = locateGepFromIntrinsic(In);
+  if (!GEPIndex) {
+    LLVM_DEBUG(dbgs() << "  No GEP in intrinsic\n");
+    return nullptr;
+  }
+  Value *Indexes = GEPIndex->getOperand(1);
+  if (auto *IndexLoad = locateIndexesFromGEP(Indexes))
+    return IndexLoad;
+
+  LLVM_DEBUG(dbgs() << "  Unable to locate Index from intrinsic\n");
+  return nullptr;
+}
+
+// Because of aukward definition of many Hex intrinsics we often have to
+// reinterprete HVX native <64 x i16> as <32 x i32> which in practice is a NOP
+// for all use cases, so this only exist to make IR builder happy.
+inline Value *getReinterpretiveCast_i16_to_i32(const HexagonVectorCombine &HVC,
+                                               IRBuilderBase &Builder,
+                                               LLVMContext &Ctx, Value *I) {
+  assert(I && "Unable to reinterprete cast");
+  Type *NT = HVC.getHvxTy(HVC.getIntTy(32), false);
+  std::vector<unsigned> shuffleMask;
+  for (unsigned i = 0; i < 64; ++i)
+    shuffleMask.push_back(i);
+  Constant *Mask = llvm::ConstantDataVector::get(Ctx, shuffleMask);
+  Value *CastShuffle =
+      Builder.CreateShuffleVector(I, I, Mask, "identity_shuffle");
+  return Builder.CreateBitCast(CastShuffle, NT, "cst64_i16_to_32_i32");
+}
+
+// Recast <128 x i8> as <32 x i32>
+inline Value *getReinterpretiveCast_i8_to_i32(const HexagonVectorCombine &HVC,
+                                              IRBuilderBase &Builder,
+                                              LLVMContext &Ctx, Value *I) {
+  assert(I && "Unable to reinterprete cast");
+  Type *NT = HVC.getHvxTy(HVC.getIntTy(32), false);
+  std::vector<unsigned> shuffleMask;
+  for (unsigned i = 0; i < 128; ++i)
+    shuffleMask.push_back(i);
+  Constant *Mask = llvm::ConstantDataVector::get(Ctx, shuffleMask);
+  Value *CastShuffle =
+      Builder.CreateShuffleVector(I, I, Mask, "identity_shuffle");
+  return Builder.CreateBitCast(CastShuffle, NT, "cst128_i8_to_32_i32");
+}
+
+// Create <32 x i32> mask reinterpreted as <128 x i1> with a given pattern
+inline Value *get_i32_Mask(const HexagonVectorCombine &HVC,
+                           IRBuilderBase &Builder, LLVMContext &Ctx,
+                           unsigned int pattern) {
+  std::vector<unsigned int> byteMask;
+  for (unsigned i = 0; i < 32; ++i)
+    byteMask.push_back(pattern);
+
+  return Builder.CreateIntrinsic(
+      HVC.getBoolTy(128), HVC.HST.getIntrinsicId(Hexagon::V6_vandvrt),
+      {llvm::ConstantDataVector::get(Ctx, byteMask), HVC.getConstInt(~0)},
+      nullptr);
+}
+
+Value *HvxIdioms::processVScatter(Instruction &In) const {
+  auto *InpTy = dyn_cast<VectorType>(In.getOperand(0)->getType());
+  assert(InpTy && "Cannot handle no vector type for llvm.scatter/gather");
+  unsigned InpSize = HVC.getSizeOf(InpTy);
+  auto *F = In.getFunction();
+  LLVMContext &Ctx = F->getContext();
+  auto *ElemTy = dyn_cast<IntegerType>(InpTy->getElementType());
+  assert(ElemTy && "llvm.scatter needs integer type argument");
+  unsigned ElemWidth = HVC.DL.getTypeAllocSize(ElemTy);
+  LLVM_DEBUG({
+    unsigned Elements = HVC.length(InpTy);
+    dbgs() << "\n[Process scatter](" << In << ")\n" << *In.getParent() << "\n";
+    dbgs() << "  Input type(" << *InpTy << ") elements(" << Elements
+           << ") VecLen(" << InpSize << ") type(" << *ElemTy << ") ElemWidth("
+           << ElemWidth << ")\n";
+  });
+
+  IRBuilder Builder(In.getParent(), In.getIterator(),
+                    InstSimplifyFolder(HVC.DL));
+
+  auto *ValueToScatter = In.getOperand(0);
+  LLVM_DEBUG(dbgs() << "  ValueToScatter   : " << *ValueToScatter << "\n");
+
+  if (HVC.HST.getVectorLength() != InpSize) {
+    LLVM_DEBUG(dbgs() << "Unhandled vector size(" << InpSize
+                      << ") for vscatter\n");
+    return nullptr;
+  }
+
+  // Base address of indexes.
+  auto *IndexLoad = locateAddressFromIntrinsic(&In);
+  if (!IndexLoad)
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "  IndexLoad        : " << *IndexLoad << "\n");
+
+  // Address of destination. Must be in VTCM.
+  auto *Ptr = getPointer(IndexLoad);
+  if (!Ptr)
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "  Ptr              : " << *Ptr << "\n");
+  // Indexes/offsets
+  auto *Indexes = locateIndexesFromIntrinsic(&In);
+  if (!Indexes)
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "  Indexes          : " << *Indexes << "\n");
+  Value *CastedDst = Builder.CreateBitOrPointerCast(Ptr, Type::getInt32Ty(Ctx),
+                                                    "cst_ptr_to_i32");
+  LLVM_DEBUG(dbgs() << "  CastedDst        : " << *CastedDst << "\n");
+  // Adjust Indexes
+  auto *cstDataVector = dyn_cast<ConstantDataVector>(Indexes);
+  Value *CastIndex = nullptr;
+  if (cstDataVector) {
+    // Our indexes are represented as a constant. We need it in a reg.
+    AllocaInst *IndexesAlloca =
+        Builder.CreateAlloca(HVC.getHvxTy(HVC.getIntTy(32), false));
+    [[maybe_unused]] auto *StoreIndexes =
+        Builder.CreateStore(cstDataVector, IndexesAlloca);
+    LLVM_DEBUG(dbgs() << "  StoreIndexes     : " << *StoreIndexes << "\n");
+    CastIndex = Builder.CreateLoad(IndexesAlloca->getAllocatedType(),
+                                   IndexesAlloca, "reload_index");
+  } else {
+    if (ElemWidth == 2)
+      CastIndex = getReinterpretiveCast_i16_to_i32(HVC, Builder, Ctx, Indexes);
+    else
+      CastIndex = Indexes;
+  }
+  LLVM_DEBUG(dbgs() << "  Cast index       : " << *CastIndex << ")\n");
+
+  if (ElemWidth == 1) {
+    // v128i8 There is no native instruction for this.
+    // Do this as two Hi/Lo gathers with masking.
+    Type *NT = HVC.getHvxTy(HVC.getIntTy(32), false);
+    // Extend indexes. We assume that indexes are in 128i8 format - need to
+    // expand them to Hi/Lo 64i16
+    Value *CastIndexes = Builder.CreateBitCast(CastIndex, NT, "cast_to_32i32");
+    auto V6_vunpack = HVC.HST.getIntrinsicId(Hexagon::V6_vunpackub);
+    auto *UnpackedIndexes = Builder.CreateIntrinsic(
+        HVC.getHvxTy(HVC.getIntTy(32), true), V6_vunpack, CastIndexes, nullptr);
+    LLVM_DEBUG(dbgs() << "  UnpackedIndexes  : " << *UnpackedIndexes << ")\n");
+
+    auto V6_hi = HVC.HST.getIntrinsicId(Hexagon::V6_hi);
+    auto V6_lo = HVC.HST.getIntrinsicId(Hexagon::V6_lo);
+    [[maybe_unused]] Value *IndexHi =
+        HVC.createHvxIntrinsic(Builder, V6_hi, NT, UnpackedIndexes);
+    [[maybe_unused]] Value *IndexLo =
+        HVC.createHvxIntrinsic(Builder, V6_lo, NT, UnpackedIndexes);
+    LLVM_DEBUG(dbgs() << "  UnpackedIndHi    : " << *IndexHi << ")\n");
+    LLVM_DEBUG(dbgs() << "  UnpackedIndLo    : " << *IndexLo << ")\n");
+    // Now unpack values to scatter
+    Value *CastSrc =
+        getReinterpretiveCast_i8_to_i32(HVC, Builder, Ctx, ValueToScatter);
+    LLVM_DEBUG(dbgs() << "  CastSrc          : " << *CastSrc << ")\n");
+    auto *UnpackedValueToScatter = Builder.CreateIntrinsic(
+        HVC.getHvxTy(HVC.getIntTy(32), true), V6_vunpack, CastSrc, nullptr);
+    LLVM_DEBUG(dbgs() << "  UnpackedValToScat: " << *UnpackedValueToScatter
+                      << ")\n");
+
+    [[maybe_unused]] Value *UVSHi =
+        HVC.createHvxIntrinsic(Builder, V6_hi, NT, UnpackedValueToScatter);
+    [[maybe_unused]] Value *UVSLo =
+        HVC.createHvxIntrinsic(Builder, V6_lo, NT, UnpackedValueToScatter);
+    LLVM_DEBUG(dbgs() << "  UVSHi            : " << *UVSHi << ")\n");
+    LLVM_DEBUG(dbgs() << "  UVSLo            : " << *UVSLo << ")\n");
+
+    // Create the mask for individual bytes
+    auto *QByteMask = get_i32_Mask(HVC, Builder, Ctx, 0x00ff00ff);
+    LLVM_DEBUG(dbgs() << "  QByteMask        : " << *QByteMask << "\n");
+    [[maybe_unused]] auto *ResHi = Builder.CreateIntrinsic(
+        Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vscattermhq_128B,
+        {QByteMask, CastedDst, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE),
+         IndexHi, UVSHi},
+        nullptr);
+    LLVM_DEBUG(dbgs() << "  ResHi            : " << *ResHi << ")\n");
+    return Builder.CreateIntrinsic(
+        Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vscattermhq_128B,
+        {QByteMask, CastedDst, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE),
+         IndexLo, UVSLo},
+        nullptr);
+  } else if (ElemWidth == 2) {
+    Value *CastSrc =
+        getReinterpretiveCast_i16_to_i32(HVC, Builder, Ctx, ValueToScatter);
+    LLVM_DEBUG(dbgs() << "  CastSrc        : " << *CastSrc << ")\n");
+    return Builder.CreateIntrinsic(
+        Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vscattermh_128B,
+        {CastedDst, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE), CastIndex,
+         CastSrc},
+        nullptr);
+  } else if (ElemWidth == 4) {
+    return Builder.CreateIntrinsic(
+        Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vscattermw_128B,
+        {CastedDst, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE), CastIndex,
+         ValueToScatter},
+        nullptr);
+  } else {
+    LLVM_DEBUG(dbgs() << "Unhandled element type for vscatter\n");
+    return nullptr;
+  }
+}
+
+Value *HvxIdioms::processVGather(Instruction &In) const {
+  [[maybe_unused]] auto *InpTy =
+      dyn_cast<VectorType>(In.getOperand(0)->getType());
+  assert(InpTy && "Cannot handle no vector type for llvm.gather");
+  [[maybe_unused]] auto *ElemTy =
+      dyn_cast<PointerType>(InpTy->getElementType());
+  assert(ElemTy && "llvm.gather needs vector of ptr argument");
+  auto *F = In.getFunction();
+  LLVMContext &Ctx = F->getContext();
+  LLVM_DEBUG(dbgs() << "\n[Process gather](" << In << ")\n"
+                    << *In.getParent() << "\n");
+  LLVM_DEBUG(dbgs() << "  Input type(" << *InpTy << ") elements("
+                    << HVC.length(InpTy) << ") VecLen(" << HVC.getSizeOf(InpTy)
+                    << ") type(" << *ElemTy << ") Access alignment("
+                    << *In.getOperand(1) << ") AddressSpace("
+                    << ElemTy->getAddressSpace() << ")\n");
+
+  // TODO: Handle masking of elements.
+  assert(dyn_cast<VectorType>(In.getOperand(2)->getType()) &&
+         "llvm.gather needs vector for mask");
+  IRBuilder Builder(In.getParent(), In.getIterator(),
+                    InstSimplifyFolder(HVC.DL));
+
+  // See who is using the result. The difference between LLVM and HVX vgather
+  // Intrinsic makes it impossible to handle all cases with temp storage. Alloca
+  // in VTCM is not yet supported, so for now we just bail out for those cases.
+  HvxIdioms::DstQualifier Qual = HvxIdioms::Undefined;
+  Instruction *Dst = locateDestination(&In, Qual);
+  if (!Dst) {
+    LLVM_DEBUG(dbgs() << "  Unable to locate vgather destination\n");
+    return nullptr;
+  }
+  LLVM_DEBUG(dbgs() << "  Destination    : " << *Dst << " Qual(" << Qual
+                    << ")\n");
+
+  // Address of destination. Must be in VTCM.
+  auto *Ptr = getPointer(Dst);
+  if (!Ptr) {
+    LLVM_DEBUG(dbgs() << "Could not locate vgather destination ptr\n");
+    return nullptr;
+  }
+
+  // Result type. Assume it is a vector type.
+  auto *DstType = cast<VectorType>(getIndexType(Dst));
+  assert(DstType && "Cannot handle non vector dst type for llvm.gather");
+
+  // Base address for sources to be loaded
+  auto *IndexLoad = locateAddressFromIntrinsic(&In);
+  if (!IndexLoad)
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "  IndexLoad      : " << *IndexLoad << "\n");
+
+  // Gather indexes/offsets
+  auto *Indexes = locateIndexesFromIntrinsic(&In);
+  if (!Indexes)
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "  Indexes        : " << *Indexes << "\n");
+
+  Instruction *Gather = nullptr;
+  Type *NT = HVC.getHvxTy(HVC.getIntTy(32), false);
+  if (Qual == HvxIdioms::LdSt || Qual == HvxIdioms::Arithmetic) {
+    // We fully assume the address space is in VTCM. We also assume that all
+    // pointers in Operand(0) have the same base(!).
+    // This is the most basic case of all the above.
+    unsigned OutputSize = HVC.getSizeOf(DstType);
+    auto *DstElemTy = cast<IntegerType>(DstType->getElementType());
+    unsigned ElemWidth = HVC.DL.getTypeAllocSize(DstElemTy);
+    LLVM_DEBUG(dbgs() << "  Buffer type    : " << *Ptr->getType()
+                      << "  Address space ("
+                      << Ptr->getType()->getPointerAddressSpace() << ")\n"
+                      << "  Result type    : " << *DstType
+                      << "\n  Size in bytes  : " << OutputSize
+                      << " element type(" << *DstElemTy
+                      << ")\n  ElemWidth      : " << ElemWidth << " bytes\n");
+
+    auto *IndexType = cast<VectorType>(getIndexType(Indexes));
+    assert(IndexType && "Cannot handle non vector index type for llvm.gather");
+    unsigned IndexWidth = HVC.DL.getTypeAllocSize(IndexType->getElementType());
+    LLVM_DEBUG(dbgs() << "  IndexWidth(" << IndexWidth << ")\n");
+
+    // Intrinsic takes i32 instead of pointer so cast.
+    Value *CastedPtr = Builder.CreateBitOrPointerCast(
+        IndexLoad, Type::getInt32Ty(Ctx), "cst_ptr_to_i32");
+    // [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, ...]
+    // int_hexagon_V6_vgathermh       [... , llvm_v16i32_ty]
+    // int_hexagon_V6_vgathermh_128B  [... , llvm_v32i32_ty]
+    // int_hexagon_V6_vgathermhw      [... , llvm_v32i32_ty]
+    // int_hexagon_V6_vgathermhw_128B [... , llvm_v64i32_ty]
+    // int_hexagon_V6_vgathermw       [... , llvm_v16i32_ty]
+    // int_hexagon_V6_vgathermw_128B  [... , llvm_v32i32_ty]
+    if (HVC.HST.getVectorLength() == OutputSize) {
+      if (ElemWidth == 1) {
+        // v128i8 There is no native instruction for this.
+        // Do this as two Hi/Lo gathers with masking.
+        // Unpack indexes. We assume that indexes are in 128i8 format - need to
+        // expand them to Hi/Lo 64i16
+        Value *CastIndexes =
+            Builder.CreateBitCast(Indexes, NT, "cast_to_32i32");
+        auto V6_vunpack = HVC.HST.getIntrinsicId(Hexagon::V6_vunpackub);
+        auto *UnpackedIndexes =
+            Builder.CreateIntrinsic(HVC.getHvxTy(HVC.getIntTy(32), true),
+                                    V6_vunpack, CastIndexes, nullptr);
+        LLVM_DEBUG(dbgs() << "  UnpackedIndexes : " << *UnpackedIndexes
+                          << ")\n");
+
+        auto V6_hi = HVC.HST.getIntrinsicId(Hexagon::V6_hi);
+        auto V6_lo = HVC.HST.getIntrinsicId(Hexagon::V6_lo);
+        [[maybe_unused]] Value *IndexHi =
+            HVC.createHvxIntrinsic(Builder, V6_hi, NT, UnpackedIndexes);
+        [[maybe_unused]] Value *IndexLo =
+            HVC.createHvxIntrinsic(Builder, V6_lo, NT, UnpackedIndexes);
+        LLVM_DEBUG(dbgs() << "  UnpackedIndHi   : " << *IndexHi << ")\n");
+        LLVM_DEBUG(dbgs() << "  UnpackedIndLo   : " << *IndexLo << ")\n");
+        // Create the mask for individual bytes
+        auto *QByteMask = get_i32_Mask(HVC, Builder, Ctx, 0x00ff00ff);
+        LLVM_DEBUG(dbgs() << "  QByteMask       : " << *QByteMask << "\n");
+        // We use our destination allocation as a temp storage
+        // This is unlikely to work properly for masked gather.
+        auto V6_vgather = HVC.HST.getIntrinsicId(Hexagon::V6_vgathermhq);
+        [[maybe_unused]] auto GatherHi = Builder.CreateIntrinsic(
+            Type::getVoidTy(Ctx), V6_vgather,
+            {Ptr, QByteMask, CastedPtr,
+             HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE), IndexHi},
+            nullptr);
+        LLVM_DEBUG(dbgs() << "  GatherHi        : " << *GatherHi << ")\n");
+        // Rematerialize the result
+        [[maybe_unused]] Value *LoadedResultHi = Builder.CreateLoad(
+            HVC.getHvxTy(HVC.getIntTy(32), false), Ptr, "temp_result_hi");
+        LLVM_DEBUG(dbgs() << "  LoadedResultHi : " << *LoadedResultHi << "\n");
+        // Same for the low part. Here we use Gather to return non-NULL result
+        // from this function and continue to iterate. We also are deleting Dst
+        // store below.
+        Gather = Builder.CreateIntrinsic(
+            Type::getVoidTy(Ctx), V6_vgather,
+            {Ptr, QByteMask, CastedPtr,
+             HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE), IndexLo},
+            nullptr);
+        LLVM_DEBUG(dbgs() << "  GatherLo        : " << *Gather << ")\n");
+        Value *LoadedResultLo = Builder.CreateLoad(
+            HVC.getHvxTy(HVC.getIntTy(32), false), Ptr, "temp_result_lo");
+        LLVM_DEBUG(dbgs() << "  LoadedResultLo : " << *LoadedResultLo << "\n");
+        // Now we have properly sized bytes in every other position
+        // B b A a c a A b B c f F g G h H is presented as
+        // B . b . A . a . c . a . A . b . B . c . f . F . g . G . h . H
+        // Use vpack to gather them
+        auto V6_vpackeb = HVC.HST.getIntrinsicId(Hexagon::V6_vpackeb);
+        [[maybe_unused]] auto Res = Builder.CreateIntrinsic(
+            NT, V6_vpackeb, {LoadedResultHi, LoadedResultLo}, nullptr);
+        LLVM_DEBUG(dbgs() << "  ScaledRes      : " << *Res << "\n");
+        [[maybe_unused]] auto *StoreRes = Builder.CreateStore(Res, Ptr);
+        LLVM_DEBUG(dbgs() << "  StoreRes       : " << *StoreRes << "\n");
+      } else if (ElemWidth == 2) {
+        // v32i16
+        if (IndexWidth == 2) {
+          // Reinterprete 64i16 as 32i32. Only needed for syntactic IR match.
+          Value *CastIndex =
+              getReinterpretiveCast_i16_to_i32(HVC, Builder, Ctx, Indexes);
+          LLVM_DEBUG(dbgs() << "  Cast index: " << *CastIndex << ")\n");
+          // shift all i16 left by 1 to match short addressing mode instead of
+          // byte.
+          auto V6_vaslh = HVC.HST.getIntrinsicId(Hexagon::V6_vaslh);
+          Value *AdjustedIndex = HVC.createHvxIntrinsic(
+              Builder, V6_vaslh, NT, {CastIndex, HVC.getConstInt(1)});
+          LLVM_DEBUG(dbgs()
+                     << "  Shifted half index: " << *AdjustedIndex << ")\n");
+
+          auto V6_vgather = HVC.HST.getIntrinsicId(Hexagon::V6_vgathermh);
+          // The 3rd argument is the size of the region to gather from. Probably
+          // want to set it to max VTCM size.
+          Gather = Builder.CreateIntrinsic(
+              Type::getVoidTy(Ctx), V6_vgather,
+              {Ptr, CastedPtr, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE),
+               AdjustedIndex},
+              nullptr);
+          for (auto &U : Dst->uses()) {
+            if (auto *UI = dyn_cast<Instruction>(U.getUser()))
+              dbgs() << "    dst used by: " << *UI << "\n";
+          }
+          for (auto &U : In.uses()) {
+            if (auto *UI = dyn_cast<Instruction>(U.getUser()))
+              dbgs() << "    In used by : " << *UI << "\n";
+          }
+          // Create temp load from result in case the result is used by any
+          // other instruction.
+          Value *LoadedResult = Builder.CreateLoad(
+              HVC.getHvxTy(HVC.getIntTy(16), false), Ptr, "temp_result");
+          LLVM_DEBUG(dbgs() << "  LoadedResult   : " << *LoadedResult << "\n");
+          In.replaceAllUsesWith(LoadedResult);
+        } else {
+          dbgs() << "    Unhandled index type for vgather\n";
+          return nullptr;
+        }
+      } else if (ElemWidth == 4) {
+        if (IndexWidth == 4) {
+          // v32i32
+          auto V6_vaslh = HVC.HST.getIntrinsicId(Hexagon::V6_vaslh);
+          Value *AdjustedIndex = HVC.createHvxIntrinsic(
+              Builder, V6_vaslh, NT, {Indexes, HVC.getConstInt(2)});
+          LLVM_DEBUG(dbgs()
+                     << "  Shifted word index: " << *AdjustedIndex << ")\n");
+          Gather = Builder.CreateIntrinsic(
+              Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vgathermw_128B,
+              {Ptr, CastedPtr, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE),
+               AdjustedIndex},
+              nullptr);
+        } else {
+          LLVM_DEBUG(dbgs() << "    Unhandled index type for vgather\n");
+          return nullptr;
+        }
+      } else {
+        LLVM_DEBUG(dbgs() << "    Unhandled element type for vgather\n");
+        return nullptr;
+      }
+    } else if (HVC.HST.getVectorLength() == OutputSize * 2) {
+      // This is half of the reg width, duplicate low in high
+      LLVM_DEBUG(dbgs() << "    Unhandled half of register size\n");
+      return nullptr;
+    } else if (HVC.HST.getVectorLength() * 2 == OutputSize) {
+      LLVM_DEBUG(dbgs() << "    Unhandle twice the register size\n");
+      return nullptr;
+    }
+    // Erase the original intrinsic and store that consumes it.
+    // HVX will create a pseudo for gather that is expanded to gather + store
+    // during packetization.
+    Dst->eraseFromParent();
+  } else if (Qual == HvxIdioms::LLVM_Scatter) {
+    // Gather feeds directly into scatter.
+    LLVM_DEBUG({
+      auto *DstInpTy = cast<VectorType>(Dst->getOperand(1)->getType());
+      assert(DstInpTy && "Cannot handle no vector type for llvm.scatter");
+      unsigned DstInpSize = HVC.getSizeOf(DstInpTy);
+      unsigned DstElements = HVC.length(DstInpTy);
+      auto *DstElemTy = cast<PointerType>(DstInpTy->getElementType());
+      assert(DstElemTy && "llvm.scatter needs vector of ptr argument");
+      dbgs() << "  Gather feeds into scatter\n  Values to scatter : "
+             << *Dst->getOperand(0) << "\n";
+      dbgs() << "  Dst type(" << *DstInpTy << ") elements(" << DstElements
+             << ") VecLen(" << DstInpSize << ") type(" << *DstElemTy
+             << ") Access alignment(" << *Dst->getOperand(2) << ")\n";
+    });
+    // Address of source
+    auto *Src = getPointer(IndexLoad);
+    if (!Src)
+      return nullptr;
+    LLVM_DEBUG(dbgs() << "  Src            : " << *Src << "\n");
+
+    if (!isa<PointerType>(Src->getType())) {
+      LLVM_DEBUG(dbgs() << "    Source is not a pointer type...\n");
+      return nullptr;
+    }
+
+    Value *CastedSrc = Builder.CreateBitOrPointerCast(
+        Src, Type::getInt32Ty(Ctx), "cst_ptr_to_i32");
+    LLVM_DEBUG(dbgs() << "  CastedSrc: " << *CastedSrc << "\n");
+
+    auto *DstLoad = locateAddressFromIntrinsic(Dst);
+    if (!DstLoad) {
+      LLVM_DEBUG(dbgs() << "  Unable to locate DstLoad\n");
+      return nullptr;
+    }
+    LLVM_DEBUG(dbgs() << "  DstLoad  : " << *DstLoad << "\n");
+
+    Value *Ptr = getPointer(DstLoad);
+    if (!Ptr)
+      return nullptr;
+    LLVM_DEBUG(dbgs() << "  Ptr      : " << *Ptr << "\n");
+    Value *CastIndex =
+        getReinterpretiveCast_i16_to_i32(HVC, Builder, Ctx, IndexLoad);
+    LLVM_DEBUG(dbgs() << "  Cast index: " << *CastIndex << ")\n");
+    // Shift all i16 left by 1 to match short addressing mode instead of
+    // byte.
+    auto V6_vaslh = HVC.HST.getIntrinsicId(Hexagon::V6_vaslh);
+    Value *AdjustedIndex = HVC.createHvxIntrinsic(
+        Builder, V6_vaslh, NT, {CastIndex, HVC.getConstInt(1)});
+    LLVM_DEBUG(dbgs() << "  Shifted half index: " << *AdjustedIndex << ")\n");
+
+    return Builder.CreateIntrinsic(
+        Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vgathermh_128B,
+        {Ptr, CastedSrc, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE),
+         AdjustedIndex},
+        nullptr);
+  } else if (Qual == HvxIdioms::HEX_Gather_Scatter) {
+    // Gather feeds into previously inserted pseudo intrinsic.
+    // These could not be in the same packet, so we need to generate another
+    // pseudo that is expanded to .tmp + store V6_vgathermh_pseudo
+    // V6_vgathermh_pseudo (ins IntRegs:$_dst_, s4_0Imm:$Ii, IntRegs:$Rt,
+    // ModRegs:$Mu, HvxVR:$Vv)
+    if (isa<AllocaInst>(IndexLoad)) {
+      auto *cstDataVector = dyn_cast<ConstantDataVector>(Indexes);
+      if (cstDataVector) {
+        // Our indexes are represented as a constant. We need THEM in a reg.
+        // This most likely will not work properly since alloca gives us DDR
+        // stack location. This will be fixed once we teach compiler about VTCM.
+        AllocaInst *IndexesAlloca = Builder.CreateAlloca(NT);
+        [[maybe_unused]] auto *StoreIndexes =
+            Builder.CreateStore(cstDataVector, IndexesAlloca);
+        LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
+        Value *LoadedIndex = Builder.CreateLoad(
+            IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
+        AllocaInst *ResultAlloca = Builder.CreateAlloca(NT);
+        LLVM_DEBUG(dbgs() << "  ResultAlloca   : " << *ResultAlloca << "\n");
+
+        Value *CastedSrc = Builder.CreateBitOrPointerCast(
+            IndexLoad, Type::getInt32Ty(Ctx), "cst_ptr_to_i32");
+        LLVM_DEBUG(dbgs() << "  CastedSrc      : " << *CastedSrc << "\n");
+
+        Gather = Builder.CreateIntrinsic(
+            Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vgathermh_128B,
+            {ResultAlloca, CastedSrc,
+             HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE), LoadedIndex},
+            nullptr);
+        Value *LoadedResult = Builder.CreateLoad(
+            HVC.getHvxTy(HVC.getIntTy(16), false), ResultAlloca, "temp_result");
+        LLVM_DEBUG(dbgs() << "  LoadedResult   : " << *LoadedResult << "\n");
+        LLVM_DEBUG(dbgs() << "  Gather         : " << *Gather << "\n");
+        In.replaceAllUsesWith(LoadedResult);
+      }
+    } else {
+      // Address of source
+      auto *Src = getPointer(IndexLoad);
+      if (!Src)
+        return nullptr;
+      LLVM_DEBUG(dbgs() << "  Src      : " << *Src << "\n");
+
+      Value *CastedSrc = Builder.CreateBitOrPointerCast(
+          Src, Type::getInt32Ty(Ctx), "cst_ptr_to_i32");
+      LLVM_DEBUG(dbgs() << "  CastedSrc: " << *CastedSrc << "\n");
+
+      auto *DstLoad = locateAddressFromIntrinsic(Dst);
+      if (!DstLoad)
+        return nullptr;
+      LLVM_DEBUG(dbgs() << "  DstLoad  : " << *DstLoad << "\n");
+      auto *Ptr = getPointer(DstLoad);
+      if (!Ptr)
+        return nullptr;
+      LLVM_DEBUG(dbgs() << "  Ptr      : " << *Ptr << "\n");
+
+      Gather = Builder.CreateIntrinsic(
+          Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vgather_vscattermh,
+          {Ptr, CastedSrc, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE),
+           Indexes},
+          nullptr);
+    }
+    return Gather;
+  } else if (Qual == HvxIdioms::HEX_Scatter) {
+    // This is the case when result of a gather is used as an argument to
+    // Intrinsic::hexagon_V6_vscattermh_128B. Most likely we just inserted it
+    // ourselves. We have to create alloca, store to it, and replace all uses
+    // with that.
+    AllocaInst *ResultAlloca = Builder.CreateAlloca(NT);
+    Value *CastedSrc = Builder.CreateBitOrPointerCast(
+        IndexLoad, Type::getInt32Ty(Ctx), "cst_ptr_to_i32");
+    LLVM_DEBUG(dbgs() << "  CastedSrc      : " << *CastedSrc << "\n");
+    Value *CastIndex =
+        getReinterpretiveCast_i16_to_i32(HVC, Builder, Ctx, Indexes);
+    LLVM_DEBUG(dbgs() << "  Cast index     : " << *CastIndex << ")\n");
+
+    Gather = Builder.CreateIntrinsic(
+        Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vgathermh_128B,
+        {ResultAlloca, CastedSrc, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE),
+         CastIndex},
+        nullptr);
+    Value *LoadedResult = Builder.CreateLoad(
+        HVC.getHvxTy(HVC.getIntTy(16), false), ResultAlloca, "temp_result");
+    LLVM_DEBUG(dbgs() << "  LoadedResult   : " << *LoadedResult << "\n");
+    In.replaceAllUsesWith(LoadedResult);
+  } else if (Qual == HvxIdioms::HEX_Gather) {
+    // Gather feeds to another gather but already replaced with
+    // hexagon_V6_vgathermh_128B
+    if (isa<AllocaInst>(IndexLoad)) {
+      auto *cstDataVector = dyn_cast<ConstantDataVector>(Indexes);
+      if (cstDataVector) {
+        // Our indexes are represented as a constant. We need it in a reg.
+        AllocaInst *IndexesAlloca = Builder.CreateAlloca(NT);
+
+        [[maybe_unused]] auto *StoreIndexes =
+            Builder.CreateStore(cstDataVector, IndexesAlloca);
+        LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
+        Value *LoadedIndex = Builder.CreateLoad(
+            IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
+        AllocaInst *ResultAlloca = Builder.CreateAlloca(NT);
+        LLVM_DEBUG(dbgs() << "  ResultAlloca   : " << *ResultAlloca
+                          << "\n  AddressSpace: "
+                          << ResultAlloca->getAddressSpace() << "\n";);
+
+        Value *CastedSrc = Builder.CreateBitOrPointerCast(
+            IndexLoad, Type::getInt32Ty(Ctx), "cst_ptr_to_i32");
+        LLVM_DEBUG(dbgs() << "  CastedSrc      : " << *CastedSrc << "\n");
+
+        Gather = Builder.CreateIntrinsic(
+            Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vgathermh_128B,
+            {ResultAlloca, CastedSrc,
+             HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE), LoadedIndex},
+            nullptr);
+        Value *LoadedResult = Builder.CreateLoad(
+            HVC.getHvxTy(HVC.getIntTy(16), false), ResultAlloca, "temp_result");
+        LLVM_DEBUG(dbgs() << "  LoadedResult   : " << *LoadedResult << "\n");
+        LLVM_DEBUG(dbgs() << "  Gather         : " << *Gather << "\n");
+        In.replaceAllUsesWith(LoadedResult);
+      }
+    }
+  } else if (Qual == HvxIdioms::LLVM_Gather) {
+    // Gather feeds into another gather
+    errs() << " Underimplemented vgather to vgather sequence\n";
+    return nullptr;
+  } else
+    llvm_unreachable("Unhandled Qual enum");
+
+  return Gather;
 }
 
 auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
@@ -2144,6 +2999,26 @@ auto HvxIdioms::run() -> bool {
         RecursivelyDeleteTriviallyDeadInstructions(&*It, &HVC.TLI);
         It = StartOver ? B.rbegin()
                        : cast<Instruction>(New)->getReverseIterator();
+        Changed = true;
+      } else if (matchGather(*It)) {
+        Value *New = processVGather(*It);
+        if (!New)
+          continue;
+        LLVM_DEBUG(dbgs() << "  Gather : " << *New << "\n");
+        // We replace original intrinsic with a new pseudo call.
+        It->eraseFromParent();
+        It = cast<Instruction>(New)->getReverseIterator();
+        RecursivelyDeleteTriviallyDeadInstructions(&*It, &HVC.TLI);
+        Changed = true;
+      } else if (matchScatter(*It)) {
+        Value *New = processVScatter(*It);
+        if (!New)
+          continue;
+        LLVM_DEBUG(dbgs() << "  Scatter : " << *New << "\n");
+        // We replace original intrinsic with a new pseudo call.
+        It->eraseFromParent();
+        It = cast<Instruction>(New)->getReverseIterator();
+        RecursivelyDeleteTriviallyDeadInstructions(&*It, &HVC.TLI);
         Changed = true;
       }
     }

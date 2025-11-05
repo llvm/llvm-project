@@ -123,7 +123,7 @@ constexpr void testOne() {
   }
   {
     // Tests for ensuring forward declarations of uses_allocator_construction_args
-    // See https://github.com/llvm/llvm-project/issues/66714.
+    // See https://llvm.org/PR66714.
     {
       using NestedPairType = std::pair<int, std::pair<int, UsesAllocArgT>>;
       std::same_as<std::tuple<

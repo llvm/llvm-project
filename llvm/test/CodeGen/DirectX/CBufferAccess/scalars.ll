@@ -25,7 +25,7 @@
 ; CHECK: define void @f
 define void @f(ptr %dst) {
 entry:
-  %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 32, 0, 4, 8, 12, 14, 16, 24)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 32, 0, 4, 8, 12, 14, 16, 24)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 32, 0, 4, 8, 12, 14, 16, 24)) %CB.cb_h.i.i, ptr @CB.cb, align 4
 
   ; CHECK: [[CB:%.*]] = load target("dx.CBuffer", {{.*}})), ptr @CB.cb

@@ -183,17 +183,17 @@ T get_T();
 
 void use() {
   UnaryC auto [a, b] = get_S();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
   BinaryC<int> auto [c, d] = get_S();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
 }
 
 template<typename T>
 void TemplUse() {
   UnaryC auto [a, b] = get_T<T>();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
   BinaryC<T> auto [c, d] = get_T<T>();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
 }
 #endif
 } // namespace cwg2635
@@ -291,12 +291,12 @@ static_assert(__is_same(decltype(i), I<char, 4>));
 
 J j = { "ghi" };
 // since-cxx20-error@-1 {{no viable constructor or deduction guide}}
-//   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'J<N>' against 'const char *'}}
-//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(J<N>) -> J<N>'}}
+//   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'cwg2681::J<N>' against 'const char *'}}
+//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(cwg2681::J<N>) -> cwg2681::J<N>'}}
 //   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'const unsigned char' against 'const char'}}
-//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(const unsigned char (&)[N]) -> J<N>'}}
+//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(const unsigned char (&)[N]) -> cwg2681::J<N>'}}
 //   since-cxx20-note@#cwg2681-J {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
-//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J() -> J<N>'}}
+//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J() -> cwg2681::J<N>'}}
 #endif
 } // namespace cwg2681
 

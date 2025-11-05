@@ -44,8 +44,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/Architecture.h"
@@ -282,11 +284,119 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
           ": Archive::children failed: " + toString(std::move(e)));
 }
 
-static InputFile *addFile(StringRef path, LoadType loadType,
-                          bool isLazy = false, bool isExplicit = true,
-                          bool isBundleLoader = false,
-                          bool isForceHidden = false) {
-  std::optional<MemoryBufferRef> buffer = readFile(path);
+struct DeferredFile {
+  StringRef path;
+  bool isLazy;
+  MemoryBufferRef buffer;
+};
+using DeferredFiles = std::vector<DeferredFile>;
+
+#if LLVM_ENABLE_THREADS
+class SerialBackgroundQueue {
+  std::deque<std::function<void()>> queue;
+  std::thread *running;
+  std::mutex mutex;
+
+public:
+  void queueWork(std::function<void()> work) {
+    mutex.lock();
+    if (running && queue.empty()) {
+      mutex.unlock();
+      running->join();
+      mutex.lock();
+      delete running;
+      running = nullptr;
+    }
+
+    if (work) {
+      queue.emplace_back(std::move(work));
+      if (!running)
+        running = new std::thread([&]() {
+          while (true) {
+            mutex.lock();
+            if (queue.empty()) {
+              mutex.unlock();
+              break;
+            }
+            auto work = std::move(queue.front());
+            mutex.unlock();
+            work();
+            mutex.lock();
+            queue.pop_front();
+            mutex.unlock();
+          }
+        });
+    }
+    mutex.unlock();
+  }
+};
+
+// Most input files have been mapped but not yet paged in.
+// This code forces the page-ins on multiple threads so
+// the process is not stalled waiting on disk buffer i/o.
+void multiThreadedPageInBackground(DeferredFiles &deferred) {
+  static const size_t pageSize = Process::getPageSizeEstimate();
+  static const size_t largeArchive = 10 * 1024 * 1024;
+#ifndef NDEBUG
+  using namespace std::chrono;
+  std::atomic_int numDeferedFilesTouched = 0;
+  static std::atomic_uint64_t totalBytes = 0;
+  auto t0 = high_resolution_clock::now();
+#endif
+
+  auto preloadDeferredFile = [&](const DeferredFile &deferredFile) {
+    const StringRef &buff = deferredFile.buffer.getBuffer();
+    if (buff.size() > largeArchive)
+      return;
+#ifndef NDEBUG
+    totalBytes += buff.size();
+    numDeferedFilesTouched += 1;
+#endif
+
+    // Reference all file's mmap'd pages to load them into memory.
+    for (const char *page = buff.data(), *end = page + buff.size(); page < end;
+         page += pageSize) {
+      [[maybe_unused]] volatile char t = *page;
+      (void)t;
+    }
+  };
+  { // Create scope for waiting for the taskGroup
+    std::atomic_size_t index = 0;
+    llvm::parallel::TaskGroup taskGroup;
+    for (int w = 0; w < config->readWorkers; w++)
+      taskGroup.spawn([&index, &preloadDeferredFile, &deferred]() {
+        while (true) {
+          size_t localIndex = index.fetch_add(1);
+          if (localIndex >= deferred.size())
+            break;
+          preloadDeferredFile(deferred[localIndex]);
+        }
+      });
+  }
+#ifndef NDEBUG
+  auto dt = high_resolution_clock::now() - t0;
+  if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
+    llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
+                 << numDeferedFilesTouched << "/" << deferred.size() << "/"
+                 << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
+#endif
+}
+
+static void multiThreadedPageIn(const DeferredFiles &deferred) {
+  static SerialBackgroundQueue pageInQueue;
+  pageInQueue.queueWork([=]() {
+    DeferredFiles files = deferred;
+    multiThreadedPageInBackground(files);
+  });
+}
+#endif
+
+static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
+                              DeferredFiles *archiveContents, StringRef path,
+                              LoadType loadType, bool isLazy = false,
+                              bool isExplicit = true,
+                              bool isBundleLoader = false,
+                              bool isForceHidden = false) {
   if (!buffer)
     return nullptr;
   MemoryBufferRef mbref = *buffer;
@@ -379,6 +489,8 @@ static InputFile *addFile(StringRef path, LoadType loadType,
             continue;
           }
 
+          if (archiveContents)
+            archiveContents->push_back({path, isLazy, *mb});
           if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
@@ -390,7 +502,8 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     }
-    file->addLazySymbols();
+    if (!archiveContents || archiveContents->empty())
+      file->addLazySymbols();
     loadedArchives[path] = ArchiveFileInfo{file, isCommandLineLoad};
     newFile = file;
     break;
@@ -439,6 +552,24 @@ static InputFile *addFile(StringRef path, LoadType loadType,
     inputFiles.insert(newFile);
   }
   return newFile;
+}
+
+static InputFile *addFile(StringRef path, LoadType loadType,
+                          bool isLazy = false, bool isExplicit = true,
+                          bool isBundleLoader = false,
+                          bool isForceHidden = false) {
+  return processFile(readFile(path), nullptr, path, loadType, isLazy,
+                     isExplicit, isBundleLoader, isForceHidden);
+}
+
+static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
+  std::optional<MemoryBufferRef> buffer = readFile(path);
+  if (!buffer)
+    return;
+  if (config->readWorkers)
+    deferred.push_back({path, isLazy, *buffer});
+  else
+    processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
 }
 
 static std::vector<StringRef> missingAutolinkWarnings;
@@ -564,13 +695,14 @@ void macho::resolveLCLinkerOptions() {
   }
 }
 
-static void addFileList(StringRef path, bool isLazy) {
+static void addFileList(StringRef path, bool isLazy,
+                        DeferredFiles &deferredFiles) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), LoadType::CommandLine, isLazy);
+    deferFile(rerootPath(path), isLazy, deferredFiles);
 }
 
 // We expect sub-library names of the form "libfoo", which will match a dylib
@@ -709,18 +841,18 @@ static PlatformVersion parsePlatformVersion(const Arg *arg) {
   // TODO(compnerd) see if we can generate this case list via XMACROS
   platformVersion.platform =
       StringSwitch<PlatformType>(lowerDash(platformStr))
-          .Cases("macos", "1", PLATFORM_MACOS)
-          .Cases("ios", "2", PLATFORM_IOS)
-          .Cases("tvos", "3", PLATFORM_TVOS)
-          .Cases("watchos", "4", PLATFORM_WATCHOS)
-          .Cases("bridgeos", "5", PLATFORM_BRIDGEOS)
-          .Cases("mac-catalyst", "6", PLATFORM_MACCATALYST)
-          .Cases("ios-simulator", "7", PLATFORM_IOSSIMULATOR)
-          .Cases("tvos-simulator", "8", PLATFORM_TVOSSIMULATOR)
-          .Cases("watchos-simulator", "9", PLATFORM_WATCHOSSIMULATOR)
-          .Cases("driverkit", "10", PLATFORM_DRIVERKIT)
-          .Cases("xros", "11", PLATFORM_XROS)
-          .Cases("xros-simulator", "12", PLATFORM_XROS_SIMULATOR)
+          .Cases({"macos", "1"}, PLATFORM_MACOS)
+          .Cases({"ios", "2"}, PLATFORM_IOS)
+          .Cases({"tvos", "3"}, PLATFORM_TVOS)
+          .Cases({"watchos", "4"}, PLATFORM_WATCHOS)
+          .Cases({"bridgeos", "5"}, PLATFORM_BRIDGEOS)
+          .Cases({"mac-catalyst", "6"}, PLATFORM_MACCATALYST)
+          .Cases({"ios-simulator", "7"}, PLATFORM_IOSSIMULATOR)
+          .Cases({"tvos-simulator", "8"}, PLATFORM_TVOSSIMULATOR)
+          .Cases({"watchos-simulator", "9"}, PLATFORM_WATCHOSSIMULATOR)
+          .Cases({"driverkit", "10"}, PLATFORM_DRIVERKIT)
+          .Cases({"xros", "11"}, PLATFORM_XROS)
+          .Cases({"xros-simulator", "12"}, PLATFORM_XROS_SIMULATOR)
           .Default(PLATFORM_UNKNOWN);
   if (platformVersion.platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
@@ -816,7 +948,7 @@ getUndefinedSymbolTreatment(const ArgList &args) {
   StringRef treatmentStr = args.getLastArgValue(OPT_undefined);
   auto treatment =
       StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
-          .Cases("error", "", UndefinedSymbolTreatment::error)
+          .Cases({"error", ""}, UndefinedSymbolTreatment::error)
           .Case("warning", UndefinedSymbolTreatment::warning)
           .Case("suppress", UndefinedSymbolTreatment::suppress)
           .Case("dynamic_lookup", UndefinedSymbolTreatment::dynamic_lookup)
@@ -840,7 +972,7 @@ getUndefinedSymbolTreatment(const ArgList &args) {
 static ICFLevel getICFLevel(const ArgList &args) {
   StringRef icfLevelStr = args.getLastArgValue(OPT_icf_eq);
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
-                      .Cases("none", "", ICFLevel::none)
+                      .Cases({"none", ""}, ICFLevel::none)
                       .Case("safe", ICFLevel::safe)
                       .Case("safe_thunks", ICFLevel::safe_thunks)
                       .Case("all", ICFLevel::all)
@@ -1222,6 +1354,8 @@ static void createFiles(const InputArgList &args) {
   bool isLazy = false;
   // If we've processed an opening --start-lib, without a matching --end-lib
   bool inLib = false;
+  DeferredFiles deferredFiles;
+
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -1229,7 +1363,7 @@ static void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), LoadType::CommandLine, isLazy);
+      deferFile(rerootPath(arg->getValue()), isLazy, deferredFiles);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
@@ -1249,7 +1383,7 @@ static void createFiles(const InputArgList &args) {
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
-      addFileList(arg->getValue(), isLazy);
+      addFileList(arg->getValue(), isLazy, deferredFiles);
       break;
     case OPT_force_load:
       addFile(rerootPath(arg->getValue()), LoadType::CommandLineForce);
@@ -1295,6 +1429,26 @@ static void createFiles(const InputArgList &args) {
       break;
     }
   }
+
+#if LLVM_ENABLE_THREADS
+  if (config->readWorkers) {
+    multiThreadedPageIn(deferredFiles);
+
+    DeferredFiles archiveContents;
+    std::vector<ArchiveFile *> archives;
+    for (auto &file : deferredFiles) {
+      auto inputFile = processFile(file.buffer, &archiveContents, file.path,
+                                   LoadType::CommandLine, file.isLazy);
+      if (ArchiveFile *archive = dyn_cast<ArchiveFile>(inputFile))
+        archives.push_back(archive);
+    }
+
+    if (!archiveContents.empty())
+      multiThreadedPageIn(archiveContents);
+    for (auto *archive : archives)
+      archive->addLazySymbols();
+  }
+#endif
 }
 
 static void gatherInputSections() {
@@ -1370,8 +1524,8 @@ static void foldIdenticalLiterals() {
   // We always create a cStringSection, regardless of whether dedupLiterals is
   // true. If it isn't, we simply create a non-deduplicating CStringSection.
   // Either way, we must unconditionally finalize it here.
-  in.cStringSection->finalizeContents();
-  in.objcMethnameSection->finalizeContents();
+  for (auto *sec : in.cStringSections)
+    sec->finalizeContents();
   in.wordLiteralSection->finalizeContents();
 }
 
@@ -1559,7 +1713,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     firstTLVDataSection = nullptr;
     tar = nullptr;
-    memset(&in, 0, sizeof(in));
+    in = InStruct();
 
     resetLoadedDylibs();
     resetOutputSegments();
@@ -1635,27 +1789,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   config->osoPrefix = args.getLastArgValue(OPT_oso_prefix);
   if (!config->osoPrefix.empty()) {
-    // Expand special characters, such as ".", "..", or  "~", if present.
-    // Note: LD64 only expands "." and not other special characters.
-    // That seems silly to imitate so we will not try to follow it, but rather
-    // just use real_path() to do it.
-
     // The max path length is 4096, in theory. However that seems quite long
     // and seems unlikely that any one would want to strip everything from the
     // path. Hence we've picked a reasonably large number here.
     SmallString<1024> expanded;
-    if (!fs::real_path(config->osoPrefix, expanded,
-                       /*expand_tilde=*/true)) {
-      // Note: LD64 expands "." to be `<current_dir>/`
-      // (ie., it has a slash suffix) whereas real_path() doesn't.
-      // So we have to append '/' to be consistent.
-      StringRef sep = sys::path::get_separator();
-      // real_path removes trailing slashes as part of the normalization, but
-      // these are meaningful for our text based stripping
-      if (config->osoPrefix == "." || config->osoPrefix.ends_with(sep))
-        expanded += sep;
-      config->osoPrefix = saver().save(expanded.str());
+    // Expand "." into the current working directory.
+    if (config->osoPrefix == "." && !fs::current_path(expanded)) {
+      // Note: LD64 expands "." to be `<current_dir>/
+      // (ie., it has a slash suffix) whereas current_path() doesn't.
+      // So we have to append '/' to be consistent because this is
+      // meaningful for our text based stripping.
+      expanded += sys::path::get_separator();
+    } else {
+      expanded = config->osoPrefix;
     }
+    config->osoPrefix = saver().save(expanded.str());
   }
 
   bool pie = args.hasFlag(OPT_pie, OPT_no_pie, true);
@@ -1687,6 +1835,20 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
   }
 
+  if (auto *arg = args.getLastArg(OPT_read_workers)) {
+#if LLVM_ENABLE_THREADS
+    StringRef v(arg->getValue());
+    unsigned workers = 0;
+    if (!llvm::to_integer(v, workers, 0))
+      error(arg->getSpelling() +
+            ": expected a non-negative integer, but got '" + arg->getValue() +
+            "'");
+    config->readWorkers = workers;
+#else
+    error(arg->getSpelling() +
+          ": option unavailable because lld was not built with thread support");
+#endif
+  }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
     unsigned threads = 0;
@@ -1828,6 +1990,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
                    OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
   config->disableVerify = args.hasArg(OPT_disable_verify);
+  config->separateCstringLiteralSections =
+      args.hasFlag(OPT_separate_cstring_literal_sections,
+                   OPT_no_separate_cstring_literal_sections, false);
+  config->tailMergeStrings =
+      args.hasFlag(OPT_tail_merge_strings, OPT_no_tail_merge_strings, false);
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified

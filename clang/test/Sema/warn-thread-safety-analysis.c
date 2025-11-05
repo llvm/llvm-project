@@ -184,8 +184,12 @@ int main(void) {
   /// Cleanup functions
   {
     struct Mutex* const __attribute__((cleanup(unlock_scope))) scope = &mu1;
-    mutex_exclusive_lock(scope);  // Note that we have to lock through scope, because no alias analysis!
+    mutex_exclusive_lock(scope);  // Lock through scope works.
     // Cleanup happens automatically -> no warning.
+  }
+  {
+    struct Mutex* const __attribute__((unused, cleanup(unlock_scope))) scope = &mu1;
+    mutex_exclusive_lock(&mu1);  // With basic alias analysis lock through mu1 also works.
   }
 
   foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'mu_' exclusively}}

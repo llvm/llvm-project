@@ -36,8 +36,9 @@ void AsyncDialect::initialize() {
 
 constexpr char kOperandSegmentSizesAttr[] = "operandSegmentSizes";
 
-OperandRange ExecuteOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBodyRegion() && "invalid region index");
+OperandRange ExecuteOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getBodyRegion() &&
+         "invalid region index");
   return getBodyOperands();
 }
 
@@ -53,8 +54,10 @@ bool ExecuteOp::areTypesCompatible(Type lhs, Type rhs) {
 void ExecuteOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `body` region branch back to the parent operation.
-  if (point == getBodyRegion()) {
-    regions.push_back(RegionSuccessor(getBodyResults()));
+  if (!point.isParent() &&
+      point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+          &getBodyRegion()) {
+    regions.push_back(RegionSuccessor(getOperation(), getBodyResults()));
     return;
   }
 
@@ -97,7 +100,7 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
   // expected result is empty. Otherwise, leave this to the caller
   // because we don't know which values to return from the execute op.
   if (resultTypes.empty() && !bodyBuilder) {
-    builder.create<async::YieldOp>(result.location, ValueRange());
+    async::YieldOp::create(builder, result.location, ValueRange());
   } else if (bodyBuilder) {
     bodyBuilder(builder, result.location, bodyBlock->getArguments());
   }

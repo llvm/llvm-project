@@ -5,6 +5,7 @@ static_library("lib") {
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
     "//lldb/source/API:liblldb",
+    "//lldb/source/Host",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
@@ -14,13 +15,13 @@ static_library("lib") {
 
   include_dirs = [ "." ]
 
-  # FIXME: link in //lldb/source/Host on Win (and netbsd)
   # FIXME: link in pthread
   # FIXME: rpath/install_name stuff on macOS for framework on macOS
 
   sources = [
     "Breakpoint.cpp",
     "BreakpointBase.cpp",
+    "ClientLauncher.cpp",
     "CommandPlugins.cpp",
     "DAP.cpp",
     "DAPError.cpp",
@@ -44,6 +45,7 @@ static_library("lib") {
     "Handler/InitializeRequestHandler.cpp",
     "Handler/LaunchRequestHandler.cpp",
     "Handler/LocationsRequestHandler.cpp",
+    "Handler/ModuleSymbolsRequestHandler.cpp",
     "Handler/ModulesRequestHandler.cpp",
     "Handler/NextRequestHandler.cpp",
     "Handler/PauseRequestHandler.cpp",
@@ -72,6 +74,7 @@ static_library("lib") {
     "LLDBUtils.cpp",
     "OutputRedirector.cpp",
     "ProgressEvent.cpp",
+    "Protocol/DAPTypes.cpp",
     "Protocol/ProtocolBase.cpp",
     "Protocol/ProtocolEvents.cpp",
     "Protocol/ProtocolRequests.cpp",

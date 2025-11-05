@@ -17,11 +17,6 @@
 
 using namespace llvm;
 
-// MSVC emits references to this into the translation units which reference it.
-#ifndef _MSC_VER
-constexpr size_t StringRef::npos;
-#endif
-
 // strncasecmp() is not available on non-POSIX systems, so define an
 // alternative function here.
 static int ascii_strncasecmp(StringRef LHS, StringRef RHS) {
@@ -385,7 +380,7 @@ size_t StringRef::count(StringRef Str) const {
   return Count;
 }
 
-static unsigned GetAutoSenseRadix(StringRef &Str) {
+unsigned llvm::getAutoSenseRadix(StringRef &Str) {
   if (Str.empty())
     return 10;
 
@@ -410,7 +405,7 @@ bool llvm::consumeUnsignedInteger(StringRef &Str, unsigned Radix,
                                   unsigned long long &Result) {
   // Autosense radix if not specified.
   if (Radix == 0)
-    Radix = GetAutoSenseRadix(Str);
+    Radix = getAutoSenseRadix(Str);
 
   // Empty strings (after the radix autosense) are invalid.
   if (Str.empty()) return true;
@@ -509,7 +504,7 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
 
   // Autosense radix if not specified.
   if (Radix == 0)
-    Radix = GetAutoSenseRadix(Str);
+    Radix = getAutoSenseRadix(Str);
 
   assert(Radix > 1 && Radix <= 36);
 

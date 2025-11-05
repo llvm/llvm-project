@@ -9,6 +9,6 @@
 #include <clc/math/clc_fdim.h>
 #include <clc/opencl/math/fdim.h>
 
-#define FUNCTION fdim
+#define __CLC_FUNCTION fdim
 #define __CLC_BODY <clc/shared/binary_def.inc>
 #include <clc/math/gentype.inc>

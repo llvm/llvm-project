@@ -1866,7 +1866,7 @@ class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  static constexpr const unsigned DefaultPseudoIndex =
+  static constexpr unsigned DefaultPseudoIndex =
       llvm::SwitchInst::DefaultPseudoIndex;
 
   LLVM_ABI static SwitchInst *create(Value *V, BasicBlock *Dest,
@@ -2278,6 +2278,8 @@ class CastInst : public UnaryInstruction {
       return Opcode::FPToSI;
     case llvm::Instruction::FPExt:
       return Opcode::FPExt;
+    case llvm::Instruction::PtrToAddr:
+      return Opcode::PtrToAddr;
     case llvm::Instruction::PtrToInt:
       return Opcode::PtrToInt;
     case llvm::Instruction::IntToPtr:
@@ -2364,6 +2366,8 @@ class FPToUIInst final : public CastInstImpl<Instruction::Opcode::FPToUI> {};
 class FPToSIInst final : public CastInstImpl<Instruction::Opcode::FPToSI> {};
 class IntToPtrInst final : public CastInstImpl<Instruction::Opcode::IntToPtr> {
 };
+class PtrToAddrInst final
+    : public CastInstImpl<Instruction::Opcode::PtrToAddr> {};
 class PtrToIntInst final : public CastInstImpl<Instruction::Opcode::PtrToInt> {
 };
 class BitCastInst final : public CastInstImpl<Instruction::Opcode::BitCast> {};
