@@ -1596,6 +1596,9 @@ void clang::InitializePreprocessor(Preprocessor &PP,
     }
   }
 
+  if (CodeGenOpts.Dwarf2CFIAsm)
+    Builder.defineMacro("__GCC_HAVE_DWARF2_CFI_ASM");
+
   // Even with predefines off, some macros are still predefined.
   // These should all be defined in the preprocessor according to the
   // current language configuration.
