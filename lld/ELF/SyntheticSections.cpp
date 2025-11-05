@@ -3566,6 +3566,16 @@ std::unique_ptr<GdbIndexSection> GdbIndexSection::create(Ctx &ctx) {
     DWARFContext dwarf(std::make_unique<LLDDwarfObj<ELFT>>(file));
     auto &dobj = static_cast<const LLDDwarfObj<ELFT> &>(dwarf.getDWARFObj());
 
+    if (dobj.getGnuPubnamesSection().sec == nullptr &&
+        dobj.getGnuPubtypesSection().sec == nullptr) {
+      Warn(ctx)
+          << files[i]
+          << ": file contains debug info but is missing .debug_gnu_pubnames or "
+             ".debug_gnu_pubtypes sections required by --gdb-index. Compile "
+             "the file using -gsplit-dwarf or -ggnu-pubnames to generate these "
+             "sections.";
+    }
+
     // If the are multiple compile units .debug_info (very rare ld -r --unique),
     // this only picks the last one. Other address ranges are lost.
     chunks[i].sec = dobj.getInfoSection();
