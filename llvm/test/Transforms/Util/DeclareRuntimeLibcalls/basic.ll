@@ -11,5 +11,9 @@ define float @sinf(float %x) {
 }
 
 ; CHECK: declare void @acosf(...)
+
+; CHECK: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
+; CHECK: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
+
 ; CHECK: declare void @__umodti3(...)
 
