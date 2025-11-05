@@ -65,7 +65,8 @@ class VPBuilder {
   VPInstruction *createInstruction(unsigned Opcode,
                                    ArrayRef<VPValue *> Operands, DebugLoc DL,
                                    const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(Opcode, Operands, DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Opcode, Operands, {}, DL, Name));
   }
 
 public:
@@ -150,11 +151,11 @@ public:
   /// its underlying Instruction.
   VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               Instruction *Inst = nullptr,
+                              const VPIRMetadata &MD = {},
+                              DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    DebugLoc DL = DebugLoc::getUnknown();
-    if (Inst)
-      DL = Inst->getDebugLoc();
-    VPInstruction *NewVPInst = createInstruction(Opcode, Operands, DL, Name);
+    VPInstruction *NewVPInst =
+        tryInsertInstruction(new VPInstruction(Opcode, Operands, MD, DL, Name));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -211,7 +212,7 @@ public:
                                   DebugLoc DL = DebugLoc::getUnknown(),
                                   const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPInstruction(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name));
+        new VPInstruction(VPInstruction::LogicalAnd, {LHS, RHS}, {}, DL, Name));
   }
 
   VPInstruction *
@@ -222,7 +223,7 @@ public:
         FMFs ? new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
                                  *FMFs, {}, DL, Name)
              : new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
-                                 DL, Name);
+                                 {}, DL, Name);
     return tryInsertInstruction(Select);
   }
 
@@ -328,7 +329,7 @@ public:
     else if (Opcode == Instruction::ZExt)
       Flags = VPIRFlags::NonNegFlagsTy(false);
     return tryInsertInstruction(
-        new VPWidenCastRecipe(Opcode, Op, ResultTy, Flags));
+        new VPWidenCastRecipe(Opcode, Op, ResultTy, nullptr, Flags));
   }
 
   VPScalarIVStepsRecipe *
