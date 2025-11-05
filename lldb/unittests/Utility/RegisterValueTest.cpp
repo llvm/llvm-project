@@ -364,3 +364,31 @@ TEST(RegisterValueTest, SetValueFromData_256_be) {
                    0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00};
   TestSetValueFromData(etalon256, src, 32, lldb::ByteOrder::eByteOrderBig);
 }
+
+static const Scalar etalon257(APInt(512, 0x0000000000000001ull) << 4 * 64 |
+                              APInt(512, 0x1f1e1d1c1b1a1918ull) << 3 * 64 |
+                              APInt(512, 0x1716151413121110ull) << 2 * 64 |
+                              APInt(512, 0x0f0e0d0c0b0a0908ull) << 1 * 64 |
+                              APInt(512, 0x0706050403020100ull) << 0 * 64);
+
+// Test that the "RegisterValue::SetValueFromData" method works correctly
+// with 256-bit little-endian data that represents an integer.
+TEST(RegisterValueTest, SetValueFromData_257_le) {
+  uint8_t src[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                   0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+                   0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+                   0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+                   0x01};
+  TestSetValueFromData(etalon257, src, 33, lldb::ByteOrder::eByteOrderLittle);
+}
+
+// Test that the "RegisterValue::SetValueFromData" method works correctly
+// with 256-bit big-endian data that represents an integer.
+TEST(RegisterValueTest, SetValueFromData_257_be) {
+  uint8_t src[] = {0x01,
+                   0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18,
+                   0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10,
+                   0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,
+                   0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00};
+  TestSetValueFromData(etalon257, src, 33, lldb::ByteOrder::eByteOrderBig);
+}
