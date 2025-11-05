@@ -874,34 +874,31 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
   VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
-  VPValue *IsNaNLane = nullptr;
+  VPValue *AllNaNLanes = nullptr;
   SmallPtrSet<VPValue *, 2> RdxResults;
-  for (const auto &[RedPhiR, MinMaxOp] : MinMaxNumReductionsToHandle) {
+  for (const auto &[_, MinMaxOp] : MinMaxNumReductionsToHandle) {
+    VPValue *RedNaNLanes =
+        LatchBuilder.createFCmp(CmpInst::FCMP_UNO, MinMaxOp, MinMaxOp);
+    AllNaNLanes = AllNaNLanes ? LatchBuilder.createOr(AllNaNLanes, RedNaNLanes)
+                              : RedNaNLanes;
+  }
+
+  VPValue *AnyNaNLane =
+      LatchBuilder.createNaryOp(VPInstruction::AnyOf, {AllNaNLanes});
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->begin());
+  for (const auto &[RedPhiR, _] : MinMaxNumReductionsToHandle) {
     assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
                RedPhiR->getRecurrenceKind()) &&
            "unsupported reduction");
 
-    VPValue *IsNaN =
-        LatchBuilder.createFCmp(CmpInst::FCMP_UNO, MinMaxOp, MinMaxOp);
-    IsNaNLane = IsNaNLane ? LatchBuilder.createOr(IsNaNLane, IsNaN) : IsNaN;
-  }
-
-  VPValue *AnyNaNLane =
-      LatchBuilder.createNaryOp(VPInstruction::AnyOf, {IsNaNLane});
-  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->begin());
-  for (const auto &[RedPhiR, MinMaxOp] : MinMaxNumReductionsToHandle) {
-    // If we exit early due to NaNs, compute the final reduction result based
-    // on the reduction phi at the beginning of the last vector iteration.
+    // If we exit early due to NaNs, compute the final reduction result based on
+    // the reduction phi at the beginning of the last vector iteration.
     auto *RdxResult = find_singleton<VPSingleDefRecipe>(
-        RedPhiR->getBackedgeValue()->users(),
-        [RedPhiR = RedPhiR](VPUser *U, bool) -> VPSingleDefRecipe * {
+        RedPhiR->users(), [](VPUser *U, bool) -> VPSingleDefRecipe * {
           auto *VPI = dyn_cast<VPInstruction>(U);
           if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
             return VPI;
-          assert(U == RedPhiR &&
-                 "Backedge value must only be used by "
-                 "ComputeReductionResult and the reduction phi");
           return nullptr;
         });
 
