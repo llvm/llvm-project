@@ -42,7 +42,8 @@ function at-exit {
   if [[ "$retcode" != "0" ]]; then
     if [[ "$GITHUB_ACTIONS" != "" ]]; then
       python "${MONOREPO_ROOT}"/.ci/premerge_advisor_explain.py \
-        $(git rev-parse HEAD~1) "${BUILD_DIR}"/test-results.*.xml \
+        $(git rev-parse HEAD~1) $retcode ${{ secrets.GITHUB_TOKEN }} \
+        $GITHUB_PR_NUMBER "${BUILD_DIR}"/test-results.*.xml \
         "${MONOREPO_ROOT}"/ninja*.log
       python "${MONOREPO_ROOT}"/.ci/premerge_advisor_upload.py \
         $(git rev-parse HEAD~1) $GITHUB_RUN_NUMBER \
