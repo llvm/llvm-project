@@ -202,6 +202,14 @@ def remarks_drop_without_debug: Flag<["--", "-"], "remarks-drop-without-debug">,
            "all remarks are kept.">,
   Group<grp_general>;
 
+def include_swiftmodules_from_interface: Flag<["--", "-"], "include-swiftmodules-from-interface">,
+  HelpText<"Whether or not to copy binary swiftmodules built from textual "
+  ".swiftinterface files into the dSYM bundle. These typically come only "
+  "from the SDK (since textual interfaces require library evolution) and "
+  "thus are a waste of space to copy into the bundle. Turn this on if the "
+  "swiftmodules are different from those in the SDK.">,
+  Group<grp_general>;
+
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
   HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">,

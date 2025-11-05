@@ -227,9 +227,6 @@ struct DOTGraphTraits<MachineGadgetGraph *> : DefaultDOTGraphTraits {
 
 } // end namespace llvm
 
-constexpr MachineInstr *MachineGadgetGraph::ArgNodeSentinel;
-constexpr int MachineGadgetGraph::GadgetEdgeSentinel;
-
 char X86LoadValueInjectionLoadHardeningPass::ID = 0;
 
 void X86LoadValueInjectionLoadHardeningPass::getAnalysisUsage(

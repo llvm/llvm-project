@@ -235,16 +235,35 @@ void nb13() [[clang::nonblocking]] { nb12(); }
 // C++ member function pointers
 struct PTMFTester {
 	typedef void (PTMFTester::*ConvertFunction)() [[clang::nonblocking]];
-
-	void convert() [[clang::nonblocking]];
+	typedef void (PTMFTester::*BlockingFunction)();
 
 	ConvertFunction mConvertFunc;
-};
 
-void PTMFTester::convert() [[clang::nonblocking]]
-{
-	(this->*mConvertFunc)();
-}
+	void convert() [[clang::nonblocking]]
+	{
+		(this->*mConvertFunc)(); // This should not generate a warning.
+	}
+
+	template <typename T>
+	struct Holder {
+		T value;
+		
+		T& operator*() { return value; }
+	};
+
+
+	void ptmfInExpr(Holder<ConvertFunction>& holder) [[clang::nonblocking]]
+	{
+		(this->*(*holder))();   // Should not generate a warning.
+		((*this).*(*holder))(); // Should not generate a warning.
+	}
+
+	void ptmfInExpr(Holder<BlockingFunction>& holder) [[clang::nonblocking]]
+	{
+		(this->*(*holder))(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' expression}}
+		((*this).*(*holder))(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' expression}}
+	}
+};
 
 // Allow implicit conversion from array to pointer.
 void nb14(unsigned idx) [[clang::nonblocking]]
@@ -353,6 +372,33 @@ struct Unsafe {
   // Delegating initializer.
   Unsafe(float y) [[clang::nonblocking]] : Unsafe(int(y)) {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
 };
+
+// Exercise cases of a temporary with a safe constructor and unsafe destructor.
+void nb23()
+{
+	struct X {
+		int *ptr = nullptr;
+		X() {}
+		~X() { delete ptr; } // expected-note 2 {{destructor cannot be inferred 'nonblocking' because it allocates or deallocates memory}}
+	};
+
+	auto inner = []() [[clang::nonblocking]] {
+		X(); // expected-warning {{lambda with 'nonblocking' attribute must not call non-'nonblocking' destructor 'nb23()::X::~X'}}
+	};
+
+	auto inner2 = [](X x) [[clang::nonblocking]] { // expected-warning {{lambda with 'nonblocking' attribute must not call non-'nonblocking' destructor 'nb23()::X::~X'}}
+	};
+
+}
+
+struct S2 { ~S2(); }; // expected-note 2 {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+void nb24() {
+    S2 s;
+    [&]() [[clang::nonblocking]] {
+        [s]{ auto x = &s; }(); // expected-warning {{lambda with 'nonblocking' attribute must not call non-'nonblocking' destructor}} expected-note {{destructor cannot be inferred 'nonblocking' because it calls non-'nonblocking' destructor 'S2::~S2'}}
+        [=]{ auto x = &s; }(); // expected-warning {{lambda with 'nonblocking' attribute must not call non-'nonblocking' destructor}} expected-note {{destructor cannot be inferred 'nonblocking' because it calls non-'nonblocking' destructor 'S2::~S2'}}
+    }();
+}
 
 struct DerivedFromUnsafe : public Unsafe {
   DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}

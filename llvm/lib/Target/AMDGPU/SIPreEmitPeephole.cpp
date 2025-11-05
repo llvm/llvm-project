@@ -296,7 +296,7 @@ bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
   for (MachineBasicBlock::instr_iterator I = std::next(First.getIterator()),
                                          E = MI.getIterator();
        I != E; ++I) {
-    if (I->isBundle())
+    if (I->isBundle() || I->isDebugInstr())
       continue;
     switch (I->getOpcode()) {
     case AMDGPU::S_SET_GPR_IDX_MODE:
