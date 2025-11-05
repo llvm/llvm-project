@@ -202,7 +202,7 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
     return FeatureBits[Xtensa::FeatureWindowed];
   case Xtensa::ATOMCTL:
   case Xtensa::SCOMPARE1:
-    return FeatureBits[Xtensa::FeatureWindowed];
+    return FeatureBits[Xtensa::FeatureS32C1I];
   case Xtensa::NoRegister:
     return false;
   }

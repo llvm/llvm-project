@@ -1805,6 +1805,7 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":types_wchar_t",
         ":types_wint_t",
     ],
 )
@@ -1859,6 +1860,7 @@ libc_function(
     hdrs = ["src/ctype/isalnum.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1869,6 +1871,7 @@ libc_function(
     hdrs = ["src/ctype/isalpha.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1909,6 +1912,7 @@ libc_function(
     hdrs = ["src/ctype/isdigit.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1919,6 +1923,7 @@ libc_function(
     hdrs = ["src/ctype/isgraph.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1929,6 +1934,7 @@ libc_function(
     hdrs = ["src/ctype/islower.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1949,6 +1955,7 @@ libc_function(
     hdrs = ["src/ctype/ispunct.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1959,6 +1966,7 @@ libc_function(
     hdrs = ["src/ctype/isspace.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1969,6 +1977,7 @@ libc_function(
     hdrs = ["src/ctype/isupper.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1979,6 +1988,7 @@ libc_function(
     hdrs = ["src/ctype/isxdigit.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1999,6 +2009,7 @@ libc_function(
     hdrs = ["src/ctype/tolower.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -2009,6 +2020,7 @@ libc_function(
     hdrs = ["src/ctype/toupper.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
