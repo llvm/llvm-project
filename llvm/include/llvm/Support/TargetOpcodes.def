@@ -114,8 +114,9 @@ HANDLE_TARGET_OPCODE(REG_SEQUENCE)
 /// used to copy between subregisters of virtual registers.
 HANDLE_TARGET_OPCODE(COPY)
 
-/// COPY_LANEMASK - Target-independent register copy for active mask in 
-/// register as represented by the lanemask. This instruction does not 
+/// COPY_LANEMASK - Target-independent partial register copy. The laneMask
+/// operand indicates which parts of the source register are copied to the
+/// destination. Other parts of the destination are undefined. It does not
 /// support copy between subregisters of virtual registers.
 HANDLE_TARGET_OPCODE(COPY_LANEMASK)
 

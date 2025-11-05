@@ -7,7 +7,7 @@ body:             |
   bb.0:
     liveins: $vgpr0
 
-    ; CHECK: [[@LINE+1]]:45: expected a valid lane mask value. 
+    ; CHECK: [[@LINE+1]]:45: expected a valid lane mask value
     $vgpr1 = COPY_LANEMASK $vgpr0, lanemask()
     S_ENDPGM 0
 ...

@@ -807,23 +807,23 @@ For an int eq predicate ``ICMP_EQ``, the syntax is:
 
    %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
 
-Lanemask Operands
+LaneMask Operands
 ^^^^^^^^^^^^^^^^^^
 
-A Lanemask operand is a 64-bit unsigned value that can store lane information 
-for a register operand in the instruction. It can be used as many times as needed
-in an instruction, with one or more register operands associated with it. While 
-the active bits represent the live subregister (in virtual registers) or regUnits
-(in physical registers), the remaining bits can represent the UNDEF part of it. 
+A LaneMask operand contains a LaneBitmask struct representing the covering of a
+register with sub-registers. [That's what it says in LaneBitmask.h!] Instructions
+typically associate a LaneMask operand with one or more Register operands, and
+use it to represent sub-register granularity information like liveness for those
+associated Register operands.
 
 
-For example, the COPY_LANEMASK instruction uses this operand to copy only active 
+For example, the COPY_LANEMASK instruction uses this operand to copy only active
 lanes (of the source register) in the mask. The syntax for it would look like:
 
 .. code-block:: text
 
    $vgpr1 = COPY_LANEMASK $vgpr0, lanemask(0x00000000000000C0)
-   
+
 .. TODO: Describe the parsers default behaviour when optional YAML attributes
    are missing.
 .. TODO: Describe the syntax for virtual register YAML definitions.
