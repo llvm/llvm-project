@@ -15596,8 +15596,10 @@ static bool canConvertToVcmpequb(SDValue &LHS, SDValue RHS) {
 
     if (Op.getOpcode() != ISD::LOAD)
       return false;
+
     if (!Op.hasOneUse())
       return false;
+
     if (Op.getValueType() != MVT::i128)
       return false;
 
@@ -15646,7 +15648,9 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
   auto getV16i8Load = [&](const SDValue &Op) {
     if (Op.getOpcode() == ISD::Constant)
       return DAG.getBitcast(MVT::v16i8, Op);
+
     assert(Op.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
+
     auto *LoadNode = dyn_cast<LoadSDNode>(Op);
     return DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
                        LoadNode->getBasePtr(), LoadNode->getMemOperand());
@@ -15675,6 +15679,16 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
   //    llvm.ppc.altivec.vcmpequb.p TargetConstant:i32<10505>,
   //    Constant:i32<2>, t3, t5
   // t7: i1 = setcc t6, Constant:i32<0>, seteq:ch
+
+  // Or transforms the DAG
+  //   t5: i128,ch = load<(load (s128) from %ir.X, align 1)> t0, t2, undef:i64
+  //   t8: i1 = setcc Constant:i128<237684487579686500932345921536>, t5, setne:ch
+  //
+  //   --->
+  //
+  //  t5: v16i8,ch = load<(load (s128) from %ir.X, align 1)> t0, t2, undef:i64
+  //  t6: v16i8 = bitcast Constant:i128<237684487579686500932345921536>
+  //  t7: i32 = llvm.ppc.altivec.vcmpequb.p Constant:i32<10962>, Constant:i32<2>, t5, t26
 
   SDValue LHSVec = getV16i8Load(N->getOperand(0));
   SDValue RHSVec = getV16i8Load(N->getOperand(1));
