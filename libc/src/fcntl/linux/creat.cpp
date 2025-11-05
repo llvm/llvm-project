@@ -27,11 +27,11 @@ LLVM_LIBC_FUNCTION(int, creat, (const char *path, int mode_flags)) {
       SYS_openat, AT_FDCWD, path, O_CREAT | O_WRONLY | O_TRUNC, mode_flags);
 #endif
 
-  if (fd > 0)
-    return fd;
-
-  libc_errno = -fd;
-  return -1;
+  if (fd < 0) {
+    libc_errno = -fd;
+    return -1;
+  }
+  return fd;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

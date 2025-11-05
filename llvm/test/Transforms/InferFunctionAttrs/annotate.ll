@@ -762,6 +762,24 @@ declare float @nearbyintf(float)
 ; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @nearbyintl(x86_fp80)
 
+; CHECK: declare double @nextafter(double, double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare double @nextafter(double, double)
+
+; CHECK: declare float @nextafterf(float, float) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare float @nextafterf(float, float)
+
+; CHECK: declare x86_fp80 @nextafterl(x86_fp80, x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare x86_fp80 @nextafterl(x86_fp80, x86_fp80)
+
+; CHECK: declare double @nexttoward(double, x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare double @nexttoward(double, x86_fp80)
+
+; CHECK: declare float @nexttowardf(float, x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare float @nexttowardf(float, x86_fp80)
+
+; CHECK: declare x86_fp80 @nexttowardl(x86_fp80, x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare x86_fp80 @nexttowardl(x86_fp80, x86_fp80)
+
 ; CHECK-LINUX: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE]]
 ; CHECK-OPEN: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE:#[0-9]+]]
 declare i32 @open(ptr, i32, ...)

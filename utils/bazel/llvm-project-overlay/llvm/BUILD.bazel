@@ -693,6 +693,8 @@ cc_binary(
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.h",
         "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
         "utils/TableGen/Basic/SDNodeProperties.h",
