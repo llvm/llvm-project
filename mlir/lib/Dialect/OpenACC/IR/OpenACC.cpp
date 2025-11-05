@@ -1059,13 +1059,11 @@ struct RemoveEmptyKernelEnvironment
     // Remove empty kernel environment
     // preserve synchronization by creating acc.wait operation if needed
     if (!op.getWaitOperands().empty())
-      rewriter.replaceOpWithNewOp<acc::WaitOp>(
-          op,
-          op.getWaitOperands(),
-          /*asyncOperand=*/Value(),
-          /*waitDevnum=*/Value(),
-          /*async=*/nullptr,
-          /*ifCond=*/Value());
+      rewriter.replaceOpWithNewOp<acc::WaitOp>(op, op.getWaitOperands(),
+                                               /*asyncOperand=*/Value(),
+                                               /*waitDevnum=*/Value(),
+                                               /*async=*/nullptr,
+                                               /*ifCond=*/Value());
     else
       rewriter.eraseOp(op);
 
