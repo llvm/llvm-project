@@ -78,11 +78,15 @@ struct BinOpInfo {
 class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
   CIRGenFunction &cgf;
   CIRGenBuilderTy &builder;
+  // Unlike classic codegen we set this to false or use std::exchange to read
+  // the value instead of calling TestAndClearIgnoreResultAssign to make it
+  // explicit when the value is used
   bool ignoreResultAssign;
 
 public:
-  ScalarExprEmitter(CIRGenFunction &cgf, CIRGenBuilderTy &builder)
-      : cgf(cgf), builder(builder) {}
+  ScalarExprEmitter(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
+                    bool ignoreResultAssign = false)
+      : cgf(cgf), builder(builder), ignoreResultAssign(ignoreResultAssign) {}
 
   //===--------------------------------------------------------------------===//
   //                               Utilities
@@ -221,6 +225,8 @@ public:
   }
 
   mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
+    ignoreResultAssign = false;
+
     if (e->getBase()->getType()->isVectorType()) {
       assert(!cir::MissingFeatures::scalableVectors());
 
@@ -839,6 +845,7 @@ public:
 
   BinOpInfo emitBinOps(const BinaryOperator *e,
                        QualType promotionType = QualType()) {
+    ignoreResultAssign = false;
     BinOpInfo result;
     result.lhs = cgf.emitPromotedScalarExpr(e->getLHS(), promotionType);
     result.rhs = cgf.emitPromotedScalarExpr(e->getRHS(), promotionType);
@@ -924,6 +931,7 @@ public:
 #undef HANDLEBINOP
 
   mlir::Value emitCmp(const BinaryOperator *e) {
+    ignoreResultAssign = false;
     const mlir::Location loc = cgf.getLoc(e->getExprLoc());
     mlir::Value result;
     QualType lhsTy = e->getLHS()->getType();
@@ -1406,11 +1414,13 @@ CIRGenFunction::emitCompoundAssignmentLValue(const CompoundAssignOperator *e) {
 }
 
 /// Emit the computation of the specified expression of scalar type.
-mlir::Value CIRGenFunction::emitScalarExpr(const Expr *e) {
+mlir::Value CIRGenFunction::emitScalarExpr(const Expr *e,
+                                           bool ignoreResultAssign) {
   assert(e && hasScalarEvaluationKind(e->getType()) &&
          "Invalid scalar expression to emit");
 
-  return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
+  return ScalarExprEmitter(*this, builder, ignoreResultAssign)
+      .Visit(const_cast<Expr *>(e));
 }
 
 mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
@@ -2053,6 +2063,11 @@ mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
 
 mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
   const unsigned numInitElements = e->getNumInits();
+
+  [[maybe_unused]] const bool ignore = std::exchange(ignoreResultAssign, false);
+  assert((ignore == false ||
+          (numInitElements == 0 && e->getType()->isVoidType())) &&
+         "init list ignored");
 
   if (e->hadArrayRangeDesignator()) {
     cgf.cgm.errorNYI(e->getSourceRange(), "ArrayRangeDesignator");
