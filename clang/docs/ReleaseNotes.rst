@@ -444,6 +444,7 @@ Bug Fixes in This Version
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
 - Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
+- Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
