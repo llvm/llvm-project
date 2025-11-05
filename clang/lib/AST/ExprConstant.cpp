@@ -11621,7 +11621,7 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
 
 static bool evalShuffleGeneric(
     EvalInfo &Info, const CallExpr *Call, APValue &Out,
-    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned, unsigned)>
         GetSourceIndex) {
 
   const auto *VT = Call->getType()->getAs<VectorType>();
@@ -11643,13 +11643,25 @@ static bool evalShuffleGeneric(
   ResultElements.reserve(NumElts);
 
   for (unsigned DstIdx = 0; DstIdx != NumElts; ++DstIdx) {
-    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask, NumElts);
 
     if (SrcIdx < 0) {
       // Zero out this element
       QualType ElemTy = VT->getElementType();
-      ResultElements.push_back(
-          APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+      if (ElemTy->isRealFloatingType()) {
+        ResultElements.push_back(
+            APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+      } else if (ElemTy->isIntegerType()) {
+        unsigned BitWidth = Info.Ctx.getTypeSize(ElemTy);
+        bool IsUnsigned = ElemTy->isUnsignedIntegerType();
+        llvm::APSInt ZeroValue(BitWidth, IsUnsigned);
+        ZeroValue = 0;
+        ResultElements.push_back(APValue(ZeroValue));
+      } else {
+        // Other types of fallback logic
+        ResultElements.push_back(APValue());
+      }
+
     } else {
       const APValue &Src = (SrcVecIdx == 0) ? A : B;
       ResultElements.push_back(Src.getVectorElt(SrcIdx));
@@ -12445,8 +12457,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APValue R;
     if (!evalShuffleGeneric(
             Info, E, R,
-            [](unsigned DstIdx,
-               unsigned ShuffleMask) -> std::pair<unsigned, int> {
+            [](unsigned DstIdx, unsigned ShuffleMask,
+               unsigned NumElems) -> std::pair<unsigned, int> {
               constexpr unsigned LaneBits = 128u;
               unsigned NumElemPerLane = LaneBits / 32;
               unsigned NumSelectableElems = NumElemPerLane / 2;
@@ -12470,8 +12482,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APValue R;
     if (!evalShuffleGeneric(
             Info, E, R,
-            [](unsigned DstIdx,
-               unsigned ShuffleMask) -> std::pair<unsigned, int> {
+            [](unsigned DstIdx, unsigned ShuffleMask,
+               unsigned NumElems) -> std::pair<unsigned, int> {
               constexpr unsigned LaneBits = 128u;
               unsigned NumElemPerLane = LaneBits / 64;
               unsigned NumSelectableElems = NumElemPerLane / 2;
@@ -12491,25 +12503,28 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   }
   case X86::BI__builtin_ia32_insertps128: {
     APValue R;
-    if (!evalShuffleGeneric(
-            Info, E, R,
-            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
-              // Bits [3:0]: zero mask - if bit is set, zero this element
-              if ((Mask & (1 << DstIdx)) != 0) {
-                return {0, -1};
-              }
-              // Bits [7:6]: select element from source vector Y (0-3)
-              // Bits [5:4]: select destination position (0-3)
-              unsigned SrcElem = (Mask >> 6) & 0x3;
-              unsigned DstElem = (Mask >> 4) & 0x3;
-              if (DstIdx == DstElem) {
-                // Insert element from source vector (B) at this position
-                return {1, static_cast<int>(SrcElem)};
-              } else {
-                // Copy from destination vector (A)
-                return {0, static_cast<int>(DstIdx)};
-              }
-            }))
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned Mask,
+                               unsigned NumElems) -> std::pair<unsigned, int> {
+                              // Bits [3:0]: zero mask - if bit is set, zero
+                              // this element
+                              if ((Mask & (1 << DstIdx)) != 0) {
+                                return {0, -1};
+                              }
+                              // Bits [7:6]: select element from source vector Y
+                              // (0-3) Bits [5:4]: select destination position
+                              // (0-3)
+                              unsigned SrcElem = (Mask >> 6) & 0x3;
+                              unsigned DstElem = (Mask >> 4) & 0x3;
+                              if (DstIdx == DstElem) {
+                                // Insert element from source vector (B) at this
+                                // position
+                                return {1, static_cast<int>(SrcElem)};
+                              } else {
+                                // Copy from destination vector (A)
+                                return {0, static_cast<int>(DstIdx)};
+                              }
+                            }))
       return false;
     return Success(R, E);
   }
@@ -13084,37 +13099,27 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512: {
-    assert(E->getNumArgs() == 3);
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned Shift,
+                               unsigned NumElems) -> std::pair<unsigned, int> {
+                              unsigned SrcVecIdx = 0;
+                              int ElemIdx = -1;
 
-    APValue VecA, VecB;
-    APSInt Imm;
-    if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
-        !EvaluateAsRValue(Info, E->getArg(1), VecB) ||
-        !EvaluateInteger(E->getArg(2), Imm, Info))
+                              // Elements come from VecB first, then VecA after
+                              // the shift boundary
+                              unsigned ShiftedIdx = DstIdx + Shift;
+                              if (ShiftedIdx < NumElems) { // from VecB
+                                SrcVecIdx = 1;
+                                ElemIdx = ShiftedIdx;
+                              } else if (ShiftedIdx <
+                                         2 * NumElems) { // from VecA
+                                ElemIdx = ShiftedIdx - NumElems;
+                              }
+                              return {SrcVecIdx, ElemIdx};
+                            }))
       return false;
-
-    if (!VecA.isVector() || !VecB.isVector())
-      return false;
-
-    unsigned LenA = VecA.getVectorLength();
-    unsigned LenB = VecB.getVectorLength();
-    assert(LenA == LenB && (LenA % 16 == 0));
-
-    unsigned Shift = Imm.getZExtValue() & 0xff;
-    SmallVector<APValue> ResultElements;
-    for (unsigned I = 0; I < LenA; ++I) {
-      if (I + Shift < LenA) {
-        ResultElements.push_back(VecB.getVectorElt(I + Shift));
-      } else if (I + Shift < LenA + LenB) {
-        ResultElements.push_back(VecA.getVectorElt(I + Shift - LenA));
-      } else {
-        APSInt Zero(/*BitWidth=*/8, /*isUnsigned=*/true);
-        Zero = 0;
-        ResultElements.push_back(APValue(Zero));
-      }
-    }
-
-    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+    return Success(R, E);
   }
   }
 }

@@ -3411,7 +3411,7 @@ static bool interp__builtin_x86_byteshift(
 
 static bool interp__builtin_ia32_shuffle_generic(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned, unsigned)>
         GetSourceIndex) {
 
   assert(Call->getNumArgs() == 3);
@@ -3427,45 +3427,7 @@ static bool interp__builtin_ia32_shuffle_generic(
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   for (unsigned DstIdx = 0; DstIdx != NumElems; ++DstIdx) {
-    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
-
-    if (SrcIdx < 0) {
-      // Zero out this element
-      if (ElemT == PT_Float) {
-        Dst.elem<Floating>(DstIdx) = Floating(
-            S.getASTContext().getFloatTypeSemantics(VecT->getElementType()));
-      } else {
-        INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(DstIdx) = T::from(0); });
-      }
-    } else {
-      const Pointer &Src = (SrcVecIdx == 0) ? A : B;
-      TYPE_SWITCH(ElemT, { Dst.elem<T>(DstIdx) = Src.elem<T>(SrcIdx); });
-    }
-  }
-  Dst.initializeAllElements();
-
-  return true;
-}
-
-static bool interp__builtin_x86_palignr(
-    InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned, unsigned)>
-        GetSourceIndex) {
-
-  assert(Call->getNumArgs() == 3);
-  unsigned Shift = popToAPSInt(S, Call->getArg(2)).getZExtValue() & 0xff;
-
-  QualType Arg0Type = Call->getArg(0)->getType();
-  const auto *VecT = Arg0Type->castAs<VectorType>();
-  PrimType ElemT = *S.getContext().classify(VecT->getElementType());
-  unsigned NumElems = VecT->getNumElements();
-
-  const Pointer &B = S.Stk.pop<Pointer>();
-  const Pointer &A = S.Stk.pop<Pointer>();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-
-  for (unsigned DstIdx = 0; DstIdx != NumElems; ++DstIdx) {
-    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, Shift, NumElems);
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask, NumElems);
 
     if (SrcIdx < 0) {
       // Zero out this element
@@ -4419,7 +4381,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_shufps256:
   case X86::BI__builtin_ia32_shufps512:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+        S, OpPC, Call,
+        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
           unsigned NumElemPerLane = 4;
           unsigned NumSelectableElems = NumElemPerLane / 2;
           unsigned BitsPerElem = 2;
@@ -4438,7 +4401,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_shufpd256:
   case X86::BI__builtin_ia32_shufpd512:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+        S, OpPC, Call,
+        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
           unsigned NumElemPerLane = 2;
           unsigned NumSelectableElems = NumElemPerLane / 2;
           unsigned BitsPerElem = 1;
@@ -4455,7 +4419,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   case X86::BI__builtin_ia32_insertps128:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call, [](unsigned DstIdx, unsigned Mask) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned Mask, unsigned NumElems) {
           // Bits [3:0]: zero mask - if bit is set, zero this element
           if ((Mask & (1 << DstIdx)) != 0) {
             return std::pair<unsigned, int>{0, -1};
@@ -4677,7 +4641,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512:
-    return interp__builtin_x86_palignr(
+    return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned Shift, unsigned NumElems) {
           // Default to -1 → zero-fill this destination element
           unsigned VecIdx = 0;
