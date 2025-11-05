@@ -1113,7 +1113,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
   // Create a stack location and ensure it's tracked.
   SpillLoc SL = {getRegByName("RSP"), StackOffset::getFixed(-8)};
   SpillLocationNo SpillNo = *MTracker->getOrTrackSpillLoc(SL);
-  ASSERT_EQ(MTracker->getNumLocs(), 13u); // Tracks all possible stack locs.
+  ASSERT_EQ(MTracker->getNumLocs(), 11u); // Tracks all possible stack locs.
   // Locations are: RSP, stack slots from 2^3 bits wide up to 2^9 for zmm regs,
   // then slots for sub_8bit_hi and sub_16bit_hi ({8, 8} and {16, 16}).
   // Finally, one for spilt fp80 registers.

@@ -20,6 +20,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   CopyConstructorInitCheck.cpp
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
+  DefaultOperatorNewOnOveralignedTypeCheck.cpp
   DerivedMethodShadowingBaseMethodCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
@@ -62,6 +63,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   ParentVirtualCallCheck.cpp
   PointerArithmeticOnPolymorphicObjectCheck.cpp
   PosixReturnCheck.cpp
+  RawMemoryCallOnNonTrivialTypeCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
