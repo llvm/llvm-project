@@ -245,7 +245,6 @@ deque stdexcept
 deque tuple
 deque version
 exception cstdint
-exception cstdlib
 exception typeinfo
 exception version
 execution version

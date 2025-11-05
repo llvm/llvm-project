@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s cert-dcl58-cpp %t -- -- -I %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-std-namespace-modification %t -- -- -I %clang_tidy_headers
 
 #include "system-header-simulation.h"
 
@@ -15,7 +15,7 @@ namespace A {
 }
 
 namespace posix {
-// CHECK-MESSAGES: :[[@LINE+2]]:11: warning: modification of 'posix' namespace can result in undefined behavior [cert-dcl58-cpp]
+// CHECK-MESSAGES: :[[@LINE+2]]:11: warning: modification of 'posix' namespace can result in undefined behavior [bugprone-std-namespace-modification]
 // CHECK-MESSAGES: :[[@LINE-2]]:11: note: 'posix' namespace opened here
 namespace foo {
 int foobar;
