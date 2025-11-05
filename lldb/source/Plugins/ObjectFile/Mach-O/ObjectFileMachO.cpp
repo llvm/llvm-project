@@ -5928,9 +5928,9 @@ bool ObjectFileMachO::IsGOTSection(const lldb_private::Section &section) const {
   if (!segment)
     return false;
 
-  bool is_data_const_got =
+  const bool is_data_const_got =
       segment->GetName() == "__DATA_CONST" && section.GetName() == "__got";
-  bool is_auth_const_ptr =
+  const bool is_auth_const_ptr =
       segment->GetName() == "__AUTH_CONST" &&
       (section.GetName() == "__auth_got" || section.GetName() == "__auth_ptr");
   return is_data_const_got || is_auth_const_ptr;
