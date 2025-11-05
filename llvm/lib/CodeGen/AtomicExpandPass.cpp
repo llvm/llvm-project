@@ -1691,7 +1691,7 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   // Atomic RMW expands to a cmpxchg loop, Since precise branch weights
   // cannot be easily determined here, we mark the branch as "unknown" (50/50)
   // to prevent misleading optimizations.
-  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, *F, DEBUG_TYPE);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE, F);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return NewLoaded;
