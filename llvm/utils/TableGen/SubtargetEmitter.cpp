@@ -443,14 +443,14 @@ void SubtargetEmitter::emitStageAndOperandCycleData(
       continue;
 
     StringRef Name = ProcModel.ItinsDef->getName();
-    OS << "\n// Functional units for \"" << Name << "\"\n";
-    NamespaceEmitter FUNamespace(OS, (Name + Twine("FU")).str());
+    {
+      OS << "\n// Functional units for \"" << Name << "\"\n";
+      NamespaceEmitter FUNamespace(OS, (Name + Twine("FU")).str());
 
-    for (const auto &[Idx, FU] : enumerate(FUs))
-      OS << "  const InstrStage::FuncUnits " << FU->getName() << " = 1ULL << "
-         << Idx << ";\n";
-
-    FUNamespace.close();
+      for (const auto &[Idx, FU] : enumerate(FUs))
+        OS << "  const InstrStage::FuncUnits " << FU->getName() << " = 1ULL << "
+           << Idx << ";\n";
+    }
 
     ConstRecVec BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
     if (BPs.empty())
@@ -1941,13 +1941,14 @@ void SubtargetEmitter::parseFeaturesFunction(raw_ostream &OS) {
 }
 
 void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
-  NamespaceEmitter NS(OS, (Target + Twine("_MC")).str());
-  OS << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,\n"
-     << "    const MCInst *MI, const MCInstrInfo *MCII, "
-     << "const MCSubtargetInfo &STI, unsigned CPUID) {\n";
-  emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
-  OS << "}\n";
-  NS.close();
+  {
+    NamespaceEmitter NS(OS, (Target + Twine("_MC")).str());
+    OS << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,\n"
+       << "    const MCInst *MI, const MCInstrInfo *MCII, "
+       << "const MCSubtargetInfo &STI, unsigned CPUID) {\n";
+    emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
+    OS << "}\n";
+  }
 
   OS << "struct " << Target
      << "GenMCSubtargetInfo : public MCSubtargetInfo {\n";
@@ -1983,15 +1984,15 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
 }
 
 void SubtargetEmitter::emitMcInstrAnalysisPredicateFunctions(raw_ostream &OS) {
-  IfDefEmitter IfDefDecls(OS, "GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS");
-
   STIPredicateExpander PE(Target, /*Indent=*/0);
-  PE.setExpandForMC(true);
-  PE.setByRef(true);
-  for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
-    PE.expandSTIPredicate(OS, Fn);
 
-  IfDefDecls.close();
+  {
+    IfDefEmitter IfDefDecls(OS, "GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS");
+    PE.setExpandForMC(true);
+    PE.setByRef(true);
+    for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
+      PE.expandSTIPredicate(OS, Fn);
+  }
 
   IfDefEmitter IfDefDefs(OS, "GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS");
   std::string ClassPrefix = Target + "MCInstrAnalysis";
