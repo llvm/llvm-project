@@ -467,46 +467,48 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   Register UnpackedDstReg = TRI->getSubReg(DstReg, AMDGPU::sub0);
 
   // Lambda to check if a source operand causes clobbering
-  auto checkSrcClobber = [&](AMDGPU::OpName SrcName, AMDGPU::OpName ModsName) -> bool {
+  auto checkSrcClobber = [&](AMDGPU::OpName SrcName,
+                             AMDGPU::OpName ModsName) -> bool {
     const MachineOperand *SrcMO = TII->getNamedOperand(MI, SrcName);
     if (SrcMO && SrcMO->isReg()) {
       Register SrcReg = SrcMO->getReg();
       unsigned SrcMods = TII->getNamedOperand(MI, ModsName)->getImm();
       Register HiSrcReg = (SrcMods & SISrcMods::OP_SEL_1)
-                            ? TRI->getSubReg(SrcReg, AMDGPU::sub1)
-                            : TRI->getSubReg(SrcReg, AMDGPU::sub0);
+                              ? TRI->getSubReg(SrcReg, AMDGPU::sub1)
+                              : TRI->getSubReg(SrcReg, AMDGPU::sub0);
       return TRI->regsOverlap(UnpackedDstReg, HiSrcReg);
-    } 
+    }
   };
-  
+
   // Src1 should be checked before src0 to avoid false positives.
   // For example, the following unpacked sequence is legal:
   // $vgpr0_vgpr1 = V_PK_MUL_F32 8, $vgpr0_vgpr1, 8, $vgpr2_vgpr3
   // =>
   // $vgpr0 = V_MUL_F32 $vgpr0, $vgpr2
   // $vgpr1 = V_MUL_F32 $vgpr1, $vgpr3
-  // Although the destination and source overlap in the first instruction ($vgpr0), $vgpr0 is not used as a source in the second instruction.
+  // Although the destination and source overlap in the first instruction
+  // ($vgpr0), $vgpr0 is not used as a source in the second instruction.
   // Therefore, unpacking this sequence is safe.
-  // 
+  //
   // The following sequence, however, is not safe to unpack:
   // $vgpr0_vgpr1 = V_PK_MUL_F32 0, $vgpr0_vgpr1, 8, $vgpr2_vgpr3
   // =>
   // $vgpr0 = V_MUL_F32 $vgpr0, $vgpr2
   // $vgpr1 = V_MUL_F32 $vgpr0, $vgpr3
-  // In the unpacked version, $vgpr1 uses $vgpr0 as a source, but $vgpr0 was updated in the previous instruction.
-  // This behavior does not occur with the packed instruction.
-  // As a result, it is unsafe to unpack this sequence.
+  // In the unpacked version, $vgpr1 uses $vgpr0 as a source, but $vgpr0 was
+  // updated in the previous instruction. This behavior does not occur with the
+  // packed instruction. As a result, it is unsafe to unpack this sequence.
   if (checkSrcClobber(AMDGPU::OpName::src1, AMDGPU::OpName::src1_modifiers))
     return true;
 
   if (checkSrcClobber(AMDGPU::OpName::src0, AMDGPU::OpName::src0_modifiers))
-      return true;
-  
+    return true;
+
   // Applicable for packed instructions with 3 source operands, such as
   // V_PK_FMA.
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
     if (checkSrcClobber(AMDGPU::OpName::src2, AMDGPU::OpName::src2_modifiers))
-        return true;
+      return true;
   }
   return false;
 }
@@ -607,15 +609,13 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
 
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
-    uint16_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
-    bool IsUnpackable =
-        UnpackedOpCode != std::numeric_limits<uint16_t>::max();
     if (Instr.isMetaInstruction())
       continue;
-    if ((Instr.isTerminator()) ||
-        (TII->isNeverCoissue(Instr) && !IsUnpackable) ||
-        (SIInstrInfo::modifiesModeRegister(Instr) &&
-         Instr.modifiesRegister(AMDGPU::EXEC, TRI)))
+    if (Instr.isTerminator())
+      return;
+    uint16_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
+    bool IsUnpackable = UnpackedOpCode != std::numeric_limits<uint16_t>::max();
+    if (TII->isNeverCoissue(Instr) && !IsUnpackable)
       return;
 
     const MCSchedClassDesc *InstrSchedClassDesc =
@@ -631,26 +631,27 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     // transitive dependencies between the MFMA def and candidate instruction
     // def and uses. Conservatively ensures that we do not incorrectly
     // read/write registers.
-    for (const MachineOperand &InstrMO : Instr.operands()) {
-      if (!InstrMO.isReg() || !InstrMO.getReg().isValid())
-        continue;
-      if (TRI->regsOverlap(MFMADef, InstrMO.getReg()))
-        return;
-    }
+    if (llvm::any_of(Instr.operands(), [&](const MachineOperand &InstrMO) {
+          return InstrMO.isReg() && InstrMO.getReg().isValid() &&
+                 TRI->regsOverlap(MFMADef, InstrMO.getReg());
+        }))
+      return;
+
     if (!IsUnpackable)
       continue;
-    
+
     // V_MOV_B32 does not support source modifiers. Without source modifiers, we
     // cannot be faithful to the packed instruction semantics in few cases. This
-    // is true when the packed instruction has NEG and NEG_HI modifiers. We should
-    // abort unpacking if:
-    // 1. hi/lo bits selected by OPSEL for src0 are also marked by NEG or NEG_HI.
+    // is true when the packed instruction has NEG and NEG_HI modifiers. We
+    // should abort unpacking if:
+    // 1. hi/lo bits selected by OPSEL for src0 are also marked by NEG or
+    // NEG_HI.
     // 2. hi/lo bits selected by OPSEL_HI for src1 are also marked by NEG or
     // NEG_HI.
     // Packed instructions do not specify ABS modifiers, so we can safely ignore
     // those.
     if (!AMDGPU::hasNamedOperand(UnpackedOpCode,
-                                  AMDGPU::OpName::src0_modifiers)) {
+                                 AMDGPU::OpName::src0_modifiers)) {
       unsigned Src0Mods =
           TII->getNamedOperand(Instr, AMDGPU::OpName::src0_modifiers)->getImm();
       unsigned Src1Mods =
