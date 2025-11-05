@@ -15,8 +15,8 @@
 ; CHECK: %[[ConstMinus184:[0-9]+]] = OpConstant %[[Int64Ty]] 18446744073709551432
 ; CHECK: %[[ConstMinus16:[0-9]+]] = OpConstant %[[Int64Ty]] 18446744073709551600
 ; CHECK: %[[Const168:[0-9]+]] = OpConstant %[[Int64Ty]] 168
-; CHECK: %[[Const184:[0-9]+]] = OpConstant %[[Int64Ty]] 184
 ; CHECK: %[[Nullptr:[0-9]+]] = OpConstantNull %[[GlobInt8PtrTy]]
+; CHECK: %[[Const184:[0-9]+]] = OpConstant %[[Int64Ty]] 184
 ; CHECK: %[[Const184toPtr:[0-9]+]] = OpSpecConstantOp %[[GlobInt8PtrTy]] ConvertUToPtr %[[Const184]]
 ; CHECK: %[[Const168toPtr:[0-9]+]] = OpSpecConstantOp %[[GlobInt8PtrTy]] ConvertUToPtr %[[Const168]]
 ; CHECK: %[[ConstMinus16toPtr:[0-9]+]] = OpSpecConstantOp %[[GlobInt8PtrTy]] ConvertUToPtr %[[ConstMinus16]]
