@@ -53446,13 +53446,11 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                    Align(), St->getMemOperand()->getFlags());
 
   // If there are other uses of StoredVal, replace with a new load of the
-  // whole (updated) value and ensure that any chained dependencies on the
-  // original store are updated to come AFTER the new load.
+  // whole (updated) value.
   if (!StoredVal.hasOneUse()) {
     SDValue NewLoad =
         DAG.getLoad(VT, DL, NewStore, Ld->getBasePtr(), Ld->getMemOperand());
     DAG.ReplaceAllUsesWith(StoredVal, NewLoad);
-    DAG.ReplaceAllUsesWith(SDValue(St, 0), NewLoad.getValue(1));
   }
   return NewStore;
 }
