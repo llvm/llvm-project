@@ -634,6 +634,17 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     return Error;
   }
 
+  if (Name == "call_ref" || Name == "return_call_ref") {
+    // Function value.
+    bool Error = popType(ErrorLoc, wasm::ValType::FUNCREF);
+    Error |= checkSig(ErrorLoc, LastSig);
+    if (Name == "return_call_indirect") {
+      Error |= endOfFunction(ErrorLoc, false);
+      pushType(Polymorphic{});
+    }
+    return Error;
+  }
+
   if (Name == "unreachable") {
     pushType(Polymorphic{});
     return false;

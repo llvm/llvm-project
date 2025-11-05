@@ -668,7 +668,13 @@ public:
       if (parseFunctionTableOperand(&FunctionTable))
         return true;
       ExpectFuncType = true;
+    } else if (Name == "call_ref" || Name == "return_call_ref") {
+      ExpectFuncType = true;
     } else if (Name == "ref.test") {
+      // When we get support for wasm-gc types, this should become
+      // ExpectRefType.
+      ExpectFuncType = true;
+    } else if (Name == "ref.cast") {
       // When we get support for wasm-gc types, this should become
       // ExpectRefType.
       ExpectFuncType = true;

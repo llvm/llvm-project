@@ -66,6 +66,16 @@ defm CALL_INDIRECT :
     [],
     "call_indirect", "call_indirect\t$type, $table", 0x11>;
 
+let variadicOpsAreDefs = 1 in
+defm CALL_REF :
+  I<(outs),
+    (ins TypeIndex:$type, variable_ops),
+    (outs),
+    (ins TypeIndex:$type),
+    [],
+    "call_ref", "call_ref\t$type", 0x14>,
+  Requires<[HasGC]>;
+
 let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
 defm RET_CALL :
   I<(outs), (ins function32_op:$callee, variable_ops),
@@ -80,5 +90,15 @@ defm RET_CALL_INDIRECT :
     "return_call_indirect\t", "return_call_indirect\t$type, $table",
     0x13>,
   Requires<[HasTailCall]>;
+
+let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
+defm RET_CALL_REF :
+  I<(outs),
+    (ins TypeIndex:$type, variable_ops),
+    (outs),
+    (ins TypeIndex:$type),
+    [],
+    "return_call_ref", "return_call_ref\t$type", 0x15>,
+  Requires<[HasTailCall, HasGC]>;
 
 } // Uses = [SP32,SP64], isCall = 1

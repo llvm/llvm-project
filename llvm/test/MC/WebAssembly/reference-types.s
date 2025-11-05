@@ -1,5 +1,5 @@
-# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+reference-types -mattr=+gc < %s | FileCheck %s
-# RUN: llvm-mc -show-encoding -triple=wasm64-unknown-unknown -mattr=+reference-types -mattr=+gc < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+reference-types -mattr=+gc -mattr=+tail-call < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -triple=wasm64-unknown-unknown -mattr=+reference-types -mattr=+gc -mattr=+tail-call < %s | FileCheck %s
 
 # CHECK-LABEL:ref_is_null:
 # CHECK: ref.is_null     # encoding: [0xd1]
@@ -40,6 +40,38 @@ ref_test_test:
   ref.test () -> ()
   ref.null_func
   ref.test () -> (i32)
+  end_function
+
+# CHECK-LABEL: ref_cast_and_call_ref_test:
+# CHECK: ref.null_func   # encoding: [0xd0,0x70]
+# CHECK: ref.cast () -> () # encoding: [0xfb,0x16,0x80'A',0x80'A',0x80'A',0x80'A',A]
+# CHECK: # fixup A - offset: 2, value: .Ltypeindex2@TYPEINDEX, kind: fixup_uleb128_i32
+# CHECK: call_ref () -> () # encoding: [0x14,0x80'A',0x80'A',0x80'A',0x80'A',A]
+# CHECK: # fixup A - offset: 1, value: .Ltypeindex3@TYPEINDEX, kind: fixup_uleb128_i32
+# CHECK: ref.null_func   # encoding: [0xd0,0x70]
+# CHECK: ref.cast (i32) -> (f32) # encoding: [0xfb,0x16,0x80'A',0x80'A',0x80'A',0x80'A',A]
+# CHECK: # fixup A - offset: 2, value: .Ltypeindex4@TYPEINDEX, kind: fixup_uleb128_i32
+# CHECK: call_ref (i32) -> (f32) # encoding: [0x14,0x80'A',0x80'A',0x80'A',0x80'A',A]
+# CHECK: # fixup A - offset: 1, value: .Ltypeindex5@TYPEINDEX, kind: fixup_uleb128_i32
+# CHECK: ref.cast (f32) -> (i32) # encoding: [0xfb,0x16,0x80'A',0x80'A',0x80'A',0x80'A',A]
+# CHECK: # fixup A - offset: 2, value: .Ltypeindex6@TYPEINDEX, kind: fixup_uleb128_i32
+# CHECK: return_call_ref (f32) -> (i32) # encoding: [0x15,0x80'A',0x80'A',0x80'A',0x80'A',A]
+# CHECK: fixup A - offset: 1, value: .Ltypeindex7@TYPEINDEX, kind: fixup_uleb128_i32
+ref_cast_and_call_ref_test:
+  .functype ref_cast_and_call_ref_test () -> (i32)
+  ref.null_func
+  ref.cast () -> ()
+  call_ref () -> ()
+
+  i32.const 0
+  ref.null_func
+  ref.cast (i32) -> (f32)
+  call_ref (i32) -> (f32)
+
+  ref.null_func
+  ref.cast (f32) -> (i32)
+  return_call_ref (f32) -> (i32)
+
   end_function
 
 # CHECK-LABEL: ref_sig_test_funcref:
