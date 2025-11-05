@@ -2584,6 +2584,14 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       report("Extra explicit operand on non-variadic instruction", MO, MONum);
   }
 
+  // Verify earlyClobber def operand
+  if (MCID.getOperandConstraint(MONum, MCOI::EARLY_CLOBBER) != -1) {
+    if (!MO->isReg())
+      report("Early clobber must be a register", MI);
+    if (!MO->isEarlyClobber())
+      report("Missing earlyClobber flag", MI);
+  }
+
   switch (MO->getType()) {
   case MachineOperand::MO_Register: {
     // Verify debug flag on debug instructions. Check this first because reg0

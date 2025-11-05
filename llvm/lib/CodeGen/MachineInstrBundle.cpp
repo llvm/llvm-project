@@ -136,6 +136,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   SmallSetVector<Register, 8> ExternUses;
   SmallSet<Register, 8> KilledUseSet;
   SmallSet<Register, 8> UndefUseSet;
+  SmallVector<std::pair<Register, Register>> TiedOperands;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
     // Debug instructions have no effects to track.
     if (MII->isDebugInstr())
@@ -160,6 +161,15 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
         if (MO.isKill()) {
           // External def is now killed.
           KilledUseSet.insert(Reg);
+        }
+        if (MO.isTied() && Reg.isVirtual()) {
+          // Record tied operand constraints that involve virtual registers so
+          // that bundles that are formed pre-register allocation reflect the
+          // relevant constraints.
+          unsigned TiedIdx = MII->findTiedOperandIdx(MO.getOperandNo());
+          MachineOperand &TiedMO = MII->getOperand(TiedIdx);
+          Register DefReg = TiedMO.getReg();
+          TiedOperands.emplace_back(DefReg, Reg);
         }
       }
     }
@@ -203,7 +213,17 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     bool isKill = KilledUseSet.contains(Reg);
     bool isUndef = UndefUseSet.contains(Reg);
     MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
-               getImplRegState(true));
+                        getImplRegState(true));
+  }
+
+  for (auto [DefReg, UseReg] : TiedOperands) {
+    unsigned DefIdx =
+        std::distance(LocalDefs.begin(), llvm::find(LocalDefs, DefReg));
+    unsigned UseIdx =
+        std::distance(ExternUses.begin(), llvm::find(ExternUses, UseReg));
+    assert(DefIdx < LocalDefs.size());
+    assert(UseIdx < ExternUses.size());
+    MIB->tieOperands(DefIdx, LocalDefs.size() + UseIdx);
   }
 }
 

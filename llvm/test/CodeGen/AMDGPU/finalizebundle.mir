@@ -40,7 +40,7 @@ name: test_tied
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_tied
-    ; CHECK: BUNDLE implicit-def %0, implicit-def %2, implicit %1:vgpr_32, implicit $mode, implicit $exec {
+    ; CHECK: BUNDLE implicit-def %0, implicit-def %2, implicit %1:vgpr_32(tied-def 1), implicit $mode, implicit $exec {
     ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY %1:vgpr_32
     ; CHECK-NEXT:   [[V_FMAC_F16_e32_:%[0-9]+]]:vgpr_32 = V_FMAC_F16_e32 internal [[COPY]], internal [[COPY]], %1:vgpr_32, implicit $mode, implicit $exec
     ; CHECK-NEXT: }

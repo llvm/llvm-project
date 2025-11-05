@@ -27,11 +27,11 @@ define amdgpu_kernel void @set_inactive_imm_poison(ptr addrspace(1) %out) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
-; GCN-NEXT:    v_mov_b32_e32 v0, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %tmp.0 = call i32 @llvm.amdgcn.set.inactive.i32(i32 1, i32 poison) #0
   %tmp = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %tmp.0)
@@ -68,12 +68,12 @@ define amdgpu_kernel void @set_inactive_imm_poison_64(ptr addrspace(1) %out) {
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v0, v0
-; GCN-NEXT:    v_mov_b32_e32 v1, v1
+; GCN-NEXT:    v_mov_b32_e32 v2, v0
+; GCN-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dwordx2 v[2:3], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %tmp.0 = call i64 @llvm.amdgcn.set.inactive.i64(i64 1, i64 poison) #0
   %tmp = call i64 @llvm.amdgcn.strict.wwm.i64(i64 %tmp.0)
