@@ -202,6 +202,27 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
 /// probability of executing at least one more iteration?
 static BranchProbability
 probOfNextInRemainder(BranchProbability OriginalLoopProb, unsigned N) {
+  // OriginalLoopProb == 1 would produce a division by zero in the calculation
+  // below.  The problem is that case indicates an always infinite loop, but a
+  // remainder loop cannot be calculated at run time if the original loop is
+  // infinite as infinity % UnrollCount is undefined.  We then choose
+  // probabilities indicating that all remainder loop iterations will always
+  // execute.
+  //
+  // Currently, the remainder loop here is an epilogue, which cannot be reached
+  // if the original loop is infinite, so the aforementioned choice is
+  // arbitrary.
+  //
+  // FIXME: Branch weights still need to be fixed in the case of prologues
+  // (issue #135812).  In that case, the aforementioned choice seems reasonable
+  // for the goal of maintaining the original loop's block frequencies.  That
+  // is, an infinite loop's initial iterations are not skipped, and the prologue
+  // loop body might have unique blocks that execute a finite number of times
+  // if, for example, the original loop body contains conditionals like i <
+  // UnrollCount.
+  if (OriginalLoopProb == BranchProbability::getOne())
+    return BranchProbability::getOne();
+
   // Each of these variables holds the original loop's probability that the
   // number of iterations it will execute is some m in the specified range.
   BranchProbability ProbOne = OriginalLoopProb;                // 1 <= m

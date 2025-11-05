@@ -39,7 +39,7 @@ TEST(LlvmLibcPrintfWriterTest, Write) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("abc", str);
-  ASSERT_EQ(writer.get_chars_written(), 3);
+  ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteMultipleTimes) {
@@ -53,7 +53,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteMultipleTimes) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("abcDEF123", str);
-  ASSERT_EQ(writer.get_chars_written(), 9);
+  ASSERT_EQ(writer.get_chars_written(), size_t{9});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteChars) {
@@ -66,7 +66,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteChars) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("aaa", str);
-  ASSERT_EQ(writer.get_chars_written(), 3);
+  ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteCharsMultipleTimes) {
@@ -80,7 +80,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteCharsMultipleTimes) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("aaaDDD111", str);
-  ASSERT_EQ(writer.get_chars_written(), 9);
+  ASSERT_EQ(writer.get_chars_written(), size_t{9});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteManyChars) {
@@ -102,7 +102,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteManyChars) {
                "ZZZZZZZZZZ"
                "ZZZZZZZZZ",
                str);
-  ASSERT_EQ(writer.get_chars_written(), 99);
+  ASSERT_EQ(writer.get_chars_written(), size_t{99});
 }
 
 TEST(LlvmLibcPrintfWriterTest, MixedWrites) {
@@ -117,7 +117,7 @@ TEST(LlvmLibcPrintfWriterTest, MixedWrites) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("aaaDEF111456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLength) {
@@ -129,7 +129,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLength) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("abcDEF1234", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLength) {
@@ -141,7 +141,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLength) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("1111111111", str);
-  ASSERT_EQ(writer.get_chars_written(), 15);
+  ASSERT_EQ(writer.get_chars_written(), size_t{15});
 }
 
 TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLength) {
@@ -157,7 +157,7 @@ TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLength) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("aaaDEF1114", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, StringWithMaxLengthOne) {
@@ -175,7 +175,7 @@ TEST(LlvmLibcPrintfWriterTest, StringWithMaxLengthOne) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLength) {
@@ -187,7 +187,7 @@ TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLength) {
   writer.write('1', 3);
   writer.write({"456", 3});
 
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 struct OutBuff {
@@ -226,7 +226,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLengthWithCallback) {
   str[out_buff.cur_pos] = '\0';
 
   ASSERT_STREQ("abcDEF123456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLengthWithCallback) {
@@ -246,7 +246,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLengthWithCallback) {
   str[out_buff.cur_pos] = '\0';
 
   ASSERT_STREQ("111111111111111", str);
-  ASSERT_EQ(writer.get_chars_written(), 15);
+  ASSERT_EQ(writer.get_chars_written(), size_t{15});
 }
 
 TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLengthWithCallback) {
@@ -269,7 +269,7 @@ TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLengthWithCallback) {
   str[out_buff.cur_pos] = '\0';
 
   ASSERT_STREQ("aaaDEF111456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, ZeroLengthBufferWithCallback) {
@@ -292,7 +292,7 @@ TEST(LlvmLibcPrintfWriterTest, ZeroLengthBufferWithCallback) {
   str[out_buff.cur_pos] = '\0';
 
   ASSERT_STREQ("aaaDEF111456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLengthWithCallback) {
@@ -312,7 +312,7 @@ TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLengthWithCallback) {
   wb.overflow_write("");
   str[out_buff.cur_pos] = '\0';
 
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
   ASSERT_STREQ("aaaDEF111456", str);
 }
 

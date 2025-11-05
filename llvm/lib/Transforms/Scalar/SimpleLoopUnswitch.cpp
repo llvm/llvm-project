@@ -40,6 +40,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
@@ -2831,9 +2832,14 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
      MSSAU->getMemorySSA()->verifyMemorySSA();
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-  Instruction *DeoptBlockTerm =
-      SplitBlockAndInsertIfThen(GI->getArgOperand(0), GI, true,
-                                GI->getMetadata(LLVMContext::MD_prof), &DTU, &LI);
+  // llvm.experimental.guard doesn't have branch weights. We can assume,
+  // however, that the deopt path is unlikely.
+  Instruction *DeoptBlockTerm = SplitBlockAndInsertIfThen(
+      GI->getArgOperand(0), GI, true,
+      !ProfcheckDisableMetadataFixes && EstimateProfile
+          ? MDBuilder(GI->getContext()).createUnlikelyBranchWeights()
+          : nullptr,
+      &DTU, &LI);
   BranchInst *CheckBI = cast<BranchInst>(CheckBB->getTerminator());
   // SplitBlockAndInsertIfThen inserts control flow that branches to
   // DeoptBlockTerm if the condition is true.  We want the opposite.
@@ -3197,10 +3203,15 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   Builder.SetInsertPoint(TI);
   auto *InvariantBr =
       Builder.CreateCondBr(InjectedCond, InLoopSucc, CheckBlock);
+  // We don't know anything about the relation between the limits.
+  setExplicitlyUnknownBranchWeightsIfProfiled(
+      *InvariantBr, *InvariantBr->getParent()->getParent(), DEBUG_TYPE);
 
   Builder.SetInsertPoint(CheckBlock);
-  Builder.CreateCondBr(TI->getCondition(), TI->getSuccessor(0),
-                       TI->getSuccessor(1));
+  Builder.CreateCondBr(
+      TI->getCondition(), TI->getSuccessor(0), TI->getSuccessor(1),
+      !ProfcheckDisableMetadataFixes ? TI->getMetadata(LLVMContext::MD_prof)
+                                     : nullptr);
   TI->eraseFromParent();
 
   // Fixup phis.
