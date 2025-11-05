@@ -229,3 +229,50 @@ define i32 @test.llvm.bitrev(i32 %a) {
   %1 = call i32 @llvm.bitreverse(i32 %a)
   ret i32 %1
 }
+
+define i1 @ctpop_i32_ult_two(i32 signext %a) nounwind {
+; CHECK-LABEL: ctpop_i32_ult_two:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.cnt a0, a0
+; CHECK-NEXT:    sltiu a0, a0, 2
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.ctpop.i32(i32 %a)
+  %2 = icmp ult i32 %1, 2
+  ret i1 %2
+}
+
+define i1 @ctpop_i32_ugt_one(i32 signext %a) nounwind {
+; CHECK-LABEL: ctpop_i32_ugt_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.cnt a0, a0
+; CHECK-NEXT:    sltiu a0, a0, 2
+; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.ctpop.i32(i32 %a)
+  %2 = icmp ugt i32 %1, 1
+  ret i1 %2
+}
+
+define i1 @ctpop_i32_eq_one(i32 signext %a) nounwind {
+; CHECK-LABEL: ctpop_i32_eq_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.cnt a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.ctpop.i32(i32 %a)
+  %2 = icmp eq i32 %1, 1
+  ret i1 %2
+}
+
+define i1 @ctpop_i32_ne_one(i32 signext %a) nounwind {
+; CHECK-LABEL: ctpop_i32_ne_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.cnt a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.ctpop.i32(i32 %a)
+  %2 = icmp ne i32 %1, 1
+  ret i1 %2
+}

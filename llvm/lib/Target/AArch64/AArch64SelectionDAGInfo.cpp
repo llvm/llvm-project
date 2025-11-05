@@ -10,8 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64TargetMachine.h"
-#include "Utils/AArch64SMEAttributes.h"
+#include "AArch64SelectionDAGInfo.h"
+#include "AArch64MachineFunctionInfo.h"
+
+#define GET_SDNODE_DESC
+#include "AArch64GenSDNodeInfo.inc"
+#undef GET_SDNODE_DESC
 
 using namespace llvm;
 
@@ -23,14 +27,107 @@ static cl::opt<bool>
                                 "to lower to librt functions"),
                        cl::init(true));
 
-bool AArch64SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
-  return Opcode >= AArch64ISD::FIRST_MEMORY_OPCODE &&
-         Opcode <= AArch64ISD::LAST_MEMORY_OPCODE;
-}
+AArch64SelectionDAGInfo::AArch64SelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(AArch64GenSDNodeInfo) {}
 
-bool AArch64SelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
-  return Opcode >= AArch64ISD::FIRST_STRICTFP_OPCODE &&
-         Opcode <= AArch64ISD::LAST_STRICTFP_OPCODE;
+void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
+                                               const SDNode *N) const {
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+
+#ifndef NDEBUG
+  // Some additional checks not yet implemented by verifyTargetNode.
+  constexpr MVT FlagsVT = MVT::i32;
+  switch (N->getOpcode()) {
+  case AArch64ISD::SUBS:
+    assert(N->getValueType(1) == FlagsVT);
+    break;
+  case AArch64ISD::ADC:
+  case AArch64ISD::SBC:
+    assert(N->getOperand(2).getValueType() == FlagsVT);
+    break;
+  case AArch64ISD::ADCS:
+  case AArch64ISD::SBCS:
+    assert(N->getValueType(1) == FlagsVT);
+    assert(N->getOperand(2).getValueType() == FlagsVT);
+    break;
+  case AArch64ISD::CSEL:
+  case AArch64ISD::CSINC:
+  case AArch64ISD::BRCOND:
+    assert(N->getOperand(3).getValueType() == FlagsVT);
+    break;
+  case AArch64ISD::SADDWT:
+  case AArch64ISD::SADDWB:
+  case AArch64ISD::UADDWT:
+  case AArch64ISD::UADDWB: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 2 && "Expected two operands!");
+    EVT VT = N->getValueType(0);
+    EVT Op0VT = N->getOperand(0).getValueType();
+    EVT Op1VT = N->getOperand(1).getValueType();
+    assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
+           VT.isInteger() && Op0VT.isInteger() && Op1VT.isInteger() &&
+           "Expected integer vectors!");
+    assert(VT == Op0VT &&
+           "Expected result and first input to have the same type!");
+    assert(Op0VT.getSizeInBits() == Op1VT.getSizeInBits() &&
+           "Expected vectors of equal size!");
+    assert(Op0VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount() &&
+           "Expected result vector and first input vector to have half the "
+           "lanes of the second input vector!");
+    break;
+  }
+  case AArch64ISD::SUNPKLO:
+  case AArch64ISD::SUNPKHI:
+  case AArch64ISD::UUNPKLO:
+  case AArch64ISD::UUNPKHI: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 1 && "Expected one operand!");
+    EVT VT = N->getValueType(0);
+    EVT OpVT = N->getOperand(0).getValueType();
+    assert(OpVT.isVector() && VT.isVector() && OpVT.isInteger() &&
+           VT.isInteger() && "Expected integer vectors!");
+    assert(OpVT.getSizeInBits() == VT.getSizeInBits() &&
+           "Expected vectors of equal size!");
+    assert(OpVT.getVectorElementCount() == VT.getVectorElementCount() * 2 &&
+           "Expected result vector with half the lanes of its input!");
+    break;
+  }
+  case AArch64ISD::TRN1:
+  case AArch64ISD::TRN2:
+  case AArch64ISD::UZP1:
+  case AArch64ISD::UZP2:
+  case AArch64ISD::ZIP1:
+  case AArch64ISD::ZIP2: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 2 && "Expected two operands!");
+    EVT VT = N->getValueType(0);
+    EVT Op0VT = N->getOperand(0).getValueType();
+    EVT Op1VT = N->getOperand(1).getValueType();
+    assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
+           "Expected vectors!");
+    assert(VT == Op0VT && VT == Op1VT && "Expected matching vectors!");
+    break;
+  }
+  case AArch64ISD::RSHRNB_I: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 2 && "Expected two operands!");
+    EVT VT = N->getValueType(0);
+    EVT Op0VT = N->getOperand(0).getValueType();
+    EVT Op1VT = N->getOperand(1).getValueType();
+    assert(VT.isVector() && VT.isInteger() &&
+           "Expected integer vector result type!");
+    assert(Op0VT.isVector() && Op0VT.isInteger() &&
+           "Expected first operand to be an integer vector!");
+    assert(VT.getSizeInBits() == Op0VT.getSizeInBits() &&
+           "Expected vectors of equal size!");
+    assert(VT.getVectorElementCount() == Op0VT.getVectorElementCount() * 2 &&
+           "Expected input vector with half the lanes of its result!");
+    assert(Op1VT == MVT::i32 && isa<ConstantSDNode>(N->getOperand(1)) &&
+           "Expected second operand to be a constant i32!");
+    break;
+  }
+  }
+#endif
 }
 
 SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
@@ -85,55 +182,39 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
   const AArch64TargetLowering *TLI = STI.getTargetLowering();
-  SDValue Symbol;
-  TargetLowering::ArgListEntry DstEntry;
-  DstEntry.Ty = PointerType::getUnqual(*DAG.getContext());
-  DstEntry.Node = Dst;
   TargetLowering::ArgListTy Args;
-  Args.push_back(DstEntry);
-  EVT PointerVT = TLI->getPointerTy(DAG.getDataLayout());
+  Args.emplace_back(Dst, PointerType::getUnqual(*DAG.getContext()));
 
+  RTLIB::Libcall NewLC;
   switch (LC) {
   case RTLIB::MEMCPY: {
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-    Symbol = DAG.getExternalSymbol("__arm_sc_memcpy", PointerVT);
-    Entry.Node = Src;
-    Args.push_back(Entry);
+    NewLC = RTLIB::SC_MEMCPY;
+    Args.emplace_back(Src, PointerType::getUnqual(*DAG.getContext()));
     break;
   }
   case RTLIB::MEMMOVE: {
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-    Symbol = DAG.getExternalSymbol("__arm_sc_memmove", PointerVT);
-    Entry.Node = Src;
-    Args.push_back(Entry);
+    NewLC = RTLIB::SC_MEMMOVE;
+    Args.emplace_back(Src, PointerType::getUnqual(*DAG.getContext()));
     break;
   }
   case RTLIB::MEMSET: {
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
-    Symbol = DAG.getExternalSymbol("__arm_sc_memset", PointerVT);
-    Src = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
-    Entry.Node = Src;
-    Args.push_back(Entry);
+    NewLC = RTLIB::SC_MEMSET;
+    Args.emplace_back(DAG.getZExtOrTrunc(Src, DL, MVT::i32),
+                      Type::getInt32Ty(*DAG.getContext()));
     break;
   }
   default:
     return SDValue();
   }
 
-  TargetLowering::ArgListEntry SizeEntry;
-  SizeEntry.Node = Size;
-  SizeEntry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
-  Args.push_back(SizeEntry);
-  assert(Symbol->getOpcode() == ISD::ExternalSymbol &&
-         "Function name is not set");
+  EVT PointerVT = TLI->getPointerTy(DAG.getDataLayout());
+  SDValue Symbol = DAG.getExternalSymbol(TLI->getLibcallName(NewLC), PointerVT);
+  Args.emplace_back(Size, DAG.getDataLayout().getIntPtrType(*DAG.getContext()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      TLI->getLibcallCallingConv(LC), RetTy, Symbol, std::move(Args));
+      TLI->getLibcallCallingConv(NewLC), RetTy, Symbol, std::move(Args));
   return TLI->LowerCallTo(CLI).second;
 }
 
@@ -148,7 +229,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
     return EmitMOPS(AArch64::MOPSMemoryCopyPseudo, DAG, DL, Chain, Dst, Src,
                     Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
 
-  SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  SMEAttrs Attrs = AFI->getSMEFnAttrs();
   if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, DL, Chain, Dst, Src, Size,
                                              RTLIB::MEMCPY);
@@ -167,7 +249,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
                     Size, Alignment, isVolatile, DstPtrInfo,
                     MachinePointerInfo{});
 
-  SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  SMEAttrs Attrs = AFI->getSMEFnAttrs();
   if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
                                              RTLIB::MEMSET);
@@ -185,7 +268,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
     return EmitMOPS(AArch64::MOPSMemoryMovePseudo, DAG, dl, Chain, Dst, Src,
                     Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
 
-  SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  SMEAttrs Attrs = AFI->getSMEFnAttrs();
   if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
                                              RTLIB::MEMMOVE);

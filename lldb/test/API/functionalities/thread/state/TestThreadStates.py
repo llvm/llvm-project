@@ -30,7 +30,6 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureAll(
         oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr23669"
     )
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
     def test_state_after_continue(self):
         """Test thread state after continue."""
         self.build()

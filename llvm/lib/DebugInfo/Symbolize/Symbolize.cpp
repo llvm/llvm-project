@@ -15,6 +15,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/BTF/BTFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/GSYM/GsymContext.h"
+#include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
@@ -257,7 +259,7 @@ LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol,
     if (LineInfo.FileName != DILineInfo::BadString) {
       if (Opts.Demangle)
         LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
-      Result.push_back(LineInfo);
+      Result.push_back(std::move(LineInfo));
     }
   }
 
@@ -498,6 +500,34 @@ bool LLVMSymbolizer::getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
   return false;
 }
 
+std::string LLVMSymbolizer::lookUpGsymFile(const std::string &Path) {
+  if (Opts.DisableGsym)
+    return {};
+
+  auto CheckGsymFile = [](const llvm::StringRef &GsymPath) {
+    sys::fs::file_status Status;
+    std::error_code EC = llvm::sys::fs::status(GsymPath, Status);
+    return !EC && !llvm::sys::fs::is_directory(Status);
+  };
+
+  // First, look beside the binary file
+  if (const auto GsymPath = Path + ".gsym"; CheckGsymFile(GsymPath))
+    return GsymPath;
+
+  // Then, look in the directories specified by GsymFileDirectory
+
+  for (const auto &Directory : Opts.GsymFileDirectory) {
+    SmallString<16> GsymPath = llvm::StringRef{Directory};
+    llvm::sys::path::append(GsymPath,
+                            llvm::sys::path::filename(Path) + ".gsym");
+
+    if (CheckGsymFile(GsymPath))
+      return static_cast<std::string>(GsymPath);
+  }
+
+  return {};
+}
+
 Expected<LLVMSymbolizer::ObjectPair>
 LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
                                       const std::string &ArchName) {
@@ -634,30 +664,48 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
   std::unique_ptr<DIContext> Context;
   // If this is a COFF object containing PDB info and not containing DWARF
   // section, use a PDBContext to symbolize. Otherwise, use DWARF.
-  if (auto CoffObject = dyn_cast<COFFObjectFile>(Objects.first)) {
-    const codeview::DebugInfo *DebugInfo;
-    StringRef PDBFileName;
-    auto EC = CoffObject->getDebugPDBInfo(DebugInfo, PDBFileName);
-    // Use DWARF if there're DWARF sections.
-    bool HasDwarf =
-        llvm::any_of(Objects.first->sections(), [](SectionRef Section) -> bool {
-          if (Expected<StringRef> SectionName = Section.getName())
-            return SectionName.get() == ".debug_info";
-          return false;
-        });
-    if (!EC && !HasDwarf && DebugInfo != nullptr && !PDBFileName.empty()) {
-      using namespace pdb;
-      std::unique_ptr<IPDBSession> Session;
+  // Create a DIContext to symbolize as follows:
+  // - If there is a GSYM file, create a GsymContext.
+  // - Otherwise, if this is a COFF object containing PDB info, create a
+  // PDBContext.
+  // - Otherwise, create a DWARFContext.
+  const auto GsymFile = lookUpGsymFile(BinaryName.str());
+  if (!GsymFile.empty()) {
+    auto ReaderOrErr = gsym::GsymReader::openFile(GsymFile);
 
-      PDB_ReaderType ReaderType =
-          Opts.UseDIA ? PDB_ReaderType::DIA : PDB_ReaderType::Native;
-      if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
-                                    Session)) {
-        Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
-        // Return along the PDB filename to provide more context
-        return createFileError(PDBFileName, std::move(Err));
+    if (ReaderOrErr) {
+      std::unique_ptr<gsym::GsymReader> Reader =
+          std::make_unique<gsym::GsymReader>(std::move(*ReaderOrErr));
+
+      Context = std::make_unique<gsym::GsymContext>(std::move(Reader));
+    }
+  }
+  if (!Context) {
+    if (auto CoffObject = dyn_cast<COFFObjectFile>(Objects.first)) {
+      const codeview::DebugInfo *DebugInfo;
+      StringRef PDBFileName;
+      auto EC = CoffObject->getDebugPDBInfo(DebugInfo, PDBFileName);
+      // Use DWARF if there're DWARF sections.
+      bool HasDwarf = llvm::any_of(
+          Objects.first->sections(), [](SectionRef Section) -> bool {
+            if (Expected<StringRef> SectionName = Section.getName())
+              return SectionName.get() == ".debug_info";
+            return false;
+          });
+      if (!EC && !HasDwarf && DebugInfo != nullptr && !PDBFileName.empty()) {
+        using namespace pdb;
+        std::unique_ptr<IPDBSession> Session;
+
+        PDB_ReaderType ReaderType =
+            Opts.UseDIA ? PDB_ReaderType::DIA : PDB_ReaderType::Native;
+        if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
+                                      Session)) {
+          Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
+          // Return along the PDB filename to provide more context
+          return createFileError(PDBFileName, std::move(Err));
+        }
+        Context.reset(new PDBContext(*CoffObject, std::move(Session)));
       }
-      Context.reset(new PDBContext(*CoffObject, std::move(Session)));
     }
   }
   if (!Context)
@@ -753,7 +801,7 @@ LLVMSymbolizer::DemangleName(StringRef Name,
   if (nonMicrosoftDemangle(Name, Result))
     return Result;
 
-  if (!Name.empty() && Name.front() == '?') {
+  if (Name.starts_with('?')) {
     // Only do MSVC C++ demangling on symbols starting with '?'.
     int status = 0;
     char *DemangledName = microsoftDemangle(

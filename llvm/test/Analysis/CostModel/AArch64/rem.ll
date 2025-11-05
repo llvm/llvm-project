@@ -123,17 +123,17 @@ define void @srem_uniform() {
 ; CHECK-LABEL: 'srem_uniform'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i64_s = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, %V2i64_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4i64_s = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i64_s = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, %V4i64_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8i64_s = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i64_s = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, %V8i64_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i32_s = shufflevector <2 x i32> poison, <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = srem <2 x i32> undef, %V2i32_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i32_s = shufflevector <4 x i32> poison, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, %V4i32_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8i32_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i32_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, %V8i32_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16i32_s = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i32_s = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, %V16i32_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i16_s = shufflevector <2 x i16> poison, <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = srem <2 x i16> undef, %V2i16_s
@@ -141,9 +141,9 @@ define void @srem_uniform() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V4i16 = srem <4 x i16> undef, %V4i16_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i16_s = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, %V8i16_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16i16_s = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i16_s = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, %V16i16_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V32i16_s = shufflevector <32 x i16> poison, <32 x i16> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V32i16_s = shufflevector <32 x i16> poison, <32 x i16> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:224 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, %V32i16_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i8_s = shufflevector <2 x i8> poison, <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = srem <2 x i8> undef, %V2i8_s
@@ -153,9 +153,9 @@ define void @srem_uniform() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = srem <8 x i8> undef, %V8i8_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i8_s = shufflevector <16 x i8> poison, <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, %V16i8_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V32i8_s = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V32i8_s = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:224 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, %V32i8_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V64i8_s = shufflevector <64 x i8> poison, <64 x i8> poison, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V64i8_s = shufflevector <64 x i8> poison, <64 x i8> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:448 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, %V64i8_s
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -206,17 +206,17 @@ define void @urem_uniform() {
 ; CHECK-LABEL: 'urem_uniform'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i64_s = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, %V2i64_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4i64_s = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i64_s = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, %V4i64_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8i64_s = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i64_s = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = urem <8 x i64> undef, %V8i64_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i32_s = shufflevector <2 x i32> poison, <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = urem <2 x i32> undef, %V2i32_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i32_s = shufflevector <4 x i32> poison, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = urem <4 x i32> undef, %V4i32_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8i32_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i32_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = urem <8 x i32> undef, %V8i32_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16i32_s = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i32_s = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = urem <16 x i32> undef, %V16i32_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i16_s = shufflevector <2 x i16> poison, <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = urem <2 x i16> undef, %V2i16_s
@@ -224,9 +224,9 @@ define void @urem_uniform() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V4i16 = urem <4 x i16> undef, %V4i16_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i16_s = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = urem <8 x i16> undef, %V8i16_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16i16_s = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i16_s = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = urem <16 x i16> undef, %V16i16_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V32i16_s = shufflevector <32 x i16> poison, <32 x i16> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V32i16_s = shufflevector <32 x i16> poison, <32 x i16> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:224 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = urem <32 x i16> undef, %V32i16_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i8_s = shufflevector <2 x i8> poison, <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = urem <2 x i8> undef, %V2i8_s
@@ -236,9 +236,9 @@ define void @urem_uniform() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = urem <8 x i8> undef, %V8i8_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i8_s = shufflevector <16 x i8> poison, <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = urem <16 x i8> undef, %V16i8_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V32i8_s = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V32i8_s = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:224 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = urem <32 x i8> undef, %V32i8_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V64i8_s = shufflevector <64 x i8> poison, <64 x i8> poison, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V64i8_s = shufflevector <64 x i8> poison, <64 x i8> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:448 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = urem <64 x i8> undef, %V64i8_s
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -870,27 +870,27 @@ define void @srem_uniformconstnegpow2() {
 ; CHECK-LABEL: 'srem_uniformconstnegpow2'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = srem i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = srem <4 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = srem <8 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I32 = srem i32 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = srem <2 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = srem <4 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V2i32 = srem <2 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4i32 = srem <4 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = srem <8 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = srem <16 x i32> undef, splat (i32 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = srem <2 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i16 = srem <4 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = srem <8 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V2i16 = srem <2 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4i16 = srem <4 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8i16 = srem <8 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = srem <16 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = srem <32 x i16> undef, splat (i16 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I8 = srem i8 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = srem <2 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i8 = srem <4 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = srem <8 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = srem <16 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V2i8 = srem <2 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4i8 = srem <4 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8i8 = srem <8 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16i8 = srem <16 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = srem <32 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = srem <64 x i8> undef, splat (i8 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %I128 = srem i128 undef, -16

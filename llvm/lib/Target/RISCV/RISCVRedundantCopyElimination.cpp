@@ -44,15 +44,11 @@ class RISCVRedundantCopyElimination : public MachineFunctionPass {
 
 public:
   static char ID;
-  RISCVRedundantCopyElimination() : MachineFunctionPass(ID) {
-    initializeRISCVRedundantCopyEliminationPass(
-        *PassRegistry::getPassRegistry());
-  }
+  RISCVRedundantCopyElimination() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override {
@@ -76,12 +72,12 @@ guaranteesZeroRegInBlock(MachineBasicBlock &MBB,
                          MachineBasicBlock *TBB) {
   assert(Cond.size() == 3 && "Unexpected number of operands");
   assert(TBB != nullptr && "Expected branch target basic block");
-  auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
-  if (CC == RISCVCC::COND_EQ && Cond[2].isReg() &&
-      Cond[2].getReg() == RISCV::X0 && TBB == &MBB)
+  auto Opc = Cond[0].getImm();
+  if (Opc == RISCV::BEQ && Cond[2].isReg() && Cond[2].getReg() == RISCV::X0 &&
+      TBB == &MBB)
     return true;
-  if (CC == RISCVCC::COND_NE && Cond[2].isReg() &&
-      Cond[2].getReg() == RISCV::X0 && TBB != &MBB)
+  if (Opc == RISCV::BNE && Cond[2].isReg() && Cond[2].getReg() == RISCV::X0 &&
+      TBB != &MBB)
     return true;
   return false;
 }

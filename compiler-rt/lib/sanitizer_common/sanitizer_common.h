@@ -78,8 +78,8 @@ uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 uptr GetMaxUserVirtualAddress();
 // Threads
-tid_t GetTid();
-int TgKill(pid_t pid, tid_t tid, int sig);
+ThreadID GetTid();
+int TgKill(pid_t pid, ThreadID tid, int sig);
 uptr GetThreadSelf();
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom);
@@ -166,7 +166,7 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
-// Releases memory pages entirely within the [beg, end] address range. Noop if
+// Releases memory pages entirely within the [beg, end) address range. Noop if
 // the provided range does not contain at least one entire page.
 void ReleaseMemoryPagesToOS(uptr beg, uptr end);
 void IncreaseTotalMmap(uptr size);
@@ -389,6 +389,9 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
 // Alternative signal stack (POSIX-only).
 void SetAlternateSignalStack();
 void UnsetAlternateSignalStack();
+
+bool IsSignalHandlerFromSanitizer(int signum);
+bool SetSignalHandlerFromSanitizer(int signum, bool new_state);
 
 // Construct a one-line string:
 //   SUMMARY: SanitizerToolName: error_message
@@ -734,6 +737,7 @@ enum ModuleArch {
   kModuleArchARMV7S,
   kModuleArchARMV7K,
   kModuleArchARM64,
+  kModuleArchARM64E,
   kModuleArchLoongArch64,
   kModuleArchRISCV64,
   kModuleArchHexagon
@@ -807,6 +811,8 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "armv7k";
     case kModuleArchARM64:
       return "arm64";
+    case kModuleArchARM64E:
+      return "arm64e";
     case kModuleArchLoongArch64:
       return "loongarch64";
     case kModuleArchRISCV64:
@@ -925,12 +931,6 @@ class ListOfModules {
 // Callback type for iterating over a set of memory ranges.
 typedef void (*RangeIteratorCallback)(uptr begin, uptr end, void *arg);
 
-enum AndroidApiLevel {
-  ANDROID_NOT_ANDROID = 0,
-  ANDROID_LOLLIPOP_MR1 = 22,
-  ANDROID_POST_LOLLIPOP = 23
-};
-
 void WriteToSyslog(const char *buffer);
 
 #if defined(SANITIZER_WINDOWS) && defined(_MSC_VER) && !defined(__clang__)
@@ -963,19 +963,8 @@ inline void AndroidLogInit() {}
 inline void SetAbortMessage(const char *) {}
 #endif
 
-#if SANITIZER_ANDROID
-void SanitizerInitializeUnwinder();
-AndroidApiLevel AndroidGetApiLevel();
-#else
-inline void AndroidLogWrite(const char *buffer_unused) {}
-inline void SanitizerInitializeUnwinder() {}
-inline AndroidApiLevel AndroidGetApiLevel() { return ANDROID_NOT_ANDROID; }
-#endif
-
 inline uptr GetPthreadDestructorIterations() {
-#if SANITIZER_ANDROID
-  return (AndroidGetApiLevel() == ANDROID_LOLLIPOP_MR1) ? 8 : 4;
-#elif SANITIZER_POSIX
+#if SANITIZER_POSIX
   return 4;
 #else
 // Unused on Windows.

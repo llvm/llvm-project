@@ -14,6 +14,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 
 namespace llvm {
@@ -52,6 +53,7 @@ enum class ABI {
 struct Shape {
   CoroBeginInst *CoroBegin = nullptr;
   SmallVector<AnyCoroEndInst *, 4> CoroEnds;
+  SmallVector<CoroIsInRampInst *, 2> CoroIsInRampInsts;
   SmallVector<CoroSizeInst *, 2> CoroSizes;
   SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
@@ -64,6 +66,7 @@ struct Shape {
   void clear() {
     CoroBegin = nullptr;
     CoroEnds.clear();
+    CoroIsInRampInsts.clear();
     CoroSizes.clear();
     CoroAligns.clear();
     CoroSuspends.clear();
@@ -78,16 +81,20 @@ struct Shape {
   }
 
   // Scan the function and collect the above intrinsics for later processing
-  void analyze(Function &F, SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-               SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
+  LLVM_ABI void analyze(Function &F,
+                        SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+                        SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
+                        CoroPromiseInst *&CoroPromise);
   // If for some reason, we were not able to find coro.begin, bailout.
-  void invalidateCoroutine(Function &F,
-                           SmallVectorImpl<CoroFrameInst *> &CoroFrames);
+  LLVM_ABI void
+  invalidateCoroutine(Function &F,
+                      SmallVectorImpl<CoroFrameInst *> &CoroFrames);
   // Perform ABI related initial transformation
-  void initABI();
+  LLVM_ABI void initABI();
   // Remove orphaned and unnecessary intrinsics
-  void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                      SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
+  LLVM_ABI void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+                               SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
+                               CoroPromiseInst *CoroPromise);
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
@@ -254,24 +261,27 @@ struct Shape {
   /// Allocate memory according to the rules of the active lowering.
   ///
   /// \param CG - if non-null, will be updated for the new call
-  Value *emitAlloc(IRBuilder<> &Builder, Value *Size, CallGraph *CG) const;
+  LLVM_ABI Value *emitAlloc(IRBuilder<> &Builder, Value *Size,
+                            CallGraph *CG) const;
 
   /// Deallocate memory according to the rules of the active lowering.
   ///
   /// \param CG - if non-null, will be updated for the new call
-  void emitDealloc(IRBuilder<> &Builder, Value *Ptr, CallGraph *CG) const;
+  LLVM_ABI void emitDealloc(IRBuilder<> &Builder, Value *Ptr,
+                            CallGraph *CG) const;
 
   Shape() = default;
   explicit Shape(Function &F) {
     SmallVector<CoroFrameInst *, 8> CoroFrames;
     SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
+    CoroPromiseInst *CoroPromise = nullptr;
 
-    analyze(F, CoroFrames, UnusedCoroSaves);
+    analyze(F, CoroFrames, UnusedCoroSaves, CoroPromise);
     if (!CoroBegin) {
       invalidateCoroutine(F, CoroFrames);
       return;
     }
-    cleanCoroutine(CoroFrames, UnusedCoroSaves);
+    cleanCoroutine(CoroFrames, UnusedCoroSaves, CoroPromise);
   }
 };
 

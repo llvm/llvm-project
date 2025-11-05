@@ -19,64 +19,64 @@ program openacc_parallel_loop_validity
 
   !$acc parallel loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc parallel loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel loop
 
   !$acc parallel loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel loop tile(2)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc parallel loop self
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: SELF clause on the PARALLEL LOOP directive only accepts optional scalar logical expression
   !$acc parallel loop self(bb, cc(:,:))
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc parallel loop self(.true.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc parallel loop self(ifCondition)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc parallel loop tile(2, 2)
   do i = 1, N
     do j = 1, N
-      aa(i, j) = 3.14
+      aa(i, j) = 3.14d0
     end do
   end do
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the PARALLEL LOOP directive
   !$acc parallel loop device_type(*) if(.TRUE.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel loop
 
   !$acc kernels loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !ERROR: Unmatched END PARALLEL LOOP directive
   !$acc end parallel loop
@@ -139,6 +139,15 @@ program openacc_parallel_loop_validity
   !$acc parallel loop
   do i = 1, N
     if(i == 10) cycle
+  end do
+
+  !$acc parallel loop async(1) device_type(nvidia) async(3)
+  do i = 1, n
+  end do
+
+!ERROR: At most one ASYNC clause can appear on the PARALLEL LOOP directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel loop async(1) device_type(nvidia) async async
+  do i = 1, n
   end do
 
 end program openacc_parallel_loop_validity

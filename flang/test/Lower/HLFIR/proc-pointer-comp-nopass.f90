@@ -32,8 +32,8 @@ end function
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 ! CHECK:           %[[VAL_8:.*]] = fir.box_addr %[[VAL_7]] : (!fir.boxproc<(!fir.ref<f32>) -> f32>) -> ((!fir.ref<f32>) -> f32)
 ! CHECK:           %[[VAL_9:.*]] = fir.call %[[VAL_8]](%[[VAL_5]]#0) fastmath<contract> : (!fir.ref<f32>) -> f32
-! CHECK:           hlfir.end_associate %[[VAL_5]]#1, %[[VAL_5]]#2 : !fir.ref<f32>, i1
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_2]]#0 : f32, !fir.ref<f32>
+! CHECK:           hlfir.end_associate %[[VAL_5]]#1, %[[VAL_5]]#2 : !fir.ref<f32>, i1
 
 subroutine test2(x)
   use proc_comp_defs, only : t, iface

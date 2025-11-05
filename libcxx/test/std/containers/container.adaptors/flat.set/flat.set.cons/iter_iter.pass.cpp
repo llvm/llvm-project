@@ -23,13 +23,102 @@
 #include <functional>
 #include <vector>
 
+#include "MinSequenceContainer.h"
 #include "min_allocator.h"
 #include "test_allocator.h"
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "../../../test_compare.h"
 
-void test() {
+template <class KeyContainer>
+constexpr void test() {
+  int ar[]       = {1, 1, 1, 2, 2, 3, 2, 3, 3};
+  int expected[] = {1, 2, 3};
+  {
+    // flat_set(InputIterator , InputIterator)
+    // cpp17_input_iterator
+    using M = std::flat_set<int, std::less<int>, KeyContainer>;
+    auto m  = M(cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 9));
+    assert(std::ranges::equal(m, expected));
+
+    // explicit(false)
+    M m2 = {cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 9)};
+    assert(m2 == m);
+  }
+  {
+    // flat_set(InputIterator , InputIterator)
+    // greater
+    using M = std::flat_set<int, std::greater<int>, KeyContainer>;
+    auto m  = M(cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 9));
+    assert(std::ranges::equal(m, KeyContainer{3, 2, 1}));
+  }
+  {
+    // flat_set(InputIterator , InputIterator)
+    // Test when the operands are of array type (also contiguous iterator type)
+    using M = std::flat_set<int, std::greater<int>, KeyContainer>;
+    auto m  = M(ar, ar);
+    assert(m.empty());
+  }
+  {
+    // flat_set(InputIterator , InputIterator, const key_compare&)
+    using C = test_less<int>;
+    using M = std::flat_set<int, C, KeyContainer>;
+    auto m  = M(ar, ar + 9, C(3));
+    assert(std::ranges::equal(m, expected));
+    assert(m.key_comp() == C(3));
+
+    // explicit(false)
+    M m2 = {ar, ar + 9, C(3)};
+    assert(m2 == m);
+    assert(m2.key_comp() == C(3));
+  }
+}
+
+template <template <class...> class KeyContainer>
+constexpr void test_alloc() {
+  int ar[]       = {1, 1, 1, 2, 2, 3, 2, 3, 3};
+  int expected[] = {1, 2, 3};
+
+  {
+    // flat_set(InputIterator , InputIterator, const Allocator&)
+    using A1 = test_allocator<int>;
+    using M  = std::flat_set<int, std::less<int>, KeyContainer<int, A1>>;
+    auto m   = M(ar, ar + 9, A1(5));
+    assert(std::ranges::equal(m, expected));
+    assert(std::move(m).extract().get_allocator() == A1(5));
+  }
+  {
+    // flat_set(InputIterator , InputIterator, const Allocator&)
+    // explicit(false)
+    using A1 = test_allocator<int>;
+    using M  = std::flat_set<int, std::less<int>, KeyContainer<int, A1>>;
+    M m      = {ar, ar + 9, A1(5)}; // implicit ctor
+    assert(std::ranges::equal(m, expected));
+    assert(std::move(m).extract().get_allocator() == A1(5));
+  }
+  {
+    // flat_set(InputIterator , InputIterator, const key_compare&, const Allocator&)
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using M  = std::flat_set<int, C, KeyContainer<int, A1>>;
+    auto m   = M(ar, ar + 9, C(3), A1(5));
+    assert(std::ranges::equal(m, expected));
+    assert(m.key_comp() == C(3));
+    assert(std::move(m).extract().get_allocator() == A1(5));
+  }
+  {
+    // flat_set(InputIterator , InputIterator, const key_compare&, const Allocator&)
+    // explicit(false)
+    using A1 = test_allocator<int>;
+    using M  = std::flat_set<int, std::less<int>, KeyContainer<int, A1>>;
+    M m      = {ar, ar + 9, {}, A1(5)}; // implicit ctor
+    assert(std::ranges::equal(m, expected));
+    LIBCPP_ASSERT(std::ranges::equal(m, expected));
+    assert(std::move(m).extract().get_allocator() == A1(5));
+  }
+}
+
+constexpr bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -54,87 +143,28 @@ void test() {
     static_assert(!std::is_constructible_v<M2, Iter2, Iter2, const C&, const A1&>);
   }
 
-  int ar[]       = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-  int expected[] = {1, 2, 3};
-  {
-    // flat_set(InputIterator , InputIterator)
-    // cpp17_input_iterator
-    using M = std::flat_set<int>;
-    auto m  = M(cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 9));
-    assert(std::ranges::equal(m, expected));
+  test<std::vector<int>>();
+  test<MinSequenceContainer<int>>();
+  test<std::vector<int, min_allocator<int>>>();
 
-    // explicit(false)
-    M m2 = {cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 9)};
-    assert(m2 == m);
-  }
-  {
-    // flat_set(InputIterator , InputIterator)
-    // greater
-    using M = std::flat_set<int, std::greater<int>, std::deque<int, min_allocator<int>>>;
-    auto m  = M(cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 9));
-    assert(std::ranges::equal(m, std::deque<int, min_allocator<int>>{3, 2, 1}));
-  }
-  {
-    // flat_set(InputIterator , InputIterator)
-    // Test when the operands are of array type (also contiguous iterator type)
-    using M = std::flat_set<int, std::greater<int>, std::vector<int, min_allocator<int>>>;
-    auto m  = M(ar, ar);
-    assert(m.empty());
-  }
-  {
-    // flat_set(InputIterator , InputIterator, const key_compare&)
-    using C = test_less<int>;
-    using M = std::flat_set<int, C, std::vector<int>>;
-    auto m  = M(ar, ar + 9, C(3));
-    assert(std::ranges::equal(m, expected));
-    assert(m.key_comp() == C(3));
+  test_alloc<std::vector>();
 
-    // explicit(false)
-    M m2 = {ar, ar + 9, C(3)};
-    assert(m2 == m);
-    assert(m2.key_comp() == C(3));
-  }
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
-    // flat_set(InputIterator , InputIterator, const Allocator&)
-    using A1 = test_allocator<int>;
-    using M  = std::flat_set<int, std::less<int>, std::vector<int, A1>>;
-    auto m   = M(ar, ar + 9, A1(5));
-    assert(std::ranges::equal(m, expected));
-    assert(std::move(m).extract().get_allocator() == A1(5));
+    test<std::deque<int>>();
+    test_alloc<std::deque>();
   }
-  {
-    // flat_set(InputIterator , InputIterator, const Allocator&)
-    // explicit(false)
-    using A1 = test_allocator<int>;
-    using M  = std::flat_set<int, std::less<int>, std::vector<int, A1>>;
-    M m      = {ar, ar + 9, A1(5)}; // implicit ctor
-    assert(std::ranges::equal(m, expected));
-    assert(std::move(m).extract().get_allocator() == A1(5));
-  }
-  {
-    // flat_set(InputIterator , InputIterator, const key_compare&, const Allocator&)
-    using C  = test_less<int>;
-    using A1 = test_allocator<int>;
-    using M  = std::flat_set<int, C, std::vector<int, A1>>;
-    auto m   = M(ar, ar + 9, C(3), A1(5));
-    assert(std::ranges::equal(m, expected));
-    assert(m.key_comp() == C(3));
-    assert(std::move(m).extract().get_allocator() == A1(5));
-  }
-  {
-    // flat_set(InputIterator , InputIterator, const key_compare&, const Allocator&)
-    // explicit(false)
-    using A1 = test_allocator<int>;
-    using M  = std::flat_set<int, std::less<int>, std::deque<int, A1>>;
-    M m      = {ar, ar + 9, {}, A1(5)}; // implicit ctor
-    assert(std::ranges::equal(m, expected));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
-    assert(std::move(m).extract().get_allocator() == A1(5));
-  }
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -14,7 +14,7 @@
 //    dbg.value(metadata i32 %foo, ...)
 //    %bar = void call @ext(%foo);
 //
-// and all information is stored in the Value / Metadata hierachy defined
+// and all information is stored in the Value / Metadata hierarchy defined
 // elsewhere in LLVM. In the "DbgRecord" design, each instruction /may/ have a
 // connection with a DbgMarker, which identifies a position immediately before
 // the instruction, and each DbgMarker /may/ then have connections to DbgRecords
@@ -37,7 +37,7 @@
 //
 // This structure separates the two concerns of the position of the debug-info
 // in the function, and the Value that it refers to. It also creates a new
-// "place" in-between the Value / Metadata hierachy where we can customise
+// "place" in-between the Value / Metadata hierarchy where we can customise
 // storage and allocation techniques to better suite debug-info workloads.
 // NB: as of the initial prototype, none of that has actually been attempted
 // yet.
@@ -55,6 +55,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -117,6 +118,10 @@ public:
   }
 };
 
+extern template class LLVM_TEMPLATE_ABI DbgRecordParamRef<DIExpression>;
+extern template class LLVM_TEMPLATE_ABI DbgRecordParamRef<DILabel>;
+extern template class LLVM_TEMPLATE_ABI DbgRecordParamRef<DILocalVariable>;
+
 /// Base class for non-instruction debug metadata records that have positions
 /// within IR. Features various methods copied across from the Instruction
 /// class to aid ease-of-use. DbgRecords should always be linked into a
@@ -149,20 +154,21 @@ public:
   /// Methods that dispatch to subclass implementations. These need to be
   /// manually updated when a new subclass is added.
   ///@{
-  void deleteRecord();
-  DbgRecord *clone() const;
-  void print(raw_ostream &O, bool IsForDebug = false) const;
-  void print(raw_ostream &O, ModuleSlotTracker &MST, bool IsForDebug) const;
-  bool isIdenticalToWhenDefined(const DbgRecord &R) const;
+  LLVM_ABI void deleteRecord();
+  LLVM_ABI DbgRecord *clone() const;
+  LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &O, ModuleSlotTracker &MST,
+                      bool IsForDebug) const;
+  LLVM_ABI bool isIdenticalToWhenDefined(const DbgRecord &R) const;
   /// Convert this DbgRecord back into an appropriate llvm.dbg.* intrinsic.
   /// \p InsertBefore Optional position to insert this intrinsic.
-  /// \returns A new llvm.dbg.* intrinsic representiung this DbgRecord.
-  DbgInfoIntrinsic *createDebugIntrinsic(Module *M,
-                                         Instruction *InsertBefore) const;
+  /// \returns A new llvm.dbg.* intrinsic representing this DbgRecord.
+  LLVM_ABI DbgInfoIntrinsic *
+  createDebugIntrinsic(Module *M, Instruction *InsertBefore) const;
   ///@}
 
   /// Same as isIdenticalToWhenDefined but checks DebugLoc too.
-  bool isEquivalentTo(const DbgRecord &R) const;
+  LLVM_ABI bool isEquivalentTo(const DbgRecord &R) const;
 
   Kind getRecordKind() const { return RecordKind; }
 
@@ -171,44 +177,44 @@ public:
   DbgMarker *getMarker() { return Marker; }
   const DbgMarker *getMarker() const { return Marker; }
 
-  BasicBlock *getBlock();
-  const BasicBlock *getBlock() const;
+  LLVM_ABI BasicBlock *getBlock();
+  LLVM_ABI const BasicBlock *getBlock() const;
 
-  Function *getFunction();
-  const Function *getFunction() const;
+  LLVM_ABI Function *getFunction();
+  LLVM_ABI const Function *getFunction() const;
 
-  Module *getModule();
-  const Module *getModule() const;
+  LLVM_ABI Module *getModule();
+  LLVM_ABI const Module *getModule() const;
 
-  LLVMContext &getContext();
-  const LLVMContext &getContext() const;
+  LLVM_ABI LLVMContext &getContext();
+  LLVM_ABI const LLVMContext &getContext() const;
 
-  const Instruction *getInstruction() const;
-  const BasicBlock *getParent() const;
-  BasicBlock *getParent();
+  LLVM_ABI const Instruction *getInstruction() const;
+  LLVM_ABI const BasicBlock *getParent() const;
+  LLVM_ABI BasicBlock *getParent();
 
-  void removeFromParent();
-  void eraseFromParent();
+  LLVM_ABI void removeFromParent();
+  LLVM_ABI void eraseFromParent();
 
   DbgRecord *getNextNode() { return &*std::next(getIterator()); }
   DbgRecord *getPrevNode() { return &*std::prev(getIterator()); }
 
   // Some generic lambdas supporting intrinsic-based debug-info mean we need
   // to support both iterator and instruction position based insertion.
-  void insertBefore(DbgRecord *InsertBefore);
-  void insertAfter(DbgRecord *InsertAfter);
-  void moveBefore(DbgRecord *MoveBefore);
-  void moveAfter(DbgRecord *MoveAfter);
+  LLVM_ABI void insertBefore(DbgRecord *InsertBefore);
+  LLVM_ABI void insertAfter(DbgRecord *InsertAfter);
+  LLVM_ABI void moveBefore(DbgRecord *MoveBefore);
+  LLVM_ABI void moveAfter(DbgRecord *MoveAfter);
 
-  void insertBefore(self_iterator InsertBefore);
-  void insertAfter(self_iterator InsertAfter);
-  void moveBefore(self_iterator MoveBefore);
-  void moveAfter(self_iterator MoveAfter);
+  LLVM_ABI void insertBefore(self_iterator InsertBefore);
+  LLVM_ABI void insertAfter(self_iterator InsertAfter);
+  LLVM_ABI void moveBefore(self_iterator MoveBefore);
+  LLVM_ABI void moveAfter(self_iterator MoveAfter);
 
   DebugLoc getDebugLoc() const { return DbgLoc; }
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   using self_iterator = simple_ilist<DbgRecord>::iterator;
   using const_self_iterator = simple_ilist<DbgRecord>::const_iterator;
@@ -237,20 +243,21 @@ class DbgLabelRecord : public DbgRecord {
   DbgLabelRecord(MDNode *Label, MDNode *DL);
 
 public:
-  DbgLabelRecord(DILabel *Label, DebugLoc DL);
+  LLVM_ABI DbgLabelRecord(DILabel *Label, DebugLoc DL);
 
   /// For use during parsing; creates a DbgLabelRecord from as-of-yet unresolved
   /// MDNodes. Trying to access the resulting DbgLabelRecord's fields before
   /// they are resolved, or if they resolve to the wrong type, will result in a
   /// crash.
-  static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label,
-                                                        MDNode *DL);
+  LLVM_ABI static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label,
+                                                                 MDNode *DL);
 
-  DbgLabelRecord *clone() const;
-  void print(raw_ostream &O, bool IsForDebug = false) const;
-  void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
-  DbgLabelInst *createDebugIntrinsic(Module *M,
-                                     Instruction *InsertBefore) const;
+  LLVM_ABI DbgLabelRecord *clone() const;
+  LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                      bool IsForDebug) const;
+  LLVM_ABI DbgLabelInst *createDebugIntrinsic(Module *M,
+                                              Instruction *InsertBefore) const;
 
   void setLabel(DILabel *NewLabel) { Label = NewLabel; }
   DILabel *getLabel() const { return Label.get(); }
@@ -296,17 +303,17 @@ public:
 public:
   /// Create a new DbgVariableRecord representing the intrinsic \p DVI, for
   /// example the assignment represented by a dbg.value.
-  DbgVariableRecord(const DbgVariableIntrinsic *DVI);
-  DbgVariableRecord(const DbgVariableRecord &DVR);
+  LLVM_ABI DbgVariableRecord(const DbgVariableIntrinsic *DVI);
+  LLVM_ABI DbgVariableRecord(const DbgVariableRecord &DVR);
   /// Directly construct a new DbgVariableRecord representing a dbg.value
   /// intrinsic assigning \p Location to the DV / Expr / DI variable.
-  DbgVariableRecord(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
-                    const DILocation *DI,
-                    LocationType Type = LocationType::Value);
-  DbgVariableRecord(Metadata *Value, DILocalVariable *Variable,
-                    DIExpression *Expression, DIAssignID *AssignID,
-                    Metadata *Address, DIExpression *AddressExpression,
-                    const DILocation *DI);
+  LLVM_ABI DbgVariableRecord(Metadata *Location, DILocalVariable *DV,
+                             DIExpression *Expr, const DILocation *DI,
+                             LocationType Type = LocationType::Value);
+  LLVM_ABI DbgVariableRecord(Metadata *Value, DILocalVariable *Variable,
+                             DIExpression *Expression, DIAssignID *AssignID,
+                             Metadata *Address, DIExpression *AddressExpression,
+                             const DILocation *DI);
 
 private:
   /// Private constructor for creating new instances during parsing only. Only
@@ -325,36 +332,35 @@ public:
   /// for all types of DbgVariableRecords for simplicity while parsing, but
   /// asserts if any necessary fields are empty or unused fields are not empty,
   /// i.e. if the #dbg_assign fields are used for a non-dbg-assign type.
-  static DbgVariableRecord *
+  LLVM_ABI static DbgVariableRecord *
   createUnresolvedDbgVariableRecord(LocationType Type, Metadata *Val,
                                     MDNode *Variable, MDNode *Expression,
                                     MDNode *AssignID, Metadata *Address,
                                     MDNode *AddressExpression, MDNode *DI);
 
-  static DbgVariableRecord *
+  LLVM_ABI static DbgVariableRecord *
   createDVRAssign(Value *Val, DILocalVariable *Variable,
                   DIExpression *Expression, DIAssignID *AssignID,
                   Value *Address, DIExpression *AddressExpression,
                   const DILocation *DI);
-  static DbgVariableRecord *
+  LLVM_ABI static DbgVariableRecord *
   createLinkedDVRAssign(Instruction *LinkedInstr, Value *Val,
                         DILocalVariable *Variable, DIExpression *Expression,
                         Value *Address, DIExpression *AddressExpression,
                         const DILocation *DI);
 
-  static DbgVariableRecord *createDbgVariableRecord(Value *Location,
-                                                    DILocalVariable *DV,
-                                                    DIExpression *Expr,
-                                                    const DILocation *DI);
-  static DbgVariableRecord *
+  LLVM_ABI static DbgVariableRecord *
+  createDbgVariableRecord(Value *Location, DILocalVariable *DV,
+                          DIExpression *Expr, const DILocation *DI);
+  LLVM_ABI static DbgVariableRecord *
   createDbgVariableRecord(Value *Location, DILocalVariable *DV,
                           DIExpression *Expr, const DILocation *DI,
                           DbgVariableRecord &InsertBefore);
-  static DbgVariableRecord *createDVRDeclare(Value *Address,
-                                             DILocalVariable *DV,
-                                             DIExpression *Expr,
-                                             const DILocation *DI);
-  static DbgVariableRecord *
+  LLVM_ABI static DbgVariableRecord *createDVRDeclare(Value *Address,
+                                                      DILocalVariable *DV,
+                                                      DIExpression *Expr,
+                                                      const DILocation *DI);
+  LLVM_ABI static DbgVariableRecord *
   createDVRDeclare(Value *Address, DILocalVariable *DV, DIExpression *Expr,
                    const DILocation *DI, DbgVariableRecord &InsertBefore);
 
@@ -412,20 +418,20 @@ public:
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
   /// variable's value or its address.
-  iterator_range<location_op_iterator> location_ops() const;
+  LLVM_ABI iterator_range<location_op_iterator> location_ops() const;
 
-  Value *getVariableLocationOp(unsigned OpIdx) const;
+  LLVM_ABI Value *getVariableLocationOp(unsigned OpIdx) const;
 
-  void replaceVariableLocationOp(Value *OldValue, Value *NewValue,
-                                 bool AllowEmpty = false);
-  void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
+  LLVM_ABI void replaceVariableLocationOp(Value *OldValue, Value *NewValue,
+                                          bool AllowEmpty = false);
+  LLVM_ABI void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
   /// Adding a new location operand will always result in this intrinsic using
   /// an ArgList, and must always be accompanied by a new expression that uses
   /// the new operand.
-  void addVariableLocationOps(ArrayRef<Value *> NewValues,
-                              DIExpression *NewExpr);
+  LLVM_ABI void addVariableLocationOps(ArrayRef<Value *> NewValues,
+                                       DIExpression *NewExpr);
 
-  unsigned getNumVariableLocationOps() const;
+  LLVM_ABI unsigned getNumVariableLocationOps() const;
 
   bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
   /// Returns true if this DbgVariableRecord has no empty MDNodes in its
@@ -442,8 +448,8 @@ public:
 
   LocationType getType() const { return Type; }
 
-  void setKillLocation();
-  bool isKillLocation() const;
+  LLVM_ABI void setKillLocation();
+  LLVM_ABI bool isKillLocation() const;
 
   void setVariable(DILocalVariable *NewVar) { Variable = NewVar; }
   DILocalVariable *getVariable() const { return Variable.get(); };
@@ -474,7 +480,7 @@ public:
     resetDebugValue(0, NewLocation);
   }
 
-  std::optional<DbgVariableFragmentInfo> getFragment() const;
+  LLVM_ABI std::optional<DbgVariableFragmentInfo> getFragment() const;
   /// Get the FragmentInfo for the variable if it exists, otherwise return a
   /// FragmentInfo that covers the entire variable if the variable size is
   /// known, otherwise return a zero-sized fragment.
@@ -487,7 +493,7 @@ public:
   }
   /// Get the size (in bits) of the variable, or fragment of the variable that
   /// is described.
-  std::optional<uint64_t> getFragmentSizeInBits() const;
+  LLVM_ABI std::optional<uint64_t> getFragmentSizeInBits() const;
 
   bool isEquivalentTo(const DbgVariableRecord &Other) const {
     return DbgLoc == Other.DbgLoc && isIdenticalToWhenDefined(Other);
@@ -505,12 +511,12 @@ public:
   /// @{
   bool isDbgAssign() const { return getType() == LocationType::Assign; }
 
-  Value *getAddress() const;
+  LLVM_ABI Value *getAddress() const;
   Metadata *getRawAddress() const {
     return isDbgAssign() ? DebugValues[1] : DebugValues[0];
   }
   Metadata *getRawAssignID() const { return DebugValues[2]; }
-  DIAssignID *getAssignID() const;
+  LLVM_ABI DIAssignID *getAssignID() const;
   DIExpression *getAddressExpression() const { return AddressExpression.get(); }
   MDNode *getRawAddressExpression() const {
     return AddressExpression.getAsMDNode();
@@ -518,31 +524,32 @@ public:
   void setAddressExpression(DIExpression *NewExpr) {
     AddressExpression = NewExpr;
   }
-  void setAssignId(DIAssignID *New);
+  LLVM_ABI void setAssignId(DIAssignID *New);
   void setAddress(Value *V) { resetDebugValue(1, ValueAsMetadata::get(V)); }
   /// Kill the address component.
-  void setKillAddress();
+  LLVM_ABI void setKillAddress();
   /// Check whether this kills the address component. This doesn't take into
   /// account the position of the intrinsic, therefore a returned value of false
-  /// does not guarentee the address is a valid location for the variable at the
+  /// does not guarantee the address is a valid location for the variable at the
   /// intrinsic's position in IR.
-  bool isKillAddress() const;
+  LLVM_ABI bool isKillAddress() const;
 
   /// @}
 
-  DbgVariableRecord *clone() const;
+  LLVM_ABI DbgVariableRecord *clone() const;
   /// Convert this DbgVariableRecord back into a dbg.value intrinsic.
   /// \p InsertBefore Optional position to insert this intrinsic.
-  /// \returns A new dbg.value intrinsic representiung this DbgVariableRecord.
-  DbgVariableIntrinsic *createDebugIntrinsic(Module *M,
-                                             Instruction *InsertBefore) const;
+  /// \returns A new dbg.value intrinsic representing this DbgVariableRecord.
+  LLVM_ABI DbgVariableIntrinsic *
+  createDebugIntrinsic(Module *M, Instruction *InsertBefore) const;
 
   /// Handle changes to the location of the Value(s) that we refer to happening
   /// "under our feet".
-  void handleChangedLocation(Metadata *NewLocation);
+  LLVM_ABI void handleChangedLocation(Metadata *NewLocation);
 
-  void print(raw_ostream &O, bool IsForDebug = false) const;
-  void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
+  LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                      bool IsForDebug) const;
 
   /// Support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const DbgRecord *E) {
@@ -582,7 +589,7 @@ filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
 /// date.
 class DbgMarker {
 public:
-  DbgMarker() {}
+  DbgMarker() = default;
   /// Link back to the Instruction that owns this marker. Can be null during
   /// operations that move a marker from one instruction to another.
   Instruction *MarkedInstr = nullptr;
@@ -594,42 +601,45 @@ public:
   simple_ilist<DbgRecord> StoredDbgRecords;
   bool empty() const { return StoredDbgRecords.empty(); }
 
-  const BasicBlock *getParent() const;
-  BasicBlock *getParent();
+  LLVM_ABI const BasicBlock *getParent() const;
+  LLVM_ABI BasicBlock *getParent();
 
   /// Handle the removal of a marker: the position of debug-info has gone away,
   /// but the stored debug records should not. Drop them onto the next
   /// instruction, or otherwise work out what to do with them.
-  void removeMarker();
-  void dump() const;
+  LLVM_ABI void removeMarker();
+  LLVM_ABI void dump() const;
 
-  void removeFromParent();
-  void eraseFromParent();
+  LLVM_ABI void removeFromParent();
+  LLVM_ABI void eraseFromParent();
 
   /// Implement operator<< on DbgMarker.
-  void print(raw_ostream &O, bool IsForDebug = false) const;
-  void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
+  LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                      bool IsForDebug) const;
 
   /// Produce a range over all the DbgRecords in this Marker.
-  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange();
-  iterator_range<simple_ilist<DbgRecord>::const_iterator>
+  LLVM_ABI iterator_range<simple_ilist<DbgRecord>::iterator>
+  getDbgRecordRange();
+  LLVM_ABI iterator_range<simple_ilist<DbgRecord>::const_iterator>
   getDbgRecordRange() const;
   /// Transfer any DbgRecords from \p Src into this DbgMarker. If \p
   /// InsertAtHead is true, place them before existing DbgRecords, otherwise
   /// afterwards.
-  void absorbDebugValues(DbgMarker &Src, bool InsertAtHead);
+  LLVM_ABI void absorbDebugValues(DbgMarker &Src, bool InsertAtHead);
   /// Transfer the DbgRecords in \p Range from \p Src into this DbgMarker. If
   /// \p InsertAtHead is true, place them before existing DbgRecords, otherwise
   // afterwards.
-  void absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
-                         DbgMarker &Src, bool InsertAtHead);
+  LLVM_ABI void
+  absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
+                    DbgMarker &Src, bool InsertAtHead);
   /// Insert a DbgRecord into this DbgMarker, at the end of the list. If
   /// \p InsertAtHead is true, at the start.
-  void insertDbgRecord(DbgRecord *New, bool InsertAtHead);
+  LLVM_ABI void insertDbgRecord(DbgRecord *New, bool InsertAtHead);
   /// Insert a DbgRecord prior to a DbgRecord contained within this marker.
-  void insertDbgRecord(DbgRecord *New, DbgRecord *InsertBefore);
+  LLVM_ABI void insertDbgRecord(DbgRecord *New, DbgRecord *InsertBefore);
   /// Insert a DbgRecord after a DbgRecord contained within this marker.
-  void insertDbgRecordAfter(DbgRecord *New, DbgRecord *InsertAfter);
+  LLVM_ABI void insertDbgRecordAfter(DbgRecord *New, DbgRecord *InsertAfter);
   /// Clone all DbgMarkers from \p From into this marker. There are numerous
   /// options to customise the source/destination, due to gnarliness, see class
   /// comment.
@@ -638,16 +648,16 @@ public:
   /// \p InsertAtHead Place the cloned DbgRecords at the start of
   /// StoredDbgRecords
   /// \returns Range over all the newly cloned DbgRecords
-  iterator_range<simple_ilist<DbgRecord>::iterator>
+  LLVM_ABI iterator_range<simple_ilist<DbgRecord>::iterator>
   cloneDebugInfoFrom(DbgMarker *From,
                      std::optional<simple_ilist<DbgRecord>::iterator> FromHere,
                      bool InsertAtHead = false);
   /// Erase all DbgRecords in this DbgMarker.
-  void dropDbgRecords();
+  LLVM_ABI void dropDbgRecords();
   /// Erase a single DbgRecord from this marker. In an ideal future, we would
   /// never erase an assignment in this way, but it's the equivalent to
   /// erasing a debug intrinsic from a block.
-  void dropOneDbgRecord(DbgRecord *DR);
+  LLVM_ABI void dropOneDbgRecord(DbgRecord *DR);
 
   /// We generally act like all llvm Instructions have a range of DbgRecords
   /// attached to them, but in reality sometimes we don't allocate the DbgMarker
@@ -656,7 +666,7 @@ public:
   /// static markers range instead. This will bite us if someone tries to insert
   /// a DbgRecord in that range, but they should be using the Official (TM) API
   /// for that.
-  static DbgMarker EmptyDbgMarker;
+  LLVM_ABI static DbgMarker EmptyDbgMarker;
   static iterator_range<simple_ilist<DbgRecord>::iterator>
   getEmptyDbgRecordRange() {
     return make_range(EmptyDbgMarker.StoredDbgRecords.end(),
@@ -681,25 +691,6 @@ getDbgRecordRange(DbgMarker *DebugMarker) {
 }
 
 DEFINE_ISA_CONVERSION_FUNCTIONS(DbgRecord, LLVMDbgRecordRef)
-
-/// Used to temporarily set the debug info format of a function, module, or
-/// basic block for the duration of this object's lifetime, after which the
-/// prior state will be restored.
-template <typename T> class ScopedDbgInfoFormatSetter {
-  T &Obj;
-  bool OldState;
-
-public:
-  ScopedDbgInfoFormatSetter(T &Obj, bool NewState)
-      : Obj(Obj), OldState(Obj.IsNewDbgInfoFormat) {
-    Obj.setIsNewDbgInfoFormat(NewState);
-  }
-  ~ScopedDbgInfoFormatSetter() { Obj.setIsNewDbgInfoFormat(OldState); }
-};
-
-template <typename T>
-ScopedDbgInfoFormatSetter(T &Obj,
-                          bool NewState) -> ScopedDbgInfoFormatSetter<T>;
 
 } // namespace llvm
 

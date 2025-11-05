@@ -165,8 +165,7 @@ public:
     UnwrappedLine Result;
     Result.Level = Level;
     for (const Chunk &Chunk : Chunks) {
-      Result.Tokens.insert(Result.Tokens.end(), Chunk.Tokens.begin(),
-                           Chunk.Tokens.end());
+      llvm::append_range(Result.Tokens, Chunk.Tokens);
       assert(!Result.Tokens.empty());
       Result.Tokens.back().Children.append(Chunk.Children.begin(),
                                            Chunk.Children.end());

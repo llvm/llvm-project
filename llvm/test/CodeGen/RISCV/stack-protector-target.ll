@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=riscv64-linux < %s | FileCheck --check-prefix=LINUX-RISCV64 %s
 ; RUN: llc -mtriple=riscv64-fuchsia < %s | FileCheck --check-prefix=FUCHSIA-RISCV64 %s
 ; RUN: llc -mtriple=riscv64-android < %s | FileCheck --check-prefix=ANDROID-RISCV64 %s
+; RUN: llc -mtriple=riscv64-openbsd < %s | FileCheck --check-prefix=OPENBSD-RISCV64 %s
 
 define void @func() sspreq nounwind {
 ; LINUX-RISCV64-LABEL: func:
@@ -63,6 +64,29 @@ define void @func() sspreq nounwind {
 ; ANDROID-RISCV64-NEXT:    ret
 ; ANDROID-RISCV64-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
 ; ANDROID-RISCV64-NEXT:    call __stack_chk_fail
+;
+; OPENBSD-RISCV64-LABEL: func:
+; OPENBSD-RISCV64:       # %bb.0:
+; OPENBSD-RISCV64-NEXT:    addi sp, sp, -32
+; OPENBSD-RISCV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; OPENBSD-RISCV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; OPENBSD-RISCV64-NEXT:    lui s0, %hi(__guard_local)
+; OPENBSD-RISCV64-NEXT:    ld a0, %lo(__guard_local)(s0)
+; OPENBSD-RISCV64-NEXT:    sd a0, 8(sp)
+; OPENBSD-RISCV64-NEXT:    addi a0, sp, 4
+; OPENBSD-RISCV64-NEXT:    call capture
+; OPENBSD-RISCV64-NEXT:    ld a0, %lo(__guard_local)(s0)
+; OPENBSD-RISCV64-NEXT:    ld a1, 8(sp)
+; OPENBSD-RISCV64-NEXT:    bne a0, a1, .LBB0_2
+; OPENBSD-RISCV64-NEXT:  # %bb.1: # %SP_return
+; OPENBSD-RISCV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; OPENBSD-RISCV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; OPENBSD-RISCV64-NEXT:    addi sp, sp, 32
+; OPENBSD-RISCV64-NEXT:    ret
+; OPENBSD-RISCV64-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
+; OPENBSD-RISCV64-NEXT:    lui a0, %hi(.LSSH)
+; OPENBSD-RISCV64-NEXT:    addi a0, a0, %lo(.LSSH)
+; OPENBSD-RISCV64-NEXT:    call __stack_smash_handler
   %1 = alloca i32, align 4
   call void @capture(ptr %1)
   ret void

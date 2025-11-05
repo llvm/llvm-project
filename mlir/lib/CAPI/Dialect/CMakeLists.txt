@@ -269,3 +269,12 @@ add_mlir_upstream_c_api_library(MLIRCAPIVector
   MLIRCAPIIR
   MLIRVectorDialect
 )
+
+add_mlir_upstream_c_api_library(MLIRCAPISMT
+  SMT.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRSMT
+)

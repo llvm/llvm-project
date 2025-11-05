@@ -1,0 +1,4 @@
+module systemmodule0 {
+    header "system2.h"
+    export *
+}

@@ -56,7 +56,7 @@ public:
            "A pass name should not contain whitespaces!");
     assert(!Name.starts_with('-') && "A pass name should not start with '-'!");
   }
-  virtual ~Pass() {}
+  virtual ~Pass() = default;
   /// \Returns the name of the pass.
   StringRef getName() const { return Name; }
 #ifndef NDEBUG

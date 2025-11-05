@@ -28,7 +28,7 @@ namespace Fortran::runtime::random {
 
 Lock lock;
 Generator generator;
-Fortran::common::optional<GeneratedWord> nextValue;
+common::optional<GeneratedWord> nextValue;
 
 extern "C" {
 

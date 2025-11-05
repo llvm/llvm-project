@@ -8,9 +8,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// The test uses "Placeholder variables with no name"
-// UNSUPPORTED: apple-clang-15, apple-clang-16
-
 // <numeric>
 
 // template<class R, class T>

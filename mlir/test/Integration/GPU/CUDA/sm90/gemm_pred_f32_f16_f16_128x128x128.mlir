@@ -57,7 +57,6 @@
 
 func.func private @printMemrefF32(memref<*xf32>)
 
-memref.global "private" @dynamicShmem : memref<0xf16, 3> {alignment = 16 : i64}
 memref.global "private" @accShmem : memref<0xf32, 3> {alignment = 16 : i64}
 
 func.func @main() {
@@ -120,7 +119,7 @@ func.func @main() {
             threads(%arg3, %arg4, %arg5) in (%arg9 = %hc128, %arg10 = %hc1, %arg11 = %hc1) 
             dynamic_shared_memory_size %shmemSize 
   {  
-    memref.assume_alignment %matrixD, 16 : memref<128x128xf32>
+    %align_matrixD = memref.assume_alignment %matrixD, 16 : memref<128x128xf32>
 
     %c256 = arith.constant 256 : index
     %c10000000 = arith.constant 10000000 : index
@@ -142,13 +141,17 @@ func.func @main() {
     %c4096 = arith.constant 4096 : index
     %c8 = arith.constant 8 : index
     %txcount = arith.constant 32768 : index     
+    %c24576 = arith.constant 24576 : index
+    %c16384 = arith.constant 16384 : index
+    %c49152 = arith.constant 49152 : index
+    %c57344 = arith.constant 57344 : index
+    %c40960 = arith.constant 40960 : index
 
     %tidx = gpu.thread_id  x
-    %dynamicMem = memref.get_global @dynamicShmem : memref<0xf16, 3>
-    %lhsShmem = memref.reinterpret_cast %dynamicMem to offset: [0], sizes: [2, 128, 64], strides: [8192, 64, 1] : memref<0xf16, 3> to memref<2x128x64xf16, 3>
-    %rhsShmem2 = memref.reinterpret_cast %dynamicMem to offset: [0], sizes: [4, 64, 128],  strides: [8192,128,1] : memref<0xf16, 3> to memref<4x64x128xf16,3>
-    %rhsShmem = memref.subview %rhsShmem2[2, 0, 0][2, 64, 128][1, 1, 1] : memref<4x64x128xf16,3> to memref<2x64x128xf16, strided<[8192, 128, 1], offset: 16384>, 3>
-    
+    %dynsmem = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
+    %lhsShmem = memref.view %dynsmem[%c0][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<2x128x64xf16, #gpu.address_space<workgroup>>
+    %rhsShmem = memref.view %dynsmem[%c32768][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<2x64x128xf16, #gpu.address_space<workgroup>> 
+
     // Step 1. [GPU] Create Async Transactional Barriers (mbarriers)
     %barrier = nvgpu.mbarrier.create -> !barrierType
     
@@ -175,28 +178,25 @@ func.func @main() {
 
     // Step 4.2 [GPU] TMA Load Pipeline 1 (predicated)
     %pipe1 = arith.constant 0 : index
-    %p1lhsSlice = memref.subview %lhsShmem[0, 0, 0][1, 128, 64][1, 1, 1] : memref<2x128x64xf16, 3> to memref<128x64xf16, 3>
-    %p1rhsSlice = memref.subview %rhsShmem[0, 0, 0][1, 64, 128][1, 1, 1] : memref<2x64x128xf16, strided<[8192, 128, 1], offset: 16384>, 3> to memref<64x128xf16, strided<[128, 1], offset: 16384>, 3>
-    %p1halfFirst = memref.subview %p1rhsSlice[0, 0][64, 64][1, 1] : memref<64x128xf16, strided<[128, 1], offset: 16384>, 3> to memref<64x64xf16, strided<[128, 1], offset: 16384>, 3>
-    %p1halfSecond = memref.subview %p1rhsSlice[32, 0][64, 64][1, 1] : memref<64x128xf16, strided<[128, 1], offset: 16384>, 3> to memref<64x64xf16, strided<[128, 1], offset: 20480>, 3>
+    %lhsSlice1 = memref.view %dynsmem[%c0][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<128x64xf16, #gpu.address_space<workgroup>>
+    %halfFirst1 = memref.view %dynsmem[%c32768][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
+    %halfSecond1 = memref.view %dynsmem[%c40960][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
     nvgpu.mbarrier.arrive.expect_tx %barrier[%pipe1], %txcount, predicate = %cnd : !barrierType        
     %dim1 = arith.muli %pipe1, %c64 : index
-    nvgpu.tma.async.load %descA[%dim1, %c0], %barrier[%pipe1] to %p1lhsSlice, predicate = %cnd : !lhsTensorMap, !barrierType -> memref<128x64xf16, 3>
-    nvgpu.tma.async.load %descB[%c0, %dim1], %barrier[%pipe1] to %p1halfFirst, predicate = %cnd : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[128, 1], offset: 16384>, 3>
-    nvgpu.tma.async.load %descB[%c64, %dim1], %barrier[%pipe1] to %p1halfSecond, predicate = %cnd : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[128, 1], offset: 20480>, 3>
+    nvgpu.tma.async.load %descA[%dim1, %c0], %barrier[%pipe1] to %lhsSlice1, predicate = %cnd : !lhsTensorMap, !barrierType -> memref<128x64xf16, #gpu.address_space<workgroup>>
+    nvgpu.tma.async.load %descB[%c0, %dim1], %barrier[%pipe1] to %halfFirst1, predicate = %cnd : !rhsTensorMap, !barrierType -> memref<64x64xf16, #gpu.address_space<workgroup>>
+    nvgpu.tma.async.load %descB[%c64, %dim1], %barrier[%pipe1] to %halfSecond1, predicate = %cnd : !rhsTensorMap, !barrierType -> memref<64x64xf16, #gpu.address_space<workgroup>>
 
     // Step 5. [GPU] TMA Load Pipeline 2 (predicated)
     %pipe2 = arith.constant 1 : index
-    %p2lhsSlice = memref.subview %lhsShmem[1, 0, 0][1, 128, 64][1, 1, 1] : memref<2x128x64xf16, 3> to memref<128x64xf16, strided<[64, 1], offset: 8192>, 3>
-    %p2rhsSlice = memref.subview %rhsShmem[1, 0, 0][1, 64, 128][1, 1, 1] : memref<2x64x128xf16, strided<[8192, 128, 1], offset: 16384>, 3> to memref<64x128xf16, strided<[128, 1], offset: 24576>, 3>
-    %p2halfFirst = memref.subview %p2rhsSlice[0, 0][64, 64][1, 1] : memref<64x128xf16, strided<[128, 1], offset: 24576>, 3> to memref<64x64xf16, strided<[128, 1], offset: 24576>, 3>
-    %p2halfSecond = memref.subview %p2rhsSlice[32, 0][64, 64][1, 1] : memref<64x128xf16, strided<[128, 1], offset: 24576>, 3> to memref<64x64xf16, strided<[128, 1], offset: 28672>, 3>
+    %lhsSlice2 = memref.view %dynsmem[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<128x64xf16, #gpu.address_space<workgroup>>
+    %halfFirst2 = memref.view %dynsmem[%c49152][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
+    %halfSecond2 = memref.view %dynsmem[%c57344][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
     nvgpu.mbarrier.arrive.expect_tx %barrier[%pipe2], %txcount, predicate = %cnd : !barrierType
     %dim2 = arith.muli %pipe2, %c64 : index  
-    nvgpu.tma.async.load %descA[%dim2, %c0], %barrier[%pipe2] to %p2lhsSlice, predicate = %cnd : !lhsTensorMap, !barrierType ->  memref<128x64xf16, strided<[64, 1], offset: 8192>, 3>
-    nvgpu.tma.async.load %descB[%c0, %dim2], %barrier[%pipe2] to %p2halfFirst, predicate = %cnd : !rhsTensorMap, !barrierType ->  memref<64x64xf16, strided<[128, 1], offset: 24576>, 3>
-    nvgpu.tma.async.load %descB[%c64, %dim2], %barrier[%pipe2] to %p2halfSecond, predicate = %cnd : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[128, 1], offset: 28672>, 3>
-    
+    nvgpu.tma.async.load %descA[%dim2, %c0], %barrier[%pipe2] to %lhsSlice2, predicate = %cnd : !lhsTensorMap, !barrierType ->  memref<128x64xf16, #gpu.address_space<workgroup>>
+    nvgpu.tma.async.load %descB[%c0, %dim2], %barrier[%pipe2] to %halfFirst2, predicate = %cnd : !rhsTensorMap, !barrierType ->  memref<64x64xf16, #gpu.address_space<workgroup>>
+    nvgpu.tma.async.load %descB[%c64, %dim2], %barrier[%pipe2] to %halfSecond2, predicate = %cnd : !rhsTensorMap, !barrierType -> memref<64x64xf16, #gpu.address_space<workgroup>>
     // Step 6. [GPU] Initiliaze accumulator matrix
     %14 = nvgpu.warpgroup.mma.init.accumulator -> <fragmented = vector<128x128xf32>>
 
@@ -208,11 +208,11 @@ func.func @main() {
       // TMA wait
       %phase_c0 = arith.constant 0 : i1
       nvgpu.mbarrier.try_wait.parity %barrier[%i], %phase_c0, %ticks : !barrierType
-      %lhsSlice = memref.subview %lhsShmem [%i, 0, 0][1, 128, 64][1, 1, 1] : memref<2x128x64xf16, 3> to memref<128x64xf16, strided<[64, 1], offset: ?>, 3>
-      %rhsSlice = memref.subview %rhsShmem [%i, 0, 0][1, 64, 128][1, 1, 1] : memref<2x64x128xf16, strided<[8192, 128, 1], offset: 16384>, 3> to memref<64x128xf16, strided<[128, 1], offset: ?>, 3>
+      %lhsSlice = memref.subview %lhsShmem [%i, 0, 0][1, 128, 64][1, 1, 1] : memref<2x128x64xf16, #gpu.address_space<workgroup>> to memref<128x64xf16, strided<[64, 1], offset: ?>, #gpu.address_space<workgroup>>
+      %rhsSlice = memref.subview %rhsShmem [%i, 0, 0][1, 64, 128][1, 1, 1] : memref<2x64x128xf16, #gpu.address_space<workgroup>> to memref<64x128xf16, strided<[128, 1], offset: ?>, #gpu.address_space<workgroup>>
       // Descriptor WGMMA
-      %dA = nvgpu.warpgroup.generate.descriptor %lhsSlice, %descA : memref<128x64xf16, strided<[64, 1], offset: ?>, 3>, !lhsTensorMap -> !nvgpu.warpgroup.descriptor<tensor=memref<128x64xf16, 3>>
-      %dB = nvgpu.warpgroup.generate.descriptor %rhsSlice, %descB : memref<64x128xf16, strided<[128, 1], offset: ?>, 3>, !rhsTensorMap -> !nvgpu.warpgroup.descriptor<tensor=memref<64x128xf16, 3>>
+      %dA = nvgpu.warpgroup.generate.descriptor %lhsSlice, %descA : memref<128x64xf16, strided<[64, 1], offset: ?>, #gpu.address_space<workgroup>>, !lhsTensorMap -> !nvgpu.warpgroup.descriptor<tensor=memref<128x64xf16, 3>>
+      %dB = nvgpu.warpgroup.generate.descriptor %rhsSlice, %descB : memref<64x128xf16, strided<[128, 1], offset: ?>, #gpu.address_space<workgroup>>, !rhsTensorMap -> !nvgpu.warpgroup.descriptor<tensor=memref<64x128xf16, 3>>
       // Perform WGMMA 128x128x64
       %md  = nvgpu.warpgroup.mma %dA, %dB, %mc {transposeB} : <tensor = memref<128x64xf16,3>>, <tensor = memref<64x128xf16,3>>, <fragmented = vector<128x128xf32>> -> <fragmented = vector<128x128xf32>>
       scf.yield %md : !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
@@ -232,7 +232,7 @@ func.func @main() {
     scf.for %arg12 = %17 to %c128 step %c4 {
       %19 = arith.muli %18, %c4 : index
       %20 = vector.load %accShmemPtr[%arg12, %19] : memref<128x128xf32, 3>, vector<4xf32>
-      vector.store %20, %matrixD[%arg12, %19] : memref<128x128xf32>, vector<4xf32>
+      vector.store %20, %align_matrixD[%arg12, %19] : memref<128x128xf32>, vector<4xf32>
     }
     gpu.terminator
   }
@@ -281,5 +281,4 @@ func.func @main() {
 
   return
 }
-
 

@@ -1209,8 +1209,9 @@ def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255_expr:$imm8), IIC_iMOVi,
 }
 // Because we have an explicit tMOVSr below, we need an alias to handle
 // the immediate "movs" form here. Blech.
-def : tInstAlias <"movs $Rdn, $imm8",
-                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255_expr:$imm8, 14, zero_reg)>;
+def : tInstAlias<"movs $Rdn, $imm8",
+                 (tMOVi8 tGPR:$Rdn, (s_cc_out CPSR),
+                         imm0_255_expr:$imm8, (pred 14, zero_reg))>;
 
 // A7-73: MOV(2) - mov setting flag.
 
@@ -1697,17 +1698,17 @@ def : T1Pat<(sextloadi16 t_addrmode_is2:$addr),
 def : T1Pat<(sextloadi16 t_addrmode_rr:$addr),
             (tASRri (tLSLri (tLDRHr t_addrmode_rr:$addr), 16), 16)>;
 
-def : T1Pat<(atomic_load_8 t_addrmode_is1:$src),
+def : T1Pat<(atomic_load_azext_8 t_addrmode_is1:$src),
              (tLDRBi t_addrmode_is1:$src)>;
-def : T1Pat<(atomic_load_8 t_addrmode_rr:$src),
+def : T1Pat<(atomic_load_azext_8 t_addrmode_rr:$src),
              (tLDRBr t_addrmode_rr:$src)>;
-def : T1Pat<(atomic_load_16 t_addrmode_is2:$src),
+def : T1Pat<(atomic_load_azext_16 t_addrmode_is2:$src),
              (tLDRHi t_addrmode_is2:$src)>;
-def : T1Pat<(atomic_load_16 t_addrmode_rr:$src),
+def : T1Pat<(atomic_load_azext_16 t_addrmode_rr:$src),
              (tLDRHr t_addrmode_rr:$src)>;
-def : T1Pat<(atomic_load_32 t_addrmode_is4:$src),
+def : T1Pat<(atomic_load_nonext_32 t_addrmode_is4:$src),
              (tLDRi t_addrmode_is4:$src)>;
-def : T1Pat<(atomic_load_32 t_addrmode_rr:$src),
+def : T1Pat<(atomic_load_nonext_32 t_addrmode_rr:$src),
              (tLDRr t_addrmode_rr:$src)>;
 def : T1Pat<(atomic_store_8 tGPR:$val, t_addrmode_is1:$ptr),
              (tSTRBi tGPR:$val, t_addrmode_is1:$ptr)>;
@@ -1764,7 +1765,8 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
 // In Thumb1, "nop" is encoded as a "mov r8, r8". Technically, the bf00
 // encoding is available on ARMv6K, but we don't differentiate that finely.
-def : InstAlias<"nop", (tMOVr R8, R8, 14, zero_reg), 0>, Requires<[IsThumb, IsThumb1Only]>;
+def : InstAlias<"nop", (tMOVr R8, R8, (pred 14, zero_reg)), 0>,
+      Requires<[IsThumb, IsThumb1Only]>;
 
 
 // "neg" is and alias for "rsb rd, rn, #0"

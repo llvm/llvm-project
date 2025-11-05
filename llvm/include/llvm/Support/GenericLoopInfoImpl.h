@@ -355,7 +355,7 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
     if (BB == getHeader()) {
       assert(!OutsideLoopPreds.empty() && "Loop is unreachable!");
     } else if (!OutsideLoopPreds.empty()) {
-      // A non-header loop shouldn't be reachable from outside the loop,
+      // A non-header loop block shouldn't be reachable from outside the loop,
       // though it is permitted if the predecessor is not itself actually
       // reachable.
       BlockT *EntryBB = &BB->getParent()->front();
@@ -425,8 +425,9 @@ void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, bool Verbose,
       if (i)
         OS << ",";
       BB->printAsOperand(OS, false);
-    } else
-      OS << "\n";
+    } else {
+      OS << '\n';
+    }
 
     if (BB == H)
       OS << "<header>";
@@ -458,7 +459,7 @@ template <class BlockT, class LoopT>
 static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
                                   LoopInfoBase<BlockT, LoopT> *LI,
                                   const DomTreeBase<BlockT> &DomTree) {
-  typedef GraphTraits<Inverse<BlockT *>> InvBlockTraits;
+  using InvBlockTraits = GraphTraits<Inverse<BlockT *>>;
 
   unsigned NumBlocks = 0;
   unsigned NumSubloops = 0;
@@ -512,8 +513,8 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
 
 /// Populate all loop data in a stable order during a single forward DFS.
 template <class BlockT, class LoopT> class PopulateLoopsDFS {
-  typedef GraphTraits<BlockT *> BlockTraits;
-  typedef typename BlockTraits::ChildIteratorType SuccIterTy;
+  using BlockTraits = GraphTraits<BlockT *>;
+  using SuccIterTy = typename BlockTraits::ChildIteratorType;
 
   LoopInfoBase<BlockT, LoopT> *LI;
 
@@ -604,7 +605,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
 template <class BlockT, class LoopT>
 SmallVector<LoopT *, 4>
 LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() const {
-  SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
+  SmallVector<LoopT *, 4> PreOrderLoops;
   // The outer-most loop actually goes into the result in the same relative
   // order as we walk it. But LoopInfo stores the top level loops in reverse
   // program order so for here we reverse it to get forward program order.
@@ -642,6 +643,36 @@ LoopInfoBase<BlockT, LoopT>::getLoopsInReverseSiblingPreorder() const {
   }
 
   return PreOrderLoops;
+}
+
+template <class BlockT, class LoopT>
+LoopT *LoopInfoBase<BlockT, LoopT>::getSmallestCommonLoop(LoopT *A,
+                                                          LoopT *B) const {
+  if (!A || !B)
+    return nullptr;
+
+  // If lops A and B have different depth replace them with parent loop
+  // until they have the same depth.
+  while (A->getLoopDepth() > B->getLoopDepth())
+    A = A->getParentLoop();
+  while (B->getLoopDepth() > A->getLoopDepth())
+    B = B->getParentLoop();
+
+  // Loops A and B are at same depth but may be disjoint, replace them with
+  // parent loops until we find loop that contains both or we run out of
+  // parent loops.
+  while (A != B) {
+    A = A->getParentLoop();
+    B = B->getParentLoop();
+  }
+
+  return A;
+}
+
+template <class BlockT, class LoopT>
+LoopT *LoopInfoBase<BlockT, LoopT>::getSmallestCommonLoop(BlockT *A,
+                                                          BlockT *B) const {
+  return getSmallestCommonLoop(getLoopFor(A), getLoopFor(B));
 }
 
 // Debugging

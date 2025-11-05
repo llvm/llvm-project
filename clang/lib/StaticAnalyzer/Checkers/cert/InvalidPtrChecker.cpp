@@ -206,8 +206,8 @@ void InvalidPtrChecker::postPreviousReturnInvalidatingCall(
   const auto *CE = cast<CallExpr>(Call.getOriginExpr());
 
   // Function call will return a pointer to the new symbolic region.
-  DefinedOrUnknownSVal RetVal = C.getSValBuilder().conjureSymbolVal(
-      CE, LCtx, CE->getType(), C.blockCount());
+  DefinedOrUnknownSVal RetVal =
+      C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
   State = State->BindExpr(CE, LCtx, RetVal);
 
   const auto *SymRegOfRetVal =

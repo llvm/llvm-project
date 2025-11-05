@@ -43,7 +43,7 @@ using namespace mlir::bufferization;
 //===----------------------------------------------------------------------===//
 
 static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
-  return builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(value));
+  return arith::ConstantOp::create(builder, loc, builder.getBoolAttr(value));
 }
 
 static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
@@ -51,14 +51,8 @@ static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
 /// Return "true" if the given op is guaranteed to have neither "Allocate" nor
 /// "Free" side effects.
 static bool hasNeitherAllocateNorFreeSideEffect(Operation *op) {
-  if (isa<MemoryEffectOpInterface>(op))
-    return !hasEffect<MemoryEffects::Allocate>(op) &&
-           !hasEffect<MemoryEffects::Free>(op);
-  // If the op does not implement the MemoryEffectOpInterface but has has
-  // recursive memory effects, then this op in isolation (without its body) does
-  // not have any side effects. All the ops inside the regions of this op will
-  // be processed separately.
-  return op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+  return !mightHaveEffect<MemoryEffects::Allocate>(op) &&
+         !mightHaveEffect<MemoryEffects::Free>(op);
 }
 
 /// Return "true" if the given op has buffer semantics. I.e., it has buffer
@@ -166,8 +160,9 @@ namespace {
 /// program have a corresponding de-allocation.
 class BufferDeallocation {
 public:
-  BufferDeallocation(Operation *op, DeallocationOptions options)
-      : state(op), options(options) {}
+  BufferDeallocation(Operation *op, DeallocationOptions options,
+                     SymbolTableCollection &symbolTables)
+      : state(op, symbolTables), options(options) {}
 
   /// Performs the actual placement/creation of all dealloc operations.
   LogicalResult deallocate(FunctionOpInterface op);
@@ -516,9 +511,7 @@ LogicalResult BufferDeallocation::verifyOperationPreconditions(Operation *op) {
   //   MemoryEffectOpInterface. They usually do not have side effects apart
   //   from the callee, which will be analyzed separately. (This is similar to
   //   "recursive memory effects".)
-  if (!isa<MemoryEffectOpInterface>(op) &&
-      !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>() &&
-      !isa<CallOpInterface>(op))
+  if (hasUnknownEffects(op) && !isa<CallOpInterface>(op))
     return op->emitError(
         "ops with unknown memory side effects are not supported");
 
@@ -569,8 +562,11 @@ LogicalResult
 BufferDeallocation::updateFunctionSignature(FunctionOpInterface op) {
   SmallVector<TypeRange> returnOperandTypes(llvm::map_range(
       op.getFunctionBody().getOps<RegionBranchTerminatorOpInterface>(),
-      [](RegionBranchTerminatorOpInterface op) {
-        return op.getSuccessorOperands(RegionBranchPoint::parent()).getTypes();
+      [&](RegionBranchTerminatorOpInterface branchOp) {
+        return branchOp
+            .getSuccessorOperands(RegionSuccessor(
+                op.getOperation(), op.getOperation()->getResults()))
+            .getTypes();
       }));
   if (!llvm::all_equal(returnOperandTypes))
     return op->emitError(
@@ -749,19 +745,17 @@ Value BufferDeallocation::materializeMemrefWithGuaranteedOwnership(
 
   // Insert a runtime check and only clone if we still don't have ownership at
   // runtime.
-  Value maybeClone =
-      builder
-          .create<scf::IfOp>(
-              memref.getLoc(), condition,
-              [&](OpBuilder &builder, Location loc) {
-                builder.create<scf::YieldOp>(loc, newMemref);
-              },
-              [&](OpBuilder &builder, Location loc) {
-                Value clone =
-                    builder.create<bufferization::CloneOp>(loc, newMemref);
-                builder.create<scf::YieldOp>(loc, clone);
-              })
-          .getResult(0);
+  Value maybeClone = scf::IfOp::create(
+                         builder, memref.getLoc(), condition,
+                         [&](OpBuilder &builder, Location loc) {
+                           scf::YieldOp::create(builder, loc, newMemref);
+                         },
+                         [&](OpBuilder &builder, Location loc) {
+                           Value clone = bufferization::CloneOp::create(
+                               builder, loc, newMemref);
+                           scf::YieldOp::create(builder, loc, clone);
+                         })
+                         .getResult(0);
   Value trueVal = buildBoolValue(builder, memref.getLoc(), true);
   state.updateOwnership(maybeClone, trueVal);
   state.addMemrefToDeallocate(maybeClone, maybeClone.getParentBlock());
@@ -796,8 +790,8 @@ BufferDeallocation::handleInterface(BranchOpInterface op) {
   state.getMemrefsToRetain(block, op->getSuccessor(0), forwardedOperands,
                            toRetain);
 
-  auto deallocOp = builder.create<bufferization::DeallocOp>(
-      op.getLoc(), memrefs, conditions, toRetain);
+  auto deallocOp = bufferization::DeallocOp::create(
+      builder, op.getLoc(), memrefs, conditions, toRetain);
 
   // We want to replace the current ownership of the retained values with the
   // result values of the dealloc operation as they are always unique.
@@ -884,12 +878,11 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
       builder.setInsertionPoint(op);
       Ownership ownership = state.getOwnership(operand, block);
       if (ownership.isUnique()) {
-        Value ownershipInverted = builder.create<arith::XOrIOp>(
-            op.getLoc(), ownership.getIndicator(),
+        Value ownershipInverted = arith::XOrIOp::create(
+            builder, op.getLoc(), ownership.getIndicator(),
             buildBoolValue(builder, op.getLoc(), true));
-        builder.create<cf::AssertOp>(
-            op.getLoc(), ownershipInverted,
-            "expected that the block does not have ownership");
+        cf::AssertOp::create(builder, op.getLoc(), ownershipInverted,
+                             "expected that the block does not have ownership");
       }
     }
   }
@@ -952,8 +945,8 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
   // about, but we would need to check how many successors there are and under
   // which condition they are taken, etc.
 
-  MutableOperandRange operands =
-      op.getMutableSuccessorOperands(RegionBranchPoint::parent());
+  MutableOperandRange operands = op.getMutableSuccessorOperands(
+      RegionSuccessor(op.getOperation(), op.getOperation()->getResults()));
 
   SmallVector<Value> updatedOwnerships;
   auto result = deallocation_impl::insertDeallocOpForReturnLike(
@@ -1027,11 +1020,13 @@ struct OwnershipBasedBufferDeallocationPass
     DeallocationOptions options;
     options.privateFuncDynamicOwnership = privateFuncDynamicOwnership;
 
+    mlir::SymbolTableCollection symbolTables;
+
     auto status = getOperation()->walk([&](func::FuncOp func) {
       if (func.isExternal())
         return WalkResult::skip();
 
-      if (failed(deallocateBuffersOwnershipBased(func, options)))
+      if (failed(deallocateBuffersOwnershipBased(func, options, symbolTables)))
         return WalkResult::interrupt();
 
       return WalkResult::advance();
@@ -1047,11 +1042,11 @@ struct OwnershipBasedBufferDeallocationPass
 // Implement bufferization API
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-bufferization::deallocateBuffersOwnershipBased(FunctionOpInterface op,
-                                               DeallocationOptions options) {
+LogicalResult bufferization::deallocateBuffersOwnershipBased(
+    FunctionOpInterface op, DeallocationOptions options,
+    SymbolTableCollection &symbolTables) {
   // Gather all required allocation nodes and prepare the deallocation phase.
-  BufferDeallocation deallocation(op, options);
+  BufferDeallocation deallocation(op, options, symbolTables);
 
   // Place all required temporary clone and dealloc nodes.
   return deallocation.deallocate(op);

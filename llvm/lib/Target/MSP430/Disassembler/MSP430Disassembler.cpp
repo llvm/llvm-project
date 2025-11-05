@@ -14,14 +14,17 @@
 #include "MSP430.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "msp430-disassembler"
 
@@ -57,7 +60,8 @@ static MCDisassembler *createMSP430Disassembler(const Target &T,
   return new MSP430Disassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430Disassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMSP430Disassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheMSP430Target(),
                                          createMSP430Disassembler);
 }
@@ -99,15 +103,6 @@ static DecodeStatus DecodeGR16RegisterClass(MCInst &MI, uint64_t RegNo,
 }
 
 static DecodeStatus DecodeCGImm(MCInst &MI, uint64_t Bits, uint64_t Address,
-                                const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeMemOperand(MCInst &MI, uint64_t Bits,
-                                     uint64_t Address,
-                                     const MCDisassembler *Decoder);
-
-#include "MSP430GenDisassemblerTables.inc"
-
-static DecodeStatus DecodeCGImm(MCInst &MI, uint64_t Bits, uint64_t Address,
                                 const MCDisassembler *Decoder) {
   int64_t Imm;
   switch (Bits) {
@@ -137,6 +132,8 @@ static DecodeStatus DecodeMemOperand(MCInst &MI, uint64_t Bits,
   MI.addOperand(MCOperand::createImm((int16_t)Imm));
   return MCDisassembler::Success;
 }
+
+#include "MSP430GenDisassemblerTables.inc"
 
 enum AddrMode {
   amInvalid = 0,

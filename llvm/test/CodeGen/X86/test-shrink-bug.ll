@@ -48,18 +48,17 @@ define dso_local void @fail(i16 %a, <2 x i8> %b) {
 ; CHECK-X86:       ## %bb.0:
 ; CHECK-X86-NEXT:    subl $12, %esp
 ; CHECK-X86-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-X86-NEXT:    cmpb $123, {{[0-9]+}}(%esp)
-; CHECK-X86-NEXT:    setne %cl
-; CHECK-X86-NEXT:    testl $263, %eax ## imm = 0x107
-; CHECK-X86-NEXT:    setne %al
-; CHECK-X86-NEXT:    testb %cl, %al
-; CHECK-X86-NEXT:    jne LBB1_2
-; CHECK-X86-NEXT:  ## %bb.1: ## %yes
-; CHECK-X86-NEXT:    addl $12, %esp
-; CHECK-X86-NEXT:    retl
-; CHECK-X86-NEXT:  LBB1_2: ## %no
+; CHECK-X86-NEXT:    sete %al
+; CHECK-X86-NEXT:    testl $263, %ecx ## imm = 0x107
+; CHECK-X86-NEXT:    je LBB1_3
+; CHECK-X86-NEXT:  ## %bb.1:
+; CHECK-X86-NEXT:    testb %al, %al
+; CHECK-X86-NEXT:    jne LBB1_3
+; CHECK-X86-NEXT:  ## %bb.2: ## %no
 ; CHECK-X86-NEXT:    calll _bar
+; CHECK-X86-NEXT:  LBB1_3: ## %yes
 ; CHECK-X86-NEXT:    addl $12, %esp
 ; CHECK-X86-NEXT:    retl
 ;

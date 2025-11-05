@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/sincosf.h"
-#include "sincosf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
@@ -16,6 +15,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/__support/math/sincosf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -145,6 +145,12 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
 
   // x is inf or nan.
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      *sinp = *cosp = FPBits::quiet_nan().get_val();
+      return;
+    }
+
     if (x_abs == 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);

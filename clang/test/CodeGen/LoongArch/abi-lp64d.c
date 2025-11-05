@@ -48,6 +48,9 @@ unsigned long check_ulong() { return 0; }
 // CHECK-LABEL: define{{.*}} i64 @check_ulonglong()
 unsigned long long check_ulonglong() { return 0; }
 
+// CHECK-LABEL: define{{.*}}  half @check_float16()
+_Float16 check_float16() { return 0; }
+
 // CHECK-LABEL: define{{.*}} float @check_float()
 float check_float() { return 0; }
 
@@ -127,6 +130,14 @@ struct i16x4_s f_i16x4_s(struct i16x4_s x) {
 /// available, the value is passed in a GAR; if no GAR is available, the value
 /// is passed on the stack.
 
+struct f16x1_s {
+  __fp16 a;
+};
+
+struct float16x1_s {
+  _Float16 a;
+};
+
 struct f32x1_s {
   float a;
 };
@@ -134,6 +145,16 @@ struct f32x1_s {
 struct f64x1_s {
   double a;
 };
+
+// CHECK-LABEL: define{{.*}} half @f_f16x1_s(half %0)
+struct f16x1_s f_f16x1_s(struct f16x1_s x) {
+  return x;
+}
+
+// CHECK-LABEL: define{{.*}} half @f_float16x1_s(half %0)
+struct float16x1_s f_float16x1_s(struct float16x1_s x) {
+  return x;
+}
 
 // CHECK-LABEL: define{{.*}} float @f_f32x1_s(float %0)
 struct f32x1_s f_f32x1_s(struct f32x1_s x) {
@@ -151,9 +172,19 @@ struct f64x1_s f_f64x1_s(struct f64x1_s x) {
 /// number of available FAR is less than 2, it’s passed in a GAR, and passed on
 /// the stack if no GAR is available.
 
+struct f16x2_s {
+  __fp16 a;
+  _Float16 b;
+};
+
 struct f32x2_s {
   float a, b;
 };
+
+// CHECK-LABEL: define{{.*}} { half, half } @f_f16x2_s(half %0, half %1)
+struct f16x2_s f_f16x2_s(struct f16x2_s x) {
+  return x;
+}
 
 // CHECK-LABEL: define{{.*}} { float, float } @f_f32x2_s(float %0, float %1)
 struct f32x2_s f_f32x2_s(struct f32x2_s x) {
@@ -165,10 +196,20 @@ struct f32x2_s f_f32x2_s(struct f32x2_s x) {
 /// i. Multiple fixed-point members. If there are available GAR, the structure
 /// is passed in a GAR, and passed on the stack if no GAR is available.
 
+struct f16x1_i16x2_s {
+  _Float16 a;
+  int16_t b, c;
+};
+
 struct f32x1_i16x2_s {
   float a;
   int16_t b, c;
 };
+
+// CHECK-LABEL: define{{.*}} i64 @f_f16x1_i16x2_s(i64 %x.coerce)
+struct f16x1_i16x2_s f_f16x1_i16x2_s(struct f16x1_i16x2_s x) {
+  return x;
+}
 
 // CHECK-LABEL: define{{.*}} i64 @f_f32x1_i16x2_s(i64 %x.coerce)
 struct f32x1_i16x2_s f_f32x1_i16x2_s(struct f32x1_i16x2_s x) {
@@ -181,10 +222,20 @@ struct f32x1_i16x2_s f_f32x1_i16x2_s(struct f32x1_i16x2_s x) {
 /// but one GAR is available, it’s passed in GAR; If no GAR is available, it’s
 /// passed on the stack.
 
+struct f16x1_i32x1_s {
+  _Float16 a;
+  int32_t b;
+};
+
 struct f32x1_i32x1_s {
   float a;
   int32_t b;
 };
+
+// CHECK-LABEL: define{{.*}} { half, i32 } @f_f16x1_i32x1_s(half %0, i32 %1)
+struct f16x1_i32x1_s f_f16x1_i32x1_s(struct f16x1_i32x1_s x) {
+  return x;
+}
 
 // CHECK-LABEL: define{{.*}} { float, i32 } @f_f32x1_i32x1_s(float %0, i32 %1)
 struct f32x1_i32x1_s f_f32x1_i32x1_s(struct f32x1_i32x1_s x) {
@@ -253,6 +304,16 @@ struct f32x4_s f_f32x4_s(struct f32x4_s x) {
   return x;
 }
 
+struct f16x5_s {
+  _Float16 a, b, c, d;
+  __fp16 e;
+};
+
+// CHECK-LABEL: define{{.*}} [2 x i64] @f_f16x5_s([2 x i64] %x.coerce)
+struct f16x5_s f_f16x5_s(struct f16x5_s x) {
+  return x;
+}
+
 /// ii. The structure with two double members is passed in a pair of available
 /// FARs. If no a pair of available FARs, it’s passed in GARs. A structure with
 /// one double member and one float member is same.
@@ -309,6 +370,16 @@ struct f32x2_i32x2_s {
 
 // CHECK-LABEL: define{{.*}} [2 x i64] @f_f32x2_i32x2_s([2 x i64] %x.coerce)
 struct f32x2_i32x2_s f_f32x2_i32x2_s(struct f32x2_i32x2_s x) {
+  return x;
+}
+
+struct f16x4_i32x2_s {
+  _Float16 a, b, c, d;
+  int32_t e, f;
+};
+
+// CHECK-LABEL: define{{.*}} [2 x i64] @f_f16x4_i32x2_s([2 x i64] %x.coerce)
+struct f16x4_i32x2_s f_f16x4_i32x2_s(struct f16x4_i32x2_s x) {
   return x;
 }
 

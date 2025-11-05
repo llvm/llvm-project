@@ -165,7 +165,6 @@ FROMMACRO
 class X15 : public CopyableAlias2 {
   X15(const X15 &other) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling a base constructor
-  // CHECK-FIXES: X15(const X15 &other)  : Copyable5(other) {}
 };
 
 class X16 : public NonCopyable {

@@ -19,13 +19,11 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <atomic>
 #include <chrono>
 #include <optional>
 
@@ -52,7 +50,8 @@ public:
   llvm::sys::SmartRWMutex<true> identifierMutex;
 
   /// A thread local cache of identifiers to reduce lock contention.
-  ThreadLocalCache<llvm::StringMap<llvm::StringMapEntry<std::nullopt_t> *>>
+  ThreadLocalCache<
+      llvm::StringMap<llvm::StringMapEntry<llvm::EmptyStringSetTag> *>>
       localIdentifierCache;
 
   TimingManagerImpl() : identifiers(identifierAllocator) {}
@@ -321,7 +320,6 @@ public:
   void mergeChildren(AsyncChildrenMap &&other) {
     for (auto &thread : other) {
       mergeChildren(std::move(thread.second));
-      assert(thread.second.empty());
     }
     other.clear();
   }

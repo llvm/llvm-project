@@ -15,18 +15,13 @@
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -34,16 +29,13 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
+namespace {
 
 class SPIRVMergeRegionExitTargets : public FunctionPass {
 public:
   static char ID;
 
-  SPIRVMergeRegionExitTargets() : FunctionPass(ID) {
-    initializeSPIRVMergeRegionExitTargetsPass(*PassRegistry::getPassRegistry());
-  };
+  SPIRVMergeRegionExitTargets() : FunctionPass(ID) {}
 
   // Gather all the successors of |BB|.
   // This function asserts if the terminator neither a branch, switch or return.
@@ -242,7 +234,7 @@ public:
   }
 #endif
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto *TopLevelRegion =
         getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
@@ -273,7 +265,7 @@ public:
     FunctionPass::getAnalysisUsage(AU);
   }
 };
-} // namespace llvm
+} // namespace
 
 char SPIRVMergeRegionExitTargets::ID = 0;
 

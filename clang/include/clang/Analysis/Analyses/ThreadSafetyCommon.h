@@ -22,6 +22,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYCOMMON_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTraverse.h"
@@ -34,6 +35,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
+#include <functional>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -271,26 +273,35 @@ private:
 // translateAttrExpr needs it, but that should be moved too.
 class CapabilityExpr {
 private:
-  /// The capability expression and whether it's negated.
-  llvm::PointerIntPair<const til::SExpr *, 1, bool> CapExpr;
+  static constexpr unsigned FlagNegative = 1u << 0;
+  static constexpr unsigned FlagReentrant = 1u << 1;
+
+  /// The capability expression and flags.
+  llvm::PointerIntPair<const til::SExpr *, 2, unsigned> CapExpr;
 
   /// The kind of capability as specified by @ref CapabilityAttr::getName.
   StringRef CapKind;
 
 public:
-  CapabilityExpr() : CapExpr(nullptr, false) {}
-  CapabilityExpr(const til::SExpr *E, StringRef Kind, bool Neg)
-      : CapExpr(E, Neg), CapKind(Kind) {}
+  CapabilityExpr() : CapExpr(nullptr, 0) {}
+  CapabilityExpr(const til::SExpr *E, StringRef Kind, bool Neg, bool Reentrant)
+      : CapExpr(E, (Neg ? FlagNegative : 0) | (Reentrant ? FlagReentrant : 0)),
+        CapKind(Kind) {}
+  // Infers `Kind` and `Reentrant` from `QT`.
+  CapabilityExpr(const til::SExpr *E, QualType QT, bool Neg);
 
   // Don't allow implicitly-constructed StringRefs since we'll capture them.
-  template <typename T> CapabilityExpr(const til::SExpr *, T, bool) = delete;
+  template <typename T>
+  CapabilityExpr(const til::SExpr *, T, bool, bool) = delete;
 
   const til::SExpr *sexpr() const { return CapExpr.getPointer(); }
   StringRef getKind() const { return CapKind; }
-  bool negative() const { return CapExpr.getInt(); }
+  bool negative() const { return CapExpr.getInt() & FlagNegative; }
+  bool reentrant() const { return CapExpr.getInt() & FlagReentrant; }
 
   CapabilityExpr operator!() const {
-    return CapabilityExpr(CapExpr.getPointer(), CapKind, !CapExpr.getInt());
+    return CapabilityExpr(CapExpr.getPointer(), CapKind, !negative(),
+                          reentrant());
   }
 
   bool equals(const CapabilityExpr &other) const {
@@ -376,6 +387,11 @@ public:
     SelfVar->setKind(til::Variable::VK_SFun);
   }
 
+  // Create placeholder for this: we don't know the VarDecl on construction yet.
+  til::LiteralPtr *createThisPlaceholder() {
+    return new (Arena) til::LiteralPtr(nullptr);
+  }
+
   // Translate a clang expression in an attribute to a til::SExpr.
   // Constructs the context from D, DeclExp, and SelfDecl.
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, const NamedDecl *D,
@@ -384,12 +400,8 @@ public:
 
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, CallingContext *Ctx);
 
-  // Translate a variable reference.
-  til::LiteralPtr *createVariable(const VarDecl *VD);
-
-  // Create placeholder for this: we don't know the VarDecl on construction yet.
-  std::pair<til::LiteralPtr *, StringRef>
-  createThisPlaceholder(const Expr *Exp);
+  // Translate a VarDecl to its canonical TIL expression.
+  til::SExpr *translateVariable(const VarDecl *VD, CallingContext *Ctx);
 
   // Translate a clang statement or expression to a TIL expression.
   // Also performs substitution of variables; Ctx provides the context.
@@ -405,6 +417,10 @@ public:
 
   const til::SCFG *getCFG() const { return Scfg; }
   til::SCFG *getCFG() { return Scfg; }
+
+  void setLookupLocalVarExpr(std::function<const Expr *(const NamedDecl *)> F) {
+    LookupLocalVarExpr = std::move(F);
+  }
 
 private:
   // We implement the CFGVisitor API
@@ -439,6 +455,7 @@ private:
       const AbstractConditionalOperator *C, CallingContext *Ctx);
 
   til::SExpr *translateDeclStmt(const DeclStmt *S, CallingContext *Ctx);
+  til::SExpr *translateStmtExpr(const StmtExpr *SE, CallingContext *Ctx);
 
   // Map from statements in the clang CFG to SExprs in the til::SCFG.
   using StatementMap = llvm::DenseMap<const Stmt *, til::SExpr *>;
@@ -525,6 +542,15 @@ private:
   std::vector<til::Phi *> IncompleteArgs;
   til::BasicBlock *CurrentBB = nullptr;
   BlockInfo *CurrentBlockInfo = nullptr;
+
+  // The closure that captures state required for the lookup; this may be
+  // mutable, so we have to save/restore before/after recursive lookups.
+  using LookupLocalVarExprClosure =
+      std::function<const Expr *(const NamedDecl *)>;
+  // Recursion guard.
+  llvm::DenseSet<const ValueDecl *> VarsBeingTranslated;
+  // Context-dependent lookup of currently valid definitions of local variables.
+  LookupLocalVarExprClosure LookupLocalVarExpr;
 };
 
 #ifndef NDEBUG

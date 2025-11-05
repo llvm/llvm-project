@@ -1,4 +1,4 @@
-//===--- RedundantStrcatCallsCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ namespace clang::tidy::abseil {
 //  - Make it work in macros if the outer and inner StrCats are both in the
 //    argument.
 
-void RedundantStrcatCallsCheck::registerMatchers(MatchFinder* Finder) {
+void RedundantStrcatCallsCheck::registerMatchers(MatchFinder *Finder) {
   const auto CallToStrcat =
       callExpr(callee(functionDecl(hasName("::absl::StrCat"))));
   const auto CallToStrappend =
@@ -45,7 +45,10 @@ struct StrCatCheckResult {
   std::vector<FixItHint> Hints;
 };
 
-void removeCallLeaveArgs(const CallExpr *Call, StrCatCheckResult *CheckResult) {
+} // namespace
+
+static void removeCallLeaveArgs(const CallExpr *Call,
+                                StrCatCheckResult *CheckResult) {
   if (Call->getNumArgs() == 0)
     return;
   // Remove 'Foo('
@@ -58,11 +61,11 @@ void removeCallLeaveArgs(const CallExpr *Call, StrCatCheckResult *CheckResult) {
           Call->getRParenLoc(), Call->getEndLoc().getLocWithOffset(1))));
 }
 
-const clang::CallExpr *processArgument(const Expr *Arg,
-                                       const MatchFinder::MatchResult &Result,
-                                       StrCatCheckResult *CheckResult) {
+static const clang::CallExpr *
+processArgument(const Expr *Arg, const MatchFinder::MatchResult &Result,
+                StrCatCheckResult *CheckResult) {
   const auto IsAlphanum = hasDeclaration(cxxMethodDecl(hasName("AlphaNum")));
-  static const auto* const Strcat = new auto(hasName("::absl::StrCat"));
+  static const auto *const Strcat = new auto(hasName("::absl::StrCat"));
   const auto IsStrcat = cxxBindTemporaryExpr(
       has(callExpr(callee(functionDecl(*Strcat))).bind("StrCat")));
   if (const auto *SubStrcatCall = selectFirst<const CallExpr>(
@@ -78,21 +81,21 @@ const clang::CallExpr *processArgument(const Expr *Arg,
   return nullptr;
 }
 
-StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
-                              const MatchFinder::MatchResult &Result) {
+static StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
+                                     const MatchFinder::MatchResult &Result) {
   StrCatCheckResult CheckResult;
-  std::deque<const CallExpr*> CallsToProcess = {RootCall};
+  std::deque<const CallExpr *> CallsToProcess = {RootCall};
 
   while (!CallsToProcess.empty()) {
     ++CheckResult.NumCalls;
 
-    const CallExpr* CallExpr = CallsToProcess.front();
+    const CallExpr *CallExpr = CallsToProcess.front();
     CallsToProcess.pop_front();
 
     int StartArg = CallExpr == RootCall && IsAppend;
     for (const auto *Arg : CallExpr->arguments()) {
-      if (StartArg-- > 0) 
-      	continue;
+      if (StartArg-- > 0)
+        continue;
       if (const clang::CallExpr *Sub =
               processArgument(Arg, Result, &CheckResult)) {
         CallsToProcess.push_back(Sub);
@@ -101,18 +104,17 @@ StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
   }
   return CheckResult;
 }
-}  // namespace
 
-void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
+void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult &Result) {
   bool IsAppend = false;
 
   const CallExpr *RootCall = nullptr;
-  if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrCat"))) 
-  	IsAppend = false;
-  else if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrAppend"))) 
-  	IsAppend = true;
-  else 
-  	return;
+  if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrCat")))
+    IsAppend = false;
+  else if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrAppend")))
+    IsAppend = true;
+  else
+    return;
 
   if (RootCall->getBeginLoc().isMacroID()) {
     // Ignore calls within macros.
@@ -128,8 +130,8 @@ void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
     return;
   }
 
-  diag(RootCall->getBeginLoc(), 
-  	   "multiple calls to 'absl::StrCat' can be flattened into a single call")
+  diag(RootCall->getBeginLoc(),
+       "multiple calls to 'absl::StrCat' can be flattened into a single call")
       << CheckResult.Hints;
 }
 

@@ -46,7 +46,6 @@
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
-#include <optional>
 
 using namespace llvm;
 using namespace gsym;
@@ -387,7 +386,9 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, Gsym, LoadDwarfCallSites);
+  bool IsMachO = dyn_cast<object::MachOObjectFile>(&Obj) != nullptr;
+
+  DwarfTransformer DT(*DICtx, Gsym, LoadDwarfCallSites, IsMachO);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 

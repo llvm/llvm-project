@@ -156,3 +156,10 @@ parsed as normal. For l64a it's unspecified what happens if the input value is
 negative. For LLVM-libc, all inputs to l64a are treated as unsigned 32 bit ints.
 Additionally, the return of l64a is in a thread-local buffer that's overwritten
 on each call.
+
+`inet_aton` and Non-Standard Binary Integers
+--------------------------------------------
+The current implementation of the `inet_aton` function utilizes the same code
+as `strtol` to parse IPv4 numbers-and-dots notations. This approach may permit
+the use of binary integers (prefixed with 0b), which is not supported by the
+standard.

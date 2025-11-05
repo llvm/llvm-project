@@ -77,7 +77,7 @@ inline APInt operator-(APInt);
 ///
 class [[nodiscard]] APInt {
 public:
-  typedef uint64_t WordType;
+  using WordType = uint64_t;
 
   /// Byte size of a word.
   static constexpr unsigned APINT_WORD_SIZE = sizeof(WordType);
@@ -145,16 +145,17 @@ public:
   ///
   /// \param numBits the bit width of the constructed APInt
   /// \param bigVal a sequence of words to form the initial value of the APInt
-  APInt(unsigned numBits, ArrayRef<uint64_t> bigVal);
+  LLVM_ABI APInt(unsigned numBits, ArrayRef<uint64_t> bigVal);
 
   /// Equivalent to APInt(numBits, ArrayRef<uint64_t>(bigVal, numWords)), but
   /// deprecated because this constructor is prone to ambiguity with the
   /// APInt(unsigned, uint64_t, bool) constructor.
   ///
-  /// If this overload is ever deleted, care should be taken to prevent calls
-  /// from being incorrectly captured by the APInt(unsigned, uint64_t, bool)
-  /// constructor.
-  APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
+  /// Once all uses of this constructor are migrated to other constructors,
+  /// consider marking this overload ""= delete" to prevent calls from being
+  /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
+  [[deprecated("Use other constructors of APInt")]]
+  LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
 
   /// Construct an APInt from a string representation.
   ///
@@ -167,7 +168,7 @@ public:
   /// \param numBits the bit width of the constructed APInt
   /// \param str the string to be interpreted
   /// \param radix the radix to use for the conversion
-  APInt(unsigned numBits, StringRef str, uint8_t radix);
+  LLVM_ABI APInt(unsigned numBits, StringRef str, uint8_t radix);
 
   /// Default constructor that creates an APInt with a 1-bit zero value.
   explicit APInt() { U.VAL = 0; }
@@ -310,7 +311,7 @@ public:
   }
 
   /// Return a value containing V broadcasted over NewLen bits.
-  static APInt getSplat(unsigned NewLen, const APInt &V);
+  LLVM_ABI static APInt getSplat(unsigned NewLen, const APInt &V);
 
   /// @}
   /// \name Value Tests
@@ -458,7 +459,7 @@ public:
 
   /// Checks if this APInt -interpreted as an address- is aligned to the
   /// provided value.
-  bool isAligned(Align A) const;
+  LLVM_ABI bool isAligned(Align A) const;
 
   /// Check if the APInt's value is returned by getSignMask.
   ///
@@ -481,7 +482,7 @@ public:
   /// e.g. 0x01010101 satisfies isSplat(8).
   /// \param SplatSizeInBits The size of the pattern in bits. Must divide bit
   /// width without remainder.
-  bool isSplat(unsigned SplatSizeInBits) const;
+  LLVM_ABI bool isSplat(unsigned SplatSizeInBits) const;
 
   /// \returns true if this APInt value is a sequence of \param numBits ones
   /// starting at the least significant bit with the remainder zero.
@@ -538,7 +539,7 @@ public:
   /// bits and right shift to the least significant bit.
   ///
   /// \returns the high "numBits" bits of this APInt.
-  APInt getHiBits(unsigned numBits) const;
+  LLVM_ABI APInt getHiBits(unsigned numBits) const;
 
   /// Compute an APInt containing numBits lowbits from this APInt.
   ///
@@ -546,7 +547,7 @@ public:
   /// bits.
   ///
   /// \returns the low "numBits" bits of this APInt.
-  APInt getLoBits(unsigned numBits) const;
+  LLVM_ABI APInt getLoBits(unsigned numBits) const;
 
   /// Determine if two APInts have the same value, after zero-extending
   /// one of them (if needed!) to ensure that the bit-widths match.
@@ -561,7 +562,7 @@ public:
   }
 
   /// Overload to compute a hash_code for an APInt value.
-  friend hash_code hash_value(const APInt &Arg);
+  LLVM_ABI friend hash_code hash_value(const APInt &Arg);
 
   /// This function returns a pointer to the internal storage of the APInt.
   /// This is useful for writing out the APInt in binary form without any
@@ -588,7 +589,7 @@ public:
   /// Prefix increment operator.
   ///
   /// \returns *this incremented by one
-  APInt &operator++();
+  LLVM_ABI APInt &operator++();
 
   /// Postfix decrement operator. Decrement *this by 1.
   ///
@@ -602,7 +603,7 @@ public:
   /// Prefix decrement operator.
   ///
   /// \returns *this decremented by one.
-  APInt &operator--();
+  LLVM_ABI APInt &operator--();
 
   /// Logical negation operation on this APInt returns true if zero, like normal
   /// integers.
@@ -758,24 +759,24 @@ public:
   /// Multiplies this APInt by RHS and assigns the result to *this.
   ///
   /// \returns *this
-  APInt &operator*=(const APInt &RHS);
-  APInt &operator*=(uint64_t RHS);
+  LLVM_ABI APInt &operator*=(const APInt &RHS);
+  LLVM_ABI APInt &operator*=(uint64_t RHS);
 
   /// Addition assignment operator.
   ///
   /// Adds RHS to *this and assigns the result to *this.
   ///
   /// \returns *this
-  APInt &operator+=(const APInt &RHS);
-  APInt &operator+=(uint64_t RHS);
+  LLVM_ABI APInt &operator+=(const APInt &RHS);
+  LLVM_ABI APInt &operator+=(uint64_t RHS);
 
   /// Subtraction assignment operator.
   ///
   /// Subtracts RHS from *this and assigns the result to *this.
   ///
   /// \returns *this
-  APInt &operator-=(const APInt &RHS);
-  APInt &operator-=(uint64_t RHS);
+  LLVM_ABI APInt &operator-=(const APInt &RHS);
+  LLVM_ABI APInt &operator-=(uint64_t RHS);
 
   /// Left-shift assignment function.
   ///
@@ -800,7 +801,7 @@ public:
   /// Shifts *this left by shiftAmt and assigns the result to *this.
   ///
   /// \returns *this after shifting left by ShiftAmt
-  APInt &operator<<=(const APInt &ShiftAmt);
+  LLVM_ABI APInt &operator<<=(const APInt &ShiftAmt);
 
   /// @}
   /// \name Binary Operators
@@ -809,7 +810,7 @@ public:
   /// Multiplication operator.
   ///
   /// Multiplies this APInt by RHS and returns the result.
-  APInt operator*(const APInt &RHS) const;
+  LLVM_ABI APInt operator*(const APInt &RHS) const;
 
   /// Left logical shift operator.
   ///
@@ -897,10 +898,10 @@ public:
   }
 
   /// Rotate left by rotateAmt.
-  APInt rotl(unsigned rotateAmt) const;
+  LLVM_ABI APInt rotl(unsigned rotateAmt) const;
 
   /// Rotate right by rotateAmt.
-  APInt rotr(unsigned rotateAmt) const;
+  LLVM_ABI APInt rotr(unsigned rotateAmt) const;
 
   /// Arithmetic right-shift function.
   ///
@@ -912,7 +913,7 @@ public:
   }
 
   /// Arithmetic right-shift this APInt by shiftAmt in place.
-  void ashrInPlace(const APInt &shiftAmt);
+  LLVM_ABI void ashrInPlace(const APInt &shiftAmt);
 
   /// Logical right-shift function.
   ///
@@ -924,7 +925,7 @@ public:
   }
 
   /// Logical right-shift this APInt by ShiftAmt in place.
-  void lshrInPlace(const APInt &ShiftAmt);
+  LLVM_ABI void lshrInPlace(const APInt &ShiftAmt);
 
   /// Left-shift function.
   ///
@@ -936,10 +937,10 @@ public:
   }
 
   /// Rotate left by rotateAmt.
-  APInt rotl(const APInt &rotateAmt) const;
+  LLVM_ABI APInt rotl(const APInt &rotateAmt) const;
 
   /// Rotate right by rotateAmt.
-  APInt rotr(const APInt &rotateAmt) const;
+  LLVM_ABI APInt rotr(const APInt &rotateAmt) const;
 
   /// Concatenate the bits from "NewLSB" onto the bottom of *this.  This is
   /// equivalent to:
@@ -959,16 +960,16 @@ public:
   ///
   /// \returns a new APInt value containing the division result, rounded towards
   /// zero.
-  APInt udiv(const APInt &RHS) const;
-  APInt udiv(uint64_t RHS) const;
+  LLVM_ABI APInt udiv(const APInt &RHS) const;
+  LLVM_ABI APInt udiv(uint64_t RHS) const;
 
   /// Signed division function for APInt.
   ///
   /// Signed divide this APInt by APInt RHS.
   ///
   /// The result is rounded towards zero.
-  APInt sdiv(const APInt &RHS) const;
-  APInt sdiv(int64_t RHS) const;
+  LLVM_ABI APInt sdiv(const APInt &RHS) const;
+  LLVM_ABI APInt sdiv(int64_t RHS) const;
 
   /// Unsigned remainder operation.
   ///
@@ -977,8 +978,8 @@ public:
   /// of this operation.
   ///
   /// \returns a new APInt value containing the remainder result
-  APInt urem(const APInt &RHS) const;
-  uint64_t urem(uint64_t RHS) const;
+  LLVM_ABI APInt urem(const APInt &RHS) const;
+  LLVM_ABI uint64_t urem(uint64_t RHS) const;
 
   /// Function for signed remainder operation.
   ///
@@ -986,8 +987,8 @@ public:
   ///
   /// Note that this is a true remainder operation and not a modulo operation
   /// because the sign follows the sign of the dividend which is *this.
-  APInt srem(const APInt &RHS) const;
-  int64_t srem(int64_t RHS) const;
+  LLVM_ABI APInt srem(const APInt &RHS) const;
+  LLVM_ABI int64_t srem(int64_t RHS) const;
 
   /// Dual division/remainder interface.
   ///
@@ -996,46 +997,46 @@ public:
   /// computation making it a little more efficient. The pair of input arguments
   /// may overlap with the pair of output arguments. It is safe to call
   /// udivrem(X, Y, X, Y), for example.
-  static void udivrem(const APInt &LHS, const APInt &RHS, APInt &Quotient,
-                      APInt &Remainder);
-  static void udivrem(const APInt &LHS, uint64_t RHS, APInt &Quotient,
-                      uint64_t &Remainder);
+  LLVM_ABI static void udivrem(const APInt &LHS, const APInt &RHS,
+                               APInt &Quotient, APInt &Remainder);
+  LLVM_ABI static void udivrem(const APInt &LHS, uint64_t RHS, APInt &Quotient,
+                               uint64_t &Remainder);
 
-  static void sdivrem(const APInt &LHS, const APInt &RHS, APInt &Quotient,
-                      APInt &Remainder);
-  static void sdivrem(const APInt &LHS, int64_t RHS, APInt &Quotient,
-                      int64_t &Remainder);
+  LLVM_ABI static void sdivrem(const APInt &LHS, const APInt &RHS,
+                               APInt &Quotient, APInt &Remainder);
+  LLVM_ABI static void sdivrem(const APInt &LHS, int64_t RHS, APInt &Quotient,
+                               int64_t &Remainder);
 
   // Operations that return overflow indicators.
-  APInt sadd_ov(const APInt &RHS, bool &Overflow) const;
-  APInt uadd_ov(const APInt &RHS, bool &Overflow) const;
-  APInt ssub_ov(const APInt &RHS, bool &Overflow) const;
-  APInt usub_ov(const APInt &RHS, bool &Overflow) const;
-  APInt sdiv_ov(const APInt &RHS, bool &Overflow) const;
-  APInt smul_ov(const APInt &RHS, bool &Overflow) const;
-  APInt umul_ov(const APInt &RHS, bool &Overflow) const;
-  APInt sshl_ov(const APInt &Amt, bool &Overflow) const;
-  APInt sshl_ov(unsigned Amt, bool &Overflow) const;
-  APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
-  APInt ushl_ov(unsigned Amt, bool &Overflow) const;
+  LLVM_ABI APInt sadd_ov(const APInt &RHS, bool &Overflow) const;
+  LLVM_ABI APInt uadd_ov(const APInt &RHS, bool &Overflow) const;
+  LLVM_ABI APInt ssub_ov(const APInt &RHS, bool &Overflow) const;
+  LLVM_ABI APInt usub_ov(const APInt &RHS, bool &Overflow) const;
+  LLVM_ABI APInt sdiv_ov(const APInt &RHS, bool &Overflow) const;
+  LLVM_ABI APInt smul_ov(const APInt &RHS, bool &Overflow) const;
+  LLVM_ABI APInt umul_ov(const APInt &RHS, bool &Overflow) const;
+  LLVM_ABI APInt sshl_ov(const APInt &Amt, bool &Overflow) const;
+  LLVM_ABI APInt sshl_ov(unsigned Amt, bool &Overflow) const;
+  LLVM_ABI APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
+  LLVM_ABI APInt ushl_ov(unsigned Amt, bool &Overflow) const;
 
   /// Signed integer floor division operation.
   ///
   /// Rounds towards negative infinity, i.e. 5 / -2 = -3. Iff minimum value
   /// divided by -1 set Overflow to true.
-  APInt sfloordiv_ov(const APInt &RHS, bool &Overflow) const;
+  LLVM_ABI APInt sfloordiv_ov(const APInt &RHS, bool &Overflow) const;
 
   // Operations that saturate
-  APInt sadd_sat(const APInt &RHS) const;
-  APInt uadd_sat(const APInt &RHS) const;
-  APInt ssub_sat(const APInt &RHS) const;
-  APInt usub_sat(const APInt &RHS) const;
-  APInt smul_sat(const APInt &RHS) const;
-  APInt umul_sat(const APInt &RHS) const;
-  APInt sshl_sat(const APInt &RHS) const;
-  APInt sshl_sat(unsigned RHS) const;
-  APInt ushl_sat(const APInt &RHS) const;
-  APInt ushl_sat(unsigned RHS) const;
+  LLVM_ABI APInt sadd_sat(const APInt &RHS) const;
+  LLVM_ABI APInt uadd_sat(const APInt &RHS) const;
+  LLVM_ABI APInt ssub_sat(const APInt &RHS) const;
+  LLVM_ABI APInt usub_sat(const APInt &RHS) const;
+  LLVM_ABI APInt smul_sat(const APInt &RHS) const;
+  LLVM_ABI APInt umul_sat(const APInt &RHS) const;
+  LLVM_ABI APInt sshl_sat(const APInt &RHS) const;
+  LLVM_ABI APInt sshl_sat(unsigned RHS) const;
+  LLVM_ABI APInt ushl_sat(const APInt &RHS) const;
+  LLVM_ABI APInt ushl_sat(unsigned RHS) const;
 
   /// Array-indexing support.
   ///
@@ -1269,20 +1270,20 @@ public:
   ///
   /// Truncate the APInt to a specified width. It is an error to specify a width
   /// that is greater than the current width.
-  APInt trunc(unsigned width) const;
+  LLVM_ABI APInt trunc(unsigned width) const;
 
   /// Truncate to new width with unsigned saturation.
   ///
   /// If the APInt, treated as unsigned integer, can be losslessly truncated to
   /// the new bitwidth, then return truncated APInt. Else, return max value.
-  APInt truncUSat(unsigned width) const;
+  LLVM_ABI APInt truncUSat(unsigned width) const;
 
   /// Truncate to new width with signed saturation.
   ///
   /// If this APInt, treated as signed integer, can be losslessly truncated to
   /// the new bitwidth, then return truncated APInt. Else, return either
   /// signed min value if the APInt was negative, or signed max value.
-  APInt truncSSat(unsigned width) const;
+  LLVM_ABI APInt truncSSat(unsigned width) const;
 
   /// Sign extend to a new width.
   ///
@@ -1290,26 +1291,26 @@ public:
   /// bit is set, the fill on the left will be done with 1 bits, otherwise zero.
   /// It is an error to specify a width that is less than the
   /// current width.
-  APInt sext(unsigned width) const;
+  LLVM_ABI APInt sext(unsigned width) const;
 
   /// Zero extend to a new width.
   ///
   /// This operation zero extends the APInt to a new width. The high order bits
   /// are filled with 0 bits.  It is an error to specify a width that is less
   /// than the current width.
-  APInt zext(unsigned width) const;
+  LLVM_ABI APInt zext(unsigned width) const;
 
   /// Sign extend or truncate to width
   ///
   /// Make this APInt have the bit width given by \p width. The value is sign
   /// extended, truncated, or left alone to make it that width.
-  APInt sextOrTrunc(unsigned width) const;
+  LLVM_ABI APInt sextOrTrunc(unsigned width) const;
 
   /// Zero extend or truncate to width
   ///
   /// Make this APInt have the bit width given by \p width. The value is zero
   /// extended, truncated, or left alone to make it that width.
-  APInt zextOrTrunc(unsigned width) const;
+  LLVM_ABI APInt zextOrTrunc(unsigned width) const;
 
   /// @}
   /// \name Bit Manipulation Operators
@@ -1366,11 +1367,10 @@ public:
   /// This function handles case when \p loBit <= \p hiBit.
   void setBits(unsigned loBit, unsigned hiBit) {
     assert(hiBit <= BitWidth && "hiBit out of range");
-    assert(loBit <= BitWidth && "loBit out of range");
     assert(loBit <= hiBit && "loBit greater than hiBit");
     if (loBit == hiBit)
       return;
-    if (loBit < APINT_BITS_PER_WORD && hiBit <= APINT_BITS_PER_WORD) {
+    if (hiBit <= APINT_BITS_PER_WORD) {
       uint64_t mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - (hiBit - loBit));
       mask <<= loBit;
       if (isSingleWord())
@@ -1413,6 +1413,25 @@ public:
       U.pVal[whichWord(BitPosition)] &= Mask;
   }
 
+  /// Clear the bits from LoBit (inclusive) to HiBit (exclusive) to 0.
+  /// This function handles case when \p LoBit <= \p HiBit.
+  void clearBits(unsigned LoBit, unsigned HiBit) {
+    assert(HiBit <= BitWidth && "HiBit out of range");
+    assert(LoBit <= HiBit && "LoBit greater than HiBit");
+    if (LoBit == HiBit)
+      return;
+    if (HiBit <= APINT_BITS_PER_WORD) {
+      uint64_t Mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - (HiBit - LoBit));
+      Mask = ~(Mask << LoBit);
+      if (isSingleWord())
+        U.VAL &= Mask;
+      else
+        U.pVal[0] &= Mask;
+    } else {
+      clearBitsSlowCase(LoBit, HiBit);
+    }
+  }
+
   /// Set bottom loBits bits to 0.
   void clearLowBits(unsigned loBits) {
     assert(loBits <= BitWidth && "More bits than bitwidth");
@@ -1444,7 +1463,7 @@ public:
   ///
   /// Toggle a given bit to its opposite value whose position is given
   /// as "bitPosition".
-  void flipBit(unsigned bitPosition);
+  LLVM_ABI void flipBit(unsigned bitPosition);
 
   /// Negate this APInt in place.
   void negate() {
@@ -1453,12 +1472,14 @@ public:
   }
 
   /// Insert the bits from a smaller APInt starting at bitPosition.
-  void insertBits(const APInt &SubBits, unsigned bitPosition);
-  void insertBits(uint64_t SubBits, unsigned bitPosition, unsigned numBits);
+  LLVM_ABI void insertBits(const APInt &SubBits, unsigned bitPosition);
+  LLVM_ABI void insertBits(uint64_t SubBits, unsigned bitPosition,
+                           unsigned numBits);
 
   /// Return an APInt with the extracted bits [bitPosition,bitPosition+numBits).
-  APInt extractBits(unsigned numBits, unsigned bitPosition) const;
-  uint64_t extractBitsAsZExtValue(unsigned numBits, unsigned bitPosition) const;
+  LLVM_ABI APInt extractBits(unsigned numBits, unsigned bitPosition) const;
+  LLVM_ABI uint64_t extractBitsAsZExtValue(unsigned numBits,
+                                           unsigned bitPosition) const;
 
   /// @}
   /// \name Value Characterization Functions
@@ -1560,12 +1581,13 @@ public:
   ///
   /// This method determines how many bits are required to hold the APInt
   /// equivalent of the string given by \p str.
-  static unsigned getBitsNeeded(StringRef str, uint8_t radix);
+  LLVM_ABI static unsigned getBitsNeeded(StringRef str, uint8_t radix);
 
   /// Get the bits that are sufficient to represent the string value. This may
   /// over estimate the amount of bits required, but it does not require
   /// parsing the value in the string.
-  static unsigned getSufficientBitsNeeded(StringRef Str, uint8_t Radix);
+  LLVM_ABI static unsigned getSufficientBitsNeeded(StringRef Str,
+                                                   uint8_t Radix);
 
   /// The APInt version of std::countl_zero.
   ///
@@ -1655,14 +1677,15 @@ public:
   /// @}
   /// \name Conversion Functions
   /// @{
-  void print(raw_ostream &OS, bool isSigned) const;
+  LLVM_ABI void print(raw_ostream &OS, bool isSigned) const;
 
   /// Converts an APInt to a string and append it to Str.  Str is commonly a
   /// SmallString. If Radix > 10, UpperCase determine the case of letter
   /// digits.
-  void toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
-                bool formatAsCLiteral = false, bool UpperCase = true,
-                bool InsertSeparators = false) const;
+  LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned Radix,
+                         bool Signed, bool formatAsCLiteral = false,
+                         bool UpperCase = true,
+                         bool InsertSeparators = false) const;
 
   /// Considers the APInt to be unsigned and converts it into a string in the
   /// radix given. The radix can be 2, 8, 10 16, or 36.
@@ -1677,14 +1700,14 @@ public:
   }
 
   /// \returns a byte-swapped representation of this APInt Value.
-  APInt byteSwap() const;
+  LLVM_ABI APInt byteSwap() const;
 
   /// \returns the value with the bit representation reversed of this APInt
   /// Value.
-  APInt reverseBits() const;
+  LLVM_ABI APInt reverseBits() const;
 
   /// Converts this APInt to a double value.
-  double roundToDouble(bool isSigned) const;
+  LLVM_ABI double roundToDouble(bool isSigned) const;
 
   /// Converts this unsigned APInt to a double value.
   double roundToDouble() const { return roundToDouble(false); }
@@ -1754,7 +1777,7 @@ public:
   ///
   /// to get around any mathematical concerns resulting from
   /// referencing 2 in a space where 2 does no exist.
-  unsigned nearestLogBase2() const;
+  LLVM_ABI unsigned nearestLogBase2() const;
 
   /// \returns the log base 2 of this APInt if its an exact power of two, -1
   /// otherwise
@@ -1765,7 +1788,7 @@ public:
   }
 
   /// Compute the square root.
-  APInt sqrt() const;
+  LLVM_ABI APInt sqrt() const;
 
   /// Get the absolute value.  If *this is < 0 then return -(*this), otherwise
   /// *this.  Note that the "most negative" signed number (e.g. -128 for 8 bit
@@ -1777,7 +1800,7 @@ public:
   }
 
   /// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.
-  APInt multiplicativeInverse() const;
+  LLVM_ABI APInt multiplicativeInverse() const;
 
   /// @}
   /// \name Building-block Operations for APInt and APFloat
@@ -1791,48 +1814,50 @@ public:
 
   /// Sets the least significant part of a bignum to the input value, and zeroes
   /// out higher parts.
-  static void tcSet(WordType *, WordType, unsigned);
+  LLVM_ABI static void tcSet(WordType *, WordType, unsigned);
 
   /// Assign one bignum to another.
-  static void tcAssign(WordType *, const WordType *, unsigned);
+  LLVM_ABI static void tcAssign(WordType *, const WordType *, unsigned);
 
   /// Returns true if a bignum is zero, false otherwise.
-  static bool tcIsZero(const WordType *, unsigned);
+  LLVM_ABI static bool tcIsZero(const WordType *, unsigned);
 
   /// Extract the given bit of a bignum; returns 0 or 1.  Zero-based.
-  static int tcExtractBit(const WordType *, unsigned bit);
+  LLVM_ABI static int tcExtractBit(const WordType *, unsigned bit);
 
   /// Copy the bit vector of width srcBITS from SRC, starting at bit srcLSB, to
   /// DST, of dstCOUNT parts, such that the bit srcLSB becomes the least
   /// significant bit of DST.  All high bits above srcBITS in DST are
   /// zero-filled.
-  static void tcExtract(WordType *, unsigned dstCount, const WordType *,
-                        unsigned srcBits, unsigned srcLSB);
+  LLVM_ABI static void tcExtract(WordType *, unsigned dstCount,
+                                 const WordType *, unsigned srcBits,
+                                 unsigned srcLSB);
 
   /// Set the given bit of a bignum.  Zero-based.
-  static void tcSetBit(WordType *, unsigned bit);
+  LLVM_ABI static void tcSetBit(WordType *, unsigned bit);
 
   /// Clear the given bit of a bignum.  Zero-based.
-  static void tcClearBit(WordType *, unsigned bit);
+  LLVM_ABI static void tcClearBit(WordType *, unsigned bit);
 
   /// Returns the bit number of the least or most significant set bit of a
   /// number.  If the input number has no bits set -1U is returned.
-  static unsigned tcLSB(const WordType *, unsigned n);
-  static unsigned tcMSB(const WordType *parts, unsigned n);
+  LLVM_ABI static unsigned tcLSB(const WordType *, unsigned n);
+  LLVM_ABI static unsigned tcMSB(const WordType *parts, unsigned n);
 
   /// Negate a bignum in-place.
-  static void tcNegate(WordType *, unsigned);
+  LLVM_ABI static void tcNegate(WordType *, unsigned);
 
   /// DST += RHS + CARRY where CARRY is zero or one.  Returns the carry flag.
-  static WordType tcAdd(WordType *, const WordType *, WordType carry, unsigned);
+  LLVM_ABI static WordType tcAdd(WordType *, const WordType *, WordType carry,
+                                 unsigned);
   /// DST += RHS.  Returns the carry flag.
-  static WordType tcAddPart(WordType *, WordType, unsigned);
+  LLVM_ABI static WordType tcAddPart(WordType *, WordType, unsigned);
 
   /// DST -= RHS + CARRY where CARRY is zero or one. Returns the carry flag.
-  static WordType tcSubtract(WordType *, const WordType *, WordType carry,
-                             unsigned);
+  LLVM_ABI static WordType tcSubtract(WordType *, const WordType *,
+                                      WordType carry, unsigned);
   /// DST -= RHS.  Returns the carry flag.
-  static WordType tcSubtractPart(WordType *, WordType, unsigned);
+  LLVM_ABI static WordType tcSubtractPart(WordType *, WordType, unsigned);
 
   /// DST += SRC * MULTIPLIER + PART   if add is true
   /// DST  = SRC * MULTIPLIER + PART   if add is false
@@ -1844,21 +1869,22 @@ public:
   /// Otherwise DST is filled with the least significant DSTPARTS parts of the
   /// result, and if all of the omitted higher parts were zero return zero,
   /// otherwise overflow occurred and return one.
-  static int tcMultiplyPart(WordType *dst, const WordType *src,
-                            WordType multiplier, WordType carry,
-                            unsigned srcParts, unsigned dstParts, bool add);
+  LLVM_ABI static int tcMultiplyPart(WordType *dst, const WordType *src,
+                                     WordType multiplier, WordType carry,
+                                     unsigned srcParts, unsigned dstParts,
+                                     bool add);
 
   /// DST = LHS * RHS, where DST has the same width as the operands and is
   /// filled with the least significant parts of the result.  Returns one if
   /// overflow occurred, otherwise zero.  DST must be disjoint from both
   /// operands.
-  static int tcMultiply(WordType *, const WordType *, const WordType *,
-                        unsigned);
+  LLVM_ABI static int tcMultiply(WordType *, const WordType *, const WordType *,
+                                 unsigned);
 
   /// DST = LHS * RHS, where DST has width the sum of the widths of the
   /// operands. No overflow occurs. DST must be disjoint from both operands.
-  static void tcFullMultiply(WordType *, const WordType *, const WordType *,
-                             unsigned, unsigned);
+  LLVM_ABI static void tcFullMultiply(WordType *, const WordType *,
+                                      const WordType *, unsigned, unsigned);
 
   /// If RHS is zero LHS and REMAINDER are left unchanged, return one.
   /// Otherwise set LHS to LHS / RHS with the fractional part discarded, set
@@ -1869,19 +1895,20 @@ public:
   /// SCRATCH is a bignum of the same size as the operands and result for use by
   /// the routine; its contents need not be initialized and are destroyed.  LHS,
   /// REMAINDER and SCRATCH must be distinct.
-  static int tcDivide(WordType *lhs, const WordType *rhs, WordType *remainder,
-                      WordType *scratch, unsigned parts);
+  LLVM_ABI static int tcDivide(WordType *lhs, const WordType *rhs,
+                               WordType *remainder, WordType *scratch,
+                               unsigned parts);
 
   /// Shift a bignum left Count bits. Shifted in bits are zero. There are no
   /// restrictions on Count.
-  static void tcShiftLeft(WordType *, unsigned Words, unsigned Count);
+  LLVM_ABI static void tcShiftLeft(WordType *, unsigned Words, unsigned Count);
 
   /// Shift a bignum right Count bits.  Shifted in bits are zero.  There are no
   /// restrictions on Count.
-  static void tcShiftRight(WordType *, unsigned Words, unsigned Count);
+  LLVM_ABI static void tcShiftRight(WordType *, unsigned Words, unsigned Count);
 
   /// Comparison (unsigned) of two bignums.
-  static int tcCompare(const WordType *, const WordType *, unsigned);
+  LLVM_ABI static int tcCompare(const WordType *, const WordType *, unsigned);
 
   /// Increment a bignum in-place.  Return the carry flag.
   static WordType tcIncrement(WordType *dst, unsigned parts) {
@@ -1895,10 +1922,12 @@ public:
 
   /// Used to insert APInt objects, or objects that contain APInt objects, into
   ///  FoldingSets.
-  void Profile(FoldingSetNodeID &id) const;
+  LLVM_ABI void Profile(FoldingSetNodeID &id) const;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// debug method
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Returns whether this instance allocated memory.
   bool needsCleanup() const { return !isSingleWord(); }
@@ -2004,75 +2033,78 @@ private:
                      WordType *Remainder);
 
   /// out-of-line slow case for inline constructor
-  void initSlowCase(uint64_t val, bool isSigned);
+  LLVM_ABI void initSlowCase(uint64_t val, bool isSigned);
 
   /// shared code between two array constructors
   void initFromArray(ArrayRef<uint64_t> array);
 
   /// out-of-line slow case for inline copy constructor
-  void initSlowCase(const APInt &that);
+  LLVM_ABI void initSlowCase(const APInt &that);
 
   /// out-of-line slow case for shl
-  void shlSlowCase(unsigned ShiftAmt);
+  LLVM_ABI void shlSlowCase(unsigned ShiftAmt);
 
   /// out-of-line slow case for lshr.
-  void lshrSlowCase(unsigned ShiftAmt);
+  LLVM_ABI void lshrSlowCase(unsigned ShiftAmt);
 
   /// out-of-line slow case for ashr.
-  void ashrSlowCase(unsigned ShiftAmt);
+  LLVM_ABI void ashrSlowCase(unsigned ShiftAmt);
 
   /// out-of-line slow case for operator=
-  void assignSlowCase(const APInt &RHS);
+  LLVM_ABI void assignSlowCase(const APInt &RHS);
 
   /// out-of-line slow case for operator==
-  bool equalSlowCase(const APInt &RHS) const LLVM_READONLY;
+  LLVM_ABI bool equalSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for countLeadingZeros
-  unsigned countLeadingZerosSlowCase() const LLVM_READONLY;
+  LLVM_ABI unsigned countLeadingZerosSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for countLeadingOnes.
-  unsigned countLeadingOnesSlowCase() const LLVM_READONLY;
+  LLVM_ABI unsigned countLeadingOnesSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for countTrailingZeros.
-  unsigned countTrailingZerosSlowCase() const LLVM_READONLY;
+  LLVM_ABI unsigned countTrailingZerosSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for countTrailingOnes
-  unsigned countTrailingOnesSlowCase() const LLVM_READONLY;
+  LLVM_ABI unsigned countTrailingOnesSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for countPopulation
-  unsigned countPopulationSlowCase() const LLVM_READONLY;
+  LLVM_ABI unsigned countPopulationSlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for intersects.
-  bool intersectsSlowCase(const APInt &RHS) const LLVM_READONLY;
+  LLVM_ABI bool intersectsSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for isSubsetOf.
-  bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
+  LLVM_ABI bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for setBits.
-  void setBitsSlowCase(unsigned loBit, unsigned hiBit);
+  LLVM_ABI void setBitsSlowCase(unsigned loBit, unsigned hiBit);
+
+  /// out-of-line slow case for clearBits.
+  LLVM_ABI void clearBitsSlowCase(unsigned LoBit, unsigned HiBit);
 
   /// out-of-line slow case for flipAllBits.
-  void flipAllBitsSlowCase();
+  LLVM_ABI void flipAllBitsSlowCase();
 
   /// out-of-line slow case for concat.
-  APInt concatSlowCase(const APInt &NewLSB) const;
+  LLVM_ABI APInt concatSlowCase(const APInt &NewLSB) const;
 
   /// out-of-line slow case for operator&=.
-  void andAssignSlowCase(const APInt &RHS);
+  LLVM_ABI void andAssignSlowCase(const APInt &RHS);
 
   /// out-of-line slow case for operator|=.
-  void orAssignSlowCase(const APInt &RHS);
+  LLVM_ABI void orAssignSlowCase(const APInt &RHS);
 
   /// out-of-line slow case for operator^=.
-  void xorAssignSlowCase(const APInt &RHS);
+  LLVM_ABI void xorAssignSlowCase(const APInt &RHS);
 
   /// Unsigned comparison. Returns -1, 0, or 1 if this APInt is less than, equal
   /// to, or greater than RHS.
-  int compare(const APInt &RHS) const LLVM_READONLY;
+  LLVM_ABI int compare(const APInt &RHS) const LLVM_READONLY;
 
   /// Signed comparison. Returns -1, 0, or 1 if this APInt is less than, equal
   /// to, or greater than RHS.
-  int compareSigned(const APInt &RHS) const LLVM_READONLY;
+  LLVM_ABI int compareSigned(const APInt &RHS) const LLVM_READONLY;
 
   /// @}
 };
@@ -2234,38 +2266,44 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
 }
 
 /// Determine the absolute difference of two APInts considered to be signed.
-inline const APInt abds(const APInt &A, const APInt &B) {
+inline APInt abds(const APInt &A, const APInt &B) {
   return A.sge(B) ? (A - B) : (B - A);
 }
 
 /// Determine the absolute difference of two APInts considered to be unsigned.
-inline const APInt abdu(const APInt &A, const APInt &B) {
+inline APInt abdu(const APInt &A, const APInt &B) {
   return A.uge(B) ? (A - B) : (B - A);
 }
 
 /// Compute the floor of the signed average of C1 and C2
-APInt avgFloorS(const APInt &C1, const APInt &C2);
+LLVM_ABI APInt avgFloorS(const APInt &C1, const APInt &C2);
 
 /// Compute the floor of the unsigned average of C1 and C2
-APInt avgFloorU(const APInt &C1, const APInt &C2);
+LLVM_ABI APInt avgFloorU(const APInt &C1, const APInt &C2);
 
 /// Compute the ceil of the signed average of C1 and C2
-APInt avgCeilS(const APInt &C1, const APInt &C2);
+LLVM_ABI APInt avgCeilS(const APInt &C1, const APInt &C2);
 
 /// Compute the ceil of the unsigned average of C1 and C2
-APInt avgCeilU(const APInt &C1, const APInt &C2);
+LLVM_ABI APInt avgCeilU(const APInt &C1, const APInt &C2);
 
 /// Performs (2*N)-bit multiplication on sign-extended operands.
 /// Returns the high N bits of the multiplication result.
-APInt mulhs(const APInt &C1, const APInt &C2);
+LLVM_ABI APInt mulhs(const APInt &C1, const APInt &C2);
 
 /// Performs (2*N)-bit multiplication on zero-extended operands.
 /// Returns the high N bits of the multiplication result.
-APInt mulhu(const APInt &C1, const APInt &C2);
+LLVM_ABI APInt mulhu(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on sign-extended operands.
+LLVM_ABI APInt mulsExtended(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on zero-extended operands.
+LLVM_ABI APInt muluExtended(const APInt &C1, const APInt &C2);
 
 /// Compute X^N for N>=0.
 /// 0^0 is supported and returns 1.
-APInt pow(const APInt &X, int64_t N);
+LLVM_ABI APInt pow(const APInt &X, int64_t N);
 
 /// Compute GCD of two unsigned APInt values.
 ///
@@ -2273,7 +2311,7 @@ APInt pow(const APInt &X, int64_t N);
 /// using Stein's algorithm.
 ///
 /// \returns the greatest common divisor of A and B.
-APInt GreatestCommonDivisor(APInt A, APInt B);
+LLVM_ABI APInt GreatestCommonDivisor(APInt A, APInt B);
 
 /// Converts the given APInt to a double value.
 ///
@@ -2304,7 +2342,7 @@ inline float RoundSignedAPIntToFloat(const APInt &APIVal) {
 /// Converts the given double value into a APInt.
 ///
 /// This function convert a double value to an APInt value.
-APInt RoundDoubleToAPInt(double Double, unsigned width);
+LLVM_ABI APInt RoundDoubleToAPInt(double Double, unsigned width);
 
 /// Converts a float value into a APInt.
 ///
@@ -2314,10 +2352,10 @@ inline APInt RoundFloatToAPInt(float Float, unsigned width) {
 }
 
 /// Return A unsign-divided by B, rounded by the given rounding mode.
-APInt RoundingUDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
+LLVM_ABI APInt RoundingUDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
 
 /// Return A sign-divided by B, rounded by the given rounding mode.
-APInt RoundingSDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
+LLVM_ABI APInt RoundingSDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
 
 /// Let q(n) = An^2 + Bn + C, and BW = bit width of the value range
 /// (e.g. 32 for i32).
@@ -2352,13 +2390,13 @@ APInt RoundingSDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
 ///
 /// The returned value may have a different bit width from the input
 /// coefficients.
-std::optional<APInt> SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
-                                                unsigned RangeWidth);
+LLVM_ABI std::optional<APInt>
+SolveQuadraticEquationWrap(APInt A, APInt B, APInt C, unsigned RangeWidth);
 
 /// Compare two values, and if they are different, return the position of the
 /// most significant bit that is different in the values.
-std::optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
-                                                       const APInt &B);
+LLVM_ABI std::optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
+                                                                const APInt &B);
 
 /// Splat/Merge neighboring bits to widen/narrow the bitmask represented
 /// by \param A to \param NewBitWidth bits.
@@ -2371,21 +2409,52 @@ std::optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
 /// e.g. ScaleBitMask(0b0101, 8) -> 0b00110011
 /// e.g. ScaleBitMask(0b00011011, 4) -> 0b0001
 /// A.getBitwidth() or NewBitWidth must be a whole multiples of the other.
-APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth,
-                   bool MatchAllBits = false);
+LLVM_ABI APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth,
+                            bool MatchAllBits = false);
+
+/// Perform a funnel shift left.
+///
+/// Concatenate Hi and Lo (Hi is the most significant bits of the wide value),
+/// the combined value is shifted left by Shift (modulo the bit width of the
+/// original arguments), and the most significant bits are extracted to produce
+/// a result that is the same size as the original arguments.
+///
+/// Examples:
+/// (1) fshl(i8 255, i8 0, i8 15) = 128 (0b10000000)
+/// (2) fshl(i8 15, i8 15, i8 11) = 120 (0b01111000)
+/// (3) fshl(i8 0, i8 255, i8 8)  = 0   (0b00000000)
+/// (4) fshl(i8 255, i8 0, i8 15) = fshl(i8 255, i8 0, i8 7) // 15 % 8
+LLVM_ABI APInt fshl(const APInt &Hi, const APInt &Lo, const APInt &Shift);
+
+/// Perform a funnel shift right.
+///
+/// Concatenate Hi and Lo (Hi is the most significant bits of the wide value),
+/// the combined value is shifted right by Shift (modulo the bit width of the
+/// original arguments), and the least significant bits are extracted to produce
+/// a result that is the same size as the original arguments.
+///
+/// Examples:
+/// (1) fshr(i8 255, i8 0, i8 15) = 254 (0b11111110)
+/// (2) fshr(i8 15, i8 15, i8 11) = 225 (0b11100001)
+/// (3) fshr(i8 0, i8 255, i8 8)  = 255 (0b11111111)
+/// (4) fshr(i8 255, i8 0, i8 9)  = fshr(i8 255, i8 0, i8 1) // 9 % 8
+LLVM_ABI APInt fshr(const APInt &Hi, const APInt &Lo, const APInt &Shift);
+
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in
 // order to compile LLVM with IBM xlC compiler.
-hash_code hash_value(const APInt &Arg);
+LLVM_ABI hash_code hash_value(const APInt &Arg);
 
 /// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
 /// with the integer held in IntVal.
-void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst, unsigned StoreBytes);
+LLVM_ABI void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,
+                               unsigned StoreBytes);
 
 /// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
 /// from Src into IntVal, which is assumed to be wide enough and to hold zero.
-void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src, unsigned LoadBytes);
+LLVM_ABI void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
+                                unsigned LoadBytes);
 
 /// Provide DenseMapInfo for APInt.
 template <> struct DenseMapInfo<APInt, void> {
@@ -2401,7 +2470,7 @@ template <> struct DenseMapInfo<APInt, void> {
     return V;
   }
 
-  static unsigned getHashValue(const APInt &Key);
+  LLVM_ABI static unsigned getHashValue(const APInt &Key);
 
   static bool isEqual(const APInt &LHS, const APInt &RHS) {
     return LHS.getBitWidth() == RHS.getBitWidth() && LHS == RHS;

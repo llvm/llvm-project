@@ -3,7 +3,7 @@
 // RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=LINETABLE
 // RUN: fir-opt --add-debug-info="is-optimized=true" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=OPT
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QPsb() {
     return loc(#loc_sb)
   } loc(#loc_sb)

@@ -58,6 +58,13 @@ TEST(DenseSetTest, InsertRange) {
   EXPECT_THAT(set, ::testing::UnorderedElementsAre(1, 2, 3));
 }
 
+TEST(SmallDenseSetTest, InsertRange) {
+  llvm::SmallDenseSet<unsigned> set;
+  constexpr unsigned Args[] = {9, 7, 8};
+  set.insert_range(Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(7, 8, 9));
+}
+
 struct TestDenseSetInfo {
   static inline unsigned getEmptyKey() { return ~0; }
   static inline unsigned getTombstoneKey() { return ~0U - 1; }
@@ -89,13 +96,13 @@ private:
 };
 
 // Register these types for testing.
-typedef ::testing::Types<DenseSet<unsigned, TestDenseSetInfo>,
-                         const DenseSet<unsigned, TestDenseSetInfo>,
-                         SmallDenseSet<unsigned, 1, TestDenseSetInfo>,
-                         SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
-                         const SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
-                         SmallDenseSet<unsigned, 64, TestDenseSetInfo>>
-    DenseSetTestTypes;
+using DenseSetTestTypes =
+    ::testing::Types<DenseSet<unsigned, TestDenseSetInfo>,
+                     const DenseSet<unsigned, TestDenseSetInfo>,
+                     SmallDenseSet<unsigned, 1, TestDenseSetInfo>,
+                     SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
+                     const SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
+                     SmallDenseSet<unsigned, 64, TestDenseSetInfo>>;
 TYPED_TEST_SUITE(DenseSetTest, DenseSetTestTypes, );
 
 TYPED_TEST(DenseSetTest, Constructor) {

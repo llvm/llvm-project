@@ -1,3 +1,9 @@
+#ifndef CGSCC_PASS
+#define CGSCC_PASS(NAME, CREATE_PASS, PARSER)
+#endif
+CGSCC_PASS("polly-inline", ScopInlinerPass(), parseNoOptions)
+#undef CGSCC_PASS
+
 #ifndef FUNCTION_ANALYSIS
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)
 #endif

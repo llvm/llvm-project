@@ -1,4 +1,4 @@
-//===--- RedundantCastingCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// destination types, and subsequently recommend their removal.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-casting.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-casting.html
 class RedundantCastingCheck : public ClangTidyCheck {
 public:
   RedundantCastingCheck(StringRef Name, ClangTidyContext *Context);

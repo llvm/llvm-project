@@ -16,10 +16,12 @@
 #include "X86TargetMachine.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
@@ -30,39 +32,44 @@ using namespace llvm;
 
 namespace {
 
-class X86PartialReduction : public FunctionPass {
+class X86PartialReduction {
+  const X86TargetMachine *TM;
   const DataLayout *DL = nullptr;
   const X86Subtarget *ST = nullptr;
 
 public:
-  static char ID; // Pass identification, replacement for typeid.
-
-  X86PartialReduction() : FunctionPass(ID) { }
-
-  bool runOnFunction(Function &Fn) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-  }
-
-  StringRef getPassName() const override {
-    return "X86 Partial Reduction";
-  }
+  X86PartialReduction(const X86TargetMachine *TM) : TM(TM) {}
+  bool run(Function &F);
 
 private:
   bool tryMAddReplacement(Instruction *Op, bool ReduceInOneBB);
   bool trySADReplacement(Instruction *Op);
 };
+
+class X86PartialReductionLegacy : public FunctionPass {
+public:
+  static char ID; // Pass identification, replacement for typeid.
+
+  X86PartialReductionLegacy() : FunctionPass(ID) {}
+
+  bool runOnFunction(Function &F) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+  }
+
+  StringRef getPassName() const override { return "X86 Partial Reduction"; }
+};
 }
 
-FunctionPass *llvm::createX86PartialReductionPass() {
-  return new X86PartialReduction();
+FunctionPass *llvm::createX86PartialReductionLegacyPass() {
+  return new X86PartialReductionLegacy();
 }
 
-char X86PartialReduction::ID = 0;
+char X86PartialReductionLegacy::ID = 0;
 
-INITIALIZE_PASS(X86PartialReduction, DEBUG_TYPE,
-                "X86 Partial Reduction", false, false)
+INITIALIZE_PASS(X86PartialReductionLegacy, DEBUG_TYPE, "X86 Partial Reduction",
+                false, false)
 
 // This function should be aligned with detectExtMul() in X86ISelLowering.cpp.
 static bool matchVPDPBUSDPattern(const X86Subtarget *ST, BinaryOperator *Mul,
@@ -157,8 +164,7 @@ bool X86PartialReduction::tryMAddReplacement(Instruction *Op,
 
     // If the operation can be freely truncated and has enough sign bits we
     // can shrink.
-    if (IsFreeTruncation(Op) &&
-        ComputeNumSignBits(Op, *DL, 0, nullptr, Mul) > 16)
+    if (IsFreeTruncation(Op) && ComputeNumSignBits(Op, *DL, nullptr, Mul) > 16)
       return true;
 
     // SelectionDAG has limited support for truncating through an add or sub if
@@ -167,7 +173,7 @@ bool X86PartialReduction::tryMAddReplacement(Instruction *Op,
       if (BO->getParent() == Mul->getParent() &&
           IsFreeTruncation(BO->getOperand(0)) &&
           IsFreeTruncation(BO->getOperand(1)) &&
-          ComputeNumSignBits(Op, *DL, 0, nullptr, Mul) > 16)
+          ComputeNumSignBits(Op, *DL, nullptr, Mul) > 16)
         return true;
     }
 
@@ -495,17 +501,8 @@ static void collectLeaves(Value *Root, SmallVectorImpl<Instruction *> &Leaves) {
   }
 }
 
-bool X86PartialReduction::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (!TPC)
-    return false;
-
-  auto &TM = TPC->getTM<X86TargetMachine>();
-  ST = TM.getSubtargetImpl(F);
-
+bool X86PartialReduction::run(Function &F) {
+  ST = TM->getSubtargetImpl(F);
   DL = &F.getDataLayout();
 
   bool MadeChange = false;
@@ -540,4 +537,26 @@ bool X86PartialReduction::runOnFunction(Function &F) {
   }
 
   return MadeChange;
+}
+
+bool X86PartialReductionLegacy::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC)
+    return false;
+
+  return X86PartialReduction(&TPC->getTM<X86TargetMachine>()).run(F);
+}
+
+PreservedAnalyses X86PartialReductionPass::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
+  bool Changed = X86PartialReduction(TM).run(F);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

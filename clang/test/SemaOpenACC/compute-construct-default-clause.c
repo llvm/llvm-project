@@ -5,19 +5,19 @@ void SingleOnly() {
   while(0);
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'serial' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc serial default(present) self default(none)
   while(0);
 
   int i;
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'kernels' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc kernels self default(present) present(i) default(none) copy(i)
   while(0);
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'parallel' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc parallel self default(present) private(i) default(none) copy(i)
   for(int i = 0; i < 5; ++i);
 

@@ -9,6 +9,7 @@
 #include "ProfiledBinary.h"
 #include "ErrorHandling.h"
 #include "MissingFrameInferrer.h"
+#include "Options.h"
 #include "ProfileGenerator.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Demangle/Demangle.h"
@@ -24,46 +25,51 @@
 
 #define DEBUG_TYPE "load-binary"
 
-using namespace llvm;
-using namespace sampleprof;
+namespace llvm {
+
+using namespace object;
 
 cl::opt<bool> ShowDisassemblyOnly("show-disassembly-only",
-                                  cl::desc("Print disassembled code."));
+                                  cl::desc("Print disassembled code."),
+                                  cl::cat(ProfGenCategory));
 
 cl::opt<bool> ShowSourceLocations("show-source-locations",
-                                  cl::desc("Print source locations."));
+                                  cl::desc("Print source locations."),
+                                  cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     ShowCanonicalFnName("show-canonical-fname",
-                        cl::desc("Print canonical function name."));
+                        cl::desc("Print canonical function name."),
+                        cl::cat(ProfGenCategory));
 
 static cl::opt<bool> ShowPseudoProbe(
     "show-pseudo-probe",
-    cl::desc("Print pseudo probe section and disassembled info."));
+    cl::desc("Print pseudo probe section and disassembled info."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool> UseDwarfCorrelation(
     "use-dwarf-correlation",
     cl::desc("Use dwarf for profile correlation even when binary contains "
-             "pseudo probe."));
+             "pseudo probe."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<std::string>
     DWPPath("dwp", cl::init(""),
             cl::desc("Path of .dwp file. When not specified, it will be "
-                     "<binary>.dwp in the same directory as the main binary."));
+                     "<binary>.dwp in the same directory as the main binary."),
+            cl::cat(ProfGenCategory));
 
 static cl::list<std::string> DisassembleFunctions(
     "disassemble-functions", cl::CommaSeparated,
     cl::desc("List of functions to print disassembly for. Accept demangled "
-             "names only. Only work with show-disassembly-only"));
+             "names only. Only work with show-disassembly-only"),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     KernelBinary("kernel",
-                 cl::desc("Generate the profile for Linux kernel binary."));
+                 cl::desc("Generate the profile for Linux kernel binary."),
+                 cl::cat(ProfGenCategory));
 
-extern cl::opt<bool> ShowDetailedWarning;
-extern cl::opt<bool> InferMissingFrames;
-
-namespace llvm {
 namespace sampleprof {
 
 static const Target *getTarget(const ObjectFile *Obj) {
@@ -181,7 +187,7 @@ ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
   load();
 }
 
-ProfiledBinary::~ProfiledBinary() {}
+ProfiledBinary::~ProfiledBinary() = default;
 
 void ProfiledBinary::warnNoFuncEntry() {
   uint64_t NoFuncEntryNum = 0;
@@ -244,14 +250,12 @@ void ProfiledBinary::load() {
 
   DisassembleFunctionSet.insert_range(DisassembleFunctions);
 
-  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj)) {
-    checkPseudoProbe(ELFObj);
-    if (UsePseudoProbes)
-      populateElfSymbolAddressList(ELFObj);
+  checkPseudoProbe(Obj);
+  if (UsePseudoProbes)
+    populateSymbolAddressList(Obj);
 
-    if (ShowDisassemblyOnly)
-      decodePseudoProbe(ELFObj);
-  }
+  if (ShowDisassemblyOnly)
+    decodePseudoProbe(Obj);
 
   // Disassemble the text sections.
   disassemble(Obj);
@@ -336,12 +340,48 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
                                                 ~(PageSize - 1U));
         TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
+      } else {
+        PhdrInfo Info;
+        Info.FileOffset = Phdr.p_offset;
+        Info.FileSz = Phdr.p_filesz;
+        Info.VirtualAddr = Phdr.p_vaddr;
+        NonTextPhdrInfo.push_back(Info);
       }
     }
   }
 
   if (PreferredTextSegmentAddresses.empty())
     exitWithError("no executable segment found", FileName);
+}
+
+uint64_t ProfiledBinary::CanonicalizeNonTextAddress(uint64_t Address) {
+  uint64_t FileOffset = 0;
+  auto MMapIter = NonTextMMapEvents.lower_bound(Address);
+  if (MMapIter == NonTextMMapEvents.end())
+    return Address; // No non-text mmap event found, return the address as is.
+
+  const auto &MMapEvent = MMapIter->second;
+
+  // If the address is within the non-text mmap event, calculate its file
+  // offset in the binary.
+  if (MMapEvent.Address <= Address &&
+      Address < MMapEvent.Address + MMapEvent.Size)
+    FileOffset = Address - MMapEvent.Address + MMapEvent.Offset;
+
+  // If the address is not within the non-text mmap event, return the address
+  // as is.
+  if (FileOffset == 0)
+    return Address;
+
+  for (const auto &PhdrInfo : NonTextPhdrInfo) {
+    // Find the program section that contains the file offset and map the
+    // file offset to the virtual address.
+    if (PhdrInfo.FileOffset <= FileOffset &&
+        FileOffset < PhdrInfo.FileOffset + PhdrInfo.FileSz)
+      return PhdrInfo.VirtualAddr + (FileOffset - PhdrInfo.FileOffset);
+  }
+
+  return Address;
 }
 
 void ProfiledBinary::setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,
@@ -375,7 +415,7 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ObjectFile *Obj) {
     llvm_unreachable("invalid object format");
 }
 
-void ProfiledBinary::checkPseudoProbe(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj) {
   if (UseDwarfCorrelation)
     return;
 
@@ -398,7 +438,7 @@ void ProfiledBinary::checkPseudoProbe(const ELFObjectFileBase *Obj) {
   UsePseudoProbes = HasProbeDescSection && HasPseudoProbeSection;
 }
 
-void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
   if (!UsePseudoProbes)
     return;
 
@@ -409,17 +449,18 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
       FuncStartAddresses = SymbolStartAddrs;
     } else {
       for (auto &F : DisassembleFunctionSet) {
-        auto GUID = Function::getGUID(F.first());
+        auto GUID = Function::getGUIDAssumingExternalLinkage(F.first());
         if (auto StartAddr = SymbolStartAddrs.lookup(GUID)) {
           FuncStartAddresses[GUID] = StartAddr;
           FuncRange &Range = StartAddrToFuncRangeMap[StartAddr];
-          GuidFilter.insert(Function::getGUID(Range.getFuncName()));
+          GuidFilter.insert(
+              Function::getGUIDAssumingExternalLinkage(Range.getFuncName()));
         }
       }
     }
   } else {
     for (auto *F : ProfiledFunctions) {
-      GuidFilter.insert(Function::getGUID(F->FuncName));
+      GuidFilter.insert(Function::getGUIDAssumingExternalLinkage(F->FuncName));
       for (auto &Range : F->Ranges) {
         auto GUIDs = StartAddrToSymMap.equal_range(Range.first);
         for (const auto &[StartAddr, Func] : make_range(GUIDs))
@@ -468,7 +509,7 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
 void ProfiledBinary::decodePseudoProbe() {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
   Binary &ExeBinary = *OBinary.getBinary();
-  auto *Obj = cast<ELFObjectFileBase>(&ExeBinary);
+  auto *Obj = cast<ObjectFile>(&ExeBinary);
   decodePseudoProbe(Obj);
 }
 
@@ -621,43 +662,43 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 
 void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   const Target *TheTarget = getTarget(Obj);
-  std::string TripleName = TheTriple.getTriple();
   StringRef FileName = Obj->getFileName();
 
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
-    exitWithError("no register info for target " + TripleName, FileName);
+    exitWithError("no register info for target " + TheTriple.str(), FileName);
 
   MCTargetOptions MCOptions;
-  AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
-    exitWithError("no assembly info for target " + TripleName, FileName);
+    exitWithError("no assembly info for target " + TheTriple.str(), FileName);
 
   Expected<SubtargetFeatures> Features = Obj->getFeatures();
   if (!Features)
     exitWithError(Features.takeError(), FileName);
   STI.reset(
-      TheTarget->createMCSubtargetInfo(TripleName, "", Features->getString()));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", Features->getString()));
   if (!STI)
-    exitWithError("no subtarget info for target " + TripleName, FileName);
+    exitWithError("no subtarget info for target " + TheTriple.str(), FileName);
 
   MII.reset(TheTarget->createMCInstrInfo());
   if (!MII)
-    exitWithError("no instruction info for target " + TripleName, FileName);
+    exitWithError("no instruction info for target " + TheTriple.str(),
+                  FileName);
 
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
   Ctx.setObjectFileInfo(MOFI.get());
   DisAsm.reset(TheTarget->createMCDisassembler(*STI, Ctx));
   if (!DisAsm)
-    exitWithError("no disassembler for target " + TripleName, FileName);
+    exitWithError("no disassembler for target " + TheTriple.str(), FileName);
 
   MIA.reset(TheTarget->createMCInstrAnalysis(MII.get()));
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
-  IPrinter.reset(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
+  IPrinter.reset(TheTarget->createMCInstPrinter(TheTriple, AsmPrinterVariant,
+                                                *AsmInfo, *MII, *MRI));
   IPrinter->setPrintBranchImmAsAddress(true);
 }
 
@@ -766,15 +807,14 @@ void ProfiledBinary::checkUseFSDiscriminator(
   }
 }
 
-void ProfiledBinary::populateElfSymbolAddressList(
-    const ELFObjectFileBase *Obj) {
+void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
   // Create a mapping from virtual address to symbol GUID and the other way
   // around.
   StringRef FileName = Obj->getFileName();
   for (const SymbolRef &Symbol : Obj->symbols()) {
     const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
     const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
-    uint64_t GUID = Function::getGUID(Name);
+    uint64_t GUID = Function::getGUIDAssumingExternalLinkage(Name);
     SymbolStartAddrs[GUID] = Addr;
     StartAddrToSymMap.emplace(Addr, GUID);
   }
@@ -912,11 +952,10 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
                                                    bool UseProbeDiscriminator) {
   assert(this == IP.Binary &&
          "Binary should only symbolize its own instruction");
-  auto Addr = object::SectionedAddress{IP.Address,
-                                       object::SectionedAddress::UndefSection};
-  DIInliningInfo InlineStack = unwrapOrError(
-      Symbolizer->symbolizeInlinedCode(SymbolizerPath.str(), Addr),
-      SymbolizerPath);
+  DIInliningInfo InlineStack =
+      unwrapOrError(Symbolizer->symbolizeInlinedCode(
+                        SymbolizerPath.str(), getSectionedAddress(IP.Address)),
+                    SymbolizerPath);
 
   SampleContextFrameVector CallStack;
   for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
@@ -943,6 +982,16 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
   }
 
   return CallStack;
+}
+
+StringRef ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
+  DIGlobal DataDIGlobal =
+      unwrapOrError(Symbolizer->symbolizeData(SymbolizerPath.str(),
+                                              getSectionedAddress(Address)),
+                    SymbolizerPath);
+  decltype(NameStrings)::iterator Iter;
+  std::tie(Iter, std::ignore) = NameStrings.insert(DataDIGlobal.Name);
+  return StringRef(*Iter);
 }
 
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,

@@ -175,7 +175,7 @@ uint16_t ELF::convertArchNameToEMachine(StringRef Arch) {
       .Case("ba2", EM_BA2)
       .Case("xcore", EM_XCORE)
       .Case("mchp_pic", EM_MCHP_PIC)
-      .Case("intel205", EM_INTEL205)
+      .Case("intelgt", EM_INTELGT)
       .Case("intel206", EM_INTEL206)
       .Case("intel207", EM_INTEL207)
       .Case("intel208", EM_INTEL208)
@@ -198,6 +198,71 @@ uint16_t ELF::convertArchNameToEMachine(StringRef Arch) {
       .Case("csky", EM_CSKY)
       .Case("loongarch", EM_LOONGARCH)
       .Default(EM_NONE);
+}
+
+uint16_t ELF::convertTripleArchTypeToEMachine(Triple::ArchType ArchType) {
+  switch (ArchType) {
+  case Triple::UnknownArch:
+  default:
+    return EM_NONE;
+
+  case Triple::arm:
+  case Triple::armeb:
+  case Triple::thumb:
+  case Triple::thumbeb:
+    return EM_ARM;
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+  case Triple::aarch64_32:
+    return EM_AARCH64;
+  case Triple::arc:
+    return EM_ARC;
+  case Triple::avr:
+    return EM_AVR;
+  case Triple::bpfel:
+  case Triple::bpfeb:
+    return EM_BPF;
+  case Triple::csky:
+    return EM_CSKY;
+  case Triple::hexagon:
+    return EM_HEXAGON;
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+    return EM_LOONGARCH;
+  case Triple::m68k:
+    return EM_68K;
+  case Triple::mips:
+  case Triple::mipsel:
+  case Triple::mips64:
+  case Triple::mips64el:
+    return EM_MIPS;
+  case Triple::msp430:
+    return EM_MSP430;
+  case Triple::ppc:
+  case Triple::ppcle:
+    return EM_PPC;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return EM_PPC;
+  case Triple::riscv32:
+  case Triple::riscv64:
+    return EM_RISCV;
+  case Triple::sparc:
+  case Triple::sparcel:
+    return EM_SPARC;
+  case Triple::sparcv9:
+    return EM_SPARCV9;
+  case Triple::systemz:
+    return EM_S390;
+  case Triple::x86:
+    return EM_386;
+  case Triple::x86_64:
+    return EM_X86_64;
+  case Triple::xcore:
+    return EM_XCORE;
+  case Triple::xtensa:
+    return EM_XTENSA;
+  }
 }
 
 /// Convert an ELF's e_machine value into an architecture name.
@@ -519,8 +584,8 @@ StringRef ELF::convertEMachineToArchName(uint16_t EMachine) {
     return "xcore";
   case EM_MCHP_PIC:
     return "mchp_pic";
-  case EM_INTEL205:
-    return "intel205";
+  case EM_INTELGT:
+    return "intelgt";
   case EM_INTEL206:
     return "intel206";
   case EM_INTEL207:
