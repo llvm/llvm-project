@@ -20,8 +20,11 @@
 #  define NOMINMAX
 #  include <io.h>
 #  include <windows.h>
-#elif __has_include(<unistd.h>)
+#elif __has_include(<unistd.h>) && __has_include(<stdio.h>) && \
+      defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 1
+#  include <stdio.h>
 #  include <unistd.h>
+#  define HAS_FILENO_AND_ISATTY
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -56,7 +59,7 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#elif __has_include(<unistd.h>) // !_LIBCPP_WIN32API
+#elif defined(HAS_FILENO_AND_ISATTY) // !_LIBCPP_WIN32API
 
 _LIBCPP_EXPORTED_FROM_ABI bool __is_posix_terminal(FILE* __stream) { return isatty(fileno(__stream)); }
 #endif
