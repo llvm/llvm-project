@@ -281,18 +281,11 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 }  // namespace __asan
 
-#  if SANITIZER_APPLE && SANITIZER_WORDSIZE == 64
-#    define TAG_MASK ((uptr)0x0f << 56)  // Lower half of top byte
-#    define STRIP_TAG(addr) ((addr) & ~TAG_MASK)
-#  else
-#    define STRIP_TAG(addr) (addr)
-#  endif
-
 #  if defined(__sparc__) && SANITIZER_WORDSIZE == 64
 #    include "asan_mapping_sparc64.h"
 #  else
 #    define MEM_TO_SHADOW(mem) \
-      ((STRIP_TAG(mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
+      ((STRIP_MTE_TAG(mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
 #    define SHADOW_TO_MEM(mem) \
       (((mem) - (ASAN_SHADOW_OFFSET)) << (ASAN_SHADOW_SCALE))
 
@@ -384,7 +377,7 @@ static inline uptr MemToShadowSize(uptr size) {
 
 static inline bool AddrIsInMem(uptr a) {
   PROFILE_ASAN_MAPPING();
-  a = STRIP_TAG(a);
+  a = STRIP_MTE_TAG(a);
   return AddrIsInLowMem(a) || AddrIsInMidMem(a) || AddrIsInHighMem(a) ||
          (flags()->protect_shadow_gap == 0 && AddrIsInShadowGap(a));
 }
@@ -397,7 +390,7 @@ static inline uptr MemToShadow(uptr p) {
 
 static inline bool AddrIsInShadow(uptr a) {
   PROFILE_ASAN_MAPPING();
-  a = STRIP_TAG(a);
+  a = STRIP_MTE_TAG(a);
   return AddrIsInLowShadow(a) || AddrIsInMidShadow(a) || AddrIsInHighShadow(a);
 }
 
