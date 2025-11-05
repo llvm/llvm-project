@@ -1424,7 +1424,10 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               return true;
 
             if (auto *VPI = dyn_cast<VPInstruction>(U))
-              if (VPI->isVectorToScalar() || VPI->isSingleScalar())
+              if (VPI->isSingleScalar() ||
+                  VPI->getOpcode() == VPInstruction::ExtractLastElement ||
+                  VPI->getOpcode() == VPInstruction::ExtractLastLanePerPart ||
+                  VPI->getOpcode() == VPInstruction::ExtractPenultimateElement)
                 return true;
 
             return U->usesScalars(RepOrWidenR);
