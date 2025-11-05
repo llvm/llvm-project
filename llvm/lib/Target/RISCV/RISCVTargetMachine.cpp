@@ -139,6 +139,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandAtomicPseudoPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
+  initializeRISCVPromoteConstantPass(*PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -462,6 +463,8 @@ void RISCVPassConfig::addIRPasses() {
 }
 
 bool RISCVPassConfig::addPreISel() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createRISCVPromoteConstantPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     // Add a barrier before instruction selection so that we will not get
     // deleted block address after enabling default outlining. See D99707 for

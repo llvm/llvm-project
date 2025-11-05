@@ -141,6 +141,7 @@ Clang-Tidy Checks
    :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
    :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`bugprone-standalone-empty <bugprone/standalone-empty>`, "Yes"
+   :doc:`bugprone-std-namespace-modification <bugprone/std-namespace-modification>`,
    :doc:`bugprone-string-constructor <bugprone/string-constructor>`, "Yes"
    :doc:`bugprone-string-integer-assignment <bugprone/string-integer-assignment>`, "Yes"
    :doc:`bugprone-string-literal-with-embedded-nul <bugprone/string-literal-with-embedded-nul>`,
@@ -175,7 +176,6 @@ Clang-Tidy Checks
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
-   :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
    :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
    :doc:`cert-flp30-c <cert/flp30-c>`,
@@ -441,6 +441,7 @@ Check aliases
    :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`, :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`cert-dcl51-cpp <cert/dcl51-cpp>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
    :doc:`cert-dcl54-cpp <cert/dcl54-cpp>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
+   :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`, :doc:`bugprone-std-namespace-modification <bugprone/std-namespace-modification>`,
    :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`cert-env33-c <cert/env33-c>`, :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,

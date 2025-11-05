@@ -11628,21 +11628,38 @@ static bool evalShuffleGeneric(
   if (!VT)
     return false;
 
-  APSInt MaskImm;
-  if (!EvaluateInteger(Call->getArg(2), MaskImm, Info))
-    return false;
-  unsigned ShuffleMask = static_cast<unsigned>(MaskImm.getZExtValue());
+  unsigned ShuffleMask = 0;
+  APValue A, MaskVector, B;
+  bool IsVectorMask = false;
 
-  APValue A, B;
-  if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
-      !EvaluateAsRValue(Info, Call->getArg(1), B))
+  QualType Arg2Type = Call->getArg(2)->getType();
+  if (Arg2Type->isVectorType()) {
+    IsVectorMask = true;
+    if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+        !EvaluateAsRValue(Info, Call->getArg(1), MaskVector) ||
+        !EvaluateAsRValue(Info, Call->getArg(2), B))
+      return false;
+  } else if (Arg2Type->isIntegerType()) {
+    APSInt MaskImm;
+    if (!EvaluateInteger(Call->getArg(2), MaskImm, Info))
+      return false;
+    ShuffleMask = static_cast<unsigned>(MaskImm.getZExtValue());
+    if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+        !EvaluateAsRValue(Info, Call->getArg(1), B))
+      return false;
+  } else {
     return false;
+  }
 
   unsigned NumElts = VT->getNumElements();
-  SmallVector<APValue, 16> ResultElements;
+  SmallVector<APValue, 64> ResultElements;
   ResultElements.reserve(NumElts);
 
   for (unsigned DstIdx = 0; DstIdx != NumElts; ++DstIdx) {
+    if (IsVectorMask) {
+      ShuffleMask = static_cast<unsigned>(
+          MaskVector.getVectorElt(DstIdx).getInt().getZExtValue());
+    }
     auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
 
     if (SrcIdx < 0) {
@@ -13079,6 +13096,84 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varq128:
+  case X86::BI__builtin_ia32_vpermi2varpd128: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1;
+                              unsigned SrcIdx = (ShuffleMask >> 1) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2vard128:
+  case X86::BI__builtin_ia32_vpermi2varps128:
+  case X86::BI__builtin_ia32_vpermi2varq256:
+  case X86::BI__builtin_ia32_vpermi2varpd256: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3;
+                              unsigned SrcIdx = (ShuffleMask >> 2) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varhi128:
+  case X86::BI__builtin_ia32_vpermi2vard256:
+  case X86::BI__builtin_ia32_vpermi2varps256:
+  case X86::BI__builtin_ia32_vpermi2varq512:
+  case X86::BI__builtin_ia32_vpermi2varpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x7;
+                              unsigned SrcIdx = (ShuffleMask >> 3) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi128:
+  case X86::BI__builtin_ia32_vpermi2varhi256:
+  case X86::BI__builtin_ia32_vpermi2vard512:
+  case X86::BI__builtin_ia32_vpermi2varps512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0xF;
+                              unsigned SrcIdx = (ShuffleMask >> 4) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi256:
+  case X86::BI__builtin_ia32_vpermi2varhi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1F;
+                              unsigned SrcIdx = (ShuffleMask >> 5) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3F;
+                              unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
   }
   }
 }
