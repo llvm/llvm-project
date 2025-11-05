@@ -527,13 +527,11 @@ void ARMPassConfig::addPreSched2() {
 void ARMPassConfig::addPreEmitPass() {
   addPass(createThumb2SizeReductionPass());
 
-  // Unpack bundles for:
+  // Always unpack bundles for:
   // - Thumb2: Constant island pass requires unbundled instructions
   // - KCFI: KCFI_CHECK pseudo instructions need to be unbundled for AsmPrinter
-  addPass(createUnpackMachineBundlesLegacy([](const MachineFunction &MF) {
-    return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
-           MF.getFunction().getParent()->getModuleFlag("kcfi");
-  }));
+  // - CT_SELECT: Post-RA expansion creates bundles that must be unpacked
+  addPass(createUnpackMachineBundlesLegacy(nullptr));
 
   // Don't optimize barriers or block placement at -O0.
   if (getOptLevel() != CodeGenOptLevel::None) {
