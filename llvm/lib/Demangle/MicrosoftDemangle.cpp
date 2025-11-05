@@ -15,6 +15,7 @@
 
 #include "llvm/Demangle/MicrosoftDemangle.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/DemangleConfig.h"
@@ -278,21 +279,8 @@ demanglePointerCVQualifiers(std::string_view &MangledName) {
   DEMANGLE_UNREACHABLE;
 }
 
-static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
-                                          size_t Count) {
-  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
-  N->Count = Count;
-  N->Nodes = Arena.allocArray<Node *>(Count);
-  for (size_t I = 0; I < Count; ++I) {
-    N->Nodes[I] = Head->N;
-    Head = Head->Next;
-  }
-  return N;
-}
-
-template <unsigned N>
 static NodeArrayNode *smallVecToNodeArray(ArenaAllocator &Arena,
-                                          const SmallVector<Node *, N> &Vec) {
+                                          ArrayRef<Node *> Vec) {
   NodeArrayNode *Arr = Arena.alloc<NodeArrayNode>();
   Arr->Count = Vec.size();
   Arr->Nodes = Arena.allocArray<Node *>(Vec.size());
@@ -1637,6 +1625,18 @@ Demangler::demangleNameScopePiece(std::string_view &MangledName) {
     return demangleLocallyScopedNamePiece(MangledName);
 
   return demangleSimpleName(MangledName, /*Memorize=*/true);
+}
+
+static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
+                                          size_t Count) {
+  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
+  N->Count = Count;
+  N->Nodes = Arena.allocArray<Node *>(Count);
+  for (size_t I = 0; I < Count; ++I) {
+    N->Nodes[I] = Head->N;
+    Head = Head->Next;
+  }
+  return N;
 }
 
 QualifiedNameNode *
