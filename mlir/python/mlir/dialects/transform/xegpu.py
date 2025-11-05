@@ -34,7 +34,7 @@ class SetDescLayoutOp(SetDescLayoutOp):
         loc=None,
         ip=None,
     ):
-        target_value = _get_op_result_or_value(target)
+        target_handle = _get_op_result_or_value(target)
         inst_data = [] if inst_data is None else inst_data
         (
             dynamic_sg_layout,
@@ -53,8 +53,8 @@ class SetDescLayoutOp(SetDescLayoutOp):
         ) = _dispatch_dynamic_index_list(inst_data)
 
         super().__init__(
-            target_value.type,
-            target_value,
+            target_handle.type,
+            target_handle,
             dynamic_sg_layout,
             dynamic_sg_data,
             dynamic_inst_data,
