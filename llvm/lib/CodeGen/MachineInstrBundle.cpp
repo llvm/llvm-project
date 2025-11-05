@@ -83,15 +83,21 @@ llvm::createUnpackMachineBundles(
   return new UnpackMachineBundles(std::move(Ftor));
 }
 
-/// Return the first found DebugLoc that has a DILocation, given a range of
-/// instructions. The search range is from FirstMI to LastMI (exclusive). If no
-/// DILocation is found, then an empty location is returned.
+/// Return the first DebugLoc that has line number information, given a
+/// range of instructions. The search range is from FirstMI to LastMI
+/// (exclusive). Otherwise return the first DILocation or an empty location if
+/// there are none.
 static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
                             MachineBasicBlock::instr_iterator LastMI) {
-  for (auto MII = FirstMI; MII != LastMI; ++MII)
-    if (MII->getDebugLoc())
-      return MII->getDebugLoc();
-  return DebugLoc();
+  DebugLoc DL;
+  for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    if (DebugLoc MIIDL = MII->getDebugLoc()) {
+      if (MIIDL.getLine() != 0)
+        return MIIDL;
+      DL = MIIDL.get();
+    }
+  }
+  return DL;
 }
 
 /// Check if target reg is contained in given lists, which are:
@@ -136,6 +142,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   SmallSetVector<Register, 8> ExternUses;
   SmallSet<Register, 8> KilledUseSet;
   SmallSet<Register, 8> UndefUseSet;
+  SmallVector<std::pair<Register, Register>> TiedOperands;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
     // Debug instructions have no effects to track.
     if (MII->isDebugInstr())
@@ -160,6 +167,15 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
         if (MO.isKill()) {
           // External def is now killed.
           KilledUseSet.insert(Reg);
+        }
+        if (MO.isTied() && Reg.isVirtual()) {
+          // Record tied operand constraints that involve virtual registers so
+          // that bundles that are formed pre-register allocation reflect the
+          // relevant constraints.
+          unsigned TiedIdx = MII->findTiedOperandIdx(MO.getOperandNo());
+          MachineOperand &TiedMO = MII->getOperand(TiedIdx);
+          Register DefReg = TiedMO.getReg();
+          TiedOperands.emplace_back(DefReg, Reg);
         }
       }
     }
@@ -203,7 +219,17 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     bool isKill = KilledUseSet.contains(Reg);
     bool isUndef = UndefUseSet.contains(Reg);
     MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
-               getImplRegState(true));
+                        getImplRegState(true));
+  }
+
+  for (auto [DefReg, UseReg] : TiedOperands) {
+    unsigned DefIdx =
+        std::distance(LocalDefs.begin(), llvm::find(LocalDefs, DefReg));
+    unsigned UseIdx =
+        std::distance(ExternUses.begin(), llvm::find(ExternUses, UseReg));
+    assert(DefIdx < LocalDefs.size());
+    assert(UseIdx < ExternUses.size());
+    MIB->tieOperands(DefIdx, LocalDefs.size() + UseIdx);
   }
 }
 

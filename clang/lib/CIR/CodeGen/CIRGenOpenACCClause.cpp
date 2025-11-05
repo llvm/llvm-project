@@ -96,8 +96,8 @@ class OpenACCClauseCIREmitter final
     mlir::IntegerType targetType = mlir::IntegerType::get(
         &cgf.getMLIRContext(), /*width=*/1,
         mlir::IntegerType::SignednessSemantics::Signless);
-    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-        exprLoc, targetType, condition);
+    auto conversionOp = mlir::UnrealizedConversionCastOp::create(
+        builder, exprLoc, targetType, condition);
     return conversionOp.getResult(0);
   }
 
@@ -107,8 +107,8 @@ class OpenACCClauseCIREmitter final
     mlir::IntegerType ty = mlir::IntegerType::get(
         &cgf.getMLIRContext(), width,
         mlir::IntegerType::SignednessSemantics::Signless);
-    auto constOp = builder.create<mlir::arith::ConstantOp>(
-        loc, builder.getIntegerAttr(ty, value));
+    auto constOp = mlir::arith::ConstantOp::create(
+        builder, loc, builder.getIntegerAttr(ty, value));
 
     return constOp;
   }
@@ -126,7 +126,7 @@ class OpenACCClauseCIREmitter final
         .CaseLower("default", mlir::acc::DeviceType::Default)
         .CaseLower("host", mlir::acc::DeviceType::Host)
         .CaseLower("multicore", mlir::acc::DeviceType::Multicore)
-        .CasesLower("nvidia", "acc_device_nvidia",
+        .CasesLower({"nvidia", "acc_device_nvidia"},
                     mlir::acc::DeviceType::Nvidia)
         .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
   }
@@ -217,8 +217,8 @@ class OpenACCClauseCIREmitter final
         cgf.getOpenACCDataOperandInfo(varOperand);
 
     auto beforeOp =
-        builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
-                                   implicit, opInfo.name, opInfo.bounds);
+        BeforeOpTy::create(builder, opInfo.beginLoc, opInfo.varValue,
+                           structured, implicit, opInfo.name, opInfo.bounds);
     operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
 
     AfterOpTy afterOp;
@@ -231,12 +231,12 @@ class OpenACCClauseCIREmitter final
         // Detach/Delete ops don't have the variable reference here, so they
         // take 1 fewer argument to their build function.
         afterOp =
-            builder.create<AfterOpTy>(opInfo.beginLoc, beforeOp, structured,
-                                      implicit, opInfo.name, opInfo.bounds);
+            AfterOpTy::create(builder, opInfo.beginLoc, beforeOp, structured,
+                              implicit, opInfo.name, opInfo.bounds);
       } else {
-        afterOp = builder.create<AfterOpTy>(
-            opInfo.beginLoc, beforeOp, opInfo.varValue, structured, implicit,
-            opInfo.name, opInfo.bounds);
+        afterOp = AfterOpTy::create(builder, opInfo.beginLoc, beforeOp,
+                                    opInfo.varValue, structured, implicit,
+                                    opInfo.name, opInfo.bounds);
       }
     }
 
@@ -258,8 +258,8 @@ class OpenACCClauseCIREmitter final
     CIRGenFunction::OpenACCDataOperandInfo opInfo =
         cgf.getOpenACCDataOperandInfo(varOperand);
     auto beforeOp =
-        builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
-                                   implicit, opInfo.name, opInfo.bounds);
+        BeforeOpTy::create(builder, opInfo.beginLoc, opInfo.varValue,
+                           structured, implicit, opInfo.name, opInfo.bounds);
     operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
 
     // Set the 'rest' of the info for the operation.

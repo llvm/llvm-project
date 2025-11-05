@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library %s -o - | FileCheck %s
-; Test that uses of cbuffer members inside ConstantExprs are handled correctly.
+; Test that uses of cbuffer members are handled correctly.
 
 ; CHECK-DAG: OpDecorate %[[MyCBuffer:[0-9]+]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate %[[MyCBuffer]] Binding 0
@@ -37,10 +37,8 @@ entry:
 ; CHECK: %[[tmp_ptr:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[tmp]] %[[uint_0]] %[[uint_0]]
 ; CHECK: %[[v_ptr:.+]] = OpAccessChain %[[_ptr_Uniform_v4float]] %[[tmp]] %[[uint_0]] %[[uint_1]]
 ; CHECK: %[[s_ptr_gep:[0-9]+]] = OpInBoundsAccessChain %[[_ptr_Uniform_float]] %[[tmp_ptr]] %[[uint_0]] %[[uint_1]]
-  %gep = getelementptr inbounds %MyStruct, ptr addrspace(12) @s, i32 0, i32 0, i32 1
-
 ; CHECK: %[[s_val:.+]] = OpLoad %[[float]] %[[s_ptr_gep]]
-  %load_from_gep = load float, ptr addrspace(12) %gep, align 4
+  %load_from_gep = load float, ptr addrspace(12) getelementptr inbounds (%MyStruct, ptr addrspace(12) @s, i32 0, i32 0, i32 1), align 4
 
 ; CHECK: %[[v_val:.+]] = OpLoad %[[v4float]] %[[v_ptr]]
   %load_v = load <4 x float>, ptr addrspace(12) @v, align 16

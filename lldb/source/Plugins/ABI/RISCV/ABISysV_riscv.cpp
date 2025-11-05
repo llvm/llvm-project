@@ -643,11 +643,10 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
   }
   // Floating point return type.
   else if (type_flags & eTypeIsFloat) {
-    uint32_t float_count = 0;
     bool is_complex = false;
 
-    if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
-        float_count == 1 && !is_complex) {
+    if (compiler_type.IsFloatingPointType(is_complex) &&
+        !(type_flags & eTypeIsVector) && !is_complex) {
       const uint32_t arch_fp_flags =
           arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
       return_valobj_sp = GetValObjFromFPRegs(
@@ -799,6 +798,8 @@ bool ABISysV_riscv::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
           .Cases({"f8", "f9", "f18", "f19", "f20", "f21", "f22", "f23"},
                  is_hw_fp)
           .Cases({"f24", "f25", "f26", "f27"}, is_hw_fp)
+          // vlenb is constant and needed for vector unwinding.
+          .Case("vlenb", true)
           .Default(false);
 
   return is_callee_saved;
@@ -816,9 +817,9 @@ void ABISysV_riscv::Terminate() {
 static uint32_t GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Cases("ra", "x1", LLDB_REGNUM_GENERIC_RA)
-      .Cases("sp", "x2", LLDB_REGNUM_GENERIC_SP)
-      .Cases("fp", "s0", LLDB_REGNUM_GENERIC_FP)
+      .Cases({"ra", "x1"}, LLDB_REGNUM_GENERIC_RA)
+      .Cases({"sp", "x2"}, LLDB_REGNUM_GENERIC_SP)
+      .Cases({"fp", "s0"}, LLDB_REGNUM_GENERIC_FP)
       .Case("a0", LLDB_REGNUM_GENERIC_ARG1)
       .Case("a1", LLDB_REGNUM_GENERIC_ARG2)
       .Case("a2", LLDB_REGNUM_GENERIC_ARG3)
