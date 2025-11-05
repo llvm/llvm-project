@@ -73,7 +73,7 @@ declare noalias ptr @__kmpc_alloc_shared(i64)
 declare void @__kmpc_target_deinit()
 declare i32 @__kmpc_global_thread_num(ptr)
 declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
-declare !callback !12 void @__kmpc_distribute_static_loop_4u(ptr, ptr, ptr, i32, i32, i8)
+declare void @__kmpc_distribute_static_loop_4u(ptr, ptr, ptr, i32, i32, i8)
 
 attributes #1 = { nounwind "frame-pointer"="all" }
 attributes #4 = { "kernel" }
@@ -82,9 +82,8 @@ attributes #4 = { "kernel" }
 
 !0 = !{i32 7, !"openmp-device", i32 52}
 !1 = !{i32 7, !"openmp", i32 52}
-!12 = !{!13}
-!13 = !{i64 1, i64 -1, i64 -1, i1 false}
 
+; CHECK: @__omp_offloading_{{.*}}_kernel_environment = {{.*}}%struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3,
 ; CHECK: define internal void @__omp_offloading_10303_1849aab__QQmain_l22..omp_par(
 ; CHECK: region.guarded:
 ; CHECK: region.guarded{{[0-9]+}}:
