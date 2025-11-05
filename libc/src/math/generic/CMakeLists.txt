@@ -4675,7 +4675,7 @@ add_entrypoint_object(
   HDRS
     ../fmaf.h
   DEPENDS
-    libc.src.__support.FPUtil.fma
+    libc.src.__support.math.fmaf
 )
 
 add_entrypoint_object(
