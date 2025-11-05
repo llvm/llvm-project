@@ -1,0 +1,300 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t
+# RUN: lldb-test symbols %t | FileCheck %s
+
+# CHECK:  CompileUnit
+# CHECK:    Function{{.*}}, demangled = main,
+# CHECK-NEXT:    Block{{.*}}
+# CHECK-NEXT:      Variable{{.*}}, name = "argc", type = {{.*}} (int), scope = parameter
+# CHECK-NEXT:      Variable{{.*}}, name = "argv", type = {{.*}} (char **), scope = parameter
+# CHECK-NEXT:      Block{{.*}}, parent = {{.*}}, name = "foo", decl = inline_sites_live.cpp:14
+# CHECK-NEXT:        Variable{{.*}}, name = "param", type = {{.*}} (int), scope = parameter
+# CHECK-NEXT:        Variable{{.*}}, name = "local", type = {{.*}} (int), scope = local
+---
+MSF:
+  SuperBlock:
+    FreeBlockMap:    2
+    NumBlocks:       18
+    NumDirectoryBytes: 116
+    BlockMapAddr:    3
+  NumDirectoryBlocks: 1
+  DirectoryBlocks: [ 17 ]
+  NumStreams:      15
+  FileSize:        73728
+DbiStream:
+  BuildNumber:     36363
+  Flags:           0
+  MachineType:     Amd64
+  Modules:
+    - Module:          'C:\Users\johannes\AppData\Local\Temp\inline_sites_live-2a62f2.o'
+      SourceFiles:
+        - 'F:\Dev\llvm-project\lldb\test\Shell\SymbolFile\NativePDB\inline_sites_live.cpp'
+      Subsections:
+        - !InlineeLines
+          HasExtraFiles:   false
+          Sites:
+            - FileName:        'F:\Dev\llvm-project\lldb\test\Shell\SymbolFile\NativePDB\inline_sites_live.cpp'
+              LineNum:         14
+              Inlinee:         4096
+        - !Lines
+          CodeSize:        17
+          Flags:           [  ]
+          RelocOffset:     0
+          RelocSegment:    1
+          Blocks:
+            - FileName:        'F:\Dev\llvm-project\lldb\test\Shell\SymbolFile\NativePDB\inline_sites_live.cpp'
+              Lines:
+                - Offset:          0
+                  LineStart:       14
+                  IsStatement:     false
+                  EndDelta:        0
+                - Offset:          5
+                  LineStart:       15
+                  IsStatement:     false
+                  EndDelta:        0
+                - Offset:          15
+                  LineStart:       19
+                  IsStatement:     false
+                  EndDelta:        0
+              Columns:         []
+        - !FileChecksums
+          Checksums:
+            - FileName:        'F:\Dev\llvm-project\lldb\test\Shell\SymbolFile\NativePDB\inline_sites_live.cpp'
+              Kind:            MD5
+              Checksum:        856E65504B68E2EF155921DFCCB753CE
+      Modi:
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      'C:\Users\johannes\AppData\Local\Temp\inline_sites_live-2a62f2.o'
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Machine:         X64
+              FrontendMajor:   19
+              FrontendMinor:   1
+              FrontendBuild:   5
+              FrontendQFE:     0
+              BackendMajor:    19015
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         clang version 19.1.5
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrEnd:          264
+              CodeSize:        17
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    4097
+              Segment:         1
+              Flags:           [ HasOptimizedDebugInfo ]
+              DisplayName:     foo
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 8
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [ IsParameter ]
+              VarName:         param
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          4
+              Range:
+                OffsetStart:     5
+                ISectStart:      1
+                Range:           12
+              Gaps:            []
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [  ]
+              VarName:         local
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          0
+              Range:
+                OffsetStart:     5
+                ISectStart:      1
+                Range:           12
+              Gaps:            []
+          - Kind:            S_END
+            ScopeEndSym:     {}
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrEnd:          512
+              CodeSize:        39
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    4100
+              Offset:          32
+              Segment:         1
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     main
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 24
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+          - Kind:            S_INLINEES
+            CallerSym:
+              FuncID:          [ 4096 ]
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [ IsParameter ]
+              VarName:         argc
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          4
+              Range:
+                OffsetStart:     45
+                ISectStart:      1
+                Range:           26
+              Gaps:            []
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            4098
+              Flags:           [ IsParameter ]
+              VarName:         argv
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          8
+              Range:
+                OffsetStart:     45
+                ISectStart:      1
+                Range:           26
+              Gaps:            []
+          - Kind:            S_INLINESITE
+            InlineSiteSym:
+              PtrParent:       268
+              PtrEnd:          508
+              Inlinee:         4096
+              AnnotationData:  [ 6, 2, 3, 21, 4, 11, 0, 0 ]
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [ IsParameter ]
+              VarName:         param
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          20
+              Range:
+                OffsetStart:     53
+                ISectStart:      1
+                Range:           11
+              Gaps:            []
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [  ]
+              VarName:         local
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          16
+              Range:
+                OffsetStart:     53
+                ISectStart:      1
+                Range:           11
+              Gaps:            []
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym:     {}
+          - Kind:            S_END
+            ScopeEndSym:     {}
+  SectionHeaders:
+    - Name:            .text
+      VirtualSize:     71
+      VirtualAddress:  4096
+      SizeOfRawData:   512
+      PointerToRawData: 1024
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1610612768
+    - Name:            .rdata
+      VirtualSize:     100
+      VirtualAddress:  8192
+      SizeOfRawData:   512
+      PointerToRawData: 1536
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1073741888
+    - Name:            .pdata
+      VirtualSize:     24
+      VirtualAddress:  12288
+      SizeOfRawData:   512
+      PointerToRawData: 2048
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1073741888
+TpiStream:
+  Records:
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 116 ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      3
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  1
+        ArgumentList:    4096
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    1648
+        Attrs:           65548
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 116, 4098 ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      116
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  2
+        ArgumentList:    4099
+IpiStream:
+  Records:
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    0x1002 # this points to the wrong type (LF_POINTER)
+        Name:            foo
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    4100
+        Name:            main
+    - Kind:            LF_BUILDINFO
+      BuildInfo:
+        ArgIndices:      [ 4098, 4101, 4099, 4100, 4102 ]
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          32
+        Segment:         1
+        Name:            main
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Segment:         1
+        Name:            '?foo@@YAXH@Z'
+...
