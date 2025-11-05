@@ -175,27 +175,12 @@ public:
   using Base::Base;
 
   // Collect the reduce patterns defined by each dialect.
-  void populateReductionPatterns(RewritePatternSet &pattern) const {
-    for (const DialectReductionPatternInterface &interface : *this)
-      interface.populateReductionPatterns(pattern);
-  }
-};
-
-//===----------------------------------------------------------------------===//
-// Reduction Pattern With Tester Interface Collection
-//===----------------------------------------------------------------------===//
-
-class ReductionPatternWithTesterInterfaceCollection
-    : public DialectInterfaceCollection<
-          DialectReductionPatternWithTesterInterface> {
-public:
-  using Base::Base;
-
-  // Collect the reduce patterns defined by each dialect.
   void populateReductionPatterns(RewritePatternSet &pattern,
                                  Tester &tester) const {
-    for (const DialectReductionPatternWithTesterInterface &interface : *this)
-      interface.populateReductionPatterns(pattern, tester);
+    for (const DialectReductionPatternInterface &interface : *this) {
+      interface.populateReductionPatterns(pattern);
+      interface.populateReductionPatternsWithTester(pattern, tester);
+    }
   }
 };
 
@@ -232,11 +217,7 @@ LogicalResult ReductionTreePass::initialize(MLIRContext *context) {
   RewritePatternSet patterns(context);
 
   ReductionPatternInterfaceCollection reducePatternCollection(context);
-  reducePatternCollection.populateReductionPatterns(patterns);
-
-  ReductionPatternWithTesterInterfaceCollection
-      reducePatternWithTesterCollection(context);
-  reducePatternWithTesterCollection.populateReductionPatterns(patterns, tester);
+  reducePatternCollection.populateReductionPatterns(patterns, tester);
 
   reducerPatterns = std::move(patterns);
   return success();

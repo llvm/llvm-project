@@ -47,6 +47,7 @@ public:
   /// tensor<?xindex> with a known rank and type, e.g. tensor<1xi32>, or
   /// replacing an operation with a constant.
   virtual void populateReductionPatterns(RewritePatternSet &patterns) const = 0;
+  virtual void populateReductionPatternsWithTester(RewritePatternSet &patterns, Tester &tester) const {}
 
 protected:
   DialectReductionPatternInterface(Dialect *dialect) : Base(dialect) {}
@@ -65,17 +66,6 @@ protected:
 ///       RewritePatternSet &patterns, Tester &tester) {
 ///       patterns.add<PatternWithTester>(patterns.getContext(), tester);
 ///   }
-class DialectReductionPatternWithTesterInterface
-    : public DialectInterface::Base<
-          DialectReductionPatternWithTesterInterface> {
-public:
-  virtual void populateReductionPatterns(RewritePatternSet &patterns,
-                                         Tester &tester) const = 0;
-
-protected:
-  DialectReductionPatternWithTesterInterface(Dialect *dialect)
-      : Base(dialect) {}
-};
 
 } // namespace mlir
 
