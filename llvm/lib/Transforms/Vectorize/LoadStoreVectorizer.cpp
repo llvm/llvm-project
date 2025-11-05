@@ -690,8 +690,8 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
 
   // Cache the best aligned element in the chain for use when creating extra
   // elements.
-  Align BestAlignedElemAlign;
-  APInt OffsetOfBestAlignedElemFromLeader;
+  Align BestAlignedElemAlign = getLoadStoreAlignment(C[0].Inst);
+  APInt OffsetOfBestAlignedElemFromLeader = C[0].OffsetFromLeader;
   for (const auto &E : C) {
     Align ElementAlignment = getLoadStoreAlignment(E.Inst);
     if (ElementAlignment > BestAlignedElemAlign) {
