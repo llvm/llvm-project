@@ -200,7 +200,6 @@
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Analysis/AliasAnalysis.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -209,6 +208,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -330,7 +330,7 @@ ACCImplicitData::getDominatingDataClauses(Operation *computeConstructOp) {
   }
 
   // Find the enclosing function/subroutine
-  Operation *funcOp = computeConstructOp->getParentOfType<func::FuncOp>();
+  auto funcOp = computeConstructOp->getParentOfType<FunctionOpInterface>();
   if (!funcOp)
     return dominatingDataClauses.takeVector();
 
