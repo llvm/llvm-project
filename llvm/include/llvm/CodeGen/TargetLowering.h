@@ -506,9 +506,10 @@ public:
   MachineMemOperand::Flags
   getVPIntrinsicMemOperandFlags(const VPIntrinsic &VPIntrin) const;
 
-  virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
-    return true;
-  }
+  virtual bool isSelectSupported(SelectSupportKind kind) const { return true; }
+
+  /// Return true if the target has custom lowering for constant-time select.
+  virtual bool isCtSelectSupported(EVT VT) const { return false; }
 
   /// Return true if the @llvm.get.active.lane.mask intrinsic should be expanded
   /// using generic code in SelectionDAGBuilder.
