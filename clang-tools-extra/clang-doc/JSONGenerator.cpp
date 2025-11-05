@@ -468,7 +468,6 @@ static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
 static void serializeInfo(const RecordInfo &I, json::Object &Obj,
                           const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
-  Obj["FullName"] = I.FullName;
   Obj["TagType"] = getTagType(I.TagType);
   Obj["IsTypedef"] = I.IsTypeDef;
   Obj["MangledName"] = I.MangledName;
