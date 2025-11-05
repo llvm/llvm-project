@@ -209,6 +209,8 @@ C23 Feature Support
   `WG14 N2710 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2710.htm>`_.
 - Fixed accepting as compatible unnamed tag types with the same fields within
   the same translation unit but from different types.
+- ``-MG`` now silences the "file not found" errors with ``#embed`` when
+  scanning for dependencies and encountering an unknown file. #GH165632
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -355,7 +357,7 @@ Improvements to Clang's diagnostics
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
 
-- Clang now emits dignostic with correct message in case of assigning to const reference captured in lambda. (#GH105647)
+- Clang now emits a diagnostic with the correct message in case of assigning to const reference captured in lambda. (#GH105647)
 
 - Fixed false positive in ``-Wmissing-noreturn`` diagnostic when it was requiring the usage of
   ``[[noreturn]]`` on lambdas before C++23 (#GH154493).
@@ -394,6 +396,11 @@ Improvements to Clang's diagnostics
   extended function type information in C mode (#GH41465). Function conversions
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
+
+- Fix false-positive unused label diagnostic when a label is used in a named break
+  or continue (#GH166013)
+- Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
+  attributes are used with a negative size (#GH165463).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -437,6 +444,7 @@ Bug Fixes in This Version
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
 - Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
+- Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -457,6 +465,7 @@ Bug Fixes to Attribute Support
 - Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
 - Fixes crashes or missing diagnostics with the `device_kernel` attribute. (#GH161905)
 - Fix handling of parameter indexes when an attribute is applied to a C++23 explicit object member function.
+- Fixed several false positives and false negatives in function effect (`nonblocking`) analysis. (#GH166078) (#GH166101) (#GH166110)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -471,7 +480,7 @@ Bug Fixes to C++ Support
   casts that are guaranteed to fail (#GH137518).
 - Fix bug rejecting partial specialization of variable templates with auto NTTPs (#GH118190).
 - Fix a crash if errors "member of anonymous [...] redeclares" and
-  "intializing multiple members of union" coincide (#GH149985).
+  "initializing multiple members of union" coincide (#GH149985).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
 - Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
@@ -501,6 +510,7 @@ Bug Fixes to C++ Support
   nontrivial member when another member has an initializer. (#GH81774)
 - Fixed a template depth issue when parsing lambdas inside a type constraint. (#GH162092)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
+- Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

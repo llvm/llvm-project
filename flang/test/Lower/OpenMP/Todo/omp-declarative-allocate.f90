@@ -5,6 +5,6 @@
 program main
   integer :: x, y
 
-  ! CHECK: not yet implemented: OpenMPDeclarativeAllocate
+  ! CHECK: not yet implemented: OmpAllocateDirective
   !$omp allocate(x, y)
 end
