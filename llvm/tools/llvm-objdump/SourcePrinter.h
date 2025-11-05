@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_LLVM_OBJDUMP_SOURCEPRINTER_H
 #define LLVM_TOOLS_LLVM_OBJDUMP_SOURCEPRINTER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -107,9 +108,9 @@ class LiveElementPrinter {
   llvm::MapVector<uint64_t, std::vector<LiveElement *>>
       LiveElementsByEndAddress;
   // Map from a LiveElement pointer to its index in the LiveElements vector.
-  std::unordered_map<LiveElement *, unsigned> ElementPtrToIndex;
+  llvm::DenseMap<LiveElement *, unsigned> ElementPtrToIndex;
   // Map from a live element index to column index for efficient lookup.
-  std::unordered_map<unsigned, unsigned> ElementToColumn;
+  llvm::DenseMap<unsigned, unsigned> ElementToColumn;
   // Vector of columns currently used for printing live ranges.
   std::vector<Column> ActiveCols;
   // Set of available column indices kept sorted for efficient reuse.
@@ -119,6 +120,8 @@ class LiveElementPrinter {
 
   const MCRegisterInfo &MRI;
   const MCSubtargetInfo &STI;
+
+  void registerNewVariable();
 
   void addInlinedFunction(DWARFDie FuncDie, DWARFDie InlinedFuncDie);
   void addVariable(DWARFDie FuncDie, DWARFDie VarDie);
@@ -143,7 +146,7 @@ class LiveElementPrinter {
   void freeColumn(unsigned ColIdx);
 
   // Returns the indices of all currently active elements, sorted by their DWARF
-  // discovery order (ElementIdx).
+  // discovery order.
   std::vector<unsigned> getSortedActiveElementIndices() const;
 
 public:
@@ -192,10 +195,9 @@ public:
   /// Print the live element ranges to the right of a disassembled instruction.
   void printAfterInst(formatted_raw_ostream &OS);
 
-  /// Print a line to idenfity the start of a live element.
-  void printStartLine(formatted_raw_ostream &OS, object::SectionedAddress Addr);
-  /// Print a line to idenfity the end of a live element.
-  void printEndLine(formatted_raw_ostream &OS, object::SectionedAddress Addr);
+  /// Print a line to idenfity the start/end of a live element.
+  void printBoundaryLine(formatted_raw_ostream &OS,
+                         object::SectionedAddress Addr, bool IsEnd);
 };
 
 class SourcePrinter {
