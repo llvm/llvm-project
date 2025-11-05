@@ -219,10 +219,10 @@ char AMDGPULowerExecSyncLegacy::ID = 0;
 char &llvm::AMDGPULowerExecSyncLegacyPassID = AMDGPULowerExecSyncLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerExecSyncLegacy, DEBUG_TYPE,
-                      "AMDGPU lowering of special LDS variables", false, false)
+                      "AMDGPU lowering of execution synchronization globals", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(AMDGPULowerExecSyncLegacy, DEBUG_TYPE,
-                    "AMDGPU lowering of special LDS variables", false, false)
+                    "AMDGPU lowering of execution synchronization globals", false, false)
 
 bool AMDGPULowerExecSyncLegacy::runOnModule(Module &M) {
   return runLowerExecSyncGlobals(M);
