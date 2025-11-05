@@ -60,6 +60,7 @@ endif()
 include(builtin-config-ix)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
+include(CheckAssemblerFlag)
 
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
@@ -426,11 +427,24 @@ option(COMPILER_RT_ARM_OPTIMIZED_FP
   "On 32-bit Arm, use optimized assembly implementations of FP arithmetic. Likely to increase code size, but be faster." ON)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
+  check_assembler_flag(COMPILER_RT_HAS_MIMPLICIT_IT -mimplicit-it=always)
+  if(COMPILER_RT_HAS_MIMPLICIT_IT)
+    set(implicit_it_flag -mimplicit-it=always)
+  else()
+    check_assembler_flag(
+      COMPILER_RT_HAS_WA_MIMPLICIT_IT -Wa,-mimplicit-it=always)
+    if(COMPILER_RT_HAS_WA_MIMPLICIT_IT)
+      set(implicit_it_flag -Wa,-mimplicit-it=always)
+    else()
+      message(FATAL_ERROR "Don't know how to set the -mimplicit-it=always flag in this assembler")
+    endif()
+  endif()
+
   set(assembly_files
     arm/mulsf3.S
     arm/divsf3.S)
   set_source_files_properties(${assembly_files}
-    PROPERTIES COMPILE_OPTIONS "-Wa,-mimplicit-it=always")
+    PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
   set(arm_or_thumb2_base_SOURCES
     ${assembly_files}
     arm/fnan2.c
