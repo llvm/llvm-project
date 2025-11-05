@@ -31,22 +31,11 @@ def get_comment_id(platform: str, pr: github.PullRequest.PullRequest) -> int | N
 def get_comment(
     github_token: str,
     pr_number: int,
-    junit_objects,
-    ninja_logs,
-    advisor_response,
-    return_code,
+    body: str,
 ) -> dict[str, str]:
     repo = github.Github(github_token).get_repo("llvm/llvm-project")
     pr = repo.get_issue(pr_number).as_pull_request()
-    comment = {
-        "body": generate_test_report_lib.generate_report(
-            generate_test_report_lib.compute_platform_title(),
-            return_code,
-            junit_objects,
-            ninja_logs,
-            failure_explanations_list=advisor_response,
-        )
-    }
+    comment = {"body": body}
     comment_id = get_comment_id(platform.system(), pr)
     if comment_id:
         comment["id"] = comment_id
@@ -59,6 +48,14 @@ def main(
     pr_number: int,
     return_code: int,
 ):
+    if return_code == 0:
+        with open("comment", "w") as comment_file_handle:
+            comment = get_comment(
+                ":white_check_mark: With the latest revision this PR passed "
+                "the premerge checks."
+            )
+            if comment["id"]:
+                json.dump([comment], comment_file_handle)
     junit_objects, ninja_logs = generate_test_report_lib.load_info_from_files(
         build_log_files
     )
@@ -90,10 +87,13 @@ def main(
             get_comment(
                 github_token,
                 pr_number,
-                junit_objects,
-                ninja_logs,
-                advisor_response.json(),
-                return_code,
+                generate_test_report_lib.generate_report(
+                    generate_test_report_lib.compute_platform_title(),
+                    return_code,
+                    junit_objects,
+                    ninja_logs,
+                    failure_explanations_list=advisor_response.json(),
+                ),
             )
         ]
         with open("comment", "w") as comment_file_handle:
