@@ -24,24 +24,9 @@ def setDescLayoutMinimal():
         transform.OperationType.get("xegpu.create_nd_tdesc"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.SetDescLayoutOp(sequence.bodyTarget, sg_layout=[6, 4])
-        transform.YieldOp()
-    # CHECK-LABEL: TEST: setDescLayoutMinimal
-    # CHECK: %0 = transform.xegpu.set_desc_layout %
-    # CHECK: sg_layout = [6, 4]
-
-
-@run
-def setDescLayoutSgData():
-    sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.Propagate,
-        [],
-        transform.OperationType.get("xegpu.create_nd_tdesc"),
-    )
-    with InsertionPoint(sequence.body):
         xegpu.SetDescLayoutOp(sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16])
         transform.YieldOp()
-    # CHECK-LABEL: TEST: setDescLayoutSgData
+    # CHECK-LABEL: TEST: setDescLayoutMinimal
     # CHECK: %0 = transform.xegpu.set_desc_layout %
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
@@ -55,9 +40,12 @@ def setDescLayoutInstData():
         transform.OperationType.get("xegpu.create_nd_tdesc"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.SetDescLayoutOp(sequence.bodyTarget, sg_layout=[6, 4], inst_data=[8, 16])
+        xegpu.SetDescLayoutOp(
+            sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16], inst_data=[8, 16]
+        )
         transform.YieldOp()
     # CHECK-LABEL: TEST: setDescLayoutInstData
     # CHECK: %0 = transform.xegpu.set_desc_layout %
     # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]

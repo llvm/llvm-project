@@ -79,11 +79,11 @@ static DiagnosedSilenceableFailure convertMixedValuesToInt(
 /// Create a layout attribute from the given parameters.
 static xegpu::LayoutAttr
 createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
-                 std::optional<ArrayRef<int32_t>> sgData,
+                 ArrayRef<int32_t> sgData,
                  std::optional<ArrayRef<int32_t>> instData) {
   return xegpu::LayoutAttr::get(
       ctx, DenseI32ArrayAttr::get(ctx, sgLayout),
-      sgData ? DenseI32ArrayAttr::get(ctx, sgData.value()) : nullptr,
+      DenseI32ArrayAttr::get(ctx, sgData),
       instData ? DenseI32ArrayAttr::get(ctx, instData.value()) : nullptr,
       /*lane_layout=*/nullptr,
       /*lane_data=*/nullptr,
@@ -152,8 +152,6 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
   status = convertMixedValuesToInt(state, (*this), sgData, getMixedSgData());
   if (!status.succeeded())
     return status;
-  auto maybeSgData =
-      sgData.empty() ? std::nullopt : std::optional<ArrayRef<int32_t>>(sgData);
 
   SmallVector<int32_t> instData;
   status =
@@ -175,8 +173,8 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Set layout attr in desc op's return type. Replaces old desc op.
-  auto layoutAttr = createLayoutAttr(rewriter.getContext(), sgLayout,
-                                     maybeSgData, maybeInstData);
+  auto layoutAttr =
+      createLayoutAttr(rewriter.getContext(), sgLayout, sgData, maybeInstData);
   auto newdescOp = setDescLayout(rewriter, descOp, layoutAttr);
 
   // Map result handles.

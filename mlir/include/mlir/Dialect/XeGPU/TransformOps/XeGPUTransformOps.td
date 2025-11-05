@@ -26,7 +26,7 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   let description = [{
     Given an `xegpu.create_nd_desc` operation, this transform adds `xegpu.layout`
     attribute to the result tensor descriptor. The layout is defined by the
-    `sg_layout`, and optional `sg_data` and `inst_data` attributes. Returns a handle
+    `sg_layout`, and `sg_data` and optional `inst_data` attributes. Returns a handle
     to the transformed op.
   }];
 
@@ -52,7 +52,7 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   let assemblyFormat = [{
     $target
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
-    (`sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)^)?
+    `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
     attr-dict `:` functional-type(operands, results)
   }];
