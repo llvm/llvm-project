@@ -1420,8 +1420,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
           !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
-            if (isa<VPWidenStoreRecipe>(U))
-              return true;
+            if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U))
+              if (vputils::isSingleScalar(Store->getStoredValue()))
+                return true;
 
             if (auto *VPI = dyn_cast<VPInstruction>(U))
               if (VPI->isSingleScalar() ||
