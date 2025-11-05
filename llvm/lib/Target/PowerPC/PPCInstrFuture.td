@@ -420,6 +420,9 @@ let Predicates = [HasVSX, IsISAFuture] in {
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
                       "vucmprlh $VRT, $VRA, $VRB", []>;
 
+  def XVRLW: XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvrlw $XT, $XA, $XB", []>;
+
   // AES Acceleration Instructions
   def XXAESENCP : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),
                                     (ins vsrprc:$XAp, vsrprc:$XBp, u2imm:$M),
