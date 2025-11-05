@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "../bugprone/AvoidFloatLoopCounterCheck.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
@@ -37,7 +38,6 @@
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "FloatLoopCounter.h"
 #include "LimitedRandomnessCheck.h"
 #include "MutatingCopyCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
@@ -310,7 +310,8 @@ public:
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");
     // FLP
-    CheckFactories.registerCheck<FloatLoopCounter>("cert-flp30-c");
+    CheckFactories.registerCheck<bugprone::AvoidFloatLoopCounterCheck>(
+        "cert-flp30-c");
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-flp37-c");
     // FIO

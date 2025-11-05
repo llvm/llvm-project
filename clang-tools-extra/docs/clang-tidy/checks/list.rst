@@ -80,6 +80,7 @@ Clang-Tidy Checks
    :doc:`bugprone-argument-comment <bugprone/argument-comment>`, "Yes"
    :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
    :doc:`bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition>`,
+   :doc:`bugprone-avoid-float-loop-counter <bugprone/avoid-float-loop-counter>`,
    :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
    :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
@@ -178,7 +179,6 @@ Clang-Tidy Checks
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
    :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
-   :doc:`cert-flp30-c <cert/flp30-c>`,
    :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
    :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
    :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
@@ -451,6 +451,7 @@ Check aliases
    :doc:`cert-err61-cpp <cert/err61-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
+   :doc:`cert-flp30-c <cert/flp30-c>`, :doc:`bugprone-avoid-float-loop-counter <bugprone/avoid-float-loop-counter>`,
    :doc:`cert-flp37-c <cert/flp37-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-int09-c <cert/int09-c>`, :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`, :doc:`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>`,

@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FloatLoopCounter.h"
+#include "AvoidFloatLoopCounterCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
-void FloatLoopCounter::registerMatchers(MatchFinder *Finder) {
+void AvoidFloatLoopCounterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       forStmt(hasIncrement(forEachDescendant(
                   declRefExpr(hasType(realFloatingPointType()),
@@ -29,7 +29,7 @@ void FloatLoopCounter::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void FloatLoopCounter::check(const MatchFinder::MatchResult &Result) {
+void AvoidFloatLoopCounterCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FS = Result.Nodes.getNodeAs<ForStmt>("for");
 
   diag(FS->getInc()->getBeginLoc(), "loop induction expression should not have "
@@ -43,4 +43,4 @@ void FloatLoopCounter::check(const MatchFinder::MatchResult &Result) {
            DiagnosticIDs::Note);
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone

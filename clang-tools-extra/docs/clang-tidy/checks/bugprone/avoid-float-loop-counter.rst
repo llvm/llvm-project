@@ -1,11 +1,12 @@
-.. title:: clang-tidy - cert-flp30-c
+.. title:: clang-tidy - bugprone-avoid-float-loop-counter
 
-cert-flp30-c
-============
+bugprone-avoid-float-loop-counter
+=================================
 
-The `cert-flp30-c` is an aliaes, please see
-`bugprone-avoid-float-loop-counter <../bugprone/avoid-float-loop-counter.html>`_
-for more information
+Flags ``for`` loops where the induction expression has a floating-point type.
+
+References
+----------
 
 This check corresponds to the CERT C Coding Standard rule
 `FLP30-C. Do not use floating-point variables as loop counters
