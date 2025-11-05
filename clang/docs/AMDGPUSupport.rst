@@ -49,10 +49,6 @@ Predefined Macros
      - Defined as 1 if the CU mode is enabled and 0 if the WGP mode is enabled.
    * - ``__AMDGCN_UNSAFE_FP_ATOMICS__``
      - Defined if unsafe floating-point atomics are allowed.
-   * - ``__AMDGCN_WAVEFRONT_SIZE__``
-     - Defines the wavefront size. Allowed values are 32 and 64 (deprecated).
-   * - ``__AMDGCN_WAVEFRONT_SIZE``
-     - Alias to ``__AMDGCN_WAVEFRONT_SIZE__`` (deprecated).
    * - ``__HAS_FMAF__``
      - Defined if FMAF instruction is available (deprecated).
    * - ``__HAS_LDEXPF__``

@@ -715,6 +715,10 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
       PinnedAllocs(*this), RPCServer(nullptr) {
+  // Conservative fall-back to the plugin's device uid for the case that no real
+  // vendor (u)uid will become available later.
+  setDeviceUidFromVendorUid(std::to_string(static_cast<uint64_t>(DeviceId)));
+
 #ifdef OMPT_SUPPORT
   OmptInitialized.store(false);
   // Bind the callbacks to this device's member functions
@@ -1524,15 +1528,22 @@ Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
   return Err;
 }
 
+Expected<InfoTreeNode> GenericDeviceTy::obtainInfo() {
+  auto InfoOrErr = obtainInfoImpl();
+  if (InfoOrErr)
+    InfoOrErr->add("UID", getDeviceUid(), "", DeviceInfo::UID);
+  return InfoOrErr;
+}
+
 Error GenericDeviceTy::printInfo() {
-  auto Info = obtainInfoImpl();
+  auto InfoOrErr = obtainInfo();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = Info.takeError())
+  if (auto Err = InfoOrErr.takeError())
     return Err;
 
   // Print all info entries.
-  Info->print();
+  InfoOrErr->print();
 
   return Plugin::success();
 }
@@ -1598,6 +1609,14 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 }
 
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
+
+Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return isAccessiblePtrImpl(Ptr, Size);
+}
+
+void GenericDeviceTy::setDeviceUidFromVendorUid(StringRef VendorUid) {
+  DeviceUid = std::string(Plugin.getName()) + "-" + std::string(VendorUid);
+}
 
 Error GenericPluginTy::init() {
   if (Initialized)
@@ -2131,6 +2150,22 @@ int32_t GenericPluginTy::set_device_identifier(int32_t UserId,
 
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
+}
+
+int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
+                                           size_t Size) {
+  auto HandleError = [&](Error Err) -> bool {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure while checking accessibility of pointer %p for device %d: %s",
+       Ptr, DeviceId, ErrStr.c_str());
+    return false;
+  };
+
+  auto AccessibleOrErr = getDevice(DeviceId).isAccessiblePtr(Ptr, Size);
+  if (Error Err = AccessibleOrErr.takeError())
+    return HandleError(std::move(Err));
+
+  return *AccessibleOrErr;
 }
 
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,

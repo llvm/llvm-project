@@ -763,6 +763,10 @@ LnoR2Fix:
 
 #elif defined(__aarch64__)
 
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
+
 //
 // extern int __unw_getcontext(unw_context_t* thread_state)
 //

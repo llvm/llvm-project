@@ -36,7 +36,7 @@ public:
   /// No need to allow copies.
   SeedBundle(const SeedBundle &) = delete;
   SeedBundle &operator=(const SeedBundle &) = delete;
-  virtual ~SeedBundle() {}
+  virtual ~SeedBundle() = default;
 
   using iterator = SmallVector<Instruction *>::iterator;
   using const_iterator = SmallVector<Instruction *>::const_iterator;
