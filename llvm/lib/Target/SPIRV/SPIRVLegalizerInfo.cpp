@@ -96,14 +96,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT p10 = LLT::pointer(10, PSize); // Private
   const LLT p11 = LLT::pointer(11, PSize); // StorageBuffer
   const LLT p12 = LLT::pointer(12, PSize); // Uniform
+  const LLT p13 = LLT::pointer(13, PSize); // PushConstant
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
-      p0,    p1,    p2,    p3,    p4,     p5,     p6,    p7,    p8,
-      p9,    p10,   p11,   p12,   s1,     s8,     s16,   s32,   s64,
-      v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,  v3s16, v3s32,
-      v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,  v8s8,  v8s16,
-      v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
+      p0,    p1,    p2,    p3,    p4,    p5,     p6,     p7,    p8,
+      p9,    p10,   p11,   p12,   p13,   s1,     s8,     s16,   s32,
+      s64,   v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,  v3s16,
+      v3s32, v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,  v8s8,
+      v8s16, v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
 
   auto allVectors = {v2s1,  v2s8,   v2s16,  v2s32, v2s64, v3s1,  v3s8,
                      v3s16, v3s32,  v3s64,  v4s1,  v4s8,  v4s16, v4s32,
@@ -135,10 +136,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
 
-  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,  p2,  p3, p4,
-                                       p5, p6,  p7,  p8,  p9, p10, p11, p12};
+  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0,  p1,
+                                       p2, p3,  p4,  p5,  p6,  p7,
+                                       p8, p9,  p10, p11, p12, p13};
 
-  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12};
+  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13};
 
   auto &allowedVectorTypes = ST.isShader() ? allShaderVectors : allVectors;
 

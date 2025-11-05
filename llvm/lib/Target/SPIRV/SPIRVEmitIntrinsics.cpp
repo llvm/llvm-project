@@ -283,6 +283,7 @@ bool expectIgnoredInIRTranslation(const Instruction *I) {
   case Intrinsic::invariant_start:
   case Intrinsic::spv_resource_handlefrombinding:
   case Intrinsic::spv_resource_getpointer:
+  case Intrinsic::spv_pushconstant_getpointer:
     return true;
   default:
     return false;
@@ -871,6 +872,17 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         Ty = reconstitutePeeledArrayType(Ty);
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
+      }
+    } else if (II &&
+               II->getIntrinsicID() == Intrinsic::spv_pushconstant_getpointer) {
+      auto *GV = cast<GlobalVariable>(II->getOperand(0));
+      auto *HandleType = cast<TargetExtType>(GV->getValueType());
+      if (HandleType->getTargetExtName() == "spirv.PushConstant") {
+        for (User *U : II->users()) {
+          Ty = cast<Instruction>(U)->getAccessType();
+          if (Ty)
+            break;
+        }
       }
     } else if (II && II->getIntrinsicID() ==
                          Intrinsic::spv_generic_cast_to_ptr_explicit) {
