@@ -8,6 +8,7 @@
 # WARNING-KNOWN: warning: load command 0 LC_SEGMENT_64 cmdsize too small (56 bytes) for actual size (72 bytes)
 
 # MALFORMED: error: {{.*}}: truncated or malformed object (load command 0 LC_SEGMENT_64 cmdsize too small)
+
 --- !mach-o
 FileHeader:
   magic:           0xFEEDFACF
@@ -36,6 +37,7 @@ LoadCommands:
 # RUN: yaml2obj %s --docnum=2 -o %t2 2>&1 | FileCheck %s --check-prefix=WARNING-UNKNOWN
 
 # WARNING-UNKNOWN: warning: load command 0 (0xdeadbeef) cmdsize too small (8 bytes) for actual size (20 bytes)
+
 --- !mach-o
 FileHeader:
   magic:           0xFEEDFACF
