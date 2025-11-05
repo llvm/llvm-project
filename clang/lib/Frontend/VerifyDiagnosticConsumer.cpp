@@ -1224,9 +1224,11 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
   using LevelDiagPairT = std::pair<DiagnosticsEngine::Level, size_t>;
   static_assert(std::is_same_v<LevelDiagPairT,
                                TextDiagnosticBuffer::AllDiagList::value_type>);
-
+  int NumProblems = 0;
+  SmallString<256> Fmt;
+  llvm::raw_svector_ostream OS(Fmt);
   // CheckResults already ensured that there are as many directives as emitted
-  // diagnostics
+  // diagnostics, and that all of them match.
   for (const auto [Directive, LevelDiagPair] : llvm::zip_equal(
            OrderedDirectives,
            llvm::iterator_range{Buffer.all_begin(), Buffer.all_end()})) {
@@ -1241,31 +1243,16 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
         IsFromSameFile(SourceMgr, Directive->DiagnosticLoc, DiagLoc);
     if (!LocsMatch ||
         Directive->match(DiagText) != DiagnosticMatchResult::Match) {
-      SmallString<256> Fmt;
-      llvm::raw_svector_ostream OS(Fmt);
-      OS << "\n  directive at " << SourceMgr.getFilename(DirLoc) << ":"
-         << SourceMgr.getPresumedLineNumber(DirLoc) << ": " << Directive->Text
-         << "\n  that expects diagnostic at ";
-      if (IsFromSameFile(SourceMgr, DirLoc, Directive->DiagnosticLoc)) {
-        OS << "line "
-           << SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc);
-      } else {
-        OS << SourceMgr.getFilename(Directive->DiagnosticLoc) << ":"
-           << SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc);
-      }
-      OS << "\n  does not match diagnostic at ";
-      if (IsFromSameFile(SourceMgr, DirLoc, DiagLoc)) {
-        OS << "line " << SourceMgr.getPresumedLineNumber(DiagLoc);
-      } else {
-        OS << SourceMgr.getFilename(DiagLoc) << ":"
-           << SourceMgr.getPresumedLineNumber(DiagLoc);
-      }
-      OS << ": " << DiagText;
-      Diags.Report(diag::err_verify_directive_out_of_order) << OS.str();
-      return 1;
+      OS << "\n  '" << Directive->Spelling << "' at line "
+         << SourceMgr.getPresumedLineNumber(DirLoc) << " in "
+         << SourceMgr.getFilename(DirLoc) << ": " << Directive->Text;
+      ++NumProblems;
     }
   }
-  return 0;
+  if (NumProblems > 0) {
+    Diags.Report(diag::err_verify_directive_out_of_order) << OS.str();
+  }
+  return NumProblems;
 }
 
 void VerifyDiagnosticConsumer::UpdateParsedFileStatus(SourceManager &SM,
