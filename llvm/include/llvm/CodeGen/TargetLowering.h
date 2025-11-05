@@ -241,11 +241,15 @@ public:
 
   /// Enum that describes what type of support for selects the target has.
   enum SelectSupportKind {
-    ScalarValSelect,      // The target supports scalar selects (ex: cmov).
-    ScalarCondVectorVal,  // The target supports selects with a scalar condition
-                          // and vector values (ex: cmov).
-    VectorMaskSelect      // The target supports vector selects with a vector
-                          // mask (ex: x86 blends).
+    ScalarValSelect,     // The target supports scalar selects (ex: cmov).
+    ScalarCondVectorVal, // The target supports selects with a scalar condition
+                         // and vector values (ex: cmov).
+    VectorMaskSelect,    // The target supports vector selects with a vector
+                         // mask (ex: x86 blends).
+    CtSelect,            // The target implements a custom constant-time select.
+    ScalarCondVectorValCtSelect, // The target supports selects with a scalar
+                                 // condition and vector values.
+    VectorMaskValCtSelect, // The target supports vector selects with a vector
   };
 
   /// Enum that specifies what an atomic load/AtomicRMWInst is expanded
@@ -476,8 +480,8 @@ public:
   MachineMemOperand::Flags
   getVPIntrinsicMemOperandFlags(const VPIntrinsic &VPIntrin) const;
 
-  virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
-    return true;
+  virtual bool isSelectSupported(SelectSupportKind kind) const {
+    return kind != CtSelect;
   }
 
   /// Return true if the @llvm.get.active.lane.mask intrinsic should be expanded

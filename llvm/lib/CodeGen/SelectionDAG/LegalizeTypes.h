@@ -383,6 +383,7 @@ private:
   SDValue PromoteIntOp_CONCAT_VECTORS(SDNode *N);
   SDValue PromoteIntOp_ScalarOp(SDNode *N);
   SDValue PromoteIntOp_SELECT(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_CTSELECT(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_SETCC(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_Shift(SDNode *N);
@@ -617,6 +618,7 @@ private:
   SDValue SoftenFloatRes_LOAD(SDNode *N);
   SDValue SoftenFloatRes_ATOMIC_LOAD(SDNode *N);
   SDValue SoftenFloatRes_SELECT(SDNode *N);
+  SDValue SoftenFloatRes_CTSELECT(SDNode *N);
   SDValue SoftenFloatRes_SELECT_CC(SDNode *N);
   SDValue SoftenFloatRes_UNDEF(SDNode *N);
   SDValue SoftenFloatRes_VAARG(SDNode *N);
@@ -843,6 +845,7 @@ private:
   SDValue ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_VSELECT(SDNode *N);
   SDValue ScalarizeVecRes_SELECT(SDNode *N);
+  SDValue ScalarizeVecRes_CTSELECT(SDNode *N);
   SDValue ScalarizeVecRes_SELECT_CC(SDNode *N);
   SDValue ScalarizeVecRes_SETCC(SDNode *N);
   SDValue ScalarizeVecRes_UNDEF(SDNode *N);
@@ -1172,7 +1175,8 @@ private:
   void SplitVecRes_AssertZext(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_AssertSext(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_ARITH_FENCE (SDNode *N, SDValue &Lo, SDValue &Hi);
-  void SplitRes_Select      (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitRes_Select(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitRes_CTSELECT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_UNDEF       (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_FREEZE      (SDNode *N, SDValue &Lo, SDValue &Hi);

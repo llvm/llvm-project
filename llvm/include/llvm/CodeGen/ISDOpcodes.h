@@ -795,6 +795,10 @@ enum NodeType {
   /// i1 then the high bits must conform to getBooleanContents.
   SELECT,
 
+  /// Constant-time Select, implemented with CMOV instruction. This is used to
+  /// implement constant-time select.
+  CTSELECT,
+
   /// Select with a vector condition (op #0) and two vector operands (ops #1
   /// and #2), returning a vector result.  All vectors have the same length.
   /// Much like the scalar select and setcc, each bit in the condition selects

@@ -486,6 +486,7 @@ namespace {
     SDValue visitCTTZ_ZERO_UNDEF(SDNode *N);
     SDValue visitCTPOP(SDNode *N);
     SDValue visitSELECT(SDNode *N);
+    SDValue visitCTSELECT(SDNode *N);
     SDValue visitVSELECT(SDNode *N);
     SDValue visitVP_SELECT(SDNode *N);
     SDValue visitSELECT_CC(SDNode *N);
@@ -1918,6 +1919,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
 }
 
 SDValue DAGCombiner::visit(SDNode *N) {
+
   // clang-format off
   switch (N->getOpcode()) {
   default: break;
@@ -1991,6 +1993,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::CTTZ_ZERO_UNDEF:    return visitCTTZ_ZERO_UNDEF(N);
   case ISD::CTPOP:              return visitCTPOP(N);
   case ISD::SELECT:             return visitSELECT(N);
+  case ISD::CTSELECT:           return visitCTSELECT(N);
   case ISD::VSELECT:            return visitVSELECT(N);
   case ISD::SELECT_CC:          return visitSELECT_CC(N);
   case ISD::SETCC:              return visitSETCC(N);
@@ -6131,6 +6134,7 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
     N0CC = cast<CondCodeSDNode>(N0.getOperand(4))->get();
     break;
   case ISD::SELECT:
+  case ISD::CTSELECT:
   case ISD::VSELECT:
     if (N0.getOperand(0).getOpcode() != ISD::SETCC)
       return SDValue();
@@ -12456,8 +12460,9 @@ template <class MatchContextClass>
 static SDValue foldBoolSelectToLogic(SDNode *N, const SDLoc &DL,
                                      SelectionDAG &DAG) {
   assert((N->getOpcode() == ISD::SELECT || N->getOpcode() == ISD::VSELECT ||
-          N->getOpcode() == ISD::VP_SELECT) &&
-         "Expected a (v)(vp.)select");
+          N->getOpcode() == ISD::VP_SELECT ||
+          N->getOpcode() == ISD::CTSELECT) &&
+         "Expected a (v)(vp.)(ct) select");
   SDValue Cond = N->getOperand(0);
   SDValue T = N->getOperand(1), F = N->getOperand(2);
   EVT VT = N->getValueType(0);
@@ -12823,6 +12828,109 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
     return R;
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitCTSELECT(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  EVT VT0 = N0.getValueType();
+  SDLoc DL(N);
+  SDNodeFlags Flags = N->getFlags();
+
+  if (SDValue V = foldBoolSelectToLogic<EmptyMatchContext>(N, DL, DAG))
+    return V;
+
+  // ctselect (not Cond), N1, N2 -> ctselect Cond, N2, N1
+  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false)) {
+    SDValue SelectOp = DAG.getNode(ISD::CTSELECT, DL, VT, F, N2, N1);
+    SelectOp->setFlags(Flags);
+    return SelectOp;
+  }
+
+  if (VT0 == MVT::i1) {
+    // The code in this block deals with the following 2 equivalences:
+    //    select(C0|C1, x, y) <=> select(C0, x, select(C1, x, y))
+    //    select(C0&C1, x, y) <=> select(C0, select(C1, x, y), y)
+    // The target can specify its preferred form with the
+    // shouldNormalizeToSelectSequence() callback. However we always transform
+    // to the right anyway if we find the inner select exists in the DAG anyway
+    // and we always transform to the left side if we know that we can further
+    // optimize the combination of the conditions.
+    bool normalizeToSequence =
+        TLI.shouldNormalizeToSelectSequence(*DAG.getContext(), VT);
+    // ctselect (and Cond0, Cond1), X, Y
+    //   -> ctselect Cond0, (ctselect Cond1, X, Y), Y
+    if (N0->getOpcode() == ISD::AND && N0->hasOneUse()) {
+      SDValue Cond0 = N0->getOperand(0);
+      SDValue Cond1 = N0->getOperand(1);
+      SDValue InnerSelect = DAG.getNode(ISD::CTSELECT, DL, N1.getValueType(),
+                                        Cond1, N1, N2, Flags);
+      if (normalizeToSequence || !InnerSelect.use_empty())
+        return DAG.getNode(ISD::CTSELECT, DL, N1.getValueType(), Cond0,
+                           InnerSelect, N2, Flags);
+      // Cleanup on failure.
+      if (InnerSelect.use_empty())
+        recursivelyDeleteUnusedNodes(InnerSelect.getNode());
+    }
+    // ctselect (or Cond0, Cond1), X, Y -> ctselect Cond0, X, (ctselect Cond1,
+    // X, Y)
+    if (N0->getOpcode() == ISD::OR && N0->hasOneUse()) {
+      SDValue Cond0 = N0->getOperand(0);
+      SDValue Cond1 = N0->getOperand(1);
+      SDValue InnerSelect = DAG.getNode(ISD::CTSELECT, DL, N1.getValueType(),
+                                        Cond1, N1, N2, Flags);
+      if (normalizeToSequence || !InnerSelect.use_empty())
+        return DAG.getNode(ISD::CTSELECT, DL, N1.getValueType(), Cond0, N1,
+                           InnerSelect, Flags);
+      // Cleanup on failure.
+      if (InnerSelect.use_empty())
+        recursivelyDeleteUnusedNodes(InnerSelect.getNode());
+    }
+
+    // ctselect Cond0, (ctselect Cond1, X, Y), Y -> ctselect (and Cond0, Cond1),
+    // X, Y
+    if (N1->getOpcode() == ISD::CTSELECT && N1->hasOneUse()) {
+      SDValue N1_0 = N1->getOperand(0);
+      SDValue N1_1 = N1->getOperand(1);
+      SDValue N1_2 = N1->getOperand(2);
+      if (N1_2 == N2 && N0.getValueType() == N1_0.getValueType()) {
+        // Create the actual and node if we can generate good code for it.
+        if (!normalizeToSequence) {
+          SDValue And = DAG.getNode(ISD::AND, DL, N0.getValueType(), N0, N1_0);
+          return DAG.getNode(ISD::CTSELECT, DL, N1.getValueType(), And, N1_1,
+                             N2, Flags);
+        }
+        // Otherwise see if we can optimize the "and" to a better pattern.
+        if (SDValue Combined = visitANDLike(N0, N1_0, N)) {
+          return DAG.getNode(ISD::CTSELECT, DL, N1.getValueType(), Combined,
+                             N1_1, N2, Flags);
+        }
+      }
+    }
+    // ctselect Cond0, X, (ctselect Cond1, X, Y) -> ctselect (or Cond0, Cond1),
+    // X, Y
+    if (N2->getOpcode() == ISD::CTSELECT && N2->hasOneUse()) {
+      SDValue N2_0 = N2->getOperand(0);
+      SDValue N2_1 = N2->getOperand(1);
+      SDValue N2_2 = N2->getOperand(2);
+      if (N2_1 == N1 && N0.getValueType() == N2_0.getValueType()) {
+        // Create the actual or node if we can generate good code for it.
+        if (!normalizeToSequence) {
+          SDValue Or = DAG.getNode(ISD::OR, DL, N0.getValueType(), N0, N2_0);
+          return DAG.getNode(ISD::CTSELECT, DL, N1.getValueType(), Or, N1, N2_2,
+                             Flags);
+        }
+        // Otherwise see if we can optimize to a better pattern.
+        if (SDValue Combined = visitORLike(N0, N2_0, DL))
+          return DAG.getNode(ISD::CTSELECT, DL, N1.getValueType(), Combined, N1,
+                             N2_2, Flags);
+      }
+    }
+  }
 
   return SDValue();
 }

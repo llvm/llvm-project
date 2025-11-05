@@ -214,6 +214,11 @@ def SDTSelect : SDTypeProfile<1, 3, [       // select
   SDTCisInt<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<2, 3>
 ]>;
 
+def SDTCtSelect
+    : SDTypeProfile<1, 3,
+                    [ // ctselect
+                        SDTCisInt<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<2, 3>]>;
+
 def SDTVSelect : SDTypeProfile<1, 3, [       // vselect
   SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<2, 3>, SDTCisSameNumEltsAs<0, 1>
 ]>;
@@ -729,6 +734,7 @@ def reset_fpmode   : SDNode<"ISD::RESET_FPMODE", SDTNone, [SDNPHasChain]>;
 
 def setcc      : SDNode<"ISD::SETCC"      , SDTSetCC>;
 def select     : SDNode<"ISD::SELECT"     , SDTSelect>;
+def ctselect : SDNode<"ISD::CTSELECT", SDTCtSelect>;
 def vselect    : SDNode<"ISD::VSELECT"    , SDTVSelect>;
 def selectcc   : SDNode<"ISD::SELECT_CC"  , SDTSelectCC>;
 

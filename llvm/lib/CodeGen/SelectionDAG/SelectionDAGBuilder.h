@@ -219,6 +219,9 @@ private:
   peelDominantCaseCluster(const SwitchInst &SI,
                           SwitchCG::CaseClusterVector &Clusters,
                           BranchProbability &PeeledCaseProb);
+  SDValue createProtectedCtSelectFallback(SelectionDAG &DAG, const SDLoc &DL,
+                                          SDValue Cond, SDValue T, SDValue F,
+                                          EVT VT);
 
 private:
   const TargetMachine &TM;
