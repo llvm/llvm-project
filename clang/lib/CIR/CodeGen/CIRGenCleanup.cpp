@@ -188,7 +188,7 @@ void EHScopeStack::popCleanup() {
   }
 }
 
-bool EHScopeStack::requiresLandingPad() const {
+bool EHScopeStack::requiresCatchOrCleanup() const {
   for (stable_iterator si = getInnermostEHScope(); si != stable_end();) {
     // TODO(cir): Skip lifetime markers.
     assert(!cir::MissingFeatures::emitLifetimeMarkers());

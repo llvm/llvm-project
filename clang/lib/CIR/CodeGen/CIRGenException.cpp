@@ -355,33 +355,6 @@ void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
   }
 }
 
-/// Emit the structure of the dispatch block for the given catch scope.
-/// It is an invariant that the dispatch block already exists.
-static void emitCatchDispatchBlock(CIRGenFunction &cgf,
-                                   EHCatchScope &catchScope, cir::TryOp tryOp) {
-  if (EHPersonality::get(cgf).isWasmPersonality()) {
-    cgf.cgm.errorNYI("emitCatchDispatchBlock: WASM personality");
-    return;
-  }
-
-  if (EHPersonality::get(cgf).usesFuncletPads()) {
-    cgf.cgm.errorNYI("emitCatchDispatchBlock: usesFuncletPads");
-    return;
-  }
-
-  assert(catchScope.mayThrow() &&
-         "Expected catchScope that may throw exception");
-
-  // If there's only a single catch-all, getEHDispatchBlock returned
-  // that catch-all as the dispatch block.
-  if (catchScope.getNumHandlers() == 1 &&
-      catchScope.getHandler(0).isCatchAll()) {
-    return;
-  }
-
-  cgf.cgm.errorNYI("emitCatchDispatchBlock: non-catch all handler");
-}
-
 void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
   unsigned numHandlers = s.getNumHandlers();
   EHCatchScope &catchScope = cast<EHCatchScope>(*ehStack.begin());
@@ -409,9 +382,6 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
     tryOp.setHandlerTypesAttr({});
     return;
   }
-
-  // Emit the structure of the EH dispatch for this catch.
-  emitCatchDispatchBlock(*this, catchScope, tryOp);
 
   // Copy the handler blocks off before we pop the EH stack.  Emitting
   // the handlers might scribble on this memory.
@@ -490,8 +460,8 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
   assert(!cir::MissingFeatures::incrementProfileCounter());
 }
 
-mlir::Operation *CIRGenFunction::emitLandingPad(cir::TryOp tryOp) {
-  assert(ehStack.requiresLandingPad());
+void CIRGenFunction::populateCatchHandlers(cir::TryOp tryOp) {
+  assert(ehStack.requiresCatchOrCleanup());
   assert(!cgm.getLangOpts().IgnoreExceptions &&
          "LandingPad should not be emitted when -fignore-exceptions are in "
          "effect.");
@@ -500,7 +470,7 @@ mlir::Operation *CIRGenFunction::emitLandingPad(cir::TryOp tryOp) {
   switch (innermostEHScope.getKind()) {
   case EHScope::Terminate:
     cgm.errorNYI("emitLandingPad: terminate");
-    return {};
+    return;
 
   case EHScope::Catch:
   case EHScope::Cleanup:
@@ -523,17 +493,17 @@ mlir::Operation *CIRGenFunction::emitLandingPad(cir::TryOp tryOp) {
       switch (i->getKind()) {
       case EHScope::Cleanup: {
         cgm.errorNYI("emitLandingPad: Cleanup");
-        return {};
+        return;
       }
 
       case EHScope::Filter: {
         cgm.errorNYI("emitLandingPad: Filter");
-        return {};
+        return;
       }
 
       case EHScope::Terminate: {
         cgm.errorNYI("emitLandingPad: Terminate");
-        return {};
+        return;
       }
 
       case EHScope::Catch:
@@ -551,22 +521,22 @@ mlir::Operation *CIRGenFunction::emitLandingPad(cir::TryOp tryOp) {
         if (handler.isCatchAll()) {
           assert(!hasCatchAll);
           hasCatchAll = true;
-          goto done;
+          break;
         }
 
         cgm.errorNYI("emitLandingPad: non catch-all");
-        return {};
+        return;
       }
 
-      goto done;
+      if (hasCatchAll)
+        break;
     }
 
-  done:
     if (hasCatchAll) {
       handlerAttrs.push_back(cir::CatchAllAttr::get(&getMLIRContext()));
     } else {
       cgm.errorNYI("emitLandingPad: non catch-all");
-      return {};
+      return;
     }
 
     // Add final array of clauses into TryOp.
@@ -576,23 +546,19 @@ mlir::Operation *CIRGenFunction::emitLandingPad(cir::TryOp tryOp) {
 
   // In traditional LLVM codegen. this tells the backend how to generate the
   // landing pad by generating a branch to the dispatch block. In CIR,
-  // getEHDispatchBlock is used to populate blocks for later filing during
+  // this is used to populate blocks for later filing during
   // cleanup handling.
-  (void)getEHDispatchBlock(ehStack.getInnermostEHScope(), tryOp);
-
-  return tryOp;
+  populateEHCatchRegions(ehStack.getInnermostEHScope(), tryOp);
 }
 
 // Differently from LLVM traditional codegen, there are no dispatch blocks
 // to look at given cir.try_call does not jump to blocks like invoke does.
-// However, we keep this around since other parts of CIRGen use
-// getCachedEHDispatchBlock to infer state.
-mlir::Block *
-CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator scope,
-                                   cir::TryOp tryOp) {
+// However.
+void CIRGenFunction::populateEHCatchRegions(EHScopeStack::stable_iterator scope,
+                                            cir::TryOp tryOp) {
   if (EHPersonality::get(*this).usesFuncletPads()) {
     cgm.errorNYI("getEHDispatchBlock: usesFuncletPads");
-    return {};
+    return;
   }
 
   // Otherwise, we should look at the actual scope.
@@ -606,7 +572,7 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator scope,
     // - Update the map to enqueue new dispatchBlock to also get a cleanup. See
     // code at the end of the function.
     cgm.errorNYI("getEHDispatchBlock: mayThrow & tryOp");
-    return {};
+    return;
   }
 
   if (!mayThrow) {
@@ -621,34 +587,33 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator scope,
         break;
       }
       cgm.errorNYI("getEHDispatchBlock: mayThrow non-catch all");
-      return {};
+      return;
     }
     case EHScope::Cleanup: {
       cgm.errorNYI("getEHDispatchBlock: mayThrow & cleanup");
-      return {};
+      return;
     }
     case EHScope::Filter: {
       cgm.errorNYI("getEHDispatchBlock: mayThrow & Filter");
-      return {};
+      return;
     }
     case EHScope::Terminate: {
       cgm.errorNYI("getEHDispatchBlock: mayThrow & Terminate");
-      return {};
+      return;
     }
     }
   }
 
   if (originalBlock) {
     cgm.errorNYI("getEHDispatchBlock: originalBlock");
-    return {};
+    return;
   }
 
   ehScope.setMayThrow(mayThrow);
-  return {};
 }
 
-bool CIRGenFunction::isInvokeDest() {
-  if (!ehStack.requiresLandingPad())
+bool CIRGenFunction::isCatchOrCleanupRequired() {
+  if (!ehStack.requiresCatchOrCleanup())
     return false;
 
   // If exceptions are disabled/ignored and SEH is not in use, then there is no
@@ -668,21 +633,17 @@ bool CIRGenFunction::isInvokeDest() {
   return true;
 }
 
-mlir::Operation *CIRGenFunction::getInvokeDestImpl(cir::TryOp tryOp) {
-  assert(ehStack.requiresLandingPad());
+void CIRGenFunction::populateCatchHandlersIfRequired(cir::TryOp tryOp) {
+  assert(ehStack.requiresCatchOrCleanup());
   assert(!ehStack.empty());
 
   // TODO(cir): add personality function
 
   // CIR does not cache landing pads.
   const EHPersonality &personality = EHPersonality::get(*this);
-
-  mlir::Operation *lp = nullptr;
   if (personality.usesFuncletPads()) {
     cgm.errorNYI("getInvokeDestImpl: usesFuncletPads");
   } else {
-    lp = emitLandingPad(tryOp);
+    populateCatchHandlers(tryOp);
   }
-
-  return lp;
 }

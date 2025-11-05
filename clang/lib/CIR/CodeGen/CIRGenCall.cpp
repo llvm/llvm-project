@@ -472,11 +472,11 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
   assert(!cir::MissingFeatures::opCallSurroundingTry());
 
   if (isInvoke) {
-    // This call can throw, few options:
-    //  - If this call does not have an associated cir.try, use the
-    //    one provided by InvokeDest,
-    //  - User written try/catch clauses require calls to handle
-    //    exceptions under cir.try.
+    // This call may throw and requires catch and/or cleanup handling.
+    // If this call does not appear within the `try` region of an existing
+    // TryOp, we must create a synthetic TryOp to contain the call. This
+    // happens when a call that may throw appears within a cleanup
+    // scope.
 
     // In OG, we build the landing pad for this scope. In CIR, we emit a
     // synthetic cir.try because this didn't come from code generating from a
@@ -501,10 +501,9 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
     }
 
     callOpWithExceptions =
-        builder.createTryCallOp(callLoc, directFuncOp, cirCallArgs);
+        builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
 
-    (void)cgf.getInvokeDest(tryOp);
-
+    cgf.populateCatchHandlersIfRequired(tryOp);
     return callOpWithExceptions;
   }
 
@@ -668,7 +667,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   // TODO(cir): check for MSVCXXPersonality
   // TODO(cir): Create NoThrowAttr
   bool cannotThrow = attrs.getNamed("nothrow").has_value();
-  bool isInvoke = !cannotThrow && isInvokeDest();
+  bool isInvoke = !cannotThrow && isCatchOrCleanupRequired();
 
   mlir::Location callLoc = loc;
   cir::CIRCallOpInterface theCall =
