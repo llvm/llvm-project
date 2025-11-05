@@ -716,6 +716,10 @@ cl::list<ModuleSubsection> DumpModuleSubsections(
 cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),
                              cl::cat(FileOptions),
                              cl::sub(PdbToYamlSubcommand));
+cl::opt<bool> DumpSectionHeaders("section-headers",
+                                 cl::desc("Dump section headers."),
+                                 cl::cat(FileOptions),
+                                 cl::sub(PdbToYamlSubcommand));
 
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
@@ -1554,6 +1558,7 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DumpModules = true;
       opts::pdb2yaml::DumpModuleFiles = true;
       opts::pdb2yaml::DumpModuleSyms = true;
+      opts::pdb2yaml::DumpSectionHeaders = true;
       opts::pdb2yaml::DumpModuleSubsections.push_back(
           opts::ModuleSubsection::All);
     }
@@ -1563,6 +1568,9 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DumpModules = true;
 
     if (opts::pdb2yaml::DumpModules)
+      opts::pdb2yaml::DbiStream = true;
+
+    if (opts::pdb2yaml::DumpSectionHeaders)
       opts::pdb2yaml::DbiStream = true;
   }
 

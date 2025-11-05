@@ -1,7 +1,7 @@
 # RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
 # RUN: llvm-pdbutil dump --section-headers --section-map %t.pdb | FileCheck --check-prefix=CHECK-YAML2PDB %s
 
-# RUN: llvm-pdbutil pdb2yaml --dbi-stream %t.pdb > %t.yaml
+# RUN: llvm-pdbutil pdb2yaml --section-headers %t.pdb > %t.yaml
 # RUN: FileCheck --input-file=%t.yaml --check-prefix=CHECK-PDB2YAML %s
 
 # CHECK-YAML2PDB:                      Section Headers
