@@ -3195,6 +3195,16 @@ let Predicates = [HasBWI] in {
   def : Pat<(v32i1(bitconvert(i32 -1))), (KSET1D)>;
   def : Pat<(v64i1(bitconvert(i64 -1))), (KSET1Q)>;
 }
+// Submask patterns: lower N bits set in larger mask registers
+let Predicates = [HasBWI, HasDQI] in {
+  // v32i1 submasks
+  def : Pat<(v32i1(bitconvert(i32 255))), (COPY_TO_REGCLASS (KSET1B), VK32)>;
+  def : Pat<(v32i1(bitconvert(i32 65535))), (COPY_TO_REGCLASS (KSET1W), VK32)>;
+  // v64i1 submasks
+  def : Pat<(v64i1(bitconvert(i64 255))), (COPY_TO_REGCLASS (KSET1B), VK64)>;
+  def : Pat<(v64i1(bitconvert(i64 65535))), (COPY_TO_REGCLASS (KSET1W), VK64)>;
+  def : Pat<(v64i1(bitconvert(i64 4294967295))), (COPY_TO_REGCLASS (KSET1D), VK64)>;
+}
 
 // Patterns for kmask insert_subvector/extract_subvector to/from index=0
 multiclass operation_subvector_mask_lowering<RegisterClass subRC, ValueType subVT,
