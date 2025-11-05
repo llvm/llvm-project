@@ -6,7 +6,7 @@
 ;; code. Alignment and other requirement for vectorization should
 ;; still be met.
 
-define void @load3to4(ptr %p) #0 {
+define void @load3to4(ptr %p) {
 ; CHECK-LABEL: define void @load3to4(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i32, ptr [[P]], i32 0
@@ -28,7 +28,7 @@ define void @load3to4(ptr %p) #0 {
   ret void
 }
 
-define void @load5to8(ptr %p) #0 {
+define void @load5to8(ptr %p) {
 ; CHECK-LABEL: define void @load5to8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i16, ptr [[P]], i32 0
@@ -52,13 +52,45 @@ define void @load5to8(ptr %p) #0 {
   %v0 = load i16, ptr %p.0, align 16
   %v1 = load i16, ptr %p.1, align 2
   %v2 = load i16, ptr %p.2, align 4
-  %v3 = load i16, ptr %p.3, align 8
-  %v4 = load i16, ptr %p.4, align 2
+  %v3 = load i16, ptr %p.3, align 2
+  %v4 = load i16, ptr %p.4, align 8
 
   ret void
 }
 
-define void @load3to4_unaligned(ptr %p) #0 {
+define void @load6to8(ptr %p) {
+; CHECK-LABEL: define void @load6to8(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i16, ptr [[P]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 16 [[P_0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <8 x i16> poison)
+; CHECK-NEXT:    [[V05:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V16:%.*]] = extractelement <8 x i16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[V27:%.*]] = extractelement <8 x i16> [[TMP1]], i32 2
+; CHECK-NEXT:    [[V38:%.*]] = extractelement <8 x i16> [[TMP1]], i32 3
+; CHECK-NEXT:    [[V49:%.*]] = extractelement <8 x i16> [[TMP1]], i32 4
+; CHECK-NEXT:    [[EXTEND10:%.*]] = extractelement <8 x i16> [[TMP1]], i32 5
+; CHECK-NEXT:    [[EXTEND211:%.*]] = extractelement <8 x i16> [[TMP1]], i32 6
+; CHECK-NEXT:    [[EXTEND412:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
+; CHECK-NEXT:    ret void
+;
+  %p.0 = getelementptr i16, ptr %p, i32 0
+  %p.1 = getelementptr i16, ptr %p, i32 1
+  %p.2 = getelementptr i16, ptr %p, i32 2
+  %p.3 = getelementptr i16, ptr %p, i32 3
+  %p.4 = getelementptr i16, ptr %p, i32 4
+  %p.5 = getelementptr i16, ptr %p, i32 5
+
+  %v0 = load i16, ptr %p.0, align 16
+  %v1 = load i16, ptr %p.1, align 2
+  %v2 = load i16, ptr %p.2, align 4
+  %v3 = load i16, ptr %p.3, align 2
+  %v4 = load i16, ptr %p.4, align 8
+  %v5 = load i16, ptr %p.5, align 2
+
+  ret void
+}
+
+define void @load3to4_unaligned(ptr %p) {
 ; CHECK-LABEL: define void @load3to4_unaligned(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i32, ptr [[P]], i32 0

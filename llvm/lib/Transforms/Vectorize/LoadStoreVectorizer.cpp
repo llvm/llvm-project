@@ -283,13 +283,15 @@ private:
   bool runOnChain(Chain &C);
 
   /// Splits the chain into subchains of instructions which read/write a
-  /// contiguous block of memory.  Discards any length-1 subchains (because
-  /// there's nothing to vectorize in there).
+  /// contiguous block of memory. Discards any length-1 subchains (because
+  /// there's nothing to vectorize in there). Also attempts to fill gaps with
+  /// "extra" elements to artificially make chains contiguous in some cases.
   std::vector<Chain> splitChainByContiguity(Chain &C);
 
   /// Splits the chain into subchains where it's safe to hoist loads up to the
   /// beginning of the sub-chain and it's safe to sink loads up to the end of
-  /// the sub-chain.  Discards any length-1 subchains.
+  /// the sub-chain. Discards any length-1 subchains. Also attempts to extend
+  /// non-power-of-two chains by adding "extra" elements in some cases.
   std::vector<Chain> splitChainByMayAliasInstrs(Chain &C);
 
   /// Splits the chain into subchains that make legal, aligned accesses.
@@ -730,14 +732,15 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
     // which could cancel out the benefits of reducing number of load/stores.
     if (TryFillGaps &&
         SzBits == DL.getTypeSizeInBits(getLoadStoreType(It->Inst))) {
-      APInt OffsetOfGapStart = Prev.OffsetFromLeader + PrevSzBytes;
-      APInt GapSzBytes = It->OffsetFromLeader - OffsetOfGapStart;
+      APInt OffsetFromLeaderOfGapStart = Prev.OffsetFromLeader + PrevSzBytes;
+      APInt GapSzBytes = It->OffsetFromLeader - OffsetFromLeaderOfGapStart;
       if (GapSzBytes == PrevSzBytes) {
         // There is a single gap between Prev and Curr, create one extra element
         ChainElem NewElem = createExtraElementAfter(
             Prev, PrevSzBytes, "GapFill",
-            commonAlignment(LeaderOfChainAlign,
-                            OffsetOfGapStart.abs().getLimitedValue()));
+            commonAlignment(
+                LeaderOfChainAlign,
+                OffsetFromLeaderOfGapStart.abs().getLimitedValue()));
         CurChain.push_back(NewElem);
         CurChain.push_back(*It);
         continue;
@@ -748,13 +751,15 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
       if ((GapSzBytes == 2 * PrevSzBytes) && (CurChain.size() % 4 == 1)) {
         ChainElem NewElem1 = createExtraElementAfter(
             Prev, PrevSzBytes, "GapFill",
-            commonAlignment(LeaderOfChainAlign,
-                            OffsetOfGapStart.abs().getLimitedValue()));
-        ChainElem NewElem2 = createExtraElementAfter(
-            NewElem1, PrevSzBytes, "GapFill",
             commonAlignment(
                 LeaderOfChainAlign,
-                (OffsetOfGapStart + PrevSzBytes).abs().getLimitedValue()));
+                OffsetFromLeaderOfGapStart.abs().getLimitedValue()));
+        ChainElem NewElem2 = createExtraElementAfter(
+            NewElem1, PrevSzBytes, "GapFill",
+            commonAlignment(LeaderOfChainAlign,
+                            (OffsetFromLeaderOfGapStart + PrevSzBytes)
+                                .abs()
+                                .getLimitedValue()));
         CurChain.push_back(NewElem1);
         CurChain.push_back(NewElem2);
         CurChain.push_back(*It);
@@ -920,9 +925,14 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         }
       }
 
-      // Attempt to extend non-power-of-2 chains to the next power of 2.
+      // The vectorizer does not support non-power-of-2 element count vectors.
+      // Extend the chain to the next power-of-2 if the current chain:
+      //  1. Does not have a power-of-2 element count
+      //  2. Would be legal to vectorize if the element count was extended to
+      //     the next power-of-2
       Chain ExtendingLoadsStores;
-      if (NumVecElems < TargetVF && NumVecElems % 2 != 0 && VecElemBits >= 8) {
+      if (NumVecElems < TargetVF && !isPowerOf2_32(NumVecElems) &&
+          VecElemBits >= 8 && isPowerOf2_32(TargetVF)) {
         // TargetVF may be a lot higher than NumVecElems,
         // so only extend to the next power of 2.
         assert(VecElemBits % 8 == 0);
@@ -936,10 +946,8 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
                           << NumVecElems << " "
                           << (IsLoadChain ? "loads" : "stores") << " to "
                           << NewNumVecElems << " elements\n");
-        // Do not artificially increase the chain if it becomes misaligned or if
-        // the associated masked load/store is not legal, otherwise we may
-        // unnecessarily split the chain when the target actually supports
-        // non-pow2 VF.
+        // Only artificially increase the chain if it would be AllowedAndFast
+        // and if the resulting masked load/store will be legal for the target.
         if (accessIsAllowedAndFast(NewSizeBytes, AS, Alignment, VecElemBits) &&
             (IsLoadChain ? TTI.isLegalMaskedLoad(
                                FixedVectorType::get(VecElemTy, NewNumVecElems),
@@ -1039,14 +1047,13 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   if (C.size() < 2)
     return false;
 
-  // If we are left with a two-element chain, and one of the elements is an
-  // extra element, we don't want to vectorize
-  if (C.size() == 2 &&
-      (ExtraElements.contains(C[0].Inst) || ExtraElements.contains(C[1].Inst)))
-    return false;
-
   bool ChainContainsExtraLoadsStores = llvm::any_of(
       C, [this](const ChainElem &E) { return ExtraElements.contains(E.Inst); });
+
+  // If we are left with a two-element chain, and one of the elements is an
+  // extra element, we don't want to vectorize
+  if (C.size() == 2 && ChainContainsExtraLoadsStores)
+    return false;
 
   sortChainInOffsetOrder(C);
 
@@ -1847,8 +1854,11 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
 bool Vectorizer::accessIsAllowedAndFast(unsigned SizeBytes, unsigned AS,
                                         Align Alignment,
                                         unsigned VecElemBits) const {
+  // Aligned vector accesses are ALWAYS faster than element-wise accesses.
   if (Alignment.value() % SizeBytes == 0)
     return true;
+
+  // Element-wise access *might* be faster than misaligned vector accesses.
   unsigned VectorizedSpeed = 0;
   bool AllowsMisaligned = TTI.allowsMisalignedMemoryAccesses(
       F.getContext(), SizeBytes * 8, AS, Alignment, &VectorizedSpeed);
