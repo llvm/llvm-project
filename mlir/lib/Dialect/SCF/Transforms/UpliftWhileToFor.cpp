@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/RegionUtils.h"
 
 using namespace mlir;
 
@@ -89,22 +90,12 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
       }
     }
 
-    SmallVector<Value> additionalUsedValues;
-    auto isValueUsedInsideIf = [&](Value val) {
-      return llvm::any_of(val.getUsers(), [&](Operation *user) {
-        return ifOp.getThenRegion().isAncestor(user->getParentRegion());
-      });
-    };
-
     // Collect additional used values from before region.
-    for (Operation *it = ifOp->getPrevNode(); it != nullptr;
-         it = it->getPrevNode())
-      llvm::copy_if(it->getResults(), std::back_inserter(additionalUsedValues),
-                    isValueUsedInsideIf);
-
-    llvm::copy_if(op.getBeforeArguments(),
-                  std::back_inserter(additionalUsedValues),
-                  isValueUsedInsideIf);
+    SetVector<Value> additionalUsedValues;
+    visitUsedValuesDefinedAbove(ifOp.getThenRegion(), [&](OpOperand *operand) {
+      if (op.getBefore().isAncestor(operand->get().getParentRegion()))
+        additionalUsedValues.insert(operand->get());
+    });
 
     // Create new whileOp with additional used values as results.
     auto additionalValueTypes = llvm::map_to_vector(
@@ -132,7 +123,7 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
     // Replace uses of additional used values inside the ifOp then region with
     // the whileOp after region arguments.
     rewriter.replaceUsesWithIf(
-        additionalUsedValues,
+        additionalUsedValues.takeVector(),
         newWhileOp.getAfterArguments().take_back(additionalValueSize),
         [&](OpOperand &use) {
           return ifOp.getThenRegion().isAncestor(
