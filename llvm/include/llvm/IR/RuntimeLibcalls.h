@@ -42,6 +42,8 @@ template <> struct enum_iteration_traits<RTLIB::LibcallImpl> {
   static constexpr bool is_iterable = true;
 };
 
+class LibcallLoweringInfo;
+
 namespace RTLIB {
 
 // Return an iterator over all Libcall values.
@@ -70,6 +72,8 @@ private:
   LibcallImplBitset AvailableLibcallImpls;
 
 public:
+  friend class llvm::LibcallLoweringInfo;
+
   explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
@@ -85,17 +89,6 @@ public:
     initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
   }
 
-  /// Rename the default libcall routine name for the specified libcall.
-  void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
-    LibcallImpls[Call] = Impl;
-  }
-
-  /// Get the libcall routine name for the specified libcall.
-  // FIXME: This should be removed. Only LibcallImpl should have a name.
-  StringRef getLibcallName(RTLIB::Libcall Call) const {
-    return getLibcallImplName(LibcallImpls[Call]);
-  }
-
   /// Get the libcall routine name for the specified libcall implementation.
   static StringRef getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
     if (CallImpl == RTLIB::Unsupported)
@@ -105,21 +98,10 @@ public:
                      RuntimeLibcallNameSizeTable[CallImpl]);
   }
 
-  /// Return the lowering's selection of implementation call for \p Call
-  RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
-    return LibcallImpls[Call];
-  }
-
   /// Set the CallingConv that should be used for the specified libcall
   /// implementation
   void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
     LibcallImplCallingConvs[Call] = CC;
-  }
-
-  // FIXME: Remove this wrapper in favor of directly using
-  // getLibcallImplCallingConv
-  CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
-    return LibcallImplCallingConvs[LibcallImpls[Call]];
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
@@ -127,20 +109,13 @@ public:
     return LibcallImplCallingConvs[Call];
   }
 
-  ArrayRef<RTLIB::LibcallImpl> getLibcallImpls() const {
-    // Trim UNKNOWN_LIBCALL from the back
-    return ArrayRef(LibcallImpls).drop_back();
+  /// Return the libcall provided by \p Impl
+  static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
+    return ImplToLibcall[Impl];
   }
 
-  /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
-  /// unsupported.
-  RTLIB::LibcallImpl getMemcpyImpl() const {
-    RTLIB::LibcallImpl Memcpy = getLibcallImpl(RTLIB::MEMCPY);
-    if (Memcpy != RTLIB::Unsupported)
-      return Memcpy;
-
-    // Fallback to memmove if memcpy isn't available.
-    return getLibcallImpl(RTLIB::MEMMOVE);
+  unsigned getNumAvailableLibcallImpls() const {
+    return AvailableLibcallImpls.count();
   }
 
   bool isAvailable(RTLIB::LibcallImpl Impl) const {
@@ -149,11 +124,6 @@ public:
 
   void setAvailable(RTLIB::LibcallImpl Impl) {
     AvailableLibcallImpls.set(Impl);
-  }
-
-  /// Return the libcall provided by \p Impl
-  static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
-    return ImplToLibcall[Impl];
   }
 
   /// Check if a function name is a recognized runtime call of any kind. This
@@ -176,11 +146,8 @@ public:
   LLVM_ABI RTLIB::LibcallImpl
       getSupportedLibcallImpl(StringRef FuncName) const {
     for (RTLIB::LibcallImpl Impl : lookupLibcallImplName(FuncName)) {
-      // FIXME: This should not depend on looking up ImplToLibcall, only the
-      // list of libcalls for the module.
-      RTLIB::LibcallImpl Recognized = LibcallImpls[ImplToLibcall[Impl]];
-      if (Recognized != RTLIB::Unsupported)
-        return Recognized;
+      if (isAvailable(Impl))
+        return Impl;
     }
 
     return RTLIB::Unsupported;
@@ -196,10 +163,6 @@ public:
 private:
   LLVM_ABI static iota_range<RTLIB::LibcallImpl>
   lookupLibcallImplNameImpl(StringRef Name);
-
-  /// Stores the implementation choice for each each libcall.
-  RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
-      RTLIB::Unsupported};
 
   static_assert(static_cast<int>(CallingConv::C) == 0,
                 "default calling conv should be encoded as 0");
@@ -274,6 +237,7 @@ private:
 };
 
 } // namespace RTLIB
+
 } // namespace llvm
 
 #endif // LLVM_IR_RUNTIME_LIBCALLS_H
