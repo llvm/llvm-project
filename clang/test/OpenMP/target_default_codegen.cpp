@@ -102,6 +102,17 @@ void foo7(int a) {
     pa[50]++;
   }
 }
+
+// Verify 'default' clause on a combined 'target' directive is equivalent to
+// specifying its constituent directives with 'default' clauses. IR checks
+// generated with constituent directives but test runs with combined
+// directive.
+void foo8() {
+  int x = 0;
+  #pragma omp target teams distribute parallel for default(firstprivate) firstprivate(x)
+  for (int i=0; i<10; i++)
+    x += 1;
+}
 #endif // HEADER
 // CK-64-LABEL: define dso_local void @_Z4foo1i(
 // CK-64-SAME: i32 signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -234,7 +245,7 @@ void foo7(int a) {
 // CK-64-NEXT:    [[PVTARR_ADDR:%.*]] = alloca ptr, align 8
 // CK-64-NEXT:    [[PVTARR1:%.*]] = alloca [10 x i32], align 4
 // CK-64-NEXT:    store ptr [[PVTARR]], ptr [[PVTARR_ADDR]], align 8
-// CK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 8, !nonnull [[META17:![0-9]+]], !align [[META18:![0-9]+]]
+// CK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 8, !nonnull [[META19:![0-9]+]], !align [[META20:![0-9]+]]
 // CK-64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[PVTARR1]], i64 0, i64 5
 // CK-64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CK-64-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
@@ -464,7 +475,7 @@ void foo7(int a) {
 // CK-64-NEXT:    store i64 [[D]], ptr [[D_ADDR]], align 8
 // CK-64-NEXT:    store ptr [[PVTARR]], ptr [[PVTARR_ADDR]], align 8
 // CK-64-NEXT:    store ptr [[PA]], ptr [[PA_ADDR]], align 8
-// CK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
+// CK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 8, !nonnull [[META19]], !align [[META20]]
 // CK-64-NEXT:    [[TMP1:%.*]] = load double, ptr [[D1]], align 8
 // CK-64-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 1.000000e+00
 // CK-64-NEXT:    store double [[ADD]], ptr [[D1]], align 8
@@ -565,7 +576,7 @@ void foo7(int a) {
 // CK-64-NEXT:    store i64 [[D]], ptr [[D_ADDR]], align 8
 // CK-64-NEXT:    store ptr [[PVTARR]], ptr [[PVTARR_ADDR]], align 8
 // CK-64-NEXT:    store ptr [[PA]], ptr [[PA_ADDR]], align 8
-// CK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
+// CK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 8, !nonnull [[META19]], !align [[META20]]
 // CK-64-NEXT:    [[TMP1:%.*]] = load double, ptr [[D_ADDR]], align 8
 // CK-64-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 1.000000e+00
 // CK-64-NEXT:    store double [[ADD]], ptr [[D_ADDR]], align 8
@@ -667,7 +678,7 @@ void foo7(int a) {
 // CK-64-NEXT:    store i64 [[D]], ptr [[D_ADDR]], align 8
 // CK-64-NEXT:    store ptr [[PVTARR]], ptr [[PVTARR_ADDR]], align 8
 // CK-64-NEXT:    store ptr [[PA]], ptr [[PA_ADDR]], align 8
-// CK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
+// CK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 8, !nonnull [[META19]], !align [[META20]]
 // CK-64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[PVTARR1]], ptr align 4 [[TMP0]], i64 40, i1 false)
 // CK-64-NEXT:    [[TMP1:%.*]] = load double, ptr [[D_ADDR]], align 8
 // CK-64-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 1.000000e+00
@@ -681,6 +692,218 @@ void foo7(int a) {
 // CK-64-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 // CK-64-NEXT:    [[INC3:%.*]] = add nsw i32 [[TMP4]], 1
 // CK-64-NEXT:    store i32 [[INC3]], ptr [[ARRAYIDX2]], align 4
+// CK-64-NEXT:    ret void
+//
+//
+// CK-64-LABEL: define dso_local void @_Z4foo8v(
+// CK-64-SAME: ) #[[ATTR0]] {
+// CK-64-NEXT:  [[ENTRY:.*:]]
+// CK-64-NEXT:    [[X:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
+// CK-64-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 8
+// CK-64-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
+// CK-64-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
+// CK-64-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
+// CK-64-NEXT:    store i32 0, ptr [[X]], align 4
+// CK-64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 4
+// CK-64-NEXT:    store i32 [[TMP0]], ptr [[X_CASTED]], align 4
+// CK-64-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X_CASTED]], align 8
+// CK-64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CK-64-NEXT:    store i64 [[TMP1]], ptr [[TMP2]], align 8
+// CK-64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CK-64-NEXT:    store i64 [[TMP1]], ptr [[TMP3]], align 8
+// CK-64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 0
+// CK-64-NEXT:    store ptr null, ptr [[TMP4]], align 8
+// CK-64-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CK-64-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CK-64-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// CK-64-NEXT:    store i32 3, ptr [[TMP7]], align 4
+// CK-64-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// CK-64-NEXT:    store i32 1, ptr [[TMP8]], align 4
+// CK-64-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CK-64-NEXT:    store ptr [[TMP5]], ptr [[TMP9]], align 8
+// CK-64-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// CK-64-NEXT:    store ptr [[TMP6]], ptr [[TMP10]], align 8
+// CK-64-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// CK-64-NEXT:    store ptr @.offload_sizes.13, ptr [[TMP11]], align 8
+// CK-64-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// CK-64-NEXT:    store ptr @.offload_maptypes.14, ptr [[TMP12]], align 8
+// CK-64-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// CK-64-NEXT:    store ptr null, ptr [[TMP13]], align 8
+// CK-64-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// CK-64-NEXT:    store ptr null, ptr [[TMP14]], align 8
+// CK-64-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// CK-64-NEXT:    store i64 10, ptr [[TMP15]], align 8
+// CK-64-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// CK-64-NEXT:    store i64 0, ptr [[TMP16]], align 8
+// CK-64-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// CK-64-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP17]], align 4
+// CK-64-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// CK-64-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP18]], align 4
+// CK-64-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// CK-64-NEXT:    store i32 0, ptr [[TMP19]], align 4
+// CK-64-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.region_id, ptr [[KERNEL_ARGS]])
+// CK-64-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
+// CK-64-NEXT:    br i1 [[TMP21]], label %[[OMP_OFFLOAD_FAILED:.*]], label %[[OMP_OFFLOAD_CONT:.*]]
+// CK-64:       [[OMP_OFFLOAD_FAILED]]:
+// CK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112(i64 [[TMP1]]) #[[ATTR2]]
+// CK-64-NEXT:    br label %[[OMP_OFFLOAD_CONT]]
+// CK-64:       [[OMP_OFFLOAD_CONT]]:
+// CK-64-NEXT:    ret void
+//
+//
+// CK-64-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112(
+// CK-64-SAME: i64 [[X:%.*]]) #[[ATTR1]] {
+// CK-64-NEXT:  [[ENTRY:.*:]]
+// CK-64-NEXT:    [[X_ADDR:%.*]] = alloca i64, align 8
+// CK-64-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
+// CK-64-NEXT:    store i64 [[X]], ptr [[X_ADDR]], align 8
+// CK-64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CK-64-NEXT:    store i32 [[TMP0]], ptr [[X_CASTED]], align 4
+// CK-64-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X_CASTED]], align 8
+// CK-64-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined, i64 [[TMP1]])
+// CK-64-NEXT:    ret void
+//
+//
+// CK-64-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined(
+// CK-64-SAME: ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
+// CK-64-NEXT:  [[ENTRY:.*:]]
+// CK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
+// CK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
+// CK-64-NEXT:    [[X_ADDR:%.*]] = alloca i64, align 8
+// CK-64-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
+// CK-64-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CK-64-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
+// CK-64-NEXT:    store i64 [[X]], ptr [[X_ADDR]], align 8
+// CK-64-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB]], align 4
+// CK-64-NEXT:    store i32 9, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-64-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// CK-64-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// CK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CK-64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// CK-64-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2:[0-9]+]], i32 [[TMP1]], i32 92, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_COMB_LB]], ptr [[DOTOMP_COMB_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CK-64-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-64-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
+// CK-64-NEXT:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// CK-64:       [[COND_TRUE]]:
+// CK-64-NEXT:    br label %[[COND_END:.*]]
+// CK-64:       [[COND_FALSE]]:
+// CK-64-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-64-NEXT:    br label %[[COND_END]]
+// CK-64:       [[COND_END]]:
+// CK-64-NEXT:    [[COND:%.*]] = phi i32 [ 9, %[[COND_TRUE]] ], [ [[TMP3]], %[[COND_FALSE]] ]
+// CK-64-NEXT:    store i32 [[COND]], ptr [[DOTOMP_COMB_UB]], align 4
+// CK-64-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
+// CK-64-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
+// CK-64-NEXT:    br label %[[OMP_INNER_FOR_COND:.*]]
+// CK-64:       [[OMP_INNER_FOR_COND]]:
+// CK-64-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-64-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-64-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
+// CK-64-NEXT:    br i1 [[CMP1]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
+// CK-64:       [[OMP_INNER_FOR_BODY]]:
+// CK-64-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
+// CK-64-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
+// CK-64-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-64-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
+// CK-64-NEXT:    [[TMP11:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CK-64-NEXT:    store i32 [[TMP11]], ptr [[X_CASTED]], align 4
+// CK-64-NEXT:    [[TMP12:%.*]] = load i64, ptr [[X_CASTED]], align 8
+// CK-64-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 3, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined.omp_outlined, i64 [[TMP8]], i64 [[TMP10]], i64 [[TMP12]])
+// CK-64-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
+// CK-64:       [[OMP_INNER_FOR_INC]]:
+// CK-64-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-64-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4
+// CK-64-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP13]], [[TMP14]]
+// CK-64-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4
+// CK-64-NEXT:    br label %[[OMP_INNER_FOR_COND]]
+// CK-64:       [[OMP_INNER_FOR_END]]:
+// CK-64-NEXT:    br label %[[OMP_LOOP_EXIT:.*]]
+// CK-64:       [[OMP_LOOP_EXIT]]:
+// CK-64-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
+// CK-64-NEXT:    ret void
+//
+//
+// CK-64-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined.omp_outlined(
+// CK-64-SAME: ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
+// CK-64-NEXT:  [[ENTRY:.*:]]
+// CK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
+// CK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
+// CK-64-NEXT:    [[DOTPREVIOUS_LB__ADDR:%.*]] = alloca i64, align 8
+// CK-64-NEXT:    [[DOTPREVIOUS_UB__ADDR:%.*]] = alloca i64, align 8
+// CK-64-NEXT:    [[X_ADDR:%.*]] = alloca i64, align 8
+// CK-64-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CK-64-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CK-64-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
+// CK-64-NEXT:    store i64 [[DOTPREVIOUS_LB_]], ptr [[DOTPREVIOUS_LB__ADDR]], align 8
+// CK-64-NEXT:    store i64 [[DOTPREVIOUS_UB_]], ptr [[DOTPREVIOUS_UB__ADDR]], align 8
+// CK-64-NEXT:    store i64 [[X]], ptr [[X_ADDR]], align 8
+// CK-64-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
+// CK-64-NEXT:    store i32 9, ptr [[DOTOMP_UB]], align 4
+// CK-64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[DOTPREVIOUS_LB__ADDR]], align 8
+// CK-64-NEXT:    [[CONV:%.*]] = trunc i64 [[TMP0]] to i32
+// CK-64-NEXT:    [[TMP1:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR]], align 8
+// CK-64-NEXT:    [[CONV1:%.*]] = trunc i64 [[TMP1]] to i32
+// CK-64-NEXT:    store i32 [[CONV]], ptr [[DOTOMP_LB]], align 4
+// CK-64-NEXT:    store i32 [[CONV1]], ptr [[DOTOMP_UB]], align 4
+// CK-64-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// CK-64-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// CK-64-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CK-64-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// CK-64-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB3:[0-9]+]], i32 [[TMP3]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CK-64-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CK-64-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP4]], 9
+// CK-64-NEXT:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// CK-64:       [[COND_TRUE]]:
+// CK-64-NEXT:    br label %[[COND_END:.*]]
+// CK-64:       [[COND_FALSE]]:
+// CK-64-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CK-64-NEXT:    br label %[[COND_END]]
+// CK-64:       [[COND_END]]:
+// CK-64-NEXT:    [[COND:%.*]] = phi i32 [ 9, %[[COND_TRUE]] ], [ [[TMP5]], %[[COND_FALSE]] ]
+// CK-64-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
+// CK-64-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// CK-64-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
+// CK-64-NEXT:    br label %[[OMP_INNER_FOR_COND:.*]]
+// CK-64:       [[OMP_INNER_FOR_COND]]:
+// CK-64-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-64-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CK-64-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
+// CK-64-NEXT:    br i1 [[CMP2]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
+// CK-64:       [[OMP_INNER_FOR_BODY]]:
+// CK-64-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-64-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
+// CK-64-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// CK-64-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
+// CK-64-NEXT:    [[TMP10:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CK-64-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP10]], 1
+// CK-64-NEXT:    store i32 [[ADD3]], ptr [[X_ADDR]], align 4
+// CK-64-NEXT:    br label %[[OMP_BODY_CONTINUE:.*]]
+// CK-64:       [[OMP_BODY_CONTINUE]]:
+// CK-64-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
+// CK-64:       [[OMP_INNER_FOR_INC]]:
+// CK-64-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-64-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP11]], 1
+// CK-64-NEXT:    store i32 [[ADD4]], ptr [[DOTOMP_IV]], align 4
+// CK-64-NEXT:    br label %[[OMP_INNER_FOR_COND]]
+// CK-64:       [[OMP_INNER_FOR_END]]:
+// CK-64-NEXT:    br label %[[OMP_LOOP_EXIT:.*]]
+// CK-64:       [[OMP_LOOP_EXIT]]:
+// CK-64-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP3]])
 // CK-64-NEXT:    ret void
 //
 //
@@ -747,7 +970,7 @@ void foo7(int a) {
 // CK-32-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
 // CK-32-NEXT:    [[D1:%.*]] = alloca double, align 8
 // CK-32-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
-// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META18:![0-9]+]], !align [[META19:![0-9]+]]
+// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META20:![0-9]+]], !align [[META21:![0-9]+]]
 // CK-32-NEXT:    [[TMP1:%.*]] = load double, ptr [[D1]], align 8
 // CK-32-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 1.000000e+00
 // CK-32-NEXT:    store double [[ADD]], ptr [[D1]], align 8
@@ -812,7 +1035,7 @@ void foo7(int a) {
 // CK-32-NEXT:    [[PVTARR_ADDR:%.*]] = alloca ptr, align 4
 // CK-32-NEXT:    [[PVTARR1:%.*]] = alloca [10 x i32], align 4
 // CK-32-NEXT:    store ptr [[PVTARR]], ptr [[PVTARR_ADDR]], align 4
-// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 4, !nonnull [[META18]], !align [[META19]]
+// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 4, !nonnull [[META20]], !align [[META21]]
 // CK-32-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[PVTARR1]], i32 0, i32 5
 // CK-32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CK-32-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
@@ -1038,8 +1261,8 @@ void foo7(int a) {
 // CK-32-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
 // CK-32-NEXT:    store ptr [[PVTARR]], ptr [[PVTARR_ADDR]], align 4
 // CK-32-NEXT:    store ptr [[PA]], ptr [[PA_ADDR]], align 4
-// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META18]], !align [[META19]]
-// CK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 4, !nonnull [[META18]], !align [[META19]]
+// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META20]], !align [[META21]]
+// CK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 4, !nonnull [[META20]], !align [[META21]]
 // CK-32-NEXT:    [[TMP2:%.*]] = load double, ptr [[D1]], align 8
 // CK-32-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
 // CK-32-NEXT:    store double [[ADD]], ptr [[D1]], align 8
@@ -1137,8 +1360,8 @@ void foo7(int a) {
 // CK-32-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
 // CK-32-NEXT:    store ptr [[PVTARR]], ptr [[PVTARR_ADDR]], align 4
 // CK-32-NEXT:    store ptr [[PA]], ptr [[PA_ADDR]], align 4
-// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META18]], !align [[META19]]
-// CK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 4, !nonnull [[META18]], !align [[META19]]
+// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META20]], !align [[META21]]
+// CK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 4, !nonnull [[META20]], !align [[META21]]
 // CK-32-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP0]], align 8
 // CK-32-NEXT:    store double [[TMP2]], ptr [[D1]], align 8
 // CK-32-NEXT:    [[TMP3:%.*]] = load double, ptr [[D1]], align 8
@@ -1239,8 +1462,8 @@ void foo7(int a) {
 // CK-32-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
 // CK-32-NEXT:    store ptr [[PVTARR]], ptr [[PVTARR_ADDR]], align 4
 // CK-32-NEXT:    store ptr [[PA]], ptr [[PA_ADDR]], align 4
-// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META18]], !align [[META19]]
-// CK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 4, !nonnull [[META18]], !align [[META19]]
+// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META20]], !align [[META21]]
+// CK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PVTARR_ADDR]], align 4, !nonnull [[META20]], !align [[META21]]
 // CK-32-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP0]], align 8
 // CK-32-NEXT:    store double [[TMP2]], ptr [[D1]], align 8
 // CK-32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[PVTARR2]], ptr align 4 [[TMP1]], i32 40, i1 false)
@@ -1256,6 +1479,214 @@ void foo7(int a) {
 // CK-32-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 // CK-32-NEXT:    [[INC4:%.*]] = add nsw i32 [[TMP6]], 1
 // CK-32-NEXT:    store i32 [[INC4]], ptr [[ARRAYIDX3]], align 4
+// CK-32-NEXT:    ret void
+//
+//
+// CK-32-LABEL: define dso_local void @_Z4foo8v(
+// CK-32-SAME: ) #[[ATTR0]] {
+// CK-32-NEXT:  [[ENTRY:.*:]]
+// CK-32-NEXT:    [[X:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
+// CK-32-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
+// CK-32-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// CK-32-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
+// CK-32-NEXT:    store i32 0, ptr [[X]], align 4
+// CK-32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 4
+// CK-32-NEXT:    store i32 [[TMP0]], ptr [[X_CASTED]], align 4
+// CK-32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X_CASTED]], align 4
+// CK-32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CK-32-NEXT:    store i32 [[TMP1]], ptr [[TMP2]], align 4
+// CK-32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CK-32-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 4
+// CK-32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// CK-32-NEXT:    store ptr null, ptr [[TMP4]], align 4
+// CK-32-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CK-32-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CK-32-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// CK-32-NEXT:    store i32 3, ptr [[TMP7]], align 4
+// CK-32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// CK-32-NEXT:    store i32 1, ptr [[TMP8]], align 4
+// CK-32-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CK-32-NEXT:    store ptr [[TMP5]], ptr [[TMP9]], align 4
+// CK-32-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// CK-32-NEXT:    store ptr [[TMP6]], ptr [[TMP10]], align 4
+// CK-32-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// CK-32-NEXT:    store ptr @.offload_sizes.13, ptr [[TMP11]], align 4
+// CK-32-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// CK-32-NEXT:    store ptr @.offload_maptypes.14, ptr [[TMP12]], align 4
+// CK-32-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// CK-32-NEXT:    store ptr null, ptr [[TMP13]], align 4
+// CK-32-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// CK-32-NEXT:    store ptr null, ptr [[TMP14]], align 4
+// CK-32-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// CK-32-NEXT:    store i64 10, ptr [[TMP15]], align 8
+// CK-32-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// CK-32-NEXT:    store i64 0, ptr [[TMP16]], align 8
+// CK-32-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// CK-32-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP17]], align 4
+// CK-32-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// CK-32-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP18]], align 4
+// CK-32-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// CK-32-NEXT:    store i32 0, ptr [[TMP19]], align 4
+// CK-32-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.region_id, ptr [[KERNEL_ARGS]])
+// CK-32-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
+// CK-32-NEXT:    br i1 [[TMP21]], label %[[OMP_OFFLOAD_FAILED:.*]], label %[[OMP_OFFLOAD_CONT:.*]]
+// CK-32:       [[OMP_OFFLOAD_FAILED]]:
+// CK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112(i32 [[TMP1]]) #[[ATTR2]]
+// CK-32-NEXT:    br label %[[OMP_OFFLOAD_CONT]]
+// CK-32:       [[OMP_OFFLOAD_CONT]]:
+// CK-32-NEXT:    ret void
+//
+//
+// CK-32-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112(
+// CK-32-SAME: i32 [[X:%.*]]) #[[ATTR1]] {
+// CK-32-NEXT:  [[ENTRY:.*:]]
+// CK-32-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
+// CK-32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CK-32-NEXT:    store i32 [[TMP0]], ptr [[X_CASTED]], align 4
+// CK-32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X_CASTED]], align 4
+// CK-32-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined, i32 [[TMP1]])
+// CK-32-NEXT:    ret void
+//
+//
+// CK-32-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined(
+// CK-32-SAME: ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
+// CK-32-NEXT:  [[ENTRY:.*:]]
+// CK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
+// CK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
+// CK-32-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
+// CK-32-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
+// CK-32-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
+// CK-32-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB]], align 4
+// CK-32-NEXT:    store i32 9, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-32-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// CK-32-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// CK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
+// CK-32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// CK-32-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2:[0-9]+]], i32 [[TMP1]], i32 92, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_COMB_LB]], ptr [[DOTOMP_COMB_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CK-32-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-32-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
+// CK-32-NEXT:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// CK-32:       [[COND_TRUE]]:
+// CK-32-NEXT:    br label %[[COND_END:.*]]
+// CK-32:       [[COND_FALSE]]:
+// CK-32-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-32-NEXT:    br label %[[COND_END]]
+// CK-32:       [[COND_END]]:
+// CK-32-NEXT:    [[COND:%.*]] = phi i32 [ 9, %[[COND_TRUE]] ], [ [[TMP3]], %[[COND_FALSE]] ]
+// CK-32-NEXT:    store i32 [[COND]], ptr [[DOTOMP_COMB_UB]], align 4
+// CK-32-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
+// CK-32-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
+// CK-32-NEXT:    br label %[[OMP_INNER_FOR_COND:.*]]
+// CK-32:       [[OMP_INNER_FOR_COND]]:
+// CK-32-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-32-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-32-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
+// CK-32-NEXT:    br i1 [[CMP1]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
+// CK-32:       [[OMP_INNER_FOR_BODY]]:
+// CK-32-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
+// CK-32-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// CK-32-NEXT:    [[TMP9:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CK-32-NEXT:    store i32 [[TMP9]], ptr [[X_CASTED]], align 4
+// CK-32-NEXT:    [[TMP10:%.*]] = load i32, ptr [[X_CASTED]], align 4
+// CK-32-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 3, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined.omp_outlined, i32 [[TMP7]], i32 [[TMP8]], i32 [[TMP10]])
+// CK-32-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
+// CK-32:       [[OMP_INNER_FOR_INC]]:
+// CK-32-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-32-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4
+// CK-32-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP11]], [[TMP12]]
+// CK-32-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4
+// CK-32-NEXT:    br label %[[OMP_INNER_FOR_COND]]
+// CK-32:       [[OMP_INNER_FOR_END]]:
+// CK-32-NEXT:    br label %[[OMP_LOOP_EXIT:.*]]
+// CK-32:       [[OMP_LOOP_EXIT]]:
+// CK-32-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
+// CK-32-NEXT:    ret void
+//
+//
+// CK-32-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined.omp_outlined(
+// CK-32-SAME: ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
+// CK-32-NEXT:  [[ENTRY:.*:]]
+// CK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
+// CK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
+// CK-32-NEXT:    [[DOTPREVIOUS_LB__ADDR:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTPREVIOUS_UB__ADDR:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CK-32-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
+// CK-32-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
+// CK-32-NEXT:    store i32 [[DOTPREVIOUS_LB_]], ptr [[DOTPREVIOUS_LB__ADDR]], align 4
+// CK-32-NEXT:    store i32 [[DOTPREVIOUS_UB_]], ptr [[DOTPREVIOUS_UB__ADDR]], align 4
+// CK-32-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
+// CK-32-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
+// CK-32-NEXT:    store i32 9, ptr [[DOTOMP_UB]], align 4
+// CK-32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTPREVIOUS_LB__ADDR]], align 4
+// CK-32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTPREVIOUS_UB__ADDR]], align 4
+// CK-32-NEXT:    store i32 [[TMP0]], ptr [[DOTOMP_LB]], align 4
+// CK-32-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_UB]], align 4
+// CK-32-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// CK-32-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// CK-32-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
+// CK-32-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// CK-32-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB3:[0-9]+]], i32 [[TMP3]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CK-32-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CK-32-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP4]], 9
+// CK-32-NEXT:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// CK-32:       [[COND_TRUE]]:
+// CK-32-NEXT:    br label %[[COND_END:.*]]
+// CK-32:       [[COND_FALSE]]:
+// CK-32-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CK-32-NEXT:    br label %[[COND_END]]
+// CK-32:       [[COND_END]]:
+// CK-32-NEXT:    [[COND:%.*]] = phi i32 [ 9, %[[COND_TRUE]] ], [ [[TMP5]], %[[COND_FALSE]] ]
+// CK-32-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
+// CK-32-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// CK-32-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
+// CK-32-NEXT:    br label %[[OMP_INNER_FOR_COND:.*]]
+// CK-32:       [[OMP_INNER_FOR_COND]]:
+// CK-32-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-32-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CK-32-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
+// CK-32-NEXT:    br i1 [[CMP1]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
+// CK-32:       [[OMP_INNER_FOR_BODY]]:
+// CK-32-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-32-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
+// CK-32-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// CK-32-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
+// CK-32-NEXT:    [[TMP10:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CK-32-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP10]], 1
+// CK-32-NEXT:    store i32 [[ADD2]], ptr [[X_ADDR]], align 4
+// CK-32-NEXT:    br label %[[OMP_BODY_CONTINUE:.*]]
+// CK-32:       [[OMP_BODY_CONTINUE]]:
+// CK-32-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
+// CK-32:       [[OMP_INNER_FOR_INC]]:
+// CK-32-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CK-32-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP11]], 1
+// CK-32-NEXT:    store i32 [[ADD3]], ptr [[DOTOMP_IV]], align 4
+// CK-32-NEXT:    br label %[[OMP_INNER_FOR_COND]]
+// CK-32:       [[OMP_INNER_FOR_END]]:
+// CK-32-NEXT:    br label %[[OMP_LOOP_EXIT:.*]]
+// CK-32:       [[OMP_LOOP_EXIT]]:
+// CK-32-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP3]])
 // CK-32-NEXT:    ret void
 //
 //
@@ -1391,6 +1822,32 @@ void foo7(int a) {
 // SIMD-ONLY-64-NEXT:    ret void
 //
 //
+// SIMD-ONLY-64-LABEL: define dso_local void @_Z4foo8v(
+// SIMD-ONLY-64-SAME: ) #[[ATTR0]] {
+// SIMD-ONLY-64-NEXT:  [[ENTRY:.*:]]
+// SIMD-ONLY-64-NEXT:    [[X:%.*]] = alloca i32, align 4
+// SIMD-ONLY-64-NEXT:    [[I:%.*]] = alloca i32, align 4
+// SIMD-ONLY-64-NEXT:    store i32 0, ptr [[X]], align 4
+// SIMD-ONLY-64-NEXT:    store i32 0, ptr [[I]], align 4
+// SIMD-ONLY-64-NEXT:    br label %[[FOR_COND:.*]]
+// SIMD-ONLY-64:       [[FOR_COND]]:
+// SIMD-ONLY-64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4
+// SIMD-ONLY-64-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], 10
+// SIMD-ONLY-64-NEXT:    br i1 [[CMP]], label %[[FOR_BODY:.*]], label %[[FOR_END:.*]]
+// SIMD-ONLY-64:       [[FOR_BODY]]:
+// SIMD-ONLY-64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
+// SIMD-ONLY-64-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 1
+// SIMD-ONLY-64-NEXT:    store i32 [[ADD]], ptr [[X]], align 4
+// SIMD-ONLY-64-NEXT:    br label %[[FOR_INC:.*]]
+// SIMD-ONLY-64:       [[FOR_INC]]:
+// SIMD-ONLY-64-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I]], align 4
+// SIMD-ONLY-64-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
+// SIMD-ONLY-64-NEXT:    store i32 [[INC]], ptr [[I]], align 4
+// SIMD-ONLY-64-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
+// SIMD-ONLY-64:       [[FOR_END]]:
+// SIMD-ONLY-64-NEXT:    ret void
+//
+//
 // SIMD-ONLY-32-LABEL: define dso_local void @_Z4foo1i(
 // SIMD-ONLY-32-SAME: i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // SIMD-ONLY-32-NEXT:  [[ENTRY:.*:]]
@@ -1522,10 +1979,42 @@ void foo7(int a) {
 // SIMD-ONLY-32-NEXT:    store i32 [[INC2]], ptr [[ARRAYIDX1]], align 4
 // SIMD-ONLY-32-NEXT:    ret void
 //
+//
+// SIMD-ONLY-32-LABEL: define dso_local void @_Z4foo8v(
+// SIMD-ONLY-32-SAME: ) #[[ATTR0]] {
+// SIMD-ONLY-32-NEXT:  [[ENTRY:.*:]]
+// SIMD-ONLY-32-NEXT:    [[X:%.*]] = alloca i32, align 4
+// SIMD-ONLY-32-NEXT:    [[I:%.*]] = alloca i32, align 4
+// SIMD-ONLY-32-NEXT:    store i32 0, ptr [[X]], align 4
+// SIMD-ONLY-32-NEXT:    store i32 0, ptr [[I]], align 4
+// SIMD-ONLY-32-NEXT:    br label %[[FOR_COND:.*]]
+// SIMD-ONLY-32:       [[FOR_COND]]:
+// SIMD-ONLY-32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4
+// SIMD-ONLY-32-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], 10
+// SIMD-ONLY-32-NEXT:    br i1 [[CMP]], label %[[FOR_BODY:.*]], label %[[FOR_END:.*]]
+// SIMD-ONLY-32:       [[FOR_BODY]]:
+// SIMD-ONLY-32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
+// SIMD-ONLY-32-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 1
+// SIMD-ONLY-32-NEXT:    store i32 [[ADD]], ptr [[X]], align 4
+// SIMD-ONLY-32-NEXT:    br label %[[FOR_INC:.*]]
+// SIMD-ONLY-32:       [[FOR_INC]]:
+// SIMD-ONLY-32-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I]], align 4
+// SIMD-ONLY-32-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
+// SIMD-ONLY-32-NEXT:    store i32 [[INC]], ptr [[I]], align 4
+// SIMD-ONLY-32-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
+// SIMD-ONLY-32:       [[FOR_END]]:
+// SIMD-ONLY-32-NEXT:    ret void
+//
 //.
-// CK-64: [[META17]] = !{}
-// CK-64: [[META18]] = !{i64 4}
+// CK-64: [[META19]] = !{}
+// CK-64: [[META20]] = !{i64 4}
 //.
-// CK-32: [[META18]] = !{}
-// CK-32: [[META19]] = !{i64 4}
+// CK-32: [[META20]] = !{}
+// CK-32: [[META21]] = !{i64 4}
+//.
+// SIMD-ONLY-64: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
+// SIMD-ONLY-64: [[META3]] = !{!"llvm.loop.mustprogress"}
+//.
+// SIMD-ONLY-32: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]]}
+// SIMD-ONLY-32: [[META4]] = !{!"llvm.loop.mustprogress"}
 //.
