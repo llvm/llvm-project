@@ -281,11 +281,14 @@ streaming vector length, and it will be equal to the value of `svg`.
 ### Expression Evaluation
 
 Some instructions are illegal to use in streaming mode, unless `FEAT_SMEFA64`
-is present. LLDB will not make any attempt to make expressions compatible
-with the current mode. If part of an expression is not compatible, it will
-result in a `SIGILL` that will be cleaned up as any other signal would be.
+is present.
 
-All register, ZA and mode state will be restored as normal after an expression.
+LLDB **will not** make any attempt to make expressions compatible with the
+current mode.
+
+If part of an expression is not compatible, it will
+result in a `SIGILL` that will be cleaned up as any other signal would be. All
+register, ZA and mode state will be restored as normal after an expression.
 
 Note that to restore to a non-streaming state from a streaming state, LLDB uses
 a special part of the Linux Kernel's
