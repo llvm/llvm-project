@@ -61,7 +61,6 @@ class RuntimeLibcall {
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
-  list<LibcallLoweringPredicate> LoweringPredicates;
   bit IsDefault = false;
 }
 
