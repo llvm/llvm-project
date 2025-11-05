@@ -79,7 +79,10 @@ public:
 
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
 
-  const llvm::StringMap<int> getMissingOrigins() const;
+  const llvm::StringMap<unsigned> getMissingOrigins() const;
+
+  // Utility function to check if an origin is missing for a given expression.
+  bool isOriginMissing(const Expr &E) const;
 
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
@@ -90,7 +93,7 @@ private:
   llvm::SmallVector<Origin> AllOrigins;
   llvm::DenseMap<const clang::ValueDecl *, OriginID> DeclToOriginID;
   llvm::DenseMap<const clang::Expr *, OriginID> ExprToOriginID;
-  llvm::StringMap<int> ExprTypeToMissingOriginCount;
+  llvm::StringMap<unsigned> ExprTypeToMissingOriginCount;
 };
 } // namespace clang::lifetimes::internal
 
