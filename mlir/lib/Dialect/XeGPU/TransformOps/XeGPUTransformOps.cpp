@@ -11,42 +11,10 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 
-#include <numeric>
-
-#include "llvm/Support/Debug.h"
-#define DEBUG_TYPE "xegpu-transforms"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::transform;
-
-class XeGPUTransformDialectExtension
-    : public transform::TransformDialectExtension<
-          XeGPUTransformDialectExtension> {
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(XeGPUTransformDialectExtension)
-
-  using Base::Base;
-
-  void init();
-};
-
-void XeGPUTransformDialectExtension::init() {
-  declareGeneratedDialect<scf::SCFDialect>();
-  declareGeneratedDialect<arith::ArithDialect>();
-  declareGeneratedDialect<xegpu::XeGPUDialect>();
-
-  registerTransformOps<
-#define GET_OP_LIST
-#include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp.inc"
-      >();
-}
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp.inc"
-
-void mlir::xegpu::registerTransformDialectExtension(DialectRegistry &registry) {
-  registry.addExtensions<XeGPUTransformDialectExtension>();
-}
 
 /// Assuming that `ofr` is an index attr or a param of index type
 /// or a transform dialect handle mapped to exactly one op
@@ -109,9 +77,10 @@ static DiagnosedSilenceableFailure convertMixedValuesToInt(
 }
 
 /// Create a layout attribute from the given parameters.
-xegpu::LayoutAttr createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
-                                   std::optional<ArrayRef<int32_t>> sgData,
-                                   std::optional<ArrayRef<int32_t>> instData) {
+static xegpu::LayoutAttr
+createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
+                 std::optional<ArrayRef<int32_t>> sgData,
+                 std::optional<ArrayRef<int32_t>> instData) {
   return xegpu::LayoutAttr::get(
       ctx, DenseI32ArrayAttr::get(ctx, sgLayout),
       sgData ? DenseI32ArrayAttr::get(ctx, sgData.value()) : nullptr,
@@ -122,9 +91,9 @@ xegpu::LayoutAttr createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
 }
 
 /// Replace xegpu.create_nd_desc op with a new one with the given layout.
-xegpu::CreateNdDescOp setDescLayout(transform::TransformRewriter &rewriter,
-                                    xegpu::CreateNdDescOp descOp,
-                                    xegpu::LayoutAttr layout) {
+static xegpu::CreateNdDescOp
+setDescLayout(transform::TransformRewriter &rewriter,
+              xegpu::CreateNdDescOp descOp, xegpu::LayoutAttr layout) {
   auto oldTensorDesc = descOp.getType();
   auto descType = xegpu::TensorDescType::get(
       oldTensorDesc.getShape(), oldTensorDesc.getElementType(),
@@ -134,12 +103,8 @@ xegpu::CreateNdDescOp setDescLayout(transform::TransformRewriter &rewriter,
       /*layout=*/layout);
 
   rewriter.setInsertionPointAfter(descOp);
-  if (descOp.getMixedOffsets().size() > 0) {
-    auto newDescOp = rewriter.replaceOpWithNewOp<xegpu::CreateNdDescOp>(
-        descOp, descType, descOp.getSource(), descOp.getMixedOffsets(),
-        descOp.getMixedSizes(), descOp.getMixedStrides());
-    return newDescOp;
-  }
+  assert(descOp.getMixedOffsets().size() == 0 &&
+         "create desc op with offsets is not supported");
   auto newDescOp = rewriter.replaceOpWithNewOp<xegpu::CreateNdDescOp>(
       descOp, descType, descOp.getSource(), descOp.getMixedSizes(),
       descOp.getMixedStrides());
@@ -228,4 +193,35 @@ void transform::SetDescLayoutOp::getEffects(
   onlyReadsHandle(getInstDataMutable(), effects);
   producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
+}
+
+namespace {
+class XeGPUTransformDialectExtension
+    : public transform::TransformDialectExtension<
+          XeGPUTransformDialectExtension> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(XeGPUTransformDialectExtension)
+
+  using Base::Base;
+
+  void init();
+};
+
+void XeGPUTransformDialectExtension::init() {
+  declareGeneratedDialect<scf::SCFDialect>();
+  declareGeneratedDialect<arith::ArithDialect>();
+  declareGeneratedDialect<xegpu::XeGPUDialect>();
+
+  registerTransformOps<
+#define GET_OP_LIST
+#include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp.inc"
+      >();
+}
+} // namespace
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp.inc"
+
+void mlir::xegpu::registerTransformDialectExtension(DialectRegistry &registry) {
+  registry.addExtensions<XeGPUTransformDialectExtension>();
 }
