@@ -688,14 +688,25 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
           : TTI.isLegalMaskedStore(OptimisticVectorType, OptimisticAlign, AS,
                                    TTI::MaskKind::ConstantMask);
 
-  // Derive the alignment of the leader of the chain (which every
-  // OffsetFromLeader is based on) using the current first element of the chain.
-  // We could derive a better alignment by iterating over the entire chain but
-  // this should be sufficient. We use this value to derive the alignment of any
-  // extra elements we create while gap filling.
-  Align LeaderOfChainAlign =
-      commonAlignment(getLoadStoreAlignment(C[0].Inst),
-                      C[0].OffsetFromLeader.abs().getLimitedValue());
+  // Cache the best aligned element in the chain for use when creating extra
+  // elements.
+  Align BestAlignedElemAlign;
+  APInt OffsetOfBestAlignedElemFromLeader;
+  for (const auto &E : C) {
+    Align ElementAlignment = getLoadStoreAlignment(E.Inst);
+    if (ElementAlignment > BestAlignedElemAlign) {
+      BestAlignedElemAlign = ElementAlignment;
+      OffsetOfBestAlignedElemFromLeader = E.OffsetFromLeader;
+    }
+  }
+
+  auto DeriveAlignFromBestAlignedElem = [&](APInt NewElemOffsetFromLeader) {
+    return commonAlignment(
+        BestAlignedElemAlign,
+        (NewElemOffsetFromLeader - OffsetOfBestAlignedElemFromLeader)
+            .abs()
+            .getLimitedValue());
+  };
 
   unsigned ASPtrBits = DL.getIndexSizeInBits(AS);
 
@@ -732,15 +743,13 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
     // which could cancel out the benefits of reducing number of load/stores.
     if (TryFillGaps &&
         SzBits == DL.getTypeSizeInBits(getLoadStoreType(It->Inst))) {
-      APInt OffsetFromLeaderOfGapStart = Prev.OffsetFromLeader + PrevSzBytes;
-      APInt GapSzBytes = It->OffsetFromLeader - OffsetFromLeaderOfGapStart;
+      APInt OffsetOfGapStartFromLeader = Prev.OffsetFromLeader + PrevSzBytes;
+      APInt GapSzBytes = It->OffsetFromLeader - OffsetOfGapStartFromLeader;
       if (GapSzBytes == PrevSzBytes) {
         // There is a single gap between Prev and Curr, create one extra element
         ChainElem NewElem = createExtraElementAfter(
             Prev, PrevSzBytes, "GapFill",
-            commonAlignment(
-                LeaderOfChainAlign,
-                OffsetFromLeaderOfGapStart.abs().getLimitedValue()));
+            DeriveAlignFromBestAlignedElem(OffsetOfGapStartFromLeader));
         CurChain.push_back(NewElem);
         CurChain.push_back(*It);
         continue;
@@ -751,15 +760,11 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
       if ((GapSzBytes == 2 * PrevSzBytes) && (CurChain.size() % 4 == 1)) {
         ChainElem NewElem1 = createExtraElementAfter(
             Prev, PrevSzBytes, "GapFill",
-            commonAlignment(
-                LeaderOfChainAlign,
-                OffsetFromLeaderOfGapStart.abs().getLimitedValue()));
+            DeriveAlignFromBestAlignedElem(OffsetOfGapStartFromLeader));
         ChainElem NewElem2 = createExtraElementAfter(
             NewElem1, PrevSzBytes, "GapFill",
-            commonAlignment(LeaderOfChainAlign,
-                            (OffsetFromLeaderOfGapStart + PrevSzBytes)
-                                .abs()
-                                .getLimitedValue()));
+            DeriveAlignFromBestAlignedElem(OffsetOfGapStartFromLeader +
+                                           PrevSzBytes));
         CurChain.push_back(NewElem1);
         CurChain.push_back(NewElem2);
         CurChain.push_back(*It);
