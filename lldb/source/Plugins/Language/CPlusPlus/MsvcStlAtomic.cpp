@@ -8,6 +8,7 @@
 
 #include "MsvcStl.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 
 using namespace lldb;
@@ -64,9 +65,30 @@ lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::Update() {
   if (!storage_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
-  if (!m_element_type)
+  CompilerType backend_type = m_backend.GetCompilerType();
+  if (!backend_type)
     return lldb::ChildCacheState::eRefetch;
+
+  m_element_type = backend_type.GetTypeTemplateArgument(0);
+  // PDB doesn't have info about templates, so this uses the return type of
+  // `load`. Which is equivalent to the template type.
+  if (!m_element_type) {
+    auto ast_ctx = backend_type.GetTypeSystem<TypeSystemClang>();
+    if (!ast_ctx)
+      return lldb::ChildCacheState::eRefetch;
+
+    clang::CXXRecordDecl *record_decl =
+        TypeSystemClang::GetAsCXXRecordDecl(backend_type.GetOpaqueQualType());
+    for (const auto *method : record_decl->methods()) {
+      if (method->getDeclName().isIdentifier() && method->getName() == "load") {
+        m_element_type = ast_ctx->GetType(method->getReturnType());
+        break;
+      }
+    }
+
+    if (!m_element_type)
+      return lldb::ChildCacheState::eRefetch;
+  }
 
   m_storage = storage_sp.get();
   return lldb::ChildCacheState::eRefetch;

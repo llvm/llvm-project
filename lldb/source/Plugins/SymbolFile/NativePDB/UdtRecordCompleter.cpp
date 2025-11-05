@@ -168,7 +168,13 @@ Error UdtRecordCompleter::visitKnownMember(
   // Static constant members may be a const[expr] declaration.
   // Query the symbol's value as the variable initializer if valid.
   if (member_ct.IsConst() && member_ct.IsCompleteType()) {
-    std::string qual_name = decl->getQualifiedNameAsString();
+    std::string qual_name;
+    if (m_record.record.kind == Member::Struct)
+      qual_name = (m_cvr.cr.Name + "::" + static_data_member.Name).str();
+    else if (m_record.record.kind == Member::Union)
+      qual_name = (m_cvr.ur.Name + "::" + static_data_member.Name).str();
+    else
+      qual_name = decl->getQualifiedNameAsString();
 
     auto results =
         m_index.globals().findRecordsByName(qual_name, m_index.symrecords());
