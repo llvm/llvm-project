@@ -136,11 +136,11 @@ find_first_character_wide_read(const unsigned char *src, unsigned char ch,
   const Word ch_mask = repeat_byte<Word>(ch);
 
   // Step 2: read blocks
-  for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
-       !has_zeroes<Word>((*block_ptr) ^ ch_mask) && cur < n;
-       ++block_ptr, cur += sizeof(Word)) {
-    char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
-  }
+  const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
+  for (; !has_zeroes<Word>((*block_ptr) ^ ch_mask) && cur < n;
+       ++block_ptr, cur += sizeof(Word))
+    ;
+  char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
 
   // Step 3: find the match in the block
   for (; *char_ptr != ch && cur < n; ++char_ptr, ++cur) {
