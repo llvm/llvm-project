@@ -82,7 +82,8 @@ Updating Pull Requests
 ----------------------
 In order to update your pull request, the only thing you need to do is to push
 your new commits to the branch in your fork. That will automatically update
-the pull request.
+the pull request. You can also use the Update Branch button in GitHub's Pull
+Request UI, but be aware that it will create a merge commit on your branch.
 
 When updating a pull request, you should push additional "fix up" commits to
 your branch instead of force pushing. This makes it easier for GitHub to
@@ -90,10 +91,11 @@ track the context of previous review comments. Consider using the
 `built-in support for fixups <https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---fixupamendrewordltcommitgt>`_
 in git.
 
-If you do this, you must squash and merge before landing the PR and
-you must use the pull request title and description as the commit message.
-You can do this manually with an interactive git rebase or with GitHub's
-built-in tool. See the section about landing your fix below.
+If you create fix up or merge commits, you must squash and merge before
+landing the PR and you must use the pull request title and description as
+the commit message. You can do this manually with an interactive git
+rebase or with GitHub's built-in tool. See the section about landing your
+fix below.
 
 When pushing to your branch, make sure you push to the correct fork. Check your
 remotes with:
@@ -108,7 +110,9 @@ Rebasing Pull Requests and Force Pushes
 ---------------------------------------
 In general, you should avoid rebasing a Pull Request and force pushing to the
 branch that's the root of the Pull Request during the review. This action will
-make the context of the old changes and comments harder to find and read.
+make the context of the old changes and comments harder to find and read. If
+you want to make your pull request up-to-date with main, you might consider
+updating your branch, as described in the previous section.
 
 Sometimes, a rebase might be needed to update your branch with a fix for a test
 or in some dependent code.
