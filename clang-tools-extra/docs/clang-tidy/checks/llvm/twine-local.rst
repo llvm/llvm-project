@@ -15,7 +15,7 @@ should be generally avoided.
 
   static std::string Moo = (Twine("bark") + "bah").str();
 
-The ``llvm::Twine`` does not own the memory of its contents, so it is not
+The ``Twine`` does not own the memory of its contents, so it is not
 recommended to use ``Twine`` created from temporary strings or string literals.
 
 .. code-block:: c++
@@ -29,6 +29,6 @@ recommended to use ``Twine`` created from temporary strings or string literals.
   }
 
 After applying this fix-it hints, the code will use ``std::string`` instead of
-``Twine`` for local variables. However, ``llvm::Twine`` has lots of methods that
+``Twine`` for local variables. However, ``Twine`` has lots of methods that
 are incompatible with ``std::string``, so the user may need to adjust the code
 manually after applying the fix-it hints.
