@@ -304,18 +304,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   }
 
   bool IsSingleScalar = vputils::isSingleScalar(Def);
-
   VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
-  // Check if there is a scalar value for the selected lane.
-  if (!hasScalarValue(Def, LastLane)) {
-    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be a single scalar.
-    assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
-                VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
-           "unexpected recipe found to be invariant");
-    IsSingleScalar = true;
-    LastLane = 0;
-  }
 
   // We need to construct the vector value for a single-scalar value by
   // broadcasting the scalar to all lanes.

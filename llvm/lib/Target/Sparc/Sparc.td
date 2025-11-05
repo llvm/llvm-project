@@ -95,6 +95,9 @@ def FeatureSoftFloat : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
 def TuneSlowRDPC : SubtargetFeature<"slow-rdpc", "HasSlowRDPC", "true",
                                     "rd %pc, %XX is slow", [FeatureV9]>;
 
+def TuneNoPredictor : SubtargetFeature<"no-predictor", "HasNoPredictor", "true",
+                                    "Processor has no branch predictor, branches stall execution", []>;
+
 //==== Features added predmoninantly for LEON subtarget support
 include "LeonFeatures.td"
 
@@ -174,12 +177,15 @@ def : Proc<"ultrasparc3",     [FeatureV9, FeatureV8Deprecated, FeatureVIS,
                                FeatureVIS2],
                               [TuneSlowRDPC]>;
 def : Proc<"niagara",         [FeatureV9, FeatureV8Deprecated, FeatureVIS,
-                               FeatureVIS2, FeatureUA2005]>;
+                               FeatureVIS2, FeatureUA2005],
+                              [TuneNoPredictor]>;
 def : Proc<"niagara2",        [FeatureV9, FeatureV8Deprecated, UsePopc,
-                               FeatureVIS, FeatureVIS2, FeatureUA2005]>;
+                               FeatureVIS, FeatureVIS2, FeatureUA2005],
+                              [TuneNoPredictor]>;
 def : Proc<"niagara3",        [FeatureV9, FeatureV8Deprecated, UsePopc,
                                FeatureVIS, FeatureVIS2, FeatureVIS3,
-                               FeatureUA2005, FeatureUA2007]>;
+                               FeatureUA2005, FeatureUA2007],
+                              [TuneNoPredictor]>;
 def : Proc<"niagara4",        [FeatureV9, FeatureV8Deprecated, UsePopc,
                                FeatureVIS, FeatureVIS2, FeatureVIS3,
                                FeatureUA2005, FeatureUA2007, FeatureOSA2011,
