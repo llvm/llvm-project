@@ -114,6 +114,7 @@ exit:
   ret float %max.next
 }
 
+; TODO: Could fold pairs of `fcmp uno` together.
 define float @test_fmax_and_fmin(ptr %src.0, ptr %src.1, i64 %n) {
 ; CHECK-LABEL: define float @test_fmax_and_fmin(
 ; CHECK-SAME: ptr [[SRC_0:%.*]], ptr [[SRC_1:%.*]], i64 [[N:%.*]]) {
