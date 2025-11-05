@@ -290,20 +290,17 @@ private:
 static bool isCandidateForImplicitData(Value val, Region &accRegion) {
   // Ensure the variable is an allowed type for data clause.
   if (!acc::isPointerLikeType(val.getType()) &&
-      !acc::isMappableType(val.getType())) {
+      !acc::isMappableType(val.getType()))
     return false;
-  }
 
   // If this is already coming from a data clause, we do not need to generate
   // another.
-  if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp())) {
+  if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp()))
     return false;
-  }
 
   // If this is only used by private clauses, it is not a real live-in.
-  if (acc::isOnlyUsedByPrivateClauses(val, accRegion)) {
+  if (acc::isOnlyUsedByPrivateClauses(val, accRegion))
     return false;
-  }
 
   return true;
 }
@@ -334,10 +331,8 @@ ACCImplicitData::getDominatingDataClauses(Operation *computeConstructOp) {
 
   // Find the enclosing function/subroutine
   Operation *funcOp = computeConstructOp->getParentOfType<func::FuncOp>();
-
-  if (!funcOp) {
+  if (!funcOp)
     return dominatingDataClauses.takeVector();
-  }
 
   // Walk the function to find `acc.declare_enter`/`acc.declare_exit` pairs that
   // dominate and post-dominate the compute construct and add their data
@@ -348,19 +343,17 @@ ACCImplicitData::getDominatingDataClauses(Operation *computeConstructOp) {
     if (domInfo.dominates(declareEnterOp.getOperation(), computeConstructOp)) {
       // Collect all `acc.declare_exit` ops for this token.
       SmallVector<acc::DeclareExitOp> exits;
-      for (auto *user : declareEnterOp.getToken().getUsers()) {
-        if (auto declareExit = dyn_cast<acc::DeclareExitOp>(user)) {
+      for (auto *user : declareEnterOp.getToken().getUsers())
+        if (auto declareExit = dyn_cast<acc::DeclareExitOp>(user))
           exits.push_back(declareExit);
-        }
-      }
+
       // Only add clauses if every `acc.declare_exit` op post-dominates the
       // compute construct.
       if (!exits.empty() && llvm::all_of(exits, [&](acc::DeclareExitOp exitOp) {
             return postDomInfo.postDominates(exitOp, computeConstructOp);
           })) {
-        for (auto dataClause : declareEnterOp.getDataClauseOperands()) {
+        for (auto dataClause : declareEnterOp.getDataClauseOperands())
           dominatingDataClauses.insert(dataClause);
-        }
       }
     }
   });
@@ -377,11 +370,9 @@ Operation *ACCImplicitData::getOriginalDataClauseOpForAlias(
     if (auto *dataClauseOp = dataClause.getDefiningOp()) {
       // Only accept clauses that guarantee that the alias is present.
       if (isa<acc::CopyinOp, acc::CreateOp, acc::PresentOp, acc::NoCreateOp,
-              acc::DevicePtrOp>(dataClauseOp)) {
-        if (aliasAnalysis.alias(acc::getVar(dataClauseOp), var).isMust()) {
+              acc::DevicePtrOp>(dataClauseOp))
+        if (aliasAnalysis.alias(acc::getVar(dataClauseOp), var).isMust())
           return dataClauseOp;
-        }
-      }
     }
   }
   return nullptr;
@@ -443,7 +434,7 @@ acc::FirstprivateRecipeOp ACCImplicitData::generateFirstprivateRecipe(
     ModuleOp &module, mlir::Value var, mlir::Location loc, OpBuilder &builder,
     acc::OpenACCSupport &accSupport) {
   auto type = var.getType();
-  auto recipeName =
+  std::string recipeName =
       accSupport.getRecipeName(acc::RecipeKind::firstprivate_recipe, type, var);
 
   // Check if recipe already exists
@@ -644,16 +635,12 @@ addNewPrivateOperands(OpT &accOp, mlir::SmallVector<Value> &privateOperands,
 
   // Collect all of the existing recipes since they are held in an attribute.
   // To add to it, we need to create a brand new one.
-  if (accOp.getPrivatizationRecipes().has_value()) {
-    for (auto privatization : accOp.getPrivatizationRecipesAttr()) {
+  if (accOp.getPrivatizationRecipes().has_value())
+    for (auto privatization : accOp.getPrivatizationRecipesAttr())
       completePrivateRecipesSyms.push_back(privatization);
-    }
-  }
-  if (accOp.getFirstprivatizationRecipes().has_value()) {
-    for (auto privatization : accOp.getFirstprivatizationRecipesAttr()) {
+  if (accOp.getFirstprivatizationRecipes().has_value())
+    for (auto privatization : accOp.getFirstprivatizationRecipesAttr())
       completeFirstprivateRecipesSyms.push_back(privatization);
-    }
-  }
 
   // Now separate between private and firstprivate operands.
   for (auto [priv, privateRecipeSym] :
@@ -674,14 +661,12 @@ addNewPrivateOperands(OpT &accOp, mlir::SmallVector<Value> &privateOperands,
   accOp.getFirstprivateOperandsMutable().append(newFirstprivateOperands);
 
   // Update the privatizationRecipes attributes to hold all of the new recipes.
-  if (!completePrivateRecipesSyms.empty()) {
+  if (!completePrivateRecipesSyms.empty())
     accOp.setPrivatizationRecipesAttr(
         mlir::ArrayAttr::get(accOp.getContext(), completePrivateRecipesSyms));
-  }
-  if (!completeFirstprivateRecipesSyms.empty()) {
+  if (!completeFirstprivateRecipesSyms.empty())
     accOp.setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(
         accOp.getContext(), completeFirstprivateRecipesSyms));
-  }
 }
 
 static mlir::Operation *findDataExitOp(mlir::Operation *dataEntryOp) {
@@ -803,9 +788,8 @@ void ACCImplicitData::generateImplicitDataOps(
   // Implicit data attributes are only applied if "[t]here is no default(none)
   // clause visible at the compute construct."
   if (defaultClause.has_value() &&
-      defaultClause.value() == acc::ClauseDefaultValue::None) {
+      defaultClause.value() == acc::ClauseDefaultValue::None)
     return;
-  }
   assert(!defaultClause.has_value() ||
          defaultClause.value() == acc::ClauseDefaultValue::Present);
 
@@ -856,17 +840,15 @@ void ACCImplicitData::generateImplicitDataOps(
   // 5) Generate private recipes which are required for properly attaching
   // private operands.
   if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
-                !std::is_same_v<OpT, acc::KernelEnvironmentOp>) {
+                !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
     generateRecipes(module, builder, computeConstructOp, newPrivateOperands,
                     newPrivateRecipeSyms);
-  }
 
   // 6) Figure out insertion order for the new data clause operands.
   llvm::SmallVector<Value> sortedDataClauseOperands(
       computeConstructOp.getDataClauseOperands());
-  for (auto newClause : newDataClauseOperands) {
+  for (auto newClause : newDataClauseOperands)
     insertInSortedOrder(sortedDataClauseOperands, newClause.getDefiningOp());
-  }
 
   // 7) Generate the data exit operations.
   generateDataExitOperations(builder, computeConstructOp, newDataClauseOperands,
@@ -876,10 +858,10 @@ void ACCImplicitData::generateImplicitDataOps(
   assert(newPrivateOperands.size() == newPrivateRecipeSyms.size() &&
          "sizes must match");
   if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
-                !std::is_same_v<OpT, acc::KernelEnvironmentOp>) {
+                !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
     addNewPrivateOperands(computeConstructOp, newPrivateOperands,
                           newPrivateRecipeSyms);
-  }
+
   computeConstructOp.getDataClauseOperandsMutable().assign(
       sortedDataClauseOperands);
 }
