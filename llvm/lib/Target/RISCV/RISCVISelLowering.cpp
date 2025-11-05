@@ -16508,6 +16508,7 @@ static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
 
 static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
                                        uint64_t MulAmt) {
+  // 3/5/9 * 3/5/9 -> (shXadd (shYadd X, X), (shYadd X, X))
   switch (MulAmt) {
   case 5 * 3:
     return getShlAddShlAdd(N, DAG, 2, 1, /*AddX=*/false);
@@ -16522,6 +16523,8 @@ static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
   default:
     break;
   }
+
+  // 2/4/8 * 3/5/9 + 1 -> (shXadd (shYadd X, X), X)
   int ShX;
   if (int ShY = isShifted359(MulAmt - 1, ShX)) {
     assert(ShX != 0 && "MulAmt=4,6,10 handled before");
