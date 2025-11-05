@@ -26,6 +26,7 @@
 
 define spir_func void @foo() {
 entry:
+; TODO: if and when the SPIR-V learns how to lower readcyclecounter, we will have to pick another unhandled intrinsic
   %0 = call i64 @llvm.readcyclecounter()
   %1 = call i64 @llvm.some.custom.intrinsic()
   ret void
