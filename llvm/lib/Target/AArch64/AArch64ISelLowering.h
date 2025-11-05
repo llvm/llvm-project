@@ -23,6 +23,11 @@
 
 namespace llvm {
 
+namespace AArch64ISD {
+// Forward declare the enum from the generated file
+enum GenNodeType : unsigned;
+} // namespace AArch64ISD
+
 class AArch64TargetMachine;
 
 namespace AArch64 {
@@ -205,6 +210,9 @@ public:
                                  MachineOperand &IntDiscOp,
                                  MachineOperand &AddrDiscOp,
                                  const TargetRegisterClass *AddrDiscRC) const;
+
+  MachineBasicBlock *EmitCTSELECT(MachineInstr &MI, MachineBasicBlock *BB,
+                                  unsigned Opcode) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -713,6 +721,7 @@ private:
                          iterator_range<SDNode::user_iterator> Users,
                          SDNodeFlags Flags, const SDLoc &dl,
                          SelectionDAG &DAG) const;
+  SDValue LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
@@ -949,6 +958,8 @@ private:
   bool hasMultipleConditionRegisters(EVT VT) const override {
     return VT.isScalableVector();
   }
+
+  bool isSelectSupported(SelectSupportKind Kind) const override { return true; }
 };
 
 namespace AArch64 {
