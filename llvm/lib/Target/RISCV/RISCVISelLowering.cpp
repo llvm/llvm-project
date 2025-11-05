@@ -16162,8 +16162,8 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
 }
 
-static SDValue reduceANDOfSetCC(SDNode *N, SelectionDAG &DAG,
-                                const RISCVSubtarget &Subtarget) {
+static SDValue combineANDOfSetCCToCZERO(SDNode *N, SelectionDAG &DAG,
+                                        const RISCVSubtarget &Subtarget) {
   if (Subtarget.hasCZEROLike()) {
     // (and (i1) f, (setcc c, 0, ne)) -> (select c, f, 0) -> (czero.nez f, c)
     // (and (i1) f, (setcc c, 0, eq)) -> (select c, 0, f) -> (czero.eqz f, c)
@@ -16244,7 +16244,7 @@ static SDValue performANDCombine(SDNode *N,
 
   if (SDValue V = reverseZExtICmpCombine(N, DAG, Subtarget))
     return V;
-  if (SDValue V = reduceANDOfSetCC(N, DAG, Subtarget))
+  if (SDValue V = combineANDOfSetCCToCZERO(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
