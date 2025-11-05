@@ -5,10 +5,8 @@ define amdgpu_ps i16 @absdiff_i16_false(i16 inreg %arg0, i16 inreg %arg1) {
 ; CHECK-LABEL: absdiff_i16_false:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_sub_i32 s0, s0, s1
-; CHECK-NEXT:    s_sext_i32_i16 s1, s0
-; CHECK-NEXT:    s_sub_i32 s0, 0, s0
 ; CHECK-NEXT:    s_sext_i32_i16 s0, s0
-; CHECK-NEXT:    s_max_i32 s0, s1, s0
+; CHECK-NEXT:    s_abs_i32 s0, s0
 ; CHECK-NEXT:    ; return to shader part epilog
   %diff = sub i16 %arg0, %arg1
   %res = call i16 @llvm.abs.i16(i16 %diff, i1 false) ; INT_MIN input returns INT_MIN
@@ -19,10 +17,8 @@ define amdgpu_ps i16 @absdiff_i16_true(i16 inreg %arg0, i16 inreg %arg1) {
 ; CHECK-LABEL: absdiff_i16_true:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_sub_i32 s0, s0, s1
-; CHECK-NEXT:    s_sext_i32_i16 s1, s0
-; CHECK-NEXT:    s_sub_i32 s0, 0, s0
 ; CHECK-NEXT:    s_sext_i32_i16 s0, s0
-; CHECK-NEXT:    s_max_i32 s0, s1, s0
+; CHECK-NEXT:    s_abs_i32 s0, s0
 ; CHECK-NEXT:    ; return to shader part epilog
   %diff = sub i16 %arg0, %arg1
   %res = call i16 @llvm.abs.i16(i16 %diff, i1 true) ; INT_MIN input returns poison
