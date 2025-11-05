@@ -2791,7 +2791,7 @@ static bool isCzeroCompatible(const SDValue Op) {
 // %Res = czero.eqz %And, %X
 bool RISCVTargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT VT,
                                                           SDNode *N) const {
-  if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) {
+  if (Subtarget.hasCZEROLike()) {
     assert(
         N->getOpcode() == ISD::SELECT &&
         "shouldNormalizeToSelectSequence() called with non-SELECT operation");
@@ -2805,7 +2805,7 @@ bool RISCVTargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT VT,
 }
 
 bool RISCVTargetLowering::hasConditionalZero() const {
-  return Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps();
+  return Subtarget.hasCZEROLike();
 }
 
 bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
@@ -16164,7 +16164,7 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
 
 static SDValue reduceANDOfSetCC(SDNode *N, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
-  if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) {
+  if (Subtarget.hasCZEROLike()) {
     // (and (i1) f, (setcc c, 0, ne)) -> (select c, f, 0) -> (czero.nez f, c)
     // (and (i1) f, (setcc c, 0, eq)) -> (select c, 0, f) -> (czero.eqz f, c)
     // (and (setcc c, 0, ne), (i1) g) -> (select c, g, 0) -> (czero.nez g, c)
