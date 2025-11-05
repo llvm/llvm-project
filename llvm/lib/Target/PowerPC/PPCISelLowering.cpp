@@ -15681,14 +15681,16 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
   // t7: i1 = setcc t6, Constant:i32<0>, seteq:ch
 
   // Or transforms the DAG
-  //   t5: i128,ch = load<(load (s128) from %ir.X, align 1)> t0, t2, undef:i64
-  //   t8: i1 = setcc Constant:i128<237684487579686500932345921536>, t5, setne:ch
+  //  t5: i128,ch = load<(load (s128) from %ir.X, align 1)> t0, t2, undef:i64
+  //  t8: i1 =
+  //     setcc Constant:i128<237684487579686500932345921536>, t5, setne:ch
   //
-  //   --->
+  //  --->
   //
-  //  t5: v16i8,ch = load<(load (s128) from %ir.X, align 1)> t0, t2, undef:i64
-  //  t6: v16i8 = bitcast Constant:i128<237684487579686500932345921536>
-  //  t7: i32 = llvm.ppc.altivec.vcmpequb.p Constant:i32<10962>, Constant:i32<2>, t5, t26
+  // t5: v16i8,ch = load<(load (s128) from %ir.X, align 1)> t0, t2, undef:i64
+  // t6: v16i8 = bitcast Constant:i128<237684487579686500932345921536>
+  // t7: i32 =
+  //  llvm.ppc.altivec.vcmpequb.p Constant:i32<10962>, Constant:i32<2>, t5, t2
 
   SDValue LHSVec = getV16i8Load(N->getOperand(0));
   SDValue RHSVec = getV16i8Load(N->getOperand(1));
