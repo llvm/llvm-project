@@ -59,7 +59,7 @@ TEST(RegisterValueTest, GetScalarValue) {
 
 void TestSetValueFromData(const Scalar &etalon, void *src, size_t src_byte_size,
                           const lldb::ByteOrder endianness) {
-  RegisterInfo ri{"uint128_register",
+  RegisterInfo ri{"test",
                   nullptr,
                   static_cast<uint32_t>(src_byte_size),
                   0,
