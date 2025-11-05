@@ -448,3 +448,35 @@ func.func @test_working_1to1_pattern(%arg0: f16) {
   "test.type_consumer"(%arg0) : (f16) -> ()
   "test.return"() : () -> ()
 }
+
+// -----
+
+// The region of "test.post_order_legalization" is converted before the op.
+
+// CHECK: notifyBlockInserted into test.post_order_legalization: was unlinked
+// CHECK: notifyOperationInserted: test.invalid
+// CHECK: notifyBlockErased
+// CHECK: notifyOperationInserted: test.valid, was unlinked
+// CHECK: notifyOperationReplaced: test.invalid
+// CHECK: notifyOperationErased: test.invalid
+// CHECK: notifyOperationModified: test.post_order_legalization
+
+// CHECK-LABEL: func @test_preorder_legalization
+//       CHECK:   "test.post_order_legalization"() ({
+//       CHECK:   ^{{.*}}(%[[arg0:.*]]: f64):
+// Note: The survival of a not-explicitly-invalid operation does *not* cause
+// a conversion failure in when applying a partial conversion.
+//       CHECK:     %[[cast:.*]] = "test.cast"(%[[arg0]]) : (f64) -> i64
+//       CHECK:     "test.remaining_consumer"(%[[cast]]) : (i64) -> ()
+//       CHECK:     "test.valid"(%[[arg0]]) : (f64) -> ()
+//       CHECK:   }) {is_legal} : () -> ()
+func.func @test_preorder_legalization() {
+  "test.post_order_legalization"() ({
+  ^bb0(%arg0: i64):
+    // expected-remark @+1 {{'test.remaining_consumer' is not legalizable}}
+    "test.remaining_consumer"(%arg0) : (i64) -> ()
+    "test.invalid"(%arg0) : (i64) -> ()
+  }) : () -> ()
+  // expected-remark @+1 {{'func.return' is not legalizable}}
+  return
+}
