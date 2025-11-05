@@ -351,16 +351,20 @@ struct iterator_traits<_Tp*> {
 template <class _Tp>
 using __iterator_category _LIBCPP_NODEBUG = typename _Tp::iterator_category;
 
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 using __iterator_concept _LIBCPP_NODEBUG = typename _Tp::iterator_concept;
+#endif
 
 template <class _Tp, class _Up>
 using __has_iterator_category_convertible_to _LIBCPP_NODEBUG =
     is_convertible<__detected_or_t<__nat, __iterator_category, iterator_traits<_Tp> >, _Up>;
 
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Up>
 using __has_iterator_concept_convertible_to _LIBCPP_NODEBUG =
     is_convertible<__detected_or_t<__nat, __iterator_concept, _Tp>, _Up>;
+#endif
 
 template <class _Tp>
 using __has_input_iterator_category _LIBCPP_NODEBUG = __has_iterator_category_convertible_to<_Tp, input_iterator_tag>;
