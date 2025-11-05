@@ -9,6 +9,7 @@
 #include "DWARFUnit.h"
 
 #include "lldb/Core/Module.h"
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
@@ -738,7 +739,7 @@ bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
                                        lldb::offset_t &offset,
                                        RegisterContext *reg_ctx,
                                        lldb::RegisterKind reg_kind,
-                                       std::vector<Value> &stack) const {
+                                       DWARFExpression::Stack &stack) const {
   return GetSymbolFileDWARF().ParseVendorDWARFOpcode(op, opcodes, offset,
                                                      reg_ctx, reg_kind, stack);
 }

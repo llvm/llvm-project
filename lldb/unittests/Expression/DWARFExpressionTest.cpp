@@ -743,12 +743,12 @@ public:
     return offset - data_offset;
   }
 
-  virtual bool ParseVendorDWARFOpcode(
-      uint8_t op, const lldb_private::DataExtractor &opcodes,
-      lldb::offset_t &offset,
+  virtual bool
+  ParseVendorDWARFOpcode(uint8_t op, const lldb_private::DataExtractor &opcodes,
+                         lldb::offset_t &offset,
 
-      RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
-      std::vector<lldb_private::Value> &stack) const override {
+                         RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
+                         DWARFExpression::Stack &stack) const override {
     if (op != DW_OP_WASM_location) {
       return false;
     }
