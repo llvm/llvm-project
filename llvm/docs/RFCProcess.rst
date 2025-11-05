@@ -43,6 +43,29 @@ to words no longer in the proposal.
 There is not a set time limit to the feedback period; it lasts as long as
 discussion is actively continuing on the proposal.
 
+After posting a major proposal, it is common to receive lots of conflicting
+feedback from different parties, or no feedback at all, leaving authors without
+clear next steps. As a community, we are aiming for `"rough consensus"
+<https://en.wikipedia.org/wiki/Rough_consensus>`_, similar in spirit to what is
+described in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
+This requires considering and addressing all of the objections to the RFC, and
+confirming that we can all live with the tradeoffs embodied in the proposal.
+
+The LLVM Area Teams (defined in `LP0004
+<https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md>`_)
+are responsible for facilitating project decision making. In cases where there
+isn't obvious agreement, area teams should step in to restate their perceived
+consensus. In cases of deeper disagreement, area teams should try to identify
+the next steps for the proposal, such as gathering more data, changing the
+proposal, or rejecting it outright. They can also act as moderators by
+scheduling calls for participants to speak directly to resolve disagreements,
+subject to normal :ref:`Code of Conduct <LLVM Community Code of Conduct>`
+guidelines.
+
+Once the design of the new feature is finalized, the work itself should be done
+as a series of :ref:`incremental changes <incremental-changes>`, not as a long-term development branch.
+
+
 Trivial Acceptance or Rejection
 -------------------------------
 Some proposals have obvious consensus (for or against) after discussion in the
@@ -82,3 +105,21 @@ future. The new RFC should either clearly identify new information that may
 change the community's perception of the proposal and/or explicitly address the
 concerns previously raised by the community. It is helpful to explicitly call
 out such information in the subsequent RFC.
+
+Suggestions on Getting a Change Accepted
+----------------------------------------
+These are some suggestions for how to get a major change accepted:
+
+* Make it targeted, and avoid touching components irrelevant to the task.
+
+* Explain how the change improves LLVM for other stakeholders rather than
+  focusing on your specific use case.
+
+* As discussion evolves, periodically summarize the current state of the
+  discussion and clearly separate points where consensus seems to emerge from
+  those where further discussion is necessary.
+
+* Compilers are foundational infrastructure, so there is a high quality bar,
+  and the burden of proof is on the proposer. If reviewers repeatedly ask for
+  an unreasonable amount of evidence or data, proposal authors can escalate to
+  the area team to resolve disagreements.
