@@ -659,9 +659,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     const unsigned NumSrcElts = VecVT.getNumElements();
     // A return type different from the vector's element type may lead to
     // issues with pattern selection. Bail out to avoid that.
-    if (BitWidth > EltBitWidth) {
+    if (BitWidth > EltBitWidth)
       break;
-    }
 
     Known.Zero.setAllBits();
     Known.One.setAllBits();
@@ -674,7 +673,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
           APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
 
     computeKnownBitsImpl(InVec, Known, DemandedSrcElts, Depth + 1);
-
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
