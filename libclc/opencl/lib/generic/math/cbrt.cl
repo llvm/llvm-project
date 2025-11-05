@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_cbrt.inc>
+#include <clc/math/clc_cbrt.h>
 #include <clc/opencl/math/cbrt.h>
 
 #define __CLC_FUNCTION cbrt

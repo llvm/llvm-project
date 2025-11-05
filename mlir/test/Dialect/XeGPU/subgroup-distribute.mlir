@@ -268,15 +268,16 @@ gpu.module @xevm_module{
 
 // -----
 // CHECK-LABEL: gpu.func @load_store_matrix_1({{.*}}) {
-// CHECK: %[[LAYOUT_X:.*]] = arith.constant 8 : index
-// CHECK: %[[LAYOUT_Y:.*]] = arith.constant 2 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C8:.*]] = arith.constant 8 : index
 // CHECK: %[[LANE_ID:.*]] = gpu.lane_id
-// CHECK: %[[DELINEARIZED_LANE_Y:.*]] = affine.apply #{{.*}}()[%[[LANE_ID]]]
-// CHECK: %[[DELINEARIZED_LANE_X:.*]] = affine.apply #{{.*}}()[%[[LANE_ID]]]
-// CHECK: %[[LANE_Y_OFFSET:.*]] = index.remu %[[DELINEARIZED_LANE_Y]], %[[LAYOUT_Y]]
-// CHECK: %[[LANE_X_OFFSET:.*]] = index.remu %[[DELINEARIZED_LANE_X]], %[[LAYOUT_X]]
-// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[LANE_Y_OFFSET]], %[[LANE_X_OFFSET]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<1x1xf32>
-// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%[[LANE_Y_OFFSET]], %[[LANE_X_OFFSET]]] : vector<1x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+// CHECK: %[[REMU1:.*]] = index.remu %[[LANE_ID]], %[[C8]]
+// CHECK: %[[DIVU:.*]] = index.divu %[[LANE_ID]], %[[C8]]
+// CHECK: %[[REMU2:.*]] = index.remu %[[DIVU]], %[[C2]]
+// CHECK: %[[REMU3:.*]] = index.remu %[[REMU2]], %[[C2]]
+// CHECK: %[[REMU4:.*]] = index.remu %[[REMU1]], %[[C8]]
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[REMU3]], %[[REMU4]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<1x1xf32>
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%[[REMU3]], %[[REMU4]]] : vector<1x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
 gpu.module @xevm_module{
   gpu.func @load_store_matrix_1(%arg0: !xegpu.mem_desc<32x32xf32>) {
     %c0 = arith.constant 0 : index
@@ -288,19 +289,20 @@ gpu.module @xevm_module{
 
 // -----
 // CHECK-LABEL: gpu.func @load_store_matrix_2({{.*}}) {
-// CHECK: %[[DIST_UNIT_HEIGHT_X:.*]] = arith.constant 4 : index
-// CHECK: %[[DIST_UNIT_HEIGHT_Y:.*]] = arith.constant 8 : index
-// CHECK: %[[LANE_DATA_Y:.*]] = arith.constant 2 : index
-// CHECK: %[[USER_OFFSET_X:.*]] = arith.constant 1 : index
+// CHECK: %[[C8:.*]] = arith.constant 8 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C4:.*]] = arith.constant 4 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
 // CHECK: %[[LANE_ID:.*]] = gpu.lane_id
-// CHECK: %[[DELINEARIZED_LANE_Y:.*]] = affine.apply #{{.*}}()[%[[LANE_ID]]]
-// CHECK: %[[DELINEARIZED_LANE_X:.*]] = affine.apply #{{.*}}()[%[[LANE_ID]]]
-// CHECK: %[[LANE_Y_OFFSET_1:.*]] = index.mul %[[DELINEARIZED_LANE_Y]], %[[LANE_DATA_Y]]
-// CHECK: %[[LANE_Y_OFFSET:.*]] = index.remu %[[LANE_Y_OFFSET_1]], %[[DIST_UNIT_HEIGHT_Y]]
-// CHECK: %[[LANE_X_OFFSET_1:.*]] = index.remu %[[DELINEARIZED_LANE_X]], %[[DIST_UNIT_HEIGHT_X]]
-// CHECK: %[[LANE_X_OFFSET:.*]] = index.add %[[LANE_X_OFFSET_1]], %[[USER_OFFSET_X]]
-// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[LANE_Y_OFFSET]], %[[LANE_X_OFFSET]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x1xf32>
-// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%[[LANE_Y_OFFSET]], %[[LANE_X_OFFSET]]] : vector<2x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+// CHECK: %[[REMU1:.*]] = index.remu %[[LANE_ID]], %[[C4]]
+// CHECK: %[[DIVU:.*]] = index.divu %[[LANE_ID]], %[[C4]]
+// CHECK: %[[REMU2:.*]] = index.remu %[[DIVU]], %[[C4]]
+// CHECK: %[[MUL:.*]] = index.mul %[[REMU2]], %[[C2]]
+// CHECK: %[[REMU3:.*]] = index.remu %[[MUL]], %[[C8]]
+// CHECK: %[[REMU4:.*]] = index.remu %[[REMU1]], %[[C4]]
+// CHECK: %[[ADD:.*]] = index.add %[[REMU4]], %[[C1]]
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[REMU3]], %[[ADD]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x1xf32>
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%[[REMU3]], %[[ADD]]] : vector<2x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
 gpu.module @xevm_module{
   gpu.func @load_store_matrix_2(%arg0: !xegpu.mem_desc<32x32xf32>) {
     %c0 = arith.constant 0 : index
