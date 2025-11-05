@@ -316,9 +316,8 @@ void JSONNodeDumper::writeSourceLocation(SourceLocation Loc) {
   if (Expansion != Spelling) {
     // If the expansion and the spelling are different, output subobjects
     // describing both locations.
-    JOS.attributeObject("spellingLoc", [Spelling, this] {
-      writeBareSourceLocation(Spelling);
-    });
+    JOS.attributeObject(
+        "spellingLoc", [Spelling, this] { writeBareSourceLocation(Spelling); });
     JOS.attributeObject("expansionLoc", [Expansion, Loc, this] {
       writeBareSourceLocation(Expansion);
       // If there is a macro expansion, add extra information if the interesting
