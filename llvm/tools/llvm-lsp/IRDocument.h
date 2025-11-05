@@ -9,7 +9,6 @@
 #ifndef LLVM_TOOLS_LLVM_LSP_IRDOCUMENT_H
 #define LLVM_TOOLS_LLVM_LSP_IRDOCUMENT_H
 
-#include "OptRunner.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFGPrinter.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/SourceMgr.h"
 
 #include <filesystem>
@@ -209,14 +209,12 @@ class IRDocument {
   std::unique_ptr<Module> ParsedModule;
   StringRef Filepath;
 
-  std::unique_ptr<OptRunner> Optimizer;
   std::unique_ptr<IRArtifacts> IRA;
 
 public:
   IRDocument(StringRef PathToIRFile) : Filepath(PathToIRFile) {
     ParsedModule = loadModuleFromIR(PathToIRFile, C);
     IRA = std::make_unique<IRArtifacts>(PathToIRFile, *ParsedModule);
-    Optimizer = std::make_unique<OptRunner>(*ParsedModule);
 
     // Eagerly generate all CFG for all functions in the IRDocument.
     IRA->generateGraphs(ParserContext);
@@ -267,66 +265,6 @@ public:
     if (auto *MaybeI = ParserContext.getInstructionAtLocation(FL))
       return MaybeI;
     return nullptr;
-  }
-
-  // N is 1-Indexed here, but IRA expects 0-Indexed
-  llvm::Expected<std::string> getIRAfterPassNumber(const std::string &Pipeline,
-                                                   unsigned N) {
-    auto ExistingIR = IRA->getIRAfterPassNumber(N);
-    if (ExistingIR) {
-      lsp::Logger::info("Found Existing IR");
-      return *ExistingIR;
-    }
-    auto PassNameResult = Optimizer->getPassName(Pipeline, N);
-    if (!PassNameResult)
-      return PassNameResult.takeError();
-    auto PassName = PassNameResult.get();
-    lsp::Logger::info("Found Pass name for pass number {} as {}",
-                      std::to_string(N), PassName);
-
-    auto IntermediateIR = Optimizer->getModuleAfterPass(Pipeline, N);
-    if (!IntermediateIR) {
-      lsp::Logger::info("Error while getting intermediate IR");
-      return IntermediateIR.takeError();
-    }
-    lsp::Logger::info(
-        "Got intermediate IR. Storing it in Artifacts Directory!");
-    IRA->addIntermediateIR(*IntermediateIR.get(), N, PassName);
-    lsp::Logger::info("Finished storing in Artifacts directory!");
-    return *IRA->getIRAfterPassNumber(N);
-  }
-
-  // FIXME: We are doing some redundant work here in below functions, which can
-  // be fused together.
-  llvm::Expected<SmallVector<std::string, 256>>
-  getPassList(const std::string &Pipeline) {
-    SmallVector<std::string, 256> PassList;
-    auto PassNameAndDescriptionListResult =
-        Optimizer->getPassListAndDescription(Pipeline);
-
-    if (!PassNameAndDescriptionListResult) {
-      lsp::Logger::info("Handling error in getPassList()");
-      return PassNameAndDescriptionListResult.takeError();
-    }
-
-    for (auto &P : PassNameAndDescriptionListResult.get())
-      PassList.push_back(P.first);
-
-    return PassList;
-  }
-  llvm::Expected<SmallVector<std::string, 256>>
-  getPassDescriptions(const std::string &Pipeline) {
-    SmallVector<std::string, 256> PassDesc;
-    auto PassNameAndDescriptionListResult =
-        Optimizer->getPassListAndDescription(Pipeline);
-
-    if (!PassNameAndDescriptionListResult)
-      return PassNameAndDescriptionListResult.takeError();
-
-    for (auto &P : PassNameAndDescriptionListResult.get())
-      PassDesc.push_back(P.second);
-
-    return PassDesc;
   }
 
   AsmParserContext ParserContext;

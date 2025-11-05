@@ -248,88 +248,6 @@ void LspServer::handleRequestBBLocation(const lsp::BbLocationParams &Params,
   return Reply(Result);
 }
 
-void LspServer::handleRequestGetPassList(const lsp::GetPassListParams &Params,
-                                         lsp::Callback<lsp::PassList> Reply) {
-
-  StringRef Filepath = Params.uri.file();
-  std::string Pipeline = Params.pipeline;
-
-  if (OpenDocuments.find(Filepath.str()) == OpenDocuments.end()) {
-    lsp::Logger::error("Did not open file previously {}", Filepath.str());
-    return Reply(make_error<lsp::LSPError>(
-        formatv("Did not open file previously {}", Filepath.str()),
-        lsp::ErrorCode::InvalidParams));
-  }
-  IRDocument &Doc = *OpenDocuments[Filepath.str()];
-
-  lsp::Logger::info("Opened IR file to get pass list {}", Filepath.str());
-
-  auto PassListResult = Doc.getPassList(Pipeline);
-
-  if (!PassListResult) {
-    return Reply(PassListResult.takeError());
-  }
-
-  auto PassList = PassListResult.get();
-
-  auto PassDescriptionsResult = Doc.getPassDescriptions(Pipeline);
-
-  if (!PassDescriptionsResult) {
-    return Reply(PassDescriptionsResult.takeError());
-  }
-
-  auto PassDescriptions = PassDescriptionsResult.get();
-
-  if (PassList.size() != PassDescriptions.size()) {
-    lsp::Logger::error("Size mismatch between the objects!");
-    return Reply(make_error<lsp::LSPError>("Size mismatch between the objects!",
-                                           lsp::ErrorCode::InvalidParams));
-  }
-
-  // Build the response object
-  lsp::PassList ResponseParams;
-  ResponseParams.list.insert(ResponseParams.list.begin(), PassList.begin(),
-                             PassList.end());
-  ResponseParams.descriptions.insert(ResponseParams.descriptions.begin(),
-                                     PassDescriptions.begin(),
-                                     PassDescriptions.end());
-
-  Reply(ResponseParams);
-}
-
-void LspServer::handleRequestGetIRAfterPass(
-    const lsp::GetIRAfterPassParams &Params, lsp::Callback<lsp::IR> Reply) {
-  StringRef Filepath = Params.uri.file();
-  std::string Pipeline = Params.pipeline;
-
-  if (OpenDocuments.find(Filepath.str()) == OpenDocuments.end()) {
-    lsp::Logger::error("Did not open file previously {}", Filepath.str());
-    return Reply(make_error<lsp::LSPError>(
-        formatv("Did not open file previously {}", Filepath.str()),
-        lsp::ErrorCode::InvalidParams));
-  }
-  IRDocument &Doc = *OpenDocuments[Filepath.str()];
-
-  unsigned PassNum = Params.passnumber;
-  auto IRFilePathResult = Doc.getIRAfterPassNumber(Pipeline, PassNum);
-
-  if (!IRFilePathResult) {
-    return Reply(IRFilePathResult.takeError());
-  }
-
-  auto IRFilePath = IRFilePathResult.get();
-
-  if (auto MaybeIRUri = lsp::URIForFile::fromFile(IRFilePath)) {
-    lsp::IR Return;
-    Return.uri = *MaybeIRUri;
-    Reply(Return);
-  } else {
-    return Reply(MaybeIRUri.takeError());
-  }
-
-  return;
-}
-
 bool LspServer::registerMessageHandlers() {
   MessageHandler.method("initialize", this,
                         &LspServer::handleRequestInitialize);
@@ -347,10 +265,6 @@ bool LspServer::registerMessageHandlers() {
   MessageHandler.method("llvm/getCfg", this, &LspServer::handleRequestGetCFG);
   MessageHandler.method("llvm/bbLocation", this,
                         &LspServer::handleRequestBBLocation);
-  MessageHandler.method("llvm/getPassList", this,
-                        &LspServer::handleRequestGetPassList);
-  MessageHandler.method("llvm/getIRAfterPass", this,
-                        &LspServer::handleRequestGetIRAfterPass);
 
   ShowMessageSender =
       MessageHandler.outgoingNotification<lsp::ShowMessageParams>(
