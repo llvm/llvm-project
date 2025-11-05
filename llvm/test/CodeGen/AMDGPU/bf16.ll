@@ -968,14 +968,14 @@ define <64 x bfloat> @v_load_global_v64bf16(ptr addrspace(1) %ptr) {
 ; GFX8-NEXT:    v_addc_u32_e32 v25, vcc, 0, v29, vcc
 ; GFX8-NEXT:    s_movk_i32 s4, 0x70
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[28:29]
+; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
 ; GFX8-NEXT:    v_add_u32_e32 v28, vcc, s4, v28
 ; GFX8-NEXT:    v_addc_u32_e32 v29, vcc, 0, v29, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
-; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
-; GFX8-NEXT:    flat_load_dwordx4 v[24:27], v[24:25]
 ; GFX8-NEXT:    flat_load_dwordx4 v[16:19], v[16:17]
 ; GFX8-NEXT:    flat_load_dwordx4 v[20:23], v[20:21]
+; GFX8-NEXT:    flat_load_dwordx4 v[24:27], v[24:25]
 ; GFX8-NEXT:    flat_load_dwordx4 v[28:31], v[28:29]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -9552,7 +9552,6 @@ define <32 x double> @global_extload_v32bf16_to_v32f64(ptr addrspace(1) %ptr) {
 ; GFX8-NEXT:    v_addc_u32_e32 v34, vcc, 0, v2, vcc
 ; GFX8-NEXT:    v_add_u32_e32 v35, vcc, 36, v1
 ; GFX8-NEXT:    v_addc_u32_e32 v36, vcc, 0, v2, vcc
-; GFX8-NEXT:    v_add_u32_e32 v37, vcc, 38, v1
 ; GFX8-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
 ; GFX8-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
 ; GFX8-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
@@ -9564,6 +9563,7 @@ define <32 x double> @global_extload_v32bf16_to_v32f64(ptr addrspace(1) %ptr) {
 ; GFX8-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX8-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX8-NEXT:    buffer_store_dword v58, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX8-NEXT:    v_add_u32_e32 v37, vcc, 38, v1
 ; GFX8-NEXT:    flat_load_ushort v44, v[1:2]
 ; GFX8-NEXT:    v_addc_u32_e32 v38, vcc, 0, v2, vcc
 ; GFX8-NEXT:    v_add_u32_e32 v48, vcc, 40, v1
@@ -9686,17 +9686,6 @@ define <32 x double> @global_extload_v32bf16_to_v32f64(ptr addrspace(1) %ptr) {
 ; GFX8-NEXT:    buffer_store_dword v15, v16, s[0:3], 0 offen
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v15, 16, v51
 ; GFX8-NEXT:    v_cvt_f64_f32_e32 v[15:16], v15
-; GFX8-NEXT:    buffer_load_dword v58, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v57, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; GFX8-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
 ; GFX8-NEXT:    v_add_u32_e32 v17, vcc, 0xb8, v0
 ; GFX8-NEXT:    buffer_store_dword v14, v17, s[0:3], 0 offen
 ; GFX8-NEXT:    v_add_u32_e32 v14, vcc, 0xb4, v0
@@ -9827,6 +9816,17 @@ define <32 x double> @global_extload_v32bf16_to_v32f64(ptr addrspace(1) %ptr) {
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 8, v0
 ; GFX8-NEXT:    buffer_store_dword v15, v1, s[0:3], 0 offen
 ; GFX8-NEXT:    buffer_store_dword v14, v0, s[0:3], 0 offen
+; GFX8-NEXT:    buffer_load_dword v58, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v57, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
