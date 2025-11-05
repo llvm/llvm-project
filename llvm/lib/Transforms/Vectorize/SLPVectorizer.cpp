@@ -6968,16 +6968,16 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
       SortedOffsetsFromBase[1] - SortedOffsetsFromBase[0];
   // Determine size of the first group. Later we will check that all other
   // groups have the same size.
-  auto isEndOfGroupIndex = [=, &SortedOffsetsFromBase](unsigned Idx) {
+  auto IsEndOfGroupIndex = [=, &SortedOffsetsFromBase](unsigned Idx) {
     return SortedOffsetsFromBase[Idx] - SortedOffsetsFromBase[Idx - 1] !=
            StrideWithinGroup;
   };
-  unsigned GroupSize = *llvm::find_if(seq<unsigned>(1, Sz), isEndOfGroupIndex);
+  auto Indices = seq<unsigned>(1, Sz);
+  auto FoundIt = llvm::find_if(Indices, IsEndOfGroupIndex);
+  unsigned GroupSize = FoundIt != Indices.end() ? *FoundIt : Sz;
 
   unsigned VecSz = Sz;
   Type *NewScalarTy = ScalarTy;
-  int64_t StrideIntVal = StrideWithinGroup;
-  FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
 
   // Quick detour: at this point we can say what the type of strided load would
   // be if all the checks pass. Check if this type is legal for the target.
@@ -6993,12 +6993,12 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
         DL->getTypeSizeInBits(ScalarTy).getFixedValue() * GroupSize);
-    StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
   }
 
   if (!isStridedLoad(PointerOps, NewScalarTy, Alignment, Diff, VecSz))
     return false;
 
+  int64_t StrideIntVal = StrideWithinGroup;
   if (NeedsWidening) {
     // Continue with checking the "shape" of `SortedOffsetsFromBase`.
     // Check that the strides between groups are all the same.
@@ -7032,7 +7032,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
 
   Type *StrideTy = DL->getIndexType(Ptr0->getType());
   SPtrInfo.StrideVal = ConstantInt::get(StrideTy, StrideIntVal);
-  SPtrInfo.Ty = StridedLoadTy;
+  SPtrInfo.Ty = getWidenedType(NewScalarTy, VecSz);
   return true;
 }
 
