@@ -15587,43 +15587,51 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
       ShiftCst);
 }
 
+// The function check a i128 load can convert to 16i8 load for Vcmpequb.
 static bool canConvertToVcmpequb(SDValue &LHS, SDValue RHS) {
 
-  if (LHS.getOpcode() != ISD::LOAD || RHS.getOpcode() != ISD::LOAD ||
-      !LHS.hasOneUse() || !RHS.hasOneUse() || LHS.getValueType() != MVT::i128 ||
-      RHS.getValueType() != MVT::i128)
-    return false;
+  auto isValidForConvert = [](SDValue &Op) {
+    if (Op.getOpcode() == ISD::Constant)
+      return true;
 
-  auto *LA = dyn_cast<LoadSDNode>(LHS);
-  auto *LB = dyn_cast<LoadSDNode>(RHS);
-  if (!LA || !LB)
-    return false;
+    if (Op.getOpcode() != ISD::LOAD)
+      return false;
+    if (!Op.hasOneUse())
+      return false;
+    if (Op.getValueType() != MVT::i128)
+      return false;
 
-  // If either memory operation (LA or LB) is volatile, do not perform any
-  // optimization or transformation. Volatile operations must be preserved
-  // as written to ensure correct program behavior, so we return an empty
-  // SDValue to indicate no action.
-  if (LA->isVolatile() || LB->isVolatile())
-    return false;
+    auto *LoadOp = dyn_cast<LoadSDNode>(Op);
+    if (!LoadOp)
+      return false;
 
-  // Only combine loads if both use the unindexed addressing mode.
-  // PowerPC AltiVec/VMX does not support vector loads or stores with
-  // pre/post-increment addressing. Indexed modes may imply implicit
-  // pointer updates, which are not compatible with AltiVec vector
-  // instructions.
-  if (LA->getAddressingMode() != ISD::UNINDEXED ||
-      LB->getAddressingMode() != ISD::UNINDEXED)
-    return false;
+    // If memory operation is volatile, do not perform any
+    // optimization or transformation. Volatile operations must be preserved
+    // as written to ensure correct program behavior, so we return an empty
+    // SDValue to indicate no action.
 
-  // Only combine loads if both are non-extending loads
-  // (ISD::NON_EXTLOAD). Extending loads (such as ISD::ZEXTLOAD or
-  // ISD::SEXTLOAD) perform zero or sign extension, which may change the
-  // loaded value's semantics and are not compatible with vector loads.
-  if (LA->getExtensionType() != ISD::NON_EXTLOAD ||
-      LB->getExtensionType() != ISD::NON_EXTLOAD)
-    return false;
+    if (LoadOp->isVolatile())
+      return false;
 
-  return true;
+    // Only combine loads if both use the unindexed addressing mode.
+    // PowerPC AltiVec/VMX does not support vector loads or stores with
+    // pre/post-increment addressing. Indexed modes may imply implicit
+    // pointer updates, which are not compatible with AltiVec vector
+    // instructions.
+    if (LoadOp->getAddressingMode() != ISD::UNINDEXED)
+      return false;
+
+    // Only combine loads if both are non-extending loads
+    // (ISD::NON_EXTLOAD). Extending loads (such as ISD::ZEXTLOAD or
+    // ISD::SEXTLOAD) perform zero or sign extension, which may change the
+    // loaded value's semantics and are not compatible with vector loads.
+    if (LoadOp->getExtensionType() != ISD::NON_EXTLOAD)
+      return false;
+
+    return true;
+  };
+
+  return (isValidForConvert(LHS) && isValidForConvert(RHS));
 }
 
 SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
@@ -15634,8 +15642,15 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   assert(CC == ISD::SETNE ||
          CC == ISD::SETEQ && "CC mus be ISD::SETNE or ISD::SETEQ");
-  auto *LA = dyn_cast<LoadSDNode>(N->getOperand(0));
-  auto *LB = dyn_cast<LoadSDNode>(N->getOperand(1));
+
+  auto getV16i8Load = [&](const SDValue &Op) {
+    if (Op.getOpcode() == ISD::Constant)
+      return DAG.getBitcast(MVT::v16i8, Op);
+    assert(Op.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
+    auto *LoadNode = dyn_cast<LoadSDNode>(Op);
+    return DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                       LoadNode->getBasePtr(), LoadNode->getMemOperand());
+  };
 
   // Following code transforms the DAG
   // t0: ch,glue = EntryToken
@@ -15661,10 +15676,8 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
   //    Constant:i32<2>, t3, t5
   // t7: i1 = setcc t6, Constant:i32<0>, seteq:ch
 
-  SDValue LHSVec = DAG.getLoad(MVT::v16i8, DL, LA->getChain(), LA->getBasePtr(),
-                               LA->getMemOperand());
-  SDValue RHSVec = DAG.getLoad(MVT::v16i8, DL, LB->getChain(), LB->getBasePtr(),
-                               LB->getMemOperand());
+  SDValue LHSVec = getV16i8Load(N->getOperand(0));
+  SDValue RHSVec = getV16i8Load(N->getOperand(1));
 
   SDValue IntrID =
       DAG.getConstant(Intrinsic::ppc_altivec_vcmpequb_p, DL, MVT::i32);
