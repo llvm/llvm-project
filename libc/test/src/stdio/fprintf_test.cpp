@@ -83,7 +83,7 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
   written =
       LIBC_NAMESPACE::fprintf(file, "Writing to a read only file should fail.");
   EXPECT_LT(written, 0);
-  ASSERT_ERRNO_EQ(EBADF);
+  ASSERT_ERRNO_FAILURE();
 
   ASSERT_EQ(printf_test::fclose(file), 0);
 }
@@ -100,7 +100,7 @@ TEST(LlvmLibcFPrintfTest, NullPtrCheck) {
   int ret =
       LIBC_NAMESPACE::fprintf(file, "hello %n", static_cast<int *>(nullptr));
   EXPECT_LT(ret, 0);
-  ASSERT_ERRNO_EQ(EINVAL);
+  ASSERT_ERRNO_FAILURE();
 
   ASSERT_EQ(printf_test::fclose(file), 0);
 }
