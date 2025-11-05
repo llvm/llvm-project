@@ -211,8 +211,10 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
       std::vector<uint8_t> bytes(src_len, 0);
       for (size_t i = 0; i < src_len; i++)
         bytes[i] = src.GetU8(&src_offset);
+
       if (src.GetByteOrder() == eByteOrderBig)
         std::reverse(bytes.begin(), bytes.end());
+
       // The number of 64-bit wide words that are stored in "src".
       size_t size64 = (reg_info.byte_size - 1) / 8 + 1;
       bytes.resize(size64 * sizeof(uint64_t), 0);
