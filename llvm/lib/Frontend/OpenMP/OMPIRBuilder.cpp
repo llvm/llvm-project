@@ -2633,7 +2633,7 @@ void OpenMPIRBuilder::emitReductionListCopy(
         ShuffleSrcAddr = Builder.CreateLoad(Builder.getPtrTy(), ShuffleSrcAddr);
 
         {
-          auto OldIP = Builder.saveIP();
+          InsertPointTy OldIP = Builder.saveIP();
           Builder.restoreIP(AllocaIP);
 
           LocalStorage = Builder.CreateAlloca(ShuffleType);
@@ -3735,13 +3735,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
         RedArrayTy, ReductionList,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
 
-    auto *PrviateVar = RI.PrivateVariable;
+    Value *PrivateVar = RI.PrivateVariable;
     bool IsByRefElem = !IsByRef.empty() && IsByRef[En.index()];
     if (IsByRefElem)
-      PrviateVar = Builder.CreateLoad(RI.ElementType, PrviateVar);
+      PrivateVar = Builder.CreateLoad(RI.ElementType, PrivateVar);
 
     Value *CastElem =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(PrviateVar, PtrTy);
+        Builder.CreatePointerBitCastOrAddrSpaceCast(PrivateVar, PtrTy);
     Builder.CreateStore(CastElem, ElemPtr);
   }
   CodeGenIP = Builder.saveIP();

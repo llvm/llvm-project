@@ -1503,6 +1503,7 @@ public:
     /// reduction op's `alloc` region. For example, for allocatables and arrays,
     /// this type would be the descriptor/box struct.
     Type *ByRefAllocatedType;
+
     /// * The by-ref element type is the type of the actual storage needed for
     /// the data of the allocatable or array. For example, an float allocatable
     /// of would need some float storage to store intermediate reduction
@@ -2060,8 +2061,7 @@ public:
   ///                           variable.
   /// \param IsNoWait           Optional flag set if the reduction is
   ///                           marked as nowait.
-  /// \param IsByRef For each reduction clause, whether the reduction is by-ref
-  ///                  or not.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
   /// \param GridValue          Optional GPU grid value.
