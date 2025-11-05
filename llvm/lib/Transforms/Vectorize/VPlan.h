@@ -1447,12 +1447,6 @@ class LLVM_ABI_FOR_TEST VPWidenRecipe : public VPRecipeWithIRFlags,
   unsigned Opcode;
 
 public:
-  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, const VPIRMetadata &Metadata,
-                DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
-
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
       : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPIRMetadata(I),
         Opcode(I.getOpcode()) {}
@@ -1460,9 +1454,8 @@ public:
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    auto *R =
-        new VPWidenRecipe(getOpcode(), operands(), *this, *this, getDebugLoc());
-    R->setUnderlyingValue(getUnderlyingValue());
+    auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
+    R->transferFlags(*this);
     return R;
   }
 
