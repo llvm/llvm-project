@@ -9,4 +9,8 @@ static_library("Demangle") {
     "MicrosoftDemangleNodes.cpp",
     "RustDemangle.cpp",
   ]
+
+  public_deps = [
+    "//llvm/include/llvm/Config:llvm-config",
+  ]
 }
