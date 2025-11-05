@@ -56,6 +56,52 @@ static void NextSectionLoad(LoadedModule *module, MemoryMappedSegmentData *data,
                           sc->sectname);
 }
 
+static bool VerifyMemoryMapping(MemoryMappingLayout *mapping) {
+  InternalMmapVector<LoadedModule> modules;
+  modules.reserve(128); // matches DumpProcessMap
+  mapping->DumpListOfModules(&modules);
+
+  InternalMmapVector<LoadedModule::AddressRange> segments;
+  for (uptr i = 0; i < modules.size(); ++i) {
+    for (auto &range : modules[i].ranges()) {
+      segments.push_back(range);
+    }
+  }
+
+  // Verify that none of the segments overlap:
+  // 1. Sort the segments by the start address
+  // 2. Check that every segment starts after the previous one ends.
+  Sort(segments.data(), segments.size(),
+       [](LoadedModule::AddressRange& a, LoadedModule::AddressRange& b) {
+         return a.beg < b.beg;
+       });
+
+  // To avoid spam, we only print the report message once-per-process.
+  static bool invalid_module_map_reported = false;
+  bool well_formed = true;
+
+  for (size_t i = 1; i < segments.size(); i++) {
+    uptr cur_start = segments[i].beg;
+    uptr prev_end = segments[i - 1].end;
+    if (cur_start < prev_end) {
+      well_formed = false;
+      VReport(2, "Overlapping mappings: %s start = %p, %s end = %p\n",
+              segments[i].name, (void*)cur_start, segments[i-1].name, (void*)prev_end);
+      if (!invalid_module_map_reported) {
+        Report(
+            "WARN: Invalid dyld module map detected. This is most likely a bug "
+            "in the sanitizer.\n");
+        Report("WARN: Backtraces may be unreliable.\n");
+        invalid_module_map_reported = true;
+      }
+    }
+  }
+
+  mapping->Reset();
+  return well_formed;
+}
+
+
 void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
   // Don't iterate over sections when the caller hasn't set up the
   // data pointer, when there are no sections, or when the segment
@@ -81,7 +127,7 @@ void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
 
 MemoryMappingLayout::MemoryMappingLayout(bool cache_enabled) {
   Reset();
-  Verify();
+  VerifyMemoryMapping(this);
 }
 
 MemoryMappingLayout::~MemoryMappingLayout() {
@@ -441,56 +487,6 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
     data_.current_load_cmd_count = -1; // This will trigger loading next image
   }
   return false;
-}
-
-// NOTE: Verify expects to be called immediately after Reset(), since otherwise
-// it may miss some mappings. Verify will Reset() the layout after verification.
-bool MemoryMappingLayout::Verify() {
-  InternalMmapVector<char> module_name(kMaxPathLength);
-  MemoryMappedSegment segment(module_name.data(), module_name.size());
-  MemoryMappedSegmentData data;
-  segment.data_ = &data;
-
-  InternalMmapVector<MemoryMappedSegment> segments;
-  while (Next(&segment)) {
-    // skip the __PAGEZERO segment, its vmsize is 0
-    if (segment.filename[0] == '\0' || (segment.start == segment.end))
-      continue;
-
-    segments.push_back(segment);
-  }
-
-  // Verify that none of the segments overlap:
-  // 1. Sort the segments by the start address
-  // 2. Check that every segment starts after the previous one ends.
-  Sort(segments.data(), segments.size(),
-       [](MemoryMappedSegment& a, MemoryMappedSegment& b) {
-         return a.start < b.start;
-       });
-
-  // To avoid spam, we only print the report message once-per-process.
-  static bool invalid_module_map_reported = false;
-  bool well_formed = true;
-
-  for (size_t i = 1; i < segments.size(); i++) {
-    uptr cur_start = segments[i].start;
-    uptr prev_end = segments[i - 1].end;
-    if (cur_start < prev_end) {
-      well_formed = false;
-      VReport(2, "Overlapping mappings: cur_start = %p prev_end = %p\n",
-              (void*)cur_start, (void*)prev_end);
-      if (!invalid_module_map_reported) {
-        Report(
-            "WARN: Invalid dyld module map detected. This is most likely a bug "
-            "in the sanitizer.\n");
-        Report("WARN: Backtraces may be unreliable.\n");
-        invalid_module_map_reported = true;
-      }
-    }
-  }
-
-  Reset();
-  return well_formed;
 }
 
 void MemoryMappingLayout::DumpListOfModules(
