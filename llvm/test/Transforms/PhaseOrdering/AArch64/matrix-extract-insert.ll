@@ -106,23 +106,6 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP4]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP6]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <2 x i64> [[TMP8]], splat (i64 225)
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP11]], i64 0
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP11]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult <2 x i64> [[TMP10]], splat (i64 225)
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP12]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP12]], i64 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP14]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP15]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP16]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP17]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP17]], align 8, !alias.scope [[META0:![0-9]+]]
@@ -182,23 +165,6 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK:       vector.body.1:
 ; CHECK-NEXT:    [[INDEX_1:%.*]] = phi i64 [ 0, [[VECTOR_PH_1]] ], [ [[INDEX_NEXT_1:%.*]], [[VECTOR_BODY_1]] ]
 ; CHECK-NEXT:    [[TMP33:%.*]] = add nuw nsw i64 [[INDEX_1]], 15
-; CHECK-NEXT:    [[TMP34:%.*]] = add nuw nsw i64 [[INDEX_1]], 16
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <2 x i64> poison, i64 [[TMP33]], i64 0
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <2 x i64> [[TMP35]], i64 [[TMP34]], i64 1
-; CHECK-NEXT:    [[TMP37:%.*]] = add nuw nsw i64 [[INDEX_1]], 17
-; CHECK-NEXT:    [[TMP38:%.*]] = add nuw nsw i64 [[INDEX_1]], 18
-; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <2 x i64> poison, i64 [[TMP37]], i64 0
-; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <2 x i64> [[TMP39]], i64 [[TMP38]], i64 1
-; CHECK-NEXT:    [[TMP41:%.*]] = icmp ult <2 x i64> [[TMP36]], splat (i64 225)
-; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <2 x i1> [[TMP41]], i64 0
-; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <2 x i1> [[TMP41]], i64 1
-; CHECK-NEXT:    [[TMP42:%.*]] = icmp ult <2 x i64> [[TMP40]], splat (i64 225)
-; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <2 x i1> [[TMP42]], i64 0
-; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <2 x i1> [[TMP42]], i64 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP43]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP44]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP45]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP46]])
 ; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP47]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD_1:%.*]] = load <2 x double>, ptr [[TMP47]], align 8, !alias.scope [[META0]]
@@ -259,23 +225,6 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK:       vector.body.2:
 ; CHECK-NEXT:    [[INDEX_2:%.*]] = phi i64 [ 0, [[VECTOR_PH_2]] ], [ [[INDEX_NEXT_2:%.*]], [[VECTOR_BODY_2]] ]
 ; CHECK-NEXT:    [[TMP64:%.*]] = add nuw nsw i64 [[INDEX_2]], 30
-; CHECK-NEXT:    [[TMP65:%.*]] = add nuw nsw i64 [[INDEX_2]], 31
-; CHECK-NEXT:    [[TMP66:%.*]] = insertelement <2 x i64> poison, i64 [[TMP64]], i64 0
-; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <2 x i64> [[TMP66]], i64 [[TMP65]], i64 1
-; CHECK-NEXT:    [[TMP68:%.*]] = add nuw nsw i64 [[INDEX_2]], 32
-; CHECK-NEXT:    [[TMP69:%.*]] = add nuw nsw i64 [[INDEX_2]], 33
-; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <2 x i64> poison, i64 [[TMP68]], i64 0
-; CHECK-NEXT:    [[TMP71:%.*]] = insertelement <2 x i64> [[TMP70]], i64 [[TMP69]], i64 1
-; CHECK-NEXT:    [[TMP72:%.*]] = icmp ult <2 x i64> [[TMP67]], splat (i64 225)
-; CHECK-NEXT:    [[TMP74:%.*]] = extractelement <2 x i1> [[TMP72]], i64 0
-; CHECK-NEXT:    [[TMP75:%.*]] = extractelement <2 x i1> [[TMP72]], i64 1
-; CHECK-NEXT:    [[TMP73:%.*]] = icmp ult <2 x i64> [[TMP71]], splat (i64 225)
-; CHECK-NEXT:    [[TMP76:%.*]] = extractelement <2 x i1> [[TMP73]], i64 0
-; CHECK-NEXT:    [[TMP77:%.*]] = extractelement <2 x i1> [[TMP73]], i64 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP74]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP75]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP76]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP77]])
 ; CHECK-NEXT:    [[TMP78:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[TMP64]]
 ; CHECK-NEXT:    [[TMP79:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP78]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD_2:%.*]] = load <2 x double>, ptr [[TMP78]], align 8, !alias.scope [[META0]]
@@ -336,23 +285,6 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK:       vector.body.3:
 ; CHECK-NEXT:    [[INDEX_3:%.*]] = phi i64 [ 0, [[VECTOR_PH_3]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY_3]] ]
 ; CHECK-NEXT:    [[TMP95:%.*]] = add nuw nsw i64 [[INDEX_3]], 45
-; CHECK-NEXT:    [[TMP96:%.*]] = add nuw nsw i64 [[INDEX_3]], 46
-; CHECK-NEXT:    [[TMP97:%.*]] = insertelement <2 x i64> poison, i64 [[TMP95]], i64 0
-; CHECK-NEXT:    [[TMP98:%.*]] = insertelement <2 x i64> [[TMP97]], i64 [[TMP96]], i64 1
-; CHECK-NEXT:    [[TMP99:%.*]] = add nuw nsw i64 [[INDEX_3]], 47
-; CHECK-NEXT:    [[TMP100:%.*]] = add nuw nsw i64 [[INDEX_3]], 48
-; CHECK-NEXT:    [[TMP101:%.*]] = insertelement <2 x i64> poison, i64 [[TMP99]], i64 0
-; CHECK-NEXT:    [[TMP102:%.*]] = insertelement <2 x i64> [[TMP101]], i64 [[TMP100]], i64 1
-; CHECK-NEXT:    [[TMP103:%.*]] = icmp ult <2 x i64> [[TMP98]], splat (i64 225)
-; CHECK-NEXT:    [[TMP105:%.*]] = extractelement <2 x i1> [[TMP103]], i64 0
-; CHECK-NEXT:    [[TMP106:%.*]] = extractelement <2 x i1> [[TMP103]], i64 1
-; CHECK-NEXT:    [[TMP104:%.*]] = icmp ult <2 x i64> [[TMP102]], splat (i64 225)
-; CHECK-NEXT:    [[TMP107:%.*]] = extractelement <2 x i1> [[TMP104]], i64 0
-; CHECK-NEXT:    [[TMP108:%.*]] = extractelement <2 x i1> [[TMP104]], i64 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP105]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP106]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP107]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP108]])
 ; CHECK-NEXT:    [[TMP109:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[TMP95]]
 ; CHECK-NEXT:    [[TMP110:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP109]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD_3:%.*]] = load <2 x double>, ptr [[TMP109]], align 8, !alias.scope [[META0]]
