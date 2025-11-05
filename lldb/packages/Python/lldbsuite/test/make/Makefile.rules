@@ -334,7 +334,7 @@ endif
 # library to make ASAN tests work for most users, including the bots.
 ifeq "$(OS)" "Darwin"
 ifneq "$(ASAN_OPTIONS)" ""
-LD_FLAGS += -Wl,-lto_library -Wl,$(shell dirname $(shell xcrun -find clang))/../lib/libLTO.dylib
+LDFLAGS += -Wl,-lto_library -Wl,$(shell dirname $(shell xcrun -find clang))/../lib/libLTO.dylib
 endif
 endif
 OBJECTS =

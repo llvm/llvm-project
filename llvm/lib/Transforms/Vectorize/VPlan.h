@@ -1725,7 +1725,9 @@ public:
 #endif
 };
 
-/// A recipe for widening select instructions.
+/// A recipe for widening select instructions. Supports both wide vector and
+/// single-scalar conditions, matching the behavior of LLVM IR's select
+/// instruction.
 struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
                                                public VPIRMetadata {
   VPWidenSelectRecipe(SelectInst &I, ArrayRef<VPValue *> Operands)
