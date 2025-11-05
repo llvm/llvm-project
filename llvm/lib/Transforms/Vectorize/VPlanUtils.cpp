@@ -18,7 +18,7 @@ using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {

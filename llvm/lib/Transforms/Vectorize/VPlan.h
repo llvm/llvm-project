@@ -1163,7 +1163,7 @@ public:
   bool opcodeMayReadOrWriteFromMemory() const;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override;
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
   bool onlyFirstPartUsed(const VPValue *Op) const override;
@@ -1399,7 +1399,7 @@ public:
     return true;
   }
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -1628,7 +1628,7 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override;
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 };
 
 /// A recipe for widening Call instructions using library calls.
@@ -1765,7 +1765,7 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getCond() && isInvariantCond();
@@ -1831,7 +1831,7 @@ public:
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     if (Op == getOperand(0))
@@ -1868,7 +1868,7 @@ public:
 
   void execute(VPTransformState &State) override;
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -1920,7 +1920,7 @@ public:
 
   Type *getSourceElementType() const { return SourceElementTy; }
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -2108,7 +2108,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // The recipe creates its own wide start value, so it only requests the
@@ -2323,7 +2323,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getStartValue();
@@ -2397,7 +2397,7 @@ public:
   bool isInLoop() const { return IsInLoop; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return isOrdered() || isInLoop();
@@ -2466,13 +2466,13 @@ public:
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // Recursing through Blend recipes only, must terminate at header phi's the
     // latest.
     return all_of(users(),
-                  [this](VPUser *U) { return U->onlyFirstLaneUsed(this); });
+                  [this](VPUser *U) { return U->usesFirstLaneOnly(this); });
   }
 };
 
@@ -2560,7 +2560,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
+  bool usesFirstLaneOnly(const VPValue *Op) const override = 0;
 
   /// Returns the number of stored operands of this interleave group. Returns 0
   /// for load interleave groups.
@@ -2606,7 +2606,7 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getAddr() && !llvm::is_contained(getStoredValues(), Op);
@@ -2654,7 +2654,7 @@ public:
 #endif
 
   /// The recipe only uses the first lane of the address, and EVL operand.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return (Op == getAddr() && !llvm::is_contained(getStoredValues(), Op)) ||
@@ -2860,7 +2860,7 @@ public:
   VPValue *getEVL() const { return getOperand(2); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getEVL();
@@ -2922,7 +2922,7 @@ public:
   bool isPredicated() const { return IsPredicated; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return isSingleScalar();
@@ -3297,7 +3297,7 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // Widened, consecutive loads operations only demand the first lane of
@@ -3338,7 +3338,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // Widened loads only demand the first lane of EVL and consecutive loads
@@ -3379,7 +3379,7 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // Widened, consecutive stores only demand the first lane of their address,
@@ -3422,7 +3422,7 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     if (Op == getEVL()) {
@@ -3506,7 +3506,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -3588,7 +3588,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -3698,7 +3698,7 @@ public:
   VPValue *getStepValue() const { return getOperand(2); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -3763,7 +3763,7 @@ public:
   VPValue *getStepValue() const { return getOperand(1); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
