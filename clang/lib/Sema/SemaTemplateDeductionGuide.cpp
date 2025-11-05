@@ -656,9 +656,9 @@ private:
     // typedefs, avoiding triggering instantiation of the deduced type during
     // deduction.
     NewTSI = ExtractTypeForDeductionGuide(
-                SemaRef, MaterializedTypedefs, NestedPattern,
-                TransformingOuterPatterns ? &Args : nullptr)
-                .transform(NewTSI);
+                 SemaRef, MaterializedTypedefs, NestedPattern,
+                 TransformingOuterPatterns ? &Args : nullptr)
+                 .transform(NewTSI);
     if (!NewTSI)
       return nullptr;
     // Resolving a wording defect, we also inherit default arguments from the
