@@ -18,10 +18,12 @@ TEST(RegisterTest, Idx2StackSlot) {
   EXPECT_EQ(Register::index2StackSlot(-1),
             Register::StackSlotZero | Register::StackSlotMask);
   int MaxPowOf2 = 1 << (Register::MaxFrameIndexBitwidth - 1);
-  // check that we do not crash on the highest possible value of frame index.
-  EXPECT_NO_FATAL_FAILURE(Register::index2StackSlot(MaxPowOf2 - 1));
-  // check that we do not crash on the lowest possible value of frame index.
-  EXPECT_NO_FATAL_FAILURE(Register::index2StackSlot(-MaxPowOf2));
+  // Check the highest possible value of frame index
+  EXPECT_EQ(Register::index2StackSlot(MaxPowOf2 - 1),
+            Register::StackSlotZero | (MaxPowOf2 - 1));
+  // Check the lowest possible value of frame index
+  EXPECT_EQ(Register::index2StackSlot(-MaxPowOf2),
+            Register::StackSlotZero | (-MaxPowOf2 & Register::StackSlotMask));
 }
 
 TEST(RegisterTest, StackSlotIndex) {
