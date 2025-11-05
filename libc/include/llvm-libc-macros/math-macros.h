@@ -51,9 +51,10 @@
 #define __LIBC_SUPPORTS_MATH_ERRNO 1
 #endif
 
-#if defined(__FAST_MATH__) || ((defined(__arm__) || defined(_M_ARM) || defined(__thumb__) ||              \
-     defined(__aarch64__) || defined(_M_ARM64)) &&                             \
-    !defined(__ARM_FP))
+#if defined(__FAST_MATH__) ||                                                  \
+    ((defined(__arm__) || defined(_M_ARM) || defined(__thumb__) ||             \
+      defined(__aarch64__) || defined(_M_ARM64)) &&                            \
+     !defined(__ARM_FP))
 #define __LIBC_SUPPORTS_MATH_ERREXCEPT 0
 #else
 #define __LIBC_SUPPORTS_MATH_ERREXCEPT 1
