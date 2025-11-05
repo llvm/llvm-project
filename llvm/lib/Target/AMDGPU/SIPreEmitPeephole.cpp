@@ -616,7 +616,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     MachineInstr &Instr = *I;
     uint16_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
     bool IsUnpackable =
-        !(UnpackedOpCode == std::numeric_limits<uint16_t>::max());
+        UnpackedOpCode != std::numeric_limits<uint16_t>::max();
     if (Instr.isMetaInstruction())
       continue;
     if ((Instr.isTerminator()) ||
