@@ -188,6 +188,7 @@ add_libc_test(
     libc.src.stdio.fprintf
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+    libc.src.__support.macros.properties.architectures
     ${fprintf_test_deps}
   COMPILE_OPTIONS
     ${use_system_file}

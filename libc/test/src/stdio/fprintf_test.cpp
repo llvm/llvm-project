@@ -16,6 +16,7 @@
 #include "src/stdio/fprintf.h"
 
 #include "src/__support/CPP/limits.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
