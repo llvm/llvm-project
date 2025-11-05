@@ -531,19 +531,6 @@ llvm.func @async_cp_zfill(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>, %cpSize: i32) 
   llvm.return
 }
 
-// CHECK-LABEL: @cp_async_mbarrier_arrive
-llvm.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.ptr) {
-  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive(ptr %{{.*}})
-  nvvm.cp.async.mbarrier.arrive %bar_gen : !llvm.ptr
-  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr %{{.*}})
-  nvvm.cp.async.mbarrier.arrive %bar_gen {noinc = true} : !llvm.ptr
-  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.shared(ptr addrspace(3) %{{.*}})
-  nvvm.cp.async.mbarrier.arrive %bar_shared : !llvm.ptr<3>
-  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc.shared(ptr addrspace(3) %{{.*}})
-  nvvm.cp.async.mbarrier.arrive %bar_shared {noinc = true} : !llvm.ptr<3>
-  llvm.return
-}
-
 // CHECK-LABEL: @llvm_nvvm_setmaxregister
 llvm.func @llvm_nvvm_setmaxregister() {
   // CHECK: call void @llvm.nvvm.setmaxnreg.inc.sync.aligned.u32(i32 256)

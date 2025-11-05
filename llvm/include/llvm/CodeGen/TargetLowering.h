@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
@@ -3597,7 +3598,7 @@ public:
   }
 
   const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallsInfo() const {
-    return Libcalls;
+    return RuntimeLibcallInfo;
   }
 
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
@@ -3610,9 +3611,9 @@ public:
   }
 
   /// Get the libcall routine name for the specified libcall.
+  // FIXME: This should be removed. Only LibcallImpl should have a name.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    // FIXME: Return StringRef
-    return Libcalls.getLibcallName(Call).data();
+    return Libcalls.getLibcallName(Call);
   }
 
   /// Get the libcall routine name for the specified libcall implementation
@@ -3625,18 +3626,13 @@ public:
   /// Check if this is valid libcall for the current module, otherwise
   /// RTLIB::Unsupported.
   RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
-    return Libcalls.getSupportedLibcallImpl(FuncName);
+    return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
   }
 
   /// Get the comparison predicate that's to be used to test the result of the
   /// comparison libcall against zero. This should only be used with
   /// floating-point compare libcalls.
   ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
-
-  /// Set the CallingConv that should be used for the specified libcall.
-  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
-    Libcalls.setLibcallImplCallingConv(Call, CC);
-  }
 
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
@@ -3834,8 +3830,11 @@ private:
   std::map<std::pair<unsigned, MVT::SimpleValueType>, MVT::SimpleValueType>
     PromoteToType;
 
+  /// FIXME: This should not live here; it should come from an analysis.
+  const RTLIB::RuntimeLibcallsInfo RuntimeLibcallInfo;
+
   /// The list of libcalls that the target will use.
-  RTLIB::RuntimeLibcallsInfo Libcalls;
+  LibcallLoweringInfo Libcalls;
 
   /// The bits of IndexedModeActions used to store the legalisation actions
   /// We store the data as   | ML | MS |  L |  S | each taking 4 bits.
