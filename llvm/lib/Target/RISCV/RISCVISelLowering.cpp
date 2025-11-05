@@ -16510,15 +16510,15 @@ static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
                                        uint64_t MulAmt) {
   switch (MulAmt) {
   case 5 * 3:
-    return getShlAddShlAdd(N, DAG, 2, 1, false);
+    return getShlAddShlAdd(N, DAG, 2, 1, /*AddX=*/false);
   case 9 * 3:
-    return getShlAddShlAdd(N, DAG, 3, 1, false);
+    return getShlAddShlAdd(N, DAG, 3, 1, /*AddX=*/false);
   case 5 * 5:
-    return getShlAddShlAdd(N, DAG, 2, 2, false);
+    return getShlAddShlAdd(N, DAG, 2, 2, /*AddX=*/false);
   case 9 * 5:
-    return getShlAddShlAdd(N, DAG, 3, 2, false);
+    return getShlAddShlAdd(N, DAG, 3, 2, /*AddX=*/false);
   case 9 * 9:
-    return getShlAddShlAdd(N, DAG, 3, 3, false);
+    return getShlAddShlAdd(N, DAG, 3, 3, /*AddX=*/false);
   default:
     break;
   }
@@ -16526,7 +16526,7 @@ static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
   if (int ShY = isShifted359(MulAmt - 1, ShX)) {
     assert(ShX != 0 && "MulAmt=4,6,10 handled before");
     if (ShX <= 3)
-      return getShlAddShlAdd(N, DAG, ShX, ShY, true);
+      return getShlAddShlAdd(N, DAG, ShX, ShY, /*AddX=*/true);
   }
   return SDValue();
 }
