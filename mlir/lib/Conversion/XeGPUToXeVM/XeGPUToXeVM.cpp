@@ -194,8 +194,8 @@ class CreateNdDescToXeVMPattern
     // If source is a memref, we need to extract the aligned pointer as index.
     // Pointer type is passed as i32 or i64 by type converter.
     if (sourceMemrefTy) {
-      if (!sourceMemrefTy.hasStaticShape()) {
-        return rewriter.notifyMatchFailure(op, "Expected static memref shape.");
+      if (!sourceMemrefTy.hasRank()) {
+        return rewriter.notifyMatchFailure(op, "Expected ranked Memref.");
       }
       baseAddr =
           memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
@@ -562,6 +562,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
     VectorType valOrResVecTy = dyn_cast<VectorType>(data.getType());
     if (!valOrResVecTy)
       valOrResVecTy = VectorType::get(1, data.getType());
+    if (valOrResVecTy.getShape().size() != 1)
+      return rewriter.notifyMatchFailure(op, "Expected 1D data vector.");
 
     int64_t elemBitWidth =
         valOrResVecTy.getElementType().getIntOrFloatBitWidth();

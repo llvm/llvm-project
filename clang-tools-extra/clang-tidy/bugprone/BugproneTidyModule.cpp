@@ -24,6 +24,7 @@
 #include "CopyConstructorInitCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
+#include "DefaultOperatorNewOnOveralignedTypeCheck.h"
 #include "DerivedMethodShadowingBaseMethodCheck.h"
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
@@ -61,6 +62,7 @@
 #include "ParentVirtualCallCheck.h"
 #include "PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "PosixReturnCheck.h"
+#include "RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
 #include "ReturnConstRefFromParameterCheck.h"
@@ -71,6 +73,7 @@
 #include "SizeofExpressionCheck.h"
 #include "SpuriouslyWakeUpFunctionsCheck.h"
 #include "StandaloneEmptyCheck.h"
+#include "StdNamespaceModificationCheck.h"
 #include "StringConstructorCheck.h"
 #include "StringIntegerAssignmentCheck.h"
 #include "StringLiteralWithEmbeddedNulCheck.h"
@@ -139,6 +142,8 @@ public:
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
         "bugprone-dangling-handle");
+    CheckFactories.registerCheck<DefaultOperatorNewOnOveralignedTypeCheck>(
+        "bugprone-default-operator-new-on-overaligned-type");
     CheckFactories.registerCheck<DerivedMethodShadowingBaseMethodCheck>(
         "bugprone-derived-method-shadowing-base-method");
     CheckFactories.registerCheck<DynamicStaticInitializersCheck>(
@@ -216,6 +221,8 @@ public:
     CheckFactories.registerCheck<ParentVirtualCallCheck>(
         "bugprone-parent-virtual-call");
     CheckFactories.registerCheck<PosixReturnCheck>("bugprone-posix-return");
+    CheckFactories.registerCheck<RawMemoryCallOnNonTrivialTypeCheck>(
+        "bugprone-raw-memory-call-on-non-trivial-type");
     CheckFactories.registerCheck<ReservedIdentifierCheck>(
         "bugprone-reserved-identifier");
     CheckFactories.registerCheck<SharedPtrArrayMismatchCheck>(
@@ -231,6 +238,8 @@ public:
         "bugprone-spuriously-wake-up-functions");
     CheckFactories.registerCheck<StandaloneEmptyCheck>(
         "bugprone-standalone-empty");
+    CheckFactories.registerCheck<StdNamespaceModificationCheck>(
+        "bugprone-std-namespace-modification");
     CheckFactories.registerCheck<StringConstructorCheck>(
         "bugprone-string-constructor");
     CheckFactories.registerCheck<StringIntegerAssignmentCheck>(

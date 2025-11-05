@@ -128,7 +128,7 @@ public:
     DTraits = DOTTraits(SN);
     RenderUsingHTML = DTraits.renderNodesUsingHTML();
   }
-  virtual ~GraphWriterBase() {}
+  virtual ~GraphWriterBase() = default;
 
   void writeGraph(const std::string &Title = "") {
     // Output the header for the graph...
@@ -369,7 +369,7 @@ class GraphWriter : public GraphWriterBase<GraphType, GraphWriter<GraphType>> {
 public:
   GraphWriter(raw_ostream &o, const GraphType &g, bool SN)
       : GraphWriterBase<GraphType, GraphWriter<GraphType>>(o, g, SN) {}
-  ~GraphWriter() override {}
+  ~GraphWriter() override = default;
 };
 
 template <typename GraphType>

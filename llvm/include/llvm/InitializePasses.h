@@ -90,7 +90,6 @@ LLVM_ABI void initializeDSELegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeDXILMetadataAnalysisWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDXILMetadataAnalysisWrapperPrinterPass(PassRegistry &);
 LLVM_ABI void initializeDXILResourceBindingWrapperPassPass(PassRegistry &);
-LLVM_ABI void initializeDXILResourceImplicitBindingLegacyPass(PassRegistry &);
 LLVM_ABI void initializeDXILResourceTypeWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDXILResourceWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDeadMachineInstructionElimPass(PassRegistry &);
