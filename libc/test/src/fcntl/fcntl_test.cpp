@@ -181,11 +181,12 @@ public:
   using NAME = LibcFcntlCommonLockTests<GETLK, SETLK>;                         \
   TEST_F(NAME, GetLkRead) { GetLkRead(); }                                     \
   TEST_F(NAME, GetLkWrite) { GetLkWrite(); }                                   \
-  TEST_F(NAME, UseAfterClose) { UseAfterClose(); }
+  TEST_F(NAME, UseAfterClose) { UseAfterClose(); }                             \
+  static_assert(true, "Require semicolon.")
 
-COMMON_LOCK_TESTS(LlvmLibcFcntlProcessAssociatedLockTest, F_GETLK, F_SETLK)
+COMMON_LOCK_TESTS(LlvmLibcFcntlProcessAssociatedLockTest, F_GETLK, F_SETLK);
 COMMON_LOCK_TESTS(LlvmLibcFcntlOpenFileDescriptionLockTest, F_OFD_GETLK,
-                  F_OFD_SETLK)
+                  F_OFD_SETLK);
 
 TEST_F(LlvmLibcFcntlTest, SetGetOwnerTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
