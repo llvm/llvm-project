@@ -515,26 +515,24 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
   op = getOriginalDataClauseOpForAlias(var, builder, computeConstructOp,
                                        dominatingDataClauses);
   if (op) {
-    if (isa<acc::NoCreateOp>(op)) {
+    if (isa<acc::NoCreateOp>(op))
       return acc::NoCreateOp::create(builder, loc, var,
                                      /*structured=*/true, /*implicit=*/true,
                                      accSupport.getVariableName(var),
                                      acc::getBounds(op));
-    }
-    if (isa<acc::DevicePtrOp>(op)) {
+
+    if (isa<acc::DevicePtrOp>(op))
       return acc::DevicePtrOp::create(builder, loc, var,
                                       /*structured=*/true, /*implicit=*/true,
                                       accSupport.getVariableName(var),
                                       acc::getBounds(op));
-    }
-    {
-      // The original data clause op is a PresentOp, CopyinOp, or CreateOp,
-      // hence guaranteed to be present.
-      return acc::PresentOp::create(builder, loc, var,
-                                    /*structured=*/true, /*implicit=*/true,
-                                    accSupport.getVariableName(var),
-                                    acc::getBounds(op));
-    }
+
+    // The original data clause op is a PresentOp, CopyinOp, or CreateOp,
+    // hence guaranteed to be present.
+    return acc::PresentOp::create(builder, loc, var,
+                                  /*structured=*/true, /*implicit=*/true,
+                                  accSupport.getVariableName(var),
+                                  acc::getBounds(op));
   } else if (isScalar) {
     if (enableImplicitReductionCopy &&
         acc::isOnlyUsedByReductionClauses(var,
