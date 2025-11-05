@@ -1160,10 +1160,6 @@ body:             |
 ---
 name:            test_v_pk_mov_unpacking
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
   liveins: $sgpr4_sgpr5
