@@ -1537,6 +1537,14 @@ TEST(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 
 #ifndef LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%.75Lf",
+      0.0833333333333333333355920878593448009041821933351457118988037109375L);
+  ASSERT_STREQ_LEN(written, buff,
+                   "0."
+                   "08333333333333333333559208785934480090418219333514571189880"
+                   "3710937500000000");
+
   written = LIBC_NAMESPACE::sprintf(buff, "%Lf", 1e100L);
   ASSERT_STREQ_LEN(written, buff,
                    "99999999999999999996693535322073426194986990198284960792713"
@@ -2975,6 +2983,10 @@ TEST(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
 
   written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 0xf.fffffffffffffffp+16380L);
   ASSERT_STREQ_LEN(written, buff, "1.18973e+4932");
+
+  // Minimum normal
+  written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 3.36210314311209350626E-4932L);
+  ASSERT_STREQ_LEN(written, buff, "3.3621e-4932");
 
   written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 0xa.aaaaaaaaaaaaaabp-7L);
   ASSERT_STREQ_LEN(written, buff, "0.0833333");
