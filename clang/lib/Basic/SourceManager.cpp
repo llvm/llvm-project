@@ -928,41 +928,6 @@ SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc) const {
   return Loc;
 }
 
-FileIDAndOffset SourceManager::getDecomposedExpansionLocSlowCase(
-    const SrcMgr::SLocEntry *E) const {
-  // If this is an expansion record, walk through all the expansion points.
-  FileID FID;
-  SourceLocation Loc;
-  unsigned Offset;
-  do {
-    Loc = E->getExpansion().getExpansionLocStart();
-
-    FID = getFileID(Loc);
-    E = &getSLocEntry(FID);
-    Offset = Loc.getOffset()-E->getOffset();
-  } while (!Loc.isFileID());
-
-  return std::make_pair(FID, Offset);
-}
-
-FileIDAndOffset
-SourceManager::getDecomposedSpellingLocSlowCase(const SrcMgr::SLocEntry *E,
-                                                unsigned Offset) const {
-  // If this is an expansion record, walk through all the expansion points.
-  FileID FID;
-  SourceLocation Loc;
-  do {
-    Loc = E->getExpansion().getSpellingLoc();
-    Loc = Loc.getLocWithOffset(Offset);
-
-    FID = getFileID(Loc);
-    E = &getSLocEntry(FID);
-    Offset = Loc.getOffset()-E->getOffset();
-  } while (!Loc.isFileID());
-
-  return std::make_pair(FID, Offset);
-}
-
 /// getImmediateSpellingLoc - Given a SourceLocation object, return the
 /// spelling location referenced by the ID.  This is the first level down
 /// towards the place where the characters that make up the lexed token can be

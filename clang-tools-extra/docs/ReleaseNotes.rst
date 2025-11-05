@@ -244,6 +244,11 @@ New check aliases
   <clang-tidy/checks/modernize/avoid-variadic-functions>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-dcl58-cpp <clang-tidy/checks/cert/dcl58-cpp>` to
+  :doc:`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
   :doc:`bugprone-command-processor
   <clang-tidy/checks/bugprone/command-processor>`
