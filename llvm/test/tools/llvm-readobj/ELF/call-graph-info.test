@@ -44,7 +44,7 @@
 ## We do not support GNU format console output for --call-graph-info as it is an LLVM only info.
 # CHECK-NOT: .
 
-# LLVM: CallGraph [
+# LLVM:      CallGraph [
 # LLVM-NEXT:     Function {
 # LLVM-NEXT:       Names: [foo]
 # LLVM-NEXT:       Address: 0x1790
