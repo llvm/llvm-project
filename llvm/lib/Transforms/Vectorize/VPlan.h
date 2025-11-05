@@ -1166,7 +1166,7 @@ public:
   bool usesFirstLaneOnly(const VPValue *Op) const override;
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override;
+  bool usesFirstPartOnly(const VPValue *Op) const override;
 
   /// Returns true if this VPInstruction produces a scalar value from a vector,
   /// e.g. by performing a reduction or extracting a lane.
@@ -1393,7 +1393,7 @@ public:
     return true;
   }
 
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
+  bool usesFirstPartOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -1882,7 +1882,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
+  bool usesFirstPartOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     assert(getNumOperands() <= 2 && "must have at most two operands");
@@ -1927,7 +1927,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
+  bool usesFirstPartOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     assert(getNumOperands() <= 2 && "must have at most two operands");
@@ -3513,7 +3513,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
+  bool usesFirstPartOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;

@@ -287,7 +287,7 @@ public:
 
   /// Returns true if the VPUser only uses the first part of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
+  virtual bool usesFirstPartOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;

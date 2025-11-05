@@ -1323,7 +1323,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   llvm_unreachable("switch should return");
 }
 
-bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
+bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (Instruction::isBinaryOp(getOpcode()))
     return vputils::onlyFirstPartUsed(this);
