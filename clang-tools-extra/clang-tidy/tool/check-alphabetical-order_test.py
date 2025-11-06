@@ -36,100 +36,95 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
     def test_normalize_list_rst_sorts_rows(self):
         lines = [
             "Header\n",
+            "------"
             "\n",
             ".. csv-table:: Clang-Tidy checks\n",
-            '   :header: "Check", "Info"\n',
+            '   :header: "Name", "Offers fixes"\n',
             "\n",
-            "   :doc:`zebra <clang-tidy/checks/zebra>` Z line\n",
-            "   :doc:`Alpha <clang-tidy/checks/alpha>` A line\n",
-            "   some non-doc row that should stay after docs\n",
+            '   :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"\n',
+            "   :doc:`cert-flp30-c <cert/flp30-c>`,\n",
+            '   :doc:`abseil-cleanup-ctad <abseil/cleanup-ctad>`, "Yes"\n',
+            "   A non-doc row that should stay after docs\n",
             "\n",
             "Footer\n",
         ]
 
         out = _mod.normalize_list_rst(lines)
-        # Alpha should appear before zebra in normalized csv-table rows.
-        alpha: str = "Alpha <clang-tidy/checks/alpha>"
-        zebra: str = "zebra <clang-tidy/checks/zebra>"
-        self.assertLess(out.find(alpha), out.find(zebra))
+        pos_abseil = out.find("abseil-cleanup-ctad")
+        pos_bugprone = out.find("bugprone-virtual-near-miss")
+        pos_cert = out.find("cert-flp30-c")
+        self.assertTrue(all(p != -1 for p in [pos_abseil, pos_bugprone, pos_cert]))
+        self.assertLess(pos_abseil, pos_bugprone)
+        self.assertLess(pos_bugprone, pos_cert)
         # Non-doc row should remain after doc rows within the table region.
-        self.assertGreater(out.find("some non-doc row"), out.find("zebra"))
+        self.assertGreater(out.find("A non-doc row"), out.find("cert-flp30-c"))
 
     def test_find_heading(self):
         lines = [
-            "- something\n",
+            "- Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been\n",
+            "  moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed\n",
+            "  in the 24th release.\n",
+            "\n",
             "New checks\n",
-            "^^^^^^^^^^^\n",
-            "- something\n",
+            "^^^^^^^^^^\n",
+            "- New :doc:`bugprone-derived-method-shadowing-base-method\n",
+            "  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.\n",
         ]
         idx = _mod.find_heading(lines, "New checks")
-        self.assertEqual(idx, 1)
-
-    def test_collect_and_sort_blocks(self):
-        # Section content with two bullets and a suffix line.
-        lines = [
-            "Intro\n",
-            "- :doc:`Zed <clang-tidy/checks/zed>`: details\n",
-            "  continuation\n",
-            "- :doc:`alpha <clang-tidy/checks/alpha>`: more details\n",
-            "\n",
-        ]
-        prefix, blocks, suffix = _mod.collect_bullet_blocks(lines, 0, len(lines))
-        # Prefix is the intro line until first bullet; suffix is trailing lines.
-        self.assertEqual(prefix, ["Intro\n"])
-        self.assertEqual(suffix, [])
-        sorted_blocks = _mod.sort_blocks(blocks)
-        joined = "".join([l for b in sorted_blocks for l in b])
-        # Uppercase Z sorts before lowercase a in ASCII.
-        zed: str = "Zed <clang-tidy/checks/zed>"
-        aval: str = "alpha <clang-tidy/checks/alpha>"
-        self.assertLess(joined.find(zed), joined.find(aval))
-
-    def test_normalize_single_section_orders_bullets(self):
-        content = [
-            "New checks\n",
-            "^^^^^^^^^^^\n",
-            "- :doc:`zed <clang-tidy/checks/zed>`: new\n",
-            "- :doc:`Alpha <clang-tidy/checks/alpha>`: new\n",
-            "\n",
-        ]
-        out = "".join(
-            _mod._normalize_release_notes_section(content, "New checks", None)
-        )
-        # Uppercase A sorts before lowercase z in ASCII.
-        aitem: str = "- :doc:`Alpha <clang-tidy/checks/alpha>`: new"
-        zitem: str = "- :doc:`zed <clang-tidy/checks/zed>`: new"
-        self.assertLess(out.find(aitem), out.find(zitem))
+        self.assertEqual(idx, 4)
 
     def test_duplicate_detection_and_report(self):
+        # Ensure duplicate detection works properly when sorting is incorrect.
         lines = [
             "Changes in existing checks\n",
-            "^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
-            "- :doc:`Alpha <clang-tidy/checks/alpha>`: change one\n",
-            "- :doc:`Zed <clang-tidy/checks/zed>`: change something\n",
-            "- :doc:`Alpha <clang-tidy/checks/alpha>`: change two\n",
+            "^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+            "\n",
+            "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+            "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+            "  correcting a spelling mistake on its option\n",
+            "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+            "\n",
+            "- Improved :doc:`bugprone-exception-escape\n",
+            "  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:\n",
+            "  exceptions from captures are now diagnosed, exceptions in the bodies of\n",
+            "  lambdas that aren't actually invoked are not.\n",
+            "\n",
+            "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+            "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+            "  correcting a spelling mistake on its option\n",
+            "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
             "\n",
         ]
-        dups = _mod.find_duplicate_block_details(lines, "Changes in existing checks")
-        # Expect one duplicate group for 'Alpha' with two occurrences.
+        dups = _mod.find_duplicate_entries(lines, "Changes in existing checks")
+        # Expect one duplicate group for 'bugprone-easily-swappable-parameters' with two occurrences.
         self.assertEqual(len(dups), 1)
         key, occs = dups[0]
-        self.assertEqual(key.strip(), "Alpha")
+        self.assertEqual(key.strip(), "- Improved :doc:`bugprone-easily-swappable-parameters")
         self.assertEqual(len(occs), 2)
 
         report = _mod._emit_duplicate_report(lines, "Changes in existing checks")
         self.assertIsInstance(report, str)
         self.assertIn("Duplicate entries in 'Changes in existing checks':", report)
-        self.assertIn("-- Duplicate: Alpha", report)
+        self.assertIn("-- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters", report)
         self.assertEqual(report.count("- At line "), 2)
+        self.assertIn("- At line 4:", report)
+        self.assertIn("- At line 14:", report)
 
-    def test_handle_release_notes_out_unsorted_returns_ok(self):
+    def test_process_release_notes_with_unsorted_content(self):
         # When content is not normalized, the function writes normalized text and returns 0.
         rn_lines = [
             "New checks\n",
-            "^^^^^^^^^^^\n",
-            "- :doc:`Zed <clang-tidy/checks/zed>`: new\n",
-            "- :doc:`Alpha <clang-tidy/checks/alpha>`: new\n",
+            "^^^^^^^^^^\n",
+            "\n",
+            "- New :doc:`readability-redundant-parentheses\n",
+            "  <clang-tidy/checks/readability/redundant-parentheses>` check.\n",
+            "\n",
+            "  Detect redundant parentheses.\n",
+            "\n",
+            "- New :doc:`bugprone-derived-method-shadowing-base-method\n",
+            "  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.\n",
+            "\n",
+            "  Finds derived class methods that shadow a (non-virtual) base class method.\n",
             "\n",
         ]
         with tempfile.TemporaryDirectory() as td:
@@ -140,27 +135,62 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
             buf = io.StringIO()
             with redirect_stderr(buf):
-                rc = _mod._handle_release_notes_out(out_path, rn_doc)
+                rc = _mod.process_release_notes(out_path, rn_doc)
 
             self.assertEqual(rc, 0)
             with open(out_path, "r", encoding="utf-8") as f:
                 out = f.read()
 
+            bugprone_item = [
+                "- New :doc:`bugprone-derived-method-shadowing-base-method",
+                "  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.",
+                "  Finds derived class methods that shadow a (non-virtual) base class method.",
+            ]
+            readability_item = [
+                "- New :doc:`readability-redundant-parentheses",
+                "  <clang-tidy/checks/readability/redundant-parentheses>` check.",
+                "  Detect redundant parentheses.",
+            ]
+
+            p_bugprone = [out.find(s) for s in bugprone_item]
+            p_readability = [out.find(s) for s in readability_item]
+
+            self.assertTrue(all(p != -1 for p in p_bugprone))
+            self.assertTrue(all(p != -1 for p in p_readability))
+
+            self.assertLess(p_bugprone[0], p_bugprone[1])
+            self.assertLess(p_bugprone[1], p_bugprone[2])
+
+            self.assertLess(p_readability[0], p_readability[1])
+            self.assertLess(p_readability[1], p_readability[2])
+
             self.assertLess(
-                out.find("Alpha <clang-tidy/checks/alpha>"),
-                out.find("Zed <clang-tidy/checks/zed>"),
+                out.find("bugprone-derived-method-shadowing-base-method"),
+                out.find("readability-redundant-parentheses"),
             )
             self.assertIn("not normalized", buf.getvalue())
 
-    def test_handle_release_notes_out_duplicates_fail(self):
-        # Sorting is already correct but duplicates exist, should return 3 and report.
+    def test_process_release_notes_prioritizes_sorting_over_duplicates(self):
+        # Sorting is incorrect and duplicates exist, should report ordering issues first.
         rn_lines = [
             "Changes in existing checks\n",
-            "^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
-            "- :doc:`Alpha <clang-tidy/checks/alpha>`: change one\n",
-            "  change one\n\n",
-            "- :doc:`Alpha <clang-tidy/checks/alpha>`: change two\n\n",
-            "  change two\n\n",
+            "^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+            "\n",
+            "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+            "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+            "  correcting a spelling mistake on its option\n",
+            "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+            "\n",
+            "- Improved :doc:`bugprone-exception-escape\n",
+            "  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:\n",
+            "  exceptions from captures are now diagnosed, exceptions in the bodies of\n",
+            "  lambdas that aren't actually invoked are not.\n",
+            "\n",
+            "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+            "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+            "  correcting a spelling mistake on its option\n",
+            "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+            "\n",
         ]
         with tempfile.TemporaryDirectory() as td:
             rn_doc = os.path.join(td, "ReleaseNotes.rst")
@@ -170,42 +200,79 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
             buf = io.StringIO()
             with redirect_stderr(buf):
-                rc = _mod._handle_release_notes_out(out_path, rn_doc)
-
-            self.assertEqual(rc, 3)
+                rc = _mod.process_release_notes(out_path, rn_doc)
+            self.assertEqual(rc, 0)
             self.assertIn(
-                "Duplicate entries in 'Changes in existing checks':",
+                "Note: 'ReleaseNotes.rst' is not normalized; Please fix ordering first.",
                 buf.getvalue(),
             )
 
-    def test_handle_checks_list_out_writes_normalized(self):
+    def test_process_release_notes_with_duplicates_fails(self):
+        # Sorting is already correct but duplicates exist, should return 3 and report.
+        rn_lines = [
+            "Changes in existing checks\n",
+            "^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+            "\n",
+            "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+            "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+            "  correcting a spelling mistake on its option\n",
+            "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+            "\n",
+            "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+            "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+            "  correcting a spelling mistake on its option\n",
+            "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+            "\n",
+            "- Improved :doc:`bugprone-exception-escape\n",
+            "  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:\n",
+            "  exceptions from captures are now diagnosed, exceptions in the bodies of\n",
+            "  lambdas that aren't actually invoked are not.\n",
+            "\n",
+        ]
+        with tempfile.TemporaryDirectory() as td:
+            rn_doc = os.path.join(td, "ReleaseNotes.rst")
+            out_path = os.path.join(td, "out.rst")
+            with open(rn_doc, "w", encoding="utf-8") as f:
+                f.write("".join(rn_lines))
+
+            buf = io.StringIO()
+            with redirect_stderr(buf):
+                rc = _mod.process_release_notes(out_path, rn_doc)
+
+            self.assertEqual(rc, 3)
+            self.assertIn(
+                "-- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters",
+                buf.getvalue(),
+            )
+
+    def test_process_checks_list_normalizes_output(self):
         list_lines = [
             ".. csv-table:: List\n",
-            '   :header: "Check", "Info"\n',
+            '   :header: "Name", "Redirect", "Offers fixes"\n',
             "\n",
-            "   :doc:`Zed <clang-tidy/checks/zed>` foo\n",
-            "   :doc:`Beta <clang-tidy/checks/beta>` bar\n",
-            "   :doc:`Alpha <clang-tidy/checks/alpha>` baz\n",
-            "   :doc:`Baz <clang-tidy/checks/baz>` baz\n",
+            '   :doc:`cert-dcl16-c <cert/dcl16-c>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"\n',
+            '   :doc:`cert-con36-c <cert/con36-c>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,\n',
+            '   :doc:`cert-dcl37-c <cert/dcl37-c>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"\n',
+            "   :doc:`cert-arr39-c <cert/arr39-c>`, :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,\n",
         ]
         with tempfile.TemporaryDirectory() as td:
             in_doc = os.path.join(td, "list.rst")
             out_doc = os.path.join(td, "out.rst")
             with open(in_doc, "w", encoding="utf-8") as f:
                 f.write("".join(list_lines))
-            rc = _mod._handle_checks_list_out(out_doc, in_doc)
+            rc = _mod.process_checks_list(out_doc, in_doc)
             self.assertEqual(rc, 0)
             with open(out_doc, "r", encoding="utf-8") as f:
                 out = f.read()
-            alpha = out.find("Alpha <clang-tidy/checks/alpha>")
-            baz = out.find("Baz <clang-tidy/checks/baz>")
-            beta = out.find("Beta <clang-tidy/checks/beta>")
-            zed = out.find("Zed <clang-tidy/checks/zed>")
-            for pos in (alpha, baz, beta, zed):
+            dcl16_pos = out.find("cert-dcl16-c <cert/dcl16-c>")
+            con36_pos = out.find("cert-con36-c <cert/con36-c>")
+            dcl37_pos = out.find("cert-dcl37-c <cert/dcl37-c>")
+            arr39_pos = out.find("cert-arr39-c <cert/arr39-c>")
+            for pos in (dcl16_pos, con36_pos, dcl37_pos, arr39_pos):
                 self.assertGreaterEqual(pos, 0)
-            self.assertLess(alpha, baz)
-            self.assertLess(baz, beta)
-            self.assertLess(beta, zed)
+            self.assertLess(arr39_pos, con36_pos)
+            self.assertLess(con36_pos, dcl16_pos)
+            self.assertLess(dcl16_pos, dcl37_pos)
 
 
 if __name__ == "__main__":

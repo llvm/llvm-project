@@ -125,7 +125,7 @@ def is_bullet_start(line: str) -> bool:
     return line.startswith("- ")
 
 
-def collect_bullet_blocks(
+def parse_bullet_blocks(
     lines: Sequence[str], start: int, end: int
 ) -> Tuple[List[str], List[Tuple[str, List[str]]], List[str]]:
     i = start
@@ -166,7 +166,7 @@ def sort_blocks(blocks: List[Tuple[str, List[str]]]) -> List[List[str]]:
     return [b for _, b in sorted(blocks, key=lambda kb: kb[0])]
 
 
-def find_duplicate_block_details(
+def find_duplicate_entries(
     lines: Sequence[str], title: str
 ) -> List[Tuple[str, List[Tuple[int, List[str]]]]]:
     """Return detailed duplicate info as (key, [(start_idx, block_lines), ...]).
@@ -264,7 +264,7 @@ def _normalize_release_notes_section(
         return list(lines)
     _, sec_start, sec_end = bounds
 
-    prefix, blocks, suffix = collect_bullet_blocks(lines, sec_start, sec_end)
+    prefix, blocks, suffix = parse_bullet_blocks(lines, sec_start, sec_end)
     sorted_blocks = sort_blocks(blocks)
 
     new_section: List[str] = []
@@ -301,7 +301,7 @@ def _default_paths() -> Tuple[str, str]:
 
 
 def _emit_duplicate_report(lines: Sequence[str], title: str) -> Optional[str]:
-    dups_detail = find_duplicate_block_details(lines, title)
+    dups_detail = find_duplicate_entries(lines, title)
     if not dups_detail:
         return None
     out: List[str] = []
@@ -316,7 +316,7 @@ def _emit_duplicate_report(lines: Sequence[str], title: str) -> Optional[str]:
     return "".join(out)
 
 
-def _handle_release_notes_out(out_path: str, rn_doc: str) -> int:
+def process_release_notes(out_path: str, rn_doc: str) -> int:
     lines = read_text(rn_doc)
     normalized = normalize_release_notes(lines)
     write_text(out_path, normalized)
@@ -324,7 +324,7 @@ def _handle_release_notes_out(out_path: str, rn_doc: str) -> int:
     # Prefer reporting ordering issues first; let diff fail the test.
     if "".join(lines) != normalized:
         sys.stderr.write(
-            "Note: 'ReleaseNotes.rst' section is not normalized; Please fix ordering first.\n"
+            "Note: 'ReleaseNotes.rst' is not normalized; Please fix ordering first.\n"
         )
         return 0
 
@@ -336,14 +336,14 @@ def _handle_release_notes_out(out_path: str, rn_doc: str) -> int:
     return 0
 
 
-def _handle_checks_list_out(out_path: str, list_doc: str) -> int:
+def process_checks_list(out_path: str, list_doc: str) -> int:
     lines = read_text(list_doc)
     normalized = normalize_list_rst(lines)
     write_text(out_path, normalized)
     return 0
 
 
-def main(argv: List[str]) -> int:
+def main(argv: Sequence[str]) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("-o", "--output", dest="out", default=None)
     args = ap.parse_args(argv)
@@ -354,9 +354,9 @@ def main(argv: List[str]) -> int:
         out_path = args.out
         out_lower = os.path.basename(out_path).lower()
         if "release" in out_lower:
-            return _handle_release_notes_out(out_path, rn_doc)
+            return process_release_notes(out_path, rn_doc)
         else:
-            return _handle_checks_list_out(out_path, list_doc)
+            return process_checks_list(out_path, list_doc)
 
     list_lines = read_text(list_doc)
     rn_lines = read_text(rn_doc)
