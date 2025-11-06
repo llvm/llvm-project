@@ -30,7 +30,7 @@ class Module;
 /// appends globals to llvm.compiler.used.
 class SanitizerCoveragePass : public PassInfoMixin<SanitizerCoveragePass> {
 public:
-  explicit SanitizerCoveragePass(
+  LLVM_ABI explicit SanitizerCoveragePass(
       SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
       const std::vector<std::string> &AllowlistFiles =
           std::vector<std::string>(),

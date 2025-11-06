@@ -74,13 +74,13 @@ public:
   ///
   /// If there's an open proxy from \a createProxy(), calls \a discard() to
   /// clean up temporaries followed by \a report_fatal_error().
-  Error keep();
+  LLVM_ABI Error keep();
 
   /// Discard an output, cleaning up any temporary state. Errors if clean-up
   /// fails.
   ///
   /// If it has already been closed, calls \a report_fatal_error().
-  Error discard();
+  LLVM_ABI Error discard();
 
   /// Discard the output when destroying it if it's still open, sending the
   /// result to \a Handler.
@@ -92,7 +92,7 @@ public:
   /// producer. Errors if there's already a proxy. The proxy must be deleted
   /// before calling \a keep(). The proxy will crash if it's written to after
   /// calling \a discard().
-  Expected<std::unique_ptr<raw_pwrite_stream>> createProxy();
+  LLVM_ABI Expected<std::unique_ptr<raw_pwrite_stream>> createProxy();
 
   bool hasOpenProxy() const { return OpenProxy; }
 
@@ -126,7 +126,7 @@ public:
 private:
   /// Destroy \a Impl. Reports fatal error if the file is open and there's no
   /// handler from \a discardOnDestroy().
-  void destroy();
+  LLVM_ABI void destroy();
   OutputFile &moveFrom(OutputFile &O) {
     Path = std::move(O.Path);
     Impl = std::move(O.Impl);

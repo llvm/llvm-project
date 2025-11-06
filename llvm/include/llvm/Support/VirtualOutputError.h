@@ -42,7 +42,7 @@ public:
   }
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  LLVM_ABI static char ID;
 
   OutputError(const Twine &OutputPath, std::error_code EC)
       : ErrorInfo<OutputError, ECError>(EC), OutputPath(OutputPath.str()) {
@@ -104,7 +104,7 @@ public:
   }
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  LLVM_ABI static char ID;
 
   TempFileOutputError(const Twine &TempPath, const Twine &OutputPath,
                       std::error_code EC)
