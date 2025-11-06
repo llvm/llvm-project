@@ -1256,7 +1256,7 @@ def NVVM_MembarOp : NVVM_Op<"membar">,
                     Arguments<(ins MemLevelKindAttr:$level)> {
   let summary = "Memory barrier operation";
   let description = [{
-    `member` operation guarantees that prior memory accesses requested by this
+    `membar` operation guarantees that prior memory accesses requested by this
     thread are performed at the specified `level`, before later memory
     operations requested by this thread following the membar instruction.
 
