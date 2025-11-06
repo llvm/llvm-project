@@ -1327,23 +1327,35 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
     FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
 }
 
-void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc) {
+NamedDecl *Sema::lookupExternCName(IdentifierInfo *IdentId,
+                                   SourceLocation NameLoc, Scope *curScope) {
+  LookupResult Result(*this, IdentId, NameLoc, LookupOrdinaryName);
+  LookupName(Result, curScope);
+  if (!getLangOpts().CPlusPlus)
+    return Result.getAsSingle<NamedDecl>();
+  for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
+    NamedDecl *D = (*I)->getUnderlyingDecl();
+    if (auto *FD = dyn_cast<FunctionDecl>(D->getCanonicalDecl()))
+      if (FD->isExternC())
+        return D;
+    if (isa<VarDecl>(D->getCanonicalDecl()))
+      return D;
+  }
+  return nullptr;
+}
+
+void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc, Scope *curScope) {
   SymbolLabel Label;
   Label.NameLoc = NameLoc;
   Label.Used = false;
 
-  NamedDecl *PrevDecl =
-      LookupSingleName(TUScope, IdentId, NameLoc, LookupOrdinaryName);
+  NamedDecl *PrevDecl = lookupExternCName(IdentId, NameLoc, curScope);
   if (!PrevDecl) {
     PendingExportedNames[IdentId] = Label;
     return;
   }
 
   if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl->getCanonicalDecl())) {
-    if (getLangOpts().CPlusPlus && !FD->isExternC()) {
-      PendingExportedNames[IdentId] = Label;
-      return;
-    }
     if (!FD->hasExternalFormalLinkage()) {
       Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
       return;

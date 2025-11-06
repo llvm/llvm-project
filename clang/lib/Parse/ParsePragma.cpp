@@ -1422,7 +1422,6 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
       return false;
     }
 
-    // C++ could have a nested name, or be qualified with ::.
     PP.Lex(Tok);
     if (Tok.isNot(tok::identifier)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
@@ -1441,7 +1440,7 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     }
 
     PP.Lex(Tok);
-    Actions.ActOnPragmaExport(IdentName, IdentNameLoc);
+    Actions.ActOnPragmaExport(IdentName, IdentNameLoc, getCurScope());
 
     // Because export is also a C++ keyword, we also check for that.
     if (Tok.is(tok::identifier) || Tok.is(tok::kw_export)) {
