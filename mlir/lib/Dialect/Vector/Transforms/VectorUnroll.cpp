@@ -161,7 +161,8 @@ struct UnrollTransferReadPattern
       return failure();
     if (readOp.getMask())
       return failure();
-    auto targetShape = getTargetShape(options, readOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, readOp);
     if (!targetShape)
       return failure();
     auto sourceVectorType = readOp.getVectorType();
@@ -216,7 +217,8 @@ struct UnrollTransferWritePattern
 
     if (writeOp.getMask())
       return failure();
-    auto targetShape = getTargetShape(options, writeOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, writeOp);
     if (!targetShape)
       return failure();
     auto sourceVectorType = writeOp.getVectorType();
@@ -287,7 +289,8 @@ struct UnrollContractionPattern
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, contractOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, contractOp);
     if (!targetShape)
       return failure();
     auto dstVecType = cast<VectorType>(contractOp.getResultType());
@@ -462,7 +465,8 @@ struct UnrollElementwisePattern : public RewritePattern {
                                 PatternRewriter &rewriter) const override {
     if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
       return failure();
-    auto targetShape = getTargetShape(options, op);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, op);
     if (!targetShape)
       return failure();
     int64_t targetShapeRank = targetShape->size();
@@ -590,7 +594,8 @@ struct UnrollTransposePattern : public OpRewritePattern<vector::TransposeOp> {
                                 PatternRewriter &rewriter) const override {
     if (transposeOp.getResultVectorType().getRank() == 0)
       return failure();
-    auto targetShape = getTargetShape(options, transposeOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, transposeOp);
     if (!targetShape)
       return failure();
     auto originalVectorType = transposeOp.getResultVectorType();
@@ -643,7 +648,8 @@ struct UnrollGatherPattern : public OpRewritePattern<vector::GatherOp> {
     VectorType sourceVectorType = gatherOp.getVectorType();
     if (sourceVectorType.getRank() == 0)
       return failure();
-    auto targetShape = getTargetShape(options, gatherOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, gatherOp);
     if (!targetShape)
       return failure();
     SmallVector<int64_t> strides(targetShape->size(), 1);
@@ -697,7 +703,8 @@ struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
                                 PatternRewriter &rewriter) const override {
     VectorType vecType = loadOp.getVectorType();
 
-    auto targetShape = getTargetShape(options, loadOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, loadOp);
     if (!targetShape)
       return failure();
 
@@ -741,7 +748,8 @@ struct UnrollStorePattern : public OpRewritePattern<vector::StoreOp> {
                                 PatternRewriter &rewriter) const override {
     VectorType vecType = storeOp.getVectorType();
 
-    auto targetShape = getTargetShape(options, storeOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, storeOp);
     if (!targetShape)
       return failure();
 
@@ -780,7 +788,8 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
 
   LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, broadcastOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, broadcastOp);
     if (!targetShape)
       return failure();
 
@@ -863,7 +872,8 @@ struct ToElementsToTargetShape final
 
   LogicalResult matchAndRewrite(vector::ToElementsOp op,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, op);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, op);
     if (!targetShape)
       return failure();
 
