@@ -151,7 +151,7 @@ lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
   // We want to take the greater of two sections. If LHS and RHS are both
   // SHT_NOBITS, we should default to LHS. If RHS has a bigger section,
   // indicating it has data that wasn't stripped, we should take that instead.
-  return lhs->GetFileSize() > rhs->GetFileSize() ? lhs : rhs;
+  return rhs->GetFileSize() > lhs->GetFileSize() ? rhs : lhs;
 }
 } // end anonymous namespace
 
