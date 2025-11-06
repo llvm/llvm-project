@@ -483,7 +483,9 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
 
-  Value *NewVal = Builder.CreateBitCast(NewLI, LI->getType());
+  Value *NewVal = LI->getType()->isPtrOrPtrVectorTy()
+                      ? Builder.CreateIntToPtr(NewLI, LI->getType())
+                      : Builder.CreateBitCast(NewLI, LI->getType());
   LI->replaceAllUsesWith(NewVal);
   LI->eraseFromParent();
   return NewLI;
@@ -2093,9 +2095,18 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     I->replaceAllUsesWith(V);
   } else if (HasResult) {
     Value *V;
-    if (UseSizedLibcall)
-      V = Builder.CreateBitOrPointerCast(Result, I->getType());
-    else {
+    if (UseSizedLibcall) {
+      // Add bitcasts from Result's scalar type to I's <n x ptr> vector type
+      auto *PtrTy = dyn_cast<PointerType>(I->getType()->getScalarType());
+      auto *VTy = dyn_cast<VectorType>(I->getType());
+      if (VTy && PtrTy && !Result->getType()->isVectorTy()) {
+        unsigned AS = PtrTy->getAddressSpace();
+        Value *BC = Builder.CreateBitCast(
+            Result, VTy->getWithNewType(DL.getIntPtrType(Ctx, AS)));
+        V = Builder.CreateIntToPtr(BC, I->getType());
+      } else
+        V = Builder.CreateBitOrPointerCast(Result, I->getType());
+    } else {
       V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
                                     AllocaAlignment);
       Builder.CreateLifetimeEnd(AllocaResult);
