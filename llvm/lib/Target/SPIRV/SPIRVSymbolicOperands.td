@@ -309,7 +309,7 @@ defm SPV_KHR_shader_clock : ExtensionOperand<54, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_unstructured_loop_controls : ExtensionOperand<55, [EnvOpenCL]>;
 defm SPV_EXT_demote_to_helper_invocation : ExtensionOperand<56, [EnvVulkan]>;
 defm SPV_INTEL_fpga_reg : ExtensionOperand<57, [EnvOpenCL]>;
-defm SPV_INTEL_blocking_pipes : ExtensionOperand<58, [EnvOpenCL]>;
+defm SPV_ALTERA_blocking_pipes : ExtensionOperand<58, [EnvOpenCL]>;
 defm SPV_GOOGLE_user_type : ExtensionOperand<59, [EnvVulkan]>;
 defm SPV_KHR_physical_storage_buffer : ExtensionOperand<60, [EnvVulkan]>;
 defm SPV_INTEL_kernel_attributes : ExtensionOperand<61, [EnvOpenCL]>;
@@ -611,6 +611,7 @@ defm TensorFloat32RoundingINTEL : CapabilityOperand<6425, 0, 0, [SPV_INTEL_tenso
 defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
+defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time

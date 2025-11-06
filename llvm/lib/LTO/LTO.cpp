@@ -1396,11 +1396,10 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   SmallVector<const char *> LibcallSymbols;
-  ArrayRef<RTLIB::LibcallImpl> LibcallImpls = Libcalls.getLibcallImpls();
-  LibcallSymbols.reserve(LibcallImpls.size());
+  LibcallSymbols.reserve(Libcalls.getNumAvailableLibcallImpls());
 
-  for (RTLIB::LibcallImpl Impl : LibcallImpls) {
-    if (Impl != RTLIB::Unsupported)
+  for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+    if (Libcalls.isAvailable(Impl))
       LibcallSymbols.push_back(Libcalls.getLibcallImplName(Impl).data());
   }
 

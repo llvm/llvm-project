@@ -1010,14 +1010,12 @@ bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
     return Offset - StartOffset;
   };
 
-  // Skip a sequence of zero bytes. For AArch64 we only skip 4 bytes of zeros
-  // in case the following zeros belong to constant island or veneer.
+  // Skip a sequence of zero bytes. For AArch64 we only skip 4's exact
+  // multiple number of zeros in case the following zeros belong to veneer.
   auto skipZeros = [&]() {
     const uint64_t StartOffset = Offset;
     uint64_t CurrentOffset = Offset;
-    for (; CurrentOffset < BF.getMaxSize() &&
-           (!isAArch64() || CurrentOffset < StartOffset + 4);
-         ++CurrentOffset)
+    for (; CurrentOffset < BF.getMaxSize(); ++CurrentOffset)
       if ((*FunctionData)[CurrentOffset] != 0)
         break;
 

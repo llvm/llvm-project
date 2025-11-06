@@ -209,6 +209,19 @@ private:
 } // namespace clang
 
 template <class Emitter>
+bool Compiler<Emitter>::isValidBitCast(const CastExpr *E) {
+  QualType FromTy = E->getSubExpr()->getType()->getPointeeType();
+  QualType ToTy = E->getType()->getPointeeType();
+
+  if (classify(FromTy) == classify(ToTy))
+    return true;
+
+  if (FromTy->isVoidType() || ToTy->isVoidType())
+    return true;
+  return false;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   const Expr *SubExpr = CE->getSubExpr();
 
@@ -476,8 +489,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
+    QualType CETy = CE->getType();
     // Reject bitcasts to atomic types.
-    if (CE->getType()->isAtomicType()) {
+    if (CETy->isAtomicType()) {
       if (!this->discard(SubExpr))
         return false;
       return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, CE);
@@ -490,6 +504,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     OptPrimType ToT = classify(CE->getType());
     if (!FromT || !ToT)
+      return false;
+
+    if (!this->isValidBitCast(CE) &&
+        !this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/false, CE))
       return false;
 
     assert(isPtrType(*FromT));
@@ -5989,6 +6007,8 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
       CaseLabels[SC] = this->getLabel();
 
       const Expr *Value = CS->getLHS();
+      if (Value->isValueDependent())
+        return false;
       PrimType ValueT = this->classifyPrim(Value->getType());
 
       // Compare the case statement's value to the switch condition.

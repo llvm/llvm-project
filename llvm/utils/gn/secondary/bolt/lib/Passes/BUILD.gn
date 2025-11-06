@@ -12,7 +12,7 @@ static_library("Passes") {
     "//llvm/utils/gn/build/libs/pthread",
   ]
   sources = [
-    "ADRRelaxationPass.cpp",
+    "AArch64RelaxationPass.cpp",
     "Aligner.cpp",
     "AllocCombiner.cpp",
     "AsmDump.cpp",

@@ -851,12 +851,12 @@ define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(ptr addrsp
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    ds_write_b8 v0, v1 offset:9
+; CI-NEXT:    ds_write_b8 v0, v2 offset:13
 ; CI-NEXT:    v_lshrrev_b32_e32 v3, 24, v1
 ; CI-NEXT:    ds_write_b8 v0, v1 offset:5
 ; CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; CI-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
-; CI-NEXT:    ds_write_b8 v0, v1 offset:9
-; CI-NEXT:    ds_write_b8 v0, v2 offset:13
 ; CI-NEXT:    v_lshrrev_b32_e32 v1, 24, v2
 ; CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
 ; CI-NEXT:    v_lshrrev_b32_e32 v2, 8, v2

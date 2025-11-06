@@ -813,7 +813,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
           return StmtError();
       }
     } else {
-      LHS = Expr;
+      LHS = Actions.ActOnCaseExpr(CaseLoc, Expr);
       MissingCase = false;
     }
 

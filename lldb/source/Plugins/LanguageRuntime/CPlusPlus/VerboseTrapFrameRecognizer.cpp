@@ -95,33 +95,14 @@ VerboseTrapFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   if (func_name.empty())
     return {};
 
-  static auto trap_regex =
-      llvm::Regex(llvm::formatv("^{0}\\$(.*)\\$(.*)$", ClangTrapPrefix).str());
-  SmallVector<llvm::StringRef, 3> matches;
-  std::string regex_err_msg;
-  if (!trap_regex.match(func_name, &matches, &regex_err_msg)) {
-    LLDB_LOGF(GetLog(LLDBLog::Unwind),
-              "Failed to parse match trap regex for '%s': %s", func_name.data(),
-              regex_err_msg.c_str());
-
+  auto maybe_trap_reason =
+      clang::CodeGen::DemangleTrapReasonInDebugInfo(func_name);
+  if (!maybe_trap_reason.has_value()) {
+    LLDB_LOGF(GetLog(LLDBLog::Unwind), "Failed to demangle '%s' as trap reason",
+              func_name.str().c_str());
     return {};
   }
-
-  // For `__clang_trap_msg$category$message$` we expect 3 matches:
-  // 1. entire string
-  // 2. category
-  // 3. message
-  if (matches.size() != 3) {
-    LLDB_LOGF(GetLog(LLDBLog::Unwind),
-              "Unexpected function name format. Expected '<trap prefix>$<trap "
-              "category>$<trap message>'$ but got: '%s'.",
-              func_name.data());
-
-    return {};
-  }
-
-  auto category = matches[1];
-  auto message = matches[2];
+  auto [category, message] = maybe_trap_reason.value();
 
   std::string stop_reason =
       category.empty() ? "<empty category>" : category.str();

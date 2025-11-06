@@ -50,7 +50,7 @@ void handleError(Error Err, StringRef context = "") {
 }
 
 bool ObjectFileLoader::isArchitectureCompatible(const object::ObjectFile &Obj) {
-  Triple HostTriple(sys::getDefaultTargetTriple());
+  Triple HostTriple(sys::getProcessTriple());
   Triple ObjTriple = Obj.makeTriple();
 
   LLVM_DEBUG({

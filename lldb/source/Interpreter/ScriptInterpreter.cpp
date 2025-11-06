@@ -150,6 +150,11 @@ ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
   return exe_ctx.m_exe_ctx_sp;
 }
 
+lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
+    const lldb::SBFrameList &frame_list) const {
+  return frame_list.m_opaque_sp;
+}
+
 lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageNone)))

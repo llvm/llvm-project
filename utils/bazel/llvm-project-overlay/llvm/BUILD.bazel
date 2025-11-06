@@ -693,6 +693,8 @@ cc_binary(
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.h",
         "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
         "utils/TableGen/Basic/SDNodeProperties.h",
@@ -2551,6 +2553,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/WebAssembly/WebAssemblyGenRegisterInfo.inc": ["-gen-register-info"],
             "lib/Target/WebAssembly/WebAssemblyGenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/WebAssembly/WebAssemblyGenAsmMatcher.inc": ["-gen-asm-matcher"],
+            "lib/Target/WebAssembly/WebAssemblyGenSDNodeInfo.inc": ["-gen-sd-node-info"],
         },
     },
     {

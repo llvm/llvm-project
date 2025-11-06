@@ -949,11 +949,11 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
 
   switch (Arg.getKind()) {
   case ParsedTemplateArgument::Type: {
-    TypeSourceInfo *DI;
-    QualType T = SemaRef.GetTypeFromParser(Arg.getAsType(), &DI);
-    if (!DI)
-      DI = SemaRef.Context.getTrivialTypeSourceInfo(T, Arg.getNameLoc());
-    return TemplateArgumentLoc(TemplateArgument(T), DI);
+    TypeSourceInfo *TSI;
+    QualType T = SemaRef.GetTypeFromParser(Arg.getAsType(), &TSI);
+    if (!TSI)
+      TSI = SemaRef.Context.getTrivialTypeSourceInfo(T, Arg.getNameLoc());
+    return TemplateArgumentLoc(TemplateArgument(T), TSI);
   }
 
   case ParsedTemplateArgument::NonType: {
@@ -3846,13 +3846,14 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
       // within enable_if in a SFINAE context, dig out the specific
       // enable_if condition that failed and present that instead.
       if (isEnableIfAliasTemplate(AliasTemplate)) {
-        if (auto DeductionInfo = isSFINAEContext()) {
-          if (*DeductionInfo &&
-              (*DeductionInfo)->hasSFINAEDiagnostic() &&
-              (*DeductionInfo)->peekSFINAEDiagnostic().second.getDiagID() ==
-                diag::err_typename_nested_not_found_enable_if &&
-              TemplateArgs[0].getArgument().getKind()
-                == TemplateArgument::Expression) {
+        if (SFINAETrap *Trap = getSFINAEContext();
+            TemplateDeductionInfo *DeductionInfo =
+                Trap ? Trap->getDeductionInfo() : nullptr) {
+          if (DeductionInfo->hasSFINAEDiagnostic() &&
+              DeductionInfo->peekSFINAEDiagnostic().second.getDiagID() ==
+                  diag::err_typename_nested_not_found_enable_if &&
+              TemplateArgs[0].getArgument().getKind() ==
+                  TemplateArgument::Expression) {
             Expr *FailedCond;
             std::string FailedDescription;
             std::tie(FailedCond, FailedDescription) =
@@ -3861,15 +3862,14 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
             // Remove the old SFINAE diagnostic.
             PartialDiagnosticAt OldDiag =
               {SourceLocation(), PartialDiagnostic::NullDiagnostic()};
-            (*DeductionInfo)->takeSFINAEDiagnostic(OldDiag);
+            DeductionInfo->takeSFINAEDiagnostic(OldDiag);
 
             // Add a new SFINAE diagnostic specifying which condition
             // failed.
-            (*DeductionInfo)->addSFINAEDiagnostic(
-              OldDiag.first,
-              PDiag(diag::err_typename_nested_not_found_requirement)
-                << FailedDescription
-                << FailedCond->getSourceRange());
+            DeductionInfo->addSFINAEDiagnostic(
+                OldDiag.first,
+                PDiag(diag::err_typename_nested_not_found_requirement)
+                    << FailedDescription << FailedCond->getSourceRange());
           }
         }
       }
@@ -3955,6 +3955,7 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
 
     if (Decl->getSpecializationKind() == TSK_Undeclared &&
         ClassTemplate->getTemplatedDecl()->hasAttrs()) {
+      NonSFINAEContext _(*this);
       InstantiatingTemplate Inst(*this, TemplateLoc, Decl);
       if (!Inst.isInvalid()) {
         MultiLevelTemplateArgumentList TemplateArgLists(Template,
@@ -4329,7 +4330,7 @@ void Sema::CheckDeductionGuideTemplate(FunctionTemplateDecl *TD) {
 }
 
 DeclResult Sema::ActOnVarTemplateSpecialization(
-    Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
+    Scope *S, Declarator &D, TypeSourceInfo *TSI, LookupResult &Previous,
     SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
     StorageClass SC, bool IsPartialSpecialization) {
   // D must be variable template id.
@@ -4455,8 +4456,8 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     VarTemplatePartialSpecializationDecl *Partial =
         VarTemplatePartialSpecializationDecl::Create(
             Context, VarTemplate->getDeclContext(), TemplateKWLoc,
-            TemplateNameLoc, TemplateParams, VarTemplate, DI->getType(), DI, SC,
-            CTAI.CanonicalConverted);
+            TemplateNameLoc, TemplateParams, VarTemplate, TSI->getType(), TSI,
+            SC, CTAI.CanonicalConverted);
     Partial->setTemplateArgsAsWritten(TemplateArgs);
 
     if (!PrevPartial)
@@ -4474,7 +4475,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     // this explicit specialization or friend declaration.
     Specialization = VarTemplateSpecializationDecl::Create(
         Context, VarTemplate->getDeclContext(), TemplateKWLoc, TemplateNameLoc,
-        VarTemplate, DI->getType(), DI, SC, CTAI.CanonicalConverted);
+        VarTemplate, TSI->getType(), TSI, SC, CTAI.CanonicalConverted);
     Specialization->setTemplateArgsAsWritten(TemplateArgs);
 
     if (!PrevDecl)
@@ -5565,12 +5566,11 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
 
     auto checkExpr = [&](Expr *E) -> Expr * {
       TemplateArgument SugaredResult, CanonicalResult;
-      unsigned CurSFINAEErrors = NumSFINAEErrors;
       ExprResult Res = CheckTemplateArgument(
           NTTP, NTTPType, E, SugaredResult, CanonicalResult,
           /*StrictCheck=*/CTAI.MatchingTTP || CTAI.PartialOrdering, CTAK);
       // If the current template argument causes an error, give up now.
-      if (Res.isInvalid() || CurSFINAEErrors < NumSFINAEErrors)
+      if (Res.isInvalid())
         return nullptr;
       CTAI.SugaredConverted.push_back(SugaredResult);
       CTAI.CanonicalConverted.push_back(CanonicalResult);

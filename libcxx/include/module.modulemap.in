@@ -973,6 +973,10 @@ module std [system] {
       header "__chrono/high_resolution_clock.h"
       export *
     }
+    module is_clock {
+      header "__chrono/is_clock.h"
+      export std_core.type_traits.integral_constant
+    }
     module leap_second {
       header "__chrono/leap_second.h"
     }

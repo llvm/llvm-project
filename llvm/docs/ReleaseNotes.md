@@ -67,6 +67,9 @@ Changes to the LLVM IR
   Instead, the `align` attribute should be placed on the pointer (or vector of
   pointers) argument.
 * A `load atomic` may now be used with vector types on x86.
+* Added `@llvm.reloc.none` intrinsic to emit null relocations to symbols. This
+  emits an undefined symbol reference without adding any dedicated code or data to
+  to bear the relocation.
 
 Changes to LLVM infrastructure
 ------------------------------
