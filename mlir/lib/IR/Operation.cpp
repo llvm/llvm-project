@@ -375,9 +375,6 @@ llvm::hash_code Operation::hashProperties() {
 // Operation Ordering
 //===----------------------------------------------------------------------===//
 
-constexpr unsigned Operation::kInvalidOrderIdx;
-constexpr unsigned Operation::kOrderStride;
-
 /// Given an operation 'other' that is within the same parent block, return
 /// whether the current operation is before 'other' in the operation list
 /// of the parent block.
