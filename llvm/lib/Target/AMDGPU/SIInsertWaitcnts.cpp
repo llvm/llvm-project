@@ -1304,7 +1304,8 @@ bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
          !hasPendingEvent(STORE_CNT) && !hasPendingEvent(SMEM_GROUP);
 }
 
-void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &CheckWait, AMDGPU::Waitcnt &UpdateWait) {
+void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &CheckWait,
+                                   AMDGPU::Waitcnt &UpdateWait) {
   // Try to simplify xcnt further by checking for joint kmcnt and loadcnt
   // optimizations. On entry to a block with multiple predescessors, there may
   // be pending SMEM and VMEM events active at the same time.
