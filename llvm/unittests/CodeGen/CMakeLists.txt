@@ -39,6 +39,7 @@ add_llvm_unittest(CodeGenTests
   MachineOperandTest.cpp
   MIR2VecTest.cpp
   RegAllocScoreTest.cpp
+  RegisterTest.cpp
   PassManagerTest.cpp
   ScalableVectorMVTsTest.cpp
   SchedBoundary.cpp
