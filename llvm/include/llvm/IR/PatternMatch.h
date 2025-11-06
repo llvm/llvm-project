@@ -3071,16 +3071,14 @@ m_c_MaxOrMin(const LHS &L, const RHS &R) {
 
 template <Intrinsic::ID IntrID, typename LHS, typename RHS>
 struct CommutativeBinaryIntrinsic_match {
-  unsigned ID;
   LHS L;
   RHS R;
 
-  CommutativeBinaryIntrinsic_match(const LHS &L, const RHS &R)
-      : ID(IntrID), L(L), R(R) {}
+  CommutativeBinaryIntrinsic_match(const LHS &L, const RHS &R) : L(L), R(R) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
     const auto *II = dyn_cast<IntrinsicInst>(V);
-    if (!II || II->getIntrinsicID() != ID)
+    if (!II || II->getIntrinsicID() != IntrID)
       return false;
     return (L.match(II->getArgOperand(0)) && R.match(II->getArgOperand(1))) ||
            (L.match(II->getArgOperand(1)) && R.match(II->getArgOperand(0)));
