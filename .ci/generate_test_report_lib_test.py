@@ -882,6 +882,59 @@ class TestReports(unittest.TestCase):
             ),
         )
 
+    def test_report_test_failure_have_explanation_explained_false(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [
+                    junit_from_xml(
+                        dedent(
+                            """\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites time="8.89">
+          <testsuite name="Bar" tests="1" failures="1" skipped="0" time="410.63">
+          <testcase classname="Bar/test_3" name="test_3" time="0.02">
+            <failure><![CDATA[Error! Expected Mt. Shasta to be next in the Eastern Sierras.]]></failure>
+          </testcase>
+          </testsuite>
+          </testsuites>"""
+                        )
+                    )
+                ],
+                [],
+                failure_explanations_list=[
+                    {
+                        "name": "Bar/test_3/test_3",
+                        "explained": False,
+                        "reason": "Mt. Shasta is in the Cascades",
+                    }
+                ],
+            ),
+            (
+                dedent(
+                    """\
+          # Foo
+
+          * 1 test failed
+
+          ## Failed Tests
+          (click on a test name to see its output)
+
+          ### Bar
+          <details>
+          <summary>Bar/test_3/test_3</summary>
+          
+          ```
+          Error! Expected Mt. Shasta to be next in the Eastern Sierras.
+          ```
+          </details>
+
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
+            ),
+        )
+
     def test_generate_report_end_to_end(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             junit_xml_file = os.path.join(temp_dir, "junit.xml")

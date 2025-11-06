@@ -312,7 +312,7 @@ public:
   }
 
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) const {
-    if (!ST->hasSVE())
+    if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
     // For fixed vectors, avoid scalarization if using SVE for them.
