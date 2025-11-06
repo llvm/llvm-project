@@ -97,6 +97,9 @@ class VectorType;
 
     CMOV, // ARM conditional move instructions.
 
+    CTSELECT, // ARM constant-time select, implemented with constant-time
+              // bitwise arithmetic instructions.
+
     SSAT, // Signed saturation
     USAT, // Unsigned saturation
 
@@ -430,8 +433,12 @@ class VectorType;
     const char *getTargetNodeName(unsigned Opcode) const override;
 
     bool isSelectSupported(SelectSupportKind Kind) const override {
-      // ARM does not support scalar condition selects on vectors.
-      return (Kind != ScalarCondVectorVal);
+      if (Kind == SelectSupportKind::CtSelect) {
+        return true;
+      } else {
+        // ARM does not support scalar condition selects on vectors.
+        return (Kind != SelectSupportKind::ScalarCondVectorVal);
+      }
     }
 
     bool isReadOnly(const GlobalValue *GV) const;
@@ -885,6 +892,7 @@ class VectorType;
     SDValue LowerUnsignedALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
@@ -1032,6 +1040,7 @@ class VectorType;
                                            MachineBasicBlock *MBB) const;
     MachineBasicBlock *EmitLowered__dbzchk(MachineInstr &MI,
                                            MachineBasicBlock *MBB) const;
+
     void addMVEVectorTypes(bool HasMVEFP);
     void addAllExtLoads(const MVT From, const MVT To, LegalizeAction Action);
     void setAllExpand(MVT VT);
