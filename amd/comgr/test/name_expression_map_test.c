@@ -376,6 +376,10 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_release_data");
   Status = amd_comgr_release_data(DataExec);
   checkError(Status, "amd_comgr_release_data");
+  Status = amd_comgr_release_data(DataExec2);
+  checkError(Status, "amd_comgr_release_data");
+  Status = amd_comgr_release_data(DataReloc2);
+  checkError(Status, "amd_comgr_release_data");
   Status = amd_comgr_destroy_data_set(DataSetIn);
   checkError(Status, "amd_comgr_destroy_data_set");
   Status = amd_comgr_destroy_data_set(DataSetBc);

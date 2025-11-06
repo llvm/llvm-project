@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_(destroy_action_info(DataAction));
   amd_comgr_(destroy_data_set(OutputBitcode));
   amd_comgr_(destroy_data_set(InputBundles));
+  free(BundleData);
 
   return 0;
 }
