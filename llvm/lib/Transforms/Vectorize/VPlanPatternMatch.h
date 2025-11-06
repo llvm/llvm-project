@@ -417,6 +417,10 @@ m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
 }
 
+inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {
+  return m_VPInstruction<VPInstruction::AnyOf>();
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::AnyOf, Op0_t>
 m_AnyOf(const Op0_t &Op0) {

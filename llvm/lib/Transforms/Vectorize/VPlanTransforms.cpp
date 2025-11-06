@@ -1221,6 +1221,29 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     }
   }
 
+  // Fold any-of (fcmp uno %A, %A), (fcmp uno %B, %B), ... ->
+  //      any-of (fcmp uno %A, %B), ...
+  if (match(Def, m_AnyOf()) && Def->getNumOperands() % 2 == 0) {
+    SmallVector<VPValue *, 4> NewOps;
+    unsigned NumOps = Def->getNumOperands();
+    for (unsigned I = 0; I < NumOps; I += 2) {
+      VPValue *A, *B;
+      if (!match(
+              Def->getOperand(I),
+              m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(A), m_Deferred(A))) ||
+          !match(Def->getOperand(I + 1),
+                 m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(B), m_Deferred(B))))
+        break;
+
+      NewOps.push_back(Builder.createFCmp(CmpInst::FCMP_UNO, A, B));
+    }
+
+    if (NewOps.size() == NumOps / 2) {
+      VPValue *NewAnyOf = Builder.createNaryOp(VPInstruction::AnyOf, NewOps);
+      return Def->replaceAllUsesWith(NewAnyOf);
+    }
+  }
+
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
   if ((match(Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A), m_One())) ||
        match(Def, m_DerivedIV(m_ZeroInt(), m_ZeroInt(), m_VPValue()))) &&
