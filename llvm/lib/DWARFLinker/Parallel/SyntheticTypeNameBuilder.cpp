@@ -372,6 +372,11 @@ Error SyntheticTypeNameBuilder::addTypeName(UnitEntryPairTy InputUnitEntryPair,
       addValueName(InputUnitEntryPair, dwarf::DW_AT_const_value);
     }
   } break;
+  case dwarf::DW_TAG_typedef: {
+    // Add decl file and line if haven't already.
+    if (!HasDeclFileName)
+      addDieNameFromDeclFileAndDeclLine(InputUnitEntryPair, HasDeclFileName);
+  } break;
   default: {
     // Nothing to do.
   } break;
