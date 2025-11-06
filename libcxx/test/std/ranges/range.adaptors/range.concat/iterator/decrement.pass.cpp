@@ -122,6 +122,43 @@ constexpr bool test() {
     static_assert(!CanDecrement<Iter>);
   }
 
+  // Cross-boundary decrement: from begin of a later range into the previous range's last element.
+  {
+    auto v = std::views::concat(a, b);
+
+    // Position at the first element of `b`, then -- to land on a.back().
+    auto it = v.begin();
+    it += a.size();
+    --it;
+    assert(*it == a.back());
+
+    // Post-decrement variant from b[0]; result is old iterator, `it2` moves to a.back().
+    auto it2 = v.begin();
+    it2 += a.size();
+    auto old = it2--;
+    static_assert(std::is_same_v<decltype(old), decltype(it2)>);
+    assert(*old == b.front());
+    assert(*it2 == a.back());
+  }
+
+  // Cross-boundary with three ranges
+  {
+    std::array<int, 3> c{9, 10, 11};
+    auto v3 = std::views::concat(a, b, c);
+
+    auto it = v3.begin();
+    it += a.size() + b.size();
+    --it;
+    assert(*it == b.back());
+
+    // const-iterator.
+    const auto& cv3 = v3;
+    auto cit        = cv3.begin();
+    cit += a.size() + b.size();
+    --cit;
+    assert(*cit == b.back());
+  }
+
   return true;
 }
 
