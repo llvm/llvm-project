@@ -402,7 +402,7 @@ void ValueBoundsConstraintSet::processWorklist() {
       }
       continue;
     }
-    LDBG() << "--> ValueBoundsOpInterface not implemented\n";
+    LDBG() << "--> ValueBoundsOpInterface not implemented";
 
     // If the op does not implement `ValueBoundsOpInterface`, check if it
     // implements the `DestinationStyleOpInterface`. OpResults of such ops are
