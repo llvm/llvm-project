@@ -20,6 +20,35 @@ void test_float_add(float val) {
   f += val;
 }
 
+// CHECK-LLVM-LABEL: define dso_local void @test_float_compound_add(
+// CHECK-LLVM-SAME: float [[VAL:%.*]]) #[[ATTR0]] {
+// CHECK-LLVM-NEXT:  [[ENTRY:.*:]]
+// CHECK-LLVM-NEXT:    [[VAL_ADDR:%.*]] = alloca float, align 4
+// CHECK-LLVM-NEXT:    store float [[VAL]], ptr [[VAL_ADDR]], align 4
+// CHECK-LLVM-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic float, ptr [[VAL_ADDR]] seq_cst, align 4
+// CHECK-LLVM-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @f, float [[ATOMIC_LOAD]] seq_cst, align 4
+// CHECK-LLVM-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], [[ATOMIC_LOAD]]
+// CHECK-LLVM-NEXT:    ret void
+//
+void test_float_compound_add(_Atomic(float) val){
+  f += val;
+}
+
+// CHECK-LLVM-LABEL: define dso_local void @test_float_read_add(
+// CHECK-LLVM-SAME: float [[VAL:%.*]]) #[[ATTR0]] {
+// CHECK-LLVM-NEXT:  [[ENTRY:.*:]]
+// CHECK-LLVM-NEXT:    [[VAL_ADDR:%.*]] = alloca float, align 4
+// CHECK-LLVM-NEXT:    store float [[VAL]], ptr [[VAL_ADDR]], align 4
+// CHECK-LLVM-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic float, ptr @f seq_cst, align 4
+// CHECK-LLVM-NEXT:    [[ATOMIC_LOAD1:%.*]] = load atomic float, ptr [[VAL_ADDR]] seq_cst, align 4
+// CHECK-LLVM-NEXT:    [[ADD:%.*]] = fadd float [[ATOMIC_LOAD]], [[ATOMIC_LOAD1]]
+// CHECK-LLVM-NEXT:    store atomic float [[ADD]], ptr @f seq_cst, align 4
+// CHECK-LLVM-NEXT:    ret void
+//
+void test_float_read_add(_Atomic(float) val){
+  f = f + val;
+}
+
 // CHECK-LLVM-LABEL: define dso_local void @test_double_add(
 // CHECK-LLVM-SAME: double noundef [[VAL:%.*]]) #[[ATTR0]] {
 // CHECK-LLVM-NEXT:  [[ENTRY:.*:]]
