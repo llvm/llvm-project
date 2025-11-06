@@ -523,14 +523,15 @@ task_t MachTask::TaskPortForProcessID(DNBError &err, bool force) {
 //----------------------------------------------------------------------
 // MachTask::TaskPortForProcessID
 //----------------------------------------------------------------------
-task_t MachTask::TaskPortForProcessID(pid_t pid, DNBError &err,
-                                      uint32_t num_retries,
-                                      uint32_t usec_interval) {
+task_t MachTask::TaskPortForProcessID(pid_t pid, DNBError &err) {
+  static constexpr uint32_t k_num_retries = 10;
+  static constexpr uint32_t k_usec_delay = 10000;
+
   if (pid != INVALID_NUB_PROCESS) {
     DNBError err;
     mach_port_t task_self = mach_task_self();
     task_t task = TASK_NULL;
-    for (uint32_t i = 0; i < num_retries; i++) {
+    for (uint32_t i = 0; i < k_num_retries; i++) {
       DNBLog("[LaunchAttach] (%d) about to task_for_pid(%d)", getpid(), pid);
       err = ::task_for_pid(task_self, pid, &task);
 
@@ -557,7 +558,7 @@ task_t MachTask::TaskPortForProcessID(pid_t pid, DNBError &err,
       }
 
       // Sleep a bit and try again
-      ::usleep(usec_interval);
+      ::usleep(k_usec_delay);
     }
   }
   return TASK_NULL;
