@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=haswell | FileCheck %s --check-prefixes=NOPOSTRA
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=NOPOSTRA
 
-; FIXME: Ensure reloads are after narrowed i512 -> i32 store
+; Ensure reloads are after narrowed i512 -> i32 store
 define i1 @PR166744(ptr %v, i64 %idx, i1 zeroext %b) {
 ; POSTRA-LABEL: PR166744:
 ; POSTRA:       # %bb.0:
@@ -12,15 +12,15 @@ define i1 @PR166744(ptr %v, i64 %idx, i1 zeroext %b) {
 ; POSTRA-NEXT:    bextrl %eax, %esi, %eax
 ; POSTRA-NEXT:    movl (%rdi,%rax,4), %ecx
 ; POSTRA-NEXT:    btrl %esi, %ecx
-; POSTRA-NEXT:    movq 8(%rdi), %rsi
-; POSTRA-NEXT:    orq 40(%rdi), %rsi
 ; POSTRA-NEXT:    orl %ecx, %edx
 ; POSTRA-NEXT:    movl %edx, (%rdi,%rax,4)
 ; POSTRA-NEXT:    movq 16(%rdi), %rax
-; POSTRA-NEXT:    movq 24(%rdi), %rdx
-; POSTRA-NEXT:    orq 56(%rdi), %rdx
-; POSTRA-NEXT:    orq 48(%rdi), %rax
 ; POSTRA-NEXT:    movq (%rdi), %rcx
+; POSTRA-NEXT:    movq 24(%rdi), %rdx
+; POSTRA-NEXT:    movq 8(%rdi), %rsi
+; POSTRA-NEXT:    orq 56(%rdi), %rdx
+; POSTRA-NEXT:    orq 40(%rdi), %rsi
+; POSTRA-NEXT:    orq 48(%rdi), %rax
 ; POSTRA-NEXT:    orq 32(%rdi), %rcx
 ; POSTRA-NEXT:    orq %rdx, %rsi
 ; POSTRA-NEXT:    orq %rax, %rcx
