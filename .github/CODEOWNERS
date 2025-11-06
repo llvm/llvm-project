@@ -170,6 +170,6 @@
 /clang/bindings/python @DeinAlptraum
 
 # AMD-specific projects.
-/amd/comgr/ @jlambert_amdeng
-/amd/device-libs/ @bsumner_amdeng
-/amd/hipcc/ @dsalinas_amdeng
+/amd/comgr/ @lamb-j
+/amd/device-libs/ @b-sumner
+/amd/hipcc/ @david-salinas
