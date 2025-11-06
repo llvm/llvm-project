@@ -12,6 +12,7 @@
 
 #include <__config>
 
+#include <__assert>
 #include <__compare/strong_order.h>
 #include <__compare/synth_three_way.h>
 #include <__functional/hash.h>
