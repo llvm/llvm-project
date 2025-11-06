@@ -67,34 +67,34 @@ public:
   // [indirect.ctor], constructors
   _LIBCPP_HIDE_FROM_ABI constexpr explicit indirect()
     requires is_default_constructible_v<_Allocator>
-      : __p_(__allocate_owned_object(__alloc_)) {}
+      : __ptr_(__allocate_owned_object(__alloc_)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit indirect(allocator_arg_t, const _Allocator& __a)
-      : __alloc_(__a), __p_(__allocate_owned_object(__alloc_)) {}
+      : __alloc_(__a), __ptr_(__allocate_owned_object(__alloc_)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr indirect(const indirect& __other)
       : __alloc_(allocator_traits<_Allocator>::select_on_container_copy_construction(__other.__alloc_)),
-        __p_(__other.valueless_after_move() ? nullptr : __allocate_owned_object(__alloc_, *__other)) {}
+        __ptr_(__other.valueless_after_move() ? nullptr : __allocate_owned_object(__alloc_, *__other)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr indirect(allocator_arg_t, const _Allocator& __a, const indirect& __other)
-      : __alloc_(__a), __p_(__other.valueless_after_move() ? nullptr : __allocate_owned_object(__alloc_, *__other)) {}
+      : __alloc_(__a), __ptr_(__other.valueless_after_move() ? nullptr : __allocate_owned_object(__alloc_, *__other)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr indirect(indirect&& __other) noexcept
-      : __alloc_(std::move(__other.__alloc_)), __p_(std::exchange(__other.__p_, nullptr)) {}
+      : __alloc_(std::move(__other.__alloc_)), __ptr_(std::exchange(__other.__ptr_, nullptr)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr indirect(allocator_arg_t, const _Allocator& __a, indirect&& __other) noexcept
     requires allocator_traits<_Allocator>::is_always_equal::value
-      : __alloc_(__a), __p_(std::exchange(__other.__p_, nullptr)) {}
+      : __alloc_(__a), __ptr_(std::exchange(__other.__ptr_, nullptr)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr indirect(allocator_arg_t, const _Allocator& __a, indirect&& __other) : __alloc_(__a) {
     if (__other.valueless_after_move()) {
-      __p_ = nullptr;
+      __ptr_ = nullptr;
     } else if (__alloc_ == __other.__alloc_) {
-      __p_ = std::exchange(__other.__p_, nullptr);
+      __ptr_ = std::exchange(__other.__ptr_, nullptr);
     } else {
-      __p_ = __allocate_owned_object(__alloc_, *std::move(__other));
+      __ptr_ = __allocate_owned_object(__alloc_, *std::move(__other));
       __other.__destroy_owned_object();
-      __other.__p_ = nullptr;
+      __other.__ptr_ = nullptr;
     }
   }
 
@@ -102,34 +102,34 @@ public:
     requires(!is_same_v<remove_cvref_t<_Up>, indirect> && !is_same_v<remove_cvref_t<_Up>, in_place_t> &&
              is_constructible_v<_Tp, _Up> && is_default_constructible_v<_Allocator>)
   _LIBCPP_HIDE_FROM_ABI constexpr explicit indirect(_Up&& __u)
-      : __p_(__allocate_owned_object(__alloc_, std::forward<_Up>(__u))) {}
+      : __ptr_(__allocate_owned_object(__alloc_, std::forward<_Up>(__u))) {}
 
   template <class _Up = _Tp>
     requires(!is_same_v<remove_cvref_t<_Up>, indirect> && !is_same_v<remove_cvref_t<_Up>, in_place_t> &&
              is_constructible_v<_Tp, _Up>)
   _LIBCPP_HIDE_FROM_ABI constexpr explicit indirect(allocator_arg_t, const _Allocator& __a, _Up&& __u)
-      : __alloc_(__a), __p_(__allocate_owned_object(__alloc_, std::forward<_Up>(__u))) {}
+      : __alloc_(__a), __ptr_(__allocate_owned_object(__alloc_, std::forward<_Up>(__u))) {}
 
   template <class... _Us>
     requires(is_constructible_v<_Tp, _Us...> && is_default_constructible_v<_Allocator>)
   _LIBCPP_HIDE_FROM_ABI constexpr explicit indirect(in_place_t, _Us&&... __us)
-      : __p_(__allocate_owned_object(__alloc_, std::forward<_Us>(__us)...)) {}
+      : __ptr_(__allocate_owned_object(__alloc_, std::forward<_Us>(__us)...)) {}
 
   template <class... _Us>
     requires is_constructible_v<_Tp, _Us...>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit indirect(allocator_arg_t, const _Allocator& __a, in_place_t, _Us&&... __us)
-      : __alloc_(__a), __p_(__allocate_owned_object(__alloc_, std::forward<_Us>(__us)...)) {}
+      : __alloc_(__a), __ptr_(__allocate_owned_object(__alloc_, std::forward<_Us>(__us)...)) {}
 
   template <class _In, class... _Us>
     requires(is_constructible_v<_Tp, initializer_list<_In>&, _Us...> && is_default_constructible_v<_Allocator>)
   _LIBCPP_HIDE_FROM_ABI constexpr explicit indirect(in_place_t, initializer_list<_In> __ilist, _Us&&... __us)
-      : __p_(__allocate_owned_object(__alloc_, __ilist, std::forward<_Us>(__us)...)) {}
+      : __ptr_(__allocate_owned_object(__alloc_, __ilist, std::forward<_Us>(__us)...)) {}
 
   template <class _In, class... _Us>
     requires is_constructible_v<_Tp, initializer_list<_In>&, _Us...>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit indirect(
       allocator_arg_t, const _Allocator& __a, in_place_t, initializer_list<_In> __ilist, _Us&&... __us)
-      : __alloc_(__a), __p_(__allocate_owned_object(__alloc_, __ilist, std::forward<_Us>(__us)...)) {}
+      : __alloc_(__a), __ptr_(__allocate_owned_object(__alloc_, __ilist, std::forward<_Us>(__us)...)) {}
 
   // [indirect.dtor], destructor
   _LIBCPP_HIDE_FROM_ABI constexpr ~indirect() { __destroy_owned_object(); }
@@ -143,20 +143,20 @@ public:
         allocator_traits<_Allocator>::propagate_on_container_copy_assignment::value;
     if (__other.valueless_after_move()) {
       __destroy_owned_object();
-      __p_ = nullptr;
+      __ptr_ = nullptr;
     } else if (!valueless_after_move() && __alloc_ == __other.__alloc_) {
-      *__p_ = *__other;
+      *__ptr_ = *__other;
     } else {
-      pointer __new_p;
+      pointer __new_ptr;
       if constexpr (__propagate_allocator) {
         // We need a mutable instance of the allocator, so make a copy.
         _Allocator __alloc_copy = __other.__alloc_;
-        __new_p                 = __allocate_owned_object(__alloc_copy, *__other);
+        __new_ptr               = __allocate_owned_object(__alloc_copy, *__other);
       } else {
-        __new_p = __allocate_owned_object(__alloc_, *__other);
+        __new_ptr = __allocate_owned_object(__alloc_, *__other);
       }
       __destroy_owned_object();
-      __p_ = __new_p;
+      __ptr_ = __new_ptr;
     }
 
     if constexpr (__propagate_allocator)
@@ -174,20 +174,20 @@ public:
     static constexpr bool __propagate_allocator =
         allocator_traits<_Allocator>::propagate_on_container_move_assignment::value;
 
-    pointer __new_p;
+    pointer __new_ptr;
     if constexpr (__propagate_allocator || allocator_traits<_Allocator>::is_always_equal::value) {
-      __new_p = __other.__p_;
+      __new_ptr = __other.__ptr_;
     } else if (__other.valueless_after_move()) {
-      __new_p = nullptr;
+      __new_ptr = nullptr;
     } else if (__alloc_ == __other.__alloc_) {
-      __new_p = __other.__p_;
+      __new_ptr = __other.__ptr_;
     } else {
-      __new_p = __allocate_owned_object(__alloc_, *std::move(__other));
+      __new_ptr = __allocate_owned_object(__alloc_, *std::move(__other));
       __other.__destroy_owned_object();
     }
-    __other.__p_ = nullptr;
+    __other.__ptr_ = nullptr;
     __destroy_owned_object();
-    __p_ = __new_p;
+    __ptr_ = __new_ptr;
 
     if constexpr (__propagate_allocator)
       __alloc_ = __other.__alloc_;
@@ -199,9 +199,9 @@ public:
     requires(!is_same_v<remove_cvref_t<_Up>, indirect> && is_constructible_v<_Tp, _Up> && is_assignable_v<_Tp&, _Up>)
   _LIBCPP_HIDE_FROM_ABI constexpr indirect& operator=(_Up&& __u) {
     if (valueless_after_move())
-      __p_ = __allocate_owned_object(__alloc_, std::forward<_Up>(__u));
+      __ptr_ = __allocate_owned_object(__alloc_, std::forward<_Up>(__u));
     else
-      *__p_ = std::forward<_Up>(__u);
+      *__ptr_ = std::forward<_Up>(__u);
     return *this;
   }
 
@@ -209,40 +209,40 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !valueless_after_move(), "operator* called on a valueless std::indirect object");
-    return *__p_;
+    return *__ptr_;
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !valueless_after_move(), "operator* called on a valueless std::indirect object");
-    return *__p_;
+    return *__ptr_;
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !valueless_after_move(), "operator* called on a valueless std::indirect object");
-    return std::move(*__p_);
+    return std::move(*__ptr_);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !valueless_after_move(), "operator* called on a valueless std::indirect object");
-    return std::move(*__p_);
+    return std::move(*__ptr_);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_pointer operator->() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !valueless_after_move(), "operator-> called on a valueless std::indirect object");
-    return __p_;
+    return __ptr_;
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr pointer operator->() noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !valueless_after_move(), "operator-> called on a valueless std::indirect object");
-    return __p_;
+    return __ptr_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool valueless_after_move() const noexcept { return !__p_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool valueless_after_move() const noexcept { return !__ptr_; }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr allocator_type get_allocator() const noexcept { return __alloc_; }
 
@@ -253,7 +253,7 @@ public:
     _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         allocator_traits<_Allocator>::propagate_on_container_swap::value || get_allocator() == __other.get_allocator(),
         "swapping std::indirect objects with different allocators");
-    std::swap(__p_, __other.__p_);
+    std::swap(__ptr_, __other.__ptr_);
     std::__swap_allocator(__alloc_, __other.__alloc_);
   }
 
@@ -301,13 +301,13 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_owned_object() noexcept {
     if (!valueless_after_move()) {
-      allocator_traits<_Allocator>::destroy(__alloc_, __p_);
-      allocator_traits<_Allocator>::deallocate(__alloc_, __p_, 1);
+      allocator_traits<_Allocator>::destroy(__alloc_, __ptr_);
+      allocator_traits<_Allocator>::deallocate(__alloc_, __ptr_, 1);
     }
   }
 
   _LIBCPP_NO_UNIQUE_ADDRESS _Allocator __alloc_ = _Allocator();
-  pointer __p_;
+  pointer __ptr_;
 };
 
 template <class _Value>
