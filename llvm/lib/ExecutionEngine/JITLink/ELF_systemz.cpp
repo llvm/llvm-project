@@ -32,8 +32,7 @@ Error buildTables_ELF_systemz(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
   systemz::GOTTableManager GOT;
   systemz::PLTTableManager PLT(GOT);
-  systemz::GOTPCTableManager GOTPC(GOT);
-  visitExistingEdges(G, GOT, PLT, GOTPC);
+  visitExistingEdges(G, GOT, PLT);
   return Error::success();
 }
 
@@ -265,66 +264,69 @@ private:
       break;
     }
     case ELF::R_390_PLTOFF64: {
-      Kind = systemz::DeltaPLT64FromGOT;
+      Kind = systemz::Delta64PLTFromGOT;
       break;
     }
     case ELF::R_390_PLTOFF32: {
-      Kind = systemz::DeltaPLT32FromGOT;
+      Kind = systemz::Delta32PLTFromGOT;
       break;
     }
     case ELF::R_390_PLTOFF16: {
-      Kind = systemz::DeltaPLT16FromGOT;
+      Kind = systemz::Delta16PLTFromGOT;
       break;
     }
-    // Relocations targeting the GOT entry associated with the symbol.
+    // Relocations targeting the actual symbol (just relative to the GOT).
     case ELF::R_390_GOTOFF64: {
-      Kind = systemz::RequestGOTAndTransformToDeltaPLT64FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta64FromGOT;
       break;
     }
     case ELF::R_390_GOTOFF: {
-      Kind = systemz::RequestGOTAndTransformToDeltaPLT32FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta32FromGOT;
       break;
     }
     case ELF::R_390_GOTOFF16: {
-      Kind = systemz::RequestGOTAndTransformToDeltaPLT16FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta16FromGOT;
       break;
     }
+    // Relocations targeting the GOT entry associated with the symbol.
     case ELF::R_390_GOT64:
     case ELF::R_390_GOTPLT64: {
-      Kind = systemz::RequestGOTAndTransformToDeltaPLT64FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta64FromGOT;
       break;
     }
     case ELF::R_390_GOT32:
     case ELF::R_390_GOTPLT32: {
-      Kind = systemz::RequestGOTAndTransformToDeltaPLT32FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta32FromGOT;
       break;
     }
     case ELF::R_390_GOT20:
     case ELF::R_390_GOTPLT20: {
-      Kind = systemz::RequestGOTAndTransformToDeltaPLT20FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta20FromGOT;
       break;
     }
     case ELF::R_390_GOT16:
     case ELF::R_390_GOTPLT16: {
-      Kind = systemz::RequestGOTAndTransformToDeltaPLT16FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta16FromGOT;
       break;
     }
     case ELF::R_390_GOT12:
     case ELF::R_390_GOTPLT12: {
-      Kind = systemz::RequestGOTAndTransformToDeltaPLT12FromGOT;
-      break;
-    }
-    case ELF::R_390_GOTPC: {
-      Kind = systemz::RequestGOTPCAndTransformToDelta32GOTBase;
-      break;
-    }
-    case ELF::R_390_GOTPCDBL: {
-      Kind = systemz::RequestGOTPCAndTransformToDelta32dblGOTBase;
+      Kind = systemz::RequestGOTAndTransformToDelta12FromGOT;
       break;
     }
     case ELF::R_390_GOTENT:
     case ELF::R_390_GOTPLTENT: {
       Kind = systemz::RequestGOTAndTransformToDelta32dbl;
+      break;
+    }
+    // R_390_GOTPC and R_390_GOTPCDBL don't create GOT entry, they don't even
+    // have symbol.
+    case ELF::R_390_GOTPC: {
+      Kind = systemz::Delta32GOTBase;
+      break;
+    }
+    case ELF::R_390_GOTPCDBL: {
+      Kind = systemz::Delta32dblGOTBase;
       break;
     }
     default:

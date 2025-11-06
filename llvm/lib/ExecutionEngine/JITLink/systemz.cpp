@@ -64,12 +64,12 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "NegDelta64";
   case NegDelta32:
     return "NegDelta32";
-  case RequestGOTAndTransformToDeltaPLT64FromGOT:
-    return "RequestGOTAndTransformToDeltaPLT64FromGOT";
-  case RequestGOTAndTransformToDeltaPLT32FromGOT:
-    return "RequestGOTAndTransformToDeltaPLT32FromGOT";
-  case RequestGOTAndTransformToDeltaPLT16FromGOT:
-    return "RequestGOTAndTransformToDeltaPLT16FromGOT";
+  case RequestGOTAndTransformToDelta64FromGOT:
+    return "RequestGOTAndTransformToDelta64FromGOT";
+  case RequestGOTAndTransformToDelta32FromGOT:
+    return "RequestGOTAndTransformToDelta32FromGOT";
+  case RequestGOTAndTransformToDelta16FromGOT:
+    return "RequestGOTAndTransformToDelta16FromGOT";
   case DeltaPLT32dbl:
     return "DeltaPLT32dbl";
   case DeltaPLT24dbl:
@@ -84,20 +84,22 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "DeltaPLT64";
   case DeltaPLT32:
     return "DeltaPLT32";
-  case DeltaPLT64FromGOT:
-    return "DeltaPLT64FromGOT";
-  case DeltaPLT32FromGOT:
-    return "DeltaPLT32FromGOT";
-  case DeltaPLT16FromGOT:
-    return "DeltaPLT16FromGOT";
-  case RequestGOTAndTransformToDeltaPLT20FromGOT:
-    return "RequestGOTAndTransformToDeltaPLT20FromGOT";
-  case RequestGOTAndTransformToDeltaPLT12FromGOT:
-    return "RequestGOTAndTransformToDeltaPLT12FromGOT";
-  case RequestGOTPCAndTransformToDelta32GOTBase:
-    return "RequestGOTPCAndTransformToDelta32GOTBase";
-  case RequestGOTPCAndTransformToDelta32dblGOTBase:
-    return "RequestGOTPCAndTransformToDelta32dblGOTBase";
+  case Delta64FromGOT:
+    return "Delta64FromGOT";
+  case Delta32FromGOT:
+    return "Delta32FromGOT";
+  case Delta16FromGOT:
+    return "Delta16FromGOT";
+  case Delta64PLTFromGOT:
+    return "Delta64PLTFromGOT";
+  case Delta32PLTFromGOT:
+    return "Delta32PLTFromGOT";
+  case Delta16PLTFromGOT:
+    return "Delta16PLTFromGOT";
+  case RequestGOTAndTransformToDelta20FromGOT:
+    return "RequestGOTAndTransformToDelta20FromGOT";
+  case RequestGOTAndTransformToDelta12FromGOT:
+    return "RequestGOTAndTransformToDelta12FromGOT";
   case Delta32GOTBase:
     return "Delta32GOTBase";
   case Delta32dblGOTBase:
