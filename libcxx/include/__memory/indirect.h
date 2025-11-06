@@ -31,6 +31,7 @@
 #include <__type_traits/remove_cvref.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
+#include <__utility/forward_like.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -56,13 +57,15 @@ public:
   using const_pointer  = allocator_traits<_Allocator>::const_pointer;
 
   static_assert(__check_valid_allocator<allocator_type>::value);
-  static_assert(is_same_v<typename allocator_type::value_type, value_type>);
-  static_assert(is_object_v<value_type>);
-  static_assert(!is_array_v<value_type>);
-  static_assert(!is_same_v<value_type, in_place_t>);
-  static_assert(!__is_inplace_type<value_type>::value);
+  static_assert(is_same_v<typename allocator_type::value_type, value_type>,
+                "allocator's value_type type must match std::indirect's held type");
+  static_assert(is_object_v<value_type>, "std::indirect cannot hold void or a reference or function type");
+  static_assert(!is_array_v<value_type>, "std::indirect cannot hold an array type");
+  static_assert(!is_same_v<value_type, in_place_t>, "std::indirect cannot hold std::in_place_t");
+  static_assert(!__is_inplace_type<value_type>::value,
+                "std::indirect cannot hold a specialization of std::in_place_type_t");
   static_assert(std::is_same_v<value_type, remove_cv_t<value_type>>,
-                "value_type must not be const or volatile qualified");
+                "std::indirect cannot hold a const or volatile qualified type");
 
   // [indirect.ctor], constructors
   _LIBCPP_HIDE_FROM_ABI constexpr explicit indirect()
@@ -206,28 +209,12 @@ public:
   }
 
   // [indirect.obs], observers
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !valueless_after_move(), "operator* called on a valueless std::indirect object");
-    return *__ptr_;
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !valueless_after_move(), "operator* called on a valueless std::indirect object");
-    return *__ptr_;
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !valueless_after_move(), "operator* called on a valueless std::indirect object");
-    return std::move(*__ptr_);
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !valueless_after_move(), "operator* called on a valueless std::indirect object");
-    return std::move(*__ptr_);
+  template <class _Self>
+    requires(!is_volatile_v<_Self>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto&& operator*(this _Self&& __self) noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS((!std::__forward_as<_Self, indirect>(__self).valueless_after_move()),
+                                        "operator* called on a valueless std::indirect object");
+    return std::forward_like<_Self>(*__self.__ptr_);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_pointer operator->() const noexcept {
