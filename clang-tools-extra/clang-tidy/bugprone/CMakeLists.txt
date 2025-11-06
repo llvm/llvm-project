@@ -30,7 +30,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   ForwardingReferenceOverloadCheck.cpp
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
-  InconsistentIfelseBracesCheck.cpp
   IncorrectEnableIfCheck.cpp
   IncorrectEnableSharedFromThisCheck.cpp
   InvalidEnumDefaultInitializationCheck.cpp

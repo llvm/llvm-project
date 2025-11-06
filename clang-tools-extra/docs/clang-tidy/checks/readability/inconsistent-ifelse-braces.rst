@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-inconsistent-ifelse-braces
+.. title:: clang-tidy - readability-inconsistent-ifelse-braces
 
-bugprone-inconsistent-ifelse-braces
-===================================
+readability-inconsistent-ifelse-braces
+======================================
 
 Detects ``if``/``else`` statements where one branch uses braces and the other
 does not.

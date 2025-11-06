@@ -103,7 +103,6 @@ Clang-Tidy Checks
    :doc:`bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result>`, "Yes"
    :doc:`bugprone-inaccurate-erase <bugprone/inaccurate-erase>`, "Yes"
    :doc:`bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions>`,
-   :doc:`bugprone-inconsistent-ifelse-braces <bugprone/inconsistent-ifelse-braces>`, "Yes"
    :doc:`bugprone-incorrect-enable-if <bugprone/incorrect-enable-if>`, "Yes"
    :doc:`bugprone-incorrect-enable-shared-from-this <bugprone/incorrect-enable-shared-from-this>`, "Yes"
    :doc:`bugprone-incorrect-roundings <bugprone/incorrect-roundings>`,
@@ -389,6 +388,7 @@ Clang-Tidy Checks
    :doc:`readability-identifier-naming <readability/identifier-naming>`, "Yes"
    :doc:`readability-implicit-bool-conversion <readability/implicit-bool-conversion>`, "Yes"
    :doc:`readability-inconsistent-declaration-parameter-name <readability/inconsistent-declaration-parameter-name>`, "Yes"
+   :doc:`readability-inconsistent-ifelse-braces <readability/inconsistent-ifelse-braces>`, "Yes"
    :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
    :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes"
