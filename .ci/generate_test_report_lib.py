@@ -3,7 +3,18 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Library to parse JUnit XML files and return a markdown report."""
 
+from typing import TypedDict
+
 from junitparser import JUnitXml, Failure
+
+
+# This data structure should match the definition in llvm-zorg in
+# premerge/advisor/advisor_lib.py
+class FailureExplanation(TypedDict):
+    name: str
+    explained: bool
+    reason: str | None
+
 
 SEE_BUILD_FILE_STR = "Download the build's log file to see the details."
 UNRELATED_FAILURES_STR = (
@@ -82,16 +93,29 @@ def find_failure_in_ninja_logs(ninja_logs: list[list[str]]) -> list[tuple[str, s
     return failures
 
 
-def _format_failures(failures: list[tuple[str, str]]) -> list[str]:
+def _format_failures(
+    failures: list[tuple[str, str]], failure_explanations: dict[str, FailureExplanation]
+) -> list[str]:
     """Formats failures into summary views for the report."""
     output = []
     for build_failure in failures:
         failed_action, failure_message = build_failure
+        failure_explanation = None
+        if failed_action in failure_explanations:
+            failure_explanation = failure_explanations[failed_action]
+        output.append("<details>")
+        if failure_explanation:
+            output.extend(
+                [
+                    f"<summary>{failed_action} (Likely Already Failing)</summary>" "",
+                    failure_explanation["reason"],
+                    "",
+                ]
+            )
+        else:
+            output.extend([f"<summary>{failed_action}</summary>", ""])
         output.extend(
             [
-                "<details>",
-                f"<summary>{failed_action}</summary>",
-                "",
                 "```",
                 failure_message,
                 "```",
@@ -132,11 +156,18 @@ def generate_report(
     ninja_logs: list[list[str]],
     size_limit=1024 * 1024,
     list_failures=True,
+    failure_explanations_list: list[FailureExplanation] = [],
 ):
     failures = get_failures(junit_objects)
     tests_run = 0
     tests_skipped = 0
     tests_failed = 0
+
+    failure_explanations: dict[str, FailureExplanation] = {}
+    for failure_explanation in failure_explanations_list:
+        if not failure_explanation["explained"]:
+            continue
+        failure_explanations[failure_explanation["name"]] = failure_explanation
 
     for results in junit_objects:
         for testsuite in results:
@@ -176,7 +207,7 @@ def generate_report(
                         "",
                     ]
                 )
-                report.extend(_format_failures(ninja_failures))
+                report.extend(_format_failures(ninja_failures, failure_explanations))
                 report.extend(
                     [
                         "",
@@ -212,7 +243,7 @@ def generate_report(
 
         for testsuite_name, failures in failures.items():
             report.extend(["", f"### {testsuite_name}"])
-            report.extend(_format_failures(failures))
+            report.extend(_format_failures(failures, failure_explanations))
     elif return_code != 0:
         # No tests failed but the build was in a failed state. Bring this to the user's
         # attention.
@@ -237,7 +268,7 @@ def generate_report(
                     "",
                 ]
             )
-            report.extend(_format_failures(ninja_failures))
+            report.extend(_format_failures(ninja_failures, failure_explanations))
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])
