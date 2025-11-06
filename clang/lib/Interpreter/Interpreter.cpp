@@ -394,15 +394,6 @@ Interpreter::outOfProcessJITBuilder(JITConfig Config) {
 
 llvm::Expected<std::string>
 Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
-  std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
-  std::optional<std::string> ResourceDir = TC.getRuntimePath();
-
-  if (!CompilerRTPath && !ResourceDir) {
-    return llvm::make_error<llvm::StringError>(
-        "Neither CompilerRT path nor ResourceDir path found",
-        std::error_code());
-  }
-
   const std::array<const char *, 3> OrcRTLibNames = {
       "liborc_rt.a", "liborc_rt_osx.a", "liborc_rt-x86_64.a"};
 
@@ -416,24 +407,30 @@ Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
     return std::nullopt;
   };
 
-  std::string searched;
+  std::string SearchedPaths;
 
-  if (CompilerRTPath) {
+  if (std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath()) {
     if (auto Found = findInDir(*CompilerRTPath))
       return *Found;
-    searched += *CompilerRTPath;
+    SearchedPaths += *CompilerRTPath;
+  } else {
+    return llvm::make_error<llvm::StringError>(
+        "CompilerRT path not found", std::error_code());
   }
 
-  if (ResourceDir) {
+  if (std::optional<std::string> ResourceDir = TC.getRuntimePath()) {
     if (auto Found = findInDir(*ResourceDir))
       return *Found;
-    if (!searched.empty())
-      searched += "; ";
-    searched += *ResourceDir;
+    if (!SearchedPaths.empty())
+      SearchedPaths += "; ";
+    SearchedPaths += *ResourceDir;
+  } else {
+    return llvm::make_error<llvm::StringError>(
+        "ResourceDir path not found", std::error_code());
   }
 
   return llvm::make_error<llvm::StringError>(
-      llvm::Twine("OrcRuntime library not found in: ") + searched,
+      llvm::Twine("OrcRuntime library not found in: ") + SearchedPaths,
       std::error_code());
 }
 
