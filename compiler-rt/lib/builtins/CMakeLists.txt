@@ -426,7 +426,7 @@ set(arm_or_thumb2_base_SOURCES
 option(COMPILER_RT_ARM_OPTIMIZED_FP
   "On 32-bit Arm, use optimized assembly implementations of FP arithmetic. Likely to increase code size, but be faster." ON)
 
-if(COMPILER_RT_ARM_OPTIMIZED_FP)
+if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
   check_assembler_flag(COMPILER_RT_HAS_MIMPLICIT_IT -mimplicit-it=always)
   if(COMPILER_RT_HAS_MIMPLICIT_IT)
     set(implicit_it_flag -mimplicit-it=always)
@@ -436,22 +436,25 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
     if(COMPILER_RT_HAS_WA_MIMPLICIT_IT)
       set(implicit_it_flag -Wa,-mimplicit-it=always)
     else()
-      message(FATAL_ERROR "Don't know how to set the -mimplicit-it=always flag in this assembler")
+      message(WARNING "Don't know how to set the -mimplicit-it=always flag in this assembler; not including Arm optimized implementations")
+      set(implicit_it_flag "")
     endif()
   endif()
 
-  set(assembly_files
-    arm/mulsf3.S
-    arm/divsf3.S)
-  set_source_files_properties(${assembly_files}
-    PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
-  set(arm_or_thumb2_base_SOURCES
-    ${assembly_files}
-    arm/fnan2.c
-    arm/fnorm2.c
-    arm/funder.c
-    ${arm_or_thumb2_base_SOURCES}
-  )
+  if(implicit_it_flag)
+    set(assembly_files
+      arm/mulsf3.S
+      arm/divsf3.S)
+    set_source_files_properties(${assembly_files}
+      PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
+    set(arm_or_thumb2_base_SOURCES
+      ${assembly_files}
+      arm/fnan2.c
+      arm/fnorm2.c
+      arm/funder.c
+      ${arm_or_thumb2_base_SOURCES}
+      )
+  endif()
 endif()
 
 set(arm_sync_SOURCES
