@@ -45,6 +45,10 @@ s_set_vgpr_msb 255
 // GFX1250: [0xff,0x00,0x86,0xbf]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+s_set_vgpr_msb 0xffff
+// GFX1250: [0xff,0xff,0x86,0xbf]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 s_monitor_sleep 1
 // GFX1250: s_monitor_sleep 1                       ; encoding: [0x01,0x00,0x84,0xbf]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU

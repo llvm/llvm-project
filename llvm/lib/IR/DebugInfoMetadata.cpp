@@ -872,15 +872,18 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, Metadata *SizeInBits,
                                   uint32_t AlignInBits, unsigned Encoding,
-                                  uint32_t NumExtraInhabitants, DIFlags Flags,
+                                  uint32_t NumExtraInhabitants,
+                                  uint32_t DataSizeInBits, DIFlags Flags,
                                   StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, SizeInBits, AlignInBits,
-                                      Encoding, NumExtraInhabitants, Flags));
+  DEFINE_GETIMPL_LOOKUP(DIBasicType,
+                        (Tag, Name, SizeInBits, AlignInBits, Encoding,
+                         NumExtraInhabitants, DataSizeInBits, Flags));
   Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
-  DEFINE_GETIMPL_STORE(DIBasicType,
-                       (Tag, AlignInBits, Encoding, NumExtraInhabitants, Flags),
-                       Ops);
+  DEFINE_GETIMPL_STORE(
+      DIBasicType,
+      (Tag, AlignInBits, Encoding, NumExtraInhabitants, DataSizeInBits, Flags),
+      Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {

@@ -738,6 +738,11 @@ __m128 test_mm_shuffle_ps(__m128 A, __m128 B) {
   return _mm_shuffle_ps(A, B, 0);
 }
 
+TEST_CONSTEXPR((match_m128(_mm_shuffle_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){5.0f, 6.0f, 7.0f, 8.0f}), 4), 1.0f, 2.0f, 5.0f, 5.0f)));
+TEST_CONSTEXPR((match_m128(_mm_shuffle_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){5.0f, 6.0f, 7.0f, 8.0f}), 0), 1.0f, 1.0f, 5.0f, 5.0f)));
+TEST_CONSTEXPR((match_m128(_mm_shuffle_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){5.0f, 6.0f, 7.0f, 8.0f}), 255), 4.0f, 4.0f, 8.0f, 8.0f)));
+TEST_CONSTEXPR((match_m128(_mm_shuffle_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){5.0f, 6.0f, 7.0f, 8.0f}), 27), 4.0f, 3.0f, 6.0f, 5.0f)));
+
 __m128 test_mm_sqrt_ps(__m128 x) {
   // CHECK-LABEL: test_mm_sqrt_ps
   // CHECK: call {{.*}}<4 x float> @llvm.sqrt.v4f32(<4 x float> {{.*}})

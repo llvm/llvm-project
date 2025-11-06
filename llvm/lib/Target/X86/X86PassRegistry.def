@@ -12,12 +12,17 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("x86-lower-amx-intrinsics", X86LowerAMXIntrinsicsPass(this))
+FUNCTION_PASS("x86-lower-amx-type", X86LowerAMXTypePass(this))
+FUNCTION_PASS("x86-partial-reduction", X86PartialReductionPass(this))
+#undef FUNCTION_PASS
+
 #ifndef DUMMY_FUNCTION_PASS
 #define DUMMY_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
-DUMMY_FUNCTION_PASS("lower-amx-intrinsics", X86LowerAMXIntrinsics(*this))
-DUMMY_FUNCTION_PASS("lower-amx-type", X86LowerAMXTypePass(*this))
-DUMMY_FUNCTION_PASS("x86-partial-reduction", X86PartialReduction())
 DUMMY_FUNCTION_PASS("x86-winehstate", WinEHStatePass())
 #undef DUMMY_FUNCTION_PASS
 

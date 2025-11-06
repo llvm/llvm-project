@@ -1466,6 +1466,13 @@ def FeatureClusters : SubtargetFeature< "clusters",
   "Has clusters of workgroups support"
 >;
 
+def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
+  "waits-before-system-scope-stores",
+  "RequiresWaitsBeforeSystemScopeStores",
+  "true",
+  "Target requires waits for loads and atomics before system scope stores"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2060,7 +2067,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureBVHDualAndBVH8Insts
+   FeatureBVHDualAndBVH8Insts,
+   FeatureWaitsBeforeSystemScopeStores,
    ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2357,6 +2365,18 @@ def isGFX8GFX9NotGFX90A :
             "(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
             " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
   AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding, (not FeatureGFX90AInsts))>;
+
+// Pre-90A GFX9s allow the NV bit in FLAT instructions.
+def isNVAllowedInFlat :
+  Predicate<"!Subtarget->hasGFX90AInsts() &&"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX90AInsts), (not FeatureGFX10Insts))>;
+
+// GFX8 or GFX90A+ do not allow the NV bit in FLAT instructions.
+def isNVNotAllowedInFlat :
+  Predicate<"(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS) ||"
+            " ((Subtarget->getGeneration() == AMDGPUSubtarget::GFX9) && Subtarget->hasGFX90AInsts())">,
+  AssemblerPredicate <(any_of FeatureVolcanicIslands, FeatureGFX90AInsts)>;
 
 def isGFX90AOnly :
   Predicate<"Subtarget->hasGFX90AInsts() && !Subtarget->hasGFX940Insts()">,

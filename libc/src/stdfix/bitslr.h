@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STDFIX_BITSLR_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h" // long fract
-#include "include/llvm-libc-types/stdfix-types.h"   // int_lr_t
+#include "include/llvm-libc-types/int_lr_t.h"       // int_lr_t
 #include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {

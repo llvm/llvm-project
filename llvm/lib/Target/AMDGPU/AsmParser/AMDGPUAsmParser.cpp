@@ -1602,6 +1602,11 @@ public:
 
   bool hasKernargPreload() const { return AMDGPU::hasKernargPreload(getSTI()); }
 
+  bool isFlatInstAndNVAllowed(const MCInst &Inst) const {
+    uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
+    return (TSFlags & SIInstrFlags::FLAT) && isGFX9() && !isGFX90A();
+  }
+
   AMDGPUTargetStreamer &getTargetStreamer() {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<AMDGPUTargetStreamer &>(TS);
@@ -1860,7 +1865,6 @@ private:
   bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
                               const unsigned CPol);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
-  bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
   bool validateLdsDirect(const MCInst &Inst, const OperandVector &Operands);
   bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -5371,7 +5375,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
       Error(S, "scale_offset is not supported on this GPU");
     }
-    if (CPol & CPol::NV) {
+    if ((CPol & CPol::NV) && !isFlatInstAndNVAllowed(Inst)) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
@@ -5501,22 +5505,6 @@ bool AMDGPUAsmParser::validateTFE(const MCInst &Inst,
       Error(Loc, "TFE modifier has no meaning for store instructions");
       return false;
     }
-  }
-
-  return true;
-}
-
-bool AMDGPUAsmParser::validateSetVgprMSB(const MCInst &Inst,
-                                         const OperandVector &Operands) {
-  if (Inst.getOpcode() != AMDGPU::S_SET_VGPR_MSB_gfx12)
-    return true;
-
-  int Simm16Pos =
-      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::simm16);
-  if ((unsigned)Inst.getOperand(Simm16Pos).getImm() > 255) {
-    SMLoc Loc = Operands[1]->getStartLoc();
-    Error(Loc, "s_set_vgpr_msb accepts values in range [0..255]");
-    return false;
   }
 
   return true;
@@ -5679,9 +5667,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
     return false;
   }
   if (!validateTFE(Inst, Operands)) {
-    return false;
-  }
-  if (!validateSetVgprMSB(Inst, Operands)) {
     return false;
   }
   if (!validateWMMA(Inst, Operands)) {
@@ -7165,6 +7150,13 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
   unsigned Enabled = 0, Seen = 0;
   for (;;) {
     SMLoc S = getLoc();
+
+    if (isGFX9() && trySkipId("nv")) {
+      Enabled |= CPol::NV;
+      Seen |= CPol::NV;
+      continue;
+    }
+
     bool Disabling;
     unsigned CPol = getCPolKind(getId(), Mnemo, Disabling);
     if (!CPol)
@@ -9048,6 +9040,9 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol, 0);
+  // Parse a dummy operand as a placeholder for the SWZ operand. This enforces
+  // agreement between MCInstrDesc.getNumOperands and MCInst.getNumOperands.
+  Inst.addOperand(MCOperand::createImm(0));
 }
 
 //===----------------------------------------------------------------------===//

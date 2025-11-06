@@ -350,7 +350,7 @@ void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   //       See `test/ClangScanDeps/diagnostic-pragmas.c` for an example.
   llvm::erase_if(DiagOpts.Warnings, [](StringRef Warning) {
     return llvm::StringSwitch<bool>(Warning)
-        .Cases("pch-vfs-diff", "error=pch-vfs-diff", false)
+        .Cases({"pch-vfs-diff", "error=pch-vfs-diff"}, false)
         .StartsWith("no-error=", false)
         .Default(true);
   });
@@ -524,13 +524,12 @@ bool initializeScanCompilerInstance(
   // Use the dependency scanning optimized file system if requested to do so.
   if (DepFS) {
     DepFS->resetBypassedPathPrefix();
-    if (!ScanInstance.getHeaderSearchOpts().ModuleCachePath.empty()) {
-      SmallString<256> ModulesCachePath;
-      normalizeModuleCachePath(
-          ScanInstance.getFileManager(),
-          ScanInstance.getHeaderSearchOpts().ModuleCachePath, ModulesCachePath);
+    SmallString<256> ModulesCachePath;
+    normalizeModuleCachePath(ScanInstance.getFileManager(),
+                             ScanInstance.getHeaderSearchOpts().ModuleCachePath,
+                             ModulesCachePath);
+    if (!ModulesCachePath.empty())
       DepFS->setBypassedPathPrefix(ModulesCachePath);
-    }
 
     ScanInstance.setDependencyDirectivesGetter(
         std::make_unique<ScanningDependencyDirectivesGetter>(
