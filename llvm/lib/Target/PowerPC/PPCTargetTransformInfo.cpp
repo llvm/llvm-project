@@ -1036,6 +1036,9 @@ bool PPCTTIImpl::supportsTailCallFor(const CallBase *CB) const {
   return TLI->supportsTailCallFor(CB);
 }
 
+// Target hook used by CodeGen to decide whether to expand vector predication
+// intrinsics into scalar operations or to use special ISD nodes to represent
+// them. The Target will not see the intrinsics.
 TargetTransformInfo::VPLegalization
 PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
   using VPLegalization = TargetTransformInfo::VPLegalization;

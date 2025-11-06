@@ -11920,6 +11920,9 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
 }
 
+// Adjust the length value for a load/store with length to account for the
+// instructions requiring a left justified length, and for non-byte element
+// types requiring scaling by element size.
 static SDValue AdjustLength(SDValue Val, unsigned Bits, bool Left,
                             SelectionDAG &DAG) {
   SDLoc dl(Val);
