@@ -134,6 +134,7 @@ enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
 
 extern llvm::cl::bits<GadgetScannerKind> GadgetScannersToRun;
 
+enum ProbesWriteMode : char { PWM_None = 0, PWM_Default, PWM_Compact };
 } // namespace opts
 
 namespace llvm {
