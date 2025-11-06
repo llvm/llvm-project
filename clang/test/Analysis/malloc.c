@@ -879,7 +879,7 @@ void doNotInvalidateWhenPassedToSystemCalls(char *s) {
 // Treat source buffer contents as escaped.
 void escapeSourceContents(char *s) {
   char *p = malloc(12);
-  memcpy(s, &p, 12); // no warning
+  memcpy(s, &p, 12); // expected-warning{{memcpy' will always over-read; source buffer has size}}
 
   void *p1 = malloc(7);
   char *a;
