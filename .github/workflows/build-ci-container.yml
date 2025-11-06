@@ -10,14 +10,14 @@ on:
     paths:
       - .github/workflows/build-ci-container.yml
       - '.github/workflows/containers/github-action-ci/**'
-      - '.github/workflows/build-container/**'
-      - '.github/workflows/push-container/**'
+      - '.github/actions/build-container/**'
+      - '.github/actions/push-container/**'
   pull_request:
     paths:
       - .github/workflows/build-ci-container.yml
       - '.github/workflows/containers/github-action-ci/**'
-      - '.github/workflows/build-container/**'
-      - '.github/workflows/push-container/**'
+      - '.github/actions/build-container/**'
+      - '.github/actions/push-container/**'
 
 jobs:
   build-ci-container:
