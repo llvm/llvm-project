@@ -2218,7 +2218,8 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(
         SPIRV::Extension::SPV_ALTERA_arbitrary_precision_floating_point);
-    Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionFloatingPointALTERA);
+    Reqs.addCapability(
+        SPIRV::Capability::ArbitraryPrecisionFloatingPointALTERA);
     break;
   }
   case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
