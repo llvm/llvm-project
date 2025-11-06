@@ -748,7 +748,9 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_indirect",
-            "values": {"c++26": 202502},  # P3019R14 indirect and polymorphic: Vocabulary Types for Composite Class Design
+            "values": {
+                "c++26": 202502
+            },  # P3019R14 indirect and polymorphic: Vocabulary Types for Composite Class Design
             "headers": ["memory"],
         },
         {
