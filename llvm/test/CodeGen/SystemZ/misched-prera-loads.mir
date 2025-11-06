@@ -8,10 +8,9 @@
   define void @fun1() { ret void }
   define void @fun2() { ret void }
   define void @fun3() { ret void }
-  define void @fun4(ptr %Arg) { ret void }
+  define void @fun4() { ret void }
   define void @fun5(ptr %Arg) { ret void }
   define void @fun6() { ret void }
-  define void @fun7() { ret void }
 ...
 
 # Don't schedule the LG low as it in this case is among the hightest SUs.
@@ -57,7 +56,7 @@ body:             |
 ...
 
 # Schedule the LG low. The heuristic to move a load down to its user to
-# shorten the live range (of %1) makes sure to not increase the scheduled latency, so
+# shorten the live range makes sure to not increase the scheduled latency, so
 # therefore it ends up above the AG.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun1:%bb.0
@@ -109,26 +108,19 @@ body:             |
     Return
 ...
 
-# Schedule the '%39 = WFMDB' as soon as its use operand is already live. This
-# closes the liveness range of %3 without extending the scheduled latency.
+# Schedule the '%37 = WFMDB' as soon as its use operand is already live.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun2:%bb.0
 # CHECK:      *** Final schedule for %bb.0 ***
-# CHECK:      SU(15):   %39:vr64bit = nofpexcept WFMDB %38:fp64bit, %38:fp64bit, impl
-# CHECK-NEXT: SU(19):   %43:vr64bit = nofpexcept WFMDB %38:fp64bit, %42:vr64bit, impl
-# CHECK-NEXT: SU(20):   %44:vr64bit = nofpexcept WFMDB %43:vr64bit, %43:vr64bit, impl
-# CHECK-NEXT: SU(21):   dead %45:vr64bit = nofpexcept WFMDB %44:vr64bit, %39:vr64bit
-
+# CHECK:      SU(13):   %37:vr64bit = nofpexcept WFMDB %36:fp64bit, %36:fp64bit, impl
+# CHECK-NEXT: SU(17):   %41:vr64bit = nofpexcept WFMDB %36:fp64bit, %40:vr64bit, impl
+# CHECK-NEXT: SU(18):   %42:vr64bit = nofpexcept WFMDB %41:vr64bit, %41:vr64bit, impl
+# CHECK-NEXT: SU(19):   dead %43:vr64bit = nofpexcept WFMDB %42:vr64bit, %37:vr64bit
 ---
 name:            fun2
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $f0d, $f2d
-  
-    %1:fp64bit = COPY $f2d
-    %0:fp64bit = COPY $f0d
-
     ; Make for a top of region in terms of height, enabling heuristic for lower SUs.
     %M0:vr64bit = nofpexcept WFDDB undef %LHS0:fp64bit, undef %RHS0:fp64bit, implicit $fpc
     %M1:vr64bit = nofpexcept WFDDB undef %LHS1:fp64bit, undef %RHS1:fp64bit, implicit $fpc
@@ -143,22 +135,64 @@ body:             |
     %M10:vr64bit = nofpexcept WFDDB undef %LHS10:fp64bit, undef %RHS10:fp64bit, implicit $fpc
     %M11:vr64bit = nofpexcept WFDDB undef %LHS11:fp64bit, undef %RHS11:fp64bit, implicit $fpc
 
-    %38:fp64bit = LZDR
-    %39:vr64bit = nofpexcept WFMDB %38, %38, implicit $fpc
-    %40:vr64bit = nofpexcept WFMDB %38, %38, implicit $fpc
-    %41:vr64bit = nofpexcept WFMDB %38, %40, implicit $fpc
-    %42:vr64bit = nofpexcept WFMDB %38, %41, implicit $fpc
-    %43:vr64bit = nofpexcept WFMDB %38, %42, implicit $fpc
-    %44:vr64bit = nofpexcept WFMDB %43, %43, implicit $fpc
-    %45:vr64bit = nofpexcept WFMDB %44, %39, implicit $fpc
-    VST64 %43, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
-    $f0d = COPY %43
+    %36:fp64bit = LZDR
+    %37:vr64bit = nofpexcept WFMDB %36, %36, implicit $fpc
+    %38:vr64bit = nofpexcept WFMDB %36, %36, implicit $fpc
+    %39:vr64bit = nofpexcept WFMDB %36, %38, implicit $fpc
+    %40:vr64bit = nofpexcept WFMDB %36, %39, implicit $fpc
+    %41:vr64bit = nofpexcept WFMDB %36, %40, implicit $fpc
+    %42:vr64bit = nofpexcept WFMDB %41, %41, implicit $fpc
+    %43:vr64bit = nofpexcept WFMDB %42, %37, implicit $fpc
+    VST64 %41, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    $f0d = COPY %41
     Return implicit $f0d
 ...
 
-# *Don't* schedule the AGR low since %1 (and %0) continues to be live above it.
+# Same, with GPR registers.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun3:%bb.0
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK:      SU(13):   %37:gr64bit = AGRK %36:gr64bit, %36:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(17):   %41:gr64bit = AGRK %36:gr64bit, %40:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(18):   %42:gr64bit = AGRK %41:gr64bit, %41:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(19):   dead %43:gr64bit = AGRK %42:gr64bit, %37:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(20):   STG %41:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(21):   $r2d = COPY %41:gr64bit
+---
+name:            fun3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; Make for a top of region in terms of height, enabling heuristic for lower SUs.
+    %M0:vr64bit = nofpexcept WFDDB undef %LHS0:fp64bit, undef %RHS0:fp64bit, implicit $fpc
+    %M1:vr64bit = nofpexcept WFDDB undef %LHS1:fp64bit, undef %RHS1:fp64bit, implicit $fpc
+    %M2:vr64bit = nofpexcept WFDDB undef %LHS2:fp64bit, undef %RHS2:fp64bit, implicit $fpc
+    %M3:vr64bit = nofpexcept WFDDB undef %LHS3:fp64bit, undef %RHS3:fp64bit, implicit $fpc
+    %M4:vr64bit = nofpexcept WFDDB undef %LHS4:fp64bit, undef %RHS4:fp64bit, implicit $fpc
+    %M5:vr64bit = nofpexcept WFDDB undef %LHS5:fp64bit, undef %RHS5:fp64bit, implicit $fpc
+    %M6:vr64bit = nofpexcept WFDDB undef %LHS6:fp64bit, undef %RHS6:fp64bit, implicit $fpc
+    %M7:vr64bit = nofpexcept WFDDB undef %LHS7:fp64bit, undef %RHS7:fp64bit, implicit $fpc
+    %M8:vr64bit = nofpexcept WFDDB undef %LHS8:fp64bit, undef %RHS8:fp64bit, implicit $fpc
+    %M9:vr64bit = nofpexcept WFDDB undef %LHS9:fp64bit, undef %RHS9:fp64bit, implicit $fpc
+    %M10:vr64bit = nofpexcept WFDDB undef %LHS10:fp64bit, undef %RHS10:fp64bit, implicit $fpc
+    %M11:vr64bit = nofpexcept WFDDB undef %LHS11:fp64bit, undef %RHS11:fp64bit, implicit $fpc
+
+    %36:gr64bit = LGHI 1
+    %37:gr64bit = AGRK %36, %36, implicit-def dead $cc
+    %38:gr64bit = AGRK %36, %36, implicit-def dead $cc
+    %39:gr64bit = AGRK %36, %38, implicit-def dead $cc
+    %40:gr64bit = AGRK %36, %39, implicit-def dead $cc
+    %41:gr64bit = AGRK %36, %40, implicit-def dead $cc
+    %42:gr64bit = AGRK %41, %41, implicit-def dead $cc
+    %43:gr64bit = AGRK %42, %37, implicit-def dead $cc
+    STG %41, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    $r2d = COPY %41
+    Return implicit $r2d
+...
+
+# *Don't* schedule the AGR low since %1 continues to be live above it.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun4:%bb.0
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK:      SU(14):   %1:gr64bit = AGR %1:gr64bit(tied-def 0), %0:gr64bit, implicit-def $cc
 # CHECK-NEXT: SU(15):   dead %38:gr64bit = COPY undef %39:gr64bit
@@ -170,7 +204,7 @@ body:             |
 # CHECK-NEXT: SU(21):   STG %44:gr64bit, $noreg, 0, $noreg
 # CHECK-NEXT: SU(22):   STG %1:gr64bit, $noreg, 0, $noreg
 ---
-name:            fun3
+name:            fun4
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -208,10 +242,10 @@ body:             |
 
 # Schedule the VL64 low, above the first LG. It is loading a (live out) vr64,
 # which is prioritized, so even if %1 isn't live, that's ok as that is a GPR
-# register. This heruistic is guarded to not increment the scheduled latency,
+# register. This heuristic is guarded to not increment the scheduled latency,
 # which makes it wait until the first LG is scheduled.
 # CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun4:%bb.0
+# CHECK-NEXT: fun5:%bb.0
 # CHECK:      Live Out: %40 %39 %38
 #
 # CHECK:      Queue BotQ.A: 2 3 4 5 6 7 8 15 14 13 12 11 10 9 0
@@ -225,7 +259,7 @@ body:             |
 # CHECK-NEXT: SU(17):   dead %41:gr64bit = COPY undef %42:gr64bit
 
 ---
-name:            fun4
+name:            fun5
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -251,69 +285,16 @@ body:             |
     %38:vr64bit = VL64 %1, 0, $noreg :: (load (s64) from %ir.Arg)
     %39:addr64bit = LG %1, 0, $noreg :: (load (s64) from `ptr null`)
     %40:addr64bit = LG %0, 0, $noreg :: (load (s64) from %ir.Arg)
-    %5:gr64bit = COPY undef %42:gr64bit
-    %6:gr64bit = COPY undef %42:gr64bit
-    %7:gr64bit = COPY undef %42:gr64bit
-    %8:gr64bit = COPY undef %42:gr64bit
-    %9:gr64bit = COPY undef %42:gr64bit
-    %10:gr64bit = COPY undef %42:gr64bit
+    %41:gr64bit = COPY undef %42:gr64bit
+    %42:gr64bit = COPY undef %42:gr64bit
+    %43:gr64bit = COPY undef %42:gr64bit
+    %44:gr64bit = COPY undef %42:gr64bit
+    %45:gr64bit = COPY undef %42:gr64bit
+    %46:gr64bit = COPY undef %42:gr64bit
     CallBASR implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
     STG %39, $noreg, 0, $noreg
     VST64 %38, $noreg, 0, $noreg
     STG %40, $noreg, 0, $noreg
-    Return
-...
-
-# Same as previous, but the VLR64 has a vr64bit (prioritized) use that will
-# become live, so it is not pulled down.
-# CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun5:%bb.0
-# CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun5:%bb.0
-# CHECK:      *** Final schedule for %bb.0 ***
-# CHECK:      SU(15):   %39:vr64bit = VLR64 %2:vr64bit
-# CHECK-NEXT: SU(16):   %40:addr64bit = LG %1:addr64bit, 0, $noreg :: (load (s64) from `ptr null`)
-# CHECK-NEXT: SU(17):   %41:addr64bit = LG %0:addr64bit, 0, $noreg :: (load (s64) from %ir.Arg)
-# CHECK-NEXT: SU(18):   dead %42:gr64bit = COPY undef %43:gr64bit
----
-name:            fun5
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $r2d, $r3d, $f0d
-  
-    %0:addr64bit = COPY $r3d
-    %1:addr64bit = COPY $r2d
-    %2:vr64bit = COPY $f0d
-
-    ; Make for a top of region in terms of height, enabling heuristic for lower SUs.
-    %M0:vr64bit = nofpexcept WFDDB undef %LHS0:fp64bit, undef %RHS0:fp64bit, implicit $fpc
-    %M1:vr64bit = nofpexcept WFDDB undef %LHS1:fp64bit, undef %RHS1:fp64bit, implicit $fpc
-    %M2:vr64bit = nofpexcept WFDDB undef %LHS2:fp64bit, undef %RHS2:fp64bit, implicit $fpc
-    %M3:vr64bit = nofpexcept WFDDB undef %LHS3:fp64bit, undef %RHS3:fp64bit, implicit $fpc
-    %M4:vr64bit = nofpexcept WFDDB undef %LHS4:fp64bit, undef %RHS4:fp64bit, implicit $fpc
-    %M5:vr64bit = nofpexcept WFDDB undef %LHS5:fp64bit, undef %RHS5:fp64bit, implicit $fpc
-    %M6:vr64bit = nofpexcept WFDDB undef %LHS6:fp64bit, undef %RHS6:fp64bit, implicit $fpc
-    %M7:vr64bit = nofpexcept WFDDB undef %LHS7:fp64bit, undef %RHS7:fp64bit, implicit $fpc
-    %M8:vr64bit = nofpexcept WFDDB undef %LHS8:fp64bit, undef %RHS8:fp64bit, implicit $fpc
-    %M9:vr64bit = nofpexcept WFDDB undef %LHS9:fp64bit, undef %RHS9:fp64bit, implicit $fpc
-    %M10:vr64bit = nofpexcept WFDDB undef %LHS10:fp64bit, undef %RHS10:fp64bit, implicit $fpc
-    %M11:vr64bit = nofpexcept WFDDB undef %LHS11:fp64bit, undef %RHS11:fp64bit, implicit $fpc
-
-    %39:vr64bit = VLR64 %2
-    %40:addr64bit = LG %1, 0, $noreg :: (load (s64) from `ptr null`)
-    %41:addr64bit = LG %0, 0, $noreg :: (load (s64) from %ir.Arg)
-    %42:gr64bit = COPY undef %43:gr64bit
-    %7:gr64bit = COPY undef %7:gr64bit
-    %8:gr64bit = COPY undef %7:gr64bit
-    %9:gr64bit = COPY undef %7:gr64bit
-    %10:gr64bit = COPY undef %7:gr64bit
-    %11:gr64bit = COPY undef %7:gr64bit
-    %12:gr64bit = COPY undef %7:gr64bit
-    CallBASR implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
-    STG %40, $noreg, 0, $noreg
-    VST64 %39, $noreg, 0, $noreg
-    STG %41, $noreg, 0, $noreg
     Return
 ...
 
@@ -381,56 +362,6 @@ body:             |
     %32:gr64bit = COPY undef %11:gr64bit ;
     %33:gr64bit = COPY undef %11:gr64bit ;
     %34:gr64bit = COPY undef %11:gr64bit ;
-    VST64 %36, $noreg, 0, $noreg
-    Return
-...
-
-# Same as previous, but there are not enough remaining instructions
-# that will go above it, so it stays high as it increases the scheduled latency.
-# CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun7:%bb.0
-# CHECK:      *** Final schedule for %bb.0 ***
-# CHECK:      SU(12):   %36:vr64bit = VL64 $noreg, 0, $noreg
-# CHECK-NEXT: SU(13):   dead %37:gr64bit = COPY undef %38:gr64bit
-# CHECK-NEXT: SU(14):   dead %39:gr64bit = COPY undef %38:gr64bit
-# CHECK-NEXT: SU(15):   dead %40:gr64bit = COPY undef %38:gr64bit
-# CHECK-NEXT: SU(16):   dead %41:gr64bit = COPY undef %38:gr64bit
-# CHECK-NEXT: SU(17):   dead %42:gr64bit = COPY undef %38:gr64bit
-# CHECK-NEXT: SU(18):   dead %43:gr64bit = COPY undef %38:gr64bit
-# CHECK-NEXT: SU(19):   dead %44:gr64bit = COPY undef %38:gr64bit
-# CHECK-NEXT: SU(20):   dead %38:gr64bit = COPY undef %38:gr64bit
-# CHECK-NEXT: SU(21):   dead %45:gr64bit = COPY undef %38:gr64bit
-# CHECK-NEXT: SU(22):   VST64 %36:vr64bit, $noreg, 0, $noreg
----
-name:            fun7
-tracksRegLiveness: true
-body:             |
-  bb.0:
-  
-    ; Make for a top of region in terms of height, enabling heuristic for lower SUs.
-    %M0:vr64bit = nofpexcept WFDDB undef %LHS0:fp64bit, undef %RHS0:fp64bit, implicit $fpc
-    %M1:vr64bit = nofpexcept WFDDB undef %LHS1:fp64bit, undef %RHS1:fp64bit, implicit $fpc
-    %M2:vr64bit = nofpexcept WFDDB undef %LHS2:fp64bit, undef %RHS2:fp64bit, implicit $fpc
-    %M3:vr64bit = nofpexcept WFDDB undef %LHS3:fp64bit, undef %RHS3:fp64bit, implicit $fpc
-    %M4:vr64bit = nofpexcept WFDDB undef %LHS4:fp64bit, undef %RHS4:fp64bit, implicit $fpc
-    %M5:vr64bit = nofpexcept WFDDB undef %LHS5:fp64bit, undef %RHS5:fp64bit, implicit $fpc
-    %M6:vr64bit = nofpexcept WFDDB undef %LHS6:fp64bit, undef %RHS6:fp64bit, implicit $fpc
-    %M7:vr64bit = nofpexcept WFDDB undef %LHS7:fp64bit, undef %RHS7:fp64bit, implicit $fpc
-    %M8:vr64bit = nofpexcept WFDDB undef %LHS8:fp64bit, undef %RHS8:fp64bit, implicit $fpc
-    %M9:vr64bit = nofpexcept WFDDB undef %LHS9:fp64bit, undef %RHS9:fp64bit, implicit $fpc
-    %M10:vr64bit = nofpexcept WFDDB undef %LHS10:fp64bit, undef %RHS10:fp64bit, implicit $fpc
-    %M11:vr64bit = nofpexcept WFDDB undef %LHS11:fp64bit, undef %RHS11:fp64bit, implicit $fpc
-
-    %36:vr64bit = VL64 $noreg, 0, $noreg
-    %37:gr64bit = COPY undef %38:gr64bit
-    %39:gr64bit = COPY undef %38:gr64bit
-    %40:gr64bit = COPY undef %38:gr64bit
-    %41:gr64bit = COPY undef %38:gr64bit
-    %42:gr64bit = COPY undef %38:gr64bit
-    %43:gr64bit = COPY undef %38:gr64bit
-    %44:gr64bit = COPY undef %38:gr64bit
-    %38:gr64bit = COPY undef %38:gr64bit
-    %45:gr64bit = COPY undef %38:gr64bit
     VST64 %36, $noreg, 0, $noreg
     Return
 ...

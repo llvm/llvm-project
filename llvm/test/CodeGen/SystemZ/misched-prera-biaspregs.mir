@@ -16,22 +16,22 @@ body:             |
     Return implicit $r2d
 ...
 
-# The COPY from r3 should be first.
+# The COPY from r2 should be first.
 # CHECK:      name: fun1
-# CHECK:      liveins: $r3d
+# CHECK:      liveins: $r2
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT: %2:gr64bit = COPY $r3d
+# CHECK-NEXT: %2:gr64bit = COPY $r2
 ---
 name:            fun1
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $r3d
+    liveins: $r2d
 
     %0:gr64bit = LGHI 1
     %1:gr64bit = COPY %0
     %2:gr64bit = COPY %1
-    %2:gr64bit = COPY $r3d
+    %2:gr64bit = COPY $r2d
     $r2d = COPY %2
     Return implicit $r2d
 ...
@@ -67,21 +67,28 @@ body:             |
     Return implicit killed $r2d
 ...
 
-# Don't reorder phys-reg COPYs.
+# Don't reorder phys-reg COPYs. Recognize LA to PReg with a VReg use.
 # CHECK:      name: fun4
-# CHECK:      %0:gr64bit = COPY $r2d
-# CHECK-NEXT: %1:gr64bit = COPY $r3d
+# CHECK:      %0:addr64bit = COPY $r2d
+# CHECK-NEXT: dead %3:gr64bit = COPY $r3d
+# CHECK-NEXT: %1:gr64bit = AGRK %0, %0, implicit-def $cc
+# CHECK-NEXT: dead %2:gr64bit = AGRK %1, %0, implicit-def $cc
+# CHECK-NEXT: $r2d = LA %0, 0, $noreg
+# CHECK-NEXT: Return
 ---
 name:            fun4
 tracksRegLiveness: true
+stack:
+  - { id: 0, size: 8 }
 body:             |
   bb.0.entry:
     liveins: $r2d, $r3d
 
-    %0:gr64bit = COPY $r2d
-    %1:gr64bit = COPY $r3d
+    %0:addr64bit = COPY $r2d
     %2:gr64bit = AGRK %0, %0, implicit-def $cc
+    $r2d = LA %0, 0, $noreg
     %3:gr64bit = AGRK %2, %0, implicit-def $cc
+    %1:gr64bit = COPY $r3d
 
     Return
 ...

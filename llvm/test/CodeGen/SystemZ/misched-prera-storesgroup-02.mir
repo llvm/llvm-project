@@ -81,7 +81,7 @@ body:             |
     Return
 ...
 
-# Test that stores in a group are scheduled regardless of making an address
+# Test that FPR stores in a group are scheduled regardless of making an address
 # register live.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun1:%bb.0
