@@ -237,8 +237,7 @@ public:
 
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
-    return getWithoutLoc(Location::InaccessibleMem)
-        .doesNotAccessMemory();
+    return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
   /// Whether this function only (at most) accesses errno memory.
