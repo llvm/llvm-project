@@ -633,7 +633,8 @@ struct __declspec(dllexport) Y {
 };
 
 struct __declspec(dllexport) Z { virtual ~Z() {} };
-// The scalar deleting dtor does not get exported:
+// The deleting dtor does not get exported, but we emit body of vector deleting
+// destructor:
 // M32-DAG: define weak dso_local x86_thiscallcc ptr @"??_EZ@@UAEPAXI@Z"
 
 
