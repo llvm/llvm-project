@@ -473,9 +473,8 @@ void registerDefaultTimingManagerCLOptions();
 /// 'registerDefaultTimingManagerOptions' to a `DefaultTimingManager`.
 void applyDefaultTimingManagerCLOptions(DefaultTimingManager &tm);
 
-/// Return a default output strategy for the specified format. This function can
-/// be used in combination with DefaultTimingManager::setOutput() to use
-/// MLIR-provided output format.
+/// Create an output strategy for the specified format, to be passed to
+/// DefaultTimingManager::setOutput().
 std::unique_ptr<OutputStrategy>
 createOutputStrategy(DefaultTimingManager::OutputFormat fmt, raw_ostream &os);
 
