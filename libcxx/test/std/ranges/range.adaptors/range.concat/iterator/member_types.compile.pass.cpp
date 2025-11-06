@@ -9,6 +9,7 @@
 // REQUIRES: std-at-least-c++26
 
 #include <array>
+#include <forward_list>
 #include <ranges>
 #include <tuple>
 
@@ -168,6 +169,59 @@ constexpr bool test() {
 
     static_assert(std::is_same_v<typename Iter::iterator_category, std::input_iterator_tag>);
     static_assert(std::is_same_v<typename ConstIter::iterator_category, std::input_iterator_tag>);
+  }
+
+  {
+    // iterator category test
+    {
+      // all random-access => iterator_category is random_access_iterator_tag
+      std::span<int> s{buffer};                                // span<int> (RA, common)
+      auto sr = std::ranges::subrange{buffer, buffer + 4};     // subrange<pointer,pointer> (RA, common)
+      std::array<int, 2> arr{9, 10};                           // array (RA, common)
+      std::ranges::concat_view v(s, sr, std::views::all(arr)); // different types, all RA + non-last common
+
+      using Iter  = decltype(v.begin());
+      using CIter = decltype(std::as_const(v).begin());
+      static_assert(std::is_same_v<typename Iter::iterator_category, std::random_access_iterator_tag>);
+      static_assert(std::is_same_v<typename CIter::iterator_category, std::random_access_iterator_tag>);
+    }
+
+    // random-access + bidirectional => iterator_category is bidirectional_iterator_tag
+    {
+      std::span<int> s{buffer};    // RA
+      std::list<int> lst{1, 2, 3}; // bidirectional
+      std::ranges::concat_view v(s, lst);
+
+      using Iter  = decltype(v.begin());
+      using CIter = decltype(std::as_const(v).begin());
+      static_assert(std::is_same_v<typename Iter::iterator_category, std::bidirectional_iterator_tag>);
+      static_assert(std::is_same_v<typename CIter::iterator_category, std::bidirectional_iterator_tag>);
+    }
+
+    // random-access + forward => iterator_category is forward_iterator_tag
+    {
+      std::span<int> s{buffer};           // RA
+      std::forward_list<int> fl{1, 2, 3}; // forward
+      std::ranges::concat_view v(s, fl);
+
+      using Iter  = decltype(v.begin());
+      using CIter = decltype(std::as_const(v).begin());
+      static_assert(std::is_same_v<typename Iter::iterator_category, std::forward_iterator_tag>);
+      static_assert(std::is_same_v<typename CIter::iterator_category, std::forward_iterator_tag>);
+    }
+
+    // RA + forward + RA => iterator_category is forward_iterator_tag
+    {
+      std::span<int> s1{buffer};       // RA
+      std::forward_list<int> fl{1, 2}; // forward
+      std::array<int, 1> tail{42};     // RA
+      std::ranges::concat_view v(s1, fl, tail);
+
+      using Iter  = decltype(v.begin());
+      using CIter = decltype(std::as_const(v).begin());
+      static_assert(std::is_same_v<typename Iter::iterator_category, std::forward_iterator_tag>);
+      static_assert(std::is_same_v<typename CIter::iterator_category, std::forward_iterator_tag>);
+    }
   }
 
   return true;
