@@ -61825,9 +61825,6 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       break;
     case 'y':   // MMX_REGS if MMX allowed.
       if (!Subtarget.hasMMX()) break;
-      // MMX registers are 64-bit only
-      if (VT.getSizeInBits() != 64)
-        break;
       return std::make_pair(0U, &X86::VR64RegClass);
     case 'v':
     case 'x':   // SSE_REGS if SSE1 allowed or AVX_REGS if AVX allowed
