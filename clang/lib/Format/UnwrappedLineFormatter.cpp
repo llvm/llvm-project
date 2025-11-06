@@ -12,7 +12,6 @@
 #include "WhitespaceManager.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
-#include <iostream>
 
 #define DEBUG_TYPE "format-formatter"
 
@@ -136,9 +135,6 @@ private:
 
     if(Line.First->is(tok::identifier) && Line.First->Next && Line.First->Next->is(TT_GotoLabelColon)){
       if(Style.IndentGotoLabelsToCurrentScope){
-        std::cout << Line.First->TokenText.str() << ": indented to current scope" << std::endl;
-        std::cout << "IndentGotoLabelsToCurrentScope is true" << std::endl;
-        std::cout << Line.Level << " " << Style.IndentWidth << std::endl;
         return Style.IndentWidth;
       }
     }
