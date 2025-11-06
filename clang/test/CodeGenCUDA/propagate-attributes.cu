@@ -12,18 +12,17 @@
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc -o - \
 // RUN:   -fcuda-is-device -triple nvptx-unknown-unknown \
-// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ --check-prefix=NOFAST
+// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
 // RUN:   -fdenormal-fp-math-f32=preserve-sign -o - \
 // RUN:   -fcuda-is-device -triple nvptx-unknown-unknown \
-// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ \
-// RUN:   --check-prefix=NOFAST
+// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
 // RUN:   -fdenormal-fp-math-f32=preserve-sign -o - \
 // RUN:   -fcuda-is-device -funsafe-math-optimizations -triple nvptx-unknown-unknown \
-// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
+// RUN: | FileCheck %s --check-prefix=CHECK
 
 #ifndef LIB
 #include "Inputs/cuda.h"
@@ -65,9 +64,6 @@ __global__ void kernel() { lib_fn(); }
 
 // CHECK-SAME: "no-trapping-math"="true"
 
-// FAST-SAME: "unsafe-fp-math"="true"
-// NOFAST-NOT: "unsafe-fp-math"="true"
-
 // Check the attribute list for lib_fn.
 // CHECK: attributes [[fattr]] = {
 
@@ -81,6 +77,3 @@ __global__ void kernel() { lib_fn(); }
 // NOFTZ-NOT: "denormal-fp-math-f32"
 
 // CHECK-SAME: "no-trapping-math"="true"
-
-// FAST-SAME: "unsafe-fp-math"="true"
-// NOFAST-NOT: "unsafe-fp-math"="true"

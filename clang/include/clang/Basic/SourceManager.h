@@ -1286,16 +1286,7 @@ public:
   /// If the location is an expansion record, walk through it until we find
   /// the final location expanded.
   FileIDAndOffset getDecomposedExpansionLoc(SourceLocation Loc) const {
-    FileID FID = getFileID(Loc);
-    auto *E = getSLocEntryOrNull(FID);
-    if (!E)
-      return std::make_pair(FileID(), 0);
-
-    unsigned Offset = Loc.getOffset()-E->getOffset();
-    if (Loc.isFileID())
-      return std::make_pair(FID, Offset);
-
-    return getDecomposedExpansionLocSlowCase(E);
+    return getDecomposedLoc(getExpansionLoc(Loc));
   }
 
   /// Decompose the specified location into a raw FileID + Offset pair.
@@ -1303,15 +1294,7 @@ public:
   /// If the location is an expansion record, walk through it until we find
   /// its spelling record.
   FileIDAndOffset getDecomposedSpellingLoc(SourceLocation Loc) const {
-    FileID FID = getFileID(Loc);
-    auto *E = getSLocEntryOrNull(FID);
-    if (!E)
-      return std::make_pair(FileID(), 0);
-
-    unsigned Offset = Loc.getOffset()-E->getOffset();
-    if (Loc.isFileID())
-      return std::make_pair(FID, Offset);
-    return getDecomposedSpellingLocSlowCase(E, Offset);
+    return getDecomposedLoc(getSpellingLoc(Loc));
   }
 
   /// Returns the "included/expanded in" decomposed location of the given
@@ -1979,10 +1962,6 @@ private:
   SourceLocation getSpellingLocSlowCase(SourceLocation Loc) const;
   SourceLocation getFileLocSlowCase(SourceLocation Loc) const;
 
-  FileIDAndOffset
-  getDecomposedExpansionLocSlowCase(const SrcMgr::SLocEntry *E) const;
-  FileIDAndOffset getDecomposedSpellingLocSlowCase(const SrcMgr::SLocEntry *E,
-                                                   unsigned Offset) const;
   void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;
   void associateFileChunkWithMacroArgExp(MacroArgsMap &MacroArgsCache,
                                          FileID FID,

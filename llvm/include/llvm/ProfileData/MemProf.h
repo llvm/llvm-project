@@ -14,24 +14,20 @@
 #ifndef LLVM_PROFILEDATA_MEMPROF_H
 #define LLVM_PROFILEDATA_MEMPROF_H
 
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/MemProfData.inc"
-#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <bitset>
 #include <cstdint>
-#include <optional>
 
 namespace llvm {
 namespace yaml {

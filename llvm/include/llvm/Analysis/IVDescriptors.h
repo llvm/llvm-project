@@ -251,12 +251,18 @@ public:
            Kind == RecurKind::SMin || Kind == RecurKind::SMax;
   }
 
+  /// Returns true if the recurrence kind is a floating-point minnum/maxnum
+  /// kind.
+  static bool isFPMinMaxNumRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FMinNum || Kind == RecurKind::FMaxNum;
+  }
+
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
-           Kind == RecurKind::FMinNum || Kind == RecurKind::FMaxNum ||
            Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum ||
-           Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum;
+           Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum ||
+           isFPMinMaxNumRecurrenceKind(Kind);
   }
 
   /// Returns true if the recurrence kind is any min/max kind.

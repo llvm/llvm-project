@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/common/clc_sign.h>
 #include <clc/opencl/common/sign.h>
 

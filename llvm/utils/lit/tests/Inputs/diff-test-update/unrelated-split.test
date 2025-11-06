@@ -1,0 +1,11 @@
+# the fact that this test runs split-file is unrelated
+# to the diffed files
+
+# RUN: mkdir %t
+# RUN: split-file %s %t
+# RUN: cp %S/1.in %t/unrelated-split.expected
+# RUN: cp %S/2.in %t/unrelated-split.txt
+# RUN: diff %t/unrelated-split.expected %t/unrelated-split.txt
+
+#--- distraction.txt
+

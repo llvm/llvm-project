@@ -137,7 +137,7 @@ makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
          "modules only.");
 
   llvm::SmallVector<Module *, 4> Worklist;
-  llvm::SmallSet<Module *, 16> Visited;
+  llvm::SmallPtrSet<Module *, 16> Visited;
   Worklist.push_back(Imported);
 
   Module *FoundPrimaryModuleInterface =
@@ -772,7 +772,12 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
     Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
         getLangOpts().CurrentModule, DirectiveLoc, false, false);
     (void)ThisModule;
-    assert(ThisModule && "was expecting a module if building one");
+    // For named modules, the current module name is not known while parsing the
+    // global module fragment and lookupModule may return null.
+    assert((getLangOpts().getCompilingModule() ==
+                LangOptionsBase::CMK_ModuleInterface ||
+            ThisModule) &&
+           "was expecting a module if building a Clang module");
   }
 }
 

@@ -133,10 +133,10 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   SmallSetVector<Register, 32> LocalDefs;
   BitVector LocalDefsP(TRI->getNumRegUnits());
   SmallSet<Register, 8> DeadDefSet;
-  SmallSet<Register, 16> KilledDefSet;
   SmallSetVector<Register, 8> ExternUses;
   SmallSet<Register, 8> KilledUseSet;
   SmallSet<Register, 8> UndefUseSet;
+  SmallVector<std::pair<Register, Register>> TiedOperands;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
     // Debug instructions have no effects to track.
     if (MII->isDebugInstr())
@@ -151,7 +151,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
         MO.setIsInternalRead();
         if (MO.isKill()) {
           // Internal def is now killed.
-          KilledDefSet.insert(Reg);
+          DeadDefSet.insert(Reg);
         }
       } else {
         if (ExternUses.insert(Reg)) {
@@ -162,6 +162,15 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
           // External def is now killed.
           KilledUseSet.insert(Reg);
         }
+        if (MO.isTied() && Reg.isVirtual()) {
+          // Record tied operand constraints that involve virtual registers so
+          // that bundles that are formed pre-register allocation reflect the
+          // relevant constraints.
+          unsigned TiedIdx = MII->findTiedOperandIdx(MO.getOperandNo());
+          MachineOperand &TiedMO = MII->getOperand(TiedIdx);
+          Register DefReg = TiedMO.getReg();
+          TiedOperands.emplace_back(DefReg, Reg);
+        }
       }
     }
 
@@ -171,21 +180,18 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
         continue;
 
       if (LocalDefs.insert(Reg)) {
-        if (MO.isDead())
-          DeadDefSet.insert(Reg);
+        if (!MO.isDead() && Reg.isPhysical()) {
+          for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+            LocalDefsP.set(Unit);
+        }
       } else {
-        // Re-defined inside the bundle, it's no longer killed.
-        KilledDefSet.erase(Reg);
         if (!MO.isDead()) {
-          // Previously defined but dead.
+          // Re-defined inside the bundle, it's no longer dead.
           DeadDefSet.erase(Reg);
         }
       }
-
-      if (!MO.isDead() && Reg.isPhysical()) {
-        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-          LocalDefsP.set(Unit);
-      }
+      if (MO.isDead())
+        DeadDefSet.insert(Reg);
     }
 
     // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions
@@ -198,7 +204,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
 
   for (Register Reg : LocalDefs) {
     // If it's not live beyond end of the bundle, mark it dead.
-    bool isDead = DeadDefSet.contains(Reg) || KilledDefSet.contains(Reg);
+    bool isDead = DeadDefSet.contains(Reg);
     MIB.addReg(Reg, getDefRegState(true) | getDeadRegState(isDead) |
                         getImplRegState(true));
   }
@@ -207,7 +213,17 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     bool isKill = KilledUseSet.contains(Reg);
     bool isUndef = UndefUseSet.contains(Reg);
     MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
-               getImplRegState(true));
+                        getImplRegState(true));
+  }
+
+  for (auto [DefReg, UseReg] : TiedOperands) {
+    unsigned DefIdx =
+        std::distance(LocalDefs.begin(), llvm::find(LocalDefs, DefReg));
+    unsigned UseIdx =
+        std::distance(ExternUses.begin(), llvm::find(ExternUses, UseReg));
+    assert(DefIdx < LocalDefs.size());
+    assert(UseIdx < ExternUses.size());
+    MIB->tieOperands(DefIdx, LocalDefs.size() + UseIdx);
   }
 }
 

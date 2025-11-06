@@ -7,7 +7,7 @@
 // doesn't play well with warnings that have no line number.
 
 // RUN: llvm-profdata merge %S/Inputs/c-unprofiled.proftext -o %t.profdata
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-unprofiled.c -I %S/Inputs/ %s -o /dev/null -emit-llvm -fprofile-instrument-use-path=%t.profdata -Wprofile-instr-unprofiled 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-unprofiled.c -I %S/Inputs/ %s -o /dev/null -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -Wprofile-instr-unprofiled 2>&1 | FileCheck %s
 
 // CHECK: warning: no profile data available for file "c-unprofiled.c"
 

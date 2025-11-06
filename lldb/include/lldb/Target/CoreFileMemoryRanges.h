@@ -50,7 +50,7 @@ class CoreFileMemoryRanges
                                            CoreFileMemoryRange> {
 public:
   /// Finalize and merge all overlapping ranges in this collection. Ranges
-  /// will be seperated based on permissions.
+  /// will be separated based on permissions.
   Status FinalizeCoreFileSaveRanges();
 };
 } // namespace lldb_private

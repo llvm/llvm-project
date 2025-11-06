@@ -39,7 +39,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(
             failures[0],
             (
-                "test/4.stamp",
+                "touch test/4.stamp",
                 dedent(
                     """\
                     FAILED: touch test/4.stamp
@@ -77,7 +77,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(
             failures[0],
             (
-                "test/3.stamp",
+                "touch test/3.stamp",
                 dedent(
                     """\
                     FAILED: touch test/3.stamp
@@ -106,7 +106,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(
             failures[0],
             (
-                "test/2.stamp",
+                "touch test/2.stamp",
                 dedent(
                     """\
                     FAILED: touch test/2.stamp
@@ -117,11 +117,72 @@ class TestReports(unittest.TestCase):
         self.assertEqual(
             failures[1],
             (
-                "test/4.stamp",
+                "touch test/4.stamp",
                 dedent(
                     """\
                     FAILED: touch test/4.stamp
                     Wow! This system is maybe broken!"""
+                ),
+            ),
+        )
+
+    # Test that we can correctly handle the runtimes build. the LLVM runtimes
+    # build will involve ninja invoking more ninja processes within the
+    # runtimes directory. This means that we see two failures for a failure in
+    # the runtimes build: one from the inner ninja containing the actual action
+    # that failed, and one for the sub ninja invocation that failed.
+    def test_ninja_log_runtimes_failure(self):
+        failures = generate_test_report_lib.find_failure_in_ninja_logs(
+            [
+                [
+                    "[1/5] test/1.stamp",
+                    "[2/5] test/2.stamp",
+                    "FAILED: touch test/2.stamp",
+                    "Wow! This system is really broken!",
+                    "ninja: build stopped: subcommand failed.",
+                    "FAILED: running check-runtime failed.",
+                    "<some random command>",
+                    "ninja: build stopped: subcommand failed.",
+                ]
+            ]
+        )
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(
+            failures[0],
+            (
+                "touch test/2.stamp",
+                dedent(
+                    """\
+                    FAILED: touch test/2.stamp
+                    Wow! This system is really broken!"""
+                ),
+            ),
+        )
+
+    # Test that we correctly handle cases where the FAILED: line does not
+    # match up with the progress indicator.
+    def test_ninja_log_mismatched_failed(self):
+        failures = generate_test_report_lib.find_failure_in_ninja_logs(
+            [
+                [
+                    "[1/5] test/1.stamp",
+                    "[2/5] test/2.stamp",
+                    "ModuleNotFoundError: No module named 'mount_langley'",
+                    "FAILED: tools/check-langley",
+                    "Wow! This system is really broken!",
+                    "[5/5] test/5.stamp",
+                ]
+            ]
+        )
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(
+            failures[0],
+            (
+                "tools/check-langley",
+                dedent(
+                    """\
+                    FAILED: tools/check-langley
+                    Wow! This system is really broken!"""
                 ),
             ),
         )
@@ -374,7 +435,6 @@ class TestReports(unittest.TestCase):
                 ]
             ],
         )
-        print(test)
         self.assertEqual(
             generate_test_report_lib.generate_report(
                 "Foo",
@@ -416,7 +476,7 @@ class TestReports(unittest.TestCase):
                     All tests passed but another part of the build **failed**. Click on a failure below to see the details.
 
                     <details>
-                    <summary>test/2.stamp</summary>
+                    <summary>touch test/2.stamp</summary>
 
                     ```
                     FAILED: touch test/2.stamp
@@ -424,7 +484,7 @@ class TestReports(unittest.TestCase):
                     ```
                     </details>
                     <details>
-                    <summary>test/4.stamp</summary>
+                    <summary>touch test/4.stamp</summary>
 
                     ```
                     FAILED: touch test/4.stamp

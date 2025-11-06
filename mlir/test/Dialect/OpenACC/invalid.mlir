@@ -492,6 +492,15 @@ func.func @fct1(%0 : !llvm.ptr) -> () {
 
 // -----
 
+%i1 = arith.constant 1 : i32
+%i2 = arith.constant 10 : i32
+// expected-error@+1 {{unstructured acc.loop must not have induction variables}}
+acc.loop control(%iv : i32) = (%i1 : i32) to (%i2 : i32) step (%i1 : i32) {
+  acc.yield
+} attributes {independent = [#acc.device_type<none>], unstructured}
+
+// -----
+
 // expected-error@+1 {{expect at least one of num, dim or static values}}
 acc.loop gang({}) {
   "test.openacc_dummy_op"() : () -> ()
@@ -831,3 +840,20 @@ func.func @acc_loop_container() {
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{invalid data clause modifiers: readonly}}
 %0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}
+
+// -----
+
+func.func @verify_declare_enter(%arg0 : memref<i32>) {
+// expected-error @below {{expect valid declare data entry operation or acc.getdeviceptr as defining op}}
+  %0 = acc.declare_enter dataOperands(%arg0 : memref<i32>)
+  acc.declare_exit token(%0) dataOperands(%arg0 : memref<i32>)
+  return
+}
+
+func.func @verify_data(%arg0 : memref<i32>) {
+// expected-error @below {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
+  acc.data dataOperands(%arg0 : memref<i32>) {
+    acc.terminator
+  }
+  return
+}

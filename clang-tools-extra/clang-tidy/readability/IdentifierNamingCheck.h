@@ -1,4 +1,4 @@
-//===--- IdentifierNamingCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,7 +33,7 @@ enum StyleKind : int;
 class IdentifierNamingCheck final : public RenamerClangTidyCheck {
 public:
   IdentifierNamingCheck(StringRef Name, ClangTidyContext *Context);
-  ~IdentifierNamingCheck();
+  ~IdentifierNamingCheck() override;
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 

@@ -157,6 +157,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlwaysModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAttachModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"attach-modifier",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61, {Clause::OMPC_map}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAutomapModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"automap-modifier",

@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolEvents.h"
 #include "RequestHandler.h"
 
 using namespace lldb_dap::protocol;
@@ -76,6 +77,13 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
 
   if (ValuePointsToCode(variable))
     body.valueLocationReference = new_var_ref;
+
+  // Also send invalidated event to signal client that some variables
+  // (e.g. references) can be changed.
+  SendInvalidatedEvent(dap, {InvalidatedEventBody::eAreaVariables});
+
+  // Also send memory event to signal client that variable memory was changed.
+  SendMemoryEvent(dap, variable);
 
   return body;
 }

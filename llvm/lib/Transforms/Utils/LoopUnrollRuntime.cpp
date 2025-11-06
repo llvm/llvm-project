@@ -40,6 +40,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
+#include <cmath>
 
 using namespace llvm;
 
@@ -195,24 +196,70 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   }
 }
 
+/// Assume, due to our position in the remainder loop or its guard, anywhere
+/// from 0 to \p N more iterations can possibly execute.  Among such cases in
+/// the original loop (with loop probability \p OriginalLoopProb), what is the
+/// probability of executing at least one more iteration?
+static BranchProbability
+probOfNextInRemainder(BranchProbability OriginalLoopProb, unsigned N) {
+  // OriginalLoopProb == 1 would produce a division by zero in the calculation
+  // below.  The problem is that case indicates an always infinite loop, but a
+  // remainder loop cannot be calculated at run time if the original loop is
+  // infinite as infinity % UnrollCount is undefined.  We then choose
+  // probabilities indicating that all remainder loop iterations will always
+  // execute.
+  //
+  // Currently, the remainder loop here is an epilogue, which cannot be reached
+  // if the original loop is infinite, so the aforementioned choice is
+  // arbitrary.
+  //
+  // FIXME: Branch weights still need to be fixed in the case of prologues
+  // (issue #135812).  In that case, the aforementioned choice seems reasonable
+  // for the goal of maintaining the original loop's block frequencies.  That
+  // is, an infinite loop's initial iterations are not skipped, and the prologue
+  // loop body might have unique blocks that execute a finite number of times
+  // if, for example, the original loop body contains conditionals like i <
+  // UnrollCount.
+  if (OriginalLoopProb == BranchProbability::getOne())
+    return BranchProbability::getOne();
+
+  // Each of these variables holds the original loop's probability that the
+  // number of iterations it will execute is some m in the specified range.
+  BranchProbability ProbOne = OriginalLoopProb;                // 1 <= m
+  BranchProbability ProbTooMany = ProbOne.pow(N + 1);          // N + 1 <= m
+  BranchProbability ProbNotTooMany = ProbTooMany.getCompl();   // 0 <= m <= N
+  BranchProbability ProbOneNotTooMany = ProbOne - ProbTooMany; // 1 <= m <= N
+  return ProbOneNotTooMany / ProbNotTooMany;
+}
+
 /// Connect the unrolling epilog code to the original loop.
 /// The unrolling epilog code contains code to execute the
 /// 'extra' iterations if the run-time trip count modulo the
 /// unroll count is non-zero.
 ///
 /// This function performs the following:
-/// - Update PHI nodes at the unrolling loop exit and epilog loop exit
-/// - Create PHI nodes at the unrolling loop exit to combine
-///   values that exit the unrolling loop code and jump around it.
+/// - Update PHI nodes at the epilog loop exit
+/// - Create PHI nodes at the unrolling loop exit and epilog preheader to
+///   combine values that exit the unrolling loop code and jump around it.
 /// - Update PHI operands in the epilog loop by the new PHI nodes
-/// - Branch around the epilog loop if extra iters (ModVal) is zero.
+/// - At the unrolling loop exit, branch around the epilog loop if extra iters
+//    (ModVal) is zero.
+/// - At the epilog preheader, add an llvm.assume call that extra iters is
+///   non-zero.  If the unrolling loop exit is the predecessor, the above new
+///   branch guarantees that assumption.  If the unrolling loop preheader is the
+///   predecessor, then the required first iteration from the original loop has
+///   yet to be executed, so it must be executed in the epilog loop.  If we
+///   later unroll the epilog loop, that llvm.assume call somehow enables
+///   ScalarEvolution to compute a epilog loop maximum trip count, which enables
+///   eliminating the branch at the end of the final unrolled epilog iteration.
 ///
 static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                           BasicBlock *Exit, BasicBlock *PreHeader,
                           BasicBlock *EpilogPreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
                           LoopInfo *LI, bool PreserveLCSSA, ScalarEvolution &SE,
-                          unsigned Count) {
+                          unsigned Count, AssumptionCache &AC,
+                          BranchProbability OriginalLoopProb) {
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
   BasicBlock *EpilogLatch = cast<BasicBlock>(VMap[Latch]);
@@ -231,7 +278,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   //   EpilogLatch
   // Exit (EpilogPN)
 
-  // Update PHI nodes at NewExit and Exit.
+  // Update PHI nodes at Exit.
   for (PHINode &PN : NewExit->phis()) {
     // PN should be used in another PHI located in Exit block as
     // Exit was split by SplitBlockPredecessors into Exit and NewExit
@@ -246,14 +293,10 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     // epilogue edges have already been added.
     //
     // There is EpilogPreHeader incoming block instead of NewExit as
-    // NewExit was spilt 1 more time to get EpilogPreHeader.
+    // NewExit was split 1 more time to get EpilogPreHeader.
     assert(PN.hasOneUse() && "The phi should have 1 use");
     PHINode *EpilogPN = cast<PHINode>(PN.use_begin()->getUser());
     assert(EpilogPN->getParent() == Exit && "EpilogPN should be in Exit block");
-
-    // Add incoming PreHeader from branch around the Loop
-    PN.addIncoming(PoisonValue::get(PN.getType()), PreHeader);
-    SE.forgetValue(&PN);
 
     Value *V = PN.getIncomingValueForBlock(Latch);
     Instruction *I = dyn_cast<Instruction>(V);
@@ -271,35 +314,52 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                                NewExit);
     // Now PHIs should look like:
     // NewExit:
-    //   PN = PHI [I, Latch], [poison, PreHeader]
+    //   PN = PHI [I, Latch]
     // ...
     // Exit:
     //   EpilogPN = PHI [PN, NewExit], [VMap[I], EpilogLatch]
   }
 
-  // Create PHI nodes at NewExit (from the unrolling loop Latch and PreHeader).
-  // Update corresponding PHI nodes in epilog loop.
+  // Create PHI nodes at NewExit (from the unrolling loop Latch) and at
+  // EpilogPreHeader (from PreHeader and NewExit).  Update corresponding PHI
+  // nodes in epilog loop.
   for (BasicBlock *Succ : successors(Latch)) {
     // Skip this as we already updated phis in exit blocks.
     if (!L->contains(Succ))
       continue;
+
+    // Succ here appears to always be just L->getHeader().  Otherwise, how do we
+    // know its corresponding epilog block (from VMap) is EpilogHeader and thus
+    // EpilogPreHeader is the right incoming block for VPN, as set below?
+    // TODO: Can we thus avoid the enclosing loop over successors?
+    assert(Succ == L->getHeader() &&
+           "Expect the only in-loop successor of latch to be the loop header");
+
     for (PHINode &PN : Succ->phis()) {
-      // Add new PHI nodes to the loop exit block and update epilog
-      // PHIs with the new PHI values.
-      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr");
-      NewPN->insertBefore(NewExit->getFirstNonPHIIt());
-      // Adding a value to the new PHI node from the unrolling loop preheader.
-      NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader), PreHeader);
-      // Adding a value to the new PHI node from the unrolling loop latch.
-      NewPN->addIncoming(PN.getIncomingValueForBlock(Latch), Latch);
+      // Add new PHI nodes to the loop exit block.
+      PHINode *NewPN0 = PHINode::Create(PN.getType(), /*NumReservedValues=*/1,
+                                        PN.getName() + ".unr");
+      NewPN0->insertBefore(NewExit->getFirstNonPHIIt());
+      // Add value to the new PHI node from the unrolling loop latch.
+      NewPN0->addIncoming(PN.getIncomingValueForBlock(Latch), Latch);
+
+      // Add new PHI nodes to EpilogPreHeader.
+      PHINode *NewPN1 = PHINode::Create(PN.getType(), /*NumReservedValues=*/2,
+                                        PN.getName() + ".epil.init");
+      NewPN1->insertBefore(EpilogPreHeader->getFirstNonPHIIt());
+      // Add value to the new PHI node from the unrolling loop preheader.
+      NewPN1->addIncoming(PN.getIncomingValueForBlock(NewPreHeader), PreHeader);
+      // Add value to the new PHI node from the epilog loop guard.
+      NewPN1->addIncoming(NewPN0, NewExit);
 
       // Update the existing PHI node operand with the value from the new PHI
       // node.  Corresponding instruction in epilog loop should be PHI.
       PHINode *VPN = cast<PHINode>(VMap[&PN]);
-      VPN->setIncomingValueForBlock(EpilogPreHeader, NewPN);
+      VPN->setIncomingValueForBlock(EpilogPreHeader, NewPN1);
     }
   }
 
+  // In NewExit, branch around the epilog loop if no extra iters.
   Instruction *InsertPt = NewExit->getTerminator();
   IRBuilder<> B(InsertPt);
   Value *BrLoopExit = B.CreateIsNotNull(ModVal, "lcmp.mod");
@@ -308,24 +368,32 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   SmallVector<BasicBlock*, 4> Preds(predecessors(Exit));
   SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", DT, LI, nullptr,
                          PreserveLCSSA);
-  // Add the branch to the exit block (around the unrolling loop)
+  // Add the branch to the exit block (around the epilog loop)
   MDNode *BranchWeights = nullptr;
-  if (hasBranchWeightMD(*Latch->getTerminator())) {
+  if (OriginalLoopProb.isUnknown() &&
+      hasBranchWeightMD(*Latch->getTerminator())) {
     // Assume equal distribution in interval [0, Count).
     MDBuilder MDB(B.getContext());
     BranchWeights = MDB.createBranchWeights(1, Count - 1);
   }
-  B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit, BranchWeights);
+  BranchInst *RemainderLoopGuard =
+      B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit, BranchWeights);
+  if (!OriginalLoopProb.isUnknown()) {
+    setBranchProbability(RemainderLoopGuard,
+                         probOfNextInRemainder(OriginalLoopProb, Count - 1),
+                         /*ForFirstTarget=*/true);
+  }
   InsertPt->eraseFromParent();
   if (DT) {
     auto *NewDom = DT->findNearestCommonDominator(Exit, NewExit);
     DT->changeImmediateDominator(Exit, NewDom);
   }
 
-  // Split the main loop exit to maintain canonicalization guarantees.
-  SmallVector<BasicBlock*, 4> NewExitPreds{Latch};
-  SplitBlockPredecessors(NewExit, NewExitPreds, ".loopexit", DT, LI, nullptr,
-                         PreserveLCSSA);
+  // In EpilogPreHeader, assume extra iters is non-zero.
+  IRBuilder<> B2(EpilogPreHeader, EpilogPreHeader->getFirstNonPHIIt());
+  Value *ModIsNotNull = B2.CreateIsNotNull(ModVal, "lcmp.mod");
+  AssumeInst *AI = cast<AssumeInst>(B2.CreateAssumption(ModIsNotNull));
+  AC.registerAssumption(AI);
 }
 
 /// Create a clone of the blocks in a loop and connect them together. A new
@@ -334,14 +402,15 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
 /// The cloned blocks should be inserted between InsertTop and InsertBot.
 /// InsertTop should be new preheader, InsertBot new loop exit.
 /// Returns the new cloned loop that is created.
-static Loop *
-CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
-                const bool UnrollRemainder,
-                BasicBlock *InsertTop,
-                BasicBlock *InsertBot, BasicBlock *Preheader,
+static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
+                             const bool UseEpilogRemainder,
+                             const bool UnrollRemainder, BasicBlock *InsertTop,
+                             BasicBlock *InsertBot, BasicBlock *Preheader,
                              std::vector<BasicBlock *> &NewBlocks,
                              LoopBlocksDFS &LoopBlocks, ValueToValueMapTy &VMap,
-                             DominatorTree *DT, LoopInfo *LI, unsigned Count) {
+                             DominatorTree *DT, LoopInfo *LI, unsigned Count,
+                             std::optional<unsigned> OriginalTripCount,
+                             BranchProbability OriginalLoopProb) {
   StringRef suffix = UseEpilogRemainder ? "epil" : "prol";
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
@@ -396,7 +465,8 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
           Builder.CreateAdd(NewIdx, One, NewIdx->getName() + ".next");
       Value *IdxCmp = Builder.CreateICmpNE(IdxNext, NewIter, NewIdx->getName() + ".cmp");
       MDNode *BranchWeights = nullptr;
-      if (hasBranchWeightMD(*LatchBR)) {
+      if ((OriginalLoopProb.isUnknown() || !UseEpilogRemainder) &&
+          hasBranchWeightMD(*LatchBR)) {
         uint32_t ExitWeight;
         uint32_t BackEdgeWeight;
         if (Count >= 3) {
@@ -414,7 +484,29 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
         MDBuilder MDB(Builder.getContext());
         BranchWeights = MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
       }
-      Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot, BranchWeights);
+      BranchInst *RemainderLoopLatch =
+          Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot, BranchWeights);
+      if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
+        // Compute the total frequency of the original loop body from the
+        // remainder iterations.  Once we've reached them, the first of them
+        // always executes, so its frequency and probability are 1.
+        double FreqRemIters = 1;
+        if (Count > 2) {
+          BranchProbability ProbReaching = BranchProbability::getOne();
+          for (unsigned N = Count - 2; N >= 1; --N) {
+            ProbReaching *= probOfNextInRemainder(OriginalLoopProb, N);
+            FreqRemIters += double(ProbReaching.getNumerator()) /
+                            ProbReaching.getDenominator();
+          }
+        }
+        // Solve for the loop probability that would produce that frequency.
+        // Sum(i=0..inf)(Prob^i) = 1/(1-Prob) = FreqRemIters.
+        double ProbDouble = 1 - 1 / FreqRemIters;
+        BranchProbability Prob = BranchProbability::getBranchProbability(
+            std::round(ProbDouble * BranchProbability::getDenominator()),
+            BranchProbability::getDenominator());
+        setBranchProbability(RemainderLoopLatch, Prob, /*ForFirstTarget=*/true);
+      }
       NewIdx->addIncoming(Zero, InsertTop);
       NewIdx->addIncoming(IdxNext, NewBB);
       LatchBR->eraseFromParent();
@@ -437,25 +529,13 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
 
   Loop *NewLoop = NewLoops[L];
   assert(NewLoop && "L should have been cloned");
-  MDNode *LoopID = NewLoop->getLoopID();
 
-  // Only add loop metadata if the loop is not going to be completely
-  // unrolled.
-  if (UnrollRemainder)
-    return NewLoop;
-
-  std::optional<MDNode *> NewLoopID = makeFollowupLoopID(
-      LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
-  if (NewLoopID) {
-    NewLoop->setLoopID(*NewLoopID);
-
-    // Do not setLoopAlreadyUnrolled if loop attributes have been defined
-    // explicitly.
-    return NewLoop;
-  }
+  if (OriginalTripCount && UseEpilogRemainder)
+    setLoopEstimatedTripCount(NewLoop, *OriginalTripCount % Count);
 
   // Add unroll disable metadata to disable future unrolling for this loop.
-  NewLoop->setLoopAlreadyUnrolled();
+  if (!UnrollRemainder)
+    NewLoop->setLoopAlreadyUnrolled();
   return NewLoop;
 }
 
@@ -580,7 +660,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
-    Loop **ResultLoop) {
+    Loop **ResultLoop, std::optional<unsigned> OriginalTripCount,
+    BranchProbability OriginalLoopProb) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -795,20 +876,32 @@ bool llvm::UnrollRuntimeLoopRemainder(
                                            ConstantInt::get(BECount->getType(),
                                                             Count - 1)) :
                            B.CreateIsNotNull(ModVal, "lcmp.mod");
-  BasicBlock *RemainderLoop = UseEpilogRemainder ? NewExit : PrologPreHeader;
+  BasicBlock *RemainderLoop =
+      UseEpilogRemainder ? EpilogPreHeader : PrologPreHeader;
   BasicBlock *UnrollingLoop = UseEpilogRemainder ? NewPreHeader : PrologExit;
   // Branch to either remainder (extra iterations) loop or unrolling loop.
   MDNode *BranchWeights = nullptr;
-  if (hasBranchWeightMD(*Latch->getTerminator())) {
+  if ((OriginalLoopProb.isUnknown() || !UseEpilogRemainder) &&
+      hasBranchWeightMD(*Latch->getTerminator())) {
     // Assume loop is nearly always entered.
     MDBuilder MDB(B.getContext());
     BranchWeights = MDB.createBranchWeights(EpilogHeaderWeights);
   }
-  B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop, BranchWeights);
+  BranchInst *UnrollingLoopGuard =
+      B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop, BranchWeights);
+  if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
+    // The original loop's first iteration always happens.  Compute the
+    // probability of the original loop executing Count-1 iterations after that
+    // to complete the first iteration of the unrolled loop.
+    BranchProbability ProbOne = OriginalLoopProb;
+    BranchProbability ProbRest = ProbOne.pow(Count - 1);
+    setBranchProbability(UnrollingLoopGuard, ProbRest,
+                         /*ForFirstTarget=*/false);
+  }
   PreHeaderBR->eraseFromParent();
   if (DT) {
     if (UseEpilogRemainder)
-      DT->changeImmediateDominator(NewExit, PreHeader);
+      DT->changeImmediateDominator(EpilogPreHeader, PreHeader);
     else
       DT->changeImmediateDominator(PrologExit, PreHeader);
   }
@@ -831,9 +924,10 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // iterations. This function adds the appropriate CFG connections.
   BasicBlock *InsertBot = UseEpilogRemainder ? LatchExit : PrologExit;
   BasicBlock *InsertTop = UseEpilogRemainder ? EpilogPreHeader : PrologPreHeader;
-  Loop *remainderLoop = CloneLoopBlocks(
-      L, ModVal, UseEpilogRemainder, UnrollRemainder, InsertTop, InsertBot,
-      NewPreHeader, NewBlocks, LoopBlocks, VMap, DT, LI, Count);
+  Loop *remainderLoop =
+      CloneLoopBlocks(L, ModVal, UseEpilogRemainder, UnrollRemainder, InsertTop,
+                      InsertBot, NewPreHeader, NewBlocks, LoopBlocks, VMap, DT,
+                      LI, Count, OriginalTripCount, OriginalLoopProb);
 
   // Insert the cloned blocks into the function.
   F->splice(InsertBot->getIterator(), F, NewBlocks[0]->getIterator(), F->end());
@@ -880,7 +974,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // from both the original loop and the remainder code reaching the exit
   // blocks. While the IDom of these exit blocks were from the original loop,
   // now the IDom is the preheader (which decides whether the original loop or
-  // remainder code should run).
+  // remainder code should run) unless the block still has just the original
+  // predecessor (such as NewExit in the case of an epilog remainder).
   if (DT && !L->getExitingBlock()) {
     SmallVector<BasicBlock *, 16> ChildrenToUpdate;
     // NB! We have to examine the dom children of all loop blocks, not just
@@ -891,7 +986,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
       auto *DomNodeBB = DT->getNode(BB);
       for (auto *DomChild : DomNodeBB->children()) {
         auto *DomChildBB = DomChild->getBlock();
-        if (!L->contains(LI->getLoopFor(DomChildBB)))
+        if (!L->contains(LI->getLoopFor(DomChildBB)) &&
+            DomChildBB->getUniquePredecessor() != BB)
           ChildrenToUpdate.push_back(DomChildBB);
       }
     }
@@ -930,7 +1026,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // Connect the epilog code to the original loop and update the
     // PHI functions.
     ConnectEpilog(L, ModVal, NewExit, LatchExit, PreHeader, EpilogPreHeader,
-                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE, Count);
+                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE, Count, *AC,
+                  OriginalLoopProb);
 
     // Update counter in loop for unrolling.
     // Use an incrementing IV.  Pre-incr/post-incr is backedge/trip count.

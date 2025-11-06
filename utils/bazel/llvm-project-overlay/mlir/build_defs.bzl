@@ -4,7 +4,7 @@
 
 """Rules and macros for MLIR"""
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "CcInfo", "cc_library")
 
 def if_cuda_available(if_true, if_false = []):
     return select({

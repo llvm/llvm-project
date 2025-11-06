@@ -34,6 +34,9 @@ def FeatureNoFMULS
 def FeatureV9
   : SubtargetFeature<"v9", "IsV9", "true",
                      "Enable SPARC-V9 instructions">;
+def Feature64Bit : SubtargetFeature<"64bit", "Is64Bit", "true",
+                                    "Enable 64-bit mode", [FeatureV9]>;
+
 def FeatureV8Plus
   : SubtargetFeature<"v8plus", "IsV8Plus", "true",
                      "Enable V8+ mode, allowing use of 64-bit V9 instructions in 32-bit code">;

@@ -66,18 +66,19 @@ struct Evaluation;
 } // namespace pft
 
 static constexpr llvm::StringRef declarePostAllocSuffix =
-    "_acc_declare_update_desc_post_alloc";
+    "_acc_declare_post_alloc";
 static constexpr llvm::StringRef declarePreDeallocSuffix =
-    "_acc_declare_update_desc_pre_dealloc";
+    "_acc_declare_pre_dealloc";
 static constexpr llvm::StringRef declarePostDeallocSuffix =
-    "_acc_declare_update_desc_post_dealloc";
+    "_acc_declare_post_dealloc";
 
 static constexpr llvm::StringRef privatizationRecipePrefix = "privatization";
 
 mlir::Value genOpenACCConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
                                 pft::Evaluation &,
-                                const parser::OpenACCConstruct &);
+                                const parser::OpenACCConstruct &,
+                                Fortran::lower::SymMap &localSymbols);
 void genOpenACCDeclarativeConstruct(
     AbstractConverter &, Fortran::semantics::SemanticsContext &,
     StatementContext &, const parser::OpenACCDeclarativeConstruct &);
@@ -120,6 +121,11 @@ void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
 /// since this is dependent on number of tile operands and collapse
 /// clause.
 uint64_t getLoopCountForCollapseAndTile(const Fortran::parser::AccClauseList &);
+
+/// Parse collapse clause and return {size, force}. If absent, returns
+/// {1,false}.
+std::pair<uint64_t, bool>
+getCollapseSizeAndForce(const Fortran::parser::AccClauseList &);
 
 /// Checks whether the current insertion point is inside OpenACC loop.
 bool isInOpenACCLoop(fir::FirOpBuilder &);

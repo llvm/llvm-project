@@ -1,8 +1,7 @@
 # Tests -focus_function
 #
 # TODO: don't require linux.
-# Requires full shell support for the `for` loop syntax.
-# REQUIRES: shell, linux
+# REQUIRES: linux
 UNSUPPORTED: target=aarch64{{.*}}
 
 RUN: %cpp_compiler %S/OnlySomeBytesTest.cpp -o %t-exe
@@ -22,9 +21,9 @@ FOCUS_F0: INFO: 0/1 inputs touch the focus function
 RUN: rm -rf %t-corpus
 RUN: mkdir %t-corpus
 # ABC triggers the focus function, others don't.
-RUN: echo ABC$(for((i=0;i<2048;i++)); do echo -n x; done) > %t-corpus/ABC
-RUN: echo AXY$(for((i=0;i<2048;i++)); do echo -n x; done) > %t-corpus/AXY
-RUN: echo ABX$(for((i=0;i<2048;i++)); do echo -n x; done) > %t-corpus/ABX
+RUN: %python -c 'print("ABC" + "x" * 2048)' > %t-corpus/ABC
+RUN: %python -c 'print("AXY" + "x" * 2048)' > %t-corpus/AXY
+RUN: %python -c 'print("ABX" + "x" * 2048)' > %t-corpus/ABX
 
 RUN: %run %t-exe -runs=10000 -focus_function=f0 %t-corpus 2>&1 | FileCheck %s --check-prefix=CORPUS_1_3
 CORPUS_1_3: INFO: 1/3 inputs touch the focus function

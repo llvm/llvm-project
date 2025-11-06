@@ -1660,6 +1660,90 @@ TEST(APFloatTest, toInteger) {
   EXPECT_EQ(APSInt::getMaxValue(5, false), result);
 }
 
+class APFloatConvertFromAPIntParamTest
+    : public ::testing::TestWithParam<const fltSemantics *> {
+protected:
+  // Helper to run a conversion and compare the integer result directly.
+  static void testConversionAndCompareInt(const APInt &InputValue,
+                                          const bool IsSigned,
+                                          APFloat::roundingMode RM,
+                                          const APInt &ExpectedIntValue) {
+    const fltSemantics &Sem = *GetParam();
+    APFloat F(Sem);
+    F.convertFromAPInt(InputValue, /*IsSigned=*/IsSigned, RM);
+
+    APSInt ResultInt(InputValue.getBitWidth(), /*isUnsigned=*/!IsSigned);
+    bool IsExact;
+    F.convertToInteger(ResultInt, APFloat::rmTowardZero, &IsExact);
+
+    EXPECT_TRUE(IsExact);
+    EXPECT_TRUE(ResultInt.eq(ExpectedIntValue))
+        << "InputValue: " << InputValue << "\n"
+        << ResultInt << " vs " << ExpectedIntValue << "\n";
+  }
+};
+
+TEST_P(APFloatConvertFromAPIntParamTest, HalfwayRounding) {
+  const fltSemantics &Sem = *GetParam();
+  const unsigned Precision = APFloat::semanticsPrecision(Sem);
+
+  if (Precision == 0)
+    GTEST_SKIP() << "Skipping test for semantics with no significand.";
+
+  for (bool IsSigned : {false, true}) {
+    const unsigned BitWidth = Precision + 1 + (IsSigned ? 1 : 0);
+
+    const APInt RoundedDownVal = APInt::getOneBitSet(BitWidth, Precision);
+    const APInt HalfwayVal = RoundedDownVal + 1;
+    const APInt RoundedUpVal = RoundedDownVal + 2;
+
+    testConversionAndCompareInt(HalfwayVal, IsSigned,
+                                APFloat::rmNearestTiesToEven, RoundedDownVal);
+    testConversionAndCompareInt(HalfwayVal, IsSigned,
+                                APFloat::rmNearestTiesToAway, RoundedUpVal);
+    testConversionAndCompareInt(HalfwayVal, IsSigned, APFloat::rmTowardPositive,
+                                RoundedUpVal);
+    testConversionAndCompareInt(HalfwayVal, IsSigned, APFloat::rmTowardNegative,
+                                RoundedDownVal);
+    testConversionAndCompareInt(HalfwayVal, IsSigned, APFloat::rmTowardZero,
+                                RoundedDownVal);
+  }
+}
+
+TEST_P(APFloatConvertFromAPIntParamTest, MaxMagnitude) {
+  const fltSemantics &Sem = *GetParam();
+  const unsigned Precision = APFloat::semanticsPrecision(Sem);
+
+  if (Precision == 0)
+    GTEST_SKIP() << "Skipping test for semantics with no significand.";
+
+  const APFloat Largest = APFloat::getLargest(Sem, /*Negative=*/false);
+  const int Exp = ilogb(Largest);
+  for (bool IsSigned : {false, true}) {
+    const unsigned BitWidth = Exp + 1 + (IsSigned ? 1 : 0);
+
+    bool IsExact;
+    APSInt LargestAsInt{BitWidth, /*IsUnsigned=*/!IsSigned};
+    const APFloat::opStatus ToIntStatus =
+        Largest.convertToInteger(LargestAsInt, APFloat::rmTowardZero, &IsExact);
+    EXPECT_EQ(ToIntStatus, APFloat::opOK);
+
+    for (const APFloat::roundingMode RM :
+         {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+          APFloat::rmTowardPositive, APFloat::rmTowardZero,
+          APFloat::rmNearestTiesToEven}) {
+      testConversionAndCompareInt(LargestAsInt, IsSigned, RM, LargestAsInt);
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(IEEESemantics, APFloatConvertFromAPIntParamTest,
+                         ::testing::Values(&APFloat::IEEEhalf(),
+                                           &APFloat::BFloat(),
+                                           &APFloat::IEEEsingle(),
+                                           &APFloat::IEEEdouble(),
+                                           &APFloat::IEEEquad()));
+
 static APInt nanbitsFromAPInt(const fltSemantics &Sem, bool SNaN, bool Negative,
                               uint64_t payload) {
   APInt appayload(64, payload);
@@ -1918,6 +2002,15 @@ TEST(APFloatTest, exactInverse) {
   EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::PPCDoubleDouble(), "0.5")));
   EXPECT_TRUE(APFloat(APFloat::x87DoubleExtended(), "2.0").getExactInverse(&inv));
   EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::x87DoubleExtended(), "0.5")));
+  // 0x1p1022 has a normal inverse for IEEE 754 binary64: 0x1p-1022.
+  EXPECT_TRUE(APFloat(0x1p1022).getExactInverse(&inv));
+  EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(0x1p-1022)));
+  // With regards to getExactInverse, IEEEdouble and PPCDoubleDouble should
+  // behave the same.
+  EXPECT_TRUE(
+      APFloat(APFloat::PPCDoubleDouble(), "0x1p1022").getExactInverse(&inv));
+  EXPECT_TRUE(
+      inv.bitwiseIsEqual(APFloat(APFloat::PPCDoubleDouble(), "0x1p-1022")));
 
   // FLT_MIN
   EXPECT_TRUE(APFloat(1.17549435e-38f).getExactInverse(&inv));
@@ -1929,6 +2022,8 @@ TEST(APFloatTest, exactInverse) {
   EXPECT_FALSE(APFloat(0.0).getExactInverse(nullptr));
   // Denormalized float
   EXPECT_FALSE(APFloat(1.40129846e-45f).getExactInverse(nullptr));
+  // Largest subnormal
+  EXPECT_FALSE(APFloat(0x1p-127f).getExactInverse(nullptr));
 }
 
 TEST(APFloatTest, roundToIntegral) {
@@ -4967,8 +5062,8 @@ TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected, RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.add(A2, RM);
 
       EXPECT_EQ(Expected, A1.getCategory())
@@ -4977,8 +5072,8 @@ TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.add(A1, RM);
 
       EXPECT_EQ(Expected, A2.getCategory())
@@ -5031,8 +5126,8 @@ TEST(APFloatTest, PPCDoubleDoubleAdd) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.add(A2, RM);
 
       EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5045,8 +5140,8 @@ TEST(APFloatTest, PPCDoubleDoubleAdd) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.add(A1, RM);
 
       EXPECT_EQ(Expected[0], A2.bitcastToAPInt().getRawData()[0])
@@ -5080,8 +5175,8 @@ TEST(APFloatTest, PPCDoubleDoubleSubtract) {
     APFloat::roundingMode RM;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.subtract(A2, RM);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5135,8 +5230,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiplySpecial) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected, RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.multiply(A2, RM);
 
       EXPECT_EQ(Expected, A1.getCategory())
@@ -5145,8 +5240,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiplySpecial) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.multiply(A1, RM);
 
       EXPECT_EQ(Expected, A2.getCategory())
@@ -5208,8 +5303,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiply) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.multiply(A2, RM);
 
       EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5222,8 +5317,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiply) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.multiply(A1, RM);
 
       EXPECT_EQ(Expected[0], A2.bitcastToAPInt().getRawData()[0])
@@ -5255,8 +5350,8 @@ TEST(APFloatTest, PPCDoubleDoubleDivide) {
     APFloat::roundingMode RM;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.divide(A2, RM);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5288,8 +5383,8 @@ TEST(APFloatTest, PPCDoubleDoubleRemainder) {
     uint64_t Op1[2], Op2[2], Expected[2];
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1]) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.remainder(A2);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5323,8 +5418,8 @@ TEST(APFloatTest, PPCDoubleDoubleMod) {
     uint64_t Op1[2], Op2[2], Expected[2];
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1]) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.mod(A2);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -6187,12 +6282,108 @@ TEST(APFloatTest, PPCDoubleDoubleCompare) {
     APFloat::cmpResult Expected;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     EXPECT_EQ(Expected, A1.compare(A2))
         << formatv("compare(({0:x} + {1:x}), ({2:x} + {3:x}))", Op1[0], Op1[1],
                    Op2[0], Op2[1])
                .str();
+  }
+}
+
+namespace PPCDoubleDoubleCompareAbsoluteValueTestDetails {
+struct TestCase {
+  DD LHS;
+  DD RHS;
+  APFloat::cmpResult Result;
+};
+
+auto testCases() {
+  static constexpr auto CompareAbsoluteValueTestCases = std::array{
+      TestCase{
+          {1.0, 0.0},
+          {1.0, 0.0},
+          APFloat::cmpEqual,
+      },
+      TestCase{
+          {1.0, -0.0},
+          {1.0, +0.0},
+          APFloat::cmpEqual,
+      },
+      TestCase{
+          {1.0, 0.0},
+          {0x1.0000000000001p+0, 0.0},
+          APFloat::cmpLessThan,
+      },
+      TestCase{
+          {0x1.0000000000001p+0, 0.0},
+          {1.0, 0.0},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {0x1.0000000000001p+0, +0x1p-1074},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {0x1.0000000000001p+0, -0x1p-1074},
+          {1.0, +0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {1.0, 0.0},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {1.0, 0.0},
+          {1.0, +0x1p-1074},
+          APFloat::cmpLessThan,
+      },
+      TestCase{
+          {1.0, +0x1p-1073},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {1.0, +0x1p-1074},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+  };
+  return CompareAbsoluteValueTestCases;
+}
+} // namespace PPCDoubleDoubleCompareAbsoluteValueTestDetails
+
+class PPCDoubleDoubleCompareAbsoluteValueValueTest
+    : public testing::Test,
+      public ::testing::WithParamInterface<
+          PPCDoubleDoubleCompareAbsoluteValueTestDetails::TestCase> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PPCDoubleDoubleCompareAbsoluteValueValueParamTests,
+    PPCDoubleDoubleCompareAbsoluteValueValueTest,
+    ::testing::ValuesIn(
+        PPCDoubleDoubleCompareAbsoluteValueTestDetails::testCases()));
+
+TEST_P(PPCDoubleDoubleCompareAbsoluteValueValueTest,
+       PPCDoubleDoubleCompareAbsoluteValue) {
+  auto Param = GetParam();
+  for (bool LHSNegate : {false, true}) {
+    auto LHS = llvm::detail::DoubleAPFloat{APFloat::PPCDoubleDouble(),
+                                           APFloat{Param.LHS.Hi},
+                                           APFloat{Param.LHS.Lo}};
+    if (LHSNegate)
+      LHS.changeSign();
+    for (bool RHSNegate : {false, true}) {
+      auto RHS = llvm::detail::DoubleAPFloat{APFloat::PPCDoubleDouble(),
+                                             APFloat{Param.RHS.Hi},
+                                             APFloat{Param.RHS.Lo}};
+      if (RHSNegate)
+        RHS.changeSign();
+
+      EXPECT_EQ(LHS.compareAbsoluteValue(RHS), Param.Result);
+    }
   }
 }
 
@@ -6219,8 +6410,8 @@ TEST(APFloatTest, PPCDoubleDoubleBitwiseIsEqual) {
     bool Expected;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     EXPECT_EQ(Expected, A1.bitwiseIsEqual(A2))
         << formatv("({0:x} + {1:x}) = ({2:x} + {3:x})", Op1[0], Op1[1], Op2[0],
                    Op2[1])
@@ -6232,16 +6423,15 @@ TEST(APFloatTest, PPCDoubleDoubleHashValue) {
   uint64_t Data1[] = {0x3ff0000000000001ull, 0x0000000000000001ull};
   uint64_t Data2[] = {0x3ff0000000000001ull, 0};
   // The hash values are *hopefully* different.
-  EXPECT_NE(
-      hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Data1))),
-      hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Data2))));
+  EXPECT_NE(hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, Data1))),
+            hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, Data2))));
 }
 
 TEST(APFloatTest, PPCDoubleDoubleChangeSign) {
   uint64_t Data[] = {
       0x400f000000000000ull, 0xbcb0000000000000ull,
   };
-  APFloat Float(APFloat::PPCDoubleDouble(), APInt(128, 2, Data));
+  APFloat Float(APFloat::PPCDoubleDouble(), APInt(128, Data));
   {
     APFloat Actual =
         APFloat::copySign(Float, APFloat(APFloat::IEEEdouble(), "1"));
@@ -6261,14 +6451,14 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
     uint64_t Data[] = {
         0, 0,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getZero(APFloat::PPCDoubleDouble()).bitcastToAPInt());
   }
   {
     uint64_t Data[] = {
         0x7fefffffffffffffull, 0x7c8ffffffffffffeull,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getLargest(APFloat::PPCDoubleDouble()).bitcastToAPInt());
   }
   {
@@ -6276,12 +6466,12 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
         0x0000000000000001ull, 0,
     };
     EXPECT_EQ(
-        APInt(128, 2, Data),
+        APInt(128, Data),
         APFloat::getSmallest(APFloat::PPCDoubleDouble()).bitcastToAPInt());
   }
   {
     uint64_t Data[] = {0x0360000000000000ull, 0};
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getSmallestNormalized(APFloat::PPCDoubleDouble())
                   .bitcastToAPInt());
   }
@@ -6290,7 +6480,7 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
         0x8000000000000000ull, 0x0000000000000000ull,
     };
     EXPECT_EQ(
-        APInt(128, 2, Data),
+        APInt(128, Data),
         APFloat::getZero(APFloat::PPCDoubleDouble(), true).bitcastToAPInt());
   }
   {
@@ -6298,14 +6488,14 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
         0xffefffffffffffffull, 0xfc8ffffffffffffeull,
     };
     EXPECT_EQ(
-        APInt(128, 2, Data),
+        APInt(128, Data),
         APFloat::getLargest(APFloat::PPCDoubleDouble(), true).bitcastToAPInt());
   }
   {
     uint64_t Data[] = {
         0x8000000000000001ull, 0x0000000000000000ull,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getSmallest(APFloat::PPCDoubleDouble(), true)
                   .bitcastToAPInt());
   }
@@ -6313,7 +6503,7 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
     uint64_t Data[] = {
         0x8360000000000000ull, 0x0000000000000000ull,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getSmallestNormalized(APFloat::PPCDoubleDouble(), true)
                   .bitcastToAPInt());
   }
@@ -6332,7 +6522,7 @@ TEST(APFloatTest, PPCDoubleDoubleIsDenormal) {
         0x4010000000000000ull, 0x4008000000000000ull,
     };
     EXPECT_TRUE(
-        APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Data)).isDenormal());
+        APFloat(APFloat::PPCDoubleDouble(), APInt(128, Data)).isDenormal());
   }
 }
 
@@ -6342,7 +6532,7 @@ TEST(APFloatTest, PPCDoubleDoubleScalbn) {
       0x4008000000000000ull, 0x3cb8000000000000ull,
   };
   APFloat Result =
-      scalbn(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Input)), 1,
+      scalbn(APFloat(APFloat::PPCDoubleDouble(), APInt(128, Input)), 1,
              APFloat::rmNearestTiesToEven);
   // 6.0 + 6.0 << 53
   EXPECT_EQ(0x4018000000000000ull, Result.bitcastToAPInt().getRawData()[0]);
@@ -6661,13 +6851,12 @@ TEST_P(PPCDoubleDoubleFrexpValueTest, PPCDoubleDoubleFrexp) {
 
     int ActualExponent;
     const APFloat ActualFraction = frexp(Input, ActualExponent, RM);
-    if (ExpectedFraction.isNaN()) {
+    if (ExpectedFraction.isNaN())
       EXPECT_TRUE(ActualFraction.isNaN());
-    } else {
+    else
       EXPECT_EQ(ActualFraction.compare(ExpectedFraction), APFloat::cmpEqual)
           << ActualFraction << " vs " << ExpectedFraction << " for input "
           << Params.Input.Hi << " + " << Params.Input.Lo << " RM " << RM;
-    }
     EXPECT_EQ(ActualExponent, Expected.Exponent)
         << "for input " << Params.Input.Hi << " + " << Params.Input.Lo
         << " RM " << RM;
@@ -6931,6 +7120,249 @@ TEST(APFloatTest, PPCDoubleDoubleNext) {
   EXPECT_EQ(Test.next(false), APFloat::opOK);
   EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
   EXPECT_FALSE(Test.isDenormal());
+}
+
+TEST(APFloatTest, PPCDoubleDoubleConvertFromAPIntInexact) {
+  // Create an integer which would not be exactly representable in
+  // PPCDoubleDoubleLegacy.
+  for (bool IsSigned : {false, true}) {
+    const unsigned BitWidth =
+        APFloat::semanticsPrecision(APFloat::IEEEdouble()) * 3 +
+        (IsSigned ? 1 : 0);
+
+    for (bool Negative :
+         IsSigned ? std::vector{false, true} : std::vector{false}) {
+      APInt Huge = APInt{BitWidth, 0};
+      // Set the highest bit without making Huge negative..
+      Huge.setBit(BitWidth - (IsSigned ? 2 : 1));
+      // Set the low bit.
+      Huge.setBit(0);
+      if (Negative)
+        Huge.negate();
+      for (const APFloat::roundingMode RM :
+           {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+            APFloat::rmTowardPositive, APFloat::rmTowardZero,
+            APFloat::rmNearestTiesToEven}) {
+        APFloat F{APFloat::PPCDoubleDouble()};
+        const APFloat::opStatus ConvertFromStatus =
+            F.convertFromAPInt(Huge, /*IsSigned=*/IsSigned, RM);
+        EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+
+        bool IsExact;
+        APSInt ResultInt{Huge.getBitWidth(), /*isUnsigned=*/!IsSigned};
+        const APFloat::opStatus ConvertToStatus =
+            F.convertToInteger(ResultInt, APFloat::rmTowardZero, &IsExact);
+
+        EXPECT_TRUE(IsExact) << "RM: " << RM;
+        EXPECT_TRUE(ResultInt.eq(Huge)) << ResultInt << " vs " << Huge << "\n";
+        EXPECT_EQ(ConvertToStatus, APFloat::opOK);
+      }
+    }
+  }
+}
+
+TEST(APFloatTest, PPCDoubleDoubleConvertFromAPIntBoundary) {
+  const unsigned Binary64Precision =
+      APFloat::semanticsPrecision(APFloat::IEEEdouble());
+  APSInt Boundary =
+      APSInt::getMaxValue(Binary64Precision + 1, /*Unsigned=*/true);
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat Exact = makeDoubleAPFloat(0x1p54, -0x1p0);
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(Boundary, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+    EXPECT_EQ(F, Exact);
+  }
+
+  Boundary = APSInt{APInt::getHighBitsSet(/*numBits=*/128,
+                                          /*hiBitsSet=*/Binary64Precision + 1),
+                    /*isUnsigned=*/true};
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat Exact = makeDoubleAPFloat(0x1p128, -0x1p74);
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(Boundary, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+    EXPECT_EQ(F, Exact);
+  }
+}
+
+TEST(APFloatTest, PPCDoubleDoubleConvertFromAPIntEnormous) {
+  APFloat Largest = APFloat::getLargest(APFloat::PPCDoubleDouble());
+  int Exponent = ilogb(Largest);
+  unsigned BitWidth = Exponent + 1;
+  APSInt HugeInt{BitWidth, /*isUnsigned=*/true};
+  bool IsExact;
+  APFloat::opStatus Status =
+      Largest.convertToInteger(HugeInt, APFloat::rmTowardPositive, &IsExact);
+  ASSERT_EQ(Status, APFloat::opOK);
+  ASSERT_TRUE(IsExact);
+
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+    EXPECT_EQ(F, Largest);
+  }
+
+  const unsigned MaxExponent =
+      APFloat::semanticsMaxExponent(APFloat::IEEEdouble());
+  const unsigned Binary64Precision =
+      APFloat::semanticsPrecision(APFloat::IEEEdouble());
+  const unsigned UlpOfLargest = MaxExponent - (2 * Binary64Precision);
+  const unsigned HalfUlpOfLargest = UlpOfLargest - 1;
+
+  // Add just under a half-ulp. This should never overflow for
+  // round-ties-to-nearest modes.
+  HugeInt.setLowBits(HalfUlpOfLargest);
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    if (RM == APFloat::rmTowardPositive) {
+      EXPECT_TRUE(F.isPosInfinity()) << F;
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
+    } else {
+      EXPECT_EQ(F, Largest);
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+    }
+  }
+
+  // Now test adding a half-ulp. This should cause overflow for ties-to-away.
+  // ties-to-even will not overflow if the max finite value has a clear low bit.
+  ++HugeInt;
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    const bool Overflow =
+        RM == APFloat::rmTowardPositive || RM == APFloat::rmNearestTiesToAway ||
+        (RM == APFloat::rmNearestTiesToEven && HugeInt[UlpOfLargest]);
+    if (Overflow) {
+      EXPECT_TRUE(F.isPosInfinity()) << F;
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
+    } else {
+      EXPECT_EQ(F, Largest);
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+    }
+  }
+
+  // Now test adding just over a half-ulp. This should break all ties.
+  ++HugeInt;
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    const bool Overflow = RM == APFloat::rmTowardPositive ||
+                          RM == APFloat::rmNearestTiesToAway ||
+                          RM == APFloat::rmNearestTiesToEven;
+    if (Overflow) {
+      EXPECT_TRUE(F.isPosInfinity()) << F;
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
+    } else {
+      EXPECT_EQ(F, Largest);
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+    }
+  }
+
+  HugeInt.setAllBits();
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    const bool Overflow = RM == APFloat::rmTowardPositive ||
+                          RM == APFloat::rmNearestTiesToAway ||
+                          RM == APFloat::rmNearestTiesToEven;
+    if (Overflow) {
+      EXPECT_TRUE(F.isPosInfinity()) << F;
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
+    } else {
+      EXPECT_EQ(F, Largest);
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+    }
+  }
+
+  HugeInt.clearAllBits();
+  HugeInt.setBit(2 * Binary64Precision + 1);
+  HugeInt.setLowBits(Binary64Precision + 1);
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat RoundUp = makeDoubleAPFloat(0x1p107, 0x1p54);
+    const APFloat RoundDown = makeDoubleAPFloat(0x1p107, 0x1.fffffffffffffp53);
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+
+    if (RM == APFloat::rmNearestTiesToEven ||
+        RM == APFloat::rmNearestTiesToAway || RM == APFloat::rmTowardPositive)
+      EXPECT_EQ(F, RoundUp);
+    else
+      EXPECT_EQ(F, RoundDown);
+  }
+
+  ++HugeInt;
+  // 162259276829213381405976519770112 can be represented exactly.
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat Exact = makeDoubleAPFloat(0x1p107, 0x1p54);
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+    EXPECT_EQ(F, Exact);
+  }
+
+  ++HugeInt;
+  // 162259276829213381405976519770113 rounds to either:
+  // 162259276829213381405976519770112
+  // 162259276829213381405976519770114
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat RoundUp =
+        makeDoubleAPFloat(0x1.0000000000001p107, -0x1.fffffffffffffp53);
+    const APFloat RoundDown = makeDoubleAPFloat(0x1p107, 0x1p54);
+    EXPECT_LT(RoundDown, RoundUp);
+
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+
+    if (RM == APFloat::rmNearestTiesToAway || RM == APFloat::rmTowardPositive)
+      EXPECT_EQ(F, RoundUp);
+    else
+      EXPECT_EQ(F, RoundDown);
+  }
 }
 
 TEST(APFloatTest, x87Largest) {
@@ -9686,7 +10118,7 @@ TEST(APFloatTest, Float4E2M1FNToFloat) {
 }
 
 TEST(APFloatTest, AddOrSubtractSignificand) {
-  typedef detail::IEEEFloatUnitTestHelper Helper;
+  using Helper = detail::IEEEFloatUnitTestHelper;
   // Test cases are all combinations of:
   // {equal exponents, LHS larger exponent, RHS larger exponent}
   // {equal significands, LHS larger significand, RHS larger significand}
@@ -9741,6 +10173,13 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::PPCDoubleDouble()));
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEquad()));
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
+}
+
+TEST(APFloatTest, FrexpQuietSNaN) {
+  APFloat SNaN = APFloat::getSNaN(APFloat::PPCDoubleDouble());
+  int Exp;
+  APFloat Result = frexp(SNaN, Exp, APFloat::rmNearestTiesToEven);
+  EXPECT_FALSE(Result.isSignaling());
 }
 
 } // namespace

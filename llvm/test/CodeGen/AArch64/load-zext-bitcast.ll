@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -o - %s | FileCheck %s
 
 ; load zero-extended i32, bitcast to f64
-define double @_Z9load_u64_from_u32_testPj(ptr %n){
-; CHECK-LABEL: _Z9load_u64_from_u32_testPj:
+define double @load_u64_from_u32(ptr %n){
+; CHECK-LABEL: load_u64_from_u32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ret
@@ -15,8 +15,8 @@ entry:
 }
 
 ; load zero-extended i16, bitcast to f64
-define double @_Z9load_u64_from_u16_testPj(ptr %n){
-; CHECK-LABEL: _Z9load_u64_from_u16_testPj:
+define double @load_u64_from_u16(ptr %n){
+; CHECK-LABEL: load_u64_from_u16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ret
@@ -28,8 +28,8 @@ entry:
 }
 
 ; load zero-extended i8, bitcast to f64
-define double @_Z16load_u64_from_u8Ph(ptr %n){
-; CHECK-LABEL: _Z16load_u64_from_u8Ph:
+define double @load_u64_from_u8(ptr %n){
+; CHECK-LABEL: load_u64_from_u8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b0, [x0]
 ; CHECK-NEXT:    ret
@@ -41,8 +41,8 @@ entry:
 }
 
 ; load zero-extended i16, bitcast to f32
-define float @_Z17load_u32_from_u16Pt(ptr %n){
-; CHECK-LABEL: _Z17load_u32_from_u16Pt:
+define float @load_u32_from_u16(ptr %n){
+; CHECK-LABEL: load_u32_from_u16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ret
@@ -54,8 +54,8 @@ entry:
 }
 
 ; load zero-extended i8, bitcast to f32
-define float @_Z16load_u32_from_u8Ph(ptr %n){
-; CHECK-LABEL: _Z16load_u32_from_u8Ph:
+define float @load_u32_from_u8(ptr %n){
+; CHECK-LABEL: load_u32_from_u8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b0, [x0]
 ; CHECK-NEXT:    ret
@@ -67,14 +67,503 @@ entry:
 }
 
 ; load zero-extended i8, bitcast to f16
-define half @_Z16load_u16_from_u8Ph(ptr %n){
-; CHECK-LABEL: _Z16load_u16_from_u8Ph:
+define half @load_u16_from_u8(ptr %n){
+; CHECK-LABEL: load_u16_from_u8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b0, [x0]
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %n, align 1
+  %conv = zext i8 %0 to i16
+  %1 = bitcast i16 %conv to half
+  ret half %1
+}
+
+
+define double @load_u64_from_u32_off1(ptr %n){
+; CHECK-LABEL: load_u64_from_u32_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldur s0, [x0, #1]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 1
+  %0 = load i32, ptr %p, align 4
+  %conv = zext i32 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u16_off1(ptr %n){
+; CHECK-LABEL: load_u64_from_u16_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldur h0, [x0, #1]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 1
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u8_off1(ptr %n){
+; CHECK-LABEL: load_u64_from_u8_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #1]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 1
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define float @load_u32_from_u16_off1(ptr %n){
+; CHECK-LABEL: load_u32_from_u16_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldur h0, [x0, #1]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 1
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define float @load_u32_from_u8_off1(ptr %n){
+; CHECK-LABEL: load_u32_from_u8_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #1]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 1
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define half @load_u16_from_u8_off1(ptr %n){
+; CHECK-LABEL: load_u16_from_u8_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #1]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 1
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i16
+  %1 = bitcast i16 %conv to half
+  ret half %1
+}
+
+
+
+define double @load_u64_from_u32_off2(ptr %n){
+; CHECK-LABEL: load_u64_from_u32_off2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldur s0, [x0, #2]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 2
+  %0 = load i32, ptr %p, align 4
+  %conv = zext i32 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u16_off2(ptr %n){
+; CHECK-LABEL: load_u64_from_u16_off2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr h0, [x0, #2]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 2
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u8_off2(ptr %n){
+; CHECK-LABEL: load_u64_from_u8_off2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #2]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 2
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define float @load_u32_from_u16_off2(ptr %n){
+; CHECK-LABEL: load_u32_from_u16_off2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr h0, [x0, #2]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 2
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define float @load_u32_from_u8_off2(ptr %n){
+; CHECK-LABEL: load_u32_from_u8_off2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #2]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 2
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define half @load_u16_from_u8_off2(ptr %n){
+; CHECK-LABEL: load_u16_from_u8_off2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #2]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 2
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i16
+  %1 = bitcast i16 %conv to half
+  ret half %1
+}
+
+
+
+define double @load_u64_from_u32_off255(ptr %n){
+; CHECK-LABEL: load_u64_from_u32_off255:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldur s0, [x0, #255]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 255
+  %0 = load i32, ptr %p, align 4
+  %conv = zext i32 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u16_off255(ptr %n){
+; CHECK-LABEL: load_u64_from_u16_off255:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldur h0, [x0, #255]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 255
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u8_off255(ptr %n){
+; CHECK-LABEL: load_u64_from_u8_off255:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #255]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 255
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define float @load_u32_from_u16_off255(ptr %n){
+; CHECK-LABEL: load_u32_from_u16_off255:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldur h0, [x0, #255]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 255
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define float @load_u32_from_u8_off255(ptr %n){
+; CHECK-LABEL: load_u32_from_u8_off255:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #255]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 255
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define half @load_u16_from_u8_off255(ptr %n){
+; CHECK-LABEL: load_u16_from_u8_off255:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #255]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 255
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i16
+  %1 = bitcast i16 %conv to half
+  ret half %1
+}
+
+
+define double @load_u64_from_u32_off256(ptr %n){
+; CHECK-LABEL: load_u64_from_u32_off256:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr s0, [x0, #256]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 256
+  %0 = load i32, ptr %p, align 4
+  %conv = zext i32 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u16_off256(ptr %n){
+; CHECK-LABEL: load_u64_from_u16_off256:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr h0, [x0, #256]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 256
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u8_off256(ptr %n){
+; CHECK-LABEL: load_u64_from_u8_off256:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #256]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 256
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define float @load_u32_from_u16_off256(ptr %n){
+; CHECK-LABEL: load_u32_from_u16_off256:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr h0, [x0, #256]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 256
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define float @load_u32_from_u8_off256(ptr %n){
+; CHECK-LABEL: load_u32_from_u8_off256:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #256]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 256
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define half @load_u16_from_u8_off256(ptr %n){
+; CHECK-LABEL: load_u16_from_u8_off256:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #256]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 256
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i16
+  %1 = bitcast i16 %conv to half
+  ret half %1
+}
+
+
+
+define double @load_u64_from_u32_offn(ptr %n){
+; CHECK-LABEL: load_u64_from_u32_offn:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr s0, [x0, #16380]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 16380
+  %0 = load i32, ptr %p, align 4
+  %conv = zext i32 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u16_offn(ptr %n){
+; CHECK-LABEL: load_u64_from_u16_offn:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr h0, [x0, #8190]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 8190
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u8_offn(ptr %n){
+; CHECK-LABEL: load_u64_from_u8_offn:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #4095]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 4095
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define float @load_u32_from_u16_offn(ptr %n){
+; CHECK-LABEL: load_u32_from_u16_offn:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr h0, [x0, #8190]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 8190
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define float @load_u32_from_u8_offn(ptr %n){
+; CHECK-LABEL: load_u32_from_u8_offn:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #4095]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 4095
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define half @load_u16_from_u8_offn(ptr %n){
+; CHECK-LABEL: load_u16_from_u8_offn:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr b0, [x0, #4095]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 4095
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i16
+  %1 = bitcast i16 %conv to half
+  ret half %1
+}
+
+
+define double @load_u64_from_u32_offnp1(ptr %n){
+; CHECK-LABEL: load_u64_from_u32_offnp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #16384 // =0x4000
+; CHECK-NEXT:    ldr s0, [x0, x8]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 16384
+  %0 = load i32, ptr %p, align 4
+  %conv = zext i32 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u16_offnp1(ptr %n){
+; CHECK-LABEL: load_u64_from_u16_offnp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #8192 // =0x2000
+; CHECK-NEXT:    ldr h0, [x0, x8]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 8192
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define double @load_u64_from_u8_offnp1(ptr %n){
+; CHECK-LABEL: load_u64_from_u8_offnp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #4096 // =0x1000
+; CHECK-NEXT:    ldr b0, [x0, x8]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 4096
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i64
+  %1 = bitcast i64 %conv to double
+  ret double %1
+}
+
+define float @load_u32_from_u16_offnp1(ptr %n){
+; CHECK-LABEL: load_u32_from_u16_offnp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #8192 // =0x2000
+; CHECK-NEXT:    ldr h0, [x0, x8]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 8192
+  %0 = load i16, ptr %p, align 2
+  %conv = zext i16 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define float @load_u32_from_u8_offnp1(ptr %n){
+; CHECK-LABEL: load_u32_from_u8_offnp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #4096 // =0x1000
+; CHECK-NEXT:    ldr b0, [x0, x8]
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 4096
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i32
+  %1 = bitcast i32 %conv to float
+  ret float %1
+}
+
+define half @load_u16_from_u8_offnp1(ptr %n){
+; CHECK-LABEL: load_u16_from_u8_offnp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #4096 // =0x1000
+; CHECK-NEXT:    ldr b0, [x0, x8]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %p = getelementptr i8, ptr %n, i64 4096
+  %0 = load i8, ptr %p, align 1
   %conv = zext i8 %0 to i16
   %1 = bitcast i16 %conv to half
   ret half %1

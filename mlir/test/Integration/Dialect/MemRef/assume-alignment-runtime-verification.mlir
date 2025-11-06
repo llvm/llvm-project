@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s -generate-runtime-verification \
 // RUN:     -expand-strided-metadata \
 // RUN:     -test-cf-assert \
-// RUN:     -convert-to-llvm | \
+// RUN:     -convert-to-llvm \
+// RUN:     -reconcile-unrealized-casts | \
 // RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
@@ -37,7 +38,7 @@ func.func @main() {
   %buffer = builtin.unrealized_conversion_cast %10 : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> to memref<1xf32>
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: %[[ASSUME:.*]] = "memref.assume_alignment"(%{{.*}}) <{alignment = 4 : i32}> : (memref<1xf32>)
+  // CHECK-NEXT: %[[ASSUME:.*]] = memref.assume_alignment %{{.*}}, 4 : memref<1xf32>
   // CHECK-NEXT: ^ memref is not aligned to 4
   // CHECK-NEXT: Location: loc({{.*}})
   %assume = memref.assume_alignment %buffer, 4 : memref<1xf32>

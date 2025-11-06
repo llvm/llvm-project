@@ -1,4 +1,4 @@
-//===--- RedundantStrcatCallsCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +45,10 @@ struct StrCatCheckResult {
   std::vector<FixItHint> Hints;
 };
 
-void removeCallLeaveArgs(const CallExpr *Call, StrCatCheckResult *CheckResult) {
+} // namespace
+
+static void removeCallLeaveArgs(const CallExpr *Call,
+                                StrCatCheckResult *CheckResult) {
   if (Call->getNumArgs() == 0)
     return;
   // Remove 'Foo('
@@ -58,9 +61,9 @@ void removeCallLeaveArgs(const CallExpr *Call, StrCatCheckResult *CheckResult) {
           Call->getRParenLoc(), Call->getEndLoc().getLocWithOffset(1))));
 }
 
-const clang::CallExpr *processArgument(const Expr *Arg,
-                                       const MatchFinder::MatchResult &Result,
-                                       StrCatCheckResult *CheckResult) {
+static const clang::CallExpr *
+processArgument(const Expr *Arg, const MatchFinder::MatchResult &Result,
+                StrCatCheckResult *CheckResult) {
   const auto IsAlphanum = hasDeclaration(cxxMethodDecl(hasName("AlphaNum")));
   static const auto *const Strcat = new auto(hasName("::absl::StrCat"));
   const auto IsStrcat = cxxBindTemporaryExpr(
@@ -78,8 +81,8 @@ const clang::CallExpr *processArgument(const Expr *Arg,
   return nullptr;
 }
 
-StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
-                              const MatchFinder::MatchResult &Result) {
+static StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
+                                     const MatchFinder::MatchResult &Result) {
   StrCatCheckResult CheckResult;
   std::deque<const CallExpr *> CallsToProcess = {RootCall};
 
@@ -101,7 +104,6 @@ StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
   }
   return CheckResult;
 }
-} // namespace
 
 void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult &Result) {
   bool IsAppend = false;

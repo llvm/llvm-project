@@ -495,9 +495,7 @@ define { fp128, i32 } @test_frexp_fp128_i32(fp128 %a) nounwind {
 ; SOFT-FLOAT-64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64-NEXT:    jal frexpl
 ; SOFT-FLOAT-64-NEXT:    daddiu $6, $sp, 4
-; SOFT-FLOAT-64-NEXT:    dmfc1 $2, $f0
-; SOFT-FLOAT-64-NEXT:    dmfc1 $3, $f2
-; SOFT-FLOAT-64-NEXT:    lw $4, 4($sp)
+; SOFT-FLOAT-64-NEXT:    lw $2, 4($sp)
 ; SOFT-FLOAT-64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    jr $ra
 ; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, 16

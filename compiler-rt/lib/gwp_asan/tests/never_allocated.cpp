@@ -12,6 +12,8 @@
 #include "gwp_asan/crash_handler.h"
 #include "gwp_asan/tests/harness.h"
 
+#include <unistd.h>
+
 TEST_P(BacktraceGuardedPoolAllocatorDeathTest, NeverAllocated) {
   size_t PageSize = sysconf(_SC_PAGESIZE);
 

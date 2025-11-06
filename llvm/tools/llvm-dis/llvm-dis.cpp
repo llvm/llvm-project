@@ -80,11 +80,6 @@ static cl::opt<bool>
                     cl::desc("Add informational comments to the .ll file"),
                     cl::cat(DisCategory));
 
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden, cl::cat(DisCategory));
-
 static cl::opt<bool>
     MaterializeMetadata("materialize-metadata",
                         cl::desc("Load module without materializing metadata, "
@@ -255,7 +250,8 @@ int main(int argc, char **argv) {
       if (!DontPrint) {
         if (M) {
           M->removeDebugIntrinsicDeclarations();
-          M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
+          M->print(Out->os(), Annotator.get(),
+                   /* ShouldPreserveUseListOrder */ false);
         }
         if (Index)
           Index->print(Out->os());

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-- -target-feature +movrs -target-feature +avx10.2-512 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-- -target-feature +movrs -target-feature +avx10.2 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 

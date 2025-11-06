@@ -651,7 +651,7 @@ public:
 
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
 
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
                            bool &is_complex) override;
 
   unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
@@ -837,8 +837,7 @@ public:
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
 
-  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
-                             uint64_t &count) override;
+  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override;
 
   lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
@@ -1074,7 +1073,8 @@ public:
 #endif
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+            bool show_color) override;
 
   /// Dump clang AST types from the symbol file.
   ///
@@ -1318,7 +1318,8 @@ public:
   }
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+            bool show_color) override;
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,

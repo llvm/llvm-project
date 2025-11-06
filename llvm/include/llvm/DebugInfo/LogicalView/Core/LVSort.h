@@ -23,6 +23,7 @@ class LVObject;
 // Object Sorting Mode.
 enum class LVSortMode {
   None = 0, // No given sort.
+  ID,       // Sort by ID.
   Kind,     // Sort by kind.
   Line,     // Sort by line.
   Name,     // Sort by name.
@@ -38,6 +39,7 @@ using LVSortFunction = LVSortValue (*)(const LVObject *LHS,
 LLVM_ABI LVSortFunction getSortFunction();
 
 // Comparator functions that can be used for sorting.
+LLVM_ABI LVSortValue compareID(const LVObject *LHS, const LVObject *RHS);
 LLVM_ABI LVSortValue compareKind(const LVObject *LHS, const LVObject *RHS);
 LLVM_ABI LVSortValue compareLine(const LVObject *LHS, const LVObject *RHS);
 LLVM_ABI LVSortValue compareName(const LVObject *LHS, const LVObject *RHS);

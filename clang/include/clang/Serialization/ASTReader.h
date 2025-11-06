@@ -220,8 +220,8 @@ public:
   }
 
   /// Receives __COUNTER__ value.
-  virtual void ReadCounter(const serialization::ModuleFile &M,
-                           unsigned Value) {}
+  virtual void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) {
+  }
 
   /// This is called for each AST file loaded.
   virtual void visitModuleFile(StringRef Filename,
@@ -246,15 +246,16 @@ public:
     return true;
   }
 
-  /// Overloaded member function of \c visitInputFile that should
-  /// be defined when there is a distinction between
-  /// the file name and name-as-requested. For example, when deserializing input
+  /// Similiar to member function of \c visitInputFile but should
+  /// be defined when there is a distinction between the file name
+  /// and the name-as-requested. For example, when deserializing input
   /// files from precompiled AST files.
   ///
   /// \returns true to continue receiving the next input file, false to stop.
-  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                              bool isSystem, bool isOverridden,
-                              bool isExplicitModule) {
+  virtual bool visitInputFileAsRequested(StringRef FilenameAsRequested,
+                                         StringRef Filename, bool isSystem,
+                                         bool isOverridden,
+                                         bool isExplicitModule) {
     return true;
   }
 
@@ -311,7 +312,7 @@ public:
                                bool Complain,
                                std::string &SuggestedPredefines) override;
 
-  void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
+  void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
   bool needsInputFileVisitation() override;
   bool needsSystemInputFileVisitation() override;
   void visitModuleFile(StringRef Filename,
@@ -351,7 +352,7 @@ public:
                                StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
-  void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
+  void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
 };
 
 /// ASTReaderListenter implementation to set SuggestedPredefines of
@@ -525,6 +526,9 @@ private:
 
   /// A timer used to track the time spent deserializing.
   std::unique_ptr<llvm::Timer> ReadTimer;
+
+  // A TimeRegion used to start and stop ReadTimer via RAII.
+  std::optional<llvm::TimeRegion> ReadTimeRegion;
 
   /// The location where the module file will be considered as
   /// imported from. For non-module AST types it should be invalid.

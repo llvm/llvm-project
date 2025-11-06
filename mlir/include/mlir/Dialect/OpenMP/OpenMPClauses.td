@@ -120,11 +120,11 @@ class OpenMP_AllocatorClauseSkip<
                     extraClassDeclaration> {
 
   let arguments = (ins
-    OptionalAttr<AllocatorHandleAttr>:$allocator
+    Optional<I64>:$allocator
   );
 
   let optAssemblyFormat = [{
-    `allocator` `(` custom<ClauseAttr>($allocator) `)`
+    `allocator` `(` $allocator `)`
   }];
 
   let description = [{
@@ -208,6 +208,23 @@ class OpenMP_BindClauseSkip<
 }
 
 def OpenMP_BindClause : OpenMP_BindClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [4.4.3] `collapse` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_CollapseClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+      ConfinedAttr<DefaultValuedOptionalAttr<I64Attr, "1">, [IntMinValue<1>]>
+      :$collapse_num_loops
+  );
+}
+
+def OpenMP_CollapseClause : OpenMP_CollapseClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.7.2] `copyprivate` clause
@@ -979,6 +996,35 @@ class OpenMP_NumTeamsClauseSkip<
 def OpenMP_NumTeamsClause : OpenMP_NumTeamsClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+//  V5.1: [10.1.2] `sizes` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_SizesClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Variadic<IntLikeType>:$sizes
+  );
+
+  let optAssemblyFormat = [{
+    `sizes` `(` $sizes `:` type($sizes) `)`
+  }];
+
+  let description = [{
+    The `sizes` clauses defines the size of a grid over a multi-dimensional
+    logical iteration space. This grid is used for loop transformations such as
+    `tile` and `strip`. The size per dimension can be a variable, but only
+    values that are not at least 2 make sense. It is not specified what happens
+    when smaller values are used, but should still result in a loop nest that
+    executes each logical iteration once.
+  }];
+}
+
+def OpenMP_SizesClause : OpenMP_SizesClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [10.1.2] `num_threads` clause
 //===----------------------------------------------------------------------===//
 
@@ -1384,6 +1430,22 @@ class OpenMP_ThreadLimitClauseSkip<
 }
 
 def OpenMP_ThreadLimitClause : OpenMP_ThreadLimitClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [9.1.1] `sizes` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_TileSizesClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+      OptionalAttr<DenseI64ArrayAttr>:$tile_sizes
+  );
+}
+
+def OpenMP_TileSizesClause : OpenMP_TileSizesClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [12.1] `untied` clause

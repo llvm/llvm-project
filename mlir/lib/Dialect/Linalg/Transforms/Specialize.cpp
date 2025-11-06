@@ -182,11 +182,9 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 
   if (!mlir::linalg::detail::isContractionBody(
           *genericOp.getBlock(), [](Operation *first, Operation *second) {
-            if ((isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
-                (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
-                (isa<complex::MulOp>(first) && isa<complex::AddOp>(second)))
-              return true;
-            return false;
+            return (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
+                   (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
+                   (isa<complex::MulOp>(first) && isa<complex::AddOp>(second));
           }))
     return failure();
 

@@ -723,7 +723,7 @@ void VarListClauses() {
 }
 
 void ReductionClauseParsing() {
-  char *Begin, *End;
+  char Begin, End;
   // expected-error@+1{{expected '('}}
 #pragma acc serial reduction
   for(int i = 0; i < 5;++i) {}

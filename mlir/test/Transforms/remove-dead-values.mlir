@@ -571,3 +571,106 @@ module @return_void_with_unused_argument {
   }
 }
 
+// -----
+
+// CHECK-LABEL: module @dynamically_unreachable
+module @dynamically_unreachable {
+  func.func @dynamically_unreachable() {
+    // This value is used by an operation in a dynamically unreachable block.
+    %zero = arith.constant 0 : i64
+
+    // Dataflow analysis knows from the constant condition that
+    // ^bb1 is unreachable
+    %false = arith.constant false
+    cf.cond_br %false, ^bb1, ^bb4
+  ^bb1:
+    // This unreachable operation should be removed.
+    // CHECK-NOT: arith.cmpi
+    %3 = arith.cmpi eq, %zero, %zero : i64
+    cf.br ^bb1
+  ^bb4:
+    return
+  }
+}
+
+// CHECK-LABEL: module @last_block_not_exit
+module @last_block_not_exit {
+  // return value can be removed because it's private.
+  func.func private @terminated_with_condbr(%arg0: i1, %arg1: i1) -> i1 {
+    %true = arith.constant true
+    %false = arith.constant false
+    cf.cond_br %arg0, ^bb1(%false : i1), ^bb2
+  ^bb1(%1: i1):  // 2 preds: ^bb0, ^bb2
+    return %1 : i1
+  ^bb2:  // pred: ^bb3
+    cf.cond_br %arg1, ^bb1(%false : i1), ^bb1(%true : i1)
+  }
+
+  func.func public @call_private_but_not_use() {
+    %i0 = arith.constant 0: i1
+    %i1 = arith.constant 1: i1
+    call @terminated_with_condbr(%i0, %i1) : (i1, i1) -> i1
+    func.return
+  }
+  // CHECK-LABEL: @call_private_but_not_use
+  // CHECK: call @terminated_with_condbr(%false, %true) : (i1, i1)
+}
+
+// -----
+
+// Test the elimination of function arguments.
+
+// CHECK-LABEL: func private @single_parameter
+// CHECK-SAME: () {
+func.func private @single_parameter(%arg0: index) {
+  return
+}
+
+// CHECK-LABEL: func.func private @mutl_parameter(
+// CHECK-SAME: %[[ARG0:.*]]: index)
+// CHECK: return %[[ARG0]]
+func.func private @mutl_parameter(%arg0: index, %arg1: index, %arg2: index) -> index {
+  return %arg1 : index
+}
+
+// CHECK-LABEL: func private @eliminate_parameter
+// CHECK-SAME: () {
+func.func private @eliminate_parameter(%arg0: index, %arg1: index) {
+  call @single_parameter(%arg0) : (index) -> ()
+  return
+}
+
+// CHECK-LABEL: func @callee
+// CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+func.func @callee(%arg0: index, %arg1: index, %arg2: index) -> index {
+// CHECK: call @eliminate_parameter() : () -> ()
+  call @eliminate_parameter(%arg0, %arg1) : (index, index) -> ()
+// CHECK: call @mutl_parameter(%[[ARG1]]) : (index) -> index
+  %res = call @mutl_parameter(%arg0, %arg1, %arg2) : (index, index, index) -> (index)
+  return %res : index
+}
+
+// -----
+
+// This test verifies that the induction variables in loops are not deleted, the loop has results.
+
+// CHECK-LABEL: func @dead_value_loop_ivs
+func.func @dead_value_loop_ivs_has_result(%lb: index, %ub: index, %step: index, %b: i1) -> i1 {
+  %loop_ret = scf.for %iv = %lb to %ub step %step iter_args(%iter = %b) -> (i1) {
+    cf.assert %b, "loop not dead"
+    scf.yield %b : i1
+  }
+  return %loop_ret : i1
+}
+
+// -----
+
+// This test verifies that the induction variables in loops are not deleted, the loop has no results.
+
+// CHECK-LABEL: func @dead_value_loop_ivs_no_result
+func.func @dead_value_loop_ivs_no_result(%lb: index, %ub: index, %step: index, %input: memref<?xf32>, %value: f32, %pos: index) {
+  scf.for %iv = %lb to %ub step %step {
+    memref.store %value, %input[%pos] : memref<?xf32>
+  }
+  return
+}

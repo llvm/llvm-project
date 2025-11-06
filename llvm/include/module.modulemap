@@ -406,7 +406,7 @@ module LLVM_Utils {
     exclude header "llvm/Support/PluginLoader.h"
     exclude header "llvm/Support/Solaris/sys/regset.h"
     textual header "llvm/Support/TargetOpcodes.def"
-
+    textual header "llvm/Support/VirtualOutputConfig.def"
   }
 
   module TargetParser {

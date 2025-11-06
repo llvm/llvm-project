@@ -18,16 +18,14 @@ int main(int argc, char **argv) {
 
 
 // CHECK:      (lldb) disassemble --flavor=intel -m -n main
-// CHECK:         12   int foo() { return 42; }
-// CHECK-NEXT:    13
-// CHECK-NEXT: ** 14   int main(int argc, char **argv) {
+// CHECK: ** 14   int main(int argc, char **argv) {
 // CHECK:      disassembly.cpp.tmp.exe`main:
 // CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+0>:  sub    rsp, 0x38
 // CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+4>:  mov    dword ptr [rsp + 0x34], 0x0
 // CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+12>: mov    qword ptr [rsp + 0x28], rdx
 // CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+17>: mov    dword ptr [rsp + 0x24], ecx
 // CHECK:      ** 15     foo();
-// CHECK:      disassembly.cpp.tmp.exe[{{.*}}] <+21>: call   {{.*}}               ; foo at disassembly.cpp:12
+// CHECK:      disassembly.cpp.tmp.exe[{{.*}}] <+21>: call   {{.*}}               ; int foo(void) at disassembly.cpp:12
 // CHECK:      ** 16     return 0;
 // CHECK-NEXT:    17   }
 // CHECK-NEXT:    18

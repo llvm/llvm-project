@@ -24,15 +24,6 @@ void CIRDataLayout::reset(mlir::DataLayoutSpecInterface spec) {
 }
 
 llvm::Align CIRDataLayout::getAlignment(mlir::Type ty, bool useABIAlign) const {
-  if (auto recTy = llvm::dyn_cast<cir::RecordType>(ty)) {
-    // Packed record types always have an ABI alignment of one.
-    if (recTy && recTy.getPacked() && useABIAlign)
-      return llvm::Align(1);
-
-    // Get the layout annotation... which is lazily created on demand.
-    llvm_unreachable("getAlignment()) for record type is not implemented");
-  }
-
   // FIXME(cir): This does not account for differnt address spaces, and relies
   // on CIR's data layout to give the proper alignment.
   assert(!cir::MissingFeatures::addressSpace());

@@ -159,6 +159,29 @@ func.func @no_loops(%lb : index, %ub : index, %step : index) {
 
 // -----
 
+func.func @collapse_size(%lb : index, %ub : index, %step : index) {
+  omp.wsloop {
+    // expected-error@+1 {{collapse value is larger than the number of loops}}
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) collapse(4) {
+      omp.yield
+    }
+  }
+}
+
+// -----
+
+func.func @tiles_length(%lb : index, %ub : index, %step : index) {
+  omp.wsloop {
+    // expected-error@+1 {{op too few canonical loops for tile dimensions}}
+    omp.loop_nest (%iv) : index =  (%lb) to (%ub) step (%step) tiles(2, 4) {
+      omp.yield
+    }
+  }
+}
+
+
+// -----
+
 func.func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
   // expected-error @below {{expected '{'}}
   omp.wsloop nowait inclusive {
@@ -3011,9 +3034,108 @@ func.func @invalid_allocate_align_2(%arg0 : memref<i32>) -> () {
 }
 
 // -----
-func.func @invalid_allocate_allocator(%arg0 : memref<i32>) -> () {
-  // expected-error @below {{invalid clause value}}
-  omp.allocate_dir (%arg0 : memref<i32>) allocator(omp_small_cap_mem_alloc)
+func.func @invalid_workdistribute_empty_region() -> () {
+  omp.teams {
+    // expected-error @below {{region cannot be empty}}
+    omp.workdistribute {
+    }
+    omp.terminator
+  }
+  return
+}
 
+// -----
+func.func @invalid_workdistribute_no_terminator() -> () {
+  omp.teams {
+    // expected-error @below {{region must be terminated with omp.terminator}}
+    omp.workdistribute {
+      %c0 = arith.constant 0 : i32
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_wrong_terminator() -> () {
+  omp.teams {
+    // expected-error @below {{region must be terminated with omp.terminator}}
+    omp.workdistribute {
+      %c0 = arith.constant 0 : i32
+      func.return
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_multiple_terminators() -> () {
+  omp.teams {
+    // expected-error @below {{region must have exactly one terminator}}
+    omp.workdistribute {
+      %cond = arith.constant true
+      cf.cond_br %cond, ^bb1, ^bb2
+    ^bb1:
+      omp.terminator
+    ^bb2:
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_with_barrier() -> () {
+  omp.teams {
+    // expected-error @below {{explicit barriers are not allowed in workdistribute region}}
+    omp.workdistribute {
+      %c0 = arith.constant 0 : i32
+      omp.barrier
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_nested_parallel() -> () {
+  omp.teams {
+    // expected-error @below {{nested parallel constructs not allowed in workdistribute}}
+    omp.workdistribute {
+      omp.parallel {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+// Test: nested teams not allowed in workdistribute
+func.func @invalid_workdistribute_nested_teams() -> () {
+  omp.teams {
+    // expected-error @below {{nested teams constructs not allowed in workdistribute}}
+    omp.workdistribute {
+      omp.teams {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute() -> () {
+// expected-error @below {{workdistribute must be nested under teams}}
+  omp.workdistribute {
+    omp.terminator
+  }
   return
 }

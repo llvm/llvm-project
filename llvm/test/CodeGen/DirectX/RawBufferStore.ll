@@ -6,7 +6,7 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 define void @storef32_struct(i32 %index, float %data) {
   %buffer = call target("dx.RawBuffer", float, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: call void @dx.op.rawBufferStore.f32(i32 140, %dx.types.Handle %buffer_annot, i32 %index, i32 0, float %data, float undef, float undef, float undef, i8 1, i32 4)
   call void @llvm.dx.resource.store.rawbuffer.f32(
@@ -20,7 +20,7 @@ define void @storef32_struct(i32 %index, float %data) {
 define void @storef32_byte(i32 %offset, float %data) {
   %buffer = call target("dx.RawBuffer", i8, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: call void @dx.op.rawBufferStore.f32(i32 140, %dx.types.Handle %buffer_annot, i32 %offset, i32 0, float %data, float undef, float undef, float undef, i8 1, i32 4)
   call void @llvm.dx.resource.store.rawbuffer.f32(
@@ -34,7 +34,7 @@ define void @storef32_byte(i32 %offset, float %data) {
 define void @storev4f32_struct(i32 %index, <4 x float> %data) {
   %buffer = call target("dx.RawBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0:%.*]] = extractelement <4 x float> %data, i32 0
   ; CHECK: [[DATA1:%.*]] = extractelement <4 x float> %data, i32 1
@@ -52,7 +52,7 @@ define void @storev4f32_struct(i32 %index, <4 x float> %data) {
 define void @storev4f32_byte(i32 %offset, <4 x float> %data) {
   %buffer = call target("dx.RawBuffer", i8, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0:%.*]] = extractelement <4 x float> %data, i32 0
   ; CHECK: [[DATA1:%.*]] = extractelement <4 x float> %data, i32 1
@@ -70,7 +70,7 @@ define void @storev4f32_byte(i32 %offset, <4 x float> %data) {
 define void @storeelements(i32 %index, <4 x float> %data0, <4 x i32> %data1) {
   %buffer = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0_0:%.*]] = extractelement <4 x float> %data0, i32 0
   ; CHECK: [[DATA0_1:%.*]] = extractelement <4 x float> %data0, i32 1
@@ -97,7 +97,7 @@ define void @storeelements(i32 %index, <4 x float> %data0, <4 x i32> %data1) {
 define void @storenested(i32 %index, i32 %data0, <4 x float> %data1, <3 x half> %data2) {
   %buffer = call
       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: call void @dx.op.rawBufferStore.i32(i32 140, %dx.types.Handle %buffer_annot, i32 %index, i32 0, i32 %data0, i32 undef, i32 undef, i32 undef, i8 1, i32 4)
   call void @llvm.dx.resource.store.rawbuffer.i32(
@@ -129,7 +129,7 @@ define void @storenested(i32 %index, i32 %data0, <4 x float> %data1, <3 x half> 
 define void @storev4f64_byte(i32 %offset, <4 x double> %data) {
   %buffer = call target("dx.RawBuffer", i8, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0:%.*]] = extractelement <4 x double> %data, i32 0
   ; CHECK: [[DATA1:%.*]] = extractelement <4 x double> %data, i32 1

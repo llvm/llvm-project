@@ -13,6 +13,7 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTUDiagnostic.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -237,14 +238,23 @@ template <typename T> static bool hasBodyOrInit(const T *D) {
 }
 
 CrossTranslationUnitContext::CrossTranslationUnitContext(CompilerInstance &CI)
-    : Context(CI.getASTContext()), ASTStorage(CI) {}
+    : Context(CI.getASTContext()), ASTStorage(CI) {
+  if (CI.getAnalyzerOpts().ShouldEmitErrorsOnInvalidConfigValue &&
+      !CI.getAnalyzerOpts().CTUDir.empty()) {
+    auto S = CI.getVirtualFileSystem().status(CI.getAnalyzerOpts().CTUDir);
+    if (!S || S->getType() != llvm::sys::fs::file_type::directory_file)
+      CI.getDiagnostics().Report(diag::err_analyzer_config_invalid_input)
+          << "ctu-dir"
+          << "a filename";
+  }
+}
 
 CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 
 std::optional<std::string>
-CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
+CrossTranslationUnitContext::getLookupName(const Decl *D) {
   SmallString<128> DeclUSR;
-  bool Ret = index::generateUSRForDecl(ND, DeclUSR);
+  bool Ret = index::generateUSRForDecl(D, DeclUSR);
   if (Ret)
     return {};
   return std::string(DeclUSR);
@@ -567,8 +577,8 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
       DiagnosticIDs::create(), *DiagOpts, DiagClient);
   return ASTUnit::LoadFromASTFile(
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, DiagOpts, Diags, CI.getFileSystemOpts(),
-      CI.getHeaderSearchOpts());
+      ASTUnit::LoadEverything, CI.getVirtualFileSystemPtr(), DiagOpts, Diags,
+      CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the

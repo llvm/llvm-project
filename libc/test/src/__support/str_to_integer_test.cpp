@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
 #include "src/__support/str_to_integer.h"
 #include <stddef.h>
 
@@ -50,12 +49,14 @@ TEST(LlvmLibcStrToIntegerTest, LeadingSpaces) {
   EXPECT_EQ(result.parsed_len, ptrdiff_t(7));
   ASSERT_EQ(result.value, 12);
 
-  result = LIBC_NAMESPACE::internal::strtointeger<int>("     12345", 10, 5);
+  // Use a non-null-terminated buffer to test for possible OOB access.
+  char buf[5] = {' ', ' ', ' ', ' ', ' '};
+  result = LIBC_NAMESPACE::internal::strtointeger<int>(buf, 10, 5);
   EXPECT_FALSE(result.has_error());
   EXPECT_EQ(result.parsed_len, ptrdiff_t(0));
   ASSERT_EQ(result.value, 0);
 
-  result = LIBC_NAMESPACE::internal::strtointeger<int>("     12345", 10, 0);
+  result = LIBC_NAMESPACE::internal::strtointeger<int>(buf, 10, 0);
   EXPECT_FALSE(result.has_error());
   EXPECT_EQ(result.parsed_len, ptrdiff_t(0));
   ASSERT_EQ(result.value, 0);

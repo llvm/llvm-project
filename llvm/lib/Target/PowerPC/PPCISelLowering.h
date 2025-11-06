@@ -498,6 +498,9 @@ namespace llvm {
     /// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
     SETBCR,
 
+    /// VSRQ - The ISA 3.1 (P10) Vector Shift right quadword instruction
+    VSRQ,
+
     // NOTE: The nodes below may require PC-Rel specific patterns if the
     // address could be PC-Relative. When adding new nodes below, consider
     // whether or not the address can be PC-Relative and add the corresponding
@@ -1141,8 +1144,6 @@ namespace llvm {
 
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
-    void insertSSPDeclarations(Module &M) const override;
-    Value *getSDagStackGuard(const Module &M) const override;
 
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
@@ -1317,6 +1318,7 @@ namespace llvm {
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerUCMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,
@@ -1347,6 +1349,8 @@ namespace llvm {
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDMFVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDMFVectorStore(SDValue Op, SelectionDAG &DAG) const;
+    SDValue DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
+                          const SDLoc &dl, SelectionDAG &DAG) const;
 
     SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
@@ -1467,6 +1471,9 @@ namespace llvm {
     SDValue
     combineElementTruncationToVectorTruncation(SDNode *N,
                                                DAGCombinerInfo &DCI) const;
+
+    SDValue combineBVLoadsSpecialValue(SDValue Operand,
+                                       SelectionDAG &DAG) const;
 
     /// lowerToVINSERTH - Return the SDValue if this VECTOR_SHUFFLE can be
     /// handled by the VINSERTH instruction introduced in ISA 3.0. This is

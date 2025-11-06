@@ -10,11 +10,12 @@
 
 include(ExtendPath)
 
-# The generated headers will be placed in clang's resource directory if present.
-if(NOT LLVM_TREE_AVAILABLE)
-  set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
-else()
+# The generated headers will be placed in clang's resource if using it to
+# compile openmp in a runtimes-bootstrapping build.
+if(LLVM_TREE_AVAILABLE AND LLVM_RUNTIMES_BUILD)
   set(LIBOMP_HEADERS_INTDIR ${LLVM_BINARY_DIR}/${LIBOMP_HEADERS_INSTALL_PATH})
+else()
+  set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 # Configure omp.h, kmp_config.h and omp-tools.h if necessary
@@ -121,7 +122,7 @@ else()
     # Unix specific files
     libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
-    if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
       libomp_append(LIBOMP_GNUASMFILES z_AIX_asm.S) # AIX assembly file
     else()
       libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
@@ -167,6 +168,7 @@ endif()
 
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
+add_compile_definitions(_GLIBCXX_NO_ASSERTIONS)
 if(NOT WIN32)
   add_definitions(-U_GLIBCXX_ASSERTIONS)
 endif()
@@ -218,7 +220,7 @@ if(OPENMP_MSVC_NAME_SCHEME)
     LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
     LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
  )
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LIBOMP_SHARED_OUTPUT_NAME "omp" CACHE STRING "Output name for the shared libomp runtime library.")
   set_target_properties(omp PROPERTIES
     OUTPUT_NAME "${LIBOMP_SHARED_OUTPUT_NAME}"
@@ -252,23 +254,35 @@ set(LIBOMP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 
 # Add symbolic links to libomp
 if(NOT WIN32)
-  add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE}
-      libgomp${LIBOMP_LIBRARY_SUFFIX}
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE}
-      libiomp5${LIBOMP_LIBRARY_SUFFIX}
-    WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
-  )
-  if(LIBOMP_ENABLE_SHARED)
-    if(APPLE)
-      set(VERSIONED_LIBGOMP_NAME libgomp.1${LIBOMP_LIBRARY_SUFFIX})
-    else()
-      set(VERSIONED_LIBGOMP_NAME libgomp${LIBOMP_LIBRARY_SUFFIX}.1)
-    endif()
+  if(AIX)
+    # On AIX, libomp.a is the name for both static and shared objects.
+    set(LIBOMP_AIX_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
     add_custom_command(TARGET omp POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE} ${VERSIONED_LIBGOMP_NAME}
+      COMMAND ${CMAKE_COMMAND} -E create_symlink
+        ${LIBOMP_LIB_NAME}${LIBOMP_AIX_SUFFIX} libgomp${LIBOMP_AIX_SUFFIX}
+      COMMAND ${CMAKE_COMMAND} -E create_symlink
+        ${LIBOMP_LIB_NAME}${LIBOMP_AIX_SUFFIX} libiomp5${LIBOMP_AIX_SUFFIX}
       WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
     )
+  else()
+    add_custom_command(TARGET omp POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE}
+        libiomp5${LIBOMP_LIBRARY_SUFFIX}
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE}
+        libgomp${LIBOMP_LIBRARY_SUFFIX}
+      WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
+    )
+    if(LIBOMP_ENABLE_SHARED)
+      if(APPLE)
+        set(VERSIONED_LIBGOMP_NAME libgomp.1${LIBOMP_LIBRARY_SUFFIX})
+      else()
+        set(VERSIONED_LIBGOMP_NAME libgomp${LIBOMP_LIBRARY_SUFFIX}.1)
+      endif()
+      add_custom_command(TARGET omp POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE} ${VERSIONED_LIBGOMP_NAME}
+        WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
+      )
+    endif()
   endif()
 endif()
 

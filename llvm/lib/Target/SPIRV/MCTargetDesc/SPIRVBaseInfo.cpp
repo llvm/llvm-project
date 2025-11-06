@@ -38,8 +38,15 @@ struct CapabilityEntry {
   Capability::Capability ReqCapability;
 };
 
+struct EnvironmentEntry {
+  OperandCategory::OperandCategory Category;
+  uint32_t Value;
+  Environment::Environment AllowedEnvironment;
+};
+
 using namespace OperandCategory;
 using namespace Extension;
+using namespace Environment;
 using namespace Capability;
 using namespace InstructionSet;
 #define GET_SymbolicOperands_DECL
@@ -48,6 +55,8 @@ using namespace InstructionSet;
 #define GET_ExtensionEntries_IMPL
 #define GET_CapabilityEntries_DECL
 #define GET_CapabilityEntries_IMPL
+#define GET_EnvironmentEntries_DECL
+#define GET_EnvironmentEntries_IMPL
 #define GET_ExtendedBuiltins_DECL
 #define GET_ExtendedBuiltins_IMPL
 #include "SPIRVGenTables.inc"
@@ -131,6 +140,23 @@ getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
   }
 
   return Capabilities;
+}
+
+EnvironmentList getSymbolicOperandAllowedEnvironments(
+    SPIRV::OperandCategory::OperandCategory Category, uint32_t Value) {
+  EnvironmentList Environments;
+  const SPIRV::EnvironmentEntry *Environment =
+      SPIRV::lookupEnvironmentByCategoryAndValue(Category, Value);
+  auto TableEnd = ArrayRef(SPIRV::EnvironmentEntries).end();
+  while (Environment && Environment->Category == Category &&
+         Environment->Value == Value) {
+    Environments.push_back(static_cast<SPIRV::Environment::Environment>(
+        Environment->AllowedEnvironment));
+    if (++Environment == TableEnd)
+      break;
+  }
+
+  return Environments;
 }
 
 CapabilityList

@@ -163,7 +163,7 @@ public:
   virtual bool IsDefined(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                                   uint32_t &count, bool &is_complex) = 0;
+                                   bool &is_complex) = 0;
 
   virtual bool IsFunctionType(lldb::opaque_compiler_type_t type) = 0;
 
@@ -317,8 +317,7 @@ public:
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
 
-  virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
-                                     uint64_t &count) = 0;
+  virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) = 0;
 
   virtual lldb::Format GetFormat(lldb::opaque_compiler_type_t type) = 0;
 
@@ -448,7 +447,9 @@ public:
   /// \param[out] output Stream to dup the AST into.
   /// \param[in] filter If empty, dump whole AST. If non-empty, will only
   /// dump decls whose names contain \c filter.
-  virtual void Dump(llvm::raw_ostream &output, llvm::StringRef filter) = 0;
+  /// \param[in] show_color If true, prints the AST color-highlighted.
+  virtual void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+                    bool show_color) = 0;
 
   /// This is used by swift.
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;

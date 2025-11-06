@@ -3,22 +3,20 @@
 // Check that omp.simd as a leaf of a composite construct still generates
 // the appropriate loop vectorization attribute.
 
-// CHECK-LABEL: define internal void @test_teams_distribute_parallel_do_simd..omp_par.2
+// CHECK-LABEL: define internal void @test_teams_distribute_parallel_do_simd..omp_par.1
 // CHECK: teams.body:
 // CHECK: omp.teams.region:
 
-// CHECK-LABEL: define internal void @test_teams_distribute_parallel_do_simd..omp_par.1
+// CHECK-LABEL: define internal void @test_teams_distribute_parallel_do_simd..omp_par
 // CHECK: omp.par.entry:
 // CHECK: omp.par.region:
-// CHECK: distribute.exit:
-
-// CHECK-LABEL: define internal void @test_teams_distribute_parallel_do_simd..omp_par
 // CHECK: distribute.body:
 // CHECK: omp.distribute.region:
 // CHECK: omp_loop.header:
 // CHECK: omp_loop.inc:
 // CHECK-NEXT:   %omp_loop.next = add nuw i32 %omp_loop.iv, 1
 // CHECK-NEXT:   br label %omp_loop.header, !llvm.loop ![[LOOP_ATTR:.*]]
+// CHECK: omp.par.exit.exitStub:
 
 // CHECK: ![[LOOP_ATTR]] = distinct !{![[LOOP_ATTR]], ![[LPAR:.*]], ![[LVEC:.*]]}
 // CHECK: ![[LPAR]] = !{!"llvm.loop.parallel_accesses", ![[PAR_ACC:.*]]}

@@ -11,7 +11,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-LABEL: @reverse_interleave_load_fold_mask(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -61,24 +61,9 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i16 @llvm.vector.reduce.add.v2i16(<2 x i16> [[TMP26]])
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 41, [[SCALAR_PH]] ], [ [[IVMINUS1:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[PREVSUM:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IVMINUS1]] = add nsw i16 [[IV]], -1
-; CHECK-NEXT:    [[GEPA0:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[IVMINUS1]], i16 0
-; CHECK-NEXT:    [[TMP29:%.*]] = load i16, ptr [[GEPA0]], align 1
-; CHECK-NEXT:    [[GEPA3:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[IVMINUS1]], i16 3
-; CHECK-NEXT:    [[TMP30:%.*]] = load i16, ptr [[GEPA3]], align 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[TMP29]], [[TMP30]]
-; CHECK-NEXT:    [[PREVSUM]] = add nsw i16 [[SUM]], [[ADD]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[IV]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PREVSUM_LCSSA:%.*]] = phi i16 [ [[PREVSUM]], [[LOOP]] ], [ [[TMP28]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i16 [[PREVSUM_LCSSA]]
+; CHECK-NEXT:    ret i16 [[TMP28]]
 ;
 entry:
   br label %loop

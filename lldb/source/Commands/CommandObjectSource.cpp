@@ -513,7 +513,7 @@ protected:
           "No selected frame to use to find the default source.");
       return false;
     } else if (!cur_frame->HasDebugInformation()) {
-      result.AppendError("No debug info for the selected frame.");
+      result.AppendError("no debug info for the selected frame");
       return false;
     } else {
       const SymbolContext &sc =
@@ -553,11 +553,11 @@ protected:
         }
       }
       if (!m_module_list.GetSize()) {
-        result.AppendError("No modules match the input.");
+        result.AppendError("no modules match the input");
         return;
       }
     } else if (target.GetImages().GetSize() == 0) {
-      result.AppendError("The target has no associated executable images.");
+      result.AppendError("the target has no associated executable images");
       return;
     }
 

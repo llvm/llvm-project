@@ -19,7 +19,7 @@ int dd[3][2] = {{1, 2}, {3, 4}, {5, 6}};
 // CHECK: [i32 3, i32 4], [2 x i32] [i32 5, i32 6]]
 
 int e[10] = {1, 2};
-// CHECK: @e = global [10 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+// CHECK: @e = global <{ i32, i32, [8 x i32] }> <{ i32 1, i32 2, [8 x i32] zeroinitializer }>
 
 int f[5] = {1, 2};
 // CHECK: @f = global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]

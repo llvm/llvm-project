@@ -203,3 +203,27 @@ namespace member_pointers {
   N t3 = 0 ? &W1::a : &W2::b;
   // expected-error@-1 {{rvalue of type 'B1 member_pointers::W<void>::*'}}
 } // namespace member_pointers
+
+namespace FunctionTypeExtInfo {
+  namespace RecordType {
+    class A;
+    void (*x)(__attribute__((swift_async_context)) A *);
+
+    class A;
+    void (*y)(__attribute__((swift_async_context)) A *);
+
+    N t1 = 0 ? x : y;
+    // expected-error@-1 {{lvalue of type 'void (*)(__attribute__((swift_async_context)) A *)'}}
+  } // namespace RecordType
+  namespace TypedefType {
+    class A;
+    using B = A;
+    void (*x)(__attribute__((swift_async_context)) B *);
+
+    using B = A;
+    void (*y)(__attribute__((swift_async_context)) B *);
+
+    N t1 = 0 ? x : y;
+    // expected-error@-1 {{lvalue of type 'void (*)(__attribute__((swift_async_context)) B *)'}}
+  } // namespace TypedefType
+} // namespace FunctionTypeExtInfo

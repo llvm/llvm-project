@@ -31,6 +31,9 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
+#if SANITIZER_APPLE && !SANITIZER_GO
+#  include "tsan_flags.h"
+#endif
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
 #include "tsan_mman.h"
@@ -77,17 +80,6 @@ struct ucontext_t {
   // The size is determined by looking at sizeof of real ucontext_t on linux.
   u64 opaque[936 / sizeof(u64) + 1];
 };
-#endif
-
-#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
-    defined(__s390x__)
-#define PTHREAD_ABI_BASE  "GLIBC_2.3.2"
-#elif defined(__aarch64__) || SANITIZER_PPC64V2
-#define PTHREAD_ABI_BASE  "GLIBC_2.17"
-#elif SANITIZER_LOONGARCH64
-#define PTHREAD_ABI_BASE  "GLIBC_2.36"
-#elif SANITIZER_RISCV64
-#  define PTHREAD_ABI_BASE "GLIBC_2.27"
 #endif
 
 extern "C" int pthread_attr_init(void *attr);
@@ -341,11 +333,6 @@ void ScopedInterceptor::DisableIgnoresImpl() {
 }
 
 #define TSAN_INTERCEPT(func) INTERCEPT_FUNCTION(func)
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
-#  define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION(func)
-#else
-#  define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION_VER(func, ver)
-#endif
 #if SANITIZER_FREEBSD
 #  define TSAN_MAYBE_INTERCEPT_FREEBSD_ALIAS(func) \
     INTERCEPT_FUNCTION(_pthread_##func)
@@ -1146,6 +1133,22 @@ TSAN_INTERCEPTOR(int, pthread_create,
 
 TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   SCOPED_INTERCEPTOR_RAW(pthread_join, th, ret);
+#if SANITIZER_ANDROID
+  {
+    // In Bionic, if the target thread has already exited when pthread_detach is
+    // called, pthread_detach will call pthread_join internally to clean it up.
+    // In that case, the thread has already been consumed by the pthread_detach
+    // interceptor.
+    Tid tid = ctx->thread_registry.FindThread(
+        [](ThreadContextBase* tctx, void* arg) {
+          return tctx->user_id == (uptr)arg;
+        },
+        th);
+    if (tid == kInvalidTid) {
+      return REAL(pthread_join)(th, ret);
+    }
+  }
+#endif
   Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_join)(th, ret);
@@ -1665,6 +1668,14 @@ TSAN_INTERCEPTOR(int, pthread_barrier_wait, void *b) {
 
 TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   SCOPED_INTERCEPTOR_RAW(pthread_once, o, f);
+#if SANITIZER_APPLE && !SANITIZER_GO
+  if (flags()->lock_during_write != kLockDuringAllWrites &&
+      cur_thread_init()->in_internal_write_call) {
+    // This is needed to make it through process launch without hanging
+    f();
+    return 0;
+  }
+#endif
   if (o == 0 || f == 0)
     return errno_EINVAL;
   atomic_uint32_t *a;
@@ -2428,7 +2439,11 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
 }
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+// Bionic's pthread_create internally calls clone. When the CLONE_THREAD flag is
+// set, clone does not create a new process but a new thread. This is a
+// workaround for Android. Disabling the interception of clone solves the
+// problem in most scenarios.
 TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
                  void *arg, int *parent_tid, void *tls, pid_t *child_tid) {
   SCOPED_INTERCEPTOR_RAW(clone, fn, stack, flags, arg, parent_tid, tls,
@@ -3041,12 +3056,26 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_timedjoin_np);
   #endif
 
-  TSAN_INTERCEPT_VER(pthread_cond_init, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_signal, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_broadcast, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_wait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_timedwait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_destroy, PTHREAD_ABI_BASE);
+  // In glibc versions older than 2.36, dlsym(RTLD_NEXT, "pthread_cond_init")
+  // may return an outdated symbol (max(2.2,base_version)) if the port was
+  // introduced before 2.3.2 (when the new pthread_cond_t was introduced).
+#if SANITIZER_GLIBC && !__GLIBC_PREREQ(2, 36) &&                      \
+    (defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
+     defined(__s390x__))
+  INTERCEPT_FUNCTION_VER(pthread_cond_init, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_signal, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_broadcast, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_wait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_timedwait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_destroy, "GLIBC_2.3.2");
+#else
+  INTERCEPT_FUNCTION(pthread_cond_init);
+  INTERCEPT_FUNCTION(pthread_cond_signal);
+  INTERCEPT_FUNCTION(pthread_cond_broadcast);
+  INTERCEPT_FUNCTION(pthread_cond_wait);
+  INTERCEPT_FUNCTION(pthread_cond_timedwait);
+  INTERCEPT_FUNCTION(pthread_cond_destroy);
+#endif
 
   TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT;
 
@@ -3137,7 +3166,7 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   TSAN_INTERCEPT(clone);
 #endif
 #if !SANITIZER_ANDROID

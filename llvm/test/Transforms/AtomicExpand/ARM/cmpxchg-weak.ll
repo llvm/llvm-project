@@ -9,7 +9,7 @@ define i32 @test_cmpxchg_seq_cst(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK:       [[CMPXCHG_START]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.arm.ldrex.p0(ptr elementtype(i32) [[ADDR]])
 ; CHECK-NEXT:    [[SHOULD_STORE:%.*]] = icmp eq i32 [[TMP1]], [[DESIRED]]
-; CHECK-NEXT:    br i1 [[SHOULD_STORE]], label %[[CMPXCHG_FENCEDSTORE:.*]], label %[[CMPXCHG_NOSTORE:.*]]
+; CHECK-NEXT:    br i1 [[SHOULD_STORE]], label %[[CMPXCHG_FENCEDSTORE:.*]], label %[[CMPXCHG_NOSTORE:cmpxchg.nostore]]
 ; CHECK:       [[CMPXCHG_FENCEDSTORE]]:
 ; CHECK-NEXT:    call void @llvm.arm.dmb(i32 10)
 ; CHECK-NEXT:    br label %[[CMPXCHG_TRYSTORE:.*]]
@@ -17,7 +17,7 @@ define i32 @test_cmpxchg_seq_cst(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK-NEXT:    [[LOADED_TRYSTORE:%.*]] = phi i32 [ [[TMP1]], %[[CMPXCHG_FENCEDSTORE]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.arm.strex.p0(i32 [[NEW]], ptr elementtype(i32) [[ADDR]])
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[CMPXCHG_SUCCESS:.*]], label %[[CMPXCHG_FAILURE:.*]]
+; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[CMPXCHG_SUCCESS:.*]], label %[[CMPXCHG_FAILURE:cmpxchg.failure]]
 ; CHECK:       [[CMPXCHG_RELEASEDLOAD:.*:]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CMPXCHG_SUCCESS]]:
@@ -48,7 +48,7 @@ define i1 @test_cmpxchg_weak_fail(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK:       [[CMPXCHG_START]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.arm.ldrex.p0(ptr elementtype(i32) [[ADDR]])
 ; CHECK-NEXT:    [[SHOULD_STORE:%.*]] = icmp eq i32 [[TMP1]], [[DESIRED]]
-; CHECK-NEXT:    br i1 [[SHOULD_STORE]], label %[[CMPXCHG_FENCEDSTORE:.*]], label %[[CMPXCHG_NOSTORE:.*]]
+; CHECK-NEXT:    br i1 [[SHOULD_STORE]], label %[[CMPXCHG_FENCEDSTORE:.*]], label %[[CMPXCHG_NOSTORE:cmpxchg.nostore]]
 ; CHECK:       [[CMPXCHG_FENCEDSTORE]]:
 ; CHECK-NEXT:    call void @llvm.arm.dmb(i32 10)
 ; CHECK-NEXT:    br label %[[CMPXCHG_TRYSTORE:.*]]
@@ -56,7 +56,7 @@ define i1 @test_cmpxchg_weak_fail(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK-NEXT:    [[LOADED_TRYSTORE:%.*]] = phi i32 [ [[TMP1]], %[[CMPXCHG_FENCEDSTORE]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.arm.strex.p0(i32 [[NEW]], ptr elementtype(i32) [[ADDR]])
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[CMPXCHG_SUCCESS:.*]], label %[[CMPXCHG_FAILURE:.*]]
+; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[CMPXCHG_SUCCESS:.*]], label %[[CMPXCHG_FAILURE:cmpxchg.failure]]
 ; CHECK:       [[CMPXCHG_RELEASEDLOAD:.*:]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CMPXCHG_SUCCESS]]:
@@ -86,14 +86,14 @@ define i32 @test_cmpxchg_monotonic(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK:       [[CMPXCHG_START]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.arm.ldrex.p0(ptr elementtype(i32) [[ADDR]])
 ; CHECK-NEXT:    [[SHOULD_STORE:%.*]] = icmp eq i32 [[TMP1]], [[DESIRED]]
-; CHECK-NEXT:    br i1 [[SHOULD_STORE]], label %[[CMPXCHG_FENCEDSTORE:.*]], label %[[CMPXCHG_NOSTORE:.*]]
+; CHECK-NEXT:    br i1 [[SHOULD_STORE]], label %[[CMPXCHG_FENCEDSTORE:.*]], label %[[CMPXCHG_NOSTORE:cmpxchg.nostore]]
 ; CHECK:       [[CMPXCHG_FENCEDSTORE]]:
 ; CHECK-NEXT:    br label %[[CMPXCHG_TRYSTORE:.*]]
 ; CHECK:       [[CMPXCHG_TRYSTORE]]:
 ; CHECK-NEXT:    [[LOADED_TRYSTORE:%.*]] = phi i32 [ [[TMP1]], %[[CMPXCHG_FENCEDSTORE]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.arm.strex.p0(i32 [[NEW]], ptr elementtype(i32) [[ADDR]])
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[CMPXCHG_SUCCESS:.*]], label %[[CMPXCHG_FAILURE:.*]]
+; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[CMPXCHG_SUCCESS:.*]], label %[[CMPXCHG_FAILURE:cmpxchg.failure]]
 ; CHECK:       [[CMPXCHG_RELEASEDLOAD:.*:]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CMPXCHG_SUCCESS]]:
@@ -122,7 +122,7 @@ define i32 @test_cmpxchg_seq_cst_minsize(ptr %addr, i32 %desired, i32 %new) mins
 ; CHECK:       [[CMPXCHG_START]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.arm.ldrex.p0(ptr elementtype(i32) [[ADDR]])
 ; CHECK-NEXT:    [[SHOULD_STORE:%.*]] = icmp eq i32 [[TMP1]], [[DESIRED]]
-; CHECK-NEXT:    br i1 [[SHOULD_STORE]], label %[[CMPXCHG_FENCEDSTORE:.*]], label %[[CMPXCHG_NOSTORE:.*]]
+; CHECK-NEXT:    br i1 [[SHOULD_STORE]], label %[[CMPXCHG_FENCEDSTORE:.*]], label %[[CMPXCHG_NOSTORE:cmpxchg.nostore]]
 ; CHECK:       [[CMPXCHG_FENCEDSTORE]]:
 ; CHECK-NEXT:    call void @llvm.arm.dmb(i32 10)
 ; CHECK-NEXT:    br label %[[CMPXCHG_TRYSTORE:.*]]
@@ -130,7 +130,7 @@ define i32 @test_cmpxchg_seq_cst_minsize(ptr %addr, i32 %desired, i32 %new) mins
 ; CHECK-NEXT:    [[LOADED_TRYSTORE:%.*]] = phi i32 [ [[TMP1]], %[[CMPXCHG_FENCEDSTORE]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.arm.strex.p0(i32 [[NEW]], ptr elementtype(i32) [[ADDR]])
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[CMPXCHG_SUCCESS:.*]], label %[[CMPXCHG_FAILURE:.*]]
+; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[CMPXCHG_SUCCESS:.*]], label %[[CMPXCHG_FAILURE:cmpxchg.failure]]
 ; CHECK:       [[CMPXCHG_RELEASEDLOAD:.*:]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CMPXCHG_SUCCESS]]:
