@@ -962,9 +962,12 @@ public:
     Metadata.emplace_back(Kind, Node);
   }
 
-  /// Intersect this VPIRMetada object with \p MD, keeping only metadata
+  /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
+
+  /// Replace all metadata with \p MD.
+  void transferMetadata(const VPIRMetadata &MD) { Metadata = MD.Metadata; }
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -1456,6 +1459,7 @@ public:
   VPWidenRecipe *clone() override {
     auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
     R->transferFlags(*this);
+    R->transferMetadata(*this);
     return R;
   }
 
