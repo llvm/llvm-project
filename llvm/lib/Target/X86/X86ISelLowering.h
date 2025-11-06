@@ -176,8 +176,6 @@ namespace llvm {
     ///
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-    bool isSelectSupported(SelectSupportKind Kind) const override;
-
     /// Replace the results of node with an illegal result
     /// type with new values built out of custom code.
     ///
