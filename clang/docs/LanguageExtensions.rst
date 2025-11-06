@@ -807,6 +807,8 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
  T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
  T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
+ T __builtin_elementwise_ldexp(T x, IntT y)     returns the product of x and 2 raised to the power y.                  T: floating point types,
+                                                y must be an integer type matching the shape of x.                     IntT: integer types
 
  T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
  T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
@@ -2408,6 +2410,16 @@ those modes.
 
 Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
 underlying types is available in C23 and later.
+
+Enumerations with no enumerators
+--------------------------------
+
+Clang provides support for Microsoft extensions to support enumerations with no enumerators.
+
+.. code-block:: c++
+
+  typedef enum empty { } A;
+
 
 Interoperability with C++11 lambdas
 -----------------------------------
