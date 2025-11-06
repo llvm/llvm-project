@@ -5452,10 +5452,15 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
     }
 
     const CaseStmt *CS = cast<CaseStmt>(SC);
-    APSInt LHS = CS->getLHS()->EvaluateKnownConstInt(Info.Ctx);
-    APSInt RHS = CS->getRHS() ? CS->getRHS()->EvaluateKnownConstInt(Info.Ctx)
-                              : LHS;
-    if (LHS <= Value && Value <= RHS) {
+    const Expr *LHSExpr = CS->getLHS();
+    const Expr *RHSExpr = CS->getLHS();
+    if (LHSExpr->isValueDependent() || (RHSExpr && RHSExpr->isValueDependent()))
+      return ESR_Failed;
+
+    APSInt LHSValue = LHSExpr->EvaluateKnownConstInt(Info.Ctx);
+    APSInt RHSValue =
+        RHSExpr ? RHSExpr->EvaluateKnownConstInt(Info.Ctx) : LHSValue;
+    if (LHSValue <= Value && Value <= RHSValue) {
       Found = SC;
       break;
     }
