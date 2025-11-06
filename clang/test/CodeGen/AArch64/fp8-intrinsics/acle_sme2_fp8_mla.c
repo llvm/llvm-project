@@ -144,7 +144,7 @@ void test_svmla_lane_za32_vg4x4(uint32_t slice, svmfloat8x4_t zn, svmfloat8_t zm
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_za16_vg2x1(uint32_t slice, svmfloat8_t zn, svmfloat8_t zm, fpm_t fpm) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmla,_single,_za16,_mf8,_vg2x1_fpm)(slice, zn, zm, fpm);
+    SME_ACLE_FUNC(svmla_za16,_mf8,_vg2x1_fpm,,)(slice, zn, zm, fpm);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmla_single_za16_vg2x2(
@@ -200,7 +200,7 @@ void test_svmla_single_za16_vg2x4(uint32_t slice, svmfloat8x4_t zn, svmfloat8_t 
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_za32_vg4x1(uint32_t slice, svmfloat8_t zn, svmfloat8_t zm, fpm_t fpm) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmla,_single,_za32,_mf8,_vg4x1_fpm)(slice, zn, zm, fpm);
+    SME_ACLE_FUNC(svmla_za32,_mf8,_vg4x1_fpm,,)(slice, zn, zm, fpm);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmla_single_za32_vg4x2(
