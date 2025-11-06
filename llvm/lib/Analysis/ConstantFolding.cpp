@@ -2315,6 +2315,11 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
   if (ORM == RoundingMode::Dynamic)
     return false;
 
+  // If NaN is produced, do not fold such call. In runtime it can be trapped
+  // and properly handled.
+  if (St == APFloat::opStatus::opInvalidOp)
+    return false;
+
   // If FP exceptions are ignored, fold the call, even if such exception is
   // raised.
   if (EB && *EB != fp::ExceptionBehavior::ebStrict)
@@ -2441,16 +2446,21 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   }
 
   if (auto *Op = dyn_cast<ConstantFP>(Operands[0])) {
+    APFloat U = Op->getValueAPF();
+
     if (IntrinsicID == Intrinsic::convert_to_fp16) {
-      APFloat Val(Op->getValueAPF());
+      APFloat Val(U);
+      if (Val.isNaN())
+        return nullptr;
 
       bool lost = false;
-      Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &lost);
+      APFloat::opStatus Status =
+          Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &lost);
+      if (Status == APFloat::opInvalidOp)
+        return nullptr;
 
       return ConstantInt::get(Ty->getContext(), Val.bitcastToAPInt());
     }
-
-    APFloat U = Op->getValueAPF();
 
     if (IntrinsicID == Intrinsic::wasm_trunc_signed ||
         IntrinsicID == Intrinsic::wasm_trunc_unsigned) {
@@ -2473,6 +2483,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     if (IntrinsicID == Intrinsic::fptoui_sat ||
         IntrinsicID == Intrinsic::fptosi_sat) {
+      if (U.isNaN())
+        return nullptr;
       // convertToInteger() already has the desired saturation semantics.
       APSInt Int(Ty->getIntegerBitWidth(),
                  IntrinsicID == Intrinsic::fptoui_sat);
@@ -2502,38 +2514,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         !Ty->isIntegerTy())
       return nullptr;
 
-    // Use internal versions of these intrinsics.
-
-    if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint) {
-      U.roundToIntegral(APFloat::rmNearestTiesToEven);
-      return ConstantFP::get(Ty->getContext(), U);
-    }
-
-    if (IntrinsicID == Intrinsic::round) {
-      U.roundToIntegral(APFloat::rmNearestTiesToAway);
-      return ConstantFP::get(Ty->getContext(), U);
-    }
-
-    if (IntrinsicID == Intrinsic::roundeven) {
-      U.roundToIntegral(APFloat::rmNearestTiesToEven);
-      return ConstantFP::get(Ty->getContext(), U);
-    }
-
-    if (IntrinsicID == Intrinsic::ceil) {
-      U.roundToIntegral(APFloat::rmTowardPositive);
-      return ConstantFP::get(Ty->getContext(), U);
-    }
-
-    if (IntrinsicID == Intrinsic::floor) {
-      U.roundToIntegral(APFloat::rmTowardNegative);
-      return ConstantFP::get(Ty->getContext(), U);
-    }
-
-    if (IntrinsicID == Intrinsic::trunc) {
-      U.roundToIntegral(APFloat::rmTowardZero);
-      return ConstantFP::get(Ty->getContext(), U);
-    }
-
     if (IntrinsicID == Intrinsic::fabs) {
       U.clearSign();
       return ConstantFP::get(Ty->getContext(), U);
@@ -2550,53 +2530,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       APFloat AlmostOne(U.getSemantics(), 1);
       AlmostOne.next(/*nextDown*/ true);
       return ConstantFP::get(Ty->getContext(), minimum(FractU, AlmostOne));
-    }
-
-    // Rounding operations (floor, trunc, ceil, round and nearbyint) do not
-    // raise FP exceptions, unless the argument is signaling NaN.
-
-    std::optional<APFloat::roundingMode> RM;
-    switch (IntrinsicID) {
-    default:
-      break;
-    case Intrinsic::experimental_constrained_nearbyint:
-    case Intrinsic::experimental_constrained_rint: {
-      auto CI = cast<ConstrainedFPIntrinsic>(Call);
-      RM = CI->getRoundingMode();
-      if (!RM || *RM == RoundingMode::Dynamic)
-        return nullptr;
-      break;
-    }
-    case Intrinsic::experimental_constrained_round:
-      RM = APFloat::rmNearestTiesToAway;
-      break;
-    case Intrinsic::experimental_constrained_ceil:
-      RM = APFloat::rmTowardPositive;
-      break;
-    case Intrinsic::experimental_constrained_floor:
-      RM = APFloat::rmTowardNegative;
-      break;
-    case Intrinsic::experimental_constrained_trunc:
-      RM = APFloat::rmTowardZero;
-      break;
-    }
-    if (RM) {
-      auto CI = cast<ConstrainedFPIntrinsic>(Call);
-      if (U.isFinite()) {
-        APFloat::opStatus St = U.roundToIntegral(*RM);
-        if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
-            St == APFloat::opInexact) {
-          std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
-          if (EB == fp::ebStrict)
-            return nullptr;
-        }
-      } else if (U.isSignaling()) {
-        std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
-        if (EB && *EB != fp::ebIgnore)
-          return nullptr;
-        U = APFloat::getQNaN(U.getSemantics());
-      }
-      return ConstantFP::get(Ty->getContext(), U);
     }
 
     // NVVM float/double to signed/unsigned int32/int64 conversions:
@@ -2684,6 +2617,84 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       FloatToRound.convertToInteger(ResInt, RMode, &IsExact);
       return ConstantInt::get(Ty, ResInt);
     }
+    }
+
+    // NaN is not a value, it represents an error, don't constfold it.
+    if (U.isNaN())
+      return nullptr;
+
+    // Use internal versions of these intrinsics.
+
+    if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint) {
+      U.roundToIntegral(APFloat::rmNearestTiesToEven);
+      return ConstantFP::get(Ty->getContext(), U);
+    }
+
+    if (IntrinsicID == Intrinsic::round) {
+      U.roundToIntegral(APFloat::rmNearestTiesToAway);
+      return ConstantFP::get(Ty->getContext(), U);
+    }
+
+    if (IntrinsicID == Intrinsic::roundeven) {
+      U.roundToIntegral(APFloat::rmNearestTiesToEven);
+      return ConstantFP::get(Ty->getContext(), U);
+    }
+
+    if (IntrinsicID == Intrinsic::ceil) {
+      U.roundToIntegral(APFloat::rmTowardPositive);
+      return ConstantFP::get(Ty->getContext(), U);
+    }
+
+    if (IntrinsicID == Intrinsic::floor) {
+      U.roundToIntegral(APFloat::rmTowardNegative);
+      return ConstantFP::get(Ty->getContext(), U);
+    }
+
+    if (IntrinsicID == Intrinsic::trunc) {
+      U.roundToIntegral(APFloat::rmTowardZero);
+      return ConstantFP::get(Ty->getContext(), U);
+    }
+
+    // Rounding operations (floor, trunc, ceil, round and nearbyint) do not
+    // raise FP exceptions, unless the argument is signaling NaN.
+
+    std::optional<APFloat::roundingMode> RM;
+    switch (IntrinsicID) {
+    default:
+      break;
+    case Intrinsic::experimental_constrained_nearbyint:
+    case Intrinsic::experimental_constrained_rint: {
+      auto CI = cast<ConstrainedFPIntrinsic>(Call);
+      RM = CI->getRoundingMode();
+      if (!RM || *RM == RoundingMode::Dynamic)
+        return nullptr;
+      break;
+    }
+    case Intrinsic::experimental_constrained_round:
+      RM = APFloat::rmNearestTiesToAway;
+      break;
+    case Intrinsic::experimental_constrained_ceil:
+      RM = APFloat::rmTowardPositive;
+      break;
+    case Intrinsic::experimental_constrained_floor:
+      RM = APFloat::rmTowardNegative;
+      break;
+    case Intrinsic::experimental_constrained_trunc:
+      RM = APFloat::rmTowardZero;
+      break;
+    }
+    if (RM) {
+      auto CI = cast<ConstrainedFPIntrinsic>(Call);
+      if (U.isFinite()) {
+        APFloat::opStatus St = U.roundToIntegral(*RM);
+        if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
+            St == APFloat::opInexact) {
+          std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+          if (EB == fp::ebStrict)
+            return nullptr;
+        }
+      }
+      return ConstantFP::get(Ty->getContext(), U);
     }
 
     /// We only fold functions with finite arguments. Folding NaN and inf is
@@ -3182,6 +3193,8 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
 
   const APFloat &Op1V = Op1->getValueAPF();
   const APFloat &Op2V = Op2->getValueAPF();
+  if (Op1V.isNaN() || Op2V.isNaN())
+    return nullptr;
 
   switch (Func) {
   default:
@@ -3196,16 +3209,16 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   case LibFunc_fmod:
   case LibFunc_fmodf:
     if (TLI->has(Func)) {
-      APFloat V = Op1->getValueAPF();
-      if (APFloat::opStatus::opOK == V.mod(Op2->getValueAPF()))
+      APFloat V = Op1V;
+      if (APFloat::opStatus::opOK == V.mod(Op2V))
         return ConstantFP::get(Ty->getContext(), V);
     }
     break;
   case LibFunc_remainder:
   case LibFunc_remainderf:
     if (TLI->has(Func)) {
-      APFloat V = Op1->getValueAPF();
-      if (APFloat::opStatus::opOK == V.remainder(Op2->getValueAPF()))
+      APFloat V = Op1V;
+      if (APFloat::opStatus::opOK == V.remainder(Op2V))
         return ConstantFP::get(Ty->getContext(), V);
     }
     break;
@@ -3299,6 +3312,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
 
       if (const auto *ConstrIntr =
               dyn_cast_if_present<ConstrainedFPIntrinsic>(Call)) {
+        if (Op1V.isNaN() || Op2V.isNaN())
+          return nullptr;
         RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
         APFloat Res = Op1V;
         APFloat::opStatus St;
@@ -3519,6 +3534,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       default:
         break;
       case Intrinsic::pow:
+        if (Op1V.isNaN() || Op2V.isNaN())
+          return nullptr;
         return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
       case Intrinsic::amdgcn_fmul_legacy:
         // The legacy behaviour is that multiplying +/- 0.0 by anything, even
@@ -3531,6 +3548,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       switch (IntrinsicID) {
       case Intrinsic::ldexp: {
+        if (Op1V.isNaN())
+          return nullptr;
         return ConstantFP::get(
             Ty->getContext(),
             scalbn(Op1V, Op2C->getSExtValue(), APFloat::rmNearestTiesToEven));
@@ -3551,6 +3570,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, Result);
       }
       case Intrinsic::powi: {
+        if (Op1V.isNaN())
+          return nullptr;
         int Exp = static_cast<int>(Op2C->getSExtValue());
         switch (Ty->getTypeID()) {
         case Type::HalfTyID:
@@ -3893,6 +3914,9 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         const APFloat &C3 = Op3->getValueAPF();
 
         if (const auto *ConstrIntr = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
+          if (C1.isNaN() || C2.isNaN() || C3.isNaN())
+            return nullptr;
+
           RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
           APFloat Res = C1;
           APFloat::opStatus St;
@@ -3924,6 +3948,8 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         }
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
+          if (C1.isNaN() || C2.isNaN() || C3.isNaN())
+            return nullptr;
           APFloat V = C1;
           V.fusedMultiplyAdd(C2, C3, APFloat::rmNearestTiesToEven);
           return ConstantFP::get(Ty->getContext(), V);
@@ -4333,6 +4359,9 @@ ConstantFoldScalarFrexpCall(Constant *Op, Type *IntTy) {
     return {};
 
   const APFloat &U = ConstFP->getValueAPF();
+  if (U.isNaN())
+    return {};
+
   int FrexpExp;
   APFloat FrexpMant = frexp(U, FrexpExp, APFloat::rmNearestTiesToEven);
   Constant *Result0 = ConstantFP::get(ConstFP->getType(), FrexpMant);
