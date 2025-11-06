@@ -152,6 +152,9 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
+  /// Save Parameter Decl for coroutine.
+  llvm::SmallVector<const ParmVarDecl *, 4> fnArgs;
+
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
   /// declarations.
