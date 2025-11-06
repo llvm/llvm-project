@@ -20996,6 +20996,15 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         return false;
       }))
     return std::nullopt;
+  if (S.areInstructionsWithCopyableElements() && EI && EI.UserTE->hasState() &&
+      EI.UserTE->hasCopyableElements() &&
+      EI.UserTE->getMainOp()->getParent() == S.getMainOp()->getParent() &&
+      all_of(VL, [&](Value *V) {
+        if (S.isCopyableElement(V))
+          return true;
+        return isUsedOutsideBlock(V);
+      }))
+    return std::nullopt;
   bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (((!HasCopyables && doesNotNeedToSchedule(VL)) ||
        all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))) {

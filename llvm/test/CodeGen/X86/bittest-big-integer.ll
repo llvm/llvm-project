@@ -1056,26 +1056,45 @@ define i32 @chain_reset_i256(ptr %p0, ptr %p1, ptr %p2, i32 %position) nounwind 
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: chain_reset_i256:
-; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; X64-NEXT:    movl $-2, %eax
-; X64-NEXT:    roll %cl, %eax
-; X64-NEXT:    shrl $3, %ecx
-; X64-NEXT:    andl $28, %ecx
-; X64-NEXT:    andl %eax, (%rdi,%rcx)
-; X64-NEXT:    movq (%rdi), %rcx
-; X64-NEXT:    movq 8(%rdi), %r8
-; X64-NEXT:    orq 24(%rdi), %r8
-; X64-NEXT:    movq 16(%rdi), %rdi
-; X64-NEXT:    orq %rcx, %rdi
-; X64-NEXT:    movl (%rsi), %eax
-; X64-NEXT:    movl %ecx, (%rsi)
-; X64-NEXT:    movl (%rdx), %ecx
-; X64-NEXT:    addl %ecx, %eax
-; X64-NEXT:    orq %r8, %rdi
-; X64-NEXT:    cmovnel %ecx, %eax
-; X64-NEXT:    retq
+; SSE-LABEL: chain_reset_i256:
+; SSE:       # %bb.0:
+; SSE-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE-NEXT:    movl $-2, %eax
+; SSE-NEXT:    roll %cl, %eax
+; SSE-NEXT:    shrl $3, %ecx
+; SSE-NEXT:    andl $28, %ecx
+; SSE-NEXT:    andl %eax, (%rdi,%rcx)
+; SSE-NEXT:    movq (%rdi), %rcx
+; SSE-NEXT:    movq 8(%rdi), %r8
+; SSE-NEXT:    orq 24(%rdi), %r8
+; SSE-NEXT:    movq 16(%rdi), %rdi
+; SSE-NEXT:    orq %rcx, %rdi
+; SSE-NEXT:    movl (%rsi), %eax
+; SSE-NEXT:    movl %ecx, (%rsi)
+; SSE-NEXT:    movl (%rdx), %ecx
+; SSE-NEXT:    addl %ecx, %eax
+; SSE-NEXT:    orq %r8, %rdi
+; SSE-NEXT:    cmovnel %ecx, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: chain_reset_i256:
+; AVX:       # %bb.0:
+; AVX-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX-NEXT:    movl $-2, %eax
+; AVX-NEXT:    roll %cl, %eax
+; AVX-NEXT:    shrl $3, %ecx
+; AVX-NEXT:    andl $28, %ecx
+; AVX-NEXT:    andl %eax, (%rdi,%rcx)
+; AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX-NEXT:    movl (%rdi), %ecx
+; AVX-NEXT:    movl (%rsi), %eax
+; AVX-NEXT:    movl %ecx, (%rsi)
+; AVX-NEXT:    movl (%rdx), %ecx
+; AVX-NEXT:    addl %ecx, %eax
+; AVX-NEXT:    vptest %ymm0, %ymm0
+; AVX-NEXT:    cmovnel %ecx, %eax
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %rem = and i32 %position, 255
   %ofs = zext nneg i32 %rem to i256
   %bit = shl nuw i256 1, %ofs

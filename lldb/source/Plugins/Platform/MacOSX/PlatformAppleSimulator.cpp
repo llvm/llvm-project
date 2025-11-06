@@ -90,7 +90,7 @@ void PlatformAppleSimulator::GetStatus(Stream &strm) {
   if (!sdk.empty())
     strm << "  SDK Path: \"" << sdk << "\"\n";
   else
-    strm << "  SDK Path: error: unable to locate SDK\n";
+    strm << "  SDK Path: <unable to locate SDK>\n";
 
 #if defined(__APPLE__)
   // This will get called by subclasses, so just output status on the current

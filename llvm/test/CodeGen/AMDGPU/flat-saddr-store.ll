@@ -54,7 +54,7 @@ define amdgpu_ps void @flat_store_saddr_i8_zext_vgpr_offset_neg2048(ptr inreg %s
 ; Uniformity edge cases
 ; --------------------------------------------------------------------------------
 
-@ptr.in.lds = internal addrspace(3) global ptr undef
+@ptr.in.lds = internal addrspace(3) global ptr poison
 
 ; Base pointer is uniform, but also in VGPRs
 define amdgpu_ps void @flat_store_saddr_uniform_ptr_in_vgprs(i32 %voffset, i8 %data) {

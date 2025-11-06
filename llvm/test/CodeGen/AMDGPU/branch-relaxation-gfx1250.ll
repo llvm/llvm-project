@@ -280,7 +280,7 @@ bb0:
   br i1 %tmp, label %bb2, label %bb3
 
 bb2:
-  store volatile i32 17, ptr addrspace(1) undef
+  store volatile i32 17, ptr addrspace(1) poison
   br label %bb4
 
 bb3:
@@ -375,7 +375,7 @@ bb0:
   br i1 %cmp0, label %bb2, label %bb1
 
 bb1:
-  %val = load volatile i32, ptr addrspace(4) undef
+  %val = load volatile i32, ptr addrspace(4) poison
   %cmp1 = icmp eq i32 %val, 3
   br i1 %cmp1, label %bb3, label %bb2
 
@@ -512,7 +512,7 @@ loop_body:
   br label %loop
 
 ret:
-  store volatile i32 7, ptr addrspace(1) undef
+  store volatile i32 7, ptr addrspace(1) poison
   ret void
 }
 
@@ -622,7 +622,7 @@ bb14:                                             ; preds = %bb13, %bb9
   br label %bb19
 
 bb19:                                             ; preds = %bb14, %bb13, %bb9
-  %tmp20 = phi i32 [ undef, %bb9 ], [ undef, %bb13 ], [ %tmp18, %bb14 ]
+  %tmp20 = phi i32 [ poison, %bb9 ], [ poison, %bb13 ], [ %tmp18, %bb14 ]
   %tmp21 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %arg5
   store i32 %tmp20, ptr addrspace(1) %tmp21, align 4
   ret void

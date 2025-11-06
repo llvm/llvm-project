@@ -655,7 +655,7 @@ bb:
   br label %bb5
 
 bb5:                                              ; preds = %bb5.backedge, %bb
-  %tmp4.i.sroa.0.0 = phi <9 x double> [ undef, %bb ], [ %tmp4.i.sroa.0.1, %bb5.backedge ]
+  %tmp4.i.sroa.0.0 = phi <9 x double> [ poison, %bb ], [ %tmp4.i.sroa.0.1, %bb5.backedge ]
   %tmp14.1.i = load i32, ptr inttoptr (i64 128 to ptr), align 128
   store i32 0, ptr addrspace(5) null, align 4
   %tmp14.2.i = load i32, ptr inttoptr (i64 128 to ptr), align 128

@@ -235,6 +235,7 @@ class SymbolVendor;
 class Symtab;
 class SyntheticChildren;
 class SyntheticChildrenFrontEnd;
+class SyntheticFrameProvider;
 class SystemRuntime;
 class Progress;
 class Target;
@@ -411,6 +412,8 @@ typedef std::shared_ptr<lldb_private::ScriptSummaryFormat>
 typedef std::shared_ptr<lldb_private::ScriptInterpreter> ScriptInterpreterSP;
 typedef std::shared_ptr<lldb_private::ScriptedFrameInterface>
     ScriptedFrameInterfaceSP;
+typedef std::shared_ptr<lldb_private::SyntheticFrameProvider>
+    SyntheticFrameProviderSP;
 typedef std::shared_ptr<lldb_private::ScriptedMetadata> ScriptedMetadataSP;
 typedef std::unique_ptr<lldb_private::ScriptedPlatformInterface>
     ScriptedPlatformInterfaceUP;

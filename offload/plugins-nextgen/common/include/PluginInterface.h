@@ -1063,6 +1063,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Error getDeviceStackSize(uint64_t &V) = 0;
 
+  virtual bool hasDeviceHeapSize() { return false; }
   virtual Error getDeviceHeapSize(uint64_t &V) {
     return Plugin::error(error::ErrorCode::UNSUPPORTED,
                          "%s not supported by platform", __func__);

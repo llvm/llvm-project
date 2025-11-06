@@ -992,6 +992,22 @@ func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: i32) {
 
 // -----
 
+func.func @invalid_alloc_alignment() {
+  // expected-error @below {{'memref.alloc' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = memref.alloc() {alignment = 3} : memref<4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_realloc_alignment(%src: memref<4xf32>) {
+  // expected-error @below {{'memref.realloc' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = memref.realloc %src {alignment = 7} : memref<4xf32> to memref<8xf32>
+  return
+}
+
+// -----
+
 func.func @test_alloc_memref_map_rank_mismatch() {
 ^bb0:
   // expected-error@+1 {{memref layout mismatch between rank and affine map: 2 != 1}}

@@ -904,8 +904,6 @@ public:
       case Intrinsic::dx_resource_casthandle:
       // NOTE: llvm.dbg.value is supported as is in DXIL.
       case Intrinsic::dbg_value:
-      // NOTE: llvm.assume is supported as is in DXIL.
-      case Intrinsic::assume:
       case Intrinsic::not_intrinsic:
         if (F.use_empty())
           F.eraseFromParent();

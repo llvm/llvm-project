@@ -197,6 +197,7 @@ static Value *expand16BitIsNormal(CallInst *Orig) {
 
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
+  case Intrinsic::assume:
   case Intrinsic::abs:
   case Intrinsic::atan2:
   case Intrinsic::exp:
@@ -988,6 +989,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::abs:
     Result = expandAbs(Orig);
     break;
+  case Intrinsic::assume:
+    Orig->eraseFromParent();
+    return true;
   case Intrinsic::atan2:
     Result = expandAtan2Intrinsic(Orig);
     break;

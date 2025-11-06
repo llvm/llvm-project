@@ -263,7 +263,7 @@ define amdgpu_ps float @flat_xchg_saddr_i32_rtn_neg2048(ptr inreg %sbase, i32 %v
 ; Uniformity edge cases
 ; --------------------------------------------------------------------------------
 
-@ptr.in.lds = internal addrspace(3) global ptr undef
+@ptr.in.lds = internal addrspace(3) global ptr poison
 
 ; Base pointer is uniform, but also in VGPRs
 define amdgpu_ps float @flat_xchg_saddr_uniform_ptr_in_vgprs_rtn(i32 %voffset, i32 %data) {
