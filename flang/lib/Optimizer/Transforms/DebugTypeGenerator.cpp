@@ -720,7 +720,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertTupleType(tupleTy, fileAttr, scope, declOp);
   } else if (mlir::isa<mlir::FunctionType>(Ty)) {
     // Handle function types - these represent procedure pointers after the
-    // BoxedProcedure pass has run and unwrapped the fir.boxproc type
+    // BoxedProcedure pass has run and unwrapped the fir.boxproc type, as well
+    // as dummy procedures (which are represented as function types in FIR)
     llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
 
     auto funcTy = mlir::cast<mlir::FunctionType>(Ty);
