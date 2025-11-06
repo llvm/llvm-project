@@ -13,7 +13,7 @@ import os
 import unittest
 from copy import copy
 from pathlib import PurePath
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, namedtuple
 
 from dex.utils.Exceptions import CommandParseError, NonFloatValueInCommand
 
@@ -35,6 +35,8 @@ from dex.command.commands.DexLimitSteps import DexLimitSteps
 from dex.command.commands.DexFinishTest import DexFinishTest
 from dex.command.commands.DexUnreachable import DexUnreachable
 from dex.command.commands.DexWatch import DexWatch
+from dex.command.commands.DexStepFunction import DexStepFunction
+from dex.command.commands.DexContinue import DexContinue
 from dex.utils import Timer
 from dex.utils.Exceptions import CommandParseError, DebuggerException
 
@@ -59,6 +61,8 @@ def _get_valid_commands():
         DexFinishTest.get_name(): DexFinishTest,
         DexUnreachable.get_name(): DexUnreachable,
         DexWatch.get_name(): DexWatch,
+        DexStepFunction.get_name(): DexStepFunction,
+        DexContinue.get_name(): DexContinue,
     }
 
 
@@ -83,7 +87,7 @@ def _merge_subcommands(command_name: str, valid_commands: dict) -> dict:
 
 
 def _build_command(
-    command_type, labels, addresses, raw_text: str, path: str, lineno: str
+    command_type, labels, addresses, raw_text: str, path, lineno: str
 ) -> CommandBase:
     """Build a command object from raw text.
 
@@ -98,13 +102,15 @@ def _build_command(
 
     def label_to_line(label_name: str) -> int:
         line = labels.get(label_name, None)
-        if line != None:
+        if line is not None:
             return line
-        raise format_unresolved_label_err(label_name, raw_text, path, lineno)
+        raise format_unresolved_label_err(label_name, raw_text, path.base, lineno)
 
     def get_address_object(address_name: str, offset: int = 0):
         if address_name not in addresses:
-            raise format_undeclared_address_err(address_name, raw_text, path, lineno)
+            raise format_undeclared_address_err(
+                address_name, raw_text, path.base, lineno
+            )
         return AddressExpression(address_name, offset)
 
     valid_commands = _merge_subcommands(
@@ -120,13 +126,13 @@ def _build_command(
     command = eval(raw_text, valid_commands)
     # pylint: enable=eval-used
     command.raw_text = raw_text
-    command.path = path
+    command.path = path.declared
     command.lineno = lineno
     return command
 
 
 def _search_line_for_cmd_start(line: str, start: int, valid_commands: dict) -> int:
-    """Scan `line` for a string matching any key in `valid_commands`.
+    r"""Scan `line` for a string matching any key in `valid_commands`.
 
     Start searching from `start`.
     Commands escaped with `\` (E.g. `\DexLabel('a')`) are ignored.
@@ -267,7 +273,8 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
     labels = {}  # dict of {name: line}.
     addresses = []  # list of addresses.
     address_resolutions = {}
-    cmd_path = path
+    CmdPath = namedtuple("cmd_path", "base declared")
+    cmd_path = CmdPath(path, path)
     declared_files = set()
     commands = defaultdict(dict)
     paren_balance = 0
@@ -346,17 +353,16 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
                 elif type(command) is DexDeclareAddress:
                     add_address(addresses, command, path, cmd_point.get_lineno())
                 elif type(command) is DexDeclareFile:
-                    cmd_path = command.declared_file
-                    if not os.path.isabs(cmd_path):
+                    declared_path = command.declared_file
+                    if not os.path.isabs(declared_path):
                         source_dir = (
                             source_root_dir
                             if source_root_dir
                             else os.path.dirname(path)
                         )
-                        cmd_path = os.path.join(source_dir, cmd_path)
-                    # TODO: keep stored paths as PurePaths for 'longer'.
-                    cmd_path = str(PurePath(cmd_path))
-                    declared_files.add(cmd_path)
+                        declared_path = os.path.join(source_dir, declared_path)
+                    cmd_path = CmdPath(cmd_path.base, str(PurePath(declared_path)))
+                    declared_files.add(cmd_path.declared)
                 elif type(command) is DexCommandLine and "DexCommandLine" in commands:
                     msg = "More than one DexCommandLine in file"
                     raise format_parse_err(msg, path, file_lines, err_point)
@@ -541,7 +547,7 @@ class TestParseCommand(unittest.TestCase):
     def test_parse_escaped(self):
         """Escaped commands are ignored."""
 
-        lines = ['words \MockCmd("IGNORED") words words words\n']
+        lines = ['words \\MockCmd("IGNORED") words words words\n']
 
         values = self._find_all_mock_values_in_lines(lines)
 

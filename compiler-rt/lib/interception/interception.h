@@ -19,14 +19,25 @@
 
 #if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_APPLE &&    \
     !SANITIZER_NETBSD && !SANITIZER_WINDOWS && !SANITIZER_FUCHSIA && \
-    !SANITIZER_SOLARIS
+    !SANITIZER_SOLARIS && !SANITIZER_HAIKU && !SANITIZER_AIX
 #  error "Interception doesn't work on this operating system."
 #endif
 
 // These typedefs should be used only in the interceptor definitions to replace
 // the standard system types (e.g. SSIZE_T instead of ssize_t)
-typedef __sanitizer::uptr    SIZE_T;
-typedef __sanitizer::sptr    SSIZE_T;
+// On Windows the system headers (basetsd.h) provide a conflicting definition
+// of SIZE_T/SSIZE_T that do not match the real size_t/ssize_t for 32-bit
+// systems (using long instead of the expected int). Work around the typedef
+// redefinition by #defining SIZE_T instead of using a typedef.
+// TODO: We should be using __sanitizer::usize (and a new ssize) instead of
+// these new macros as long as we ensure they match the real system definitions.
+#if SANITIZER_WINDOWS
+// Ensure that (S)SIZE_T were already defined as we are about to override them.
+#  include <basetsd.h>
+#endif
+
+#define SIZE_T __sanitizer::usize
+#define SSIZE_T __sanitizer::ssize
 typedef __sanitizer::sptr    PTRDIFF_T;
 typedef __sanitizer::s64     INTMAX_T;
 typedef __sanitizer::u64     UINTMAX_T;
@@ -157,6 +168,16 @@ const interpose_substitution substitution_##func_name[]             \
     extern "C" ret_type func(__VA_ARGS__);
 # define DECLARE_WRAPPER_WINAPI(ret_type, func, ...)  \
     extern "C" __declspec(dllimport) ret_type __stdcall func(__VA_ARGS__);
+#elif SANITIZER_AIX
+#  define WRAP(x) __interceptor_##x
+#  define TRAMPOLINE(x) WRAP(x)
+// # define WRAPPER_NAME(x) "__interceptor_" #x
+#  define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
+// AIX's linker will not select the weak symbol, so don't use weak for the
+// interceptors.
+#  define DECLARE_WRAPPER(ret_type, func, ...) \
+    extern "C" ret_type func(__VA_ARGS__)      \
+        __attribute__((alias("__interceptor_" #func), visibility("default")));
 #elif !SANITIZER_FUCHSIA  // LINUX, FREEBSD, NETBSD, SOLARIS
 # define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
 # if ASM_INTERCEPTOR_TRAMPOLINE_SUPPORT
@@ -185,6 +206,11 @@ const interpose_substitution substitution_##func_name[]             \
 #  else
 #   define __ASM_WEAK_WRAPPER(func) ".weak " #func "\n"
 #  endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
+#  if defined(__arm__) || defined(__aarch64__)
+#   define ASM_TYPE_FUNCTION_STR "%function"
+#  else
+#   define ASM_TYPE_FUNCTION_STR "@function"
+#  endif
 // Keep trampoline implementation in sync with sanitizer_common/sanitizer_asm.h
 #  define DECLARE_WRAPPER(ret_type, func, ...)                                 \
      extern "C" ret_type func(__VA_ARGS__);                                    \
@@ -196,12 +222,14 @@ const interpose_substitution substitution_##func_name[]             \
        __ASM_WEAK_WRAPPER(func)                                                \
        ".set " #func ", " SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"           \
        ".globl " SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                    \
-       ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", %function\n"         \
+       ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
+         ASM_TYPE_FUNCTION_STR "\n"                                            \
        SANITIZER_STRINGIFY(TRAMPOLINE(func)) ":\n"                             \
-       SANITIZER_STRINGIFY(CFI_STARTPROC) "\n"                                 \
-       SANITIZER_STRINGIFY(ASM_TAIL_CALL) " __interceptor_"                    \
-         SANITIZER_STRINGIFY(ASM_PREEMPTIBLE_SYM(func)) "\n"                   \
-       SANITIZER_STRINGIFY(CFI_ENDPROC) "\n"                                   \
+       C_ASM_STARTPROC "\n"                                                    \
+       C_ASM_TAIL_CALL(SANITIZER_STRINGIFY(TRAMPOLINE(func)),                  \
+                       "__interceptor_"                                        \
+                         SANITIZER_STRINGIFY(ASM_PREEMPTIBLE_SYM(func))) "\n"  \
+       C_ASM_ENDPROC "\n"                                                      \
        ".size  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
             ".-" SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                    \
      );
@@ -331,26 +359,35 @@ const interpose_substitution substitution_##func_name[]             \
 #endif
 
 // ISO C++ forbids casting between pointer-to-function and pointer-to-object,
-// so we use casting via an integral type __interception::uptr,
-// assuming that system is POSIX-compliant. Using other hacks seem
-// challenging, as we don't even pass function type to
-// INTERCEPT_FUNCTION macro, only its name.
+// so we use casts via uintptr_t (the local __sanitizer::uptr equivalent).
 namespace __interception {
-#if defined(_WIN64)
-typedef unsigned long long uptr;
+
+#if defined(__ELF__) && !SANITIZER_FUCHSIA
+// The use of interceptors makes many sanitizers unusable for static linking.
+// Define a function, if called, will cause a linker error (undefined _DYNAMIC).
+// However, -static-pie (which is not common) cannot be detected at link time.
+extern uptr kDynamic[] asm("_DYNAMIC");
+inline void DoesNotSupportStaticLinking() {
+  [[maybe_unused]] volatile auto x = &kDynamic;
+}
 #else
-typedef unsigned long uptr;
-#endif  // _WIN64
+inline void DoesNotSupportStaticLinking() {}
+#endif
 }  // namespace __interception
 
 #define INCLUDED_FROM_INTERCEPTION_LIB
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+#if SANITIZER_AIX
+#  include "interception_aix.h"
+#  define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_AIX(func)
+#  define INTERCEPT_FUNCTION_VER(func, symver) INTERCEPT_FUNCTION_AIX(func)
 
-# include "interception_linux.h"
-# define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)
-# define INTERCEPT_FUNCTION_VER(func, symver) \
+#elif SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
+
+#  include "interception_linux.h"
+#  define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)
+#  define INTERCEPT_FUNCTION_VER(func, symver) \
     INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver)
 #elif SANITIZER_APPLE
 # include "interception_mac.h"

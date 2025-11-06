@@ -9,8 +9,8 @@
 
 ## Handle invalid argument.
 # RUN: llvm-symbolizer "DATA tmp.o Z" --output-style=JSON | \
-# RUN:   FileCheck %s --check-prefix=INVARG --strict-whitespace --match-full-lines --implicit-check-not={{.}}
-# INVARG:[{"ModuleName":"tmp.o","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}]
+# RUN:   FileCheck %s -DMSG=%errc_ENOENT --check-prefix=INVARG --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# INVARG:[{"Error":{"Message":"[[MSG]]"},"ModuleName":"tmp.o","SymName":"Z"}]
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 

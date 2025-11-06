@@ -10,6 +10,8 @@
 // constants for the GOFF file format.
 //
 // GOFF specifics can be found in MVS Program Management: Advanced Facilities.
+// See
+// https://www.ibm.com/docs/en/zos/3.1.0?topic=facilities-generalized-object-file-format-goff
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,13 +21,24 @@
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
+
 namespace GOFF {
 
+/// \brief Length of the parts of a physical GOFF record.
 constexpr uint8_t RecordLength = 80;
 constexpr uint8_t RecordPrefixLength = 3;
 constexpr uint8_t PayloadLength = 77;
+constexpr uint8_t RecordContentLength = RecordLength - RecordPrefixLength;
 
-// Prefix byte on every record. This indicates GOFF format.
+/// \brief Maximum data length before starting a new card for RLD and TXT data.
+///
+/// The maximum number of bytes that can be included in an RLD or TXT record and
+/// their continuations is a SIGNED 16 bit int despite what the spec says. The
+/// number of bytes we allow ourselves to attach to a card is thus arbitrarily
+/// limited to 32K-1 bytes.
+constexpr uint16_t MaxDataLength = 32 * 1024 - 1;
+
+/// \brief Prefix byte on every record. This indicates GOFF format.
 constexpr uint8_t PTVPrefix = 0x03;
 
 enum RecordType : uint8_t {
@@ -154,6 +167,92 @@ enum ENDEntryPointRequest : uint8_t {
 // \brief Subsections of the primary C_CODE section in the object file.
 enum SubsectionKind : uint8_t {
   SK_PPA1 = 2,
+  SK_PPA2 = 4,
+};
+
+// The standard System/390 convention is to name the high-order (leftmost) bit
+// in a byte as bit zero. The Flags type helps to set bits in byte according
+// to this numeration order.
+class Flags {
+  uint8_t Val = 0;
+
+  constexpr static uint8_t bits(uint8_t BitIndex, uint8_t Length, uint8_t Value,
+                                uint8_t OldValue) {
+    uint8_t Pos = 8 - BitIndex - Length;
+    uint8_t Mask = ((1 << Length) - 1) << Pos;
+    Value = Value << Pos;
+    return (OldValue & ~Mask) | Value;
+  }
+
+public:
+  constexpr Flags() = default;
+  constexpr Flags(uint8_t BitIndex, uint8_t Length, uint8_t Value)
+      : Val(bits(BitIndex, Length, Value, 0)) {}
+
+  template <typename T>
+  constexpr void set(uint8_t BitIndex, uint8_t Length, T NewValue) {
+    Val = bits(BitIndex, Length, static_cast<uint8_t>(NewValue), Val);
+  }
+
+  template <typename T>
+  constexpr T get(uint8_t BitIndex, uint8_t Length) const {
+    return static_cast<T>((Val >> (8 - BitIndex - Length)) &
+                          ((1 << Length) - 1));
+  }
+
+  constexpr operator uint8_t() const { return Val; }
+};
+
+// Structure for the flag field of a symbol. See
+// https://www.ibm.com/docs/en/zos/3.1.0?topic=formats-external-symbol-definition-record
+// at offset 41 for the definition.
+struct SymbolFlags {
+  Flags SymFlags;
+
+#define GOFF_SYMBOL_FLAG(NAME, TYPE, BITINDEX, LENGTH)                         \
+  void set##NAME(TYPE Val) { SymFlags.set<TYPE>(BITINDEX, LENGTH, Val); }      \
+  TYPE get##NAME() const { return SymFlags.get<TYPE>(BITINDEX, LENGTH); }
+
+  GOFF_SYMBOL_FLAG(FillBytePresence, bool, 0, 1)
+  GOFF_SYMBOL_FLAG(Mangled, bool, 1, 1)
+  GOFF_SYMBOL_FLAG(Renameable, bool, 2, 1)
+  GOFF_SYMBOL_FLAG(RemovableClass, bool, 3, 1)
+  GOFF_SYMBOL_FLAG(ReservedQwords, ESDReserveQwords, 5, 3)
+
+#undef GOFF_SYMBOL_FLAG
+
+  constexpr operator uint8_t() const { return static_cast<uint8_t>(SymFlags); }
+};
+
+// Structure for the behavioral attributes. See
+// https://www.ibm.com/docs/en/zos/3.1.0?topic=record-external-symbol-definition-behavioral-attributes
+// for the definition.
+struct BehavioralAttributes {
+  Flags Attr[10];
+
+#define GOFF_BEHAVIORAL_ATTRIBUTE(NAME, TYPE, ATTRIDX, BITINDEX, LENGTH)       \
+  void set##NAME(TYPE Val) { Attr[ATTRIDX].set<TYPE>(BITINDEX, LENGTH, Val); } \
+  TYPE get##NAME() const { return Attr[ATTRIDX].get<TYPE>(BITINDEX, LENGTH); }
+
+  GOFF_BEHAVIORAL_ATTRIBUTE(Amode, GOFF::ESDAmode, 0, 0, 8)
+  GOFF_BEHAVIORAL_ATTRIBUTE(Rmode, GOFF::ESDRmode, 1, 0, 8)
+  GOFF_BEHAVIORAL_ATTRIBUTE(TextStyle, GOFF::ESDTextStyle, 2, 0, 4)
+  GOFF_BEHAVIORAL_ATTRIBUTE(BindingAlgorithm, GOFF::ESDBindingAlgorithm, 2, 4,
+                            4)
+  GOFF_BEHAVIORAL_ATTRIBUTE(TaskingBehavior, GOFF::ESDTaskingBehavior, 3, 0, 3)
+  GOFF_BEHAVIORAL_ATTRIBUTE(ReadOnly, bool, 3, 4, 1)
+  GOFF_BEHAVIORAL_ATTRIBUTE(Executable, GOFF::ESDExecutable, 3, 5, 3)
+  GOFF_BEHAVIORAL_ATTRIBUTE(DuplicateSymbolSeverity,
+                            GOFF::ESDDuplicateSymbolSeverity, 4, 2, 2)
+  GOFF_BEHAVIORAL_ATTRIBUTE(BindingStrength, GOFF::ESDBindingStrength, 4, 4, 4)
+  GOFF_BEHAVIORAL_ATTRIBUTE(LoadingBehavior, GOFF::ESDLoadingBehavior, 5, 0, 2)
+  GOFF_BEHAVIORAL_ATTRIBUTE(COMMON, bool, 5, 2, 1)
+  GOFF_BEHAVIORAL_ATTRIBUTE(IndirectReference, bool, 5, 3, 1)
+  GOFF_BEHAVIORAL_ATTRIBUTE(BindingScope, GOFF::ESDBindingScope, 5, 4, 4)
+  GOFF_BEHAVIORAL_ATTRIBUTE(LinkageType, GOFF::ESDLinkageType, 6, 2, 1)
+  GOFF_BEHAVIORAL_ATTRIBUTE(Alignment, GOFF::ESDAlignment, 6, 3, 5)
+
+#undef GOFF_BEHAVIORAL_ATTRIBUTE
 };
 } // end namespace GOFF
 

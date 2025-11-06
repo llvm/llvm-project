@@ -13,7 +13,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <limits>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -138,9 +137,9 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
   std::tie(SchedClassId, std::ignore) = ResolvedSchedClass::resolveSchedClassId(
       State_.getSubtargetInfo(), State_.getInstrInfo(), MCI);
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  const MCSchedClassDesc *const SCDesc =
-      State_.getSubtargetInfo().getSchedModel().getSchedClassDesc(SchedClassId);
-  writeEscaped<kEscapeCsv>(OS, SCDesc->Name);
+  StringRef SCDescName =
+      State_.getSubtargetInfo().getSchedModel().getSchedClassName(SchedClassId);
+  writeEscaped<kEscapeCsv>(OS, SCDescName);
 #else
   OS << SchedClassId;
 #endif
@@ -255,8 +254,7 @@ static void writeLatencySnippetHtml(raw_ostream &OS,
   }
 }
 
-void Analysis::printPointHtml(const Benchmark &Point,
-                              llvm::raw_ostream &OS) const {
+void Analysis::printPointHtml(const Benchmark &Point, raw_ostream &OS) const {
   OS << "<li><span class=\"mono\" title=\"";
   writeSnippet<EscapeTag, kEscapeHtmlString>(OS, Point.AssembledSnippet, "\n");
   OS << "\">";
@@ -411,9 +409,9 @@ void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
   OS << "</table>";
 }
 
-void Analysis::printClusterRawHtml(
-    const BenchmarkClustering::ClusterId &Id, StringRef display_name,
-    llvm::raw_ostream &OS) const {
+void Analysis::printClusterRawHtml(const BenchmarkClustering::ClusterId &Id,
+                                   StringRef display_name,
+                                   raw_ostream &OS) const {
   const auto &Points = Clustering_.getPoints();
   const auto &Cluster = Clustering_.getCluster(Id);
   if (Cluster.PointIndices.empty())
@@ -448,7 +446,7 @@ void Analysis::printClusterRawHtml(
 
 } // namespace exegesis
 
-static constexpr const char kHtmlHead[] = R"(
+static constexpr char kHtmlHead[] = R"(
 <head>
 <title>llvm-exegesis Analysis Results</title>
 <style>
@@ -526,6 +524,9 @@ Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
   OS << "</span></h3><h3>Cpu: <span class=\"mono\">";
   writeEscaped<kEscapeHtml>(OS, FirstPoint.CpuName);
   OS << "</span></h3>";
+  OS << "<h3>Epsilon: <span class=\"mono\">"
+     << format("%0.2f", std::sqrt(AnalysisInconsistencyEpsilonSquared_))
+     << "</span></h3>";
 
   const auto &SI = State_.getSubtargetInfo();
   for (const auto &RSCAndPoints : makePointsPerSchedClass()) {
@@ -539,8 +540,8 @@ Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
         continue; // Ignore noise and errors. FIXME: take noise into account ?
       if (ClusterId.isUnstable() ^ AnalysisDisplayUnstableOpcodes_)
         continue; // Either display stable or unstable clusters only.
-      auto SchedClassClusterIt = llvm::find_if(
-          SchedClassClusters, [ClusterId](const SchedClassCluster &C) {
+      auto SchedClassClusterIt =
+          find_if(SchedClassClusters, [ClusterId](const SchedClassCluster &C) {
             return C.id() == ClusterId;
           });
       if (SchedClassClusterIt == SchedClassClusters.end()) {
@@ -562,7 +563,8 @@ Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
     OS << "<div class=\"inconsistency\"><p>Sched Class <span "
           "class=\"sched-class-name\">";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    writeEscaped<kEscapeHtml>(OS, RSCAndPoints.RSC.SCDesc->Name);
+    writeEscaped<kEscapeHtml>(OS, SI.getSchedModel().getSchedClassName(
+                                      RSCAndPoints.RSC.SchedClassId));
 #else
     OS << RSCAndPoints.RSC.SchedClassId;
 #endif

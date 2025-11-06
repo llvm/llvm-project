@@ -4,19 +4,26 @@
  ; to a position where the stack might still be accessed by a load or store
  
  ; RUN: llc -x=mir -simplify-mir -run-pass=shrink-wrap -o - %s | FileCheck %s
+ ; RUN: llc -x=mir -simplify-mir -passes='shrink-wrap' -o - %s | FileCheck %s
  ; CHECK:      name:            compiler_pop_stack
  ; CHECK:      frameInfo:
- ; CHECK:      savePoint:       '%bb.1'
- ; CHECK:      restorePoint:    '%bb.7'
+ ; CHECK:        savePoint:
+ ; CHECK-NEXT:     - point:           '%bb.1'
+ ; CHECK:        restorePoint:
+ ; CHECK-NEXT:     - point:           '%bb.7'
  ; CHECK:      name:            compiler_pop_stack_no_memoperands
  ; CHECK:      frameInfo:
- ; CHECK:      savePoint:       '%bb.1'
- ; CHECK:      restorePoint:    '%bb.7'
+ ; CHECK:        savePoint:
+ ; CHECK-NEXT:     - point:           '%bb.1'
+ ; CHECK:        restorePoint:
+ ; CHECK-NEXT:     - point:           '%bb.7'
  ; CHECK:      name:            f
  ; CHECK:      frameInfo:
- ; CHECK:      savePoint:       '%bb.2'
- ; CHECK-NEXT: restorePoint:    '%bb.4'
- ; CHECK-NEXT: stack:
+ ; CHECK:        savePoint:
+ ; CHECK-NEXT:     - point:           '%bb.2'
+ ; CHECK:        restorePoint:
+ ; CHECK-NEXT:     - point:           '%bb.4'
+ ; CHECK:      stack:
 
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
@@ -46,7 +53,7 @@
 
 
  ; Test from: https://bugs.llvm.org/show_bug.cgi?id=37472
-  define i32 @f(%struct.S* nocapture %arg, i32 %arg1) {
+  define i32 @f(ptr nocapture %arg, i32 %arg1) {
   bb:
     %tmp = alloca [4 x i8], align 1
     %tmp6 = getelementptr inbounds [4 x i8], ptr %tmp, i64 0, i64 3

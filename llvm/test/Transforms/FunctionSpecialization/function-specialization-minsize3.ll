@@ -4,7 +4,7 @@
 ; specialisation for the call that does not have the attribute:
 ;
 ; CHECK: plus:
-; CHECK:   %tmp0 = call i64 @compute.1(i64 %x, ptr @plus)
+; CHECK:   %tmp0 = call i64 @compute.specialized.1(i64 %x, ptr @plus)
 ; CHECK:   br label %merge
 ; CHECK: minus:
 ; CHECK:   %tmp1 = call i64 @compute(i64 %x, ptr @minus) #0

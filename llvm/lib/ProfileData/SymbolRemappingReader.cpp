@@ -37,7 +37,7 @@ Error SymbolRemappingReader::read(MemoryBuffer &B) {
     StringRef Line = *LineIt;
     Line = Line.ltrim(' ');
     // line_iterator only detects comments starting in column 1.
-    if (Line.startswith("#") || Line.empty())
+    if (Line.starts_with("#") || Line.empty())
       continue;
 
     SmallVector<StringRef, 4> Parts;

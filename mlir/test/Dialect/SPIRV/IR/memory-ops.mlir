@@ -8,21 +8,21 @@ func.func @access_chain_struct() -> () {
   %0 = spirv.Constant 1: i32
   %1 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}, {{.*}}] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4 x f32>)>, Function>
-  %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32
+  %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
 func.func @access_chain_1D_array(%arg0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4xf32>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}] : !spirv.ptr<!spirv.array<4 x f32>, Function>
-  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32
+  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
 func.func @access_chain_2D_array_1(%arg0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}, {{.*}}] : !spirv.ptr<!spirv.array<4 x !spirv.array<4 x f32>>, Function>
-  %1 = spirv.AccessChain %0[%arg0, %arg0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32
+  %1 = spirv.AccessChain %0[%arg0, %arg0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   %2 = spirv.Load "Function" %1 ["Volatile"] : f32
   return
 }
@@ -30,7 +30,7 @@ func.func @access_chain_2D_array_1(%arg0 : i32) -> () {
 func.func @access_chain_2D_array_2(%arg0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}] : !spirv.ptr<!spirv.array<4 x !spirv.array<4 x f32>>, Function>
-  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32
+  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
   %2 = spirv.Load "Function" %1 ["Volatile"] : !spirv.array<4xf32>
   return
 }
@@ -38,7 +38,7 @@ func.func @access_chain_2D_array_2(%arg0 : i32) -> () {
 func.func @access_chain_rtarray(%arg0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.rtarray<f32>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}] : !spirv.ptr<!spirv.rtarray<f32>, Function>
-  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.rtarray<f32>, Function>, i32
+  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.rtarray<f32>, Function>, i32 -> !spirv.ptr<f32, Function>
   %2 = spirv.Load "Function" %1 ["Volatile"] : f32
   return
 }
@@ -49,7 +49,7 @@ func.func @access_chain_non_composite() -> () {
   %0 = spirv.Constant 1: i32
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
   // expected-error @+1 {{cannot extract from non-composite type 'f32' with index 0}}
-  %2 = spirv.AccessChain %1[%0] : !spirv.ptr<f32, Function>, i32
+  %2 = spirv.AccessChain %1[%0] : !spirv.ptr<f32, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -57,8 +57,8 @@ func.func @access_chain_non_composite() -> () {
 
 func.func @access_chain_no_indices(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{expected at least one index}}
-  %1 = spirv.AccessChain %0[] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 0 operands and 1 types}}
+  %1 = spirv.AccessChain %0[] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -75,8 +75,8 @@ func.func @access_chain_missing_comma(%index0 : i32) -> () {
 
 func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{'spirv.AccessChain' op indices types' count must be equal to indices info count}}
-  %1 = spirv.AccessChain %0[%index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 1 operands and 2 types}}
+  %1 = spirv.AccessChain %0[%index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
   return
 }
 
@@ -84,8 +84,8 @@ func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
 
 func.func @access_chain_missing_indices_type(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{'spirv.AccessChain' op indices types' count must be equal to indices info count}}
-  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 2 operands and 1 types}}
+  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -94,8 +94,8 @@ func.func @access_chain_missing_indices_type(%index0 : i32) -> () {
 func.func @access_chain_invalid_type(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
   %1 = spirv.Load "Function" %0 ["Volatile"] : !spirv.array<4x!spirv.array<4xf32>>
-  // expected-error @+1 {{expected a pointer to composite type, but provided '!spirv.array<4 x !spirv.array<4 x f32>>'}}
-  %2 = spirv.AccessChain %1[%index0] : !spirv.array<4x!spirv.array<4xf32>>, i32
+  // expected-error @+1 {{'spirv.AccessChain' op operand #0 must be any SPIR-V pointer type, but got '!spirv.array<4 x !spirv.array<4 x f32>>'}}
+  %2 = spirv.AccessChain %1[%index0] : !spirv.array<4x!spirv.array<4xf32>>, i32 -> f32
   return
 }
 
@@ -113,7 +113,7 @@ func.func @access_chain_invalid_index_1(%index0 : i32) -> () {
 func.func @access_chain_invalid_index_2(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
   // expected-error @+1 {{index must be an integer spirv.Constant to access element of spirv.struct}}
-  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32
+  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -123,7 +123,7 @@ func.func @access_chain_invalid_constant_type_1() -> () {
   %0 = arith.constant 1: i32
   %1 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
   // expected-error @+1 {{index must be an integer spirv.Constant to access element of spirv.struct, but provided arith.constant}}
-  %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32
+  %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -133,7 +133,7 @@ func.func @access_chain_out_of_bounds() -> () {
   %index0 = "spirv.Constant"() { value = 12: i32} : () -> i32
   %0 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
   // expected-error @+1 {{'spirv.AccessChain' op index 12 out of bounds for '!spirv.struct<(f32, !spirv.array<4 x f32>)>'}}
-  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32
+  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -142,9 +142,9 @@ func.func @access_chain_out_of_bounds() -> () {
 func.func @access_chain_invalid_accessing_type(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
   // expected-error @+1 {{cannot extract from non-composite type 'f32' with index 0}}
-  %1 = spirv.AccessChain %0[%index, %index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32, i32
+  %1 = spirv.AccessChain %0[%index0, %index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32, i32 -> !spirv.ptr<f32, Function>
   return
-
+}
 // -----
 
 //===----------------------------------------------------------------------===//
@@ -356,6 +356,16 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+// CHECK-LABEL: @image_load
+func.func @image_load() -> () {
+  %0 = spirv.Variable : !spirv.ptr<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, Function>
+  // CHECK: spirv.Load "Function" %{{.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>
+  %1 = spirv.Load "Function" %0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.StoreOp
 //===----------------------------------------------------------------------===//
@@ -525,6 +535,61 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+func.func @variable_ptr_physical_buffer() -> () {
+  %0 = spirv.Variable {aliased_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Function>
+  %1 = spirv.Variable {restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_physical_buffer_no_decoration() -> () {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  %0 = spirv.Variable : !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_physical_buffer_two_alias_decorations() -> () {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  %0 = spirv.Variable {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_array_physical_buffer() -> () {
+  %0 = spirv.Variable {aliased_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
+  %1 = spirv.Variable {restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_array_physical_buffer_no_decoration() -> () {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  %0 = spirv.Variable :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_array_physical_buffer_two_alias_decorations() -> () {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  %0 = spirv.Variable {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
+  return
+}
+
+// -----
+
 func.func @variable_bind() -> () {
   // expected-error @+1 {{cannot have 'descriptor_set' attribute (only allowed in spirv.GlobalVariable)}}
   %0 = spirv.Variable bind(1, 2) : !spirv.ptr<f32, Function>
@@ -644,7 +709,7 @@ func.func @copy_memory_print_maa() {
 // CHECK-SAME:    %[[ARG1:.*]]: i64)
 // CHECK: spirv.PtrAccessChain %[[ARG0]][%[[ARG1]]] : !spirv.ptr<f32, CrossWorkgroup>, i64
 func.func @ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
-  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
+  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
   return
 }
 
@@ -659,6 +724,6 @@ func.func @ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64
 // CHECK-SAME:    %[[ARG1:.*]]: i64)
 // CHECK: spirv.InBoundsPtrAccessChain %[[ARG0]][%[[ARG1]]] : !spirv.ptr<f32, CrossWorkgroup>, i64
 func.func @inbounds_ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
-  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
+  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
   return
 }

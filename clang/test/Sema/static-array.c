@@ -23,11 +23,11 @@ void f(int *p) {
 
   char d[4];
   cat((int *)d); // expected-warning {{array argument is too small; is of size 4, callee requires at least 12}}
-  cat(d); // expected-warning {{array argument is too small; is of size 4, callee requires at least 12}} expected-warning {{incompatible pointer types}}
+  cat(d); // expected-warning {{array argument is too small; is of size 4, callee requires at least 12}} expected-error {{incompatible pointer types}}
 
   char e[12];
   cat((int *)e);
-  cat(e); // expected-warning {{incompatible pointer types}}
+  cat(e); // expected-error {{incompatible pointer types}}
 }
 
 

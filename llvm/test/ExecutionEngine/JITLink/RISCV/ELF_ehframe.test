@@ -1,0 +1,104 @@
+# RUN: yaml2obj -DELFCLASS=ELFCLASS32 -o %t.32.o %s
+# RUN: llvm-jitlink -noexec -check %s %t.32.o
+# RUN: yaml2obj -DELFCLASS=ELFCLASS64 -o %t.64.o %s
+# RUN: llvm-jitlink -noexec -check %s %t.64.o
+
+### Compiled from the following code with -mattr=+relax to force relocations for
+### address_range and DW_CFA_advance_loc (both needed for .balign).
+## 	.text
+## 	.globl	main
+## 	.p2align	1
+## 	.type	main,@function
+## main:
+## 	.cfi_startproc
+##     .balign 8
+## 	addi	sp, sp, -16
+## cfa_advance_loc:
+## 	.cfi_def_cfa_offset 16
+##     nop
+## main_end:
+## 	.size	main, main_end-main
+## 	.cfi_endproc
+
+--- !ELF
+FileHeader:
+  Class:           [[ELFCLASS]]
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_RISCV
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x8
+    Content:         13000000130101FF13000000
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Content:         1000000000000000017A5200017801011B0C02001000000018000000000000000000000000400E10
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Type:            R_RISCV_ALIGN
+        Addend:          4
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x1C
+        Symbol:          main
+        Type:            R_RISCV_32_PCREL
+      - Offset:          0x20
+        Symbol:          main_end
+        Type:            R_RISCV_ADD32
+      - Offset:          0x20
+        Symbol:          main
+        Type:            R_RISCV_SUB32
+      - Offset:          0x25
+        Symbol:          cfa_advance_loc
+        Type:            R_RISCV_SET6
+      - Offset:          0x25
+        Symbol:          main
+        Type:            R_RISCV_SUB6
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .symtab
+Symbols:
+  - Name:            cfa_advance_loc
+    Section:         .text
+    Value:           0x8
+  - Name:            main_end
+    Section:         .text
+    Value:           0xC
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0xC
+  - Name:            eh_frame
+    Type:            STT_SECTION
+    Binding:         STB_GLOBAL
+    Section:         .eh_frame
+    Size:            0x28
+...
+
+## CIE_pointer
+# jitlink-check: *{4}(eh_frame + 0x1c) = main - (eh_frame + 0x1c)
+## address_range
+# jitlink-check: *{4}(eh_frame + 0x20) = main_end - main
+## DW_CFA_advance_loc
+# jitlink-check: (*{1}(eh_frame + 0x25)) & 0x3f = cfa_advance_loc - main

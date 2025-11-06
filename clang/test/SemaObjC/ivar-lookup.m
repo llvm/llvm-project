@@ -29,7 +29,7 @@ extern struct foo x;
 
 @implementation A
 - (int*)method {
-  int *ip = [Ivar method]; // expected-warning{{incompatible pointer types initializing 'int *' with an expression of type 'float *'}}
+  int *ip = [Ivar method]; // expected-error{{incompatible pointer types initializing 'int *' with an expression of type 'float *'}}
                            // Note that there is no warning in Objective-C++
   return 0;
 }
@@ -95,11 +95,11 @@ extern struct foo x;
   union U {
     __typeof(myStatus) __in;  // fails.
   };
-  struct S {
+  struct S { // expected-note{{previous definition is here}}
     __typeof(myStatus) __in;  // fails.
     struct S1 { // expected-warning {{declaration does not declare anything}}
       __typeof(myStatus) __in;  // fails.
-      struct S { // expected-warning {{declaration does not declare anything}}
+      struct S { // expected-error {{nested redefinition of 'S'}}
         __typeof(myStatus) __in;  // fails.
       };
     };

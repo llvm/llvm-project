@@ -2,7 +2,7 @@
 #
 # This test ensure no outlined epilog is formed when X16 is live across the helper.
 --- |
-  @FuncPtr = local_unnamed_addr global i32 (i32)* null, align 8
+  @FuncPtr = local_unnamed_addr global ptr null, align 8
 
   define i32 @_Z3fooi(i32) minsize "frame-pointer"="all" {
     ret i32 0

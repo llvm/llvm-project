@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-eabi -verify %s
+// RUN: %clang_cc1 -triple aarch64 -verify %s
 
 #include "arm_acle.h"
 

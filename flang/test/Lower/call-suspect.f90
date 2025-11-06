@@ -5,10 +5,7 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPs1() {
-! CHECK: %[[cast:.*]] = fir.convert %{{.*}} : (!fir.ref<f32>) -> !fir.ref<!fir.char<1,?>>
-! CHECK: %[[undef:.*]] = fir.undefined index
-! CHECK: %[[box:.*]] = fir.emboxchar %[[cast]], %[[undef]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK: fir.call @_QPs3(%[[box]]) {{.*}}: (!fir.boxchar<1>) -> ()
+! CHECK: fir.convert %{{.*}} : ((!fir.boxchar<1>) -> ()) -> ((!fir.ref<f32>) -> ())
 
 ! Pass a REAL by reference to a subroutine expecting a CHARACTER
 subroutine s1
@@ -16,11 +13,7 @@ subroutine s1
 end subroutine s1
 
 ! CHECK-LABEL: func @_QPs2(
-! CHECK: %[[ptr:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
-! CHECK: %[[cast:.*]] = fir.convert %[[ptr]] : (!fir.ptr<f32>) -> !fir.ref<!fir.char<1,?>>
-! CHECK: %[[undef:.*]] = fir.undefined index
-! CHECK: %[[box:.*]] = fir.emboxchar %[[cast]], %[[undef]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK: fir.call @_QPs3(%[[box]]) {{.*}}: (!fir.boxchar<1>) -> ()
+! CHECK: fir.convert %{{.*}} : ((!fir.boxchar<1>) -> ()) -> ((!fir.ref<f32>) -> ())
 
 ! Pass a REAL, POINTER data reference to a subroutine expecting a CHARACTER
 subroutine s2(p)

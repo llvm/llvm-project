@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_RVALUE_REFERENCE_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_RVALUE_REFERENCE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_RVALUE_REFERENCE_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_RVALUE_REFERENCE_H
 
 #include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/CPP/type_traits/false_type.h"
@@ -14,10 +14,11 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // is_rvalue_reference
-#if LIBC_HAS_BUILTIN(__is_rvalue_reference)
+#if __has_builtin(__is_rvalue_reference)
 template <typename T>
 struct is_rvalue_reference : bool_constant<__is_rvalue_reference(T)> {};
 #else
@@ -28,6 +29,7 @@ template <class T>
 LIBC_INLINE_VAR constexpr bool is_rvalue_reference_v =
     is_rvalue_reference<T>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_RVALUE_REFERENCE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_RVALUE_REFERENCE_H

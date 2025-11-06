@@ -1,0 +1,268 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64-windows arm64-func-sym.s -o arm64-func-sym.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func-sym.s -o arm64ec-func-sym.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func-sym2.s -o arm64ec-func-sym2.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows data-sec.s -o data-sec.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows data-sec2.s -o data-sec2.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows empty-sec.s -o arm64ec-empty-sec.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-func-sym.s -o x86_64-func-sym.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows empty-sec.s -o x86_64-empty-sec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+
+Link ARM64EC DLL and verify that the code is arranged as expected.
+
+RUN: lld-link -out:test.dll -machine:arm64ec arm64ec-func-sym.obj x86_64-func-sym.obj \
+RUN:          loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-readobj --coff-load-config test.dll | FileCheck -check-prefix=CODEMAP %s
+CODEMAP:       CodeMap [
+CODEMAP-NEXT:    0x1000 - 0x1008  ARM64EC
+CODEMAP-NEXT:    0x2000 - 0x2006  X64
+CODEMAP-NEXT:    0x6000 - 0x6008  ARM64EC
+CODEMAP-NEXT:    0x7000 - 0x7006  X64
+CODEMAP-NEXT:  ]
+
+RUN: llvm-objdump -d test.dll | FileCheck -check-prefix=DISASM %s
+DISASM:      Disassembly of section .text:
+DISASM-EMPTY:
+DISASM-NEXT: 0000000180001000 <.text>:
+DISASM-NEXT: 180001000: 52800040     mov     w0, #0x2
+DISASM-NEXT: 180001004: d65f03c0     ret
+DISASM-NEXT:                 ...
+DISASM-NEXT: 180002000: b8 03 00 00 00               movl    $0x3, %eax
+DISASM-NEXT: 180002005: c3                           retq
+DISASM-EMPTY:
+DISASM-NEXT: Disassembly of section test:
+DISASM-EMPTY:
+DISASM-NEXT: 0000000180006000 <test>:
+DISASM-NEXT: 180006000: 528000a0     mov     w0, #0x5
+DISASM-NEXT: 180006004: d65f03c0     ret
+DISASM-NEXT:                 ...
+DISASM-NEXT: 180007000: b8 06 00 00 00               movl    $0x6, %eax
+DISASM-NEXT: 180007005: c3                           retq
+
+Order of arguments doesn't matter in this case, chunks are sorted by target type anyway.
+
+RUN: lld-link -out:test2.dll -machine:arm64ec x86_64-func-sym.obj arm64ec-func-sym.obj \
+RUN:          loadconfig-arm64ec.obj -dll -noentry
+RUN: llvm-readobj --coff-load-config test2.dll | FileCheck -check-prefix=CODEMAP %s
+RUN: llvm-objdump -d test2.dll | FileCheck -check-prefix=DISASM %s
+
+RUN: lld-link -out:testx.dll -machine:arm64x arm64-func-sym.obj arm64ec-func-sym.obj \
+RUN:          x86_64-func-sym.obj loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
+
+Adding empty chunks does not affect code map ranges.
+
+RUN: lld-link -out:test3.dll -machine:arm64ec x86_64-empty-sec.obj arm64ec-empty-sec.obj \
+RUN:          arm64ec-func-sym.obj  x86_64-func-sym.obj loadconfig-arm64ec.obj -dll -noentry
+RUN: llvm-readobj --coff-load-config test3.dll | FileCheck -check-prefix=CODEMAP %s
+
+Do the same with ARM64X target.
+
+RUN: llvm-readobj --coff-load-config testx.dll | FileCheck -check-prefix=CODEMAPX %s
+CODEMAPX:       CodeMap [
+CODEMAPX-NEXT:    0x1000 - 0x1008  ARM64
+CODEMAPX-NEXT:    0x2000 - 0x2008  ARM64EC
+CODEMAPX-NEXT:    0x3000 - 0x3006  X64
+CODEMAPX-NEXT:    0x7000 - 0x7008  ARM64EC
+CODEMAPX-NEXT:    0x8000 - 0x8006  X64
+CODEMAPX-NEXT:  ]
+
+RUN: llvm-objdump -d testx.dll | FileCheck -check-prefix=DISASMX %s
+DISASMX:      Disassembly of section .text:
+DISASMX-EMPTY:
+DISASMX-NEXT: 0000000180001000 <.text>:
+DISASMX-NEXT: 180001000: 528000e0     mov     w0, #0x7
+DISASMX-NEXT: 180001004: d65f03c0     ret
+DISASMX-NEXT:                 ...
+DISASMX-NEXT: 180002000: 52800040     mov     w0, #0x2
+DISASMX-NEXT: 180002004: d65f03c0     ret
+DISASMX-NEXT:                 ...
+DISASMX-NEXT: 180003000: b8 03 00 00 00               movl    $0x3, %eax
+DISASMX-NEXT: 180003005: c3                           retq
+DISASMX-EMPTY:
+DISASMX-NEXT: Disassembly of section test:
+DISASMX-EMPTY:
+DISASMX-NEXT: 0000000180007000 <test>:
+DISASMX-NEXT: 180007000: 528000a0     mov     w0, #0x5
+DISASMX-NEXT: 180007004: d65f03c0     ret
+DISASMX-NEXT:                 ...
+DISASMX-NEXT: 180008000: b8 06 00 00 00               movl    $0x6, %eax
+DISASMX-NEXT: 180008005: c3                           retq
+
+Test merged sections.
+
+RUN: lld-link -out:testm.dll -machine:arm64ec arm64ec-func-sym.obj x86_64-func-sym.obj \
+RUN:          loadconfig-arm64ec.obj -dll -noentry -merge:test=.text
+
+RUN: llvm-readobj --coff-load-config testm.dll | FileCheck -check-prefix=CODEMAPM %s
+CODEMAPM:      CodeMap [
+CODEMAPM-NEXT:   0x1000 - 0x1010  ARM64EC
+CODEMAPM-NEXT:   0x2000 - 0x200E  X64
+CODEMAPM-NEXT: ]
+
+RUN: llvm-objdump -d testm.dll | FileCheck -check-prefix=DISASMM %s
+DISASMM:      Disassembly of section .text:
+DISASMM-EMPTY:
+DISASMM-NEXT: 0000000180001000 <.text>:
+DISASMM-NEXT: 180001000: 52800040     mov     w0, #0x2
+DISASMM-NEXT: 180001004: d65f03c0     ret
+DISASMM-NEXT: 180001008: 528000a0     mov     w0, #0x5
+DISASMM-NEXT: 18000100c: d65f03c0     ret
+DISASMM-NEXT:                 ...
+DISASMM-NEXT: 180002000: b8 03 00 00 00               movl    $0x3, %eax
+DISASMM-NEXT: 180002005: c3                           retq
+DISASMM-NEXT: 180002006: 00 00                        addb    %al, (%rax)
+DISASMM-NEXT: 180002008: b8 06 00 00 00               movl    $0x6, %eax
+DISASMM-NEXT: 18000200d: c3                           retq
+
+Merging data sections into code sections causes data to be separated from the code when sorting chunks.
+
+RUN: lld-link -out:testdm.dll -machine:arm64ec arm64ec-func-sym.obj x86_64-func-sym.obj data-sec.obj \
+RUN:          data-sec2.obj loadconfig-arm64ec.obj -dll -noentry -merge:.testdata=.text -merge:.rdata=test
+
+RUN: llvm-readobj --coff-load-config testdm.dll | FileCheck -check-prefix=CODEMAPDM %s
+CODEMAPDM:      CodeMap [
+CODEMAPDM-NEXT:     0x2000 - 0x2008  ARM64EC
+CODEMAPDM-NEXT:     0x3000 - 0x3006  X64
+CODEMAPDM-NEXT:     0x7000 - 0x7008  ARM64EC
+CODEMAPDM-NEXT:     0x8000 - 0x8006  X64
+CODEMAPDM-NEXT: ]
+
+RUN: llvm-objdump -d testdm.dll | FileCheck -check-prefix=DISASMDM %s
+DISASMDM:      Disassembly of section .text:
+DISASMDM-EMPTY:
+DISASMDM-NEXT: 0000000180001000 <.text>:
+DISASMDM-NEXT: 180001000: 00000001     udf     #0x1
+DISASMDM-NEXT: 180001004: 00000000     udf     #0x0
+DISASMDM-NEXT: 180001008: 00000002     udf     #0x2
+DISASMDM-NEXT:                 ...
+DISASMDM-NEXT: 180002000: 52800040     mov     w0, #0x2
+DISASMDM-NEXT: 180002004: d65f03c0     ret
+DISASMDM-NEXT:                 ...
+DISASMDM-NEXT: 180003000: b8 03 00 00 00               movl    $0x3, %eax
+DISASMDM-NEXT: 180003005: c3                           retq
+DISASMDM-EMPTY:
+DISASMDM-NEXT: Disassembly of section test:
+DISASMDM-EMPTY:
+DISASMDM-NEXT: 0000000180006000 <test>:
+DISASMDM:      180007000: 528000a0     mov     w0, #0x5
+DISASMDM-NEXT: 180007004: d65f03c0     ret
+DISASMDM-NEXT:                 ...
+DISASMDM-NEXT: 180008000: b8 06 00 00 00               movl    $0x6, %eax
+DISASMDM-NEXT: 180008005: c3                           retq
+
+Merging a code section into data section produces a valid code map.
+
+RUN: lld-link -out:testcm.dll -machine:arm64ec x86_64-func-sym.obj data-sec.obj \
+RUN:          loadconfig-arm64ec.obj -dll -noentry -merge:test=.testdata -merge:.text=.testdata
+
+RUN: llvm-readobj --coff-load-config testcm.dll | FileCheck -check-prefix=CODEMAPCM %s
+CODEMAPCM:      CodeMap [
+CODEMAPCM-NEXT:     0x4008 - 0x4016  X64
+CODEMAPCM-NEXT: ]
+
+RUN: llvm-objdump -d testcm.dll | FileCheck -check-prefix=DISASMCM %s
+DISASMCM:      Disassembly of section .testdat:
+DISASMCM-EMPTY:
+DISASMCM-NEXT: 0000000180004000 <.testdat>:
+DISASMCM-NEXT: 180004000: 00000001     udf     #0x1
+DISASMCM-NEXT: 180004004: 00000000     udf     #0x0
+DISASMCM-NEXT: 180004008: b8 03 00 00 00               movl    $0x3, %eax
+DISASMCM-NEXT: 18000400d: c3                           retq
+DISASMCM-NEXT: 18000400e: 00 00                        addb    %al, (%rax)
+DISASMCM-NEXT: 180004010: b8 06 00 00 00               movl    $0x6, %eax
+DISASMCM-NEXT: 180004015: c3
+
+Test code map range entry spanning over multiple sections.
+
+RUN: lld-link -out:testms.dll -machine:arm64ec arm64ec-func-sym.obj arm64ec-func-sym2.obj \
+RUN:          loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-readobj --coff-load-config testms.dll | FileCheck -check-prefix=CODEMAPMS %s
+CODEMAPMS:      CodeMap [
+CODEMAPMS-NEXT:     0x1000 - 0x1008  ARM64EC
+CODEMAPMS-NEXT:     0x5000 - 0x6008  ARM64EC
+CODEMAPMS-NEXT: ]
+
+RUN: llvm-objdump -d testms.dll | FileCheck -check-prefix=DISASMMS %s
+DISASMMS:      Disassembly of section .text:
+DISASMMS-EMPTY:
+DISASMMS-NEXT: 0000000180001000 <.text>:
+DISASMMS-NEXT: 180001000: 52800040     mov     w0, #0x2                // =2
+DISASMMS-NEXT: 180001004: d65f03c0     ret
+DISASMMS-EMPTY:
+DISASMMS-NEXT: Disassembly of section test:
+DISASMMS-EMPTY:
+DISASMMS-NEXT: 0000000180005000 <test>:
+DISASMMS-NEXT: 180005000: 528000a0     mov     w0, #0x5                // =5
+DISASMMS-NEXT: 180005004: d65f03c0     ret
+DISASMMS-EMPTY:
+DISASMMS-NEXT: Disassembly of section test2:
+DISASMMS-EMPTY:
+DISASMMS-NEXT: 0000000180006000 <test2>:
+DISASMMS-NEXT: 180006000: 528000a0     mov     w0, #0x5                // =5
+DISASMMS-NEXT: 180006004: d65f03c0     ret
+
+
+#--- arm64-func-sym.s
+    .text
+    .globl arm64_func_sym
+    .p2align 2, 0x0
+arm64_func_sym:
+    mov w0, #7
+    ret
+
+#--- arm64ec-func-sym.s
+    .text
+    .globl arm64ec_func_sym
+    .p2align 2, 0x0
+arm64ec_func_sym:
+    mov w0, #2
+    ret
+
+    .section test, "xr"
+    .globl arm64ec_func_sym2
+    .p2align 2, 0x0
+arm64ec_func_sym2:
+    mov w0, #5
+    ret
+
+#--- arm64ec-func-sym2.s
+    .section test2, "xr"
+    .globl arm64ec_func_sym3
+    .p2align 2, 0x0
+arm64ec_func_sym3:
+    mov w0, #5
+    ret
+
+#--- x86_64-func-sym.s
+    .text
+    .globl x86_64_func_sym
+    .p2align 2, 0x0
+x86_64_func_sym:
+    movl $3, %eax
+    retq
+
+    .section test, "xr"
+    .globl x86_64_func_sym2
+    .p2align 2, 0x0
+x86_64_func_sym2:
+    movl $6, %eax
+    retq
+
+#--- data-sec.s
+    .section .testdata, "rd"
+    .xword 1
+
+#--- data-sec2.s
+    .section .testdata, "rd"
+    .xword 2
+
+#--- empty-sec.s
+    .section .empty1, "xr"
+    .section .empty2, "xr"
+    .section .empty3, "xr"

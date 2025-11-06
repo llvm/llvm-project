@@ -44,13 +44,14 @@ static bool isCaseSensitivePath(StringRef Path) {
   // sensitive in the absence of real_path, since this is the YAMLVFSWriter
   // default.
   UpperDest = Path.upper();
-  if (!sys::fs::real_path(UpperDest, RealDest) && Path.equals(RealDest))
+  if (!sys::fs::real_path(UpperDest, RealDest) && Path == RealDest)
     return false;
   return true;
 }
 
-FileCollector::FileCollector(std::string Root, std::string OverlayRoot)
-    : Root(Root), OverlayRoot(OverlayRoot) {
+FileCollector::FileCollector(std::string Root, std::string OverlayRoot,
+                             IntrusiveRefCntPtr<vfs::FileSystem> VFS)
+    : Root(Root), OverlayRoot(OverlayRoot), Canonicalizer(std::move(VFS)) {
   assert(sys::path::is_absolute(Root) && "Root not absolute");
   assert(sys::path::is_absolute(OverlayRoot) && "OverlayRoot not absolute");
 }
@@ -67,11 +68,10 @@ void FileCollector::PathCanonicalizer::updateWithRealPath(
   SmallString<256> RealPath;
   auto DirWithSymlink = CachedDirs.find(Directory);
   if (DirWithSymlink == CachedDirs.end()) {
-    // FIXME: Should this be a call to FileSystem::getRealpath(), in some
-    // cases? What if there is nothing on disk?
-    if (sys::fs::real_path(Directory, RealPath))
+    // FIXME: What if there is nothing on disk?
+    if (VFS->getRealPath(Directory, RealPath))
       return;
-    CachedDirs[Directory] = std::string(RealPath.str());
+    CachedDirs[Directory] = std::string(RealPath);
   } else {
     RealPath = DirWithSymlink->second;
   }
@@ -88,9 +88,9 @@ void FileCollector::PathCanonicalizer::updateWithRealPath(
 }
 
 /// Make Path absolute.
-static void makeAbsolute(SmallVectorImpl<char> &Path) {
+static void makeAbsolute(vfs::FileSystem &VFS, SmallVectorImpl<char> &Path) {
   // We need an absolute src path to append to the root.
-  sys::fs::make_absolute(Path);
+  VFS.makeAbsolute(Path);
 
   // Canonicalize src to a native path to avoid mixed separator styles.
   sys::path::native(Path);
@@ -105,7 +105,7 @@ FileCollector::PathCanonicalizer::PathStorage
 FileCollector::PathCanonicalizer::canonicalize(StringRef SrcPath) {
   PathStorage Paths;
   Paths.VirtualPath = SrcPath;
-  makeAbsolute(Paths.VirtualPath);
+  makeAbsolute(*VFS, Paths.VirtualPath);
 
   // If a ".." component is present after a symlink component, remove_dots may
   // lead to the wrong real destination path. Let the source be canonicalized
@@ -281,7 +281,7 @@ public:
   }
 
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+                              SmallVectorImpl<char> &Output) override {
     auto EC = FS->getRealPath(Path, Output);
     if (!EC) {
       Collector->addFile(Path);
@@ -313,5 +313,6 @@ private:
 IntrusiveRefCntPtr<vfs::FileSystem>
 FileCollector::createCollectorVFS(IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
                                   std::shared_ptr<FileCollector> Collector) {
-  return new FileCollectorFileSystem(std::move(BaseFS), std::move(Collector));
+  return makeIntrusiveRefCnt<FileCollectorFileSystem>(std::move(BaseFS),
+                                                      std::move(Collector));
 }

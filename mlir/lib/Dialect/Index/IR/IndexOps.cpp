@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "llvm/ADT/SmallString.h"
@@ -37,7 +36,7 @@ Operation *IndexDialect::materializeConstant(OpBuilder &b, Attribute value,
   if (auto boolValue = dyn_cast<BoolAttr>(value)) {
     if (!type.isSignlessInteger(1))
       return nullptr;
-    return b.create<BoolConstantOp>(loc, type, boolValue);
+    return BoolConstantOp::create(b, loc, type, boolValue);
   }
 
   // Materialize integer attributes as `index`.
@@ -47,7 +46,7 @@ Operation *IndexDialect::materializeConstant(OpBuilder &b, Attribute value,
       return nullptr;
     assert(indexValue.getValue().getBitWidth() ==
            IndexType::kInternalStorageBitWidth);
-    return b.create<ConstantOp>(loc, indexValue);
+    return ConstantOp::create(b, loc, indexValue);
   }
 
   return nullptr;
@@ -118,6 +117,32 @@ static OpFoldResult foldBinaryOpChecked(
   return IntegerAttr::get(IndexType::get(lhs.getContext()), *result64);
 }
 
+/// Helper for associative and commutative binary ops that can be transformed:
+/// `x = op(v, c1); y = op(x, c2)` -> `tmp = op(c1, c2); y = op(v, tmp)`
+/// where c1 and c2 are constants. It is expected that `tmp` will be folded.
+template <typename BinaryOp>
+LogicalResult
+canonicalizeAssociativeCommutativeBinaryOp(BinaryOp op,
+                                           PatternRewriter &rewriter) {
+  if (!mlir::matchPattern(op.getRhs(), mlir::m_Constant()))
+    return rewriter.notifyMatchFailure(op.getLoc(), "RHS is not a constant");
+
+  auto lhsOp = op.getLhs().template getDefiningOp<BinaryOp>();
+  if (!lhsOp)
+    return rewriter.notifyMatchFailure(op.getLoc(), "LHS is not the same BinaryOp");
+
+  if (!mlir::matchPattern(lhsOp.getRhs(), mlir::m_Constant()))
+    return rewriter.notifyMatchFailure(op.getLoc(), "RHS of LHS op is not a constant");
+
+  Value c = rewriter.createOrFold<BinaryOp>(op->getLoc(), op.getRhs(),
+                                           lhsOp.getRhs());
+  if (c.getDefiningOp<BinaryOp>())
+    return rewriter.notifyMatchFailure(op.getLoc(), "new BinaryOp was not folded");
+
+  rewriter.replaceOpWithNewOp<BinaryOp>(op, lhsOp.getLhs(), c);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // AddOp
 //===----------------------------------------------------------------------===//
@@ -135,6 +160,10 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
   }
 
   return {};
+}
+
+LogicalResult AddOp::canonicalize(AddOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -176,6 +205,10 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   }
 
   return {};
+}
+
+LogicalResult MulOp::canonicalize(MulOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -330,6 +363,10 @@ OpFoldResult MaxSOp::fold(FoldAdaptor adaptor) {
                              });
 }
 
+LogicalResult MaxSOp::canonicalize(MaxSOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
+}
+
 //===----------------------------------------------------------------------===//
 // MaxUOp
 //===----------------------------------------------------------------------===//
@@ -339,6 +376,10 @@ OpFoldResult MaxUOp::fold(FoldAdaptor adaptor) {
                              [](const APInt &lhs, const APInt &rhs) {
                                return lhs.ugt(rhs) ? lhs : rhs;
                              });
+}
+
+LogicalResult MaxUOp::canonicalize(MaxUOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -352,6 +393,10 @@ OpFoldResult MinSOp::fold(FoldAdaptor adaptor) {
                              });
 }
 
+LogicalResult MinSOp::canonicalize(MinSOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
+}
+
 //===----------------------------------------------------------------------===//
 // MinUOp
 //===----------------------------------------------------------------------===//
@@ -361,6 +406,10 @@ OpFoldResult MinUOp::fold(FoldAdaptor adaptor) {
                              [](const APInt &lhs, const APInt &rhs) {
                                return lhs.ult(rhs) ? lhs : rhs;
                              });
+}
+
+LogicalResult MinUOp::canonicalize(MinUOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -420,6 +469,10 @@ OpFoldResult AndOp::fold(FoldAdaptor adaptor) {
       [](const APInt &lhs, const APInt &rhs) { return lhs & rhs; });
 }
 
+LogicalResult AndOp::canonicalize(AndOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
+}
+
 //===----------------------------------------------------------------------===//
 // OrOp
 //===----------------------------------------------------------------------===//
@@ -428,6 +481,10 @@ OpFoldResult OrOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpUnchecked(
       adaptor.getOperands(),
       [](const APInt &lhs, const APInt &rhs) { return lhs | rhs; });
+}
+
+LogicalResult OrOp::canonicalize(OrOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -440,13 +497,69 @@ OpFoldResult XOrOp::fold(FoldAdaptor adaptor) {
       [](const APInt &lhs, const APInt &rhs) { return lhs ^ rhs; });
 }
 
+LogicalResult XOrOp::canonicalize(XOrOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
+}
+
 //===----------------------------------------------------------------------===//
 // CastSOp
 //===----------------------------------------------------------------------===//
 
+static OpFoldResult
+foldCastOp(Attribute input, Type type,
+           function_ref<APInt(const APInt &, unsigned)> extFn,
+           function_ref<APInt(const APInt &, unsigned)> extOrTruncFn) {
+  auto attr = dyn_cast_if_present<IntegerAttr>(input);
+  if (!attr)
+    return {};
+  const APInt &value = attr.getValue();
+
+  if (isa<IndexType>(type)) {
+    // When casting to an index type, perform the cast assuming a 64-bit target.
+    // The result can be truncated to 32 bits as needed and always be correct.
+    // This is because `cast32(cast64(value)) == cast32(value)`.
+    APInt result = extOrTruncFn(value, 64);
+    return IntegerAttr::get(type, result);
+  }
+
+  // When casting from an index type, we must ensure the results respect
+  // `cast_t(value) == cast_t(trunc32(value))`.
+  auto intType = cast<IntegerType>(type);
+  unsigned width = intType.getWidth();
+
+  // If the result type is at most 32 bits, then the cast can always be folded
+  // because it is always a truncation.
+  if (width <= 32) {
+    APInt result = value.trunc(width);
+    return IntegerAttr::get(type, result);
+  }
+
+  // If the result type is at least 64 bits, then the cast is always a
+  // extension. The results will differ if `trunc32(value) != value)`.
+  if (width >= 64) {
+    if (extFn(value.trunc(32), 64) != value)
+      return {};
+    APInt result = extFn(value, width);
+    return IntegerAttr::get(type, result);
+  }
+
+  // Otherwise, we just have to check the property directly.
+  APInt result = value.trunc(width);
+  if (result != extFn(value.trunc(32), width))
+    return {};
+  return IntegerAttr::get(type, result);
+}
+
 bool CastSOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
   return llvm::isa<IndexType>(lhsTypes.front()) !=
          llvm::isa<IndexType>(rhsTypes.front());
+}
+
+OpFoldResult CastSOp::fold(FoldAdaptor adaptor) {
+  return foldCastOp(
+      adaptor.getInput(), getType(),
+      [](const APInt &x, unsigned width) { return x.sext(width); },
+      [](const APInt &x, unsigned width) { return x.sextOrTrunc(width); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -456,6 +569,13 @@ bool CastSOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
 bool CastUOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
   return llvm::isa<IndexType>(lhsTypes.front()) !=
          llvm::isa<IndexType>(rhsTypes.front());
+}
+
+OpFoldResult CastUOp::fold(FoldAdaptor adaptor) {
+  return foldCastOp(
+      adaptor.getInput(), getType(),
+      [](const APInt &x, unsigned width) { return x.zext(width); },
+      [](const APInt &x, unsigned width) { return x.zextOrTrunc(width); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -519,6 +639,25 @@ static std::optional<bool> foldCmpOfMaxOrMin(Operation *lhsOp,
                                 lhsRange, ConstantIntRanges::constant(cstB));
 }
 
+/// Return the result of `cmp(pred, x, x)`
+static bool compareSameArgs(IndexCmpPredicate pred) {
+  switch (pred) {
+  case IndexCmpPredicate::EQ:
+  case IndexCmpPredicate::SGE:
+  case IndexCmpPredicate::SLE:
+  case IndexCmpPredicate::UGE:
+  case IndexCmpPredicate::ULE:
+    return true;
+  case IndexCmpPredicate::NE:
+  case IndexCmpPredicate::SGT:
+  case IndexCmpPredicate::SLT:
+  case IndexCmpPredicate::UGT:
+  case IndexCmpPredicate::ULT:
+    return false;
+  }
+  llvm_unreachable("unknown predicate in compareSameArgs");
+}
+
 OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
   // Attempt to fold if both inputs are constant.
   auto lhs = dyn_cast_if_present<IntegerAttr>(adaptor.getLhs());
@@ -547,6 +686,10 @@ OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
       return BoolAttr::get(getContext(), *result64);
   }
 
+  // Fold `cmp(x, x)`
+  if (getLhs() == getRhs())
+    return BoolAttr::get(getContext(), compareSameArgs(getPred()));
+
   return {};
 }
 
@@ -572,11 +715,11 @@ LogicalResult CmpOp::canonicalize(CmpOp op, PatternRewriter &rewriter) {
 
   index::CmpOp newCmp;
   if (rhsIsZero)
-    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
-                                           subOp.getLhs(), subOp.getRhs());
+    newCmp = index::CmpOp::create(rewriter, op.getLoc(), op.getPred(),
+                                  subOp.getLhs(), subOp.getRhs());
   else
-    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
-                                           subOp.getRhs(), subOp.getLhs());
+    newCmp = index::CmpOp::create(rewriter, op.getLoc(), op.getPred(),
+                                  subOp.getRhs(), subOp.getLhs());
   rewriter.replaceOp(op, newCmp);
   return success();
 }

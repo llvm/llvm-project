@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; CHECK:      if.then260:
 ; CHECK-NEXT:   %p.4 = getelementptr inbounds i8, ptr null, i64 1

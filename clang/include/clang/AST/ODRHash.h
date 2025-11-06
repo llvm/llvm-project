@@ -25,6 +25,7 @@
 
 namespace clang {
 
+class APValue;
 class Decl;
 class IdentifierInfo;
 class NestedNameSpecifier;
@@ -92,19 +93,28 @@ public:
   void AddQualType(QualType T);
   void AddStmt(const Stmt *S);
   void AddIdentifierInfo(const IdentifierInfo *II);
-  void AddNestedNameSpecifier(const NestedNameSpecifier *NNS);
+  void AddNestedNameSpecifier(NestedNameSpecifier NNS);
+  void AddDependentTemplateName(const DependentTemplateStorage &Name);
   void AddTemplateName(TemplateName Name);
-  void AddDeclarationName(DeclarationName Name, bool TreatAsDecl = false);
+  void AddDeclarationNameInfo(DeclarationNameInfo NameInfo,
+                              bool TreatAsDecl = false);
+  void AddDeclarationName(DeclarationName Name, bool TreatAsDecl = false) {
+    AddDeclarationNameInfo(DeclarationNameInfo(Name, SourceLocation()),
+                           TreatAsDecl);
+  }
+
   void AddTemplateArgument(TemplateArgument TA);
   void AddTemplateParameterList(const TemplateParameterList *TPL);
 
   // Save booleans until the end to lower the size of data to process.
   void AddBoolean(bool value);
 
+  void AddStructuralValue(const APValue &);
+
   static bool isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent);
 
 private:
-  void AddDeclarationNameImpl(DeclarationName Name);
+  void AddDeclarationNameInfoImpl(DeclarationNameInfo NameInfo);
 };
 
 }  // end namespace clang

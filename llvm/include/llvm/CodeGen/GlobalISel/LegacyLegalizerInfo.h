@@ -16,9 +16,11 @@
 #define LLVM_CODEGEN_GLOBALISEL_LEGACYLEGALIZERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/Support/Compiler.h"
 #include <unordered_map>
+#include <vector>
 
 namespace llvm {
 struct LegalityQuery;
@@ -74,8 +76,8 @@ enum LegacyLegalizeAction : std::uint8_t {
   NotFound,
 };
 } // end namespace LegacyLegalizeActions
-raw_ostream &operator<<(raw_ostream &OS,
-                        LegacyLegalizeActions::LegacyLegalizeAction Action);
+LLVM_ABI raw_ostream &
+operator<<(raw_ostream &OS, LegacyLegalizeActions::LegacyLegalizeAction Action);
 
 /// Legalization is decided based on an instruction's opcode, which type slot
 /// we're considering, and what the existing type is. These aspects are gathered
@@ -124,7 +126,7 @@ public:
   using SizeChangeStrategy =
       std::function<SizeAndActionsVec(const SizeAndActionsVec &v)>;
 
-  LegacyLegalizerInfo();
+  LLVM_ABI LegacyLegalizerInfo();
 
   static bool needsLegalizingToDifferentSize(
       const LegacyLegalizeActions::LegacyLegalizeAction Action) {
@@ -144,7 +146,7 @@ public:
   /// Compute any ancillary tables needed to quickly decide how an operation
   /// should be handled. This must be called after all "set*Action"methods but
   /// before any query is made or incorrect results may be returned.
-  void computeTables();
+  LLVM_ABI void computeTables();
 
   /// More friendly way to set an action for common types that have an LLT
   /// representation.
@@ -240,16 +242,6 @@ public:
                                                        Unsupported);
   }
 
-  static SizeAndActionsVec
-  narrowToSmallerAndWidenToSmallest(const SizeAndActionsVec &v) {
-    using namespace LegacyLegalizeActions;
-    assert(v.size() > 0 &&
-           "At least one size that can be legalized towards is needed"
-           " for this SizeChangeStrategy");
-    return decreaseToSmallerTypesAndIncreaseToSmallest(v, NarrowScalar,
-                                                       WidenScalar);
-  }
-
   /// A SizeChangeStrategy for the common case where legalization for a
   /// particular vector operation consists of having more elements in the
   /// vector, to a type that is legal. Unless there is no such type and then
@@ -276,19 +268,19 @@ public:
   }
 
   /// Helper function to implement many typical SizeChangeStrategy functions.
-  static SizeAndActionsVec increaseToLargerTypesAndDecreaseToLargest(
+  LLVM_ABI static SizeAndActionsVec increaseToLargerTypesAndDecreaseToLargest(
       const SizeAndActionsVec &v,
       LegacyLegalizeActions::LegacyLegalizeAction IncreaseAction,
       LegacyLegalizeActions::LegacyLegalizeAction DecreaseAction);
   /// Helper function to implement many typical SizeChangeStrategy functions.
-  static SizeAndActionsVec decreaseToSmallerTypesAndIncreaseToSmallest(
+  LLVM_ABI static SizeAndActionsVec decreaseToSmallerTypesAndIncreaseToSmallest(
       const SizeAndActionsVec &v,
       LegacyLegalizeActions::LegacyLegalizeAction DecreaseAction,
       LegacyLegalizeActions::LegacyLegalizeAction IncreaseAction);
 
-  LegacyLegalizeActionStep getAction(const LegalityQuery &Query) const;
+  LLVM_ABI LegacyLegalizeActionStep getAction(const LegalityQuery &Query) const;
 
-  unsigned getOpcodeIdxForOpcode(unsigned Opcode) const;
+  LLVM_ABI unsigned getOpcodeIdxForOpcode(unsigned Opcode) const;
 
 private:
   /// Determine what action should be taken to legalize the given generic
@@ -327,11 +319,8 @@ private:
                         const unsigned AddressSpace,
                         const SizeAndActionsVec &SizeAndActions) {
     const unsigned OpcodeIdx = Opcode - FirstOp;
-    if (AddrSpace2PointerActions[OpcodeIdx].find(AddressSpace) ==
-        AddrSpace2PointerActions[OpcodeIdx].end())
-      AddrSpace2PointerActions[OpcodeIdx][AddressSpace] = {{}};
     SmallVector<SizeAndActionsVec, 1> &Actions =
-        AddrSpace2PointerActions[OpcodeIdx].find(AddressSpace)->second;
+        AddrSpace2PointerActions[OpcodeIdx][AddressSpace];
     setActions(TypeIndex, Actions, SizeAndActions);
   }
 
@@ -356,11 +345,8 @@ private:
                                  const unsigned ElementSize,
                                  const SizeAndActionsVec &SizeAndActions) {
     const unsigned OpcodeIdx = Opcode - FirstOp;
-    if (NumElements2Actions[OpcodeIdx].find(ElementSize) ==
-        NumElements2Actions[OpcodeIdx].end())
-      NumElements2Actions[OpcodeIdx][ElementSize] = {{}};
     SmallVector<SizeAndActionsVec, 1> &Actions =
-        NumElements2Actions[OpcodeIdx].find(ElementSize)->second;
+        NumElements2Actions[OpcodeIdx][ElementSize];
     setActions(TypeIndex, Actions, SizeAndActions);
   }
 

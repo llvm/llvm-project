@@ -24,7 +24,7 @@ define void @test2() personality ptr @Personality {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch.body] unwind to caller
 ; CHECK:       catch.body:
@@ -58,7 +58,7 @@ define void @test3() personality ptr @Personality {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[CLEANUP_PAD:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[CLEANUP_PAD:%.*]]
 ; CHECK:       cleanup.pad:
 ; CHECK-NEXT:    [[CLEANUP:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    call void @f() #[[ATTR0]]
@@ -88,7 +88,7 @@ define void @test5() personality ptr @Personality {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch.body] unwind to caller
 ; CHECK:       catch.body:
@@ -116,7 +116,7 @@ define void @test6() personality ptr @Personality {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch.body] unwind to caller
 ; CHECK:       catch.body:
@@ -144,7 +144,7 @@ define void @test7() personality ptr @Personality {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch.body] unwind to caller
 ; CHECK:       catch.body:
@@ -176,7 +176,7 @@ define void @test8() personality ptr @Personality {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch.body] unwind to caller
 ; CHECK:       catch.body:
@@ -208,7 +208,7 @@ define void @test9() personality ptr @Personality {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH_PAD:%.*]]
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label [[CATCH_BODY:%.*]], label %catch.body2] unwind to caller
 ; CHECK:       catch.body:

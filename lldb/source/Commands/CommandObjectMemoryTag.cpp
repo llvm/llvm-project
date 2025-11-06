@@ -42,12 +42,12 @@ public:
   ~CommandObjectMemoryTagRead() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if ((command.GetArgumentCount() < 1) || (command.GetArgumentCount() > 2)) {
       result.AppendError(
           "wrong number of arguments; expected at least <address-expression>, "
           "at most <address-expression> <end-address-expression>");
-      return false;
+      return;
     }
 
     Status error;
@@ -56,7 +56,7 @@ protected:
     if (start_addr == LLDB_INVALID_ADDRESS) {
       result.AppendErrorWithFormatv("Invalid address expression, {0}",
                                     error.AsCString());
-      return false;
+      return;
     }
 
     // Default 1 byte beyond start, rounds up to at most 1 granule later
@@ -68,7 +68,7 @@ protected:
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendErrorWithFormatv("Invalid end address expression, {0}",
                                       error.AsCString());
-        return false;
+        return;
       }
     }
 
@@ -77,8 +77,8 @@ protected:
         process->GetMemoryTagManager();
 
     if (!tag_manager_or_err) {
-      result.SetError(Status(tag_manager_or_err.takeError()));
-      return false;
+      result.SetError(Status::FromError(tag_manager_or_err.takeError()));
+      return;
     }
 
     const MemoryTagManager *tag_manager = *tag_manager_or_err;
@@ -102,16 +102,16 @@ protected:
         tag_manager->MakeTaggedRange(start_addr, end_addr, memory_regions);
 
     if (!tagged_range) {
-      result.SetError(Status(tagged_range.takeError()));
-      return false;
+      result.SetError(Status::FromError(tagged_range.takeError()));
+      return;
     }
 
     llvm::Expected<std::vector<lldb::addr_t>> tags = process->ReadMemoryTags(
         tagged_range->GetRangeBase(), tagged_range->GetByteSize());
 
     if (!tags) {
-      result.SetError(Status(tags.takeError()));
-      return false;
+      result.SetError(Status::FromError(tags.takeError()));
+      return;
     }
 
     result.AppendMessageWithFormatv("Logical tag: {0:x}", logical_tag);
@@ -128,7 +128,6 @@ protected:
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 
@@ -195,11 +194,11 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() < 2) {
       result.AppendError("wrong number of arguments; expected "
                          "<address-expression> <tag> [<tag> [...]]");
-      return false;
+      return;
     }
 
     Status error;
@@ -208,7 +207,7 @@ protected:
     if (start_addr == LLDB_INVALID_ADDRESS) {
       result.AppendErrorWithFormatv("Invalid address expression, {0}",
                                     error.AsCString());
-      return false;
+      return;
     }
 
     command.Shift(); // shift off start address
@@ -221,7 +220,7 @@ protected:
         result.AppendErrorWithFormat(
             "'%s' is not a valid unsigned decimal string value.\n",
             entry.c_str());
-        return false;
+        return;
       }
       tags.push_back(tag_value);
     }
@@ -231,8 +230,8 @@ protected:
         process->GetMemoryTagManager();
 
     if (!tag_manager_or_err) {
-      result.SetError(Status(tag_manager_or_err.takeError()));
-      return false;
+      result.SetError(Status::FromError(tag_manager_or_err.takeError()));
+      return;
     }
 
     const MemoryTagManager *tag_manager = *tag_manager_or_err;
@@ -283,20 +282,19 @@ protected:
                                      memory_regions);
 
     if (!tagged_range) {
-      result.SetError(Status(tagged_range.takeError()));
-      return false;
+      result.SetError(Status::FromError(tagged_range.takeError()));
+      return;
     }
 
     Status status = process->WriteMemoryTags(tagged_range->GetRangeBase(),
                                              tagged_range->GetByteSize(), tags);
 
     if (status.Fail()) {
-      result.SetError(status);
-      return false;
+      result.SetError(std::move(status));
+      return;
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 
   OptionGroupOptions m_option_group;

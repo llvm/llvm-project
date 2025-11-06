@@ -75,7 +75,6 @@ public:
     std::vector<InitialCmdEntry> m_after_file_commands;
     std::vector<InitialCmdEntry> m_after_crash_commands;
 
-    bool m_debug_mode = false;
     bool m_source_quietly = false;
     bool m_print_version = false;
     bool m_print_python_path = false;
@@ -93,7 +92,7 @@ public:
 
   lldb::SBDebugger &GetDebugger() { return m_debugger; }
 
-  void ResizeWindow(unsigned short col);
+  void UpdateWindowSize();
 
 private:
   lldb::SBDebugger m_debugger;

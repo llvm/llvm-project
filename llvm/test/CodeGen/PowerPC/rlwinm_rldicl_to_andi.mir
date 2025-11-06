@@ -60,7 +60,7 @@
     ret i64 %cond
   }
   
-  attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+vsx,-power9-vector" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+vsx,-power9-vector" "use-soft-float"="false" }
   
   !llvm.module.flags = !{!0, !1}
   !llvm.ident = !{!2}
@@ -107,8 +107,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
 stack:           
 constants:       
@@ -122,7 +122,7 @@ body:             |
     %3:gprc = LI -11
     %4:gprc_and_gprc_nor0 = RLWINM_rec %3, 2, 20, 31, implicit-def $cr0
     ; CHECK: LI 4055
-    ; CHECK: ANDI_rec %3, 4055
+    ; CHECK: ANDI_rec killed %3, 4055
     ; CHECK-LATE-NOT: andi.
     ; CHECK-LATE: rlwinm.
     %5:crrc = COPY killed $cr0
@@ -167,8 +167,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
 stack:           
 constants:       
@@ -227,8 +227,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
 stack:           
 constants:       
@@ -284,8 +284,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
 stack:           
 constants:       
@@ -297,7 +297,7 @@ body:             |
     %0:g8rc = LI8 -11
     %2:g8rc_and_g8rc_nox0  = RLDICL_rec %0, 2, 49, implicit-def $cr0
     ; CHECK: LI8 32727
-    ; CHECK: ANDI8_rec %0, 32727
+    ; CHECK: ANDI8_rec killed %0, 32727
     ; CHECK-LATE-NOT: andi.
     ; CHECK-LATE: rldicl.
     %3:crrc = COPY killed $cr0
@@ -338,8 +338,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
 stack:           
 constants:       
@@ -392,8 +392,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
 stack:           
 constants:       

@@ -22,3 +22,13 @@ define float @f2(<4 x float> %val1, <4 x float> %val2) {
   %ret = fadd float %scalar1, %scalar2
   ret float %ret
 }
+
+; Test a v1f128 addition.
+define <1 x fp128> @f3(<1 x fp128> %dummy, <1 x fp128> %val1,
+                       <1 x fp128> %val2) {
+; CHECK-LABEL: f3:
+; CHECK: wfaxb %v24, %v26, %v28
+; CHECK: br %r14
+  %ret = fadd <1 x fp128> %val1, %val2
+  ret <1 x fp128> %ret
+}

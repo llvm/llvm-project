@@ -19,7 +19,6 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 
@@ -54,6 +53,10 @@ public:
   /// Retrieve the dialect version by name if available.
   virtual FailureOr<const DialectVersion *>
   getDialectVersion(StringRef dialectName) const = 0;
+  template <class T>
+  FailureOr<const DialectVersion *> getDialectVersion() const {
+    return getDialectVersion(T::getDialectNamespace());
+  }
 
   /// Retrieve the context associated to the reader.
   virtual MLIRContext *getContext() const = 0;
@@ -400,6 +403,15 @@ public:
 
   /// Return the bytecode version being emitted for.
   virtual int64_t getBytecodeVersion() const = 0;
+
+  /// Retrieve the dialect version by name if available.
+  virtual FailureOr<const DialectVersion *>
+  getDialectVersion(StringRef dialectName) const = 0;
+
+  template <class T>
+  FailureOr<const DialectVersion *> getDialectVersion() const {
+    return getDialectVersion(T::getDialectNamespace());
+  }
 };
 
 //===----------------------------------------------------------------------===//

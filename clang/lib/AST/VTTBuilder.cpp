@@ -20,7 +20,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
 
@@ -64,9 +63,7 @@ void VTTBuilder::LayoutSecondaryVTTs(BaseSubobject Base) {
     if (I.isVirtual())
         continue;
 
-    const auto *BaseDecl =
-        cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
-
+    const auto *BaseDecl = I.getType()->castAsCXXRecordDecl();
     const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
     CharUnits BaseOffset = Base.getBaseOffset() +
       Layout.getBaseClassOffset(BaseDecl);
@@ -90,8 +87,7 @@ VTTBuilder::LayoutSecondaryVirtualPointers(BaseSubobject Base,
     return;
 
   for (const auto &I : RD->bases()) {
-    const auto *BaseDecl =
-        cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
+    const auto *BaseDecl = I.getType()->castAsCXXRecordDecl();
 
     // Itanium C++ ABI 2.6.2:
     //   Secondary virtual pointers are present for all bases with either
@@ -154,8 +150,7 @@ VTTBuilder::LayoutSecondaryVirtualPointers(BaseSubobject Base,
 void VTTBuilder::LayoutVirtualVTTs(const CXXRecordDecl *RD,
                                    VisitedVirtualBasesSetTy &VBases) {
   for (const auto &I : RD->bases()) {
-    const auto *BaseDecl =
-        cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
+    const auto *BaseDecl = I.getType()->castAsCXXRecordDecl();
 
     // Check if this is a virtual base.
     if (I.isVirtual()) {
@@ -189,7 +184,7 @@ void VTTBuilder::LayoutVTT(BaseSubobject Base, bool BaseIsVirtual) {
 
   if (!IsPrimaryVTT) {
     // Remember the sub-VTT index.
-    SubVTTIndicies[Base] = VTTComponents.size();
+    SubVTTIndices[Base] = VTTComponents.size();
   }
 
   uint64_t VTableIndex = VTTVTables.size();

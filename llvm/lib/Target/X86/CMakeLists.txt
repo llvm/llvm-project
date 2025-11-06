@@ -8,7 +8,7 @@ tablegen(LLVM X86GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
 tablegen(LLVM X86GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM X86GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM X86GenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM X86GenEVEX2VEXTables.inc -gen-x86-EVEX2VEX-tables)
+tablegen(LLVM X86GenInstrMapping.inc -gen-x86-instr-mapping)
 tablegen(LLVM X86GenExegesis.inc -gen-exegesis)
 tablegen(LLVM X86GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel)
@@ -29,11 +29,11 @@ set(sources
   X86CallFrameOptimization.cpp
   X86CallingConv.cpp
   X86CmovConversion.cpp
+  X86CodeGenPassBuilder.cpp
   X86DomainReassignment.cpp
   X86DiscriminateMemOps.cpp
   X86LowerTileCopy.cpp
   X86LowerAMXType.cpp
-  X86PreAMXConfig.cpp
   X86LowerAMXIntrinsics.cpp
   X86TileConfig.cpp
   X86FastPreTileConfig.cpp
@@ -62,7 +62,7 @@ set(sources
   X86InstrFMA3Info.cpp
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
-  X86EvexToVex.cpp
+  X86CompressEVEX.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp
   X86MCInstLower.cpp
@@ -78,11 +78,13 @@ set(sources
   X86SpeculativeLoadHardening.cpp
   X86SpeculativeExecutionSideEffectSuppression.cpp
   X86Subtarget.cpp
+  X86SuppressAPXForReloc.cpp
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp
   X86TargetTransformInfo.cpp
   X86VZeroUpper.cpp
   X86WinEHState.cpp
+  X86WinEHUnwindV2.cpp
   X86InsertWait.cpp
   GISel/X86CallLowering.cpp
   GISel/X86InstructionSelector.cpp
@@ -99,9 +101,12 @@ add_llvm_target(X86CodeGen ${sources}
   CodeGenTypes
   Core
   GlobalISel
+  IRPrinter
   Instrumentation
   MC
+  ObjCARC
   ProfileData
+  Scalar
   SelectionDAG
   Support
   Target

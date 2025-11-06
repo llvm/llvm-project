@@ -61,19 +61,20 @@ class ObjCSelfInitChecker : public Checker<  check::PostObjCMessage,
                                              check::PostCall,
                                              check::Location,
                                              check::Bind > {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Missing \"self = [(super or self) init...]\"",
+                   categories::CoreFoundationObjectiveC};
 
   void checkForInvalidSelf(const Expr *E, CheckerContext &C,
                            const char *errorStr) const;
 
 public:
-  ObjCSelfInitChecker() {}
   void checkPostObjCMessage(const ObjCMethodCall &Msg, CheckerContext &C) const;
   void checkPostStmt(const ObjCIvarRefExpr *E, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
   void checkLocation(SVal location, bool isLoad, const Stmt *S,
                      CheckerContext &C) const;
-  void checkBind(SVal loc, SVal val, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal loc, SVal val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
 
   void checkPreCall(const CallEvent &CE, CheckerContext &C) const;
   void checkPostCall(const CallEvent &CE, CheckerContext &C) const;
@@ -157,10 +158,7 @@ void ObjCSelfInitChecker::checkForInvalidSelf(const Expr *E, CheckerContext &C,
   if (!N)
     return;
 
-  if (!BT)
-    BT.reset(new BugType(this, "Missing \"self = [(super or self) init...]\"",
-                         categories::CoreFoundationObjectiveC));
-  C.emitReport(std::make_unique<PathSensitiveBugReport>(*BT, errorStr, N));
+  C.emitReport(std::make_unique<PathSensitiveBugReport>(BT, errorStr, N));
 }
 
 void ObjCSelfInitChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
@@ -314,9 +312,8 @@ void ObjCSelfInitChecker::checkLocation(SVal location, bool isLoad,
                 C);
 }
 
-
 void ObjCSelfInitChecker::checkBind(SVal loc, SVal val, const Stmt *S,
-                                    CheckerContext &C) const {
+                                    bool AtDeclInit, CheckerContext &C) const {
   // Allow assignment of anything to self. Self is a local variable in the
   // initializer, so it is legal to assign anything to it, like results of
   // static functions/method calls. After self is assigned something we cannot
@@ -345,7 +342,7 @@ void ObjCSelfInitChecker::printState(raw_ostream &Out, ProgramStateRef State,
   if (FlagMap.isEmpty() && !DidCallInit && !PreCallFlags)
     return;
 
-  Out << Sep << NL << *this << " :" << NL;
+  Out << Sep << NL << "ObjCSelfInitChecker:" << NL;
 
   if (DidCallInit)
     Out << "  An init method has been called." << NL;

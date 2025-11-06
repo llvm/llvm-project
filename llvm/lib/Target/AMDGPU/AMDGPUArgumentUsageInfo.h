@@ -9,6 +9,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUARGUMENTUSAGEINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUARGUMENTUSAGEINFO_H
 
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Pass.h"
 
@@ -37,22 +39,19 @@ private:
   bool IsSet : 1;
 
 public:
-  constexpr ArgDescriptor(unsigned Val = 0, unsigned Mask = ~0u,
-                bool IsStack = false, bool IsSet = false)
-    : Reg(Val), Mask(Mask), IsStack(IsStack), IsSet(IsSet) {}
+  ArgDescriptor(unsigned Val = 0, unsigned Mask = ~0u, bool IsStack = false,
+                bool IsSet = false)
+      : Reg(Val), Mask(Mask), IsStack(IsStack), IsSet(IsSet) {}
 
-  static constexpr ArgDescriptor createRegister(Register Reg,
-                                                unsigned Mask = ~0u) {
+  static ArgDescriptor createRegister(Register Reg, unsigned Mask = ~0u) {
     return ArgDescriptor(Reg, Mask, false, true);
   }
 
-  static constexpr ArgDescriptor createStack(unsigned Offset,
-                                             unsigned Mask = ~0u) {
+  static ArgDescriptor createStack(unsigned Offset, unsigned Mask = ~0u) {
     return ArgDescriptor(Offset, Mask, true, true);
   }
 
-  static constexpr ArgDescriptor createArg(const ArgDescriptor &Arg,
-                                           unsigned Mask) {
+  static ArgDescriptor createArg(const ArgDescriptor &Arg, unsigned Mask) {
     return ArgDescriptor(Arg.Reg, Mask, Arg.IsStack, Arg.IsSet);
   }
 
@@ -79,6 +78,8 @@ public:
   }
 
   unsigned getMask() const {
+    // None of the target SGPRs or VGPRs are expected to have a 'zero' mask.
+    assert(Mask && "Invalid mask.");
     return Mask;
   }
 
@@ -94,7 +95,13 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ArgDescriptor &Arg) {
   return OS;
 }
 
+struct KernArgPreloadDescriptor : public ArgDescriptor {
+  KernArgPreloadDescriptor() = default;
+  SmallVector<MCRegister> Regs;
+};
+
 struct AMDGPUFunctionArgInfo {
+  // clang-format off
   enum PreloadedValue {
     // SGPRS:
     PRIVATE_SEGMENT_BUFFER = 0,
@@ -104,19 +111,28 @@ struct AMDGPUFunctionArgInfo {
     DISPATCH_ID         =  4,
     FLAT_SCRATCH_INIT   =  5,
     LDS_KERNEL_ID       =  6, // LLVM internal, not part of the ABI
-    WORKGROUP_ID_X      = 10,
-    WORKGROUP_ID_Y      = 11,
-    WORKGROUP_ID_Z      = 12,
+    WORKGROUP_ID_X      = 10, // Also used for cluster ID X.
+    WORKGROUP_ID_Y      = 11, // Also used for cluster ID Y.
+    WORKGROUP_ID_Z      = 12, // Also used for cluster ID Z.
     PRIVATE_SEGMENT_WAVE_BYTE_OFFSET = 14,
     IMPLICIT_BUFFER_PTR = 15,
     IMPLICIT_ARG_PTR = 16,
+    PRIVATE_SEGMENT_SIZE = 17,
+    CLUSTER_WORKGROUP_ID_X = 21,
+    CLUSTER_WORKGROUP_ID_Y = 22,
+    CLUSTER_WORKGROUP_ID_Z = 23,
+    CLUSTER_WORKGROUP_MAX_ID_X = 24,
+    CLUSTER_WORKGROUP_MAX_ID_Y = 25,
+    CLUSTER_WORKGROUP_MAX_ID_Z = 26,
+    CLUSTER_WORKGROUP_MAX_FLAT_ID = 27,
 
     // VGPRS:
-    WORKITEM_ID_X       = 17,
-    WORKITEM_ID_Y       = 18,
-    WORKITEM_ID_Z       = 19,
+    WORKITEM_ID_X       = 28,
+    WORKITEM_ID_Y       = 29,
+    WORKITEM_ID_Z       = 30,
     FIRST_VGPR_VALUE    = WORKITEM_ID_X
   };
+  // clang-format on
 
   // Kernel input registers setup for the HSA ABI in allocation order.
 
@@ -151,10 +167,15 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor WorkItemIDY;
   ArgDescriptor WorkItemIDZ;
 
+  // Map the index of preloaded kernel arguments to its descriptor.
+  SmallDenseMap<int, KernArgPreloadDescriptor> PreloadKernArgs{};
+  // The first user SGPR allocated for kernarg preloading.
+  Register FirstKernArgPreloadReg;
+
   std::tuple<const ArgDescriptor *, const TargetRegisterClass *, LLT>
   getPreloadedValue(PreloadedValue Value) const;
 
-  static constexpr AMDGPUFunctionArgInfo fixedABILayout();
+  static AMDGPUFunctionArgInfo fixedABILayout();
 };
 
 class AMDGPUArgumentUsageInfo : public ImmutablePass {

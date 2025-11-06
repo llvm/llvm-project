@@ -1,5 +1,5 @@
-;RUN: llc -march=sparc < %s -verify-machineinstrs | FileCheck %s
-;RUN: llc -march=sparc -O0 < %s -verify-machineinstrs | FileCheck %s -check-prefix=UNOPT
+;RUN: llc -mtriple=sparc < %s -verify-machineinstrs | FileCheck %s
+;RUN: llc -mtriple=sparc -O0 < %s -verify-machineinstrs | FileCheck %s -check-prefix=UNOPT
 
 target triple = "sparc-unknown-linux-gnu"
 
@@ -14,7 +14,7 @@ entry:
   ret i32 %0
 }
 
-define i32 @test_jmpl(i32 (i32, i32)* nocapture %f, i32 %a, i32 %b) #0 {
+define i32 @test_jmpl(ptr nocapture %f, i32 %a, i32 %b) #0 {
 entry:
 ; CHECK:      test_jmpl
 ; CHECK:      call
@@ -60,7 +60,7 @@ entry:
 ;CHECK:      sethi
 ;CHECK:      !NO_APP
 ;CHECK-NEXT: ble
-;CHECK-NEXT: mov
+;CHECK-NEXT: nop
   tail call void asm sideeffect "sethi 0, %g0", ""() nounwind
   %0 = icmp slt i32 %a, 0
   br i1 %0, label %bb, label %bb1
@@ -84,7 +84,7 @@ entry:
 ;UNOPT-LABEL:       test_implicit_def:
 ;UNOPT:       call func
 ;UNOPT-NEXT:  nop
-  %0 = tail call i32 @func(i32* undef) nounwind
+  %0 = tail call i32 @func(ptr undef) nounwind
   ret i32 0
 }
 
@@ -105,7 +105,7 @@ entry:
 }
 
 
-declare i32 @func(i32*)
+declare i32 @func(ptr)
 
 
 define i32 @restore_add(i32 %a, i32 %b) {
@@ -184,4 +184,29 @@ entry:
   ret i32 %2
 }
 
+define i32 @test_generic_inst(i32 %arg) #0 {
+;CHECK-LABEL: test_generic_inst:
+;CHECK: ! fake_use: {{.*}}
+;CHECK: bne {{.*}}
+;CHECK-NEXT: nop
+  %bar1 = call i32 @bar(i32 %arg)
+  %even = and i32 %bar1, 1
+  %cmp = icmp eq i32 %even, 0
+  ; This shouldn't get reordered into a delay slot
+  call void (...) @llvm.fake.use(i32 %arg)
+  br i1 %cmp, label %true, label %false
+true:
+  %bar2 = call i32 @bar(i32 %bar1)
+  br label %cont
+
+false:
+  %inc = add nsw i32 %bar1, 1
+  br label %cont
+
+cont:
+  %ret = phi i32 [ %bar2, %true ], [ %inc, %false ]
+  ret i32 %ret
+}
+
+declare void @llvm.fake.use(...)
 attributes #0 = { nounwind "disable-tail-calls"="true" }

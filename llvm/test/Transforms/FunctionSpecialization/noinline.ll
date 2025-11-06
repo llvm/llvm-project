@@ -1,4 +1,4 @@
-; RUN: opt -S --passes="ipsccp<func-spec>" < %s | FileCheck %s
+; RUN: opt -S --passes="ipsccp<func-spec>" -funcspec-for-literal-constant=false < %s | FileCheck %s
 define dso_local i32 @p0(i32 noundef %x) {
 entry:
   %add = add nsw i32 %x, 1
@@ -31,5 +31,5 @@ entry:
 }
 
 ; Check that a noinline function is specialized, even if it's small.
-; CHECK: @f.1
-; CHECK: @f.2
+; CHECK: @f.specialized.1
+; CHECK: @f.specialized.2

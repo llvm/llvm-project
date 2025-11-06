@@ -63,8 +63,8 @@ define i64 @f5(i64 %dummy, ptr %src, i64 %b) {
 ; Check that indexed addresses are not allowed.
 define i64 @f6(i64 %dummy, i64 %base, i64 %index, i64 %b) {
 ; CHECK-LABEL: f6:
+; CHECK: lg %r2, 0(%r4,%r3)
 ; CHECK: agr %r3, %r4
-; CHECK: lg %r2, 0(%r3)
 ; CHECK: csg %r2, {{%r[0-9]+}}, 0(%r3)
 ; CHECK: br %r14
   %add = add i64 %base, %index

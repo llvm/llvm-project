@@ -15,14 +15,16 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "src/errno/libc_errno.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include "hdr/stdio_macros.h"
+#include "hdr/types/size_t.h"
+#include "src/__support/libc_errno.h"
 
-using MemoryView = __llvm_libc::testing::MemoryView;
+using LlvmLibcFOpenCookieTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
 
 struct StringStream {
   char *buf;
@@ -88,7 +90,7 @@ int close_ss(void *cookie) {
 constexpr cookie_io_functions_t STRING_STREAM_FUNCS = {&read_ss, &write_ss,
                                                        &seek_ss, &close_ss};
 
-TEST(LlvmLibcFOpenCookie, ReadOnlyCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, ReadOnlyCookieTest) {
   constexpr char CONTENT[] = "Hello,readonly!";
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
   ss->buf = reinterpret_cast<char *>(malloc(sizeof(CONTENT)));
@@ -98,33 +100,32 @@ TEST(LlvmLibcFOpenCookie, ReadOnlyCookieTest) {
   for (size_t i = 0; i < sizeof(CONTENT); ++i)
     ss->buf[i] = CONTENT[i];
 
-  ::FILE *f = __llvm_libc::fopencookie(ss, "r", STRING_STREAM_FUNCS);
+  ::FILE *f = LIBC_NAMESPACE::fopencookie(ss, "r", STRING_STREAM_FUNCS);
   ASSERT_TRUE(f != nullptr);
   char read_data[sizeof(CONTENT)];
   ASSERT_EQ(sizeof(CONTENT),
-            __llvm_libc::fread(read_data, 1, sizeof(CONTENT), f));
+            LIBC_NAMESPACE::fread(read_data, 1, sizeof(CONTENT), f));
   ASSERT_STREQ(read_data, CONTENT);
 
   // Reading another time should trigger eof.
   ASSERT_NE(sizeof(CONTENT),
-            __llvm_libc::fread(read_data, 1, sizeof(CONTENT), f));
-  ASSERT_NE(__llvm_libc::feof(f), 0);
+            LIBC_NAMESPACE::fread(read_data, 1, sizeof(CONTENT), f));
+  ASSERT_NE(LIBC_NAMESPACE::feof(f), 0);
 
-  ASSERT_EQ(0, __llvm_libc::fseek(f, 0, SEEK_SET));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fseek(f, 0, SEEK_SET));
   // Should be an error to write.
-  ASSERT_EQ(size_t(0), __llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT), f));
-  ASSERT_NE(__llvm_libc::ferror(f), 0);
-  ASSERT_NE(libc_errno, 0);
-  libc_errno = 0;
+  ASSERT_EQ(size_t(0), LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT), f));
+  ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
+  ASSERT_ERRNO_FAILURE();
 
-  __llvm_libc::clearerr(f);
-  ASSERT_EQ(__llvm_libc::ferror(f), 0);
+  LIBC_NAMESPACE::clearerr(f);
+  ASSERT_EQ(LIBC_NAMESPACE::ferror(f), 0);
 
-  ASSERT_EQ(0, __llvm_libc::fclose(f));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
   free(ss);
 }
 
-TEST(LlvmLibcFOpenCookie, WriteOnlyCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, WriteOnlyCookieTest) {
   size_t INIT_BUFSIZE = 32;
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
   ss->buf = reinterpret_cast<char *>(malloc(INIT_BUFSIZE));
@@ -132,32 +133,32 @@ TEST(LlvmLibcFOpenCookie, WriteOnlyCookieTest) {
   ss->offset = 0;
   ss->endpos = 0;
 
-  ::FILE *f = __llvm_libc::fopencookie(ss, "w", STRING_STREAM_FUNCS);
+  ::FILE *f = LIBC_NAMESPACE::fopencookie(ss, "w", STRING_STREAM_FUNCS);
   ASSERT_TRUE(f != nullptr);
 
   constexpr char WRITE_DATA[] = "Hello,writeonly!";
   ASSERT_EQ(sizeof(WRITE_DATA),
-            __llvm_libc::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f));
+            LIBC_NAMESPACE::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f));
   // Flushing will ensure the data to be written to the string stream.
-  ASSERT_EQ(0, __llvm_libc::fflush(f));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fflush(f));
   ASSERT_STREQ(WRITE_DATA, ss->buf);
 
-  ASSERT_EQ(0, __llvm_libc::fseek(f, 0, SEEK_SET));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fseek(f, 0, SEEK_SET));
   char read_data[sizeof(WRITE_DATA)];
   // Should be an error to read.
-  ASSERT_EQ(size_t(0), __llvm_libc::fread(read_data, 1, sizeof(WRITE_DATA), f));
-  ASSERT_NE(__llvm_libc::ferror(f), 0);
-  ASSERT_EQ(libc_errno, EBADF);
-  libc_errno = 0;
+  ASSERT_EQ(size_t(0),
+            LIBC_NAMESPACE::fread(read_data, 1, sizeof(WRITE_DATA), f));
+  ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
+  ASSERT_ERRNO_EQ(EBADF);
 
-  __llvm_libc::clearerr(f);
-  ASSERT_EQ(__llvm_libc::ferror(f), 0);
+  LIBC_NAMESPACE::clearerr(f);
+  ASSERT_EQ(LIBC_NAMESPACE::ferror(f), 0);
 
-  ASSERT_EQ(0, __llvm_libc::fclose(f));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
   free(ss);
 }
 
-TEST(LlvmLibcFOpenCookie, AppendOnlyCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, AppendOnlyCookieTest) {
   constexpr char INITIAL_CONTENT[] = "1234567890987654321";
   constexpr char WRITE_DATA[] = "append";
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
@@ -168,30 +169,29 @@ TEST(LlvmLibcFOpenCookie, AppendOnlyCookieTest) {
   for (size_t i = 0; i < sizeof(INITIAL_CONTENT); ++i)
     ss->buf[i] = INITIAL_CONTENT[i];
 
-  ::FILE *f = __llvm_libc::fopencookie(ss, "a", STRING_STREAM_FUNCS);
+  ::FILE *f = LIBC_NAMESPACE::fopencookie(ss, "a", STRING_STREAM_FUNCS);
   ASSERT_TRUE(f != nullptr);
 
   constexpr size_t READ_SIZE = 5;
   char read_data[READ_SIZE];
   // This is not a readable file.
-  ASSERT_EQ(__llvm_libc::fread(read_data, 1, READ_SIZE, f), size_t(0));
-  ASSERT_NE(__llvm_libc::ferror(f), 0);
-  EXPECT_NE(libc_errno, 0);
-  libc_errno = 0;
+  ASSERT_EQ(LIBC_NAMESPACE::fread(read_data, 1, READ_SIZE, f), size_t(0));
+  ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
+  ASSERT_ERRNO_FAILURE();
 
-  __llvm_libc::clearerr(f);
-  ASSERT_EQ(__llvm_libc::ferror(f), 0);
+  LIBC_NAMESPACE::clearerr(f);
+  ASSERT_EQ(LIBC_NAMESPACE::ferror(f), 0);
 
-  ASSERT_EQ(__llvm_libc::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f),
+  ASSERT_EQ(LIBC_NAMESPACE::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f),
             sizeof(WRITE_DATA));
-  EXPECT_EQ(__llvm_libc::fflush(f), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::fflush(f), 0);
   EXPECT_EQ(ss->endpos, sizeof(WRITE_DATA) + sizeof(INITIAL_CONTENT));
 
-  ASSERT_EQ(__llvm_libc::fclose(f), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(f), 0);
   free(ss);
 }
 
-TEST(LlvmLibcFOpenCookie, ReadUpdateCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, ReadUpdateCookieTest) {
   const char INITIAL_CONTENT[] = "1234567890987654321";
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
   ss->buf = reinterpret_cast<char *>(malloc(sizeof(INITIAL_CONTENT)));
@@ -201,28 +201,28 @@ TEST(LlvmLibcFOpenCookie, ReadUpdateCookieTest) {
   for (size_t i = 0; i < sizeof(INITIAL_CONTENT); ++i)
     ss->buf[i] = INITIAL_CONTENT[i];
 
-  ::FILE *f = __llvm_libc::fopencookie(ss, "r+", STRING_STREAM_FUNCS);
+  ::FILE *f = LIBC_NAMESPACE::fopencookie(ss, "r+", STRING_STREAM_FUNCS);
   ASSERT_TRUE(f != nullptr);
 
   constexpr size_t READ_SIZE = sizeof(INITIAL_CONTENT) / 2;
   char read_data[READ_SIZE];
-  ASSERT_EQ(READ_SIZE, __llvm_libc::fread(read_data, 1, READ_SIZE, f));
+  ASSERT_EQ(READ_SIZE, LIBC_NAMESPACE::fread(read_data, 1, READ_SIZE, f));
 
   MemoryView src1(INITIAL_CONTENT, READ_SIZE), dst1(read_data, READ_SIZE);
   EXPECT_MEM_EQ(src1, dst1);
 
-  ASSERT_EQ(__llvm_libc::fseek(f, 0, SEEK_SET), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::fseek(f, 0, SEEK_SET), 0);
   constexpr char WRITE_DATA[] = "hello, file";
   ASSERT_EQ(sizeof(WRITE_DATA),
-            __llvm_libc::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f));
-  ASSERT_EQ(__llvm_libc::fflush(f), 0);
+            LIBC_NAMESPACE::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f));
+  ASSERT_EQ(LIBC_NAMESPACE::fflush(f), 0);
   EXPECT_STREQ(ss->buf, WRITE_DATA);
 
-  ASSERT_EQ(__llvm_libc::fclose(f), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(f), 0);
   free(ss);
 }
 
-TEST(LlvmLibcFOpenCookie, WriteUpdateCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, WriteUpdateCookieTest) {
   constexpr char WRITE_DATA[] = "hello, file";
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
   ss->buf = reinterpret_cast<char *>(malloc(sizeof(WRITE_DATA)));
@@ -230,19 +230,19 @@ TEST(LlvmLibcFOpenCookie, WriteUpdateCookieTest) {
   ss->offset = 0;
   ss->endpos = 0;
 
-  ::FILE *f = __llvm_libc::fopencookie(ss, "w+", STRING_STREAM_FUNCS);
+  ::FILE *f = LIBC_NAMESPACE::fopencookie(ss, "w+", STRING_STREAM_FUNCS);
   ASSERT_TRUE(f != nullptr);
 
   ASSERT_EQ(sizeof(WRITE_DATA),
-            __llvm_libc::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f));
+            LIBC_NAMESPACE::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f));
 
-  ASSERT_EQ(__llvm_libc::fseek(f, 0, SEEK_SET), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::fseek(f, 0, SEEK_SET), 0);
 
   char read_data[sizeof(WRITE_DATA)];
-  ASSERT_EQ(__llvm_libc::fread(read_data, 1, sizeof(read_data), f),
+  ASSERT_EQ(LIBC_NAMESPACE::fread(read_data, 1, sizeof(read_data), f),
             sizeof(read_data));
   EXPECT_STREQ(read_data, WRITE_DATA);
 
-  ASSERT_EQ(__llvm_libc::fclose(f), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(f), 0);
   free(ss);
 }

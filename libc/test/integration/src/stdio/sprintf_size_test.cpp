@@ -38,7 +38,7 @@ static int my_strlen(const char *str) {
   return static_cast<int>(other - str);
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int argc, char **argv, [[maybe_unused]] char **envp) {
   ASSERT_EQ(argc, 5);
   ASSERT_TRUE(my_streq(argv[1], "%s %c %d"));
   ASSERT_EQ(my_strlen(argv[1]), 8);
@@ -51,8 +51,9 @@ TEST_MAIN(int argc, char **argv, char **envp) {
 
 #ifndef INTEGRATION_DISABLE_PRINTF
   char buf[100];
-  ASSERT_EQ(__llvm_libc::sprintf(buf, argv[1], argv[2], argv[3][0], argv[4][0]),
-            14);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::sprintf(buf, argv[1], argv[2], argv[3][0], argv[4][0]),
+      14);
   ASSERT_TRUE(my_streq(buf, "First arg a 48"));
 #endif
 

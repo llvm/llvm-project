@@ -29,13 +29,9 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/ThreadLocalCache.h"
-#include "mlir/Transforms/Mem2Reg.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
 
 namespace llvm {
 class Type;
@@ -84,6 +80,13 @@ public:
 
   using BaseT::operator=;
 };
+} // namespace LLVM
+} // namespace mlir
+
+namespace mlir {
+namespace LLVM {
+struct AssumeAlignTag {};
+struct AssumeSeparateStorageTag {};
 } // namespace LLVM
 } // namespace mlir
 
@@ -209,12 +212,14 @@ private:
 /// global and use it to compute the address of the first character in the
 /// string (operations inserted at the builder insertion point).
 Value createGlobalString(Location loc, OpBuilder &builder, StringRef name,
-                         StringRef value, Linkage linkage,
-                         bool useOpaquePointers);
+                         StringRef value, Linkage linkage);
 
 /// LLVM requires some operations to be inside of a Module operation. This
 /// function confirms that the Operation has the desired properties.
 bool satisfiesLLVMModule(Operation *op);
+
+/// Lookup parent Module satisfying LLVM conditions on the Module Operation.
+Operation *parentLLVMModule(Operation *op);
 
 /// Convert an array of integer attributes to a vector of integers that can be
 /// used as indices in LLVM operations.

@@ -7,12 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeCompletionStrings.h"
+#include "Config.h"
+#include "SymbolDocumentation.h"
 #include "clang-c/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Comment.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <utility>
 
@@ -22,7 +28,7 @@ namespace {
 
 bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
   return Chunk.Kind == CodeCompletionString::CK_Informative &&
-         llvm::StringRef(Chunk.Text).endswith("::");
+         llvm::StringRef(Chunk.Text).ends_with("::");
 }
 
 void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
@@ -99,16 +105,55 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
     // the comments for namespaces.
     return "";
   }
-  const RawComment *RC = getCompletionComment(Ctx, &Decl);
-  if (!RC)
-    return "";
-  // Sanity check that the comment does not come from the PCH. We choose to not
-  // write them into PCH, because they are racy and slow to load.
-  assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
-  std::string Doc =
-      RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  if (!looksLikeDocComment(Doc))
-    return "";
+
+  const RawComment *RC = nullptr;
+  const Config &Cfg = Config::current();
+
+  std::string Doc;
+
+  if (Cfg.Documentation.CommentFormat == Config::CommentFormatPolicy::Doxygen &&
+      isa<ParmVarDecl, TemplateTypeParmDecl>(Decl)) {
+    // Parameters are documented in their declaration context (function or
+    // template function).
+    const NamedDecl *ND = dyn_cast<NamedDecl>(Decl.getDeclContext());
+    if (!ND)
+      return "";
+
+    RC = getCompletionComment(Ctx, ND);
+    if (!RC)
+      return "";
+
+    // Sanity check that the comment does not come from the PCH. We choose to
+    // not write them into PCH, because they are racy and slow to load.
+    assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
+
+    comments::FullComment *FC = RC->parse(Ctx, /*PP=*/nullptr, ND);
+    if (!FC)
+      return "";
+
+    SymbolDocCommentVisitor V(FC, Ctx.getLangOpts().CommentOpts);
+    std::string RawDoc;
+    llvm::raw_string_ostream OS(RawDoc);
+
+    if (auto *PVD = dyn_cast<ParmVarDecl>(&Decl))
+      V.parameterDocToString(PVD->getName(), OS);
+    else
+      V.templateTypeParmDocToString(
+          cast<TemplateTypeParmDecl>(&Decl)->getName(), OS);
+
+    Doc = StringRef(RawDoc).trim().str();
+  } else {
+    RC = getCompletionComment(Ctx, &Decl);
+    if (!RC)
+      return "";
+    // Sanity check that the comment does not come from the PCH. We choose to
+    // not write them into PCH, because they are racy and slow to load.
+    assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
+    Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+    if (!looksLikeDocComment(Doc))
+      return "";
+  }
+
   // Clang requires source to be UTF-8, but doesn't enforce this in comments.
   if (!llvm::json::isUTF8(Doc))
     Doc = llvm::json::fixUTF8(Doc);
@@ -118,7 +163,8 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                   std::string *Snippet,
                   CodeCompletionResult::ResultKind ResultKind,
-                  CXCursorKind CursorKind, std::string *RequiredQualifiers) {
+                  CXCursorKind CursorKind, bool IncludeFunctionArguments,
+                  std::string *RequiredQualifiers) {
   // Placeholder with this index will be $0 to mark final cursor position.
   // Usually we do not add $0, so the cursor is placed at end of completed text.
   unsigned CursorSnippetArg = std::numeric_limits<unsigned>::max();
@@ -138,6 +184,8 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
   unsigned SnippetArg = 0;
   bool HadObjCArguments = false;
   bool HadInformativeChunks = false;
+
+  std::optional<unsigned> TruncateSnippetAt;
   for (const auto &Chunk : CCS) {
     // Informative qualifier chunks only clutter completion results, skip
     // them.
@@ -161,7 +209,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       //   Completing a method declaration itself (not a method expression) is
       //   similar except that we use the `RequiredQualifiers` to store the
       //   text before the selector, e.g. `- (void)`.
-      if (!llvm::StringRef(Chunk.Text).endswith(":")) { // Treat as C++.
+      if (!llvm::StringRef(Chunk.Text).ends_with(":")) { // Treat as C++.
         if (RequiredQualifiers)
           *RequiredQualifiers = std::move(*Signature);
         Signature->clear();
@@ -243,6 +291,13 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                        "CompletionItems");
       break;
     case CodeCompletionString::CK_LeftParen:
+      // We're assuming that a LeftParen in a declaration starts a function
+      // call, and arguments following the parenthesis could be discarded if
+      // IncludeFunctionArguments is false.
+      if (!IncludeFunctionArguments &&
+          ResultKind == CodeCompletionResult::RK_Declaration)
+        TruncateSnippetAt.emplace(Snippet->size());
+      [[fallthrough]];
     case CodeCompletionString::CK_RightParen:
     case CodeCompletionString::CK_LeftBracket:
     case CodeCompletionString::CK_RightBracket:
@@ -264,6 +319,8 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       break;
     }
   }
+  if (TruncateSnippetAt)
+    *Snippet = Snippet->substr(0, *TruncateSnippetAt);
 }
 
 std::string formatDocumentation(const CodeCompletionString &CCS,

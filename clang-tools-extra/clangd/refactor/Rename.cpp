@@ -18,9 +18,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/CharInfo.h"
@@ -183,9 +185,8 @@ void filterRenameTargets(llvm::DenseSet<const NamedDecl *> &Decls) {
   // For renaming, we're only interested in foo's declaration, so drop the other
   // one. There should never be more than one UsingDecl here, otherwise the
   // rename would be ambiguos anyway.
-  auto UD = std::find_if(Decls.begin(), Decls.end(), [](const NamedDecl *D) {
-    return llvm::isa<UsingDecl>(D);
-  });
+  auto UD = llvm::find_if(
+      Decls, [](const NamedDecl *D) { return llvm::isa<UsingDecl>(D); });
   if (UD != Decls.end()) {
     Decls.erase(UD);
   }
@@ -222,6 +223,11 @@ std::optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
         return ReasonToReject::UnsupportedSymbol;
     }
   }
+  // We allow renaming ObjC methods although they don't have a simple
+  // identifier.
+  const auto *ID = RenameDecl.getIdentifier();
+  if (!ID && !isa<ObjCMethodDecl>(&RenameDecl))
+    return ReasonToReject::UnsupportedSymbol;
   // Filter out symbols that are unsupported in both rename modes.
   if (llvm::isa<NamespaceDecl>(&RenameDecl))
     return ReasonToReject::UnsupportedSymbol;
@@ -333,7 +339,8 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
     for (const auto &Child : DS->getDeclGroup())
       if (const auto *ND = dyn_cast<NamedDecl>(Child))
         if (ND != &RenamedDecl && ND->getDeclName().isIdentifier() &&
-            ND->getName() == Name)
+            ND->getName() == Name &&
+            ND->getIdentifierNamespace() & RenamedDecl.getIdentifierNamespace())
           return ND;
     return nullptr;
   };
@@ -375,7 +382,9 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
     // Also check if there is a name collision with function arguments.
     if (const auto *Function = ScopeParent->get<FunctionDecl>())
       for (const auto *Parameter : Function->parameters())
-        if (Parameter->getName() == NewName)
+        if (Parameter->getName() == NewName &&
+            Parameter->getIdentifierNamespace() &
+                RenamedDecl.getIdentifierNamespace())
           return Parameter;
     return nullptr;
   }
@@ -400,7 +409,9 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
   if (const auto *EnclosingFunction = Parent->get<FunctionDecl>()) {
     // Check for conflicts with other arguments.
     for (const auto *Parameter : EnclosingFunction->parameters())
-      if (Parameter != &RenamedDecl && Parameter->getName() == NewName)
+      if (Parameter != &RenamedDecl && Parameter->getName() == NewName &&
+          Parameter->getIdentifierNamespace() &
+              RenamedDecl.getIdentifierNamespace())
         return Parameter;
     // FIXME: We don't modify all references to function parameters when
     // renaming from forward declaration now, so using a name colliding with
@@ -445,7 +456,8 @@ const NamedDecl *lookupSiblingsWithinContext(ASTContext &Ctx,
   }
   // Lookup may contain the RenameDecl itself, exclude it.
   for (const auto *D : LookupResult)
-    if (D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl())
+    if (D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl() &&
+        D->getIdentifierNamespace() & RenamedDecl.getIdentifierNamespace())
       return D;
   return nullptr;
 }
@@ -498,7 +510,7 @@ llvm::Error makeError(InvalidName Reason) {
   return error("invalid name: {0}", Message(Reason));
 }
 
-static bool mayBeValidIdentifier(llvm::StringRef Ident) {
+static bool mayBeValidIdentifier(llvm::StringRef Ident, bool AllowColon) {
   assert(llvm::json::isUTF8(Ident));
   if (Ident.empty())
     return false;
@@ -508,24 +520,45 @@ static bool mayBeValidIdentifier(llvm::StringRef Ident) {
       !isAsciiIdentifierStart(Ident.front(), AllowDollar))
     return false;
   for (char C : Ident) {
+    if (AllowColon && C == ':')
+      continue;
     if (llvm::isASCII(C) && !isAsciiIdentifierContinue(C, AllowDollar))
       return false;
   }
   return true;
 }
 
+std::string getName(const NamedDecl &RenameDecl) {
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl))
+    return MD->getSelector().getAsString();
+  if (const auto *ID = RenameDecl.getIdentifier())
+    return ID->getName().str();
+  return "";
+}
+
 // Check if we can rename the given RenameDecl into NewName.
 // Return details if the rename would produce a conflict.
-std::optional<InvalidName> checkName(const NamedDecl &RenameDecl,
-                                     llvm::StringRef NewName) {
+llvm::Error checkName(const NamedDecl &RenameDecl, llvm::StringRef NewName,
+                      llvm::StringRef OldName) {
   trace::Span Tracer("CheckName");
   static constexpr trace::Metric InvalidNameMetric(
       "rename_name_invalid", trace::Metric::Counter, "invalid_kind");
+
+  if (OldName == NewName)
+    return makeError(ReasonToReject::SameName);
+
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+    const auto Sel = MD->getSelector();
+    if (Sel.getNumArgs() != NewName.count(':') &&
+        NewName != "__clangd_rename_placeholder")
+      return makeError(InvalidName{InvalidName::BadIdentifier, NewName.str()});
+  }
+
   auto &ASTCtx = RenameDecl.getASTContext();
   std::optional<InvalidName> Result;
   if (isKeyword(NewName, ASTCtx.getLangOpts()))
     Result = InvalidName{InvalidName::Keywords, NewName.str()};
-  else if (!mayBeValidIdentifier(NewName))
+  else if (!mayBeValidIdentifier(NewName, isa<ObjCMethodDecl>(&RenameDecl)))
     Result = InvalidName{InvalidName::BadIdentifier, NewName.str()};
   else {
     // Name conflict detection.
@@ -538,9 +571,223 @@ std::optional<InvalidName> checkName(const NamedDecl &RenameDecl,
             Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
     }
   }
-  if (Result)
+  if (Result) {
     InvalidNameMetric.record(1, toString(Result->K));
+    return makeError(*Result);
+  }
+  return llvm::Error::success();
+}
+
+bool isSelectorLike(const syntax::Token &Cur, const syntax::Token &Next) {
+  return Cur.kind() == tok::identifier && Next.kind() == tok::colon &&
+         // We require the selector name and : to be contiguous.
+         // e.g. support `foo:` but not `foo :`.
+         Cur.endLocation() == Next.location();
+}
+
+bool isMatchingSelectorName(const syntax::Token &Cur, const syntax::Token &Next,
+                            const SourceManager &SM,
+                            llvm::StringRef SelectorName) {
+  if (SelectorName.empty())
+    return Cur.kind() == tok::colon;
+  return isSelectorLike(Cur, Next) && Cur.text(SM) == SelectorName;
+}
+
+// Scan through Tokens to find ranges for each selector fragment in Sel assuming
+// its first segment is located at Tokens.front().
+// The search will terminate upon seeing Terminator or a ; at the top level.
+std::optional<SymbolRange>
+findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
+                      const SourceManager &SM, const RenameSymbolName &Name,
+                      tok::TokenKind Terminator) {
+  assert(!Tokens.empty());
+
+  ArrayRef<std::string> NamePieces = Name.getNamePieces();
+  unsigned NumArgs = NamePieces.size();
+  llvm::SmallVector<tok::TokenKind, 8> Closes;
+  std::vector<Range> SelectorPieces;
+  for (unsigned Index = 0, Last = Tokens.size(); Index < Last - 1; ++Index) {
+    const auto &Tok = Tokens[Index];
+
+    if (Closes.empty()) {
+      auto PieceCount = SelectorPieces.size();
+      if (PieceCount < NumArgs &&
+          isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
+                                 NamePieces[PieceCount])) {
+        // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
+        // token after the name. We don't currently properly support empty
+        // selectors since we may lex them improperly due to ternary statements
+        // as well as don't properly support storing their ranges for edits.
+        if (!NamePieces[PieceCount].empty())
+          ++Index;
+        SelectorPieces.push_back(
+            halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
+        continue;
+      }
+      // If we've found all pieces but the current token looks like another
+      // selector piece, it means the method being renamed is a strict prefix of
+      // the selector we've found - should be skipped.
+      if (SelectorPieces.size() >= NumArgs &&
+          isSelectorLike(Tok, Tokens[Index + 1]))
+        return std::nullopt;
+    }
+
+    if (Closes.empty() && Tok.kind() == Terminator)
+      return SelectorPieces.size() == NumArgs
+                 ? std::optional(SymbolRange(SelectorPieces))
+                 : std::nullopt;
+
+    switch (Tok.kind()) {
+    case tok::l_square:
+      Closes.push_back(tok::r_square);
+      break;
+    case tok::l_paren:
+      Closes.push_back(tok::r_paren);
+      break;
+    case tok::l_brace:
+      Closes.push_back(tok::r_brace);
+      break;
+    case tok::r_square:
+    case tok::r_paren:
+    case tok::r_brace:
+      if (Closes.empty() || Closes.back() != Tok.kind())
+        return std::nullopt;
+      Closes.pop_back();
+      break;
+    case tok::semi:
+      // top level ; terminates all statements.
+      if (Closes.empty())
+        return SelectorPieces.size() == NumArgs
+                   ? std::optional(SymbolRange(SelectorPieces))
+                   : std::nullopt;
+      break;
+    default:
+      break;
+    }
+  }
+  return std::nullopt;
+}
+
+/// Collects all ranges of the given identifier/selector in the source code.
+///
+/// If `Name` is an Objective-C symbol name, this does a full lex of the given
+/// source code in order to identify all selector fragments (e.g. in method
+/// exprs/decls) since they are non-contiguous.
+std::vector<SymbolRange>
+collectRenameIdentifierRanges(const RenameSymbolName &Name,
+                              llvm::StringRef Content,
+                              const LangOptions &LangOpts) {
+  std::vector<SymbolRange> Ranges;
+  if (auto SinglePiece = Name.getSinglePiece()) {
+    auto IdentifierRanges =
+        collectIdentifierRanges(*SinglePiece, Content, LangOpts);
+    for (const auto &R : IdentifierRanges)
+      Ranges.emplace_back(R);
+    return Ranges;
+  }
+  // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
+  std::string NullTerminatedCode = Content.str();
+  SourceManagerForFile FileSM("mock_file_name.cpp", NullTerminatedCode);
+  auto &SM = FileSM.get();
+
+  // We track parens and brackets to ensure that we don't accidentally try
+  // parsing a method declaration or definition which isn't at the top level or
+  // similar looking expressions (e.g. an @selector() expression).
+  llvm::SmallVector<tok::TokenKind, 8> Closes;
+  llvm::StringRef FirstSelPiece = Name.getNamePieces()[0];
+
+  auto Tokens = syntax::tokenize(SM.getMainFileID(), SM, LangOpts);
+  unsigned Last = Tokens.size() - 1;
+  for (unsigned Index = 0; Index < Last; ++Index) {
+    const auto &Tok = Tokens[Index];
+
+    // Search for the first selector piece to begin a match, but make sure we're
+    // not in () to avoid the @selector(foo:bar:) case.
+    if ((Closes.empty() || Closes.back() == tok::r_square) &&
+        isMatchingSelectorName(Tok, Tokens[Index + 1], SM, FirstSelPiece)) {
+      // We found a candidate for our match, this might be a method call,
+      // declaration, or unrelated identifier eg:
+      // - [obj ^sel0: X sel1: Y ... ]
+      //
+      // or
+      //
+      // @interface Foo
+      //  - (int)^sel0:(int)x sel1:(int)y;
+      // @end
+      //
+      // or
+      //
+      // @implementation Foo
+      //  - (int)^sel0:(int)x sel1:(int)y {}
+      // @end
+      //
+      // but not @selector(sel0:sel1:)
+      //
+      // Check if we can find all the relevant selector peices starting from
+      // this token
+      auto SelectorRanges =
+          findAllSelectorPieces(ArrayRef(Tokens).slice(Index), SM, Name,
+                                Closes.empty() ? tok::l_brace : Closes.back());
+      if (SelectorRanges)
+        Ranges.emplace_back(std::move(*SelectorRanges));
+    }
+
+    switch (Tok.kind()) {
+    case tok::l_square:
+      Closes.push_back(tok::r_square);
+      break;
+    case tok::l_paren:
+      Closes.push_back(tok::r_paren);
+      break;
+    case tok::r_square:
+    case tok::r_paren:
+      if (Closes.empty()) // Invalid code, give up on the rename.
+        return std::vector<SymbolRange>();
+
+      if (Closes.back() == Tok.kind())
+        Closes.pop_back();
+      break;
+    default:
+      break;
+    }
+  }
+  return Ranges;
+}
+
+clangd::Range tokenRangeForLoc(ParsedAST &AST, SourceLocation TokLoc,
+                               const SourceManager &SM,
+                               const LangOptions &LangOpts) {
+  const auto *Token = AST.getTokens().spelledTokenContaining(TokLoc);
+  assert(Token && "rename expects spelled tokens");
+  clangd::Range Result;
+  Result.start = sourceLocToPosition(SM, Token->location());
+  Result.end = sourceLocToPosition(SM, Token->endLocation());
   return Result;
+}
+
+// AST-based ObjC method rename, it renames all occurrences in the main file
+// even for selectors which may have multiple tokens.
+llvm::Expected<tooling::Replacements>
+renameObjCMethodWithinFile(ParsedAST &AST, const ObjCMethodDecl *MD,
+                           llvm::StringRef NewName,
+                           std::vector<SourceLocation> SelectorOccurences) {
+  const SourceManager &SM = AST.getSourceManager();
+  auto Code = SM.getBufferData(SM.getMainFileID());
+  llvm::SmallVector<llvm::StringRef, 8> NewNames;
+  NewName.split(NewNames, ":");
+
+  std::vector<Range> Ranges;
+  const auto &LangOpts = MD->getASTContext().getLangOpts();
+  for (const auto &Loc : SelectorOccurences)
+    Ranges.push_back(tokenRangeForLoc(AST, Loc, SM, LangOpts));
+  auto FilePath = AST.tuPath();
+  auto RenameRanges = collectRenameIdentifierRanges(
+      RenameSymbolName(MD->getDeclName()), Code, LangOpts);
+  auto RenameEdit = buildRenameEdit(FilePath, Code, RenameRanges, NewNames);
+  if (!RenameEdit)
+    return error("failed to rename in file {0}: {1}", FilePath,
+                 RenameEdit.takeError());
+  return RenameEdit->Replacements;
 }
 
 // AST-based rename, it renames all occurrences in the main file.
@@ -551,6 +798,7 @@ renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
   const SourceManager &SM = AST.getSourceManager();
 
   tooling::Replacements FilteredChanges;
+  std::vector<SourceLocation> Locs;
   for (SourceLocation Loc : findOccurrencesWithinFile(AST, RenameDecl)) {
     SourceLocation RenameLoc = Loc;
     // We don't rename in any macro bodies, but we allow rename the symbol
@@ -569,8 +817,23 @@ renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
     //   }
     if (!isInsideMainFile(RenameLoc, SM))
       continue;
+    Locs.push_back(RenameLoc);
+  }
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+    // The custom ObjC selector logic doesn't handle the zero arg selector
+    // case, as it relies on parsing selectors via the trailing `:`.
+    // We also choose to use regular rename logic for the single-arg selectors
+    // as the AST/Index has the right locations in that case.
+    if (MD->getSelector().getNumArgs() > 1)
+      return renameObjCMethodWithinFile(AST, MD, NewName, std::move(Locs));
+
+    // Eat trailing : for single argument methods since they're actually
+    // considered a separate token during rename.
+    NewName.consume_back(":");
+  }
+  for (const auto &Loc : Locs) {
     if (auto Err = FilteredChanges.add(tooling::Replacement(
-            SM, CharSourceRange::getTokenRange(RenameLoc), NewName)))
+            SM, CharSourceRange::getTokenRange(Loc), NewName)))
       return std::move(Err);
   }
   return FilteredChanges;
@@ -642,7 +905,7 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
   for (auto &FileAndOccurrences : AffectedFiles) {
     auto &Ranges = FileAndOccurrences.getValue();
     llvm::sort(Ranges);
-    Ranges.erase(std::unique(Ranges.begin(), Ranges.end()), Ranges.end());
+    Ranges.erase(llvm::unique(Ranges), Ranges.end());
 
     SPAN_ATTACH(Tracer, FileAndOccurrences.first(),
                 static_cast<int64_t>(Ranges.size()));
@@ -681,12 +944,14 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
            ExpBuffer.getError().message());
       continue;
     }
+    RenameSymbolName RenameName(RenameDecl.getDeclName());
+    llvm::SmallVector<llvm::StringRef, 8> NewNames;
+    NewName.split(NewNames, ":");
 
     auto AffectedFileCode = (*ExpBuffer)->getBuffer();
-    auto RenameRanges =
-        adjustRenameRanges(AffectedFileCode, RenameDecl.getNameAsString(),
-                           std::move(FileAndOccurrences.second),
-                           RenameDecl.getASTContext().getLangOpts());
+    auto RenameRanges = adjustRenameRanges(
+        AffectedFileCode, RenameName, std::move(FileAndOccurrences.second),
+        RenameDecl.getASTContext().getLangOpts());
     if (!RenameRanges) {
       // Our heuristics fails to adjust rename ranges to the current state of
       // the file, it is most likely the index is stale, so we give up the
@@ -696,7 +961,7 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
                    FilePath);
     }
     auto RenameEdit =
-        buildRenameEdit(FilePath, AffectedFileCode, *RenameRanges, NewName);
+        buildRenameEdit(FilePath, AffectedFileCode, *RenameRanges, NewNames);
     if (!RenameEdit)
       return error("failed to rename in file {0}: {1}", FilePath,
                    RenameEdit.takeError());
@@ -724,7 +989,7 @@ bool impliesSimpleEdit(const Position &LHS, const Position &RHS) {
 //     *line* or *column*, but not both (increases chance of a robust mapping)
 void findNearMiss(
     std::vector<size_t> &PartialMatch, ArrayRef<Range> IndexedRest,
-    ArrayRef<Range> LexedRest, int LexedIndex, int &Fuel,
+    ArrayRef<SymbolRange> LexedRest, int LexedIndex, int &Fuel,
     llvm::function_ref<void(const std::vector<size_t> &)> MatchedCB) {
   if (--Fuel < 0)
     return;
@@ -734,7 +999,8 @@ void findNearMiss(
     MatchedCB(PartialMatch);
     return;
   }
-  if (impliesSimpleEdit(IndexedRest.front().start, LexedRest.front().start)) {
+  if (impliesSimpleEdit(IndexedRest.front().start,
+                        LexedRest.front().range().start)) {
     PartialMatch.push_back(LexedIndex);
     findNearMiss(PartialMatch, IndexedRest.drop_front(), LexedRest.drop_front(),
                  LexedIndex + 1, Fuel, MatchedCB);
@@ -745,6 +1011,67 @@ void findNearMiss(
 }
 
 } // namespace
+
+RenameSymbolName::RenameSymbolName() : NamePieces({}) {}
+
+namespace {
+std::vector<std::string> extractNamePieces(const DeclarationName &DeclName) {
+  if (DeclName.getNameKind() ==
+          DeclarationName::NameKind::ObjCMultiArgSelector ||
+      DeclName.getNameKind() == DeclarationName::NameKind::ObjCOneArgSelector) {
+    const Selector &Sel = DeclName.getObjCSelector();
+    std::vector<std::string> Result;
+    for (unsigned Slot = 0; Slot < Sel.getNumArgs(); ++Slot) {
+      Result.push_back(Sel.getNameForSlot(Slot).str());
+    }
+    return Result;
+  }
+  return {DeclName.getAsString()};
+}
+} // namespace
+
+RenameSymbolName::RenameSymbolName(const DeclarationName &DeclName)
+    : RenameSymbolName(extractNamePieces(DeclName)) {}
+
+RenameSymbolName::RenameSymbolName(ArrayRef<std::string> NamePieces) {
+  for (const auto &Piece : NamePieces)
+    this->NamePieces.push_back(Piece);
+}
+
+std::optional<std::string> RenameSymbolName::getSinglePiece() const {
+  if (getNamePieces().size() == 1) {
+    return NamePieces.front();
+  }
+  return std::nullopt;
+}
+
+std::string RenameSymbolName::getAsString() const {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  this->print(OS);
+  return Result;
+}
+
+void RenameSymbolName::print(raw_ostream &OS) const {
+  llvm::interleave(NamePieces, OS, ":");
+}
+
+SymbolRange::SymbolRange(Range R) : Ranges({R}) {}
+
+SymbolRange::SymbolRange(std::vector<Range> Ranges)
+    : Ranges(std::move(Ranges)) {}
+
+Range SymbolRange::range() const { return Ranges.front(); }
+
+bool operator==(const SymbolRange &LHS, const SymbolRange &RHS) {
+  return LHS.Ranges == RHS.Ranges;
+}
+bool operator!=(const SymbolRange &LHS, const SymbolRange &RHS) {
+  return !(LHS == RHS);
+}
+bool operator<(const SymbolRange &LHS, const SymbolRange &RHS) {
+  return LHS.range() < RHS.range();
+}
 
 llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   assert(!RInputs.Index == !RInputs.FS &&
@@ -778,15 +1105,16 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::NoSymbolFound);
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
+
   const auto &RenameDecl = **DeclsUnderCursor.begin();
-  const auto *ID = RenameDecl.getIdentifier();
-  if (!ID)
-    return makeError(ReasonToReject::UnsupportedSymbol);
-  if (ID->getName() == RInputs.NewName)
-    return makeError(ReasonToReject::SameName);
-  auto Invalid = checkName(RenameDecl, RInputs.NewName);
+  static constexpr trace::Metric RenameTriggerCounter(
+      "rename_trigger_count", trace::Metric::Counter, "decl_kind");
+  RenameTriggerCounter.record(1, RenameDecl.getDeclKindName());
+
+  std::string Placeholder = getName(RenameDecl);
+  auto Invalid = checkName(RenameDecl, RInputs.NewName, Placeholder);
   if (Invalid)
-    return makeError(std::move(*Invalid));
+    return std::move(Invalid);
 
   auto Reject =
       renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index, Opts);
@@ -806,27 +1134,38 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (!MainFileRenameEdit)
     return MainFileRenameEdit.takeError();
 
+  llvm::DenseSet<Range> RenamedRanges;
+  if (!isa<ObjCMethodDecl>(RenameDecl)) {
+    // TODO: Insert the ranges from the ObjCMethodDecl/ObjCMessageExpr selector
+    // pieces which are being renamed. This will require us to make changes to
+    // locateDeclAt to preserve this AST node.
+    RenamedRanges.insert(CurrentIdentifier);
+  }
+
   // Check the rename-triggering location is actually being renamed.
   // This is a robustness check to avoid surprising rename results -- if the
   // the triggering location is not actually the name of the node we identified
   // (e.g. for broken code), then rename is likely not what users expect, so we
   // reject this kind of rename.
-  auto StartOffset = positionToOffset(MainFileCode, CurrentIdentifier.start);
-  auto EndOffset = positionToOffset(MainFileCode, CurrentIdentifier.end);
-  if (!StartOffset)
-    return StartOffset.takeError();
-  if (!EndOffset)
-    return EndOffset.takeError();
-  if (llvm::none_of(
-          *MainFileRenameEdit,
-          [&StartOffset, &EndOffset](const clang::tooling::Replacement &R) {
-            return R.getOffset() == *StartOffset &&
-                   R.getLength() == *EndOffset - *StartOffset;
-          })) {
-    return makeError(ReasonToReject::NoSymbolFound);
+  for (const auto &Range : RenamedRanges) {
+    auto StartOffset = positionToOffset(MainFileCode, Range.start);
+    auto EndOffset = positionToOffset(MainFileCode, Range.end);
+    if (!StartOffset)
+      return StartOffset.takeError();
+    if (!EndOffset)
+      return EndOffset.takeError();
+    if (llvm::none_of(
+            *MainFileRenameEdit,
+            [&StartOffset, &EndOffset](const clang::tooling::Replacement &R) {
+              return R.getOffset() == *StartOffset &&
+                     R.getLength() == *EndOffset - *StartOffset;
+            })) {
+      return makeError(ReasonToReject::NoSymbolFound);
+    }
   }
   RenameResult Result;
   Result.Target = CurrentIdentifier;
+  Result.Placeholder = Placeholder;
   Edit MainFileEdits = Edit(MainFileCode, std::move(*MainFileRenameEdit));
   for (const TextEdit &TE : MainFileEdits.asTextEdits())
     Result.LocalChanges.push_back(TE.range);
@@ -862,16 +1201,15 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
 
 llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
                                      llvm::StringRef InitialCode,
-                                     std::vector<Range> Occurrences,
-                                     llvm::StringRef NewName) {
+                                     std::vector<SymbolRange> Occurrences,
+                                     llvm::ArrayRef<llvm::StringRef> NewNames) {
   trace::Span Tracer("BuildRenameEdit");
   SPAN_ATTACH(Tracer, "file_path", AbsFilePath);
   SPAN_ATTACH(Tracer, "rename_occurrences",
               static_cast<int64_t>(Occurrences.size()));
 
   assert(llvm::is_sorted(Occurrences));
-  assert(std::unique(Occurrences.begin(), Occurrences.end()) ==
-             Occurrences.end() &&
+  assert(llvm::unique(Occurrences) == Occurrences.end() &&
          "Occurrences must be unique");
 
   // These two always correspond to the same position.
@@ -893,22 +1231,38 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
     return LastOffset;
   };
 
-  std::vector<std::pair</*start*/ size_t, /*end*/ size_t>> OccurrencesOffsets;
-  for (const auto &R : Occurrences) {
-    auto StartOffset = Offset(R.start);
-    if (!StartOffset)
-      return StartOffset.takeError();
-    auto EndOffset = Offset(R.end);
-    if (!EndOffset)
-      return EndOffset.takeError();
-    OccurrencesOffsets.push_back({*StartOffset, *EndOffset});
+  struct OccurrenceOffset {
+    size_t Start;
+    size_t End;
+    llvm::StringRef NewName;
+
+    OccurrenceOffset(size_t Start, size_t End, llvm::StringRef NewName)
+        : Start(Start), End(End), NewName(NewName) {}
+  };
+
+  std::vector<OccurrenceOffset> OccurrencesOffsets;
+  for (const auto &SR : Occurrences) {
+    for (auto [Range, NewName] : llvm::zip(SR.Ranges, NewNames)) {
+      auto StartOffset = Offset(Range.start);
+      if (!StartOffset)
+        return StartOffset.takeError();
+      auto EndOffset = Offset(Range.end);
+      if (!EndOffset)
+        return EndOffset.takeError();
+      // Nothing to do if the token/name hasn't changed.
+      auto CurName =
+          InitialCode.substr(*StartOffset, *EndOffset - *StartOffset);
+      if (CurName == NewName)
+        continue;
+      OccurrencesOffsets.emplace_back(*StartOffset, *EndOffset, NewName);
+    }
   }
 
   tooling::Replacements RenameEdit;
   for (const auto &R : OccurrencesOffsets) {
-    auto ByteLength = R.second - R.first;
+    auto ByteLength = R.End - R.Start;
     if (auto Err = RenameEdit.add(
-            tooling::Replacement(AbsFilePath, R.first, ByteLength, NewName)))
+            tooling::Replacement(AbsFilePath, R.Start, ByteLength, R.NewName)))
       return std::move(Err);
   }
   return Edit(InitialCode, std::move(RenameEdit));
@@ -927,20 +1281,20 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 //          ranges onto candidates in a plausible way (e.g. guess that lines
 //          were inserted). If such a "near miss" is found, the rename is still
 //          possible
-std::optional<std::vector<Range>>
-adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
+std::optional<std::vector<SymbolRange>>
+adjustRenameRanges(llvm::StringRef DraftCode, const RenameSymbolName &Name,
                    std::vector<Range> Indexed, const LangOptions &LangOpts) {
   trace::Span Tracer("AdjustRenameRanges");
   assert(!Indexed.empty());
   assert(llvm::is_sorted(Indexed));
-  std::vector<Range> Lexed =
-      collectIdentifierRanges(Identifier, DraftCode, LangOpts);
+  std::vector<SymbolRange> Lexed =
+      collectRenameIdentifierRanges(Name, DraftCode, LangOpts);
   llvm::sort(Lexed);
   return getMappedRanges(Indexed, Lexed);
 }
 
-std::optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
-                                                  ArrayRef<Range> Lexed) {
+std::optional<std::vector<SymbolRange>>
+getMappedRanges(ArrayRef<Range> Indexed, ArrayRef<SymbolRange> Lexed) {
   trace::Span Tracer("GetMappedRanges");
   assert(!Indexed.empty());
   assert(llvm::is_sorted(Indexed));
@@ -954,8 +1308,8 @@ std::optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
     return std::nullopt;
   }
   // Fast check for the special subset case.
-  if (std::includes(Indexed.begin(), Indexed.end(), Lexed.begin(), Lexed.end()))
-    return Indexed.vec();
+  if (llvm::includes(Indexed, Lexed))
+    return Lexed.vec();
 
   std::vector<size_t> Best;
   size_t BestCost = std::numeric_limits<size_t>::max();
@@ -985,7 +1339,7 @@ std::optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
     SPAN_ATTACH(Tracer, "error", "Didn't find a near miss");
     return std::nullopt;
   }
-  std::vector<Range> Mapped;
+  std::vector<SymbolRange> Mapped;
   for (auto I : Best)
     Mapped.push_back(Lexed[I]);
   SPAN_ATTACH(Tracer, "mapped_ranges", static_cast<int64_t>(Mapped.size()));
@@ -1007,7 +1361,8 @@ std::optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
 //   diff[0]: line + 1  <- insert a line before edit 0.
 //   diff[1]: column + 1 <- remove a line between edits 0 and 1, and insert a
 //   character on edit 1.
-size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed, ArrayRef<Range> Lexed,
+size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed,
+                                 ArrayRef<SymbolRange> Lexed,
                                  ArrayRef<size_t> MappedIndex) {
   assert(Indexed.size() == MappedIndex.size());
   assert(llvm::is_sorted(Indexed));
@@ -1017,9 +1372,10 @@ size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed, ArrayRef<Range> Lexed,
   int LastDLine = 0, LastDColumn = 0;
   int Cost = 0;
   for (size_t I = 0; I < Indexed.size(); ++I) {
-    int DLine = Indexed[I].start.line - Lexed[MappedIndex[I]].start.line;
-    int DColumn =
-        Indexed[I].start.character - Lexed[MappedIndex[I]].start.character;
+    int DLine =
+        Indexed[I].start.line - Lexed[MappedIndex[I]].range().start.line;
+    int DColumn = Indexed[I].start.character -
+                  Lexed[MappedIndex[I]].range().start.character;
     int Line = Indexed[I].start.line;
     if (Line != LastLine)
       LastDColumn = 0; // column offsets don't carry cross lines.

@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_ATOL_H
 #define LLVM_LIBC_SRC_STDLIB_ATOL_H
 
-namespace __llvm_libc {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 long atol(const char *str);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_ATOL_H

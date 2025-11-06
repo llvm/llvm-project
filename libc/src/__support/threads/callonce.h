@@ -6,11 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-namespace __llvm_libc {
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
 
-struct CallOnceFlag;
-using CallOnceCallback = void(void);
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h" // LIBC_LIKELY
 
-int callonce(CallOnceFlag *flag, CallOnceCallback *callback);
+// Plaform specific routines, provides:
+// - OnceFlag definition
+// - callonce_impl::callonce_fastpath for fast path check
+// - callonce_impl::callonce_slowpath for slow path execution
+#ifdef __linux__
+#include "src/__support/threads/linux/callonce.h"
+#else
+#error "callonce is not supported on this platform"
+#endif
 
-} // namespace __llvm_libc
+namespace LIBC_NAMESPACE_DECL {
+template <class CallOnceCallback>
+LIBC_INLINE int callonce(CallOnceFlag *flag, CallOnceCallback callback) {
+  if (LIBC_LIKELY(callonce_impl::callonce_fastpath(flag)))
+    return 0;
+
+  return callonce_impl::callonce_slowpath(flag, callback);
+}
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H

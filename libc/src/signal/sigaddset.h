@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SIGNAL_SIGEADDSET_H
-#define LLVM_LIBC_SRC_SIGNAL_SIGEADDSET_H
+#ifndef LLVM_LIBC_SRC_SIGNAL_SIGADDSET_H
+#define LLVM_LIBC_SRC_SIGNAL_SIGADDSET_H
 
-#include <signal.h>
+#include "hdr/types/sigset_t.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int sigaddset(sigset_t *set, int signum);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SIGNAL_SIGEADDSET_H
+#endif // LLVM_LIBC_SRC_SIGNAL_SIGADDSET_H

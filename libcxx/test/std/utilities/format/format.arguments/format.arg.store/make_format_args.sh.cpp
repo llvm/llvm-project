@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -24,6 +25,7 @@
 #include "test_macros.h"
 
 void test() {
+  char c = 'c';
   TEST_IGNORE_NODISCARD
-  std::make_format_args<std::basic_format_context<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>>('c');
+  std::make_format_args<std::basic_format_context<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>>(c);
 }

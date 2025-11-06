@@ -154,10 +154,10 @@ struct DynamicDerivedMultiple;
 // CHECK-CTORS: call void @_ZN12DynamicBase2C2Ev(
 // CHECK-CTORS-NOT: @llvm.launder.invariant.group.p0
 
-// CHECK-CTORS: store {{.*}} @_ZTV22DynamicDerivedMultiple, i32 0, inrange i32 0, i32 2), {{.*}} %[[THIS0]]
+// CHECK-CTORS: store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV22DynamicDerivedMultiple, i32 0, i32 0, i32 2), ptr %[[THIS0]]
 // CHECK-CTORS: %[[THIS_ADD:.*]] = getelementptr inbounds i8, ptr %[[THIS0]], i64 16
 
-// CHECK-CTORS: store {{.*}} @_ZTV22DynamicDerivedMultiple, i32 0, inrange i32 1, i32 2), {{.*}} %[[THIS_ADD]]
+// CHECK-CTORS: store ptr getelementptr inbounds inrange(-16, 8) ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV22DynamicDerivedMultiple, i32 0, i32 1, i32 2), ptr %[[THIS_ADD]]
 // CHECK-CTORS-LABEL: {{^}}}
 
 struct DynamicFromStatic;
@@ -367,7 +367,7 @@ void testCompareMembers() {
   ap->foo();
   // CHECK-NEW:    [[TMP7:%.*]] = load ptr, ptr [[AP]]
   // CHECK-NEW:    [[TMP9:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[TMP7]])
-  // CHECK-NEW:    [[M:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[TMP9]], i32 0, i32 1
+  // CHECK-NEW:    [[M:%.*]] = getelementptr inbounds nuw [[STRUCT_A:%.*]], ptr [[TMP9]], i32 0, i32 1
   // CHECK-NEW:    store ptr [[M]], ptr [[APM]]
   int *const apm = &ap->m;
 
@@ -375,7 +375,7 @@ void testCompareMembers() {
 
   // CHECK-NEW:    [[TMP20:%.*]] = load ptr, ptr [[BP]]
   // CHECK-NEW:    [[TMP23:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[TMP20]])
-  // CHECK-NEW:    [[M4:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[TMP23]], i32 0, i32 1
+  // CHECK-NEW:    [[M4:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP23]], i32 0, i32 1
   // CHECK-NEW:    store ptr [[M4]], ptr [[BPM]]
   int *const bpm = &bp->m;
 

@@ -4,13 +4,13 @@ define i1 @no_viable_top_fallthrough() {
 ; CHECK-LABEL: no_viable_top_fallthrough
 ; CHECK: %.entry
 ; CHECK: %.bb1
+; CHECK: %.stop
 ; CHECK: %.bb2
 ; CHECK: %.middle
 ; CHECK: %.backedge
 ; CHECK: %.bb3
 ; CHECK: %.header
 ; CHECK: %.exit
-; CHECK: %.stop
 .entry:
   %val1 = call i1 @foo()
   br i1 %val1, label %.bb1, label %.header, !prof !10

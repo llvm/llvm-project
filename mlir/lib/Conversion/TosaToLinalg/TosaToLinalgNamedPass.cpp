@@ -20,11 +20,9 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
-#include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_TOSATOLINALGNAMED
@@ -37,6 +35,9 @@ namespace {
 struct TosaToLinalgNamed
     : public impl::TosaToLinalgNamedBase<TosaToLinalgNamed> {
 public:
+  TosaToLinalgNamed(const TosaToLinalgNamedOptions &options)
+      : impl::TosaToLinalgNamedBase<TosaToLinalgNamed>(options) {}
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
         .insert<arith::ArithDialect, linalg::LinalgDialect, math::MathDialect,
@@ -44,6 +45,9 @@ public:
   }
 
   void runOnOperation() override {
+    TypeConverter converter;
+    tosa::populateTosaTypeConversion(converter);
+
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addLegalDialect<linalg::LinalgDialect, tosa::TosaDialect,
@@ -56,18 +60,22 @@ public:
     target.addIllegalOp<tosa::MaxPool2dOp>();
     target.addIllegalOp<tosa::AvgPool2dOp>();
     target.addIllegalOp<tosa::MatMulOp>();
-    target.addIllegalOp<tosa::FullyConnectedOp>();
+    target.addIllegalOp<tosa::TransposeOp>();
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     FunctionOpInterface func = getOperation();
-    mlir::tosa::populateTosaToLinalgNamedConversionPatterns(&patterns);
+    TosaToLinalgNamedOptions options;
+    options.preferConv2DKernelLayoutHWCF = preferConv2DKernelLayoutHWCF;
+    tosa::populateTosaToLinalgNamedConversionPatterns(converter, &patterns,
+                                                      options);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
   }
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaToLinalgNamed() {
-  return std::make_unique<TosaToLinalgNamed>();
+std::unique_ptr<Pass>
+mlir::tosa::createTosaToLinalgNamed(const TosaToLinalgNamedOptions &options) {
+  return std::make_unique<TosaToLinalgNamed>(options);
 }

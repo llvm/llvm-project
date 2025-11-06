@@ -10,5 +10,8 @@ unittest("LoongArchTests") {
     "//llvm/lib/Target/LoongArch/TargetInfo",
   ]
   include_dirs = [ "//llvm/lib/Target/LoongArch" ]
-  sources = [ "InstSizes.cpp" ]
+  sources = [
+    "InstSizes.cpp",
+    "MCInstrAnalysisTest.cpp",
+  ]
 }

@@ -1,5 +1,5 @@
-# This checks that shrink wrapping does attempt at accessing stack elements
-# using RSP when the function is aligning RSP and changing offsets.
+## This checks that shrink wrapping does attempt at accessing stack elements
+## using RSP when the function is aligning RSP and changing offsets.
 
 # REQUIRES: system-linux
 
@@ -12,10 +12,10 @@
 # RUN:     --frame-opt=all --simplify-conditional-tail-calls=false \
 # RUN:     --eliminate-unreachable=false | FileCheck %s
 
-# Here we have a function that aligns the stack at prologue. Stack pointer
-# analysis can't try to infer offset positions after AND because that depends
-# on the runtime value of the stack pointer of callee (whether it is misaligned
-# or not).
+## Here we have a function that aligns the stack at prologue. Stack pointer
+## analysis can't try to infer offset positions after AND because that depends
+## on the runtime value of the stack pointer of callee (whether it is misaligned
+## or not).
   .globl _start
   .type _start, %function
 _start:

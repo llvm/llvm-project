@@ -26,6 +26,7 @@
 
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/simple_ilist.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 
 namespace llvm {
@@ -57,15 +58,16 @@ DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalAlias, Module)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalIFunc, Module)
 #undef DEFINE_SYMBOL_TABLE_PARENT_TYPE
 
-template <typename NodeTy> class SymbolTableList;
+template <typename NodeTy, typename... Args> class SymbolTableList;
 
 // ValueSubClass   - The type of objects that I hold, e.g. Instruction.
 // ItemParentClass - The type of object that owns the list, e.g. BasicBlock.
+// OptionsT        - Extra options to ilist nodes.
 //
-template <typename ValueSubClass>
+template <typename ValueSubClass, typename... Args>
 class SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
-  using ListTy = SymbolTableList<ValueSubClass>;
-  using iterator = typename simple_ilist<ValueSubClass>::iterator;
+  using ListTy = SymbolTableList<ValueSubClass, Args...>;
+  using iterator = typename simple_ilist<ValueSubClass, Args...>::iterator;
   using ItemParentClass =
       typename SymbolTableListParentType<ValueSubClass>::type;
 
@@ -105,14 +107,24 @@ public:
   static ValueSymbolTable *toPtr(ValueSymbolTable &R) { return &R; }
 };
 
+// The SymbolTableListTraits template is explicitly instantiated for the
+// following data types, so add extern template statements to prevent implicit
+// instantiation.
+extern template class LLVM_TEMPLATE_ABI SymbolTableListTraits<BasicBlock>;
+extern template class LLVM_TEMPLATE_ABI SymbolTableListTraits<Function>;
+extern template class LLVM_TEMPLATE_ABI SymbolTableListTraits<GlobalAlias>;
+extern template class LLVM_TEMPLATE_ABI SymbolTableListTraits<GlobalIFunc>;
+extern template class LLVM_TEMPLATE_ABI SymbolTableListTraits<GlobalVariable>;
+
 /// List that automatically updates parent links and symbol tables.
 ///
 /// When nodes are inserted into and removed from this list, the associated
 /// symbol table will be automatically updated.  Similarly, parent links get
 /// updated automatically.
-template <class T>
-class SymbolTableList
-    : public iplist_impl<simple_ilist<T>, SymbolTableListTraits<T>> {};
+template <class T, typename... Args>
+class SymbolTableList : public iplist_impl<simple_ilist<T, Args...>,
+                                           SymbolTableListTraits<T, Args...>> {
+};
 
 } // end namespace llvm
 

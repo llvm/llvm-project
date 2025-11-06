@@ -1,4 +1,4 @@
-//===--- KernelNameRestrictionCheck.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include <string>
 #include <vector>
 
 using namespace clang::ast_matchers;
@@ -29,7 +28,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FileNameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override;
@@ -61,7 +61,7 @@ void KernelNameRestrictionCheck::registerPPCallbacks(const SourceManager &SM,
 void KernelNameRestrictionPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &, StringRef FileName, bool,
     CharSourceRange, OptionalFileEntryRef, StringRef, StringRef, const Module *,
-    SrcMgr::CharacteristicKind) {
+    bool, SrcMgr::CharacteristicKind) {
   IncludeDirective ID = {HashLoc, FileName};
   IncludeDirectives.push_back(std::move(ID));
 }

@@ -1,1 +1,1 @@
-Github action workflows should be stored in this directrory.
+Github action workflows should be stored in this directory.

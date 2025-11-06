@@ -13,8 +13,8 @@
 // pointed to here. However the following links contain more information about
 // ROCDL (ROCm-Device-Library)
 //
-// https://github.com/RadeonOpenCompute/ROCm-Device-Libs/blob/amd-stg-open/doc/OCML.md
-// https://github.com/RadeonOpenCompute/ROCm-Device-Libs/blob/amd-stg-open/doc/OCKL.md
+// https://github.com/ROCm/llvm-project/blob/amd-staging/amd/device-libs/doc/OCML.md
+// https://github.com/ROCm/llvm-project/blob/amd-staging/amd/device-libs/doc/OCKL.md
 // https://llvm.org/docs/AMDGPUUsage.html
 //
 //===----------------------------------------------------------------------===//
@@ -23,7 +23,6 @@
 #define MLIR_DIALECT_LLVMIR_ROCDLDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"

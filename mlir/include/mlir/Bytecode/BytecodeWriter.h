@@ -14,10 +14,12 @@
 #define MLIR_BYTECODE_BYTECODEWRITER_H
 
 #include "mlir/IR/AsmState.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
 
 namespace mlir {
-class Operation;
 class DialectBytecodeWriter;
+class DialectVersion;
+class Operation;
 
 /// A class to interact with the attributes and types printer when emitting MLIR
 /// bytecode.
@@ -80,6 +82,7 @@ public:
   /// printers for the fallback resources within the map.
   BytecodeWriterConfig(FallbackAsmResourceMap &map,
                        StringRef producer = "MLIR" LLVM_VERSION_STRING);
+  BytecodeWriterConfig(BytecodeWriterConfig &&);
   ~BytecodeWriterConfig();
 
   /// An internal implementation class that contains the state of the
@@ -96,6 +99,19 @@ public:
 
   /// Get the set desired bytecode version to emit.
   int64_t getDesiredBytecodeVersion() const;
+
+  /// A map containing the dialect versions to emit.
+  llvm::StringMap<std::unique_ptr<DialectVersion>> &
+  getDialectVersionMap() const;
+
+  /// Set a given dialect version to emit on the map.
+  template <class T>
+  void setDialectVersion(std::unique_ptr<DialectVersion> dialectVersion) const {
+    return setDialectVersion(T::getDialectNamespace(),
+                             std::move(dialectVersion));
+  }
+  void setDialectVersion(StringRef dialectName,
+                         std::unique_ptr<DialectVersion> dialectVersion) const;
 
   //===--------------------------------------------------------------------===//
   // Types and Attributes encoding
@@ -137,6 +153,9 @@ public:
   //===--------------------------------------------------------------------===//
   // Resources
   //===--------------------------------------------------------------------===//
+
+  /// Set a boolean flag to skip emission of resources into the bytecode file.
+  void setElideResourceDataFlag(bool shouldElideResourceData = true);
 
   /// Attach the given resource printer to the writer configuration.
   void attachResourcePrinter(std::unique_ptr<AsmResourcePrinter> printer);

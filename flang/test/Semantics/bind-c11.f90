@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m
   !ERROR: A scalar interoperable variable may not be ALLOCATABLE or POINTER
   real, allocatable, bind(c) :: x1
@@ -8,7 +8,7 @@ module m
   real, allocatable, bind(c) :: x3(:)
  contains
   subroutine s1(x) bind(c)
-    !PORTABILITY: A BIND(C) LOGICAL dummy argument should have the interoperable KIND=C_BOOL
+    !PORTABILITY: A BIND(C) LOGICAL dummy argument should have the interoperable KIND=C_BOOL [-Wlogical-vs-c-bool]
     logical(2), intent(in), value :: x
   end
   subroutine s2(x) bind(c)

@@ -1,7 +1,7 @@
 ! Test various aspects around call lowering. More detailed tests around core
 ! requirements are done in call-xxx.f90 and dummy-argument-xxx.f90 files.
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPtest_nested_calls
 subroutine test_nested_calls()
@@ -45,7 +45,7 @@ function f_int_to_char(i) bind(c, name="f_int_to_char")
 end function
 
 ! CHECK-LABEL: func.func @f_int_to_char(
-! CHECK-SAME: %[[ARG0:.*]]: i32 {fir.bindc_name = "i"}) -> !fir.char<1> attributes {fir.bindc_name = "f_int_to_char"} {
+! CHECK-SAME: %[[ARG0:.*]]: i32 {fir.bindc_name = "i"}) -> !fir.char<1> attributes {fir.bindc_name = "f_int_to_char", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
 ! CHECK: %[[CHARBOX:.*]] = fir.alloca !fir.char<1> {adapt.valuebyref}
 ! CHECK: %[[RESULT:.*]] = fir.alloca !fir.char<1> {bindc_name = "f_int_to_char", uniq_name = "_QFf_int_to_charEf_int_to_char"}
 ! CHECK: %[[INT_I:.*]] = fir.alloca i32

@@ -66,7 +66,8 @@ protected:
 
 public:
   BasicAATest()
-      : M("BasicAATest", C), B(C), DL(DLString), TLI(TLII), F(nullptr) {}
+      : M("BasicAATest", C), B(C), DL(DLString), TLII(M.getTargetTriple()),
+        TLI(TLII), F(nullptr) {}
 };
 
 // Check that a function arg can't trivially alias a global when we're accessing
@@ -81,8 +82,7 @@ TEST_F(BasicAATest, AliasInstWithObjectOfImpreciseSize) {
 
   Value *IncomingI32Ptr = F->arg_begin();
 
-  auto *GlobalPtr =
-      cast<GlobalVariable>(M.getOrInsertGlobal("some_global", B.getInt8Ty()));
+  auto *GlobalPtr = M.getOrInsertGlobal("some_global", B.getInt8Ty());
 
   // Without sufficiently restricted linkage/an init, some of the object size
   // checking bits get more conservative.
@@ -118,7 +118,7 @@ TEST_F(BasicAATest, AliasInstWithFullObjectOfImpreciseSize) {
   Value *ArbitraryI32 = F->arg_begin();
   AllocaInst *I8 = B.CreateAlloca(B.getInt8Ty(), B.getInt32(2));
   auto *I8AtUncertainOffset =
-      cast<GetElementPtrInst>(B.CreateGEP(B.getInt8Ty(), I8, ArbitraryI32));
+      cast<GetElementPtrInst>(B.CreatePtrAdd(I8, ArbitraryI32));
 
   auto &AllAnalyses = setupAnalyses();
   BasicAAResult &BasicAA = AllAnalyses.BAA;
@@ -153,13 +153,11 @@ TEST_F(BasicAATest, PartialAliasOffsetPhi) {
   B.CreateCondBr(I, B1, B2);
 
   B.SetInsertPoint(B1);
-  auto *Ptr1 =
-      cast<GetElementPtrInst>(B.CreateGEP(B.getInt8Ty(), Ptr, B.getInt32(1)));
+  auto *Ptr1 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt32(1)));
   B.CreateBr(End);
 
   B.SetInsertPoint(B2);
-  auto *Ptr2 =
-      cast<GetElementPtrInst>(B.CreateGEP(B.getInt8Ty(), Ptr, B.getInt32(1)));
+  auto *Ptr2 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt32(1)));
   B.CreateBr(End);
 
   B.SetInsertPoint(End);
@@ -188,10 +186,8 @@ TEST_F(BasicAATest, PartialAliasOffsetSelect) {
   BasicBlock *Entry(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
 
-  auto *Ptr1 =
-      cast<GetElementPtrInst>(B.CreateGEP(B.getInt8Ty(), Ptr, B.getInt32(1)));
-  auto *Ptr2 =
-      cast<GetElementPtrInst>(B.CreateGEP(B.getInt8Ty(), Ptr, B.getInt32(1)));
+  auto *Ptr1 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt32(1)));
+  auto *Ptr2 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt32(1)));
   auto *Select = B.CreateSelect(I, Ptr1, Ptr2);
   B.CreateRetVoid();
 

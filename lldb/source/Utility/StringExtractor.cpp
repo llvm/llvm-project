@@ -254,7 +254,7 @@ uint64_t StringExtractor::GetHexMaxU64(bool little_endian,
 
 bool StringExtractor::ConsumeFront(const llvm::StringRef &str) {
   llvm::StringRef S = GetStringRef();
-  if (!S.startswith(str))
+  if (!S.starts_with(str))
     return false;
   else
     m_index += str.size();

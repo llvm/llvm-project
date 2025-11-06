@@ -92,10 +92,11 @@ public:
   using reference = typename OptionsT::reference;
   using const_pointer = typename OptionsT::const_pointer;
   using const_reference = typename OptionsT::const_reference;
-  using iterator = ilist_iterator<OptionsT, false, false>;
-  using const_iterator = ilist_iterator<OptionsT, false, true>;
-  using reverse_iterator = ilist_iterator<OptionsT, true, false>;
-  using const_reverse_iterator = ilist_iterator<OptionsT, true, true>;
+  using iterator = ilist_select_iterator_type<OptionsT, false, false>;
+  using const_iterator = ilist_select_iterator_type<OptionsT, false, true>;
+  using reverse_iterator = ilist_select_iterator_type<OptionsT, true, false>;
+  using const_reverse_iterator =
+      ilist_select_iterator_type<OptionsT, true, true>;
   using size_type = size_t;
   using difference_type = ptrdiff_t;
 

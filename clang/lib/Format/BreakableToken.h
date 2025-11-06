@@ -18,11 +18,8 @@
 #define LLVM_CLANG_LIB_FORMAT_BREAKABLETOKEN_H
 
 #include "Encoding.h"
-#include "TokenAnnotator.h"
 #include "WhitespaceManager.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Regex.h"
-#include <utility>
 
 namespace clang {
 namespace format {
@@ -386,6 +383,8 @@ protected:
 
   // The intended start column of the first line of text from this section.
   unsigned StartColumn;
+
+  const bool AlwaysReflow = Style.ReflowComments == FormatStyle::RCS_Always;
 
   // The prefix to use in front a line that has been reflown up.
   // For example, when reflowing the second line after the first here:

@@ -32,8 +32,11 @@ namespace exegesis {
 
 class SubprocessMemory {
 public:
-  static constexpr const size_t AuxiliaryMemoryOffset = 1;
-  static constexpr const size_t AuxiliaryMemorySize = 4096;
+  static constexpr size_t AuxiliaryMemoryOffset = 1;
+  static constexpr size_t AuxiliaryMemorySize = 4096;
+
+  // Gets the thread ID for the calling thread.
+  static long getCurrentTID();
 
   Error initializeSubprocessMemory(pid_t ProcessID);
 
@@ -54,7 +57,7 @@ public:
   // section.
   static Expected<int> setupAuxiliaryMemoryInSubprocess(
       std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-      pid_t ParentPID, int CounterFileDescriptor);
+      pid_t ParentPID, long ParentTID, int CounterFileDescriptor);
 
   ~SubprocessMemory();
 

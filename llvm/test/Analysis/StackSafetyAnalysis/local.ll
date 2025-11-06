@@ -12,6 +12,7 @@ declare void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 %isvolati
 declare void @llvm.memset.p0.i64(ptr %dest, i8 %val, i64 %len, i1 %isvolatile)
 
 declare void @unknown_call(ptr %dest)
+declare void @unknown_call_int(i64 %i)
 declare ptr @retptr(ptr returned)
 
 ; Address leaked.
@@ -706,9 +707,9 @@ entry:
   %n = load i8, ptr %y
   call void @llvm.memset.p0.i32(ptr nonnull %z, i8 0, i32 1, i1 false)
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-  call void @llvm.lifetime.start.p0(i64 1, ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %z)
 
   ret void
 }
@@ -730,9 +731,9 @@ entry:
   %y = alloca i8, align 4
   %z = alloca i8, align 4
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-  call void @llvm.lifetime.start.p0(i64 1, ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %z)
 
   store i8 5, ptr %x
   %n = load i8, ptr %y
@@ -755,13 +756,13 @@ entry:
   %y = alloca i8, align 4
   %z = alloca i8, align 4
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-  call void @llvm.lifetime.start.p0(i64 1, ptr %y)
-  call void @llvm.lifetime.start.p0(i64 1, ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %z)
 
-  call void @llvm.lifetime.end.p0(i64 1, ptr %x)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %y)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %z)
 
   store i8 5, ptr %x
   %n = load i8, ptr %y
@@ -972,13 +973,13 @@ define void @DoubleLifetime() {
 ; CHECK-EMPTY:
 entry:
   %a = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   call void @llvm.memset.p0.i32(ptr %a, i8 1, i32 4, i1 true)
 
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memset.p0.i32(ptr %a, i8 1, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -992,13 +993,13 @@ define void @DoubleLifetime2() {
 ; CHECK-EMPTY:
 entry:
   %a = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   %n = load i32, ptr %a
 
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memset.p0.i32(ptr %a, i8 1, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -1012,13 +1013,13 @@ define void @DoubleLifetime3() {
 ; CHECK-EMPTY:
 entry:
   %a = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   store i32 5, ptr %a
 
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memset.p0.i32(ptr %a, i8 1, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -1032,9 +1033,9 @@ define void @DoubleLifetime4() {
 ; CHECK-EMPTY:
 entry:
   %a = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memset.p0.i32(ptr %a, i8 1, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   call void @unknown_call(ptr %a)
   ret void
 }
@@ -1106,5 +1107,34 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+define void @NonPointer(ptr %p) {
+; CHECK-LABEL: @NonPointer
+; CHECK-NEXT: args uses:
+; LOCAL-NEXT: p[]: empty-set, @unknown_call_int(arg0, full-set)
+; GLOBAL-NEXT: p[]: full-set, @unknown_call_int(arg0, full-set)
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; CHECK-EMPTY:
+  %int = ptrtoint ptr %p to i64
+  call void @unknown_call_int(i64 %int)
+  ret void
+}
+
+@ifunc = dso_local ifunc i64 (ptr), ptr @ifunc_resolver
+
+define dso_local void @CallIfunc(ptr noundef %uaddr) local_unnamed_addr {
+; CHECK-LABEL: @CallIfunc
+; CHECK-NEXT:  args uses:
+; CHECK-NEXT:    uaddr[]: full-set
+entry:
+  tail call i64 @ifunc(ptr noundef %uaddr)
+  ret void
+}
+
+define dso_local ptr @ifunc_resolver() {
+entry:
+  ret ptr null
+}
+
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)

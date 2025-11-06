@@ -4,12 +4,15 @@
 """Rules for running lit tests."""
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@rules_python//python:defs.bzl", _py_test = "py_test")
 
 def lit_test(
         name,
         srcs,
         args = None,
         data = None,
+        deps = None,
+        py_test = _py_test,
         **kwargs):
     """Runs a single test file with LLVM's lit tool.
 
@@ -20,6 +23,8 @@ def lit_test(
         Note that `-v` and the 'srcs' paths are added automatically.
       data: label list. Additional data dependencies of the test.
         Note that 'srcs' targets are added automatically.
+      deps: label list. List of targets the test depends on.
+      py_test: function. The py_test rule to use for the underlying test.
       **kwargs: additional keyword arguments.
 
     See https://llvm.org/docs/CommandGuide/lit.html for details on lit.
@@ -27,14 +32,15 @@ def lit_test(
 
     args = args or []
     data = data or []
-
-    native.py_test(
+    deps = deps or []
+    py_test(
         name = name,
         srcs = [Label("//llvm:lit")],
         main = Label("//llvm:utils/lit/lit.py"),
         args = args + ["-v"] + ["$(execpath %s)" % src for src in srcs],
         data = data + srcs,
         legacy_create_init = False,
+        deps = deps + [Label("//llvm:lit")],
         **kwargs
     )
 

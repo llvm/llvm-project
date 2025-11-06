@@ -30,26 +30,30 @@
 #include "polly/JSONExporter.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/MaximalStaticExpansion.h"
-#include "polly/PolyhedralInfo.h"
 #include "polly/PruneUnprofitable.h"
 #include "polly/ScheduleOptimizer.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopGraphPrinter.h"
 #include "polly/ScopInfo.h"
+#include "polly/ScopInliner.h"
 #include "polly/Simplify.h"
 #include "polly/Support/DumpFunctionPass.h"
 #include "polly/Support/DumpModulePass.h"
 #include "llvm/Analysis/CFGPrinter.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/IPO.h"
 
+using namespace llvm;
 namespace cl = llvm::cl;
+using namespace polly;
 
 using llvm::FunctionPassManager;
 using llvm::OptimizationLevel;
@@ -231,11 +235,9 @@ void initializePollyPasses(llvm::PassRegistry &Registry) {
   initializeIslScheduleOptimizerWrapperPassPass(Registry);
   initializeIslScheduleOptimizerPrinterLegacyPassPass(Registry);
   initializePollyCanonicalizePass(Registry);
-  initializePolyhedralInfoPass(Registry);
-  initializePolyhedralInfoPrinterLegacyPassPass(Registry);
   initializeScopDetectionWrapperPassPass(Registry);
   initializeScopDetectionPrinterLegacyPassPass(Registry);
-  initializeScopInlinerPass(Registry);
+  initializeScopInlinerWrapperPassPass(Registry);
   initializeScopInfoRegionPassPass(Registry);
   initializeScopInfoPrinterLegacyRegionPassPass(Registry);
   initializeScopInfoWrapperPassPass(Registry);
@@ -436,6 +438,16 @@ static void buildLatePollyPipeline(FunctionPassManager &PM,
         false);
 }
 
+static llvm::Expected<std::monostate> parseNoOptions(StringRef Params) {
+  if (!Params.empty())
+    return make_error<StringError>(
+        formatv("'{0}' passed to pass that does not take any options", Params)
+            .str(),
+        inconvertibleErrorCode());
+
+  return std::monostate{};
+}
+
 static OwningScopAnalysisManagerFunctionProxy
 createScopAnalyses(FunctionAnalysisManager &FAM,
                    PassInstrumentationCallbacks *PIC) {
@@ -461,6 +473,23 @@ static void registerFunctionAnalyses(FunctionAnalysisManager &FAM,
 #include "PollyPasses.def"
 
   FAM.registerPass([&FAM, PIC] { return createScopAnalyses(FAM, PIC); });
+}
+
+static llvm::Expected<bool>
+parseCGPipeline(StringRef Name, llvm::CGSCCPassManager &CGPM,
+                PassInstrumentationCallbacks *PIC,
+                ArrayRef<PassBuilder::PipelineElement> Pipeline) {
+#define CGSCC_PASS(NAME, CREATE_PASS, PARSER)                                  \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
+    auto Params = PassBuilder::parsePassParameters(PARSER, Name, NAME);        \
+    if (!Params)                                                               \
+      return Params.takeError();                                               \
+    CGPM.addPass(CREATE_PASS);                                                 \
+    return true;                                                               \
+  }
+#include "PollyPasses.def"
+
+  return false;
 }
 
 static bool
@@ -540,7 +569,6 @@ static bool
 parseTopLevelPipeline(llvm::ModulePassManager &MPM,
                       PassInstrumentationCallbacks *PIC,
                       ArrayRef<PassBuilder::PipelineElement> Pipeline) {
-  std::vector<PassBuilder::PipelineElement> FullPipeline;
   StringRef FirstName = Pipeline.front().Name;
 
   if (!isScopPassName(FirstName))
@@ -600,6 +628,12 @@ void registerPollyPasses(PassBuilder &PB) {
       [PIC](StringRef Name, FunctionPassManager &FPM,
             ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
         return parseScopPipeline(Name, FPM, PIC, Pipeline);
+      });
+  PB.registerPipelineParsingCallback(
+      [PIC](StringRef Name, CGSCCPassManager &CGPM,
+            ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
+        ExitOnError Err("Unable to parse Polly call graph pass: ");
+        return Err(parseCGPipeline(Name, CGPM, PIC, Pipeline));
       });
   PB.registerParseTopLevelPipelineCallback(
       [PIC](llvm::ModulePassManager &MPM,

@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -27,6 +28,7 @@
 
 #include "MoveOnly.h"
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test Constraints
 static_assert(std::is_constructible_v<std::expected<void, int>, const std::unexpected<int>&>);
@@ -60,13 +62,12 @@ constexpr void testUnexpected() {
 constexpr bool test() {
   testUnexpected<int>();
   testUnexpected<MyInt>();
+  testUnexpected<TailClobberer<1>>();
   return true;
 }
 
 void testException() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  struct Except {};
-
   struct Throwing {
     Throwing(int) { throw Except{}; }
   };

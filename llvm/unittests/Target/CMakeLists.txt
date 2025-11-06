@@ -3,3 +3,9 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
     add_subdirectory(${t})
   endif()
 endforeach()
+
+set(LLVM_LINK_COMPONENTS Core Target AllTargetsCodeGens AllTargetsDescs AllTargetsInfos)
+
+add_llvm_unittest(TargetMachineCTests
+  TargetMachineOptionsTest.cpp
+)

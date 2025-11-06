@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strlcat.h"
+#include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, strlcat,
                    (char *__restrict dst, const char *__restrict src,
@@ -24,4 +25,4 @@ LLVM_LIBC_FUNCTION(size_t, strlcat,
   return first_len + internal::strlcpy(new_dst, src, size - first_len);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

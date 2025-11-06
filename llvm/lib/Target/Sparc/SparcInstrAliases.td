@@ -286,11 +286,11 @@ multiclass cp_cond_alias<string cond, int condVal> {
 
   // cb<cond> $imm
   def : InstAlias<!strconcat(!strconcat("cb", cond), " $imm"),
-                  (CBCOND brtarget:$imm, condVal), 0>;
+                  (CPBCOND brtarget:$imm, condVal), 0>;
 
   // cb<cond>,a $imm
   def : InstAlias<!strconcat(!strconcat("cb", cond), ",a $imm"),
-                  (CBCONDA brtarget:$imm, condVal), 0>;
+                  (CPBCONDA brtarget:$imm, condVal), 0>;
 }
 
 // Instruction aliases for register conditional branches and moves.
@@ -329,6 +329,25 @@ multiclass reg_cond_alias<string rcond, int condVal> {
                             MOVRrr, MOVRri,
                             FMOVRS, FMOVRD, FMOVRQ>,
                             Requires<[Is64Bit]>;
+}
+
+// Instruction aliases for compare-and-branch.
+multiclass cwb_cond_alias<string cond, int condVal> {
+  def : InstAlias<"cwb" # cond # " $rs1, $rs2, $imm",
+                  (CWBCONDrr cbtarget:$imm, condVal, IntRegs:$rs1, IntRegs:$rs2)>,
+                  Requires<[HasOSA2011]>;
+  def : InstAlias<"cwb" # cond # " $rs1, $simm5, $imm",
+                  (CWBCONDri cbtarget:$imm, condVal, IntRegs:$rs1, simm5Op:$simm5)>,
+                  Requires<[HasOSA2011]>;
+}
+
+multiclass cxb_cond_alias<string cond, int condVal> {
+  def : InstAlias<"cxb" # cond # " $rs1, $rs2, $imm",
+                  (CXBCONDrr cbtarget:$imm, condVal, IntRegs:$rs1, IntRegs:$rs2)>,
+                  Requires<[HasOSA2011]>;
+  def : InstAlias<"cxb" # cond # " $rs1, $simm5, $imm",
+                  (CXBCONDri cbtarget:$imm, condVal, IntRegs:$rs1, simm5Op:$simm5)>,
+                  Requires<[HasOSA2011]>;
 }
 
 defm : int_cond_alias<"a",    0b1000>;
@@ -400,11 +419,51 @@ defm : cp_cond_alias<"012",   0b1111>;
 let EmitPriority = 0 in defm : cp_cond_alias<"",      0b1000>; // same as a; gnu asm, not in manual
 
 defm : reg_cond_alias<"z",    0b001>;
+defm : reg_cond_alias<"e",    0b001>;
 defm : reg_cond_alias<"lez",  0b010>;
 defm : reg_cond_alias<"lz",   0b011>;
 defm : reg_cond_alias<"nz",   0b101>;
+defm : reg_cond_alias<"ne",   0b101>;
 defm : reg_cond_alias<"gz",   0b110>;
 defm : reg_cond_alias<"gez",  0b111>;
+
+defm : cwb_cond_alias<"ne",   0b1001>;
+defm : cwb_cond_alias<"e",    0b0001>;
+defm : cwb_cond_alias<"g",    0b1010>;
+defm : cwb_cond_alias<"le",   0b0010>;
+defm : cwb_cond_alias<"ge",   0b1011>;
+defm : cwb_cond_alias<"l",    0b0011>;
+defm : cwb_cond_alias<"gu",   0b1100>;
+defm : cwb_cond_alias<"leu",  0b0100>;
+defm : cwb_cond_alias<"cc",   0b1101>;
+defm : cwb_cond_alias<"cs",   0b0101>;
+defm : cwb_cond_alias<"pos",  0b1110>;
+defm : cwb_cond_alias<"neg",  0b0110>;
+defm : cwb_cond_alias<"vc",   0b1111>;
+defm : cwb_cond_alias<"vs",   0b0111>;
+let EmitPriority = 0 in {
+  defm : cwb_cond_alias<"geu",  0b1101>; // same as cc
+  defm : cwb_cond_alias<"lu",   0b0101>; // same as cs
+}
+
+defm : cxb_cond_alias<"ne",   0b1001>;
+defm : cxb_cond_alias<"e",    0b0001>;
+defm : cxb_cond_alias<"g",    0b1010>;
+defm : cxb_cond_alias<"le",   0b0010>;
+defm : cxb_cond_alias<"ge",   0b1011>;
+defm : cxb_cond_alias<"l",    0b0011>;
+defm : cxb_cond_alias<"gu",   0b1100>;
+defm : cxb_cond_alias<"leu",  0b0100>;
+defm : cxb_cond_alias<"cc",   0b1101>;
+defm : cxb_cond_alias<"cs",   0b0101>;
+defm : cxb_cond_alias<"pos",  0b1110>;
+defm : cxb_cond_alias<"neg",  0b0110>;
+defm : cxb_cond_alias<"vc",   0b1111>;
+defm : cxb_cond_alias<"vs",   0b0111>;
+let EmitPriority = 0 in {
+  defm : cxb_cond_alias<"geu",  0b1101>; // same as cc
+  defm : cxb_cond_alias<"lu",   0b0101>; // same as cs
+}
 
 // Section A.3 Synthetic Instructions
 
@@ -413,9 +472,12 @@ defm : reg_cond_alias<"gez",  0b111>;
 // non-alias form, except for the most obvious and clarifying aliases: cmp, jmp,
 // call, tst, ret, retl.
 
-// Note: cmp is handled in SparcInstrInfo.
-//       jmp/call/ret/retl have special case handling for output in
+// Note: jmp/call/ret/retl have special case handling for output in
 //       SparcInstPrinter.cpp
+
+// cmp rs1, reg_or_imm -> subcc rs1, reg_or_imm, %g0
+def : InstAlias<"cmp $rs1, $rs2", (SUBCCrr G0, IntRegs:$rs1, IntRegs:$rs2)>;
+def : InstAlias<"cmp $rs1, $imm", (SUBCCri G0, IntRegs:$rs1, simm13Op:$imm)>;
 
 // jmp addr -> jmpl addr, %g0
 def : InstAlias<"jmp $addr", (JMPLrr G0, MEMrr:$addr), 0>;
@@ -444,6 +506,10 @@ def : InstAlias<"save", (SAVErr G0, G0, G0)>;
 // (turns into a sequence of sethi+or, depending on the value)
 // def : InstAlias<"set $val, $rd", (ORri IntRegs:$rd, (SETHIi (HI22 imm:$val)), (LO10 imm:$val))>;
 def SET : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "set $val, $rd">;
+
+// setsw value, rd
+// (turns into a sequence of sethi+or+sra, depending on the value)
+def SETSW : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "setsw $val, $rd">, Requires<[HasV9]>;
 
 // setx value, tmp, rd
 // (turns into a sequence of sethi+or+shift, depending on the value)
@@ -486,41 +552,41 @@ let Predicates = [HasV9] in {
 def : InstAlias<"inc $rd", (ADDri IntRegs:$rd, IntRegs:$rd, 1), 0>;
 
 // inc simm13, rd -> add rd, simm13, rd
-def : InstAlias<"inc $simm13, $rd", (ADDri IntRegs:$rd, IntRegs:$rd, i32imm:$simm13), 0>;
+def : InstAlias<"inc $simm13, $rd", (ADDri IntRegs:$rd, IntRegs:$rd, simm13Op:$simm13), 0>;
 
 // inccc rd -> addcc rd, 1, rd
 def : InstAlias<"inccc $rd", (ADDCCri IntRegs:$rd, IntRegs:$rd, 1), 0>;
 
 // inccc simm13, rd -> addcc rd, simm13, rd
-def : InstAlias<"inccc $simm13, $rd", (ADDCCri IntRegs:$rd, IntRegs:$rd, i32imm:$simm13), 0>;
+def : InstAlias<"inccc $simm13, $rd", (ADDCCri IntRegs:$rd, IntRegs:$rd, simm13Op:$simm13), 0>;
 
 // dec rd -> sub rd, 1, rd
 def : InstAlias<"dec $rd", (SUBri IntRegs:$rd, IntRegs:$rd, 1), 0>;
 
 // dec simm13, rd -> sub rd, simm13, rd
-def : InstAlias<"dec $simm13, $rd", (SUBri IntRegs:$rd, IntRegs:$rd, i32imm:$simm13), 0>;
+def : InstAlias<"dec $simm13, $rd", (SUBri IntRegs:$rd, IntRegs:$rd, simm13Op:$simm13), 0>;
 
 // deccc rd -> subcc rd, 1, rd
 def : InstAlias<"deccc $rd", (SUBCCri IntRegs:$rd, IntRegs:$rd, 1), 0>;
 
 // deccc simm13, rd -> subcc rd, simm13, rd
-def : InstAlias<"deccc $simm13, $rd", (SUBCCri IntRegs:$rd, IntRegs:$rd, i32imm:$simm13), 0>;
+def : InstAlias<"deccc $simm13, $rd", (SUBCCri IntRegs:$rd, IntRegs:$rd, simm13Op:$simm13), 0>;
 
 // btst reg_or_imm, reg -> andcc reg,reg_or_imm,%g0
 def : InstAlias<"btst $rs2, $rs1", (ANDCCrr G0, IntRegs:$rs1, IntRegs:$rs2), 0>;
-def : InstAlias<"btst $simm13, $rs1", (ANDCCri G0, IntRegs:$rs1, i32imm:$simm13), 0>;
+def : InstAlias<"btst $simm13, $rs1", (ANDCCri G0, IntRegs:$rs1, simm13Op:$simm13), 0>;
 
 // bset reg_or_imm, rd -> or rd,reg_or_imm,rd
 def : InstAlias<"bset $rs2, $rd", (ORrr IntRegs:$rd, IntRegs:$rd, IntRegs:$rs2), 0>;
-def : InstAlias<"bset $simm13, $rd", (ORri IntRegs:$rd, IntRegs:$rd, i32imm:$simm13), 0>;
+def : InstAlias<"bset $simm13, $rd", (ORri IntRegs:$rd, IntRegs:$rd, simm13Op:$simm13), 0>;
 
 // bclr reg_or_imm, rd -> andn rd,reg_or_imm,rd
 def : InstAlias<"bclr $rs2, $rd", (ANDNrr IntRegs:$rd, IntRegs:$rd, IntRegs:$rs2), 0>;
-def : InstAlias<"bclr $simm13, $rd", (ANDNri IntRegs:$rd, IntRegs:$rd, i32imm:$simm13), 0>;
+def : InstAlias<"bclr $simm13, $rd", (ANDNri IntRegs:$rd, IntRegs:$rd, simm13Op:$simm13), 0>;
 
 // btog reg_or_imm, rd -> xor rd,reg_or_imm,rd
 def : InstAlias<"btog $rs2, $rd", (XORrr IntRegs:$rd, IntRegs:$rd, IntRegs:$rs2), 0>;
-def : InstAlias<"btog $simm13, $rd", (XORri IntRegs:$rd, IntRegs:$rd, i32imm:$simm13), 0>;
+def : InstAlias<"btog $simm13, $rd", (XORri IntRegs:$rd, IntRegs:$rd, simm13Op:$simm13), 0>;
 
 
 // clr rd -> or %g0, %g0, rd
@@ -537,7 +603,7 @@ def : InstAlias<"clr [$addr]", (STri MEMri:$addr, G0), 0>;
 
 // mov reg_or_imm, rd -> or %g0, reg_or_imm, rd
 def : InstAlias<"mov $rs2, $rd", (ORrr IntRegs:$rd, G0, IntRegs:$rs2)>;
-def : InstAlias<"mov $simm13, $rd", (ORri IntRegs:$rd, G0, i32imm:$simm13)>;
+def : InstAlias<"mov $simm13, $rd", (ORri IntRegs:$rd, G0, simm13Op:$simm13)>;
 
 // mov specialreg, rd -> rd specialreg, rd
 def : InstAlias<"mov $asr, $rd", (RDASR IntRegs:$rd, ASRRegs:$asr), 0>;
@@ -547,42 +613,47 @@ def : InstAlias<"mov %tbr, $rd", (RDTBR IntRegs:$rd), 0>;
 
 // mov reg_or_imm, specialreg -> wr %g0, reg_or_imm, specialreg
 def : InstAlias<"mov $rs2, $asr", (WRASRrr ASRRegs:$asr, G0, IntRegs:$rs2), 0>;
-def : InstAlias<"mov $simm13, $asr", (WRASRri ASRRegs:$asr, G0, i32imm:$simm13), 0>;
+def : InstAlias<"mov $simm13, $asr", (WRASRri ASRRegs:$asr, G0, simm13Op:$simm13), 0>;
 def : InstAlias<"mov $rs2, %psr", (WRPSRrr G0, IntRegs:$rs2), 0>;
-def : InstAlias<"mov $simm13, %psr", (WRPSRri G0, i32imm:$simm13), 0>;
+def : InstAlias<"mov $simm13, %psr", (WRPSRri G0, simm13Op:$simm13), 0>;
 def : InstAlias<"mov $rs2, %wim", (WRWIMrr G0, IntRegs:$rs2), 0>;
-def : InstAlias<"mov $simm13, %wim", (WRWIMri G0, i32imm:$simm13), 0>;
+def : InstAlias<"mov $simm13, %wim", (WRWIMri G0, simm13Op:$simm13), 0>;
 def : InstAlias<"mov $rs2, %tbr", (WRTBRrr G0, IntRegs:$rs2), 0>;
-def : InstAlias<"mov $simm13, %tbr", (WRTBRri G0, i32imm:$simm13), 0>;
+def : InstAlias<"mov $simm13, %tbr", (WRTBRri G0, simm13Op:$simm13), 0>;
 
 // End of Section A.3
 
-// or imm, reg, rd -> or reg, imm, rd
-// Nonstandard GNU extension.
-let EmitPriority = 0 in
+
+// Nonstandard GNU extensions.
+let EmitPriority = 0 in {
+  // or imm, reg, rd -> or reg, imm, rd
   def : InstAlias<"or $simm13, $rs1, $rd", (ORri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
+
+  // addc/addx imm, reg, rd -> addc/addx reg, imm, rd
+  def : InstAlias<"addx $simm13, $rs1, $rd", (ADDCri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
+}
 
 // wr reg_or_imm, specialreg -> wr %g0, reg_or_imm, specialreg
 // (aka: omit the first arg when it's g0. This is not in the manual, but is
 // supported by gnu and solaris as)
 def : InstAlias<"wr $rs2, $asr", (WRASRrr ASRRegs:$asr, G0, IntRegs:$rs2), 0>;
-def : InstAlias<"wr $simm13, $asr", (WRASRri ASRRegs:$asr, G0, i32imm:$simm13), 0>;
+def : InstAlias<"wr $simm13, $asr", (WRASRri ASRRegs:$asr, G0, simm13Op:$simm13), 0>;
 def : InstAlias<"wr $rs2, %psr", (WRPSRrr G0, IntRegs:$rs2), 0>;
-def : InstAlias<"wr $simm13, %psr", (WRPSRri G0, i32imm:$simm13), 0>;
+def : InstAlias<"wr $simm13, %psr", (WRPSRri G0, simm13Op:$simm13), 0>;
 def : InstAlias<"wr $rs2, %wim", (WRWIMrr G0, IntRegs:$rs2), 0>;
-def : InstAlias<"wr $simm13, %wim", (WRWIMri G0, i32imm:$simm13), 0>;
+def : InstAlias<"wr $simm13, %wim", (WRWIMri G0, simm13Op:$simm13), 0>;
 def : InstAlias<"wr $rs2, %tbr", (WRTBRrr G0, IntRegs:$rs2), 0>;
-def : InstAlias<"wr $simm13, %tbr", (WRTBRri G0, i32imm:$simm13), 0>;
+def : InstAlias<"wr $simm13, %tbr", (WRTBRri G0, simm13Op:$simm13), 0>;
 
 def : InstAlias<"pwr $rs2, %psr", (PWRPSRrr G0, IntRegs:$rs2), 0>;
-def : InstAlias<"pwr $simm13, %psr", (PWRPSRri G0, i32imm:$simm13), 0>;
+def : InstAlias<"pwr $simm13, %psr", (PWRPSRri G0, simm13Op:$simm13), 0>;
 
 // wrpr %reg, %rd -> wrpr %reg, %g0, %rd
 // wrpr  imm, %rd -> wrpr  %g0, imm, %rd
 // Nonstandard GNU extensions.
 let Predicates = [HasV9] in {
   def : InstAlias<"wrpr $rs1, $rd", (WRPRrr PRRegs:$rd, IntRegs:$rs1, G0), 0>;
-  def : InstAlias<"wrpr $simm13, $rd", (WRPRri PRRegs:$rd, G0, i32imm:$simm13), 0>;
+  def : InstAlias<"wrpr $simm13, $rd", (WRPRri PRRegs:$rd, G0, simm13Op:$simm13), 0>;
 }
 
 // flush -> flush %g0
@@ -590,6 +661,12 @@ def : InstAlias<"flush", (FLUSH), 0>;
 
 // unimp -> unimp 0
 def : InstAlias<"unimp", (UNIMP 0), 0>;
+
+// Not in spec, but we follow Solaris behavior of having `illtrap`
+// interchangeable with `unimp` all the time.
+def : MnemonicAlias<"illtrap", "unimp">;
+
+def : MnemonicAlias<"setuw", "set">, Requires<[HasV9]>;
 
 def : MnemonicAlias<"iflush", "flush">;
 
@@ -645,3 +722,9 @@ def : InstAlias<"signx $rs1, $rd", (SRArr IntRegs:$rd, IntRegs:$rs1, G0), 0>, Re
 
 // sir -> sir 0
 def : InstAlias<"sir", (SIR 0), 0>;
+
+// pause reg_or_imm -> wrasr %g0, reg_or_imm, %asr27
+let Predicates = [HasOSA2011] in {
+  def : InstAlias<"pause $rs2", (WRASRrr ASR27, G0, IntRegs:$rs2), 1>;
+  def : InstAlias<"pause $simm13", (WRASRri ASR27, G0, simm13Op:$simm13), 1>;
+} // Predicates = [HasOSA2011]

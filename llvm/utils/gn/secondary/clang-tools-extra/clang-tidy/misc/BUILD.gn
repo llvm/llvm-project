@@ -34,6 +34,7 @@ static_library("misc") {
   sources = [
     "ConfusableIdentifierCheck.cpp",
     "ConstCorrectnessCheck.cpp",
+    "CoroutineHostileRAIICheck.cpp",
     "DefinitionsInHeadersCheck.cpp",
     "HeaderIncludeCycleCheck.cpp",
     "IncludeCleanerCheck.cpp",
@@ -45,6 +46,7 @@ static_library("misc") {
     "NoRecursionCheck.cpp",
     "NonCopyableObjects.cpp",
     "NonPrivateMemberVariablesInClassesCheck.cpp",
+    "OverrideWithDifferentVisibilityCheck.cpp",
     "RedundantExpressionCheck.cpp",
     "StaticAssertCheck.cpp",
     "ThrowByValueCatchByReferenceCheck.cpp",
@@ -54,5 +56,6 @@ static_library("misc") {
     "UnusedParametersCheck.cpp",
     "UnusedUsingDeclsCheck.cpp",
     "UseAnonymousNamespaceCheck.cpp",
+    "UseInternalLinkageCheck.cpp",
   ]
 }

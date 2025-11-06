@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 
 using namespace llvm;
@@ -252,8 +251,7 @@ void LVElement::generateName(std::string &Prefix) const {
   Prefix.append(isLined() ? lineNumberAsString(/*ShowZero=*/true) : "?");
 
   // Remove any whitespaces.
-  Prefix.erase(std::remove_if(Prefix.begin(), Prefix.end(), ::isspace),
-               Prefix.end());
+  llvm::erase_if(Prefix, ::isspace);
 }
 
 // Generate a name for unnamed elements.

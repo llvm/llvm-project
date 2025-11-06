@@ -42,9 +42,14 @@ public:
 
   bool IsValid() const;
 
+  /// Get the command as the user typed it. Empty string if commands were run on
+  /// behalf of lldb.
+  const char *GetCommand();
+
   const char *GetOutput();
 
   const char *GetError();
+  SBStructuredData GetErrorData();
 
 #ifndef SWIG
   LLDB_DEPRECATED_FIXME("Use PutOutput(SBFile) or PutOutput(FileSP)",
@@ -130,6 +135,8 @@ public:
                 const char *fallback_error_cstr = nullptr);
 
   void SetError(const char *error_cstr);
+
+  lldb::SBValueList GetValues(lldb::DynamicValueType use_dynamic);
 
 protected:
   friend class SBCommandInterpreter;

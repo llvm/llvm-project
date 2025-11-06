@@ -18,6 +18,12 @@
 ; CHECK:     {{.*}}Proc{{.*}}Sym {
 ; CHECK:       DisplayName: main
 ; CHECK:     }
+; CHECK:     InlineesSym {
+; CHECK-NEXT:  Kind: S_INLINEES (0x1168)
+; CHECK-NEXT:  Inlinees [
+; CHECK-NEXT:    FuncID: same_name (0x1002)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:}
 ; CHECK:     InlineSiteSym {
 ; CHECK:       Inlinee: same_name (0x1002)
 ; CHECK:     }

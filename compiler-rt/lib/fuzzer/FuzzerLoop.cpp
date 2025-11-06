@@ -125,8 +125,8 @@ void FreeHook(const volatile void *ptr) {
 void Fuzzer::HandleMalloc(size_t Size) {
   if (!Options.MallocLimitMb || (Size >> 20) < (size_t)Options.MallocLimitMb)
     return;
-  Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n", GetPid(),
-         Size);
+  Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n",
+         (int)GetPid(), Size);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   PrintStackTrace();
   DumpCurrentUnit("oom-");
@@ -448,9 +448,9 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
       secondsSinceProcessStartUp() >= 2)
     PrintStats("pulse ");
-  auto Threshhold =
+  auto Threshold =
       static_cast<long>(static_cast<double>(TimeOfLongestUnitInSeconds) * 1.1);
-  if (TimeOfUnit > Threshhold && TimeOfUnit >= Options.ReportSlowUnits) {
+  if (TimeOfUnit > Threshold && TimeOfUnit >= Options.ReportSlowUnits) {
     TimeOfLongestUnitInSeconds = TimeOfUnit;
     Printf("Slowest unit: %ld s:\n", TimeOfLongestUnitInSeconds);
     WriteUnitToFileWithPrefix({Data, Data + Size}, "slow-unit-");
@@ -568,7 +568,7 @@ size_t Fuzzer::GetCurrentUnitInFuzzingThead(const uint8_t **Data) const {
 
 void Fuzzer::CrashOnOverwrittenData() {
   Printf("==%d== ERROR: libFuzzer: fuzz target overwrites its const input\n",
-         GetPid());
+         (int)GetPid());
   PrintStackTrace();
   Printf("SUMMARY: libFuzzer: overwrites-const-input\n");
   DumpCurrentUnit("crash-");
@@ -579,6 +579,9 @@ void Fuzzer::CrashOnOverwrittenData() {
 // Compare two arrays, but not all bytes if the arrays are large.
 static bool LooseMemeq(const uint8_t *A, const uint8_t *B, size_t Size) {
   const size_t Limit = 64;
+  // memcmp cannot take null pointer arguments even if Size is 0.
+  if (!Size)
+    return true;
   if (Size <= 64)
     return !memcmp(A, B, Size);
   // Compare first and last Limit/2 bytes.
@@ -596,7 +599,9 @@ ATTRIBUTE_NOINLINE bool Fuzzer::ExecuteCallback(const uint8_t *Data,
   // We copy the contents of Unit into a separate heap buffer
   // so that we reliably find buffer overflows in it.
   uint8_t *DataCopy = new uint8_t[Size];
-  memcpy(DataCopy, Data, Size);
+  // memcpy cannot take null pointer arguments even if Size is 0.
+  if (Size)
+    memcpy(DataCopy, Data, Size);
   if (EF->__msan_unpoison)
     EF->__msan_unpoison(DataCopy, Size);
   if (EF->__msan_unpoison_param)
@@ -661,7 +666,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
 }
 
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
-  II->NumSuccessfullMutations++;
+  II->NumSuccessfulMutations++;
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U, II->Reduced ? "REDUCE" : "NEW   ");
   WriteToOutputCorpus(U);
@@ -799,7 +804,7 @@ void Fuzzer::ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles) {
     TotalSize += File.Size;
   }
   if (Options.MaxLen == 0)
-    SetMaxInputLen(std::min(std::max(kMinDefaultLen, MaxSize), kMaxSaneLen));
+    SetMaxInputLen(std::clamp(MaxSize, kMinDefaultLen, kMaxSaneLen));
   assert(MaxInputLen > 0);
 
   // Test the callback with empty input and never try it again.

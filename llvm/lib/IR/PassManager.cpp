@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerImpl.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 using namespace llvm;
@@ -16,14 +17,16 @@ using namespace llvm;
 namespace llvm {
 // Explicit template instantiations and specialization defininitions for core
 // template typedefs.
-template class AllAnalysesOn<Module>;
-template class AllAnalysesOn<Function>;
-template class PassManager<Module>;
-template class PassManager<Function>;
-template class AnalysisManager<Module>;
-template class AnalysisManager<Function>;
-template class InnerAnalysisManagerProxy<FunctionAnalysisManager, Module>;
-template class OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
+template class LLVM_EXPORT_TEMPLATE AllAnalysesOn<Module>;
+template class LLVM_EXPORT_TEMPLATE AllAnalysesOn<Function>;
+template class LLVM_EXPORT_TEMPLATE PassManager<Module>;
+template class LLVM_EXPORT_TEMPLATE PassManager<Function>;
+template class LLVM_EXPORT_TEMPLATE AnalysisManager<Module>;
+template class LLVM_EXPORT_TEMPLATE AnalysisManager<Function>;
+template class LLVM_EXPORT_TEMPLATE
+    InnerAnalysisManagerProxy<FunctionAnalysisManager, Module>;
+template class LLVM_EXPORT_TEMPLATE
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 
 template <>
 bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
@@ -143,6 +146,18 @@ PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
   PA.preserveSet<AllAnalysesOn<Function>>();
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
   return PA;
+}
+
+template <>
+void llvm::printIRUnitNameForStackTrace<Module>(raw_ostream &OS,
+                                                const Module &IR) {
+  OS << "module \"" << IR.getName() << "\"";
+}
+
+template <>
+void llvm::printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                                  const Function &IR) {
+  OS << "function \"" << IR.getName() << "\"";
 }
 
 AnalysisSetKey CFGAnalyses::SetKey;

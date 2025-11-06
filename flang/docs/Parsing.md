@@ -6,11 +6,12 @@
   
 -->
 
-# The F18 Parser
+# The Flang Parser
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 This program source code implements a parser for the Fortran programming

@@ -12,31 +12,31 @@ define i32 @test(i32 signext %x, i32 signext %c) {
 ; CHECK-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; CHECK-NEXT:    addiur2 $5, $5, -1
 ; CHECK-NEXT:    sltiu $1, $5, 4
-; CHECK-NEXT:    beqz $1, $BB0_3
+; CHECK-NEXT:    beqz $1, $BB0_6
 ; CHECK-NEXT:    addu $3, $2, $25
-; CHECK-NEXT:  $BB0_1: # %entry
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li16 $2, 0
 ; CHECK-NEXT:    sll16 $5, $5, 2
 ; CHECK-NEXT:    lw $6, %got($JTI0_0)($3)
 ; CHECK-NEXT:    addu16 $5, $5, $6
 ; CHECK-NEXT:    lw $5, %lo($JTI0_0)($5)
-; CHECK-NEXT:    addu16 $3, $5, $3
+; CHECK-NEXT:    addu16 $3, $3, $5
 ; CHECK-NEXT:    jr $3
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  $BB0_2: # %sw.bb2
 ; CHECK-NEXT:    addiur2 $2, $4, 1
 ; CHECK-NEXT:    jrc $ra
-; CHECK-NEXT:  $BB0_3:
-; CHECK-NEXT:    move $2, $4
-; CHECK-NEXT:    jrc $ra
-; CHECK-NEXT:  $BB0_4: # %sw.bb3
+; CHECK-NEXT:  $BB0_3: # %sw.bb3
 ; CHECK-NEXT:    addius5 $4, 2
 ; CHECK-NEXT:    move $2, $4
 ; CHECK-NEXT:    jrc $ra
-; CHECK-NEXT:  $BB0_5: # %sw.bb5
+; CHECK-NEXT:  $BB0_4: # %sw.bb5
 ; CHECK-NEXT:    addius5 $4, 3
 ; CHECK-NEXT:    move $2, $4
-; CHECK-NEXT:  $BB0_6: # %for.cond.cleanup
+; CHECK-NEXT:  $BB0_5: # %for.cond.cleanup
+; CHECK-NEXT:    jrc $ra
+; CHECK-NEXT:  $BB0_6:
+; CHECK-NEXT:    move $2, $4
 ; CHECK-NEXT:    jrc $ra
 entry:
   switch i32 %c, label %sw.epilog [

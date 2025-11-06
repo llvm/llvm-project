@@ -222,6 +222,11 @@ OPTIONS
  Show coverage for branch conditions in terms of either count or percentage.
  The supported views are: "count", "percent".
 
+.. option:: -show-mcdc
+
+ Show modified condition/decision coverage (MC/DC) for each applicable boolean
+ expression.
+
 .. option:: -show-line-counts
 
  Show the execution counts for each line. Defaults to true, unless another
@@ -375,6 +380,11 @@ OPTIONS
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
 
+.. option:: -empty-profile
+
+ Display the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
+
 .. program:: llvm-cov report
 
 .. _llvm-cov-report:
@@ -426,6 +436,10 @@ OPTIONS
 
  Show statistics for all branch conditions. Defaults to true.
 
+.. option:: -show-mcdc-summary
+
+ Show MC/DC statistics. Defaults to false.
+
 .. option:: -show-functions
 
  Show coverage summaries for each function. Defaults to false.
@@ -460,6 +474,11 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+.. option:: -empty-profile
+
+ Display the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
 
 .. program:: llvm-cov export
 
@@ -517,15 +536,15 @@ OPTIONS
 
  Skip source code files with file paths that match the given regular expression.
 
- .. option:: -skip-expansions
+.. option:: -skip-expansions
 
  Skip exporting macro expansion coverage data.
 
- .. option:: -skip-functions
+.. option:: -skip-functions
 
  Skip exporting per-function coverage data.
 
- .. option:: -num-threads=N, -j=N
+.. option:: -num-threads=N, -j=N
 
  Use N threads to export coverage data. When N=0, llvm-cov auto-detects an
  appropriate number of threads to use. This is the default.
@@ -552,6 +571,11 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+.. option:: -empty-profile
+
+ Export the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
 
 CONVERT-FOR-TESTING COMMAND
 ---------------------------

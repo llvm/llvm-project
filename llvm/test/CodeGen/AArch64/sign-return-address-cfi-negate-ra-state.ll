@@ -57,7 +57,8 @@ return:                                           ; No predecessors!
 }
 
 ; For asynchronous unwind tables, we need to flip the value of RA_SIGN_STATE
-; before and after the tail call.
+; before and after the tail call. In the prolog, RA_SIGN_STATE is updated right
+; after the corresponding 'PACIASP' instruction.
 define hidden noundef i32 @baz_async(i32 noundef %a) #0 uwtable(async) {
 ; CHECK-V8A-LABEL: baz_async:
 ; CHECK-V8A:       // %bb.0: // %entry
@@ -73,9 +74,9 @@ define hidden noundef i32 @baz_async(i32 noundef %a) #0 uwtable(async) {
 ; CHECK-V8A-NEXT:    bl _Z3bari
 ; CHECK-V8A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-V8A-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-V8A-NEXT:    .cfi_restore w30
 ; CHECK-V8A-NEXT:    hint #29
 ; CHECK-V8A-NEXT:    .cfi_negate_ra_state
-; CHECK-V8A-NEXT:    .cfi_restore w30
 ; CHECK-V8A-NEXT:    b _Z3bari
 ; CHECK-V8A-NEXT:  .LBB1_2: // %if.else
 ; CHECK-V8A-NEXT:    .cfi_restore_state
@@ -83,9 +84,9 @@ define hidden noundef i32 @baz_async(i32 noundef %a) #0 uwtable(async) {
 ; CHECK-V8A-NEXT:    add w0, w0, #1
 ; CHECK-V8A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-V8A-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-V8A-NEXT:    .cfi_restore w30
 ; CHECK-V8A-NEXT:    hint #29
 ; CHECK-V8A-NEXT:    .cfi_negate_ra_state
-; CHECK-V8A-NEXT:    .cfi_restore w30
 ; CHECK-V8A-NEXT:    ret
 ;
 ; CHECK-V83A-LABEL: baz_async:
@@ -102,9 +103,9 @@ define hidden noundef i32 @baz_async(i32 noundef %a) #0 uwtable(async) {
 ; CHECK-V83A-NEXT:    bl _Z3bari
 ; CHECK-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-V83A-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-V83A-NEXT:    .cfi_restore w30
 ; CHECK-V83A-NEXT:    autiasp
 ; CHECK-V83A-NEXT:    .cfi_negate_ra_state
-; CHECK-V83A-NEXT:    .cfi_restore w30
 ; CHECK-V83A-NEXT:    b _Z3bari
 ; CHECK-V83A-NEXT:  .LBB1_2: // %if.else
 ; CHECK-V83A-NEXT:    .cfi_restore_state
@@ -137,6 +138,8 @@ return:                                           ; preds = %if.else, %if.then
 ; around the tail call. The tail-called function might throw an exception, but
 ; at this point we are set up to return into baz's caller, so the unwinder will
 ; never see baz's unwind table for that exception.
+; The '.cfi_negate_ra_state' instruction in the prolog can be bundled with other
+; CFI instructions to avoid emitting superfluous DW_CFA_advance_loc.
 define hidden noundef i32 @baz_sync(i32 noundef %a) #0 uwtable(sync) {
 ; CHECK-V8A-LABEL: baz_sync:
 ; CHECK-V8A:       // %bb.0: // %entry
@@ -213,6 +216,10 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP-NOT: DW_CFA_remember_state
 ; CHECK-DUMP-NOT: DW_CFA_restore_state
 
+; CHECK-DUMP: CFA=WSP{{$}}
+; CHECK-DUMP: reg34=1
+; CHECK-DUMP-NOT: reg34=0
+
 ; baz_async
 ; CHECK-DUMP-LABEL: FDE
 ; CHECK-DUMP: Format:       DWARF32
@@ -222,9 +229,23 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP:   DW_CFA_restore_state:
 ; CHECK-DUMP:   DW_CFA_AARCH64_negate_ra_state:
 
+;; First DW_CFA_AARCH64_negate_ra_state:
+; CHECK-DUMP: reg34=1
+;; Second DW_CFA_AARCH64_negate_ra_state:
+; CHECK-DUMP: reg34=0
+;; DW_CFA_restore_state:
+; CHECK-DUMP: reg34=1
+;; Third DW_CFA_AARCH64_negate_ra_state:
+; CHECK-DUMP: reg34=0
+; CHECK-DUMP-NOT: reg34=1
+
 ; baz_sync
 ; CHECK-DUMP-LABEL: FDE
 ; CHECK-DUMP:   DW_CFA_AARCH64_negate_ra_state:
 ; CHECK-DUMP-NOT: DW_CFA_AARCH64_negate_ra_state
 ; CHECK-DUMP-NOT: DW_CFA_remember_state
 ; CHECK-DUMP-NOT: DW_CFA_restore_state
+
+; CHECK-DUMP: CFA=WSP{{$}}
+; CHECK-DUMP: reg34=1
+; CHECK-DUMP-NOT: reg34=0

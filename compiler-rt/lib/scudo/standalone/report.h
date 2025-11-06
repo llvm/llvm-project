@@ -12,18 +12,19 @@
 #include "internal_defs.h"
 
 namespace scudo {
-
 // Reports are *fatal* unless stated otherwise.
 
-// Generic error.
+// Generic error, adds newline to end of message.
 void NORETURN reportError(const char *Message);
+
+// Generic error, but the message is not modified.
+void NORETURN reportRawError(const char *Message);
 
 // Flags related errors.
 void NORETURN reportInvalidFlag(const char *FlagType, const char *Value);
 
 // Chunk header related errors.
-void NORETURN reportHeaderCorruption(void *Ptr);
-void NORETURN reportHeaderRace(void *Ptr);
+void NORETURN reportHeaderCorruption(void *Header, const void *Ptr);
 
 // Sanity checks related error.
 void NORETURN reportSanityCheckError(const char *Field);
@@ -40,11 +41,12 @@ enum class AllocatorAction : u8 {
   Reallocating,
   Sizing,
 };
-void NORETURN reportInvalidChunkState(AllocatorAction Action, void *Ptr);
-void NORETURN reportMisalignedPointer(AllocatorAction Action, void *Ptr);
-void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, void *Ptr,
+void NORETURN reportInvalidChunkState(AllocatorAction Action, const void *Ptr);
+void NORETURN reportMisalignedPointer(AllocatorAction Action, const void *Ptr);
+void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, const void *Ptr,
                                         u8 TypeA, u8 TypeB);
-void NORETURN reportDeleteSizeMismatch(void *Ptr, uptr Size, uptr ExpectedSize);
+void NORETURN reportDeleteSizeMismatch(const void *Ptr, uptr Size,
+                                       uptr ExpectedSize);
 
 // C wrappers errors.
 void NORETURN reportAlignmentNotPowerOfTwo(uptr Alignment);

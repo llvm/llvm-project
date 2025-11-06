@@ -23,7 +23,7 @@ end subroutine
 ! CHECK-HLFIR-NEXT:    fir.do_loop %[[ARG2:.*]] = %[[C1]] to %[[EXT1]] step %[[C1]] unordered {
 ! CHECK-HLFIR-NEXT:      fir.do_loop %[[ARG3:.*]] = %[[C1]] to %[[EXT0]] step %[[C1]] unordered {
 ! CHECK-HLFIR-NEXT:        %[[ELE:.*]] = hlfir.apply %[[MUL]], %[[ARG3]], %[[ARG2]] : (!hlfir.expr<2x?xf32>, index, index) -> f32
-! CHECK-HLFIR-NEXT:        %[[ASSOC:.*]]:3 = hlfir.associate %[[ELE]] {uniq_name = "adapt.valuebyref"} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
+! CHECK-HLFIR-NEXT:        %[[ASSOC:.*]]:3 = hlfir.associate %[[ELE]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
 ! CHECK-HLFIR-NEXT:        fir.call
 ! CHECK-HLFIR-NEXT:        hlfir.end_associate
 ! CHECK-HLFIR-NEXT:      }
@@ -31,18 +31,17 @@ end subroutine
 ! CHECK-HLFIR-NEXT:    hlfir.destroy %[[MUL]]
 
 ! ...
+! CHECK-FIR-DAG:       %[[C0:.*]] = arith.constant 0 : index
+! CHECK-FIR-DAG:       %[[C1:.*]] = arith.constant 1 : index
+! CHECK-FIR-DAG:       %[[C2:.*]] = arith.constant 2 : index
 ! CHECK-FIR:           fir.call @_FortranAMatmul
 ! CHECK-FIR-NEXT:      %[[MUL:.*]] = fir.load %[[MUL_BOX:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
-! CHECK-FIR-NEXT:      %[[C0:.*]] = arith.constant 0 : index
 ! CHECK-FIR-NEXT:      %[[DIMS0:.*]]:3 = fir.box_dims %[[MUL]], %[[C0]]
-! CHECK-FIR-NEXT:      %[[C1:.*]] = arith.constant 1 : index
 ! CHECK-FIR-NEXT:      %[[DIMS1:.*]]:3 = fir.box_dims %[[MUL]], %[[C1]]
 ! ...
 ! CHECK-FIR:           %[[SHAPE:.*]] = fir.shape %[[DIMS0]]#1, %[[DIMS1]]#1
-! CHECK-FIR-NEXT:      %[[C2:.*]] = arith.constant 2 : index
-! CHECK-FIR-NEXT:      %[[C1_1:.*]] = arith.constant 1 : index
-! CHECK-FIR-NEXT:      fir.do_loop %[[ARG2:.*]] = %[[C1_1]] to %[[DIMS1]]#1 step %[[C1_1]] unordered {
-! CHECK-FIR-NEXT:        fir.do_loop %[[ARG3:.*]] = %[[C1_1]] to %[[C2]] step %[[C1_1]] unordered {
+! CHECK-FIR-NEXT:      fir.do_loop %[[ARG2:.*]] = %[[C1]] to %[[DIMS1]]#1 step %[[C1]] unordered {
+! CHECK-FIR-NEXT:        fir.do_loop %[[ARG3:.*]] = %[[C1]] to %[[C2]] step %[[C1]] unordered {
 ! ...
 
 ! CHECK-ALL:           return

@@ -6,7 +6,8 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 //
-// RUN: EXPECTED_RESOURCE_DIR=`%clang -print-resource-dir` && \
+// RUN: %clang -print-resource-dir | tr -d '\n' > %t/resource-dir
+// RUN: export EXPECTED_RESOURCE_DIR=%{readfile:%t/resource-dir}
 // RUN: ln -s %clang++ %t/clang++ && \
 // RUN: sed "s|EXPECTED_RESOURCE_DIR|$EXPECTED_RESOURCE_DIR|g; s|DIR|%/t|g" %t/P1689.json.in > %t/P1689.json && \
 // RUN: clang-scan-deps -compilation-database %t/P1689.json -format=p1689 | FileCheck %t/a.cpp -DPREFIX=%/t && \

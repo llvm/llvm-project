@@ -20,7 +20,6 @@
 #include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
-#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -50,8 +49,8 @@ struct X86TileConfig : public MachineFunctionPass {
   /// X86TileConfig analysis usage.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<VirtRegMap>();
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<VirtRegMapWrapperLegacy>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -59,8 +58,7 @@ struct X86TileConfig : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &mf) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   static char ID;
@@ -72,17 +70,22 @@ char X86TileConfig::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86TileConfig, DEBUG_TYPE, "Tile Register Configure",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(X86TileConfig, DEBUG_TYPE, "Tile Register Configure", false,
                     false)
 
 bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
+  X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  // Early exit in the common case of non-AMX code.
+  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+    return false;
+
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  const X86RegisterInfo *TRI = ST.getRegisterInfo();
   const TargetInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
-  VirtRegMap &VRM = getAnalysis<VirtRegMap>();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
 
   if (VRM.isShapeMapEmpty())
     return false;
@@ -121,11 +124,12 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
     Register VirtReg = Register::index2VirtReg(I);
     if (MRI.reg_nodbg_empty(VirtReg))
       continue;
-    if (MRI.getRegClass(VirtReg)->getID() != X86::TILERegClassID)
+    if (!TRI->isTileRegisterClass(MRI.getRegClass(VirtReg)))
       continue;
-    if (VRM.getPhys(VirtReg) == VirtRegMap::NO_PHYS_REG)
+    MCRegister PhysReg = VRM.getPhys(VirtReg);
+    if (!PhysReg)
       continue;
-    unsigned Index = VRM.getPhys(VirtReg) - X86::TMM0;
+    unsigned Index = PhysReg - X86::TMM0;
     if (!Phys2Virt[Index])
       Phys2Virt[Index] = VirtReg;
   }
@@ -167,6 +171,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
             continue;
           }
           Imm = DefMI.getOperand(1).getImm();
+
           NewMI = addFrameReference(
                       BuildMI(MF.front(), ++ConstMI->getIterator(), DL,
                               TII->get(IsRow ? X86::MOV8mi : X86::MOV16mi)),

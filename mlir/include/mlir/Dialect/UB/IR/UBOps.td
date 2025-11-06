@@ -12,7 +12,7 @@
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 
-include "UBOpsInterfaces.td"
+include "mlir/Dialect/UB/IR/UBOpsInterfaces.td"
 
 def UB_Dialect : Dialect {
   let name = "ub";
@@ -47,12 +47,6 @@ def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
     `value` attribute is needed to indicate an optional additional poison
     semantics (e.g. partially poisoned vectors), default value indicates results
     is fully poisoned.
-
-    Syntax:
-
-    ```
-    poison-op ::= `poison` (`<` value `>`)? `:` type
-    ```
 
     Examples:
 

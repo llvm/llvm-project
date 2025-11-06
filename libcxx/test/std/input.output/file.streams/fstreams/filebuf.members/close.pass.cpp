@@ -32,7 +32,10 @@ int main(int, char**)
         assert(f.close() == nullptr);
         assert(!f.is_open());
     }
-#if defined(__unix__)
+    // Starting with Android API 30+, Bionic's fdsan aborts a process that calls
+    // close() on a file descriptor tagged as belonging to something else (such
+    // as a FILE*).
+#if defined(__unix__) && !defined(__BIONIC__)
     {
         std::filebuf f;
         assert(!f.is_open());

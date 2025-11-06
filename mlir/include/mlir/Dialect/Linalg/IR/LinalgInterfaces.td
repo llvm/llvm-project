@@ -13,6 +13,8 @@
 #ifndef LINALG_IR_LINALGINTERFACES
 #define LINALG_IR_LINALGINTERFACES
 
+include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/IndexingMapOpInterface.td"
 include "mlir/IR/OpBase.td"
 
 // The 'LinalgContractionOpInterface' provides access to the
@@ -84,6 +86,50 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     /*args=*/(ins),
     /*methodBody=*/[{
         return mlir::isRowMajorBatchMatmul($_op.getIndexingMaps());
+    }]>,
+    InterfaceMethod<
+    /*desc=*/[{
+      Returns whether the given op has indexing maps that correspond to a
+      vector-matrix multiplication.
+    }],
+    /*retTy=*/"bool",
+    /*methodName=*/"isVecmat",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+        return mlir::isVecmat($_op.getIndexingMaps());
+    }]>,
+    InterfaceMethod<
+    /*desc=*/[{
+      Returns whether the given op has indexing maps that correspond to a
+      batched vector-matrix multiplication.
+    }],
+    /*retTy=*/"bool",
+    /*methodName=*/"isBatchVecmat",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+        return mlir::isBatchVecmat($_op.getIndexingMaps());
+    }]>,
+    InterfaceMethod<
+    /*desc=*/[{
+      Returns whether the given op has indexing maps that correspond to a
+      matrix-vector multiplication.
+    }],
+    /*retTy=*/"bool",
+    /*methodName=*/"isMatvec",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+        return mlir::isMatvec($_op.getIndexingMaps());
+    }]>,
+    InterfaceMethod<
+    /*desc=*/[{
+      Returns whether the given op has indexing maps that correspond to a
+      batched matrix-vector multiplication.
+    }],
+    /*retTy=*/"bool",
+    /*methodName=*/"isBatchMatvec",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+        return mlir::isBatchMatvec($_op.getIndexingMaps());
     }]>,
   ];
 }
@@ -178,7 +224,10 @@ def LinalgFillOpInterface : OpInterface<"FillOpInterface"> {
 }
 
 // The 'LinalgStructuredInterface' provides access to the 'LinalgOp' interface.
-def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
+def LinalgStructuredInterface
+    : OpInterface<"LinalgOp", 
+      [DestinationStyleOpInterface, IndexingMapOpInterface]
+  > {
   let cppNamespace = "::mlir::linalg";
   let methods = [
     //===------------------------------------------------------------------===//
@@ -195,6 +244,18 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         return llvm::count($_op.getIteratorTypesArray(),
                            utils::IteratorType::parallel);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return true if all loops are parallel.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isAllParallelLoops",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return getNumParallelLoops() ==  getNumLoops();
       }]
     >,
     InterfaceMethod<
@@ -283,6 +344,18 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Returns true only if linalgOp takes one input and produces one result.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isSingleInputOutput",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getNumDpsInputs() == 1 && $_op.getNumDpsInits() == 1;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return true if `opOperand` is an init tensor. This is true when it is
         an output tensor operand whose value is used in the payload region.
       }],
@@ -298,7 +371,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the `opOperand` rank or zero for scalars.
+        Return the `opOperand` rank or zero for scalars or vectors not wrapped within a tensor or a memref.
       }],
       /*retTy=*/"int64_t",
       /*methodName=*/"getRank",
@@ -306,9 +379,17 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == this->getOperation());
-        if (auto shapedType =
-              ::llvm::dyn_cast<ShapedType>(opOperand->get().getType()))
+        Type t = opOperand->get().getType();
+        // A VectorType is an elemental type, do not consider its rank for the operand.
+        if (isa<VectorType>(t))
+          return 0;
+        // Tensor and Memref container types have a rank.
+        if (auto shapedType = ::llvm::dyn_cast<ShapedType>(t)) {
+          // Failsafe.
+          assert((isa<MemRefType>(t) || isa<RankedTensorType>(t)) &&
+                 "expected a ranked tensor or memref in LinalgInterface::getRank");
           return shapedType.getRank();
+        }
         return 0;
       }]
     >,
@@ -321,13 +402,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        // MLIR currently does not support dependent interfaces or interface
-        // inheritance. By construction all ops with StructuredOpInterface must
-        // implement DestinationStyleOpInterface.
-        // TODO: reevaluate the need for a cast when a better mechanism exists.
-        return getBlock()->getArguments().take_front(
-            cast<DestinationStyleOpInterface>(*this->getOperation())
-                .getNumDpsInputs());
+        return getBlock()->getArguments().take_front($_op.getNumDpsInputs());
       }]
     >,
     InterfaceMethod<
@@ -339,29 +414,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        // MLIR currently does not support dependent interfaces or interface
-        // inheritance. By construction all ops with StructuredOpInterface must
-        // implement DestinationStyleOpInterface.
-        // TODO: reevaluate the need for a cast when a better mechanism exists.
-        return getBlock()->getArguments().take_back(
-            cast<DestinationStyleOpInterface>(*this->getOperation())
-                .getNumDpsInits());
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
-        Return the `opOperand` shape or an empty vector for scalars.
-      }],
-      /*retTy=*/"ArrayRef<int64_t>",
-      /*methodName=*/"getShape",
-      /*args=*/(ins "OpOperand*":$opOperand),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        assert(opOperand->getOwner() == this->getOperation());
-        if (auto shapedType =
-              ::llvm::dyn_cast<ShapedType>(opOperand->get().getType()))
-          return shapedType.getShape();
-        return {};
+        return getBlock()->getArguments().take_back($_op.getNumDpsInits());
       }]
     >,
     InterfaceMethod<
@@ -393,21 +446,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the input or output indexing map for `opOperand`.
-      }],
-      /*retTy=*/"AffineMap",
-      /*methodName=*/"getMatchingIndexingMap",
-      /*args=*/(ins "OpOperand*":$opOperand),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        assert(opOperand->getOwner() == this->getOperation());
-        auto indexingMaps =
-          $_op.getIndexingMaps().template getAsValueRange<AffineMapAttr>();
-        return *(indexingMaps.begin() + opOperand->getOperandNumber());
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
         Return the indexing map for a `result`.
       }],
       /*retTy=*/"AffineMap",
@@ -418,13 +456,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         assert(result.getOwner() == this->getOperation());
         auto indexingMaps =
           $_op.getIndexingMaps().template getAsValueRange<AffineMapAttr>();
-        // MLIR currently does not support dependent interfaces or interface
-        // inheritance. By construction all ops with StructuredOpInterface must
-        // implement DestinationStyleOpInterface.
-        // TODO: reevaluate the need for a cast when a better mechanism exists.
-        return *(indexingMaps.begin() +
-                 cast<DestinationStyleOpInterface>(*this->getOperation())
-                     .getNumDpsInputs() +
+        return *(indexingMaps.begin() + $_op.getNumDpsInputs() +
                  result.getResultNumber());
       }]
     >,
@@ -439,16 +471,10 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == this->getOperation());
-        // MLIR currently does not support dependent interfaces or interface
-        // inheritance. By construction all ops with StructuredOpInterface must
-        // implement DestinationStyleOpInterface.
-        // TODO: reevaluate the need for a cast when a better mechanism exists.
         int64_t resultIndex =
-            opOperand->getOperandNumber() -
-            cast<DestinationStyleOpInterface>(*this->getOperation())
-                .getNumDpsInputs();
+            opOperand->getOperandNumber() - $_op.getNumDpsInputs();
         assert(resultIndex >= 0 &&
-               resultIndex < this->getOperation()->getNumResults());
+               resultIndex < $_op.getNumDpsInits());
         Operation *yieldOp = getBlock()->getTerminator();
         return &yieldOp->getOpOperand(resultIndex);
       }]
@@ -516,27 +542,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the indexing maps attribute within the current operation.
-      }],
-      /*retTy=*/"ArrayAttr",
-      /*methodName=*/"getIndexingMaps"
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
-        Return the indexing maps within the current operation.
-      }],
-      /*retTy=*/"SmallVector<AffineMap>",
-      /*methodName=*/"getIndexingMapsArray",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        auto range = $_op.getIndexingMaps()
-          .template getAsValueRange<AffineMapAttr>();
-        return {range.begin(), range.end()};
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
         Return true if any of the operands has a dynamic shape.
       }],
       /*retTy=*/"bool",
@@ -544,7 +549,12 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::any_of(getStaticShape(), ShapedType::isDynamic);
+        for (OpOperand &opOperand : this->getOperation()->getOpOperands()) {
+          if (auto shapedType = dyn_cast<ShapedType>(opOperand.get().getType())) {
+            if (ShapedType::isDynamicShape(shapedType.getShape())) return true;
+          }
+        }
+        return false;
       }]
     >,
     InterfaceMethod<
@@ -577,12 +587,12 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         are expection. For example, in `map` output operand isn't used in
         the block.
       }],
-      /*retTy=*/"OpOperandVector",
+      /*retTy=*/"::llvm::SmallVector<OpOperand *>",
       /*methodName=*/"getOpOperandsMatchingBBargs",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        OpOperandVector result;
+        ::llvm::SmallVector<OpOperand *> result;
         result.reserve($_op->getNumOperands());
         llvm::transform(
           this->getOperation()->getOpOperands(),
@@ -646,56 +656,22 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         return;
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true if the user has supplied explicit indexing maps that are
+        different from default indexing maps for this op. Returns `false` otherwise.
+        Note, if the user define maps that are identical to the default maps,
+        this method returns `false`.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasUserDefinedMaps",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return false; }]
+    >,
     //===------------------------------------------------------------------===//
     // Linalg generalization hooks.
     //===------------------------------------------------------------------===//
-    InterfaceMethod<
-      /*desc=*/[{
-        Hook to provide a custom AffineMap used to compute all the operand
-        subshapes given loop bounds. This is used to answer the question: "given
-        an iteration space over the codomain, what are the subshapes of the
-        operands involved in the computation".
-        The default behavior is to just concatenate all the indexing maps.
-        A custom AffineMap allows providing a map that can be used to
-        compute subshapes even in cases where the concatenation of indexing maps
-        (i.e. the data traversal order) is not a simple permutation of the loop
-        traversal order. It is then possible to define ops with skewed data
-        traversal order for which we can still easily compute hyperrectangular
-        loop bounds and subviews.
-      }],
-      /*retTy=*/"AffineMap",
-      /*methodName=*/"getLoopsToShapesMap",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        auto maps =  $_op.getIndexingMapsArray();
-        return concatAffineMaps(maps);
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
-        Hook to provide a custom AffineMap used to construct the
-        hyperrectangular loop iteration space given all the operand subshapes.
-        This is used to answer the question:
-        "Given a list of operand ranges, what is the subportion of the iteration
-        space involved in the computation".
-        This is the inverse problem of `getLoopsToShapesMap`.
-        Return the empty AffineMap when such an AffineMap cannot be constructed.
-        The default behavior is based on a very simple inference procedure that
-        only works with permutation affine maps.
-        A more advanced Tensor-Comprehension like inference is possible but has
-        proven to be ambiguous in unfavorable case.
-        A safer and more robust alternative is to allow each op to define
-        its own AffineMap.
-      }],
-      /*retTy=*/"AffineMap",
-      /*methodName=*/"getShapesToLoopsMap",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return inversePermutation(getLoopsToShapesMap());
-      }]
-    >,
     InterfaceMethod<
       /*desc=*/[{
         Checks if the given operands can be dropped, and the remaining
@@ -709,39 +685,30 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         return detail::canOpOperandsBeDroppedImpl($_op, droppedOperands);
       }]
     >,
+    //===------------------------------------------------------------------===//
+    // IndexingMapOpInterface interface methods implementation.
+    //===------------------------------------------------------------------===//
     InterfaceMethod<
       /*desc=*/[{
-        Like `getShape`, but only returns statically-known information, without
-        generating any new IR. For each shape dimension, returns >=0 if that
-        dimension is statically known, or ShapedType::kDynamic otherwise.
+        Return the `opOperand` shape or an empty vector for scalars or vectors
+        not wrapped within a tensor or a memref.
       }],
-      /*retTy=*/"SmallVector<int64_t>",
-      /*methodName=*/"getStaticShape",
-      /*args=*/(ins),
+      /*retTy=*/"ArrayRef<int64_t>",
+      /*methodName=*/"getShape",
+      /*args=*/(ins "OpOperand*":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        SmallVector<int64_t> res;
-        for (OpOperand &opOperand : this->getOperation()->getOpOperands())
-          llvm::append_range(res, getShape(&opOperand));
-        return res;
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
-        Returns the statically-known loop ranges. Composes
-        `getShapesToLoopsMap()` with the result of `getStaticShape`.
-        Returns ShapedType::kDynamic for non-statically-known loop ranges.
-        This is expected to be called by a valid Linalg op
-      }],
-      /*retTy=*/"SmallVector<int64_t, 4>",
-      /*methodName=*/"getStaticLoopRanges",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        SmallVector<int64_t> viewSizes = getStaticShape();
-        AffineMap invertedMap = getShapesToLoopsMap();
-        assert(invertedMap && "expected a valid Linalg op to call the method");
-        return invertedMap.compose(viewSizes);
+        Type t = opOperand->get().getType();
+        // A VectorType is an elemental type, do not consider its rank for the operand.
+        if (isa<VectorType>(t))
+          return {};
+        if (auto shapedType = ::llvm::dyn_cast<ShapedType>(t)) {
+          // Failsafe.
+          assert((isa<MemRefType>(t) || isa<RankedTensorType>(t)) &&
+                 "expected a ranked tensor or memref in LinalgInterface::getRank");
+          return shapedType.getShape();
+        }
+        return {};
       }]
     >,
     //===------------------------------------------------------------------===//
@@ -753,7 +720,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Returns a null function if this named op does not define a region
         builder.
       }],
-      /*retTy=*/"std::function<void(ImplicitLocOpBuilder &, Block &, ArrayRef<NamedAttribute>)>",
+      /*retTy=*/"std::function<void(ImplicitLocOpBuilder &, Block &, ArrayRef<NamedAttribute>, function_ref<InFlightDiagnostic()>)>",
       /*methodName=*/"getRegionBuilder",
       (ins),
       [{ return ConcreteOp::getRegionBuilder(); }]
@@ -788,11 +755,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     /// `createFlatListOfOperandDims`.
     SmallVector<Range, 4> createLoopRanges(OpBuilder &b, Location loc);
 
-    /// Compute the static loop sizes necessary to vectorize the computation.
-    /// This is done by applying `getShapesToLoopsMap` to
-    /// `createFlatListOfOperandStaticDims`.
-    SmallVector<int64_t, 4> computeStaticLoopSizes();
-
     /// Returns the value that expresses the shape of the output in terms of
     /// shape of the input operands where possible
     LogicalResult reifyResultShapes(OpBuilder &b,
@@ -800,80 +762,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
 
     /// Return the index in the indexingMaps vector that corresponds to this `opOperand`
     int64_t getIndexingMapIndex(OpOperand *opOperand);
-
-    //========================================================================//
-    // Forwarding functions to access interface methods from the
-    // DestinationStyleOpInterface.
-    // MLIR currently does not support dependent interfaces or interface
-    // inheritance. By construction all ops with StructuredOpInterface must
-    // implement DestinationStyleOpInterface.
-    // TODO: reevaluate the need for a cast when a better mechanism exists.
-    //========================================================================//
-
-    int64_t getNumDpsInputs() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .getNumDpsInputs();
-    }
-
-    int64_t getNumDpsInits() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .getNumDpsInits();
-    }
-
-    OpOperandVector getDpsInputOperands() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .getDpsInputOperands();
-    }
-
-    OpOperand *getDpsInputOperand(int64_t i) {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .getDpsInputOperand(i);
-    }
-
-    void setDpsInitOperand(int64_t i, Value value) {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .setDpsInitOperand(i, value);
-    }
-
-    OpOperandVector getDpsInitOperands() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .getDpsInitOperands();
-    }
-
-    OpOperand *getDpsInitOperand(int64_t i) {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .getDpsInitOperand(i);
-    }
-
-    bool isDpsInput(OpOperand *opOperand) {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .isDpsInput(opOperand);
-    }
-
-    bool isDpsInit(OpOperand *opOperand) {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .isDpsInit(opOperand);
-    }
-
-    bool isScalar(OpOperand *opOperand) {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .isScalar(opOperand);
-    }
-
-    OpResult getTiedOpResult(OpOperand *opOperand) {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .getTiedOpResult(opOperand);
-    }
-
-    bool hasBufferSemantics() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .hasBufferSemantics();
-    }
-
-    bool hasTensorSemantics() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation())
-          .hasTensorSemantics();
-    }
   }];
 
   let verify = [{ return detail::verifyStructuredOpInterface($_op); }];

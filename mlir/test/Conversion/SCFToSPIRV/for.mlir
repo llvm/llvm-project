@@ -5,6 +5,7 @@ module attributes {
     #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
+// CHECK-LABEL: @loop_kernel
 func.func @loop_kernel(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
   // CHECK: %[[LB:.*]] = spirv.Constant 4 : i32
   %lb = arith.constant 4 : index
@@ -19,23 +20,28 @@ func.func @loop_kernel(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer
   // CHECK:        spirv.BranchConditional %[[CMP]], ^[[BODY:.*]], ^[[MERGE:.*]]
   // CHECK:      ^[[BODY]]:
   // CHECK:        %[[ZERO1:.*]] = spirv.Constant 0 : i32
-  // CHECK:        %[[OFFSET1:.*]] = spirv.Constant 0 : i32
-  // CHECK:        %[[STRIDE1:.*]] = spirv.Constant 1 : i32
-  // CHECK:        %[[UPDATE1:.*]] = spirv.IMul %[[STRIDE1]], %[[INDVAR]] : i32
-  // CHECK:        %[[INDEX1:.*]] = spirv.IAdd %[[OFFSET1]], %[[UPDATE1]] : i32
-  // CHECK:        spirv.AccessChain {{%.*}}{{\[}}%[[ZERO1]], %[[INDEX1]]{{\]}}
+  // CHECK:        spirv.AccessChain {{%.*}}{{\[}}%[[ZERO1]], %[[INDVAR]]{{\]}}
   // CHECK:        %[[ZERO2:.*]] = spirv.Constant 0 : i32
-  // CHECK:        %[[OFFSET2:.*]] = spirv.Constant 0 : i32
-  // CHECK:        %[[STRIDE2:.*]] = spirv.Constant 1 : i32
-  // CHECK:        %[[UPDATE2:.*]] = spirv.IMul %[[STRIDE2]], %[[INDVAR]] : i32
-  // CHECK:        %[[INDEX2:.*]] = spirv.IAdd %[[OFFSET2]], %[[UPDATE2]] : i32
-  // CHECK:        spirv.AccessChain {{%.*}}[%[[ZERO2]], %[[INDEX2]]]
+  // CHECK:        spirv.AccessChain {{%.*}}[%[[ZERO2]], %[[INDVAR]]]
   // CHECK:        %[[INCREMENT:.*]] = spirv.IAdd %[[INDVAR]], %[[STEP]] : i32
   // CHECK:        spirv.Branch ^[[HEADER]](%[[INCREMENT]] : i32)
   // CHECK:      ^[[MERGE]]
   // CHECK:        spirv.mlir.merge
   // CHECK:      }
   scf.for %arg4 = %lb to %ub step %step {
+    %1 = memref.load %arg2[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+    memref.store %1, %arg3[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+  }
+  return
+}
+
+// CHECK-LABEL: @unsigned_loop
+//       CHECK:   spirv.ULessThan
+func.func @unsigned_loop(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
+  %lb = arith.constant 4 : index
+  %ub = arith.constant 42 : index
+  %step = arith.constant 2 : index
+  scf.for unsigned %arg4 = %lb to %ub step %step {
     %1 = memref.load %arg2[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
     memref.store %1, %arg3[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
   }

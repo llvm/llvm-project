@@ -7,6 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: 32-bit-pointer
+// REQUIRES: large_tests
+
+// This bug was fixed in the dylib by 53aed4759b33e33614e0f4e321bc1ef764b6d5b6.
+// XFAIL: using-built-library-before-llvm-17
+
+// Android devices frequently don't have enough memory to run this test. Rather
+// than throw std::bad_alloc, exhausting memory triggers the OOM Killer.
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 // Test that tellp() does not break the stringstream after INT_MAX, due to use
 // of pbump() that accept int.

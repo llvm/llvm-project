@@ -193,7 +193,7 @@ static_assert(!std::is_invocable_v<RangeEndT, EndFunction &&>);
 
 static_assert( std::is_invocable_v<RangeEndT,  EndFunction const&>);
 static_assert(!std::is_invocable_v<RangeEndT,  EndFunction &&>);
-static_assert(!std::is_invocable_v<RangeEndT,  EndFunction &>);
+static_assert(std::is_invocable_v<RangeEndT, EndFunction&>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
 static_assert( std::is_invocable_v<RangeCEndT, EndFunction const&>);
 static_assert( std::is_invocable_v<RangeCEndT, EndFunction &>);
 
@@ -271,7 +271,7 @@ constexpr bool testEndFunction() {
   assert(std::ranges::end(a) == &a.x);
   assert(std::ranges::cend(a) == &a.x);
   EndFunction aa{};
-  static_assert(!std::is_invocable_v<RangeEndT, decltype((aa))>);
+  assert(std::ranges::end(aa) == &aa.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::cend(aa) == &aa.x);
 
   EndFunctionByValue b;
@@ -286,28 +286,28 @@ constexpr bool testEndFunction() {
   assert(std::ranges::end(d) == &d.x);
   assert(std::ranges::cend(d) == &d.x);
   EndFunctionReturnsEmptyPtr dd{};
-  static_assert(!std::is_invocable_v<RangeEndT, decltype((dd))>);
+  assert(std::ranges::end(dd) == &dd.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::cend(dd) == &dd.x);
 
   const EndFunctionWithDataMember e{};
   assert(std::ranges::end(e) == &e.x);
   assert(std::ranges::cend(e) == &e.x);
   EndFunctionWithDataMember ee{};
-  static_assert(!std::is_invocable_v<RangeEndT, decltype((ee))>);
+  assert(std::ranges::end(ee) == &ee.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::cend(ee) == &ee.x);
 
   const EndFunctionWithPrivateEndMember f{};
   assert(std::ranges::end(f) == &f.y);
   assert(std::ranges::cend(f) == &f.y);
   EndFunctionWithPrivateEndMember ff{};
-  static_assert(!std::is_invocable_v<RangeEndT, decltype((ff))>);
+  assert(std::ranges::end(ff) == &ff.y); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::cend(ff) == &ff.y);
 
   const BeginMemberEndFunction g{};
   assert(std::ranges::end(g) == &g.x);
   assert(std::ranges::cend(g) == &g.x);
   BeginMemberEndFunction gg{};
-  static_assert(!std::is_invocable_v<RangeEndT, decltype((gg))>);
+  assert(std::ranges::end(gg) == &gg.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::cend(gg) == &gg.x);
 
   return true;

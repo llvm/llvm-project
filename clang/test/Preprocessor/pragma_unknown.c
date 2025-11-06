@@ -27,6 +27,8 @@
 
 #pragma STDC CX_LIMITED_RANGE    // expected-warning {{expected 'ON' or 'OFF' or 'DEFAULT' in pragma}}
 #pragma STDC CX_LIMITED_RANGE ON FULL POWER  // expected-warning {{expected end of directive in pragma}}
+//expected-error@-1 {{unknown type name 'POWER'}}
+//expected-error@-2 {{expected identifier or '('}}
 // CHECK: {{^}}#pragma STDC CX_LIMITED_RANGE{{$}}
 // CHECK: {{^}}#pragma STDC CX_LIMITED_RANGE ON FULL POWER{{$}}
 

@@ -14,7 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_RTDYLDOBJECTLINKINGLAYER_H
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -22,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cassert>
@@ -34,7 +34,7 @@
 namespace llvm {
 namespace orc {
 
-class RTDyldObjectLinkingLayer
+class LLVM_ABI RTDyldObjectLinkingLayer
     : public RTTIExtends<RTDyldObjectLinkingLayer, ObjectLayer>,
       private ResourceManager {
 public:
@@ -50,14 +50,15 @@ public:
       MaterializationResponsibility &R, std::unique_ptr<MemoryBuffer>)>;
 
   using GetMemoryManagerFunction =
-      unique_function<std::unique_ptr<RuntimeDyld::MemoryManager>()>;
+      unique_function<std::unique_ptr<RuntimeDyld::MemoryManager>(
+          const MemoryBuffer &)>;
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyEmitted functors.
   RTDyldObjectLinkingLayer(ExecutionSession &ES,
                            GetMemoryManagerFunction GetMemoryManager);
 
-  ~RTDyldObjectLinkingLayer();
+  ~RTDyldObjectLinkingLayer() override;
 
   /// Emit the object.
   void emit(std::unique_ptr<MaterializationResponsibility> R,
@@ -138,7 +139,7 @@ private:
                  object::OwningBinary<object::ObjectFile> O,
                  std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
                  std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
-                 Error Err);
+                 std::unique_ptr<SymbolDependenceMap> Deps, Error Err);
 
   Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
   void handleTransferResources(JITDylib &JD, ResourceKey DstKey,

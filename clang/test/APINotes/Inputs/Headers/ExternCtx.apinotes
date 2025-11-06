@@ -1,0 +1,15 @@
+Name: ExternCtx
+Globals:
+  - Name: globalInExternC
+    Availability: none
+    AvailabilityMsg: "oh no"
+  - Name: globalInExternCXX
+    Availability: none
+    AvailabilityMsg: "oh no #2"
+Functions:
+  - Name: globalFuncInExternC
+    Availability: none
+    AvailabilityMsg: "oh no #3"
+  - Name: globalFuncInExternCXX
+    Availability: none
+    AvailabilityMsg: "oh no #4"

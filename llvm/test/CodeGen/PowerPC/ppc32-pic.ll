@@ -19,7 +19,7 @@ entry:
 ; SMALL:         stwu 1, -32(1)
 ; SMALL:         stw 30, 24(1)
 ; SMALL-BSS:     bl _GLOBAL_OFFSET_TABLE_@local-4
-; SMALL-SECURE:  bl .L0$pb
+; SMALL-SECURE:  bcl 20, 31, .L0$pb
 ; SMALL:         mflr 30
 ; SMALL-SECURE:  addis 30, 30, _GLOBAL_OFFSET_TABLE_-.L0$pb@ha
 ; SMALL-SECURE:  addi 30, 30, _GLOBAL_OFFSET_TABLE_-.L0$pb@l

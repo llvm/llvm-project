@@ -63,7 +63,7 @@ define amdgpu_vs void @promote_store_aggr() #0 {
 ; CHECK-NEXT:    [[FOO6_FCA_1_INSERT:%.*]] = insertvalue [2 x float] [[FOO6_FCA_0_INSERT]], float 2.000000e+00, 1
 ; CHECK-NEXT:    [[FOO7:%.*]] = getelementptr [[BLOCK2:%.*]], ptr addrspace(1) @block2, i32 0, i32 1
 ; CHECK-NEXT:    store [2 x float] [[FOO6_FCA_1_INSERT]], ptr addrspace(1) [[FOO7]], align 4
-; CHECK-NEXT:    store <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, ptr addrspace(1) @pv, align 16
+; CHECK-NEXT:    store <4 x float> splat (float 1.000000e+00), ptr addrspace(1) @pv, align 16
 ; CHECK-NEXT:    ret void
 ;
   %i = alloca i32, addrspace(5)
@@ -87,13 +87,14 @@ define amdgpu_vs void @promote_store_aggr() #0 {
 
 define amdgpu_vs void @promote_load_from_store_aggr() #0 {
 ; CHECK-LABEL: @promote_load_from_store_aggr(
+; CHECK-NEXT:    [[F1:%.*]] = freeze <2 x float> poison
 ; CHECK-NEXT:    [[FOO:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 1
 ; CHECK-NEXT:    [[FOO1:%.*]] = load i32, ptr addrspace(1) [[FOO]], align 4
 ; CHECK-NEXT:    [[FOO3:%.*]] = load [2 x float], ptr addrspace(1) @block3, align 4
 ; CHECK-NEXT:    [[FOO3_FCA_0_EXTRACT:%.*]] = extractvalue [2 x float] [[FOO3]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[FOO3_FCA_0_EXTRACT]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[F1]], float [[FOO3_FCA_0_EXTRACT]], i32 0
 ; CHECK-NEXT:    [[FOO3_FCA_1_EXTRACT:%.*]] = extractvalue [2 x float] [[FOO3]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[FOO3_FCA_1_EXTRACT]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[FOO3_FCA_1_EXTRACT]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 [[FOO1]]
 ; CHECK-NEXT:    [[FOO9:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 0
 ; CHECK-NEXT:    [[FOO10:%.*]] = insertelement <4 x float> [[FOO9]], float [[TMP3]], i32 1
@@ -122,8 +123,46 @@ define amdgpu_vs void @promote_load_from_store_aggr() #0 {
   ret void
 }
 
+%Block4 = type { [2 x i32], i32 }
+@block4 = external addrspace(1) global %Block4
+%gl_PV = type { <4 x i32>, i32, [1 x i32], [1 x i32] }
+@pv1 = external addrspace(1) global %gl_PV
+
+; This should not crash on an aliased variable offset that can be
+; optimized out (variable %aliasTofoo3 in the test)
+define amdgpu_vs void @promote_load_from_store_aggr_varoff(<4 x i32> %input) {
+; CHECK-LABEL: @promote_load_from_store_aggr_varoff(
+; CHECK-NEXT:    [[F1:%.*]] = freeze <3 x i32> poison
+; CHECK-NEXT:    [[FOO3_UNPACK2:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @block4, i64 8), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> [[F1]], i32 [[FOO3_UNPACK2]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i32> [[TMP1]], i32 [[FOO3_UNPACK2]]
+; CHECK-NEXT:    [[FOO12:%.*]] = insertelement <4 x i32> [[INPUT:%.*]], i32 [[TMP2]], i64 3
+; CHECK-NEXT:    store <4 x i32> [[FOO12]], ptr addrspace(1) @pv1, align 16
+; CHECK-NEXT:    ret void
+;
+  %f1 = alloca [3 x i32], align 4, addrspace(5)
+  %G1 = getelementptr inbounds i8, ptr addrspace(5) %f1, i32 8
+  %foo3.unpack2 = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @block4, i64 8), align 4
+  store i32 %foo3.unpack2, ptr addrspace(5) %G1, align 4
+  %aliasTofoo3 = load i32, ptr addrspace(5) %G1, align 4
+  %foo5 = getelementptr [3 x i32], ptr addrspace(5) %f1, i32 0, i32 %aliasTofoo3
+  %foo6 = load i32, ptr addrspace(5) %foo5, align 4
+  %foo12 = insertelement <4 x i32> %input, i32 %foo6, i64 3
+  store <4 x i32> %foo12, ptr addrspace(1) @pv1, align 16
+  ret void
+}
+
 define amdgpu_vs void @promote_memmove_aggr() #0 {
 ; CHECK-LABEL: @promote_memmove_aggr(
+; CHECK-NEXT:    [[F1:%.*]] = freeze <5 x float> poison
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x float> [[F1]], float 0.000000e+00, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <5 x float> [[TMP1]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <5 x float> [[TMP2]], float 0.000000e+00, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x float> [[TMP3]], float 0.000000e+00, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <5 x float> [[TMP4]], float 0.000000e+00, i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <5 x float> [[TMP5]], float 1.000000e+00, i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <5 x float> [[TMP6]], float 2.000000e+00, i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <5 x float> [[TMP7]], <5 x float> poison, <5 x i32> <i32 1, i32 2, i32 3, i32 4, i32 4>
 ; CHECK-NEXT:    store float 1.000000e+00, ptr addrspace(1) @pv, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -133,7 +172,7 @@ define amdgpu_vs void @promote_memmove_aggr() #0 {
   store float 1.0, ptr addrspace(5) %foo1
   %foo2 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 3
   store float 2.0, ptr addrspace(5) %foo2
-  call void @llvm.memmove.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %foo1, i32 16, i1 false)
+  call void @llvm.memmove.p5.p5.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %foo1, i32 16, i1 false)
   %foo3 = load float, ptr addrspace(5) %f1
   store float %foo3, ptr addrspace(1) @pv
   ret void
@@ -141,9 +180,16 @@ define amdgpu_vs void @promote_memmove_aggr() #0 {
 
 define amdgpu_vs void @promote_memcpy_aggr() #0 {
 ; CHECK-LABEL: @promote_memcpy_aggr(
+; CHECK-NEXT:    [[F1:%.*]] = freeze <5 x float> poison
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <5 x float> [[F1]], float 0.000000e+00, i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <5 x float> [[TMP7]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <5 x float> [[TMP8]], float 0.000000e+00, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x float> [[TMP9]], float 0.000000e+00, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <5 x float> [[TMP4]], float 0.000000e+00, i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <5 x float> [[TMP5]], float 2.000000e+00, i32 3
 ; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
 ; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 2.000000e+00, float 0.000000e+00>, float 3.000000e+00, i32 [[FOO4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x float> [[TMP6]], float 3.000000e+00, i32 [[FOO4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <5 x float> [[TMP1]], <5 x float> poison, <5 x i32> <i32 3, i32 4, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <5 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    store float [[TMP3]], ptr addrspace(1) @pv, align 4
@@ -160,7 +206,7 @@ define amdgpu_vs void @promote_memcpy_aggr() #0 {
   %foo5 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 %foo4
   store float 3.0, ptr addrspace(5) %foo5
 
-  call void @llvm.memcpy.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %foo2, i32 8, i1 false)
+  call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %foo2, i32 8, i1 false)
   %foo6 = load float, ptr addrspace(5) %f1
   store float %foo6, ptr addrspace(1) @pv
   ret void
@@ -177,7 +223,7 @@ define amdgpu_vs void @promote_memcpy_identity_aggr() #0 {
   store float 1.0, ptr addrspace(5) %foo1
   %foo2 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 3
   store float 2.0, ptr addrspace(5) %foo2
-  call void @llvm.memcpy.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %f1, i32 20, i1 false)
+  call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %f1, i32 20, i1 false)
   %foo3 = load float, ptr addrspace(5) %f1
   store float %foo3, ptr addrspace(1) @pv
   ret void
@@ -229,7 +275,7 @@ define amdgpu_vs void @promote_memcpy_two_aggrs() #0 {
   %foo5 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 %foo4
   store float 3.0, ptr addrspace(5) %foo5
 
-  call void @llvm.memcpy.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f2, ptr addrspace(5) align 4 %f1, i32 8, i1 false)
+  call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) align 4 %f2, ptr addrspace(5) align 4 %f1, i32 8, i1 false)
 
   %foo6 = getelementptr [5 x float], ptr addrspace(5) %f2, i32 0, i32 %foo4
   %foo7 = load float, ptr addrspace(5) %foo6
@@ -266,15 +312,21 @@ define amdgpu_vs void @promote_memcpy_p1p5_aggr(ptr addrspace(1) inreg %src) #0 
   %foo5 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 %foo4
   store float 3.0, ptr addrspace(5) %foo5
 
-  call void @llvm.memcpy.p1i8.p5i8.i32(ptr addrspace(1) align 4 @pv, ptr addrspace(5) align 4 %f1, i32 8, i1 false)
+  call void @llvm.memcpy.p1.p5.i32(ptr addrspace(1) align 4 @pv, ptr addrspace(5) align 4 %f1, i32 8, i1 false)
   ret void
 }
 
 define amdgpu_vs void @promote_memcpy_inline_aggr() #0 {
 ; CHECK-LABEL: @promote_memcpy_inline_aggr(
+; CHECK-NEXT:    [[F1:%.*]] = freeze <5 x float> poison
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <5 x float> [[F1]], float 0.000000e+00, i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <5 x float> [[TMP6]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <5 x float> [[TMP7]], float 0.000000e+00, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x float> [[TMP8]], float 0.000000e+00, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <5 x float> [[TMP4]], float 0.000000e+00, i32 4
 ; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
 ; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x float> zeroinitializer, float 3.000000e+00, i32 [[FOO4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x float> [[TMP5]], float 3.000000e+00, i32 [[FOO4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <5 x float> [[TMP1]], <5 x float> poison, <5 x i32> <i32 3, i32 4, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <5 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    store float [[TMP3]], ptr addrspace(1) @pv, align 4
@@ -289,16 +341,16 @@ define amdgpu_vs void @promote_memcpy_inline_aggr() #0 {
   %foo5 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 %foo4
   store float 3.0, ptr addrspace(5) %foo5
 
-  call void @llvm.memcpy.inline.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %foo2, i32 8, i1 false)
+  call void @llvm.memcpy.inline.p5.p5.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %foo2, i32 8, i1 false)
   %foo6 = load float, ptr addrspace(5) %f1
   store float %foo6, ptr addrspace(1) @pv
   ret void
 }
 
-declare void @llvm.memcpy.p5i8.p5i8.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
-declare void @llvm.memcpy.p1i8.p5i8.i32(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
-declare void @llvm.memcpy.inline.p5i8.p5i8.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
-declare void @llvm.memmove.p5i8.p5i8.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
+declare void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
+declare void @llvm.memcpy.p1.p5.i32(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
+declare void @llvm.memcpy.inline.p5.p5.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
+declare void @llvm.memmove.p5.p5.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
 
 @tmp_g = external addrspace(1) global { [4 x double], <2 x double>, <3 x double>, <4 x double> }
 @frag_color = external addrspace(1) global <4 x float>
@@ -309,14 +361,14 @@ define amdgpu_ps void @promote_double_aggr() #0 {
 ; CHECK-NEXT:    [[FOO1:%.*]] = load double, ptr addrspace(1) [[FOO]], align 8
 ; CHECK-NEXT:    [[FOO2:%.*]] = getelementptr { [4 x double], <2 x double>, <3 x double>, <4 x double> }, ptr addrspace(1) @tmp_g, i32 0, i32 0, i32 1
 ; CHECK-NEXT:    [[FOO3:%.*]] = load double, ptr addrspace(1) [[FOO2]], align 8
-; CHECK-NEXT:    [[FOO4:%.*]] = insertvalue [2 x double] undef, double [[FOO1]], 0
+; CHECK-NEXT:    [[FOO4:%.*]] = insertvalue [2 x double] poison, double [[FOO1]], 0
 ; CHECK-NEXT:    [[FOO5:%.*]] = insertvalue [2 x double] [[FOO4]], double [[FOO3]], 1
 ; CHECK-NEXT:    [[FOO5_FCA_0_EXTRACT:%.*]] = extractvalue [2 x double] [[FOO5]], 0
 ; CHECK-NEXT:    [[FOO5_FCA_1_EXTRACT:%.*]] = extractvalue [2 x double] [[FOO5]], 1
 ; CHECK-NEXT:    [[FOO10:%.*]] = fadd double [[FOO5_FCA_1_EXTRACT]], [[FOO5_FCA_1_EXTRACT]]
 ; CHECK-NEXT:    [[FOO16:%.*]] = fadd double [[FOO10]], [[FOO5_FCA_1_EXTRACT]]
 ; CHECK-NEXT:    [[FOO17:%.*]] = fptrunc double [[FOO16]] to float
-; CHECK-NEXT:    [[FOO18:%.*]] = insertelement <4 x float> undef, float [[FOO17]], i32 0
+; CHECK-NEXT:    [[FOO18:%.*]] = insertelement <4 x float> poison, float [[FOO17]], i32 0
 ; CHECK-NEXT:    [[FOO19:%.*]] = insertelement <4 x float> [[FOO18]], float [[FOO17]], i32 1
 ; CHECK-NEXT:    [[FOO20:%.*]] = insertelement <4 x float> [[FOO19]], float [[FOO17]], i32 2
 ; CHECK-NEXT:    [[FOO21:%.*]] = insertelement <4 x float> [[FOO20]], float [[FOO17]], i32 3
@@ -328,7 +380,7 @@ define amdgpu_ps void @promote_double_aggr() #0 {
   %foo1 = load double, ptr addrspace(1) %foo
   %foo2 = getelementptr { [4 x double], <2 x double>, <3 x double>, <4 x double> }, ptr addrspace(1) @tmp_g, i32 0, i32 0, i32 1
   %foo3 = load double, ptr addrspace(1) %foo2
-  %foo4 = insertvalue [2 x double] undef, double %foo1, 0
+  %foo4 = insertvalue [2 x double] poison, double %foo1, 0
   %foo5 = insertvalue [2 x double] %foo4, double %foo3, 1
   store [2 x double] %foo5, ptr addrspace(5) %s
   %foo6 = getelementptr [2 x double], ptr addrspace(5) %s, i32 0, i32 1
@@ -342,7 +394,7 @@ define amdgpu_ps void @promote_double_aggr() #0 {
   %foo15 = load double, ptr addrspace(5) %foo14
   %foo16 = fadd double %foo13, %foo15
   %foo17 = fptrunc double %foo16 to float
-  %foo18 = insertelement <4 x float> undef, float %foo17, i32 0
+  %foo18 = insertelement <4 x float> poison, float %foo17, i32 0
   %foo19 = insertelement <4 x float> %foo18, float %foo17, i32 1
   %foo20 = insertelement <4 x float> %foo19, float %foo17, i32 2
   %foo21 = insertelement <4 x float> %foo20, float %foo17, i32 3

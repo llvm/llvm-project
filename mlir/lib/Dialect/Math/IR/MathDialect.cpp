@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -34,4 +34,5 @@ void mlir::math::MathDialect::initialize() {
 #include "mlir/Dialect/Math/IR/MathOps.cpp.inc"
       >();
   addInterfaces<MathInlinerInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, MathDialect>();
 }

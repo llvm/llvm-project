@@ -430,11 +430,11 @@ func.func @m16n8k4_tf32_f32_row_row_row(%arg0: memref<20x20xf32, #gpu.address_sp
   %B = vector.transfer_read %arg1[%c3, %c3], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<20x20xf32, #gpu.address_space<workgroup>>, vector<8x4xf32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x4xf32>, vector<8x4xf32> into vector<16x8xf32>
 
-  // CHECK: vector.extract [[d_frag]][0] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][0] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
-  // CHECK: vector.extract [[d_frag]][1] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][1] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC8_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
@@ -493,11 +493,11 @@ func.func @m16n8k8_tf32_f32_row_row_row(%arg0: memref<20x20xf32, #gpu.address_sp
   %B = vector.transfer_read %arg1[%c3, %c3], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<20x20xf32, #gpu.address_space<workgroup>>, vector<8x8xf32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x8xf32>, vector<8x8xf32> into vector<16x8xf32>
 
-  // CHECK: vector.extract [[d_frag]][0] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][0] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
-  // CHECK: vector.extract [[d_frag]][1] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][1] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC8_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
@@ -564,11 +564,11 @@ func.func @m16n8k8_tf32_f32_col_col_row(%arg0: memref<20x20xf32, #gpu.address_sp
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"],
     kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x8xf32>, vector<8x8xf32> into vector<16x8xf32>
 
-  // CHECK: vector.extract [[d_frag]][0] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][0] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
-  // CHECK: vector.extract [[d_frag]][1] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][1] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC8_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
@@ -632,12 +632,12 @@ func.func @m16n8k64_int4_row_col_row(%arg0: memref<128x128xi4, #gpu.address_spac
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x64xi4>, vector<8x64xi4> into vector<16x8xi32>
 
   // CHECK: [[lane:%.+]] = gpu.lane_id
-  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2x2xi32>
+  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2xi32> from vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC0_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>
 
-  // CHECK: [[v:%.+]] = vector.extract [[d]][1] : vector<2x2xi32>
+  // CHECK: [[v:%.+]] = vector.extract [[d]][1] : vector<2xi32> from vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC8_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>
@@ -702,11 +702,11 @@ func.func @m16n8k32_int8_row_col_row(%arg0: memref<128x128xi8, #gpu.address_spac
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x32xi8>, vector<8x32xi8> into vector<16x8xi32>
 
   // CHECK: [[lane:%.+]] = gpu.lane_id
-  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2x2xi32>
+  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2xi32> from vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC0_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>
-  // CHECK: [[v:%.+]] = vector.extract [[d]][1] : vector<2x2xi32>
+  // CHECK: [[v:%.+]] = vector.extract [[d]][1] : vector<2xi32> from vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC8_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>

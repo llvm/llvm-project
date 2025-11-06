@@ -118,10 +118,9 @@ exit:
 define i4 @and_compare_undef(i4 %N, i4 %step) {
 ; CHECK-LABEL: @and_compare_undef(
 ; CHECK-NEXT:  step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i4 [[STEP:%.*]], 0
 ; CHECK-NEXT:    [[B1:%.*]] = add i4 undef, -1
 ; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i4 [[B1]], [[N:%.*]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -439,7 +438,7 @@ define i1 @test_and_chain_select_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i4 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 3, [[X]]
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 3, [[A:%.*]]
-; CHECK-NEXT:    [[AND_1:%.*]] = select i1 [[C_1]], i1 true, i1 false
+; CHECK-NEXT:    [[AND_1:%.*]] = select i1 [[C_1]], i1 [[C_1]], i1 false
 ; CHECK-NEXT:    [[AND_2:%.*]] = select i1 [[AND_1]], i1 [[C_3]], i1 false
 ; CHECK-NEXT:    [[AND_3:%.*]] = select i1 [[C_4]], i1 [[AND_2]], i1 false
 ; CHECK-NEXT:    br i1 [[AND_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
@@ -523,7 +522,7 @@ define i1 @test_and_chain_select_ule_logical_or(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i4 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 3, [[X]]
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 3, [[A:%.*]]
-; CHECK-NEXT:    [[AND_1:%.*]] = select i1 [[C_1]], i1 true, i1 false
+; CHECK-NEXT:    [[AND_1:%.*]] = select i1 [[C_1]], i1 [[C_1]], i1 false
 ; CHECK-NEXT:    [[AND_2:%.*]] = select i1 [[AND_1]], i1 [[C_3]], i1 false
 ; CHECK-NEXT:    [[AND_3:%.*]] = select i1 [[C_4]], i1 [[AND_2]], i1 false
 ; CHECK-NEXT:    [[AND_4:%.*]] = select i1 [[AND_3]], i1 true, i1 false

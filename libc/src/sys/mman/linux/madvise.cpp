@@ -11,15 +11,16 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 // This function is currently linux only. It has to be refactored suitably if
 // madvise is to be supported on non-linux operating systems also.
 LLVM_LIBC_FUNCTION(int, madvise, (void *addr, size_t size, int advice)) {
-  int ret = __llvm_libc::syscall_impl<int>(
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_madvise, reinterpret_cast<long>(addr), size, advice);
 
   // A negative return value indicates an error with the magnitude of the
@@ -32,4 +33,4 @@ LLVM_LIBC_FUNCTION(int, madvise, (void *addr, size_t size, int advice)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

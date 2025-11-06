@@ -19,11 +19,11 @@
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -42,7 +42,6 @@ transform::MemrefToLLVMTypeConverterOp::getTypeConverter() {
       (getUseAlignedAlloc() ? LowerToLLVMOptions::AllocLowering::AlignedAlloc
                             : LowerToLLVMOptions::AllocLowering::Malloc);
   options.useGenericFunctions = getUseGenericFunctions();
-  options.useOpaquePointers = getUseOpaquePointers();
 
   if (getIndexBitwidth() != kDeriveIndexBitwidthFromDataLayout)
     options.overrideIndexBitwidth(getIndexBitwidth());
@@ -127,6 +126,67 @@ void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
 }
 
 //===----------------------------------------------------------------------===//
+// AllocaToGlobalOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
+                                         transform::TransformResults &results,
+                                         transform::TransformState &state) {
+  auto allocaOps = state.getPayloadOps(getAlloca());
+
+  SmallVector<memref::GlobalOp> globalOps;
+  SmallVector<memref::GetGlobalOp> getGlobalOps;
+
+  // Transform `memref.alloca`s.
+  for (auto *op : allocaOps) {
+    auto alloca = cast<memref::AllocaOp>(op);
+    MLIRContext *ctx = rewriter.getContext();
+    Location loc = alloca->getLoc();
+
+    memref::GlobalOp globalOp;
+    {
+      // Find nearest symbol table.
+      Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(op);
+      assert(symbolTableOp && "expected alloca payload to be in symbol table");
+      SymbolTable symbolTable(symbolTableOp);
+
+      // Insert a `memref.global` into the symbol table.
+      Type resultType = alloca.getResult().getType();
+      OpBuilder builder(rewriter.getContext());
+      // TODO: Add a better builder for this.
+      globalOp = memref::GlobalOp::create(
+          builder, loc, StringAttr::get(ctx, "alloca"),
+          StringAttr::get(ctx, "private"), TypeAttr::get(resultType),
+          Attribute{}, UnitAttr{}, IntegerAttr{});
+      symbolTable.insert(globalOp);
+    }
+
+    // Replace the `memref.alloca` with a `memref.get_global` accessing the
+    // global symbol inserted above.
+    rewriter.setInsertionPoint(alloca);
+    auto getGlobalOp = rewriter.replaceOpWithNewOp<memref::GetGlobalOp>(
+        alloca, globalOp.getType(), globalOp.getName());
+
+    globalOps.push_back(globalOp);
+    getGlobalOps.push_back(getGlobalOp);
+  }
+
+  // Assemble results.
+  results.set(cast<OpResult>(getGlobal()), globalOps);
+  results.set(cast<OpResult>(getGetGlobal()), getGlobalOps);
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::MemRefAllocaToGlobalOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getAllocaMutable(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
 // MemRefMultiBufferOp
 //===----------------------------------------------------------------------===//
 
@@ -188,7 +248,7 @@ transform::MemRefEraseDeadAllocAndStoresOp::applyToOne(
 
 void transform::MemRefEraseDeadAllocAndStoresOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
 }
 void transform::MemRefEraseDeadAllocAndStoresOp::build(OpBuilder &builder,
@@ -249,6 +309,8 @@ class MemRefTransformDialectExtension
     : public transform::TransformDialectExtension<
           MemRefTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(MemRefTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

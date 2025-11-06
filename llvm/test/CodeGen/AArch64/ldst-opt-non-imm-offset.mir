@@ -4,8 +4,8 @@
 
   define i32 @test() {
   entry:
-    store i32 0, i32* @g, align 4
-    %0 = load i32, i32* undef, align 4
+    store i32 0, ptr @g, align 4
+    %0 = load i32, ptr undef, align 4
     ret i32 %0
   }
 
@@ -21,7 +21,7 @@ body:             |
   bb.0.entry:
     renamable $x8 = ADRP target-flags(aarch64-page) @g
     STRWui $wzr, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
-    renamable $w0 = LDRWui undef renamable $x8, 0 :: (load (s32) from `i32* undef`)
+    renamable $w0 = LDRWui undef renamable $x8, 0 :: (load (s32) from `ptr undef`)
     RET_ReallyLR implicit $w0
 
 ...

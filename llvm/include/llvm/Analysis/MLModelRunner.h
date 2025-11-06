@@ -17,7 +17,9 @@ namespace llvm {
 class LLVMContext;
 
 /// MLModelRunner interface: abstraction of a mechanism for evaluating a
-/// tensorflow "saved model".
+/// ML model. More abstractly, evaluating a function that has as tensors as
+/// arguments, described via TensorSpecs, and returns a tensor. Currently, the
+/// latter is assumed to be a scalar, in absence of more elaborate scenarios.
 /// NOTE: feature indices are expected to be consistent all accross
 /// MLModelRunners (pertaining to the same model), and also Loggers (see
 /// TFUtils.h)
@@ -52,8 +54,8 @@ public:
   virtual void switchContext(StringRef Name) {}
 
 protected:
-  MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NrInputs)
-      : Ctx(Ctx), Type(Type), InputBuffers(NrInputs) {
+  MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NumInputs)
+      : Ctx(Ctx), Type(Type), InputBuffers(NumInputs) {
     assert(Type != Kind::Unknown);
   }
   virtual void *evaluateUntyped() = 0;

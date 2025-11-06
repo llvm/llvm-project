@@ -43,9 +43,11 @@ extern const unsigned GR32Regs[16];
 extern const unsigned GRH32Regs[16];
 extern const unsigned GR64Regs[16];
 extern const unsigned GR128Regs[16];
+extern const unsigned FP16Regs[16];
 extern const unsigned FP32Regs[16];
 extern const unsigned FP64Regs[16];
 extern const unsigned FP128Regs[16];
+extern const unsigned VR16Regs[32];
 extern const unsigned VR32Regs[32];
 extern const unsigned VR64Regs[32];
 extern const unsigned VR128Regs[32];
@@ -85,7 +87,9 @@ MCAsmBackend *createSystemZMCAsmBackend(const Target &T,
                                         const MCRegisterInfo &MRI,
                                         const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectTargetWriter> createSystemZObjectWriter(uint8_t OSABI);
+std::unique_ptr<MCObjectTargetWriter>
+createSystemZELFObjectWriter(uint8_t OSABI);
+std::unique_ptr<MCObjectTargetWriter> createSystemZGOFFObjectWriter();
 } // end namespace llvm
 
 // Defines symbolic names for SystemZ registers.

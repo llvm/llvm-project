@@ -1,4 +1,5 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 
 ; Test debug location for the local variables moved onto the unsafe stack.
 
@@ -19,11 +20,11 @@ entry:
   call void @llvm.dbg.declare(metadata ptr %xxx, metadata !21, metadata !19), !dbg !22
 
 ; dbg.declare for %zzz and %xxx are gone; replaced with dbg.declare based off the unsafe stack pointer
-; CHECK-NOT: call void @llvm.dbg.declare
-; CHECK: call void @llvm.dbg.declare(metadata ptr %[[USP]], metadata ![[VAR_ARG:.*]], metadata !DIExpression(DW_OP_constu, 104, DW_OP_minus))
-; CHECK-NOT: call void @llvm.dbg.declare
-; CHECK: call void @llvm.dbg.declare(metadata ptr %[[USP]], metadata ![[VAR_LOCAL:.*]], metadata !DIExpression(DW_OP_constu, 208, DW_OP_minus))
-; CHECK-NOT: call void @llvm.dbg.declare
+; CHECK-NOT: #dbg_declare
+; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_ARG:.*]], !DIExpression(DW_OP_constu, 104, DW_OP_minus),
+; CHECK-NOT: #dbg_declare
+; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_LOCAL:.*]], !DIExpression(DW_OP_constu, 208, DW_OP_minus),
+; CHECK-NOT: #dbg_declare
 
   call void @Capture(ptr %zzz), !dbg !23
   call void @Capture(ptr %xxx), !dbg !24
@@ -43,11 +44,10 @@ entry:
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @Capture(ptr) #2
+declare void @Capture(ptr)
 
-attributes #0 = { safestack uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { safestack uwtable }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!15, !16}

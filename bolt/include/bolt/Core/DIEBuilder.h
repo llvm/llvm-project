@@ -15,11 +15,13 @@
 #ifndef BOLT_CORE_DIE_BUILDER_H
 #define BOLT_CORE_DIE_BUILDER_H
 
+#include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/DebugNames.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Allocator.h"
 
 #include <list>
@@ -32,7 +34,9 @@
 namespace llvm {
 
 namespace bolt {
+
 class DIEStreamer;
+class DebugStrOffsetsWriter;
 
 class DIEBuilder {
   friend DIEStreamer;
@@ -56,7 +60,7 @@ public:
     uint32_t UnitLength = 0;
     bool IsConstructed = false;
     // A map of DIE offsets in original DWARF section to DIE ID.
-    // Whih is used to access DieInfoVector.
+    // Which is used to access DieInfoVector.
     std::unordered_map<uint64_t, uint32_t> DIEIDMap;
 
     // Some STL implementations don't have a noexcept move constructor for
@@ -119,20 +123,21 @@ private:
   std::unique_ptr<State> BuilderState;
   FoldingSet<DIEAbbrev> AbbreviationsSet;
   std::vector<std::unique_ptr<DIEAbbrev>> Abbreviations;
+  BinaryContext &BC;
   DWARFContext *DwarfContext{nullptr};
-  bool IsDWO{false};
+  DWARFUnit *SkeletonCU{nullptr};
   uint64_t UnitSize{0};
+  /// Adds separate UnitSize counter for updating DebugNames
+  /// so there is no dependency between the functions.
+  uint64_t DebugNamesUnitSize{0};
   llvm::DenseSet<uint64_t> AllProcessed;
+  DWARF5AcceleratorTable &DebugNamesTable;
+  // Unordered map to handle name collision if output DWO directory is
+  // specified.
+  std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
   /// Returns current state of the DIEBuilder
-  State &getState() { return *BuilderState.get(); }
-  /// Resolve the reference in DIE, if target is not loaded into IR,
-  /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
-  /// RefValue.
-  DWARFDie resolveDIEReference(
-      const DWARFFormValue &RefValue,
-      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-      DWARFUnit *&RefCU, DWARFDebugInfoEntry &DwarfDebugInfoEntry);
+  State &getState() { return *BuilderState; }
 
   /// Resolve the reference in DIE, if target is not loaded into IR,
   /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
@@ -156,10 +161,9 @@ private:
       const DWARFFormValue &Val);
 
   /// Clone an attribute in reference format.
-  void cloneDieReferenceAttribute(
-      DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
-      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-      const DWARFFormValue &Val);
+  void cloneDieOffsetReferenceAttribute(
+      DIE &Die, DWARFUnit &U, const DWARFDie &InputDIE,
+      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref);
 
   /// Clone an attribute in block format.
   void cloneBlockAttribute(
@@ -203,9 +207,18 @@ private:
   void updateReferences();
 
   /// Update the Offset and Size of DIE.
-  uint32_t computeDIEOffset(const DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
+  /// Along with current CU, and DIE being processed and the new DIE offset to
+  /// be updated, it takes in Parents vector that can be empty if this DIE has
+  /// no parents.
+  uint32_t finalizeDIEs(DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
 
-  void registerUnit(DWARFUnit &DU, bool NeedSort);
+  /// Populates DebugNames table.
+  void populateDebugNamesTable(DWARFUnit &CU, const DIE &Die,
+                               std::optional<BOLTDWARF5AccelTableData *> Parent,
+                               uint32_t NumberParentsInChain);
+
+  /// Returns true if DWARFUnit is registered successfully.
+  bool registerUnit(DWARFUnit &DU, bool NeedSort);
 
   /// \return the unique ID of \p U if it exists.
   std::optional<uint32_t> getUnitId(const DWARFUnit &DU);
@@ -218,9 +231,10 @@ private:
     if (getState().CloneUnitCtxMap[UnitId].DieInfoVector.size() > DIEId)
       return *getState().CloneUnitCtxMap[UnitId].DieInfoVector[DIEId].get();
 
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: The DIE is not allocated "
-              "before looking up, some"
-           << "unexpected corner cases happened.\n";
+    BC.errs()
+        << "BOLT-WARNING: [internal-dwarf-error]: The DIE is not allocated "
+           "before looking up, some"
+        << "unexpected corner cases happened.\n";
     return *getState().CloneUnitCtxMap[UnitId].DieInfoVector.front().get();
   }
 
@@ -259,21 +273,28 @@ private:
   /// current Section.
   DIE *constructDIEFast(DWARFDie &DDie, DWARFUnit &U, uint32_t UnitId);
 
+  /// Returns true if this DIEBUilder is for DWO Unit.
+  bool isDWO() const { return SkeletonCU != nullptr; }
+
 public:
-  DIEBuilder(DWARFContext *DwarfContext, bool IsDWO = false);
+  DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext,
+             DWARF5AcceleratorTable &DebugNamesTable,
+             DWARFUnit *SkeletonCU = nullptr);
 
   /// Returns enum to what we are currently processing.
   ProcessingType getCurrentProcessingState() { return getState().Type; }
 
   /// Constructs IR for Type Units.
-  void buildTypeUnits(const bool Init = true);
+  void buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter = nullptr,
+                      const bool Init = true);
   /// Constructs IR for all the CUs.
   void buildCompileUnits(const bool Init = true);
   /// Constructs IR for CUs in a vector.
   void buildCompileUnits(const std::vector<DWARFUnit *> &CUs);
   /// Preventing implicit conversions.
   template <class T> void buildCompileUnits(T) = delete;
-  void buildBoth();
+  /// Builds DWO Unit. For DWARF5 this includes the type units.
+  void buildDWOUnit(DWARFUnit &U);
 
   /// Returns DWARFUnitInfo for DWARFUnit
   DWARFUnitInfo &getUnitInfoByDwarfUnit(const DWARFUnit &DwarfUnit) {
@@ -292,8 +313,9 @@ public:
     if (getState().TypeDIEMap.count(&DU))
       return getState().TypeDIEMap[&DU];
 
-    errs() << "BOLT-ERROR: unable to find TypeUnit for Type Unit at offset 0x"
-           << DU.getOffset() << "\n";
+    BC.errs()
+        << "BOLT-ERROR: unable to find TypeUnit for Type Unit at offset 0x"
+        << Twine::utohexstr(DU.getOffset()) << "\n";
     return nullptr;
   }
 
@@ -322,6 +344,9 @@ public:
 
   /// Finish current DIE construction.
   void finish();
+
+  /// Update debug names table.
+  void updateDebugNamesTable();
 
   // Interface to edit DIE
   template <class T> T *allocateDIEValue() {
@@ -363,6 +388,17 @@ public:
   bool deleteValue(DIEValueList *Die, dwarf::Attribute Attribute) {
     return Die->deleteValue(Attribute);
   }
+  /// Updates DWO Name and Compilation directory for Skeleton CU \p Unit.
+  std::string updateDWONameCompDir(DebugStrOffsetsWriter &StrOffstsWriter,
+                                   DebugStrWriter &StrWriter,
+                                   DWARFUnit &SkeletonCU,
+                                   std::optional<StringRef> DwarfOutputPath,
+                                   std::optional<StringRef> DWONameToUse);
+  /// Updates DWO Name and Compilation directory for Type Units.
+  void updateDWONameCompDirForTypes(DebugStrOffsetsWriter &StrOffstsWriter,
+                                    DebugStrWriter &StrWriter, DWARFUnit &Unit,
+                                    std::optional<StringRef> DwarfOutputPath,
+                                    const StringRef DWOName);
 };
 } // namespace bolt
 } // namespace llvm

@@ -64,6 +64,26 @@ struct SymbolizedStack {
   SymbolizedStack();
 };
 
+class SymbolizedStackHolder {
+  SymbolizedStack *Stack;
+
+  void clear() {
+    if (Stack)
+      Stack->ClearAll();
+  }
+
+ public:
+  explicit SymbolizedStackHolder(SymbolizedStack *Stack = nullptr)
+      : Stack(Stack) {}
+  ~SymbolizedStackHolder() { clear(); }
+  void reset(SymbolizedStack *S = nullptr) {
+    if (Stack != S)
+      clear();
+    Stack = S;
+  }
+  const SymbolizedStack *get() const { return Stack; }
+};
+
 // For now, DataInfo is used to describe global variable.
 struct DataInfo {
   // Owns all the string members. Storage for them is
@@ -154,6 +174,8 @@ class Symbolizer final {
 
   void InvalidateModuleList();
 
+  const ListOfModules &GetRefreshedListOfModules();
+
  private:
   // GetModuleNameAndOffsetForPC has to return a string to the caller.
   // Since the corresponding module might get unloaded later, we should create
@@ -163,17 +185,17 @@ class Symbolizer final {
   class ModuleNameOwner {
    public:
     explicit ModuleNameOwner(Mutex *synchronized_by)
-        : last_match_(nullptr), mu_(synchronized_by) {
+        : mu_(synchronized_by), last_match_(nullptr) {
       storage_.reserve(kInitialCapacity);
     }
     const char *GetOwnedCopy(const char *str);
 
    private:
     static const uptr kInitialCapacity = 1000;
-    InternalMmapVector<const char*> storage_;
-    const char *last_match_;
 
     Mutex *mu_;
+    const char *last_match_ SANITIZER_GUARDED_BY(mu_);
+    InternalMmapVector<const char *> storage_ SANITIZER_GUARDED_BY(*mu_);
   } module_names_;
 
   /// Platform-specific function for creating a Symbolizer object.
@@ -198,7 +220,7 @@ class Symbolizer final {
   // always synchronized.
   Mutex mu_;
 
-  IntrusiveList<SymbolizerTool> tools_;
+  IntrusiveList<SymbolizerTool> tools_ SANITIZER_GUARDED_BY(mu_);
 
   explicit Symbolizer(IntrusiveList<SymbolizerTool> tools);
 

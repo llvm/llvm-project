@@ -295,9 +295,9 @@ A code snippet for such a walk looks like this:
 .. code-block:: c++
 
   MemoryDef *Def;  // find who's optimized or defining for this MemoryDef
-  for (auto& U : Def->uses()) {
-    MemoryAccess *MA = cast<MemoryAccess>(Use.getUser());
-    if (auto *DefUser = cast_of_null<MemoryDef>MA)
+  for (auto &U : Def->uses()) {
+    MemoryAccess *MA = cast<MemoryAccess>(U.getUser());
+    if (auto *DefUser = dyn_cast<MemoryDef>(MA))
       if (DefUser->isOptimized() && DefUser->getOptimized() == Def) {
         // User who is optimized to Def
       } else {
@@ -312,19 +312,18 @@ the store.
 .. code-block:: c++
 
   checkUses(MemoryAccess *Def) { // Def can be a MemoryDef or a MemoryPhi.
-    for (auto& U : Def->uses()) {
-      MemoryAccess *MA = cast<MemoryAccess>(Use.getUser());
-      if (auto *MU = cast_of_null<MemoryUse>MA) {
+    for (auto &U : Def->uses()) {
+      MemoryAccess *MA = cast<MemoryAccess>(U.getUser());
+      if (auto *MU = dyn_cast<MemoryUse>(MA)) {
         // Process MemoryUse as needed.
-      }
-      else {
+      } else {
         // Process MemoryDef or MemoryPhi as needed.
 
         // As a user can come up twice, as an optimized access and defining
         // access, keep a visited list.
 
         // Check transitive uses as needed
-        checkUses (MA); // use a worklist for an iterative algorithm
+        checkUses(MA); // use a worklist for an iterative algorithm
       }
     }
   }

@@ -23,7 +23,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
@@ -61,7 +61,7 @@ public:
 // Helper to fill in a function.
 class FunctionFiller {
 public:
-  FunctionFiller(MachineFunction &MF, std::vector<unsigned> RegistersSetUp);
+  FunctionFiller(MachineFunction &MF, std::vector<MCRegister> RegistersSetUp);
 
   // Adds a basic block to the function.
   BasicBlockFiller addBasicBlock();
@@ -73,12 +73,12 @@ public:
   const MCInstrInfo *const MCII;
 
   // Returns the set of registers in the snippet setup code.
-  ArrayRef<unsigned> getRegistersSetUp() const;
+  ArrayRef<MCRegister> getRegistersSetUp() const;
 
 private:
   BasicBlockFiller Entry;
   // The set of registers that are set up in the basic block.
-  std::vector<unsigned> RegistersSetUp;
+  std::vector<MCRegister> RegistersSetUp;
 };
 
 // A callback that fills a function.
@@ -89,11 +89,9 @@ using FillFunction = std::function<void(FunctionFiller &)>;
 // epilogue. Once the MachineFunction is ready, it is assembled for TM to
 // AsmStream, the temporary function is eventually discarded.
 Error assembleToStream(const ExegesisTarget &ET,
-                       std::unique_ptr<LLVMTargetMachine> TM,
-                       ArrayRef<unsigned> LiveIns,
-                       ArrayRef<RegisterValue> RegisterInitialValues,
-                       const FillFunction &Fill, raw_pwrite_stream &AsmStreamm,
-                       const BenchmarkKey &Key,
+                       std::unique_ptr<TargetMachine> TM,
+                       ArrayRef<MCRegister> LiveIns, const FillFunction &Fill,
+                       raw_pwrite_stream &AsmStreamm, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions);
 
 // Creates an ObjectFile in the format understood by the host.
@@ -106,22 +104,28 @@ object::OwningBinary<object::ObjectFile> getObjectFromFile(StringRef Filename);
 
 // Consumes an ObjectFile containing a `void foo(char*)` function and make it
 // executable.
-struct ExecutableFunction {
-  explicit ExecutableFunction(
-      std::unique_ptr<LLVMTargetMachine> TM,
-      object::OwningBinary<object::ObjectFile> &&ObjectFileHolder);
+class ExecutableFunction {
+public:
+  static Expected<ExecutableFunction>
+  create(std::unique_ptr<TargetMachine> TM,
+         object::OwningBinary<object::ObjectFile> &&ObjectFileHolder);
 
   // Retrieves the function as an array of bytes.
   StringRef getFunctionBytes() const { return FunctionBytes; }
 
   // Executes the function.
   void operator()(char *Memory) const {
-    ((void (*)(char *))(intptr_t)FunctionBytes.data())(Memory);
+    ((void (*)(char *))(uintptr_t)FunctionBytes.data())(Memory);
   }
 
-  std::unique_ptr<LLVMContext> Context;
-  std::unique_ptr<ExecutionEngine> ExecEngine;
   StringRef FunctionBytes;
+
+private:
+  ExecutableFunction(std::unique_ptr<LLVMContext> Ctx,
+                     std::unique_ptr<orc::LLJIT> EJIT, StringRef FunctionBytes);
+
+  std::unique_ptr<LLVMContext> Context;
+  std::unique_ptr<orc::LLJIT> ExecJIT;
 };
 
 // Copies benchmark function's bytes from benchmark object.

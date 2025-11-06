@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/auxv.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -15,19 +16,20 @@
 #include <sanitizer/hwasan_interface.h>
 
 const unsigned char kTag = 42;
-const size_t kNumShadowPages = 256;
+const size_t kNumShadowPages = 1024;
 const size_t kNumPages = 16 * kNumShadowPages;
-const size_t kPageSize = 4096;
-const size_t kMapSize = kNumPages * kPageSize;
+
+size_t page_size, map_size;
 
 void sync_rss() {
-  char *page = (char *)mmap(0, kPageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+  char *page = (char *)mmap(0, page_size, PROT_READ | PROT_WRITE,
+                            MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
   // Linux kernel updates RSS counters after a set number of page faults.
-  for (int i = 0; i < 10000; ++i) {
+  for (int i = 0; i < 100; ++i) {
     page[0] = 42;
-    madvise(page, kPageSize, MADV_DONTNEED);
+    madvise(page, page_size, MADV_DONTNEED);
   }
-  munmap(page, kPageSize);
+  munmap(page, page_size);
 }
 
 size_t current_rss() {
@@ -44,29 +46,39 @@ size_t current_rss() {
   return rss;
 }
 
-void test_rss_difference(void *p) {
-  __hwasan_tag_memory(p, kTag, kMapSize);
+int test_rss_difference(void *p) {
+  __hwasan_tag_memory(p, kTag, map_size);
   size_t rss_before = current_rss();
-  __hwasan_tag_memory(p, 0, kMapSize);
+  __hwasan_tag_memory(p, 0, map_size);
   size_t rss_after = current_rss();
   fprintf(stderr, "%zu -> %zu\n", rss_before, rss_after);
-  assert(rss_before > rss_after);
+  if (rss_before <= rss_after)
+    return 0;
   size_t diff = rss_before - rss_after;
   fprintf(stderr, "diff %zu\n", diff);
   // Check that the difference is at least close to kNumShadowPages.
-  assert(diff > kNumShadowPages / 2);
+  return diff >= kNumShadowPages / 2;
 }
 
 int main() {
+  page_size = getauxval(AT_PAGESZ);
+  map_size = kNumPages * page_size;
+
   fprintf(stderr, "starting rss %zu\n", current_rss());
   fprintf(stderr, "shadow pages: %zu\n", kNumShadowPages);
 
-  void *p = mmap(0, kMapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+  void *p = mmap(0, map_size, PROT_READ | PROT_WRITE,
+                 MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
   fprintf(stderr, "p = %p\n", p);
 
-  test_rss_difference(p);
-  test_rss_difference(p);
-  test_rss_difference(p);
+  size_t total_count = 10;
+  size_t success_count = 0;
+  for (size_t i = 0; i < total_count; ++i)
+    success_count += test_rss_difference(p);
+
+  fprintf(stderr, "p = %p\n", p);
+  fprintf(stderr, "passed %zu out of %zu\n", success_count, total_count);
+  assert(success_count > total_count * 0.8);
 
   return 0;
 }

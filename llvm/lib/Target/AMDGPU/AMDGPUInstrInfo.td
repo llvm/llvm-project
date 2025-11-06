@@ -94,9 +94,24 @@ def AMDGPUtc_return_gfx: SDNode<"AMDGPUISD::TC_RETURN_GFX", AMDGPUTCReturnTP,
 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
+def AMDGPUtc_return_gfx_ww: SDNode<"AMDGPUISD::TC_RETURN_GFX_WholeWave", AMDGPUTCReturnTP,
+[SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
+def AMDGPUtc_return_chain: SDNode<"AMDGPUISD::TC_RETURN_CHAIN",
+  SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
+// With dynamic VGPRs.
+def AMDGPUtc_return_chain_dvgpr: SDNode<"AMDGPUISD::TC_RETURN_CHAIN_DVGPR",
+  SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
-  SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>,
-    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPInGlue]
+  SDTypeProfile<0, 1, [SDTCisVT<0, i16>]>,
+    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPOptInGlue]
 >;
 
 def AMDGPUconstdata_ptr : SDNode<
@@ -165,6 +180,11 @@ def AMDGPUfmax3 : SDNode<"AMDGPUISD::FMAX3", SDTFPTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
 >;
 
+// out = max(a, b, c) a, b and c are floats. Operation is IEEE2019 compliant.
+def AMDGPUfmaximum3 : SDNode<"AMDGPUISD::FMAXIMUM3", SDTFPTernaryOp,
+  [/*SDNPCommutative, SDNPAssociative*/]
+>;
+
 // out = max(a, b, c) a, b, and c are signed ints
 def AMDGPUsmax3 : SDNode<"AMDGPUISD::SMAX3", AMDGPUDTIntTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
@@ -177,6 +197,11 @@ def AMDGPUumax3 : SDNode<"AMDGPUISD::UMAX3", AMDGPUDTIntTernaryOp,
 
 // out = min(a, b, c) a, b and c are floats
 def AMDGPUfmin3 : SDNode<"AMDGPUISD::FMIN3", SDTFPTernaryOp,
+  [/*SDNPCommutative, SDNPAssociative*/]
+>;
+
+// out = min(a, b, c) a, b and c are floats. Operation is IEEE2019 compliant.
+def AMDGPUfminimum3 : SDNode<"AMDGPUISD::FMINIMUM3", SDTFPTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
 >;
 
@@ -276,11 +301,15 @@ def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntBitCountUnaryOp>;
 def AMDGPUffbl_b32_impl : SDNode<"AMDGPUISD::FFBL_B32", SDTIntBitCountUnaryOp>;
 
 // Signed and unsigned 24-bit multiply. The highest 8-bits are ignore
-// when performing the multiply. The result is a 32-bit value.
-def AMDGPUmul_u24_impl : SDNode<"AMDGPUISD::MUL_U24", SDTIntBinOp,
+// when performing the multiply. The result is a 32 or 64 bit value.
+def AMDGPUMul24Op : SDTypeProfile<1, 2, [
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>
+]>;
+
+def AMDGPUmul_u24_impl : SDNode<"AMDGPUISD::MUL_U24", AMDGPUMul24Op,
   [SDNPCommutative, SDNPAssociative]
 >;
-def AMDGPUmul_i24_impl : SDNode<"AMDGPUISD::MUL_I24", SDTIntBinOp,
+def AMDGPUmul_i24_impl : SDNode<"AMDGPUISD::MUL_I24", AMDGPUMul24Op,
   [SDNPCommutative, SDNPAssociative]
 >;
 
@@ -323,6 +352,17 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
+// Marks the entry into a whole wave function.
+def AMDGPUwhole_wave_setup : SDNode<
+  "AMDGPUISD::WHOLE_WAVE_SETUP", SDTypeProfile<1, 0, [SDTCisInt<0>]>,
+  [SDNPHasChain, SDNPSideEffect]>;
+
+// Marks the return from a whole wave function.
+def AMDGPUwhole_wave_return : SDNode<
+  "AMDGPUISD::WHOLE_WAVE_RETURN", SDTNone,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
   SDTCisInt<0>,       // i8 tgt
@@ -357,6 +397,8 @@ def IL_brcond      : SDNode<"AMDGPUISD::BRANCH_COND", SDTIL_BRCond, [SDNPHasChai
 def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
     [SDNPHasChain, SDNPOptInGlue]>;
 def AMDGPUendpgm_trap : SDNode<"AMDGPUISD::ENDPGM_TRAP", SDTNone,
+    [SDNPHasChain]>;
+def AMDGPUsimulated_trap : SDNode<"AMDGPUISD::SIMULATED_TRAP", SDTNone,
     [SDNPHasChain]>;
 
 def AMDGPUreturn_to_epilog : SDNode<"AMDGPUISD::RETURN_TO_EPILOG", SDTNone,

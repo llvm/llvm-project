@@ -156,6 +156,24 @@ entry:
   ret void
 }
 
+define void @unknown_call(ptr %fn) {
+; CHECK-LABEL: @unknown_call(
+; CHECK-NEXT:    call void [[FN:%.*]]()
+; CHECK-NEXT:    ret void
+;
+  call void %fn()
+  ret void
+}
+
+define void @unknown_nofree_call(ptr %fn) {
+; CHECK-LABEL: @unknown_nofree_call(
+; CHECK-NEXT:    call void [[FN:%.*]]() #[[ATTR5]]
+; CHECK-NEXT:    ret void
+;
+  call void %fn() nofree
+  ret void
+}
+
 declare void @_ZdaPv(ptr) local_unnamed_addr #4
 
 attributes #0 = { uwtable }

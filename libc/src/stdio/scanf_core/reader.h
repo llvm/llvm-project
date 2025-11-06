@@ -9,47 +9,37 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 
-#include "src/stdio/scanf_core/file_reader.h"
-#include "src/stdio/scanf_core/string_reader.h"
+#include "src/__support/macros/attributes.h" // For LIBC_INLINE
+#include "src/__support/macros/config.h"
+
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
-enum class ReaderType { String, File };
-
-class Reader final {
-  union {
-    StringReader *string_reader;
-    FileReader *file_reader;
-  };
-
-  const ReaderType reader_type;
-
+template <typename Derived> class Reader {
   size_t cur_chars_read = 0;
 
 public:
-  Reader(StringReader *init_string_reader)
-      : string_reader(init_string_reader), reader_type(ReaderType::String) {}
-
-  Reader(FileReader *init_file_reader)
-      : file_reader(init_file_reader), reader_type(ReaderType::File) {}
-
   // This returns the next character from the input and advances it by one
   // character. When it hits the end of the string or file it returns '\0' to
   // signal to stop parsing.
-  char getc();
+  LIBC_INLINE char getc() {
+    ++cur_chars_read;
+    return static_cast<Derived *>(this)->getc();
+  }
 
   // This moves the input back by one character, placing c into the buffer if
   // this is a file reader, else c is ignored.
-  void ungetc(char c);
+  LIBC_INLINE void ungetc(int c) {
+    --cur_chars_read;
+    static_cast<Derived *>(this)->ungetc(c);
+  }
 
-  size_t chars_read() { return cur_chars_read; }
-
-  bool has_error();
+  LIBC_INLINE size_t chars_read() { return cur_chars_read; }
 };
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H

@@ -1,8 +1,17 @@
-; Check the basic block sections list option.
-; RUN: echo '!_Z3foob' > %t
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS --check-prefix=LINUX-SECTIONS-FUNCTION-SECTION
-; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS --check-prefix=LINUX-SECTIONS-NO-FUNCTION-SECTION
-; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t -unique-basic-block-section-names --bbsections-guided-section-prefix=false | FileCheck %s -check-prefix=LINUX-SECTIONS-NO-GUIDED-PREFIX
+;; Check the basic block sections list option.
+;; version 0 profile:
+; RUN: echo '!_Z3foob' > %t1
+;;
+;; version 1 profile:
+; RUN: echo 'v1' > %t2
+; RUN: echo 'f _Z3foob' >> %t2
+;;
+; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS --check-prefix=LINUX-SECTIONS-FUNCTION-SECTION
+; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t1 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS --check-prefix=LINUX-SECTIONS-NO-FUNCTION-SECTION
+; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t1 -unique-basic-block-section-names --bbsections-guided-section-prefix=false | FileCheck %s -check-prefix=LINUX-SECTIONS-NO-GUIDED-PREFIX
+; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS --check-prefix=LINUX-SECTIONS-FUNCTION-SECTION
+; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t2 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS --check-prefix=LINUX-SECTIONS-NO-FUNCTION-SECTION
+; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t2 -unique-basic-block-section-names --bbsections-guided-section-prefix=false | FileCheck %s -check-prefix=LINUX-SECTIONS-NO-GUIDED-PREFIX
 
 define i32 @_Z3foob(i1 zeroext %0) nounwind {
   %2 = alloca i32, align 4

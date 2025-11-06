@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03
 
 #include <memory>
+#include <cstddef>
 #include <type_traits>
 
 template <int> struct Tag {};
@@ -46,7 +47,7 @@ int main(int, char**) {
     SPtr<3> s3(nullptr, Deleter{}); // OK
   }
 
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}default_delete cannot be instantiated for function types}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}default_delete cannot be instantiated for function types}}
   std::default_delete<FnType<5>> deleter{}; // expected-note {{requested here}}
 
   return 0;

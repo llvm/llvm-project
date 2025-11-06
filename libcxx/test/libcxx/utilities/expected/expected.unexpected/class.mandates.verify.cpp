@@ -14,12 +14,12 @@
 
 
 
-template class std::unexpected<int[2]>; // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}[expected.un.general]}}
+template class std::unexpected<int[2]>; // expected-error-re@*:* {{static assertion failed {{.*}}[expected.un.general]}}
 
-template class std::unexpected<const int>; // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}[expected.un.general]}}
+template class std::unexpected<const int>; // expected-error-re@*:* {{static assertion failed {{.*}}[expected.un.general]}}
 
-template class std::unexpected<int&>; // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}[expected.un.general]}}
+template class std::unexpected<int&>; // expected-error-re@*:* {{static assertion failed {{.*}}[expected.un.general]}}
 
-template class std::unexpected<std::unexpected<int>>; // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}[expected.un.general]}}
+template class std::unexpected<std::unexpected<int>>; // expected-error-re@*:* {{static assertion failed {{.*}}[expected.un.general]}}
 
-template class std::unexpected<volatile int>; // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}[expected.un.general]}}
+template class std::unexpected<volatile int>; // expected-error-re@*:* {{static assertion failed {{.*}}[expected.un.general]}}

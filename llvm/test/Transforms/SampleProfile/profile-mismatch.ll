@@ -6,29 +6,32 @@
 ; RUN: llvm-objdump --section-headers %t.obj | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llc < %t.ll -filetype=asm -o - | FileCheck %s --check-prefix=CHECK-ASM
 
-; CHECK: (2/3) of callsites' profile are invalid and (25/35) of samples are discarded due to callsite location mismatch.
+; CHECK: (1/3) of callsites' profile are invalid and (15/50) of samples are discarded due to callsite location mismatch.
 
-; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 25, !"TotalCallsiteSamples", i64 35}
+; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 1, !"NumRecoveredCallsites", i64 0, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 15, !"RecoveredCallsiteSamples", i64 0}
 
 ; CHECK-OBJ: .llvm_stats
 
-; CHECK-ASM: .section  .llvm_stats,"",@progbits
-; CHECK-ASM: .byte 22
-; CHECK-ASM: .ascii  "NumMismatchedCallsites"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "Mg=="
-; CHECK-ASM: .byte 22
-; CHECK-ASM: .ascii  "TotalProfiledCallsites"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "Mw=="
-; CHECK-ASM: .byte 25
-; CHECK-ASM: .ascii  "MismatchedCallsiteSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MjU="
-; CHECK-ASM: .byte 20
-; CHECK-ASM: .ascii  "TotalCallsiteSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MzU="
+; CHECK-ASM: .ascii	"NumMismatchedCallsites"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MQ=="
+; CHECK-ASM: .byte	21
+; CHECK-ASM: .ascii	"NumRecoveredCallsites"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MA=="
+; CHECK-ASM: .byte	22
+; CHECK-ASM: .ascii	"TotalProfiledCallsites"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"Mw=="
+; CHECK-ASM: .byte	25
+; CHECK-ASM: .ascii	"MismatchedCallsiteSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MTU="
+; CHECK-ASM: .byte	24
+; CHECK-ASM: .ascii	"RecoveredCallsiteSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MA=="
+
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -40,13 +43,13 @@ define dso_local i32 @foo(i32 noundef %x) #0 !dbg !12 {
 entry:
   %y = alloca i32, align 4
   call void @llvm.dbg.value(metadata i32 %x, metadata !16, metadata !DIExpression()), !dbg !18
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %y), !dbg !19
+  call void @llvm.lifetime.start.p0(ptr nonnull %y), !dbg !19
   call void @llvm.dbg.declare(metadata ptr %y, metadata !17, metadata !DIExpression()), !dbg !20
   %add = add nsw i32 %x, 1, !dbg !21
   store volatile i32 %add, ptr %y, align 4, !dbg !20, !tbaa !22
   %y.0. = load volatile i32, ptr %y, align 4, !dbg !26, !tbaa !22
   %add1 = add nsw i32 %y.0., 1, !dbg !27
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %y), !dbg !28
+  call void @llvm.lifetime.end.p0(ptr nonnull %y), !dbg !28
   ret i32 %add1, !dbg !29
 }
 
@@ -54,10 +57,10 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @bar(i32 noundef %x) #3 !dbg !30 {

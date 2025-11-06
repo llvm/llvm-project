@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// UNSUPPORTED: availability-filesystem-missing
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -15,14 +14,14 @@
 
 // path& make_preferred()
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <cassert>
 #include <string>
 #include <type_traits>
 
 #include "test_iterators.h"
 #include "count_new.h"
-
+namespace fs = std::filesystem;
 
 struct MakePreferredTestcase {
   const char* value;

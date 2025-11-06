@@ -14,12 +14,12 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHTARGETMACHINE_H
 
 #include "LoongArchSubtarget.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
 
 namespace llvm {
 
-class LoongArchTargetMachine : public LLVMTargetMachine {
+class LoongArchTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<LoongArchSubtarget>> SubtargetMap;
 
@@ -45,6 +45,11 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+
+  // Addrspacecasts are always noops.
+  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+    return true;
+  }
 };
 
 } // end namespace llvm

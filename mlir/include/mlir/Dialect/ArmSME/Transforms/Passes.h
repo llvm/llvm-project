@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_ARMSME_TRANSFORMS_PASSES_H
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/ArmSME/Transforms/PassesEnums.h.inc"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -20,30 +21,21 @@ namespace arm_sme {
 //===----------------------------------------------------------------------===//
 // The EnableArmStreaming pass.
 //===----------------------------------------------------------------------===//
-// Options for Armv9 Streaming SVE mode. By default, streaming-mode is part of
-// the function interface (ABI) and the caller manages PSTATE.SM on entry/exit.
-// In a locally streaming function PSTATE.SM is kept internal and the callee
-// manages it on entry/exit.
-enum class ArmStreaming { Default = 0, Locally = 1 };
-
 #define GEN_PASS_DECL
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h.inc"
 
 /// Pass to enable Armv9 Streaming SVE mode.
-std::unique_ptr<Pass>
-createEnableArmStreamingPass(const ArmStreaming mode = ArmStreaming::Default,
-                             const bool enableZA = false);
+std::unique_ptr<Pass> createEnableArmStreamingPass(
+    const ArmStreamingMode = ArmStreamingMode::Streaming,
+    const ArmZaMode = ArmZaMode::Disabled, bool ifRequiredByOps = false,
+    bool ifContainsScalableVectors = false);
 
-/// Pass that replaces 'arm_sme.get_tile_id' ops with actual tiles.
-std::unique_ptr<Pass> createTileAllocationPass();
+/// Pass that fuses 'arm_sme.outerproduct' ops into 2-way or 4-way widening
+/// variants.
+std::unique_ptr<Pass> createOuterProductFusionPass();
 
-//===----------------------------------------------------------------------===//
-// Type ArmSMETypeConverter pass.
-//===----------------------------------------------------------------------===//
-class ArmSMETypeConverter : public LLVMTypeConverter {
-public:
-  ArmSMETypeConverter(MLIRContext *ctx, const LowerToLLVMOptions &options);
-};
+/// Pass that legalizes vectors so they can be lowered to ArmSME.
+std::unique_ptr<Pass> createVectorLegalizationPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

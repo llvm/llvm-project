@@ -13,6 +13,7 @@
 // RUN: mkdir -p %t2/include/c++/v1
 // RUN: mkdir -p %t2/sysroot
 // RUN: mkdir -p %t2/include/aarch64-none-linux-android/c++/v1
+// RUN: mkdir -p %t2/include/aarch64-none-linux-android23/c++/v1
 
 // RUN: %clang -target aarch64-none-linux-android -ccc-install-dir %/t2/bin \
 // RUN:   --sysroot=%t2/sysroot -stdlib=libc++ -fsyntax-only \
@@ -24,3 +25,14 @@
 
 // ANDROID-DIR: "-internal-isystem" "[[DIR]][[SEP:/|\\\\]]..[[SEP]]include[[SEP]]aarch64-none-linux-android[[SEP]]c++[[SEP]]v1"
 // ANDROID-DIR-SAME: "-internal-isystem" "[[DIR]][[SEP]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"
+
+// RUN: %clang -target aarch64-none-linux-android23 -ccc-install-dir %/t2/bin \
+// RUN:   --sysroot=%t2/sysroot -stdlib=libc++ -fsyntax-only \
+// RUN:   %s -### 2>&1 | FileCheck --check-prefix=ANDROID23-DIR -DDIR=%/t2/bin %s
+
+// RUN: %clang -target aarch64-none-linux-android28 -ccc-install-dir %/t2/bin \
+// RUN:   --sysroot=%t2/sysroot -stdlib=libc++ -fsyntax-only \
+// RUN:   %s -### 2>&1 | FileCheck --check-prefix=ANDROID23-DIR -DDIR=%/t2/bin %s
+
+// ANDROID23-DIR: "-internal-isystem" "[[DIR]][[SEP:/|\\\\]]..[[SEP]]include[[SEP]]aarch64-none-linux-android23[[SEP]]c++[[SEP]]v1"
+// ANDROID23-DIR-SAME: "-internal-isystem" "[[DIR]][[SEP]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"

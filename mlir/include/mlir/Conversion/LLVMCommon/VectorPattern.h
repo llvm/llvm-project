@@ -54,11 +54,11 @@ LogicalResult handleMultidimensionalVectors(
     std::function<Value(Type, ValueRange)> createOperand,
     ConversionPatternRewriter &rewriter);
 
-LogicalResult vectorOneToOneRewrite(Operation *op, StringRef targetOp,
-                                    ValueRange operands,
-                                    ArrayRef<NamedAttribute> targetAttrs,
-                                    const LLVMTypeConverter &typeConverter,
-                                    ConversionPatternRewriter &rewriter);
+LogicalResult vectorOneToOneRewrite(
+    Operation *op, StringRef targetOp, ValueRange operands,
+    ArrayRef<NamedAttribute> targetAttrs,
+    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
+    IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
 } // namespace detail
 } // namespace LLVM
 
@@ -70,6 +70,9 @@ public:
   AttrConvertPassThrough(SourceOp srcOp) : srcAttrs(srcOp->getAttrs()) {}
 
   ArrayRef<NamedAttribute> getAttrs() const { return srcAttrs; }
+  LLVM::IntegerOverflowFlags getOverflowFlags() const {
+    return LLVM::IntegerOverflowFlags::none;
+  }
 
 private:
   ArrayRef<NamedAttribute> srcAttrs;
@@ -89,18 +92,50 @@ public:
   using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
   using Super = VectorConvertToLLVMPattern<SourceOp, TargetOp>;
 
+  /// Return the given type if it's a floating point type. If the given type is
+  /// a vector type, return its element type if it's a floating point type.
+  static FloatType getFloatingPointType(Type type) {
+    if (auto floatType = dyn_cast<FloatType>(type))
+      return floatType;
+    if (auto vecType = dyn_cast<VectorType>(type))
+      return dyn_cast<FloatType>(vecType.getElementType());
+    return nullptr;
+  }
+
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     static_assert(
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
+
+    // The pattern should not apply if a floating-point operand is converted to
+    // a non-floating-point type. This indicates that the floating point type
+    // is not supported by the LLVM lowering. (Such types are converted to
+    // integers.)
+    auto checkType = [&](Value v) -> LogicalResult {
+      FloatType floatType = getFloatingPointType(v.getType());
+      if (!floatType)
+        return success();
+      Type convertedType = this->getTypeConverter()->convertType(floatType);
+      if (!isa_and_nonnull<FloatType>(convertedType))
+        return rewriter.notifyMatchFailure(op,
+                                           "unsupported floating point type");
+      return success();
+    };
+    for (Value operand : op->getOperands())
+      if (failed(checkType(operand)))
+        return failure();
+    if (failed(checkType(op->getResult(0))))
+      return failure();
+
     // Determine attributes for the target op
     AttrConvert<SourceOp, TargetOp> attrConvert(op);
 
     return LLVM::detail::vectorOneToOneRewrite(
         op, TargetOp::getOperationName(), adaptor.getOperands(),
-        attrConvert.getAttrs(), *this->getTypeConverter(), rewriter);
+        attrConvert.getAttrs(), *this->getTypeConverter(), rewriter,
+        attrConvert.getOverflowFlags());
   }
 };
 } // namespace mlir

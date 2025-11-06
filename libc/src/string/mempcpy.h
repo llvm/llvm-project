@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMPCPY_H
 #define LLVM_LIBC_SRC_STRING_MEMPCPY_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 void *mempcpy(void *__restrict dest, const void *__restrict src, size_t count);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMPCPY_H

@@ -6,19 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_STRING_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_STRING_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h" // string_length
 
 #include <stddef.h> // size_t
-#include <stdlib.h> // malloc, free
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // This class mimics std::string but does not intend to be a full fledged
@@ -61,10 +64,11 @@ public:
   LIBC_INLINE string(const string_view &view)
       : string(view.data(), view.size()) {}
   LIBC_INLINE string(const char *cstr)
-      : string(cstr, ::__llvm_libc::internal::string_length(cstr)) {}
+      : string(cstr, ::LIBC_NAMESPACE::internal::string_length(cstr)) {}
   LIBC_INLINE string(size_t size_, char value) {
     resize(size_);
-    inline_memset((void *)buffer_, value, size_);
+    static_assert(sizeof(char) == sizeof(uint8_t));
+    inline_memset((void *)buffer_, static_cast<uint8_t>(value), size_);
   }
 
   LIBC_INLINE string &operator=(const string &other) {
@@ -225,6 +229,6 @@ LIBC_INLINE string to_string(unsigned long long value) {
 // LIBC_INLINE string to_string(long double value);
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_STRING_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H

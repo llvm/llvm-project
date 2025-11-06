@@ -38,12 +38,18 @@ body:             |
     liveins: $x3
 
     ; CHECK-LABEL: bb.0.entry:
-    ; CHECK: %4:g8rc = EXTSW_32_64 %3
+    ; CHECK: %4:g8rc = EXTSW_32_64 killed %3
     ; CHECK: %5:g8rc = INSERT_SUBREG %15, %1, %subreg.sub_32
-    ; CHECK: %7:g8rc = EXTSW_32_64 %6
-    ; CHECK: %9:g8rc = INSERT_SUBREG %16, %8, %subreg.sub_32
-    ; CHECK: %11:g8rc = INSERT_SUBREG %17, %10, %subreg.sub_32
-    ; CHECK: %14:g8rc = COPY %1
+    ; CHECK: %7:g8rc = EXTSW_32_64 killed %6
+    ; CHECK: %17:g8rc = INSERT_SUBREG %16, %1, %subreg.sub_32
+    ; CHECK-NEXT: %18:g8rc = ORIS8 killed %17, 32767
+    ; CHECK-NEXT: %8:gprc = COPY killed %18.sub_32
+    ; CHECK: %9:g8rc = INSERT_SUBREG %19, %8, %subreg.sub_32
+    ; CHECK: %21:g8rc = INSERT_SUBREG %20, %1, %subreg.sub_32
+    ; CHECK-NEXT: %22:g8rc = ORI8 killed %21, 32768
+    ; CHECK-NEXT: %10:gprc = COPY killed %22.sub_32
+    ; CHECK: %11:g8rc = INSERT_SUBREG %23, %10, %subreg.sub_32
+    ; CHECK: %14:g8rc = COPY killed %13
 
     %0:g8rc_nox0 = COPY $x3
     %1:gprc, %2:g8rc_nox0 = LBZU 0, %0:g8rc_nox0

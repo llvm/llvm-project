@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 
@@ -16,8 +18,11 @@ using namespace presburger;
 bool Identifier::isEqual(const Identifier &other) const {
   if (value == nullptr || other.value == nullptr)
     return false;
-  assert(value == other.value && idType == other.idType &&
-         "Values of Identifiers are equal but their types do not match.");
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  assert(value != other.value ||
+         (value == other.value && idType == other.idType &&
+          "Values of Identifiers are equal but their types do not match."));
+#endif
   return value == other.value;
 }
 
@@ -161,6 +166,26 @@ void PresburgerSpace::convertVarKind(VarKind srcKind, unsigned srcPos,
   assert(dstPos <= getNumVarKind(dstKind) &&
          "invalid position for destination variables");
 
+  // Move identifiers if `usingIds` and variables moved are not locals.
+  unsigned srcOffset = getVarKindOffset(srcKind) + srcPos;
+  unsigned dstOffset = getVarKindOffset(dstKind) + dstPos;
+  if (isUsingIds() && srcKind != VarKind::Local && dstKind != VarKind::Local) {
+    identifiers.insert(identifiers.begin() + dstOffset, num, Identifier());
+    // Update srcOffset if insertion of new elements invalidates it.
+    if (dstOffset < srcOffset)
+      srcOffset += num;
+    std::move(identifiers.begin() + srcOffset,
+              identifiers.begin() + srcOffset + num,
+              identifiers.begin() + dstOffset);
+    identifiers.erase(identifiers.begin() + srcOffset,
+                      identifiers.begin() + srcOffset + num);
+  } else if (isUsingIds() && srcKind != VarKind::Local) {
+    identifiers.erase(identifiers.begin() + srcOffset,
+                      identifiers.begin() + srcOffset + num);
+  } else if (isUsingIds() && dstKind != VarKind::Local) {
+    identifiers.insert(identifiers.begin() + dstOffset, num, Identifier());
+  }
+
   auto addVars = [&](VarKind kind, int num) {
     switch (kind) {
     case VarKind::Domain:
@@ -180,22 +205,6 @@ void PresburgerSpace::convertVarKind(VarKind srcKind, unsigned srcPos,
 
   addVars(srcKind, -(signed)num);
   addVars(dstKind, num);
-
-  // Move identifiers if `usingIds` and variables moved are not locals.
-  unsigned srcOffset = getVarKindOffset(srcKind) + srcPos;
-  unsigned dstOffset = getVarKindOffset(dstKind) + dstPos;
-  if (isUsingIds() && srcKind != VarKind::Local && dstKind != VarKind::Local) {
-    identifiers.insert(identifiers.begin() + dstOffset, num, Identifier());
-    for (unsigned i = 0; i < num; ++i)
-      identifiers[dstOffset + i] = identifiers[srcOffset + i];
-    identifiers.erase(identifiers.begin() + srcOffset,
-                      identifiers.begin() + srcOffset + num);
-  } else if (isUsingIds() && srcKind != VarKind::Local) {
-    identifiers.erase(identifiers.begin() + srcOffset,
-                      identifiers.begin() + srcOffset + num);
-  } else if (isUsingIds() && dstKind != VarKind::Local) {
-    identifiers.insert(identifiers.begin() + dstOffset, num, Identifier());
-  }
 }
 
 void PresburgerSpace::swapVar(VarKind kindA, VarKind kindB, unsigned posA,
@@ -207,16 +216,17 @@ void PresburgerSpace::swapVar(VarKind kindA, VarKind kindB, unsigned posA,
     return;
 
   if (kindA == VarKind::Local) {
-    getId(kindB, posB) = Identifier();
+    setId(kindB, posB, Identifier());
     return;
   }
 
   if (kindB == VarKind::Local) {
-    getId(kindA, posA) = Identifier();
+    setId(kindA, posA, Identifier());
     return;
   }
 
-  std::swap(getId(kindA, posA), getId(kindB, posB));
+  std::swap(identifiers[getVarKindOffset(kindA) + posA],
+            identifiers[getVarKindOffset(kindB) + posB]);
 }
 
 bool PresburgerSpace::isCompatible(const PresburgerSpace &other) const {
@@ -278,13 +288,42 @@ bool PresburgerSpace::isAligned(const PresburgerSpace &other,
   return getNumVarKind(kind) == other.getNumVarKind(kind);
 }
 
-void PresburgerSpace::setVarSymbolSeperation(unsigned newSymbolCount) {
+void PresburgerSpace::setVarSymbolSeparation(unsigned newSymbolCount) {
   assert(newSymbolCount <= getNumDimAndSymbolVars() &&
          "invalid separation position");
   numRange = numRange + numSymbols - newSymbolCount;
   numSymbols = newSymbolCount;
   // We do not need to change `identifiers` since the ordering of
   // `identifiers` remains same.
+}
+
+void PresburgerSpace::mergeAndAlignSymbols(PresburgerSpace &other) {
+  assert(usingIds && other.usingIds &&
+         "Both spaces need to have identifers to merge & align");
+
+  // First merge & align identifiers into `other` from `this`.
+  unsigned i = 0;
+  for (const Identifier identifier : getIds(VarKind::Symbol)) {
+    // If the identifier exists in `other`, then align it; otherwise insert it
+    // assuming it is a new identifier. Search in `other` starting at position
+    // `i` since the left of `i` is aligned.
+    auto *findBegin = other.getIds(VarKind::Symbol).begin() + i;
+    auto *findEnd = other.getIds(VarKind::Symbol).end();
+    auto *itr = std::find(findBegin, findEnd, identifier);
+    if (itr != findEnd) {
+      std::swap(findBegin, itr);
+    } else {
+      other.insertVar(VarKind::Symbol, i);
+      other.setId(VarKind::Symbol, i, identifier);
+    }
+    ++i;
+  }
+
+  // Finally add identifiers that are in `other`, but not in `this` to `this`.
+  for (unsigned e = other.getNumVarKind(VarKind::Symbol); i < e; ++i) {
+    insertVar(VarKind::Symbol, i);
+    setId(VarKind::Symbol, i, other.getId(VarKind::Symbol, i));
+  }
 }
 
 void PresburgerSpace::print(llvm::raw_ostream &os) const {

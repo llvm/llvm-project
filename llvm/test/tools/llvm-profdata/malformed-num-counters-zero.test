@@ -5,21 +5,33 @@
 // INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
 // INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
 // INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, NumBitmaskBytes, NumBitmaskBytes)
 // INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 // INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, BitmaskDelta, (uintptr_t)BitmaskBegin)
 // INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, VNamesSize, VNamesSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, NumVTables, NumVTables)
 // INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 
+// gnuwin32 printf does not work for this test because it will print \15 (CR)
+// whenever \12 (LF) is in the input string.
+UNSUPPORTED: system-windows
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\12\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
 // Data Section
@@ -35,11 +47,46 @@ RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+
+// Make two copies for another test.
+RUN: cp %t.profraw %t-bad.profraw
+RUN: cp %t.profraw %t-good.profraw
+
 // Make NumCounters = 0 so that we get "number of counters is zero" error message
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t.profraw
 
-RUN: not llvm-profdata show %t.profraw 2>&1 | FileCheck %s
-CHECK: malformed instrumentation profile data: number of counters is zero
+RUN: not llvm-profdata show %t.profraw 2>&1 | FileCheck %s --check-prefix=ZERO
+ZERO: malformed instrumentation profile data: number of counters is zero
+
+// Test a counter value greater than 2^56.
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bad.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bad.profraw
+// Counter value is 72057594037927937
+RUN: printf '\1\0\0\0\0\0\0\1' >> %t-bad.profraw
+RUN: printf '\3\0foo\0\0\0' >> %t-bad.profraw
+
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t-good.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-good.profraw
+// Counter value is 72057594037927937
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t-good.profraw
+RUN: printf '\3\0foo\0\0\0' >> %t-good.profraw
+
+// llvm-profdata fails if there is a warning for any input file under default failure mode (any).
+RUN: not llvm-profdata merge %t-bad.profraw %t-good.profraw -o %t.profdata 2>&1 | FileCheck %s --check-prefix=ANY
+ANY: {{.*}} excessively large counter value suggests corrupted profile data: 72057594037927937
+
+// -failure-mode=all only fails if there is a warning for every input file.
+RUN: not llvm-profdata merge %t-bad.profraw -failure-mode=all -o %t.profdata 2>&1 | FileCheck %s --check-prefix=ALL-ERR
+ALL-ERR: {{.*}} excessively large counter value suggests corrupted profile data: 72057594037927937
+
+RUN: llvm-profdata merge %t-bad.profraw %t-good.profraw -failure-mode=all -o %t.profdata 2>&1 | FileCheck %s --check-prefix=ALL-WARN
+ALL-WARN: {{.*}} excessively large counter value suggests corrupted profile data: 72057594037927937
+
+// -failure-mode=warn does not fail at all. It only prints warnings.
+RUN: llvm-profdata merge %t-bad.profraw -failure-mode=warn -o %t.profdata 2>&1 | FileCheck %s --check-prefix=WARN
+WARN: {{.*}} excessively large counter value suggests corrupted profile data: 72057594037927937

@@ -9,12 +9,12 @@ process launch
 # CHECK: stop reason = signal SIGTRAP
 
 thread backtrace
-# CHECK: frame #0: {{.*}}`asm_main + 23
+# CHECK: frame #0: {{.*}}`asm_main + 19
 # CHECK: frame #1: {{.*}}`main + {{.*}}
 
 target modules show-unwind -n asm_main
 # CHECK: eh_frame UnwindPlan:
 # CHECK: row[0]:    0: CFA=rsp +8 => rip=[CFA-8]
-# CHECK: row[1]:   14: CFA=rsp+16 => rbp=[CFA-16] rip=[CFA-8]
-# CHECK: row[2]:   17: CFA=rbp+16 => rbp=[CFA-16] rip=[CFA-8]
-# CHECK: row[3]:   22: CFA=rsp +8 => rip=[CFA-8]
+# CHECK: row[1]:   10: CFA=rsp+16 => rbp=[CFA-16] rip=[CFA-8]
+# CHECK: row[2]:   13: CFA=rbp+16 => rbp=[CFA-16] rip=[CFA-8]
+# CHECK: row[3]:   18: CFA=rsp +8 => rip=[CFA-8]

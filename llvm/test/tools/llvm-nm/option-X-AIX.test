@@ -4,11 +4,10 @@
 # RUN: yaml2obj -DFLAG=0x1DF %s -o %t_xcoff32.o
 # RUN: yaml2obj -DFLAG=0x1F7 %s -o %t_xcoff64.o
 # RUN: rm -rf %t.a
-# RUN: unset OBJECT_MODE
 # RUN: env OBJECT_MODE=any llvm-ar -q -c %t.a %t_xcoff32.o %t_xcoff64.o
 
 ## Test default "-X" option.
-# RUN: llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN: env -u OBJECT_MODE llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
 # RUN:   FileCheck -DFILE32=%t_xcoff32.o --check-prefixes=XCOFF32 %s --implicit-check-not={{.}}
 
 ## Test environment variable "OBJECT_MODE".

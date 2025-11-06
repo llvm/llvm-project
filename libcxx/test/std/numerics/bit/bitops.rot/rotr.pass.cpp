@@ -1,11 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T>
@@ -15,6 +15,7 @@
 
 #include <bit>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -41,6 +42,8 @@ constexpr bool test()
     assert(std::rotr(T(max - 1), 5) == T(max - (highbit >> 4)));
     assert(std::rotr(T(max - 1), 6) == T(max - (highbit >> 5)));
     assert(std::rotr(T(max - 1), 7) == T(max - (highbit >> 6)));
+    assert(std::rotr(T(max - 1), std::numeric_limits<int>::max()) ==
+           std::rotr(T(max - 1), std::numeric_limits<int>::max() % std::numeric_limits<T>::digits));
 
     assert(std::rotr(T(max - 1), -1) == T(max - 2));
     assert(std::rotr(T(max - 1), -2) == T(max - 4));
@@ -49,6 +52,8 @@ constexpr bool test()
     assert(std::rotr(T(max - 1), -5) == T(max - 32));
     assert(std::rotr(T(max - 1), -6) == T(max - 64));
     assert(std::rotr(T(max - 1), -7) == T(max - 128));
+    assert(std::rotr(T(max - 1), std::numeric_limits<int>::min()) ==
+           std::rotr(T(max - 1), std::numeric_limits<int>::min() % std::numeric_limits<T>::digits));
 
     assert(std::rotr(T(128), 0) == T(128));
     assert(std::rotr(T(128), 1) == T(64));

@@ -14,8 +14,8 @@
 // Make sure that accessing a span out-of-bounds triggers an assertion.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
-// XFAIL: availability-verbose_abort-missing
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <array>
 #include <span>
@@ -23,17 +23,17 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    {
-        std::array<int, 3> array{0, 1, 2};
-        std::span<int> const s(array.data(), 0);
-        TEST_LIBCPP_ASSERT_FAILURE(s.back(), "span<T>::back() on empty span");
-    }
+  {
+    std::array<int, 3> array{0, 1, 2};
+    std::span<int> const s(array.data(), 0);
+    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "span<T>::back() on empty span");
+  }
 
-    {
-        std::array<int, 3> array{0, 1, 2};
-        std::span<int, 0> const s(array.data(), 0);
-        TEST_LIBCPP_ASSERT_FAILURE(s.back(), "span<T, N>::back() on empty span");
-    }
+  {
+    std::array<int, 3> array{0, 1, 2};
+    std::span<int, 0> const s(array.data(), 0);
+    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "span<T, N>::back() on empty span");
+  }
 
-    return 0;
+  return 0;
 }

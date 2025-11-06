@@ -20,13 +20,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64TargetMachine.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
+#include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -307,9 +309,11 @@ bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (!Store.isSimple())
     return false;
   LLT ValTy = MRI.getType(Store.getValueReg());
+  if (ValTy.isScalableVector())
+    return false;
   if (!ValTy.isVector() || ValTy.getSizeInBits() != 128)
     return false;
-  if (ValTy.getSizeInBits() != Store.getMemSizeInBits())
+  if (Store.getMemSizeInBits() != ValTy.getSizeInBits())
     return false; // Don't split truncating stores.
   if (!MRI.hasOneNonDBGUse(Store.getValueReg()))
     return false;
@@ -379,17 +383,187 @@ void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
+bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         Register &SrcReg) {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  if (DstTy != LLT::fixed_vector(2, 64) && DstTy != LLT::fixed_vector(2, 32) &&
+      DstTy != LLT::fixed_vector(4, 32) && DstTy != LLT::fixed_vector(4, 16) &&
+      DstTy != LLT::fixed_vector(8, 16))
+    return false;
+
+  auto AndMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  if (AndMI->getOpcode() != TargetOpcode::G_AND)
+    return false;
+  auto LShrMI = getDefIgnoringCopies(AndMI->getOperand(1).getReg(), MRI);
+  if (LShrMI->getOpcode() != TargetOpcode::G_LSHR)
+    return false;
+
+  // Check the constant splat values
+  auto V1 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(MI.getOperand(2).getReg()), MRI);
+  auto V2 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(AndMI->getOperand(2).getReg()), MRI);
+  auto V3 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(LShrMI->getOperand(2).getReg()), MRI);
+  if (!V1.has_value() || !V2.has_value() || !V3.has_value())
+    return false;
+  unsigned HalfSize = DstTy.getScalarSizeInBits() / 2;
+  if (!V1.value().isMask(HalfSize) || V2.value() != (1ULL | 1ULL << HalfSize) ||
+      V3 != (HalfSize - 1))
+    return false;
+
+  SrcReg = LShrMI->getOperand(1).getReg();
+
+  return true;
+}
+
+void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B, Register &SrcReg) {
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT HalfTy =
+      DstTy.changeElementCount(DstTy.getElementCount().multiplyCoefficientBy(2))
+          .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+
+  Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
+  Register CastReg =
+      B.buildInstr(TargetOpcode::G_BITCAST, {HalfTy}, {SrcReg}).getReg(0);
+  Register CMLTReg =
+      B.buildICmp(CmpInst::Predicate::ICMP_SLT, HalfTy, CastReg, ZeroVec)
+          .getReg(0);
+
+  B.buildInstr(TargetOpcode::G_BITCAST, {DstReg}, {CMLTReg}).getReg(0);
+  MI.eraseFromParent();
+}
+
+// Match mul({z/s}ext , {z/s}ext) => {u/s}mull
+bool matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       GISelValueTracking *KB,
+                       std::tuple<bool, Register, Register> &MatchInfo) {
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+  unsigned I1Opc = I1->getOpcode();
+  unsigned I2Opc = I2->getOpcode();
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+
+  if (!DstTy.isVector() || I1->getNumOperands() < 2 || I2->getNumOperands() < 2)
+    return false;
+
+  auto IsAtLeastDoubleExtend = [&](Register R) {
+    LLT Ty = MRI.getType(R);
+    return EltSize >= Ty.getScalarSizeInBits() * 2;
+  };
+
+  // If the source operands were EXTENDED before, then {U/S}MULL can be used
+  bool IsZExt1 =
+      I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_ANYEXT;
+  bool IsZExt2 =
+      I2Opc == TargetOpcode::G_ZEXT || I2Opc == TargetOpcode::G_ANYEXT;
+  if (IsZExt1 && IsZExt2 && IsAtLeastDoubleExtend(I1->getOperand(1).getReg()) &&
+      IsAtLeastDoubleExtend(I2->getOperand(1).getReg())) {
+    get<0>(MatchInfo) = true;
+    get<1>(MatchInfo) = I1->getOperand(1).getReg();
+    get<2>(MatchInfo) = I2->getOperand(1).getReg();
+    return true;
+  }
+
+  bool IsSExt1 =
+      I1Opc == TargetOpcode::G_SEXT || I1Opc == TargetOpcode::G_ANYEXT;
+  bool IsSExt2 =
+      I2Opc == TargetOpcode::G_SEXT || I2Opc == TargetOpcode::G_ANYEXT;
+  if (IsSExt1 && IsSExt2 && IsAtLeastDoubleExtend(I1->getOperand(1).getReg()) &&
+      IsAtLeastDoubleExtend(I2->getOperand(1).getReg())) {
+    get<0>(MatchInfo) = false;
+    get<1>(MatchInfo) = I1->getOperand(1).getReg();
+    get<2>(MatchInfo) = I2->getOperand(1).getReg();
+    return true;
+  }
+
+  // Select UMULL if we can replace the other operand with an extend.
+  APInt Mask = APInt::getHighBitsSet(EltSize, EltSize / 2);
+  if (KB && (IsZExt1 || IsZExt2) &&
+      IsAtLeastDoubleExtend(IsZExt1 ? I1->getOperand(1).getReg()
+                                    : I2->getOperand(1).getReg())) {
+    Register ZExtOp =
+        IsZExt1 ? MI.getOperand(2).getReg() : MI.getOperand(1).getReg();
+    if (KB->maskedValueIsZero(ZExtOp, Mask)) {
+      get<0>(MatchInfo) = true;
+      get<1>(MatchInfo) = IsZExt1 ? I1->getOperand(1).getReg() : ZExtOp;
+      get<2>(MatchInfo) = IsZExt1 ? ZExtOp : I2->getOperand(1).getReg();
+      return true;
+    }
+  } else if (KB && DstTy == LLT::fixed_vector(2, 64) &&
+             KB->maskedValueIsZero(MI.getOperand(1).getReg(), Mask) &&
+             KB->maskedValueIsZero(MI.getOperand(2).getReg(), Mask)) {
+    get<0>(MatchInfo) = true;
+    get<1>(MatchInfo) = MI.getOperand(1).getReg();
+    get<2>(MatchInfo) = MI.getOperand(2).getReg();
+    return true;
+  }
+
+  if (KB && (IsSExt1 || IsSExt2) &&
+      IsAtLeastDoubleExtend(IsSExt1 ? I1->getOperand(1).getReg()
+                                    : I2->getOperand(1).getReg())) {
+    Register SExtOp =
+        IsSExt1 ? MI.getOperand(2).getReg() : MI.getOperand(1).getReg();
+    if (KB->computeNumSignBits(SExtOp) > EltSize / 2) {
+      get<0>(MatchInfo) = false;
+      get<1>(MatchInfo) = IsSExt1 ? I1->getOperand(1).getReg() : SExtOp;
+      get<2>(MatchInfo) = IsSExt1 ? SExtOp : I2->getOperand(1).getReg();
+      return true;
+    }
+  } else if (KB && DstTy == LLT::fixed_vector(2, 64) &&
+             KB->computeNumSignBits(MI.getOperand(1).getReg()) > EltSize / 2 &&
+             KB->computeNumSignBits(MI.getOperand(2).getReg()) > EltSize / 2) {
+    get<0>(MatchInfo) = false;
+    get<1>(MatchInfo) = MI.getOperand(1).getReg();
+    get<2>(MatchInfo) = MI.getOperand(2).getReg();
+    return true;
+  }
+
+  return false;
+}
+
+void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       MachineIRBuilder &B, GISelChangeObserver &Observer,
+                       std::tuple<bool, Register, Register> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_MUL &&
+         "Expected a G_MUL instruction");
+
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  bool IsZExt = get<0>(MatchInfo);
+  Register Src1Reg = get<1>(MatchInfo);
+  Register Src2Reg = get<2>(MatchInfo);
+  LLT Src1Ty = MRI.getType(Src1Reg);
+  LLT Src2Ty = MRI.getType(Src2Reg);
+  LLT HalfDstTy = DstTy.changeElementSize(DstTy.getScalarSizeInBits() / 2);
+  unsigned ExtOpc = IsZExt ? TargetOpcode::G_ZEXT : TargetOpcode::G_SEXT;
+
+  if (Src1Ty.getScalarSizeInBits() * 2 != DstTy.getScalarSizeInBits())
+    Src1Reg = B.buildExtOrTrunc(ExtOpc, {HalfDstTy}, {Src1Reg}).getReg(0);
+  if (Src2Ty.getScalarSizeInBits() * 2 != DstTy.getScalarSizeInBits())
+    Src2Reg = B.buildExtOrTrunc(ExtOpc, {HalfDstTy}, {Src2Reg}).getReg(0);
+
+  B.buildInstr(IsZExt ? AArch64::G_UMULL : AArch64::G_SMULL,
+               {MI.getOperand(0).getReg()}, {Src1Reg, Src2Reg});
+  MI.eraseFromParent();
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
   const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
 
 public:
   AArch64PostLegalizerCombinerImpl(
       MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
       const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -410,12 +584,12 @@ private:
 
 AArch64PostLegalizerCombinerImpl::AArch64PostLegalizerCombinerImpl(
     MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI, MachineDominatorTree *MDT,
     const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
+    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+      Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenPostLegalizeGICombiner.inc"
@@ -439,6 +613,22 @@ public:
 private:
   bool IsOptNone;
   AArch64PostLegalizerCombinerImplRuleConfig RuleConfig;
+
+
+  struct StoreInfo {
+    GStore *St = nullptr;
+    // The G_PTR_ADD that's used by the store. We keep this to cache the
+    // MachineInstr def.
+    GPtrAdd *Ptr = nullptr;
+    // The signed offset to the Ptr instruction.
+    int64_t Offset = 0;
+    LLT StoredType;
+  };
+  bool tryOptimizeConsecStores(SmallVectorImpl<StoreInfo> &Stores,
+                               CSEMIRBuilder &MIB);
+
+  bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
+                                          CSEMIRBuilder &MIB);
 };
 } // end anonymous namespace
 
@@ -446,11 +636,11 @@ void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<GISelCSEAnalysisWrapperPass>();
     AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   }
@@ -459,19 +649,14 @@ void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AArch64PostLegalizerCombiner::AArch64PostLegalizerCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  initializeAArch64PostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
 
 bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
-  assert(MF.getProperties().hasProperty(
-             MachineFunctionProperties::Property::Legalized) &&
-         "Expected a legalized function?");
+  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
@@ -480,9 +665,11 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   const auto *LI = ST.getLegalizerInfo();
 
-  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
+      IsOptNone ? nullptr
+                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
@@ -490,9 +677,203 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
-  AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *KB, CSEInfo,
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // Legalizer performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
+  AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo,
                                         RuleConfig, ST, MDT, LI);
-  return Impl.combineMachineInstrs();
+  bool Changed = Impl.combineMachineInstrs();
+
+  auto MIB = CSEMIRBuilder(MF);
+  MIB.setCSEInfo(CSEInfo);
+  Changed |= optimizeConsecutiveMemOpAddressing(MF, MIB);
+  return Changed;
+}
+
+bool AArch64PostLegalizerCombiner::tryOptimizeConsecStores(
+    SmallVectorImpl<StoreInfo> &Stores, CSEMIRBuilder &MIB) {
+  if (Stores.size() <= 2)
+    return false;
+
+  // Profitabity checks:
+  int64_t BaseOffset = Stores[0].Offset;
+  unsigned NumPairsExpected = Stores.size() / 2;
+  unsigned TotalInstsExpected = NumPairsExpected + (Stores.size() % 2);
+  // Size savings will depend on whether we can fold the offset, as an
+  // immediate of an ADD.
+  auto &TLI = *MIB.getMF().getSubtarget().getTargetLowering();
+  if (!TLI.isLegalAddImmediate(BaseOffset))
+    TotalInstsExpected++;
+  int SavingsExpected = Stores.size() - TotalInstsExpected;
+  if (SavingsExpected <= 0)
+    return false;
+
+  auto &MRI = MIB.getMF().getRegInfo();
+
+  // We have a series of consecutive stores. Factor out the common base
+  // pointer and rewrite the offsets.
+  Register NewBase = Stores[0].Ptr->getReg(0);
+  for (auto &SInfo : Stores) {
+    // Compute a new pointer with the new base ptr and adjusted offset.
+    MIB.setInstrAndDebugLoc(*SInfo.St);
+    auto NewOff = MIB.buildConstant(LLT::scalar(64), SInfo.Offset - BaseOffset);
+    auto NewPtr = MIB.buildPtrAdd(MRI.getType(SInfo.St->getPointerReg()),
+                                  NewBase, NewOff);
+    if (MIB.getObserver())
+      MIB.getObserver()->changingInstr(*SInfo.St);
+    SInfo.St->getOperand(1).setReg(NewPtr.getReg(0));
+    if (MIB.getObserver())
+      MIB.getObserver()->changedInstr(*SInfo.St);
+  }
+  LLVM_DEBUG(dbgs() << "Split a series of " << Stores.size()
+                    << " stores into a base pointer and offsets.\n");
+  return true;
+}
+
+static cl::opt<bool>
+    EnableConsecutiveMemOpOpt("aarch64-postlegalizer-consecutive-memops",
+                              cl::init(true), cl::Hidden,
+                              cl::desc("Enable consecutive memop optimization "
+                                       "in AArch64PostLegalizerCombiner"));
+
+bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
+    MachineFunction &MF, CSEMIRBuilder &MIB) {
+  // This combine needs to run after all reassociations/folds on pointer
+  // addressing have been done, specifically those that combine two G_PTR_ADDs
+  // with constant offsets into a single G_PTR_ADD with a combined offset.
+  // The goal of this optimization is to undo that combine in the case where
+  // doing so has prevented the formation of pair stores due to illegal
+  // addressing modes of STP. The reason that we do it here is because
+  // it's much easier to undo the transformation of a series consecutive
+  // mem ops, than it is to detect when doing it would be a bad idea looking
+  // at a single G_PTR_ADD in the reassociation/ptradd_immed_chain combine.
+  //
+  // An example:
+  //   G_STORE %11:_(<2 x s64>), %base:_(p0) :: (store (<2 x s64>), align 1)
+  //   %off1:_(s64) = G_CONSTANT i64 4128
+  //   %p1:_(p0) = G_PTR_ADD %0:_, %off1:_(s64)
+  //   G_STORE %11:_(<2 x s64>), %p1:_(p0) :: (store (<2 x s64>), align 1)
+  //   %off2:_(s64) = G_CONSTANT i64 4144
+  //   %p2:_(p0) = G_PTR_ADD %0:_, %off2:_(s64)
+  //   G_STORE %11:_(<2 x s64>), %p2:_(p0) :: (store (<2 x s64>), align 1)
+  //   %off3:_(s64) = G_CONSTANT i64 4160
+  //   %p3:_(p0) = G_PTR_ADD %0:_, %off3:_(s64)
+  //   G_STORE %11:_(<2 x s64>), %17:_(p0) :: (store (<2 x s64>), align 1)
+  bool Changed = false;
+  auto &MRI = MF.getRegInfo();
+
+  if (!EnableConsecutiveMemOpOpt)
+    return Changed;
+
+  SmallVector<StoreInfo, 8> Stores;
+  // If we see a load, then we keep track of any values defined by it.
+  // In the following example, STP formation will fail anyway because
+  // the latter store is using a load result that appears after the
+  // the prior store. In this situation if we factor out the offset then
+  // we increase code size for no benefit.
+  //   G_STORE %v1:_(s64), %base:_(p0) :: (store (s64))
+  //   %v2:_(s64) = G_LOAD %ldptr:_(p0) :: (load (s64))
+  //   G_STORE %v2:_(s64), %base:_(p0) :: (store (s64))
+  SmallVector<Register> LoadValsSinceLastStore;
+
+  auto storeIsValid = [&](StoreInfo &Last, StoreInfo New) {
+    // Check if this store is consecutive to the last one.
+    if (Last.Ptr->getBaseReg() != New.Ptr->getBaseReg() ||
+        (Last.Offset + static_cast<int64_t>(Last.StoredType.getSizeInBytes()) !=
+         New.Offset) ||
+        Last.StoredType != New.StoredType)
+      return false;
+
+    // Check if this store is using a load result that appears after the
+    // last store. If so, bail out.
+    if (any_of(LoadValsSinceLastStore, [&](Register LoadVal) {
+          return New.St->getValueReg() == LoadVal;
+        }))
+      return false;
+
+    // Check if the current offset would be too large for STP.
+    // If not, then STP formation should be able to handle it, so we don't
+    // need to do anything.
+    int64_t MaxLegalOffset;
+    switch (New.StoredType.getSizeInBits()) {
+    case 32:
+      MaxLegalOffset = 252;
+      break;
+    case 64:
+      MaxLegalOffset = 504;
+      break;
+    case 128:
+      MaxLegalOffset = 1008;
+      break;
+    default:
+      llvm_unreachable("Unexpected stored type size");
+    }
+    if (New.Offset < MaxLegalOffset)
+      return false;
+
+    // If factoring it out still wouldn't help then don't bother.
+    return New.Offset - Stores[0].Offset <= MaxLegalOffset;
+  };
+
+  auto resetState = [&]() {
+    Stores.clear();
+    LoadValsSinceLastStore.clear();
+  };
+
+  for (auto &MBB : MF) {
+    // We're looking inside a single BB at a time since the memset pattern
+    // should only be in a single block.
+    resetState();
+    for (auto &MI : MBB) {
+      // Skip for scalable vectors
+      if (auto *LdSt = dyn_cast<GLoadStore>(&MI);
+          LdSt && MRI.getType(LdSt->getOperand(0).getReg()).isScalableVector())
+        continue;
+
+      if (auto *St = dyn_cast<GStore>(&MI)) {
+        Register PtrBaseReg;
+        APInt Offset;
+        LLT StoredValTy = MRI.getType(St->getValueReg());
+        unsigned ValSize = StoredValTy.getSizeInBits();
+        if (ValSize < 32 || St->getMMO().getSizeInBits() != ValSize)
+          continue;
+
+        Register PtrReg = St->getPointerReg();
+        if (mi_match(
+                PtrReg, MRI,
+                m_OneNonDBGUse(m_GPtrAdd(m_Reg(PtrBaseReg), m_ICst(Offset))))) {
+          GPtrAdd *PtrAdd = cast<GPtrAdd>(MRI.getVRegDef(PtrReg));
+          StoreInfo New = {St, PtrAdd, Offset.getSExtValue(), StoredValTy};
+
+          if (Stores.empty()) {
+            Stores.push_back(New);
+            continue;
+          }
+
+          // Check if this store is a valid continuation of the sequence.
+          auto &Last = Stores.back();
+          if (storeIsValid(Last, New)) {
+            Stores.push_back(New);
+            LoadValsSinceLastStore.clear(); // Reset the load value tracking.
+          } else {
+            // The store isn't a valid to consider for the prior sequence,
+            // so try to optimize what we have so far and start a new sequence.
+            Changed |= tryOptimizeConsecStores(Stores, MIB);
+            resetState();
+            Stores.push_back(New);
+          }
+        }
+      } else if (auto *Ld = dyn_cast<GLoad>(&MI)) {
+        LoadValsSinceLastStore.push_back(Ld->getDstReg());
+      }
+    }
+    Changed |= tryOptimizeConsecStores(Stores, MIB);
+    resetState();
+  }
+
+  return Changed;
 }
 
 char AArch64PostLegalizerCombiner::ID = 0;
@@ -500,7 +881,7 @@ INITIALIZE_PASS_BEGIN(AArch64PostLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 MachineInstrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AArch64PostLegalizerCombiner, DEBUG_TYPE,
                     "Combine AArch64 MachineInstrs after legalization", false,
                     false)

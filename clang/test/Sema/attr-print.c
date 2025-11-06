@@ -9,11 +9,11 @@ __declspec(align(4)) int y;
 // CHECK: short arr[3] __attribute__((aligned));
 short arr[3] __attribute__((aligned));
 
-// CHECK: void foo(void) __attribute__((const));
-void foo(void) __attribute__((const));
+// CHECK: int foo(void) __attribute__((const));
+int foo(void) __attribute__((const));
 
-// CHECK: void bar(void) __attribute__((__const));
-void bar(void) __attribute__((__const));
+// CHECK: int bar(void) __attribute__((__const));
+int bar(void) __attribute__((__const));
 
 // CHECK: int * __ptr32 p32;
 int * __ptr32 p32;
@@ -35,3 +35,6 @@ int * __sptr * __ptr32 ppsp32;
 
 // CHECK: __attribute__((availability(macos, strict, introduced=10.6)));
 void f6(int) __attribute__((availability(macosx,strict,introduced=10.6)));
+
+// CHECK: _libc_intl_domainname asm("__gi__libc_intl_domainname") __attribute__((visibility("hidden")));
+extern const char _libc_intl_domainname[]; extern typeof (_libc_intl_domainname) _libc_intl_domainname asm("__gi__libc_intl_domainname") __attribute__((visibility("hidden")));

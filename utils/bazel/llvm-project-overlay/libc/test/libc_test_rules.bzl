@@ -6,33 +6,82 @@
 
 libc functions are created though the libc_build_rules.bzl:libc_function.
 They come in two flavors:
- - the internal one that is scoped into the `__llvm_libc` namespace.
+ - the internal one that is scoped into the `LIBC_NAMESPACE` namespace.
  - the libc one that is the regular C function.
 
 When performing tests we make sure to always use the internal version.
 """
 
-load("//libc:libc_build_rules.bzl", "INTERNAL_SUFFIX")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("//libc:libc_build_rules.bzl", "libc_common_copts")
+load("//libc:libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 
-def libc_test(name, srcs, libc_function_deps, deps = [], **kwargs):
+_FULL_BUILD_COPTS = [
+    "-nostdlib++",
+    "-nostdlib",
+    "-DLIBC_FULL_BUILD",
+    "-DLIBC_COPT_USE_C_ASSERT",
+]
+
+def libc_test(
+        name,
+        copts = [],
+        deps = [],
+        local_defines = [],
+        use_test_framework = True,
+        full_build = False,
+        **kwargs):
     """Add target for a libc test.
 
     Args:
       name: Test target name
-      srcs: List of sources for the test.
-      libc_function_deps: List of libc_function targets used by this test.
-      deps: The list of other libraries to be linked in to the test target.
-      **kwargs: Attributes relevant for a cc_test. For example, name, srcs.
+      copts: The list of options to add to the C++ compilation command.
+      deps: The list of libc functions and libraries to be linked in.
+      local_defines: The list of target local_defines if any.
+      use_test_framework: Whether to use the libc unit test `main` function.
+      full_build: Whether to compile with LIBC_FULL_BUILD and disallow
+          use of system headers. This is useful for tests that include both
+          LLVM libc headers and proxy headers to avoid conflicting definitions.
+      **kwargs: Attributes relevant for a cc_test.
     """
-    all_function_deps = libc_function_deps + ["//libc:errno"]
-    native.cc_test(
+    deps = deps + [
+        "//libc:hdr_stdint_proxy",
+        "//libc:__support_macros_config",
+        "//libc:__support_libc_errno",
+        "//libc:errno",
+        "//libc:func_aligned_alloc",
+        "//libc:func_free",
+        "//libc:func_malloc",
+        "//libc:func_realloc",
+    ]
+    if use_test_framework:
+        deps = deps + ["//libc/test/UnitTest:LibcUnitTest"]
+
+    if full_build:
+        copts = copts + _FULL_BUILD_COPTS
+    cc_test(
         name = name,
-        srcs = srcs,
-        deps = [d + INTERNAL_SUFFIX for d in all_function_deps] + [
-            "//libc:libc_root",
-            "//libc/test/UnitTest:LibcUnitTest",
-        ] + deps,
-        features = ["-link_llvmlibc"],  # Do not link libllvmlibc.a
+        local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
+        deps = deps,
+        copts = copts + libc_common_copts(),
+        linkstatic = 1,
+        **kwargs
+    )
+
+def libc_test_library(name, copts = [], local_defines = [], **kwargs):
+    """Add target for library used in libc tests.
+
+    Args:
+      name: Library target name.
+      copts: See cc_library.copts.
+      local_defines: See cc_library.local_defines.
+      **kwargs: Other attributes relevant to cc_library (e.g. "deps").
+    """
+    cc_library(
+        name = name,
+        testonly = True,
+        copts = copts + libc_common_copts(),
+        local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
         linkstatic = 1,
         **kwargs
     )

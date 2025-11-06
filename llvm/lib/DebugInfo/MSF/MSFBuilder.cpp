@@ -16,6 +16,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -248,6 +249,8 @@ uint32_t MSFBuilder::computeDirectoryByteSize() const {
 }
 
 Expected<MSFLayout> MSFBuilder::generateLayout() {
+  llvm::TimeTraceScope timeScope("MSF: Generate layout");
+
   SuperBlock *SB = Allocator.Allocate<SuperBlock>();
   MSFLayout L;
   L.SB = SB;
@@ -283,8 +286,7 @@ Expected<MSFLayout> MSFBuilder::generateLayout() {
   SB->NumBlocks = FreeBlocks.size();
 
   ulittle32_t *DirBlocks = Allocator.Allocate<ulittle32_t>(NumDirectoryBlocks);
-  std::uninitialized_copy_n(DirectoryBlocks.begin(), NumDirectoryBlocks,
-                            DirBlocks);
+  llvm::uninitialized_copy(DirectoryBlocks, DirBlocks);
   L.DirectoryBlocks = ArrayRef<ulittle32_t>(DirBlocks, NumDirectoryBlocks);
 
   // The stream sizes should be re-allocated as a stable pointer and the stream
@@ -297,8 +299,7 @@ Expected<MSFLayout> MSFBuilder::generateLayout() {
       Sizes[I] = StreamData[I].first;
       ulittle32_t *BlockList =
           Allocator.Allocate<ulittle32_t>(StreamData[I].second.size());
-      std::uninitialized_copy_n(StreamData[I].second.begin(),
-                                StreamData[I].second.size(), BlockList);
+      llvm::uninitialized_copy(StreamData[I].second, BlockList);
       L.StreamMap[I] =
           ArrayRef<ulittle32_t>(BlockList, StreamData[I].second.size());
     }
@@ -336,6 +337,8 @@ static void commitFpm(WritableBinaryStream &MsfBuffer, const MSFLayout &Layout,
 
 Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
                                                   MSFLayout &Layout) {
+  llvm::TimeTraceScope timeScope("Commit MSF");
+
   Expected<MSFLayout> L = generateLayout();
   if (!L)
     return L.takeError();
@@ -381,7 +384,7 @@ Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
     return std::move(EC);
 
   FileBufferByteStream Buffer(std::move(*OutFileOrError),
-                              llvm::support::little);
+                              llvm::endianness::little);
   BinaryStreamWriter Writer(Buffer);
 
   if (auto EC = Writer.writeObject(*Layout.SB))

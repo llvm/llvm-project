@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: !is-lockfree-runtime-function
+// XFAIL: !has-1024-bit-atomics
 
 // <atomic>
 
@@ -27,8 +27,14 @@ struct TestFn {
   void operator()() const {
     typedef std::atomic<T> A;
     T t = T();
+
     A a(t);
     bool b1 = std::atomic_is_lock_free(static_cast<const A*>(&a));
+#if TEST_STD_VER >= 17
+    if (A::is_always_lock_free)
+      assert(b1);
+#endif
+
     volatile A va(t);
     bool b2 = std::atomic_is_lock_free(static_cast<const volatile A*>(&va));
     assert(b1 == b2);

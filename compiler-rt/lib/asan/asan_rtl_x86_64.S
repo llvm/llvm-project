@@ -5,6 +5,7 @@
 #include "sanitizer_common/sanitizer_platform.h"
 
 .file "asan_rtl_x86_64.S"
+.att_syntax
 
 #define NAME(n, reg, op, s, i) n##_##op##_##i##_##s##_##reg
 
@@ -27,7 +28,12 @@ FNAME(reg, op, s, i): ;\
 #define ASAN_MEMORY_ACCESS_INITIAL_CHECK_ADD(reg, op, s) \
         mov    %##reg,%r10 ;\
         shr    $0x3,%r10 ;\
+        .if ASAN_SHADOW_OFFSET_CONST < 0x80000000   ;\
         movsbl ASAN_SHADOW_OFFSET_CONST(%r10),%r10d ;\
+        .else                                       ;\
+        movabsq $ASAN_SHADOW_OFFSET_CONST,%r11      ;\
+        movsbl (%r10,%r11),%r10d                    ;\
+        .endif                                      ;\
         test   %r10d,%r10d ;\
         jne    CLABEL(reg, op, s, add) ;\
 RLABEL(reg, op, s, add): ;\
@@ -84,7 +90,12 @@ ENDF
 #define ASAN_MEMORY_ACCESS_CHECK_ADD(reg, op, s, c) \
         mov    %##reg,%r10 ;\
         shr    $0x3,%r10 ;\
+        .if ASAN_SHADOW_OFFSET_CONST < 0x80000000  ;\
         ##c    $0x0,ASAN_SHADOW_OFFSET_CONST(%r10) ;\
+        .else                                      ;\
+        movabsq $ASAN_SHADOW_OFFSET_CONST,%r11     ;\
+        ##c    $0x0,(%r10,%r11)                    ;\
+        .endif                                     ;\
         jne    FLABEL(reg, op, s, add) ;\
         retq  ;\
 

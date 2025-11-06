@@ -21,6 +21,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -190,9 +191,10 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
       Delimited = true;
       ThisTokBuf++;
       if (*ThisTokBuf == '}') {
-        Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-             diag::err_delimited_escape_empty);
-        return ResultChar;
+        HadError = true;
+        if (Diags)
+          Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
+               diag::err_delimited_escape_empty);
       }
     } else if (ThisTokBuf == ThisTokEnd || !isHexDigit(*ThisTokBuf)) {
       if (Diags)
@@ -283,9 +285,10 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     Delimited = true;
     ++ThisTokBuf;
     if (*ThisTokBuf == '}') {
-      Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-           diag::err_delimited_escape_empty);
-      return ResultChar;
+      HadError = true;
+      if (Diags)
+        Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
+             diag::err_delimited_escape_empty);
     }
 
     while (ThisTokBuf != ThisTokEnd) {
@@ -351,10 +354,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
            diag::err_expected)
           << tok::r_brace;
     else if (!HadError) {
-      Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-           Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
-                                : diag::ext_delimited_escape_sequence)
-          << /*delimited*/ 0 << (Features.CPlusPlus ? 1 : 0);
+      Lexer::DiagnoseDelimitedOrNamedEscapeSequence(Loc, false, Features,
+                                                    *Diags);
     }
   }
 
@@ -707,11 +708,8 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
          diag::warn_ucn_not_valid_in_c89_literal);
 
   if ((IsDelimitedEscapeSequence || IsNamedEscapeSequence) && Diags)
-    Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
-         Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
-                              : diag::ext_delimited_escape_sequence)
-        << (IsNamedEscapeSequence ? 1 : 0) << (Features.CPlusPlus ? 1 : 0);
-
+    Lexer::DiagnoseDelimitedOrNamedEscapeSequence(Loc, IsNamedEscapeSequence,
+                                                  Features, *Diags);
   return true;
 }
 
@@ -930,7 +928,11 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   // and FP constants (specifically, the 'pp-number' regex), and assumes that
   // the byte at "*end" is both valid and not part of the regex.  Because of
   // this, it doesn't have to check for 'overscan' in various places.
-  if (isPreprocessingNumberBody(*ThisTokEnd)) {
+  // Note: For HLSL, the end token is allowed to be '.' which would be in the
+  // 'pp-number' regex. This is required to support vector swizzles on numeric
+  // constants (i.e. 1.xx or 1.5f.rrr).
+  if (isPreprocessingNumberBody(*ThisTokEnd) &&
+      !(LangOpts.HLSL && *ThisTokEnd == '.')) {
     Diags.Report(TokLoc, diag::err_lexing_numeric);
     hadError = true;
     return;
@@ -970,6 +972,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   bool isFixedPointConstant = isFixedPointLiteral();
   bool isFPConstant = isFloatingLiteral();
   bool HasSize = false;
+  bool DoubleUnderscore = false;
 
   // Loop over all of the characters of the suffix.  If we see something bad,
   // we break out of the loop.
@@ -1066,8 +1069,8 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       continue;
     case 'i':
     case 'I':
-      if (LangOpts.MicrosoftExt && !isFPConstant) {
-        // Allow i8, i16, i32, and i64. First, look ahead and check if
+      if (LangOpts.MicrosoftExt && s + 1 < ThisTokEnd && !isFPConstant) {
+        // Allow i8, i16, i32, i64, and i128. First, look ahead and check if
         // suffixes are Microsoft integers and not the imaginary unit.
         uint8_t Bits = 0;
         size_t ToSkip = 0;
@@ -1077,19 +1080,23 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
           ToSkip = 2;
           break;
         case '1':
-          if (s[2] == '6') { // i16 suffix
+          if (s + 2 < ThisTokEnd && s[2] == '6') { // i16 suffix
             Bits = 16;
             ToSkip = 3;
+          } else if (s + 3 < ThisTokEnd && s[2] == '2' &&
+                     s[3] == '8') { // i128 suffix
+            Bits = 128;
+            ToSkip = 4;
           }
           break;
         case '3':
-          if (s[2] == '2') { // i32 suffix
+          if (s + 2 < ThisTokEnd && s[2] == '2') { // i32 suffix
             Bits = 32;
             ToSkip = 3;
           }
           break;
         case '6':
-          if (s[2] == '4') { // i64 suffix
+          if (s + 2 < ThisTokEnd && s[2] == '4') { // i64 suffix
             Bits = 64;
             ToSkip = 3;
           }
@@ -1113,6 +1120,32 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       if (isImaginary) break;   // Cannot be repeated.
       isImaginary = true;
       continue;  // Success.
+    case '_':
+      if (isFPConstant)
+        break; // Invalid for floats
+      if (HasSize)
+        break;
+      // There is currently no way to reach this with DoubleUnderscore set.
+      // If new double underscope literals are added handle it here as above.
+      assert(!DoubleUnderscore && "unhandled double underscore case");
+      if (LangOpts.CPlusPlus && s + 2 < ThisTokEnd &&
+          s[1] == '_') { // s + 2 < ThisTokEnd to ensure some character exists
+                         // after __
+        DoubleUnderscore = true;
+        s += 2; // Skip both '_'
+        if (s + 1 < ThisTokEnd &&
+            (*s == 'u' || *s == 'U')) { // Ensure some character after 'u'/'U'
+          isUnsigned = true;
+          ++s;
+        }
+        if (s + 1 < ThisTokEnd &&
+            ((*s == 'w' && *(++s) == 'b') || (*s == 'W' && *(++s) == 'B'))) {
+          isBitInt = true;
+          HasSize = true;
+          continue;
+        }
+      }
+      break;
     case 'w':
     case 'W':
       if (isFPConstant)
@@ -1123,9 +1156,9 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       // wb and WB are allowed, but a mixture of cases like Wb or wB is not. We
       // explicitly do not support the suffix in C++ as an extension because a
       // library-based UDL that resolves to a library type may be more
-      // appropriate there.
-      if (!LangOpts.CPlusPlus && ((s[0] == 'w' && s[1] == 'b') ||
-          (s[0] == 'W' && s[1] == 'B'))) {
+      // appropriate there. The same rules apply for __wb/__WB.
+      if ((!LangOpts.CPlusPlus || DoubleUnderscore) && s + 1 < ThisTokEnd &&
+          ((s[0] == 'w' && s[1] == 'b') || (s[0] == 'W' && s[1] == 'B'))) {
         isBitInt = true;
         HasSize = true;
         ++s; // Skip both characters (2nd char skipped on continue).
@@ -1237,7 +1270,9 @@ bool NumericLiteralParser::isValidUDSuffix(const LangOptions &LangOpts,
     return false;
 
   // By C++11 [lex.ext]p10, ud-suffixes starting with an '_' are always valid.
-  if (Suffix[0] == '_')
+  // Suffixes starting with '__' (double underscore) are for use by
+  // the implementation.
+  if (Suffix.starts_with("_") && !Suffix.starts_with("__"))
     return true;
 
   // In C++11, there are no library suffixes.
@@ -1248,10 +1283,10 @@ bool NumericLiteralParser::isValidUDSuffix(const LangOptions &LangOpts,
   // Per tweaked N3660, "il", "i", and "if" are also used in the library.
   // In C++2a "d" and "y" are used in the library.
   return llvm::StringSwitch<bool>(Suffix)
-      .Cases("h", "min", "s", true)
-      .Cases("ms", "us", "ns", true)
-      .Cases("il", "i", "if", true)
-      .Cases("d", "y", LangOpts.CPlusPlus20)
+      .Cases({"h", "min", "s"}, true)
+      .Cases({"ms", "us", "ns"}, true)
+      .Cases({"il", "i", "if"}, true)
+      .Cases({"d", "y"}, LangOpts.CPlusPlus20)
       .Default(false);
 }
 
@@ -1354,11 +1389,17 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
 
   // Handle simple binary numbers 0b01010
   if ((c1 == 'b' || c1 == 'B') && (s[1] == '0' || s[1] == '1')) {
-    // 0b101010 is a C++1y / GCC extension.
-    Diags.Report(TokLoc, LangOpts.CPlusPlus14
-                             ? diag::warn_cxx11_compat_binary_literal
-                         : LangOpts.CPlusPlus ? diag::ext_binary_literal_cxx14
-                                              : diag::ext_binary_literal);
+    // 0b101010 is a C++14 and C23 extension.
+    unsigned DiagId;
+    if (LangOpts.CPlusPlus14)
+      DiagId = diag::warn_cxx11_compat_binary_literal;
+    else if (LangOpts.C23)
+      DiagId = diag::warn_c23_compat_binary_literal;
+    else if (LangOpts.CPlusPlus)
+      DiagId = diag::ext_binary_literal_cxx14;
+    else
+      DiagId = diag::ext_binary_literal;
+    Diags.Report(TokLoc, DiagId);
     ++s;
     assert(s < ThisTokEnd && "didn't maximally munch?");
     radix = 2;
@@ -1378,6 +1419,42 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
     return;
   }
 
+  // Parse a potential octal literal prefix.
+  bool IsSingleZero = false;
+  if ((c1 == 'O' || c1 == 'o') && (s[1] >= '0' && s[1] <= '7')) {
+    unsigned DiagId;
+    if (LangOpts.C2y)
+      DiagId = diag::warn_c2y_compat_octal_literal;
+    else if (LangOpts.CPlusPlus)
+      DiagId = diag::ext_cpp_octal_literal;
+    else
+      DiagId = diag::ext_octal_literal;
+    Diags.Report(TokLoc, DiagId);
+    ++s;
+    DigitsBegin = s;
+    radix = 8;
+    s = SkipOctalDigits(s);
+    if (s == ThisTokEnd) {
+      // Done
+    } else if ((isHexDigit(*s) && *s != 'e' && *s != 'E' && *s != '.') &&
+               !isValidUDSuffix(LangOpts, StringRef(s, ThisTokEnd - s))) {
+      auto InvalidDigitLoc = Lexer::AdvanceToTokenCharacter(
+          TokLoc, s - ThisTokBegin, SM, LangOpts);
+      Diags.Report(InvalidDigitLoc, diag::err_invalid_digit)
+          << StringRef(s, 1) << 1;
+      hadError = true;
+    }
+    // Other suffixes will be diagnosed by the caller.
+    return;
+  }
+
+  auto _ = llvm::make_scope_exit([&] {
+    // If we still have an octal value but we did not see an octal prefix,
+    // diagnose as being an obsolescent feature starting in C2y.
+    if (radix == 8 && LangOpts.C2y && !hadError && !IsSingleZero)
+      Diags.Report(TokLoc, diag::warn_unprefixed_octal_deprecated);
+  });
+
   // For now, the radix is set to 8. If we discover that we have a
   // floating point constant, the radix will change to 10. Octal floating
   // point constants are not permitted (only decimal and hexadecimal).
@@ -1389,6 +1466,8 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
   // anything, we leave the digit start where it was.
   if (s != PossibleNewDigitStart)
     DigitsBegin = PossibleNewDigitStart;
+  else
+    IsSingleZero = (s == ThisTokBegin + 1);
 
   if (s == ThisTokEnd)
     return; // Done, simple octal number like 01234
@@ -1482,7 +1561,8 @@ bool NumericLiteralParser::GetIntegerValue(llvm::APInt &Val) {
 }
 
 llvm::APFloat::opStatus
-NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
+NumericLiteralParser::GetFloatValue(llvm::APFloat &Result,
+                                    llvm::RoundingMode RM) {
   using llvm::APFloat;
 
   unsigned n = std::min(SuffixBegin - ThisTokBegin, ThisTokEnd - ThisTokBegin);
@@ -1496,15 +1576,16 @@ NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
     Str = Buffer;
   }
 
-  auto StatusOrErr =
-      Result.convertFromString(Str, APFloat::rmNearestTiesToEven);
+  auto StatusOrErr = Result.convertFromString(Str, RM);
   assert(StatusOrErr && "Invalid floating point representation");
   return !errorToBool(StatusOrErr.takeError()) ? *StatusOrErr
                                                : APFloat::opInvalidOp;
 }
 
-static inline bool IsExponentPart(char c) {
-  return c == 'p' || c == 'P' || c == 'e' || c == 'E';
+static inline bool IsExponentPart(char c, bool isHex) {
+  if (isHex)
+    return c == 'p' || c == 'P';
+  return c == 'e' || c == 'E';
 }
 
 bool NumericLiteralParser::GetFixedPointValue(llvm::APInt &StoreVal, unsigned Scale) {
@@ -1523,7 +1604,8 @@ bool NumericLiteralParser::GetFixedPointValue(llvm::APInt &StoreVal, unsigned Sc
   if (saw_exponent) {
     const char *Ptr = DigitsBegin;
 
-    while (!IsExponentPart(*Ptr)) ++Ptr;
+    while (!IsExponentPart(*Ptr, radix == 16))
+      ++Ptr;
     ExponentBegin = Ptr;
     ++Ptr;
     NegativeExponent = *Ptr == '-';

@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -259,7 +260,6 @@ void FileSystem::Resolve(FileSpec &file_spec) {
     file_spec.SetDirectory(path);
   else
     file_spec.SetPath(path);
-  file_spec.SetIsResolved(true);
 }
 
 template <typename T>
@@ -289,8 +289,7 @@ FileSystem::CreateWritableDataBuffer(const llvm::Twine &path, uint64_t size,
                                                             is_volatile);
   if (!buffer)
     return {};
-  return std::shared_ptr<WritableDataBufferLLVM>(
-      new WritableDataBufferLLVM(std::move(buffer)));
+  return std::make_shared<WritableDataBufferLLVM>(std::move(buffer));
 }
 
 std::shared_ptr<DataBuffer>
@@ -301,7 +300,7 @@ FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
       GetMemoryBuffer<llvm::MemoryBuffer>(path, size, offset, is_volatile);
   if (!buffer)
     return {};
-  return std::shared_ptr<DataBufferLLVM>(new DataBufferLLVM(std::move(buffer)));
+  return std::make_shared<DataBufferLLVM>(std::move(buffer));
 }
 
 std::shared_ptr<WritableDataBuffer>

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s -fexperimental-new-constant-interpreter
 
 // expected-no-diagnostics
 
@@ -11,7 +12,8 @@ enum gcc_type_class {
   function_type_class, method_type_class,
   record_type_class, union_type_class,
   array_type_class, string_type_class,
-  lang_type_class
+  lang_type_class, opaque_type_class,
+  bitint_type_class, vector_type_class
 };
 
 class cl {
@@ -42,6 +44,7 @@ void foo() {
   _Atomic double atomic_d;
   _Complex int complex_i;
   _Complex double complex_d;
+  _BitInt(32) bitint;
 
   int a1[__builtin_classify_type(f()) == void_type_class ? 1 : -1];
   int a2[__builtin_classify_type(i) == integer_type_class ? 1 : -1];
@@ -59,11 +62,12 @@ void foo() {
   int a14[__builtin_classify_type(arr) == pointer_type_class ? 1 : -1];
   int a15[__builtin_classify_type("abc") == pointer_type_class ? 1 : -1];
   int a16[__builtin_classify_type(block) == no_type_class ? 1 : -1];
-  int a17[__builtin_classify_type(vec) == no_type_class ? 1 : -1];
-  int a18[__builtin_classify_type(evec) == no_type_class ? 1 : -1];
+  int a17[__builtin_classify_type(vec) == vector_type_class ? 1 : -1];
+  int a18[__builtin_classify_type(evec) == vector_type_class ? 1 : -1];
   int a19[__builtin_classify_type(atomic_i) == integer_type_class ? 1 : -1];
   int a20[__builtin_classify_type(atomic_d) == real_type_class ? 1 : -1];
   int a21[__builtin_classify_type(complex_i) == complex_type_class ? 1 : -1];
   int a22[__builtin_classify_type(complex_d) == complex_type_class ? 1 : -1];
+  int a23[__builtin_classify_type(bitint) == bitint_type_class ? 1 : -1];
 }
 

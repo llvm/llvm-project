@@ -49,7 +49,7 @@ TEST(IncludeCleanerCheckTest, BasicUnusedIncludes) {
   std::vector<ClangTidyError> Errors;
   EXPECT_EQ(PostCode,
             runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
                 {{"bar.h", "#pragma once"}, {"vector", "#pragma once"}}));
 }
 
@@ -59,26 +59,31 @@ TEST(IncludeCleanerCheckTest, SuppressUnusedIncludes) {
 #include "foo/qux.h"
 #include "baz/qux/qux.h"
 #include <vector>
+#include <list>
 )";
 
   const char *PostCode = R"(
 #include "bar.h"
 #include "foo/qux.h"
 #include <vector>
+#include <list>
 )";
 
   std::vector<ClangTidyError> Errors;
   ClangTidyOptions Opts;
-  Opts.CheckOptions["IgnoreHeaders"] = llvm::StringRef{llvm::formatv(
-      "bar.h;{0};{1};vector",
-      llvm::Regex::escape(appendPathFileSystemIndependent({"foo", "qux.h"})),
-      llvm::Regex::escape(appendPathFileSystemIndependent({"baz", "qux"})))};
+  Opts.CheckOptions["test-check-0.IgnoreHeaders"] = llvm::StringRef{
+      llvm::formatv("bar.h;{0};{1};vector;<list>;",
+                    llvm::Regex::escape(
+                        appendPathFileSystemIndependent({"foo", "qux.h"})),
+                    llvm::Regex::escape(
+                        appendPathFileSystemIndependent({"baz", "qux"})))};
   EXPECT_EQ(
       PostCode,
       runCheckOnCode<IncludeCleanerCheck>(
-          PreCode, &Errors, "file.cpp", std::nullopt, Opts,
+          PreCode, &Errors, "file.cpp", {}, Opts,
           {{"bar.h", "#pragma once"},
            {"vector", "#pragma once"},
+           {"list", "#pragma once"},
            {appendPathFileSystemIndependent({"foo", "qux.h"}), "#pragma once"},
            {appendPathFileSystemIndependent({"baz", "qux", "qux.h"}),
             "#pragma once"}}));
@@ -100,14 +105,13 @@ int BazResult = baz();
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PostCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
-                {{"bar.h", R"(#pragma once
+  EXPECT_EQ(PostCode, runCheckOnCode<IncludeCleanerCheck>(
+                          PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                          {{"bar.h", R"(#pragma once
                               #include "baz.h"
                               int bar();
                            )"},
-                 {"baz.h", R"(#pragma once
+                           {"baz.h", R"(#pragma once
                               int baz();
                            )"}}));
 }
@@ -121,8 +125,8 @@ int BarResult2 = $diag2^bar();)");
 
   {
     std::vector<ClangTidyError> Errors;
-    runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp",
-                                        std::nullopt, ClangTidyOptions(),
+    runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp", {},
+                                        ClangTidyOptions(),
                                         {{"baz.h", R"(#pragma once
                               #include "bar.h"
                            )"},
@@ -137,9 +141,9 @@ int BarResult2 = $diag2^bar();)");
   {
     std::vector<ClangTidyError> Errors;
     ClangTidyOptions Opts;
-    Opts.CheckOptions.insert({"DeduplicateFindings", "false"});
-    runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp",
-                                        std::nullopt, Opts,
+    Opts.CheckOptions["test-check-0.DeduplicateFindings"] = "false";
+    runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp", {},
+                                        Opts,
                                         {{"baz.h", R"(#pragma once
                               #include "bar.h"
                            )"},
@@ -163,29 +167,36 @@ TEST(IncludeCleanerCheckTest, SuppressMissingIncludes) {
 int BarResult = bar();
 int BazResult = baz();
 int QuxResult = qux();
+int PrivResult = test();
+std::vector x;
 )";
 
   ClangTidyOptions Opts;
-  Opts.CheckOptions["IgnoreHeaders"] = llvm::StringRef{
-      "baz.h;" +
+  Opts.CheckOptions["test-check-0.IgnoreHeaders"] = llvm::StringRef{
+      "public.h;<vector>;baz.h;" +
       llvm::Regex::escape(appendPathFileSystemIndependent({"foo", "qux.h"}))};
   std::vector<ClangTidyError> Errors;
   EXPECT_EQ(PreCode, runCheckOnCode<IncludeCleanerCheck>(
-                         PreCode, &Errors, "file.cpp", std::nullopt, Opts,
+                         PreCode, &Errors, "file.cpp", {}, Opts,
                          {{"bar.h", R"(#pragma once
                               #include "baz.h"
                               #include "foo/qux.h"
+                              #include "private.h"
                               int bar();
+                              namespace std { struct vector {}; }
                            )"},
                           {"baz.h", R"(#pragma once
                               int baz();
+                           )"},
+                          {"private.h", R"(#pragma once
+                              // IWYU pragma: private, include "public.h"
+                              int test();
                            )"},
                           {appendPathFileSystemIndependent({"foo", "qux.h"}),
                            R"(#pragma once
                               int qux();
                            )"}}));
 }
-
 
 TEST(IncludeCleanerCheckTest, MultipleTimeMissingInclude) {
   const char *PreCode = R"(
@@ -205,14 +216,13 @@ int BazResult_1 = baz_1();
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PostCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
-                {{"bar.h", R"(#pragma once
+  EXPECT_EQ(PostCode, runCheckOnCode<IncludeCleanerCheck>(
+                          PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                          {{"bar.h", R"(#pragma once
                               #include "baz.h"
                               int bar();
                            )"},
-                 {"baz.h", R"(#pragma once
+                           {"baz.h", R"(#pragma once
                               int baz_0();
                               int baz_1();
                            )"}}));
@@ -234,13 +244,12 @@ std::vector Vec;
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PostCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
-                {{"string", R"(#pragma once
+  EXPECT_EQ(PostCode, runCheckOnCode<IncludeCleanerCheck>(
+                          PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                          {{"string", R"(#pragma once
                               namespace std { class string {}; }
                             )"},
-                 {"vector", R"(#pragma once
+                           {"vector", R"(#pragma once
                               #include <string>
                               namespace std { class vector {}; }
                             )"}}));
@@ -262,14 +271,13 @@ int FooBarResult = foobar();
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PostCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
-                {{"bar.h", R"(#pragma once
+  EXPECT_EQ(PostCode, runCheckOnCode<IncludeCleanerCheck>(
+                          PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                          {{"bar.h", R"(#pragma once
                               #include "private.h"
                               int bar();
                            )"},
-                 {"private.h", R"(#pragma once
+                           {"private.h", R"(#pragma once
                                 // IWYU pragma: private, include "public.h"
                                 int foobar();
                                )"}}));
@@ -285,11 +293,10 @@ DECLARE(myfunc) {
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PreCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
-                {{"foo.h",
-                  R"(#pragma once
+  EXPECT_EQ(PreCode, runCheckOnCode<IncludeCleanerCheck>(
+                         PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                         {{"foo.h",
+                           R"(#pragma once
                      #define DECLARE(X) void X()
                   )"}}));
 
@@ -301,13 +308,70 @@ DECLARE {
 }
 )";
 
-  EXPECT_EQ(PreCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
-                {{"foo.h",
-                  R"(#pragma once
+  EXPECT_EQ(PreCode, runCheckOnCode<IncludeCleanerCheck>(
+                         PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                         {{"foo.h",
+                           R"(#pragma once
                      #define DECLARE void myfunc()
                   )"}}));
+}
+
+TEST(IncludeCleanerCheckTest, UnusedIncludes) {
+  const char *PreCode = R"(
+#include "bar.h")";
+
+  {
+    std::vector<ClangTidyError> Errors;
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {},
+                                        ClangTidyOptions(),
+                                        {{"bar.h", "#pragma once"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(1U));
+    EXPECT_EQ(Errors.front().Message.Message,
+              "included header bar.h is not used directly");
+  }
+  {
+    std::vector<ClangTidyError> Errors;
+    ClangTidyOptions Opts;
+    Opts.CheckOptions["test-check-0.UnusedIncludes"] = "false";
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {}, Opts,
+                                        {{"bar.h", "#pragma once"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(0U));
+  }
+}
+
+TEST(IncludeCleanerCheckTest, MissingIncludes) {
+  const char *PreCode = R"(
+#include "baz.h" // IWYU pragma: keep
+
+int BarResult1 = bar();)";
+
+  {
+    std::vector<ClangTidyError> Errors;
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {},
+                                        ClangTidyOptions(),
+                                        {{"baz.h", R"(#pragma once
+                                          #include "bar.h"
+                                       )"},
+                                         {"bar.h", R"(#pragma once
+                                          int bar();
+                                       )"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(1U));
+    EXPECT_EQ(Errors.front().Message.Message,
+              "no header providing \"bar\" is directly included");
+  }
+  {
+    std::vector<ClangTidyError> Errors;
+    ClangTidyOptions Opts;
+    Opts.CheckOptions["test-check-0.MissingIncludes"] = "false";
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {}, Opts,
+                                        {{"baz.h", R"(#pragma once
+                                          #include "bar.h"
+                                       )"},
+                                         {"bar.h", R"(#pragma once
+                                          int bar();
+                                       )"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(0U));
+  }
 }
 
 } // namespace

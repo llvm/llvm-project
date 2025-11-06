@@ -37,44 +37,16 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
   if (llvm::Type *TransTy = CGM.getTargetCodeGenInfo().getOpenCLType(CGM, T))
     return TransTy;
 
-  switch (cast<BuiltinType>(T)->getKind()) {
-  default:
-    llvm_unreachable("Unexpected opencl builtin type!");
-    return nullptr;
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
-  case BuiltinType::Id:                                                        \
-    return getPointerType(T, "opencl." #ImgType "_" #Suffix "_t");
-#include "clang/Basic/OpenCLImageTypes.def"
-  case BuiltinType::OCLSampler:
+  if (T->isSamplerT())
     return getSamplerType(T);
-  case BuiltinType::OCLEvent:
-    return getPointerType(T, "opencl.event_t");
-  case BuiltinType::OCLClkEvent:
-    return getPointerType(T, "opencl.clk_event_t");
-  case BuiltinType::OCLQueue:
-    return getPointerType(T, "opencl.queue_t");
-  case BuiltinType::OCLReserveID:
-    return getPointerType(T, "opencl.reserve_id_t");
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext)                                      \
-  case BuiltinType::Id:                                                        \
-    return getPointerType(T, "opencl." #ExtType);
-#include "clang/Basic/OpenCLExtensionTypes.def"
-  }
+
+  return getPointerType(T);
 }
 
-llvm::PointerType *CGOpenCLRuntime::getPointerType(const Type *T,
-                                                   StringRef Name) {
-  auto I = CachedTys.find(Name);
-  if (I != CachedTys.end())
-    return I->second;
-
-  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+llvm::PointerType *CGOpenCLRuntime::getPointerType(const Type *T) {
   uint32_t AddrSpc = CGM.getContext().getTargetAddressSpace(
       CGM.getContext().getOpenCLTypeAddrSpace(T));
-  auto *PTy =
-      llvm::PointerType::get(llvm::StructType::create(Ctx, Name), AddrSpc);
-  CachedTys[Name] = PTy;
-  return PTy;
+  return llvm::PointerType::get(CGM.getLLVMContext(), AddrSpc);
 }
 
 llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {
@@ -90,10 +62,7 @@ llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {
 llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T, StringRef Name,
                                          llvm::Type *&PipeTy) {
   if (!PipeTy)
-    PipeTy = llvm::PointerType::get(llvm::StructType::create(
-      CGM.getLLVMContext(), Name),
-      CGM.getContext().getTargetAddressSpace(
-          CGM.getContext().getOpenCLTypeAddrSpace(T)));
+    PipeTy = getPointerType(T);
   return PipeTy;
 }
 
@@ -105,10 +74,7 @@ llvm::Type *CGOpenCLRuntime::getSamplerType(const Type *T) {
           CGM, CGM.getContext().OCLSamplerTy.getTypePtr()))
     SamplerTy = TransTy;
   else
-    SamplerTy = llvm::PointerType::get(
-        llvm::StructType::create(CGM.getLLVMContext(), "opencl.sampler_t"),
-        CGM.getContext().getTargetAddressSpace(
-            CGM.getContext().getOpenCLTypeAddrSpace(T)));
+    SamplerTy = getPointerType(T);
   return SamplerTy;
 }
 
@@ -164,10 +130,11 @@ void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
   assert(!EnqueuedBlockMap.contains(E) && "Block expression emitted twice");
   assert(isa<llvm::Function>(InvokeF) && "Invalid invoke function");
   assert(Block->getType()->isPointerTy() && "Invalid block literal type");
-  EnqueuedBlockMap[E].InvokeFunc = InvokeF;
-  EnqueuedBlockMap[E].BlockArg = Block;
-  EnqueuedBlockMap[E].BlockTy = BlockTy;
-  EnqueuedBlockMap[E].KernelHandle = nullptr;
+  EnqueuedBlockInfo &BlockInfo = EnqueuedBlockMap[E];
+  BlockInfo.InvokeFunc = InvokeF;
+  BlockInfo.BlockArg = Block;
+  BlockInfo.BlockTy = BlockTy;
+  BlockInfo.KernelHandle = nullptr;
 }
 
 llvm::Function *CGOpenCLRuntime::getInvokeFunction(const Expr *E) {
@@ -182,17 +149,19 @@ CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
   // to get the block literal.
   const BlockExpr *Block = getBlockExpr(E);
 
-  assert(EnqueuedBlockMap.contains(Block) && "Block expression not emitted");
+  auto It = EnqueuedBlockMap.find(Block);
+  assert(It != EnqueuedBlockMap.end() && "Block expression not emitted");
+  EnqueuedBlockInfo &BlockInfo = It->second;
 
   // Do not emit the block wrapper again if it has been emitted.
-  if (EnqueuedBlockMap[Block].KernelHandle) {
-    return EnqueuedBlockMap[Block];
+  if (BlockInfo.KernelHandle) {
+    return BlockInfo;
   }
 
   auto *F = CGF.getTargetHooks().createEnqueuedBlockKernel(
-      CGF, EnqueuedBlockMap[Block].InvokeFunc, EnqueuedBlockMap[Block].BlockTy);
+      CGF, BlockInfo.InvokeFunc, BlockInfo.BlockTy);
 
   // The common part of the post-processing of the kernel goes here.
-  EnqueuedBlockMap[Block].KernelHandle = F;
-  return EnqueuedBlockMap[Block];
+  BlockInfo.KernelHandle = F;
+  return BlockInfo;
 }

@@ -14,7 +14,10 @@
 #ifndef LLVM_LIB_TARGET_X86_X86_H
 #define LLVM_LIB_TARGET_X86_X86_H
 
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
@@ -131,9 +134,9 @@ FunctionPass *createX86FixupBWInsts();
 /// to another, when profitable.
 FunctionPass *createX86DomainReassignmentPass();
 
-/// This pass replaces EVEX encoded of AVX-512 instructiosn by VEX
-/// encoding when possible in order to reduce code size.
-FunctionPass *createX86EvexToVexInsts();
+/// This pass compress instructions from EVEX space to legacy/VEX/EVEX space when
+/// possible in order to reduce code size or facilitate HW decoding.
+FunctionPass *createX86CompressEVEXPass();
 
 /// This pass creates the thunks for the retpoline feature.
 FunctionPass *createX86IndirectThunksPass();
@@ -142,7 +145,7 @@ FunctionPass *createX86IndirectThunksPass();
 FunctionPass *createX86ReturnThunksPass();
 
 /// This pass ensures instructions featuring a memory operand
-/// have distinctive <LineNumber, Discriminator> (with respect to eachother)
+/// have distinctive <LineNumber, Discriminator> (with respect to each other)
 FunctionPass *createX86DiscriminateMemOpsPass();
 
 /// This pass applies profiling information to insert cache prefetches.
@@ -155,23 +158,66 @@ FunctionPass *createX86InsertX87waitPass();
 /// This pass optimizes arithmetic based on knowledge that is only used by
 /// a reduction sequence and is therefore safe to reassociate in interesting
 /// ways.
-FunctionPass *createX86PartialReductionPass();
+class X86PartialReductionPass : public PassInfoMixin<X86PartialReductionPass> {
+private:
+  const X86TargetMachine *TM;
+
+public:
+  X86PartialReductionPass(const X86TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+FunctionPass *createX86PartialReductionLegacyPass();
+
+/// // Analyzes and emits pseudos to support Win x64 Unwind V2.
+FunctionPass *createX86WinEHUnwindV2Pass();
+
+/// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
+/// or split the data to two <128 x i32>.
+class X86LowerAMXTypePass : public PassInfoMixin<X86LowerAMXTypePass> {
+private:
+  const TargetMachine *TM;
+
+public:
+  X86LowerAMXTypePass(const TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86LowerAMXTypeLegacyPass();
+
+/// The pass transforms amx intrinsics to scalar operation if the function has
+/// optnone attribute or it is O0.
+class X86LowerAMXIntrinsicsPass
+    : public PassInfoMixin<X86LowerAMXIntrinsicsPass> {
+private:
+  const TargetMachine *TM;
+
+public:
+  X86LowerAMXIntrinsicsPass(const TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86LowerAMXIntrinsicsLegacyPass();
 
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
-                                                  X86Subtarget &,
-                                                  X86RegisterBankInfo &);
+                                                  const X86Subtarget &,
+                                                  const X86RegisterBankInfo &);
 
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
 FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
 FunctionPass *createX86ArgumentStackSlotPass();
+FunctionPass *createX86SuppressAPXForRelocationPass();
 
-void initializeEvexToVexInstPassPass(PassRegistry &);
+void initializeCompressEVEXPassPass(PassRegistry &);
 void initializeFPSPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAPassPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
+void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningPassPass(PassRegistry &);
 void initializeX86FixupVectorConstantsPassPass(PassRegistry &);
 void initializeWinEHStatePassPass(PassRegistry &);
@@ -179,8 +225,9 @@ void initializeX86AvoidSFBPassPass(PassRegistry &);
 void initializeX86AvoidTrailingCallPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
-void initializeX86DAGToDAGISelPass(PassRegistry &);
+void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
+void initializeX86DynAllocaExpanderPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
@@ -193,13 +240,14 @@ void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
 void initializeX86LowerTileCopyPass(PassRegistry &);
 void initializeX86OptimizeLEAPassPass(PassRegistry &);
-void initializeX86PartialReductionPass(PassRegistry &);
-void initializeX86PreAMXConfigPassPass(PassRegistry &);
+void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigPass(PassRegistry &);
 void initializeX86ReturnThunksPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
 void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
 void initializeX86TileConfigPass(PassRegistry &);
+void initializeX86SuppressAPXForRelocationPassPass(PassRegistry &);
+void initializeX86WinEHUnwindV2Pass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

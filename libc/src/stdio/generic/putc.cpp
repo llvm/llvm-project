@@ -9,15 +9,17 @@
 #include "src/stdio/putc.h"
 #include "src/__support/File/file.h"
 
-#include "src/errno/libc_errno.h"
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
+#include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, putc, (int c, ::FILE *stream)) {
   unsigned char uc = static_cast<unsigned char>(c);
 
-  auto result = reinterpret_cast<__llvm_libc::File *>(stream)->write(&uc, 1);
+  auto result = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->write(&uc, 1);
   if (result.has_error())
     libc_errno = result.error;
   size_t written = result.value;
@@ -29,4 +31,4 @@ LLVM_LIBC_FUNCTION(int, putc, (int c, ::FILE *stream)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

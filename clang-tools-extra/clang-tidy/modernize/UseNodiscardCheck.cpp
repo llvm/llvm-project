@@ -1,4 +1,4 @@
-//===--- UseNodiscardCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ static bool doesNoDiscardMacroExist(ASTContext &Context,
                                     const llvm::StringRef &MacroId) {
   // Don't check for the Macro existence if we are using an attribute
   // either a C++17 standard attribute or pre C++17 syntax
-  if (MacroId.startswith("[[") || MacroId.startswith("__attribute__"))
+  if (MacroId.starts_with("[[") || MacroId.starts_with("__attribute__"))
     return true;
 
   // Otherwise look up the macro name in the context to see if its defined.

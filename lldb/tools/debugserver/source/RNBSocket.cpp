@@ -120,8 +120,13 @@ rnb_err_t RNBSocket::Listen(const char *listen_host, uint16_t port,
   while (!accept_connection) {
 
     struct kevent event_list[4];
-    int num_events =
-        kevent(queue_id, events.data(), events.size(), event_list, 4, NULL);
+    int num_events;
+    do {
+      errno = 0;
+      num_events =
+          kevent(queue_id, events.data(), events.size(), event_list, 4, NULL);
+    } while (num_events == -1 &&
+             (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR));
 
     if (num_events < 0) {
       err.SetError(errno, DNBError::MachKernel);
@@ -291,7 +296,12 @@ rnb_err_t RNBSocket::Read(std::string &p) {
   // DNBLogThreadedIf(LOG_RNB_COMM, "%8u RNBSocket::%s calling read()",
   // (uint32_t)m_timer.ElapsedMicroSeconds(true), __FUNCTION__);
   DNBError err;
-  ssize_t bytesread = read(m_fd, buf, sizeof(buf));
+  ssize_t bytesread;
+  do {
+    errno = 0;
+    bytesread = read(m_fd, buf, sizeof(buf));
+  } while (bytesread == -1 &&
+           (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR));
   if (bytesread <= 0)
     err.SetError(errno, DNBError::POSIX);
   else

@@ -9,12 +9,10 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @PR1101(i32 %N) {
 ; CHECK-LABEL: 'PR1101'
 ; CHECK-NEXT:  Determining loop execution counts for: @PR1101
-; CHECK-NEXT:  Loop %bb3: backedge-taken count is 10000
-; CHECK-NEXT:  Loop %bb3: constant max backedge-taken count is 10000
-; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is 10000
-; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is 10000
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb3: Trip multiple is 10001
+; CHECK-NEXT:  Loop %bb3: backedge-taken count is i32 10000
+; CHECK-NEXT:  Loop %bb3: constant max backedge-taken count is i32 10000
+; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is i32 10000
+; CHECK-NEXT:  Loop %bb3: Trip multiple is 10001
 ;
 entry:
   br label %bb3
@@ -40,12 +38,10 @@ return:         ; preds = %bb5
 define i32 @PR22795() {
 ; CHECK-LABEL: 'PR22795'
 ; CHECK-NEXT:  Determining loop execution counts for: @PR22795
-; CHECK-NEXT:  Loop %preheader: backedge-taken count is 7
-; CHECK-NEXT:  Loop %preheader: constant max backedge-taken count is 7
-; CHECK-NEXT:  Loop %preheader: symbolic max backedge-taken count is 7
-; CHECK-NEXT:  Loop %preheader: Predicated backedge-taken count is 7
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %preheader: Trip multiple is 8
+; CHECK-NEXT:  Loop %preheader: backedge-taken count is i64 7
+; CHECK-NEXT:  Loop %preheader: constant max backedge-taken count is i64 7
+; CHECK-NEXT:  Loop %preheader: symbolic max backedge-taken count is i64 7
+; CHECK-NEXT:  Loop %preheader: Trip multiple is 8
 ;
 entry:
   %bins = alloca [16 x i64], align 16
@@ -103,12 +99,10 @@ declare void @may_exit() nounwind
 define void @pr28012(i32 %n) {
 ; CHECK-LABEL: 'pr28012'
 ; CHECK-NEXT:  Determining loop execution counts for: @pr28012
-; CHECK-NEXT:  Loop %loop: backedge-taken count is -1431655751
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1431655751
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is -1431655751
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is -1431655751
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 2863311546
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 -1431655751
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1431655751
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 -1431655751
+; CHECK-NEXT:  Loop %loop: Trip multiple is 2863311546
 ;
 entry:
   br label %loop
@@ -121,5 +115,99 @@ loop:
   br i1 %becond, label %loop, label %leave
 
 leave:
+  ret void
+}
+
+define void @non_zero_from_loop_guard(i16 %n) {
+; CHECK-LABEL: 'non_zero_from_loop_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @non_zero_from_loop_guard
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (%n /u 2))<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 32766
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (%n /u 2))<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %shr = lshr i16 %n, 1
+  %precond = icmp ult i16 %n, 2
+  br i1 %precond, label %exit, label %loop
+
+loop:
+  %iv = phi i16 [ %inc, %loop ], [ 0, %entry ]
+  %inc = add nuw nsw i16 %iv, 1
+  %cmp = icmp ult i16 %inc, %shr
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @dual_sext_ne_with_slt_guard(i8 %s, i8 %n) {
+; CHECK-LABEL: 'dual_sext_ne_with_slt_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @dual_sext_ne_with_slt_guard
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (sext i8 %n to i64) + (-1 * (sext i8 %s to i64))<nsw>)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (sext i8 %n to i64) + (-1 * (sext i8 %s to i64))<nsw>)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %cmp4 = icmp slt i8 %s, %n
+  br i1 %cmp4, label %for.body.preheader, label %exit
+
+for.body.preheader:
+  %0 = sext i8 %s to i64
+  %wide.trip.count = sext i8 %n to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %0, %for.body.preheader ], [ %iv.next, %for.body ]
+  %iv.next = add nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @dual_sext_ne_with_nsw_inc(i8 %s, i64 %n) {
+; CHECK-LABEL: 'dual_sext_ne_with_nsw_inc'
+; CHECK-NEXT:  Determining loop execution counts for: @dual_sext_ne_with_nsw_inc
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * (sext i8 %s to i64))<nsw> + %n)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * (sext i8 %s to i64))<nsw> + %n)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %0 = sext i8 %s to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %0, %entry ], [ %iv.next, %for.body ]
+  %iv.next = add nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @dual_sext_ne_with_nuw_inc(i8 %s, i64 %n) {
+; CHECK-LABEL: 'dual_sext_ne_with_nuw_inc'
+; CHECK-NEXT:  Determining loop execution counts for: @dual_sext_ne_with_nuw_inc
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * (sext i8 %s to i64))<nsw> + %n)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * (sext i8 %s to i64))<nsw> + %n)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %0 = sext i8 %s to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %0, %entry ], [ %iv.next, %for.body ]
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
   ret void
 }

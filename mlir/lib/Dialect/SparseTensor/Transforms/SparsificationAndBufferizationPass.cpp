@@ -20,10 +20,10 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -39,7 +39,7 @@ namespace sparse_tensor {
 /// Return `true` if one of the given types is a sparse tensor type.
 static bool containsSparseTensor(TypeRange types) {
   for (Type t : types)
-    if (getSparseTensorEncoding(t))
+    if (isa<TensorType>(t) && getSparseTensorEncoding(t))
       return true;
   return false;
 }
@@ -60,44 +60,63 @@ class SparsificationAndBufferizationPass
     : public impl::SparsificationAndBufferizationBase<
           SparsificationAndBufferizationPass> {
 public:
+  // Private pass options only.
   SparsificationAndBufferizationPass(
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
       const SparsificationOptions &sparsificationOptions,
-      const SparseTensorConversionOptions &sparseTensorConversionOptions,
       bool createSparseDeallocs, bool enableRuntimeLibrary,
-      bool enableBufferInitialization, unsigned vectorLength,
-      bool enableVLAVectorization, bool enableSIMDIndex32)
+      bool enableBufferInitialization)
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
-        sparseTensorConversionOptions(sparseTensorConversionOptions),
         createSparseDeallocs(createSparseDeallocs),
         enableRuntimeLibrary(enableRuntimeLibrary),
-        enableBufferInitialization(enableBufferInitialization),
-        vectorLength(vectorLength),
-        enableVLAVectorization(enableVLAVectorization),
-        enableSIMDIndex32(enableSIMDIndex32) {}
+        enableBufferInitialization(enableBufferInitialization) {}
+  // Private pass options and visible pass options.
+  SparsificationAndBufferizationPass(
+      const bufferization::OneShotBufferizationOptions &bufferizationOptions,
+      const SparsificationOptions &sparsificationOptions,
+      bool createSparseDeallocs, bool enableRuntimeLibrary,
+      bool enableBufferInitialization, unsigned vl, bool vla, bool index32,
+      bool gpu, SparseEmitStrategy emitStrategy,
+      SparseParallelizationStrategy parallelizationStrategy)
+      : bufferizationOptions(bufferizationOptions),
+        sparsificationOptions(sparsificationOptions),
+        createSparseDeallocs(createSparseDeallocs),
+        enableRuntimeLibrary(enableRuntimeLibrary),
+        enableBufferInitialization(enableBufferInitialization) {
+    // Set the visible pass options explicitly.
+    vectorLength = vl;
+    enableVLAVectorization = vla;
+    enableSIMDIndex32 = index32;
+    enableGPULibgen = gpu;
+    sparseEmitStrategy = emitStrategy;
+    parallelization = parallelizationStrategy;
+  }
 
   /// Bufferize all dense ops. This assumes that no further analysis is needed
   /// and that all required buffer copies were already inserted by
   /// `insertTensorCopies` in the form of `bufferization.alloc_tensor` ops.
   LogicalResult runDenseBufferization() {
-    bufferization::OpFilter denseOpFilter;
-    denseOpFilter.allowOperation([&](Operation *op) {
+    bufferization::OneShotBufferizationOptions updatedOptions =
+        bufferizationOptions;
+    // Skip all sparse ops.
+    updatedOptions.opFilter.denyOperation([&](Operation *op) {
       if (containsSparseTensor(TypeRange(op->getResults())) ||
           containsSparseTensor(TypeRange(op->getOperands())))
-        return false;
+        return true;
       if (auto funcOp = dyn_cast<func::FuncOp>(op)) {
         FunctionType funcType = funcOp.getFunctionType();
         if (containsSparseTensor(funcType.getInputs()) ||
             containsSparseTensor(funcType.getResults()))
-          return false;
+          return true;
       }
-      return true;
+      return false;
     });
 
-    if (failed(bufferization::bufferizeOp(getOperation(), bufferizationOptions,
-                                          /*copyBeforeWrite=*/false,
-                                          &denseOpFilter)))
+    bufferization::BufferizationState bufferizationState;
+
+    if (failed(bufferization::bufferizeModuleOp(getOperation(), updatedOptions,
+                                                bufferizationState)))
       return failure();
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
@@ -105,8 +124,14 @@ public:
   }
 
   void runOnOperation() override {
+    // Overrides the default emit strategy using user-provided value.
+    this->sparsificationOptions.sparseEmitStrategy = sparseEmitStrategy;
+
+    // Overrides the default parallelization strategy using user-provided value.
+    this->sparsificationOptions.parallelizationStrategy = parallelization;
+
+    // Run enabling transformations.
     {
-      // Run enabling transformations.
       OpPassManager pm("builtin.module");
       pm.addPass(createPreSparsificationRewritePass());
       pm.addNestedPass<func::FuncOp>(
@@ -125,11 +150,13 @@ public:
     // invalidate the results of the analysis. From now on, only small and
     // localized rewrites are allowed, such as replacing a tensor op with its
     // memref equivalent.
-    if (failed(bufferization::insertTensorCopies(getOperation(),
-                                                 bufferizationOptions)))
+    bufferization::BufferizationState bufferizationState;
+
+    if (failed(bufferization::insertTensorCopies(
+            getOperation(), bufferizationOptions, bufferizationState)))
       return signalPassFailure();
 
-    // `testAnalysisOnly` is a debug/testing flag. If set, the results of
+    // Option `testAnalysisOnly` is a debug/testing flag. If set, the results of
     // OneShotAnalysis are added to the IR via attributes. In that case, do not
     // continue with the remaining pipeline.
     if (bufferizationOptions.testAnalysisOnly)
@@ -140,21 +167,33 @@ public:
     // of `bufferization.alloc_tensor` ops.
     {
       OpPassManager pm("builtin.module");
+      if (enableGPULibgen)
+        pm.addPass(createSparseGPUCodegenPass(0, enableRuntimeLibrary));
+      pm.addPass(createSparseReinterpretMapPass(ReinterpretMapScope::kAll));
       pm.addPass(createSparsificationPass(sparsificationOptions));
-      pm.addPass(createPostSparsificationRewritePass(enableRuntimeLibrary));
+      if (sparsificationOptions.sparseEmitStrategy ==
+          SparseEmitStrategy::kSparseIterator) {
+        pm.addNestedPass<func::FuncOp>(createSparseSpaceCollapsePass());
+        pm.addNestedPass<func::FuncOp>(createLowerSparseIterationToSCFPass());
+      }
+
+      pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
+      pm.addPass(createLowerSparseOpsToForeachPass(enableRuntimeLibrary,
+                                                   /*enableConvert=*/true));
+      pm.addPass(
+          createSparseReinterpretMapPass(ReinterpretMapScope::kExceptGeneric));
+      pm.addNestedPass<func::FuncOp>(createLowerForeachToSCFPass());
+      pm.addPass(mlir::createLoopInvariantCodeMotionPass());
       if (vectorLength > 0) {
-        pm.addPass(mlir::createLoopInvariantCodeMotionPass());
         pm.addPass(createSparseVectorizationPass(
             vectorLength, enableVLAVectorization, enableSIMDIndex32));
       }
       if (enableRuntimeLibrary) {
-        pm.addPass(
-            createSparseTensorConversionPass(sparseTensorConversionOptions));
+        pm.addPass(createSparseTensorConversionPass());
       } else {
         pm.addPass(createSparseTensorCodegenPass(createSparseDeallocs,
                                                  enableBufferInitialization));
         pm.addPass(createSparseBufferRewritePass(enableBufferInitialization));
-        pm.addPass(createStorageSpecifierToLLVMPass());
       }
       if (failed(runPipeline(pm, getOperation())))
         return signalPassFailure();
@@ -168,13 +207,9 @@ public:
 private:
   bufferization::OneShotBufferizationOptions bufferizationOptions;
   SparsificationOptions sparsificationOptions;
-  SparseTensorConversionOptions sparseTensorConversionOptions;
   bool createSparseDeallocs;
   bool enableRuntimeLibrary;
   bool enableBufferInitialization;
-  unsigned vectorLength;
-  bool enableVLAVectorization;
-  bool enableSIMDIndex32;
 };
 
 } // namespace sparse_tensor
@@ -186,43 +221,47 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
   OneShotBufferizationOptions options;
   options.bufferizeFunctionBoundaries = true;
   options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
-  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
+  options.unknownTypeConverterFn = [](TensorType tensorType,
+                                      Attribute memorySpace,
                                       const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        cast<TensorType>(value.getType()), memorySpace);
+    return getMemRefTypeWithStaticIdentityLayout(tensorType, memorySpace);
   };
   if (analysisOnly) {
     options.testAnalysisOnly = true;
     options.printConflicts = true;
   }
+  // Since this mini-pipeline may be used in alternative pipelines (viz.
+  // different from the default "sparsifier" pipeline) where unknown ops
+  // are handled by alternative bufferization methods that are downstream
+  // of this mini-pipeline, we allow unknown ops by default (failure to
+  // bufferize is eventually apparent by failing to convert to LLVM IR).
+  options.allowUnknownOps = true;
   return options;
 }
 
 std::unique_ptr<mlir::Pass> mlir::createSparsificationAndBufferizationPass() {
   SparsificationOptions sparseOptions;
-  SparseTensorConversionOptions convOptions;
-  return createSparsificationAndBufferizationPass(
+  return std::make_unique<
+      mlir::sparse_tensor::SparsificationAndBufferizationPass>(
       getBufferizationOptionsForSparsification(/*analysisOnly=*/false),
-      sparseOptions, convOptions,
+      sparseOptions,
       /*createSparseDeallocs=*/false,
       /*enableRuntimeLibrary=*/false,
-      /*enableBufferInitialization=*/false,
-      /*vectorLength=*/0,
-      /*enableVLAVectorization=*/false,
-      /*enableSIMDIndex32=*/false);
+      /*enableBufferInitialization=*/false);
 }
 
 std::unique_ptr<mlir::Pass> mlir::createSparsificationAndBufferizationPass(
     const bufferization::OneShotBufferizationOptions &bufferizationOptions,
     const SparsificationOptions &sparsificationOptions,
-    const SparseTensorConversionOptions &sparseTensorConversionOptions,
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
-    bool enableVLAVectorization, bool enableSIMDIndex32) {
+    bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen,
+    SparseEmitStrategy emitStrategy,
+    SparseParallelizationStrategy parallelizationStrategy) {
   return std::make_unique<
       mlir::sparse_tensor::SparsificationAndBufferizationPass>(
-      bufferizationOptions, sparsificationOptions,
-      sparseTensorConversionOptions, createSparseDeallocs, enableRuntimeLibrary,
-      enableBufferInitialization, vectorLength, enableVLAVectorization,
-      enableSIMDIndex32);
+      bufferizationOptions, sparsificationOptions, createSparseDeallocs,
+      enableRuntimeLibrary, enableBufferInitialization, vectorLength,
+      enableVLAVectorization, enableSIMDIndex32, enableGPULibgen, emitStrategy,
+      parallelizationStrategy);
 }

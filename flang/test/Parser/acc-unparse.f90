@@ -9,13 +9,13 @@ program bug47659
     !$acc parallel loop
     do j = 1, 10
       if (j == 2) then
-        exit label1
+        stop 1
       end if
     end do
   end do label1
 end program
 
-!CHECK-LABEL: PROGRAM bug47659
+!CHECK-LABEL: PROGRAM BUG47659
 !CHECK: !$ACC PARALLEL LOOP
 
 

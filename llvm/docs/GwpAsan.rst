@@ -30,14 +30,18 @@ GWP-ASan vs. ASan
 Unlike `AddressSanitizer <https://clang.llvm.org/docs/AddressSanitizer.html>`_,
 GWP-ASan does not induce a significant performance overhead. ASan often requires
 the use of dedicated canaries to be viable in production environments, and as
-such is often impractical.
+such is often impractical. Moreover, ASan's runtime is not developed with
+security consideration in mind, making compiled binaries more vulnerable to
+exploits.
 
-GWP-ASan is only capable of finding a subset of the memory issues detected by
-ASan. Furthermore, GWP-ASan's bug detection capabilities are only probabilistic.
-As such, we recommend using ASan over GWP-ASan in testing, as well as anywhere
-else that guaranteed error detection is more valuable than the 2x execution
-slowdown/binary size bloat. For the majority of production environments, this
-impact is too high, and GWP-ASan proves extremely useful.
+However, GWP-ASan is only capable of finding a subset of the memory issues
+detected by ASan. Furthermore, GWP-ASan's bug detection capabilities are
+only probabilistic. As such, we recommend using ASan over GWP-ASan in testing,
+as well as anywhere else that guaranteed error detection is more valuable than
+the 2x execution slowdown/binary size bloat. For the majority of production
+environments, this impact is too high and security is indispensable, so GWP-ASan
+proves extremely useful.
+
 
 Design
 ======
@@ -256,6 +260,7 @@ attempt to symbolize each possible line, falling back to the previous output if
 anything fails. This results in the following output:
 
 .. code:: console
+
 
   $ cat my_gwp_asan_error.txt | symbolize.sh
   |

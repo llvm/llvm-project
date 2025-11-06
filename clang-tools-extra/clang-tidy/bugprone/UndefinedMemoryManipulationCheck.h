@@ -1,4 +1,4 @@
-//===--- UndefinedMemoryManipulationCheck.h - clang-tidy---------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,11 +14,11 @@
 namespace clang::tidy::bugprone {
 
 /// Finds calls of memory manipulation functions ``memset()``, ``memcpy()`` and
-/// ``memmove()`` on not TriviallyCopyable objects resulting in undefined
+/// ``memmove()`` on non-TriviallyCopyable objects resulting in undefined
 /// behavior.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/undefined-memory-manipulation.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/undefined-memory-manipulation.html
 class UndefinedMemoryManipulationCheck : public ClangTidyCheck {
 public:
   UndefinedMemoryManipulationCheck(StringRef Name, ClangTidyContext *Context)

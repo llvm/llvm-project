@@ -58,8 +58,8 @@ using NonSimpleCommonRandomAccessSized = NonSimpleCommon;
 static_assert(std::ranges::common_range<Common<true>>);
 static_assert(std::ranges::random_access_range<SimpleCommon>);
 static_assert(std::ranges::sized_range<SimpleCommon>);
-LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleCommon>);
-LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NonSimpleCommon>);
+static_assert(simple_view<SimpleCommon>);
+static_assert(!simple_view<NonSimpleCommon>);
 
 template <bool Simple>
 struct NonCommon : TupleBufferView {
@@ -86,8 +86,8 @@ using NonSimpleNonCommon = NonCommon<false>;
 static_assert(!std::ranges::common_range<SimpleNonCommon>);
 static_assert(std::ranges::random_access_range<SimpleNonCommon>);
 static_assert(!std::ranges::sized_range<SimpleNonCommon>);
-LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleNonCommon>);
-LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NonSimpleNonCommon>);
+static_assert(simple_view<SimpleNonCommon>);
+static_assert(!simple_view<NonSimpleNonCommon>);
 
 template <class Derived>
 struct IterBase {

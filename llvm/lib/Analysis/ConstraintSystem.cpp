@@ -8,10 +8,10 @@
 
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <string>
 
@@ -29,7 +29,6 @@ bool ConstraintSystem::eliminateUsingFM() {
   assert(!Constraints.empty() &&
          "should only be called for non-empty constraint systems");
 
-  uint32_t NewGCD = 1;
   unsigned LastIdx = NumVariables - 1;
 
   // First, either remove the variable in place if it is 0 or add the row to
@@ -53,9 +52,12 @@ bool ConstraintSystem::eliminateUsingFM() {
   for (unsigned R1 = 0; R1 < NumRemainingConstraints; R1++) {
     // FIXME do not use copy
     for (unsigned R2 = R1 + 1; R2 < NumRemainingConstraints; R2++) {
-      if (R1 == R2)
-        continue;
-
+      // Examples of constraints stored as {Constant, Coeff_x, Coeff_y}
+      // R1:  0 >=  1 * x + (-2) * y  => { 0,  1, -2 }
+      // R2:  3 >=  2 * x +  3 * y    => { 3,  2,  3 }
+      // LastIdx = 2 (tracking coefficient of y)
+      // UpperLast: 3
+      // LowerLast: -2
       int64_t UpperLast = getLastCoefficient(RemainingRows[R2], LastIdx);
       int64_t LowerLast = getLastCoefficient(RemainingRows[R1], LastIdx);
       assert(
@@ -77,10 +79,13 @@ bool ConstraintSystem::eliminateUsingFM() {
       unsigned IdxLower = 0;
       auto &LowerRow = RemainingRows[LowerR];
       auto &UpperRow = RemainingRows[UpperR];
+      // Update constant and coefficients of both constraints.
+      // Stops until every coefficient is updated or overflows.
       while (true) {
         if (IdxUpper >= UpperRow.size() || IdxLower >= LowerRow.size())
           break;
         int64_t M1, M2, N;
+        // Starts with index 0 and updates every coefficients.
         int64_t UpperV = 0;
         int64_t LowerV = 0;
         uint16_t CurrentId = std::numeric_limits<uint16_t>::max();
@@ -96,24 +101,35 @@ bool ConstraintSystem::eliminateUsingFM() {
           IdxUpper++;
         }
 
-        if (MulOverflow(UpperV, ((-1) * LowerLast / GCD), M1))
+        if (MulOverflow(UpperV, -1 * LowerLast, M1))
           return false;
         if (IdxLower < LowerRow.size() && LowerRow[IdxLower].Id == CurrentId) {
           LowerV = LowerRow[IdxLower].Coefficient;
           IdxLower++;
         }
 
-        if (MulOverflow(LowerV, (UpperLast / GCD), M2))
+        if (MulOverflow(LowerV, UpperLast, M2))
           return false;
+        // This algorithm is a variant of sparse Gaussian elimination.
+        //
+        // The new coefficient for CurrentId is
+        // N = UpperV * (-1) * LowerLast + LowerV * UpperLast
+        //
+        // UpperRow: { 3,  2,  3 }, LowerLast: -2
+        // LowerRow: { 0,  1, -2 }, UpperLast: 3
+        //
+        // After multiplication:
+        // UpperRow: { 6, 4, 6 }
+        // LowerRow: { 0, 3, -6 }
+        //
+        // Eliminates y after addition:
+        // N: { 6, 7, 0 } => 6 >= 7 * x
         if (AddOverflow(M1, M2, N))
           return false;
+        // Skip variable that is completely eliminated.
         if (N == 0)
           continue;
         NR.emplace_back(N, CurrentId);
-
-        NewGCD =
-            APIntOps::GreatestCommonDivisor({32, (uint32_t)N}, {32, NewGCD})
-                .getZExtValue();
       }
       if (NR.empty())
         continue;
@@ -124,7 +140,6 @@ bool ConstraintSystem::eliminateUsingFM() {
     }
   }
   NumVariables -= 1;
-  GCD = NewGCD;
 
   return true;
 }
@@ -169,15 +184,15 @@ void ConstraintSystem::dump() const {
   SmallVector<std::string> Names = getVarNamesList();
   for (const auto &Row : Constraints) {
     SmallVector<std::string, 16> Parts;
-    for (unsigned I = 0, S = Row.size(); I < S; ++I) {
-      if (Row[I].Id >= NumVariables)
+    for (const Entry &E : Row) {
+      if (E.Id >= NumVariables)
         break;
-      if (Row[I].Id == 0)
+      if (E.Id == 0)
         continue;
       std::string Coefficient;
-      if (Row[I].Coefficient != 1)
-        Coefficient = std::to_string(Row[I].Coefficient) + " * ";
-      Parts.push_back(Coefficient + Names[Row[I].Id - 1]);
+      if (E.Coefficient != 1)
+        Coefficient = std::to_string(E.Coefficient) + " * ";
+      Parts.push_back(Coefficient + Names[E.Id - 1]);
     }
     // assert(!Parts.empty() && "need to have at least some parts");
     int64_t ConstPart = 0;

@@ -104,7 +104,7 @@ class HelpCommandTestCase(TestBase):
     def test_help_image_list_shows_positional_args(self):
         """Command 'help image list' should describe positional args."""
         # 'image' is an alias for 'target modules'.
-        self.expect("help image list", substrs=["<shlib-name> [...]"])
+        self.expect("help image list", substrs=["<module> [...]"])
 
     @no_debug_info_test
     def test_help_target_variable_syntax(self):
@@ -349,13 +349,13 @@ class HelpCommandTestCase(TestBase):
         self.expect(
             "help memory read",
             patterns=[
-                "--show-tags\n\s+Include memory tags in output "
-                "\(does not apply to binary output\)."
+                "--show-tags\n\\s+Include memory tags in output "
+                "\\(does not apply to binary output\\)."
             ],
         )
         self.expect(
             "help memory find",
-            patterns=["--show-tags\n\s+Include memory tags in output."],
+            patterns=["--show-tags\n\\s+Include memory tags in output."],
         )
 
     @no_debug_info_test

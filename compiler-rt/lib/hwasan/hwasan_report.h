@@ -26,7 +26,7 @@ void ReportTagMismatch(StackTrace *stack, uptr addr, uptr access_size,
 void ReportInvalidFree(StackTrace *stack, uptr addr);
 void ReportTailOverwritten(StackTrace *stack, uptr addr, uptr orig_size,
                            const u8 *expected);
-void ReportRegisters(uptr *registers_frame, uptr pc);
+void ReportRegisters(const uptr *registers_frame, uptr pc);
 void ReportAtExitStatistics();
 
 

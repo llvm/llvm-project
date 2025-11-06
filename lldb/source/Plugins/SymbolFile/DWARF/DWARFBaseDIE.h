@@ -15,6 +15,8 @@
 #include "llvm/Support/Error.h"
 #include <optional>
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DIERef;
 class DWARFASTParser;
 class DWARFAttributes;
@@ -22,9 +24,11 @@ class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
+class DWARFFormValue;
 
 class DWARFBaseDIE {
 public:
+  using DWARFFormValue = dwarf::DWARFFormValue;
   DWARFBaseDIE() = default;
 
   DWARFBaseDIE(DWARFUnit *cu, DWARFDebugInfoEntry *die)
@@ -78,12 +82,10 @@ public:
   // correct section data.
   //
   // Clients must validate that this object is valid before calling this.
-  const lldb_private::DWARFDataExtractor &GetData() const;
+  const DWARFDataExtractor &GetData() const;
 
   // Accessing information about a DIE
   dw_tag_t Tag() const;
-
-  const char *GetTagAsCString() const;
 
   dw_offset_t GetOffset() const;
 
@@ -117,6 +119,12 @@ public:
   enum class Recurse : bool { no, yes };
   DWARFAttributes GetAttributes(Recurse recurse = Recurse::yes) const;
 
+  // The following methods use LLVM naming convension in order to be are used by
+  // LLVM libraries.
+  dw_tag_t getTag() const { return Tag(); }
+
+  const char *getShortName() const { return GetName(); }
+
 protected:
   DWARFUnit *m_cu = nullptr;
   DWARFDebugInfoEntry *m_die = nullptr;
@@ -124,5 +132,7 @@ protected:
 
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs);
 bool operator!=(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs);
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H

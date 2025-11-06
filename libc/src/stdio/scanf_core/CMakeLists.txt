@@ -1,17 +1,48 @@
+if(LIBC_CONF_SCANF_DISABLE_FLOAT)
+  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
+  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_INDEX_MODE")
+endif()
+if(scanf_config_copts)
+  list(PREPEND scanf_config_copts "COMPILE_OPTIONS")
+endif()
+
+
+list(APPEND file_deps libc.hdr.types.FILE)
+if(LIBC_TARGET_OS_IS_GPU)
+  list(APPEND file_deps
+    libc.src.stdio.getc
+    libc.src.stdio.ungetc
+    libc.src.stdio.ferror
+  )
+elseif(LLVM_LIBC_FULL_BUILD)
+  list(APPEND file_deps
+    libc.src.__support.File.file
+  )
+endif()
+
+add_header_library(
+  scanf_config
+  HDRS
+    scanf_config.h
+  ${scanf_config_copts}
+)
+
 add_header_library(
   core_structs
   HDRS
     core_structs.h
   DEPENDS
+    .scanf_config
+    libc.include.inttypes
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.bitset
     libc.src.__support.FPUtil.fp_bits
 )
 
-add_object_library(
+add_header_library(
   parser
-  SRCS
-    parser.cpp
   HDRS
     parser.h
   DEPENDS
@@ -24,16 +55,8 @@ add_object_library(
     libc.src.__support.CPP.string_view
 )
 
-if(NOT (TARGET libc.src.__support.File.file))
-  # Not all platforms have a file implementation. If file is unvailable,
-  # then we must skip all the parts that need file.
-  return()
-endif()
-
-add_object_library(
+add_header_library(
   scanf_main
-  SRCS
-    scanf_main.cpp
   HDRS
     scanf_main.h
   DEPENDS
@@ -42,45 +65,28 @@ add_object_library(
     .converter
     .core_structs
     libc.src.__support.arg_list
+  ${use_system_file}
 )
 
-add_object_library(
-  string_reader
-  SRCS
-    string_reader.cpp
-  HDRS
-    string_reader.h
-)
-
-add_object_library(
-  file_reader
-  SRCS
-    file_reader.cpp
-  HDRS
-    file_reader.h
-  DEPENDS
-    libc.src.__support.File.file
-)
-
-add_object_library(
+add_header_library(
   reader
-  SRCS
-    reader.cpp
   HDRS
     reader.h
   DEPENDS
-    .string_reader
-    .file_reader
+    libc.src.__support.macros.attributes
 )
 
-add_object_library(
+add_header_library(
+  string_reader
+  HDRS
+    string_reader.h
+  DEPENDS
+    .reader
+    libc.src.__support.macros.attributes
+)
+
+add_header_library(
   converter
-  SRCS
-    converter.cpp
-    string_converter.cpp
-    int_converter.cpp
-    float_converter.cpp
-    ptr_converter.cpp
   HDRS
     converter.h
     converter_utils.h
@@ -92,6 +98,7 @@ add_object_library(
   DEPENDS
     .reader
     .core_structs
+    libc.include.inttypes
     libc.src.__support.common
     libc.src.__support.ctype_utils
     libc.src.__support.CPP.bitset
@@ -99,17 +106,18 @@ add_object_library(
     libc.src.__support.CPP.limits
     libc.src.__support.char_vector
     libc.src.__support.str_to_float
+  ${use_system_file}
 )
 
-add_object_library(
-  vfscanf_internal
-  SRCS
-    vfscanf_internal.cpp
-  HDRS
-    vfscanf_internal.h
-  DEPENDS
-    .reader
-    .file_reader
-    .scanf_main
-    libc.src.__support.arg_list
+#TODO: condense the file-related code as possible.
+add_header_library(
+    vfscanf_internal
+    HDRS
+      vfscanf_internal.h
+    DEPENDS
+      .reader
+      .scanf_main
+      libc.src.__support.arg_list
+      ${file_deps}
+    ${use_system_file}
 )

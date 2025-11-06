@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -690,19 +691,11 @@ static void test_valid_values_time() {
            "%OM='00'\t"
            "%S='00'\t"
            "%OS='00'\t"
-#  if defined(__APPLE__)
-           "%p='AM'\t"
-#  else
            "%p='午前'\t"
-#  endif
            "%R='00:00'\t"
            "%T='00:00:00'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='12:00:00 AM'\t"
-#    else
            "%r='12:00:00 午前'\t"
-#    endif
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
 #  elif defined(_WIN32)
@@ -727,19 +720,11 @@ static void test_valid_values_time() {
            "%OM='31'\t"
            "%S='30.123'\t"
            "%OS='30.123'\t"
-#  if defined(__APPLE__)
-           "%p='PM'\t"
-#  else
            "%p='午後'\t"
-#  endif
            "%R='23:31'\t"
            "%T='23:31:30.123'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='11:31:30 PM'\t"
-#    else
            "%r='11:31:30 午後'\t"
-#    endif
            "%X='23時31分30秒'\t"
            "%EX='23時31分30秒'\t"
 #  elif defined(_WIN32)
@@ -820,7 +805,9 @@ static void test_valid_values_date_time() {
   // Use the global locale (fr_FR)
   check(
 // https://sourceware.org/bugzilla/show_bug.cgi?id=24054
-#if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
+#if defined(__powerpc__) && defined(__linux__)
+      SV("%c='jeu. 01 janv. 1970 00:00:00 UTC'\t%Ec='jeu. 01 janv. 1970 00:00:00 UTC'\n"),
+#elif defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
       SV("%c='jeu. 01 janv. 1970 00:00:00 GMT'\t%Ec='jeu. 01 janv. 1970 00:00:00 GMT'\n"),
 #elif defined(_AIX)
       SV("%c=' 1 janvier 1970 à 00:00:00 UTC'\t%Ec=' 1 janvier 1970 à 00:00:00 UTC'\n"),
@@ -838,7 +825,9 @@ static void test_valid_values_date_time() {
 
   check(
 // https://sourceware.org/bugzilla/show_bug.cgi?id=24054
-#if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
+#if defined(__powerpc__) && defined(__linux__)
+      SV("%c='ven. 13 févr. 2009 23:31:30 UTC'\t%Ec='ven. 13 févr. 2009 23:31:30 UTC'\n"),
+#elif defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
       SV("%c='ven. 13 févr. 2009 23:31:30 GMT'\t%Ec='ven. 13 févr. 2009 23:31:30 GMT'\n"),
 #elif defined(_AIX)
       SV("%c='13 février 2009 à 23:31:30 UTC'\t%Ec='13 février 2009 à 23:31:30 UTC'\n"),

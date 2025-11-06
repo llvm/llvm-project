@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Bufferization/Pipelines/Passes.h"
 
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -20,16 +19,19 @@
 
 void mlir::bufferization::buildBufferDeallocationPipeline(
     OpPassManager &pm, const BufferDeallocationPipelineOptions &options) {
-  pm.addNestedPass<func::FuncOp>(
-      memref::createExpandReallocPass(/*emitDeallocs=*/false));
-  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
-  pm.addNestedPass<func::FuncOp>(createOwnershipBasedBufferDeallocationPass(
-      options.privateFunctionDynamicOwnership.getValue()));
-  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
-  pm.addNestedPass<func::FuncOp>(createBufferDeallocationSimplificationPass());
+  memref::ExpandReallocPassOptions expandAllocPassOptions{
+      /*emitDeallocs=*/false};
+  pm.addPass(memref::createExpandReallocPass(expandAllocPassOptions));
+  pm.addPass(createCanonicalizerPass());
+
+  OwnershipBasedBufferDeallocationPassOptions deallocationOptions{
+      options.privateFunctionDynamicOwnership};
+  pm.addPass(createOwnershipBasedBufferDeallocationPass(deallocationOptions));
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createBufferDeallocationSimplificationPass());
   pm.addPass(createLowerDeallocationsPass());
-  pm.addNestedPass<func::FuncOp>(createCSEPass());
-  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
+  pm.addPass(createCSEPass());
+  pm.addPass(createCanonicalizerPass());
 }
 
 //===----------------------------------------------------------------------===//

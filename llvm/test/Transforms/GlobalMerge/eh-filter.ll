@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -global-merge -debug-only=global-merge -S -o - %s 2>&1 | FileCheck %s
+; RUN: opt -passes='global-merge' -debug-only=global-merge -S -o - %s 2>&1 | FileCheck %s
 
 ;; Checks from the debug info.
 ; CHECK:      Number of GV that must be kept:  5

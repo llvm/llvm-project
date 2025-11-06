@@ -15,15 +15,15 @@
 # RUN: llvm-dwarfdump -verify %t1 | FileCheck %s --check-prefix VERIFY-CHECK
 # RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s
 
-# RUN: llvm-dwarfutil --linker llvm %t.o %t1
+# RUN: llvm-dwarfutil --linker parallel %t.o %t1
 # RUN: llvm-dwarfdump -verify %t1 | FileCheck %s --check-prefix VERIFY-CHECK
 # RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s
 
-# RUN: llvm-dwarfutil --linker llvm --no-garbage-collection %t.o %t1
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection %t.o %t1
 # RUN: llvm-dwarfdump -verify %t1 | FileCheck %s --check-prefix VERIFY-CHECK
 # RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s
 
-# RUN: llvm-dwarfutil --linker llvm --no-garbage-collection --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection --build-accelerator=DWARF %t.o %t1
 # RUN: llvm-dwarfdump -verify %t1 | FileCheck %s --check-prefix VERIFY-CHECK
 # RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s
 

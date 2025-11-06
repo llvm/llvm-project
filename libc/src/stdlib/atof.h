@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_ATOF_H
 #define LLVM_LIBC_SRC_STDLIB_ATOF_H
 
-namespace __llvm_libc {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 double atof(const char *str);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STDLIB_ATOI_H
+#endif // LLVM_LIBC_SRC_STDLIB_ATOF_H

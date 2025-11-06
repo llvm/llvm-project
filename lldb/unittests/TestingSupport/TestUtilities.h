@@ -11,10 +11,11 @@
 
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Utility/DataBuffer.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 #define ASSERT_NO_ERROR(x)                                                     \
@@ -31,6 +32,11 @@
 namespace lldb_private {
 std::string GetInputFilePath(const llvm::Twine &name);
 
+class TestUtilities {
+public:
+  static std::once_flag g_debugger_initialize_flag;
+};
+
 class TestFile {
 public:
   static llvm::Expected<TestFile> fromYaml(llvm::StringRef Yaml);
@@ -39,6 +45,8 @@ public:
   ModuleSpec moduleSpec() {
     return ModuleSpec(FileSpec(), UUID(), dataBuffer());
   }
+
+  llvm::Expected<llvm::sys::fs::TempFile> writeToTemporaryFile();
 
 private:
   TestFile(std::string &&Buffer) : Buffer(std::move(Buffer)) {}
@@ -51,6 +59,13 @@ private:
 
   std::string Buffer;
 };
+
+template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
+  std::string encoded;
+  llvm::raw_string_ostream OS(encoded);
+  OS << toJSON(input);
+  return llvm::json::parse<T>(encoded);
 }
+} // namespace lldb_private
 
 #endif

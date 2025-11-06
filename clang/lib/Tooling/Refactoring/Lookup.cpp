@@ -98,24 +98,14 @@ static StringRef getBestNamespaceSubstr(const DeclContext *DeclA,
     // from NewName if it has an identical prefix.
     std::string NS =
         "::" + cast<NamespaceDecl>(DeclA)->getQualifiedNameAsString() + "::";
-    if (NewName.startswith(NS))
-      return NewName.substr(NS.size());
+    if (NewName.consume_front(NS))
+      return NewName;
 
     // No match yet. Strip of a namespace from the end of the chain and try
     // again. This allows to get optimal qualifications even if the old and new
     // decl only share common namespaces at a higher level.
     DeclA = DeclA->getParent();
   }
-}
-
-/// Check if the name specifier begins with a written "::".
-static bool isFullyQualified(const NestedNameSpecifier *NNS) {
-  while (NNS) {
-    if (NNS->getKind() == NestedNameSpecifier::Global)
-      return true;
-    NNS = NNS->getPrefix();
-  }
-  return false;
 }
 
 // Adds more scope specifier to the spelled name until the spelling is not
@@ -128,9 +118,9 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
                                                StringRef QName,
                                                const DeclContext &UseContext,
                                                SourceLocation UseLoc) {
-  assert(QName.startswith("::"));
-  assert(QName.endswith(Spelling));
-  if (Spelling.startswith("::"))
+  assert(QName.starts_with("::"));
+  assert(QName.ends_with(Spelling));
+  if (Spelling.starts_with("::"))
     return std::string(Spelling);
 
   auto UnspelledSpecifier = QName.drop_back(Spelling.size());
@@ -146,7 +136,7 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
   UseLoc = SM.getSpellingLoc(UseLoc);
 
   auto IsAmbiguousSpelling = [&](const llvm::StringRef CurSpelling) {
-    if (CurSpelling.startswith("::"))
+    if (CurSpelling.starts_with("::"))
       return false;
     // Lookup the first component of Spelling in all enclosing namespaces
     // and check if there is any existing symbols with the same name but in
@@ -160,7 +150,7 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
           // ambiguous. For example, a reference in a header file should not be
           // affected by a potentially ambiguous name in some file that includes
           // the header.
-          if (!TrimmedQName.startswith(Res->getQualifiedNameAsString()) &&
+          if (!TrimmedQName.starts_with(Res->getQualifiedNameAsString()) &&
               SM.isBeforeInTranslationUnit(
                   SM.getSpellingLoc(Res->getLocation()), UseLoc))
             return true;
@@ -182,12 +172,12 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
   return Disambiguated;
 }
 
-std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
+std::string tooling::replaceNestedName(NestedNameSpecifier Use,
                                        SourceLocation UseLoc,
                                        const DeclContext *UseContext,
                                        const NamedDecl *FromDecl,
                                        StringRef ReplacementString) {
-  assert(ReplacementString.startswith("::") &&
+  assert(ReplacementString.starts_with("::") &&
          "Expected fully-qualified name!");
 
   // We can do a raw name replacement when we are not inside the namespace for
@@ -217,7 +207,7 @@ std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
   // We work backwards (from most specific possible namespace to least
   // specific).
   StringRef Suggested = getBestNamespaceSubstr(UseContext, ReplacementString,
-                                               isFullyQualified(Use));
+                                               Use.isFullyQualified());
 
   return disambiguateSpellingInScope(Suggested, ReplacementString, *UseContext,
                                      UseLoc);

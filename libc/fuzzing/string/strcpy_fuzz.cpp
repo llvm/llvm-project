@@ -21,7 +21,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   char *dest = new char[size];
   if (!dest) __builtin_trap();
 
-  __llvm_libc::strcpy(dest, src);
+  LIBC_NAMESPACE::strcpy(dest, src);
 
   size_t i;
   for (i = 0; src[i] != '\0'; i++) {

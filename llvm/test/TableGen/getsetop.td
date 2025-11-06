@@ -8,6 +8,7 @@
 // RUN: not llvm-tblgen -DERROR7 %s 2>&1 | FileCheck --check-prefix=ERROR7 %s
 // RUN: not llvm-tblgen -DERROR8 %s 2>&1 | FileCheck --check-prefix=ERROR8 %s
 // RUN: not llvm-tblgen -DERROR9 %s 2>&1 | FileCheck --check-prefix=ERROR9 %s
+// RUN: not llvm-tblgen -DERROR10 %s 2>&1 | FileCheck --check-prefix=ERROR10 %s
 
 // !setop and !getop are deprecated in favor of !setdagop and !getdagop.
 // Two tests retain the old names just to be sure they are still supported.
@@ -27,6 +28,7 @@ def bob : Super;
 def test {
   dag orig = (foo 1, 2:$a, $b);
   dag another = (qux "hello", $world);
+  dag named = (foo:$root 1, 2:$a, $b);
 
   // CHECK: dag replaceWithBar = (bar 1, 2:$a, ?:$b);
   dag replaceWithBar = !setop(orig, bar);
@@ -39,6 +41,19 @@ def test {
 
   // CHECK: dag getopToSetop = (foo "hello", ?:$world);
   dag getopToSetop = !setdagop(another, !getdagop(orig));
+
+  // CHECK: dag setOpName = (foo:$baz 1, 2:$a, ?:$b);
+  dag setOpName = !setdagopname(orig, "baz");
+
+  // CHECK: dag getopNameToSetOpName = (foo:$root 1, 2:$a, ?:$b);
+  dag getopNameToSetOpName = !setdagopname(orig, !getdagopname(named));
+
+  // CHECK: dag setOpNameExpl = (foo:$baz 1, 2:$a, ?:$b);
+  dag setOpNameExpl = !setdagopname((foo 1, 2:$a, $b), "baz");
+
+  // CHECK: dag getopNameToSetOpNameExpl = (foo:$root 1, 2:$a, ?:$b);
+  dag getopNameToSetOpNameExpl =
+    !setdagopname(orig, !getdagopname((foo:$root 1, 2:$a, $b)));
 
   // CHECK: dag getopToBangDag = (foo 1:$a, 2:$b, 3:$c);
   dag getopToBangDag = !dag(!getdagop(orig), [1, 2, 3], ["a", "b", "c"]);
@@ -148,3 +163,32 @@ def test {
   dag orig_out_of_range = !setdagarg(orig, foo, (foo qux:$a));
 #endif
 }
+
+// Copy a list (Predicates) that is a field in a dag operator
+// (TestInstruction), which is defined in the same multiclass
+// (TestInstructionAndPattern) as the destination of the copy
+// (TestPattern::Predicates).
+class TestInstruction<list<int> _Predicates> {
+  list<int> Predicates = _Predicates;
+}
+#ifdef ERROR10
+class OtherTestInstruction<list<int> _Predicates> {
+  list<int> Predicates = _Predicates;
+}
+// ERROR10: error: Expected type 'OtherTestInstruction', got 'TestInstruction'
+class TestPattern<dag D> {
+  list<int> Predicates = !getdagop<OtherTestInstruction>(D).Predicates;
+}
+#else
+class TestPattern<dag D> {
+  list<int> Predicates = !getdagop<TestInstruction>(D).Predicates;
+}
+#endif
+
+multiclass TestInstructionAndPattern<list<int> Predicates> {
+  def NAME : TestInstruction<Predicates>;
+  def : TestPattern<(!cast<TestInstruction>(NAME) foo)>;
+}
+// CHECK: def testInst0 { // TestInstruction
+// CHECK-NEXT: list<int> Predicates = [7];
+defm testInst0 : TestInstructionAndPattern<[7]>;

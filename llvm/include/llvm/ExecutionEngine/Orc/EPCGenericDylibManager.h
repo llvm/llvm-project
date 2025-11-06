@@ -19,7 +19,9 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
@@ -32,12 +34,12 @@ public:
   struct SymbolAddrs {
     ExecutorAddr Instance;
     ExecutorAddr Open;
-    ExecutorAddr Lookup;
+    ExecutorAddr Resolve;
   };
 
   /// Create an EPCGenericMemoryAccess instance from a given set of
   /// function addrs.
-  static Expected<EPCGenericDylibManager>
+  LLVM_ABI static Expected<EPCGenericDylibManager>
   CreateWithDefaultBootstrapSymbols(ExecutorProcessControl &EPC);
 
   /// Create an EPCGenericMemoryAccess instance from a given set of
@@ -46,15 +48,38 @@ public:
       : EPC(EPC), SAs(SAs) {}
 
   /// Loads the dylib with the given name.
-  Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
+  LLVM_ABI Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
 
   /// Looks up symbols within the given dylib.
-  Expected<std::vector<ExecutorAddr>> lookup(tpctypes::DylibHandle H,
-                                             const SymbolLookupSet &Lookup);
+  Expected<tpctypes::LookupResult> lookup(tpctypes::DylibHandle H,
+                                          const SymbolLookupSet &Lookup) {
+    std::promise<MSVCPExpected<tpctypes::LookupResult>> RP;
+    auto RF = RP.get_future();
+    lookupAsync(H, Lookup, [&RP](auto R) { RP.set_value(std::move(R)); });
+    return RF.get();
+  }
 
   /// Looks up symbols within the given dylib.
-  Expected<std::vector<ExecutorAddr>>
-  lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup);
+  Expected<tpctypes::LookupResult> lookup(tpctypes::DylibHandle H,
+                                          const RemoteSymbolLookupSet &Lookup) {
+    std::promise<MSVCPExpected<tpctypes::LookupResult>> RP;
+    auto RF = RP.get_future();
+    lookupAsync(H, Lookup, [&RP](auto R) { RP.set_value(std::move(R)); });
+    return RF.get();
+  }
+
+  using SymbolLookupCompleteFn =
+      unique_function<void(Expected<tpctypes::LookupResult>)>;
+
+  /// Looks up symbols within the given dylib.
+  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,
+                            const SymbolLookupSet &Lookup,
+                            SymbolLookupCompleteFn Complete);
+
+  /// Looks up symbols within the given dylib.
+  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,
+                            const RemoteSymbolLookupSet &Lookup,
+                            SymbolLookupCompleteFn Complete);
 
 private:
   ExecutorProcessControl &EPC;

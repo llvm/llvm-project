@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYToolChain.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -125,7 +124,7 @@ std::string CSKYToolChain::computeSysRoot() const {
   if (!llvm::sys::fs::exists(SysRootDir))
     return std::string();
 
-  return std::string(SysRootDir.str());
+  return std::string(SysRootDir);
 }
 
 void CSKY::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -169,9 +168,8 @@ void CSKY::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
-  Args.AddAllArgs(CmdArgs,
-                  {options::OPT_T_Group, options::OPT_s, options::OPT_t,
-                   options::OPT_Z_Flag, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
+                            options::OPT_t, options::OPT_r});
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 

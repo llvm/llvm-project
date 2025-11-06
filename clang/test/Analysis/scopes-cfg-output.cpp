@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -analyze -analyzer-checker=debug.DumpCFG -analyzer-config cfg-scopes=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-scopes=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 class A {
@@ -1074,7 +1074,7 @@ void test_switch_with_compound_with_default() {
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B0 (EXIT)]
 // CHECK-NEXT:   Preds (1): B1
-int test_switch_with_compound_without_default() {
+void test_switch_with_compound_without_default() {
   char c = '1';
   switch (int i = getX()) {
     case 0:
@@ -1418,4 +1418,69 @@ void test_multiple_goto_entering_scopes() {
 label:
     }
   }
+}
+
+// CHECK:      [B1]
+// CHECK-NEXT:   1: CFGScopeBegin(i)
+// CHECK-NEXT:   2: int i __attribute__((cleanup(cleanup_int)));
+// CHECK-NEXT:   3: CleanupFunction (cleanup_int)
+// CHECK-NEXT:   4: CFGScopeEnd(i)
+void cleanup_int(int *i);
+void test_cleanup_functions() {
+  int i __attribute__((cleanup(cleanup_int)));
+}
+
+// CHECK:      [B1]
+// CHECK-NEXT:    1: 10
+// CHECK-NEXT:    2: i
+// CHECK-NEXT:    3: [B1.2] = [B1.1]
+// CHECK-NEXT:    4: return;
+// CHECK-NEXT:    5: CleanupFunction (cleanup_int)
+// CHECK-NEXT:    6: CFGScopeEnd(i)
+// CHECK-NEXT:    Preds (1): B3
+// CHECK-NEXT:    Succs (1): B0
+// CHECK:      [B2]
+// CHECK-NEXT:    1: return;
+// CHECK-NEXT:    2: CleanupFunction (cleanup_int)
+// CHECK-NEXT:    3: CFGScopeEnd(i)
+// CHECK-NEXT:    Preds (1): B3
+// CHECK-NEXT:    Succs (1): B0
+// CHECK:      [B3]
+// CHECK-NEXT:    1: CFGScopeBegin(i)
+// CHECK-NEXT:    2: int i __attribute__((cleanup(cleanup_int)));
+// CHECK-NEXT:    3: m
+// CHECK-NEXT:    4: [B3.3] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-NEXT:    5: 1
+// CHECK-NEXT:    6: [B3.4] == [B3.5]
+// CHECK-NEXT:    T: if [B3.6]
+// CHECK-NEXT:    Preds (1): B4
+// CHECK-NEXT:    Succs (2): B2 B1
+void test_cleanup_functions2(int m) {
+  int i __attribute__((cleanup(cleanup_int)));
+
+  if (m == 1) {
+    return;
+  }
+
+  i = 10;
+  return;
+}
+
+// CHECK:       [B1]
+// CHECK-NEXT:    1: CFGScopeBegin(f)
+// CHECK-NEXT:    2:  (CXXConstructExpr, [B1.3], F)
+// CHECK-NEXT:    3: F f __attribute__((cleanup(cleanup_F)));
+// CHECK-NEXT:    4: CleanupFunction (cleanup_F)
+// CHECK-NEXT:    5: [B1.3].~F() (Implicit destructor)
+// CHECK-NEXT:    6: CFGScopeEnd(f)
+// CHECK-NEXT:    Preds (1): B2
+// CHECK-NEXT:    Succs (1): B0
+class F {
+public:
+  ~F();
+};
+void cleanup_F(F *f);
+
+void test() {
+  F f __attribute((cleanup(cleanup_F)));
 }

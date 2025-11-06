@@ -1,4 +1,4 @@
-//===- AutoConvert.h - Auto conversion between ASCII/EBCDIC -----*- C++ -*-===//
+/*===- AutoConvert.h - Auto conversion between ASCII/EBCDIC -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,32 +9,93 @@
 // This file contains functions used for auto conversion between
 // ASCII/EBCDIC codepages specific to z/OS.
 //
-//===----------------------------------------------------------------------===//i
+//===----------------------------------------------------------------------===*/
 
 #ifndef LLVM_SUPPORT_AUTOCONVERT_H
 #define LLVM_SUPPORT_AUTOCONVERT_H
 
 #ifdef __MVS__
+#include <_Ccsid.h>
+#endif
+#ifdef __cplusplus
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/Error.h"
+#include <system_error>
+#endif /* __cplusplus */
+
 #define CCSID_IBM_1047 1047
 #define CCSID_UTF_8 1208
-#include <system_error>
+#define CCSID_ISO8859_1 819
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+int enablezOSAutoConversion(int FD);
+int disablezOSAutoConversion(int FD);
+int restorezOSStdHandleAutoConversion(int FD);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#ifdef __cplusplus
 namespace llvm {
 
-/// \brief Disable the z/OS enhanced ASCII auto-conversion for the file
-/// descriptor.
-std::error_code disableAutoConversion(int FD);
+#ifdef __MVS__
 
-/// \brief Query the z/OS enhanced ASCII auto-conversion status of a file
-/// descriptor and force the conversion if the file is not tagged with a
-/// codepage.
-std::error_code enableAutoConversion(int FD);
+/** \brief Set the tag information for a file descriptor. */
+std::error_code setzOSFileTag(int FD, int CCSID, bool Text);
 
-/// \brief Set the tag information for a file descriptor.
-std::error_code setFileTag(int FD, int CCSID, bool Text);
+/** \brief Get the the tag ccsid for a file name or a file descriptor. */
+ErrorOr<__ccsid_t> getzOSFileTag(const Twine &FileName, const int FD = -1);
 
-} // namespace llvm
+/** \brief Query the file tag to determine if it needs conversion to UTF-8
+ *  codepage.
+ */
+ErrorOr<bool> needzOSConversion(const Twine &FileName, const int FD = -1);
 
-#endif // __MVS__
+#endif /* __MVS__*/
 
-#endif // LLVM_SUPPORT_AUTOCONVERT_H
+inline std::error_code disableAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::disablezOSAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
+inline std::error_code enableAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::enablezOSAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
+inline std::error_code restoreStdHandleAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::restorezOSStdHandleAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
+inline std::error_code setFileTag(int FD, int CCSID, bool Text) {
+#ifdef __MVS__
+  return setzOSFileTag(FD, CCSID, Text);
+#endif
+  return std::error_code();
+}
+
+inline ErrorOr<bool> needConversion(const Twine &FileName, const int FD = -1) {
+#ifdef __MVS__
+  return needzOSConversion(FileName, FD);
+#endif
+  return false;
+}
+
+} /* namespace llvm */
+#endif /* __cplusplus */
+
+#endif /* LLVM_SUPPORT_AUTOCONVERT_H */

@@ -21,7 +21,7 @@ stack:
   - { id: 1, size: 4, alignment: 4, local-offset: -68 }
 
 # CHECK: body:
-# CHECK:   $sp = ANDXri killed ${{x[0-9]+}}, 7865
+# CHECK:   $sp = frame-setup ANDXri killed ${{x[0-9]+}}, 7865
 # CHECK:   STRSui $s0, $sp, 0
 # CHECK:   STRSui $s0, $fp, 7
 body:             |

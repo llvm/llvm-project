@@ -17,7 +17,7 @@ define i16 @insert0_v2i8(i16 %x, i8 %y) {
 ; LE-LABEL: @insert0_v2i8(
 ; LE-NEXT:    [[TMP1:%.*]] = and i16 [[X:%.*]], -256
 ; LE-NEXT:    [[TMP2:%.*]] = zext i8 [[Y:%.*]] to i16
-; LE-NEXT:    [[R:%.*]] = or i16 [[TMP1]], [[TMP2]]
+; LE-NEXT:    [[R:%.*]] = or disjoint i16 [[TMP1]], [[TMP2]]
 ; LE-NEXT:    ret i16 [[R]]
 ;
   %v = bitcast i16 %x to <2 x i8>
@@ -33,7 +33,7 @@ define i16 @insert1_v2i8(i16 %x, i8 %y) {
 ; BE-LABEL: @insert1_v2i8(
 ; BE-NEXT:    [[TMP1:%.*]] = and i16 [[X:%.*]], -256
 ; BE-NEXT:    [[TMP2:%.*]] = zext i8 [[Y:%.*]] to i16
-; BE-NEXT:    [[R:%.*]] = or i16 [[TMP1]], [[TMP2]]
+; BE-NEXT:    [[R:%.*]] = or disjoint i16 [[TMP1]], [[TMP2]]
 ; BE-NEXT:    ret i16 [[R]]
 ;
 ; LE-LABEL: @insert1_v2i8(
@@ -61,7 +61,7 @@ define i32 @insert0_v4i8(i32 %x, i8 %y) {
 ; LE-LABEL: @insert0_v4i8(
 ; LE-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -256
 ; LE-NEXT:    [[TMP2:%.*]] = zext i8 [[Y:%.*]] to i32
-; LE-NEXT:    [[R:%.*]] = or i32 [[TMP1]], [[TMP2]]
+; LE-NEXT:    [[R:%.*]] = or disjoint i32 [[TMP1]], [[TMP2]]
 ; LE-NEXT:    ret i32 [[R]]
 ;
   %v = bitcast i32 %x to <4 x i8>
@@ -100,7 +100,7 @@ define i64 @insert0_v4i16(i64 %x, i16 %y) {
 ; LE-LABEL: @insert0_v4i16(
 ; LE-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], -65536
 ; LE-NEXT:    [[TMP2:%.*]] = zext i16 [[Y:%.*]] to i64
-; LE-NEXT:    [[R:%.*]] = or i64 [[TMP1]], [[TMP2]]
+; LE-NEXT:    [[R:%.*]] = or disjoint i64 [[TMP1]], [[TMP2]]
 ; LE-NEXT:    ret i64 [[R]]
 ;
   %v = bitcast i64 %x to <4 x i16>
@@ -131,7 +131,7 @@ define i64 @insert3_v4i16(i64 %x, i16 %y) {
 ; BE-LABEL: @insert3_v4i16(
 ; BE-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], -65536
 ; BE-NEXT:    [[TMP2:%.*]] = zext i16 [[Y:%.*]] to i64
-; BE-NEXT:    [[R:%.*]] = or i64 [[TMP1]], [[TMP2]]
+; BE-NEXT:    [[R:%.*]] = or disjoint i64 [[TMP1]], [[TMP2]]
 ; BE-NEXT:    ret i64 [[R]]
 ;
 ; LE-LABEL: @insert3_v4i16(

@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_DESTRUCTIBLE_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_DESTRUCTIBLE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_DESTRUCTIBLE_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_DESTRUCTIBLE_H
 
 #include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/CPP/type_traits/false_type.h"
@@ -15,13 +15,15 @@
 #include "src/__support/CPP/type_traits/remove_all_extents.h"
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/CPP/utility/declval.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // is_destructible
-#if LIBC_HAS_BUILTIN(__is_destructible)
+#if __has_builtin(__is_destructible) || defined(LIBC_COMPILER_IS_MSVC)
 template <typename T>
 struct is_destructible : bool_constant<__is_destructible(T)> {};
 #else
@@ -61,6 +63,7 @@ template <> struct is_destructible<void> : public false_type {};
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_destructible_v = is_destructible<T>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_DESTRUCTIBLE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_DESTRUCTIBLE_H

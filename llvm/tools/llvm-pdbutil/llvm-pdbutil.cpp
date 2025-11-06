@@ -27,8 +27,6 @@
 #include "YAMLOutputStyle.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -40,6 +38,7 @@
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -51,6 +50,7 @@
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
@@ -126,9 +126,9 @@ cl::SubCommand ExplainSubcommand("explain",
 cl::SubCommand ExportSubcommand("export",
                                 "Write binary data from a stream to a file");
 
-cl::OptionCategory TypeCategory("Symbol Type Options");
-cl::OptionCategory FilterCategory("Filtering and Sorting Options");
-cl::OptionCategory OtherOptions("Other Options");
+static cl::OptionCategory TypeCategory("Symbol Type Options");
+static cl::OptionCategory FilterCategory("Filtering and Sorting Options");
+static cl::OptionCategory OtherOptions("Other Options");
 
 cl::ValuesClass ChunkValues = cl::values(
     clEnumValN(ModuleSubsection::CrossScopeExports, "cme",
@@ -156,9 +156,10 @@ cl::ValuesClass ChunkValues = cl::values(
     clEnumValN(ModuleSubsection::All, "all", "All known subsections"));
 
 namespace diadump {
-cl::list<std::string> InputFilenames(cl::Positional,
-                                     cl::desc("<input PDB files>"),
-                                     cl::OneOrMore, cl::sub(DiaDumpSubcommand));
+static cl::list<std::string> InputFilenames(cl::Positional,
+                                            cl::desc("<input PDB files>"),
+                                            cl::OneOrMore,
+                                            cl::sub(DiaDumpSubcommand));
 
 cl::opt<bool> Native("native", cl::desc("Use native PDB reader instead of DIA"),
                      cl::sub(DiaDumpSubcommand));
@@ -200,9 +201,10 @@ static cl::opt<bool> Typedefs("typedefs", cl::desc("Dump typedefs"),
 FilterOptions Filters;
 
 namespace pretty {
-cl::list<std::string> InputFilenames(cl::Positional,
-                                     cl::desc("<input PDB files>"),
-                                     cl::OneOrMore, cl::sub(PrettySubcommand));
+static cl::list<std::string> InputFilenames(cl::Positional,
+                                            cl::desc("<input PDB files>"),
+                                            cl::OneOrMore,
+                                            cl::sub(PrettySubcommand));
 
 cl::opt<bool> InjectedSources("injected-sources",
                               cl::desc("Display injected sources"),
@@ -226,7 +228,7 @@ cl::opt<bool> Globals("globals", cl::desc("Dump global symbols"),
                       cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 cl::opt<bool> Externals("externals", cl::desc("Dump external symbols"),
                         cl::cat(TypeCategory), cl::sub(PrettySubcommand));
-cl::list<SymLevel> SymTypes(
+static cl::list<SymLevel> SymTypes(
     "sym-types", cl::desc("Type of symbols to dump (default all)"),
     cl::cat(TypeCategory), cl::sub(PrettySubcommand),
     cl::values(
@@ -368,14 +370,14 @@ cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 }
 
-cl::OptionCategory FileOptions("Module & File Options");
+static cl::OptionCategory FileOptions("Module & File Options");
 
 namespace bytes {
-cl::OptionCategory MsfBytes("MSF File Options");
-cl::OptionCategory DbiBytes("Dbi Stream Options");
-cl::OptionCategory PdbBytes("PDB Stream Options");
-cl::OptionCategory Types("Type Options");
-cl::OptionCategory ModuleCategory("Module Options");
+static cl::OptionCategory MsfBytes("MSF File Options");
+static cl::OptionCategory DbiBytes("Dbi Stream Options");
+static cl::OptionCategory PdbBytes("PDB Stream Options");
+static cl::OptionCategory Types("Type Options");
+static cl::OptionCategory ModuleCategory("Module Options");
 
 std::optional<NumberRange> DumpBlockRange;
 std::optional<NumberRange> DumpByteRange;
@@ -440,18 +442,19 @@ cl::opt<bool> SplitChunks(
     cl::desc(
         "When dumping debug chunks, show a different section for each chunk"),
     cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
-cl::list<std::string> InputFilenames(cl::Positional,
-                                     cl::desc("<input PDB files>"),
-                                     cl::OneOrMore, cl::sub(BytesSubcommand));
+static cl::list<std::string> InputFilenames(cl::Positional,
+                                            cl::desc("<input PDB files>"),
+                                            cl::OneOrMore,
+                                            cl::sub(BytesSubcommand));
 
 } // namespace bytes
 
 namespace dump {
 
-cl::OptionCategory MsfOptions("MSF Container Options");
-cl::OptionCategory TypeOptions("Type Record Options");
-cl::OptionCategory SymbolOptions("Symbol Options");
-cl::OptionCategory MiscOptions("Miscellaneous Options");
+static cl::OptionCategory MsfOptions("MSF Container Options");
+static cl::OptionCategory TypeOptions("Type Record Options");
+static cl::OptionCategory SymbolOptions("Symbol Options");
+static cl::OptionCategory MiscOptions("Miscellaneous Options");
 
 // MSF OPTIONS
 cl::opt<bool> DumpSummary("summary", cl::desc("dump file summary"),
@@ -642,9 +645,10 @@ cl::opt<bool> DumpSectionHeaders("section-headers",
 cl::opt<bool> RawAll("all", cl::desc("Implies most other options."),
                      cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
-cl::list<std::string> InputFilenames(cl::Positional,
-                                     cl::desc("<input PDB files>"),
-                                     cl::OneOrMore, cl::sub(DumpSubcommand));
+static cl::list<std::string> InputFilenames(cl::Positional,
+                                            cl::desc("<input PDB files>"),
+                                            cl::OneOrMore,
+                                            cl::sub(DumpSubcommand));
 }
 
 namespace yaml2pdb {
@@ -719,9 +723,10 @@ cl::list<std::string> InputFilename(cl::Positional,
 } // namespace pdb2yaml
 
 namespace merge {
-cl::list<std::string> InputFilenames(cl::Positional,
-                                     cl::desc("<input PDB files>"),
-                                     cl::OneOrMore, cl::sub(MergeSubcommand));
+static cl::list<std::string> InputFilenames(cl::Positional,
+                                            cl::desc("<input PDB files>"),
+                                            cl::OneOrMore,
+                                            cl::sub(MergeSubcommand));
 cl::opt<std::string>
     PdbOutputFile("pdb", cl::desc("the name of the PDB file to write"),
                   cl::sub(MergeSubcommand));
@@ -751,9 +756,10 @@ cl::opt<InputFileType> InputType(
 } // namespace explain
 
 namespace exportstream {
-cl::list<std::string> InputFilename(cl::Positional,
-                                    cl::desc("<input PDB file>"), cl::Required,
-                                    cl::sub(ExportSubcommand));
+static cl::list<std::string> InputFilename(cl::Positional,
+                                           cl::desc("<input PDB file>"),
+                                           cl::Required,
+                                           cl::sub(ExportSubcommand));
 cl::opt<std::string> OutputFile("out",
                                 cl::desc("The file to write the stream to"),
                                 cl::Required, cl::sub(ExportSubcommand));
@@ -842,7 +848,7 @@ static void yamlToPdb(StringRef Path) {
       ExitOnErr(DbiBuilder.addModuleSourceFile(ModiBuilder, S));
     if (MI.Modi) {
       const auto &ModiStream = *MI.Modi;
-      for (auto Symbol : ModiStream.Symbols) {
+      for (const auto &Symbol : ModiStream.Symbols) {
         ModiBuilder.addSymbol(
             Symbol.toCodeViewSymbol(Allocator, CodeViewContainer::Pdb));
       }
@@ -874,6 +880,24 @@ static void yamlToPdb(StringRef Path) {
   for (const auto &R : Ipi.Records) {
     CVType Type = R.toCodeViewRecord(TS);
     IpiBuilder.addTypeRecord(Type.RecordData, std::nullopt);
+  }
+
+  if (YamlObj.PublicsStream) {
+    auto &GsiBuilder = Builder.getGsiBuilder();
+    std::vector<BulkPublic> BulkPublics;
+    for (const auto &P : YamlObj.PublicsStream->PubSyms) {
+      CVSymbol CV = P.toCodeViewSymbol(Allocator, CodeViewContainer::Pdb);
+      auto PS = cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(CV));
+
+      BulkPublic BP;
+      BP.Name = PS.Name.data();
+      BP.NameLen = PS.Name.size();
+      BP.setFlags(PS.Flags);
+      BP.Offset = PS.Offset;
+      BP.Segment = PS.Segment;
+      BulkPublics.emplace_back(BP);
+    }
+    GsiBuilder.addPublicSymbols(std::move(BulkPublics));
   }
 
   Builder.getStringTableBuilder().setStrings(*Strings.strings());
@@ -1371,7 +1395,6 @@ static void mergePdbs() {
 }
 
 static void explain() {
-  std::unique_ptr<IPDBSession> Session;
   InputFile IF =
       ExitOnErr(InputFile::open(opts::explain::InputFilename.front(), true));
 
@@ -1415,7 +1438,7 @@ static void exportStream() {
   SourceStream = File.createIndexedStream(Index);
   auto OutFile = ExitOnErr(
       FileOutputBuffer::create(OutFileName, SourceStream->getLength()));
-  FileBufferByteStream DestStream(std::move(OutFile), llvm::support::little);
+  FileBufferByteStream DestStream(std::move(OutFile), llvm::endianness::little);
   BinaryStreamWriter Writer(DestStream);
   ExitOnErr(Writer.writeStreamRef(*SourceStream));
   ExitOnErr(DestStream.commit());
@@ -1534,8 +1557,7 @@ int main(int Argc, const char **Argv) {
 
   // Initialize the filters for LinePrinter.
   auto propagate = [&](auto &Target, auto &Reference) {
-    for (std::string &Option : Reference)
-      Target.push_back(Option);
+    llvm::append_range(Target, Reference);
   };
 
   propagate(opts::Filters.ExcludeTypes, opts::pretty::ExcludeTypes);
@@ -1576,7 +1598,7 @@ int main(int Argc, const char **Argv) {
     if (opts::yaml2pdb::YamlPdbOutputFile.empty()) {
       SmallString<16> OutputFilename(opts::yaml2pdb::InputFilename.getValue());
       sys::path::replace_extension(OutputFilename, ".pdb");
-      opts::yaml2pdb::YamlPdbOutputFile = std::string(OutputFilename.str());
+      opts::yaml2pdb::YamlPdbOutputFile = std::string(OutputFilename);
     }
     yamlToPdb(opts::yaml2pdb::InputFilename);
   } else if (opts::DiaDumpSubcommand) {

@@ -14,12 +14,15 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_EXECUTORADDRESS_H
 
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/identity.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
+#if __has_feature(ptrauth_calls)
+#include <ptrauth.h>
+#endif
 #include <type_traits>
 
 namespace llvm {
@@ -31,13 +34,41 @@ using ExecutorAddrDiff = uint64_t;
 class ExecutorAddr {
 public:
   /// A wrap/unwrap function that leaves pointers unmodified.
-  template <typename T> using rawPtr = llvm::identity<T *>;
+  using rawPtr = llvm::identity;
+
+#if __has_feature(ptrauth_calls)
+  template <typename T> class PtrauthSignDefault {
+  public:
+    constexpr T *operator()(T *P) {
+      if (std::is_function_v<T>)
+        return ptrauth_sign_unauthenticated(P, ptrauth_key_function_pointer, 0);
+      else
+        return P;
+    }
+  };
+
+  template <typename T> class PtrauthStripDefault {
+  public:
+    constexpr T *operator()(T *P) {
+      return ptrauth_strip(P, ptrauth_key_function_pointer);
+    }
+  };
 
   /// Default wrap function to use on this host.
-  template <typename T> using defaultWrap = rawPtr<T>;
+  template <typename T> using defaultWrap = PtrauthSignDefault<T>;
 
   /// Default unwrap function to use on this host.
-  template <typename T> using defaultUnwrap = rawPtr<T>;
+  template <typename T> using defaultUnwrap = PtrauthStripDefault<T>;
+
+#else
+
+  /// Default wrap function to use on this host.
+  template <typename T> using defaultWrap = rawPtr;
+
+  /// Default unwrap function to use on this host.
+  template <typename T> using defaultUnwrap = rawPtr;
+
+#endif
 
   /// Merges a tag into the raw address value:
   ///   P' = P | (TagValue << TagOffset).
@@ -195,6 +226,19 @@ struct ExecutorAddrRange {
   ExecutorAddrRange(ExecutorAddr Start, ExecutorAddrDiff Size)
       : Start(Start), End(Start + Size) {}
 
+  template <typename T, typename UnwrapFn = ExecutorAddr::defaultUnwrap<T>>
+  static ExecutorAddrRange fromPtrRange(T *Start, T *End,
+                                        UnwrapFn &&Unwrap = UnwrapFn()) {
+    return {ExecutorAddr::fromPtr(Start, Unwrap),
+            ExecutorAddr::fromPtr(End, Unwrap)};
+  }
+
+  template <typename T, typename UnwrapFn = ExecutorAddr::defaultUnwrap<T>>
+  static ExecutorAddrRange fromPtrRange(T *Ptr, ExecutorAddrDiff Size,
+                                        UnwrapFn &&Unwrap = UnwrapFn()) {
+    return {ExecutorAddr::fromPtr(Ptr, std::forward<UnwrapFn>(Unwrap)), Size};
+  }
+
   bool empty() const { return Start == End; }
   ExecutorAddrDiff size() const { return End - Start; }
 
@@ -228,6 +272,9 @@ struct ExecutorAddrRange {
   }
 
   bool contains(ExecutorAddr Addr) const { return Start <= Addr && Addr < End; }
+  bool contains(const ExecutorAddrRange &Other) {
+    return (Other.Start >= Start && Other.End <= End);
+  }
   bool overlaps(const ExecutorAddrRange &Other) {
     return !(Other.End <= Start || End <= Other.Start);
   }

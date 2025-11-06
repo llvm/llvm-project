@@ -18,9 +18,17 @@ using namespace mlir;
 #include "mlir/IR/RegionKindInterface.cpp.inc"
 
 bool mlir::mayHaveSSADominance(Region &region) {
-  auto regionKindOp =
-      dyn_cast_if_present<RegionKindInterface>(region.getParentOp());
+  auto regionKindOp = dyn_cast<RegionKindInterface>(region.getParentOp());
   if (!regionKindOp)
     return true;
   return regionKindOp.hasSSADominance(region.getRegionNumber());
+}
+
+bool mlir::mayBeGraphRegion(Region &region) {
+  if (!region.getParentOp()->isRegistered())
+    return true;
+  auto regionKindOp = dyn_cast<RegionKindInterface>(region.getParentOp());
+  if (!regionKindOp)
+    return false;
+  return !regionKindOp.hasSSADominance(region.getRegionNumber());
 }

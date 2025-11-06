@@ -9,6 +9,9 @@
 // NetBSD does not support LC_COLLATE at the moment
 // XFAIL: netbsd
 
+// Bionic has minimal locale support, investigate this later.
+// XFAIL: LIBCXX-ANDROID-FIXME
+
 // <locale>
 
 // template <class charT> class collate_byname

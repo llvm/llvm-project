@@ -112,7 +112,7 @@ private:
   InstClassification classifyInstruction(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
                                          const X86RegisterInfo &RegInfo,
-                                         DenseSet<unsigned int> &UsedRegs);
+                                         const DenseSet<MCRegister> &UsedRegs);
 
   StringRef getPassName() const override { return "X86 Optimize Call Frame"; }
 
@@ -239,8 +239,7 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
   TFL = STI->getFrameLowering();
   MRI = &MF.getRegInfo();
 
-  const X86RegisterInfo &RegInfo =
-      *static_cast<const X86RegisterInfo *>(STI->getRegisterInfo());
+  const X86RegisterInfo &RegInfo = *STI->getRegisterInfo();
   SlotSize = RegInfo.getSlotSize();
   assert(isPowerOf2_32(SlotSize) && "Expect power of 2 stack slot size");
   Log2SlotSize = Log2_32(SlotSize);
@@ -278,7 +277,7 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
 X86CallFrameOptimization::InstClassification
 X86CallFrameOptimization::classifyInstruction(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    const X86RegisterInfo &RegInfo, DenseSet<unsigned int> &UsedRegs) {
+    const X86RegisterInfo &RegInfo, const DenseSet<MCRegister> &UsedRegs) {
   if (MI == MBB.end())
     return Exit;
 
@@ -341,7 +340,7 @@ X86CallFrameOptimization::classifyInstruction(
     if (RegInfo.regsOverlap(Reg, RegInfo.getStackRegister()))
       return Exit;
     if (MO.isDef()) {
-      for (unsigned int U : UsedRegs)
+      for (MCRegister U : UsedRegs)
         if (RegInfo.regsOverlap(Reg, U))
           return Exit;
     }
@@ -356,8 +355,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
                                                CallContext &Context) {
   // Check that this particular call sequence is amenable to the
   // transformation.
-  const X86RegisterInfo &RegInfo =
-      *static_cast<const X86RegisterInfo *>(STI->getRegisterInfo());
+  const X86RegisterInfo &RegInfo = *STI->getRegisterInfo();
 
   // We expect to enter this at the beginning of a call sequence
   assert(I->getOpcode() == TII->getCallFrameSetupOpcode());
@@ -406,7 +404,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   if (MaxAdjust > 4)
     Context.ArgStoreVector.resize(MaxAdjust, nullptr);
 
-  DenseSet<unsigned int> UsedRegs;
+  DenseSet<MCRegister> UsedRegs;
 
   for (InstClassification Classification = Skip; Classification != Exit; ++I) {
     // If this is the COPY of the stack pointer, it's ok to ignore.
@@ -455,7 +453,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
         continue;
       Register Reg = MO.getReg();
       if (Reg.isPhysical())
-        UsedRegs.insert(Reg);
+        UsedRegs.insert(Reg.asMCReg());
     }
   }
 

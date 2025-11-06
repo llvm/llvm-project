@@ -13,17 +13,19 @@
 #ifndef MLIR_TARGET_LLVMIR_LLVMTRANSLATIONINTERFACE_H
 #define MLIR_TARGET_LLVMIR_LLVMTRANSLATIONINTERFACE_H
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectInterface.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace llvm {
+class Instruction;
 class IRBuilderBase;
 } // namespace llvm
 
 namespace mlir {
 namespace LLVM {
 class ModuleTranslation;
+class LLVMFuncOp;
 } // namespace LLVM
 
 /// Base class for dialect interfaces providing translation to LLVM IR.
@@ -52,8 +54,19 @@ public:
   /// translation results and amend the corresponding IR constructs. Does
   /// nothing and succeeds by default.
   virtual LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const {
+    return success();
+  }
+
+  /// Hook for derived dialect interface to translate or act on a derived
+  /// dialect attribute that appears on a function parameter. This gets called
+  /// after the function operation has been translated.
+  virtual LogicalResult
+  convertParameterAttr(LLVM::LLVMFuncOp function, int argIdx,
+                       NamedAttribute attr,
+                       LLVM::ModuleTranslation &moduleTranslation) const {
     return success();
   }
 };
@@ -78,12 +91,30 @@ public:
   /// Acts on the given operation using the interface implemented by the dialect
   /// of one of the operation's dialect attributes.
   virtual LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const {
     if (const LLVMTranslationDialectInterface *iface =
             getInterfaceFor(attribute.getNameDialect())) {
-      return iface->amendOperation(op, attribute, moduleTranslation);
+      return iface->amendOperation(op, instructions, attribute,
+                                   moduleTranslation);
     }
+    return success();
+  }
+
+  /// Acts on the given function operation using the interface implemented by
+  /// the dialect of one of the function parameter attributes.
+  virtual LogicalResult
+  convertParameterAttr(LLVM::LLVMFuncOp function, int argIdx,
+                       NamedAttribute attribute,
+                       LLVM::ModuleTranslation &moduleTranslation) const {
+    if (const LLVMTranslationDialectInterface *iface =
+            getInterfaceFor(attribute.getNameDialect())) {
+      return iface->convertParameterAttr(function, argIdx, attribute,
+                                         moduleTranslation);
+    }
+    function.emitWarning("Unhandled parameter attribute '" +
+                         attribute.getName().str() + "'");
     return success();
   }
 };

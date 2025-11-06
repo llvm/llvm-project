@@ -37,10 +37,10 @@ export void f(B b = B());
 //--- X.cppm
 export module X;
 import M;
-B b3; // expected-error {{definition of 'B' must be imported from module 'M:B' before it is required}} expected-error {{}}
+B b3; // expected-error {{definition of 'B' must be imported from module 'M' before it is required}} expected-error {{}}
       // expected-note@* {{definition here is not reachable}} expected-note@* {{}}
 // FIXME: We should emit an error for unreachable definition of B.
 void g() { f(); }
-void g1() { f(B()); } // expected-error 1+{{definition of 'B' must be imported from module 'M:B' before it is required}}
+void g1() { f(B()); } // expected-error 1+{{definition of 'B' must be imported from module 'M' before it is required}}
                       // expected-note@* 1+{{definition here is not reachable}}
                       // expected-note@M.cppm:5 {{passing argument to parameter 'b' here}}

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 
-This file is used to generate the tables of values in 
+This file is used to generate the tables of values in
 src/__support/ryu_constants.h and ryu_long_double constants.h. To use it, set
 the constants at the top of the file to the values you want to use for the Ryu
 algorithm, then run this file. It will output the appropriate tables to stdout,
@@ -173,10 +173,10 @@ if MOD_SIZE > (2**MID_INT_SIZE):
     )
 else:
     print("static const uint64_t POW10_SPLIT[][" + str(MID_INT_SIZE // 64) + "] = {")
-    for idx in range(0, POSITIVE_ARR_SIZE):
+    for idx in range(0, POSITIVE_ARR_SIZE + 1):
         num_size = print_positive_table_for_idx(idx)
+        positive_size_arr[idx] = acc
         acc += num_size
-        positive_size_arr[idx + 1] = acc
     print("};")
 
     print(

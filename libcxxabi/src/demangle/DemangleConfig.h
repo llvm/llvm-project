@@ -15,11 +15,19 @@
 // build systems to override this value.
 // https://libcxx.llvm.org/UsingLibcxx.html#enabling-the-safe-libc-mode
 #ifndef _LIBCPP_VERBOSE_ABORT
-#define _LIBCPP_VERBOSE_ABORT(...) abort_message(__VA_ARGS__)
+#define _LIBCPP_VERBOSE_ABORT(...) __abort_message(__VA_ARGS__)
 #include "../abort_message.h"
 #endif
 
-#include <ciso646>
+#ifndef _LIBCPP_LOG_HARDENING_FAILURE
+// Libc++abi does not have any functionality to log and continue, so we drop
+// error messages when we build the demangler with `observe` assertion semantic.
+// Once the layering with libc++ is improved, this could use the libc++
+// functionality to log hardening failures.
+#define _LIBCPP_LOG_HARDENING_FAILURE(message) ((void)0)
+#endif
+
+#include <version>
 
 #ifdef _MSC_VER
 // snprintf is implemented in VS 2015
@@ -99,7 +107,16 @@
 #define DEMANGLE_FALLTHROUGH
 #endif
 
+#ifndef DEMANGLE_ASSERT
+#include <cassert>
+#define DEMANGLE_ASSERT(__expr, __msg) assert((__expr) && (__msg))
+#endif
+
 #define DEMANGLE_NAMESPACE_BEGIN namespace { namespace itanium_demangle {
 #define DEMANGLE_NAMESPACE_END } }
+
+// The DEMANGLE_ABI macro resolves to nothing when building libc++abi. Only
+// the llvm copy defines DEMANGLE_ABI as a visibility attribute.
+#define DEMANGLE_ABI
 
 #endif // LIBCXXABI_DEMANGLE_DEMANGLE_CONFIG_H

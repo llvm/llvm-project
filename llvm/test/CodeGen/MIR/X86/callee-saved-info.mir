@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses callee saved information in the
 # stack objects correctly.
 
@@ -12,7 +12,7 @@
   define i32 @func(i32 %a) {
   entry:
     %b = alloca i32
-    store i32 %a, i32* %b
+    store i32 %a, ptr %b
     br label %check
 
   check:
@@ -20,10 +20,10 @@
     br i1 %comp, label %loop, label %exit
 
   loop:
-    %c = load i32, i32* %b
+    %c = load i32, ptr %b
     %d = call i32 @compute(i32 %c)
     %e = sub i32 %d, 1
-    store i32 %e, i32* %b
+    store i32 %e, ptr %b
     br label %check
 
   exit:

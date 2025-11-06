@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "DwarfGenerator.h"
 #include "DwarfUtils.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+
+// AIX doesn't support the debug_addr section
+#ifdef _AIX
+#define NO_SUPPORT_DEBUG_ADDR
+#endif
 
 using namespace llvm;
 using namespace dwarf;
@@ -181,11 +186,7 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
   EXPECT_STREQ(*toString(Prologue.FileNames[0].Name), "a file");
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_GetOrParseLineTableAtInvalidOffset) {
-#else
 TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffset) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
   generate();
@@ -207,12 +208,7 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffset) {
           "offset 0x00000001 is not a valid debug line section offset"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_GetOrParseLineTableAtInvalidOffsetAfterData) {
-#else
 TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffsetAfterData) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -233,7 +229,7 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffsetAfterData) {
           "offset 0x00000001 is not a valid debug line section offset"));
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_PrologueGetLength) {
 #else
 TEST_P(DebugLineParameterisedFixture, PrologueGetLength) {
@@ -260,7 +256,7 @@ TEST_P(DebugLineParameterisedFixture, PrologueGetLength) {
   EXPECT_EQ((*ExpectedLineTable)->Prologue.getLength(), ExpectedLength);
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_GetOrParseLineTableValidTable) {
 #else
 TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
@@ -330,7 +326,7 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
   // correctly.
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_ClearLineValidTable) {
 #else
 TEST_P(DebugLineParameterisedFixture, ClearLineValidTable) {
@@ -406,11 +402,7 @@ TEST_P(DebugLineParameterisedFixture, ClearLineValidTable) {
   EXPECT_EQ(Expected4->Sequences.size(), 2u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ErrorForReservedLength) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -433,12 +425,7 @@ struct DebugLineUnsupportedVersionFixture : public TestWithParam<uint16_t>,
   uint16_t Version;
 };
 
-#ifdef _AIX
-TEST_P(DebugLineUnsupportedVersionFixture,
-       DISABLED_ErrorForUnsupportedVersion) {
-#else
 TEST_P(DebugLineUnsupportedVersionFixture, ErrorForUnsupportedVersion) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -460,7 +447,7 @@ INSTANTIATE_TEST_SUITE_P(UnsupportedVersionTestParams,
                          Values(/*1 below min */ 1, /* 1 above max */ 6,
                                 /* Maximum possible */ 0xffff));
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_F(DebugLineBasicFixture, DISABLED_ErrorForInvalidV5IncludeDirTable) {
 #else
 TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
@@ -505,7 +492,7 @@ TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
           "found"));
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_ErrorForTooLargePrologueLength) {
 #else
 TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
@@ -545,7 +532,7 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
               .str()));
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_ErrorForTooShortPrologueLength) {
 #else
 TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
@@ -603,12 +590,7 @@ INSTANTIATE_TEST_SUITE_P(
            std::make_pair(4, DWARF64), // Test v4 fields and DWARF64.
            std::make_pair(5, DWARF32), std::make_pair(5, DWARF64)));
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ErrorForExtendedOpcodeLengthSmallerThanExpected) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthSmallerThanExpected) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -637,12 +619,7 @@ TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthSmallerThanExpected) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Discriminator, DW_LNS_negate_stmt);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ErrorForExtendedOpcodeLengthLargerThanExpected) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthLargerThanExpected) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -671,11 +648,7 @@ TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthLargerThanExpected) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[2].IsStmt, 1u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ErrorForUnitLengthTooLarge) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -704,11 +677,7 @@ TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
   EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ErrorForMismatchedAddressSize) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
-#endif
   if (!setupGenerator(4, 8))
     GTEST_SKIP();
 
@@ -737,13 +706,8 @@ TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Address.Address, Addr2);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ErrorForMismatchedAddressSizeUnsetInitialAddress) {
-#else
 TEST_F(DebugLineBasicFixture,
        ErrorForMismatchedAddressSizeUnsetInitialAddress) {
-#endif
   if (!setupGenerator(4, 0))
     GTEST_SKIP();
 
@@ -769,13 +733,8 @@ TEST_F(DebugLineBasicFixture,
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Address.Address, Addr2);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ErrorForUnsupportedAddressSizeInSetAddressLength) {
-#else
 TEST_F(DebugLineBasicFixture,
        ErrorForUnsupportedAddressSizeInSetAddressLength) {
-#endif
   // Use DWARF v4, and 0 for data extractor address size so that the address
   // size is derived from the opcode length.
   if (!setupGenerator(4, 0))
@@ -807,11 +766,7 @@ TEST_F(DebugLineBasicFixture,
   EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ErrorForAddressSizeGreaterThanByteSize) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForAddressSizeGreaterThanByteSize) {
-#endif
   // Use DWARF v4, and 0 for data extractor address size so that the address
   // size is derived from the opcode length.
   if (!setupGenerator(4, 0))
@@ -835,7 +790,7 @@ TEST_F(DebugLineBasicFixture, ErrorForAddressSizeGreaterThanByteSize) {
   ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_F(DebugLineBasicFixture,
        DISABLED_ErrorForUnsupportedAddressSizeDefinedInHeader) {
 #else
@@ -868,7 +823,9 @@ TEST_F(DebugLineBasicFixture, ErrorForUnsupportedAddressSizeDefinedInHeader) {
                                                     nullptr, RecordRecoverable);
   EXPECT_THAT_ERROR(
       std::move(Recoverable),
-      FailedWithMessage("address size 0x09 of DW_LNE_set_address opcode at "
+      FailedWithMessage("parsing line table prologue at offset 0x00000000: "
+                        "invalid address size 9",
+                        "address size 0x09 of DW_LNE_set_address opcode at "
                         "offset 0x00000038 is unsupported"));
   ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
   ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 3u);
@@ -877,11 +834,7 @@ TEST_F(DebugLineBasicFixture, ErrorForUnsupportedAddressSizeDefinedInHeader) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_CallbackUsedForUnterminatedSequence) {
-#else
 TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -911,7 +864,7 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
 }
 
 struct AdjustAddressFixtureBase : public CommonFixture {
-  virtual ~AdjustAddressFixtureBase() {}
+  virtual ~AdjustAddressFixtureBase() = default;
 
   // Create and update the prologue as specified by the subclass, then return
   // the length of the table.
@@ -1095,11 +1048,7 @@ struct OpIndexFixture : Test, CommonFixture {
   }
 };
 
-#ifdef _AIX
-TEST_F(OpIndexFixture, DISABLED_OpIndexAdvance) {
-#else
 TEST_F(OpIndexFixture, OpIndexAdvance) {
-#endif
   if (!setupGenerator(4, 4))
     GTEST_SKIP();
 
@@ -1166,11 +1115,7 @@ TEST_F(OpIndexFixture, OpIndexAdvance) {
   VerifyRow((*Table)->Rows[5], 0x50, 4, 110);
 }
 
-#ifdef _AIX
-TEST_F(OpIndexFixture, DISABLED_OpIndexReset) {
-#else
 TEST_F(OpIndexFixture, OpIndexReset) {
-#endif
   if (!setupGenerator(4, 4))
     GTEST_SKIP();
 
@@ -1233,11 +1178,7 @@ TEST_F(OpIndexFixture, OpIndexReset) {
   EXPECT_EQ((*Table)->Rows[7].OpIndex, 0u);
 }
 
-#ifdef _AIX
-TEST_F(OpIndexFixture, DISABLED_MaxOpsZeroDwarf3) {
-#else
 TEST_F(OpIndexFixture, MaxOpsZeroDwarf3) {
-#endif
   if (!setupGenerator(3, 4))
     GTEST_SKIP();
 
@@ -1254,11 +1195,7 @@ TEST_F(OpIndexFixture, MaxOpsZeroDwarf3) {
   ASSERT_THAT_EXPECTED(Table, Succeeded());
 }
 
-#ifdef _AIX
-TEST_F(OpIndexFixture, DISABLED_MaxOpsZeroDwarf4) {
-#else
 TEST_F(OpIndexFixture, MaxOpsZeroDwarf4) {
-#endif
   if (!setupGenerator(4, 4))
     GTEST_SKIP();
 
@@ -1310,11 +1247,7 @@ struct LineRangeFixture : TestWithParam<std::tuple<uint8_t, bool>>,
   uint8_t LineRange;
 };
 
-#ifdef _AIX
-TEST_P(LineRangeFixture, DISABLED_LineRangeProblemsReportedCorrectly) {
-#else
 TEST_P(LineRangeFixture, LineRangeProblemsReportedCorrectly) {
-#endif
   runTest(/*CheckAdvancePC=*/false,
           "but the prologue line_range value is 0. The address and line will "
           "not be adjusted");
@@ -1349,11 +1282,7 @@ struct BadMinInstLenFixture : TestWithParam<std::tuple<uint8_t, bool>>,
   uint8_t MinInstLength;
 };
 
-#ifdef _AIX
-TEST_P(BadMinInstLenFixture, DISABLED_MinInstLengthProblemsReportedCorrectly) {
-#else
 TEST_P(BadMinInstLenFixture, MinInstLengthProblemsReportedCorrectly) {
-#endif
   runTest(/*CheckAdvancePC=*/true,
           "but the prologue minimum_instruction_length value is 0, which "
           "prevents any address advancing");
@@ -1364,11 +1293,7 @@ INSTANTIATE_TEST_SUITE_P(
     Values(std::make_tuple(0, true),    // Test zero value (error).
            std::make_tuple(1, false))); // Test non-zero value (no error).
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ParserParsesCorrectly) {
-#else
 TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1395,11 +1320,7 @@ TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
   EXPECT_FALSE(Unrecoverable);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ParserSkipsCorrectly) {
-#else
 TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1420,11 +1341,7 @@ TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
   EXPECT_FALSE(Unrecoverable);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ParserAlwaysDoneForEmptySection) {
-#else
 TEST_F(DebugLineBasicFixture, ParserAlwaysDoneForEmptySection) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1434,12 +1351,7 @@ TEST_F(DebugLineBasicFixture, ParserAlwaysDoneForEmptySection) {
   EXPECT_TRUE(Parser.done());
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserMarkedAsDoneForBadLengthWhenParsing) {
-#else
 TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenParsing) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1462,12 +1374,7 @@ TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenParsing) {
           "reserved unit length of value 0xfffffff0"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserMarkedAsDoneForBadLengthWhenSkipping) {
-#else
 TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenSkipping) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1490,12 +1397,7 @@ TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenSkipping) {
           "reserved unit length of value 0xfffffff0"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserReportsFirstErrorInEachTableWhenParsing) {
-#else
 TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1521,12 +1423,7 @@ TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
                         "unsupported version 1"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserReportsNonPrologueProblemsWhenParsing) {
-#else
 TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1558,13 +1455,8 @@ TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
   EXPECT_FALSE(Unrecoverable);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserReportsPrologueErrorsInEachTableWhenSkipping) {
-#else
 TEST_F(DebugLineBasicFixture,
        ParserReportsPrologueErrorsInEachTableWhenSkipping) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1590,12 +1482,7 @@ TEST_F(DebugLineBasicFixture,
                         "unsupported version 1"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserIgnoresNonPrologueErrorsWhenSkipping) {
-#else
 TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1611,7 +1498,7 @@ TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
   EXPECT_FALSE(Unrecoverable);
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_F(DebugLineBasicFixture, DISABLED_VerboseOutput) {
 #else
 TEST_F(DebugLineBasicFixture, VerboseOutput) {
@@ -1671,7 +1558,6 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   raw_string_ostream OS(Output);
   Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS,
                    /*Verbose=*/true);
-  OS.flush();
   StringRef OutputRef(Output);
 
   size_t Pos = 0;
@@ -1777,7 +1663,7 @@ struct TruncatedPrologueFixture
   StringRef ExpectedErr;
 };
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(TruncatedPrologueFixture, DISABLED_ErrorForTruncatedPrologue) {
 #else
 TEST_P(TruncatedPrologueFixture, ErrorForTruncatedPrologue) {
@@ -1918,7 +1804,6 @@ struct TruncatedOpcodeFixtureBase : public CommonFixture {
     raw_string_ostream OS(Output);
     Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS,
                      /*Verbose=*/true);
-    OS.flush();
 
     std::string LinePrefix =
         ("0x0000002f: 0" + Twine::utohexstr(OpcodeValue) + " ").str();
@@ -1958,12 +1843,7 @@ struct TruncatedExtendedOpcodeFixture
   uint64_t OpcodeLength;
 };
 
-#ifdef _AIX
-TEST_P(TruncatedExtendedOpcodeFixture,
-       DISABLED_ErrorForTruncatedExtendedOpcode) {
-#else
 TEST_P(TruncatedExtendedOpcodeFixture, ErrorForTruncatedExtendedOpcode) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
   LineTable &LT = setupTable();
@@ -2042,12 +1922,7 @@ INSTANTIATE_TEST_SUITE_P(
             "unexpected end of data at offset 0x35 while reading [0x32, "
             "0x36)")));
 
-#ifdef _AIX
-TEST_P(TruncatedStandardOpcodeFixture,
-       DISABLED_ErrorForTruncatedStandardOpcode) {
-#else
 TEST_P(TruncatedStandardOpcodeFixture, ErrorForTruncatedStandardOpcode) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
   LineTable &LT = setupTable();
@@ -2103,7 +1978,7 @@ INSTANTIATE_TEST_SUITE_P(
             "unable to decode LEB128 at offset 0x00000032: "
             "malformed uleb128, extends past end")));
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_F(DebugLineBasicFixture, DISABLED_PrintPathsProperly) {
 #else
 TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
@@ -2160,4 +2035,117 @@ TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
   EXPECT_THAT(Result.c_str(), MatchesRegex("a dir.b dir.b file"));
 }
 
+/// Test that lookupAddressRange correctly filters rows based on
+/// a statement-sequence offset (simulating DW_AT_LLVM_stmt_sequence).
+///
+/// This test verifies that:
+/// 1. When a statement-sequence offset is provided, lookupAddressRange
+///    only returns rows from the sequence starting at that offset.
+/// 2. When an invalid statement-sequence offset is provided, no rows
+///    are returned.
+/// 3. When no statement-sequence offset is provided, all matching rows
+///    in the table are returned.
+///
+/// We build a line table with two sequences at the same address range
+/// but different line numbers. Then we try lookups with various statement-
+/// sequence offsets to check the filtering logic.
+TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
+  if (!setupGenerator())
+    GTEST_SKIP();
+
+  // Create a line table that has two sequences covering [0x1000, 0x1004).
+  // Each sequence has two rows: addresses at 0x1000 and 0x1004, but
+  // they differ by line numbers (100 vs. 200, etc.).
+  //
+  // We'll pretend the first sequence starts at offset 0x2e in the line table,
+  // the second at 0x42, and we'll also test an invalid offset 0x66.
+
+  LineTable &LT = Gen->addLineTable();
+
+  // First sequence at offset 0x2e: addresses 0x1000(Ln=100), 0x1004(Ln=101)
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000U, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_set_prologue_end, {});
+  // Advance the line register by 99 (so line=100) and copy.
+  LT.addStandardOpcode(DW_LNS_advance_line, {{99, LineTable::SLEB}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  // 0x4b is a special opcode: address += 4, line += 1 (so line=101).
+  LT.addByte(0x4b);
+  // End this sequence.
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  // Second sequence at offset 0x42: addresses 0x1000(Ln=200), 0x1004(Ln=201)
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000U, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_set_prologue_end, {});
+  LT.addStandardOpcode(DW_LNS_advance_line, {{199, LineTable::SLEB}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  // 0x4b again: address += 4, line += 1 (so line=201).
+  LT.addByte(0x4b);
+  // End this second sequence.
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  // Generate the DWARF data.
+  generate();
+
+  // Parse the line table.
+  auto ExpectedLineTable =
+      Line.getOrParseLineTable(LineData, /*Offset=*/0, *Context,
+                               /*DwarfUnit=*/nullptr, RecordRecoverable);
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  const auto *Table = *ExpectedLineTable;
+
+  // The table should have two sequences, each starting at our chosen offsets.
+  ASSERT_EQ(Table->Sequences.size(), 2u);
+
+  // 1) Try looking up with an invalid offset (simulating an invalid
+  //    DW_AT_LLVM_stmt_sequence). We expect no rows.
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
+        {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
+        /*StmtSequenceOffset=*/0x66); // invalid offset
+    EXPECT_FALSE(Found);
+    EXPECT_TRUE(Rows.empty());
+  }
+
+  // 2) Look up using the offset 0x2e (our first sequence). We expect
+  //    to get the rows from that sequence only (which for 0x1000 is row #0).
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
+        {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
+        /*StmtSequenceOffset=*/0x2e);
+    EXPECT_TRUE(Found);
+    ASSERT_EQ(Rows.size(), 1u);
+    // The first sequence's first row is index 0.
+    EXPECT_EQ(Rows[0], 0u);
+  }
+
+  // 3) Look up using the offset 0x42 (second sequence). For address 0x1000
+  //    in that second sequence, we should see row #2.
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
+        {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
+        /*StmtSequenceOffset=*/0x42);
+    EXPECT_TRUE(Found);
+    ASSERT_EQ(Rows.size(), 1u);
+    // The second sequence's first row is index 2 in the table.
+    EXPECT_EQ(Rows[0], 3u);
+  }
+
+  // 4) Look up with no statement-sequence offset specified.
+  //    We should get rows from both sequences for address 0x1000.
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
+        {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
+        std::nullopt /* no filter */);
+    EXPECT_TRUE(Found);
+    // The first sequence's row is #0, second's row is #2, so both should
+    // appear.
+    ASSERT_EQ(Rows.size(), 2u);
+    EXPECT_EQ(Rows[0], 0u);
+    EXPECT_EQ(Rows[1], 3u);
+  }
+}
 } // end anonymous namespace

@@ -20,18 +20,21 @@
 #include <mach/mach.h>
 
 // These are not available in older macOS SDKs.
-#ifndef CPU_SUBTYPE_X86_64_H
-#define CPU_SUBTYPE_X86_64_H  ((cpu_subtype_t)8)   /* Haswell */
-#endif
-#ifndef CPU_SUBTYPE_ARM_V7S
-#define CPU_SUBTYPE_ARM_V7S   ((cpu_subtype_t)11)  /* Swift */
-#endif
-#ifndef CPU_SUBTYPE_ARM_V7K
-#define CPU_SUBTYPE_ARM_V7K   ((cpu_subtype_t)12)
-#endif
-#ifndef CPU_TYPE_ARM64
-#define CPU_TYPE_ARM64        (CPU_TYPE_ARM | CPU_ARCH_ABI64)
-#endif
+#  ifndef CPU_SUBTYPE_X86_64_H
+#    define CPU_SUBTYPE_X86_64_H ((cpu_subtype_t)8) /* Haswell */
+#  endif
+#  ifndef CPU_SUBTYPE_ARM_V7S
+#    define CPU_SUBTYPE_ARM_V7S ((cpu_subtype_t)11) /* Swift */
+#  endif
+#  ifndef CPU_SUBTYPE_ARM_V7K
+#    define CPU_SUBTYPE_ARM_V7K ((cpu_subtype_t)12)
+#  endif
+#  ifndef CPU_TYPE_ARM64
+#    define CPU_TYPE_ARM64 (CPU_TYPE_ARM | CPU_ARCH_ABI64)
+#  endif
+#  ifndef CPU_SUBTYPE_ARM64E
+#    define CPU_SUBTYPE_ARM64E ((cpu_subtype_t)2)
+#  endif
 
 namespace __sanitizer {
 
@@ -311,18 +314,26 @@ ModuleArch ModuleArchFromCpuType(cpu_type_t cputype, cpu_subtype_t cpusubtype) {
     case CPU_TYPE_I386:
       return kModuleArchI386;
     case CPU_TYPE_X86_64:
-      if (cpusubtype == CPU_SUBTYPE_X86_64_ALL) return kModuleArchX86_64;
-      if (cpusubtype == CPU_SUBTYPE_X86_64_H) return kModuleArchX86_64H;
+      if (cpusubtype == CPU_SUBTYPE_X86_64_ALL)
+        return kModuleArchX86_64;
+      if (cpusubtype == CPU_SUBTYPE_X86_64_H)
+        return kModuleArchX86_64H;
       CHECK(0 && "Invalid subtype of x86_64");
       return kModuleArchUnknown;
     case CPU_TYPE_ARM:
-      if (cpusubtype == CPU_SUBTYPE_ARM_V6) return kModuleArchARMV6;
-      if (cpusubtype == CPU_SUBTYPE_ARM_V7) return kModuleArchARMV7;
-      if (cpusubtype == CPU_SUBTYPE_ARM_V7S) return kModuleArchARMV7S;
-      if (cpusubtype == CPU_SUBTYPE_ARM_V7K) return kModuleArchARMV7K;
+      if (cpusubtype == CPU_SUBTYPE_ARM_V6)
+        return kModuleArchARMV6;
+      if (cpusubtype == CPU_SUBTYPE_ARM_V7)
+        return kModuleArchARMV7;
+      if (cpusubtype == CPU_SUBTYPE_ARM_V7S)
+        return kModuleArchARMV7S;
+      if (cpusubtype == CPU_SUBTYPE_ARM_V7K)
+        return kModuleArchARMV7K;
       CHECK(0 && "Invalid subtype of ARM");
       return kModuleArchUnknown;
     case CPU_TYPE_ARM64:
+      if (cpusubtype == CPU_SUBTYPE_ARM64E)
+        return kModuleArchARM64E;
       return kModuleArchARM64;
     default:
       CHECK(0 && "Invalid CPU type");
@@ -334,9 +345,22 @@ static const load_command *NextCommand(const load_command *lc) {
   return (const load_command *)((const char *)lc + lc->cmdsize);
 }
 
-static void FindUUID(const load_command *first_lc, u8 *uuid_output) {
-  for (const load_command *lc = first_lc; lc->cmd != 0; lc = NextCommand(lc)) {
-    if (lc->cmd != LC_UUID) continue;
+#  ifdef MH_MAGIC_64
+static constexpr size_t header_size = sizeof(mach_header_64);
+#  else
+static constexpr size_t header_size = sizeof(mach_header);
+#  endif
+
+static void FindUUID(const load_command *first_lc, const mach_header *hdr,
+                     u8 *uuid_output) {
+  uint32_t curcmd = 0;
+  for (const load_command *lc = first_lc; curcmd < hdr->ncmds;
+       curcmd++, lc = NextCommand(lc)) {
+    CHECK_LT((const char *)lc,
+             (const char *)hdr + header_size + hdr->sizeofcmds);
+
+    if (lc->cmd != LC_UUID)
+      continue;
 
     const uuid_command *uuid_lc = (const uuid_command *)lc;
     const uint8_t *uuid = &uuid_lc->uuid[0];
@@ -345,9 +369,16 @@ static void FindUUID(const load_command *first_lc, u8 *uuid_output) {
   }
 }
 
-static bool IsModuleInstrumented(const load_command *first_lc) {
-  for (const load_command *lc = first_lc; lc->cmd != 0; lc = NextCommand(lc)) {
-    if (lc->cmd != LC_LOAD_DYLIB) continue;
+static bool IsModuleInstrumented(const load_command *first_lc,
+                                 const mach_header *hdr) {
+  uint32_t curcmd = 0;
+  for (const load_command *lc = first_lc; curcmd < hdr->ncmds;
+       curcmd++, lc = NextCommand(lc)) {
+    CHECK_LT((const char *)lc,
+             (const char *)hdr + header_size + hdr->sizeofcmds);
+
+    if (lc->cmd != LC_LOAD_DYLIB)
+      continue;
 
     const dylib_command *dylib_lc = (const dylib_command *)lc;
     uint32_t dylib_name_offset = dylib_lc->dylib.name.offset;
@@ -393,10 +424,10 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
           continue;
         }
       }
-      FindUUID((const load_command *)data_.current_load_cmd_addr,
+      FindUUID((const load_command *)data_.current_load_cmd_addr, hdr,
                data_.current_uuid);
       data_.current_instrumented = IsModuleInstrumented(
-          (const load_command *)data_.current_load_cmd_addr);
+          (const load_command *)data_.current_load_cmd_addr, hdr);
     }
 
     while (data_.current_load_cmd_count > 0) {
@@ -433,7 +464,9 @@ void MemoryMappingLayout::DumpListOfModules(
   MemoryMappedSegmentData data;
   segment.data_ = &data;
   while (Next(&segment)) {
-    if (segment.filename[0] == '\0') continue;
+    // skip the __PAGEZERO segment, its vmsize is 0
+    if (segment.filename[0] == '\0' || (segment.start == segment.end))
+      continue;
     LoadedModule *cur_module = nullptr;
     if (!modules->empty() &&
         0 == internal_strcmp(segment.filename, modules->back().full_name())) {

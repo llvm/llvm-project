@@ -1,7 +1,7 @@
-# This test verifies the effect of -icp-inline option: that ICP is only
-# performed for call targets eligible for inlining.
+## This test verifies the effect of -icp-inline option: that ICP is only
+## performed for call targets eligible for inlining.
 
-# The assembly was produced from C code compiled with clang-15 -O1 -S:
+## The assembly was produced from C code compiled with clang-15 -O1 -S:
 
 # int foo(int x) { return x + 1; }
 # int bar(int x) { return x*100 + 42; }
@@ -20,7 +20,7 @@
 
 # Without -icp-inline option, ICP is performed
 # RUN: llvm-bolt %t.exe --icp=calls --icp-calls-topn=1 --inline-small-functions\
-# RUN:   -o /dev/null --lite=0 \
+# RUN:   -o %t.null --lite=0 \
 # RUN:   --inline-small-functions-bytes=4 --print-icp --data %t.fdata \
 # RUN:   | FileCheck %s --check-prefix=CHECK-NO-ICP-INLINE
 # CHECK-NO-ICP-INLINE: Binary Function "main" after indirect-call-promotion
@@ -29,7 +29,7 @@
 
 # With -icp-inline option, ICP is not performed (size of bar > inline threshold)
 # RUN: llvm-bolt %t.exe --icp=calls --icp-calls-topn=1 --inline-small-functions\
-# RUN:   -o /dev/null --lite=0 \
+# RUN:   -o %t.null --lite=0 \
 # RUN:   --inline-small-functions-bytes=4 --icp-inline --print-icp \
 # RUN:   --data %t.fdata | FileCheck %s --check-prefix=CHECK-ICP-INLINE
 # CHECK-ICP-INLINE:     Binary Function "main" after indirect-call-promotion

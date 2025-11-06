@@ -7,57 +7,41 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjcopyOptions.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/BinaryFormat/ELF.h"
-#include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/COFF/COFFObjcopy.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ELF/ELFConfig.h"
 #include "llvm/ObjCopy/ELF/ELFObjcopy.h"
-#include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MachO/MachOObjcopy.h"
 #include "llvm/ObjCopy/ObjCopy.h"
-#include "llvm/ObjCopy/wasm/WasmConfig.h"
 #include "llvm/ObjCopy/wasm/WasmObjcopy.h"
 #include "llvm/Object/Archive.h"
-#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
-#include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <memory>
-#include <string>
-#include <system_error>
 #include <utility>
 
 using namespace llvm;
@@ -123,6 +107,7 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   case FileFormat::Binary:
   case FileFormat::IHex:
   case FileFormat::Unspecified:
+  case FileFormat::SREC:
     Expected<const ELFConfig &> ELFConfig = ConfigMgr.getELFConfig();
     if (!ELFConfig)
       return ELFConfig.takeError();
@@ -225,7 +210,6 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
 }
 
 int llvm_objcopy_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   ToolName = argv[0];
 
   // Expand response files.
@@ -249,12 +233,16 @@ int llvm_objcopy_main(int argc, char **argv, const llvm::ToolContext &) {
                           WithColor::error(errs(), ToolName));
     return 1;
   }
+
+  int ret = 0;
   for (ConfigManager &ConfigMgr : DriverConfig->CopyConfigs) {
+    assert(!ConfigMgr.Common.ErrorCallback);
+    ConfigMgr.Common.ErrorCallback = reportWarning;
     if (Error E = executeObjcopy(ConfigMgr)) {
       logAllUnhandledErrors(std::move(E), WithColor::error(errs(), ToolName));
-      return 1;
+      ret = 1;
     }
   }
 
-  return 0;
+  return ret;
 }

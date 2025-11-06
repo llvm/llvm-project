@@ -12,7 +12,6 @@
 
 #include "clang/Lex/PreprocessorLexer.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include <cassert>
@@ -47,7 +46,6 @@ void PreprocessorLexer::LexIncludeFilename(Token &FilenameTok) {
 
 /// getFileEntry - Return the FileEntry corresponding to this FileID.  Like
 /// getFileID(), this only works for lexers with attached preprocessors.
-OptionalFileEntryRefDegradesToFileEntryPtr
-PreprocessorLexer::getFileEntry() const {
+OptionalFileEntryRef PreprocessorLexer::getFileEntry() const {
   return PP->getSourceManager().getFileEntryRefForID(getFileID());
 }

@@ -16,9 +16,6 @@
 #include "llvm/Transforms/IPO/ProfiledCallGraph.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 namespace sampleprof {
 
@@ -57,8 +54,7 @@ struct ProfiledCandidateComparer {
     // Tie breaker using GUID so we have stable/deterministic inlining order
     assert(LHS.CalleeSamples && RHS.CalleeSamples &&
            "Expect non-null FunctionSamples");
-    return LHS.CalleeSamples->getGUID(LHS.CalleeSamples->getName()) <
-           RHS.CalleeSamples->getGUID(RHS.CalleeSamples->getName());
+    return LHS.CalleeSamples->getGUID() < RHS.CalleeSamples->getGUID();
   }
 };
 
@@ -81,8 +77,8 @@ public:
 private:
   bool getInlineCandidates(ProfiledCandidateQueue &CQueue,
                            const FunctionSamples *FCallerContextSamples);
-  std::vector<StringRef> buildTopDownOrder();
-  void processFunction(StringRef Name);
+  std::vector<FunctionId> buildTopDownOrder();
+  void processFunction(FunctionId Name);
   bool shouldInline(ProfiledInlineCandidate &Candidate);
   uint32_t getFuncSize(const ContextTrieNode *ContextNode);
   bool UseContextCost;

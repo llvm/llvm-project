@@ -47,15 +47,18 @@ UdtRecordCompleter::UdtRecordCompleter(
   CVType cvt = m_index.tpi().getType(m_id.index);
   switch (cvt.kind()) {
   case LF_ENUM:
+    m_cvr.er.Options = ClassOptions::None;
     llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, m_cvr.er));
     break;
   case LF_UNION:
+    m_cvr.ur.Options = ClassOptions::None;
     llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, m_cvr.ur));
     m_layout.bit_size = m_cvr.ur.getSize() * 8;
     m_record.record.kind = Member::Union;
     break;
   case LF_CLASS:
   case LF_STRUCTURE:
+    m_cvr.cr.Options = ClassOptions::None;
     llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, m_cvr.cr));
     m_layout.bit_size = m_cvr.cr.getSize() * 8;
     m_record.record.kind = Member::Struct;
@@ -108,9 +111,8 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
   m_ast_builder.clang().AddMethodToCXXRecordType(
-      derived_opaque_ty, name.data(), nullptr, method_ct,
-      access_type, attrs.isVirtual(), attrs.isStatic(), false, false, false,
-      is_artificial);
+      derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct, access_type,
+      attrs.isVirtual(), attrs.isStatic(), false, false, false, is_artificial);
 
   m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
 }
@@ -356,14 +358,14 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
   case Member::Struct:
   case Member::Union: {
     clang::TagTypeKind kind = field->kind == Member::Struct
-                                  ? clang::TagTypeKind::TTK_Struct
-                                  : clang::TagTypeKind::TTK_Union;
+                                  ? clang::TagTypeKind::Struct
+                                  : clang::TagTypeKind::Union;
     ClangASTMetadata metadata;
     metadata.SetUserID(pdb->anonymous_id);
     metadata.SetIsDynamicCXXType(false);
     CompilerType record_ct = clang.CreateRecordType(
-        parent_decl_ctx, OptionalClangModuleID(), lldb::eAccessPublic, "", kind,
-        lldb::eLanguageTypeC_plus_plus, &metadata);
+        parent_decl_ctx, OptionalClangModuleID(), lldb::eAccessPublic, "",
+        llvm::to_underlying(kind), lldb::eLanguageTypeC_plus_plus, metadata);
     TypeSystemClang::StartTagDeclarationDefinition(record_ct);
     ClangASTImporter::LayoutInfo layout;
     clang::DeclContext *decl_ctx = clang.GetDeclContextForType(record_ct);
@@ -440,6 +442,10 @@ void UdtRecordCompleter::Record::ConstructRecord() {
 
   // The end offset to a vector of field/struct that ends at the offset.
   std::map<uint64_t, std::vector<Member *>> end_offset_map;
+  auto is_last_end_offset = [&](auto it) {
+    return it != end_offset_map.end() && ++it == end_offset_map.end();
+  };
+
   for (auto &pair : fields_map) {
     uint64_t offset = pair.first;
     auto &fields = pair.second;
@@ -460,8 +466,23 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       }
       if (iter->second.empty())
         continue;
-      parent = iter->second.back();
-      iter->second.pop_back();
+
+      // If the new fields come after the already added ones
+      // without overlap, go back to the root.
+      if (iter->first <= offset && is_last_end_offset(iter)) {
+        if (record.kind == Member::Struct) {
+          parent = &record;
+        } else {
+          assert(record.kind == Member::Union &&
+                 "Current record must be a union");
+          assert(!record.fields.empty());
+          // For unions, append the field to the last struct
+          parent = record.fields.back().get();
+        }
+      } else {
+        parent = iter->second.back();
+        iter->second.pop_back();
+      }
     }
     // If it's a field, then the field is inside a union, so we can safely
     // increase its size by converting it to a struct to hold multiple fields.

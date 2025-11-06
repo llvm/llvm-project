@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-
 // Check that we don't pass -mconstructor-aliases to CUDA device-side
 // compilation, but we do pass it to host-side compilation.
 

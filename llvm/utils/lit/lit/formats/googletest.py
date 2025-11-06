@@ -15,7 +15,7 @@ kIsWindows = sys.platform in ["win32", "cygwin"]
 
 
 class GoogleTest(TestFormat):
-    def __init__(self, test_sub_dirs, test_suffix, run_under=[]):
+    def __init__(self, test_sub_dirs, test_suffix, run_under=[], test_prefix=None):
         self.seen_executables = set()
         self.test_sub_dirs = str(test_sub_dirs).split(";")
 
@@ -26,6 +26,7 @@ class GoogleTest(TestFormat):
 
         # Also check for .py files for testing purposes.
         self.test_suffixes = {exe_suffix, test_suffix + ".py"}
+        self.test_prefixes = {test_prefix} if test_prefix else None
         self.run_under = run_under
 
     def get_num_tests(self, path, litConfig, localConfig):
@@ -55,7 +56,9 @@ class GoogleTest(TestFormat):
             dir_path = os.path.join(source_path, subdir)
             if not os.path.isdir(dir_path):
                 continue
-            for fn in lit.util.listdir_files(dir_path, suffixes=self.test_suffixes):
+            for fn in lit.util.listdir_files(
+                dir_path, suffixes=self.test_suffixes, prefixes=self.test_prefixes
+            ):
                 # Discover the tests in this executable.
                 execpath = os.path.join(source_path, subdir, fn)
                 if execpath in self.seen_executables:
@@ -68,24 +71,49 @@ class GoogleTest(TestFormat):
                     self.seen_executables.add(execpath)
                 num_tests = self.get_num_tests(execpath, litConfig, localConfig)
                 if num_tests is not None:
-                    # Compute the number of shards.
-                    shard_size = init_shard_size
-                    nshard = int(math.ceil(num_tests / shard_size))
-                    while nshard < core_count and shard_size > 1:
-                        shard_size = shard_size // 2
+                    if litConfig.gtest_sharding:
+                        # Compute the number of shards.
+                        shard_size = init_shard_size
                         nshard = int(math.ceil(num_tests / shard_size))
+                        while nshard < core_count and shard_size > 1:
+                            shard_size = shard_size // 2
+                            nshard = int(math.ceil(num_tests / shard_size))
 
-                    # Create one lit test for each shard.
-                    for idx in range(nshard):
-                        testPath = path_in_suite + (subdir, fn, str(idx), str(nshard))
+                        # Create one lit test for each shard.
+                        for idx in range(nshard):
+                            testPath = path_in_suite + (
+                                subdir,
+                                fn,
+                                str(idx),
+                                str(nshard),
+                            )
+                            json_file = (
+                                "-".join(
+                                    [
+                                        execpath,
+                                        testSuite.config.name,
+                                        str(os.getpid()),
+                                        str(idx),
+                                        str(nshard),
+                                    ]
+                                )
+                                + ".json"
+                            )
+                            yield lit.Test.Test(
+                                testSuite,
+                                testPath,
+                                localConfig,
+                                file_path=execpath,
+                                gtest_json_file=json_file,
+                            )
+                    else:
+                        testPath = path_in_suite + (subdir, fn)
                         json_file = (
                             "-".join(
                                 [
                                     execpath,
                                     testSuite.config.name,
                                     str(os.getpid()),
-                                    str(idx),
-                                    str(nshard),
                                 ]
                             )
                             + ".json"
@@ -118,24 +146,32 @@ class GoogleTest(TestFormat):
         if test.gtest_json_file is None:
             return lit.Test.FAIL, ""
 
-        testPath, testName = os.path.split(test.getSourcePath())
-        while not os.path.exists(testPath):
-            # Handle GTest parametrized and typed tests, whose name includes
-            # some '/'s.
-            testPath, namePrefix = os.path.split(testPath)
-            testName = namePrefix + "/" + testName
-
-        testName, total_shards = os.path.split(testName)
-        testName, shard_idx = os.path.split(testName)
+        testPath = test.getSourcePath()
         from lit.cl_arguments import TestOrder
 
         use_shuffle = TestOrder(litConfig.order) == TestOrder.RANDOM
         shard_env = {
             "GTEST_OUTPUT": "json:" + test.gtest_json_file,
             "GTEST_SHUFFLE": "1" if use_shuffle else "0",
-            "GTEST_TOTAL_SHARDS": os.environ.get("GTEST_TOTAL_SHARDS", total_shards),
-            "GTEST_SHARD_INDEX": os.environ.get("GTEST_SHARD_INDEX", shard_idx),
         }
+        if litConfig.gtest_sharding:
+            testPath, testName = os.path.split(test.getSourcePath())
+            while not os.path.exists(testPath):
+                # Handle GTest parameterized and typed tests, whose name includes
+                # some '/'s.
+                testPath, namePrefix = os.path.split(testPath)
+                testName = namePrefix + "/" + testName
+
+            testName, total_shards = os.path.split(testName)
+            testName, shard_idx = os.path.split(testName)
+            shard_env.update(
+                {
+                    "GTEST_TOTAL_SHARDS": os.environ.get(
+                        "GTEST_TOTAL_SHARDS", total_shards
+                    ),
+                    "GTEST_SHARD_INDEX": os.environ.get("GTEST_SHARD_INDEX", shard_idx),
+                }
+            )
         test.config.environment.update(shard_env)
 
         cmd = [testPath]
@@ -301,7 +337,11 @@ class GoogleTest(TestFormat):
                             returnCode = lit.Test.SKIPPED
                         elif "failures" in testinfo:
                             has_failure_in_shard = True
-                            returnCode = lit.Test.FAIL
+                            returnCode = (
+                                lit.Test.XFAIL
+                                if test.isExpectedToFail()
+                                else lit.Test.FAIL
+                            )
                             output = header
                             for fail in testinfo["failures"]:
                                 output += fail["failure"] + "\n"

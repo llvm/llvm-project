@@ -20,7 +20,7 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis -o /dev/null
 
 ; VERIFY: No errors.
-; STATS: "#call site DIEs": 6,
+; STATS: "#call site DIEs": 5,
 
 @sink = global i32 0, align 4, !dbg !0
 
@@ -64,16 +64,16 @@ entry:
 ; OBJ:   DW_AT_call_all_calls (true)
 ; OBJ:   DW_AT_name ("foo")
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[bar_sp]])
+; OBJ:     DW_AT_call_origin ([[bar_sp]] "_Z3barv")
 ; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[bat_sp]])
+; OBJ:     DW_AT_call_origin ([[bat_sp]] "_Z3batv")
 ; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[bar_sp]])
+; OBJ:     DW_AT_call_origin ([[bar_sp]] "_Z3barv")
 ; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[bat_sp]])
+; OBJ:     DW_AT_call_origin ([[bat_sp]] "_Z3batv")
 ; OBJ:     DW_AT_call_tail_call
 ; OBJ:     DW_AT_call_pc
 define void @_Z3foov() !dbg !25 {
@@ -92,17 +92,11 @@ entry:
 ; OBJ: DW_AT_call_all_calls (true)
 ; OBJ: DW_AT_name ("main")
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[foo_sp]])
-; OBJ:     DW_AT_call_return_pc
-; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_target
+; OBJ:     DW_AT_call_origin ([[foo_sp]] "_Z3foov")
 ; OBJ:     DW_AT_call_return_pc
 define i32 @main() !dbg !29 {
 entry:
   call void @_Z3foov(), !dbg !32
-
-  %indirect_target = load ptr, ptr undef
-  call void %indirect_target()
 
   call void asm sideeffect "", "~{dirflag},~{fpsr},~{flags}"()
 

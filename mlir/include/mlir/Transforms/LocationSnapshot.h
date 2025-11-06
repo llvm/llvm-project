@@ -21,7 +21,6 @@
 
 namespace mlir {
 class Location;
-struct LogicalResult;
 class Operation;
 class OpPrintingFlags;
 class Pass;
@@ -51,18 +50,6 @@ void generateLocationsFromIR(raw_ostream &os, StringRef fileName, StringRef tag,
 /// `filename` is empty, a temporary file is generated instead.
 LogicalResult generateLocationsFromIR(StringRef fileName, StringRef tag,
                                       Operation *op, OpPrintingFlags flags);
-
-/// Create a pass to generate new locations by snapshotting the IR to the given
-/// file, and using the printed locations within that file. If `filename` is
-/// empty, a temporary file is generated instead. If a 'tag' is non-empty, the
-/// generated locations are represented as a NameLoc with the given tag as the
-/// name, and then fused with the existing locations. Otherwise, the existing
-/// locations are replaced.
-std::unique_ptr<Pass> createLocationSnapshotPass(OpPrintingFlags flags,
-                                                 StringRef fileName = "",
-                                                 StringRef tag = "");
-/// Overload utilizing pass options for initialization.
-std::unique_ptr<Pass> createLocationSnapshotPass();
 
 } // namespace mlir
 

@@ -14,14 +14,36 @@
 #ifndef LLVM_TARGET_CGPASSBUILDEROPTION_H
 #define LLVM_TARGET_CGPASSBUILDEROPTION_H
 
-#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 
 namespace llvm {
 
-enum class RunOutliner { TargetDefault, AlwaysOutline, NeverOutline };
-enum class RegAllocType { Default, Basic, Fast, Greedy, PBQP };
+enum class RunOutliner {
+  TargetDefault,
+  AlwaysOutline,
+  OptimisticPGO,
+  ConservativePGO,
+  NeverOutline
+};
+enum class RegAllocType { Unset, Default, Basic, Fast, Greedy, PBQP };
+
+class RegAllocTypeParser : public cl::parser<RegAllocType> {
+public:
+  RegAllocTypeParser(cl::Option &O) : cl::parser<RegAllocType>(O) {}
+  void initialize() {
+    cl::parser<RegAllocType>::initialize();
+    addLiteralOption("default", RegAllocType::Default,
+                     "Default register allocator");
+    addLiteralOption("pbqp", RegAllocType::PBQP, "PBQP register allocator");
+    addLiteralOption("fast", RegAllocType::Fast, "Fast register allocator");
+    addLiteralOption("basic", RegAllocType::Basic, "Basic register allocator");
+    addLiteralOption("greedy", RegAllocType::Greedy,
+                     "Greedy register allocator");
+  }
+};
 
 // Not one-on-one but mostly corresponding to commandline options in
 // TargetPassConfig.cpp.
@@ -32,30 +54,44 @@ struct CGPassBuilderOption {
   bool DisableVerify = false;
   bool EnableImplicitNullChecks = false;
   bool EnableBlockPlacementStats = false;
+  bool EnableGlobalMergeFunc = false;
+  bool EnableMachineFunctionSplitter = false;
+  bool EnableSinkAndFold = false;
+  bool EnableTailMerge = true;
+  /// Enable LoopTermFold immediately after LSR.
+  bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
+  bool GCEmptyBlocks = false;
 
   bool DisableLSR = false;
   bool DisableCGP = false;
-  bool PrintLSR = false;
   bool DisableMergeICmps = false;
   bool DisablePartialLibcallInlining = false;
   bool DisableConstantHoisting = false;
   bool DisableSelectOptimize = true;
+  bool DisableAtExitBasedGlobalDtorLowering = false;
+  bool DisableExpandReductions = false;
+  bool DisableRAFSProfileLoader = false;
+  bool DisableCFIFixup = false;
+  bool PrintAfterISel = false;
   bool PrintISelInput = false;
-  bool PrintGCInfo = false;
   bool RequiresCodeGenSCCOrder = false;
 
   RunOutliner EnableMachineOutliner = RunOutliner::TargetDefault;
-  RegAllocType RegAlloc = RegAllocType::Default;
+  RegAllocType RegAlloc = RegAllocType::Unset;
   std::optional<GlobalISelAbortMode> EnableGlobalISelAbort;
+  std::string FSProfileFile;
+  std::string FSRemappingFile;
 
   std::optional<bool> VerifyMachineCode;
   std::optional<bool> EnableFastISelOption;
   std::optional<bool> EnableGlobalISelOption;
+  std::optional<bool> DebugifyAndStripAll;
+  std::optional<bool> DebugifyCheckAndStripAll;
 };
 
-CGPassBuilderOption getCGPassBuilderOption();
+LLVM_ABI CGPassBuilderOption getCGPassBuilderOption();
 
 } // namespace llvm
 

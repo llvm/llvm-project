@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 | FileCheck %s --check-prefixes=ALL,SM30
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 | FileCheck %s --check-prefixes=ALL,SM60
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_30 | FileCheck %s --check-prefixes=ALL,SM30
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_60 | FileCheck %s --check-prefixes=ALL,SM60
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas-sm_60 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
 
 ; CHECK-LABEL: fadd_double
 define void @fadd_double(ptr %0, double %1) {
@@ -93,7 +93,8 @@ entry:
   %3 = atomicrmw or ptr %0, i8 %1 monotonic, align 1
   ; ALL: atom.xor.b32
   %4 = atomicrmw xor ptr %0, i8 %1 monotonic, align 1
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %5 = atomicrmw xchg ptr %0, i8 %1 monotonic, align 1
   ret void
 }
@@ -101,13 +102,17 @@ entry:
 ; CHECK-LABEL: minmax_i8
 define void @minmax_i8(ptr %0, i8 %1) {
 entry:
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %2 = atomicrmw min ptr %0, i8 %1 monotonic, align 1
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %3 = atomicrmw max ptr %0, i8 %1 monotonic, align 1
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %4 = atomicrmw umin ptr %0, i8 %1 monotonic, align 1
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %5 = atomicrmw umax ptr %0, i8 %1 monotonic, align 1
   ret void
 }
@@ -121,7 +126,8 @@ entry:
   %3 = atomicrmw or ptr %0, i16 %1 monotonic, align 2
   ; ALL: atom.xor.b32
   %4 = atomicrmw xor ptr %0, i16 %1 monotonic, align 2
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %5 = atomicrmw xchg ptr %0, i16 %1 monotonic, align 2
   ret void
 }
@@ -129,37 +135,17 @@ entry:
 ; CHECK-LABEL: minmax_i16
 define void @minmax_i16(ptr %0, i16 %1) {
 entry:
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %2 = atomicrmw min ptr %0, i16 %1 monotonic, align 2
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %3 = atomicrmw max ptr %0, i16 %1 monotonic, align 2
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %4 = atomicrmw umin ptr %0, i16 %1 monotonic, align 2
-  ; ALL: atom.cas.b32
+  ; SM30: atom.cas.b32
+  ; SM60: atom.sys.cas.b32
   %5 = atomicrmw umax ptr %0, i16 %1 monotonic, align 2
   ret void
 }
-
-; TODO: We might still want to test other types, such as i128. Currently the
-; backend doesn't support them. Atomic expand only supports expansion to cas of
-; the same bitwidth, which means even after expansion, the back end still
-; doesn't support the instruction. Here we still put the tests. Remove the
-; comment once we have proper support, either from atomic expand or backend.
-
-; define void @bitwise_i128(ptr %0, i128 %1) {
-; entry:
-;   %2 = atomicrmw and ptr %0, i128 %1 monotonic, align 16
-;   %3 = atomicrmw or ptr %0, i128 %1 monotonic, align 16
-;   %4 = atomicrmw xor ptr %0, i128 %1 monotonic, align 16
-;   %5 = atomicrmw xchg ptr %0, i128 %1 monotonic, align 16
-;   ret void
-; }
-
-; define void @minmax_i128(ptr %0, i128 %1) {
-; entry:
-;   %2 = atomicrmw min ptr %0, i128 %1 monotonic, align 16
-;   %3 = atomicrmw max ptr %0, i128 %1 monotonic, align 16
-;   %4 = atomicrmw umin ptr %0, i128 %1 monotonic, align 16
-;   %5 = atomicrmw umax ptr %0, i128 %1 monotonic, align 16
-;   ret void
-; }

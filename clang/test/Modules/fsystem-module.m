@@ -6,13 +6,13 @@
 
 // RUN: not %clang_cc1 -fmodules -I %S/Inputs \
 // RUN:   -emit-module -fmodule-name=warning -pedantic -Werror \
-// RUN:   %S/Inputs/module.map -o %t.dir/warning.pcm
+// RUN:   %S/Inputs/module.modulemap -o %t.dir/warning.pcm
 
 // RUN: %clang_cc1 -fmodules -I %S/Inputs \
 // RUN:   -emit-module -fmodule-name=warning -pedantic -Werror \
-// RUN:   %S/Inputs/module.map -o %t.dir/warning-system.pcm -fsystem-module
+// RUN:   %S/Inputs/module.modulemap -o %t.dir/warning-system.pcm -fsystem-module
 
 // RUN: not %clang_cc1 -fmodules -I %S/Inputs \
 // RUN:   -emit-module -fmodule-name=warning -pedantic -Werror \
-// RUN:   %S/Inputs/module.map -o %t.dir/warning-system.pcm -fsystem-module \
+// RUN:   %S/Inputs/module.modulemap -o %t.dir/warning-system.pcm -fsystem-module \
 // RUN:   -Wsystem-headers

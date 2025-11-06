@@ -1,25 +1,25 @@
 // RUN: %clang_analyze_cc1 -analyzer-output=text -Wno-unused %s     \
-// RUN:   -analyzer-checker=core,alpha.security.cert.env.InvalidPtr \
+// RUN:   -analyzer-checker=core,security.cert.env.InvalidPtr       \
 // RUN:   -verify=putenv,common                                     \
 // RUN:   -DENV_INVALIDATING_CALL="putenv(\"X=Y\")"
 //
 // RUN: %clang_analyze_cc1 -analyzer-output=text -Wno-unused %s     \
-// RUN:   -analyzer-checker=core,alpha.security.cert.env.InvalidPtr \
+// RUN:   -analyzer-checker=core,security.cert.env.InvalidPtr       \
 // RUN:   -verify=putenvs,common                                    \
 // RUN:   -DENV_INVALIDATING_CALL="_putenv_s(\"X\", \"Y\")"
 //
 // RUN: %clang_analyze_cc1 -analyzer-output=text -Wno-unused %s     \
-// RUN:   -analyzer-checker=core,alpha.security.cert.env.InvalidPtr \
+// RUN:   -analyzer-checker=core,security.cert.env.InvalidPtr       \
 // RUN:   -verify=wputenvs,common                                   \
 // RUN:   -DENV_INVALIDATING_CALL="_wputenv_s(\"X\", \"Y\")"
 //
 // RUN: %clang_analyze_cc1 -analyzer-output=text -Wno-unused %s     \
-// RUN:   -analyzer-checker=core,alpha.security.cert.env.InvalidPtr \
+// RUN:   -analyzer-checker=core,security.cert.env.InvalidPtr       \
 // RUN:   -verify=setenv,common                                     \
 // RUN:   -DENV_INVALIDATING_CALL="setenv(\"X\", \"Y\", 0)"
 //
 // RUN: %clang_analyze_cc1 -analyzer-output=text -Wno-unused %s     \
-// RUN:   -analyzer-checker=core,alpha.security.cert.env.InvalidPtr \
+// RUN:   -analyzer-checker=core,security.cert.env.InvalidPtr       \
 // RUN:   -verify=unsetenv,common                                   \
 // RUN:   -DENV_INVALIDATING_CALL="unsetenv(\"X\")"
 

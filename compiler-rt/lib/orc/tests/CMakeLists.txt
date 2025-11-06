@@ -4,11 +4,11 @@ include_directories(..)
 
 # Unit tests target.
 add_custom_target(OrcRTUnitTests)
-set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "OrcRT unittests")
+set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
 
 # Testing tools target.
 add_custom_target(OrcRTTools)
-set_target_properties(OrcRTTools PROPERTIES FOLDER "OrcRT tools")
+set_target_properties(OrcRTTools PROPERTIES FOLDER "Compiler-RT/Tools")
 
 set(ORC_UNITTEST_CFLAGS
 # FIXME: This should be set for all unit tests.
@@ -22,12 +22,14 @@ function(add_orc_lib library)
   add_library(${library} STATIC ${ARGN})
   set_target_properties(${library} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT Runtime tests")
+    FOLDER "Compiler-RT/Tests/Runtime")
 endfunction()
 
 function(get_orc_lib_for_arch arch lib)
   if(APPLE)
-    set(tgt_name "RTOrc.test.osx")
+    if("osx" IN_LIST ORC_SUPPORTED_OS)
+      set(tgt_name "RTOrc.test.osx")
+    endif()
   else()
     set(tgt_name "RTOrc.test.${arch}")
   endif()
@@ -65,14 +67,16 @@ macro(add_orc_unittest testname)
     foreach(arch ${ORC_TEST_ARCH})
       set(TEST_OBJECTS)
       get_orc_lib_for_arch(${arch} ORC_RUNTIME_LIBS)
-      generate_compiler_rt_tests(TEST_OBJECTS
-        OrcRTUnitTests "${testname}-${arch}-Test" "${arch}"
-        SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
-        RUNTIME "${ORC_RUNTIME_LIBS}"
-        COMPILE_DEPS ${TEST_HEADERS} ${ORC_HEADERS}
-        DEPS llvm_gtest ${ORC_DEPS}
-        CFLAGS ${ORC_UNITTEST_CFLAGS} ${COMPILER_RT_GTEST_CFLAGS}
-        LINK_FLAGS ${ORC_UNITTEST_LINK_FLAGS})
+      if(ORC_RUNTIME_LIBS)
+        generate_compiler_rt_tests(TEST_OBJECTS
+          OrcRTUnitTests "${testname}-${arch}-Test" "${arch}"
+          SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
+          RUNTIME "${ORC_RUNTIME_LIBS}"
+          COMPILE_DEPS ${TEST_HEADERS} ${ORC_HEADERS}
+          DEPS ${ORC_DEPS}
+          CFLAGS ${ORC_UNITTEST_CFLAGS} ${COMPILER_RT_GTEST_CFLAGS}
+          LINK_FLAGS ${ORC_UNITTEST_LINK_FLAGS})
+      endif()
     endforeach()
   endif()
 endmacro()
@@ -83,21 +87,25 @@ macro(add_orc_tool toolname)
     foreach(arch ${ORC_TEST_ARCH})
       set(TOOL_OBJECTS)
       get_orc_lib_for_arch(${arch} ORC_RUNTIME_LIBS)
-      generate_compiler_rt_tests(TOOL_OBJECTS
-        OrcRTTools "${toolname}-${arch}" "${arch}"
-        SOURCES ${TOOL_SOURCES}
-        RUNTIME "${ORC_RUNTIME_LIBS}"
-        COMPILE_DEPS ${TOOL_HEADERS} ${ORC_HEADERS}
-        DEPS ${ORC_DEPS}
-        CFLAGS ${ORC_UNITTEST_CFLAGS}
-        LINK_FLAGS ${ORC_UNITTEST_LINK_FLAGS})
+      if(ORC_RUNTIME_LIBS)
+        generate_compiler_rt_tests(TOOL_OBJECTS
+          OrcRTTools "${toolname}-${arch}" "${arch}"
+          SOURCES ${TOOL_SOURCES}
+          RUNTIME "${ORC_RUNTIME_LIBS}"
+          COMPILE_DEPS ${TOOL_HEADERS} ${ORC_HEADERS}
+          DEPS ${ORC_DEPS}
+          CFLAGS ${ORC_UNITTEST_CFLAGS}
+          LINK_FLAGS ${ORC_UNITTEST_LINK_FLAGS})
+      endif()
     endforeach()
   endif()
 endmacro()
 
 if (APPLE)
-  add_orc_lib("RTOrc.test.osx"
-    $<TARGET_OBJECTS:RTOrc.osx>)
+  if("osx" IN_LIST ORC_SUPPORTED_OS)
+    add_orc_lib("RTOrc.test.osx"
+      $<TARGET_OBJECTS:RTOrc.osx>)
+  endif()
 else()
   foreach(arch ${ORC_SUPPORTED_ARCH})
     add_orc_lib("RTOrc.test.${arch}"

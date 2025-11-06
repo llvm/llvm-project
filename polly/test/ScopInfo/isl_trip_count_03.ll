@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Test comes from a bug (15771) or better a feature request. It was not allowed
 ; in Polly in the old domain generation as ScalarEvolution cannot figure out the

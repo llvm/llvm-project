@@ -40,7 +40,7 @@ define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) {
 ; CHECK-NEXT:    move.b (11,%sp), %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    muls #171, %d0
-; CHECK-NEXT:    move.w #9, %d1
+; CHECK-NEXT:    moveq #9, %d1
 ; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    and.l #65535, %d0
 ; CHECK-NEXT:    rts
@@ -58,7 +58,7 @@ define signext i16 @test4(i16 signext %x) nounwind {
 ; CHECK-NEXT:    muls #1986, %d0
 ; CHECK-NEXT:    asr.l #8, %d0
 ; CHECK-NEXT:    asr.l #8, %d0
-; CHECK-NEXT:    move.w #15, %d1
+; CHECK-NEXT:    moveq #15, %d1
 ; CHECK-NEXT:    move.w %d0, %d2
 ; CHECK-NEXT:    lsr.w %d1, %d2
 ; CHECK-NEXT:    add.w %d2, %d0
@@ -77,7 +77,7 @@ define i32 @test5(i32 %A) nounwind {
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l #1577682821, (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __udivsi3@PLT
+; CHECK-NEXT:    jsr __udivsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
   %tmp1 = udiv i32 %A, 1577682821         ; <i32> [#uses=1]
@@ -94,7 +94,7 @@ define signext i16 @test6(i16 signext %x) nounwind {
 ; CHECK-NEXT:    muls #26215, %d0
 ; CHECK-NEXT:    asr.l #8, %d0
 ; CHECK-NEXT:    asr.l #8, %d0
-; CHECK-NEXT:    move.w #15, %d1
+; CHECK-NEXT:    moveq #15, %d1
 ; CHECK-NEXT:    move.w %d0, %d2
 ; CHECK-NEXT:    lsr.w %d1, %d2
 ; CHECK-NEXT:    asr.w #2, %d0
@@ -114,7 +114,7 @@ define i32 @test7(i32 %x) nounwind {
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l #28, (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __udivsi3@PLT
+; CHECK-NEXT:    jsr __udivsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
   %div = udiv i32 %x, 28
@@ -128,7 +128,7 @@ define i8 @test8(i8 %x) nounwind {
 ; CHECK-NEXT:    lsr.b #1, %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    muls #211, %d0
-; CHECK-NEXT:    move.w #13, %d1
+; CHECK-NEXT:    moveq #13, %d1
 ; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    ; kill: def $bd0 killed $bd0 killed $d0
 ; CHECK-NEXT:    rts
@@ -143,7 +143,7 @@ define i8 @test9(i8 %x) nounwind {
 ; CHECK-NEXT:    lsr.b #2, %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    muls #71, %d0
-; CHECK-NEXT:    move.w #11, %d1
+; CHECK-NEXT:    moveq #11, %d1
 ; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    ; kill: def $bd0 killed $bd0 killed $d0
 ; CHECK-NEXT:    rts
@@ -156,11 +156,11 @@ define i32 @testsize1(i32 %x) minsize nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
-; CHECK-NEXT:    move.l #31, %d1
+; CHECK-NEXT:    moveq #31, %d1
 ; CHECK-NEXT:    move.l (8,%sp), %d0
 ; CHECK-NEXT:    move.l %d0, %d2
 ; CHECK-NEXT:    asr.l %d1, %d2
-; CHECK-NEXT:    move.l #27, %d1
+; CHECK-NEXT:    moveq #27, %d1
 ; CHECK-NEXT:    lsr.l %d1, %d2
 ; CHECK-NEXT:    add.l %d2, %d0
 ; CHECK-NEXT:    asr.l #5, %d0
@@ -178,7 +178,7 @@ define i32 @testsize2(i32 %x) minsize nounwind {
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l #33, (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __divsi3@PLT
+; CHECK-NEXT:    jsr __divsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -203,7 +203,7 @@ define i32 @testsize4(i32 %x) minsize nounwind {
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l #33, (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __udivsi3@PLT
+; CHECK-NEXT:    jsr __udivsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:

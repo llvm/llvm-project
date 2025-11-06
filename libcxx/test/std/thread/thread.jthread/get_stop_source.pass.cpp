@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: libcpp-has-no-experimental-stop_token
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: availability-synchronization_library-missing
 
 // [[nodiscard]] stop_source get_stop_source() noexcept;
 
@@ -19,6 +17,7 @@
 #include <thread>
 #include <type_traits>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 static_assert(noexcept(std::declval<std::jthread&>().get_stop_source()));
@@ -26,7 +25,7 @@ static_assert(noexcept(std::declval<std::jthread&>().get_stop_source()));
 int main(int, char**) {
   // Represents a thread
   {
-    std::jthread jt{[] {}};
+    std::jthread jt                                      = support::make_test_jthread([] {});
     std::same_as<std::stop_source> decltype(auto) result = jt.get_stop_source();
     assert(result.stop_possible());
   }

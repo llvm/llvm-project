@@ -1,0 +1,71 @@
+# RUN: llc -verify-machineinstrs -x mir -filetype=obj < %s -o %t.o
+# RUN: llvm-objdump -dr %t.o | FileCheck %s
+# CHECK-LABEL: .read_x
+# CHECK: lbz 3, 2(2)
+# CHECK-NEXT: R_TOC        x
+# CHECK-LABEL: .read_y
+# CHECK: lbz 3, 0(2)
+# CHECK-NEXT: R_TOC        y
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "E-m:a-Fi64-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+  target triple = "powerpc64-ibm-aix"
+  
+  @x = local_unnamed_addr global i32 218114560, align 4 #0
+  @y = external local_unnamed_addr global i32, align 4 #0
+  
+  define signext range(i32 0, 256) i32 @read_x() {
+  entry:
+    %0 = load i32, ptr @x, align 4
+    %shr = lshr i32 %0, 8
+    %and = and i32 %shr, 255
+    ret i32 %and
+  }
+  
+  define signext range(i32 0, 256) i32 @read_y() {
+  entry:
+    %0 = load i32, ptr @y, align 4
+    %shr = lshr i32 %0, 16
+    %and = and i32 %shr, 255
+    ret i32 %and
+  }
+  
+  attributes #0 = { "toc-data" }
+
+...
+---
+name:            read_x
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: g8rc }
+frameInfo:
+  maxAlignment:    8
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x2
+    %0:g8rc = LBZ8 @x + 2, $x2 :: (dereferenceable load (s8) from @x + 2, align 2, basealign 4)
+    $x3 = COPY %0
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            read_y
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: g8rc }
+frameInfo:
+  maxAlignment:    8
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x2
+    %0:g8rc = LBZ8 @y + 1, $x2 :: (dereferenceable load (s8) from @y + 1, basealign 4)
+    $x3 = COPY %0
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...

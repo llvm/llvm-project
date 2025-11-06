@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// UNSUPPORTED: availability-filesystem-missing
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -17,13 +16,13 @@
 // typedef basic_string<value_type> string_type;
 // static constexpr value_type preferred_separator = ...;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <cassert>
 #include <string>
 #include <type_traits>
 
 #include "test_macros.h"
-
+namespace fs = std::filesystem;
 
 int main(int, char**) {
   using namespace fs;

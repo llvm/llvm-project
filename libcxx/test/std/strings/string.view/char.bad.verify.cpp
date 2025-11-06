@@ -8,14 +8,25 @@
 
 // UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // <string_view>
 //   ... manipulating sequences of any non-array trivial standard-layout types.
 
 #include <string>
+#include <type_traits>
 #include "../basic.string/test_traits.h"
 
-struct NotTrivial {
-  NotTrivial() : value(3) {}
+struct NotTriviallyCopyable {
+  int value;
+  NotTriviallyCopyable& operator=(const NotTriviallyCopyable& other) {
+    value = other.value;
+    return *this;
+  }
+};
+
+struct NotTriviallyDefaultConstructible {
+  NotTriviallyDefaultConstructible() : value(3) {}
   int value;
 };
 
@@ -35,21 +46,28 @@ int main(int, char**) {
     typedef char C[3];
     static_assert(std::is_array<C>::value, "");
     std::basic_string_view<C, test_traits<C> > sv;
-    //  expected-error-re@string_view:* {{{{(static_assert|static assertion)}} failed{{.*}}Character type of basic_string_view must not be an array}}
+    //  expected-error-re@string_view:* {{static assertion failed{{.*}}Character type of basic_string_view must not be an array}}
   }
 
   {
-    //  not trivial
-    static_assert(!std::is_trivial<NotTrivial>::value, "");
-    std::basic_string_view<NotTrivial, test_traits<NotTrivial> > sv;
-    //  expected-error-re@string_view:* {{{{(static_assert|static assertion)}} failed{{.*}}Character type of basic_string_view must be trivial}}
+    //  not trivially copyable
+    static_assert(!std::is_trivially_copyable<NotTriviallyCopyable>::value, "");
+    std::basic_string_view<NotTriviallyCopyable, test_traits<NotTriviallyCopyable> > s;
+    // expected-error-re@*:* {{static assertion failed{{.*}}Character type of basic_string_view must be trivially copyable}}
+  }
+
+  {
+    //  not trivially default constructible
+    static_assert(!std::is_trivially_default_constructible<NotTriviallyDefaultConstructible>::value, "");
+    std::basic_string_view<NotTriviallyDefaultConstructible, test_traits<NotTriviallyDefaultConstructible> > sv;
+    //  expected-error-re@string_view:* {{static assertion failed{{.*}}Character type of basic_string_view must be trivially default constructible}}
   }
 
   {
     //  not standard layout
     static_assert(!std::is_standard_layout<NotStandardLayout>::value, "");
     std::basic_string_view<NotStandardLayout, test_traits<NotStandardLayout> > sv;
-    //  expected-error-re@string_view:* {{{{(static_assert|static assertion)}} failed{{.*}}Character type of basic_string_view must be standard-layout}}
+    //  expected-error-re@string_view:* {{static assertion failed{{.*}}Character type of basic_string_view must be standard-layout}}
   }
 
   return 0;

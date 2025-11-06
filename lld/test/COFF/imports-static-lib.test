@@ -1,0 +1,33 @@
+# REQUIRES: x86
+
+# Ensure that we don't import dllimport symbols from static (non-import) libraries
+# RUN: split-file %s %t.dir
+# RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/foo.s -o %t.foo.obj
+# RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/main.s -o %t.main.obj
+# RUN: llvm-lib %t.foo.obj -out:%t.foo.lib
+# RUN: not lld-link %t.foo.lib %t.main.obj -out:%t.dll -dll 2>&1 | FileCheck %s
+
+CHECK: error: undefined symbol: __declspec(dllimport) foo
+CHECK: NOTE: a relevant symbol 'foo' is available in {{.*}}.foo.lib but cannot be used because it is not an import library.
+
+# Now do the same thing, but import the symbol from a import library.
+# RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/foo_dll_main.s -o %t.foo_dll_main.obj
+# RUN: lld-link /out:%t.dll /dll %t.foo.obj %t.foo_dll_main.obj /export:foo /implib:%t.foo.imp.lib
+# RUN: lld-link %t.main.obj %t.foo.imp.lib -out:%t.exe -dll
+
+#--- foo.s
+.text
+.globl foo
+foo:
+  ret
+#--- foo_dll_main.s
+.text
+.global _DllMainCRTStartup
+_DllMainCRTStartup:
+  ret
+#--- main.s
+.text
+.global _DllMainCRTStartup
+_DllMainCRTStartup:
+  call *__imp_foo(%rip)
+  ret

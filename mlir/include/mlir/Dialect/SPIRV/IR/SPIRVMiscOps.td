@@ -1,4 +1,4 @@
-//===-- SPIRVBarrierOps.td - MLIR SPIR-V Barrier Ops -------*- tablegen -*-===//
+//===-- SPIRVMiscOps.td - MLIR SPIR-V Misc Ops -------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,12 +65,6 @@ def SPIRV_UndefOp : SPIRV_Op<"Undef", [Pure]> {
     Each consumption of Result <id> yields an arbitrary, possibly different
     bit pattern or abstract value resulting in possibly different concrete,
     abstract, or opaque values.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    undef-op ::= `spirv.Undef` `:` spirv-type
-    ```
 
     #### Example:
 

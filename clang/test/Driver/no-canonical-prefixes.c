@@ -1,5 +1,5 @@
 // Due to ln -sf:
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 // RUN: mkdir -p %t.real
 // RUN: cd %t.real
 // RUN: ln -sf %clang test-clang
@@ -26,7 +26,7 @@
 // RUN:     | FileCheck --check-prefix=NON-CANONICAL %s
 //
 // FIXME: This should really be '.real'.
-// CANONICAL: InstalledDir: {{.*}}.fake
+// CANONICAL: InstalledDir: {{.*}}bin
 // CANONICAL: {{[/|\\]*}}clang{{.*}}" -cc1
 //
 // NON-CANONICAL: InstalledDir: .{{$}}

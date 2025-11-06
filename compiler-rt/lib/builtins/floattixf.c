@@ -23,7 +23,7 @@
 // eeee | 1mmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm
 // mmmm mmmm mmmm
 
-COMPILER_RT_ABI long double __floattixf(ti_int a) {
+COMPILER_RT_ABI xf_float __floattixf(ti_int a) {
   if (a == 0)
     return 0.0;
   const unsigned N = sizeof(ti_int) * CHAR_BIT;
@@ -63,7 +63,7 @@ COMPILER_RT_ABI long double __floattixf(ti_int a) {
     a <<= (LDBL_MANT_DIG - sd);
     // a is now rounded to LDBL_MANT_DIG bits
   }
-  long_double_bits fb;
+  xf_bits fb;
   fb.u.high.s.low = ((su_int)s & 0x8000) | // sign
                     (e + 16383);           // exponent
   fb.u.low.all = (du_int)a;                // mantissa

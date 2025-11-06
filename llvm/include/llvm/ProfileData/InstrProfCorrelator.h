@@ -5,15 +5,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This file defines InstrProfCorrelator used to generate PGO profiles from
-// raw profile data and debug info.
+// This file defines InstrProfCorrelator used to generate PGO/coverage profiles
+// from raw profile data and debug info/binary file.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 #define LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Debuginfod/BuildIDFetcher.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -21,7 +25,6 @@
 #include <vector>
 
 namespace llvm {
-class DWARFContext;
 class DWARFDie;
 namespace object {
 class ObjectFile;
@@ -31,22 +34,26 @@ class ObjectFile;
 /// to their functions.
 class InstrProfCorrelator {
 public:
-  static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
-  get(StringRef DebugInfoFilename);
+  /// Indicate if we should use the debug info or profile metadata sections to
+  /// correlate.
+  enum ProfCorrelatorKind { NONE, DEBUG_INFO, BINARY };
+
+  LLVM_ABI static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
+  get(StringRef Filename, ProfCorrelatorKind FileKind,
+      const object::BuildIDFetcher *BIDFetcher = nullptr,
+      const ArrayRef<llvm::object::BuildID> BIs = {});
 
   /// Construct a ProfileData vector used to correlate raw instrumentation data
   /// to their functions.
   /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
   virtual Error correlateProfileData(int MaxWarnings) = 0;
 
-  virtual Error correlateCovUnusedFuncNames(int MaxWarnings) = 0;
-
   /// Process debug info and dump the correlation data.
   /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
   virtual Error dumpYaml(int MaxWarnings, raw_ostream &OS) = 0;
 
   /// Return the number of ProfileData elements.
-  std::optional<size_t> getDataSize() const;
+  LLVM_ABI std::optional<size_t> getDataSize() const;
 
   /// Return a pointer to the names string that this class constructs.
   const char *getNamesPointer() const { return Names.c_str(); }
@@ -54,21 +61,14 @@ public:
   /// Return the number of bytes in the names string.
   size_t getNamesSize() const { return Names.size(); }
 
-  const char *getCovUnusedFuncNamesPointer() const {
-    return CovUnusedFuncNames.c_str();
-  }
-
-  size_t getCovUnusedFuncNamesSize() const { return CovUnusedFuncNames.size(); }
-
   /// Return the size of the counters section in bytes.
   uint64_t getCountersSectionSize() const {
     return Ctx->CountersSectionEnd - Ctx->CountersSectionStart;
   }
 
-  static const char *FunctionNameAttributeName;
-  static const char *CFGHashAttributeName;
-  static const char *NumCountersAttributeName;
-  static const char *CovFunctionNameAttributeName;
+  LLVM_ABI static const char *FunctionNameAttributeName;
+  LLVM_ABI static const char *CFGHashAttributeName;
+  LLVM_ABI static const char *NumCountersAttributeName;
 
   enum InstrProfCorrelatorKind { CK_32Bit, CK_64Bit };
   InstrProfCorrelatorKind getKind() const { return Kind; }
@@ -76,12 +76,19 @@ public:
 
 protected:
   struct Context {
-    static llvm::Expected<std::unique_ptr<Context>>
-    get(std::unique_ptr<MemoryBuffer> Buffer, const object::ObjectFile &Obj);
+    LLVM_ABI static llvm::Expected<std::unique_ptr<Context>>
+    get(std::unique_ptr<MemoryBuffer> Buffer, const object::ObjectFile &Obj,
+        ProfCorrelatorKind FileKind);
     std::unique_ptr<MemoryBuffer> Buffer;
     /// The address range of the __llvm_prf_cnts section.
     uint64_t CountersSectionStart;
     uint64_t CountersSectionEnd;
+    /// The pointer points to start/end of profile data/name sections if
+    /// FileKind is Binary.
+    const char *DataStart;
+    const char *DataEnd;
+    const char *NameStart;
+    size_t NameSize;
     /// True if target and host have different endian orders.
     bool ShouldSwapBytes;
   };
@@ -92,7 +99,6 @@ protected:
 
   std::string Names;
   std::vector<std::string> NamesVec;
-  std::string CovUnusedFuncNames;
 
   struct Probe {
     std::string FunctionName;
@@ -114,7 +120,7 @@ protected:
 
 private:
   static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
-  get(std::unique_ptr<MemoryBuffer> Buffer);
+  get(std::unique_ptr<MemoryBuffer> Buffer, ProfCorrelatorKind FileKind);
 
   const InstrProfCorrelatorKind Kind;
 };
@@ -138,7 +144,7 @@ public:
 
   static llvm::Expected<std::unique_ptr<InstrProfCorrelatorImpl<IntPtrT>>>
   get(std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-      const object::ObjectFile &Obj);
+      const object::ObjectFile &Obj, ProfCorrelatorKind FileKind);
 
 protected:
   std::vector<RawInstrProf::ProfileData<IntPtrT>> Data;
@@ -148,21 +154,24 @@ protected:
       int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) = 0;
 
+  virtual Error correlateProfileNameImpl() = 0;
+
   Error dumpYaml(int MaxWarnings, raw_ostream &OS) override;
 
-  void addProbe(StringRef FunctionName, uint64_t CFGHash, IntPtrT CounterOffset,
-                IntPtrT FunctionPtr, uint32_t NumCounters);
+  void addDataProbe(uint64_t FunctionName, uint64_t CFGHash,
+                    IntPtrT CounterOffset, IntPtrT FunctionPtr,
+                    uint32_t NumCounters);
+
+  // Byte-swap the value if necessary.
+  template <class T> T maybeSwap(T Value) const {
+    return Ctx->ShouldSwapBytes ? llvm::byteswap(Value) : Value;
+  }
 
 private:
   InstrProfCorrelatorImpl(InstrProfCorrelatorKind Kind,
                           std::unique_ptr<InstrProfCorrelator::Context> Ctx)
       : InstrProfCorrelator(Kind, std::move(Ctx)){};
   llvm::DenseSet<IntPtrT> CounterOffsets;
-
-  // Byte-swap the value if necessary.
-  template <class T> T maybeSwap(T Value) const {
-    return Ctx->ShouldSwapBytes ? sys::getSwappedBytes(Value) : Value;
-  }
 };
 
 /// DwarfInstrProfCorrelator - A child of InstrProfCorrelatorImpl that takes
@@ -216,7 +225,29 @@ private:
       int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) override;
 
-  Error correlateCovUnusedFuncNames(int MaxWarnings) override;
+  Error correlateProfileNameImpl() override;
+};
+
+/// BinaryInstrProfCorrelator - A child of InstrProfCorrelatorImpl that
+/// takes an object file as input to correlate profiles.
+template <class IntPtrT>
+class BinaryInstrProfCorrelator : public InstrProfCorrelatorImpl<IntPtrT> {
+public:
+  BinaryInstrProfCorrelator(std::unique_ptr<InstrProfCorrelator::Context> Ctx)
+      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx)) {}
+
+  /// Return a pointer to the names string that this class constructs.
+  const char *getNamesPointer() const { return this->Ctx.NameStart; }
+
+  /// Return the number of bytes in the names string.
+  size_t getNamesSize() const { return this->Ctx.NameSize; }
+
+private:
+  void correlateProfileDataImpl(
+      int MaxWarnings,
+      InstrProfCorrelator::CorrelationData *Data = nullptr) override;
+
+  Error correlateProfileNameImpl() override;
 };
 
 } // end namespace llvm

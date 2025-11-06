@@ -4,7 +4,7 @@
 ; This used to crash, depending on the particular worklist iteration order.
 define void @pr59613(<6 x i16> %0) {
 ; CHECK-LABEL: @pr59613(
-; CHECK-NEXT:    store <6 x i16> poison, ptr null, align 4294967296
+; CHECK-NEXT:    store <6 x i16> poison, ptr null, align 16
 ; CHECK-NEXT:    ret void
 ;
   %cmp1 = icmp ne <6 x i16> %0, zeroinitializer

@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-delicm -pass-remarks-analysis=polly-delicm -polly-delicm-max-ops=1 -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadPolly -polly-delicm -polly-print-dependences -polly-delicm-max-ops=1 -polly-dependences-computeout=0 -disable-output < %s | FileCheck %s -check-prefix=DEP
+; RUN: opt %loadNPMPolly '-passes=print<polly-delicm>' -pass-remarks-analysis=polly-delicm -polly-delicm-max-ops=1 -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-delicm,print<polly-dependences>' -polly-delicm-max-ops=1 -polly-dependences-computeout=0 -disable-output < %s | FileCheck %s -check-prefix=DEP
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
@@ -66,7 +66,7 @@ return:
 ; CHECK: maximal number of operations exceeded during zone analysis
 
 ; Check that even if the quota was exceeded in DeLICM, DependenceInfo is still
-; successfull since it uses a different operations counter.
+; successful since it uses a different operations counter.
 ;
 ; DEP:     RAW dependences:
 ; DEP-NOT:        n/a

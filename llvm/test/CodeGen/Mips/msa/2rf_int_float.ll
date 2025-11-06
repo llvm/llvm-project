@@ -2,8 +2,8 @@
 ; 2RF instruction format. This includes conversions but other instructions such
 ; as fclass are also here.
 
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
 
 @llvm_mips_fclass_w_ARG1 = global <4 x float> <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, align 16
 @llvm_mips_fclass_w_RES  = global <4 x i32> <i32 0, i32 0, i32 0, i32 0>, align 16

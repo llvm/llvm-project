@@ -39,7 +39,7 @@ define i32 @add_const_incoming0_nonspeculative(i1 %b, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP0]], [[IF]] ], [ 59, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 59, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -210,7 +210,7 @@ define i64 @or_const_incoming01(i1 %b, i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP0]], [[IF]] ], [ 19, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ 19, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF]] ]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -285,7 +285,7 @@ define i8 @ashr_const_incoming0(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ 5, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ 5, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -653,12 +653,11 @@ define i8 @mul_const_incoming0_speculatable(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ 42, [[ENTRY:%.*]] ], [ [[X:%.*]], [[IF]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ 17, [[ENTRY]] ], [ [[Y:%.*]], [[IF]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ -54, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF]] ]
 ; CHECK-NEXT:    call void @sideeffect()
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[P0]], [[P1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:

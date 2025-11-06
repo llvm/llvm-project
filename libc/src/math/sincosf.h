@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_SINCOSF_H
 #define LLVM_LIBC_SRC_MATH_SINCOSF_H
 
-namespace __llvm_libc {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 void sincosf(float x, float *sinx, float *cosx);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_SINCOSF_H

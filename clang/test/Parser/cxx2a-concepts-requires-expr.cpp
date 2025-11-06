@@ -83,7 +83,7 @@ bool r23 = requires { typename identity<T>::temp<T>; };
 template<typename T>
 bool r24 = requires {
     typename identity<T>::template temp<T>;
-    typename identity<T>::template temp; // expected-error{{expected an identifier or template-id after '::'}}
+    typename identity<T>::template temp; // expected-error{{template argument list is expected after a name prefixed by the template keyword}}
 };
 
 bool r25 = requires { ; };
@@ -160,3 +160,11 @@ template <int N>
 requires requires {
  typename BitInt<N>; // ok
 } using r44 = void;
+
+namespace GH73112 {
+void f() {
+    requires { requires(int; } // expected-error {{expected ')'}} \
+                               // expected-error {{expected expression}} \
+                               // expected-note {{to match this '('}}
+}
+}

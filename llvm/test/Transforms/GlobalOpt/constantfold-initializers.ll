@@ -4,8 +4,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 @.str91250 = global [3 x i8] zeroinitializer
 
-; CHECK: @A = local_unnamed_addr global i1 false
-@A = global i1 icmp ne (i64 sub nsw (i64 ptrtoint (ptr getelementptr inbounds ([3 x i8], ptr @.str91250, i64 0, i64 1) to i64), i64 ptrtoint (ptr @.str91250 to i64)), i64 1)
+; CHECK: @A = local_unnamed_addr global i64 4
+@A = global i64 ptrtoint (ptr getelementptr (i32, ptr null, i64 1) to i64)
 
 ; PR11352
 
@@ -72,11 +72,12 @@ entry:
 }
 
 @threadlocalptr = global ptr null, align 4
-; CHECK: @threadlocalptr = global ptr null, align 4
+; CHECK: @threadlocalptr = local_unnamed_addr global ptr null, align 4
 @threadlocalvar = external thread_local global i32
 define internal void @test5() {
 entry:
-  store ptr @threadlocalvar, ptr @threadlocalptr, align 4
+  %p = call ptr @llvm.threadlocal.address(ptr @threadlocalvar)
+  store ptr %p, ptr @threadlocalptr, align 4
   ret void
 }
 

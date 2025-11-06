@@ -13,7 +13,7 @@ entry:
   %reduce1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %arg2)
   %reduce2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %arg3)
   %add1 = add i32 %reduce1, %reduce2
-  store i32 %add1, i32* %ptr, align 4
+  store i32 %add1, ptr %ptr, align 4
   %add2 = add i32 %add1, %arg1
   ret i32 %add2
 }
@@ -30,7 +30,7 @@ entry:
   %reduce1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %arg2)
   %reduce2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %arg3)
   %add1 = add i32 %reduce1, %reduce2
-  store i32 %add1, i32* %ptr, align 4
+  store i32 %add1, ptr %ptr, align 4
   %add2 = add i32 %arg1, %add1
   ret i32 %add2
 }
@@ -48,7 +48,7 @@ entry:
   %reduce1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %arg3)
   %reduce2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %arg4)
   %add1 = add i32 %arg1, %reduce1
-  store i32 %add1, i32* %ptr, align 4
+  store i32 %add1, ptr %ptr, align 4
   %add2 = add i32 %arg2, %reduce2
   %add3 = add i32 %add1, %add2
   ret i32 %add3
@@ -66,13 +66,13 @@ define arm_aapcs_vfpcc i32 @test4(ptr %ptr, i32 %arg1, ptr %arg2) {
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    bx lr
 entry:
-  %load1 = load <4 x i32>, <4 x i32>* %arg2, align 4
-  %gep = getelementptr inbounds i32, i32* %arg2, i32 1
-  %load2 = load <4 x i32>, <4 x i32>* %gep, align 4
+  %load1 = load <4 x i32>, ptr %arg2, align 4
+  %gep = getelementptr inbounds i32, ptr %arg2, i32 1
+  %load2 = load <4 x i32>, ptr %gep, align 4
   %reduce1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %load1)
   %reduce2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %load2)
   %add1 = add i32 %arg1, %reduce1
-  store i32 %add1, i32* %ptr, align 4
+  store i32 %add1, ptr %ptr, align 4
   %add2 = add i32 %add1, %reduce2
   ret i32 %add2
 }
@@ -89,13 +89,13 @@ define arm_aapcs_vfpcc i32 @test5(ptr %ptr, i32 %arg1, ptr %arg2) {
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    bx lr
 entry:
-  %load1 = load <4 x i32>, <4 x i32>* %arg2, align 4
-  %gep = getelementptr inbounds i32, i32* %arg2, i32 1
-  %load2 = load <4 x i32>, <4 x i32>* %gep, align 4
+  %load1 = load <4 x i32>, ptr %arg2, align 4
+  %gep = getelementptr inbounds i32, ptr %arg2, i32 1
+  %load2 = load <4 x i32>, ptr %gep, align 4
   %reduce1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %load1)
   %reduce2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %load2)
   %add1 = add i32 %arg1, %reduce2
-  store i32 %add1, i32* %ptr, align 4
+  store i32 %add1, ptr %ptr, align 4
   %add2 = add i32 %add1, %reduce1
   ret i32 %add2
 }

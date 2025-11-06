@@ -16,7 +16,7 @@ def OpA : NS_Op<"op_for_CPred_containing_multiple_same_placeholder", []> {
   let results = (outs Variadic<I32OrF32>:$y);
 }
 
-// CHECK: static ::mlir::LogicalResult [[$INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
+// CHECK: static ::llvm::LogicalResult [[$INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
 // CHECK:      if (!((type.isInteger(32) || type.isF32()))) {
 // CHECK-NEXT:   return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:       << " must be 32-bit integer or floating-point type, but got " << type;
@@ -26,12 +26,12 @@ def OpA : NS_Op<"op_for_CPred_containing_multiple_same_placeholder", []> {
 // CHECK-NOT:    return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NOT.        << " must be 32-bit integer or floating-point type, but got " << type;
 
-// CHECK: static ::mlir::LogicalResult [[$TENSOR_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
+// CHECK: static ::llvm::LogicalResult [[$TENSOR_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
 // CHECK:       if (!(((::llvm::isa<::mlir::TensorType>(type))) && ([](::mlir::Type elementType) { return (true); }(::llvm::cast<::mlir::ShapedType>(type).getElementType())))) {
 // CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:        << " must be tensor of any type values, but got " << type;
 
-// CHECK: static ::mlir::LogicalResult [[$TENSOR_INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
+// CHECK: static ::llvm::LogicalResult [[$TENSOR_INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
 // CHECK:       if (!(((::llvm::isa<::mlir::TensorType>(type))) && ([](::mlir::Type elementType) { return ((elementType.isF32())) || ((elementType.isSignlessInteger(32))); }(::llvm::cast<::mlir::ShapedType>(type).getElementType())))) {
 // CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:        << " must be tensor of 32-bit float or 32-bit signless integer values, but got " << type;

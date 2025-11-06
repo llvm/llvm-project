@@ -10,10 +10,11 @@
 #define LLVM_SUPPORT_CSKYATTRIBUTEPARSER_H
 
 #include "llvm/Support/CSKYAttributes.h"
-#include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ELFAttrParserCompact.h"
 
 namespace llvm {
-class CSKYAttributeParser : public ELFAttributeParser {
+class LLVM_ABI CSKYAttributeParser : public ELFCompactAttrParser {
   struct DisplayHandler {
     CSKYAttrs::AttrType attribute;
     Error (CSKYAttributeParser::*routine)(unsigned);
@@ -33,9 +34,9 @@ class CSKYAttributeParser : public ELFAttributeParser {
 
 public:
   CSKYAttributeParser(ScopedPrinter *sw)
-      : ELFAttributeParser(sw, CSKYAttrs::getCSKYAttributeTags(), "csky") {}
+      : ELFCompactAttrParser(sw, CSKYAttrs::getCSKYAttributeTags(), "csky") {}
   CSKYAttributeParser()
-      : ELFAttributeParser(CSKYAttrs::getCSKYAttributeTags(), "csky") {}
+      : ELFCompactAttrParser(CSKYAttrs::getCSKYAttributeTags(), "csky") {}
 };
 
 } // namespace llvm

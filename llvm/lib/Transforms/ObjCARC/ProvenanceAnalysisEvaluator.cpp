@@ -19,13 +19,15 @@ using namespace llvm::objcarc;
 
 static StringRef getName(Value *V) {
   StringRef Name = V->getName();
-  if (Name.startswith("\1"))
+  if (Name.starts_with("\1"))
     return Name.substr(1);
   return Name;
 }
 
 static void insertIfNamed(SetVector<Value *> &Values, Value *V) {
   if (!V->hasName())
+    return;
+  if (!V->getType()->isPointerTy())
     return;
   Values.insert(V);
 }

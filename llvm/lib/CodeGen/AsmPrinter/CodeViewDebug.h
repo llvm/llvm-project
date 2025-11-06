@@ -20,6 +20,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
@@ -62,14 +63,14 @@ public:
     int DataOffset : 31;
 
     /// Non-zero if this is a piece of an aggregate.
-    uint16_t IsSubfield : 1;
+    uint32_t IsSubfield : 1;
 
     /// Offset into aggregate.
-    uint16_t StructOffset : 15;
+    uint32_t StructOffset : 15;
 
     /// Register containing the data or the register base of the memory
     /// location containing the data.
-    uint16_t CVRegister;
+    uint32_t CVRegister : 16;
 
     uint64_t static toOpaqueValue(const LocalVarDef DR) {
       uint64_t Val = 0;
@@ -96,6 +97,10 @@ private:
 
   /// The codeview CPU type used by the translation unit.
   codeview::CPUType TheCPU;
+
+  /// The AsmPrinter used for emitting compiler metadata. When only compiler
+  /// info is being emitted, DebugHandlerBase::Asm may be null.
+  AsmPrinter *CompilerInfoAsm = nullptr;
 
   static LocalVarDef createDefRangeMem(uint16_t CVRegister, int Offset);
 
@@ -141,6 +146,7 @@ private:
     const MCSymbol *Branch;
     const MCSymbol *Table;
     size_t TableSize;
+    std::vector<const MCSymbol *> Cases;
   };
 
   // For each function, store a vector of labels to its instructions, as well as
@@ -157,6 +163,9 @@ private:
 
     /// Ordered list of top-level inlined call sites.
     SmallVector<const DILocation *, 1> ChildSites;
+
+    /// Set of all functions directly inlined into this one.
+    SmallSet<codeview::TypeIndex, 1> Inlinees;
 
     SmallVector<LocalVariable, 1> Locals;
     SmallVector<CVGlobalVariable, 1> Globals;
@@ -216,7 +225,7 @@ private:
   // DIGlobalVariableExpression referencing the DIGlobalVariable.
   DenseMap<const DIGlobalVariable *, uint64_t> CVGlobalVariableOffsets;
 
-  // Map used to seperate variables according to the lexical scope they belong
+  // Map used to separate variables according to the lexical scope they belong
   // in.  This is populated by recordLocalVariable() before
   // collectLexicalBlocks() separates the variables between the FunctionInfo
   // and LexicalBlocks.
@@ -329,6 +338,8 @@ private:
 
   void emitCompilerInformation();
 
+  void emitSecureHotPatchInformation();
+
   void emitBuildInfo();
 
   void emitInlineeLinesSubsection();
@@ -370,6 +381,8 @@ private:
 
   void emitInlinedCallSite(const FunctionInfo &FI, const DILocation *InlinedAt,
                            const InlineSite &Site);
+
+  void emitInlinees(const SmallSet<codeview::TypeIndex, 1> &Inlinees);
 
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
@@ -510,8 +523,6 @@ public:
   CodeViewDebug(AsmPrinter *AP);
 
   void beginModule(Module *M) override;
-
-  void setSymbolSize(const MCSymbol *, uint64_t) override {}
 
   /// Emit the COFF section that holds the line table information.
   void endModule() override;

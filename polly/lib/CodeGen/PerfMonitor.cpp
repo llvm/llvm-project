@@ -13,6 +13,7 @@
 #include "polly/ScopInfo.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -24,8 +25,8 @@ Function *PerfMonitor::getAtExit() {
 
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
-    FunctionType *Ty = FunctionType::get(Builder.getInt32Ty(),
-                                         {Builder.getInt8PtrTy()}, false);
+    FunctionType *Ty =
+        FunctionType::get(Builder.getInt32Ty(), {Builder.getPtrTy()}, false);
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
@@ -44,12 +45,12 @@ void PerfMonitor::addToGlobalConstructors(Function *Fn) {
     GV->eraseFromParent();
   }
 
-  StructType *ST = StructType::get(Builder.getInt32Ty(), Fn->getType(),
-                                   Builder.getInt8PtrTy());
+  StructType *ST =
+      StructType::get(Builder.getInt32Ty(), Fn->getType(), Builder.getPtrTy());
 
   V.push_back(
       ConstantStruct::get(ST, Builder.getInt32(10), Fn,
-                          ConstantPointerNull::get(Builder.getInt8PtrTy())));
+                          ConstantPointerNull::get(Builder.getPtrTy())));
   ArrayType *Ty = ArrayType::get(ST, V.size());
 
   GV = new GlobalVariable(*M, Ty, true, GlobalValue::AppendingLinkage,
@@ -58,12 +59,12 @@ void PerfMonitor::addToGlobalConstructors(Function *Fn) {
 }
 
 Function *PerfMonitor::getRDTSCP() {
-  return Intrinsic::getDeclaration(M, Intrinsic::x86_rdtscp);
+  return Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_rdtscp);
 }
 
 PerfMonitor::PerfMonitor(const Scop &S, Module *M)
     : M(M), Builder(M->getContext()), S(S) {
-  if (Triple(M->getTargetTriple()).getArch() == llvm::Triple::x86_64)
+  if (M->getTargetTriple().getArch() == llvm::Triple::x86_64)
     Supported = true;
   else
     Supported = false;
@@ -246,7 +247,7 @@ Function *PerfMonitor::insertInitFunction(Function *FinalReporting) {
 
   // Register the final reporting function with atexit().
   Value *FinalReportingPtr =
-      Builder.CreatePointerCast(FinalReporting, Builder.getInt8PtrTy());
+      Builder.CreatePointerCast(FinalReporting, Builder.getPtrTy());
   Function *AtExitFn = getAtExit();
   Builder.CreateCall(AtExitFn, {FinalReportingPtr});
 
@@ -266,7 +267,7 @@ void PerfMonitor::insertRegionStart(Instruction *InsertBefore) {
   if (!Supported)
     return;
 
-  Builder.SetInsertPoint(InsertBefore);
+  Builder.SetInsertPoint(InsertBefore->getIterator());
   Function *RDTSCPFn = getRDTSCP();
   Value *CurrentCycles =
       Builder.CreateExtractValue(Builder.CreateCall(RDTSCPFn), {0});
@@ -277,7 +278,7 @@ void PerfMonitor::insertRegionEnd(Instruction *InsertBefore) {
   if (!Supported)
     return;
 
-  Builder.SetInsertPoint(InsertBefore);
+  Builder.SetInsertPoint(InsertBefore->getIterator());
   Function *RDTSCPFn = getRDTSCP();
   Type *Int64Ty = Builder.getInt64Ty();
   LoadInst *CyclesStart =

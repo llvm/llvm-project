@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
-#define LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
+#define LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
 
 // This is defined as a simple macro in test.h so that it exists for platforms
 // that don't use our test infrastructure. It's defined as a proper function
 // below.
+#include "src/__support/macros/config.h"
 #ifdef libc_make_test_file_path
 #undef libc_make_test_file_path
 #endif // libc_make_test_file_path
 
 // This is defined as a macro here to avoid namespace issues.
 #define libc_make_test_file_path(file_name)                                    \
-  (__llvm_libc::testing::libc_make_test_file_path_func(file_name))
+  (LIBC_NAMESPACE::testing::libc_make_test_file_path_func(file_name))
 
 // This file can only include headers from src/__support/ or test/UnitTest. No
 // other headers should be included.
@@ -29,10 +30,11 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/c_string.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 // Only the following conditions are supported. Notice that we do not have
@@ -67,7 +69,7 @@ struct Location {
 TestLogger &operator<<(TestLogger &logger, Location Loc);
 
 #define LIBC_TEST_LOC_()                                                       \
-  __llvm_libc::testing::internal::Location(__FILE__, __LINE__)
+  LIBC_NAMESPACE::testing::internal::Location(__FILE__, __LINE__)
 
 // Object to forward custom logging after the EXPECT / ASSERT macros.
 struct Message {
@@ -80,7 +82,7 @@ struct Message {
 // A trivial object to catch the Message, this enables custom logging and
 // returning from the test function, see LIBC_TEST_SCAFFOLDING_ below.
 struct Failure {
-  void operator=(Message msg) {}
+  void operator=([[maybe_unused]] Message msg) {}
 };
 
 struct RunContext {
@@ -100,6 +102,15 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
 
 } // namespace internal
 
+struct TestOptions {
+  // If set, then just this one test from the suite will be run.
+  const char *TestFilter = nullptr;
+  // Should the test results print color codes to stdout?
+  bool PrintColor = true;
+  // Should the test results print timing only in milliseconds, as GTest does?
+  bool TimeInMs = false;
+};
+
 // NOTE: One should not create instances and call methods on them directly. One
 // should use the macros TEST or TEST_F to write test cases.
 class Test {
@@ -107,13 +118,14 @@ class Test {
   internal::RunContext *Ctx = nullptr;
 
   void setContext(internal::RunContext *C) { Ctx = C; }
+  static int getNumTests();
 
 public:
   virtual ~Test() {}
   virtual void SetUp() {}
   virtual void TearDown() {}
 
-  static int runTests(const char *);
+  static int runTests(const TestOptions &Options);
 
 protected:
   static void addTest(Test *T);
@@ -125,8 +137,11 @@ protected:
   // is the result of the |Cond| operation on |LHS| and |RHS|. Though not bad,
   // |Cond| on mismatched |LHS| and |RHS| types can potentially succeed because
   // of type promotion.
-  template <typename ValType,
-            cpp::enable_if_t<cpp::is_integral_v<ValType>, int> = 0>
+  template <
+      typename ValType,
+      cpp::enable_if_t<cpp::is_integral_v<ValType> || is_big_int_v<ValType> ||
+                           cpp::is_fixed_point_v<ValType>,
+                       int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
@@ -148,18 +163,26 @@ protected:
                           (unsigned long long)RHS, LHSStr, RHSStr, Loc);
   }
 
+  // Helper to allow macro invocations like `ASSERT_EQ(foo, nullptr)`.
+  template <typename ValType,
+            cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
+  bool test(TestCond Cond, ValType LHS, cpp::nullptr_t, const char *LHSStr,
+            const char *RHSStr, internal::Location Loc) {
+    return test(Cond, LHS, static_cast<ValType>(nullptr), LHSStr, RHSStr, Loc);
+  }
+
   template <
       typename ValType,
-      cpp::enable_if_t<cpp::is_same_v<ValType, __llvm_libc::cpp::string_view>,
-                       int> = 0>
+      cpp::enable_if_t<
+          cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string_view>, int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
   }
 
   template <typename ValType,
-            cpp::enable_if_t<cpp::is_same_v<ValType, __llvm_libc::cpp::string>,
-                             int> = 0>
+            cpp::enable_if_t<
+                cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string>, int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
@@ -225,8 +248,9 @@ constexpr bool valid_prefix(char const *lhs) {
 }
 
 // 'str' is a null terminated string of the form
-// "const char *__llvm_libc::testing::internal::GetTypeName() [ParamType = XXX]"
-// We return the substring that start at character '[' or a default message.
+// "const char *LIBC_NAMESPACE::testing::internal::GetTypeName() [ParamType =
+// XXX]" We return the substring that start at character '[' or a default
+// message.
 constexpr char const *GetPrettyFunctionParamType(char const *str) {
   for (const char *ptr = str; *ptr != '\0'; ++ptr)
     if (*ptr == '[')
@@ -237,7 +261,11 @@ constexpr char const *GetPrettyFunctionParamType(char const *str) {
 // This function recovers ParamType at compile time by using __PRETTY_FUNCTION__
 // It can be customized by using the REGISTER_TYPE_NAME macro below.
 template <typename ParamType> static constexpr const char *GetTypeName() {
+#ifdef LIBC_COMPILER_IS_MSVC
+  return GetPrettyFunctionParamType(__FUNCSIG__);
+#else
   return GetPrettyFunctionParamType(__PRETTY_FUNCTION__);
+#endif // LIBC_COMPILER_IS_MSVC
 }
 
 template <typename T>
@@ -292,13 +320,13 @@ template <typename... Types> struct TypeList {
 
 } // namespace internal
 
-// Make TypeList visible in __llvm_libc::testing.
+// Make TypeList visible in LIBC_NAMESPACE::testing.
 template <typename... Types> using TypeList = internal::TypeList<Types...>;
 
 CString libc_make_test_file_path_func(const char *file_name);
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 // For TYPED_TEST and TYPED_TEST_F below we need to display which type was used
 // to run the test. The default will return the fully qualified canonical type
@@ -306,22 +334,23 @@ CString libc_make_test_file_path_func(const char *file_name);
 // client to register the type name as they see it in the code.
 #define REGISTER_TYPE_NAME(TYPE)                                               \
   template <>                                                                  \
-  constexpr const char *__llvm_libc::testing::internal::GetTypeName<TYPE>() {  \
+  constexpr const char *                                                       \
+  LIBC_NAMESPACE::testing::internal::GetTypeName<TYPE>() {                     \
     return "[ParamType = " #TYPE "]";                                          \
   }
 
 #define TYPED_TEST(SuiteName, TestName, TypeList)                              \
   static_assert(                                                               \
-      __llvm_libc::testing::internal::valid_prefix(#SuiteName),                \
+      LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteName),             \
       "All LLVM-libc TYPED_TEST suite names must start with 'LlvmLibc'.");     \
   template <typename T>                                                        \
-  class SuiteName##_##TestName : public __llvm_libc::testing::Test {           \
+  class SuiteName##_##TestName : public LIBC_NAMESPACE::testing::Test {        \
   public:                                                                      \
     using ParamType = T;                                                       \
     char name[256];                                                            \
     SuiteName##_##TestName() {                                                 \
       addTest(this);                                                           \
-      __llvm_libc::testing::internal::GenerateName<T>(                         \
+      LIBC_NAMESPACE::testing::internal::GenerateName<T>(                      \
           name, sizeof(name), #SuiteName "." #TestName);                       \
     }                                                                          \
     void Run() override;                                                       \
@@ -332,7 +361,7 @@ CString libc_make_test_file_path_func(const char *file_name);
   template <typename T> void SuiteName##_##TestName<T>::Run()
 
 #define TYPED_TEST_F(SuiteClass, TestName, TypeList)                           \
-  static_assert(__llvm_libc::testing::internal::valid_prefix(#SuiteClass),     \
+  static_assert(LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteClass),  \
                 "All LLVM-libc TYPED_TEST_F suite class names must start "     \
                 "with 'LlvmLibc'.");                                           \
   template <typename T> class SuiteClass##_##TestName : public SuiteClass<T> { \
@@ -341,7 +370,7 @@ CString libc_make_test_file_path_func(const char *file_name);
     char name[256];                                                            \
     SuiteClass##_##TestName() {                                                \
       SuiteClass<T>::addTest(this);                                            \
-      __llvm_libc::testing::internal::GenerateName<T>(                         \
+      LIBC_NAMESPACE::testing::internal::GenerateName<T>(                      \
           name, sizeof(name), #SuiteClass "." #TestName);                      \
     }                                                                          \
     void Run() override;                                                       \
@@ -352,9 +381,9 @@ CString libc_make_test_file_path_func(const char *file_name);
   template <typename T> void SuiteClass##_##TestName<T>::Run()
 
 #define TEST(SuiteName, TestName)                                              \
-  static_assert(__llvm_libc::testing::internal::valid_prefix(#SuiteName),      \
+  static_assert(LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteName),   \
                 "All LLVM-libc TEST suite names must start with 'LlvmLibc'."); \
-  class SuiteName##_##TestName : public __llvm_libc::testing::Test {           \
+  class SuiteName##_##TestName : public LIBC_NAMESPACE::testing::Test {        \
   public:                                                                      \
     SuiteName##_##TestName() { addTest(this); }                                \
     void Run() override;                                                       \
@@ -365,7 +394,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define TEST_F(SuiteClass, TestName)                                           \
   static_assert(                                                               \
-      __llvm_libc::testing::internal::valid_prefix(#SuiteClass),               \
+      LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteClass),            \
       "All LLVM-libc TEST_F suite class names must start with 'LlvmLibc'.");   \
   class SuiteClass##_##TestName : public SuiteClass {                          \
   public:                                                                      \
@@ -376,18 +405,13 @@ CString libc_make_test_file_path_func(const char *file_name);
   SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
   void SuiteClass##_##TestName::Run()
 
-// The GNU compiler emits a warning if nested "if" statements are followed by
-// an "else" statement and braces are not used to explicitly disambiguate the
-// "else" binding.  This leads to problems with code like:
-//
-//   if (gate)
-//     ASSERT_*(condition) << "Some message";
-//
-// The "switch (0) case 0:" idiom is used to suppress this.
-#define LIBC_AMBIGUOUS_ELSE_BLOCKER_                                           \
+// Helper to trick the compiler into ignoring lack of braces on the else
+// branch.  We cannot introduce braces at this point, since it would prevent
+// using `<< ...` after the test macro for additional failure output.
+#define LIBC_TEST_DISABLE_DANGLING_ELSE                                        \
   switch (0)                                                                   \
   case 0:                                                                      \
-  default:
+  default: // NOLINT
 
 // If RET_OR_EMPTY is the 'return' keyword we perform an early return which
 // corresponds to an assert. If it is empty the execution continues, this
@@ -400,16 +424,16 @@ CString libc_make_test_file_path_func(const char *file_name);
 // returning a boolean. This expression is responsible for logging the
 // diagnostic in case of failure.
 #define LIBC_TEST_SCAFFOLDING_(TEST, RET_OR_EMPTY)                             \
-  LIBC_AMBIGUOUS_ELSE_BLOCKER_                                                 \
+  LIBC_TEST_DISABLE_DANGLING_ELSE                                              \
   if (TEST)                                                                    \
     ;                                                                          \
   else                                                                         \
-    RET_OR_EMPTY __llvm_libc::testing::internal::Failure() =                   \
-        __llvm_libc::testing::internal::Message()
+    RET_OR_EMPTY LIBC_NAMESPACE::testing::internal::Failure() =                \
+        LIBC_NAMESPACE::testing::internal::Message()
 
 #define LIBC_TEST_BINOP_(COND, LHS, RHS, RET_OR_EMPTY)                         \
-  LIBC_TEST_SCAFFOLDING_(test(__llvm_libc::testing::TestCond::COND, LHS, RHS,  \
-                              #LHS, #RHS, LIBC_TEST_LOC_()),                   \
+  LIBC_TEST_SCAFFOLDING_(test(LIBC_NAMESPACE::testing::TestCond::COND, LHS,    \
+                              RHS, #LHS, #RHS, LIBC_TEST_LOC_()),              \
                          RET_OR_EMPTY)
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -462,7 +486,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define LIBC_TEST_PROCESS_(TEST_FUNC, FUNC, VALUE, RET_OR_EMPTY)               \
   LIBC_TEST_SCAFFOLDING_(                                                      \
-      TEST_FUNC(__llvm_libc::testing::Test::createCallable(FUNC), VALUE,       \
+      TEST_FUNC(LIBC_NAMESPACE::testing::Test::createCallable(FUNC), VALUE,    \
                 #FUNC, #VALUE, LIBC_TEST_LOC_()),                              \
       RET_OR_EMPTY)
 
@@ -493,4 +517,6 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define WITH_SIGNAL(X) X
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#define LIBC_TEST_HAS_MATCHERS() (1)
+
+#endif // LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H

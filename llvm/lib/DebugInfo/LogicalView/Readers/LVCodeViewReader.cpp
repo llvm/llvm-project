@@ -13,15 +13,11 @@
 #include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
-#include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVType.h"
-#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
@@ -30,7 +26,6 @@
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
-#include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -167,11 +162,11 @@ void LVCodeViewReader::cacheRelocations() {
   for (const SectionRef &Section : getObj().sections()) {
     const coff_section *CoffSection = getObj().getCOFFSection(Section);
 
-    for (const RelocationRef &Relocacion : Section.relocations())
-      RelocMap[CoffSection].push_back(Relocacion);
+    auto &RM = RelocMap[CoffSection];
+    llvm::append_range(RM, Section.relocations());
 
     // Sort relocations by address.
-    llvm::sort(RelocMap[CoffSection], [](RelocationRef L, RelocationRef R) {
+    llvm::sort(RM, [](RelocationRef L, RelocationRef R) {
       return L.getOffset() < R.getOffset();
     });
   }
@@ -217,11 +212,9 @@ Error LVCodeViewReader::resolveSymbolName(const coff_section *CoffSection,
 // and they are printed only if the command line option 'internal=system'.
 bool LVCodeViewReader::isSystemEntry(LVElement *Element, StringRef Name) const {
   Name = Name.empty() ? Element->getName() : Name;
-  auto Find = [=](const char *String) -> bool {
-    return StringRef::npos != Name.find(String);
-  };
+  auto Find = [=](const char *String) -> bool { return Name.contains(String); };
   auto Starts = [=](const char *Pattern) -> bool {
-    return Name.startswith(Pattern);
+    return Name.starts_with(Pattern);
   };
   auto CheckExclude = [&]() -> bool {
     if (Starts("__") || Starts("_PMD") || Starts("_PMFN"))
@@ -276,7 +269,7 @@ Error LVCodeViewReader::collectInlineeInfo(
 }
 
 Error LVCodeViewReader::traverseInlineeLines(StringRef Subsection) {
-  BinaryStreamReader SR(Subsection, llvm::support::little);
+  BinaryStreamReader SR(Subsection, llvm::endianness::little);
   DebugInlineeLinesSubsectionRef Lines;
   if (Error E = Lines.initialize(SR))
     return createStringError(errorToErrorCode(std::move(E)), getFileName());
@@ -349,7 +342,7 @@ Error LVCodeViewReader::initializeFileAndStringTables(
     if (Error E = Reader.readFixedString(Contents, SubSectionSize))
       return createStringError(errorToErrorCode(std::move(E)), getFileName());
 
-    BinaryStreamRef ST(Contents, support::little);
+    BinaryStreamRef ST(Contents, llvm::endianness::little);
     switch (DebugSubsectionKind(SubType)) {
     case DebugSubsectionKind::FileChecksums:
       if (Error E = CVFileChecksumTable.initialize(ST))
@@ -478,8 +471,8 @@ Error LVCodeViewReader::loadPrecompiledObject(PrecompRecord &Precomp,
       if (Magic != COFF::DEBUG_SECTION_MAGIC)
         return errorCodeToError(object_error::parse_failed);
 
-      ReaderPrecomp =
-          std::make_unique<BinaryStreamReader>(*DataOrErr, support::little);
+      ReaderPrecomp = std::make_unique<BinaryStreamReader>(
+          *DataOrErr, llvm::endianness::little);
       cantFail(
           ReaderPrecomp->readArray(CVTypesPrecomp, ReaderPrecomp->getLength()));
 
@@ -514,7 +507,7 @@ Error LVCodeViewReader::loadPrecompiledObject(PrecompRecord &Precomp,
       [&](TypeIndex TI, const CVType &Type) { TypeArray.push_back(Type); });
 
   ItemStream =
-      std::make_unique<BinaryItemStream<CVType>>(llvm::support::little);
+      std::make_unique<BinaryItemStream<CVType>>(llvm::endianness::little);
   ItemStream->setItems(TypeArray);
   TypeStream.setUnderlyingStream(*ItemStream);
 
@@ -550,7 +543,7 @@ Error LVCodeViewReader::traverseTypeSection(StringRef SectionName,
   // Get the first type record. It will indicate if this object uses a type
   // server (/Zi) or a PCH file (/Yu).
   CVTypeArray CVTypes;
-  BinaryStreamReader Reader(*DataOrErr, support::little);
+  BinaryStreamReader Reader(*DataOrErr, llvm::endianness::little);
   cantFail(Reader.readArray(CVTypes, Reader.getLength()));
   CVTypeArray::Iterator FirstType = CVTypes.begin();
 
@@ -621,7 +614,7 @@ Error LVCodeViewReader::traverseSymbolsSubsection(StringRef Subsection,
   LVSymbolVisitorDelegate VisitorDelegate(this, Section, &getObj(),
                                           SectionContents);
   CVSymbolArray Symbols;
-  BinaryStreamReader Reader(BinaryData, llvm::support::little);
+  BinaryStreamReader Reader(BinaryData, llvm::endianness::little);
   if (Error E = Reader.readArray(Symbols, Reader.getLength()))
     return createStringError(errorToErrorCode(std::move(E)), getFileName());
 
@@ -664,7 +657,7 @@ Error LVCodeViewReader::traverseSymbolSection(StringRef SectionName,
   if (Magic != COFF::DEBUG_SECTION_MAGIC)
     return createStringError(object_error::parse_failed, getFileName());
 
-  BinaryStreamReader FSReader(Data, support::little);
+  BinaryStreamReader FSReader(Data, llvm::endianness::little);
   if (Error Err = initializeFileAndStringTables(FSReader))
     return Err;
 
@@ -727,12 +720,11 @@ Error LVCodeViewReader::traverseSymbolSection(StringRef SectionName,
                                    getFileName());
 
         LLVM_DEBUG({ W.printString("Symbol Name", SymbolName); });
-        if (FunctionLineTables.count(SymbolName) != 0) {
+        if (!FunctionLineTables.try_emplace(SymbolName, Contents).second) {
           // Saw debug info for this function already?
           return createStringError(object_error::parse_failed, getFileName());
         }
 
-        FunctionLineTables[SymbolName] = Contents;
         SymbolNames.push_back(SymbolName);
       }
       break;
@@ -752,7 +744,8 @@ Error LVCodeViewReader::traverseSymbolSection(StringRef SectionName,
       W.printString("Symbol Name", SymbolName);
     });
 
-    BinaryStreamReader Reader(FunctionLineTables[SymbolName], support::little);
+    BinaryStreamReader Reader(FunctionLineTables[SymbolName],
+                              llvm::endianness::little);
 
     DebugLinesSubsectionRef Lines;
     if (Error E = Lines.initialize(Reader))
@@ -1197,7 +1190,12 @@ Error LVCodeViewReader::loadTargetInfo(const ObjectFile &Obj) {
     FeaturesValue = SubtargetFeatures();
   }
   FeaturesValue = *Features;
-  return loadGenericTargetInfo(TT.str(), FeaturesValue.getString());
+
+  StringRef CPU;
+  if (auto OptCPU = Obj.tryGetCPUName())
+    CPU = *OptCPU;
+
+  return loadGenericTargetInfo(TT.str(), FeaturesValue.getString(), CPU);
 }
 
 Error LVCodeViewReader::loadTargetInfo(const PDBFile &Pdb) {
@@ -1207,8 +1205,9 @@ Error LVCodeViewReader::loadTargetInfo(const PDBFile &Pdb) {
   TT.setOS(Triple::Win32);
 
   StringRef TheFeature = "";
+  StringRef TheCPU = "";
 
-  return loadGenericTargetInfo(TT.str(), TheFeature);
+  return loadGenericTargetInfo(TT.str(), TheFeature, TheCPU);
 }
 
 std::string LVCodeViewReader::getRegisterName(LVSmall Opcode,

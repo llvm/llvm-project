@@ -15,7 +15,9 @@
 #define MLIR_DIALECT_LLVMIR_LLVMATTRS_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include <optional>
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc"
@@ -60,6 +62,15 @@ public:
   static bool classof(Attribute attr);
 };
 
+/// This class represents a LLVM attribute that describes a debug info variable.
+class DIVariableAttr : public DINodeAttr {
+public:
+  using DINodeAttr::DINodeAttr;
+
+  /// Support LLVM type casting.
+  static bool classof(Attribute attr);
+};
+
 /// Base class for LLVM attributes participating in the TBAA graph.
 class TBAANodeAttr : public Attribute {
 public:
@@ -81,8 +92,19 @@ public:
 // --gen-attr-* and --gen-attrdef-*.
 using cconv::CConv;
 using linkage::Linkage;
+using tailcallkind::TailCallKind;
+
+namespace detail {
+/// Checks whether the given type is an LLVM type that can be loaded or stored.
+bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
+                          std::optional<int64_t> alignment,
+                          const ::mlir::DataLayout *dataLayout,
+                          function_ref<InFlightDiagnostic()> emitError);
+} // namespace detail
 } // namespace LLVM
 } // namespace mlir
+
+#include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.h.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"

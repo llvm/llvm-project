@@ -34,11 +34,15 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
   Status error;
   const int short_option = g_process_launch_options[option_idx].short_option;
 
+  TargetSP target_sp =
+      execution_context ? execution_context->GetTargetSP() : TargetSP();
   switch (short_option) {
   case 's': // Stop at program entry point
     launch_info.GetFlags().Set(eLaunchFlagStopAtEntry);
     break;
-
+  case 'm': // Stop at user entry point
+    target_sp->CreateBreakpointAtUserEntry(error);
+    break;
   case 'i': // STDIN for read only
   {
     FileAction action;
@@ -89,8 +93,6 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     break;
 
   case 'a': {
-    TargetSP target_sp =
-        execution_context ? execution_context->GetTargetSP() : TargetSP();
     PlatformSP platform_sp =
         target_sp ? target_sp->GetPlatform() : PlatformSP();
     launch_info.GetArchitecture() =
@@ -105,7 +107,7 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     if (success)
       disable_aslr = disable_aslr_arg ? eLazyBoolYes : eLazyBoolNo;
     else
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "Invalid boolean value for disable-aslr option: '%s'",
           option_arg.empty() ? "<null>" : option_arg.str().c_str());
     break;
@@ -119,11 +121,15 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     if (success)
       launch_info.SetShellExpandArguments(expand_args);
     else
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "Invalid boolean value for shell-expand-args option: '%s'",
           option_arg.empty() ? "<null>" : option_arg.str().c_str());
     break;
   }
+
+  case 'M':
+    launch_info.GetFlags().Set(eLaunchFlagMemoryTagging);
+    break;
 
   case 'c':
     if (!option_arg.empty())
@@ -137,9 +143,8 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     break;
 
   default:
-    error.SetErrorStringWithFormat("unrecognized short option character '%c'",
-                                   short_option);
-    break;
+    return Status::FromErrorStringWithFormat(
+        "unrecognized short option character '%c'", short_option);
   }
   return error;
 }

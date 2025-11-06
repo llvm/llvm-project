@@ -8,7 +8,7 @@
 define void @partial_tail_dup(i1 %a1, i1 %a2, ptr %a4, ptr %a5, ptr %a6, i32 %a7) #0 align 2  !prof !1 {
 ; CHECK-LABEL: partial_tail_dup:
 ; CHECK:        # %bb.0: # %entry
-; CHECK-NEXT:   .p2align 4, 0x90
+; CHECK-NEXT:   .p2align 4
 ; CHECK-NEXT:   .LBB0_1: # %for.cond
 ; CHECK-NEXT:   # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:	  testb	$1, %dil
@@ -20,14 +20,14 @@ define void @partial_tail_dup(i1 %a1, i1 %a2, ptr %a4, ptr %a5, ptr %a6, i32 %a7
 ; CHECK-NEXT:	  testl	%r9d, %r9d
 ; CHECK-NEXT:	  je	.LBB0_1
 ; CHECK-NEXT:	  jmp	.LBB0_8
-; CHECK-NEXT:	  .p2align	4, 0x90
+; CHECK-NEXT:	  .p2align	4
 ; CHECK-NEXT:   .LBB0_6: # %dup2
 ; CHECK-NEXT:   # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:	  movl	$2, (%rcx)
 ; CHECK-NEXT:	  testl	%r9d, %r9d
 ; CHECK-NEXT:	  je	.LBB0_1
 ; CHECK-NEXT:	  jmp	.LBB0_8
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %if.end56
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb $1, %sil

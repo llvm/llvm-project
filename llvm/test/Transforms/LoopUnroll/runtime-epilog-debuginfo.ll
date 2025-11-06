@@ -3,14 +3,24 @@
 ; Test that epilogue is tagged with the same debug information as original loop body rather than original loop exit.
 
 ; CHECK: for.body.i:
-; CHECK:   br i1 {{.*}}, label %lee1.exit.loopexit.unr-lcssa.loopexit, label %for.body.i, !dbg ![[LOOP_LOC:[0-9]+]]
-; CHECK: lee1.exit.loopexit.unr-lcssa.loopexit:
-; CHECK:   br label %lee1.exit.loopexit.unr-lcssa, !dbg ![[LOOP_LOC]]
+; CHECK:   br i1 {{.*}}, label %lee1.exit.loopexit.unr-lcssa, label %for.body.i, !dbg ![[LOOP_LOC:[0-9]+]]
 ; CHECK: lee1.exit.loopexit.unr-lcssa:
 ; CHECK:   %lcmp.mod = icmp ne i32 %xtraiter, 0, !dbg ![[LOOP_LOC]]
 ; CHECK:   br i1 %lcmp.mod, label %for.body.i.epil.preheader, label %lee1.exit.loopexit, !dbg ![[LOOP_LOC]]
 ; CHECK: for.body.i.epil.preheader:
 ; CHECK:   br label %for.body.i.epil, !dbg ![[LOOP_LOC]]
+; CHECK: for.body.i.epil:
+;; Ensure that when we clone the div/add/add and its following dbg.values,
+;; those dbg.values are remapped to the duplicated adds, not the originals.
+; CHECK:      %div.i.epil = sdiv i32 %t.08.i.epil, 2,
+; CHECK-NEXT: %add.i.epil = add i32 %t.08.i.epil, %a,
+; CHECK-NEXT: %add1.i.epil = add i32 %add.i.epil, %div.i.epil,
+; CHECK-NEXT: #dbg_value(i32 %add1.i.epil,
+; CHECK-NEXT: %inc.i.epil = add nuw i32 %i.09.i.epil, 1, !dbg !36
+; CHECK-NEXT: #dbg_value(i32 %inc.i.epil,
+; CHECK-NEXT: #dbg_value(i32 %inc.i.epil,
+; CHECK-NEXT: #dbg_value(i32 %add1.i.epil,
+
 ; CHECK: lee1.exit.loopexit:
 ; CHECK:   br label %lee1.exit, !dbg ![[EXIT_LOC:[0-9]+]]
 
@@ -66,7 +76,7 @@ lee1.exit:                                        ; preds = %lee1.exit.loopexit,
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
-attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="arm7tdmi" "target-features"="+neon,+strict-align,+vfp3,-crypto,-fp-armv8,-fp16,-vfp4" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="arm7tdmi" "target-features"="+neon,+strict-align,+vfp3,-crypto,-fp-armv8,-fp16,-vfp4" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

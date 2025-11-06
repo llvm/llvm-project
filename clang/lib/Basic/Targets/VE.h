@@ -40,6 +40,7 @@ public:
     Int64Type = SignedLong;
     RegParmMax = 8;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    HasUnalignedAccess = true;
 
     WCharType = UnsignedInt;
     WIntType = UnsignedInt;
@@ -54,7 +55,7 @@ public:
 
   bool hasSjLjLowering() const override { return true; }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;

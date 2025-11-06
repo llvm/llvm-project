@@ -69,7 +69,7 @@ bool MockTildeExpressionResolver::ResolvePartial(StringRef Expr,
 
   SmallString<16> QualifiedName("~");
   for (const auto &User : UserDirectories) {
-    if (!User.getKey().startswith(Expr))
+    if (!User.getKey().starts_with(Expr))
       continue;
     QualifiedName.resize(1);
     QualifiedName.append(User.getKey().begin(), User.getKey().end());

@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Compiler.h"
-#include <cassert>
 #include <utility>
 #include <vector>
 
@@ -57,7 +56,7 @@ public:
 
   /// Update DBG_VALUE or DBG_PHI if dependency breaker is updating
   /// other machine instruction to use NewReg.
-  void UpdateDbgValue(MachineInstr &MI, unsigned OldReg, unsigned NewReg) {
+  void UpdateDbgValue(MachineInstr &MI, MCRegister OldReg, MCRegister NewReg) {
     if (MI.isDebugValue()) {
       if (MI.getDebugOperand(0).isReg() &&
           MI.getDebugOperand(0).getReg() == OldReg)
@@ -74,7 +73,7 @@ public:
   /// Update all DBG_VALUE instructions that may be affected by the dependency
   /// breaker's update of ParentMI to use NewReg.
   void UpdateDbgValues(const DbgValueVector &DbgValues, MachineInstr *ParentMI,
-                       unsigned OldReg, unsigned NewReg) {
+                       MCRegister OldReg, MCRegister NewReg) {
     // The following code is dependent on the order in which the DbgValues are
     // constructed in ScheduleDAGInstrs::buildSchedGraph.
     MachineInstr *PrevDbgMI = nullptr;

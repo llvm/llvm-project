@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FIXME: This takes over an hour to compile, disable for now.
+// UNSUPPORTED: LIBCXX-AMDGPU-FIXME
+// UNSUPPORTED: LIBCXX-NVPTX-FIXME
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
@@ -26,7 +30,7 @@ int main(int, char**) {
   static_assert(test_constraints_insert_range<std::deque, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_insert_range<std::deque<int, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_insert_range<std::deque<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
     });
   });

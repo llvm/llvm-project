@@ -1,9 +1,9 @@
 
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers %t.o | FileCheck %s --check-prefixes=SEC,SEC32
 ; RUN: llvm-objdump -r %t.o | FileCheck %s --check-prefix=RELO
 
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t64.o < %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=ppc -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --section-headers %t64.o | FileCheck %s --check-prefixes=SEC,SEC64
 ; RUN: llvm-objdump -r %t64.o | FileCheck %s --check-prefix=RELO64
 
@@ -84,6 +84,7 @@ entry:
 ; SEC-NEXT:      NumberOfRelocations: 0
 ; SEC-NEXT:      NumberOfLineNumbers: 0
 ; SEC-NEXT:      Type: STYP_DWARF (0x10)
+; SEC-NEXT:      DWARFSubType: SSUBTYP_DWABREV (0x60000)
 ; SEC-NEXT:    }
 ; SEC-NEXT:    Section {
 ; SEC-NEXT:      Index: 4
@@ -100,6 +101,7 @@ entry:
 ; SEC-NEXT:      NumberOfRelocations: 4
 ; SEC-NEXT:      NumberOfLineNumbers: 0
 ; SEC-NEXT:      Type: STYP_DWARF (0x10)
+; SEC-NEXT:      DWARFSubType: SSUBTYP_DWINFO (0x10000)
 ; SEC-NEXT:    }
 ; SEC-NEXT:    Section {
 ; SEC-NEXT:      Index: 5
@@ -116,6 +118,7 @@ entry:
 ; SEC-NEXT:      NumberOfRelocations: 1
 ; SEC-NEXT:      NumberOfLineNumbers: 0
 ; SEC-NEXT:      Type: STYP_DWARF (0x10)
+; SEC-NEXT:      DWARFSubType: SSUBTYP_DWLINE (0x20000)
 ; SEC-NEXT:    }
 ; SEC-NEXT:  ]
 

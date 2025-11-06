@@ -29,16 +29,16 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nofree norecurse nounwind uwtable
 define dso_local i32 @main() local_unnamed_addr !dbg !12 {
 entry:
-; CHECK: call void @llvm.dbg.value(metadata i32 4, metadata [[VAR:![0-9]+]], metadata !DIExpression())
+; CHECK: #dbg_value(i32 4, [[VAR:![0-9]+]], !DIExpression(),
   call void @llvm.dbg.value(metadata i32 4, metadata !16, metadata !DIExpression()), !dbg !21
   %0 = load volatile i32, ptr @v, align 4, !dbg !22, !tbaa !23
   %inc = add nsw i32 %0, 1, !dbg !22
   store volatile i32 %inc, ptr @v, align 4, !dbg !22, !tbaa !23
 
-; CHECK: call void @llvm.dbg.value(metadata i32 4, metadata [[PTR1:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_implicit_pointer))
+; CHECK: #dbg_value(i32 4, [[PTR1:![0-9]+]], !DIExpression(DW_OP_LLVM_implicit_pointer),
   call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !DIExpression(DW_OP_LLVM_implicit_pointer)), !dbg !21
 
-; CHECK: call void @llvm.dbg.value(metadata i32 4, metadata [[PTR2:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer))
+; CHECK: #dbg_value(i32 4, [[PTR2:![0-9]+]], !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer),
   call void @llvm.dbg.value(metadata i32 4, metadata !19, metadata !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer)), !dbg !21
   %1 = load volatile i32, ptr @v, align 4, !dbg !27, !tbaa !23
   %inc1 = add nsw i32 %1, 1, !dbg !27

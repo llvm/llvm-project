@@ -45,12 +45,12 @@ struct LoopBodyTraits {
   class WrappedSuccIterator
       : public iterator_adaptor_base<
             WrappedSuccIterator, succ_iterator,
-            typename std::iterator_traits<succ_iterator>::iterator_category,
-            NodeRef, std::ptrdiff_t, NodeRef *, NodeRef> {
+            std::iterator_traits<succ_iterator>::iterator_category, NodeRef,
+            std::ptrdiff_t, NodeRef *, NodeRef> {
     using BaseT = iterator_adaptor_base<
         WrappedSuccIterator, succ_iterator,
-        typename std::iterator_traits<succ_iterator>::iterator_category,
-        NodeRef, std::ptrdiff_t, NodeRef *, NodeRef>;
+        std::iterator_traits<succ_iterator>::iterator_category, NodeRef,
+        std::ptrdiff_t, NodeRef *, NodeRef>;
 
     const Loop *L;
 
@@ -120,7 +120,7 @@ public:
   Loop *getLoop() const { return L; }
 
   /// Traverse the loop blocks and store the DFS result.
-  void perform(LoopInfo *LI);
+  void perform(const LoopInfo *LI);
 
   /// Return true if postorder numbers are assigned to all loop blocks.
   bool isComplete() const { return PostBlocks.size() == L->getNumBlocks(); }
@@ -177,7 +177,7 @@ public:
   LoopBlocksRPO(Loop *Container) : DFS(Container) {}
 
   /// Traverse the loop blocks and store the DFS result.
-  void perform(LoopInfo *LI) {
+  void perform(const LoopInfo *LI) {
     DFS.perform(LI);
   }
 
@@ -204,10 +204,10 @@ public:
 
 private:
   LoopBlocksDFS &DFS;
-  LoopInfo *LI;
+  const LoopInfo *LI;
 
 public:
-  LoopBlocksTraversal(LoopBlocksDFS &Storage, LoopInfo *LInfo) :
+  LoopBlocksTraversal(LoopBlocksDFS &Storage, const LoopInfo *LInfo) :
     DFS(Storage), LI(LInfo) {}
 
   /// Postorder traversal over the graph. This only needs to be done once.

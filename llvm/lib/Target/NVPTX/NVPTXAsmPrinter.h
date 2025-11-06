@@ -27,6 +27,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCExpr.h"
@@ -100,39 +101,33 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
     // SymbolsBeforeStripping[i].
     SmallVector<const Value *, 4> SymbolsBeforeStripping;
     unsigned curpos;
-    NVPTXAsmPrinter &AP;
-    bool EmitGeneric;
+    const NVPTXAsmPrinter &AP;
+    const bool EmitGeneric;
 
   public:
-    AggBuffer(unsigned size, NVPTXAsmPrinter &AP)
-        : size(size), buffer(size), AP(AP) {
-      curpos = 0;
-      EmitGeneric = AP.EmitGeneric;
-    }
+    AggBuffer(unsigned size, const NVPTXAsmPrinter &AP)
+        : size(size), buffer(size), curpos(0), AP(AP),
+          EmitGeneric(AP.EmitGeneric) {}
 
     // Copy Num bytes from Ptr.
     // if Bytes > Num, zero fill up to Bytes.
-    unsigned addBytes(unsigned char *Ptr, int Num, int Bytes) {
-      assert((curpos + Num) <= size);
-      assert((curpos + Bytes) <= size);
-      for (int i = 0; i < Num; ++i) {
-        buffer[curpos] = Ptr[i];
-        curpos++;
-      }
-      for (int i = Num; i < Bytes; ++i) {
-        buffer[curpos] = 0;
-        curpos++;
-      }
-      return curpos;
+    void addBytes(const unsigned char *Ptr, unsigned Num, unsigned Bytes) {
+      for (unsigned I : llvm::seq(Num))
+        addByte(Ptr[I]);
+      if (Bytes > Num)
+        addZeros(Bytes - Num);
     }
 
-    unsigned addZeros(int Num) {
-      assert((curpos + Num) <= size);
-      for (int i = 0; i < Num; ++i) {
-        buffer[curpos] = 0;
-        curpos++;
+    void addByte(uint8_t Byte) {
+      assert(curpos < size);
+      buffer[curpos] = Byte;
+      curpos++;
+    }
+
+    void addZeros(unsigned Num) {
+      for ([[maybe_unused]] unsigned _ : llvm::seq(Num)) {
+        addByte(0);
       }
-      return curpos;
     }
 
     void addSymbol(const Value *GVar, const Value *GVarBeforeStripping) {
@@ -150,11 +145,13 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
   friend class AggBuffer;
 
-private:
+public:
+  static char ID;
+
   StringRef getPassName() const override { return "NVPTX Assembly Printer"; }
 
+private:
   const Function *F;
-  std::string CurrentFnName;
 
   void emitStartOfAsmFile(Module &M) override;
   void emitBasicBlockStart(const MachineBasicBlock &MBB) override;
@@ -165,7 +162,7 @@ private:
 
   void emitInstruction(const MachineInstr *) override;
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
-  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
+  MCOperand lowerOperand(const MachineOperand &MO);
   MCOperand GetSymbolRef(const MCSymbol *Symbol);
   unsigned encodeVirtualRegister(unsigned Reg);
 
@@ -174,12 +171,13 @@ private:
   void printModuleLevelGV(const GlobalVariable *GVar, raw_ostream &O,
                           bool processDemoted, const NVPTXSubtarget &STI);
   void emitGlobals(const Module &M);
-  void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
   void emitHeader(Module &M, raw_ostream &O, const NVPTXSubtarget &STI);
   void emitKernelFunctionDirectives(const Function &F, raw_ostream &O) const;
   void emitVirtualRegister(unsigned int vr, raw_ostream &);
   void emitFunctionParamList(const Function *, raw_ostream &O);
   void setAndEmitFunctionVirtualRegisters(const MachineFunction &MF);
+  void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -188,8 +186,9 @@ private:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &) override;
 
-  const MCExpr *lowerConstantForGV(const Constant *CV, bool ProcessingGeneric);
-  void printMCExpr(const MCExpr &Expr, raw_ostream &OS);
+  const MCExpr *lowerConstantForGV(const Constant *CV,
+                                   bool ProcessingGeneric) const;
+  void printMCExpr(const MCExpr &Expr, raw_ostream &OS) const;
 
 protected:
   bool doInitialization(Module &M) override;
@@ -215,18 +214,16 @@ private:
   void emitPTXAddressSpace(unsigned int AddressSpace, raw_ostream &O) const;
   std::string getPTXFundamentalTypeStr(Type *Ty, bool = true) const;
   void printScalarConstant(const Constant *CPV, raw_ostream &O);
-  void printFPConstant(const ConstantFP *Fp, raw_ostream &O);
+  void printFPConstant(const ConstantFP *Fp, raw_ostream &O) const;
   void bufferLEByte(const Constant *CPV, int Bytes, AggBuffer *aggBuffer);
   void bufferAggregateConstant(const Constant *CV, AggBuffer *aggBuffer);
 
   void emitLinkageDirective(const GlobalValue *V, raw_ostream &O);
   void emitDeclarations(const Module &, raw_ostream &O);
   void emitDeclaration(const Function *, raw_ostream &O);
+  void emitAliasDeclaration(const GlobalAlias *, raw_ostream &O);
+  void emitDeclarationWithName(const Function *, MCSymbol *, raw_ostream &O);
   void emitDemotedVars(const Function *, raw_ostream &);
-
-  bool lowerImageHandleOperand(const MachineInstr *MI, unsigned OpNo,
-                               MCOperand &MCOp);
-  void lowerImageHandleSymbol(unsigned Index, MCOperand &MCOp);
 
   bool isLoopHeaderOfNoUnroll(const MachineBasicBlock &MBB) const;
 
@@ -241,18 +238,18 @@ private:
   // Since the address value should always be generic in CUDA C and always
   // be specific in OpenCL, we use this simple control here.
   //
-  bool EmitGeneric;
+  const bool EmitGeneric;
 
 public:
   NVPTXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)),
+      : AsmPrinter(TM, std::move(Streamer), ID),
         EmitGeneric(static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
                     NVPTX::CUDA) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AsmPrinter::getAnalysisUsage(AU);
   }
 

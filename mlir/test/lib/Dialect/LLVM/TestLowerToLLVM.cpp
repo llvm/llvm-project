@@ -12,20 +12,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
-#include "mlir/IR/DialectRegistry.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
 #include "mlir/Transforms/Passes.h"
@@ -48,11 +48,6 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // unrealized casts, but there needs to be the final module-wise cleanup in
   // the end. Keep module-level for now.
 
-  auto enableOpaquePointers = [](auto options) {
-    options.useOpaquePointers = true;
-    return options;
-  };
-
   // Blanket-convert any remaining high-level vector ops to loops if any remain.
   pm.addNestedPass<func::FuncOp>(createConvertVectorToSCFPass());
   // Blanket-convert any remaining linalg ops to loops if any remain.
@@ -60,15 +55,14 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // Blanket-convert any remaining affine ops if any remain.
   pm.addPass(createLowerAffinePass());
   // Convert SCF to CF (always needed).
-  pm.addPass(createConvertSCFToCFPass());
+  pm.addPass(createSCFToControlFlowPass());
   // Sprinkle some cleanups.
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createCSEPass());
   // Convert vector to LLVM (always needed).
   pm.addPass(createConvertVectorToLLVMPass(
       // TODO: add more options on a per-need basis.
-      enableOpaquePointers(
-          ConvertVectorToLLVMPassOptions{options.reassociateFPReductions})));
+      ConvertVectorToLLVMPassOptions{options.reassociateFPReductions}));
   // Convert Math to LLVM (always needed).
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   // Expand complicated MemRef operations before lowering them.
@@ -76,13 +70,17 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // The expansion may create affine expressions. Get rid of them.
   pm.addPass(createLowerAffinePass());
   // Convert MemRef to LLVM (always needed).
-  pm.addPass(createFinalizeMemRefToLLVMConversionPass(
-      enableOpaquePointers(FinalizeMemRefToLLVMConversionPassOptions{})));
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   // Convert Func to LLVM (always needed).
-  pm.addPass(createConvertFuncToLLVMPass(
-      enableOpaquePointers(ConvertFuncToLLVMPassOptions{})));
+  pm.addPass(createConvertFuncToLLVMPass());
+  // Convert Arith to LLVM (always needed).
+  pm.addPass(createArithToLLVMConversionPass());
+  // Convert CF to LLVM (always needed).
+  pm.addPass(createConvertControlFlowToLLVMPass());
   // Convert Index to LLVM (always needed).
   pm.addPass(createConvertIndexToLLVMPass());
+  // Convert UB to LLVM (always needed).
+  pm.addPass(createUBToLLVMConversionPass());
   // Convert remaining unrealized_casts (always needed).
   pm.addPass(createReconcileUnrealizedCastsPass());
 }

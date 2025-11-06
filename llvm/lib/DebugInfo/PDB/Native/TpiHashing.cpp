@@ -19,7 +19,7 @@ using namespace llvm::pdb;
 // Corresponds to `fUDTAnon`.
 static bool isAnonymous(StringRef Name) {
   return Name == "<unnamed-tag>" || Name == "__unnamed" ||
-         Name.endswith("::<unnamed-tag>") || Name.endswith("::__unnamed");
+         Name.ends_with("::<unnamed-tag>") || Name.ends_with("::__unnamed");
 }
 
 // Computes the hash for a user-defined type record. This could be a struct,

@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TERMIOS_H
 #define LLVM_LIBC_TERMIOS_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/termios-macros.h>
+#include "__llvm-libc-common.h"
+#include "llvm-libc-macros/termios-macros.h"
 
 %%public_api()
 

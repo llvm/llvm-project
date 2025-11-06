@@ -26,3 +26,43 @@ SBLanguageRuntime::GetNameForLanguageType(lldb::LanguageType language) {
 
   return Language::GetNameForLanguageType(language);
 }
+
+bool SBLanguageRuntime::LanguageIsCPlusPlus(lldb::LanguageType language) {
+  return Language::LanguageIsCPlusPlus(language);
+}
+
+bool SBLanguageRuntime::LanguageIsObjC(lldb::LanguageType language) {
+  return Language::LanguageIsObjC(language);
+}
+
+bool SBLanguageRuntime::LanguageIsCFamily(lldb::LanguageType language) {
+  return Language::LanguageIsCFamily(language);
+}
+
+bool SBLanguageRuntime::SupportsExceptionBreakpointsOnThrow(
+    lldb::LanguageType language) {
+  if (Language *lang_plugin = Language::FindPlugin(language))
+    return lang_plugin->SupportsExceptionBreakpointsOnThrow();
+  return false;
+}
+
+bool SBLanguageRuntime::SupportsExceptionBreakpointsOnCatch(
+    lldb::LanguageType language) {
+  if (Language *lang_plugin = Language::FindPlugin(language))
+    return lang_plugin->SupportsExceptionBreakpointsOnCatch();
+  return false;
+}
+
+const char *
+SBLanguageRuntime::GetThrowKeywordForLanguage(lldb::LanguageType language) {
+  if (Language *lang_plugin = Language::FindPlugin(language))
+    return ConstString(lang_plugin->GetThrowKeyword()).AsCString();
+  return nullptr;
+}
+
+const char *
+SBLanguageRuntime::GetCatchKeywordForLanguage(lldb::LanguageType language) {
+  if (Language *lang_plugin = Language::FindPlugin(language))
+    return ConstString(lang_plugin->GetCatchKeyword()).AsCString();
+  return nullptr;
+}

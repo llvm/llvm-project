@@ -49,7 +49,14 @@ def CallOp : Func_Op<"call",
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let arguments = (ins
+    FlatSymbolRefAttr:$callee,
+    Variadic<AnyType>:$operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs, 
+    UnitAttr:$no_inline
+  );
+
   let results = (outs Variadic<AnyType>);
 
   let builders = [
@@ -72,6 +79,18 @@ def CallOp : Func_Op<"call",
       CArg<"ValueRange", "{}">:$operands), [{
       build($_builder, $_state, StringAttr::get($_builder.getContext(), callee),
             results, operands);
+    }]>,
+    OpBuilder<(ins "TypeRange":$results, "FlatSymbolRefAttr":$callee,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, callee, results, operands);
+    }]>,
+    OpBuilder<(ins "TypeRange":$results, "StringAttr":$callee,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, callee, results, operands);
+    }]>,
+    OpBuilder<(ins "TypeRange":$results, "StringRef":$callee,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, callee, results, operands);
     }]>];
 
   let extraClassDeclaration = [{
@@ -96,7 +115,7 @@ def CallOp : Func_Op<"call",
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
+      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
     }
   }];
 
@@ -135,8 +154,13 @@ def CallIndirectOp : Func_Op<"call_indirect", [
     ```
   }];
 
-  let arguments = (ins FunctionType:$callee,
-                       Variadic<AnyType>:$callee_operands);
+  let arguments = (ins
+    FunctionType:$callee,
+    Variadic<AnyType>:$callee_operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
+
   let results = (outs Variadic<AnyType>:$results);
 
   let builders = [
@@ -167,7 +191,7 @@ def CallIndirectOp : Func_Op<"call_indirect", [
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      setOperand(0, callee.get<Value>());
+      setOperand(0, cast<Value>(callee));
     }
   }];
 
@@ -183,6 +207,7 @@ def CallIndirectOp : Func_Op<"call_indirect", [
 
 def ConstantOp : Func_Op<"constant",
     [ConstantLike, Pure,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "constant";
   let description = [{
@@ -216,7 +241,6 @@ def ConstantOp : Func_Op<"constant",
   }];
 
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -246,23 +270,23 @@ def FuncOp : Func_Op<"func", [
 
     ```mlir
     // External function definitions.
-    func.func @abort()
-    func.func @scribble(i32, i64, memref<? x 128 x f32, #layout_map0>) -> f64
+    func.func private @abort()
+    func.func private @scribble(i32, i64, memref<? x 128 x f32, #layout_map0>) -> f64
 
     // A function that returns its argument twice:
     func.func @count(%x: i64) -> (i64, i64)
-      attributes {fruit: "banana"} {
+      attributes {fruit = "banana"} {
       return %x, %x: i64, i64
     }
 
     // A function with an argument attribute
-    func.func @example_fn_arg(%x: i32 {swift.self = unit})
+    func.func private @example_fn_arg(%x: i32 {swift.self = unit})
 
     // A function with a result attribute
-    func.func @example_fn_result() -> (f64 {dialectName.attrName = 0 : i64})
+    func.func private @example_fn_result() -> (f64 {dialectName.attrName = 0 : i64})
 
     // A function with an attribute
-    func.func @example_fn_attr() attributes {dialectName.attrName = false}
+    func.func private @example_fn_attr() attributes {dialectName.attrName = false}
     ```
   }];
 
@@ -270,7 +294,8 @@ def FuncOp : Func_Op<"func", [
                        TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
+                       UnitAttr:$no_inline);
   let regions = (region AnyRegion:$body);
 
   let builders = [OpBuilder<(ins
@@ -350,7 +375,7 @@ def ReturnOp : Func_Op<"return", [Pure, HasParent<"FuncOp">,
     Example:
 
     ```mlir
-    func.func @foo() : (i32, f8) {
+    func.func @foo() -> (i32, f8) {
       ...
       return %0, %1 : i32, f8
     }
@@ -360,7 +385,7 @@ def ReturnOp : Func_Op<"return", [Pure, HasParent<"FuncOp">,
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let builders = [OpBuilder<(ins), [{
-    build($_builder, $_state, std::nullopt);
+    build($_builder, $_state, {});
   }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";

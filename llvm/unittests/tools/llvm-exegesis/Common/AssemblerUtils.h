@@ -20,6 +20,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -28,16 +29,15 @@ namespace exegesis {
 
 class MachineFunctionGeneratorBaseTest : public ::testing::Test {
 protected:
-  MachineFunctionGeneratorBaseTest(const std::string &TT,
+  MachineFunctionGeneratorBaseTest(const std::string &TargetStr,
                                    const std::string &CpuName)
-      : TT(TT), CpuName(CpuName),
-        CanExecute(Triple(TT).getArch() ==
-                   Triple(sys::getProcessTriple()).getArch()),
-        ET(ExegesisTarget::lookup(Triple(TT))) {
+      : TT(TargetStr), CpuName(CpuName),
+        CanExecute(TT.getArch() == Triple(sys::getProcessTriple()).getArch()),
+        ET(ExegesisTarget::lookup(TT)) {
     assert(ET);
     if (!CanExecute) {
       outs() << "Skipping execution, host:" << sys::getProcessTriple()
-             << ", target:" << TT << "\n";
+             << ", target:" << TT.str() << "\n";
     }
   }
 
@@ -60,16 +60,15 @@ protected:
   }
 
 private:
-  std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+  std::unique_ptr<TargetMachine> createTargetMachine() {
     std::string Error;
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
-    EXPECT_TRUE(TheTarget) << Error << " " << TT;
+    EXPECT_TRUE(TheTarget) << Error << " " << TT.str();
     const TargetOptions Options;
     TargetMachine *TM = TheTarget->createTargetMachine(TT, CpuName, "", Options,
                                                        Reloc::Model::Static);
-    EXPECT_TRUE(TM) << TT << " " << CpuName;
-    return std::unique_ptr<LLVMTargetMachine>(
-        static_cast<LLVMTargetMachine *>(TM));
+    EXPECT_TRUE(TM) << TT.str() << " " << CpuName;
+    return std::unique_ptr<TargetMachine>(TM);
   }
 
   ExecutableFunction
@@ -80,13 +79,17 @@ private:
     BenchmarkKey Key;
     Key.RegisterInitialValues = RegisterInitialValues;
     EXPECT_FALSE(assembleToStream(*ET, createTargetMachine(), /*LiveIns=*/{},
-                                  RegisterInitialValues, Fill, AsmStream, Key,
-                                  false));
-    return ExecutableFunction(createTargetMachine(),
-                              getObjectFromBuffer(AsmStream.str()));
+                                  Fill, AsmStream, Key, false));
+    Expected<ExecutableFunction> ExecFunc = ExecutableFunction::create(
+        createTargetMachine(), getObjectFromBuffer(AsmStream.str()));
+
+    // We can't use ASSERT_THAT_EXPECTED here as it doesn't work inside of
+    // non-void functions.
+    EXPECT_TRUE(detail::TakeExpected(ExecFunc).Success());
+    return std::move(*ExecFunc);
   }
 
-  const std::string TT;
+  const Triple TT;
   const std::string CpuName;
   const bool CanExecute;
   const ExegesisTarget *const ET;

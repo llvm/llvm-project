@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // Some fields in the test case variables are deliberately not explicitly initialized, this silences a warning on GCC.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-missing-field-initializers
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-missing-field-initializers
 
 // <map>
 
@@ -23,7 +23,7 @@
 int main(int, char**) {
   // Note: we want to use a pair with non-const elements for input (an assignable type is a lot more convenient) but
   // have to use the exact `value_type` of the map (that is, `pair<const K, V>`) for the allocator.
-  using Pair = std::pair<int, char>;
+  using Pair      = std::pair<int, char>;
   using ConstPair = std::pair<const int, char>;
   for_all_iterators_and_allocators<ConstPair, const Pair*>([]<class Iter, class Sent, class Alloc>() {
     test_map_set_insert_range<std::map<int, char, test_less<int>, Alloc>, Pair, Iter, Sent>();

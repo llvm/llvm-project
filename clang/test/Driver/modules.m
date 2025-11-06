@@ -57,7 +57,21 @@
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=foo.map"
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=bar.map"
 
-// RUN: %clang -fmodules -fbuiltin-module-map -### %s 2>&1 | FileCheck -check-prefix=CHECK-BUILTIN-MODULE-MAP %s
+// Verify that the driver propagates -fmodule-name and -fmodule-map-file flags when
+// -fmodules-decluse or -fmodules-strict-decluse, as used for layering check.
+// RUN: %clang -fmodules-decluse -fmodule-name=foo -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-DECLUSE-PROPAGATE-MODULE-NAME %s
+// CHECK-DECLUSE-PROPAGATE-MODULE-NAME: -fmodule-name=foo
+
+// RUN: %clang -fmodules-decluse -fmodule-map-file=foo.map -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-DECLUSE-PROPAGATE-MODULE-MAPS %s
+// CHECK-DECLUSE-PROPAGATE-MODULE-MAPS: -fmodule-map-file=foo.map
+
+// RUN: %clang -fmodules-strict-decluse -fmodule-name=foo -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-DECLUSE-PROPAGATE-MODULE-NAME %s
+// CHECK-STRICT-DECLUSE-PROPAGATE-MODULE-NAME: -fmodule-name=foo
+
+// RUN: %clang -fmodules-strict-decluse -fmodule-map-file=foo.map -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-DECLUSE-PROPAGATE-MODULE-MAPS %s
+// CHECK-STRICT-DECLUSE-PROPAGATE-MODULE-MAPS: -fmodule-map-file=foo.map
+
+    // RUN: %clang -fmodules -fbuiltin-module-map -### %s 2>&1 | FileCheck -check-prefix=CHECK-BUILTIN-MODULE-MAP %s
 // CHECK-BUILTIN-MODULE-MAP: "-fmodules"
 // CHECK-BUILTIN-MODULE-MAP: "-fmodule-map-file={{.*}}include{{/|\\\\}}module.modulemap"
 

@@ -14,8 +14,8 @@
 // Check that we ensure `size(r) == Extent`.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
-// XFAIL: availability-verbose_abort-missing
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <span>
 #include <vector>
@@ -23,10 +23,16 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    std::vector<int> vec{0, 1, 2}; // must use std::vector instead of std::array, because std::span has a special constructor from std::array
+  std::vector<int> vec{
+      0,
+      1,
+      2}; // must use std::vector instead of std::array, because std::span has a special constructor from std::array
 
-    auto invalid_size = [&] { std::span<int, 2> const s(vec); (void)s; };
-    TEST_LIBCPP_ASSERT_FAILURE(invalid_size(), "size mismatch in span's constructor (range)");
+  auto invalid_size = [&] {
+    std::span<int, 2> const s(vec);
+    (void)s;
+  };
+  TEST_LIBCPP_ASSERT_FAILURE(invalid_size(), "size mismatch in span's constructor (range)");
 
-    return 0;
+  return 0;
 }

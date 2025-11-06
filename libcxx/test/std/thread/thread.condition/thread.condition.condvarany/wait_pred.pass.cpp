@@ -5,9 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
-// ALLOW_RETRIES: 2
+
+// UNSUPPORTED: no-threads, c++03
 
 // <condition_variable>
 
@@ -17,55 +16,113 @@
 //   void wait(Lock& lock, Predicate pred);
 
 #include <condition_variable>
+#include <atomic>
+#include <cassert>
 #include <mutex>
 #include <thread>
-#include <functional>
-#include <cassert>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-std::condition_variable_any cv;
-
-typedef std::timed_mutex L0;
-typedef std::unique_lock<L0> L1;
-
-L0 m0;
-
-int test1 = 0;
-int test2 = 0;
-
-class Pred
-{
-    int& i_;
-public:
-    explicit Pred(int& i) : i_(i) {}
-
-    bool operator()() {return i_ != 0;}
+template <class Mutex>
+struct MyLock : std::unique_lock<Mutex> {
+  using std::unique_lock<Mutex>::unique_lock;
 };
 
-void f()
-{
-    L1 lk(m0);
-    assert(test2 == 0);
-    test1 = 1;
-    cv.notify_one();
-    cv.wait(lk, Pred(test2));
-    assert(test2 != 0);
+template <class Lock>
+void test() {
+  using Mutex = typename Lock::mutex_type;
+
+  // Test unblocking via a call to notify_one() in another thread.
+  //
+  // To test this, we try to minimize the likelihood that we got awoken by a
+  // spurious wakeup by updating the likely_spurious flag only immediately
+  // before we perform the notification.
+  {
+    std::atomic<bool> ready(false);
+    std::atomic<bool> likely_spurious(true);
+    std::condition_variable_any cv;
+    Mutex mutex;
+
+    std::thread t1 = support::make_test_thread([&] {
+      Lock lock(mutex);
+      ready = true;
+      cv.wait(lock, [&] { return !likely_spurious; });
+    });
+
+    std::thread t2 = support::make_test_thread([&] {
+      while (!ready) {
+        // spin
+      }
+
+      // Acquire the same mutex as t1. This ensures that the condition variable has started
+      // waiting (and hence released that mutex).
+      Lock lock(mutex);
+
+      likely_spurious = false;
+      lock.unlock();
+      cv.notify_one();
+    });
+
+    t2.join();
+    t1.join();
+  }
+
+  // Test unblocking via a spurious wakeup.
+  //
+  // To test this, we basically never wake up the condition variable. This way, we
+  // are hoping to get out of the wait via a spurious wakeup.
+  //
+  // However, since spurious wakeups are not required to even happen, this test is
+  // only trying to trigger that code path, but not actually asserting that it is
+  // taken. In particular, we do need to eventually ensure we get out of the wait
+  // by standard means, so we actually wake up the thread at the end.
+  {
+    std::atomic<bool> ready(false);
+    std::atomic<bool> awoken(false);
+    std::condition_variable_any cv;
+    Mutex mutex;
+
+    std::thread t1 = support::make_test_thread([&] {
+      Lock lock(mutex);
+      ready = true;
+      cv.wait(lock, [&] { return true; });
+      awoken = true;
+    });
+
+    std::thread t2 = support::make_test_thread([&] {
+      while (!ready) {
+        // spin
+      }
+
+      // Acquire the same mutex as t1. This ensures that the condition variable has started
+      // waiting (and hence released that mutex).
+      Lock lock(mutex);
+      lock.unlock();
+
+      // Give some time for t1 to be awoken spuriously so that code path is used.
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+
+      // We would want to assert that the thread has been awoken after this time,
+      // however nothing guarantees us that it ever gets spuriously awoken, so
+      // we can't really check anything. This is still left here as documentation.
+      bool woke = awoken.load();
+      assert(woke || !woke);
+
+      // Whatever happened, actually awaken the condition variable to ensure the test finishes.
+      cv.notify_one();
+    });
+
+    t2.join();
+    t1.join();
+  }
 }
 
-int main(int, char**)
-{
-    L1 lk(m0);
-    std::thread t = support::make_test_thread(f);
-    assert(test1 == 0);
-    while (test1 == 0)
-        cv.wait(lk);
-    assert(test1 != 0);
-    test2 = 1;
-    lk.unlock();
-    cv.notify_one();
-    t.join();
+int main(int, char**) {
+  test<std::unique_lock<std::mutex>>();
+  test<std::unique_lock<std::timed_mutex>>();
+  test<MyLock<std::mutex>>();
+  test<MyLock<std::timed_mutex>>();
 
   return 0;
 }

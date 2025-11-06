@@ -1,4 +1,9 @@
 RUN: lld-link -lldmingw %S/Inputs/gnu-weak.o %S/Inputs/gnu-weak2.o -out:%t.exe
+RUN: lld-link -lld-allow-duplicate-weak %S/Inputs/gnu-weak.o %S/Inputs/gnu-weak2.o -out:%t.exe
+RUN: not lld-link %S/Inputs/gnu-weak.o %S/Inputs/gnu-weak2.o -out:%t.exe 2>&1 | FileCheck %s --check-prefix=DEFAULT-ERROR
+
+DEFAULT-ERROR: error: duplicate symbol: weakfunc
+
 
 GNU ld can handle several definitions of the same weak symbol, and
 unless there is a strong definition of it, it just picks the first

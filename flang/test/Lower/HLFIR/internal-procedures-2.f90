@@ -23,7 +23,7 @@ contains
   end forall
  end subroutine
 end subroutine
-! CHECK-LABEL: func.func @_QFhost_procedurePinternal_procedure(
+! CHECK-LABEL: func.func private @_QFhost_procedurePinternal_procedure(
 ! CHECK:    fir.address_of(@_QMmodule_used_by_hostEindexed_by_var) : !fir.ref<!fir.array<2xi32>>
 ! CHECK:    fir.address_of(@_QMmodule_used_by_hostEref_in_forall) : !fir.ref<!fir.array<2xi32>>
 ! CHECK:    fir.address_of(@_QMmodule_used_by_hostEref_in_implied_do) : !fir.ref<i32>

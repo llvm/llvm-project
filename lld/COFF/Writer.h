@@ -50,6 +50,9 @@ public:
   void writeHeaderTo(uint8_t *buf, bool isDebug);
   void addContributingPartialSection(PartialSection *sec);
 
+  // Sort chunks to split native and EC sections on hybrid targets.
+  void splitECChunks();
+
   // Returns the size of this section in an executable memory image.
   // This may be smaller than the raw size (the raw size is multiple
   // of disk sector size, so there may be padding at end), or may be
@@ -63,6 +66,12 @@ public:
   // Set offset into the string table storing this section name.
   // Used only when the name is longer than 8 bytes.
   void setStringTableOff(uint32_t v) { stringTableOff = v; }
+
+  bool isCodeSection() const {
+    return (header.Characteristics & llvm::COFF::IMAGE_SCN_CNT_CODE) &&
+           (header.Characteristics & llvm::COFF::IMAGE_SCN_MEM_READ) &&
+           (header.Characteristics & llvm::COFF::IMAGE_SCN_MEM_EXECUTE);
+  }
 
   // N.B. The section index is one based.
   uint32_t sectionIndex = 0;

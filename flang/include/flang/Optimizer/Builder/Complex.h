@@ -32,13 +32,12 @@ public:
   mlir::Type getComplexPartType(mlir::Value cplx) const;
   mlir::Type getComplexPartType(mlir::Type complexType) const;
 
-  /// Complex operation creation. They create MLIR operations.
-  mlir::Value createComplex(fir::KindTy kind, mlir::Value real,
-                            mlir::Value imag);
-
   /// Create a complex value.
   mlir::Value createComplex(mlir::Type complexType, mlir::Value real,
                             mlir::Value imag);
+  /// Create a complex value given the real and imag parts real type (which
+  /// must be the same).
+  mlir::Value createComplex(mlir::Value real, mlir::Value imag);
 
   /// Returns the Real/Imag part of \p cplx
   mlir::Value extractComplexPart(mlir::Value cplx, bool isImagPart) {
@@ -59,16 +58,16 @@ public:
 protected:
   template <Part partId>
   mlir::Value extract(mlir::Value cplx) {
-    return builder.create<fir::ExtractValueOp>(
-        loc, getComplexPartType(cplx), cplx,
+    return fir::ExtractValueOp::create(
+        builder, loc, getComplexPartType(cplx), cplx,
         builder.getArrayAttr({builder.getIntegerAttr(
             builder.getIndexType(), static_cast<int>(partId))}));
   }
 
   template <Part partId>
   mlir::Value insert(mlir::Value cplx, mlir::Value part) {
-    return builder.create<fir::InsertValueOp>(
-        loc, cplx.getType(), cplx, part,
+    return fir::InsertValueOp::create(
+        builder, loc, cplx.getType(), cplx, part,
         builder.getArrayAttr({builder.getIntegerAttr(
             builder.getIndexType(), static_cast<int>(partId))}));
   }

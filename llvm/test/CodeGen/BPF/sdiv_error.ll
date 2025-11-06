@@ -1,9 +1,8 @@
-; RUN: not --crash llc -march=bpf < %s 2> %t1
+; RUN: not llc -mtriple=bpf < %s 2> %t1
 ; RUN: FileCheck %s < %t1
-; CHECK: Unsupport signed division
+; CHECK: unsupported signed division
 
-; Function Attrs: norecurse nounwind readnone
-define i32 @test(i32 %len) #0 {
-  %1 = srem i32 %len, 15
-  ret i32 %1
+define i64 @test(i64 %len) {
+  %1 = sdiv i64 %len, 15
+  ret i64 %1
 }

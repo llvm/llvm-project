@@ -9,18 +9,19 @@
 #include "tss_create.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, tss_create, (tss_t * key, tss_dtor_t dtor)) {
-  auto k = __llvm_libc::new_tss_key(dtor);
+  auto k = LIBC_NAMESPACE::new_tss_key(dtor);
   if (!k)
     return thrd_error;
   *key = *k;
   return thrd_success;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

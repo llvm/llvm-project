@@ -155,6 +155,40 @@ bool MergedIndex::refs(const RefsRequest &Req,
   return More || StaticHadMore;
 }
 
+bool MergedIndex::containedRefs(
+    const ContainedRefsRequest &Req,
+    llvm::function_ref<void(const ContainedRefsResult &)> Callback) const {
+  trace::Span Tracer("MergedIndex refersTo");
+  bool More = false;
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
+  // We don't want duplicated refs from the static/dynamic indexes,
+  // and we can't reliably deduplicate them because offsets may differ slightly.
+  // We consider the dynamic index authoritative and report all its refs,
+  // and only report static index refs from other files.
+  More |= Dynamic->containedRefs(Req, [&](const auto &O) {
+    Callback(O);
+    assert(Remaining != 0);
+    --Remaining;
+  });
+  if (Remaining == 0 && More)
+    return More;
+  auto DynamicContainsFile = Dynamic->indexedFiles();
+  // We return less than Req.Limit if static index returns more refs for dirty
+  // files.
+  bool StaticHadMore = Static->containedRefs(Req, [&](const auto &O) {
+    if ((DynamicContainsFile(O.Location.FileURI) & IndexContents::References) !=
+        IndexContents::None)
+      return; // ignore refs that have been seen from dynamic index.
+    if (Remaining == 0) {
+      More = true;
+      return;
+    }
+    --Remaining;
+    Callback(O);
+  });
+  return More || StaticHadMore;
+}
+
 llvm::unique_function<IndexContents(llvm::StringRef) const>
 MergedIndex::indexedFiles() const {
   return [DynamicContainsFile{Dynamic->indexedFiles()},
@@ -187,6 +221,32 @@ void MergedIndex::relations(
   });
 }
 
+void MergedIndex::reverseRelations(
+    const RelationsRequest &Req,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
+  // Return results from both indexes but avoid duplicates.
+  // We might return stale relations from the static index;
+  // we don't currently have a good way of identifying them.
+  llvm::DenseSet<std::pair<SymbolID, SymbolID>> SeenRelations;
+  Dynamic->reverseRelations(
+      Req, [&](const SymbolID &Subject, const Symbol &Object) {
+        Callback(Subject, Object);
+        SeenRelations.insert(std::make_pair(Subject, Object.ID));
+        --Remaining;
+      });
+  if (Remaining == 0)
+    return;
+  Static->reverseRelations(
+      Req, [&](const SymbolID &Subject, const Symbol &Object) {
+        if (Remaining > 0 &&
+            !SeenRelations.count(std::make_pair(Subject, Object.ID))) {
+          --Remaining;
+          Callback(Subject, Object);
+        }
+      });
+}
+
 // Returns true if \p L is (strictly) preferred to \p R (e.g. by file paths). If
 // neither is preferred, this returns false.
 static bool prefer(const SymbolLocation &L, const SymbolLocation &R) {
@@ -197,7 +257,7 @@ static bool prefer(const SymbolLocation &L, const SymbolLocation &R) {
   auto HasCodeGenSuffix = [](const SymbolLocation &Loc) {
     constexpr static const char *CodegenSuffixes[] = {".proto"};
     return llvm::any_of(CodegenSuffixes, [&](llvm::StringRef Suffix) {
-      return llvm::StringRef(Loc.FileURI).endswith(Suffix);
+      return llvm::StringRef(Loc.FileURI).ends_with(Suffix);
     });
   };
   return HasCodeGenSuffix(L) && !HasCodeGenSuffix(R);

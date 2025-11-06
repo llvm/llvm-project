@@ -106,7 +106,7 @@ void ExecutionEngine::dumpToObjectFile(StringRef filename) {
   }
   // Compilation is lazy and it doesn't populate object cache unless requested.
   // In case object dump is requested before cache is populated, we need to
-  // force compilation manually. 
+  // force compilation manually.
   if (cache->isEmpty()) {
     for (std::string &functionName : functionNames) {
       auto result = lookupPacked(functionName);
@@ -131,7 +131,7 @@ void ExecutionEngine::registerSymbols(
 void ExecutionEngine::setupTargetTripleAndDataLayout(Module *llvmModule,
                                                      llvm::TargetMachine *tm) {
   llvmModule->setDataLayout(tm->createDataLayout());
-  llvmModule->setTargetTriple(tm->getTargetTriple().getTriple());
+  llvmModule->setTargetTriple(tm->getTargetTriple());
 }
 
 static std::string makePackedFunctionName(StringRef name) {
@@ -155,9 +155,9 @@ static void packFunctionArguments(Module *module) {
 
     // Given a function `foo(<...>)`, define the interface function
     // `mlir_foo(i8**)`.
-    auto *newType = llvm::FunctionType::get(
-        builder.getVoidTy(), builder.getInt8PtrTy()->getPointerTo(),
-        /*isVarArg=*/false);
+    auto *newType =
+        llvm::FunctionType::get(builder.getVoidTy(), builder.getPtrTy(),
+                                /*isVarArg=*/false);
     auto newName = makePackedFunctionName(func.getName());
     auto funcCst = module->getOrInsertFunction(newName, newType);
     llvm::Function *interfaceFunc = cast<llvm::Function>(funcCst.getCallee());
@@ -175,11 +175,9 @@ static void packFunctionArguments(Module *module) {
       llvm::Value *argIndex = llvm::Constant::getIntegerValue(
           builder.getInt64Ty(), APInt(64, index));
       llvm::Value *argPtrPtr =
-          builder.CreateGEP(builder.getInt8PtrTy(), argList, argIndex);
-      llvm::Value *argPtr =
-          builder.CreateLoad(builder.getInt8PtrTy(), argPtrPtr);
+          builder.CreateGEP(builder.getPtrTy(), argList, argIndex);
+      llvm::Value *argPtr = builder.CreateLoad(builder.getPtrTy(), argPtrPtr);
       llvm::Type *argTy = arg.getType();
-      argPtr = builder.CreateBitCast(argPtr, argTy->getPointerTo());
       llvm::Value *load = builder.CreateLoad(argTy, argPtr);
       args.push_back(load);
     }
@@ -192,10 +190,8 @@ static void packFunctionArguments(Module *module) {
       llvm::Value *retIndex = llvm::Constant::getIntegerValue(
           builder.getInt64Ty(), APInt(64, llvm::size(func.args())));
       llvm::Value *retPtrPtr =
-          builder.CreateGEP(builder.getInt8PtrTy(), argList, retIndex);
-      llvm::Value *retPtr =
-          builder.CreateLoad(builder.getInt8PtrTy(), retPtrPtr);
-      retPtr = builder.CreateBitCast(retPtr, result->getType()->getPointerTo());
+          builder.CreateGEP(builder.getPtrTy(), argList, retIndex);
+      llvm::Value *retPtr = builder.CreateLoad(builder.getPtrTy(), retPtrPtr);
       builder.CreateStore(result, retPtr);
     }
 
@@ -223,6 +219,11 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 }
 
 ExecutionEngine::~ExecutionEngine() {
+  // Execute the global destructors from the module being processed.
+  // TODO: Allow JIT deinitialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (jit && !jit->getTargetTriple().isAArch64())
+    llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
   for (LibraryDestroyFn destroy : destroyFns)
     destroy();
@@ -238,6 +239,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   // Remember all entry-points if object dumping is enabled.
   if (options.enableObjectDump) {
     for (auto funcOp : m->getRegion(0).getOps<LLVM::LLVMFuncOp>()) {
+      if (funcOp.getBlocks().empty())
+        continue;
       StringRef funcName = funcOp.getSymName();
       engine->functionNames.push_back(funcName.str());
     }
@@ -312,10 +315,10 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
-  auto objectLinkingLayerCreator = [&](ExecutionSession &session,
-                                       const Triple &tt) {
+  auto objectLinkingLayerCreator = [&](ExecutionSession &session) {
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, [sectionMemoryMapper = options.sectionMemoryMapper]() {
+        session, [sectionMemoryMapper =
+                      options.sectionMemoryMapper](const MemoryBuffer &) {
           return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
         });
 
@@ -328,7 +331,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     // COFF format binaries (Windows) need special handling to deal with
     // exported symbol visibility.
     // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp LLJIT::createObjectLinkingLayer
-    llvm::Triple targetTriple(llvm::Twine(llvmModule->getTargetTriple()));
+    const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
     if (targetTriple.isOSBinFormatCOFF()) {
       objectLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
       objectLayer->setAutoClaimResponsibilityForObjectSymbols(true);
@@ -399,7 +402,6 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     return symbolMap;
   };
   engine->registerSymbols(runtimeSymbolMap);
-
   return std::move(engine);
 }
 
@@ -425,7 +427,7 @@ Expected<void *> ExecutionEngine::lookup(StringRef name) const {
     llvm::raw_string_ostream os(errorMessage);
     llvm::handleAllErrors(expectedSymbol.takeError(),
                           [&os](llvm::ErrorInfoBase &ei) { ei.log(os); });
-    return makeStringError(os.str());
+    return makeStringError(errorMessage);
   }
 
   if (void *fptr = expectedSymbol->toPtr<void *>())
@@ -435,6 +437,7 @@ Expected<void *> ExecutionEngine::lookup(StringRef name) const {
 
 Error ExecutionEngine::invokePacked(StringRef name,
                                     MutableArrayRef<void *> args) {
+  initialize();
   auto expectedFPtr = lookupPacked(name);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
@@ -443,4 +446,14 @@ Error ExecutionEngine::invokePacked(StringRef name,
   (*fptr)(args.data());
 
   return Error::success();
+}
+
+void ExecutionEngine::initialize() {
+  if (isInitialized)
+    return;
+  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (!jit->getTargetTriple().isAArch64())
+    cantFail(jit->initialize(jit->getMainJITDylib()));
+  isInitialized = true;
 }

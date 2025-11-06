@@ -7,10 +7,10 @@ source_filename = ".\\debug_value_list.cpp"
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.16.27034"
 
-; CHECK-COUNT-3: llvm.dbg.value(
-; CHECK-SAME: metadata !DIArgList(i32 %a, i32 %b, i32 5)
-; CHECK-SAME: metadata !16,
-; CHECK-SAME: metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_plus)
+; CHECK-COUNT-3: #dbg_value(
+; CHECK-SAME: !DIArgList(i32 %a, i32 %b, i32 5)
+; CHECK-SAME: !16,
+; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_plus)
 define dso_local i32 @"?foo@@YAHHH@Z"(i32 %a, i32 %b) local_unnamed_addr !dbg !8 {
 entry:
   call void @llvm.dbg.value(metadata !DIArgList(i32 %b), metadata !14, metadata !DIExpression(DW_OP_LLVM_arg, 0)), !dbg !17

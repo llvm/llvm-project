@@ -18,7 +18,7 @@ foo:
 
 
 // CHECK:      Section {
-// CHECK:        Name: .text (16)
+// CHECK:        Name: .text
 // CHECK-NEXT:   Type: SHT_PROGBITS (0x1)
 // CHECK-NEXT:   Flags [ (0x20000006)
 // CHECK-NEXT:     SHF_ALLOC (0x2)
@@ -29,7 +29,7 @@ foo:
 // CHECK:      }
 
 // CHECK:      Section {
-// CHECK:        Name: .text (16)
+// CHECK:        Name: .text
 // CHECK-NEXT:   Type: SHT_PROGBITS (0x1)
 // CHECK-NEXT:   Flags [ (0x20000006)
 // CHECK-NEXT:     SHF_ALLOC (0x2)
@@ -40,6 +40,6 @@ foo:
 // CHECK:      }
 
 // CHECK: Symbol {
-// CHECK:   Name: foo (22)
+// CHECK:   Name: foo
 // CHECK:   Section: .text (0x3)
 // CHECK: }

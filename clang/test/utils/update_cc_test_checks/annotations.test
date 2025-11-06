@@ -1,0 +1,4 @@
+## Test that !annotation metadata is matched correctly
+
+# RUN: cp %S/Inputs/annotations.c %t.c && %update_cc_test_checks --version 4 %t.c
+# RUN: diff -u %S/Inputs/annotations.c.expected %t.c

@@ -47,7 +47,7 @@ static void MaybePrintStackTrace(uptr pc, uptr bp) {
   if (!flags()->print_stacktrace)
     return;
 
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   ubsan_GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr,
                 common_flags()->fast_unwind_on_fatal);
   stack.Print();
@@ -88,7 +88,7 @@ static void MaybeReportErrorSummary(Location Loc, ErrorType Type) {
       AI.file = internal_strdup(SLoc.getFilename());
       AI.line = SLoc.getLine();
       AI.column = SLoc.getColumn();
-      AI.function = internal_strdup("");  // Avoid printing ?? as function name.
+      AI.function = nullptr;
       ReportErrorSummary(ErrorKind, AI, GetSanititizerToolName());
       AI.Clear();
       return;
@@ -149,9 +149,10 @@ static void RenderLocation(InternalScopedString *Buffer, Location Loc) {
     if (SLoc.isInvalid())
       Buffer->AppendF("<unknown>");
     else
-      RenderSourceLocation(Buffer, SLoc.getFilename(), SLoc.getLine(),
-                           SLoc.getColumn(), common_flags()->symbolize_vs_style,
-                           common_flags()->strip_path_prefix);
+      StackTracePrinter::GetOrInit()->RenderSourceLocation(
+          Buffer, SLoc.getFilename(), SLoc.getLine(), SLoc.getColumn(),
+          common_flags()->symbolize_vs_style,
+          common_flags()->strip_path_prefix);
     return;
   }
   case Location::LK_Memory:
@@ -160,12 +161,14 @@ static void RenderLocation(InternalScopedString *Buffer, Location Loc) {
   case Location::LK_Symbolized: {
     const AddressInfo &Info = Loc.getSymbolizedStack()->info;
     if (Info.file)
-      RenderSourceLocation(Buffer, Info.file, Info.line, Info.column,
-                           common_flags()->symbolize_vs_style,
-                           common_flags()->strip_path_prefix);
+      StackTracePrinter::GetOrInit()->RenderSourceLocation(
+          Buffer, Info.file, Info.line, Info.column,
+          common_flags()->symbolize_vs_style,
+          common_flags()->strip_path_prefix);
     else if (Info.module)
-      RenderModuleLocation(Buffer, Info.module, Info.module_offset,
-                           Info.module_arch, common_flags()->strip_path_prefix);
+      StackTracePrinter::GetOrInit()->RenderModuleLocation(
+          Buffer, Info.module, Info.module_offset, Info.module_arch,
+          common_flags()->strip_path_prefix);
     else
       Buffer->AppendF("%p", reinterpret_cast<void *>(Info.address));
     return;
@@ -399,7 +402,7 @@ ScopedReport::~ScopedReport() {
     Die();
 }
 
-ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
+alignas(64) static char suppression_placeholder[sizeof(SuppressionContext)];
 static SuppressionContext *suppression_ctx = nullptr;
 static const char kVptrCheck[] = "vptr_check";
 static const char *kSuppressionTypes[] = {

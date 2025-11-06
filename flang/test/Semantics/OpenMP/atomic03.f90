@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 
 ! OpenMP Atomic construct
 ! section 2.17.7
@@ -23,26 +25,26 @@ program OmpAtomic
    y = MIN(y, 8)
 
 !$omp atomic
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+   !ERROR: The atomic variable z should appear as an argument of the top-level AND operator
    z = IAND(y, 4)
 !$omp atomic
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+   !ERROR: The atomic variable z should appear as an argument of the top-level OR operator
    z = IOR(y, 5)
 !$omp atomic
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+   !ERROR: The atomic variable z should appear as an argument of the top-level NEQV/EOR operator
    z = IEOR(y, 6)
 !$omp atomic
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+   !ERROR: The atomic variable z should appear as an argument of the top-level MAX operator
    z = MAX(y, 7, b, c)
 !$omp atomic
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+   !ERROR: The atomic variable z should appear as an argument of the top-level MIN operator
    z = MIN(y, 8, a, d)
 
 !$omp atomic
-   !ERROR: Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement
+   !ERROR: This intrinsic function is not a valid ATOMIC UPDATE operation
    y = FRACTION(x)
 !$omp atomic
-   !ERROR: Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement
+   !ERROR: The atomic variable y should appear as an argument in the update operation
    y = REAL(x)
 !$omp atomic update
    y = IAND(y, 4)
@@ -56,26 +58,26 @@ program OmpAtomic
    y = MIN(y, 8)
 
 !$omp atomic update
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+   !ERROR: The atomic variable z should appear as an argument of the top-level AND operator
    z = IAND(y, 4)
-!$omp atomic update
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+!$omp atomic update 
+   !ERROR: The atomic variable z should appear as an argument of the top-level OR operator
    z = IOR(y, 5)
 !$omp atomic update
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+   !ERROR: The atomic variable z should appear as an argument of the top-level NEQV/EOR operator
    z = IEOR(y, 6)
 !$omp atomic update
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+   !ERROR: The atomic variable z should appear as an argument of the top-level MAX operator
    z = MAX(y, 7)
 !$omp atomic update
-   !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+   !ERROR: The atomic variable z should appear as an argument of the top-level MIN operator
    z = MIN(y, 8)
 
 !$omp atomic update
-   !ERROR: Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement
+  !ERROR: This intrinsic function is not a valid ATOMIC UPDATE operation
    y = MOD(y, 9)
 !$omp atomic update
-   !ERROR: Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement
+  !ERROR: This intrinsic function is not a valid ATOMIC UPDATE operation
    x = ABS(x)
 end program OmpAtomic
 
@@ -88,6 +90,50 @@ subroutine conflicting_types()
     type(simple) ::s
     z = 1
     !$omp atomic
-    !ERROR: Atomic update variable 'z' not found in the argument list of intrinsic procedure
+    !ERROR: The atomic variable z should appear as an argument of the top-level AND operator
     z = IAND(s%z, 4)
+end subroutine
+
+subroutine more_invalid_atomic_update_stmts()
+    integer :: a, b
+    integer :: k(10)
+    type some_type
+        integer :: m(10)
+    end type
+    type(some_type) :: s
+ 
+    !$omp atomic update
+    !ERROR: The atomic variable a should be exactly one of the arguments of the top-level MIN operator
+        a = min(a, a, b)
+     
+    !$omp atomic
+    !ERROR: The atomic variable a should be exactly one of the arguments of the top-level MAX operator
+        a = max(b, a, b, a)
+
+    !$omp atomic
+        a = min(b, a, b)
+
+    !$omp atomic
+    !ERROR: The atomic variable a should be exactly one of the arguments of the top-level MAX operator
+        a = max(b, a, b, a, b)
+    
+    !$omp atomic update
+    !ERROR: The atomic variable y should appear as an argument of the top-level MIN operator
+        y = min(z, x)
+     
+    !$omp atomic
+        z = max(z, y)
+
+    !$omp atomic update
+    !ERROR: Atomic variable k should be a scalar
+    !ERROR: The atomic variable k should appear as an argument of the top-level MAX operator
+        k = max(x, y)
+
+    !$omp atomic
+    !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar REAL(4) and rank 1 array of REAL(4)
+        x = min(x, k)
+
+    !$omp atomic
+    !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar REAL(4) and rank 1 array of REAL(4)
+        z = z + s%m
 end subroutine

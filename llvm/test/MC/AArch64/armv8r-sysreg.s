@@ -1,4 +1,7 @@
 // RUN: llvm-mc -triple aarch64 -show-encoding -mattr=+v8r -o - %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64 -show-encoding -mattr=+v8r,-fp-armv8,-rdm,-dotprod,-complxnum,-jsconv -o - %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64 -show-encoding -mcpu=cortex-r82 -o - %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64 -show-encoding -mcpu=cortex-r82 -mattr=-fp-armv8,-rdm,-dotprod,-complxnum,-jsconv -o - %s | FileCheck %s
 .text
 mrs x0, VSCTLR_EL2
 mrs x0, MPUIR_EL1

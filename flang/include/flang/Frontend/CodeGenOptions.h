@@ -12,10 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
-#define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
+#ifndef FORTRAN_FRONTEND_CODEGENOPTIONS_H
+#define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
+#include "flang/Optimizer/OpenMP/Utils.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
@@ -51,12 +53,25 @@ public:
   /// The paths to the pass plugins that were registered using -fpass-plugin.
   std::vector<std::string> LLVMPassPlugins;
 
+  /// The prefered vector width, if requested by -mprefer-vector-width.
+  std::string PreferVectorWidth;
+
+  /// List of reciprocal estimate sub-options.
+  std::string Reciprocals;
+
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.
   std::vector<std::string> OffloadObjects;
 
+  /// List of filenames passed in using the -mlink-builtin-bitcode. These
+  /// are bc libraries that should be linked in and internalized;
+  std::vector<std::string> BuiltinBCLibs;
+
   /// The directory where temp files are stored if specified by -save-temps
   std::optional<std::string> SaveTempsDir;
+
+  /// The string containing the commandline for the llvm.commandline metadata.
+  std::optional<std::string> RecordCommandLine;
 
   /// The name of the file to which the backend should save YAML optimization
   /// records.
@@ -69,6 +84,9 @@ public:
   /// The format used for serializing remarks (default: YAML)
   std::string OptRecordFormat;
 
+  /// Options to add to the linker for the object file
+  std::vector<std::string> DependentLibs;
+
   // The RemarkKind enum class and OptRemark struct are identical to what Clang
   // has
   // TODO: Share with clang instead of re-implementing here
@@ -80,6 +98,10 @@ public:
                     // -Rno-pass-missed, -Rno-pass-analysis.
     RK_WithPattern, // Remark pattern specified via '-Rgroup=regexp'.
   };
+
+  /// \brief Code object version for AMDGPU.
+  llvm::CodeObjectVersionKind CodeObjectVersion =
+      llvm::CodeObjectVersionKind::COV_None;
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
@@ -121,6 +143,87 @@ public:
   /// transformation.
   OptRemark OptimizationRemarkAnalysis;
 
+  /// The code model to use (-mcmodel).
+  std::string CodeModel;
+
+  /// The code model-specific large data threshold to use
+  /// (-mlarge-data-threshold).
+  uint64_t LargeDataThreshold;
+
+  /// Optionally map `do concurrent` loops to OpenMP. This is only valid of
+  /// OpenMP is enabled.
+  using DoConcurrentMappingKind = flangomp::DoConcurrentMappingKind;
+
+  /// Name of the profile file to use as output for -fprofile-instr-generate,
+  /// -fprofile-generate, and -fcs-profile-generate.
+  std::string InstrProfileOutput;
+
+  /// Name of the profile file to use as input for -fmemory-profile-use.
+  std::string MemoryProfileUsePath;
+
+  /// Name of the profile file to use as input for -fprofile-instr-use
+  std::string ProfileInstrumentUsePath;
+
+  /// Name of the profile remapping file to apply to the profile data supplied
+  /// by -fprofile-sample-use or -fprofile-instr-use.
+  std::string ProfileRemappingFile;
+
+  /// The name for the split debug info file used for the DW_AT_[GNU_]dwo_name
+  /// attribute in the skeleton CU.
+  std::string SplitDwarfFile;
+
+  /// Output filename for the split debug info, not used in the skeleton CU.
+  std::string SplitDwarfOutput;
+
+  /// Check if Clang profile instrumenation is on.
+  bool hasProfileClangInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileClangInstr;
+  }
+
+  /// Check if IR level profile instrumentation is on.
+  bool hasProfileIRInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileIRInstr;
+  }
+
+  /// Check if CS IR level profile instrumentation is on.
+  bool hasProfileCSIRInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileCSIRInstr;
+  }
+  /// Check if IR level profile use is on.
+  bool hasProfileIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileIRInstr ||
+           getProfileUse() == llvm::driver::ProfileCSIRInstr;
+  }
+  /// Check if CSIR profile use is on.
+  bool hasProfileCSIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileCSIRInstr;
+  }
+
+  /// Controls the various implementations for complex division.
+  enum ComplexRangeKind {
+    /// Implementation of complex division using a call to runtime library
+    /// functions. Overflow and non-finite values are handled by the library
+    /// implementation. This is the default value.
+    CX_Full,
+
+    /// Implementation of complex division offering an improved handling
+    /// for overflow in intermediate calculations. Overflow and non-finite
+    /// values are handled by MLIR's implementation of "complex.div", but this
+    /// may change in the future.
+    CX_Improved,
+
+    /// Implementation of complex division using algebraic formulas at source
+    /// precision. No special handling to avoid overflow. NaN and infinite
+    /// values are not handled.
+    CX_Basic,
+
+    /// No range rule is enabled.
+    CX_None
+
+    /// TODO: Implemention of other values as needed. In Clang, "CX_Promoted"
+    /// is implemented. (See clang/Basic/LangOptions.h)
+  };
+
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \
@@ -131,6 +234,8 @@ public:
   CodeGenOptions();
 };
 
+std::optional<llvm::CodeModel::Model> getCodeModel(llvm::StringRef string);
+
 } // end namespace Fortran::frontend
 
-#endif
+#endif // FORTRAN_FRONTEND_CODEGENOPTIONS_H

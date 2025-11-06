@@ -174,8 +174,20 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
 
 void ThreadPlanCallFunction::DoTakedown(bool success) {
   Log *log = GetLog(LLDBLog::Step);
+  Thread &thread = GetThread();
 
   if (!m_valid) {
+    // If ConstructorSetup was succesfull but PrepareTrivialCall was not,
+    // we will have a saved register state and potentially modified registers.
+    // Restore those.
+    if (m_stored_thread_state.register_backup_sp)
+      if (!thread.RestoreRegisterStateFromCheckpoint(m_stored_thread_state))
+        LLDB_LOGF(
+            log,
+            "ThreadPlanCallFunction(%p): Failed to restore register state from "
+            "invalid plan that contained a saved register state.",
+            static_cast<void *>(this));
+
     // Don't call DoTakedown if we were never valid to begin with.
     LLDB_LOGF(log,
               "ThreadPlanCallFunction(%p): Log called on "
@@ -185,7 +197,6 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
   }
 
   if (!m_takedown_done) {
-    Thread &thread = GetThread();
     if (success) {
       SetReturnValue();
     }
@@ -291,10 +302,10 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     BreakpointSiteSP bp_site_sp;
     bp_site_sp = m_process.GetBreakpointSiteList().FindByID(break_site_id);
     if (bp_site_sp) {
-      uint32_t num_owners = bp_site_sp->GetNumberOfOwners();
+      uint32_t num_owners = bp_site_sp->GetNumberOfConstituents();
       bool is_internal = true;
       for (uint32_t i = 0; i < num_owners; i++) {
-        Breakpoint &bp = bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint();
+        Breakpoint &bp = bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint();
         LLDB_LOGF(log,
                   "ThreadPlanCallFunction::PlanExplainsStop: hit "
                   "breakpoint %d while calling function",

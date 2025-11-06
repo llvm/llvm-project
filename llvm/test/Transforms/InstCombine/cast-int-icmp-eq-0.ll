@@ -603,7 +603,7 @@ define i1 @i16_cast_cmp_sgt_int_m1_sitofp_half(i16 %i) {
   ret i1 %cmp
 }
 
-; Verify that vector types and vector constants including undef elements are transformed too.
+; Verify that vector types and vector constants including poison elements are transformed too.
 
 define <3 x i1> @i32_cast_cmp_ne_int_0_sitofp_double_vec(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_ne_int_0_sitofp_double_vec(
@@ -616,38 +616,38 @@ define <3 x i1> @i32_cast_cmp_ne_int_0_sitofp_double_vec(<3 x i32> %i) {
   ret <3 x i1> %cmp
 }
 
-; TODO: Can we propagate the constant vector with undef element?
+; TODO: Can we propagate the constant vector with poison element?
 
-define <3 x i1> @i32_cast_cmp_eq_int_0_sitofp_float_vec_undef(<3 x i32> %i) {
-; CHECK-LABEL: @i32_cast_cmp_eq_int_0_sitofp_float_vec_undef(
+define <3 x i1> @i32_cast_cmp_eq_int_0_sitofp_float_vec_poison(<3 x i32> %i) {
+; CHECK-LABEL: @i32_cast_cmp_eq_int_0_sitofp_float_vec_poison(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <3 x i32> [[I:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i32> %i to  <3 x float>
   %b = bitcast <3 x float> %f to <3 x i32>
-  %cmp = icmp eq <3 x i32> %b, <i32 0, i32 undef, i32 0>
+  %cmp = icmp eq <3 x i32> %b, <i32 0, i32 poison, i32 0>
   ret <3 x i1> %cmp
 }
 
-define <3 x i1> @i64_cast_cmp_slt_int_1_sitofp_half_vec_undef(<3 x i64> %i) {
-; CHECK-LABEL: @i64_cast_cmp_slt_int_1_sitofp_half_vec_undef(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <3 x i64> [[I:%.*]], <i64 1, i64 1, i64 1>
+define <3 x i1> @i64_cast_cmp_slt_int_1_sitofp_half_vec_poison(<3 x i64> %i) {
+; CHECK-LABEL: @i64_cast_cmp_slt_int_1_sitofp_half_vec_poison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <3 x i64> [[I:%.*]], splat (i64 1)
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i64> %i to  <3 x half>
   %b = bitcast <3 x half> %f to <3 x i16>
-  %cmp = icmp slt <3 x i16> %b, <i16 1, i16 undef, i16 1>
+  %cmp = icmp slt <3 x i16> %b, <i16 1, i16 poison, i16 1>
   ret <3 x i1> %cmp
 }
 
-define <3 x i1> @i16_cast_cmp_sgt_int_m1_sitofp_float_vec_undef(<3 x i16> %i) {
-; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_sitofp_float_vec_undef(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i16> [[I:%.*]], <i16 -1, i16 -1, i16 -1>
+define <3 x i1> @i16_cast_cmp_sgt_int_m1_sitofp_float_vec_poison(<3 x i16> %i) {
+; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_sitofp_float_vec_poison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i16> [[I:%.*]], splat (i16 -1)
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i16> %i to  <3 x float>
   %b = bitcast <3 x float> %f to <3 x i32>
-  %cmp = icmp sgt <3 x i32> %b, <i32 -1, i32 undef, i32 -1>
+  %cmp = icmp sgt <3 x i32> %b, <i32 -1, i32 poison, i32 -1>
   ret <3 x i1> %cmp
 }
 
@@ -659,7 +659,7 @@ define <6 x i1> @i16_cast_cmp_sgt_int_m1_bitcast_vector_num_elements_sitofp(<3 x
 ; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_bitcast_vector_num_elements_sitofp(
 ; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i16> [[I:%.*]] to <3 x float>
 ; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to <6 x i16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <6 x i16> [[B]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <6 x i16> [[B]], splat (i16 -1)
 ; CHECK-NEXT:    ret <6 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i16> %i to  <3 x float>

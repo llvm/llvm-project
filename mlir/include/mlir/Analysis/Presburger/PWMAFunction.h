@@ -40,13 +40,13 @@ enum class OrderingKind { EQ, NE, LT, LE, GT, GE };
 /// value of the function at a specified point.
 class MultiAffineFunction {
 public:
-  MultiAffineFunction(const PresburgerSpace &space, const Matrix &output)
+  MultiAffineFunction(const PresburgerSpace &space, const IntMatrix &output)
       : space(space), output(output),
         divs(space.getNumVars() - space.getNumRangeVars()) {
     assertIsConsistent();
   }
 
-  MultiAffineFunction(const PresburgerSpace &space, const Matrix &output,
+  MultiAffineFunction(const PresburgerSpace &space, const IntMatrix &output,
                       const DivisionRepr &divs)
       : space(space), output(output), divs(divs) {
     assertIsConsistent();
@@ -65,9 +65,11 @@ public:
   PresburgerSpace getOutputSpace() const { return space.getRangeSpace(); }
 
   /// Get a matrix with each row representing row^th output expression.
-  const Matrix &getOutputMatrix() const { return output; }
+  const IntMatrix &getOutputMatrix() const { return output; }
   /// Get the `i^th` output expression.
-  ArrayRef<MPInt> getOutputExpr(unsigned i) const { return output.getRow(i); }
+  ArrayRef<DynamicAPInt> getOutputExpr(unsigned i) const {
+    return output.getRow(i);
+  }
 
   /// Get the divisions used in this function.
   const DivisionRepr &getDivs() const { return divs; }
@@ -80,9 +82,9 @@ public:
   void mergeDivs(MultiAffineFunction &other);
 
   //// Return the output of the function at the given point.
-  SmallVector<MPInt, 8> valueAt(ArrayRef<MPInt> point) const;
-  SmallVector<MPInt, 8> valueAt(ArrayRef<int64_t> point) const {
-    return valueAt(getMPIntVec(point));
+  SmallVector<DynamicAPInt, 8> valueAt(ArrayRef<DynamicAPInt> point) const;
+  SmallVector<DynamicAPInt, 8> valueAt(ArrayRef<int64_t> point) const {
+    return valueAt(getDynamicAPIntVec(point));
   }
 
   /// Return whether the `this` and `other` are equal when the domain is
@@ -124,7 +126,7 @@ private:
   /// The function's output is a tuple of integers, with the ith element of the
   /// tuple defined by the affine expression given by the ith row of this output
   /// matrix.
-  Matrix output;
+  IntMatrix output;
 
   /// Storage for division representation for each local variable in space.
   DivisionRepr divs;
@@ -191,9 +193,11 @@ public:
   PresburgerSet getDomain() const;
 
   /// Return the output of the function at the given point.
-  std::optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<MPInt> point) const;
-  std::optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<int64_t> point) const {
-    return valueAt(getMPIntVec(point));
+  std::optional<SmallVector<DynamicAPInt, 8>>
+  valueAt(ArrayRef<DynamicAPInt> point) const;
+  std::optional<SmallVector<DynamicAPInt, 8>>
+  valueAt(ArrayRef<int64_t> point) const {
+    return valueAt(getDynamicAPIntVec(point));
   }
 
   /// Return all the pieces of this piece-wise function.

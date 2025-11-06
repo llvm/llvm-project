@@ -27,7 +27,7 @@
 // <TODO:Remove brackets> below
 
 // Make sure we catch forced conversions to the difference_type if they happen.
-// ADDITIONAL_COMPILE_FLAGS<TODO:Remove brackets>: -Wsign-conversion
+// ADDITIONAL_COMPILE_FLAGS<TODO:Remove brackets>(gcc-style-warnings): -Wsign-conversion
 
 #include <iterator>
 #include <cassert>

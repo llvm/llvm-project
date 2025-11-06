@@ -132,9 +132,9 @@ func.func @no_dynamic_shape(%arg0: i32, %arg1: i32) -> i32 {
 
 // -----
 
-// CHECK-LABEL: func.func @no_out_of_bounds
+// CHECK-LABEL: func.func @no_out_of_bound_write
 // CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32)
-func.func @no_out_of_bounds(%arg0: i32, %arg1: i32) -> i32 {
+func.func @no_out_of_bound_write(%arg0: i32, %arg1: i32) -> i32 {
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
   // CHECK: %[[C100:.*]] = arith.constant 100 : index
@@ -149,6 +149,27 @@ func.func @no_out_of_bounds(%arg0: i32, %arg1: i32) -> i32 {
   memref.store %arg1, %alloca[%c100] : memref<2xi32>
   // CHECK: %[[RES:.*]] = memref.load %[[ALLOCA]][%[[C0]]]
   %res = memref.load %alloca[%c0] : memref<2xi32>
+  // CHECK: return %[[RES]] : i32
+  return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @no_out_of_bound_load
+// CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32)
+func.func @no_out_of_bound_load(%arg0: i32, %arg1: i32) -> i32 {
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[C100:.*]] = arith.constant 100 : index
+  %c100 = arith.constant 100 : index
+  // CHECK-NOT: = memref.alloca()
+  // CHECK: %[[ALLOCA:.*]] = memref.alloca() : memref<2xi32>
+  // CHECK-NOT: = memref.alloca()
+  %alloca = memref.alloca() : memref<2xi32>
+  // CHECK: memref.store %[[ARG0]], %[[ALLOCA]][%[[C0]]]
+  memref.store %arg0, %alloca[%c0] : memref<2xi32>
+  // CHECK: %[[RES:.*]] = memref.load %[[ALLOCA]][%[[C100]]]
+  %res = memref.load %alloca[%c100] : memref<2xi32>
   // CHECK: return %[[RES]] : i32
   return %res : i32
 }

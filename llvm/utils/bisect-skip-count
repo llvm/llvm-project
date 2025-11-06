@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # This script is used to bisect skip and count arguments for --debug-counter.
 # It is similar to bisect, except it understands how to increase skip and decrease count
 #

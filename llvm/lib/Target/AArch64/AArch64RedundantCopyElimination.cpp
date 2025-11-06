@@ -78,10 +78,7 @@ class AArch64RedundantCopyElimination : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64RedundantCopyElimination() : MachineFunctionPass(ID) {
-    initializeAArch64RedundantCopyEliminationPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AArch64RedundantCopyElimination() : MachineFunctionPass(ID) {}
 
   struct RegImm {
     MCPhysReg Reg;
@@ -95,8 +92,7 @@ public:
   bool optimizeBlock(MachineBasicBlock *MBB);
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
   StringRef getPassName() const override {
     return "AArch64 Redundant Copy Elimination";
@@ -265,7 +261,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
     }
 
     // Bail if we see an instruction that defines NZCV that we don't handle.
-    if (PredI.definesRegister(AArch64::NZCV))
+    if (PredI.definesRegister(AArch64::NZCV, /*TRI=*/nullptr))
       return false;
 
     // Track clobbered and used registers.

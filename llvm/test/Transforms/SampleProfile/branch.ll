@@ -49,8 +49,8 @@ entry:
   %0 = load i32, ptr %argc.addr, align 4, !dbg !21
   %cmp = icmp slt i32 %0, 2, !dbg !23
   br i1 %cmp, label %if.then, label %if.end, !dbg !24
-; CHECK:  edge entry -> if.then probability is 0x4ccf6b16 / 0x80000000 = 60.01%
-; CHECK:  edge entry -> if.end probability is 0x333094ea / 0x80000000 = 39.99%
+; CHECK:  edge %entry -> %if.then probability is 0x4ccf6b16 / 0x80000000 = 60.01%
+; CHECK:  edge %entry -> %if.end probability is 0x333094ea / 0x80000000 = 39.99%
 
 if.then:                                          ; preds = %entry
   store i32 1, ptr %retval, align 4, !dbg !25
@@ -62,20 +62,20 @@ if.end:                                           ; preds = %entry
   %1 = load ptr, ptr %argv.addr, align 8, !dbg !30
   %arrayidx = getelementptr inbounds ptr, ptr %1, i64 1, !dbg !30
   %2 = load ptr, ptr %arrayidx, align 8, !dbg !30
-  %call = call i32 @atoi(ptr %2) #4, !dbg !31
+  %call = call i32 @atoi(ptr %2), !dbg !31
   store i32 %call, ptr %limit, align 4, !dbg !29
   %3 = load i32, ptr %limit, align 4, !dbg !32
   %cmp1 = icmp sgt i32 %3, 100, !dbg !34
   br i1 %cmp1, label %if.then.2, label %if.else, !dbg !35
-; CHECK: edge if.end -> if.then.2 probability is 0x6652c748 / 0x80000000 = 79.94%
-; CHECK: edge if.end -> if.else probability is 0x19ad38b8 / 0x80000000 = 20.06%
+; CHECK: edge %if.end -> %if.then.2 probability is 0x6652c748 / 0x80000000 = 79.94%
+; CHECK: edge %if.end -> %if.else probability is 0x19ad38b8 / 0x80000000 = 20.06%
 
 if.then.2:                                        ; preds = %if.end
   call void @llvm.dbg.declare(metadata ptr %s, metadata !36, metadata !17), !dbg !38
   %4 = load ptr, ptr %argv.addr, align 8, !dbg !39
   %arrayidx3 = getelementptr inbounds ptr, ptr %4, i64 2, !dbg !39
   %5 = load ptr, ptr %arrayidx3, align 8, !dbg !39
-  %call4 = call i32 @atoi(ptr %5) #4, !dbg !40
+  %call4 = call i32 @atoi(ptr %5), !dbg !40
   %conv = sitofp i32 %call4 to double, !dbg !40
   %mul = fmul double 0x40370ABE6A337A81, %conv, !dbg !41
   store double %mul, ptr %s, align 8, !dbg !38
@@ -88,10 +88,10 @@ for.cond:                                         ; preds = %for.inc, %if.then.2
   %7 = load i32, ptr %limit, align 4, !dbg !48
   %cmp5 = icmp slt i32 %6, %7, !dbg !49
   br i1 %cmp5, label %for.body, label %for.end, !dbg !50, !prof !80
-; CHECK: edge for.cond -> for.body probability is 0x73333333 / 0x80000000 = 90.00%
-; CHECK: edge for.cond -> for.end probability is 0x0ccccccd / 0x80000000 = 10.00%
-; OVW: edge for.cond -> for.body probability is 0x76b3f3be / 0x80000000 = 92.74% 
-; OVW: edge for.cond -> for.end probability is 0x094c0c42 / 0x80000000 = 7.26% 
+; CHECK: edge %for.cond -> %for.body probability is 0x73333333 / 0x80000000 = 90.00%
+; CHECK: edge %for.cond -> %for.end probability is 0x0ccccccd / 0x80000000 = 10.00%
+; OVW: edge %for.cond -> %for.body probability is 0x76b3f3be / 0x80000000 = 92.74% 
+; OVW: edge %for.cond -> %for.end probability is 0x094c0c42 / 0x80000000 = 7.26% 
 
 for.body:                                         ; preds = %for.cond
   call void @llvm.dbg.declare(metadata ptr %x, metadata !51, metadata !17), !dbg !53
@@ -128,7 +128,7 @@ if.else:                                          ; preds = %if.end
   %16 = load ptr, ptr %argv.addr, align 8, !dbg !72
   %arrayidx10 = getelementptr inbounds ptr, ptr %16, i64 2, !dbg !72
   %17 = load ptr, ptr %arrayidx10, align 8, !dbg !72
-  %call11 = call i32 @atoi(ptr %17) #4, !dbg !74
+  %call11 = call i32 @atoi(ptr %17), !dbg !74
   %conv12 = sitofp i32 %call11 to double, !dbg !74
   store double %conv12, ptr %result, align 8, !dbg !75
   br label %if.end.13
@@ -145,18 +145,14 @@ return:                                           ; preds = %if.end.13, %if.then
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind readonly
-declare i32 @atoi(ptr) #2
+declare i32 @atoi(ptr)
 
-declare i32 @printf(ptr, ...) #3
+declare i32 @printf(ptr, ...)
 
-attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readonly "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind readonly }
+attributes #0 = { uwtable "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !14}

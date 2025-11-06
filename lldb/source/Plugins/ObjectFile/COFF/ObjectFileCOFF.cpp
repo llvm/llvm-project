@@ -191,19 +191,15 @@ void ObjectFileCOFF::CreateSections(lldb_private::SectionList &sections) {
 
   auto SectionType = [](StringRef Name,
                         const coff_section *Section) -> lldb::SectionType {
-    lldb::SectionType type =
-        StringSwitch<lldb::SectionType>(Name)
-            // DWARF Debug Sections
-            .Case(".debug_abbrev", eSectionTypeDWARFDebugAbbrev)
-            .Case(".debug_info", eSectionTypeDWARFDebugInfo)
-            .Case(".debug_line", eSectionTypeDWARFDebugLine)
-            .Case(".debug_pubnames", eSectionTypeDWARFDebugPubNames)
-            .Case(".debug_pubtypes", eSectionTypeDWARFDebugPubTypes)
-            .Case(".debug_str", eSectionTypeDWARFDebugStr)
-            // CodeView Debug Sections: .debug$S, .debug$T
-            .StartsWith(".debug$", eSectionTypeDebug)
-            .Case("clangast", eSectionTypeOther)
-            .Default(eSectionTypeInvalid);
+    // DWARF Debug Sections
+    if (Name.consume_front(".debug_"))
+      return GetDWARFSectionTypeFromName(Name);
+
+    lldb::SectionType type = StringSwitch<lldb::SectionType>(Name)
+                                 // CodeView Debug Sections: .debug$S, .debug$T
+                                 .StartsWith(".debug$", eSectionTypeDebug)
+                                 .Case("clangast", eSectionTypeOther)
+                                 .Default(eSectionTypeInvalid);
     if (type != eSectionTypeInvalid)
       return type;
 
@@ -271,9 +267,9 @@ void ObjectFileCOFF::ParseSymtab(lldb_private::Symtab &symtab) {
     const auto COFFSymRef = m_object->getCOFFSymbol(SymRef);
 
     Expected<StringRef> NameOrErr = SymRef.getName();
-    if (auto error = NameOrErr.takeError()) {
-      LLDB_LOG(log, "ObjectFileCOFF: failed to get symbol name: {0}",
-               llvm::fmt_consume(std::move(error)));
+    if (!NameOrErr) {
+      LLDB_LOG_ERROR(log, NameOrErr.takeError(),
+                     "ObjectFileCOFF: failed to get symbol name: {0}");
       continue;
     }
 

@@ -1,16 +1,23 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+
+; StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat implicitly
+; declare Shader, causing a SPIR-V module to be rejected by the OpenCL
+; run-time. See https://github.com/KhronosGroup/SPIRV-Headers/issues/487
+; De-facto, OpImageRead and OpImageWrite are allowed to use Unknown Image
+; Formats when the Kernel capability is declared. We reflect this behavior
+; in the test case, and leave the check under CHECK-SPIRV-NOT to track
+; the issue and follow-up its final resolution when ready.
+; CHECK-SPIRV-NOT: OpCapability StorageImageReadWithoutFormat
 
 ; CHECK-SPIRV: %[[#]] = OpImageRead %[[#]] %[[#]] %[[#]] Sample %[[#]]
 
-%opencl.image2d_msaa_ro_t = type opaque
-
-define spir_kernel void @sample_test(%opencl.image2d_msaa_ro_t addrspace(1)* %source, i32 %sampler, <4 x float> addrspace(1)* nocapture %results) {
+define spir_kernel void @sample_test(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source, i32 %sampler, <4 x float> addrspace(1)* nocapture %results) {
 entry:
   %call = tail call spir_func i32 @_Z13get_global_idj(i32 0)
   %call1 = tail call spir_func i32 @_Z13get_global_idj(i32 1)
-  %call2 = tail call spir_func i32 @_Z15get_image_width19ocl_image2d_msaa_ro(%opencl.image2d_msaa_ro_t addrspace(1)* %source)
-  %call3 = tail call spir_func i32 @_Z16get_image_height19ocl_image2d_msaa_ro(%opencl.image2d_msaa_ro_t addrspace(1)* %source)
-  %call4 = tail call spir_func i32 @_Z21get_image_num_samples19ocl_image2d_msaa_ro(%opencl.image2d_msaa_ro_t addrspace(1)* %source)
+  %call2 = tail call spir_func i32 @_Z15get_image_width19ocl_image2d_msaa_ro(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source)
+  %call3 = tail call spir_func i32 @_Z16get_image_height19ocl_image2d_msaa_ro(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source)
+  %call4 = tail call spir_func i32 @_Z21get_image_num_samples19ocl_image2d_msaa_ro(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source)
   %cmp20 = icmp eq i32 %call4, 0
   br i1 %cmp20, label %for.end, label %for.body.lr.ph
 
@@ -25,7 +32,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %tmp = add i32 %mul5, %call1
   %tmp19 = mul i32 %tmp, %call2
   %add7 = add i32 %tmp19, %call
-  %call9 = tail call spir_func <4 x float> @_Z11read_imagef19ocl_image2d_msaa_roDv2_ii(%opencl.image2d_msaa_ro_t addrspace(1)* %source, <2 x i32> %vecinit8, i32 %sample.021)
+  %call9 = tail call spir_func <4 x float> @_Z11read_imagef19ocl_image2d_msaa_roDv2_ii(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source, <2 x i32> %vecinit8, i32 %sample.021)
   %arrayidx = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %results, i32 %add7
   store <4 x float> %call9, <4 x float> addrspace(1)* %arrayidx, align 16
   %inc = add nuw i32 %sample.021, 1
@@ -41,10 +48,10 @@ for.end:                                          ; preds = %for.end.loopexit, %
 
 declare spir_func i32 @_Z13get_global_idj(i32)
 
-declare spir_func i32 @_Z15get_image_width19ocl_image2d_msaa_ro(%opencl.image2d_msaa_ro_t addrspace(1)*)
+declare spir_func i32 @_Z15get_image_width19ocl_image2d_msaa_ro(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0))
 
-declare spir_func i32 @_Z16get_image_height19ocl_image2d_msaa_ro(%opencl.image2d_msaa_ro_t addrspace(1)*)
+declare spir_func i32 @_Z16get_image_height19ocl_image2d_msaa_ro(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0))
 
-declare spir_func i32 @_Z21get_image_num_samples19ocl_image2d_msaa_ro(%opencl.image2d_msaa_ro_t addrspace(1)*)
+declare spir_func i32 @_Z21get_image_num_samples19ocl_image2d_msaa_ro(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0))
 
-declare spir_func <4 x float> @_Z11read_imagef19ocl_image2d_msaa_roDv2_ii(%opencl.image2d_msaa_ro_t addrspace(1)*, <2 x i32>, i32)
+declare spir_func <4 x float> @_Z11read_imagef19ocl_image2d_msaa_roDv2_ii(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0), <2 x i32>, i32)

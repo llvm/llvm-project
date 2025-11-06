@@ -1,5 +1,5 @@
-# Check that BOLT inserts trap instruction at entry to functions that use AVX-512.
-# Check that AVX-512 instruction is updated correctly when -trap-avx512=0 is passed.
+## Check that BOLT inserts trap instruction at entry to functions that use AVX-512.
+## Check that AVX-512 instruction is updated correctly when -trap-avx512=0 is passed.
 
 RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-unknown -o %t.o \
 RUN:   %S/Inputs/avx512.s
@@ -17,11 +17,11 @@ RUN:   FileCheck %s --check-prefix=CHECK-DIS-NO-TRAP
 
 CHECK: BOLT-WARNING: 1 function will trap on entry
 
-# Check that we have two ud2 instructions - one per entry.
+## Check that we have two ud2 instructions - one per entry.
 CHECK-DIS:      use_avx512
 CHECK-DIS-NEXT:    ud2
 CHECK-DIS-NEXT:    ud2
 
-# Check that we generate correct AVX-512
+## Check that we generate correct AVX-512
 CHECK-DIS-NO-TRAP:      use_avx512
-CHECK-DIS-NO-TRAP:          62 e2 f5 70 2c da    	vscalefpd 
+CHECK-DIS-NO-TRAP:          62 e2 f5 70 2c da    	vscalefpd

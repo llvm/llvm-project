@@ -9,11 +9,12 @@
 #include "src/math/llround.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long long, llround, (double x)) {
   return fputil::round_to_signed_integer<double, long long>(x);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

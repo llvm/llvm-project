@@ -6,50 +6,53 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/sincosf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-using __llvm_libc::testing::SDCOMP26094_VALUES;
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 
-DECLARE_SPECIAL_CONSTANTS(float)
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
-  libc_errno = 0;
+TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
   float sin, cos;
 
-  __llvm_libc::sincosf(aNaN, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(aNaN, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
   EXPECT_MATH_ERRNO(0);
 
-  __llvm_libc::sincosf(0.0f, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(0.0f, &sin, &cos);
   EXPECT_FP_EQ(1.0f, cos);
   EXPECT_FP_EQ(0.0f, sin);
   EXPECT_MATH_ERRNO(0);
 
-  __llvm_libc::sincosf(-0.0f, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(-0.0f, &sin, &cos);
   EXPECT_FP_EQ(1.0f, cos);
   EXPECT_FP_EQ(-0.0f, sin);
   EXPECT_MATH_ERRNO(0);
 
-  __llvm_libc::sincosf(inf, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(inf, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
   EXPECT_MATH_ERRNO(EDOM);
 
-  __llvm_libc::sincosf(neg_inf, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(neg_inf, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
   EXPECT_MATH_ERRNO(EDOM);
@@ -58,51 +61,51 @@ TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
 #define EXPECT_SINCOS_MATCH_ALL_ROUNDING(input)                                \
   {                                                                            \
     float sin, cos;                                                            \
-    namespace mpfr = __llvm_libc::testing::mpfr;                               \
+    namespace mpfr = LIBC_NAMESPACE::testing::mpfr;                            \
                                                                                \
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
     if (__r1.success) {                                                        \
-      __llvm_libc::sincosf(input, &sin, &cos);                                 \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+      LIBC_NAMESPACE::sincosf(input, &sin, &cos);                              \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Nearest);                          \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Nearest);                          \
     }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
     if (__r2.success) {                                                        \
-      __llvm_libc::sincosf(input, &sin, &cos);                                 \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+      LIBC_NAMESPACE::sincosf(input, &sin, &cos);                              \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Upward);                           \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Upward);                           \
     }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
     if (__r3.success) {                                                        \
-      __llvm_libc::sincosf(input, &sin, &cos);                                 \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+      LIBC_NAMESPACE::sincosf(input, &sin, &cos);                              \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Downward);                         \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Downward);                         \
     }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
     if (__r4.success) {                                                        \
-      __llvm_libc::sincosf(input, &sin, &cos);                                 \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+      LIBC_NAMESPACE::sincosf(input, &sin, &cos);                              \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::TowardZero);                       \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::TowardZero);                       \
     }                                                                          \
   }
 
-TEST(LlvmLibcSinCosfTest, InFloatRange) {
+TEST_F(LlvmLibcSinCosfTest, InFloatRange) {
   constexpr uint32_t COUNT = 1'001;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits((v)));
-    if (isnan(x) || isinf(x))
+    float x = FPBits(v).get_val();
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
 
     EXPECT_SINCOS_MATCH_ALL_ROUNDING(x);
@@ -111,7 +114,7 @@ TEST(LlvmLibcSinCosfTest, InFloatRange) {
 }
 
 // For hard to round inputs.
-TEST(LlvmLibcSinCosfTest, SpecialValues) {
+TEST_F(LlvmLibcSinCosfTest, SpecialValues) {
   constexpr int N = 43;
   constexpr uint32_t INPUTS[N] = {
       0x3b56'37f5U, // x = 0x1.ac6feap-9f
@@ -160,17 +163,17 @@ TEST(LlvmLibcSinCosfTest, SpecialValues) {
   };
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_SINCOS_MATCH_ALL_ROUNDING(x);
     EXPECT_SINCOS_MATCH_ALL_ROUNDING(-x);
   }
 }
 
-// SDCOMP-26094: check sinf in the cases for which the range reducer
+// SDCOMP-26094: check sincosf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
-TEST(LlvmLibcSinCosfTest, SDCOMP_26094) {
+TEST_F(LlvmLibcSinCosfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
-    float x = float(FPBits((v)));
+    float x = FPBits(v).get_val();
     EXPECT_SINCOS_MATCH_ALL_ROUNDING(x);
     EXPECT_SINCOS_MATCH_ALL_ROUNDING(-x);
   }

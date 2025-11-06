@@ -14,8 +14,8 @@ define void @_ZN3foo3barERKN1M1XINS_6detail3quxEEE() #0 !dbg !2 {
 entry:
   %cmp = call i1 @foo(), !dbg !6
   br i1 %cmp, label %if.then, label %if.end
-; CHECK:  edge entry -> if.then probability is 0x4ccf6b16 / 0x80000000 = 60.01%
-; CHECK:  edge entry -> if.end probability is 0x333094ea / 0x80000000 = 39.99%
+; CHECK:  edge %entry -> %if.then probability is 0x4ccf6b16 / 0x80000000 = 60.01%
+; CHECK:  edge %entry -> %if.end probability is 0x333094ea / 0x80000000 = 39.99%
 
 if.then:
   br label %return
@@ -23,8 +23,8 @@ if.then:
 if.end:
   %cmp1 = call i1 @foo(), !dbg !7
   br i1 %cmp1, label %if.then.2, label %if.else
-; CHECK: edge if.end -> if.then.2 probability is 0x6652c748 / 0x80000000 = 79.94%
-; CHECK: edge if.end -> if.else probability is 0x19ad38b8 / 0x80000000 = 20.06%
+; CHECK: edge %if.end -> %if.then.2 probability is 0x6652c748 / 0x80000000 = 79.94%
+; CHECK: edge %if.end -> %if.else probability is 0x19ad38b8 / 0x80000000 = 20.06%
 
 if.then.2:
   call i1 @foo(), !dbg !8
@@ -33,8 +33,8 @@ if.then.2:
 for.cond:
   %cmp5 = call i1 @foo()
   br i1 %cmp5, label %for.body, label %for.end, !prof !9
-; CHECK: edge for.cond -> for.body probability is 0x73333333 / 0x80000000 = 90.00%
-; CHECK: edge for.cond -> for.end probability is 0x0ccccccd / 0x80000000 = 10.00%
+; CHECK: edge %for.cond -> %for.body probability is 0x73333333 / 0x80000000 = 90.00%
+; CHECK: edge %for.cond -> %for.end probability is 0x0ccccccd / 0x80000000 = 10.00%
 
 for.body:
   br label %for.cond

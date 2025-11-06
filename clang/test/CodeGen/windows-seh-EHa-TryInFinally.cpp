@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions -fms-extensions -x c++ -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions -fms-extensions -x c++ -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: @main()
 // CHECK: invoke void @llvm.seh.try.begin()
@@ -64,6 +64,29 @@ void foo()
       printf("Passed\n");
     } else {
       printf("Failed\n");
+    }
+  }
+}
+
+// CHECK-LABEL:@"?bar@@YAHXZ"()
+// CHECK: invoke.cont:
+// CHECK: invoke void @llvm.seh.try.begin()
+// CHECK: invoke.cont1:
+// CHECK: store volatile i32 1, ptr %cleanup.dest.slot
+// CHECK: invoke void @llvm.seh.try.end()
+// CHECK: invoke.cont2:
+// CHECK: call void @"?fin$0@0@bar@@"
+// CHECK: %cleanup.dest3 = load i32, ptr %cleanup.dest.slot
+// CHECK: return:
+// CHECK: ret i32 11
+int bar()
+{
+  int x;
+  __try {
+    return 11;
+  } __finally {
+    if (_abnormal_termination()) {
+      x = 9;
     }
   }
 }

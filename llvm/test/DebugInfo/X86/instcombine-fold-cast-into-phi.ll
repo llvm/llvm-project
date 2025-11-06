@@ -5,7 +5,7 @@
 ;; deleted). Check the new phi inherits the DebugLoc.
 
 ; CHECK: %[[phi:.*]] = phi i8 [ 1, %{{.*}} ], [ 0, %{{.*}} ], !dbg ![[dbg:[0-9]+]]
-; CHECK: call void @llvm.dbg.value(metadata i8 %[[phi]], metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)
+; CHECK: #dbg_value(i8 %[[phi]], ![[#]], !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)
 ; CHECK: ![[dbg]] = !DILocation(line: 123,
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

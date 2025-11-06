@@ -2,6 +2,9 @@
 ; RUN: opt < %s -mattr=+neon -interleaved-access -S | FileCheck %s --check-prefix=CHECK-NEON
 ; RUN: opt < %s -mattr=+mve.fp -interleaved-access -S | FileCheck %s --check-prefix=CHECK-MVE
 ; RUN: opt < %s -interleaved-access -S | FileCheck %s --check-prefix=CHECK-NONE
+; RUN: opt < %s -mattr=+neon -passes=interleaved-access -S | FileCheck %s --check-prefix=CHECK-NEON
+; RUN: opt < %s -mattr=+mve.fp -passes=interleaved-access -S | FileCheck %s --check-prefix=CHECK-MVE
+; RUN: opt < %s -passes=interleaved-access -S | FileCheck %s --check-prefix=CHECK-NONE
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 target triple = "arm---eabi"

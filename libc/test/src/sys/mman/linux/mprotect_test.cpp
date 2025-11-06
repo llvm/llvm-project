@@ -6,25 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/mprotect.h"
 #include "src/sys/mman/munmap.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <signal.h>
 #include <sys/mman.h>
 
-using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcMProtectTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcMProtectTest, NoError) {
+TEST_F(LlvmLibcMProtectTest, NoError) {
   size_t alloc_size = 128;
-  libc_errno = 0;
-  void *addr = __llvm_libc::mmap(nullptr, alloc_size, PROT_READ,
-                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  EXPECT_EQ(0, libc_errno);
+  void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
+                                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  ASSERT_ERRNO_SUCCESS();
   EXPECT_NE(addr, MAP_FAILED);
 
   int *array = reinterpret_cast<int *>(addr);
@@ -35,27 +35,28 @@ TEST(LlvmLibcMProtectTest, NoError) {
 
   // By setting the memory protection to read and write, we should be able to
   // modify that memory.
-  EXPECT_THAT(__llvm_libc::mprotect(addr, alloc_size, PROT_READ | PROT_WRITE),
-              Succeeds());
+  EXPECT_THAT(
+      LIBC_NAMESPACE::mprotect(addr, alloc_size, PROT_READ | PROT_WRITE),
+      Succeeds());
   array[0] = 1;
   EXPECT_EQ(array[0], 1);
 
-  EXPECT_THAT(__llvm_libc::munmap(addr, alloc_size), Succeeds());
+  EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, alloc_size), Succeeds());
 }
 
 // This test is disabled currently due to flakeyness. It will be re-enabled once
 // it is less flakey.
 /*
-TEST(LlvmLibcMProtectTest, Error_InvalidWrite) {
+TEST_F(LlvmLibcMProtectTest, Error_InvalidWrite) {
   // attempting to write to a read-only protected part of memory should cause a
   // segfault.
   EXPECT_DEATH(
       [] {
         size_t alloc_size = 128;
         void *addr =
-            __llvm_libc::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
+            LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
                               MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-        __llvm_libc::mprotect(addr, alloc_size, PROT_READ);
+        LIBC_NAMESPACE::mprotect(addr, alloc_size, PROT_READ);
 
         (reinterpret_cast<char *>(addr))[0] = 'A';
       },

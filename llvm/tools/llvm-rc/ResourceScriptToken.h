@@ -29,7 +29,6 @@
 
 #include <cstdint>
 #include <map>
-#include <string>
 #include <vector>
 
 namespace llvm {
@@ -57,8 +56,11 @@ public:
   StringRef value() const;
   Kind kind() const;
 
-  // Check if a token describes a binary operator.
-  bool isBinaryOp() const;
+  // Check if a token describes a low precedence binary operator.
+  bool isLowPrecedenceBinaryOp() const;
+
+  // Check if a token describes a high precedence binary operator.
+  bool isHighPrecedenceBinaryOp() const;
 
 private:
   Kind TokenKind;

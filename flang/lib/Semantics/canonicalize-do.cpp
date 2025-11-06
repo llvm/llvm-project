@@ -117,16 +117,15 @@ private:
             std::get<ExecutableConstruct>(doLoop->u).u)};
         auto &loopControl{
             std::get<std::optional<LoopControl>>(labelDo.statement.value().t)};
-        auto &name{std::get<std::optional<Name>>(labelDo.statement.value().t)};
         Statement<NonLabelDoStmt> nonLabelDoStmt{std::move(labelDo.label),
-            NonLabelDoStmt{
-                std::make_tuple(common::Clone(name), std::move(loopControl))}};
+            NonLabelDoStmt{std::make_tuple(std::optional<Name>{},
+                std::optional<Label>{}, std::move(loopControl))}};
         nonLabelDoStmt.source = originalSource;
         std::get<ExecutableConstruct>(doLoop->u).u =
             common::Indirection<DoConstruct>{
                 std::make_tuple(std::move(nonLabelDoStmt), std::move(block),
-                    Statement<EndDoStmt>{
-                        std::optional<Label>{}, EndDoStmt{std::move(name)}})};
+                    Statement<EndDoStmt>{std::optional<Label>{},
+                        EndDoStmt{std::optional<Name>{}}})};
         stack.pop_back();
       } while (!stack.empty() && stack.back().label == currentLabel);
       i = --next;

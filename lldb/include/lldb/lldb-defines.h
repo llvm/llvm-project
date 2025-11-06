@@ -44,8 +44,13 @@
 #define LLDB_WATCH_ID_IS_VALID(uid) ((uid) != (LLDB_INVALID_WATCH_ID))
 #define LLDB_WATCH_TYPE_READ (1u << 0)
 #define LLDB_WATCH_TYPE_WRITE (1u << 1)
+#define LLDB_WATCH_TYPE_MODIFY (1u << 2)
 #define LLDB_WATCH_TYPE_IS_VALID(type)                                         \
-  ((type & LLDB_WATCH_TYPE_READ) || (type & LLDB_WATCH_TYPE_WRITE))
+  ((type & LLDB_WATCH_TYPE_READ) || (type & LLDB_WATCH_TYPE_WRITE) ||          \
+   (type & LLDB_WATCH_TYPE_MODIFY))
+
+// StopPointSites
+#define LLDB_INVALID_SITE_ID UINT32_MAX
 
 // Generic Register Numbers
 #define LLDB_REGNUM_GENERIC_PC 0    // Program Counter
@@ -69,6 +74,9 @@
   11 // The register that would contain pointer size or less argument 7 (if any)
 #define LLDB_REGNUM_GENERIC_ARG8                                               \
   12 // The register that would contain pointer size or less argument 8 (if any)
+#define LLDB_REGNUM_GENERIC_TP                                                 \
+  13 // The register that would contain thread specific data, like TLS data and
+     // thread control block pointer
 /// Invalid value definitions
 #define LLDB_INVALID_STOP_ID 0
 #define LLDB_INVALID_ADDRESS UINT64_MAX
@@ -87,6 +95,8 @@
 #define LLDB_INVALID_COLUMN_NUMBER 0
 #define LLDB_INVALID_QUEUE_ID 0
 #define LLDB_INVALID_CPU_ID UINT32_MAX
+#define LLDB_INVALID_WATCHPOINT_RESOURCE_ID UINT32_MAX
+#define LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID 0
 
 /// CPU Type definitions
 #define LLDB_ARCH_DEFAULT "systemArch"
@@ -117,6 +127,11 @@
 #if defined(_WIN32) && !defined(MAX_PATH)
 #define MAX_PATH 260
 #endif
+
+/// Address Mask
+/// Bits not used for addressing are set to 1 in the mask;
+/// all mask bits set is an invalid value.
+#define LLDB_INVALID_ADDRESS_MASK UINT64_MAX
 
 // ignore GCC function attributes
 #if defined(_MSC_VER) && !defined(__clang__)

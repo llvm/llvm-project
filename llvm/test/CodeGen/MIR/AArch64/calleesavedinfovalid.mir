@@ -1,0 +1,41 @@
+
+# RUN: llc -run-pass=none -mtriple=aarch64-- -o - %s | FileCheck %s
+
+---
+# CHECK-LABEL:  name:                   no_stack_no_calleesavedinfo
+# CHECK:        isCalleeSavedInfoValid: false
+name:            no_stack_no_calleesavedinfo
+frameInfo:
+  isCalleeSavedInfoValid: false
+stack: []
+
+...
+---
+# CHECK-LABEL:  name:                   no_stack_calleesavedinfo
+# CHECK:        isCalleeSavedInfoValid: true
+name:            no_stack_calleesavedinfo
+frameInfo:
+  isCalleeSavedInfoValid: true
+stack: []
+
+...
+---
+# CHECK-LABEL:  name:                   stack_no_calleesavedinfo
+# CHECK:        isCalleeSavedInfoValid: true
+name:            stack_no_calleesavedinfo
+frameInfo:
+  isCalleeSavedInfoValid: false
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
+
+...
+---
+# CHECK-LABEL:  name:                   stack_calleesavedinfo
+# CHECK:        isCalleeSavedInfoValid: true
+name:            stack_calleesavedinfo
+frameInfo:
+  isCalleeSavedInfoValid: true
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
+
+...

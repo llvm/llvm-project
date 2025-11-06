@@ -42,9 +42,9 @@ entry:
   %SA2 = getelementptr inbounds %SA, ptr %pSA, i64 0, i32 4
   %v3 = load ptr, ptr %SA2, align 8
   %v4 = bitcast <1 x i64> %v0 to <4 x i16>
-  %v5 = bitcast <4 x i16> %v4 to x86_mmx
-  %v6 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %v5, i8 -18)
-  %v7 = bitcast x86_mmx %v6 to <4 x i16>
+  %v5 = bitcast <4 x i16> %v4 to <1 x i64>
+  %v6 = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %v5, i8 -18)
+  %v7 = bitcast <1 x i64> %v6 to <4 x i16>
   %v8 = bitcast <4 x i16> %v7 to <1 x i64>
   %v9 = extractelement <1 x i64> %v8, i32 0
   %v10 = bitcast i64 %v9 to <2 x i32>
@@ -55,18 +55,18 @@ entry:
 if.A:
   %pa = phi <1 x i64> [ %v8, %entry ], [ %vx, %if.C ]
   %v17 = extractelement <1 x i64> %pa, i32 0
-  %v18 = bitcast i64 %v17 to x86_mmx
-  %v19 = tail call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx %v18, i32 %B) #2
-  %v20 = bitcast x86_mmx %v19 to i64
+  %v18 = bitcast i64 %v17 to <1 x i64>
+  %v19 = tail call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> %v18, i32 %B) #2
+  %v20 = bitcast <1 x i64> %v19 to i64
   %v21 = insertelement <1 x i64> undef, i64 %v20, i32 0
   %cmp3 = icmp eq i64 %v20, 0
   br i1 %cmp3, label %if.C, label %merge
 
 if.B:
   %v34 = bitcast <1 x i64> %v8 to <4 x i16>
-  %v35 = bitcast <4 x i16> %v34 to x86_mmx
-  %v36 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %v35, i8 -18)
-  %v37 = bitcast x86_mmx %v36 to <4 x i16>
+  %v35 = bitcast <4 x i16> %v34 to <1 x i64>
+  %v36 = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %v35, i8 -18)
+  %v37 = bitcast <1 x i64> %v36 to <4 x i16>
   %v38 = bitcast <4 x i16> %v37 to <1 x i64>
   br label %if.C
 
@@ -80,9 +80,9 @@ if.C:
 merge:
   %vy = phi <1 x i64> [ %v21, %if.A ], [ %vx, %if.C ]
   %v130 = bitcast <1 x i64> %vy to <4 x i16>
-  %v131 = bitcast <4 x i16> %v130 to x86_mmx
-  %v132 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %v131, i8 -18)
-  %v133 = bitcast x86_mmx %v132 to <4 x i16>
+  %v131 = bitcast <4 x i16> %v130 to <1 x i64>
+  %v132 = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %v131, i8 -18)
+  %v133 = bitcast <1 x i64> %v132 to <4 x i16>
   %v134 = bitcast <4 x i16> %v133 to <1 x i64>
   %v135 = extractelement <1 x i64> %v134, i32 0
   %v136 = bitcast i64 %v135 to <2 x i32>
@@ -91,5 +91,5 @@ merge:
 }
 
 
-declare x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx, i8)
-declare x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx, i32)
+declare <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64>, i8)
+declare <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64>, i32)

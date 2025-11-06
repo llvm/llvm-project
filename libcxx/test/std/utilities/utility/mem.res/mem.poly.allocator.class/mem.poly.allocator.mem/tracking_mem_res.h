@@ -14,21 +14,22 @@
 
 class TrackingMemRes : public std::pmr::memory_resource {
 public:
-  TrackingMemRes(std::size_t* last_size, size_t* last_alginment) : last_size_(last_size), last_alginment_(last_alginment) {}
+  TrackingMemRes(std::size_t* last_size, size_t* last_alignment)
+      : last_size_(last_size), last_alignment_(last_alignment) {}
 
 private:
   std::size_t* last_size_;
-  std::size_t* last_alginment_;
+  std::size_t* last_alignment_;
   void* do_allocate(std::size_t size, size_t alignment) override {
     *last_size_      = size;
-    *last_alginment_ = alignment;
+    *last_alignment_ = alignment;
 
     return std::pmr::new_delete_resource()->allocate(size, alignment);
   }
 
   void do_deallocate(void* ptr, std::size_t size, size_t alignment) override {
     *last_size_      = size;
-    *last_alginment_ = alignment;
+    *last_alignment_ = alignment;
     std::pmr::new_delete_resource()->deallocate(ptr, size, alignment);
   }
 

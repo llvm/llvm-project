@@ -40,8 +40,8 @@ the nested regions and print them individually:
     if (!op->getAttrs().empty()) {
       printIndent() << op->getAttrs().size() << " attributes:\n";
       for (NamedAttribute attr : op->getAttrs())
-        printIndent() << " - '" << attr.first << "' : '" << attr.second
-                      << "'\n";
+        printIndent() << " - '" << attr.getName() << "' : '"
+                      << attr.getValue() << "'\n";
     }
 
     // Recurse into each of the regions attached to the operation.
@@ -97,12 +97,12 @@ llvm-project/mlir/test/IR/print-ir-nesting.mlir`:
 
 ```mlir
 "builtin.module"() ( {
-  %0:4 = "dialect.op1"() {"attribute name" = 42 : i32} : () -> (i1, i16, i32, i64)
+  %results:4 = "dialect.op1"() {"attribute name" = 42 : i32} : () -> (i1, i16, i32, i64)
   "dialect.op2"() ( {
-    "dialect.innerop1"(%0#0, %0#1) : (i1, i16) -> ()
+    "dialect.innerop1"(%results#0, %results#1) : (i1, i16) -> ()
   },  {
     "dialect.innerop2"() : () -> ()
-    "dialect.innerop3"(%0#0, %0#2, %0#3)[^bb1, ^bb2] : (i1, i32, i64) -> ()
+    "dialect.innerop3"(%results#0, %results#2, %results#3)[^bb1, ^bb2] : (i1, i32, i64) -> ()
   ^bb1(%1: i32):  // pred: ^bb0
     "dialect.innerop4"() : () -> ()
     "dialect.innerop5"() : () -> ()
@@ -125,6 +125,8 @@ visiting op: 'builtin.module' with 0 operands and 0 results
        - 'attribute name' : '42 : i32'
        0 nested regions:
       visiting op: 'dialect.op2' with 0 operands and 0 results
+      1 attributes:
+       - 'other attribute' : '42 : i64'
        2 nested regions:
         Region with 1 blocks:
           Block with 0 arguments, 0 successors, and 1 operations
@@ -146,7 +148,6 @@ visiting op: 'builtin.module' with 0 operands and 0 results
              0 nested regions:
             visiting op: 'dialect.innerop7' with 0 operands and 0 results
              0 nested regions:
-       0 nested regions:
 ```
 
 ## Other IR Traversal Methods
@@ -177,7 +178,7 @@ inside a single block (or a single region), however it is frequently interesting
 to traverse the IR in a nested fashion. To this end MLIR exposes the `walk()`
 helper on `Operation`, `Block`, and `Region`. This helper takes a single
 argument: a callback method that will be invoked for every operation recursively
-nested under the provided entity.
+nested under the provided entity (as well as this initial operation).
 
 ```c++
   // Recursively traverse all the regions and blocks nested inside the function
@@ -235,7 +236,7 @@ some information about them:
     } else {
       // If there is no defining op, the Value is necessarily a Block
       // argument.
-      auto blockArg = operand.cast<BlockArgument>();
+      auto blockArg = cast<BlockArgument>(operand);
       llvm::outs() << "  - Operand produced by Block argument, number "
                    << blockArg.getArgNumber() << "\n";
     }
@@ -256,14 +257,10 @@ results and print informations about them:
       llvm::outs() << " has no uses\n";
       continue;
     }
-    if (result.hasOneUse()) {
+    if (result.hasOneUse())
       llvm::outs() << " has a single use: ";
-    } else {
-      llvm::outs() << " has "
-                   << std::distance(result.getUses().begin(),
-                                    result.getUses().end())
-                   << " uses:\n";
-    }
+    else
+      llvm::outs() << " has " << result.getNumUses() << " uses:\n";
     for (Operation *userOp : result.getUsers()) {
       llvm::outs() << "    - " << userOp->getName() << "\n";
     }

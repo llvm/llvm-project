@@ -20,6 +20,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
@@ -34,26 +35,6 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "WebAssemblyGenRegisterInfo.inc"
-
-// Exception handling & setjmp-longjmp handling related options.
-
-// Emscripten's asm.js-style exception handling
-cl::opt<bool> WebAssembly::WasmEnableEmEH(
-    "enable-emscripten-cxx-exceptions",
-    cl::desc("WebAssembly Emscripten-style exception handling"),
-    cl::init(false));
-// Emscripten's asm.js-style setjmp/longjmp handling
-cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
-    "enable-emscripten-sjlj",
-    cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
-    cl::init(false));
-// Exception handling using wasm EH instructions
-cl::opt<bool>
-    WebAssembly::WasmEnableEH("wasm-enable-eh",
-                              cl::desc("WebAssembly exception handling"));
-// setjmp/longjmp handling using wasm EH instrutions
-cl::opt<bool> WebAssembly::WasmEnableSjLj(
-    "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
 
 static MCAsmInfo *createMCAsmInfo(const MCRegisterInfo & /*MRI*/,
                                   const Triple &TT,
@@ -104,10 +85,9 @@ createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new WebAssemblyTargetWasmStreamer(S);
 }
 
-static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
-                                                 formatted_raw_ostream &OS,
-                                                 MCInstPrinter * /*InstPrint*/,
-                                                 bool /*isVerboseAsm*/) {
+static MCTargetStreamer *
+createAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                        MCInstPrinter * /*InstPrint*/) {
   return new WebAssemblyTargetAsmStreamer(S, OS);
 }
 
@@ -116,7 +96,8 @@ static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeWebAssemblyTargetMC() {
   for (Target *T :
        {&getTheWebAssemblyTarget32(), &getTheWebAssemblyTarget64()}) {
     // Register the MC asm info.

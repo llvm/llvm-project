@@ -13,7 +13,7 @@ COMPILER_RT_ABI long double __extenddftf2(double a);
 int test__extenddftf2(double a, uint64_t expectedHi, uint64_t expectedLo)
 {
     long double x = __extenddftf2(a);
-    int ret = compareResultLD(x, expectedHi, expectedLo);
+    int ret = compareResultF128(x, expectedHi, expectedLo);
 
     if (ret){
         printf("error in test__extenddftf2(%f) = %.20Lf, "
@@ -64,7 +64,11 @@ int main()
                           UINT64_C(0x3fd2edcba9876543),
                           UINT64_C(0x2000000000000000)))
         return 1;
-
+    // denormal
+    if (test__extenddftf2(1.8194069811494184E-308,
+                          UINT64_C(0x3c00a2a7757954b9),
+                          UINT64_C(0x6000000000000000)))
+        return 1;
 #else
     printf("skipped\n");
 

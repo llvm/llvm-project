@@ -18,10 +18,11 @@ entry:
   br i1 true, label %final, label %delay
 
 delay:                                            ; preds = %entry
+  %cmp = icmp eq ptr @A, @B
   br label %final
 
 final:                                            ; preds = %delay, %entry
-  %use2 = phi i1 [ false, %entry ], [ icmp eq (ptr @A, ptr @B), %delay ]
+  %use2 = phi i1 [ false, %entry ], [ %cmp, %delay ]
   %value = select i1 %use2, i32 2, i32 1
   %B7 = mul i32 %value, 2147483647
   %C3 = icmp ule i32 %B7, 0

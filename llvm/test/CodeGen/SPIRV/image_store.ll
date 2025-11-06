@@ -1,22 +1,22 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-;; Image types may be represented in two ways while translating to SPIR-V:
-;; - OpenCL form based on pointers-to-opaque-structs, e.g. '%opencl.image2d_ro_t',
-;; - SPIR-V form based on TargetExtType, e.g. 'target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0)',
-;; but it is still one type which should be translated to one SPIR-V type.
-;;
-;; The test checks that the code below is successfully translated and only one
-;; SPIR-V type for images is generated.
+; Image types may be represented in two ways while translating to SPIR-V:
+; - OpenCL form, for example, '%opencl.image2d_ro_t',
+; - SPIR-V form, for example, '%spirv.Image._void_1_0_0_0_0_0_0',
+; but it is still one type which should be translated to one SPIR-V type.
+;
+; The test checks that the code below is successfully translated and only one
+; SPIR-V type for images is generated (no duplicate OpTypeImage instructions).
 
-; CHECK:     OpTypeImage
-; CHECK-NOT: OpTypeImage
+; CHECK:     %[[#]] = OpTypeImage %[[#]] 2D
+; CHECK-NOT: %[[#]] = OpTypeImage %[[#]] 2D
 
-%opencl.image2d_ro_t = type opaque
+declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_ff(ptr addrspace(1), ptr addrspace(2), <2 x float>, float)
 
-define spir_kernel void @read_image(%opencl.image2d_ro_t addrspace(1)* %srcimg) {
+define spir_kernel void @read_image(ptr addrspace(1) %srcimg, ptr addrspace(2) %sampler){
 entry:
-  %srcimg.addr = alloca %opencl.image2d_ro_t addrspace(1)*, align 8
   %spirvimg.addr = alloca target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0), align 8
-  store %opencl.image2d_ro_t addrspace(1)* %srcimg, %opencl.image2d_ro_t addrspace(1)** %srcimg.addr, align 8
+  %val = call <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_ff(ptr addrspace(1) %srcimg, ptr addrspace(2) %sampler, <2 x float> zeroinitializer, float 0.0)
   ret void
 }

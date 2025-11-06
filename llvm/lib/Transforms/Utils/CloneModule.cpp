@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/Core.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -34,6 +35,8 @@ static void copyComdat(GlobalObject *Dst, const GlobalObject *Src) {
 /// copies of global variables and functions, and making their (initializers and
 /// references, respectively) refer to the right globals.
 ///
+/// Cloning un-materialized modules is not currently supported, so any
+/// modules initialized via lazy loading should be materialized before cloning
 std::unique_ptr<Module> llvm::CloneModule(const Module &M) {
   // Create the value map that maps things from the old module over to the new
   // module.
@@ -49,6 +52,9 @@ std::unique_ptr<Module> llvm::CloneModule(const Module &M,
 std::unique_ptr<Module> llvm::CloneModule(
     const Module &M, ValueToValueMapTy &VMap,
     function_ref<bool(const GlobalValue *)> ShouldCloneDefinition) {
+
+  assert(M.isMaterialized() && "Module must be materialized before cloning!");
+
   // First off, we need to create the new module.
   std::unique_ptr<Module> New =
       std::make_unique<Module>(M.getModuleIdentifier(), M.getContext());
@@ -118,32 +124,6 @@ std::unique_ptr<Module> llvm::CloneModule(
     VMap[&I] = GI;
   }
 
-  // Now that all of the things that global variable initializer can refer to
-  // have been created, loop through and copy the global variable referrers
-  // over...  We also set the attributes on the global now.
-  //
-  for (const GlobalVariable &G : M.globals()) {
-    GlobalVariable *GV = cast<GlobalVariable>(VMap[&G]);
-
-    SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
-    G.getAllMetadata(MDs);
-    for (auto MD : MDs)
-      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
-
-    if (G.isDeclaration())
-      continue;
-
-    if (!ShouldCloneDefinition(&G)) {
-      // Skip after setting the correct linkage for an external reference.
-      GV->setLinkage(GlobalValue::ExternalLinkage);
-      continue;
-    }
-    if (G.hasInitializer())
-      GV->setInitializer(MapValue(G.getInitializer(), VMap));
-
-    copyComdat(GV, &G);
-  }
-
   // Similarly, copy over function bodies now...
   //
   for (const Function &I : M) {
@@ -202,8 +182,34 @@ std::unique_ptr<Module> llvm::CloneModule(
   // And named metadata....
   for (const NamedMDNode &NMD : M.named_metadata()) {
     NamedMDNode *NewNMD = New->getOrInsertNamedMetadata(NMD.getName());
-    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-      NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
+    for (const MDNode *N : NMD.operands())
+      NewNMD->addOperand(MapMetadata(N, VMap));
+  }
+
+  // Now that all of the things that global variable initializer can refer to
+  // have been created, loop through and copy the global variable referrers
+  // over...  We also set the attributes on the global now.
+  //
+  for (const GlobalVariable &G : M.globals()) {
+    GlobalVariable *GV = cast<GlobalVariable>(VMap[&G]);
+
+    SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+    G.getAllMetadata(MDs);
+    for (auto MD : MDs)
+      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
+
+    if (G.isDeclaration())
+      continue;
+
+    if (!ShouldCloneDefinition(&G)) {
+      // Skip after setting the correct linkage for an external reference.
+      GV->setLinkage(GlobalValue::ExternalLinkage);
+      continue;
+    }
+    if (G.hasInitializer())
+      GV->setInitializer(MapValue(G.getInitializer(), VMap));
+
+    copyComdat(GV, &G);
   }
 
   return New;

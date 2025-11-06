@@ -197,13 +197,31 @@ option specifies "``-``", then the output will also be sent to standard output.
 
   Enable all the view.
 
-.. option:: -instruction-tables
+.. option:: -instruction-tables=<level>
 
   Prints resource pressure information based on the static information
   available from the processor model. This differs from the resource pressure
   view because it doesn't require that the code is simulated. It instead prints
   the theoretical uniform distribution of resource pressure for every
   instruction in sequence.
+
+  The choice of `<level>` controls number of printed information.
+  `<level>` may be `none` (default), `normal`, `full`.
+  Note: If the option is used without `<label>`, default is `normal` (legacy).
+
+  When `<level>` is `full`, additional information are:
+  - `<Bypass Latency>`: Latency when a bypass is implemented between operands
+  in pipelines (see SchedReadAdvance).
+  - `<LLVM Opcode Name>`: mnemonic plus operands identifier.
+  - `<Resources units>`: Used resources associated with LLVM Opcode.
+  - `<instruction comment>`: reports comment if any from source assembly.
+
+  `<Resources units>` syntax can be:
+  - <Resource Name>: ReleaseAtCycle is 1.
+  - <Resource Name>[<ReleaseAtCycle>]: ReleaseAtCycle is greater than 1
+  and AcquireAtCycle is 0.
+  - <Resource Name>[<AcquireAtCycle>,<ReleaseAtCycle>]: ReleaseAtCycle
+  is greater than 1 and AcquireAtCycle is greater than 0.
 
 .. option:: -bottleneck-analysis
 
@@ -223,7 +241,7 @@ option specifies "``-``", then the output will also be sent to standard output.
 .. option:: -disable-cb
 
   Force usage of the generic CustomBehaviour and InstrPostProcess classes rather
-  than using the target specific implementation. The generic classes never
+  than using the target-specific implementation. The generic classes never
   detect any custom hazards or make any post processing modifications to
   instructions.
 
@@ -233,6 +251,16 @@ option specifies "``-``", then the output will also be sent to standard output.
   specific implementation. The generic class creates Instruments that provide
   no extra information, and InstrumentManager never overrides the default
   schedule class for a given instruction.
+
+.. option:: -skip-unsupported-instructions=<reason>
+
+  Force :program:`llvm-mca` to continue in the presence of instructions which do
+  not parse or lack key scheduling information. Note that the resulting analysis
+  is impacted since those unsupported instructions are ignored as-if they are
+  not supplied as a part of the input.
+
+  The choice of `<reason>` controls the when mca will report an error.
+  `<reason>` may be `none` (default), `lack-sched`, `parse-failure`, `any`.
 
 EXIT STATUS
 -----------
@@ -350,10 +378,24 @@ an InstrumentRegion does not need a comment to end the region.
 Comments that are prefixed with `LLVM-MCA-` but do not correspond to
 a valid `INSTRUMENT_TYPE` for the target cause an error, except for
 `BEGIN` and `END`, since those correspond to AnalysisRegions. Comments
-that do not start with `LLVM-MCA-` are ignored by :program `llvm-mca`.
+that do not start with `LLVM-MCA-` are ignored by :program:`llvm-mca`.
 
 An instruction (a MCInst) is added to an InstrumentRegion R only
 if its location is in range [R.RangeStart, R.RangeEnd].
+
+There is one instrument that can be used on all targets to explicitly
+set instruction latencies. It can be used, for example, to model the
+cache misses that impact load latencies. The syntax is like
+
+.. code-block:: none
+
+  # LLVM-MCA-LATENCY 100
+  mov (%edi), %eax
+  # LLVM-MCA-LATENCY
+
+It sets the latency of mov instruction to 100. LLVM-MCA-LATENCY without
+argument ends the region with explicit latency, after it default target
+latencies are used.
 
 On RISCV targets, vector instructions have different behaviour depending
 on the LMUL. Code can be instrumented with a comment that takes the
@@ -908,6 +950,7 @@ process instructions.
 * Retire (Instruction is retired; writes are architecturally committed).
 
 The in-order pipeline implements the following sequence of stages:
+
 * InOrderIssue (Instruction is issued to the processor pipelines).
 * Retire (Instruction is retired; writes are architecturally committed).
 
@@ -1096,9 +1139,9 @@ CustomBehaviour class can be used in these cases to enforce proper
 instruction modeling (often by customizing data dependencies and detecting
 hazards that :program:`llvm-mca` has no way of knowing about).
 
-:program:`llvm-mca` comes with one generic and multiple target specific
+:program:`llvm-mca` comes with one generic and multiple target-specific
 CustomBehaviour classes. The generic class will be used if the ``-disable-cb``
-flag is used or if a target specific CustomBehaviour class doesn't exist for
+flag is used or if a target-specific CustomBehaviour class doesn't exist for
 that target. (The generic class does nothing.) Currently, the CustomBehaviour
 class is only a part of the in-order pipeline, but there are plans to add it
 to the out-of-order pipeline in the future.
@@ -1112,7 +1155,7 @@ if you don't know the exact number and a value of 0 represents no stall).
 
 If you'd like to add a CustomBehaviour class for a target that doesn't
 already have one, refer to an existing implementation to see how to set it
-up. The classes are implemented within the target specific backend (for
+up. The classes are implemented within the target-specific backend (for
 example `/llvm/lib/Target/AMDGPU/MCA/`) so that they can access backend symbols.
 
 Instrument Manager
@@ -1148,12 +1191,12 @@ classes (MCSubtargetInfo, MCInstrInfo, etc.), please add it to the
 AND requires unexposed backend symbols or functionality, you can define it in
 the `/lib/Target/<TargetName>/MCA/` directory.
 
-To enable this target specific View, you will have to use this target's
+To enable this target-specific View, you will have to use this target's
 CustomBehaviour class to override the `CustomBehaviour::getViews()` methods.
 There are 3 variations of these methods based on where you want your View to
 appear in the output: `getStartViews()`, `getPostInstrInfoViews()`, and
 `getEndViews()`. These methods returns a vector of Views so you will want to
-return a vector containing all of the target specific Views for the target in
+return a vector containing all of the target-specific Views for the target in
 question.
 
 Because these target specific (and backend dependent) Views require the

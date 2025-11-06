@@ -8,8 +8,7 @@
 
 #include "DivTest.h"
 
+#include "hdr/types/lldiv_t.h"
 #include "src/stdlib/lldiv.h"
 
-#include <stdlib.h>
-
-LIST_DIV_TESTS(long long, lldiv_t, __llvm_libc::lldiv)
+LIST_DIV_TESTS(long long, lldiv_t, LIBC_NAMESPACE::lldiv)

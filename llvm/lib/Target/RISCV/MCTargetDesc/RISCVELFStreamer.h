@@ -12,7 +12,7 @@
 #include "RISCVTargetStreamer.h"
 #include "llvm/MC/MCELFStreamer.h"
 
-using namespace llvm;
+namespace llvm {
 
 class RISCVELFStreamer : public MCELFStreamer {
   void reset() override;
@@ -22,31 +22,26 @@ class RISCVELFStreamer : public MCELFStreamer {
 
   enum ElfMappingSymbol { EMS_None, EMS_Instructions, EMS_Data };
 
-  int64_t MappingSymbolCounter = 0;
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS = EMS_None;
 
 public:
   RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
                    std::unique_ptr<MCObjectWriter> MOW,
-                   std::unique_ptr<MCCodeEmitter> MCE)
-      : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
+                   std::unique_ptr<MCCodeEmitter> MCE);
 
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, uint32_t Subsection) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitBytes(StringRef Data) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
 };
 
-namespace llvm {
-
 class RISCVTargetELFStreamer : public RISCVTargetStreamer {
 private:
   StringRef CurrentVendor;
 
   MCSection *AttributeSection = nullptr;
-  const MCSubtargetInfo &STI;
 
   void emitAttribute(unsigned Attribute, unsigned Value) override;
   void emitTextAttribute(unsigned Attribute, StringRef String) override;
@@ -60,23 +55,25 @@ public:
   RISCVELFStreamer &getStreamer();
   RISCVTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
-  void emitDirectiveOptionPush() override;
-  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionExact() override;
+  void emitDirectiveOptionNoExact() override;
   void emitDirectiveOptionPIC() override;
   void emitDirectiveOptionNoPIC() override;
-  void emitDirectiveOptionRVC() override;
-  void emitDirectiveOptionNoRVC() override;
+  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionPush() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
+  void emitDirectiveOptionRVC() override;
+  void emitDirectiveOptionNoRVC() override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 
   void finish() override;
 };
 
-MCELFStreamer *createRISCVELFStreamer(MCContext &C,
-                                      std::unique_ptr<MCAsmBackend> MAB,
-                                      std::unique_ptr<MCObjectWriter> MOW,
-                                      std::unique_ptr<MCCodeEmitter> MCE,
-                                      bool RelaxAll);
-}
-#endif
+MCStreamer *createRISCVELFStreamer(const Triple &, MCContext &C,
+                                   std::unique_ptr<MCAsmBackend> &&MAB,
+                                   std::unique_ptr<MCObjectWriter> &&MOW,
+                                   std::unique_ptr<MCCodeEmitter> &&MCE);
+} // namespace llvm
+
+#endif // LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVELFSTREAMER_H

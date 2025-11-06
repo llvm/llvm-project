@@ -90,7 +90,7 @@ public:
   // Process Control
   lldb_private::Status WillResume() override;
 
-  lldb_private::Status DoResume() override;
+  lldb_private::Status DoResume(lldb::RunDirection direction) override;
 
   lldb_private::Status DoHalt(bool &caused_stop) override;
 
@@ -123,13 +123,6 @@ public:
 
   lldb_private::Status
   DisableBreakpointSite(lldb_private::BreakpointSite *bp_site) override;
-
-  // Process Watchpoints
-  lldb_private::Status EnableWatchpoint(lldb_private::Watchpoint *wp,
-                                        bool notify = true) override;
-
-  lldb_private::Status DisableWatchpoint(lldb_private::Watchpoint *wp,
-                                         bool notify = true) override;
 
   CommunicationKDP &GetCommunication() { return m_comm; }
 

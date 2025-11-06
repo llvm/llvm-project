@@ -25,13 +25,9 @@ config.test_format = lit.formats.GoogleTest(config.llvm_build_mode, "Tests")
 
 # Propagate the temp directory. Windows requires this because it uses \Windows\
 # if none of these are present.
-if "TMP" in os.environ:
-    config.environment["TMP"] = os.environ["TMP"]
-if "TEMP" in os.environ:
-    config.environment["TEMP"] = os.environ["TEMP"]
-
-if "HOME" in os.environ:
-    config.environment["HOME"] = os.environ["HOME"]
+for v in ["TMP", "TEMP", "HOME", "SystemDrive"]:
+    if v in os.environ:
+        config.environment[v] = os.environ[v]
 
 # Propagate sanitizer options.
 for var in [
@@ -55,7 +51,7 @@ def find_shlibpath_var():
         yield "LD_LIBRARY_PATH"
     elif platform.system() == "Darwin":
         yield "DYLD_LIBRARY_PATH"
-    elif platform.system() == "Windows":
+    elif platform.system() == "Windows" or sys.platform == "cygwin":
         yield "PATH"
     elif platform.system() == "AIX":
         yield "LIBPATH"

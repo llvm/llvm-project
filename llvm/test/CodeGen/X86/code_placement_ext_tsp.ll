@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 < %s | FileCheck %s
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 -ext-tsp-chain-split-threshold=0 -ext-tsp-enable-chain-split-along-jumps=0 < %s | FileCheck %s -check-prefix=CHECK2
+;; See also llvm/unittests/Transforms/Utils/CodeLayoutTest.cpp
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -enable-ext-tsp-block-placement < %s | FileCheck %s
 
 define void @func1a()  {
 ; Test that the algorithm positions the most likely successor first
@@ -328,8 +328,8 @@ end:
 }
 
 define void @func4() !prof !11 {
-; Test verifying that, if enabled, chains can be split in order to improve the
-; objective (by creating more fallthroughs)
+; Test verifying that chains can be split in order to improve the objective
+; by creating more fallthroughs
 ;
 ; +-------+
 ; | entry |--------+
@@ -353,19 +353,11 @@ define void @func4() !prof !11 {
 ; |  b2   | <+ ----+
 ; +-------+
 ;
-; With chain splitting enabled:
 ; CHECK-LABEL: func4:
 ; CHECK: entry
 ; CHECK: b1
 ; CHECK: b3
 ; CHECK: b2
-;
-; With chain splitting disabled:
-; CHECK2-LABEL: func4:
-; CHECK2: entry
-; CHECK2: b1
-; CHECK2: b2
-; CHECK2: b3
 
 entry:
   call void @b()

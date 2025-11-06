@@ -82,7 +82,7 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]] = fir.alloca tuple<!fir.ref<i32>>
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
-! CHECK:  fir.store %[[VAL_1]]#1 to %[[VAL_4]] : !fir.llvm_ptr<!fir.ref<i32>>
+! CHECK:  fir.store %[[VAL_1]]#0 to %[[VAL_4]] : !fir.llvm_ptr<!fir.ref<i32>>
 ! CHECK:  %[[VAL_5:.*]] = fir.address_of(@_QMtest_proc_designatorFtest_pass_simple_internalPsimple_internal) : (!fir.ref<tuple<!fir.ref<i32>>>) -> ()
 ! CHECK:  %[[VAL_6:.*]] = fir.emboxproc %[[VAL_5]], %[[VAL_2]] : ((!fir.ref<tuple<!fir.ref<i32>>>) -> (), !fir.ref<tuple<!fir.ref<i32>>>) -> !fir.boxproc<() -> ()>
 ! CHECK:  fir.call @_QPtakes_simple(%[[VAL_6]]) {{.*}}: (!fir.boxproc<() -> ()>) -> ()
@@ -100,7 +100,7 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]] = fir.alloca tuple<!fir.ref<i32>>
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
-! CHECK:  fir.store %[[VAL_1]]#1 to %[[VAL_4]] : !fir.llvm_ptr<!fir.ref<i32>>
+! CHECK:  fir.store %[[VAL_1]]#0 to %[[VAL_4]] : !fir.llvm_ptr<!fir.ref<i32>>
 ! CHECK:  %[[VAL_5:.*]] = fir.address_of(@_QMtest_proc_designatorFtest_pass_character_internalPreturn_char_internal) : (!fir.ref<!fir.char<1,10>>, index, !fir.ref<tuple<!fir.ref<i32>>>) -> !fir.boxchar<1>
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 10 : i64
 ! CHECK:  %[[VAL_7:.*]] = fir.emboxproc %[[VAL_5]], %[[VAL_2]] : ((!fir.ref<!fir.char<1,10>>, index, !fir.ref<tuple<!fir.ref<i32>>>) -> !fir.boxchar<1>, !fir.ref<tuple<!fir.ref<i32>>>) -> !fir.boxproc<() -> ()>
@@ -126,10 +126,10 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMtest_proc_designatorPtest_call_character_dummy(
 ! CHECK-SAME:    %[[VAL_0:.*]]: tuple<!fir.boxproc<() -> ()>, i64> {fir.char_proc}) {
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.char<1,10> {bindc_name = ".result"}
-! CHECK:  %[[VAL_4:.*]] = fir.extract_value %[[VAL_0]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
-! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.boxproc<() -> ()>) -> (() -> ())
-! CHECK:  %[[VAL_12:.*]] = fir.convert %[[VAL_5]] : (() -> ()) -> ((!fir.ref<!fir.char<1,10>>, index, !fir.ref<i32>) -> !fir.boxchar<1>)
-! CHECK:  %[[VAL_13:.*]] = fir.call %[[VAL_12]](%[[VAL_1]], {{.*}}
+! CHECK:  %[[VAL_3:.*]] = fir.insert_value %{{.*}}, %c10{{.*}}, [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, i64) -> tuple<!fir.boxproc<() -> ()>, i64>
+! CHECK:  %[[VAL_4:.*]] = fir.extract_value %[[VAL_3]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
+! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.boxproc<() -> ()>) -> ((!fir.ref<!fir.char<1,10>>, index, !fir.ref<i32>) -> !fir.boxchar<1>)
+! CHECK:  %[[VAL_13:.*]] = fir.call %[[VAL_5]](%[[VAL_1]], {{.*}}
 
 subroutine test_present_simple_dummy(proc)
   procedure(simple), optional :: proc

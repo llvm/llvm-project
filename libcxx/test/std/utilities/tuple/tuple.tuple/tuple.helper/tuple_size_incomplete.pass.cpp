@@ -16,9 +16,10 @@
 
 // UNSUPPORTED: c++03
 
-#include <tuple>
 #include <array>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -30,9 +31,8 @@ template <class T> constexpr bool is_complete() { return is_complete<T>(0); }
 struct Dummy1 {};
 struct Dummy2 {};
 
-namespace std {
-template <> struct tuple_size<Dummy1> : public integral_constant<std::size_t, 0> {};
-}
+template <>
+struct std::tuple_size<Dummy1> : public integral_constant<std::size_t, 0> {};
 
 template <class T>
 void test_complete() {
@@ -45,9 +45,11 @@ void test_complete() {
 template <class T>
 void test_incomplete() {
   static_assert(!is_complete<T>(), "");
-  static_assert(!is_complete<const T>(), "");
-  static_assert(!is_complete<volatile T>(), "");
-  static_assert(!is_complete<const volatile T>(), "");
+  // https://cplusplus.github.io/LWG/issue4040
+  // It is controversial whether these specializations are incomplete.
+  LIBCPP_STATIC_ASSERT(!is_complete<const T>(), "");
+  LIBCPP_STATIC_ASSERT(!is_complete<volatile T>(), "");
+  LIBCPP_STATIC_ASSERT(!is_complete<const volatile T>(), "");
 }
 
 

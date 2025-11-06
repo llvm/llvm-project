@@ -14,7 +14,6 @@
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBREMOTE_H
 
 #include "DNB.h"
-#include "PThreadMutex.h"
 #include "RNBContext.h"
 #include "RNBDefs.h"
 #include "RNBSocket.h"
@@ -25,7 +24,6 @@
 
 class RNBSocket;
 class RNBContext;
-class PThreadEvents;
 
 enum event_loop_mode { debug_nub, gdb_remote_protocol, done };
 
@@ -33,6 +31,7 @@ enum class compression_types { zlib_deflate, lz4, lzma, lzfse, none };
 
 class RNBRemote {
 public:
+  // clang-format off
   enum PacketEnum {
     invalid_packet = 0,
     ack,                           // '+'
@@ -45,8 +44,6 @@ public:
     cont,                          // 'c'
     continue_with_sig,             // 'C'
     detach,                        // 'D'
-    read_general_regs,             // 'g'
-    write_general_regs,            // 'G'
     set_thread,                    // 'H'
     step_inferior_one_cycle,       // 'i'
     signal_and_step_inf_one_cycle, // 'I'
@@ -124,6 +121,7 @@ public:
     set_list_threads_in_stop_reply,     // 'QListThreadsInStopReply:'
     sync_thread_state,                  // 'QSyncThreadState:'
     memory_region_info,                 // 'qMemoryRegionInfo:'
+    get_memory_tags,                    // 'qMemTags:'
     get_profile_data,                   // 'qGetProfileData'
     set_enable_profiling,               // 'QSetEnableAsyncProfiling'
     enable_compression,                 // 'QEnableCompression:'
@@ -137,8 +135,11 @@ public:
     set_detach_on_error,                // 'QSetDetachOnError:'
     query_transfer,                     // 'qXfer:'
     json_query_dyld_process_state,      // 'jGetDyldProcessState'
+    enable_error_strings,               // 'QEnableErrorStrings'
+    multi_mem_read,                     // 'MultiMemRead'
     unknown_type
   };
+  // clang-format on
 
   typedef rnb_err_t (RNBRemote::*HandlePacketCallback)(const char *p);
 
@@ -196,6 +197,7 @@ public:
   rnb_err_t HandlePacket_qGDBServerVersion(const char *p);
   rnb_err_t HandlePacket_qProcessInfo(const char *p);
   rnb_err_t HandlePacket_qSymbol(const char *p);
+  rnb_err_t HandlePacket_QEnableErrorStrings(const char *p);
   rnb_err_t HandlePacket_QStartNoAckMode(const char *p);
   rnb_err_t HandlePacket_QThreadSuffixSupported(const char *p);
   rnb_err_t HandlePacket_QSetLogging(const char *p);
@@ -215,10 +217,9 @@ public:
   rnb_err_t HandlePacket_last_signal(const char *p);
   rnb_err_t HandlePacket_m(const char *p);
   rnb_err_t HandlePacket_M(const char *p);
+  rnb_err_t HandlePacket_MultiMemRead(const char *p);
   rnb_err_t HandlePacket_x(const char *p);
   rnb_err_t HandlePacket_X(const char *p);
-  rnb_err_t HandlePacket_g(const char *p);
-  rnb_err_t HandlePacket_G(const char *p);
   rnb_err_t HandlePacket_z(const char *p);
   rnb_err_t HandlePacket_T(const char *p);
   rnb_err_t HandlePacket_p(const char *p);
@@ -239,6 +240,7 @@ public:
   rnb_err_t HandlePacket_SaveRegisterState(const char *p);
   rnb_err_t HandlePacket_RestoreRegisterState(const char *p);
   rnb_err_t HandlePacket_MemoryRegionInfo(const char *p);
+  rnb_err_t HandlePacket_qMemTags(const char *p);
   rnb_err_t HandlePacket_GetProfileData(const char *p);
   rnb_err_t HandlePacket_SetEnableAsyncProfiling(const char *p);
   rnb_err_t HandlePacket_QEnableCompression(const char *p);
@@ -356,6 +358,8 @@ protected:
   rnb_err_t GetPacket(std::string &packet_data, RNBRemote::Packet &packet_info,
                       bool wait);
   rnb_err_t SendPacket(const std::string &);
+  rnb_err_t SendErrorPacket(std::string errcode,
+                            const std::string &errmsg = "");
   std::string CompressString(const std::string &);
 
   void CreatePacketTable();
@@ -377,7 +381,7 @@ protected:
   std::string m_arch;
   nub_thread_t m_continue_thread; // thread to continue; 0 for any, -1 for all
   nub_thread_t m_thread;          // thread for other ops; 0 for any, -1 for all
-  PThreadMutex m_mutex;           // Mutex that protects
+  std::mutex m_mutex;             // Mutex that protects
   DispatchQueueOffsets m_dispatch_queue_offsets;
   nub_addr_t m_dispatch_queue_offsets_addr;
   uint32_t m_qSymbol_index;
@@ -405,6 +409,9 @@ protected:
   bool m_enable_compression_next_send_packet;
 
   compression_types m_compression_mode;
+
+  bool m_enable_error_strings; // Whether we can append asciihex error strings
+                               // after Exx error replies
 };
 
 /* We translate the /usr/include/mach/exception_types.h exception types

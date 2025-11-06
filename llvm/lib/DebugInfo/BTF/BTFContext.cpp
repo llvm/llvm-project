@@ -20,12 +20,13 @@ using namespace llvm;
 using object::ObjectFile;
 using object::SectionedAddress;
 
-DILineInfo BTFContext::getLineInfoForAddress(SectionedAddress Address,
-                                             DILineInfoSpecifier Specifier) {
+std::optional<DILineInfo>
+BTFContext::getLineInfoForAddress(SectionedAddress Address,
+                                  DILineInfoSpecifier Specifier) {
   const BTF::BPFLineInfo *LineInfo = BTF.findLineInfo(Address);
   DILineInfo Result;
   if (!LineInfo)
-    return Result;
+    return std::nullopt;
 
   Result.LineSource = BTF.findString(LineInfo->LineOff);
   Result.FileName = BTF.findString(LineInfo->FileNameOff);
@@ -34,9 +35,10 @@ DILineInfo BTFContext::getLineInfoForAddress(SectionedAddress Address,
   return Result;
 }
 
-DILineInfo BTFContext::getLineInfoForDataAddress(SectionedAddress Address) {
+std::optional<DILineInfo>
+BTFContext::getLineInfoForDataAddress(SectionedAddress Address) {
   // BTF does not convey such information.
-  return {};
+  return std::nullopt;
 }
 
 DILineInfoTable
@@ -63,7 +65,9 @@ std::unique_ptr<BTFContext>
 BTFContext::create(const ObjectFile &Obj,
                    std::function<void(Error)> ErrorHandler) {
   auto Ctx = std::make_unique<BTFContext>();
-  if (Error E = Ctx->BTF.parse(Obj))
+  BTFParser::ParseOptions Opts;
+  Opts.LoadLines = true;
+  if (Error E = Ctx->BTF.parse(Obj, Opts))
     ErrorHandler(std::move(E));
   return Ctx;
 }

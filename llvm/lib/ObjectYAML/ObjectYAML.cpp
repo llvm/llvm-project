@@ -26,6 +26,8 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
       MappingTraits<ELFYAML::Object>::mapping(IO, *ObjectFile.Elf);
     if (ObjectFile.Coff)
       MappingTraits<COFFYAML::Object>::mapping(IO, *ObjectFile.Coff);
+    if (ObjectFile.Goff)
+      MappingTraits<GOFFYAML::Object>::mapping(IO, *ObjectFile.Goff);
     if (ObjectFile.MachO)
       MappingTraits<MachOYAML::Object>::mapping(IO, *ObjectFile.MachO);
     if (ObjectFile.FatMachO)
@@ -46,6 +48,9 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
     } else if (IO.mapTag("!COFF")) {
       ObjectFile.Coff.reset(new COFFYAML::Object());
       MappingTraits<COFFYAML::Object>::mapping(IO, *ObjectFile.Coff);
+    } else if (IO.mapTag("!GOFF")) {
+      ObjectFile.Goff.reset(new GOFFYAML::Object());
+      MappingTraits<GOFFYAML::Object>::mapping(IO, *ObjectFile.Goff);
     } else if (IO.mapTag("!mach-o")) {
       ObjectFile.MachO.reset(new MachOYAML::Object());
       MappingTraits<MachOYAML::Object>::mapping(IO, *ObjectFile.MachO);

@@ -1,67 +1,29 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabi %s -o %t.o
-// RUN: ld.lld %t.o -o %t
-// RUN: llvm-readobj -S -r --symbols %t | FileCheck %s
-// RUN: llvm-objdump --triple=armv7a-linux-gnueabi -d %t | FileCheck --check-prefix=DISASM %s
+// RUN: ld.lld -z separate-loadable-segments %t.o -o %t
+// RUN: llvm-readelf -S -r --symbols %t | FileCheck %s
+// RUN: llvm-objdump --triple=armv7a-linux-gnueabi -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASM %s
 
 // Test the R_ARM_GOTOFF32 relocation
 
-// CHECK:      Name: .got
-// CHECK-NEXT:    Type: SHT_PROGBITS (0x1)
-// CHECK-NEXT:    Flags [
-// CHECK-NEXT:      SHF_ALLOC
-// CHECK-NEXT:      SHF_WRITE
-// CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x30124
-// CHECK-NEXT:    Offset: 0x124
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Link:
-// CHECK-NEXT:    Info:
-// CHECK-NEXT:    AddressAlignment:
+// CHECK:      [Nr] Name              Type            Address  Off    Size   ES Flg Lk Inf Al
+// CHECK-NEXT: [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+// CHECK-NEXT: [ 1] .text             PROGBITS        00020000 010000 000010 00  AX  0   0  4
+// CHECK-NEXT: [ 2] .got              PROGBITS        00030000 020000 000000 00  WA  0   0  4
+// CHECK-NEXT: [ 3] .relro_padding    NOBITS          00030000 020000 000000 00  WA  0   0  1
+// CHECK-NEXT: [ 4] .bss              NOBITS          00030000 020000 000014 00  WA  0   0  1
 
-// CHECK:    Name: .bss
-// CHECK-NEXT:    Type: SHT_NOBITS
-// CHECK-NEXT:    Flags [
-// CHECK-NEXT:      SHF_ALLOC
-// CHECK-NEXT:      SHF_WRITE
-// CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x40124
-// CHECK-NEXT:    Offset:
-// CHECK-NEXT:    Size: 20
-// CHECK-NEXT:    Link:
-// CHECK-NEXT:    Info:
-// CHECK-NEXT:    AddressAlignment: 1
+// CHECK:      00030000    10 OBJECT  GLOBAL DEFAULT    4 bar
+// CHECK-NEXT: 0003000a    10 OBJECT  GLOBAL DEFAULT    4 obj
 
-// CHECK-NEXT:    EntrySize: 0
-
-// CHECK:       Symbol {
-// CHECK:       Name: bar
-// CHECK-NEXT:    Value: 0x40124
-// CHECK-NEXT:    Size: 10
-// CHECK-NEXT:    Binding: Global
-// CHECK-NEXT:    Type: Object
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .bss
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: obj
-// CHECK-NEXT:    Value: 0x4012E
-// CHECK-NEXT:    Size: 10
-// CHECK-NEXT:    Binding: Global
-// CHECK-NEXT:    Type: Object
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .bss
-
-// DISASM:      Disassembly of section .text:
-// DISASM-EMPTY:
-// DISASM-NEXT :_start:
-// DISASM-NEXT   11114:       1e ff 2f e1     bx      lr
+// DISASM:      <_start>:
+// DISASM-NEXT:   bx lr
 // Offset 0 from .got = bar
-// DISASM        11118:       00 10 00 00
+// DISASM:        .word 0x00000000
 // Offset 10 from .got = obj
-// DISASM-NEXT   1111c:       0a 10 00 00
+// DISASM-NEXT:   .word 0x0000000a
 // Offset 15 from .got = obj +5
-// DISASM-NEXT   11120:       0f 10 00 00
+// DISASM-NEXT:   .word 0x0000000f
  .syntax unified
  .globl _start
 _start:

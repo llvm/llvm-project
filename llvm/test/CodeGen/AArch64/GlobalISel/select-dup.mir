@@ -14,10 +14,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: DUPv4i32gpr
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr128 = DUPv4i32gpr %copy
-    ; CHECK: $q0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr128 = DUPv4i32gpr %copy
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(s32) = COPY $w0
     %dup:fpr(<4 x s32>) = G_DUP %copy(s32)
     $q0 = COPY %dup(<4 x s32>)
@@ -35,10 +36,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: DUPv2i64gpr
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64 = COPY $x0
-    ; CHECK: %dup:fpr128 = DUPv2i64gpr %copy
-    ; CHECK: $q0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64 = COPY $x0
+    ; CHECK-NEXT: %dup:fpr128 = DUPv2i64gpr %copy
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(s64) = COPY $x0
     %dup:fpr(<2 x s64>) = G_DUP %copy(s64)
     $q0 = COPY %dup(<2 x s64>)
@@ -56,10 +58,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: DUPv2i32gpr
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr64 = DUPv2i32gpr %copy
-    ; CHECK: $d0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr64 = DUPv2i32gpr %copy
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(s32) = COPY $w0
     %dup:fpr(<2 x s32>) = G_DUP %copy(s32)
     $d0 = COPY %dup(<2 x s32>)
@@ -78,12 +81,13 @@ body:             |
 
     ; CHECK-LABEL: name: DUPv4i32lane
     ; CHECK: liveins: $s0
-    ; CHECK: %copy:fpr32 = COPY $s0
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.ssub
-    ; CHECK: %dup:fpr128 = DUPv4i32lane [[INSERT_SUBREG]], 0
-    ; CHECK: $q0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr32 = COPY $s0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.ssub
+    ; CHECK-NEXT: %dup:fpr128 = DUPv4i32lane [[INSERT_SUBREG]], 0
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:fpr(s32) = COPY $s0
     %dup:fpr(<4 x s32>) = G_DUP %copy(s32)
     $q0 = COPY %dup(<4 x s32>)
@@ -101,12 +105,13 @@ body:             |
     liveins: $d0
     ; CHECK-LABEL: name: DUPv2i64lane
     ; CHECK: liveins: $d0
-    ; CHECK: %copy:fpr64 = COPY $d0
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.dsub
-    ; CHECK: %dup:fpr128 = DUPv2i64lane [[INSERT_SUBREG]], 0
-    ; CHECK: $q0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.dsub
+    ; CHECK-NEXT: %dup:fpr128 = DUPv2i64lane [[INSERT_SUBREG]], 0
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:fpr(s64) = COPY $d0
     %dup:fpr(<2 x s64>) = G_DUP %copy(s64)
     $q0 = COPY %dup(<2 x s64>)
@@ -124,12 +129,13 @@ body:             |
     liveins: $s0
     ; CHECK-LABEL: name: DUPv2i32lane
     ; CHECK: liveins: $s0
-    ; CHECK: %copy:fpr32 = COPY $s0
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.ssub
-    ; CHECK: %dup:fpr64 = DUPv2i32lane [[INSERT_SUBREG]], 0
-    ; CHECK: $d0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr32 = COPY $s0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.ssub
+    ; CHECK-NEXT: %dup:fpr64 = DUPv2i32lane [[INSERT_SUBREG]], 0
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:fpr(s32) = COPY $s0
     %dup:fpr(<2 x s32>) = G_DUP %copy(s32)
     $d0 = COPY %dup(<2 x s32>)
@@ -148,12 +154,13 @@ body:             |
     liveins: $h0
     ; CHECK-LABEL: name: DUPv4i16lane
     ; CHECK: liveins: $h0
-    ; CHECK: %copy:fpr16 = COPY $h0
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.hsub
-    ; CHECK: %dup:fpr64 = DUPv4i16lane [[INSERT_SUBREG]], 0
-    ; CHECK: $d0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr16 = COPY $h0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.hsub
+    ; CHECK-NEXT: %dup:fpr64 = DUPv4i16lane [[INSERT_SUBREG]], 0
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:fpr(s16) = COPY $h0
     %dup:fpr(<4 x s16>) = G_DUP %copy(s16)
     $d0 = COPY %dup(<4 x s16>)
@@ -170,10 +177,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: DUPv4i16gpr
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr64 = DUPv4i16gpr %copy
-    ; CHECK: $d0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr64 = DUPv4i16gpr %copy
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(s32) = COPY $w0
     %dup:fpr(<4 x s16>) = G_DUP %copy(s32)
     $d0 = COPY %dup(<4 x s16>)
@@ -191,12 +199,13 @@ body:             |
     liveins: $h0
     ; CHECK-LABEL: name: DUPv8i16lane
     ; CHECK: liveins: $h0
-    ; CHECK: %copy:fpr16 = COPY $h0
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.hsub
-    ; CHECK: %dup:fpr128 = DUPv8i16lane [[INSERT_SUBREG]], 0
-    ; CHECK: $q0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr16 = COPY $h0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %copy, %subreg.hsub
+    ; CHECK-NEXT: %dup:fpr128 = DUPv8i16lane [[INSERT_SUBREG]], 0
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:fpr(s16) = COPY $h0
     %dup:fpr(<8 x s16>) = G_DUP %copy(s16)
     $q0 = COPY %dup(<8 x s16>)
@@ -214,10 +223,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: DUPv8i16gpr
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr128 = DUPv8i16gpr %copy
-    ; CHECK: $q0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr128 = DUPv8i16gpr %copy
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(s32) = COPY $w0
     %dup:fpr(<8 x s16>) = G_DUP %copy(s32)
     $q0 = COPY %dup(<8 x s16>)
@@ -233,13 +243,13 @@ tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
-    ; Checks that we can still select the gpr variant if the scalar is an s16.
     ; CHECK-LABEL: name: DUPv8i16gpr_s16_src
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr128 = DUPv8i16gpr %copy
-    ; CHECK: $q0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr128 = DUPv8i16gpr %copy
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(s32) = COPY $w0
     %trunc:gpr(s16) = G_TRUNC %copy
     %dup:fpr(<8 x s16>) = G_DUP %trunc(s16)
@@ -258,10 +268,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: DUPv4s16gpr_s16_src
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr64 = DUPv4i16gpr %copy
-    ; CHECK: $d0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr64 = DUPv4i16gpr %copy
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(s32) = COPY $w0
     %trunc:gpr(s16) = G_TRUNC %copy
     %dup:fpr(<4 x s16>) = G_DUP %trunc(s16)
@@ -280,10 +291,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: DUPv8i8gpr
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr64 = DUPv8i8gpr %copy
-    ; CHECK: $d0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr64 = DUPv8i8gpr %copy
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(s32) = COPY $w0
     %dup:fpr(<8 x s8>) = G_DUP %copy(s32)
     $d0 = COPY %dup(<8 x s8>)
@@ -301,10 +313,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: DUPv8i8gpr_s8_src
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr64 = DUPv8i8gpr %copy
-    ; CHECK: $d0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr64 = DUPv8i8gpr %copy
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(s32) = COPY $w0
     %trunc:gpr(s8) = G_TRUNC %copy(s32)
     %dup:fpr(<8 x s8>) = G_DUP %trunc(s8)
@@ -323,10 +336,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: DUPv16i8gpr
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr128 = DUPv16i8gpr %copy
-    ; CHECK: $q0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr128 = DUPv16i8gpr %copy
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(s32) = COPY $w0
     %dup:fpr(<16 x s8>) = G_DUP %copy(s32)
     $q0 = COPY %dup(<16 x s8>)
@@ -341,13 +355,13 @@ tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
-    ; Check we still select the gpr variant when scalar is an s8.
     ; CHECK-LABEL: name: DUPv16i8gpr_s8_src
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %dup:fpr128 = DUPv16i8gpr %copy
-    ; CHECK: $q0 = COPY %dup
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %dup:fpr128 = DUPv16i8gpr %copy
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(s32) = COPY $w0
     %trunc:gpr(s8) = G_TRUNC %copy
     %dup:fpr(<16 x s8>) = G_DUP %trunc(s8)
@@ -368,11 +382,12 @@ body:             |
 
     ; CHECK-LABEL: name: dup_v2p0
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
-    ; CHECK: [[DUPv2i64gpr:%[0-9]+]]:fpr128 = DUPv2i64gpr [[COPY1]]
-    ; CHECK: $q0 = COPY [[DUPv2i64gpr]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+    ; CHECK-NEXT: [[DUPv2i64gpr:%[0-9]+]]:fpr128 = DUPv2i64gpr [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[DUPv2i64gpr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:gpr(p0) = COPY $x0
     %4:fpr(<2 x p0>) = G_DUP %0(p0)
     $q0 = COPY %4(<2 x p0>)
@@ -389,10 +404,10 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: cst_v4s32
     ; CHECK: liveins: $w0
-    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
-    ; CHECK: $q0 = COPY [[LDRQui]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %dup:fpr128 = MOVIv4i32 3, 0
+    ; CHECK-NEXT: $q0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %cst:gpr(s32) = G_CONSTANT i32 3
     %dup:fpr(<4 x s32>) = G_DUP %cst(s32)
     $q0 = COPY %dup(<4 x s32>)
@@ -409,10 +424,10 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: cst_v8s8
     ; CHECK: liveins: $w0
-    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
-    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
-    ; CHECK: $d0 = COPY [[LDRDui]]
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %dup:fpr64 = MOVIv8b_ns 3
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %cst:gpr(s8) = G_CONSTANT i8 3
     %dup:fpr(<8 x s8>) = G_DUP %cst(s8)
     $d0 = COPY %dup(<8 x s8>)
@@ -428,12 +443,32 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: cst_v2p0
     ; CHECK: liveins: $w0
-    ; CHECK: %cst:gpr64 = MOVi64imm 3
-    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
-    ; CHECK: $q0 = COPY [[LDRQui]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst:gpr64 = MOVi64imm 3
+    ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s128) from constant-pool)
+    ; CHECK-NEXT: $q0 = COPY [[LDRQui]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %cst:gpr(p0) = G_CONSTANT i64 3
     %dup:fpr(<2 x p0>) = G_DUP %cst(p0)
     $q0 = COPY %dup(<2 x p0>)
     RET_ReallyLR implicit $q0
+...
+---
+name:            cstv4i16gpri32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins:
+    ; CHECK-LABEL: name: cstv4i16gpri32
+    ; CHECK: %dup:fpr64 = MOVIv4i16 3, 0
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %cst:gpr(s32) = G_CONSTANT i32 3
+    %dup:fpr(<4 x s16>) = G_DUP %cst(s32)
+    $d0 = COPY %dup(<4 x s16>)
+    RET_ReallyLR implicit $d0
+
+...

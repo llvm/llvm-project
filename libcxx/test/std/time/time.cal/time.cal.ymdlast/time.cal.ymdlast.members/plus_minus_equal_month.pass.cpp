@@ -14,54 +14,55 @@
 // constexpr year_month_day_last& operator-=(const months& m) noexcept;
 
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
-template <typename D, typename Ds>
-constexpr bool testConstexpr(D d1)
-{
-    if (static_cast<unsigned>((d1          ).month()) !=  1) return false;
-    if (static_cast<unsigned>((d1 += Ds{ 1}).month()) !=  2) return false;
-    if (static_cast<unsigned>((d1 += Ds{ 2}).month()) !=  4) return false;
-    if (static_cast<unsigned>((d1 += Ds{12}).month()) !=  4) return false;
-    if (static_cast<unsigned>((d1 -= Ds{ 1}).month()) !=  3) return false;
-    if (static_cast<unsigned>((d1 -= Ds{ 2}).month()) !=  1) return false;
-    if (static_cast<unsigned>((d1 -= Ds{12}).month()) !=  1) return false;
-    return true;
+using year                = std::chrono::year;
+using month               = std::chrono::month;
+using month_day_last      = std::chrono::month_day_last;
+using year_month_day_last = std::chrono::year_month_day_last;
+using months              = std::chrono::months;
+
+constexpr bool test() {
+  for (unsigned i = 0; i <= 10; ++i) {
+    year y{1234};
+    month_day_last mdl{month{i}};
+    year_month_day_last ymdl(y, mdl);
+    assert(static_cast<unsigned>((ymdl += months{2}).month()) == i + 2);
+    assert(ymdl.year() == y);
+    assert(static_cast<unsigned>((ymdl).month()) == i + 2);
+    assert(ymdl.year() == y);
+    assert(static_cast<unsigned>((ymdl -= months{1}).month()) == i + 1);
+    assert(ymdl.year() == y);
+    assert(static_cast<unsigned>((ymdl).month()) == i + 1);
+    assert(ymdl.year() == y);
+  }
+
+  { // Test year wrapping
+    year_month_day_last ymdl{year{2020}, month_day_last{month{4}}};
+
+    ymdl += months{12};
+    assert((ymdl == year_month_day_last{year{2021}, month_day_last{month{4}}}));
+
+    ymdl -= months{12};
+    assert((ymdl == year_month_day_last{year{2020}, month_day_last{month{4}}}));
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using year                = std::chrono::year;
-    using month               = std::chrono::month;
-    using month_day_last      = std::chrono::month_day_last;
-    using year_month_day_last = std::chrono::year_month_day_last;
-    using months              = std::chrono::months;
+int main(int, char**) {
+  ASSERT_NOEXCEPT(std::declval<year_month_day_last&>() += std::declval<months>());
+  ASSERT_NOEXCEPT(std::declval<year_month_day_last&>() -= std::declval<months>());
 
-    ASSERT_NOEXCEPT(std::declval<year_month_day_last&>() += std::declval<months>());
-    ASSERT_NOEXCEPT(std::declval<year_month_day_last&>() -= std::declval<months>());
+  ASSERT_SAME_TYPE(year_month_day_last&, decltype(std::declval<year_month_day_last&>() += std::declval<months>()));
+  ASSERT_SAME_TYPE(year_month_day_last&, decltype(std::declval<year_month_day_last&>() -= std::declval<months>()));
 
-    ASSERT_SAME_TYPE(year_month_day_last&, decltype(std::declval<year_month_day_last&>() += std::declval<months>()));
-    ASSERT_SAME_TYPE(year_month_day_last&, decltype(std::declval<year_month_day_last&>() -= std::declval<months>()));
-
-    static_assert(testConstexpr<year_month_day_last, months>(year_month_day_last{year{1234}, month_day_last{month{1}}}), "");
-
-    for (unsigned i = 0; i <= 10; ++i)
-    {
-        year y{1234};
-        month_day_last   mdl{month{i}};
-        year_month_day_last ym(y, mdl);
-        assert(static_cast<unsigned>((ym += months{2}).month()) == i + 2);
-        assert(ym.year() == y);
-        assert(static_cast<unsigned>((ym             ).month()) == i + 2);
-        assert(ym.year() == y);
-        assert(static_cast<unsigned>((ym -= months{1}).month()) == i + 1);
-        assert(ym.year() == y);
-        assert(static_cast<unsigned>((ym             ).month()) == i + 1);
-        assert(ym.year() == y);
-    }
+  test();
+  static_assert(test());
 
   return 0;
 }

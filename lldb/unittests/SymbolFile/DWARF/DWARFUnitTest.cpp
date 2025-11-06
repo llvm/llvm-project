@@ -13,6 +13,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 TEST(DWARFUnitTest, NullUnitDie) {
   // Make sure we don't crash parsing a null unit DIE.
@@ -119,41 +120,6 @@ DWARF:
   ASSERT_TRUE((bool)unit);
   EXPECT_EQ(unit->GetProducer(), eProducerClang);
   EXPECT_EQ(unit->GetProducerVersion(), llvm::VersionTuple(1300, 0, 29, 3));
-}
-
-TEST(DWARFUnitTest, LLVMGCCProducer) {
-  const char *yamldata = R"(
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_386
-DWARF:
-  debug_str:
-    - 'i686-apple-darwin11-llvm-gcc-4.2 (GCC) 4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2336.11.00)'
-  debug_abbrev:
-    - Table:
-        - Code:            0x00000001
-          Tag:             DW_TAG_compile_unit
-          Children:        DW_CHILDREN_yes
-          Attributes:
-            - Attribute:       DW_AT_producer
-              Form:            DW_FORM_strp
-  debug_info:
-    - Version:         4
-      AddrSize:        8
-      Entries:
-        - AbbrCode:        0x1
-          Values:
-            - Value:           0x0
-        - AbbrCode:        0x0
-)";
-
-  YAMLModuleTester t(yamldata);
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_TRUE((bool)unit);
-  EXPECT_EQ(unit->GetProducer(), eProducerLLVMGCC);
 }
 
 TEST(DWARFUnitTest, SwiftProducer) {

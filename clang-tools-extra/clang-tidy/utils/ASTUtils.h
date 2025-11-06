@@ -1,4 +1,4 @@
-//===---------- ASTUtils.h - clang-tidy -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,6 +39,11 @@ bool rangeCanBeFixed(SourceRange Range, const SourceManager *SM);
 // Check if statements are same
 bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
                             const ASTContext &Context, bool Canonical = false);
+
+// Given a field of an anonymous record, find its corresponding
+// IndirectFieldDecl in the outermost possible scope.
+const IndirectFieldDecl *
+findOutermostIndirectFieldDeclForField(const FieldDecl *FD);
 
 } // namespace clang::tidy::utils
 

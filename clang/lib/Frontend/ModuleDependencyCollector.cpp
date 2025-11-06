@@ -14,7 +14,6 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -55,7 +54,8 @@ struct ModuleDependencyPPCallbacks : public PPCallbacks {
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     if (!File)
       return;
@@ -91,10 +91,10 @@ void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
       std::make_unique<ModuleDependencyMMCallbacks>(*this));
 }
 
-static bool isCaseSensitivePath(StringRef Path) {
+static bool isCaseSensitivePath(llvm::vfs::FileSystem &VFS, StringRef Path) {
   SmallString<256> TmpDest = Path, UpperDest, RealDest;
   // Remove component traversals, links, etc.
-  if (llvm::sys::fs::real_path(Path, TmpDest))
+  if (VFS.getRealPath(Path, TmpDest))
     return true; // Current default value in vfs.yaml
   Path = TmpDest;
 
@@ -104,7 +104,7 @@ static bool isCaseSensitivePath(StringRef Path) {
   // already expects when sensitivity isn't setup.
   for (auto &C : Path)
     UpperDest.push_back(toUppercase(C));
-  if (!llvm::sys::fs::real_path(UpperDest, RealDest) && Path.equals(RealDest))
+  if (!VFS.getRealPath(UpperDest, RealDest) && Path == RealDest)
     return false;
   return true;
 }
@@ -121,7 +121,8 @@ void ModuleDependencyCollector::writeFileMap() {
 
   // Explicitly set case sensitivity for the YAML writer. For that, find out
   // the sensitivity at the path where the headers all collected to.
-  VFSWriter.setCaseSensitivity(isCaseSensitivePath(VFSDir));
+  VFSWriter.setCaseSensitivity(
+      isCaseSensitivePath(Canonicalizer.getFileSystem(), VFSDir));
 
   // Do not rely on real path names when executing the crash reproducer scripts
   // since we only want to actually use the files we have on the VFS cache.
@@ -153,7 +154,7 @@ std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src,
   } else {
     // When collecting entries from input vfsoverlays, copy the external
     // contents into the cache but still map from the source.
-    if (!fs::exists(Dst))
+    if (!Canonicalizer.getFileSystem().exists(Dst))
       return std::error_code();
     path::append(CacheDst, Dst);
     Paths.CopyFrom = Dst;

@@ -40,9 +40,7 @@ define <vscale x 4 x i32> @non_const_shufflevector(<vscale x 4 x i32> %lhs,
 
 define <vscale x 4 x i32> @const_select() {
   %s = select <vscale x 4 x i1> insertelement
-      (<vscale x 4 x i1> undef,
-       i1 icmp ne (i32* @important_val, i32* null),
-       i32 0),
+      (<vscale x 4 x i1> undef, i1 true, i32 0),
      <vscale x 4 x i32> zeroinitializer,
      <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i32 0)
   ret <vscale x 4 x i32> %s

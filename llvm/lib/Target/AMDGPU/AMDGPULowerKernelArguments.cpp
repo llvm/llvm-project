@@ -13,11 +13,14 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
+
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
 using namespace llvm;
@@ -62,9 +65,9 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   LLVMContext &Ctx = F.getParent()->getContext();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&*getInsertPt(EntryBlock));
+  IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
@@ -76,15 +79,13 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     return false;
 
   CallInst *KernArgSegment =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {},
                               nullptr, F.getName() + ".kernarg.segment");
-
   KernArgSegment->addRetAttr(Attribute::NonNull);
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
   uint64_t ExplicitArgOffset = 0;
-
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
@@ -97,7 +98,8 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     uint64_t EltOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + BaseOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
 
-    if (Arg.use_empty())
+    // Skip inreg arguments which should be preloaded.
+    if (Arg.use_empty() || Arg.hasInRegAttr())
       continue;
 
     // If this is byval, the loads are already explicit in the function. We just
@@ -146,6 +148,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       // Since we don't have sub-dword scalar loads, avoid doing an extload by
       // loading earlier than the argument address, and extracting the relevant
       // bits.
+      // TODO: Update this for GFX12 which does have scalar sub-dword loads.
       //
       // Additionally widen any sub-dword load to i32 even if suitably aligned,
       // so that CSE between different argument loads works easily.
@@ -171,6 +174,16 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
 
     MDBuilder MDB(Ctx);
+
+    if (Arg.hasAttribute(Attribute::NoUndef))
+      Load->setMetadata(LLVMContext::MD_noundef, MDNode::get(Ctx, {}));
+
+    if (Arg.hasAttribute(Attribute::Range)) {
+      const ConstantRange &Range =
+          Arg.getAttribute(Attribute::Range).getValueAsConstantRange();
+      Load->setMetadata(LLVMContext::MD_range,
+                        MDB.createRange(Range.getLower(), Range.getUpper()));
+    }
 
     if (isa<PointerType>(ArgTy)) {
       if (Arg.hasNonNullAttr())

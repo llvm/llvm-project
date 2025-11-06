@@ -5,19 +5,19 @@ target triple = "nvptx64"
 @G = external global i32
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32
+; CHECK: @G = external global i32
 ;.
-define weak void @kernel0() #0 {
+define weak ptx_kernel void @kernel0() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, ptr null)
 ; CHECK-NEXT:    call void @helper0()
 ; CHECK-NEXT:    call void @helper1()
 ; CHECK-NEXT:    call void @helper2()
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i1 true)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr null)
+  %i = call i32 @__kmpc_target_init(ptr null, ptr null)
   call void @helper0()
   call void @helper1()
   call void @helper2()
@@ -25,31 +25,31 @@ define weak void @kernel0() #0 {
   ret void
 }
 
-define weak void @kernel1() #0 {
+define weak ptx_kernel void @kernel1() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel1
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, ptr null)
 ; CHECK-NEXT:    call void @helper1()
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr null)
+  %i = call i32 @__kmpc_target_init(ptr null, ptr null)
   call void @helper1()
   call void @__kmpc_target_deinit()
   ret void
 }
 
-define weak void @kernel2() #0 {
+define weak ptx_kernel void @kernel2() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel2
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i1 false, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, ptr null)
 ; CHECK-NEXT:    call void @helper0()
 ; CHECK-NEXT:    call void @helper1()
 ; CHECK-NEXT:    call void @helper2()
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr null, i1 false, i1 false)
+  %i = call i32 @__kmpc_target_init(ptr null, ptr null)
   call void @helper0()
   call void @helper1()
   call void @helper2()
@@ -102,20 +102,16 @@ define internal void @helper2() {
 }
 
 declare i32 @__kmpc_get_hardware_num_threads_in_block()
-declare i32 @__kmpc_target_init(ptr) #1
+declare i32 @__kmpc_target_init(ptr, ptr) #1
 declare void @__kmpc_target_deinit() #1
 
 
 !llvm.module.flags = !{!0, !1}
-!nvvm.annotations = !{!2, !3, !4}
 
 attributes #0 = { optnone noinline "kernel" "omp_target_thread_limit"="666" "omp_target_num_teams"="777"}
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
-!2 = !{ptr @kernel0, !"kernel", i32 1}
-!3 = !{ptr @kernel1, !"kernel", i32 1}
-!4 = !{ptr @kernel2, !"kernel", i32 1}
 ;
 ;.
 ; CHECK: attributes #[[ATTR0]] = { noinline optnone "kernel" "omp_target_num_teams"="777" "omp_target_thread_limit"="666" }
@@ -123,7 +119,4 @@ attributes #0 = { optnone noinline "kernel" "omp_target_thread_limit"="666" "omp
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META2:![0-9]+]] = !{ptr @kernel0, !"kernel", i32 1}
-; CHECK: [[META3:![0-9]+]] = !{ptr @kernel1, !"kernel", i32 1}
-; CHECK: [[META4:![0-9]+]] = !{ptr @kernel2, !"kernel", i32 1}
 ;.

@@ -2643,8 +2643,7 @@ define i8 @pr60530() {
 ;
 ; GISEL-LABEL: pr60530:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #1 // =0x1
-; GISEL-NEXT:    sbfx w0, w8, #0, #1
+; GISEL-NEXT:    mov w0, #255 // =0xff
 ; GISEL-NEXT:    ret
   %1 = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 0, i8 1)
   %2 = extractvalue { i8, i1 } %1, 1

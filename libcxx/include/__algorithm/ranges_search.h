@@ -33,8 +33,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __search {
-struct __fn {
+struct __search {
   template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Pred, class _Proj1, class _Proj2>
   _LIBCPP_HIDE_FROM_ABI static constexpr subrange<_Iter1> __ranges_search_impl(
       _Iter1 __first1,
@@ -77,7 +76,7 @@ struct __fn {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<_Iter1, _Iter2, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter1> operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter1> operator()(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
@@ -94,7 +93,7 @@ struct __fn {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<iterator_t<_Range1>, iterator_t<_Range2>, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range1> operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range1> operator()(
       _Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
     auto __first1 = ranges::begin(__range1);
     if constexpr (sized_range<_Range2>) {
@@ -120,10 +119,9 @@ struct __fn {
         __proj2);
   }
 };
-} // namespace __search
 
 inline namespace __cpo {
-inline constexpr auto search = __search::__fn{};
+inline constexpr auto search = __search{};
 } // namespace __cpo
 } // namespace ranges
 

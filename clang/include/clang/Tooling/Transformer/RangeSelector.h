@@ -86,6 +86,11 @@ RangeSelector name(std::string ID);
 // source between the call's parentheses).
 RangeSelector callArgs(std::string ID);
 
+// Given a \c CXXConstructExpr (bound to \p ID), selects the
+// arguments' source text. Depending on the syntactic form of the construct,
+// this is the range between parentheses or braces.
+RangeSelector constructExprArgs(std::string ID);
+
 // Given a \c CompoundStmt (bound to \p ID), selects the source of the
 // statements (all source between the braces).
 RangeSelector statements(std::string ID);

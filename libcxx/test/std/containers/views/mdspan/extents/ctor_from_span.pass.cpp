@@ -76,7 +76,7 @@ int main(int, char**) {
   std::span<int, 5> s5(a5.data(), 5);
   // check that explicit construction works, i.e. no error
   static_assert(std::is_constructible_v< std::extents<int, D, D, 5, D, D>, decltype(s5)>,
-                "extents unexpectectly not constructible");
+                "extents unexpectedly not constructible");
   // check that implicit construction doesn't work
   assert((implicit_construction<std::extents<int, D, D, 5, D, D>>(s5).value == false));
 

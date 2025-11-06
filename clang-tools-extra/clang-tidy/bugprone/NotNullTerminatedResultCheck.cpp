@@ -1,4 +1,4 @@
-//===--- NotNullTerminatedResultCheck.cpp - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,15 +64,17 @@ static unsigned getLength(const Expr *E,
   if (!E)
     return 0;
 
-  Expr::EvalResult Length;
   E = E->IgnoreImpCasts();
 
   if (const auto *LengthDRE = dyn_cast<DeclRefExpr>(E))
     if (const auto *LengthVD = dyn_cast<VarDecl>(LengthDRE->getDecl()))
       if (!isa<ParmVarDecl>(LengthVD))
-        if (const Expr *LengthInit = LengthVD->getInit())
+        if (const Expr *LengthInit = LengthVD->getInit();
+            LengthInit && !LengthInit->isValueDependent()) {
+          Expr::EvalResult Length;
           if (LengthInit->EvaluateAsInt(Length, *Result.Context))
             return Length.Val.getInt().getZExtValue();
+        }
 
   if (const auto *LengthIL = dyn_cast<IntegerLiteral>(E))
     return LengthIL->getValue().getZExtValue();
@@ -307,10 +309,9 @@ static void lengthExprHandle(const Expr *LengthExpr,
   // Try to obtain an 'IntegerLiteral' and adjust it.
   if (!IsMacroDefinition) {
     if (const auto *LengthIL = dyn_cast<IntegerLiteral>(LengthExpr)) {
-      size_t NewLength = LengthIL->getValue().getZExtValue() +
-                         (LengthHandle == LengthHandleKind::Increase
-                              ? (isInjectUL(Result) ? 1UL : 1)
-                              : -1);
+      uint64_t NewLength =
+          LengthIL->getValue().getZExtValue() +
+          (LengthHandle == LengthHandleKind::Increase ? 1 : -1);
 
       const auto NewLengthFix = FixItHint::CreateReplacement(
           LengthIL->getSourceRange(),
@@ -385,7 +386,7 @@ static bool isDestExprFix(const MatchFinder::MatchResult &Result,
 
   std::string TempTyStr = Dest->getType().getAsString();
   StringRef TyStr = TempTyStr;
-  if (TyStr.startswith("char") || TyStr.startswith("wchar_t"))
+  if (TyStr.starts_with("char") || TyStr.starts_with("wchar_t"))
     return false;
 
   Diag << FixItHint::CreateInsertion(Dest->getBeginLoc(), "(char *)");
@@ -677,7 +678,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                 std::optional<unsigned> SourcePos, unsigned LengthPos,
                 bool WithIncrease)
         : Name(Name), DestinationPos(DestinationPos), SourcePos(SourcePos),
-          LengthPos(LengthPos), WithIncrease(WithIncrease){};
+          LengthPos(LengthPos), WithIncrease(WithIncrease) {};
 
     StringRef Name;
     std::optional<unsigned> DestinationPos;
@@ -702,17 +703,16 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
     return hasArgument(
         CC.LengthPos,
         allOf(
-            anyOf(
-                ignoringImpCasts(integerLiteral().bind(WrongLengthExprName)),
-                allOf(unless(hasDefinition(SizeOfCharExpr)),
-                      allOf(CC.WithIncrease
-                                ? ignoringImpCasts(hasDefinition(HasIncOp))
-                                : ignoringImpCasts(allOf(
-                                      unless(hasDefinition(HasIncOp)),
-                                      anyOf(hasDefinition(binaryOperator().bind(
-                                                UnknownLengthName)),
-                                            hasDefinition(anything())))),
-                            AnyOfWrongLengthInit))),
+            anyOf(ignoringImpCasts(integerLiteral().bind(WrongLengthExprName)),
+                  allOf(unless(hasDefinition(SizeOfCharExpr)),
+                        allOf(CC.WithIncrease
+                                  ? ignoringImpCasts(hasDefinition(HasIncOp))
+                                  : ignoringImpCasts(
+                                        allOf(unless(hasDefinition(HasIncOp)),
+                                              hasDefinition(optionally(
+                                                  binaryOperator().bind(
+                                                      UnknownLengthName))))),
+                              AnyOfWrongLengthInit))),
             expr().bind(LengthExprName)));
   };
 
@@ -721,8 +721,8 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
 
     // Try to match with 'wchar_t' based function calls.
     std::string WcharHandlerFuncName =
-        "::" + (CC.Name.startswith("mem") ? "w" + CC.Name.str()
-                                          : "wcs" + CC.Name.substr(3).str());
+        "::" + (CC.Name.starts_with("mem") ? "w" + CC.Name.str()
+                                           : "wcs" + CC.Name.substr(3).str());
 
     return allOf(callee(functionDecl(
                      hasAnyName(CharHandlerFuncName, WcharHandlerFuncName))),
@@ -820,13 +820,13 @@ void NotNullTerminatedResultCheck::check(
   }
 
   StringRef Name = FunctionExpr->getDirectCallee()->getName();
-  if (Name.startswith("mem") || Name.startswith("wmem"))
+  if (Name.starts_with("mem") || Name.starts_with("wmem"))
     memoryHandlerFunctionFix(Name, Result);
   else if (Name == "strerror_s")
-    strerror_sFix(Result);
-  else if (Name.endswith("ncmp"))
+    strerrorSFix(Result);
+  else if (Name.ends_with("ncmp"))
     ncmpFix(Name, Result);
-  else if (Name.endswith("xfrm"))
+  else if (Name.ends_with("xfrm"))
     xfrmFix(Name, Result);
 }
 
@@ -835,7 +835,7 @@ void NotNullTerminatedResultCheck::memoryHandlerFunctionFix(
   if (isCorrectGivenLength(Result))
     return;
 
-  if (Name.endswith("chr")) {
+  if (Name.ends_with("chr")) {
     memchrFix(Name, Result);
     return;
   }
@@ -849,13 +849,13 @@ void NotNullTerminatedResultCheck::memoryHandlerFunctionFix(
            "the result from calling '%0' is not null-terminated")
       << Name;
 
-  if (Name.endswith("cpy")) {
+  if (Name.ends_with("cpy")) {
     memcpyFix(Name, Result, Diag);
-  } else if (Name.endswith("cpy_s")) {
-    memcpy_sFix(Name, Result, Diag);
-  } else if (Name.endswith("move")) {
+  } else if (Name.ends_with("cpy_s")) {
+    memcpySFix(Name, Result, Diag);
+  } else if (Name.ends_with("move")) {
     memmoveFix(Name, Result, Diag);
-  } else if (Name.endswith("move_s")) {
+  } else if (Name.ends_with("move_s")) {
     isDestCapacityFix(Result, Diag);
     lengthArgHandle(LengthHandleKind::Increase, Result, Diag);
   }
@@ -889,7 +889,7 @@ void NotNullTerminatedResultCheck::memcpyFix(
     insertNullTerminatorExpr(Name, Result, Diag);
 }
 
-void NotNullTerminatedResultCheck::memcpy_sFix(
+void NotNullTerminatedResultCheck::memcpySFix(
     StringRef Name, const MatchFinder::MatchResult &Result,
     DiagnosticBuilder &Diag) {
   bool IsOverflows = isDestCapacityFix(Result, Diag);
@@ -950,7 +950,7 @@ void NotNullTerminatedResultCheck::memmoveFix(
   lengthArgHandle(LengthHandleKind::Increase, Result, Diag);
 }
 
-void NotNullTerminatedResultCheck::strerror_sFix(
+void NotNullTerminatedResultCheck::strerrorSFix(
     const MatchFinder::MatchResult &Result) {
   auto Diag =
       diag(Result.Nodes.getNodeAs<CallExpr>(FunctionExprName)->getBeginLoc(),

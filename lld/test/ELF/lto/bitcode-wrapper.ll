@@ -1,4 +1,6 @@
 ; REQUIRES: x86
+; This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+; XFAIL: main-run-twice
 
 ;; The LLVM bitcode format allows for an optional wrapper header. This test
 ;; shows that LLD can handle bitcode wrapped in this way, and also that an

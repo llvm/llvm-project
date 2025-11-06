@@ -1,4 +1,4 @@
-//===--- UseEqualsDeleteCheck.cpp - clang-tidy-----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,11 +17,12 @@ namespace clang::tidy::modernize {
 
 namespace {
 AST_MATCHER(FunctionDecl, hasAnyDefinition) {
-  if (Node.hasBody() || Node.isPure() || Node.isDefaulted() || Node.isDeleted())
+  if (Node.hasBody() || Node.isPureVirtual() || Node.isDefaulted() ||
+      Node.isDeleted())
     return true;
 
   if (const FunctionDecl *Definition = Node.getDefinition())
-    if (Definition->hasBody() || Definition->isPure() ||
+    if (Definition->hasBody() || Definition->isPureVirtual() ||
         Definition->isDefaulted() || Definition->isDeleted())
       return true;
 
@@ -46,7 +47,7 @@ static const char DeletedNotPublic[] = "DeletedNotPublic";
 UseEqualsDeleteCheck::UseEqualsDeleteCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UseEqualsDeleteCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

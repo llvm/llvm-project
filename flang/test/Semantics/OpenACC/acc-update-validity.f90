@@ -53,12 +53,12 @@ program openacc_update_validity
 
   !$acc update host(bb) device_type(*) wait
 
-  !$acc update self(cc) device_type(1,2) async device_type(3) wait
+  !$acc update self(cc) device_type(host,multicore) async device_type(*) wait
 
   !ERROR: At most one IF clause can appear on the UPDATE directive
   !$acc update device(aa) if(.true.) if(ifCondition)
 
-  !ERROR: At most one IF_PRESENT clause can appear on the UPDATE directive
+  ! OK
   !$acc update device(bb) if_present if_present
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the UPDATE directive

@@ -10,7 +10,6 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
@@ -39,7 +38,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
-#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -74,7 +72,7 @@ Error NativeSession::createFromPdb(std::unique_ptr<MemoryBuffer> Buffer,
                                    std::unique_ptr<IPDBSession> &Session) {
   StringRef Path = Buffer->getBufferIdentifier();
   auto Stream = std::make_unique<MemoryBufferByteStream>(
-      std::move(Buffer), llvm::support::little);
+      std::move(Buffer), llvm::endianness::little);
 
   auto Allocator = std::make_unique<BumpPtrAllocator>();
   auto File = std::make_unique<PDBFile>(Path, std::move(Stream), *Allocator);
@@ -104,8 +102,8 @@ loadPdbFile(StringRef PdbPath, std::unique_ptr<BumpPtrAllocator> &Allocator) {
   if (EC || Magic != file_magic::pdb)
     return make_error<RawError>(EC);
 
-  auto Stream = std::make_unique<MemoryBufferByteStream>(std::move(Buffer),
-                                                         llvm::support::little);
+  auto Stream = std::make_unique<MemoryBufferByteStream>(
+      std::move(Buffer), llvm::endianness::little);
 
   auto File = std::make_unique<PDBFile>(PdbPath, std::move(Stream), *Allocator);
   if (auto EC = File->parseFileHeaders())
@@ -176,7 +174,7 @@ NativeSession::searchForPdb(const PdbSearchOptions &Opts) {
   if (!PathOrErr)
     return PathOrErr.takeError();
   StringRef PathFromExe = PathOrErr.get();
-  sys::path::Style Style = PathFromExe.startswith("/")
+  sys::path::Style Style = PathFromExe.starts_with("/")
                                ? sys::path::Style::posix
                                : sys::path::Style::windows;
   StringRef PdbName = sys::path::filename(PathFromExe, Style);

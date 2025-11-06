@@ -26,7 +26,7 @@ namespace opts {
 
 cl::opt<std::string> RuntimeInstrumentationLib(
     "runtime-instrumentation-lib",
-    cl::desc("specify file name of the runtime instrumentation library"),
+    cl::desc("specify path of the runtime instrumentation library"),
     cl::init("libbolt_rt_instr.a"), cl::cat(BoltOptCategory));
 
 extern cl::opt<bool> InstrumentationFileAppendPID;
@@ -57,10 +57,11 @@ void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
               "the input binary\n";
     exit(1);
   }
-  if (!BC.FiniFunctionAddress && !BC.IsStaticExecutable) {
-    errs() << "BOLT-ERROR: input binary lacks DT_FINI entry in the dynamic "
-              "section but instrumentation currently relies on patching "
-              "DT_FINI to write the profile\n";
+
+  if (BC.IsStaticExecutable && !opts::InstrumentationSleepTime) {
+    errs() << "BOLT-ERROR: instrumentation of static binary currently does not "
+              "support profile output on binary finalization, so it "
+              "requires -instrumentation-sleep-time=N (N>0) usage\n";
     exit(1);
   }
 
@@ -88,13 +89,6 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
                            : static_cast<MCSection *>(BC.Ctx->getMachOSection(
                                  "__BOLT", "__counters", MachO::S_REGULAR,
                                  SectionKind::getData()));
-
-  if (BC.IsStaticExecutable && !opts::InstrumentationSleepTime) {
-    errs() << "BOLT-ERROR: instrumentation of static binary currently does not "
-              "support profile output on binary finalization, so it "
-              "requires -instrumentation-sleep-time=N (N>0) usage\n";
-    exit(1);
-  }
 
   Section->setAlignment(llvm::Align(BC.RegularPageSize));
   Streamer.switchSection(Section);
@@ -209,27 +203,35 @@ void InstrumentationRuntimeLibrary::link(
   if (BC.isMachO())
     return;
 
-  RuntimeFiniAddress = Linker.lookupSymbol("__bolt_instr_fini").value_or(0);
-  if (!RuntimeFiniAddress) {
+  std::optional<BOLTLinker::SymbolInfo> FiniSymInfo =
+      Linker.lookupSymbolInfo("__bolt_instr_fini");
+  if (!FiniSymInfo) {
     errs() << "BOLT-ERROR: instrumentation library does not define "
               "__bolt_instr_fini: "
            << LibPath << "\n";
     exit(1);
   }
-  RuntimeStartAddress = Linker.lookupSymbol("__bolt_instr_start").value_or(0);
-  if (!RuntimeStartAddress) {
+  RuntimeFiniAddress = FiniSymInfo->Address;
+
+  std::optional<BOLTLinker::SymbolInfo> StartSymInfo =
+      Linker.lookupSymbolInfo("__bolt_instr_start");
+  if (!StartSymInfo) {
     errs() << "BOLT-ERROR: instrumentation library does not define "
               "__bolt_instr_start: "
            << LibPath << "\n";
     exit(1);
   }
+  RuntimeStartAddress = StartSymInfo->Address;
+
   outs() << "BOLT-INFO: output linked against instrumentation runtime "
             "library, lib entry point is 0x"
-         << Twine::utohexstr(RuntimeFiniAddress) << "\n";
+         << Twine::utohexstr(RuntimeStartAddress) << "\n";
+
+  std::optional<BOLTLinker::SymbolInfo> ClearSymInfo =
+      Linker.lookupSymbolInfo("__bolt_instr_clear_counters");
+  const uint64_t ClearSymAddress = ClearSymInfo ? ClearSymInfo->Address : 0;
   outs() << "BOLT-INFO: clear procedure is 0x"
-         << Twine::utohexstr(
-                Linker.lookupSymbol("__bolt_instr_clear_counters").value_or(0))
-         << "\n";
+         << Twine::utohexstr(ClearSymAddress) << "\n";
 
   emitTablesAsELFNote(BC);
 }
@@ -320,7 +322,6 @@ std::string InstrumentationRuntimeLibrary::buildTables(BinaryContext &BC) {
   }
   // Our string table lives immediately after descriptions vector
   OS << Summary->StringTable;
-  OS.flush();
 
   return TablesStr;
 }

@@ -3,13 +3,16 @@
 
 // Temporarily disable test
 // UNSUPPORTED: tsan
-// UNSUPPORTED: target=powerpc64{{.*}}
+// UNSUPPORTED: target={{(powerpc64|loongarch64).*}}
 
 // Not needed, no allocator.
 // UNSUPPORTED: ubsan
 
 // FIXME: This mode uses 32bit allocator without purge.
 // UNSUPPORTED: hwasan-aliasing
+
+// Page size is hardcoded below, but test still fails even if not hardcoded.
+// REQUIRES: page-size-4096
 
 #include <algorithm>
 #include <assert.h>

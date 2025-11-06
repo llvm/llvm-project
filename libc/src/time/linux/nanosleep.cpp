@@ -7,26 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/nanosleep.h"
-
+#include "hdr/stdint_proxy.h" // For int64_t.
+#include "hdr/time_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 
-#include <stdint.h>      // For int64_t.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, nanosleep,
                    (const struct timespec *req, struct timespec *rem)) {
 #if SYS_nanosleep
-  int ret = __llvm_libc::syscall_impl<int>(SYS_nanosleep, req, rem);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_nanosleep, req, rem);
 #elif defined(SYS_clock_nanosleep_time64)
   static_assert(
       sizeof(time_t) == sizeof(int64_t),
       "SYS_clock_gettime64 requires struct timespec with 64-bit members.");
-  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_nanosleep_time64,
-                                           CLOCK_REALTIME, 0, req, rem);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_nanosleep_time64,
+                                              CLOCK_REALTIME, 0, req, rem);
 #else
 #error "SYS_nanosleep and SYS_clock_nanosleep_time64 syscalls not available."
 #endif
@@ -38,4 +39,4 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

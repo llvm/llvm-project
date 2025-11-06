@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include <optional>
 
 namespace mlir {
@@ -55,10 +54,8 @@ template <typename Op, typename TypeResolver = ComplexTypeResolver>
 struct ScalarOpToLibmCall : public OpRewritePattern<Op> {
 public:
   using OpRewritePattern<Op>::OpRewritePattern;
-  ScalarOpToLibmCall<Op, TypeResolver>(MLIRContext *context,
-                                       StringRef floatFunc,
-                                       StringRef doubleFunc,
-                                       PatternBenefit benefit)
+  ScalarOpToLibmCall(MLIRContext *context, StringRef floatFunc,
+                     StringRef doubleFunc, PatternBenefit benefit)
       : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
         doubleFunc(doubleFunc){};
 
@@ -87,8 +84,8 @@ LogicalResult ScalarOpToLibmCall<Op, TypeResolver>::matchAndRewrite(
     rewriter.setInsertionPointToStart(&module->getRegion(0).front());
     auto opFunctionTy = FunctionType::get(
         rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
-    opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name,
-                                           opFunctionTy);
+    opFunc = func::FuncOp::create(rewriter, rewriter.getUnknownLoc(), name,
+                                  opFunctionTy);
     opFunc.setPrivate();
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));
@@ -119,6 +116,8 @@ void mlir::populateComplexToLibmConversionPatterns(RewritePatternSet &patterns,
       patterns.getContext(), "cabsf", "cabs", benefit);
   patterns.add<ScalarOpToLibmCall<complex::AngleOp, FloatTypeResolver>>(
       patterns.getContext(), "cargf", "carg", benefit);
+  patterns.add<ScalarOpToLibmCall<complex::TanOp>>(patterns.getContext(),
+                                                   "ctanf", "ctan", benefit);
 }
 
 namespace {
@@ -138,12 +137,8 @@ void ConvertComplexToLibmPass::runOnOperation() {
   target.addLegalDialect<func::FuncDialect>();
   target.addIllegalOp<complex::PowOp, complex::SqrtOp, complex::TanhOp,
                       complex::CosOp, complex::SinOp, complex::ConjOp,
-                      complex::LogOp, complex::AbsOp, complex::AngleOp>();
+                      complex::LogOp, complex::AbsOp, complex::AngleOp,
+                      complex::TanOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertComplexToLibmPass() {
-  return std::make_unique<ConvertComplexToLibmPass>();
 }

@@ -32,7 +32,7 @@
 
 thread_local static int32_t defaultDevice = 0;
 
-extern "C" hipModule_t mgpuModuleLoad(void *data) {
+extern "C" hipModule_t mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   hipModule_t module = nullptr;
   HIP_REPORT_IF_ERROR(hipModuleLoadData(&module, data));
   return module;
@@ -62,7 +62,7 @@ extern "C" void mgpuLaunchKernel(hipFunction_t function, intptr_t gridX,
                                  intptr_t blockX, intptr_t blockY,
                                  intptr_t blockZ, int32_t smem,
                                  hipStream_t stream, void **params,
-                                 void **extra) {
+                                 void **extra, size_t /*paramsCount*/) {
   HIP_REPORT_IF_ERROR(hipModuleLaunchKernel(function, gridX, gridY, gridZ,
                                             blockX, blockY, blockZ, smem,
                                             stream, params, extra));
@@ -104,7 +104,8 @@ extern "C" void mgpuEventRecord(hipEvent_t event, hipStream_t stream) {
   HIP_REPORT_IF_ERROR(hipEventRecord(event, stream));
 }
 
-extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, hipStream_t /*stream*/) {
+extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, hipStream_t /*stream*/,
+                              bool /*isHostShared*/) {
   void *ptr;
   HIP_REPORT_IF_ERROR(hipMalloc(&ptr, sizeBytes));
   return ptr;
@@ -125,6 +126,13 @@ extern "C" void mgpuMemset32(void *dst, int value, size_t count,
   HIP_REPORT_IF_ERROR(hipMemsetD32Async(reinterpret_cast<hipDeviceptr_t>(dst),
                                         value, count, stream));
 }
+
+extern "C" void mgpuMemset16(void *dst, int short value, size_t count,
+                             hipStream_t stream) {
+  HIP_REPORT_IF_ERROR(hipMemsetD16Async(reinterpret_cast<hipDeviceptr_t>(dst),
+                                        value, count, stream));
+}
+
 /// Helper functions for writing mlir example code
 
 // Allows to register byte array with the ROCM runtime. Helpful until we have

@@ -30,35 +30,34 @@ class FDE;
 
 namespace bolt {
 
+class BinaryContext;
 class BinaryFunction;
 
 /// \brief Wraps up information to read all CFI instructions and feed them to a
 /// BinaryFunction, as well as rewriting CFI sections.
 class CFIReaderWriter {
 public:
-  explicit CFIReaderWriter(const DWARFDebugFrame &EHFrame);
+  explicit CFIReaderWriter(BinaryContext &BC, const DWARFDebugFrame &EHFrame);
 
   bool fillCFIInfoFor(BinaryFunction &Function) const;
 
   /// Generate .eh_frame_hdr from old and new .eh_frame sections.
   ///
-  /// Take FDEs from the \p NewEHFrame unless their initial_pc is listed
-  /// in \p FailedAddresses. All other entries are taken from the
+  /// Take FDEs from the \p NewEHFrame. All other entries are taken from the
   /// \p OldEHFrame.
   ///
   /// \p EHFrameHeaderAddress specifies location of .eh_frame_hdr,
   /// and is required for relative addressing used in the section.
-  std::vector<char>
-  generateEHFrameHeader(const DWARFDebugFrame &OldEHFrame,
-                        const DWARFDebugFrame &NewEHFrame,
-                        uint64_t EHFrameHeaderAddress,
-                        std::vector<uint64_t> &FailedAddresses) const;
+  std::vector<char> generateEHFrameHeader(const DWARFDebugFrame &OldEHFrame,
+                                          const DWARFDebugFrame &NewEHFrame,
+                                          uint64_t EHFrameHeaderAddress) const;
 
   using FDEsMap = std::map<uint64_t, const dwarf::FDE *>;
 
   const FDEsMap &getFDEs() const { return FDEs; }
 
 private:
+  BinaryContext &BC;
   FDEsMap FDEs;
 };
 
@@ -77,7 +76,7 @@ public:
   ///   void PatcherCallback(uint64_t Value, uint64_t Offset, uint64_t Type);
   ///
   /// where Value is a value of the reference, Offset - is an offset into the
-  /// frame data at which the reference occured, and Type is a DWARF encoding
+  /// frame data at which the reference occurred, and Type is a DWARF encoding
   /// type of the reference.
   static Error parse(DWARFDataExtractor Data, uint64_t EHFrameAddress,
                      PatcherCallbackTy PatcherCallback);

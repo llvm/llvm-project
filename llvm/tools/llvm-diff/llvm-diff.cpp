@@ -42,7 +42,7 @@ static std::unique_ptr<Module> readModule(LLVMContext &Context,
 static void diffGlobal(DifferenceEngine &Engine, Module &L, Module &R,
                        StringRef Name) {
   // Drop leading sigils from the global name.
-  if (Name.startswith("@")) Name = Name.substr(1);
+  Name.consume_front("@");
 
   Function *LFn = L.getFunction(Name);
   Function *RFn = R.getFunction(Name);
@@ -56,7 +56,7 @@ static void diffGlobal(DifferenceEngine &Engine, Module &L, Module &R,
     errs() << "No function named @" << Name << " in right module\n";
 }
 
-cl::OptionCategory DiffCategory("Diff Options");
+static cl::OptionCategory DiffCategory("Diff Options");
 
 static cl::opt<std::string> LeftFilename(cl::Positional,
                                          cl::desc("<first file>"), cl::Required,

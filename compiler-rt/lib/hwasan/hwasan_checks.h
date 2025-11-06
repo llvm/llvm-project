@@ -140,7 +140,6 @@ __attribute__((always_inline, nodebug)) static inline uptr ShortTagSize(
 
 __attribute__((always_inline, nodebug)) static inline bool
 PossiblyShortTagMatches(tag_t mem_tag, uptr ptr, uptr sz) {
-  DCHECK(IsAligned(ptr, kShadowAlignment));
   tag_t ptr_tag = GetTagFromPointer(ptr);
   if (ptr_tag == mem_tag)
     return true;

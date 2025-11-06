@@ -51,6 +51,7 @@ HELP-ALL:     =gaps                    -   Missing debug location (gaps).
 HELP-ALL:     =generated               -   Compiler generated elements.
 HELP-ALL:     =global                  -   Element referenced across Compile Units.
 HELP-ALL:     =inserted                -   Generated inlined abstract references.
+HELP-ALL:     =language                -   Source language name.
 HELP-ALL:     =level                   -   Lexical scope level (File=0, Compile Unit=1).
 HELP-ALL:     =linkage                 -   Linkage name.
 HELP-ALL:     =local                   -   Element referenced only in the Compile Unit.
@@ -64,14 +65,13 @@ HELP-ALL:     =qualifier               -   Line qualifiers (Newstatement, BasicB
 HELP-ALL:     =range                   -   Debug location ranges.
 HELP-ALL:     =reference               -   Element declaration and definition references.
 HELP-ALL:     =register                -   Processor register names.
+HELP-ALL:     =size                    -   Type sizes.
 HELP-ALL:     =standard                -   Basic attributes alias.
 HELP-ALL:     =subrange                -   Subrange encoding information for arrays.
 HELP-ALL:     =system                  -   Display PDB's MS system elements.
 HELP-ALL:     =typename                -   Include Parameters in templates.
 HELP-ALL:     =underlying              -   Underlying type for type definitions.
 HELP-ALL:     =zero                    -   Zero line numbers.
-HELP-ALL: Color Options:
-HELP-ALL:   This option category has no options.
 HELP-ALL: Compare Options:
 HELP-ALL: These control the view comparison.
 HELP-ALL:   --compare=<value>          - Elements to compare.
@@ -81,8 +81,6 @@ HELP-ALL:     =scopes                  -   Scopes.
 HELP-ALL:     =symbols                 -   Symbols.
 HELP-ALL:     =types                   -   Types.
 HELP-ALL:   --compare-context          - Add the view as compare context.
-HELP-ALL: General options:
-HELP-ALL:   This option category has no options.
 HELP-ALL: Generic Options:
 HELP-ALL:   -h                         - Alias for --help
 HELP-ALL:   --help                     - Display available options (--help-hidden for more)
@@ -112,6 +110,8 @@ HELP-ALL:   --output-file=<filename>   - Redirect output to the specified file.
 HELP-ALL:   --output-folder=<pathname> - Folder name for view splitting.
 HELP-ALL:   --output-level=<N>         - Only print to a depth of N elements.
 HELP-ALL:   --output-sort=<value>      - Primary key when ordering logical view (default: line).
+HELP-ALL:     =none                    -   Unsorted output (i.e. as read from input).
+HELP-ALL:     =id                      -   Sort by unique element ID.
 HELP-ALL:     =kind                    -   Sort by element kind.
 HELP-ALL:     =line                    -   Sort by element line number.
 HELP-ALL:     =name                    -   Sort by element name.
@@ -173,6 +173,7 @@ HELP-ALL:     =FunctionType            -   Function type.
 HELP-ALL:     =InlinedFunction         -   Inlined function.
 HELP-ALL:     =Label                   -   Label.
 HELP-ALL:     =LexicalBlock            -   Lexical block.
+HELP-ALL:     =Module                  -   Module.
 HELP-ALL:     =Namespace               -   Namespace.
 HELP-ALL:     =Root                    -   Root.
 HELP-ALL:     =Structure               -   Structure.

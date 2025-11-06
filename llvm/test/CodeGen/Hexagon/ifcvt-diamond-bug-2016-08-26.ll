@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-eif=0 -disable-machine-sink < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-eif=0 -disable-machine-sink < %s | FileCheck %s
 target triple = "hexagon"
 
 %struct.0 = type { i16, i16 }
@@ -16,7 +16,6 @@ entry:
   %cmp199 = icmp eq i16 %call197, 0
   br i1 %cmp199, label %if.then200, label %if.else201
 
-; CHECK: = add
 ; CHECK-DAG: [[R4:r[0-9]+]] = add
 ; CHECK-DAG: p0 = cmp.eq(r0,#0)
 ; CHECK: if (!p0) [[R3:r[0-9]+]] = add(r{{[0-9]+}},#3)

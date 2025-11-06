@@ -29,6 +29,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cstdio>
 #include <mutex>
 #include <utility>
@@ -136,7 +137,7 @@ public:
 
   void addParsedRegions(ArrayRef<PPRegion> Regions) {
     std::lock_guard<std::mutex> MG(Mutex);
-    ParsedRegions.insert(Regions.begin(), Regions.end());
+    ParsedRegions.insert_range(Regions);
   }
 };
 
@@ -171,9 +172,7 @@ public:
   ///
   /// Can provide false-negative in case the location was parsed after this
   /// instance had been constructed.
-  bool hasAlredyBeenParsed(SourceLocation Loc, FileID FID,
-                           const FileEntry *FE) {
-    assert(FE);
+  bool hasAlredyBeenParsed(SourceLocation Loc, FileID FID, FileEntryRef FE) {
     PPRegion region = getRegion(Loc, FID, FE);
     if (region.isInvalid())
       return false;
@@ -199,12 +198,11 @@ public:
   }
 
 private:
-  PPRegion getRegion(SourceLocation Loc, FileID FID, const FileEntry *FE) {
-    assert(FE);
+  PPRegion getRegion(SourceLocation Loc, FileID FID, FileEntryRef FE) {
     auto Bail = [this, FE]() {
       if (isParsedOnceInclude(FE)) {
-        const llvm::sys::fs::UniqueID &ID = FE->getUniqueID();
-        return PPRegion(ID, 0, FE->getModificationTime());
+        const llvm::sys::fs::UniqueID &ID = FE.getUniqueID();
+        return PPRegion(ID, 0, FE.getModificationTime());
       }
       return PPRegion();
     };
@@ -222,11 +220,11 @@ private:
     if (RegionFID != FID)
       return Bail();
 
-    const llvm::sys::fs::UniqueID &ID = FE->getUniqueID();
-    return PPRegion(ID, RegionOffset, FE->getModificationTime());
+    const llvm::sys::fs::UniqueID &ID = FE.getUniqueID();
+    return PPRegion(ID, RegionOffset, FE.getModificationTime());
   }
 
-  bool isParsedOnceInclude(const FileEntry *FE) {
+  bool isParsedOnceInclude(FileEntryRef FE) {
     return PP.getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE) ||
            PP.getHeaderSearchInfo().hasFileBeenImported(FE);
   }
@@ -264,12 +262,13 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     bool isImport = (IncludeTok.is(tok::identifier) &&
             IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import);
     DataConsumer.ppIncludedFile(HashLoc, FileName, File, isImport, IsAngled,
-                            Imported);
+                                ModuleImported);
   }
 
   /// MacroDefined - This hook is called whenever a macro definition is seen.
@@ -305,7 +304,8 @@ public:
       : DataConsumer(dataConsumer) {}
 
   void Initialize(ASTContext &Context) override {
-    DataConsumer.setASTContext(Context);
+    // TODO: accept Context as IntrusiveRefCntPtr?
+    DataConsumer.setASTContext(&Context);
     DataConsumer.startedTranslationUnit();
   }
 
@@ -356,7 +356,7 @@ public:
         DataConsumer->importedPCH(*File);
     }
 
-    DataConsumer->setASTContext(CI.getASTContext());
+    DataConsumer->setASTContext(CI.getASTContextPtr());
     Preprocessor &PP = CI.getPreprocessor();
     PP.addPPCallbacks(std::make_unique<IndexPPCallbacks>(PP, *DataConsumer));
     DataConsumer->setPreprocessor(CI.getPreprocessorPtr());
@@ -390,17 +390,15 @@ public:
     if (SM.isInSystemHeader(Loc))
       return true; // always skip bodies from system headers.
 
-    FileID FID;
-    unsigned Offset;
-    std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
+    auto [FID, Offset] = SM.getDecomposedLoc(Loc);
     // Don't skip bodies from main files; this may be revisited.
     if (SM.getMainFileID() == FID)
       return false;
-    const FileEntry *FE = SM.getFileEntryForID(FID);
+    OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
     if (!FE)
       return false;
 
-    return ParsedLocsTracker->hasAlredyBeenParsed(Loc, FID, FE);
+    return ParsedLocsTracker->hasAlredyBeenParsed(Loc, FID, *FE);
   }
 
   TranslationUnitKind getTranslationUnitKind() override {
@@ -481,10 +479,11 @@ static CXErrorCode clang_indexSourceFile_Impl(
     CaptureDiag = new CaptureDiagnosticConsumer();
 
   // Configure the diagnostics.
-  IntrusiveRefCntPtr<DiagnosticsEngine>
-    Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions,
-                                              CaptureDiag,
-                                              /*ShouldOwnClient=*/true));
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          *DiagOpts, CaptureDiag,
+                                          /*ShouldOwnClient=*/true));
 
   // Recover resources if we crash before exiting this function.
   llvm::CrashRecoveryContextCleanupRegistrar<DiagnosticsEngine,
@@ -555,7 +554,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
   CInvok->getHeaderSearchOpts().ModuleFormat = std::string(
       CXXIdx->getPCHContainerOperations()->getRawReader().getFormats().front());
 
-  auto Unit = ASTUnit::create(CInvok, Diags, CaptureDiagnostics,
+  auto Unit = ASTUnit::create(CInvok, DiagOpts, Diags, CaptureDiagnostics,
                               /*UserFilesAreVolatile=*/true);
   if (!Unit)
     return CXError_InvalidArguments;
@@ -618,7 +617,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
       !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
   DiagnosticErrorTrap DiagTrap(*Diags);
   bool Success = ASTUnit::LoadFromCompilerInvocationAction(
-      std::move(CInvok), CXXIdx->getPCHContainerOperations(), Diags,
+      std::move(CInvok), CXXIdx->getPCHContainerOperations(), DiagOpts, Diags,
       IndexAction.get(), UPtr, Persistent, CXXIdx->getClangResourcesPath(),
       OnlyLocalDecls, CaptureDiagnostics, PrecompilePreambleAfterNParses,
       CacheCodeCompletionResults, /*UserFilesAreVolatile=*/true);
@@ -708,7 +707,7 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
   else
     DataConsumer.enteredMainFile(std::nullopt);
 
-  DataConsumer.setASTContext(Unit->getASTContext());
+  DataConsumer.setASTContext(Unit->getASTContextPtr());
   DataConsumer.startedTranslationUnit();
 
   indexPreprocessingRecord(*Unit, DataConsumer);

@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdlib.h>
-
 #ifndef LLVM_LIBC_SRC_STDLIB_RAND_H
 #define LLVM_LIBC_SRC_STDLIB_RAND_H
 
-namespace __llvm_libc {
+#include "hdr/stdlib_macros.h"
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 int rand(void);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_RAND_H

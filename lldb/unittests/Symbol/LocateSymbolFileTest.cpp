@@ -10,9 +10,9 @@
 
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb_private;
@@ -29,8 +29,9 @@ TEST_F(
     TerminateLocateExecutableSymbolFileForUnknownExecutableAndUnknownSymbolFile) {
   ModuleSpec module_spec;
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+  StatisticsMap map;
   FileSpec symbol_file_spec =
-      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+      PluginManager::LocateExecutableSymbolFile(module_spec, search_paths, map);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
 }
 
@@ -41,7 +42,8 @@ TEST_F(SymbolsTest,
   module_spec.GetSymbolFileSpec().SetFile(
       "4A524676-B24B-4F4E-968A-551D465EBAF1.so", FileSpec::Style::native);
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+  StatisticsMap map;
   FileSpec symbol_file_spec =
-      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+      PluginManager::LocateExecutableSymbolFile(module_spec, search_paths, map);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
 }

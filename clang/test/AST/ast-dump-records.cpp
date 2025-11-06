@@ -72,7 +72,7 @@ struct C {
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-12]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-12]]:3)':'C::(unnamed struct at {{.*}}:[[@LINE-12]]:3)'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-12]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-12]]:3)'
 
   union {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+12]]:3> line:[[@LINE-1]]:3 union definition
@@ -90,10 +90,10 @@ struct C {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-14]]:3> col:3 implicit 'C::(anonymous union at {{.*}}:[[@LINE-14]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:9> col:9 implicit c 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'C::(anonymous union at {{.*}}:[[@LINE-16]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'C::(anonymous union at {{.*}}:[[@LINE-16]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'c' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:11> col:11 implicit d 'float'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'C::(anonymous union at {{.*}}:[[@LINE-19]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'C::(anonymous union at {{.*}}:[[@LINE-19]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'd' 'float'
 
   struct {
@@ -111,10 +111,10 @@ struct C {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-13]]:3> col:3 implicit 'C::(anonymous struct at {{.*}}:[[@LINE-13]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:9> col:9 implicit e 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'C::(anonymous struct at {{.*}}:[[@LINE-15]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'C::(anonymous struct at {{.*}}:[[@LINE-15]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'e' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <col:12> col:12 implicit f 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'C::(anonymous struct at {{.*}}:[[@LINE-18]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'C::(anonymous struct at {{.*}}:[[@LINE-18]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'f' 'int'
 };
 
@@ -179,7 +179,7 @@ union E {
 };
 
 union G {
-  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+71]]:1> line:[[@LINE-1]]:7 union G definition
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+69]]:1> line:[[@LINE-1]]:7 union G definition
   // CHECK-NEXT: DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
   // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
   // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -202,9 +202,7 @@ union G {
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // FIXME: note that it talks about 'struct G' below; the same happens in
-  // other cases with union G as well.
-  // CHECK: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-15]]:3, line:[[@LINE-3]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-15]]:3)':'G::(unnamed struct at {{.*}}:[[@LINE-15]]:3)'
+  // CHECK: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-13]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-13]]:3)'
 
   union {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+13]]:3> line:[[@LINE-1]]:3 union definition
@@ -223,10 +221,10 @@ union G {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-15]]:3> col:3 implicit 'G::(anonymous union at {{.*}}:[[@LINE-15]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:9> col:9 implicit c 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'G::(anonymous union at {{.*}}:[[@LINE-17]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'G::(anonymous union at {{.*}}:[[@LINE-17]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'c' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:11> col:11 implicit d 'float'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'G::(anonymous union at {{.*}}:[[@LINE-20]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'G::(anonymous union at {{.*}}:[[@LINE-20]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'd' 'float'
 
   struct {
@@ -245,10 +243,10 @@ union G {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-14]]:3> col:3 implicit 'G::(anonymous struct at {{.*}}:[[@LINE-14]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:9> col:9 implicit e 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'G::(anonymous struct at {{.*}}:[[@LINE-16]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'G::(anonymous struct at {{.*}}:[[@LINE-16]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'e' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <col:12> col:12 implicit f 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'G::(anonymous struct at {{.*}}:[[@LINE-19]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'G::(anonymous struct at {{.*}}:[[@LINE-19]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'f' 'int'
 };
 
@@ -301,10 +299,10 @@ class NonTrivial {
 struct CheckFullExpression {
 // CHECK: |-CXXRecordDecl {{.*}} struct CheckFullExpression definition
   NonTrivial value = NonTrivial();
-// CHECK: | |-FieldDecl {{.*}} value 'NonTrivial':'NonTrivial'
-// CHECK-NEXT: | | `-ExprWithCleanups {{.*}} 'NonTrivial':'NonTrivial'
-// CHECK-NEXT: | |   `-CXXBindTemporaryExpr {{.*}} 'NonTrivial':'NonTrivial' (CXXTemporary{{.*}})
-// CHECK-NEXT: | |     `-CXXTemporaryObjectExpr {{.*}} 'NonTrivial':'NonTrivial' 'void ()'
+// CHECK: | |-FieldDecl {{.*}} value 'NonTrivial'
+// CHECK-NEXT: | | `-ExprWithCleanups {{.*}} 'NonTrivial'
+// CHECK-NEXT: | |   `-CXXBindTemporaryExpr {{.*}} 'NonTrivial' (CXXTemporary{{.*}})
+// CHECK-NEXT: | |     `-CXXTemporaryObjectExpr {{.*}} 'NonTrivial' 'void ()'
 };
 
 struct CheckNoCleanup {

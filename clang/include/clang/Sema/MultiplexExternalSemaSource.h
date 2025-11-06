@@ -40,7 +40,7 @@ class MultiplexExternalSemaSource : public ExternalSemaSource {
   static char ID;
 
 private:
-  SmallVector<ExternalSemaSource *, 2> Sources;
+  SmallVector<llvm::IntrusiveRefCntPtr<ExternalSemaSource>, 2> Sources;
 
 public:
   /// Constructs a new multiplexing external sema source and appends the
@@ -49,15 +49,14 @@ public:
   ///\param[in] S1 - A non-null (old) ExternalSemaSource.
   ///\param[in] S2 - A non-null (new) ExternalSemaSource.
   ///
-  MultiplexExternalSemaSource(ExternalSemaSource *S1, ExternalSemaSource *S2);
-
-  ~MultiplexExternalSemaSource() override;
+  MultiplexExternalSemaSource(llvm::IntrusiveRefCntPtr<ExternalSemaSource> S1,
+                              llvm::IntrusiveRefCntPtr<ExternalSemaSource> S2);
 
   /// Appends new source to the source list.
   ///
   ///\param[in] Source - An ExternalSemaSource.
   ///
-  void AddSource(ExternalSemaSource *Source);
+  void AddSource(llvm::IntrusiveRefCntPtr<ExternalSemaSource> Source);
 
   //===--------------------------------------------------------------------===//
   // ExternalASTSource.
@@ -65,7 +64,7 @@ public:
 
   /// Resolve a declaration ID into a declaration, potentially
   /// building a new declaration.
-  Decl *GetExternalDecl(uint32_t ID) override;
+  Decl *GetExternalDecl(GlobalDeclID ID) override;
 
   /// Complete the redeclaration chain if it's been extended since the
   /// previous generation of the AST source.
@@ -92,10 +91,19 @@ public:
 
   ExtKind hasExternalDefinitions(const Decl *D) override;
 
+  bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
+
   /// Find all declarations with the given name in the
   /// given context.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      const DeclContext *OriginalDC) override;
+
+  bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial) override;
+
+  bool
+  LoadExternalSpecializations(const Decl *D,
+                              ArrayRef<TemplateArgument> TemplateArgs) override;
 
   /// Ensures that the table of all visible declarations inside this
   /// context is up to date.
@@ -361,7 +369,7 @@ public:
                                         QualType T) override;
 
   // Inform all attached sources that a mangling number was assigned.
-  void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) override;
+  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// LLVM-style RTTI.
   /// \{

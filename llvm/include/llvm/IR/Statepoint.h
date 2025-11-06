@@ -176,23 +176,23 @@ public:
   }
 
   /// Returns an iterator to the begining of the argument range describing gc
-  /// values for the statepoint.
-  const_op_iterator gc_args_begin() const {
+  /// live values for the statepoint.
+  const_op_iterator gc_live_begin() const {
     if (auto Opt = getOperandBundle(LLVMContext::OB_gc_live))
       return Opt->Inputs.begin();
     return arg_end();
   }
 
-  /// Return an end iterator for the gc argument range
-  const_op_iterator gc_args_end() const {
+  /// Return an end iterator for the gc live range
+  const_op_iterator gc_live_end() const {
     if (auto Opt = getOperandBundle(LLVMContext::OB_gc_live))
       return Opt->Inputs.end();
     return arg_end();
   }
 
-  /// range adapter for gc arguments
-  iterator_range<const_op_iterator> gc_args() const {
-    return make_range(gc_args_begin(), gc_args_end());
+  /// range adapter for gc live arguments
+  iterator_range<const_op_iterator> gc_live() const {
+    return make_range(gc_live_begin(), gc_live_end());
   }
 
 

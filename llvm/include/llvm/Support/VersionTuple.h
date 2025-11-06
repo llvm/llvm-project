@@ -16,14 +16,13 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <string>
 #include <tuple>
 
 namespace llvm {
-template <typename HasherT, support::endianness Endianness>
-class HashBuilderImpl;
+template <typename HasherT, llvm::endianness Endianness> class HashBuilder;
 class raw_ostream;
 class StringRef;
 
@@ -102,9 +101,7 @@ public:
 
   /// Return a version tuple that contains a different major version but
   /// everything else is the same.
-  VersionTuple withMajorReplaced(unsigned NewMajor) const {
-    return VersionTuple(NewMajor, Minor, Subminor, Build);
-  }
+  LLVM_ABI VersionTuple withMajorReplaced(unsigned NewMajor) const;
 
   /// Return a version tuple that contains only components that are non-zero.
   VersionTuple normalize() const {
@@ -174,23 +171,23 @@ public:
     return hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
   }
 
-  template <typename HasherT, llvm::support::endianness Endianness>
-  friend void addHash(HashBuilderImpl<HasherT, Endianness> &HBuilder,
+  template <typename HasherT, llvm::endianness Endianness>
+  friend void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
                       const VersionTuple &VT) {
     HBuilder.add(VT.Major, VT.Minor, VT.Subminor, VT.Build);
   }
 
   /// Retrieve a string representation of the version number.
-  std::string getAsString() const;
+  LLVM_ABI std::string getAsString() const;
 
   /// Try to parse the given string as a version number.
   /// \returns \c true if the string does not match the regular expression
   ///   [0-9]+(\.[0-9]+){0,3}
-  bool tryParse(StringRef string);
+  LLVM_ABI bool tryParse(StringRef string);
 };
 
 /// Print a version number.
-raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
 
 // Provide DenseMapInfo for version tuples.
 template <> struct DenseMapInfo<VersionTuple> {

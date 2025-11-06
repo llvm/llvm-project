@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
 #define LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
 
+#include "clang/APINotes/APINotesOptions.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
@@ -79,7 +80,7 @@ protected:
   std::shared_ptr<TargetOptions> TargetOpts;
 
   /// Options controlling the diagnostic engine.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagnosticOpts;
+  std::shared_ptr<DiagnosticOptions> DiagnosticOpts;
 
   /// Options controlling the \#include directive.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
@@ -88,9 +89,12 @@ protected:
   std::shared_ptr<PreprocessorOptions> PPOpts;
 
   /// Options controlling the static analyzer.
-  AnalyzerOptionsRef AnalyzerOpts;
+  std::shared_ptr<AnalyzerOptions> AnalyzerOpts;
 
   std::shared_ptr<MigratorOptions> MigratorOpts;
+
+  /// Options controlling API notes.
+  std::shared_ptr<APINotesOptions> APINotesOpts;
 
   /// Options controlling IRgen and the backend.
   std::shared_ptr<CodeGenOptions> CodeGenOpts;
@@ -131,6 +135,7 @@ public:
   const PreprocessorOptions &getPreprocessorOpts() const { return *PPOpts; }
   const AnalyzerOptions &getAnalyzerOpts() const { return *AnalyzerOpts; }
   const MigratorOptions &getMigratorOpts() const { return *MigratorOpts; }
+  const APINotesOptions &getAPINotesOpts() const { return *APINotesOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return *CodeGenOpts; }
   const FileSystemOptions &getFileSystemOpts() const { return *FSOpts; }
   const FrontendOptions &getFrontendOpts() const { return *FrontendOpts; }
@@ -196,6 +201,8 @@ private:
   /// @}
 };
 
+class CowCompilerInvocation;
+
 /// Helper class for holding the data necessary to invoke the compiler.
 ///
 /// This class is designed to represent an abstract "invocation" of the
@@ -215,6 +222,9 @@ public:
   }
   ~CompilerInvocation() = default;
 
+  explicit CompilerInvocation(const CowCompilerInvocation &X);
+  CompilerInvocation &operator=(const CowCompilerInvocation &X);
+
   /// Const getters.
   /// @{
   // Note: These need to be pulled in manually. Otherwise, they get hidden by
@@ -226,6 +236,7 @@ public:
   using CompilerInvocationBase::getPreprocessorOpts;
   using CompilerInvocationBase::getAnalyzerOpts;
   using CompilerInvocationBase::getMigratorOpts;
+  using CompilerInvocationBase::getAPINotesOpts;
   using CompilerInvocationBase::getCodeGenOpts;
   using CompilerInvocationBase::getFileSystemOpts;
   using CompilerInvocationBase::getFrontendOpts;
@@ -242,6 +253,7 @@ public:
   PreprocessorOptions &getPreprocessorOpts() { return *PPOpts; }
   AnalyzerOptions &getAnalyzerOpts() { return *AnalyzerOpts; }
   MigratorOptions &getMigratorOpts() { return *MigratorOpts; }
+  APINotesOptions &getAPINotesOpts() { return *APINotesOpts; }
   CodeGenOptions &getCodeGenOpts() { return *CodeGenOpts; }
   FileSystemOptions &getFileSystemOpts() { return *FSOpts; }
   FrontendOptions &getFrontendOpts() { return *FrontendOpts; }
@@ -250,19 +262,6 @@ public:
   }
   PreprocessorOutputOptions &getPreprocessorOutputOpts() {
     return *PreprocessorOutputOpts;
-  }
-  /// @}
-
-  /// Base class internals.
-  /// @{
-  using CompilerInvocationBase::LangOpts;
-  using CompilerInvocationBase::TargetOpts;
-  using CompilerInvocationBase::DiagnosticOpts;
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() {
-    return HSOpts;
-  }
-  std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
-    return PPOpts;
   }
   /// @}
 
@@ -291,6 +290,15 @@ public:
   /// \param MainAddr - The address of main (or some other function in the main
   /// executable), for finding the builtin compiler path.
   static std::string GetResourcesPath(const char *Argv0, void *MainAddr);
+
+  /// Populate \p Opts with the default set of pointer authentication-related
+  /// options given \p LangOpts and \p Triple.
+  ///
+  /// Note: This is intended to be used by tools which must be aware of
+  /// pointer authentication-related code generation, e.g. lldb.
+  static void setDefaultPointerAuthOptions(PointerAuthOptions &Opts,
+                                           const LangOptions &LangOpts,
+                                           const llvm::Triple &Triple);
 
   /// Retrieve a module hash string that is suitable for uniquely
   /// identifying the conditions under which the module was built.
@@ -368,6 +376,7 @@ public:
   PreprocessorOptions &getMutPreprocessorOpts();
   AnalyzerOptions &getMutAnalyzerOpts();
   MigratorOptions &getMutMigratorOpts();
+  APINotesOptions &getMutAPINotesOpts();
   CodeGenOptions &getMutCodeGenOpts();
   FileSystemOptions &getMutFileSystemOpts();
   FrontendOptions &getMutFrontendOpts();

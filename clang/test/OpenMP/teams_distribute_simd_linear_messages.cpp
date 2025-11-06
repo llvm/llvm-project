@@ -1,12 +1,14 @@
 // RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void xxx(int argc) {
-  int i, step; // expected-note {{initialize the variable 'step' to silence this warning}}
+  int i, sz; // expected-note {{initialize the variable 'sz' to silence this warning}}
 #pragma omp target
-#pragma omp teams distribute simd linear(i : step) // expected-warning {{variable 'step' is uninitialized when used here}}
+#pragma omp teams distribute simd linear(i : sz) // expected-warning {{variable 'sz' is uninitialized when used here}}
   for (i = 0; i < 10; ++i)
     ;
 }
@@ -98,7 +100,7 @@ template<int LEN> int test_warn() {
   int ind2 = 0;
 // expected-error@+2 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
   #pragma omp target
-  #pragma omp teams distribute simd linear(ind2:LEN) // expected-warning {{zero linear step (ind2 should probably be const)}}
+  #pragma omp teams distribute simd linear(ind2:LEN) // expected-warning {{zero linear step ('ind2' should probably be const)}}
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;
   }

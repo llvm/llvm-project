@@ -20,7 +20,7 @@ constexpr int f2(S &) { return 0; }
 
 struct BeingDefined;
 extern BeingDefined beingdefined;
-struct BeingDefined { 
+struct BeingDefined {
   static constexpr BeingDefined& t = beingdefined;
 };
 
@@ -136,11 +136,15 @@ struct ArrBad {
 };
 constexpr int f(ArrBad) { return 0; } // expected-error {{1st parameter type 'ArrBad' is not a literal type}}
 
-constexpr int arb(int n) {
-  int a[n]; // expected-error {{variable of non-literal type 'int[n]' cannot be defined in a constexpr function}}
+constexpr int arb(int n) { // expected-note {{declared here}}
+  int a[n]; // expected-error {{variable of non-literal type 'int[n]' cannot be defined in a constexpr function}} \
+               expected-warning {{variable length arrays in C++ are a Clang extension}} \
+               expected-note {{function parameter 'n' with unknown value cannot be used in a constant expression}}
 }
-// expected-warning@+1 {{variable length array folded to constant array as an extension}}
-constexpr long Overflow[(1 << 30) << 2]{}; // expected-warning {{requires 34 bits to represent}}
+constexpr long Overflow[(1 << 30) << 2]{}; // expected-warning {{requires 34 bits to represent}} \
+                                              expected-error {{variable length array declaration not allowed at file scope}} \
+                                              expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                              expected-note {{signed left shift discards bits}}
 
 namespace inherited_ctor {
   struct A { constexpr A(int); };

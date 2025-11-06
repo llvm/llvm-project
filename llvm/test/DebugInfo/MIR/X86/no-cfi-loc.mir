@@ -1,6 +1,6 @@
 # Verify that a CFI instruction with no debug location
 # does not result in a line-0 location in the assembler.
-# RUN: %llc_dwarf -start-after=prologepilog -march=x86-64 -use-unknown-locations=Enable %s -o - | FileCheck %s
+# RUN: %llc_dwarf -start-after=prologepilog -mtriple=x86_64 -use-unknown-locations=Enable %s -o - | FileCheck %s
 #
 # CHECK-NOT: .loc 1 0
 # CHECK:     .cfi_def_cfa_offset
@@ -20,7 +20,7 @@
   declare void @bar()
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
   
   attributes #0 = { nounwind }
   

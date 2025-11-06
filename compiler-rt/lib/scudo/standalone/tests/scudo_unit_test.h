@@ -11,9 +11,16 @@
 #if SCUDO_FUCHSIA
 #include <zxtest/zxtest.h>
 using Test = ::zxtest::Test;
+#define TEST_SKIP(message) ZXTEST_SKIP(message)
+#define TEST_HAS_FAILURE true
 #else
 #include "gtest/gtest.h"
 using Test = ::testing::Test;
+#define TEST_SKIP(message)                                                     \
+  do {                                                                         \
+    GTEST_SKIP() << message;                                                   \
+  } while (0)
+#define TEST_HAS_FAILURE Test::HasFailure()
 #endif
 
 // If EXPECT_DEATH isn't defined, make it a no-op.

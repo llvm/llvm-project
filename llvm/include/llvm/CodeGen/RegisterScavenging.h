@@ -38,9 +38,6 @@ class RegScavenger {
   MachineBasicBlock *MBB = nullptr;
   MachineBasicBlock::iterator MBBI;
 
-  /// True if RegScavenger is currently tracking the liveness of registers.
-  bool Tracking = false;
-
   /// Information on scavenged registers (held in a spill slot).
   struct ScavengedInfo {
     ScavengedInfo(int FI = -1) : FrameIndex(FI) {}
@@ -95,20 +92,11 @@ public:
   /// method gives precise results even in the absence of kill flags.
   void backward();
 
-  /// Call backward() as long as the internal iterator does not point to \p I.
+  /// Call backward() to update internal register state to just before \p *I.
   void backward(MachineBasicBlock::iterator I) {
     while (MBBI != I)
       backward();
   }
-
-  /// Move the internal MBB iterator but do not update register states.
-  void skipTo(MachineBasicBlock::iterator I) {
-    if (I == MachineBasicBlock::iterator(nullptr))
-      Tracking = false;
-    MBBI = I;
-  }
-
-  MachineBasicBlock::iterator getCurrentPosition() const { return MBBI; }
 
   /// Return if a specific register is currently used.
   bool isRegUsed(Register Reg, bool includeReserved = true) const;

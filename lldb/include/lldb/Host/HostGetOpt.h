@@ -9,11 +9,7 @@
 #ifndef LLDB_HOST_HOSTGETOPT_H
 #define LLDB_HOST_HOSTGETOPT_H
 
-#if !defined(_MSC_VER) && !defined(__NetBSD__)
-
-#ifdef _WIN32
-#define _BSD_SOURCE // Required so that getopt.h defines optreset
-#endif
+#if !defined(_MSC_VER) && !defined(__NetBSD__) && !defined(_AIX)
 
 #include <getopt.h>
 #include <unistd.h>

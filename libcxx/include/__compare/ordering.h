@@ -22,46 +22,38 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 // exposition only
-enum class _OrdResult : signed char {
-  __less = -1,
-  __equiv = 0,
-  __greater = 1
-};
+enum class _OrdResult : signed char { __less = -1, __equiv = 0, __greater = 1 };
 
-enum class _NCmpResult : signed char {
-  __unordered = -127
+enum class _PartialOrdResult : signed char {
+  __less      = static_cast<signed char>(_OrdResult::__less),
+  __equiv     = static_cast<signed char>(_OrdResult::__equiv),
+  __greater   = static_cast<signed char>(_OrdResult::__greater),
+  __unordered = -127,
 };
 
 class partial_ordering;
 class weak_ordering;
 class strong_ordering;
 
-template<class _Tp, class... _Args>
-inline constexpr bool __one_of_v = (is_same_v<_Tp, _Args> || ...);
-
 struct _CmpUnspecifiedParam {
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  _CmpUnspecifiedParam(int _CmpUnspecifiedParam::*) noexcept {}
-
-  template<class _Tp, class = enable_if_t<!__one_of_v<_Tp, int, partial_ordering, weak_ordering, strong_ordering>>>
-  _CmpUnspecifiedParam(_Tp) = delete;
+  // If anything other than a literal 0 is provided, the behavior is undefined by the Standard.
+  //
+  // The alternative to the `__enable_if__` attribute would be to use the fact that a pointer
+  // can be constructed from literal 0, but this conflicts with `-Wzero-as-null-pointer-constant`.
+  template <class _Tp, class = __enable_if_t<is_same_v<_Tp, int> > >
+  _LIBCPP_HIDE_FROM_ABI consteval _CmpUnspecifiedParam(_Tp __zero) noexcept
+#  if __has_attribute(__enable_if__)
+      __attribute__((__enable_if__(
+          __zero == 0, "Only literal 0 is allowed as the operand of a comparison with one of the ordering types")))
+#  endif
+  {
+    (void)__zero;
+  }
 };
 
 class partial_ordering {
-  using _ValueT = signed char;
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr partial_ordering(_PartialOrdResult __v) noexcept : __value_(__v) {}
 
-  _LIBCPP_HIDE_FROM_ABI
-  explicit constexpr partial_ordering(_OrdResult __v) noexcept
-      : __value_(_ValueT(__v)) {}
-
-  _LIBCPP_HIDE_FROM_ABI
-  explicit constexpr partial_ordering(_NCmpResult __v) noexcept
-      : __value_(_ValueT(__v)) {}
-
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr bool __is_ordered() const noexcept {
-    return __value_ != _ValueT(_NCmpResult::__unordered);
-  }
 public:
   // valid values
   static const partial_ordering less;
@@ -70,145 +62,122 @@ public:
   static const partial_ordering unordered;
 
   // comparisons
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator==(partial_ordering, partial_ordering) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(partial_ordering, partial_ordering) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator==(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ == 0;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
+    return __v.__value_ == _PartialOrdResult::__equiv;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator< (partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ < 0;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
+    return __v.__value_ == _PartialOrdResult::__less;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator<=(partial_ordering __v, _CmpUnspecifiedParam) noexcept  {
-    return __v.__is_ordered() && __v.__value_ <= 0;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
+    return __v.__value_ == _PartialOrdResult::__equiv || __v.__value_ == _PartialOrdResult::__less;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator> (partial_ordering __v, _CmpUnspecifiedParam) noexcept  {
-    return __v.__is_ordered() && __v.__value_ > 0;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
+    return __v.__value_ == _PartialOrdResult::__greater;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator>=(partial_ordering __v, _CmpUnspecifiedParam) noexcept  {
-    return __v.__is_ordered() && __v.__value_ >= 0;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
+    return __v.__value_ == _PartialOrdResult::__equiv || __v.__value_ == _PartialOrdResult::__greater;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator< (_CmpUnspecifiedParam, partial_ordering __v) noexcept  {
-    return __v.__is_ordered() && 0 < __v.__value_;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
+    return __v.__value_ == _PartialOrdResult::__greater;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator<=(_CmpUnspecifiedParam, partial_ordering __v) noexcept  {
-    return __v.__is_ordered() && 0 <= __v.__value_;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
+    return __v.__value_ == _PartialOrdResult::__equiv || __v.__value_ == _PartialOrdResult::__greater;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator> (_CmpUnspecifiedParam, partial_ordering __v) noexcept  {
-    return __v.__is_ordered() && 0 > __v.__value_;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
+    return __v.__value_ == _PartialOrdResult::__less;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator>=(_CmpUnspecifiedParam, partial_ordering __v) noexcept  {
-    return __v.__is_ordered() && 0 >= __v.__value_;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
+    return __v.__value_ == _PartialOrdResult::__equiv || __v.__value_ == _PartialOrdResult::__less;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr partial_ordering operator<=>(partial_ordering __v, _CmpUnspecifiedParam) noexcept  {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr partial_ordering
+  operator<=>(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr partial_ordering operator<=>(_CmpUnspecifiedParam, partial_ordering __v) noexcept  {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr partial_ordering
+  operator<=>(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
     return __v < 0 ? partial_ordering::greater : (__v > 0 ? partial_ordering::less : __v);
   }
+
 private:
-  _ValueT __value_;
+  _PartialOrdResult __value_;
 };
 
-inline constexpr partial_ordering partial_ordering::less(_OrdResult::__less);
-inline constexpr partial_ordering partial_ordering::equivalent(_OrdResult::__equiv);
-inline constexpr partial_ordering partial_ordering::greater(_OrdResult::__greater);
-inline constexpr partial_ordering partial_ordering::unordered(_NCmpResult ::__unordered);
+inline constexpr partial_ordering partial_ordering::less(_PartialOrdResult::__less);
+inline constexpr partial_ordering partial_ordering::equivalent(_PartialOrdResult::__equiv);
+inline constexpr partial_ordering partial_ordering::greater(_PartialOrdResult::__greater);
+inline constexpr partial_ordering partial_ordering::unordered(_PartialOrdResult::__unordered);
 
 class weak_ordering {
-  using _ValueT = signed char;
+  using _ValueT _LIBCPP_NODEBUG = signed char;
 
-  _LIBCPP_HIDE_FROM_ABI
-  explicit constexpr weak_ordering(_OrdResult __v) noexcept : __value_(_ValueT(__v)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr weak_ordering(_OrdResult __v) noexcept : __value_(_ValueT(__v)) {}
 
 public:
   static const weak_ordering less;
   static const weak_ordering equivalent;
   static const weak_ordering greater;
 
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr operator partial_ordering() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr operator partial_ordering() const noexcept {
     return __value_ == 0 ? partial_ordering::equivalent
-        : (__value_ < 0 ? partial_ordering::less : partial_ordering::greater);
+                         : (__value_ < 0 ? partial_ordering::less : partial_ordering::greater);
   }
 
   // comparisons
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator==(weak_ordering, weak_ordering) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(weak_ordering, weak_ordering) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator==(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ == 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator< (weak_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ < 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator<=(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ <= 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator> (weak_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ > 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator>=(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ >= 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator< (_CmpUnspecifiedParam, weak_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(_CmpUnspecifiedParam, weak_ordering __v) noexcept {
     return 0 < __v.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator<=(_CmpUnspecifiedParam, weak_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(_CmpUnspecifiedParam, weak_ordering __v) noexcept {
     return 0 <= __v.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator> (_CmpUnspecifiedParam, weak_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(_CmpUnspecifiedParam, weak_ordering __v) noexcept {
     return 0 > __v.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator>=(_CmpUnspecifiedParam, weak_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(_CmpUnspecifiedParam, weak_ordering __v) noexcept {
     return 0 >= __v.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr weak_ordering operator<=>(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr weak_ordering operator<=>(weak_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr weak_ordering operator<=>(_CmpUnspecifiedParam, weak_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr weak_ordering operator<=>(_CmpUnspecifiedParam, weak_ordering __v) noexcept {
     return __v < 0 ? weak_ordering::greater : (__v > 0 ? weak_ordering::less : __v);
   }
 
@@ -221,10 +190,9 @@ inline constexpr weak_ordering weak_ordering::equivalent(_OrdResult::__equiv);
 inline constexpr weak_ordering weak_ordering::greater(_OrdResult::__greater);
 
 class strong_ordering {
-  using _ValueT = signed char;
+  using _ValueT _LIBCPP_NODEBUG = signed char;
 
-  _LIBCPP_HIDE_FROM_ABI
-  explicit constexpr strong_ordering(_OrdResult __v) noexcept : __value_(_ValueT(__v)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr strong_ordering(_OrdResult __v) noexcept : __value_(_ValueT(__v)) {}
 
 public:
   static const strong_ordering less;
@@ -233,74 +201,61 @@ public:
   static const strong_ordering greater;
 
   // conversions
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr operator partial_ordering() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr operator partial_ordering() const noexcept {
     return __value_ == 0 ? partial_ordering::equivalent
-        : (__value_ < 0 ? partial_ordering::less : partial_ordering::greater);
+                         : (__value_ < 0 ? partial_ordering::less : partial_ordering::greater);
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr operator weak_ordering() const noexcept {
-    return __value_ == 0 ? weak_ordering::equivalent
-        : (__value_ < 0 ? weak_ordering::less : weak_ordering::greater);
+  _LIBCPP_HIDE_FROM_ABI constexpr operator weak_ordering() const noexcept {
+    return __value_ == 0 ? weak_ordering::equivalent : (__value_ < 0 ? weak_ordering::less : weak_ordering::greater);
   }
 
   // comparisons
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator==(strong_ordering, strong_ordering) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(strong_ordering, strong_ordering) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator==(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ == 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator< (strong_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ < 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator<=(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ <= 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator> (strong_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ > 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator>=(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v.__value_ >= 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator< (_CmpUnspecifiedParam, strong_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(_CmpUnspecifiedParam, strong_ordering __v) noexcept {
     return 0 < __v.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator<=(_CmpUnspecifiedParam, strong_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(_CmpUnspecifiedParam, strong_ordering __v) noexcept {
     return 0 <= __v.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator> (_CmpUnspecifiedParam, strong_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(_CmpUnspecifiedParam, strong_ordering __v) noexcept {
     return 0 > __v.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator>=(_CmpUnspecifiedParam, strong_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(_CmpUnspecifiedParam, strong_ordering __v) noexcept {
     return 0 >= __v.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr strong_ordering operator<=>(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
+  operator<=>(strong_ordering __v, _CmpUnspecifiedParam) noexcept {
     return __v;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr strong_ordering operator<=>(_CmpUnspecifiedParam, strong_ordering __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
+  operator<=>(_CmpUnspecifiedParam, strong_ordering __v) noexcept {
     return __v < 0 ? strong_ordering::greater : (__v > 0 ? strong_ordering::less : __v);
   }
 
@@ -317,7 +272,8 @@ inline constexpr strong_ordering strong_ordering::greater(_OrdResult::__greater)
 /// The types partial_ordering, weak_ordering, and strong_ordering are
 /// collectively termed the comparison category types.
 template <class _Tp>
-concept __comparison_category = __one_of_v<_Tp, partial_ordering, weak_ordering, strong_ordering>;
+concept __comparison_category =
+    is_same_v<_Tp, partial_ordering> || is_same_v<_Tp, weak_ordering> || is_same_v<_Tp, strong_ordering>;
 
 #endif // _LIBCPP_STD_VER >= 20
 

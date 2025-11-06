@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_TIME_CLOCK_H
 #define LLVM_LIBC_SRC_TIME_CLOCK_H
 
-#include <time.h>
+#include "hdr/types/clock_t.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 clock_t clock();
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TIME_CLOCK_H

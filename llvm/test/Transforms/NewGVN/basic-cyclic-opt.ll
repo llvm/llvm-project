@@ -4,7 +4,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ;; Function Attrs: nounwind ssp uwtable
 ;; We should eliminate the sub, and one of the phi nodes
-define void @vnum_test1(ptr %data) #0 {
+define void @vnum_test1(ptr %data) {
 ; CHECK-LABEL: @vnum_test1(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 3
@@ -74,7 +74,7 @@ bb19:                                             ; preds = %bb4
 ;; We should eliminate the sub, one of the phi nodes, prove the store of the sub
 ;; and the load of data are equivalent, that the load always produces constant 0, and
 ;; delete the load replacing it with constant 0.
-define i32 @vnum_test2(ptr %data) #0 {
+define i32 @vnum_test2(ptr %data) {
 ; CHECK-LABEL: @vnum_test2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 3
@@ -142,11 +142,10 @@ bb21:                                             ; preds = %bb4
   ret i32 %p.0
 }
 
-
 ; Function Attrs: nounwind ssp uwtable
 ;; Same as test 2, with a conditional store of m-n, so it has to also discover
 ;; that data ends up with the same value no matter what branch is taken.
-define i32 @vnum_test3(ptr %data) #0 {
+define i32 @vnum_test3(ptr %data) {
 ; CHECK-LABEL: @vnum_test3(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 3
@@ -242,21 +241,21 @@ bb23:                                             ; preds = %bb4
 ;; Both loads should equal 0, but it requires being
 ;; completely optimistic about MemoryPhis, otherwise
 ;; we will not be able to see through the cycle.
-define i8 @irreducible_memoryphi(ptr noalias %arg, ptr noalias %arg2) {
+define i8 @irreducible_memoryphi(ptr noalias %arg, ptr noalias %arg2, i1 %arg3) {
 ; CHECK-LABEL: @irreducible_memoryphi(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    store i8 0, ptr [[ARG:%.*]]
-; CHECK-NEXT:    br i1 undef, label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK-NEXT:    store i8 0, ptr [[ARG:%.*]], align 1
+; CHECK-NEXT:    br i1 [[ARG3:%.*]], label [[BB2:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB3:%.*]]
+; CHECK-NEXT:    br i1 [[ARG3]], label [[BB1]], label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i8 0
 ;
 bb:
   store i8 0, ptr %arg
-  br i1 undef, label %bb2, label %bb1
+  br i1 %arg3, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb2, %bb
   br label %bb2
@@ -264,7 +263,7 @@ bb1:                                              ; preds = %bb2, %bb
 bb2:                                              ; preds = %bb1, %bb
   %tmp2 = load i8, ptr %arg
   store i8 0, ptr %arg
-  br i1 undef, label %bb1, label %bb3
+  br i1 %arg3, label %bb1, label %bb3
 
 bb3:                                              ; preds = %bb2
   %tmp = load i8, ptr %arg
@@ -277,20 +276,20 @@ bb3:                                              ; preds = %bb2
 ;; It should return 0, but it requires being
 ;; completely optimistic about phis, otherwise
 ;; we will not be able to see through the cycle.
-define i32 @irreducible_phi(i32 %arg) {
+define i32 @irreducible_phi(i32 %arg, i1 %arg2) {
 ; CHECK-LABEL: @irreducible_phi(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 undef, label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB2:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB3:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[BB1]], label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
 ;
 bb:
   %tmp = add i32 0, %arg
-  br i1 undef, label %bb2, label %bb1
+  br i1 %arg2, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb2, %bb
   %phi1 = phi i32 [%tmp, %bb], [%phi2, %bb2]
@@ -298,14 +297,13 @@ bb1:                                              ; preds = %bb2, %bb
 
 bb2:                                              ; preds = %bb1, %bb
   %phi2 = phi i32 [%tmp, %bb], [%phi1, %bb1]
-  br i1 undef, label %bb1, label %bb3
+  br i1 %arg2, label %bb1, label %bb3
 
 bb3:                                              ; preds = %bb2
   ; This should be zero
   %tmp3 = sub i32 %tmp, %phi2
   ret i32 %tmp3
 }
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0, !0, !0}
 

@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
 
@@ -51,6 +50,10 @@ CSEMIRBuilder::getDominatingInstrForID(FoldingSetNodeID &ID,
       // this builder will have the def ready.
       setInsertPt(*CurMBB, std::next(MII));
     } else if (!dominates(MI, CurrPos)) {
+      // Update the spliced machineinstr's debug location by merging it with the
+      // debug location of the instruction at the insertion point.
+      auto Loc = DebugLoc::getMergedLocation(getDebugLoc(), MI->getDebugLoc());
+      MI->setDebugLoc(Loc);
       CurMBB->splice(CurrPos, CurMBB, MI);
     }
     return MachineInstrBuilder(getMF(), MI);
@@ -68,17 +71,23 @@ bool CSEMIRBuilder::canPerformCSEForOpc(unsigned Opc) const {
 void CSEMIRBuilder::profileDstOp(const DstOp &Op,
                                  GISelInstProfileBuilder &B) const {
   switch (Op.getDstOpKind()) {
-  case DstOp::DstType::Ty_RC:
+  case DstOp::DstType::Ty_RC: {
     B.addNodeIDRegType(Op.getRegClass());
     break;
+  }
   case DstOp::DstType::Ty_Reg: {
     // Regs can have LLT&(RB|RC). If those exist, profile them as well.
     B.addNodeIDReg(Op.getReg());
     break;
   }
-  default:
+  case DstOp::DstType::Ty_LLT: {
     B.addNodeIDRegType(Op.getLLTTy(*getMRI()));
     break;
+  }
+  case DstOp::DstType::Ty_VRegAttrs: {
+    B.addNodeIDRegType(Op.getVRegAttrs());
+    break;
+  }
   }
 }
 
@@ -86,7 +95,7 @@ void CSEMIRBuilder::profileSrcOp(const SrcOp &Op,
                                  GISelInstProfileBuilder &B) const {
   switch (Op.getSrcOpKind()) {
   case SrcOp::SrcType::Ty_Imm:
-    B.addNodeIDImmediate(static_cast<int64_t>(Op.getImm()));
+    B.addNodeIDImmediate(Op.getImm());
     break;
   case SrcOp::SrcType::Ty_Predicate:
     B.addNodeIDImmediate(static_cast<int64_t>(Op.getPredicate()));
@@ -159,7 +168,7 @@ CSEMIRBuilder::generateCopiesIfRequired(ArrayRef<DstOp> DstOps,
     if (Observer)
       Observer->changingInstr(*MIB);
     MIB->setDebugLoc(
-        DILocation::getMergedLocation(MIB->getDebugLoc(), getDebugLoc()));
+        DebugLoc::getMergedLocation(MIB->getDebugLoc(), getDebugLoc()));
     if (Observer)
       Observer->changedInstr(*MIB);
   }
@@ -174,6 +183,22 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   switch (Opc) {
   default:
     break;
+  case TargetOpcode::G_ICMP: {
+    assert(SrcOps.size() == 3 && "Invalid sources");
+    assert(DstOps.size() == 1 && "Invalid dsts");
+    LLT SrcTy = SrcOps[1].getLLTTy(*getMRI());
+    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    auto BoolExtOp = getBoolExtOp(SrcTy.isVector(), false);
+
+    if (std::optional<SmallVector<APInt>> Cst = ConstantFoldICmp(
+            SrcOps[0].getPredicate(), SrcOps[1].getReg(), SrcOps[2].getReg(),
+            DstTy.getScalarSizeInBits(), BoolExtOp, *getMRI())) {
+      if (SrcTy.isVector())
+        return buildBuildVectorConstant(DstOps[0], *Cst);
+      return buildConstant(DstOps[0], Cst->front());
+    }
+    break;
+  }
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_AND:
@@ -256,10 +281,16 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
       return buildFConstant(DstOps[0], *Cst);
     break;
   }
-  case TargetOpcode::G_CTLZ: {
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTTZ: {
     assert(SrcOps.size() == 1 && "Expected one source");
     assert(DstOps.size() == 1 && "Expected one dest");
-    auto MaybeCsts = ConstantFoldCTLZ(SrcOps[0].getReg(), *getMRI());
+    std::function<unsigned(APInt)> CB;
+    if (Opc == TargetOpcode::G_CTLZ)
+      CB = [](APInt V) -> unsigned { return V.countl_zero(); };
+    else
+      CB = [](APInt V) -> unsigned { return V.countTrailingZeros(); };
+    auto MaybeCsts = ConstantFoldCountZeros(SrcOps[0].getReg(), *getMRI(), CB);
     if (!MaybeCsts)
       break;
     if (MaybeCsts->size() == 1)
@@ -308,7 +339,9 @@ MachineInstrBuilder CSEMIRBuilder::buildConstant(const DstOp &Res,
 
   // For vectors, CSE the element only for now.
   LLT Ty = Res.getLLTTy(*getMRI());
-  if (Ty.isVector())
+  if (Ty.isFixedVector())
+    return buildSplatBuildVector(Res, buildConstant(Ty.getElementType(), Val));
+  if (Ty.isScalableVector())
     return buildSplatVector(Res, buildConstant(Ty.getElementType(), Val));
 
   FoldingSetNodeID ID;
@@ -336,7 +369,7 @@ MachineInstrBuilder CSEMIRBuilder::buildFConstant(const DstOp &Res,
   // For vectors, CSE the element only for now.
   LLT Ty = Res.getLLTTy(*getMRI());
   if (Ty.isVector())
-    return buildSplatVector(Res, buildFConstant(Ty.getElementType(), Val));
+    return buildSplatBuildVector(Res, buildFConstant(Ty.getElementType(), Val));
 
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());

@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Feature.h"
 #include "TestFS.h"
 #include "TidyProvider.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -52,6 +54,22 @@ TEST(TidyProvider, NestedDirectories) {
   EXPECT_EQ(*Sub2Options.Checks, "misc-*,bugprone-*");
   EXPECT_EQ(Sub2Options.CheckOptions.lookup("TestKey").Value, "3");
 }
+
+TEST(TidyProvider, IsFastTidyCheck) {
+  EXPECT_THAT(isFastTidyCheck("misc-const-correctness"), llvm::ValueIs(false));
+  EXPECT_THAT(isFastTidyCheck("bugprone-suspicious-include"),
+              llvm::ValueIs(true));
+  // Linked in (ParsedASTTests.cpp) but not measured.
+  EXPECT_EQ(isFastTidyCheck("replay-preamble-check"), std::nullopt);
+}
+
+#if CLANGD_TIDY_CHECKS
+TEST(TidyProvider, IsValidCheck) {
+  EXPECT_TRUE(isRegisteredTidyCheck("bugprone-argument-comment"));
+  EXPECT_FALSE(isRegisteredTidyCheck("bugprone-argument-clinic"));
+}
+#endif
+
 } // namespace
 } // namespace clangd
 } // namespace clang

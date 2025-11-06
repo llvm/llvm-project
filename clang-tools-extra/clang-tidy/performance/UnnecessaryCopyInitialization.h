@@ -1,4 +1,4 @@
-//===--- UnnecessaryCopyInitialization.h - clang-tidy------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,21 +25,39 @@ namespace clang::tidy::performance {
 class UnnecessaryCopyInitialization : public ClangTidyCheck {
 public:
   UnnecessaryCopyInitialization(StringRef Name, ClangTidyContext *Context);
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override{
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
+protected:
+  // A helper to manipulate the state common to
+  // `CopyFromMethodReturn` and `CopyFromLocalVar`.
+  struct CheckContext {
+    const VarDecl &Var;
+    const Stmt &BlockStmt;
+    const DeclStmt &VarDeclStmt;
+    clang::ASTContext &ASTCtx;
+    const bool IssueFix;
+    const bool IsVarUnused;
+    const bool IsVarOnlyUsedAsConst;
+  };
+
+  // Create diagnostics. These are virtual so that derived classes can change
+  // behaviour.
+  virtual void diagnoseCopyFromMethodReturn(const CheckContext &Ctx);
+  virtual void diagnoseCopyFromLocalVar(const CheckContext &Ctx,
+                                        const VarDecl &OldVar);
+
 private:
-  void handleCopyFromMethodReturn(const VarDecl &Var, const Stmt &BlockStmt,
-                                  const DeclStmt &Stmt, bool IssueFix,
-                                  const VarDecl *ObjectArg,
-                                  ASTContext &Context);
-  void handleCopyFromLocalVar(const VarDecl &NewVar, const VarDecl &OldVar,
-                              const Stmt &BlockStmt, const DeclStmt &Stmt,
-                              bool IssueFix, ASTContext &Context);
+  void handleCopyFromMethodReturn(const CheckContext &Ctx,
+                                  const VarDecl *ObjectArg);
+  void handleCopyFromLocalVar(const CheckContext &Ctx, const VarDecl &OldVar);
+
+  void maybeIssueFixes(const CheckContext &Ctx, DiagnosticBuilder &Diagnostic);
+
   const std::vector<StringRef> AllowedTypes;
   const std::vector<StringRef> ExcludedContainerTypes;
 };

@@ -1,57 +1,57 @@
+// RUN: rm -rf %t && mkdir %t
+// RUN: sed -e "s|DIR|%/S/Inputs|g" %S/Inputs/taint-generic-config-vfs.json > %t/taint-generic-config-vfs.json
+
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint \
+// RUN:   -analyzer-checker=optin.taint.TaintedDiv \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-checker=security.ArrayBound \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-virtual.yaml \
+// RUN:   -ivfsoverlay %t/taint-generic-config-vfs.json
 
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -DFILE_IS_STRUCT \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint \
+// RUN:   -analyzer-checker=optin.taint.TaintedDiv \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-checker=security.ArrayBound \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
-// RUN: not %clang_analyze_cc1 -Wno-pointer-to-int-cast \
-// RUN:   -Wno-incompatible-library-redeclaration -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
-// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint  \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=justguessit \
+// RUN:     optin.taint.TaintPropagation:Config=justguessit \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-FILE
 
 // CHECK-INVALID-FILE: (frontend): invalid input for checker option
-// CHECK-INVALID-FILE-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-FILE-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-INVALID-FILE-SAME:        that expects a valid filename instead of
 // CHECK-INVALID-FILE-SAME:        'justguessit'
 
-// RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
-// RUN:   -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
-// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint  \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
 // RUN:   2>&1 | FileCheck -DMSG=%errc_EINVAL %s -check-prefix=CHECK-ILL-FORMED
 
 // CHECK-ILL-FORMED: (frontend): invalid input for checker option
-// CHECK-ILL-FORMED-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-ILL-FORMED-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: [[MSG]]
 
-// RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
-// RUN:   -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
-// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-ARG
 
 // CHECK-INVALID-ARG: (frontend): invalid input for checker option
-// CHECK-INVALID-ARG-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-ARG-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-INVALID-ARG-SAME:        that expects an argument number for propagation
 // CHECK-INVALID-ARG-SAME:        rules greater or equal to -1
 
@@ -63,6 +63,9 @@ void clang_analyzer_isTainted_char(char);
 void clang_analyzer_isTainted_wchar(wchar_t);
 void clang_analyzer_isTainted_charp(char*);
 void clang_analyzer_isTainted_int(int);
+void clang_analyzer_dump_int(int);
+
+int coin();
 
 int scanf(const char *restrict format, ...);
 char *gets(char *str);
@@ -118,6 +121,41 @@ void *malloc(size_t);
 void *calloc(size_t nmemb, size_t size);
 void bcopy(void *s1, void *s2, size_t n);
 
+
+//    function | pathname | filename | fd | arglist | argv[] | envp[]
+//    ===============================================================
+// 1  execl    |     X    |          |    |    X    |        |
+// 2  execle   |     X    |          |    |    X    |        |   X
+// 3  execlp   |          |     X    |    |    X    |        |
+// 4  execv    |     X    |          |    |         |    X   |
+// 5  execve   |     X    |          |    |         |    X   |   X
+// 6  execvp   |          |     X    |    |         |    X   |
+// 7  execvpe  |          |     X    |    |         |    X   |   X
+// 8  fexecve  |          |          |  X |         |    X   |   X
+//    ===============================================================
+//    letter   |          |     p    |  f |    l    |    v   |   e
+//
+// legend:
+//  - pathname: rel/abs path to the binary
+//  - filename: file name searched in PATH to execute the binary
+//  - fd:       accepts a file descriptor
+//  - arglist:  accepts variadic arguments
+//  - argv:     accepts a pointer to array, denoting the new argv
+//  - envp:     accepts a pointer to array, denoting the new envp
+
+int execl(const char *path, const char *arg, ...);
+int execle(const char *path, const char *arg, ...);
+int execlp(const char *file, const char *arg, ...);
+int execv(const char *path, char *const argv[]);
+int execve(const char *path, char *const argv[], char *const envp[]);
+int execvp(const char *file, char *const argv[]);
+int execvpe(const char *file, char *const argv[], char *const envp[]);
+int fexecve(int fd, char *const argv[], char *const envp[]);
+FILE *popen(const char *command, const char *type);
+int pclose(FILE *stream);
+int system(const char *command);
+
+
 typedef size_t socklen_t;
 
 struct sockaddr {
@@ -132,21 +170,21 @@ void bufferScanfDirect(void)
 {
   int n;
   scanf("%d", &n);
-  Buffer[n] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[n] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void bufferScanfArithmetic1(int x) {
   int n;
   scanf("%d", &n);
   int m = (n - 3);
-  Buffer[m] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[m] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void bufferScanfArithmetic2(int x) {
   int n;
   scanf("%d", &n);
   int m = 100 - (n + 3) * x;
-  Buffer[m] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[m] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void bufferScanfAssignment(int x) {
@@ -155,7 +193,7 @@ void bufferScanfAssignment(int x) {
   int m;
   if (x > 0) {
     m = n;
-    Buffer[m] = 1; // expected-warning {{Out of bound memory access }}
+    Buffer[m] = 1; // expected-warning {{Potential out of bound access }}
   }
 }
 
@@ -166,7 +204,7 @@ void scanfArg(void) {
 
 void bufferGetchar(int x) {
   int m = getchar();
-  Buffer[m] = 1;  //expected-warning {{Out of bound memory access (index is tainted)}}
+  Buffer[m] = 1;  //expected-warning {{Potential out of bound access}}
 }
 
 extern const unsigned short int **__ctype_b_loc (void);
@@ -179,7 +217,7 @@ int isdigitImplFalsePositive(void) {
   // macros in ctypes.h.
   int c = getchar();
   return ((*__ctype_b_loc ())[(int) (c)] & (unsigned short int) _ISdigit);
-  //expected-warning@-1 {{Out of bound memory access (index is tainted)}}
+  //expected-warning@-1 {{Potential out of bound access}}
 }
 
 int isdigitSuppressed(void) {
@@ -224,7 +262,6 @@ void testUncontrolledFormatString(char **p) {
 
 }
 
-int system(const char *command);
 void testTaintSystemCall(void) {
   char buffer[156];
   char addr[128];
@@ -269,15 +306,21 @@ void testGets_s(void) {
 
 void testTaintedBufferSize(void) {
   size_t ts;
+  // The functions malloc, calloc, bcopy and memcpy are not taint sinks in the
+  // default config of GenericTaintChecker (because that would cause too many
+  // false positives).
+  // FIXME: We should generate warnings when a value passed to these functions
+  // is tainted and _can be very large_ (because that's exploitable). This
+  // functionality probably belongs to the checkers that do more detailed
+  // modeling of these functions (MallocChecker and CStringChecker).
   scanf("%zd", &ts);
-
-  int *buf1 = (int*)malloc(ts*sizeof(int)); // expected-warning {{Untrusted data is used to specify the buffer size}}
-  char *dst = (char*)calloc(ts, sizeof(char)); //expected-warning {{Untrusted data is used to specify the buffer size}}
-  bcopy(buf1, dst, ts); // expected-warning {{Untrusted data is used to specify the buffer size}}
-  __builtin_memcpy(dst, buf1, (ts + 4)*sizeof(char)); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  int *buf1 = (int*)malloc(ts*sizeof(int)); // warn here, ts is unbounded and tainted
+  char *dst = (char*)calloc(ts, sizeof(char)); // warn here, ts is unbounded tainted
+  bcopy(buf1, dst, ts); // no warning here, since the size of buf1, dst equals ts. Cannot overflow.
+  __builtin_memcpy(dst, buf1, (ts + 4)*sizeof(char)); // warn here, dst overflows (whatever the value of ts)
 
   // If both buffers are trusted, do not issue a warning.
-  char *dst2 = (char*)malloc(ts*sizeof(char)); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  char *dst2 = (char*)malloc(ts*sizeof(char)); // warn here, ts in unbounded
   strncat(dst2, dst, ts); // no-warning
 }
 
@@ -287,7 +330,6 @@ void testTaintedBufferSize(void) {
 #define SOCK_STREAM 1
 int socket(int, int, int);
 size_t read(int, void *, size_t);
-int  execl(const char *, const char *, ...);
 
 void testSocket(void) {
   int sock;
@@ -318,7 +360,7 @@ void testStruct(void) {
 
   sock = socket(AF_INET, SOCK_STREAM, 0);
   read(sock, &tainted, sizeof(tainted));
-  __builtin_memcpy(buffer, tainted.buf, tainted.length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  clang_analyzer_isTainted_int(tainted.length); // expected-warning {{YES }}
 }
 
 void testStructArray(void) {
@@ -333,17 +375,17 @@ void testStructArray(void) {
   __builtin_memset(srcbuf, 0, sizeof(srcbuf));
 
   read(sock, &tainted[0], sizeof(tainted));
-  __builtin_memcpy(dstbuf, srcbuf, tainted[0].length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{YES}}
 
   __builtin_memset(&tainted, 0, sizeof(tainted));
   read(sock, &tainted, sizeof(tainted));
-  __builtin_memcpy(dstbuf, srcbuf, tainted[0].length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{YES}}
 
   __builtin_memset(&tainted, 0, sizeof(tainted));
   // If we taint element 1, we should not raise an alert on taint for element 0 or element 2
   read(sock, &tainted[1], sizeof(tainted));
-  __builtin_memcpy(dstbuf, srcbuf, tainted[0].length); // no-warning
-  __builtin_memcpy(dstbuf, srcbuf, tainted[2].length); // no-warning
+  clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{NO}}
+  clang_analyzer_isTainted_int(tainted[2].length); // expected-warning {{NO}}
 }
 
 void testUnion(void) {
@@ -366,11 +408,41 @@ int testDivByZero(void) {
   return 5/x; // expected-warning {{Division by a tainted value, possibly zero}}
 }
 
+int testTaintedDivFP(void) {
+  int x;
+  scanf("%d", &x);
+  if (!x)
+    return 0;
+  return 5/x; // x cannot be 0, so no tainted warning either
+}
+
+void clang_analyzer_warnIfReached();
+
+int testTaintDivZeroNonfatal() {
+  int x;
+  scanf("%d", &x);
+  int y = 5/x; // expected-warning {{Division by a tainted value, possibly zero}}
+  if (x == 0)
+    clang_analyzer_warnIfReached();
+  else
+    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  return y;
+}
+
 // Zero-sized VLAs.
 void testTaintedVLASize(void) {
   int x;
   scanf("%d", &x);
-  int vla[x]; // expected-warning{{Declared variable-length array (VLA) has tainted size}}
+  int vla[x]; // expected-warning{{Declared variable-length array (VLA) has tainted (attacker controlled) size that can be 0 or negative}}
+}
+
+// Tainted-sanitized VLAs.
+void testTaintedSanitizedVLASize(void) {
+  int x;
+  scanf("%d", &x);
+  if (x<1)
+    return;
+  int vla[x]; // no-warning
 }
 
 int testTaintedAllocaMem() {
@@ -409,7 +481,53 @@ unsigned radar11369570_hanging(const unsigned char *arr, int l) {
     longcmp(a, t, c);
     l -= 12;
   }
-  return 5/a; // expected-warning {{Division by a tainted value, possibly zero}}
+  return 5/a; // FIXME: Should be a "div by tainted" warning here.
+}
+
+// This computation used to take a very long time.
+void complex_taint_queries(const int *p) {
+  int tainted = 0;
+  scanf("%d", &tainted);
+
+  // Make "tmp" tainted.
+  int tmp = tainted + tainted;
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{YES}}
+
+  // Make "tmp" SymExpr a lot more complicated by applying computation.
+  // This should balloon the symbol complexity.
+  tmp += p[0] + p[0];
+  tmp += p[1] + p[1];
+  tmp += p[2] + p[2];
+  clang_analyzer_dump_int(tmp); // expected-warning{{((((conj_}} symbol complexity: 8
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{YES}}
+
+  tmp += p[3] + p[3];
+  clang_analyzer_dump_int(tmp); // expected-warning{{(((((conj_}} symbol complexity: 10
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}} 10 is already too complex to be traversed
+
+  tmp += p[4] + p[4];
+  tmp += p[5] + p[5];
+  tmp += p[6] + p[6];
+  tmp += p[7] + p[7];
+  tmp += p[8] + p[8];
+  tmp += p[9] + p[9];
+  tmp += p[10] + p[10];
+  tmp += p[11] + p[11];
+  tmp += p[12] + p[12];
+  tmp += p[13] + p[13];
+  tmp += p[14] + p[14];
+  tmp += p[15] + p[15];
+
+  // The SymExpr still holds the full history of the computation, yet, "isTainted" doesn't traverse the tree as the complexity is over the threshold.
+  clang_analyzer_dump_int(tmp);
+  // expected-warning@-1{{(((((((((((((((((conj_}} symbol complexity: 34
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}} FIXME: Ideally, this should still result in "tainted".
+
+  // By making it even one step more complex, then it would hit the "max-symbol-complexity"
+  // threshold and the engine would cut the SymExpr and replace it by a new conjured symbol.
+  tmp += p[16];
+  clang_analyzer_dump_int(tmp); // expected-warning{{conj_}} symbol complexity: 1
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}}
 }
 
 // Check that we do not assert of the following code.
@@ -443,14 +561,18 @@ int testSprintf_propagates_taint(char *buf, char *msg) {
   return 1 / x;                    // expected-warning {{Division by a tainted value, possibly zero}}
 }
 
-void test_wchar_apis_propagate(const char *path) {
+void test_wchar_apis_dont_propagate(const char *path) {
+  // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+  // See the details here: https://github.com/llvm/llvm-project/pull/66086
+  // This isn't ideal, but this is only what we have now.
+
   FILE *f = fopen(path, "r");
   clang_analyzer_isTainted_charp((char*)f);  // expected-warning {{YES}}
   wchar_t wbuf[10];
   fgetws(wbuf, sizeof(wbuf)/sizeof(*wbuf), f);
   clang_analyzer_isTainted_wchar(*wbuf); // expected-warning {{YES}}
   int n = wcslen(wbuf);
-  clang_analyzer_isTainted_int(n); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(n); // expected-warning {{NO}}
 
   wchar_t dst[100] = L"ABC";
   clang_analyzer_isTainted_wchar(*dst); // expected-warning {{NO}}
@@ -458,7 +580,7 @@ void test_wchar_apis_propagate(const char *path) {
   clang_analyzer_isTainted_wchar(*dst); // expected-warning {{YES}}
 
   int m = wcslen(dst);
-  clang_analyzer_isTainted_int(m); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(m); // expected-warning {{NO}}
 }
 
 int scanf_s(const char *format, ...);
@@ -948,21 +1070,27 @@ void testStrndupa(size_t n) {
 }
 
 size_t strlen(const char *s);
-void testStrlen() {
+void testStrlen_dont_propagate() {
+  // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+  // See the details here: https://github.com/llvm/llvm-project/pull/66086
+  // This isn't ideal, but this is only what we have now.
   char s[10];
   scanf("%9s", s);
 
   size_t result = strlen(s);
-  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+  // strlen propagating taint would bring in many false positives
+  clang_analyzer_isTainted_int(result); // expected-warning {{NO}}
 }
 
 size_t strnlen(const char *s, size_t maxlen);
-void testStrnlen(size_t maxlen) {
+void testStrnlen_dont_propagate(size_t maxlen) {
+  // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+  // See the details here: https://github.com/llvm/llvm-project/pull/66086
+  // This isn't ideal, but this is only what we have now.
   char s[10];
   scanf("%9s", s);
-
   size_t result = strnlen(s, maxlen);
-  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(result); // expected-warning {{NO}}
 }
 
 long strtol(const char *restrict nptr, char **restrict endptr, int base);
@@ -1068,26 +1196,26 @@ void mySink(int, int, int);
 
 void testConfigurationSources1(void) {
   int x = mySource1();
-  Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[x] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationSources2(void) {
   int x;
   mySource2(&x);
-  Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[x] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationSources3(void) {
   int x, y;
   myScanf("%d %d", &x, &y);
-  Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[y] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationPropagation(void) {
   int x = mySource1();
   int y;
   myPropagator(x, &y);
-  Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[y] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationFilter(void) {
@@ -1117,6 +1245,128 @@ void testConfigurationSinks(void) {
   mySink(1, x, 2); // no-warning
   mySink(1, 2, x);
   // expected-warning@-1 {{Untrusted data is passed to a user-defined sink}}
+}
+
+int test_exec_like_functions() {
+  char buf[100] = {0};
+  scanf("%99s", buf);
+  clang_analyzer_isTainted_char(buf[0]); // expected-warning {{YES}}
+
+  char *cleanArray[] = {"ENV1=V1", "ENV2=V2", NULL};
+  char *taintedArray[] = {buf, "ENV2=V2", NULL};
+  clang_analyzer_isTainted_char(taintedArray[0][0]);      // expected-warning {{YES}}
+  clang_analyzer_isTainted_char(*(char*)taintedArray[0]); // expected-warning {{YES}}
+  clang_analyzer_isTainted_char(*(char*)taintedArray);    // expected-warning {{NO}}  We should have YES here.
+  // FIXME: Above the triple pointer indirection will confuse the checker,
+  // as we only check two levels. The results would be worse, if the tainted
+  // subobject ("buf") would not be at the beginning of the enclosing object,
+  // for the same reason.
+
+  switch (coin()) {
+    default: break;
+    // Execute `path` with all arguments after `path` until a NULL pointer
+    // and environment from `environ'.
+    case 0: return execl("path", "arg0", "arg1", "arg2", NULL); // no-warning
+    case 1: return execl(buf, "arg0", "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execl("path", buf, "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 3: return execl("path", "arg0", buf, "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 4: return execl("path", "arg0", "arg1", buf, NULL); // expected-warning {{Untrusted data is passed to a system call}}
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `path` with all arguments after `PATH` until a NULL pointer,
+    // and the argument after that for environment.
+    case 0: return execle("path", "arg0", "arg1", NULL,   cleanArray); // no-warning
+    case 1: return execle(   buf, "arg0", "arg1", NULL,   cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execle("path",    buf, "arg1", NULL,   cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 3: return execle("path", "arg0",    buf, NULL,   cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 4: return execle("path", "arg0", "arg1", NULL,          buf); // expected-warning {{Untrusted data is passed to a system call}}
+    case 5: return execle("path", "arg0", "arg1", NULL, taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `file`, searching in the `PATH' environment variable if it
+    // contains no slashes, with all arguments after `file` until a NULL
+    // pointer and environment from `environ'.
+    case 0: return execlp("file", "arg0", "arg1", "arg2", NULL); // no-warning
+    case 1: return execlp(   buf, "arg0", "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execlp("file",    buf, "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 3: return execlp("file", "arg0",    buf, "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 4: return execlp("file", "arg0", "arg1",    buf, NULL); // expected-warning {{Untrusted data is passed to a system call}}
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `path` with arguments `ARGV` and environment from `environ'.
+    case 0: return execv("path", /*argv=*/  cleanArray); // no-warning
+    case 1: return execv(   buf, /*argv=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execv("path", /*argv=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Replace the current process, executing `path` with arguments `ARGV`
+    // and environment `ENVP`. `ARGV` and `ENVP` are terminated by NULL pointers.
+    case 0: return execve("path", /*argv=*/  cleanArray, /*envp=*/cleanArray); // no-warning
+    case 1: return execve(   buf, /*argv=*/  cleanArray, /*envp=*/cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execve("path", /*argv=*/taintedArray, /*envp=*/cleanArray); // FIXME: We might wanna have a report here.
+    case 3: return execve("path", /*argv=*/cleanArray, /*envp=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `file`, searching in the `PATH' environment variable if it
+    // contains no slashes, with arguments `ARGV` and environment from `environ'.
+    case 0: return execvp("file", /*argv=*/  cleanArray); // no-warning
+    case 1: return execvp(   buf, /*argv=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execvp("file", /*argv=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  // execvpe
+  switch (coin()) {
+    default: break;
+    // Execute `file`, searching in the `PATH' environment variable if it
+    // contains no slashes, with arguments `ARGV` and environment `ENVP`.
+    // `ARGV` and `ENVP` are terminated by NULL pointers.
+    case 0: return execvpe("file", /*argv=*/  cleanArray, /*envp=*/  cleanArray); // no-warning
+    case 1: return execvpe(   buf, /*argv=*/  cleanArray, /*envp=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execvpe("file", /*argv=*/taintedArray, /*envp=*/  cleanArray); // FIXME: We might wanna have a report here.
+    case 3: return execvpe("file", /*argv=*/  cleanArray, /*envp=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  int cleanFD = coin();
+  int taintedFD;
+  scanf("%d", &taintedFD);
+  clang_analyzer_isTainted_int(taintedFD); // expected-warning {{YES}}
+
+  switch (coin()) {
+    default: break;
+    // Execute the file `FD` refers to, overlaying the running program image.
+    // `ARGV` and `ENVP` are passed to the new program, as for `execve'.
+    case 0: return fexecve(  cleanFD, /*argv=*/  cleanArray, /*envp=*/  cleanArray); // no-warning
+    case 1: return fexecve(taintedFD, /*argv=*/  cleanArray, /*envp=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return fexecve(  cleanFD, /*argv=*/taintedArray, /*envp=*/  cleanArray); // FIXME: We might wanna have a report here.
+    case 3: return fexecve(  cleanFD, /*argv=*/  cleanArray, /*envp=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Create a new stream connected to a pipe running the given `command`.
+    case 0: return pclose(popen("command", /*mode=*/"r")); // no-warning
+    case 1: return pclose(popen(      buf, /*mode=*/"r")); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return pclose(popen("command", /*mode=*/buf)); // 'mode' is not a taint sink.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute the given line as a shell command.
+    case 0: return system("command"); // no-warning
+    case 1: return system(      buf); // expected-warning {{Untrusted data is passed to a system call}}
+  }
+
+  return 0;
 }
 
 void testUnknownFunction(void (*foo)(void)) {

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -triple=riscv64 -mattr=+zmmul -riscv-no-aliases 2>&1 \
+# RUN: not llvm-mc %s -triple=riscv64 -mattr=+zmmul -M no-aliases 2>&1 \
 # RUN:  | FileCheck -check-prefixes=CHECK-ERROR %s
 
 # CHECK-ERROR: 5:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}

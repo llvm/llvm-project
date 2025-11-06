@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Parser/Parser.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -38,33 +40,33 @@ bool operator==(const TestProperties &lhs, TestProperties &rhs) {
 /// parsing with the generic format.
 static LogicalResult
 setPropertiesFromAttribute(TestProperties &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag) {
+                           function_ref<InFlightDiagnostic()> emitError) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    getDiag() << "expected DictionaryAttr to set TestProperties";
+    emitError() << "expected DictionaryAttr to set TestProperties";
     return failure();
   }
   auto aAttr = dict.getAs<IntegerAttr>("a");
   if (!aAttr) {
-    getDiag() << "expected IntegerAttr for key `a`";
+    emitError() << "expected IntegerAttr for key `a`";
     return failure();
   }
   auto bAttr = dict.getAs<FloatAttr>("b");
   if (!bAttr ||
       &bAttr.getValue().getSemantics() != &llvm::APFloatBase::IEEEsingle()) {
-    getDiag() << "expected FloatAttr for key `b`";
+    emitError() << "expected FloatAttr for key `b`";
     return failure();
   }
 
   auto arrayAttr = dict.getAs<DenseI64ArrayAttr>("array");
   if (!arrayAttr) {
-    getDiag() << "expected DenseI64ArrayAttr for key `array`";
+    emitError() << "expected DenseI64ArrayAttr for key `array`";
     return failure();
   }
 
   auto label = dict.getAs<mlir::StringAttr>("label");
   if (!label) {
-    getDiag() << "expected StringAttr for key `label`";
+    emitError() << "expected StringAttr for key `label`";
     return failure();
   }
 
@@ -94,10 +96,9 @@ inline llvm::hash_code computeHash(const TestProperties &prop) {
   // We hash `b` which is a float using its underlying array of char:
   unsigned char const *p = reinterpret_cast<unsigned char const *>(&prop.b);
   ArrayRef<unsigned char> bBytes{p, sizeof(prop.b)};
-  return llvm::hash_combine(
-      prop.a, llvm::hash_combine_range(bBytes.begin(), bBytes.end()),
-      llvm::hash_combine_range(prop.array.begin(), prop.array.end()),
-      StringRef(*prop.label));
+  return llvm::hash_combine(prop.a, llvm::hash_combine_range(bBytes),
+                            llvm::hash_combine_range(prop.array),
+                            StringRef(*prop.label));
 }
 
 /// A custom operation for the purpose of showcasing how to use "properties".
@@ -127,9 +128,26 @@ public:
                                     NamedAttrList &attrs) {}
   static LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attrs,
-                      function_ref<InFlightDiagnostic()> getDiag) {
+                      function_ref<InFlightDiagnostic()> emitError) {
     return success();
   }
+};
+
+/// A custom operation for the purpose of showcasing how discardable attributes
+/// are handled in absence of properties.
+class OpWithoutProperties : public Op<OpWithoutProperties> {
+public:
+  // Begin boilerplate.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpWithoutProperties)
+  using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() {
+    static StringRef attributeNames[] = {StringRef("inherent_attr")};
+    return ArrayRef(attributeNames);
+  };
+  static StringRef getOperationName() {
+    return "test_op_properties.op_without_properties";
+  }
+  // End boilerplate.
 };
 
 // A trivial supporting dialect to register the above operation.
@@ -142,7 +160,7 @@ public:
   explicit TestOpPropertiesDialect(MLIRContext *context)
       : Dialect(getDialectNamespace(), context,
                 TypeID::get<TestOpPropertiesDialect>()) {
-    addOperations<OpWithProperties>();
+    addOperations<OpWithProperties, OpWithoutProperties>();
   }
 };
 
@@ -172,7 +190,7 @@ TEST(OpPropertiesTest, Properties) {
                  "array = array<i64: 40, 41>, "
                  "b = -4.200000e+01 : f32, "
                  "label = \"bar foo\"}> : () -> ()\n",
-                 os.str().c_str());
+                 output.c_str());
   }
   // Get a mutable reference to the properties for this operation and modify it
   // in place one member at a time.
@@ -182,40 +200,44 @@ TEST(OpPropertiesTest, Properties) {
     std::string output;
     llvm::raw_string_ostream os(output);
     opWithProp.print(os);
-    EXPECT_TRUE(StringRef(os.str()).contains("a = 42"));
-    EXPECT_TRUE(StringRef(os.str()).contains("b = -4.200000e+01"));
-    EXPECT_TRUE(StringRef(os.str()).contains("array = array<i64: 40, 41>"));
-    EXPECT_TRUE(StringRef(os.str()).contains("label = \"bar foo\""));
+    StringRef view(output);
+    EXPECT_TRUE(view.contains("a = 42"));
+    EXPECT_TRUE(view.contains("b = -4.200000e+01"));
+    EXPECT_TRUE(view.contains("array = array<i64: 40, 41>"));
+    EXPECT_TRUE(view.contains("label = \"bar foo\""));
   }
   prop.b = 42.;
   {
     std::string output;
     llvm::raw_string_ostream os(output);
     opWithProp.print(os);
-    EXPECT_TRUE(StringRef(os.str()).contains("a = 42"));
-    EXPECT_TRUE(StringRef(os.str()).contains("b = 4.200000e+01"));
-    EXPECT_TRUE(StringRef(os.str()).contains("array = array<i64: 40, 41>"));
-    EXPECT_TRUE(StringRef(os.str()).contains("label = \"bar foo\""));
+    StringRef view(output);
+    EXPECT_TRUE(view.contains("a = 42"));
+    EXPECT_TRUE(view.contains("b = 4.200000e+01"));
+    EXPECT_TRUE(view.contains("array = array<i64: 40, 41>"));
+    EXPECT_TRUE(view.contains("label = \"bar foo\""));
   }
   prop.array.push_back(42);
   {
     std::string output;
     llvm::raw_string_ostream os(output);
     opWithProp.print(os);
-    EXPECT_TRUE(StringRef(os.str()).contains("a = 42"));
-    EXPECT_TRUE(StringRef(os.str()).contains("b = 4.200000e+01"));
-    EXPECT_TRUE(StringRef(os.str()).contains("array = array<i64: 40, 41, 42>"));
-    EXPECT_TRUE(StringRef(os.str()).contains("label = \"bar foo\""));
+    StringRef view(output);
+    EXPECT_TRUE(view.contains("a = 42"));
+    EXPECT_TRUE(view.contains("b = 4.200000e+01"));
+    EXPECT_TRUE(view.contains("array = array<i64: 40, 41, 42>"));
+    EXPECT_TRUE(view.contains("label = \"bar foo\""));
   }
   prop.label = std::make_shared<std::string>("foo bar");
   {
     std::string output;
     llvm::raw_string_ostream os(output);
     opWithProp.print(os);
-    EXPECT_TRUE(StringRef(os.str()).contains("a = 42"));
-    EXPECT_TRUE(StringRef(os.str()).contains("b = 4.200000e+01"));
-    EXPECT_TRUE(StringRef(os.str()).contains("array = array<i64: 40, 41, 42>"));
-    EXPECT_TRUE(StringRef(os.str()).contains("label = \"foo bar\""));
+    StringRef view(output);
+    EXPECT_TRUE(view.contains("a = 42"));
+    EXPECT_TRUE(view.contains("b = 4.200000e+01"));
+    EXPECT_TRUE(view.contains("array = array<i64: 40, 41, 42>"));
+    EXPECT_TRUE(view.contains("label = \"foo bar\""));
   }
 }
 
@@ -257,15 +279,10 @@ TEST(OpPropertiesTest, FailedProperties) {
   attrs.push_back(b.getNamedAttr("a", b.getStringAttr("foo")));
   state.propertiesAttr = attrs.getDictionary(&context);
   {
-    std::unique_ptr<InFlightDiagnostic> diagnostic;
-    auto getDiag = [&]() -> InFlightDiagnostic & {
-      if (!diagnostic) {
-        diagnostic = std::make_unique<InFlightDiagnostic>(
-            op->emitError("setting properties failed: "));
-      }
-      return *diagnostic;
+    auto emitError = [&]() {
+      return op->emitError("setting properties failed: ");
     };
-    auto result = state.setProperties(op, getDiag);
+    auto result = state.setProperties(op, emitError);
     EXPECT_TRUE(result.failed());
   }
   EXPECT_STREQ("setting properties failed: expected IntegerAttr for key `a`",
@@ -283,9 +300,10 @@ TEST(OpPropertiesTest, DefaultValues) {
     std::string output;
     llvm::raw_string_ostream os(output);
     op->print(os);
-    EXPECT_TRUE(StringRef(os.str()).contains("a = -1"));
-    EXPECT_TRUE(StringRef(os.str()).contains("b = -1"));
-    EXPECT_TRUE(StringRef(os.str()).contains("array = array<i64: -33>"));
+    StringRef view(output);
+    EXPECT_TRUE(view.contains("a = -1"));
+    EXPECT_TRUE(view.contains("b = -1"));
+    EXPECT_TRUE(view.contains("array = array<i64: -33>"));
   }
   op->erase();
 }
@@ -357,11 +375,48 @@ TEST(OpPropertiesTest, getOrAddProperties) {
     std::string output;
     llvm::raw_string_ostream os(output);
     op->print(os);
-    EXPECT_TRUE(StringRef(os.str()).contains("a = 1"));
-    EXPECT_TRUE(StringRef(os.str()).contains("b = 2"));
-    EXPECT_TRUE(StringRef(os.str()).contains("array = array<i64: 3, 4, 5>"));
+    StringRef view(output);
+    EXPECT_TRUE(view.contains("a = 1"));
+    EXPECT_TRUE(view.contains("b = 2"));
+    EXPECT_TRUE(view.contains("array = array<i64: 3, 4, 5>"));
   }
   op->erase();
+}
+
+constexpr StringLiteral withoutPropertiesAttrsSrc = R"mlir(
+    "test_op_properties.op_without_properties"()
+      {inherent_attr = 42, other_attr = 56} : () -> ()
+)mlir";
+
+TEST(OpPropertiesTest, withoutPropertiesDiscardableAttrs) {
+  MLIRContext context;
+  context.getOrLoadDialect<TestOpPropertiesDialect>();
+  ParserConfig config(&context);
+  OwningOpRef<Operation *> op =
+      parseSourceString(withoutPropertiesAttrsSrc, config);
+  ASSERT_EQ(llvm::range_size(op->getDiscardableAttrs()), 1u);
+  EXPECT_EQ(op->getDiscardableAttrs().begin()->getName().getValue(),
+            "other_attr");
+
+  EXPECT_EQ(op->getAttrs().size(), 2u);
+  EXPECT_TRUE(op->getInherentAttr("inherent_attr") != std::nullopt);
+  EXPECT_TRUE(op->getDiscardableAttr("other_attr") != Attribute());
+
+  std::string output;
+  llvm::raw_string_ostream os(output);
+  op->print(os);
+  StringRef view(output);
+  EXPECT_TRUE(view.contains("inherent_attr = 42"));
+  EXPECT_TRUE(view.contains("other_attr = 56"));
+
+  OwningOpRef<Operation *> reparsed = parseSourceString(os.str(), config);
+  auto trivialHash = [](Value v) { return hash_value(v); };
+  auto hash = [&](Operation *operation) {
+    return OperationEquivalence::computeHash(
+        operation, trivialHash, trivialHash,
+        OperationEquivalence::Flags::IgnoreLocations);
+  };
+  EXPECT_TRUE(hash(op.get()) == hash(reparsed.get()));
 }
 
 } // namespace

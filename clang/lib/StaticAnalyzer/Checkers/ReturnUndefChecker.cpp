@@ -24,8 +24,8 @@ using namespace ento;
 
 namespace {
 class ReturnUndefChecker : public Checker< check::PreStmt<ReturnStmt> > {
-  mutable std::unique_ptr<BugType> BT_Undef;
-  mutable std::unique_ptr<BugType> BT_NullReference;
+  const BugType BT_Undef{this, "Garbage return value"};
+  const BugType BT_NullReference{this, "Returning null reference"};
 
   void emitUndef(CheckerContext &C, const Expr *RetE) const;
   void checkReference(CheckerContext &C, const Expr *RetE,
@@ -77,7 +77,7 @@ void ReturnUndefChecker::checkPreStmt(const ReturnStmt *RS,
   }
 }
 
-static void emitBug(CheckerContext &C, BugType &BT, StringRef Msg,
+static void emitBug(CheckerContext &C, const BugType &BT, StringRef Msg,
                     const Expr *RetE, const Expr *TrackingE = nullptr) {
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
@@ -92,9 +92,7 @@ static void emitBug(CheckerContext &C, BugType &BT, StringRef Msg,
 }
 
 void ReturnUndefChecker::emitUndef(CheckerContext &C, const Expr *RetE) const {
-  if (!BT_Undef)
-    BT_Undef.reset(new BugType(this, "Garbage return value"));
-  emitBug(C, *BT_Undef, "Undefined or garbage value returned to caller", RetE);
+  emitBug(C, BT_Undef, "Undefined or garbage value returned to caller", RetE);
 }
 
 void ReturnUndefChecker::checkReference(CheckerContext &C, const Expr *RetE,
@@ -109,10 +107,7 @@ void ReturnUndefChecker::checkReference(CheckerContext &C, const Expr *RetE,
   }
 
   // The return value is known to be null. Emit a bug report.
-  if (!BT_NullReference)
-    BT_NullReference.reset(new BugType(this, "Returning null reference"));
-
-  emitBug(C, *BT_NullReference, BT_NullReference->getDescription(), RetE,
+  emitBug(C, BT_NullReference, BT_NullReference.getDescription(), RetE,
           bugreporter::getDerefExpr(RetE));
 }
 

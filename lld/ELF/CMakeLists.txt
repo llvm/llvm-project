@@ -33,9 +33,11 @@ add_lld_library(lldELF
   Arch/PPC64.cpp
   Arch/RISCV.cpp
   Arch/SPARCV9.cpp
+  Arch/SystemZ.cpp
   Arch/X86.cpp
   Arch/X86_64.cpp
   ARMErrataFix.cpp
+  BPSectionOrderer.cpp
   CallGraphSort.cpp
   DWARF.cpp
   Driver.cpp
@@ -71,8 +73,10 @@ add_lld_library(lldELF
   Object
   Option
   Passes
+  ProfileData
   Support
   TargetParser
+  TransformUtils
 
   LINK_LIBS
   lldCommon

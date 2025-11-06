@@ -77,8 +77,7 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
     Ops.push_back(I->getOperand(2));
     break;
   case Instruction::PHI:
-    for (Value *V : cast<PHINode>(I)->incoming_values())
-      Ops.push_back(V);
+    llvm::append_range(Ops, cast<PHINode>(I)->incoming_values());
     break;
   default:
     llvm_unreachable("Unreachable!");
@@ -111,7 +110,7 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
       Worklist.pop_back();
       Stack.pop_back();
       // Insert I to the Info map.
-      InstInfoMap.insert(std::make_pair(I, Info()));
+      InstInfoMap.try_emplace(I);
       continue;
     }
 
@@ -366,7 +365,7 @@ static Type *getReducedType(Value *V, Type *Ty) {
 Value *TruncInstCombine::getReducedOperand(Value *V, Type *SclTy) {
   Type *Ty = getReducedType(V, SclTy);
   if (auto *C = dyn_cast<Constant>(V)) {
-    C = ConstantExpr::getIntegerCast(C, Ty, false);
+    C = ConstantExpr::getTrunc(C, Ty);
     // If we got a constantexpr back, try to simplify it with DL info.
     return ConstantFoldConstant(C, DL, &TLI);
   }
@@ -460,7 +459,7 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
       Value *Op0 = I->getOperand(0);
       Value *LHS = getReducedOperand(I->getOperand(1), SclTy);
       Value *RHS = getReducedOperand(I->getOperand(2), SclTy);
-      Res = Builder.CreateSelect(Op0, LHS, RHS);
+      Res = Builder.CreateSelect(Op0, LHS, RHS, "", I);
       break;
     }
     case Instruction::PHI: {

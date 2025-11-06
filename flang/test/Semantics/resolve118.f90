@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! USE vs IMPORT
 module m1
   type t
@@ -17,7 +17,7 @@ module m3
   interface
     subroutine s1(x)
       use m1
-      !PORTABILITY: The same 't' is already present in this scope
+      !PORTABILITY: The same 't' is already present in this scope [-Wbenign-name-clash]
       import t
       type(t) x
     end
@@ -57,3 +57,26 @@ module m5
   subroutine t
   end
 end module
+
+module m6a
+  integer :: i = 7
+end module
+
+module m6b
+  interface
+    module subroutine sub(arg)
+      interface
+        integer function arg(x)
+          use m6a, only: i
+          real :: x(i) ! ok
+        end
+      end interface
+    end
+  end interface
+end module
+
+submodule (m6b) m6bs1
+  contains
+    module procedure sub
+    end
+end submodule

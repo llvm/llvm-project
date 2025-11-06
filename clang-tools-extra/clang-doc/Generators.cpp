@@ -28,15 +28,15 @@ findGeneratorByName(llvm::StringRef Format) {
 
 std::string getTagType(TagTypeKind AS) {
   switch (AS) {
-  case TagTypeKind::TTK_Class:
+  case TagTypeKind::Class:
     return "class";
-  case TagTypeKind::TTK_Union:
+  case TagTypeKind::Union:
     return "union";
-  case TagTypeKind::TTK_Interface:
+  case TagTypeKind::Interface:
     return "interface";
-  case TagTypeKind::TTK_Struct:
+  case TagTypeKind::Struct:
     return "struct";
-  case TagTypeKind::TTK_Enum:
+  case TagTypeKind::Enum:
     return "enum";
   }
   llvm_unreachable("Unknown TagTypeKind");
@@ -97,15 +97,11 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the generators.
-extern volatile int YAMLGeneratorAnchorSource;
-extern volatile int MDGeneratorAnchorSource;
-extern volatile int HTMLGeneratorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED YAMLGeneratorAnchorDest =
-    YAMLGeneratorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED MDGeneratorAnchorDest =
-    MDGeneratorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED HTMLGeneratorAnchorDest =
-    HTMLGeneratorAnchorSource;
-
+[[maybe_unused]] static int YAMLGeneratorAnchorDest = YAMLGeneratorAnchorSource;
+[[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
+[[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
+[[maybe_unused]] static int MHTMLGeneratorAnchorDest =
+    MHTMLGeneratorAnchorSource;
+[[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

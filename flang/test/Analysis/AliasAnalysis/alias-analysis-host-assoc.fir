@@ -297,8 +297,7 @@ func.func @_QFtest8Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {
 //   end subroutine inner
 // end subroutine test9
 
-// FIXME: 'g' is classified as Indirect access leading to a conservative reply:
-// CHECK: test9_g(1)#0 <-> test9_x(1)#0: MayAlias
+// CHECK: test9_g(1)#0 <-> test9_x(1)#0: NoAlias
 func.func @_QFtest9Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   %0 = fir.address_of(@_QMglobalsEg) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMglobalsEg"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)

@@ -18,6 +18,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S, class SV>
 TEST_CONSTEXPR_CXX20 void test(S s, typename S::size_type pos1, typename S::size_type n1, SV sv, S expected) {
@@ -30,6 +31,7 @@ TEST_CONSTEXPR_CXX20 void test(S s, typename S::size_type pos1, typename S::size
     typename S::size_type xlen = std::min(n1, old_size - pos1);
     typename S::size_type rlen = sv.size();
     assert(s.size() == old_size - xlen + rlen);
+    LIBCPP_ASSERT(is_string_asan_correct(s));
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
@@ -358,25 +360,25 @@ TEST_CONSTEXPR_CXX20 bool test2() {
   return true;
 }
 
-template <class S>
+template <class CharT, template <class> class Alloc>
 void test() {
-  {
-    typedef std::string_view SV;
-    test0<S, SV>();
-    test1<S, SV>();
-    test2<S, SV>();
+  using S  = std::basic_string<CharT, std::char_traits<CharT>, Alloc<CharT> >;
+  using SV = std::basic_string_view<CharT, std::char_traits<CharT> >;
+  test0<S, SV>();
+  test1<S, SV>();
+  test2<S, SV>();
 #if TEST_STD_VER > 17
-    static_assert(test0<S, SV>());
-    static_assert(test1<S, SV>());
-    static_assert(test2<S, SV>());
+  static_assert(test0<S, SV>());
+  static_assert(test1<S, SV>());
+  static_assert(test2<S, SV>());
 #endif
-  }
 }
 
 int main(int, char**) {
-  test<std::string>();
+  test<char, std::allocator>();
 #if TEST_STD_VER >= 11
-  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test<char, min_allocator>();
+  test<char, safe_allocator>();
 #endif
 
   return 0;

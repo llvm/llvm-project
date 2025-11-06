@@ -20,8 +20,7 @@ define void @loop_phi_pos_start_value(i32 %y, i1 %c, i32 %n) {
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sgt i32 [[X]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
-; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i32 [[X]], 0
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp sge i32 [[X]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
 ; CHECK-NEXT:    [[X_NEXT]] = add nsw i32 [[X]], 1

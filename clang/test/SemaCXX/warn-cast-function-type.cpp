@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fblocks -fsyntax-only -Wcast-function-type -Wno-cast-function-type-strict -verify
+// RUN: %clang_cc1 %s -fblocks -fsyntax-only -Wextra -Wno-cast-function-type-strict -verify
 
 int x(long);
 
@@ -27,8 +28,17 @@ struct S
 
 typedef void (S::*mf)(int);
 
+enum E : long;
+int efunc(E);
+
+// Produce the underlying `long` type implicitly.
+enum E2 { big = __LONG_MAX__ };
+int e2func(E2);
+
 void foo() {
   a = (f1 *)x;
+  a = (f1 *)efunc; // enum is just type system sugar, still passed as a long.
+  a = (f1 *)e2func; // enum is just type system sugar, still passed as a long.
   b = (f2 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
   b = reinterpret_cast<f2 *>(x); // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
   c = (f3 *)x;

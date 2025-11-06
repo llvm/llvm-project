@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_CREATE_H
-#define LLVM_LIBC_SRC_THREADS_PTHREAD_CREATE_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_CREATE_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_CREATE_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_create(pthread_t *__restrict thread,
                    const pthread_attr_t *__restrict attr,
                    __pthread_start_t func, void *arg);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_CREATE_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_CREATE_H

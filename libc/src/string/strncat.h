@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRNCAT_H
 #define LLVM_LIBC_SRC_STRING_STRNCAT_H
 
-#include <string.h>
+#include "include/llvm-libc-types/size_t.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 char *strncat(char *__restrict dest, const char *__restrict src, size_t count);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_STRNCAT_H

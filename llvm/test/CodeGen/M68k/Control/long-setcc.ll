@@ -4,7 +4,7 @@
 define i1 @t1(i64 %x) nounwind {
 ; CHECK-LABEL: t1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    move.l #31, %d1
+; CHECK-NEXT:    moveq #31, %d1
 ; CHECK-NEXT:    move.l (4,%sp), %d0
 ; CHECK-NEXT:    lsr.l %d1, %d0
 ; CHECK-NEXT:    ; kill: def $bd0 killed $bd0 killed $d0
@@ -26,7 +26,7 @@ define i1 @t2(i64 %x) nounwind {
 define i1 @t3(i32 %x) nounwind {
 ; CHECK-LABEL: t3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    move.b #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
   %tmp = icmp ugt i32 %x, -1
   ret i1 %tmp

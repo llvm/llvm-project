@@ -48,19 +48,19 @@
 define dso_local void @_Z4Testv() local_unnamed_addr {
 entry:
   %o = alloca %class.Impl, align 8
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %o)
+  call void @llvm.lifetime.start.p0(ptr nonnull %o)
   call void @_ZN4ImplC2Ev(ptr nonnull %o)
   call fastcc void @_ZL11IndirectRunR9Interface(ptr nonnull dereferenceable(8) %o)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %o)
+  call void @llvm.lifetime.end.p0(ptr nonnull %o)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 define linkonce_odr dso_local void @_ZN4ImplC2Ev(ptr %this) unnamed_addr align 2 {
 entry:
   call void @_ZN9InterfaceC2Ev(ptr %this)
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV4Impl, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV4Impl, i64 0, i32 0, i64 2), ptr %this, align 8
   %f = getelementptr inbounds %class.Impl, ptr %this, i64 0, i32 1
   store i32 3, ptr %f, align 8
   ret void
@@ -74,21 +74,21 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define linkonce_odr dso_local void @_ZN9InterfaceC2Ev(ptr %this) unnamed_addr align 2 {
 entry:
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV9Interface, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV9Interface, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
 define linkonce_odr dso_local void @_ZN4Impl3RunEv(ptr %this) unnamed_addr align 2 {
 entry:
   %ref.tmp = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ref.tmp)
+  call void @llvm.lifetime.start.p0(ptr nonnull %ref.tmp)
   store ptr %this, ptr %ref.tmp, align 8
   call void @_Z13DoNotOptimizeIP4ImplEvRKT_(ptr nonnull dereferenceable(8) %ref.tmp)
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ref.tmp)
+  call void @llvm.lifetime.end.p0(ptr nonnull %ref.tmp)
   ret void
 }
 
@@ -160,10 +160,10 @@ memptr.end:                                       ; preds = %memptr.nonvirtual, 
 define i32 @_Z2g1v() {
 entry:
   %a = alloca %struct.A, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %a)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a)
   call void @_ZN1AC1Ev(ptr nonnull %a)
   %call = call i32 @_Z1fP1AMS_FivE(ptr nonnull %a, i64 1, i64 0)
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   ret i32 %call
 }
 
@@ -176,16 +176,16 @@ entry:
 define i32 @_Z2g2v() {
 entry:
   %a = alloca %struct.A, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %a)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a)
   call void @_ZN1AC1Ev(ptr nonnull %a)
   %call = call i32 @_Z1fP1AMS_FivE(ptr nonnull %a, i64 9, i64 0)
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   ret i32 %call
 }
 
 define linkonce_odr void @_ZN1AC2Ev(ptr %this) align 2 {
 entry:
-  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 

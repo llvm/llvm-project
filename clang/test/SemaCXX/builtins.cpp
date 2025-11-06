@@ -1,13 +1,21 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++11 -fcxx-exceptions
-// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++1z -fcxx-exceptions
+// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++11 -fcxx-exceptions -fptrauth-intrinsics
+// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++1z -fcxx-exceptions -fptrauth-intrinsics
 typedef const struct __CFString * CFStringRef;
 #define CFSTR __builtin___CFStringMakeConstantString
+#define NSSTR __builtin___NSStringMakeConstantString
 
 void f() {
 #if !defined(__MVS__) && !defined(_AIX)
   // Builtin function __builtin___CFStringMakeConstantString is currently
   // unsupported on z/OS and AIX.
   (void)CFStringRef(CFSTR("Hello"));
+
+  constexpr bool a = CFSTR("Hello") == CFSTR("Hello");
+  // expected-error@-1 {{constant expression}}
+  // expected-note@-2 {{comparison against opaque constant address '&__builtin___CFStringMakeConstantString("Hello")'}}
+  constexpr bool b = NSSTR("Hello") == NSSTR("Hello");
+  // expected-error@-1 {{constant expression}}
+  // expected-note@-2 {{comparison against opaque constant address '&__builtin___NSStringMakeConstantString("Hello")'}}
 #endif
 }
 
@@ -47,7 +55,7 @@ void a(void) {}
 int n;
 void *p = __builtin_function_start(n);               // expected-error {{argument must be a function}}
 static_assert(__builtin_function_start(a) == a, ""); // expected-error {{static assertion expression is not an integral constant expression}}
-// expected-note@-1 {{comparison of addresses of literals has unspecified value}}
+// expected-note@-1 {{comparison against opaque constant address '&__builtin_function_start(a)'}}
 } // namespace function_start
 
 void no_ms_builtins() {
@@ -75,6 +83,11 @@ using MemFnType = int (Dummy::*)(char);
 using ConstMemFnType = int (Dummy::*)() const;
 
 void foo() {}
+
+void test_builtin_empty_parentheses_diags() {
+  __is_trivially_copyable(); // expected-error {{expected a type}}
+  __is_trivially_copyable(1); // expected-error {{expected a type}}
+}
 
 void test_builtin_launder_diags(void *vp, const void *cvp, FnType *fnp,
                                 MemFnType mfp, ConstMemFnType cmfp, int (&Arr)[5]) {
@@ -169,4 +182,24 @@ template void test_builtin_complex(int, double); // expected-note {{instantiatio
 // This previously would cause an assertion when emitting the note diagnostic.
 static void __builtin_cpu_init(); // expected-error {{static declaration of '__builtin_cpu_init' follows non-static declaration}} \
                                      expected-note {{'__builtin_cpu_init' is a builtin with type 'void () noexcept'}}
+#endif
+
+#ifdef _MSC_VER
+constexpr int x = [] {
+  __noop;
+  return 0;
+}(); // expected-no-diagnostics
+static_assert([] { return __noop; }() == 0);
+static_assert([] { return __noop(4); }() == 0);
+extern int not_accessed;
+void not_called();
+static_assert([] { return __noop(not_accessed *= 6); }() == 0);
+static_assert([] { return __noop(not_called()); }() == 0);
+static_assert([] { return __noop(throw ""); }() == 0);
+static_assert([] { return __noop(throw "", throw ""); }() == 0);
+static_assert([] {
+  int a = 5;
+  __noop(++a);
+  return a;
+}() == 5);
 #endif

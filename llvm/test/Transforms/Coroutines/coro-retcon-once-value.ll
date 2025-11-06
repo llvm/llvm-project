@@ -29,7 +29,7 @@ neg.cont:
   br label %cleanup
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -72,7 +72,7 @@ neg.cont:
 cleanup:
   %new.val = add i32 %val, 123
   %tok = call token (...) @llvm.coro.end.results(ptr null, i32 %new.val, ptr @deallocate)
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token %tok)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
   unreachable
 }
 
@@ -96,7 +96,7 @@ entry:
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare token @llvm.coro.end.results(...)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 
@@ -159,7 +159,7 @@ declare void @print(i32)
 ; CHECK-NEXT:  PostSpill:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 16)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
-; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[TMP0]], i64 0, i32 1
+; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    store i32 [[VAL:%.*]], ptr [[VAL_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    store ptr [[ARRAY:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ARRAY]], align 4
@@ -180,11 +180,11 @@ declare void @print(i32)
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAY_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[COROEND]]
 ; CHECK:       CoroEnd:
-; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[TMP2]], i64 0, i32 1
+; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i32, ptr [[VAL_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    [[NEW_VAL:%.*]] = add i32 [[VAL_RELOAD]], 123
 ; CHECK-NEXT:    tail call void @deallocate(ptr [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr, i32, ptr } { ptr null, i32 undef, ptr undef }, i32 [[NEW_VAL]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr, i32, ptr } { ptr null, i32 poison, ptr poison }, i32 [[NEW_VAL]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { ptr, i32, ptr } [[TMP3]], ptr @deallocate, 2
 ; CHECK-NEXT:    ret { ptr, i32, ptr } [[TMP4]]
 ;
@@ -198,11 +198,11 @@ declare void @print(i32)
 ; CHECK-NEXT:    store i32 10, ptr [[ARRAY_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[COROEND]]
 ; CHECK:       CoroEnd:
-; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[TMP2]], i64 0, i32 1
+; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i32, ptr [[VAL_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    [[NEW_VAL:%.*]] = add i32 [[VAL_RELOAD]], 123
 ; CHECK-NEXT:    tail call void @deallocate(ptr [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr, i32, ptr } { ptr null, i32 undef, ptr undef }, i32 [[NEW_VAL]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr, i32, ptr } { ptr null, i32 poison, ptr poison }, i32 [[NEW_VAL]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { ptr, i32, ptr } [[TMP3]], ptr @deallocate, 2
 ; CHECK-NEXT:    ret { ptr, i32, ptr } [[TMP4]]
 ;

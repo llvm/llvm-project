@@ -1,37 +1,44 @@
-; Tests whether resume function would remain dbg.value infomation.
+; Tests whether resume function retains dbg.value information.
 ; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 ;
 ; This file is based on coro-debug-frame-variable.ll.
-; CHECK-LABEL: define void @f(
+; CHECK-LABEL: define void @_Z3foov(
 ; CHECK:       %[[frame:.*]] = call {{.*}} @llvm.coro.begin
-; CHECK:       call void @llvm.dbg.value(metadata ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX:[0-9]*]]))
+; CHECK:       #dbg_value(ptr %[[frame]]
+; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX:[0-9]*]]),
 ;                                                                   ^ No deref at the end, as this variable ("x") is an array;
 ;                                                                     its value is its address. The entire array is in the frame.
-; CHECK:       call void @llvm.dbg.value(metadata ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetSpill:[0-9]*]], DW_OP_deref))
-; CHECK:       call void @llvm.dbg.value(metadata ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetI:[0-9]*]], DW_OP_deref))
-; CHECK:       call void @llvm.dbg.value(metadata ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetJ:[0-9]*]], DW_OP_deref))
+; CHECK:       #dbg_assign(ptr %[[frame]]
+; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX]])
+;; FIXME: Should we be updating the addresses on assigns here as well?
+; CHECK-SAME:    , ptr %[[frame]], !DIExpression(),
 
-; CHECK-LABEL: void @f.resume(
+; CHECK:       #dbg_value(ptr %[[frame]]
+; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetSpill:[0-9]*]], DW_OP_deref),
+; CHECK:       #dbg_value(ptr %[[frame]]
+; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetI:[0-9]*]], DW_OP_deref),
+; CHECK:       #dbg_value(ptr %[[frame]]
+; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetJ:[0-9]*]], DW_OP_deref),
+
+; CHECK-LABEL: void @_Z3foov.resume(
 ; CHECK-SAME:                 ptr {{.*}} %[[frame:.*]])
 ; CHECK-SAME:  !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]
 ; CHECK:         %[[frame_alloca:.*]] = alloca ptr
+; CHECK-NEXT:    #dbg_declare(ptr %begin.debug, ![[FRAME_DI_NUM:[0-9]+]],
 ; CHECK-NEXT:    store ptr %[[frame]], ptr %[[frame_alloca]]
 ; CHECK:       init.ready:
-; CHECK:         call void @llvm.dbg.value(metadata ptr %[[frame_alloca]], metadata ![[XVAR_RESUME:[0-9]+]],
+; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[XVAR_RESUME:[0-9]+]],
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetX]])
 ; CHECK:       await.ready:
-; CHECK:         call void @llvm.dbg.value(metadata ptr %[[frame_alloca]], metadata ![[SPILL_RESUME:[0-9]+]]
+; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[SPILL_RESUME:[0-9]+]]
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetSpill]], DW_OP_deref)
-; CHECK:         call void @llvm.dbg.value(metadata ptr %[[frame_alloca]], metadata ![[IVAR_RESUME:[0-9]+]],
+; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[IVAR_RESUME:[0-9]+]],
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetI]], DW_OP_deref)
-; CHECK:         call void @llvm.dbg.value(metadata ptr %[[frame_alloca]], metadata ![[JVAR_RESUME:[0-9]+]],
+; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[JVAR_RESUME:[0-9]+]],
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetJ]], DW_OP_deref)
 ;
-; CHECK: ![[RESUME_FN_DBG_NUM]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"
+; CHECK: ![[RESUME_FN_DBG_NUM]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov.resume"
+; CHECK: ![[FRAME_DI_NUM]] = !DILocalVariable(name: "__coro_frame"
 ; CHECK: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
 ; CHECK: ![[XVAR_RESUME]] = !DILocalVariable(name: "x"
 ; CHECK: ![[JVAR_RESUME]] = !DILocalVariable(name: "j"
@@ -39,7 +46,7 @@
 
 declare void @consume(i32)
 
-define void @f(i32 %i, i32 %j) presplitcoroutine !dbg !8 {
+define void @_Z3foov(i32 %i, i32 %j) presplitcoroutine !dbg !8 {
 entry:
   %__promise = alloca i8, align 8
   %x = alloca [10 x i32], align 16
@@ -77,6 +84,7 @@ init.ready:                                       ; preds = %init.suspend, %coro
   %i.init.ready.inc = add nsw i32 0, 1
   call void @llvm.dbg.value(metadata i32 %i.init.ready.inc, metadata !6, metadata !DIExpression()), !dbg !11
   call void @llvm.dbg.value(metadata ptr %x, metadata !12, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.assign(metadata ptr %x, metadata !12, metadata !DIExpression(), metadata !30, metadata ptr %x, metadata !DIExpression()), !dbg !17
   call void @llvm.memset.p0.i64(ptr align 16 %x, i8 0, i64 40, i1 false), !dbg !17
   call void @print(i32 %i.init.ready.inc)
   %ready.again = call zeroext i1 @await_ready()
@@ -154,7 +162,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
   br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-  %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -186,7 +194,7 @@ declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(ptr, i1, token) #2
+declare void @llvm.coro.end(ptr, i1, token) #2
 
 declare ptr @new(i64)
 
@@ -249,3 +257,4 @@ attributes #4 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !21 = !DILocation(line: 43, column: 3, scope: !7)
 !22 = !DILocation(line: 43, column: 8, scope: !7)
 !23 = !DILocalVariable(name: "produced", scope: !7, file: !1, line:24, type: !10)
+!30 = distinct !DIAssignID()

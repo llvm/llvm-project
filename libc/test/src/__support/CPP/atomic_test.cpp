@@ -13,22 +13,55 @@
 // threads, at which point it becomes a chicken and egg problem.
 
 TEST(LlvmLibcAtomicTest, LoadStore) {
-  __llvm_libc::cpp::Atomic<int> aint(123);
-  ASSERT_EQ(aint.load(__llvm_libc::cpp::MemoryOrder::RELAXED), 123);
+  LIBC_NAMESPACE::cpp::Atomic<int> aint(123);
+  ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 123);
 
-  aint.store(100, __llvm_libc::cpp::MemoryOrder::RELAXED);
-  ASSERT_EQ(aint.load(__llvm_libc::cpp::MemoryOrder::RELAXED), 100);
+  aint.store(100, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
+  ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 100);
 
   aint = 1234; // Equivalent of store
-  ASSERT_EQ(aint.load(__llvm_libc::cpp::MemoryOrder::RELAXED), 1234);
+  ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 1234);
 }
 
 TEST(LlvmLibcAtomicTest, CompareExchangeStrong) {
   int desired = 123;
-  __llvm_libc::cpp::Atomic<int> aint(desired);
+  LIBC_NAMESPACE::cpp::Atomic<int> aint(desired);
   ASSERT_TRUE(aint.compare_exchange_strong(desired, 100));
-  ASSERT_EQ(aint.load(__llvm_libc::cpp::MemoryOrder::RELAXED), 100);
+  ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 100);
 
   ASSERT_FALSE(aint.compare_exchange_strong(desired, 100));
-  ASSERT_EQ(aint.load(__llvm_libc::cpp::MemoryOrder::RELAXED), 100);
+  ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 100);
+}
+
+struct alignas(void *) TrivialData {
+  char a;
+  char b;
+  char padding[sizeof(void *) - 2];
+};
+
+TEST(LlvmLibcAtomicTest, TrivialCompositeData) {
+  LIBC_NAMESPACE::cpp::Atomic<TrivialData> data({'a', 'b', {}});
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).a, 'a');
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).b, 'b');
+
+  auto old = data.exchange({'c', 'd', {}});
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).a, 'c');
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).b, 'd');
+  ASSERT_EQ(old.a, 'a');
+  ASSERT_EQ(old.b, 'b');
+}
+
+TEST(LlvmLibcAtomicTest, AtomicRefTest) {
+  int val = 123;
+  LIBC_NAMESPACE::cpp::AtomicRef aint(val);
+  ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 123);
+  ASSERT_EQ(aint.fetch_add(1, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 123);
+  aint = 1234;
+  ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 1234);
+
+  // Test the implicit construction from pointer.
+  auto fn = [](LIBC_NAMESPACE::cpp::AtomicRef<int> aint) -> int {
+    return aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
+  };
+  ASSERT_EQ(fn(&val), 1234);
 }

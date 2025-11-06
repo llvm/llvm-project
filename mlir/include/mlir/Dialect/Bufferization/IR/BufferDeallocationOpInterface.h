@@ -104,7 +104,7 @@ struct DeallocationOptions {
 /// BufferDeallocation pass.
 class DeallocationState {
 public:
-  DeallocationState(Operation *op);
+  DeallocationState(Operation *op, SymbolTableCollection &symbolTables);
 
   // The state should always be passed by reference.
   DeallocationState(const DeallocationState &) = delete;
@@ -189,7 +189,7 @@ public:
 private:
   // Symbol cache to lookup functions from call operations to check attributes
   // on the function operation.
-  SymbolTableCollection symbolTable;
+  SymbolTableCollection &symbolTable;
 
   // Mapping from each SSA value with MemRef type to the associated ownership in
   // each block.
@@ -204,6 +204,23 @@ private:
   // alloc and dealloc positions.
   Liveness liveness;
 };
+
+namespace deallocation_impl {
+/// Insert a `bufferization.dealloc` operation right before `op` which has to be
+/// a terminator without any successors. Note that it is not required to have
+/// the ReturnLike trait attached. The MemRef values in the `operands` argument
+/// will be added to the list of retained values and their updated ownership
+/// values will be appended to the `updatedOperandOwnerships` list. `op` is not
+/// modified in any way. Returns failure if at least one of the MemRefs to
+/// deallocate does not have 'Unique' ownership (likely as a result of an
+/// incorrect implementation of the `process` or
+/// `materializeUniqueOwnershipForMemref` interface method) or the original
+/// `op`.
+FailureOr<Operation *>
+insertDeallocOpForReturnLike(DeallocationState &state, Operation *op,
+                             ValueRange operands,
+                             SmallVectorImpl<Value> &updatedOperandOwnerships);
+} // namespace deallocation_impl
 
 } // namespace bufferization
 } // namespace mlir

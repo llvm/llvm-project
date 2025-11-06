@@ -13,6 +13,7 @@
 #ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTHREAD_H
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTHREAD_H
 
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -24,8 +25,6 @@
 #include "DNBArch.h"
 #include "DNBRegisterInfo.h"
 #include "MachException.h"
-#include "PThreadCondition.h"
-#include "PThreadMutex.h"
 
 #include "ThreadInfo.h"
 
@@ -108,6 +107,7 @@ public:
 
   bool IsUserReady();
   struct thread_basic_info *GetBasicInfo();
+  struct thread_extended_info *GetExtendedInfo();
   const char *GetBasicInfoAsString() const;
   const char *GetName();
 
@@ -126,8 +126,8 @@ public:
 protected:
   static bool GetBasicInfo(thread_t threadID,
                            struct thread_basic_info *basic_info);
-
-  bool GetIdentifierInfo();
+  static bool GetExtendedInfo(thread_t threadID,
+                              struct thread_extended_info *extended_info);
 
   //    const char *
   //    GetDispatchQueueName();
@@ -138,7 +138,7 @@ protected:
                                // namesp.
   uint32_t m_seq_id;   // A Sequential ID that increments with each new thread
   nub_state_t m_state; // The state of our process
-  PThreadMutex m_state_mutex;            // Multithreaded protection for m_state
+  std::recursive_mutex m_state_mutex;    // Multithreaded protection for m_state
   struct thread_basic_info m_basic_info; // Basic information for a thread used
                                          // to see if a thread is valid
   int32_t m_suspend_count; // The current suspend count > 0 means we have
@@ -152,8 +152,7 @@ protected:
   const DNBRegisterSetInfo
       *m_reg_sets; // Register set information for this thread
   nub_size_t m_num_reg_sets;
-  thread_identifier_info_data_t m_ident_info;
-  struct proc_threadinfo m_proc_threadinfo;
+  thread_extended_info_data_t m_extended_info;
   std::string m_dispatch_queue_name;
   bool m_is_64_bit;
 

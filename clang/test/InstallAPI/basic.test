@@ -1,0 +1,72 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+/// Check basic arguments are captured.
+// RUN: clang-installapi -x objective-c -target arm64-apple-ios13.0.0 \
+// RUN: -fapplication-extension -current_version 1 -compatibility_version 1 \
+// RUN: -install_name /usr/lib/basic.dylib -dynamiclib \
+// RUN: %t/basic_inputs.json -o %t/basic.tbd 2>&1 | FileCheck %s --allow-empty
+// RUN: llvm-readtapi -compare %t/basic.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty
+
+/// Check multiple targets are captured.
+// RUN: clang-installapi -x objective-c -target arm64-apple-ios14.1 -target arm64e-apple-ios14.1 \
+// RUN: -fapplication-extension -install_name /usr/lib/basic.dylib -dynamiclib \
+// RUN: %t/basic_inputs.json -o %t/multi-targets.tbd 2>&1 | FileCheck %s --allow-empty
+// RUN: llvm-readtapi -compare %t/multi-targets.tbd %t/expected-multi.tbd 2>&1 | FileCheck %s --allow-empty
+
+// CHECK-NOT: error:  
+// CHECK-NOT: warning:  
+
+//--- basic_inputs.json
+{
+  "headers": [
+  ],
+  "version": "3"
+}
+
+//--- expected.tbd
+{
+  "main_library": {
+    "install_names": [
+      {
+        "name": "/usr/lib/basic.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.0.0",
+        "target": "arm64-ios"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+//--- expected-multi.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }],
+    "current_versions": [
+      {
+        "version": "0"
+      }],
+    "install_names": [
+      {
+        "name": "/usr/lib/basic.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "14.1",
+        "target": "arm64-ios"
+      },
+      {
+        "min_deployment": "14.1",
+        "target": "arm64e-ios"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

@@ -201,9 +201,9 @@ define void @tail_merge_switch(i32 %v) {
 ; CHECK-LABEL: @tail_merge_switch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[RET:%.*]] [
-; CHECK-NEXT:    i32 0, label [[A1:%.*]]
-; CHECK-NEXT:    i32 13, label [[A2:%.*]]
-; CHECK-NEXT:    i32 42, label [[A3:%.*]]
+; CHECK-NEXT:      i32 0, label [[A1:%.*]]
+; CHECK-NEXT:      i32 13, label [[A2:%.*]]
+; CHECK-NEXT:      i32 42, label [[A3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       a1:
 ; CHECK-NEXT:    call void @assert_fail_1(i32 0)
@@ -315,8 +315,8 @@ cont3:
 ; from sharing stack slots for x and y.
 
 declare void @escape_i32_ptr(ptr)
-declare void @llvm.lifetime.start(i64, ptr nocapture)
-declare void @llvm.lifetime.end(i64, ptr nocapture)
+declare void @llvm.lifetime.start(ptr nocapture)
+declare void @llvm.lifetime.end(ptr nocapture)
 
 define void @dont_merge_lifetimes(i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @dont_merge_lifetimes(
@@ -324,11 +324,11 @@ define void @dont_merge_lifetimes(i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    switch i32 [[C1:%.*]], label [[IF_END9:%.*]] [
-; CHECK-NEXT:    i32 13, label [[IF_THEN:%.*]]
-; CHECK-NEXT:    i32 42, label [[IF_THEN3:%.*]]
+; CHECK-NEXT:      i32 13, label [[IF_THEN:%.*]]
+; CHECK-NEXT:      i32 42, label [[IF_THEN3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    store i32 0, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C2:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN1:%.*]]
@@ -336,11 +336,11 @@ define void @dont_merge_lifetimes(i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    call void @escape_i32_ptr(ptr nonnull [[X]])
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.then3:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[Y]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[Y]])
 ; CHECK-NEXT:    store i32 0, ptr [[Y]], align 4
 ; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp eq i32 [[C2]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL5]], label [[IF_END7:%.*]], label [[IF_THEN6:%.*]]
@@ -348,7 +348,7 @@ define void @dont_merge_lifetimes(i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    call void @escape_i32_ptr(ptr nonnull [[Y]])
 ; CHECK-NEXT:    br label [[IF_END7]]
 ; CHECK:       if.end7:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[Y]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[Y]])
 ; CHECK-NEXT:    call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end9:
@@ -363,7 +363,7 @@ entry:
   ]
 
 if.then:                                          ; preds = %entry
-  call void @llvm.lifetime.start(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.start(ptr nonnull %x)
   store i32 0, ptr %x, align 4
   %tobool = icmp eq i32 %c2, 0
   br i1 %tobool, label %if.end, label %if.then1
@@ -373,12 +373,12 @@ if.then1:                                         ; preds = %if.then
   br label %if.end
 
 if.end:                                           ; preds = %if.then1, %if.then
-  call void @llvm.lifetime.end(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.end(ptr nonnull %x)
   call void @abort()
   unreachable
 
 if.then3:                                         ; preds = %entry
-  call void @llvm.lifetime.start(i64 4, ptr nonnull %y)
+  call void @llvm.lifetime.start(ptr nonnull %y)
   store i32 0, ptr %y, align 4
   %tobool5 = icmp eq i32 %c2, 0
   br i1 %tobool5, label %if.end7, label %if.then6
@@ -388,7 +388,7 @@ if.then6:                                         ; preds = %if.then3
   br label %if.end7
 
 if.end7:                                          ; preds = %if.then6, %if.then3
-  call void @llvm.lifetime.end(i64 4, ptr nonnull %y)
+  call void @llvm.lifetime.end(ptr nonnull %y)
   call void @abort()
   unreachable
 
@@ -444,17 +444,17 @@ cont3:
 define void @strip_dbg_value(i32 %c) {
 ; CHECK-LABEL: @strip_dbg_value(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[C:%.*]], metadata [[META5:![0-9]+]], metadata !DIExpression()), !dbg [[DBG7:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i32 [[C:%.*]], [[META5:![0-9]+]], !DIExpression(), [[META7:![0-9]+]])
 ; CHECK-NEXT:    switch i32 [[C]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:    i32 13, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 42, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 13, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 42, label [[SW_BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 55, metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 55, [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.bb1:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 67, metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 67, [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.epilog:
@@ -484,21 +484,21 @@ sw.epilog:                                        ; preds = %entry
 define void @dead_phi_and_dbg(i32 %c) {
 ; CHECK-LABEL: @dead_phi_and_dbg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[C:%.*]], metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 [[C:%.*]], [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    switch i32 [[C]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:    i32 13, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 42, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 53, label [[SW_BB2:%.*]]
+; CHECK-NEXT:      i32 13, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 42, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 53, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[C_1:%.*]] = phi i32 [ 55, [[ENTRY:%.*]] ], [ 67, [[SW_BB1]] ]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[C_1]], metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 [[C_1]], [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[SW_BB]]
 ; CHECK:       sw.bb2:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 84, metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 84, [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.epilog:

@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
@@ -46,10 +47,10 @@ class Stmt;
 
 namespace ento {
 
+class CallEvent;
 class ConditionTruthVal;
 class ProgramStateManager;
 class StoreRef;
-
 class SValBuilder {
   virtual void anchor();
 
@@ -110,6 +111,18 @@ public:
   /// that value is returned. Otherwise, returns NULL.
   virtual const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal val) = 0;
 
+  /// Tries to get the minimal possible (integer) value of a given SVal. This
+  /// always returns the value of a ConcreteInt, but may return NULL if the
+  /// value is symbolic and the constraint manager cannot provide a useful
+  /// answer.
+  virtual const llvm::APSInt *getMinValue(ProgramStateRef state, SVal val) = 0;
+
+  /// Tries to get the maximal possible (integer) value of a given SVal. This
+  /// always returns the value of a ConcreteInt, but may return NULL if the
+  /// value is symbolic and the constraint manager cannot provide a useful
+  /// answer.
+  virtual const llvm::APSInt *getMaxValue(ProgramStateRef state, SVal val) = 0;
+
   /// Simplify symbolic expressions within a given SVal. Return an SVal
   /// that represents the same value, but is hopefully easier to work with
   /// than the original SVal.
@@ -159,19 +172,11 @@ public:
 
   // Forwarding methods to SymbolManager.
 
-  const SymbolConjured* conjureSymbol(const Stmt *stmt,
+  const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
                                       const LocationContext *LCtx,
-                                      QualType type,
-                                      unsigned visitCount,
+                                      QualType type, unsigned visitCount,
                                       const void *symbolTag = nullptr) {
-    return SymMgr.conjureSymbol(stmt, LCtx, type, visitCount, symbolTag);
-  }
-
-  const SymbolConjured* conjureSymbol(const Expr *expr,
-                                      const LocationContext *LCtx,
-                                      unsigned visitCount,
-                                      const void *symbolTag = nullptr) {
-    return SymMgr.conjureSymbol(expr, LCtx, visitCount, symbolTag);
+    return SymMgr.conjureSymbol(Elem, LCtx, type, visitCount, symbolTag);
   }
 
   /// Construct an SVal representing '0' for the specified type.
@@ -187,33 +192,36 @@ public:
   /// preserve the relation between related(or even equivalent) expressions, so
   /// conjured symbols should be used sparingly.
   DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
-                                        const Expr *expr,
+                                        ConstCFGElementRef elem,
                                         const LocationContext *LCtx,
                                         unsigned count);
   DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
-                                        const Expr *expr,
+                                        ConstCFGElementRef elem,
                                         const LocationContext *LCtx,
-                                        QualType type,
-                                        unsigned count);
-  DefinedOrUnknownSVal conjureSymbolVal(const Stmt *stmt,
+                                        QualType type, unsigned count);
+  DefinedOrUnknownSVal conjureSymbolVal(ConstCFGElementRef elem,
                                         const LocationContext *LCtx,
-                                        QualType type,
-                                        unsigned visitCount);
+                                        QualType type, unsigned visitCount);
+  DefinedOrUnknownSVal conjureSymbolVal(const CallEvent &call, QualType type,
+                                        unsigned visitCount,
+                                        const void *symbolTag = nullptr);
+  DefinedOrUnknownSVal conjureSymbolVal(const CallEvent &call,
+                                        unsigned visitCount,
+                                        const void *symbolTag = nullptr);
 
   /// Conjure a symbol representing heap allocated memory region.
-  ///
-  /// Note, the expression should represent a location.
-  DefinedOrUnknownSVal getConjuredHeapSymbolVal(const Expr *E,
-                                                const LocationContext *LCtx,
-                                                unsigned Count);
+  DefinedSVal getConjuredHeapSymbolVal(ConstCFGElementRef elem,
+                                       const LocationContext *LCtx,
+                                       QualType type, unsigned Count);
 
-  /// Conjure a symbol representing heap allocated memory region.
+  /// Create an SVal representing the result of an alloca()-like call, that is,
+  /// an AllocaRegion on the stack.
   ///
-  /// Note, now, the expression *doesn't* need to represent a location.
-  /// But the type need to!
-  DefinedOrUnknownSVal getConjuredHeapSymbolVal(const Expr *E,
-                                                const LocationContext *LCtx,
-                                                QualType type, unsigned Count);
+  /// After calling this function, it's a good idea to set the extent of the
+  /// returned AllocaRegion.
+  loc::MemRegionVal getAllocaRegionVal(const Expr *E,
+                                       const LocationContext *LCtx,
+                                       unsigned Count);
 
   DefinedOrUnknownSVal getDerivedRegionValueSymbolVal(
       SymbolRef parentSymbol, const TypedValueRegion *region);
@@ -310,11 +318,10 @@ public:
   }
 
   nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                               const llvm::APSInt &rhs, QualType type);
+                               APSIntPtr rhs, QualType type);
 
-  nonloc::SymbolVal makeNonLoc(const llvm::APSInt &rhs,
-                               BinaryOperator::Opcode op, const SymExpr *lhs,
-                               QualType type);
+  nonloc::SymbolVal makeNonLoc(APSIntPtr rhs, BinaryOperator::Opcode op,
+                               const SymExpr *lhs, QualType type);
 
   nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
                                const SymExpr *rhs, QualType type);

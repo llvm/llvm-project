@@ -1,4 +1,4 @@
-//===--- StringFindStartswithCheck.cc - clang-tidy---------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,11 +19,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::abseil {
 
+const auto DefaultStringLikeClasses =
+    "::std::basic_string;::std::basic_string_view";
+
 StringFindStartswithCheck::StringFindStartswithCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StringLikeClasses(utils::options::parseStringList(
-          Options.get("StringLikeClasses", "::std::basic_string"))),
+          Options.get("StringLikeClasses", DefaultStringLikeClasses))),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()),

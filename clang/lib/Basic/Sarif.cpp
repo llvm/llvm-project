@@ -17,10 +17,8 @@
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/JSON.h"
@@ -58,8 +56,7 @@ static std::string percentEncodeURICharacter(char C) {
   // should be written out directly. Otherwise, percent
   // encode the character and write that out instead of the
   // reserved character.
-  if (llvm::isAlnum(C) ||
-      StringRef::npos != StringRef("-._~:@!$&'()*+,;=").find(C))
+  if (llvm::isAlnum(C) || StringRef("-._~:@!$&'()*+,;=").contains(C))
     return std::string(&C, 1);
   return "%" + llvm::toHex(StringRef(&C, 1));
 }
@@ -70,12 +67,12 @@ static std::string percentEncodeURICharacter(char C) {
 /// \param Filename The filename to be represented as URI.
 ///
 /// \return RFC3986 URI representing the input file name.
-static std::string fileNameToURI(StringRef Filename) {
+std::string SarifDocumentWriter::fileNameToURI(StringRef Filename) {
   SmallString<32> Ret = StringRef("file://");
 
   // Get the root name to see if it has a URI authority.
   StringRef Root = sys::path::root_name(Filename);
-  if (Root.startswith("//")) {
+  if (Root.starts_with("//")) {
     // There is an authority, so add it to the URI.
     Ret += Root.drop_front(2).str();
   } else if (!Root.empty()) {
@@ -87,12 +84,12 @@ static std::string fileNameToURI(StringRef Filename) {
   assert(Iter != End && "Expected there to be a non-root path component.");
   // Add the rest of the path components, encoding any reserved characters;
   // we skip past the first path component, as it was handled it above.
-  std::for_each(++Iter, End, [&Ret](StringRef Component) {
+  for (StringRef Component : llvm::make_range(++Iter, End)) {
     // For reasons unknown to me, we may get a backslash with Windows native
     // paths for the initial backslash following the drive component, which
     // we need to ignore as a URI path part.
     if (Component == "\\")
-      return;
+      continue;
 
     // Add the separator between the previous path part and the one being
     // currently processed.
@@ -102,7 +99,7 @@ static std::string fileNameToURI(StringRef Filename) {
     for (char C : Component) {
       Ret += percentEncodeURICharacter(C);
     }
-  });
+  }
 
   return std::string(Ret);
 }
@@ -120,7 +117,7 @@ static unsigned int adjustColumnPos(FullSourceLoc Loc,
                                     unsigned int TokenLen = 0) {
   assert(!Loc.isInvalid() && "invalid Loc when adjusting column position");
 
-  std::pair<FileID, unsigned> LocInfo = Loc.getDecomposedExpansionLoc();
+  FileIDAndOffset LocInfo = Loc.getDecomposedExpansionLoc();
   std::optional<MemoryBufferRef> Buf =
       Loc.getManager().getBufferOrNone(LocInfo.first);
   assert(Buf && "got an invalid buffer for the location's file");
@@ -143,7 +140,7 @@ static unsigned int adjustColumnPos(FullSourceLoc Loc,
 /// @{
 
 /// \internal
-json::Object createMessage(StringRef Text) {
+static json::Object createMessage(StringRef Text) {
   return json::Object{{"text", Text.str()}};
 }
 
@@ -394,6 +391,11 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
   json::Object Ret{{"message", createMessage(Result.DiagnosticMessage)},
                    {"ruleIndex", static_cast<int64_t>(RuleIdx)},
                    {"ruleId", Rule.Id}};
+
+  if (!Result.HostedViewerURI.empty()) {
+    Ret["hostedViewerUri"] = Result.HostedViewerURI;
+  }
+
   if (!Result.Locations.empty()) {
     json::Array Locs;
     for (auto &Range : Result.Locations) {
@@ -401,6 +403,15 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
     }
     Ret["locations"] = std::move(Locs);
   }
+
+  if (!Result.PartialFingerprints.empty()) {
+    json::Object fingerprints = {};
+    for (auto &pair : Result.PartialFingerprints) {
+      fingerprints[pair.first] = pair.second;
+    }
+    Ret["partialFingerprints"] = std::move(fingerprints);
+  }
+
   if (!Result.ThreadFlows.empty())
     Ret["codeFlows"] = json::Array{createCodeFlow(Result.ThreadFlows)};
 

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -start-before=twoaddressinstruction %s -o - | FileCheck %s -check-prefix=GCN
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before=twoaddressinstruction %s -o - | FileCheck %s -check-prefix=GCN
 
 # Wait to sxpand SI_INDIRECT sequences that use VGPR indexing until after
 # register allocation. We don’t want to reschedule the mode switching or to
@@ -24,7 +24,7 @@ body:             |
 
     %0:sgpr_64 = COPY killed $sgpr0_sgpr1
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0(p4), 36, 0
+    %2:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM %0(p4), 36, 0
     %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0(p4), 44, 0
     %4:sreg_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
     %5:vgpr_32 = V_MOV_B32_e32 1065353216, implicit $exec

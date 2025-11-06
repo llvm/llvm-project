@@ -10,6 +10,6 @@ add_mlir_conversion_library(MLIRVectorToArmSME
 
   LINK_LIBS PUBLIC
   MLIRArmSMEDialect
-  MLIRArmSMEUtils
+  MLIRArmSVEDialect
   MLIRLLVMCommonConversion
   )

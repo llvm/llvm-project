@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -pass-remarks-analysis="polly-scops" \
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -pass-remarks-analysis="polly-scops" \
 ; RUN:     -polly-allow-differing-element-types \
 ; RUN:     -disable-output < %s  2>&1 | FileCheck %s
 ;

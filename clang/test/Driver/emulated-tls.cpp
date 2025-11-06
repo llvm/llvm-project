@@ -8,6 +8,8 @@
 // RUN:   | FileCheck -check-prefix=NOEMU %s
 // RUN: %clang -### --target=i686-pc-cygwin %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=EMU %s
+// RUN: %clang -### --target=x86_64-pc-cygwin %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=EMU %s
 // RUN: %clang -### --target=i686-pc-openbsd %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=EMU %s
 
@@ -17,6 +19,8 @@
 // RUN: | FileCheck -check-prefix=EMU %s
 // RUN: %clang -### -target i686-pc-cygwin %s -fno-emulated-tls -femulated-tls 2>&1 \
 // RUN: | FileCheck -check-prefix=EMU %s
+// RUN: %clang -### -target x86_64-pc-cygwin %s -fno-emulated-tls -femulated-tls 2>&1 \
+// RUN: | FileCheck -check-prefix=EMU %s
 // RUN: %clang -### -target i686-pc-openbsd %s -fno-emulated-tls -femulated-tls 2>&1 \
 // RUN: | FileCheck -check-prefix=EMU %s
 
@@ -25,6 +29,8 @@
 // RUN: %clang -### -target arm-linux-gnu %s -femulated-tls -fno-emulated-tls 2>&1 \
 // RUN: | FileCheck -check-prefix=NOEMU %s
 // RUN: %clang -### -target i686-pc-cygwin %s -femulated-tls -fno-emulated-tls 2>&1 \
+// RUN: | FileCheck -check-prefix=NOEMU %s
+// RUN: %clang -### -target x86_64-pc-cygwin %s -femulated-tls -fno-emulated-tls 2>&1 \
 // RUN: | FileCheck -check-prefix=NOEMU %s
 // RUN: %clang -### -target i686-pc-openbsd %s -femulated-tls -fno-emulated-tls 2>&1 \
 // RUN: | FileCheck -check-prefix=NOEMU %s
@@ -39,6 +45,8 @@
 // RUN: | FileCheck %s --check-prefix=LTO_EMUTLS
 // RUN: %clang -### -flto --target=riscv64-linux-android10000 -fno-emulated-tls %s 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LTO_NOEMUTLS
+// RUN: %clang -### -flto --target=amd64-unknown-openbsd %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=LTO_EMUTLS
 
 // Default without -f[no-]emulated-tls, will be decided by the target triple.
 // DEFAULT-NOT: "-cc1" {{.*}}"-femulated-tls"

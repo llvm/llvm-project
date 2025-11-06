@@ -1,9 +1,9 @@
 # RUN: llc -O0 -mtriple arm-linux-gnueabihf -mattr=+vfp2 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
-# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-AEABI
-# RUN: llc -O0 -mtriple arm-linux-gnu -mattr=+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT
+# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-AEABI -check-prefix SOFT_POOL
+# RUN: llc -O0 -mtriple arm-linux-gnu -mattr=+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT -check-prefix SOFT_POOL
 # RUN: llc -O0 -mtriple thumb-linux-gnueabihf -mattr=+v6t2,+vfp2 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
-# RUN: llc -O0 -mtriple thumb-linux-gnueabi -mattr=+v6t2,+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-AEABI
-# RUN: llc -O0 -mtriple thumb-linux-gnu -mattr=+v6t2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT
+# RUN: llc -O0 -mtriple thumb-linux-gnueabi -mattr=+v6t2,+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix=SOFT-AEABI -check-prefix SOFT_CONST
+# RUN: llc -O0 -mtriple thumb-linux-gnu -mattr=+v6t2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT -check-prefix SOFT_CONST
 --- |
   define void @test_frem_float() { ret void }
   define void @test_frem_double() { ret void }
@@ -657,10 +657,20 @@ body:             |
   bb.0:
     liveins:
 
+    ; SOFT_POOL: constants:
+    ; SOFT_POOL: id: 0
+    ; SOFT_POOL: value: i32 -1073532109
+    ; SOFT_POOL: id: 1
+    ; SOFT_POOL: value: i32 858993459
+
     ; HARD: [[R:%[0-9]+]]:_(s64) = G_FCONSTANT double -2.4
     ; SOFT-NOT: G_FCONSTANT
-    ; SOFT-DAG: [[HI:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1073532109
-    ; SOFT-DAG: [[LO:%[0-9]+]]:_(s32) = G_CONSTANT i32 858993459
+    ; SOFT_CONST-DAG: [[HI:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1073532109
+    ; SOFT_CONST-DAG: [[LO:%[0-9]+]]:_(s32) = G_CONSTANT i32 858993459
+    ; SOFT_POOL-DAG: [[HIPTR:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.0
+    ; SOFT_POOL-DAG: [[HI:%[0-9]+]]:_(s32) = G_LOAD [[HIPTR]]
+    ; SOFT_POOL-DAG: [[LOPTR:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.1
+    ; SOFT_POOL-DAG: [[LO:%[0-9]+]]:_(s32) = G_LOAD [[LOPTR]]
     ; SOFT-NOT: G_FCONSTANT
     %0(s64) = G_FCONSTANT double -2.4
     ; HARD-DAG: G_UNMERGE_VALUES [[R]](s64)
@@ -1117,8 +1127,7 @@ body:             |
     ; SOFT-NOT: G_FCMP
     ; For soft float we just need to return a '-1' constant, but the truncation
     ; to 1 bit is converted by the combiner to the following masking sequence.
-    ; SOFT: [[R:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = COPY [[R]](s32)
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; SOFT-NOT: G_FCMP
     ; CHECK: $r0 = COPY [[REXT]]
 ...
@@ -1152,8 +1161,7 @@ body:             |
     ; SOFT-NOT: G_FCMP
     ; For soft float we just need to return a '0' constant, but the truncation
     ; to 1 bit is converted by the combiner to the following masking sequence.
-    ; SOFT: [[R:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = COPY [[R]](s32)
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; SOFT-NOT: G_FCMP
     ; CHECK: $r0 = COPY [[REXT]]
 ...
@@ -1825,8 +1833,7 @@ body:             |
     ; SOFT-NOT: G_FCMP
     ; The result needs to be truncated, and the combiner turns the truncation
     ; into the following masking sequence.
-    ; SOFT: [[MASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = COPY [[MASK]]
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
     $r0 = COPY %7(s32)
@@ -1870,11 +1877,9 @@ body:             |
     ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(false), [[X]](s64), [[Y]]
     ; HARD: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     ; SOFT-NOT: G_FCMP
-    ; SOFT: [[R:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; The result needs to be truncated, and the combiner turns the truncation
     ; into the following masking sequence.
-    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = COPY [[R]]
-    ; SOFT-NOT: G_FCMP
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
     $r0 = COPY %7(s32)

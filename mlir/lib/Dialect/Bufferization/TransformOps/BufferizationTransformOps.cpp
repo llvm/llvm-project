@@ -36,7 +36,7 @@ DiagnosedSilenceableFailure transform::BufferLoopHoistingOp::applyToOne(
 
 void transform::BufferLoopHoistingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -47,6 +47,10 @@ void transform::BufferLoopHoistingOp::getEffects(
 LogicalResult transform::OneShotBufferizeOp::verify() {
   if (getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
     return emitOpError() << "unsupported memcpy op";
+  if (getPrintConflicts() && !getTestAnalysisOnly())
+    return emitOpError() << "'print_conflicts' requires 'test_analysis_only'";
+  if (getDumpAliasSets() && !getTestAnalysisOnly())
+    return emitOpError() << "'dump_alias_sets' requires 'test_analysis_only'";
   return success();
 }
 
@@ -58,6 +62,7 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
   options.allowReturnAllocsFromLoops = getAllowReturnAllocsFromLoops();
   options.allowUnknownOps = getAllowUnknownOps();
   options.bufferizeFunctionBoundaries = getBufferizeFunctionBoundaries();
+  options.dumpAliasSets = getDumpAliasSets();
   options.testAnalysisOnly = getTestAnalysisOnly();
   options.printConflicts = getPrintConflicts();
   if (getFunctionBoundaryTypeConversion().has_value())
@@ -65,12 +70,12 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
         *getFunctionBoundaryTypeConversion());
   if (getMemcpyOp() == "memref.copy") {
     options.memCpyFn = [](OpBuilder &b, Location loc, Value from, Value to) {
-      b.create<memref::CopyOp>(loc, from, to);
+      memref::CopyOp::create(b, loc, from, to);
       return success();
     };
   } else if (getMemcpyOp() == "linalg.copy") {
     options.memCpyFn = [](OpBuilder &b, Location loc, Value from, Value to) {
-      b.create<linalg::CopyOp>(loc, from, to);
+      linalg::CopyOp::create(b, loc, from, to);
       return success();
     };
   } else {
@@ -78,6 +83,8 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
   }
 
   auto payloadOps = state.getPayloadOps(getTarget());
+  BufferizationState bufferizationState;
+
   for (Operation *target : payloadOps) {
     if (!isa<ModuleOp, FunctionOpInterface>(target))
       return emitSilenceableError() << "expected module or function target";
@@ -85,10 +92,12 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
     if (options.bufferizeFunctionBoundaries) {
       if (!moduleOp)
         return emitSilenceableError() << "expected module target";
-      if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options)))
+      if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options,
+                                                          bufferizationState)))
         return emitSilenceableError() << "bufferization failed";
     } else {
-      if (failed(bufferization::runOneShotBufferize(target, options)))
+      if (failed(bufferization::runOneShotBufferize(target, options,
+                                                    bufferizationState)))
         return emitSilenceableError() << "bufferization failed";
     }
   }
@@ -105,24 +114,17 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::EliminateEmptyTensorsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
 DiagnosedSilenceableFailure transform::EliminateEmptyTensorsOp::apply(
     transform::TransformRewriter &rewriter, TransformResults &transformResults,
     TransformState &state) {
-  OneShotBufferizationOptions options;
-  options.allowReturnAllocsFromLoops = true;
-
   for (Operation *target : state.getPayloadOps(getTarget())) {
-    OneShotAnalysisState state(target, options);
-    if (failed(analyzeOp(target, state)))
+    if (failed(bufferization::eliminateEmptyTensors(rewriter, target)))
       return mlir::emitSilenceableFailure(target->getLoc())
-             << "failed to analyze op";
-    if (failed(bufferization::eliminateEmptyTensors(rewriter, target, state)))
-      return mlir::emitSilenceableFailure(target->getLoc())
-             << "failed to eliminate insert_slice anchored tensor.empty ops";
+             << "empty tensor elimination failed";
   }
   return DiagnosedSilenceableFailure::success();
 }
@@ -152,6 +154,9 @@ class BufferizationTransformDialectExtension
     : public transform::TransformDialectExtension<
           BufferizationTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      BufferizationTransformDialectExtension)
+
   using Base::Base;
 
   void init() {
@@ -161,6 +166,7 @@ public:
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.cpp.inc"
+
         >();
   }
 };
@@ -174,5 +180,4 @@ public:
 void mlir::bufferization::registerTransformDialectExtension(
     DialectRegistry &registry) {
   registry.addExtensions<BufferizationTransformDialectExtension>();
-  bufferization::registerAllocationOpInterfaceExternalModels(registry);
 }

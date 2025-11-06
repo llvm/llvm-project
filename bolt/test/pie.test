@@ -1,10 +1,10 @@
-# Check that we do not reject position-independent executables (PIEs).
+## Check that we do not reject position-independent executables (PIEs).
 
-# This test uses the clang driver without target flags and will only succeed
-# on Linux systems where the host triple matches the target.
+## This test uses the clang driver without target flags and will only succeed
+## on Linux systems where the host triple matches the target.
 REQUIRES: system-linux
 
-RUN: %clang %cflags -fPIC -pie %p/Inputs/jump_table_icp.cpp -o %t
-RUN: llvm-bolt %t -o /dev/null 2>&1 | FileCheck %s
+RUN: %clangxx %cxxflags -fPIC -pie %p/Inputs/jump_table_icp.cpp -o %t
+RUN: llvm-bolt %t -o %t.null 2>&1 | FileCheck %s
 
 CHECK: BOLT-INFO: shared object or position-independent executable detected

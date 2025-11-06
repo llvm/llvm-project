@@ -27,20 +27,23 @@ static bool my_streq(const char *lhs, const char *rhs) {
   return *l == '\0' && *r == '\0';
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
-  ASSERT_TRUE(my_streq(__llvm_libc::getenv(""), static_cast<char *>(nullptr)));
-  ASSERT_TRUE(my_streq(__llvm_libc::getenv("="), static_cast<char *>(nullptr)));
-  ASSERT_TRUE(my_streq(__llvm_libc::getenv("MISSING ENV VARIABLE"),
+TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
+          [[maybe_unused]] char **envp) {
+  ASSERT_TRUE(
+      my_streq(LIBC_NAMESPACE::getenv(""), static_cast<char *>(nullptr)));
+  ASSERT_TRUE(
+      my_streq(LIBC_NAMESPACE::getenv("="), static_cast<char *>(nullptr)));
+  ASSERT_TRUE(my_streq(LIBC_NAMESPACE::getenv("MISSING ENV VARIABLE"),
                        static_cast<char *>(nullptr)));
   ASSERT_FALSE(
-      my_streq(__llvm_libc::getenv("PATH"), static_cast<char *>(nullptr)));
-  ASSERT_TRUE(my_streq(__llvm_libc::getenv("FRANCE"), "Paris"));
-  ASSERT_FALSE(my_streq(__llvm_libc::getenv("FRANCE"), "Berlin"));
-  ASSERT_TRUE(my_streq(__llvm_libc::getenv("GERMANY"), "Berlin"));
+      my_streq(LIBC_NAMESPACE::getenv("PATH"), static_cast<char *>(nullptr)));
+  ASSERT_TRUE(my_streq(LIBC_NAMESPACE::getenv("FRANCE"), "Paris"));
+  ASSERT_FALSE(my_streq(LIBC_NAMESPACE::getenv("FRANCE"), "Berlin"));
+  ASSERT_TRUE(my_streq(LIBC_NAMESPACE::getenv("GERMANY"), "Berlin"));
   ASSERT_TRUE(
-      my_streq(__llvm_libc::getenv("FRANC"), static_cast<char *>(nullptr)));
-  ASSERT_TRUE(
-      my_streq(__llvm_libc::getenv("FRANCE1"), static_cast<char *>(nullptr)));
+      my_streq(LIBC_NAMESPACE::getenv("FRANC"), static_cast<char *>(nullptr)));
+  ASSERT_TRUE(my_streq(LIBC_NAMESPACE::getenv("FRANCE1"),
+                       static_cast<char *>(nullptr)));
 
   return 0;
 }

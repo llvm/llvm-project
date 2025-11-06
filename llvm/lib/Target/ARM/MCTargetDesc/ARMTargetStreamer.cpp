@@ -52,7 +52,7 @@ void ARMTargetStreamer::reset() {}
 void ARMTargetStreamer::emitInst(uint32_t Inst, char Suffix) {
   unsigned Size;
   char Buffer[4];
-  const bool LittleEndian = getStreamer().getContext().getAsmInfo()->isLittleEndian();
+  const bool LittleEndian = getContext().getAsmInfo()->isLittleEndian();
 
   switch (Suffix) {
   case '\0':
@@ -92,11 +92,11 @@ void ARMTargetStreamer::emitCantUnwind() {}
 void ARMTargetStreamer::emitPersonality(const MCSymbol *Personality) {}
 void ARMTargetStreamer::emitPersonalityIndex(unsigned Index) {}
 void ARMTargetStreamer::emitHandlerData() {}
-void ARMTargetStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
+void ARMTargetStreamer::emitSetFP(MCRegister FpReg, MCRegister SpReg,
                                   int64_t Offset) {}
-void ARMTargetStreamer::emitMovSP(unsigned Reg, int64_t Offset) {}
+void ARMTargetStreamer::emitMovSP(MCRegister Reg, int64_t Offset) {}
 void ARMTargetStreamer::emitPad(int64_t Offset) {}
-void ARMTargetStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+void ARMTargetStreamer::emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                                     bool isVector) {}
 void ARMTargetStreamer::emitUnwindRaw(int64_t StackOffset,
                                       const SmallVectorImpl<uint8_t> &Opcodes) {
@@ -115,6 +115,10 @@ void ARMTargetStreamer::emitFPU(ARM::FPUKind FPU) {}
 void ARMTargetStreamer::finishAttributeSection() {}
 void ARMTargetStreamer::annotateTLSDescriptorSequence(
     const MCSymbolRefExpr *SRE) {}
+void ARMTargetStreamer::emitSyntaxUnified() {}
+void ARMTargetStreamer::emitCode16() {}
+void ARMTargetStreamer::emitCode32() {}
+void ARMTargetStreamer::emitThumbFunc(MCSymbol *Symbol) {}
 void ARMTargetStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {}
 
 void ARMTargetStreamer::emitARMWinCFIAllocStack(unsigned Size, bool Wide) {}
@@ -177,7 +181,7 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   switchVendor("aeabi");
 
   const StringRef CPUString = STI.getCPU();
-  if (!CPUString.empty() && !CPUString.startswith("generic")) {
+  if (!CPUString.empty() && !CPUString.starts_with("generic")) {
     // FIXME: remove krait check when GNU tools support krait cpu
     if (STI.hasFeature(ARM::ProcKrait)) {
       emitTextAttribute(ARMBuildAttrs::CPU_name, "cortex-a9");
@@ -238,14 +242,18 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
                         ? ARMBuildAttrs::AllowNeonARMv8_1a
                         : ARMBuildAttrs::AllowNeonARMv8);
   } else {
-    if (STI.hasFeature(ARM::FeatureFPARMv8_D16_SP))
+    if (STI.hasFeature(ARM::FeatureFPARMv8_D16_SP)) {
       // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
       // FPU, but there are two different names for it depending on the CPU.
-      emitFPU(STI.hasFeature(ARM::FeatureD32)
-                  ? ARM::FK_FP_ARMV8
-                  : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_FPV5_D16
-                                                      : ARM::FK_FPV5_SP_D16));
-    else if (STI.hasFeature(ARM::FeatureVFP4_D16_SP))
+      if (STI.hasFeature(ARM::FeatureD32))
+        emitFPU(ARM::FK_FP_ARMV8);
+      else {
+        emitFPU(STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_FPV5_D16
+                                                 : ARM::FK_FPV5_SP_D16);
+        if (STI.hasFeature(ARM::HasMVEFloatOps))
+          emitArchExtension(ARM::AEK_MVE | ARM::AEK_DSP | ARM::AEK_FP);
+      }
+    } else if (STI.hasFeature(ARM::FeatureVFP4_D16_SP))
       emitFPU(STI.hasFeature(ARM::FeatureD32)
                   ? ARM::FK_VFPV4
                   : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_VFPV4_D16
@@ -325,5 +333,7 @@ llvm::createARMObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
     return createARMObjectTargetELFStreamer(S);
   if (TT.isOSBinFormatCOFF())
     return createARMObjectTargetWinCOFFStreamer(S);
+  if (TT.isOSBinFormatMachO())
+    return createARMObjectTargetMachOStreamer(S);
   return new ARMTargetStreamer(S);
 }

@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
@@ -18,9 +18,10 @@
 // This is not part of the public tzdb interface.
 
 #include <chrono>
+#include <cstdio>
 #include <fstream>
-#include <string>
 #include <string_view>
+#include <string>
 
 #include "assert_macros.h"
 #include "concat_macros.h"
@@ -60,7 +61,7 @@ static void test_exception(std::string_view input, [[maybe_unused]] std::string_
 }
 
 int main(int, const char**) {
-  test_exception("", "corrupt tzdb: expected character '#'");
+  test_exception("", std::string{"corrupt tzdb: expected character '#', got '"} + (char)EOF + "' instead");
   test_exception("#version", "corrupt tzdb: expected whitespace");
   test("#version     \t                      ABCD", "ABCD");
   test("#Version     \t                      ABCD", "ABCD");

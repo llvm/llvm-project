@@ -17,6 +17,8 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
+#include "operator_hijacker.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(S s1, S s2) {
@@ -27,6 +29,8 @@ TEST_CONSTEXPR_CXX20 void test(S s1, S s2) {
   LIBCPP_ASSERT(s2.__invariants());
   assert(s1 == s2_);
   assert(s2 == s1_);
+  LIBCPP_ASSERT(is_string_asan_correct(s1));
+  LIBCPP_ASSERT(is_string_asan_correct(s2));
 }
 
 template <class S>
@@ -47,12 +51,19 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("abcdefghijklmnopqrst"), S("12345"));
   test(S("abcdefghijklmnopqrst"), S("1234567890"));
   test(S("abcdefghijklmnopqrst"), S("12345678901234567890"));
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrst"), S(""));
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrst"), S("12345"));
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrst"), S("1234567890"));
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrst"), S("12345678901234567890"));
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrst"), S("12345678901234567890abcdefghijklmnopqrst"));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, operator_hijacker_allocator<char>>>();
 #endif
 
   return true;

@@ -18,8 +18,10 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
@@ -62,11 +64,9 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableUnsafeFPMath)
 CGOPT(bool, EnableNoInfsFPMath)
 CGOPT(bool, EnableNoNaNsFPMath)
 CGOPT(bool, EnableNoSignedZerosFPMath)
-CGOPT(bool, EnableApproxFuncFPMath)
 CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
@@ -83,22 +83,26 @@ CGOPT(bool, StackRealign)
 CGOPT(std::string, TrapFuncName)
 CGOPT(bool, UseCtors)
 CGOPT(bool, DisableIntegratedAS)
-CGOPT(bool, RelaxELFRelocations)
 CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(bool, XCOFFTracebackTable)
+CGOPT(bool, EnableBBAddrMap)
 CGOPT(std::string, BBSections)
 CGOPT(unsigned, TLSSize)
 CGOPT_EXP(bool, EmulatedTLS)
+CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
+CGOPT(bool, SeparateNamedSections)
 CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
+CGOPT(bool, EnableCallGraphSection)
 CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableMachineFunctionSplitter)
+CGOPT(bool, EnableStaticDataPartitioning)
 CGOPT(bool, EnableDebugEntryValues)
 CGOPT(bool, ForceDwarfFrameSection)
 CGOPT(bool, XRayFunctionIndex)
@@ -207,15 +211,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Disable frame pointer elimination"),
           clEnumValN(FramePointerKind::NonLeaf, "non-leaf",
                      "Disable frame pointer elimination for non-leaf frame"),
+          clEnumValN(FramePointerKind::Reserved, "reserved",
+                     "Enable frame pointer elimination, but reserve the frame "
+                     "pointer register"),
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableUnsafeFPMath(
-      "enable-unsafe-fp-math",
-      cl::desc("Enable optimizations that may decrease FP precision"),
-      cl::init(false));
-  CGBINDOPT(EnableUnsafeFPMath);
 
   static cl::opt<bool> EnableNoInfsFPMath(
       "enable-no-infs-fp-math",
@@ -235,12 +236,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                "the sign of 0 is insignificant"),
       cl::init(false));
   CGBINDOPT(EnableNoSignedZerosFPMath);
-
-  static cl::opt<bool> EnableApproxFuncFPMath(
-      "enable-approx-func-fp-math",
-      cl::desc("Enable FP math optimizations that assume approx func"),
-      cl::init(false));
-  CGBINDOPT(EnableApproxFuncFPMath);
 
   static cl::opt<bool> EnableNoTrappingFPMath(
       "enable-no-trapping-fp-math",
@@ -358,13 +353,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                                 cl::init(false));
   CGBINDOPT(UseCtors);
 
-  static cl::opt<bool> RelaxELFRelocations(
-      "relax-elf-relocations",
-      cl::desc(
-          "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
-      cl::init(true));
-  CGBINDOPT(RelaxELFRelocations);
-
   static cl::opt<bool> DataSections(
       "data-sections", cl::desc("Emit data into separate sections"),
       cl::init(false));
@@ -387,6 +375,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(true));
   CGBINDOPT(XCOFFTracebackTable);
 
+  static cl::opt<bool> EnableBBAddrMap(
+      "basic-block-address-map",
+      cl::desc("Emit the basic block address map section"), cl::init(false));
+  CGBINDOPT(EnableBBAddrMap);
+
   static cl::opt<std::string> BBSections(
       "basic-block-sections",
       cl::desc("Emit basic blocks into separate sections"),
@@ -402,6 +395,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       "emulated-tls", cl::desc("Use emulated TLS model"), cl::init(false));
   CGBINDOPT(EmulatedTLS);
 
+  static cl::opt<bool> EnableTLSDESC(
+      "enable-tlsdesc", cl::desc("Enable the use of TLS Descriptors"),
+      cl::init(false));
+  CGBINDOPT(EnableTLSDESC);
+
   static cl::opt<bool> UniqueSectionNames(
       "unique-section-names", cl::desc("Give unique names to every section"),
       cl::init(true));
@@ -412,6 +410,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::desc("Give unique names to every basic block section"),
       cl::init(false));
   CGBINDOPT(UniqueBasicBlockSectionNames);
+
+  static cl::opt<bool> SeparateNamedSections(
+      "separate-named-sections",
+      cl::desc("Use separate unique sections for named sections"),
+      cl::init(false));
+  CGBINDOPT(SeparateNamedSections);
 
   static cl::opt<EABI> EABIVersion(
       "meabi", cl::desc("Set EABI type (default depends on triple):"),
@@ -444,6 +448,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableAddrsig);
 
+  static cl::opt<bool> EnableCallGraphSection(
+      "call-graph-section", cl::desc("Emit a call graph section"),
+      cl::init(false));
+  CGBINDOPT(EnableCallGraphSection);
+
   static cl::opt<bool> EmitCallSiteInfo(
       "emit-call-site-info",
       cl::desc(
@@ -463,6 +472,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                "profile information"),
       cl::init(false));
   CGBINDOPT(EnableMachineFunctionSplitter);
+
+  static cl::opt<bool> EnableStaticDataPartitioning(
+      "partition-static-data-sections",
+      cl::desc("Partition data sections using profile information."),
+      cl::init(false));
+  CGBINDOPT(EnableStaticDataPartitioning);
 
   static cl::opt<bool> ForceDwarfFrameSection(
       "force-dwarf-frame-section",
@@ -509,8 +524,6 @@ llvm::BasicBlockSection
 codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
   if (getBBSections() == "all")
     return BasicBlockSection::All;
-  else if (getBBSections() == "labels")
-    return BasicBlockSection::Labels;
   else if (getBBSections() == "none")
     return BasicBlockSection::None;
   else {
@@ -532,11 +545,9 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.UnsafeFPMath = getEnableUnsafeFPMath();
   Options.NoInfsFPMath = getEnableNoInfsFPMath();
   Options.NoNaNsFPMath = getEnableNoNaNsFPMath();
   Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
-  Options.ApproxFuncFPMath = getEnableApproxFuncFPMath();
   Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
   DenormalMode::DenormalModeKind DenormKind = getDenormalFPMath();
@@ -554,22 +565,27 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.StackSymbolOrdering = getStackSymbolOrdering();
   Options.UseInitArray = !getUseCtors();
   Options.DisableIntegratedAS = getDisableIntegratedAS();
-  Options.RelaxELFRelocations = getRelaxELFRelocations();
   Options.DataSections =
       getExplicitDataSections().value_or(TheTriple.hasDefaultDataSections());
   Options.FunctionSections = getFunctionSections();
   Options.IgnoreXCOFFVisibility = getIgnoreXCOFFVisibility();
   Options.XCOFFTracebackTable = getXCOFFTracebackTable();
+  Options.BBAddrMap = getEnableBBAddrMap();
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
+  Options.SeparateNamedSections = getSeparateNamedSections();
   Options.TLSSize = getTLSSize();
   Options.EmulatedTLS =
       getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());
+  Options.EnableTLSDESC =
+      getExplicitEnableTLSDESC().value_or(TheTriple.hasDefaultTLSDESC());
   Options.ExceptionModel = getExceptionModel();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
+  Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();
   Options.EmitAddrsig = getEnableAddrsig();
+  Options.EmitCallGraphSection = getEnableCallGraphSection();
   Options.EmitCallSiteInfo = getEmitCallSiteInfo();
   Options.EnableDebugEntryValues = getEnableDebugEntryValues();
   Options.ForceDwarfFrameSection = getForceDwarfFrameSection();
@@ -605,12 +621,9 @@ std::string codegen::getFeaturesStr() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
-        Features.AddFeature(Feature, IsEnabled);
-  }
+  if (getMCPU() == "native")
+    for (const auto &[Feature, IsEnabled] : sys::getHostCPUFeatures())
+      Features.AddFeature(Feature, IsEnabled);
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);
@@ -625,12 +638,9 @@ std::vector<std::string> codegen::getFeatureList() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
-        Features.AddFeature(Feature, IsEnabled);
-  }
+  if (getMCPU() == "native")
+    for (const auto &[Feature, IsEnabled] : sys::getHostCPUFeatures())
+      Features.AddFeature(Feature, IsEnabled);
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);
@@ -677,6 +687,8 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
       NewAttrs.addAttribute("frame-pointer", "all");
     else if (getFramePointerUsage() == FramePointerKind::NonLeaf)
       NewAttrs.addAttribute("frame-pointer", "non-leaf");
+    else if (getFramePointerUsage() == FramePointerKind::Reserved)
+      NewAttrs.addAttribute("frame-pointer", "reserved");
     else if (getFramePointerUsage() == FramePointerKind::None)
       NewAttrs.addAttribute("frame-pointer", "none");
   }
@@ -686,11 +698,9 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
 
-  HANDLE_BOOL_ATTR(EnableUnsafeFPMathView, "unsafe-fp-math");
   HANDLE_BOOL_ATTR(EnableNoInfsFPMathView, "no-infs-fp-math");
   HANDLE_BOOL_ATTR(EnableNoNaNsFPMathView, "no-nans-fp-math");
   HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
-  HANDLE_BOOL_ATTR(EnableApproxFuncFPMathView, "approx-func-fp-math");
 
   if (DenormalFPMathView->getNumOccurrences() > 0 &&
       !F.hasFnAttribute("denormal-fp-math")) {
@@ -731,4 +741,25 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
                                     Module &M) {
   for (Function &F : M)
     setFunctionAttributes(CPU, Features, F);
+}
+
+Expected<std::unique_ptr<TargetMachine>>
+codegen::createTargetMachineForTriple(StringRef TargetTriple,
+                                      CodeGenOptLevel OptLevel) {
+  Triple TheTriple(TargetTriple);
+  std::string Error;
+  const auto *TheTarget =
+      TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+  if (!TheTarget)
+    return createStringError(inconvertibleErrorCode(), Error);
+  auto *Target = TheTarget->createTargetMachine(
+      TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(),
+      codegen::InitTargetOptionsFromCodeGenFlags(TheTriple),
+      codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
+      OptLevel);
+  if (!Target)
+    return createStringError(inconvertibleErrorCode(),
+                             Twine("could not allocate target machine for ") +
+                                 TargetTriple);
+  return std::unique_ptr<TargetMachine>(Target);
 }

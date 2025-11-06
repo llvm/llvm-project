@@ -18,6 +18,7 @@ setup_host_tool(mlir-linalg-ods-yaml-gen MLIR_LINALG_ODS_YAML_GEN MLIR_LINALG_OD
 
 if(NOT ${MLIR_LINALG_ODS_YAML_GEN_EXE} STREQUAL "mlir-linalg-ods-yaml-gen")
   add_custom_target(mlir-linalg-ods-yaml-gen-host DEPENDS ${MLIR_LINALG_ODS_YAML_GEN_EXE})
+  set_target_properties(mlir-linalg-ods-yaml-gen-host PROPERTIES FOLDER "MLIR/Tablegenning")
 
   if(NOT LLVM_BUILD_UTILS)
     set_target_properties(mlir-linalg-ods-yaml-gen PROPERTIES EXCLUDE_FROM_ALL ON)

@@ -21,7 +21,7 @@ define void @write_struct() {
 ; CHECK-NEXT:    tail call fastcc void @read_struct()
 ; CHECK-NEXT:    ret void
 ;
-  store ptr null, ptr getelementptr inbounds (%struct.widget, ptr @global, i64 0, i32 0), align 8
+  store ptr null, ptr @global, align 8
   store ptr null, ptr getelementptr inbounds (%struct.widget, ptr @global, i64 0, i32 1), align 8
   store ptr null, ptr getelementptr inbounds (%struct.widget, ptr @global, i64 0, i32 2), align 8
   store ptr null, ptr getelementptr inbounds (%struct.widget, ptr @global, i64 0, i32 3), align 8
@@ -59,7 +59,7 @@ define void @store_to_struct_array() {
 ; CHECK-NEXT:    tail call fastcc void @read_non_array_field()
 ; CHECK-NEXT:    ret void
 ;
-  store i64 0, ptr getelementptr inbounds (%struct.with.array, ptr @global.array_in_struct, i64 0, i32 0, i32 0), align 8
+  store i64 0, ptr @global.array_in_struct, align 8
   store i64 0, ptr getelementptr inbounds (%struct.with.array, ptr @global.array_in_struct, i64 0, i32 0, i32 1), align 8
   store i64 0, ptr getelementptr inbounds (%struct.with.array, ptr @global.array_in_struct, i64 0, i32 0, i32 2), align 8
   store i64 0, ptr getelementptr inbounds (%struct.with.array, ptr @global.array_in_struct, i64 0, i32 0, i32 3), align 8
@@ -94,7 +94,7 @@ define void @store_to_array() {
 ; CHECK-NEXT:    tail call fastcc void @read_array()
 ; CHECK-NEXT:    ret void
 ;
-  store i64 0, ptr getelementptr inbounds ([100 x i64], ptr @global.array, i64 0, i32 0), align 8
+  store i64 0, ptr @global.array, align 8
   store i64 0, ptr getelementptr inbounds ([100 x i64], ptr @global.array, i64 0, i32 1), align 8
   store i64 0, ptr getelementptr inbounds ([100 x i64], ptr @global.array, i64 0, i32 2), align 8
   store i64 0, ptr getelementptr inbounds ([100 x i64], ptr @global.array, i64 0, i32 3), align 8

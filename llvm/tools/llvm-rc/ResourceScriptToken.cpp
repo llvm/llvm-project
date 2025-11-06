@@ -64,12 +64,22 @@ StringRef RCToken::value() const { return TokenValue; }
 
 Kind RCToken::kind() const { return TokenKind; }
 
-bool RCToken::isBinaryOp() const {
+bool RCToken::isLowPrecedenceBinaryOp() const {
   switch (TokenKind) {
   case Kind::Plus:
   case Kind::Minus:
   case Kind::Pipe:
   case Kind::Amp:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool RCToken::isHighPrecedenceBinaryOp() const {
+  switch (TokenKind) {
+  case Kind::Asterisk:
+  case Kind::Slash:
     return true;
   default:
     return false;
@@ -274,7 +284,7 @@ Error Tokenizer::consumeToken(const Kind TokenKind) {
 }
 
 bool Tokenizer::willNowRead(StringRef FollowingChars) const {
-  return Data.drop_front(Pos).startswith(FollowingChars);
+  return Data.drop_front(Pos).starts_with(FollowingChars);
 }
 
 bool Tokenizer::canStartIdentifier() const {
@@ -298,12 +308,12 @@ bool Tokenizer::canStartInt() const {
 
 bool Tokenizer::canStartBlockComment() const {
   assert(!streamEof());
-  return Data.drop_front(Pos).startswith("/*");
+  return Data.drop_front(Pos).starts_with("/*");
 }
 
 bool Tokenizer::canStartLineComment() const {
   assert(!streamEof());
-  return Data.drop_front(Pos).startswith("//");
+  return Data.drop_front(Pos).starts_with("//");
 }
 
 bool Tokenizer::canContinueInt() const {

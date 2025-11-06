@@ -256,7 +256,7 @@ define i25 @consider_lowbits_masked_input(i25 %A) {
 define i32 @overflow_masked_input(i32 %A) {
 ; CHECK-LABEL: @overflow_masked_input(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[A:%.*]], 16777217
-; CHECK-NEXT:    [[B:%.*]] = uitofp i32 [[M]] to float
+; CHECK-NEXT:    [[B:%.*]] = uitofp nneg i32 [[M]] to float
 ; CHECK-NEXT:    [[C:%.*]] = fptoui float [[B]] to i32
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -377,4 +377,41 @@ define i12 @u32_half_u12(i32 %x) {
   %h = uitofp i32 %x to half
   %r = fptoui half %h to i12
   ret i12 %r
+}
+
+define <2 x i1> @i8_vec_sitofp_test1(<2 x i8> %A) {
+; CHECK-LABEL: @i8_vec_sitofp_test1(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %B = sitofp <2 x i8> %A to <2 x double>
+  %C = fcmp ult <2 x double> %B, <double 128.0, double 128.0>
+  ret <2 x i1> %C
+}
+
+define <2 x i1> @i8_vec_sitofp_test2(<2 x i8> %A) {
+; CHECK-LABEL: @i8_vec_sitofp_test2(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %B = sitofp <2 x i8> %A to <2 x double>
+  %C = fcmp ugt <2 x double> %B, <double -128.1, double -128.1>
+  ret <2 x i1> %C
+}
+
+define <2 x i1> @i8_vec_sitofp_test3(<2 x i8> %A) {
+; CHECK-LABEL: @i8_vec_sitofp_test3(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %B = sitofp <2 x i8> %A to <2 x double>
+  %C = fcmp ule <2 x double> %B, <double 127.0, double 127.0>
+  ret <2 x i1> %C
+}
+
+define <2 x i1> @i8_vec_sitofp_test4(<2 x i8> %A) {
+; CHECK-LABEL: @i8_vec_sitofp_test4(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[A:%.*]], splat (i8 127)
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %B = sitofp <2 x i8> %A to <2 x double>
+  %C = fcmp ult <2 x double> %B, <double 127.0, double 127.0>
+  ret <2 x i1> %C
 }

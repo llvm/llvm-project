@@ -46,6 +46,8 @@ public:
   constexpr const char &operator[](std::size_t j) const {
     return interval_.start()[j];
   }
+  constexpr const char &front() const { return (*this)[0]; }
+  constexpr const char &back() const { return (*this)[size() - 1]; }
 
   bool Contains(const CharBlock &that) const {
     return interval_.Contains(that.interval_);
@@ -129,18 +131,33 @@ public:
 
 private:
   int Compare(const CharBlock &that) const {
-    std::size_t bytes{std::min(size(), that.size())};
-    int cmp{std::memcmp(static_cast<const void *>(begin()),
-        static_cast<const void *>(that.begin()), bytes)};
-    if (cmp != 0) {
-      return cmp;
+    // "memcmp" in glibc has "nonnull" attributes on the input pointers.
+    // Avoid passing null pointers, since it would result in an undefined
+    // behavior.
+    if (size() == 0) {
+      return that.size() == 0 ? 0 : -1;
+    } else if (that.size() == 0) {
+      return 1;
+    } else {
+      std::size_t bytes{std::min(size(), that.size())};
+      int cmp{std::memcmp(static_cast<const void *>(begin()),
+          static_cast<const void *>(that.begin()), bytes)};
+      if (cmp != 0) {
+        return cmp;
+      } else {
+        return size() < that.size() ? -1 : size() > that.size();
+      }
     }
-    return size() < that.size() ? -1 : size() > that.size();
   }
 
   int Compare(const char *that) const {
     std::size_t bytes{size()};
-    if (int cmp{std::strncmp(begin(), that, bytes)}) {
+    // strncmp is undefined if either pointer is null.
+    if (!bytes) {
+      return that == nullptr ? 0 : -1;
+    } else if (!that) {
+      return 1;
+    } else if (int cmp{std::strncmp(begin(), that, bytes)}) {
       return cmp;
     }
     return that[bytes] == '\0' ? 0 : -1;

@@ -2,7 +2,7 @@
 
 ; Tests that `bar` has been specialized and that the compiler did not crash
 ; while attempting to promote the alloca in `entry`.
-; CHECK: bar.1
+; CHECK: bar.specialized.1
 
 @block = internal constant [8 x i8] zeroinitializer, align 1
 

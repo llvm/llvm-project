@@ -47,16 +47,16 @@ struct D {
 void construct() {
   using namespace foo;
   A a = A(12);
-  // CHECK: CXXConstructExpr {{0x[0-9a-fA-F]+}} <col:9, col:13> 'A':'foo::A' 'void (int){{( __attribute__\(\(thiscall\)\))?}}'
+  // CHECK: CXXConstructExpr {{0x[0-9a-fA-F]+}} <col:9, col:13> 'A' 'void (int){{( __attribute__\(\(thiscall\)\))?}}'
   D d = D(12);
-  // CHECK: CXXConstructExpr {{0x[0-9a-fA-F]+}} <col:9, col:13> 'D':'D' 'void (int){{( __attribute__\(\(thiscall\)\))?}}'
+  // CHECK: CXXConstructExpr {{0x[0-9a-fA-F]+}} <col:9, col:13> 'D' 'void (int){{( __attribute__\(\(thiscall\)\))?}}'
 }
 
 namespace PR38987 {
 struct A { A(); };
 template <class T> void f() { T{}; }
 template void f<A>();
-// CHECK: CXXTemporaryObjectExpr {{.*}} <col:31, col:33> 'PR38987::A':'PR38987::A'
+// CHECK: CXXTemporaryObjectExpr {{.*}} <col:31, col:33> 'PR38987::A'
 }
 
 void abort() __attribute__((noreturn));
@@ -174,7 +174,7 @@ namespace in_class_init {
 
   // CHECK-1Z: CXXRecordDecl {{.*}} struct B definition
   struct B {
-    // CHECK-1Z: FieldDecl {{.*}} a 'A':'in_class_init::A'
+    // CHECK-1Z: FieldDecl {{.*}} a 'A'
     // CHECK-1Z-NEXT: InitListExpr {{.*}} <col:11, col:12
     A a = {};
   };
@@ -192,7 +192,7 @@ namespace delegating_constructor_init {
   // CHECK-1Z: CXXRecordDecl {{.*}} struct C definition
   struct C : B {
     // CHECK-1Z: CXXConstructorDecl {{.*}} C
-    // CHECK-1Z-NEXT: CXXCtorInitializer 'B':'delegating_constructor_init::B'
+    // CHECK-1Z-NEXT: CXXCtorInitializer 'B'
     // CHECK-1Z-NEXT: CXXConstructExpr {{.*}} <col:11, col:15
     // CHECK-1Z-NEXT: InitListExpr {{.*}} <col:13, col:14
     C() : B({}) {};

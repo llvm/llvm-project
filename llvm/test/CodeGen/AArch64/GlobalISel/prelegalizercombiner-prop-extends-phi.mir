@@ -489,3 +489,67 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# Same as above but with a source MI with multiple destination operands.
+---
+name:            anyext_add_through_phi_multiple_operands
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: anyext_add_through_phi_multiple_operands
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+  ; CHECK-NEXT:   %one:_(s32) = G_CONSTANT i32 2
+  ; CHECK-NEXT:   %cmp:_(s1) = G_ICMP intpred(sle), [[COPY]](s32), %one
+  ; CHECK-NEXT:   G_BRCOND %cmp(s1), %bb.2
+  ; CHECK-NEXT:   G_BR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %big0:_(s64) = G_SEXT [[COPY]](s32)
+  ; CHECK-NEXT:   %big1:_(s64) = G_SEXT [[COPY1]](s32)
+  ; CHECK-NEXT:   %add:_(s64) = G_ADD %big0, %big1
+  ; CHECK-NEXT:   %first:_(s32), %second:_(s32) = G_UNMERGE_VALUES %add(s64)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %second(s32)
+  ; CHECK-NEXT:   G_BR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   %ext:_(s64) = G_PHI [[ANYEXT]](s64), %bb.1, [[C]](s64), %bb.2
+  ; CHECK-NEXT:   $x0 = COPY %ext(s64)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
+  bb.1.entry:
+    liveins: $w0, $w1
+
+    %0:_(s32) = COPY $w0
+    %1:_(s32) = COPY $w1
+    %zero:_(s32) = G_CONSTANT i32 0
+    %one:_(s32) = G_CONSTANT i32 2
+    %cmp:_(s1) = G_ICMP intpred(sgt), %0(s32), %one
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+
+  bb.2:
+    %big0:_(s64) = G_SEXT %0
+    %big1:_(s64) = G_SEXT %1
+    %add:_(s64) = G_ADD %big0, %big1
+    %first:_(s32), %second:_(s32) = G_UNMERGE_VALUES %add:_(s64)
+    G_BR %bb.4
+
+  bb.3:
+    %cst32_10:_(s32) = G_CONSTANT i32 10
+
+  bb.4:
+    %phi:_(s32) = G_PHI %second, %bb.2, %cst32_10, %bb.3
+    %ext:_(s64) = G_ANYEXT %phi
+    $x0 = COPY %ext(s64)
+    RET_ReallyLR implicit $x0
+
+...

@@ -51,26 +51,26 @@ define i96 @square_high(i96 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    mull %edi
-; X86-NEXT:    movl %edx, %ebx
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    mull %edi
-; X86-NEXT:    addl %eax, %ebx
+; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    movl %edx, %ebp
 ; X86-NEXT:    adcl $0, %ebp
-; X86-NEXT:    addl %eax, %ebx
+; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    adcl %edx, %ebp
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    movzbl %al, %ecx
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    mull %esi
+; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    mull %ebx
 ; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    addl %ebp, %ebx
 ; X86-NEXT:    adcl %edx, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %edi
 ; X86-NEXT:    movl %edx, (%esp) ## 4-byte Spill

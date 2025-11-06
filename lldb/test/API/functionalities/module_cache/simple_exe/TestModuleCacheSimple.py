@@ -66,18 +66,16 @@ class ModuleCacheTestcaseSimple(TestBase):
         # get a different creation and modification time for the file since some
         # OSs store the modification time in seconds since Jan 1, 1970.
         os.remove(exe)
-        self.assertEqual(
-            os.path.exists(exe),
-            False,
-            "make sure we were able to remove the executable",
+        self.assertFalse(
+            os.path.exists(exe), "make sure we were able to remove the executable"
         )
         time.sleep(2)
         # Now rebuild the binary so it has a different content which should
         # update the UUID to make the cache miss when it tries to load the
         # symbol table from the binary at the same path.
         self.build(dictionary={"CFLAGS_EXTRAS": "-DEXTRA_FUNCTION"})
-        self.assertEqual(
-            os.path.exists(exe), True, "make sure executable exists after rebuild"
+        self.assertTrue(
+            os.path.exists(exe), "make sure executable exists after rebuild"
         )
         # Make sure the modification time has changed or this test will fail.
         exe_mtime_2 = os.path.getmtime(exe)
@@ -99,9 +97,8 @@ class ModuleCacheTestcaseSimple(TestBase):
         main_module = target.GetModuleAtIndex(0)
         self.assertTrue(main_module.IsValid())
         main_module.GetNumSymbols()
-        self.assertEqual(
+        self.assertTrue(
             os.path.exists(symtab_cache_path),
-            True,
             'make sure "symtab" cache files exists after cache is updated',
         )
         symtab_mtime_2 = os.path.getmtime(symtab_cache_path)

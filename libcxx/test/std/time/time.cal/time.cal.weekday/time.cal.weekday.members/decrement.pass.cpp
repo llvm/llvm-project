@@ -13,42 +13,36 @@
 //  constexpr weekday& operator--() noexcept;
 //  constexpr weekday operator--(int) noexcept;
 
-
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 #include "../../euclidian.h"
 
-template <typename WD>
-constexpr bool testConstexpr()
-{
-    WD wd{1};
-    if ((--wd).c_encoding() != 0) return false;
-    if ((wd--).c_encoding() != 0) return false;
-    if ((wd).c_encoding()   != 6) return false;
-    return true;
+using weekday = std::chrono::weekday;
+
+constexpr bool test() {
+  for (unsigned i = 0; i <= 6; ++i) {
+    weekday wd(i);
+    assert(((--wd).c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, 1)));
+    assert(((wd--).c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, 1)));
+    assert(((wd).c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, 2)));
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using weekday = std::chrono::weekday;
-    ASSERT_NOEXCEPT(--(std::declval<weekday&>())  );
-    ASSERT_NOEXCEPT(  (std::declval<weekday&>())--);
+int main(int, char**) {
+  ASSERT_NOEXCEPT(--(std::declval<weekday&>()));
+  ASSERT_NOEXCEPT((std::declval<weekday&>())--);
 
-    ASSERT_SAME_TYPE(weekday , decltype(  std::declval<weekday&>()--));
-    ASSERT_SAME_TYPE(weekday&, decltype(--std::declval<weekday&>()  ));
+  ASSERT_SAME_TYPE(weekday, decltype(std::declval<weekday&>()--));
+  ASSERT_SAME_TYPE(weekday&, decltype(--std::declval<weekday&>()));
 
-    static_assert(testConstexpr<weekday>(), "");
-
-    for (unsigned i = 0; i <= 6; ++i)
-    {
-        weekday wd(i);
-        assert(((--wd).c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, 1)));
-        assert(((wd--).c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, 1)));
-        assert(((wd)  .c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, 2)));
-    }
+  test();
+  static_assert(test());
 
   return 0;
 }

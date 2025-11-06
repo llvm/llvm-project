@@ -11,16 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Lex/HeaderMap.h"
-#include "clang/Lex/HeaderMapTypes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
-#include "llvm/ADT/SmallString.h"
+#include "clang/Lex/HeaderMapTypes.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SwapByteOrder.h"
-#include "llvm/Support/Debug.h"
 #include <cstring>
 #include <memory>
 #include <optional>
@@ -53,7 +50,10 @@ std::unique_ptr<HeaderMap> HeaderMap::Create(FileEntryRef FE, FileManager &FM) {
   unsigned FileSize = FE.getSize();
   if (FileSize <= sizeof(HMapHeader)) return nullptr;
 
-  auto FileBuffer = FM.getBufferForFile(FE);
+  auto FileBuffer =
+      FM.getBufferForFile(FE, /*IsVolatile=*/false,
+                          /*RequiresNullTerminator=*/true,
+                          /*MaybeList=*/std::nullopt, /*IsText=*/false);
   if (!FileBuffer || !*FileBuffer)
     return nullptr;
   bool NeedsByteSwap;
@@ -87,9 +87,8 @@ bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
 
   // Check the number of buckets.  It should be a power of two, and there
   // should be enough space in the file for all of them.
-  uint32_t NumBuckets = NeedsByteSwap
-                            ? llvm::sys::getSwappedBytes(Header->NumBuckets)
-                            : Header->NumBuckets;
+  uint32_t NumBuckets =
+      NeedsByteSwap ? llvm::byteswap(Header->NumBuckets) : Header->NumBuckets;
   if (!llvm::isPowerOf2_32(NumBuckets))
     return false;
   if (File.getBufferSize() <
@@ -155,6 +154,10 @@ std::optional<StringRef> HeaderMapImpl::getString(unsigned StrTabIdx) const {
 
   const char *Data = FileBuffer->getBufferStart() + StrTabIdx;
   unsigned MaxLen = FileBuffer->getBufferSize() - StrTabIdx;
+
+  if (MaxLen == 0)
+    return std::nullopt;
+
   unsigned Len = strnlen(Data, MaxLen);
 
   // Check whether the buffer is null-terminated.

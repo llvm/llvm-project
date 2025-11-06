@@ -14,6 +14,10 @@
 #include "string_utils.h"
 #include "thread_annotations.h"
 
+#ifndef __STDC_FORMAT_MACROS
+// Ensure PRId64 macro is available
+#define __STDC_FORMAT_MACROS 1
+#endif
 #include <inttypes.h>
 #include <string.h>
 
@@ -104,6 +108,7 @@ public:
     strncpy(Timers[NumAllocatedTimers].Name, Name, MaxLenOfTimerName);
     TimerRecords[NumAllocatedTimers].AccumulatedTime = 0;
     TimerRecords[NumAllocatedTimers].Occurrence = 0;
+    TimerRecords[NumAllocatedTimers].MaxTime = 0;
     return Timer(*this, NumAllocatedTimers++);
   }
 
@@ -140,36 +145,47 @@ public:
 
     const u32 HandleId = T.HandleId;
     CHECK_LT(HandleId, MaxNumberOfTimers);
-    TimerRecords[HandleId].AccumulatedTime += T.getAccumulatedTime();
+    u64 AccTime = T.getAccumulatedTime();
+    TimerRecords[HandleId].AccumulatedTime += AccTime;
+    if (AccTime > TimerRecords[HandleId].MaxTime) {
+      TimerRecords[HandleId].MaxTime = AccTime;
+    }
     ++TimerRecords[HandleId].Occurrence;
     ++NumEventsReported;
-    if (NumEventsReported % PrintingInterval == 0)
-      printAllImpl();
+    if (NumEventsReported % PrintingInterval == 0) {
+      ScopedString Str;
+      getAllImpl(Str);
+      Str.output();
+    }
   }
 
   void printAll() EXCLUDES(Mutex) {
+    ScopedString Str;
+    getAll(Str);
+    Str.output();
+  }
+
+  void getAll(ScopedString &Str) EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    printAllImpl();
+    getAllImpl(Str);
   }
 
 private:
-  void printAllImpl() REQUIRES(Mutex) {
-    static char NameHeader[] = "-- Name (# of Calls) --";
+  void getAllImpl(ScopedString &Str) REQUIRES(Mutex) {
     static char AvgHeader[] = "-- Average Operation Time --";
-    ScopedString Str;
-    Str.append("%-15s %-15s\n", AvgHeader, NameHeader);
+    static char MaxHeader[] = "-- Maximum Operation Time --";
+    static char NameHeader[] = "-- Name (# of Calls) --";
+    Str.append("%-15s %-15s %-15s\n", AvgHeader, MaxHeader, NameHeader);
 
     for (u32 I = 0; I < NumAllocatedTimers; ++I) {
       if (Timers[I].Nesting != MaxNumberOfTimers)
         continue;
-      printImpl(Str, I);
+      getImpl(Str, I);
     }
-
-    Str.output();
   }
 
-  void printImpl(ScopedString &Str, const u32 HandleId,
-                 const u32 ExtraIndent = 0) REQUIRES(Mutex) {
+  void getImpl(ScopedString &Str, const u32 HandleId, const u32 ExtraIndent = 0)
+      REQUIRES(Mutex) {
     const u64 AccumulatedTime = TimerRecords[HandleId].AccumulatedTime;
     const u64 Occurrence = TimerRecords[HandleId].Occurrence;
     const u64 Integral = Occurrence == 0 ? 0 : AccumulatedTime / Occurrence;
@@ -179,15 +195,20 @@ private:
         Occurrence == 0 ? 0
                         : ((AccumulatedTime % Occurrence) * 10) / Occurrence;
 
-    Str.append("%14" PRId64 ".%" PRId64 "(ns) %-11s", Integral, Fraction, " ");
+    // Average time.
+    Str.append("%14" PRId64 ".%" PRId64 "(ns) %-8s", Integral, Fraction, " ");
 
+    // Maximum time.
+    Str.append("%16" PRId64 "(ns) %-11s", TimerRecords[HandleId].MaxTime, " ");
+
+    // Name and num occurrences.
     for (u32 I = 0; I < ExtraIndent; ++I)
       Str.append("%s", "  ");
     Str.append("%s (%" PRId64 ")\n", Timers[HandleId].Name, Occurrence);
 
     for (u32 I = 0; I < NumAllocatedTimers; ++I)
       if (Timers[I].Nesting == HandleId)
-        printImpl(Str, I, ExtraIndent + 1);
+        getImpl(Str, I, ExtraIndent + 1);
   }
 
   // Instead of maintaining pages for timer registration, a static buffer is
@@ -199,6 +220,7 @@ private:
   struct Record {
     u64 AccumulatedTime = 0;
     u64 Occurrence = 0;
+    u64 MaxTime = 0;
   };
 
   struct TimerInfo {

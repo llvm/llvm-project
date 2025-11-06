@@ -12,6 +12,10 @@ extern "C" {
 // Functions concerning instrumented global variables:
 void __asan_abi_register_image_globals(void) {}
 void __asan_abi_unregister_image_globals(void) {}
+void __asan_abi_register_elf_globals(bool *flag, void *start, void *stop) {}
+void __asan_abi_unregister_elf_globals(bool *flag, void *start, void *stop) {}
+void __asan_abi_register_globals(void *globals, size_t n) {}
+void __asan_abi_unregister_globals(void *globals, size_t n) {}
 
 // Functions concerning dynamic library initialization
 void __asan_abi_before_dynamic_init(const char *module_name) {}

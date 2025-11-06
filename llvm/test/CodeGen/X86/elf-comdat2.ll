@@ -5,7 +5,7 @@ $foo = comdat any
 @foo = global i32 42
 
 ; CHECK:      .type   bar,@object
-; CHECK-NEXT: .section        .data.bar,"aGw",@progbits,foo,comdat
+; CHECK-NEXT: .section        .data.bar,"awG",@progbits,foo,comdat
 ; CHECK-NEXT: .globl  bar
 ; CHECK:      .type   foo,@object
 ; CHECK-NEXT: .data

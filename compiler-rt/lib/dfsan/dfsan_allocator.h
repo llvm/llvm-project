@@ -18,7 +18,7 @@
 namespace __dfsan {
 
 struct DFsanThreadLocalMallocStorage {
-  ALIGNED(8) uptr allocator_cache[96 * (512 * 8 + 16)];  // Opaque.
+  alignas(8) uptr allocator_cache[96 * (512 * 8 + 16)];  // Opaque.
   void CommitBack();
 
  private:

@@ -17,8 +17,10 @@
 // Make sure that calling arrive_and_wait with a negative value triggers an assertion.
 
 // REQUIRES: has-unix-headers
-// REQUIRES: libcpp-hardening-mode={{safe|debug}}
-// XFAIL: availability-verbose_abort-missing
+// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
+// Without the assertion, the test will most likely time out.
+// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <latch>
 

@@ -1,5 +1,4 @@
 /// Check the behavior of toolchain for NEC Aurora VE
-/// REQUIRES: ve-registered-target
 /// UNSUPPORTED: system-windows
 
 ///-----------------------------------------------------------------------------
@@ -80,7 +79,7 @@
 ///  - nld VE specific options
 ///  - sjlj exception
 
-// RUN: %clang -### --target=ve-unknown-linux-gnu \
+// RUN: %clang -### -no-canonical-prefixes --target=ve-unknown-linux-gnu \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
 // RUN:     --unwindlib=none \
@@ -97,8 +96,8 @@
 // DEF-SAME: "[[SYSROOT]]/opt/nec/ve/lib/crt1.o"
 // DEF-SAME: "[[SYSROOT]]/opt/nec/ve/lib/crti.o"
 // DEF-SAME: "-z" "max-page-size=0x4000000"
-// DEF-SAME: "[[RESOURCE_DIR]]/lib/linux/clang_rt.crtbegin-ve.o"
-// DEF-SAME: "[[RESOURCE_DIR]]/lib/linux/libclang_rt.builtins-ve.a" "-lc"
-// DEF-SAME: "[[RESOURCE_DIR]]/lib/linux/libclang_rt.builtins-ve.a"
-// DEF-SAME: "[[RESOURCE_DIR]]/lib/linux/clang_rt.crtend-ve.o"
+// DEF-SAME: "[[RESOURCE_DIR]]/lib/ve-unknown-linux-gnu/clang_rt.crtbegin.o"
+// DEF-SAME: "[[RESOURCE_DIR]]/lib/ve-unknown-linux-gnu/libclang_rt.builtins.a" "-lc"
+// DEF-SAME: "[[RESOURCE_DIR]]/lib/ve-unknown-linux-gnu/libclang_rt.builtins.a"
+// DEF-SAME: "[[RESOURCE_DIR]]/lib/ve-unknown-linux-gnu/clang_rt.crtend.o"
 // DEF-SAME: "[[SYSROOT]]/opt/nec/ve/lib/crtn.o"

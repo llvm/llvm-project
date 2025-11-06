@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memmove.h"
 
 #include "memory_utils/memory_check_utils.h"
@@ -13,16 +15,16 @@
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using __llvm_libc::cpp::array;
-using __llvm_libc::cpp::span;
+using LIBC_NAMESPACE::cpp::array;
+using LIBC_NAMESPACE::cpp::span;
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 TEST(LlvmLibcMemmoveTest, MoveZeroByte) {
   char Buffer[] = {'a', 'b', 'y', 'z'};
   const char Expected[] = {'a', 'b', 'y', 'z'};
   void *const Dst = Buffer;
-  void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 0);
+  void *const Ret = LIBC_NAMESPACE::memmove(Dst, Buffer + 2, 0);
   EXPECT_EQ(Ret, Dst);
   ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
@@ -31,7 +33,7 @@ TEST(LlvmLibcMemmoveTest, DstAndSrcPointToSameAddress) {
   char Buffer[] = {'a', 'b'};
   const char Expected[] = {'a', 'b'};
   void *const Dst = Buffer;
-  void *const Ret = __llvm_libc::memmove(Dst, Buffer, 1);
+  void *const Ret = LIBC_NAMESPACE::memmove(Dst, Buffer, 1);
   EXPECT_EQ(Ret, Dst);
   ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
@@ -42,7 +44,7 @@ TEST(LlvmLibcMemmoveTest, DstStartsBeforeSrc) {
   char Buffer[] = {'z', 'a', 'b', 'c', 'z'};
   const char Expected[] = {'z', 'b', 'c', 'c', 'z'};
   void *const Dst = Buffer + 1;
-  void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 2);
+  void *const Ret = LIBC_NAMESPACE::memmove(Dst, Buffer + 2, 2);
   EXPECT_EQ(Ret, Dst);
   ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
@@ -51,7 +53,7 @@ TEST(LlvmLibcMemmoveTest, DstStartsAfterSrc) {
   char Buffer[] = {'z', 'a', 'b', 'c', 'z'};
   const char Expected[] = {'z', 'a', 'a', 'b', 'z'};
   void *const Dst = Buffer + 2;
-  void *const Ret = __llvm_libc::memmove(Dst, Buffer + 1, 2);
+  void *const Ret = LIBC_NAMESPACE::memmove(Dst, Buffer + 1, 2);
   EXPECT_EQ(Ret, Dst);
   ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
@@ -64,7 +66,7 @@ TEST(LlvmLibcMemmoveTest, SrcFollowDst) {
   char Buffer[] = {'z', 'a', 'b', 'z'};
   const char Expected[] = {'z', 'b', 'b', 'z'};
   void *const Dst = Buffer + 1;
-  void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 1);
+  void *const Ret = LIBC_NAMESPACE::memmove(Dst, Buffer + 2, 1);
   EXPECT_EQ(Ret, Dst);
   ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
@@ -73,7 +75,7 @@ TEST(LlvmLibcMemmoveTest, DstFollowSrc) {
   char Buffer[] = {'z', 'a', 'b', 'z'};
   const char Expected[] = {'z', 'a', 'a', 'z'};
   void *const Dst = Buffer + 2;
-  void *const Ret = __llvm_libc::memmove(Dst, Buffer + 1, 1);
+  void *const Ret = LIBC_NAMESPACE::memmove(Dst, Buffer + 1, 1);
   EXPECT_EQ(Ret, Dst);
   ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
@@ -81,7 +83,7 @@ TEST(LlvmLibcMemmoveTest, DstFollowSrc) {
 // Adapt CheckMemmove signature to op implementation signatures.
 static inline void Adaptor(cpp::span<char> dst, cpp::span<char> src,
                            size_t size) {
-  __llvm_libc::memmove(dst.begin(), src.begin(), size);
+  LIBC_NAMESPACE::memmove(dst.begin(), src.begin(), size);
 }
 
 TEST(LlvmLibcMemmoveTest, SizeSweep) {
@@ -92,7 +94,8 @@ TEST(LlvmLibcMemmoveTest, SizeSweep) {
   Randomize(Buffer);
   for (int Size = 0; Size < kMaxSize; ++Size)
     for (int Overlap = -1; Overlap < Size;) {
-      ASSERT_TRUE(CheckMemmove<Adaptor>(Buffer, Size, Overlap));
+      ASSERT_TRUE(
+          CheckMemmove<Adaptor>(Buffer, static_cast<size_t>(Size), Overlap));
       // Prevent quadratic behavior by skipping offset above kDenseOverlap.
       if (Overlap > kDenseOverlap)
         Overlap *= 2;
@@ -101,4 +104,13 @@ TEST(LlvmLibcMemmoveTest, SizeSweep) {
     }
 }
 
-} // namespace __llvm_libc
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcMemmoveTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memmove(nullptr, nullptr, 2); },
+               WITH_SIGNAL(-1));
+}
+
+#endif // LIBC_ADD_NULL_CHECKS
+
+} // namespace LIBC_NAMESPACE_DECL

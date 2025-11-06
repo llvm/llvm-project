@@ -14,12 +14,11 @@ define i16 @cmov_zpromotion_8_to_16(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_8_to_16:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $117, %eax
-; NO_CMOV-NEXT:    jne .LBB0_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $237, %eax
-; NO_CMOV-NEXT:  .LBB0_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $152, %eax
+; NO_CMOV-NEXT:    xorl $237, %eax
 ; NO_CMOV-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 117, i8 -19
@@ -38,12 +37,11 @@ define i32 @cmov_zpromotion_8_to_32(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_8_to_32:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $126, %eax
-; NO_CMOV-NEXT:    jne .LBB1_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $255, %eax
-; NO_CMOV-NEXT:  .LBB1_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $129, %eax
+; NO_CMOV-NEXT:    xorl $255, %eax
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 12414, i8 -1
   %ret = zext i8 %t0 to i32
@@ -61,12 +59,11 @@ define i64 @cmov_zpromotion_8_to_64(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_8_to_64:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $126, %eax
-; NO_CMOV-NEXT:    jne .LBB2_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $255, %eax
-; NO_CMOV-NEXT:  .LBB2_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $129, %eax
+; NO_CMOV-NEXT:    xorl $255, %eax
 ; NO_CMOV-NEXT:    xorl %edx, %edx
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 12414, i8 -1
@@ -85,12 +82,11 @@ define i32 @cmov_zpromotion_16_to_32(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_16_to_32:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; NO_CMOV-NEXT:    jne .LBB3_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; NO_CMOV-NEXT:  .LBB3_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $53121, %eax # imm = 0xCF81
+; NO_CMOV-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 -1
   %ret = zext i16 %t0 to i32
@@ -108,12 +104,11 @@ define i64 @cmov_zpromotion_16_to_64(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_16_to_64:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; NO_CMOV-NEXT:    jne .LBB4_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; NO_CMOV-NEXT:  .LBB4_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $53121, %eax # imm = 0xCF81
+; NO_CMOV-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; NO_CMOV-NEXT:    xorl %edx, %edx
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 -1
@@ -132,12 +127,11 @@ define i64 @cmov_zpromotion_32_to_64(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_32_to_64:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; NO_CMOV-NEXT:    jne .LBB5_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $43107, %eax # imm = 0xA863
-; NO_CMOV-NEXT:  .LBB5_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $38941, %eax # imm = 0x981D
+; NO_CMOV-NEXT:    xorl $43107, %eax # imm = 0xA863
 ; NO_CMOV-NEXT:    xorl %edx, %edx
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i32 12414, i32 43107
@@ -157,12 +151,11 @@ define i16 @cmov_spromotion_8_to_16(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_8_to_16:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $117, %eax
-; NO_CMOV-NEXT:    jne .LBB6_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $65517, %eax # imm = 0xFFED
-; NO_CMOV-NEXT:  .LBB6_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $-104, %eax
+; NO_CMOV-NEXT:    xorl $65517, %eax # imm = 0xFFED
 ; NO_CMOV-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 117, i8 -19
@@ -181,12 +174,11 @@ define i32 @cmov_spromotion_8_to_32(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_8_to_32:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $126, %eax
-; NO_CMOV-NEXT:    jne .LBB7_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $99, %eax
-; NO_CMOV-NEXT:  .LBB7_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $29, %eax
+; NO_CMOV-NEXT:    xorl $99, %eax
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 12414, i8 43107
   %ret = sext i8 %t0 to i32
@@ -204,12 +196,11 @@ define i64 @cmov_spromotion_8_to_64(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_8_to_64:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $126, %eax
-; NO_CMOV-NEXT:    jne .LBB8_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $99, %eax
-; NO_CMOV-NEXT:  .LBB8_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $29, %eax
+; NO_CMOV-NEXT:    xorl $99, %eax
 ; NO_CMOV-NEXT:    xorl %edx, %edx
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 12414, i8 43107
@@ -228,12 +219,11 @@ define i32 @cmov_spromotion_16_to_32(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_16_to_32:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; NO_CMOV-NEXT:    jne .LBB9_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $-22429, %eax # imm = 0xA863
-; NO_CMOV-NEXT:  .LBB9_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $-26595, %eax # imm = 0x981D
+; NO_CMOV-NEXT:    xorl $-22429, %eax # imm = 0xA863
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 43107
   %ret = sext i16 %t0 to i32
@@ -251,19 +241,12 @@ define i64 @cmov_spromotion_16_to_64(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_16_to_64:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    xorl %edx, %edx
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; NO_CMOV-NEXT:    je .LBB10_1
-; NO_CMOV-NEXT:  # %bb.2:
-; NO_CMOV-NEXT:    je .LBB10_3
-; NO_CMOV-NEXT:  .LBB10_4:
-; NO_CMOV-NEXT:    retl
-; NO_CMOV-NEXT:  .LBB10_1:
-; NO_CMOV-NEXT:    movl $-22429, %eax # imm = 0xA863
-; NO_CMOV-NEXT:    jne .LBB10_4
-; NO_CMOV-NEXT:  .LBB10_3:
-; NO_CMOV-NEXT:    movl $-1, %edx
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    leal -1(%eax), %edx
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $-26595, %eax # imm = 0x981D
+; NO_CMOV-NEXT:    xorl $-22429, %eax # imm = 0xA863
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 43107
   %ret = sext i16 %t0 to i64
@@ -281,12 +264,11 @@ define i64 @cmov_spromotion_32_to_64(i1 %c) {
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_32_to_64:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; NO_CMOV-NEXT:    jne .LBB11_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $43107, %eax # imm = 0xA863
-; NO_CMOV-NEXT:  .LBB11_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    negl %eax
+; NO_CMOV-NEXT:    andl $38941, %eax # imm = 0x981D
+; NO_CMOV-NEXT:    xorl $43107, %eax # imm = 0xA863
 ; NO_CMOV-NEXT:    xorl %edx, %edx
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i32 12414, i32 43107

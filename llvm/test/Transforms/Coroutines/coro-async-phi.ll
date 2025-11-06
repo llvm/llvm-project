@@ -47,11 +47,11 @@ bb30:                                             ; preds = %bb
   %i47 = inttoptr i64 %i46 to ptr
   %i52 = call swiftcc ptr @swift_task_alloc(i64 24) #1
   %i54 = load ptr, ptr %i, align 8
-  %i55 = getelementptr inbounds <{ ptr, ptr, i32 }>, <{ ptr, ptr, i32 }>* %i52, i32 0, i32 0
+  %i55 = getelementptr inbounds <{ ptr, ptr, i32 }>, ptr %i52, i32 0, i32 0
   store ptr %i54, ptr %i55, align 8
   %i56 = call ptr @llvm.coro.async.resume()
   call void @use(ptr %i56)
-  %i58 = getelementptr inbounds <{ ptr, ptr, i32 }>, <{ ptr, ptr, i32 }>* %i52, i32 0, i32 1
+  %i58 = getelementptr inbounds <{ ptr, ptr, i32 }>, ptr %i52, i32 0, i32 1
   store ptr %i56, ptr %i58, align 8
   %i61 = call { ptr, ptr } (i32, ptr, ptr, ...) @llvm.coro.suspend.async.sl_p0i8p0s_swift.errorss(i32 256, ptr %i56, ptr @__swift_async_resume_project_context, ptr @__swift_suspend_dispatch_4, ptr %i47, ptr %i52, i64 %i31, i64 0, ptr %arg3)
   %i62 = extractvalue { ptr, ptr } %i61, 0
@@ -83,7 +83,7 @@ bb68:                                             ; preds = %bb30
   br label %bb126
 
 bb126:
-  %i162 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %i12, i1 false, ptr @__swift_suspend_dispatch_2, ptr @doIt, ptr null, ptr null)
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %i12, i1 false, ptr @__swift_suspend_dispatch_2, ptr @doIt, ptr null, ptr null)
   unreachable
 }
 
@@ -119,7 +119,7 @@ entry:
 declare { ptr } @llvm.coro.suspend.async.sl_p0i8s(i32, ptr, ptr, ...) #1
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end.async(ptr, i1, ...) #1
+declare void @llvm.coro.end.async(ptr, i1, ...) #1
 
 ; Function Attrs: argmemonly nounwind
 declare extern_weak swiftcc ptr @swift_task_alloc(i64) #5

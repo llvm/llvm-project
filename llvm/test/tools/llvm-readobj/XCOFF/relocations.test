@@ -2,9 +2,19 @@
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --relocs --expand-relocs %t | \
-# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=RELOCSEXP
+# RUN:   FileCheck %s --strict-whitespace --check-prefixes=RELOCSEXP,NODEMANEXP
 # RUN: llvm-readobj --relocs %t | \
-# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=RELOCS
+# RUN:   FileCheck %s --strict-whitespace --check-prefixes=RELOCS,NODEMAN
+
+# RUN: llvm-readobj --relocs --expand-relocs --no-demangle %t | \
+# RUN:   FileCheck %s --strict-whitespace --check-prefixes=RELOCSEXP,NODEMANEXP
+# RUN: llvm-readobj --relocs --no-demangle %t | \
+# RUN:   FileCheck %s --strict-whitespace --check-prefixes=RELOCS,NODEMAN
+
+# RUN: llvm-readobj --relocs --expand-relocs --demangle %t | \
+# RUN:   FileCheck %s --strict-whitespace --check-prefixes=RELOCSEXP,DEMANEXP
+# RUN: llvm-readobj --relocs --demangle %t | \
+# RUN:   FileCheck %s --strict-whitespace --check-prefixes=RELOCS,DEMAN
 
 #      RELOCSEXP:Relocations [
 # RELOCSEXP-NEXT:  Section (index: 1) .text {
@@ -28,7 +38,8 @@
 # RELOCSEXP-NEXT:  Section (index: 2) .data {
 # RELOCSEXP-NEXT:    Relocation {
 # RELOCSEXP-NEXT:      Virtual Address: 0x200
-# RELOCSEXP-NEXT:      Symbol: bar (1)
+# NODEMANEXP-NEXT:     Symbol: _Z3fwpv (1)
+# DEMANEXP-NEXT:       Symbol: fwp() (1)
 # RELOCSEXP-NEXT:      IsSigned: No
 # RELOCSEXP-NEXT:      FixupBitValue: 0
 # RELOCSEXP-NEXT:      Length: 20
@@ -43,7 +54,8 @@
 # RELOCS-NEXT:    0x100 R_REL foo(0) 0x14
 # RELOCS-NEXT:  }
 # RELOCS-NEXT:  Section (index: 2) .data {
-# RELOCS-NEXT:    0x200 R_TOC bar(1) 0x13
+# NODEMAN-NEXT:  0x200 R_TOC _Z3fwpv(1) 0x13
+# DEMAN-NEXT:    0x200 R_TOC fwp()(1) 0x13
 # RELOCS-NEXT:  }
 # RELOCS-NEXT:]
 
@@ -73,6 +85,6 @@ Symbols:
   - Name:    foo
     Value:   0x0
     Section: .text
-  - Name:    bar
+  - Name:    _Z3fwpv
     Value:   0x80
     Section: .data

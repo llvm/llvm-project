@@ -240,6 +240,15 @@
 // RUN: FileCheck -check-prefix=LINK_NO_IOS_ARM64_LIBGCC_S %s < %t.log
 // LINK_NO_IOS_ARM64_LIBGCC_S-NOT: lgcc_s.1
 
+// Check that clang links with libgcc_s.1 for Mac OS X 10.5 and earlier, but not arm64
+// RUN: %clang -target x86_64-apple-macosx10.5 -mmacosx-version-min=10.5 -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_OSX_LIBGCC_S %s < %t.log
+// LINK_OSX_LIBGCC_S: lgcc_s.1
+
+// RUN: %clang -target arm64-apple-macosx10.5 -mmacosx-version-min=10.5 -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_NO_OSX_ARM64_LIBGCC_S %s < %t.log
+// LINK_NO_OSX_ARM64_LIBGCC_S-NOT: lgcc_s.1
+
 // RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=100 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_NO_EXPORT_DYNAMIC %s < %t.log
@@ -336,7 +345,7 @@
 // RUN: FileCheck -check-prefix=PROFILE_SECTALIGN %s < %t.log
 // RUN: %clang -target arm64-apple-ios12 -fprofile-instr-generate -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=PROFILE_SECTALIGN %s < %t.log
-// PROFILE_SECTALIGN: "-sectalign" "__DATA" "__llvm_prf_cnts" "0x4000" "-sectalign" "__DATA" "__llvm_prf_data" "0x4000"
+// PROFILE_SECTALIGN: "-sectalign" "__DATA" "__llvm_prf_cnts" "0x4000" "-sectalign" "__DATA" "__llvm_prf_bits" "0x4000" "-sectalign" "__DATA" "__llvm_prf_data" "0x4000"
 
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate --coverage -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=NO_PROFILE_EXPORT %s < %t.log

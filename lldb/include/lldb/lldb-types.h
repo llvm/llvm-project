@@ -42,7 +42,7 @@ typedef void *rwlock_t;
 typedef void *process_t;                          // Process type is HANDLE
 typedef void *thread_t;                           // Host thread type
 typedef void *file_t;                             // Host file type
-typedef unsigned int __w64 socket_t;              // Host socket type
+typedef uintptr_t socket_t;                       // Host socket type
 typedef void *thread_arg_t;                       // Host thread argument type
 typedef unsigned thread_result_t;                 // Host thread result type
 typedef thread_result_t (*thread_func_t)(void *); // Host thread function type
@@ -68,21 +68,24 @@ typedef int pipe_t;                     // Host pipe type
 #define LLDB_INVALID_PROCESS ((lldb::process_t)-1)
 #define LLDB_INVALID_HOST_THREAD ((lldb::thread_t)NULL)
 #define LLDB_INVALID_PIPE ((lldb::pipe_t)-1)
+#define LLDB_INVALID_CALLBACK_TOKEN ((lldb::callback_token_t) - 1)
 
 typedef void (*LogOutputCallback)(const char *, void *baton);
 typedef bool (*CommandOverrideCallback)(void *baton, const char **argv);
-typedef bool (*ExpressionCancelCallback)(ExpressionEvaluationPhase phase,
+typedef bool (*ExpressionCancelCallback)(lldb::ExpressionEvaluationPhase phase,
                                          void *baton);
 
 typedef void *ScriptObjectPtr;
 
 typedef uint64_t addr_t;
+typedef int32_t callback_token_t;
 typedef uint64_t user_id_t;
 typedef uint64_t pid_t;
 typedef uint64_t tid_t;
 typedef uint64_t offset_t;
 typedef int32_t break_id_t;
 typedef int32_t watch_id_t;
+typedef uint32_t wp_resource_id_t;
 typedef void *opaque_compiler_type_t;
 typedef uint64_t queue_id_t;
 typedef uint32_t cpu_id_t; // CPU core id

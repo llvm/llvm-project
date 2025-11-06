@@ -17,13 +17,13 @@ entry:
   ret i32 2
 }
 
-; CHECKFS32: 00000000 l       .text  00000000 (idx: {{[[:digit:]]*}}) [PR]
-; CHECKFS32-NEXT: 00000000 g       .text  {{([[:xdigit:]]{8})}} (idx: {{[[:digit:]]*}}) .text[PR]
-; CHECKFS32-NEXT: {{([[:xdigit:]]{8})}} g       .text  {{([[:xdigit:]]{8})}} (idx: {{[[:digit:]]*}}) .text2[PR]
+; CHECKFS32: 00000000 l        .text  00000000 (idx: {{[[:digit:]]*}}) [PR]
+; CHECKFS32-NEXT: 00000000 g      F .text  {{([[:xdigit:]]{8})}} (idx: {{[[:digit:]]*}}) .text[PR]
+; CHECKFS32-NEXT: {{([[:xdigit:]]{8})}} g      F .text  {{([[:xdigit:]]{8})}} (idx: {{[[:digit:]]*}}) .text2[PR]
 
-; CHECKFS64: 0000000000000000 l       .text  0000000000000000 
-; CHECKFS64-NEXT: 0000000000000000 g       .text  {{([[:xdigit:]]{16})}} (idx: {{[[:digit:]]*}}) .text[PR]
-; CHECKFS64-NEXT: {{([[:xdigit:]]{16})}} g       .text  {{([[:xdigit:]]{16})}} (idx: {{[[:digit:]]*}}) .text2[PR]
+; CHECKFS64: 0000000000000000 l      .text  0000000000000000
+; CHECKFS64-NEXT: 0000000000000000 g      F .text  {{([[:xdigit:]]{16})}} (idx: {{[[:digit:]]*}}) .text[PR]
+; CHECKFS64-NEXT: {{([[:xdigit:]]{16})}} g      F .text  {{([[:xdigit:]]{16})}} (idx: {{[[:digit:]]*}}) .text2[PR]
 
 ; CHECK32: 00000000 l       .text  {{([[:xdigit:]]{8})}} (idx: {{[[:digit:]]*}}) [PR]
 ; CHECK32-NEXT: {{([[:xdigit:]]{8})}} g     F .text (csect: (idx: {{[[:digit:]]*}}) [PR])   00000000 (idx: {{[[:digit:]]*}}) .text

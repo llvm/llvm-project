@@ -10,16 +10,18 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/File/file.h"
 
-#include "src/errno/libc_errno.h"
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
+#include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fputs,
                    (const char *__restrict str, ::FILE *__restrict stream)) {
   cpp::string_view str_view(str);
 
-  auto result = reinterpret_cast<__llvm_libc::File *>(stream)->write(
+  auto result = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->write(
       str, str_view.size());
   if (result.has_error())
     libc_errno = result.error;
@@ -32,4 +34,4 @@ LLVM_LIBC_FUNCTION(int, fputs,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

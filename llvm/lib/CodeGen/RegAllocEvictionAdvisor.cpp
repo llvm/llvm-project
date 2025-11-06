@@ -9,15 +9,17 @@
 // Implementation of the default eviction advisor and of the Analysis pass.
 //
 //===----------------------------------------------------------------------===//
-
-#include "RegAllocEvictionAdvisor.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "AllocationOrder.h"
 #include "RegAllocGreedy.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -25,17 +27,18 @@
 
 using namespace llvm;
 
-static cl::opt<RegAllocEvictionAdvisorAnalysis::AdvisorMode> Mode(
+static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
     "regalloc-enable-advisor", cl::Hidden,
-    cl::init(RegAllocEvictionAdvisorAnalysis::AdvisorMode::Default),
+    cl::init(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default),
     cl::desc("Enable regalloc advisor mode"),
     cl::values(
-        clEnumValN(RegAllocEvictionAdvisorAnalysis::AdvisorMode::Default,
+        clEnumValN(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default,
                    "default", "Default"),
-        clEnumValN(RegAllocEvictionAdvisorAnalysis::AdvisorMode::Release,
+        clEnumValN(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release,
                    "release", "precompiled"),
-        clEnumValN(RegAllocEvictionAdvisorAnalysis::AdvisorMode::Development,
-                   "development", "for training")));
+        clEnumValN(
+            RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development,
+            "development", "for training")));
 
 static cl::opt<bool> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,
@@ -58,59 +61,112 @@ cl::opt<unsigned> EvictInterferenceCutoff(
 #define LLVM_HAVE_TF_AOT
 #endif
 
-char RegAllocEvictionAdvisorAnalysis::ID = 0;
-INITIALIZE_PASS(RegAllocEvictionAdvisorAnalysis, "regalloc-evict",
+char RegAllocEvictionAdvisorAnalysisLegacy::ID = 0;
+INITIALIZE_PASS(RegAllocEvictionAdvisorAnalysisLegacy, "regalloc-evict",
                 "Regalloc eviction policy", false, true)
 
 namespace {
-class DefaultEvictionAdvisorAnalysis final
-    : public RegAllocEvictionAdvisorAnalysis {
+class DefaultEvictionAdvisorProvider final
+    : public RegAllocEvictionAdvisorProvider {
 public:
-  DefaultEvictionAdvisorAnalysis(bool NotAsRequested)
-      : RegAllocEvictionAdvisorAnalysis(AdvisorMode::Default),
-        NotAsRequested(NotAsRequested) {}
+  DefaultEvictionAdvisorProvider(bool NotAsRequested, LLVMContext &Ctx)
+      : RegAllocEvictionAdvisorProvider(AdvisorMode::Default, Ctx) {
+    if (NotAsRequested)
+      Ctx.emitError("Requested regalloc eviction advisor analysis "
+                    "could not be created. Using default");
+  }
 
   // support for isa<> and dyn_cast.
-  static bool classof(const RegAllocEvictionAdvisorAnalysis *R) {
+  static bool classof(const RegAllocEvictionAdvisorProvider *R) {
+    return R->getAdvisorMode() == AdvisorMode::Default;
+  }
+
+  std::unique_ptr<RegAllocEvictionAdvisor>
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             MachineBlockFrequencyInfo *, MachineLoopInfo *) override {
+    return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
+  }
+};
+
+class DefaultEvictionAdvisorAnalysisLegacy final
+    : public RegAllocEvictionAdvisorAnalysisLegacy {
+public:
+  DefaultEvictionAdvisorAnalysisLegacy(bool NotAsRequested)
+      : RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode::Default),
+        NotAsRequested(NotAsRequested) {}
+
+  bool doInitialization(Module &M) override {
+    Provider.reset(
+        new DefaultEvictionAdvisorProvider(NotAsRequested, M.getContext()));
+    return false;
+  }
+
+  // support for isa<> and dyn_cast.
+  static bool classof(const RegAllocEvictionAdvisorAnalysisLegacy *R) {
     return R->getAdvisorMode() == AdvisorMode::Default;
   }
 
 private:
-  std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
-    return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
-  }
-  bool doInitialization(Module &M) override {
-    if (NotAsRequested)
-      M.getContext().emitError("Requested regalloc eviction advisor analysis "
-                               "could be created. Using default");
-    return RegAllocEvictionAdvisorAnalysis::doInitialization(M);
-  }
   const bool NotAsRequested;
 };
 } // namespace
 
-template <> Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysis>() {
-  Pass *Ret = nullptr;
+AnalysisKey RegAllocEvictionAdvisorAnalysis::Key;
+
+void RegAllocEvictionAdvisorAnalysis::initializeProvider(
+    RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode Mode, LLVMContext &Ctx) {
+  if (Provider)
+    return;
   switch (Mode) {
-  case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Default:
-    Ret = new DefaultEvictionAdvisorAnalysis(/*NotAsRequested*/ false);
-    break;
-  case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Development:
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
+    Provider.reset(
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/false, Ctx));
+    return;
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
-    Ret = createDevelopmentModeAdvisor();
+    Provider.reset(createDevelopmentModeAdvisorProvider(Ctx));
+#else
+    Provider.reset(
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 #endif
-    break;
-  case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Release:
-    Ret = createReleaseModeAdvisor();
-    break;
+    return;
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
+    Provider.reset(createReleaseModeAdvisorProvider(Ctx));
+    return;
   }
-  if (Ret)
-    return Ret;
-  return new DefaultEvictionAdvisorAnalysis(/*NotAsRequested*/ true);
 }
 
-StringRef RegAllocEvictionAdvisorAnalysis::getPassName() const {
+RegAllocEvictionAdvisorAnalysis::Result
+RegAllocEvictionAdvisorAnalysis::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  // Lazy initialization of the provider.
+  initializeProvider(::Mode, MF.getFunction().getContext());
+  return Result{Provider.get()};
+}
+
+template <>
+Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>() {
+  switch (Mode) {
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
+    return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/false);
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release: {
+    Pass *Ret = createReleaseModeAdvisorAnalysisLegacy();
+    // release mode advisor may not be supported
+    if (Ret)
+      return Ret;
+    return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/true);
+  }
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
+#if defined(LLVM_HAVE_TFLITE)
+    return createDevelopmentModeAdvisorAnalysisLegacy();
+#else
+    return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/true);
+#endif
+  }
+  llvm_unreachable("unexpected advisor mode");
+}
+
+StringRef RegAllocEvictionAdvisorAnalysisLegacy::getPassName() const {
   switch (getAdvisorMode()) {
   case AdvisorMode::Default:
     return "Default Regalloc Eviction Advisor";
@@ -156,7 +212,7 @@ bool DefaultEvictionAdvisor::shouldEvict(const LiveInterval &A, bool IsHint,
     return true;
 
   if (A.weight() > B.weight()) {
-    LLVM_DEBUG(dbgs() << "should evict: " << B << " w= " << B.weight() << '\n');
+    LLVM_DEBUG(dbgs() << "should evict: " << B << '\n');
     return true;
   }
   return false;
@@ -168,7 +224,7 @@ bool DefaultEvictionAdvisor::canEvictHintInterference(
     const LiveInterval &VirtReg, MCRegister PhysReg,
     const SmallVirtRegSet &FixedRegisters) const {
   EvictionCost MaxCost;
-  MaxCost.setBrokenHints(1);
+  MaxCost.setBrokenHints(MRI->getRegClass(VirtReg.reg())->getCopyCost());
   return canEvictInterferenceBasedOnCost(VirtReg, PhysReg, true, MaxCost,
                                          FixedRegisters);
 }
@@ -244,15 +300,17 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
           return false;
         // We permit breaking cascades for urgent evictions. It should be the
         // last resort, though, so make it really expensive.
-        Cost.BrokenHints += 10;
+        Cost.BrokenHints += 10 * MRI->getRegClass(Intf->reg())->getCopyCost();
       }
       // Would this break a satisfied hint?
       bool BreaksHint = VRM->hasPreferredPhys(Intf->reg());
       // Update eviction cost.
-      Cost.BrokenHints += BreaksHint;
+      if (BreaksHint)
+        Cost.BrokenHints += MRI->getRegClass(Intf->reg())->getCopyCost();
+
       Cost.MaxWeight = std::max(Cost.MaxWeight, Intf->weight());
       // Abort if this would be too expensive.
-      if (!(Cost < MaxCost))
+      if (Cost >= MaxCost)
         return false;
       if (Urgent)
         continue;

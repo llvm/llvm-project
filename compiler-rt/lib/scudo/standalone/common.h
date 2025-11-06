@@ -28,7 +28,11 @@ template <class Dest, class Source> inline Dest bit_cast(const Source &S) {
   return D;
 }
 
-inline constexpr bool isPowerOfTwo(uptr X) { return (X & (X - 1)) == 0; }
+inline constexpr bool isPowerOfTwo(uptr X) {
+  if (X == 0)
+    return false;
+  return (X & (X - 1)) == 0;
+}
 
 inline constexpr uptr roundUp(uptr X, uptr Boundary) {
   DCHECK(isPowerOfTwo(Boundary));
@@ -112,34 +116,60 @@ template <typename T> inline void shuffle(T *A, u32 N, u32 *RandState) {
   *RandState = State;
 }
 
-// Hardware specific inlinable functions.
+inline void computePercentage(uptr Numerator, uptr Denominator, uptr *Integral,
+                              uptr *Fractional) {
+  constexpr uptr Digits = 100;
+  if (Denominator == 0) {
+    *Integral = 100;
+    *Fractional = 0;
+    return;
+  }
 
-inline void yieldProcessor(UNUSED u8 Count) {
-#if defined(__i386__) || defined(__x86_64__)
-  __asm__ __volatile__("" ::: "memory");
-  for (u8 I = 0; I < Count; I++)
-    __asm__ __volatile__("pause");
-#elif defined(__aarch64__) || defined(__arm__)
-  __asm__ __volatile__("" ::: "memory");
-  for (u8 I = 0; I < Count; I++)
-    __asm__ __volatile__("yield");
-#endif
-  __asm__ __volatile__("" ::: "memory");
+  *Integral = Numerator * Digits / Denominator;
+  *Fractional =
+      (((Numerator * Digits) % Denominator) * Digits + Denominator / 2) /
+      Denominator;
 }
 
 // Platform specific functions.
 
+#if defined(SCUDO_PAGE_SIZE)
+
+inline constexpr uptr getPageSizeCached() { return SCUDO_PAGE_SIZE; }
+
+inline constexpr uptr getPageSizeSlow() { return getPageSizeCached(); }
+
+inline constexpr uptr getPageSizeLogCached() {
+  return static_cast<uptr>(__builtin_ctzl(SCUDO_PAGE_SIZE));
+}
+
+#else
+
 extern uptr PageSizeCached;
+extern uptr PageSizeLogCached;
+
+// Must be defined in platform specific code.
+uptr getPageSize();
+
+// Always calls getPageSize(), but caches the results for get*Cached(), below.
 uptr getPageSizeSlow();
+
 inline uptr getPageSizeCached() {
-#if SCUDO_ANDROID && defined(PAGE_SIZE)
-  // Most Android builds have a build-time constant page size.
-  return PAGE_SIZE;
-#endif
   if (LIKELY(PageSizeCached))
     return PageSizeCached;
   return getPageSizeSlow();
 }
+
+inline uptr getPageSizeLogCached() {
+  if (LIKELY(PageSizeLogCached))
+    return PageSizeLogCached;
+  // PageSizeLogCached and PageSizeCached are both set in getPageSizeSlow()
+  getPageSizeSlow();
+  DCHECK_NE(PageSizeLogCached, 0);
+  return PageSizeLogCached;
+}
+
+#endif
 
 // Returns 0 if the number of CPUs could not be determined.
 u32 getNumberOfCPUs();
@@ -189,10 +219,6 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
 
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
                       MapPlatformData *Data = nullptr);
-
-// Internal map & unmap fatal error. This must not call map(). SizeIfOOM shall
-// hold the requested size on an out-of-memory error, 0 otherwise.
-void NORETURN dieOnMapUnmapError(uptr SizeIfOOM = 0);
 
 // Logging related functions.
 

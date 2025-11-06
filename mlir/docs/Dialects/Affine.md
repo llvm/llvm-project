@@ -61,26 +61,29 @@ Example:
 
 The affine dialect imposes certain restrictions on dimension and symbolic
 identifiers to enable powerful analysis and transformation. An SSA value's use
-can be bound to a symbolic identifier if that SSA value is either 1. a region
-argument for an op with trait `AffineScope` (eg. `FuncOp`), 2. a value defined
-at the top level of an `AffineScope` op (i.e., immediately enclosed by the
-latter), 3. a value that dominates the `AffineScope` op enclosing the value's
-use, 4. the result of a
-constant operation, 5. the result of an
-[`affine.apply` operation](#affineapply-mliraffineapplyop) that recursively takes as
-arguments any valid symbolic identifiers, or 6. the result of a
+can be bound to a symbolic identifier if that SSA value is either:
+
+1. a region argument for an op with trait `AffineScope` (eg. `FuncOp`),
+2. a value defined at the top level of an `AffineScope` op (i.e., 
+immediately enclosed by the latter),
+3. a value that dominates the `AffineScope` op enclosing the value's
+use,
+4. the result of a constant operation,
+5. the result of a `Pure` operation whose operands are valid symbolic identifiers.
+6. the result of a
 [`dim` operation](MemRef.md/#memrefdim-mlirmemrefdimop) on either a memref that
 is an argument to a `AffineScope` op or a memref where the corresponding
 dimension is either static or a dynamic one in turn bound to a valid symbol.
+
 *Note:* if the use of an SSA value is not contained in any op with the
 `AffineScope` trait, only the rules 4-6 can be applied.
 
 Note that as a result of rule (3) above, symbol validity is sensitive to the
 location of the SSA use. Dimensions may be bound not only to anything that a
 symbol is bound to, but also to induction variables of enclosing
-[`affine.for`](#affinefor-mliraffineforop) and
-[`affine.parallel`](#affineparallel-mliraffineparallelop) operations, and the result
-of an [`affine.apply` operation](#affineapply-mliraffineapplyop) (which recursively
+[`affine.for`](#affinefor-affineaffineforop) and
+[`affine.parallel`](#affineparallel-affineaffineparallelop) operations, and the result
+of an [`affine.apply` operation](#affineapply-affineaffineapplyop) (which recursively
 may use other dimensions and symbols).
 
 ### Affine Expressions
@@ -155,7 +158,7 @@ dimension indices and symbols into a list of results, with affine expressions
 combining the indices and symbols. Affine maps distinguish between
 [indices and symbols](#dimensions-and-symbols) because indices are inputs to the
 affine map when the map is called (through an operation such as
-[affine.apply](#affineapply-mliraffineapplyop)), whereas symbols are bound when the
+[affine.apply](#affineapply-affineaffineapplyop)), whereas symbols are bound when the
 map is established (e.g. when a memref is formed, establishing a memory
 [layout map](Builtin.md/#layout)).
 
@@ -367,7 +370,7 @@ Syntax:
 operation ::= `affine.dma_wait` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
 ```
 
-The `affine.dma_start` op blocks until the completion of a DMA operation
+The `affine.dma_wait` op blocks until the completion of a DMA operation
 associated with the tag element `%tag[%index]`. `%tag` is a memref, and `%index` has
 to be an index with the same restrictions as any load/store index. In
 particular, index for each memref dimension must be an affine expression of loop

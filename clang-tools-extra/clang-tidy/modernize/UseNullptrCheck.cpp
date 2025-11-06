@@ -1,4 +1,4 @@
-//===--- UseNullptrCheck.cpp - clang-tidy----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,8 +21,6 @@ using namespace llvm;
 namespace clang::tidy::modernize {
 namespace {
 
-const char CastSequence[] = "sequence";
-
 AST_MATCHER(Type, sugaredNullptrType) {
   const Type *DesugaredType = Node.getUnqualifiedDesugaredType();
   if (const auto *BT = dyn_cast<BuiltinType>(DesugaredType))
@@ -30,20 +28,35 @@ AST_MATCHER(Type, sugaredNullptrType) {
   return false;
 }
 
+} // namespace
+
+static const char CastSequence[] = "sequence";
+
 /// Create a matcher that finds implicit casts as well as the head of a
 /// sequence of zero or more nested explicit casts that have an implicit cast
 /// to null within.
 /// Finding sequences of explicit casts is necessary so that an entire sequence
 /// can be replaced instead of just the inner-most implicit cast.
-StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
+///
+/// TODO/NOTE: The second "anyOf" below discards matches on a substituted type,
+/// since we don't know if that would _always_ be a pointer type for all other
+/// specializations, unless the expression was "__null", in which case we assume
+/// that all specializations are expected to be for pointer types. Ideally this
+/// would check for the "NULL" macro instead, but that'd be harder to express.
+/// In practice, "NULL" is often defined as "__null", and this is a useful
+/// condition.
+static StatementMatcher
+makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
   auto ImplicitCastToNull = implicitCastExpr(
       anyOf(hasCastKind(CK_NullToPointer), hasCastKind(CK_NullToMemberPointer)),
-      unless(hasImplicitDestinationType(qualType(substTemplateTypeParmType()))),
+      anyOf(hasSourceExpression(gnuNullExpr()),
+            unless(hasImplicitDestinationType(
+                qualType(substTemplateTypeParmType())))),
       unless(hasSourceExpression(hasType(sugaredNullptrType()))),
       unless(hasImplicitDestinationType(
           qualType(matchers::matchesAnyListedTypeName(NameList)))));
 
-  auto IsOrHasDescendant = [](auto InnerMatcher) {
+  auto IsOrHasDescendant = [](const auto &InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
   };
 
@@ -69,16 +82,16 @@ StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
                 unless(hasAncestor(functionDecl(isDefaulted()))))));
 }
 
-bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
-                        const SourceManager &SM) {
+static bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
+                               const SourceManager &SM) {
   return SM.isWrittenInSameFile(StartLoc, EndLoc);
 }
 
 /// Replaces the provided range with the text "nullptr", but only if
 /// the start and end location are both in main file.
 /// Returns true if and only if a replacement was made.
-void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
-                        SourceLocation StartLoc, SourceLocation EndLoc) {
+static void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
+                               SourceLocation StartLoc, SourceLocation EndLoc) {
   CharSourceRange Range(SourceRange(StartLoc, EndLoc), true);
   // Add a space if nullptr follows an alphanumeric character. This happens
   // whenever there is an c-style explicit cast to nullptr not surrounded by
@@ -96,8 +109,9 @@ void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
 /// #define MY_NULL NULL
 /// \endcode
 /// If \p Loc points to NULL, this function will return the name MY_NULL.
-StringRef getOutermostMacroName(SourceLocation Loc, const SourceManager &SM,
-                                const LangOptions &LO) {
+static StringRef getOutermostMacroName(SourceLocation Loc,
+                                       const SourceManager &SM,
+                                       const LangOptions &LO) {
   assert(Loc.isMacroID());
   SourceLocation OutermostMacroLoc;
 
@@ -108,6 +122,8 @@ StringRef getOutermostMacroName(SourceLocation Loc, const SourceManager &SM,
 
   return Lexer::getImmediateMacroName(OutermostMacroLoc, SM, LO);
 }
+
+namespace {
 
 /// RecursiveASTVisitor for ensuring all nodes rooted at a given AST
 /// subtree that have file-level source locations corresponding to a macro
@@ -219,7 +235,7 @@ public:
       return true;
     }
 
-    auto* CastSubExpr = C->getSubExpr()->IgnoreParens();
+    auto *CastSubExpr = C->getSubExpr()->IgnoreParens();
     // Ignore cast expressions which cast nullptr literal.
     if (isa<CXXNullPtrLiteralExpr>(CastSubExpr)) {
       return true;
@@ -483,9 +499,8 @@ UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NullMacrosStr(Options.get("NullMacros", "NULL")),
       IgnoredTypes(utils::options::parseStringList(Options.get(
-          "IgnoredTypes",
-          "std::_CmpUnspecifiedParam::;^std::__cmp_cat::__unspec"))) {
-  StringRef(NullMacrosStr).split(NullMacros, ",");
+          "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))) {
+  NullMacrosStr.split(NullMacros, ",");
 }
 
 void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

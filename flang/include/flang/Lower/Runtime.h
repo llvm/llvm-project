@@ -34,6 +34,7 @@ namespace parser {
 struct EventPostStmt;
 struct EventWaitStmt;
 struct LockStmt;
+struct NotifyWaitStmt;
 struct PauseStmt;
 struct StopStmt;
 struct SyncAllStmt;
@@ -49,6 +50,8 @@ class AbstractConverter;
 
 // Lowering of Fortran statement related runtime (other than IO and maths)
 
+void genNotifyWaitStatement(AbstractConverter &,
+                            const parser::NotifyWaitStmt &);
 void genEventPostStatement(AbstractConverter &, const parser::EventPostStmt &);
 void genEventWaitStatement(AbstractConverter &, const parser::EventWaitStmt &);
 void genLockStatement(AbstractConverter &, const parser::LockStmt &);
@@ -67,7 +70,7 @@ void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
                          mlir::Value pointer, mlir::Value target);
 void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
                                   mlir::Value pointer, mlir::Value target,
-                                  mlir::Value bounds);
+                                  mlir::Value bounds, bool isMonomorphic);
 void genPointerAssociateLowerBounds(fir::FirOpBuilder &, mlir::Location,
                                     mlir::Value pointer, mlir::Value target,
                                     mlir::Value lbounds);

@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp -Werror
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -Werror -pedantic
 ! OpenMP Version 5.0
 ! 2.19.4.4 firstprivate Clause
 ! 2.19.4.5 lastprivate Clause
@@ -10,7 +10,7 @@
 subroutine firstprivate()
   class(*), allocatable, save :: x
 
-  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in FIRSTPRIVATE clause, the behavior is unspecified
+  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in FIRSTPRIVATE clause, the behavior is unspecified [-Wportability]
   !$omp parallel firstprivate(x)
     call sub()
   !$omp end parallel
@@ -20,7 +20,7 @@ end
 subroutine lastprivate()
   class(*), allocatable, save :: x
 
-  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in LASTPRIVATE clause, the behavior is unspecified
+  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in LASTPRIVATE clause, the behavior is unspecified [-Wportability]
   !$omp do lastprivate(x)
   do i = 1, 10
     call sub()
@@ -33,7 +33,7 @@ subroutine copyin()
   class(*), allocatable, save :: x
   !$omp threadprivate(x)
 
-  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYIN clause, the behavior is unspecified
+  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYIN clause, the behavior is unspecified [-Wportability]
   !$omp parallel copyin(x)
     call sub()
   !$omp end parallel
@@ -44,9 +44,9 @@ subroutine copyprivate()
   class(*), allocatable, save :: x
   !$omp threadprivate(x)
 
-  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYPRIVATE clause, the behavior is unspecified
-  !$omp single copyprivate(x)
+  !$omp single
     call sub()
-  !$omp end single
+  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYPRIVATE clause, the behavior is unspecified [-Wportability]
+  !$omp end single copyprivate(x)
 
 end

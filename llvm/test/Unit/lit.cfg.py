@@ -19,7 +19,11 @@ config.test_exec_root = os.path.join(config.llvm_obj_root, "unittests")
 config.test_source_root = config.test_exec_root
 
 # testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.GoogleTest(config.llvm_build_mode, "Tests")
+config.test_format = lit.formats.GoogleTest(
+    config.llvm_build_mode,
+    "Tests",
+    run_under=config.gtest_run_under,
+)
 
 # Propagate the temp directory. Windows requires this because it uses \Windows\
 # if none of these are present.
@@ -43,6 +47,7 @@ for var in [
     "ASAN_OPTIONS",
     "HWASAN_OPTIONS",
     "MSAN_OPTIONS",
+    "RTSAN_OPTIONS",
     "TSAN_OPTIONS",
     "UBSAN_OPTIONS",
 ]:
@@ -55,6 +60,6 @@ if sys.platform in ["win32", "cygwin"] and os.path.isdir(config.shlibdir):
         (config.shlibdir, config.environment["PATH"])
     )
 
-# Win32 may use %SYSTEMDRIVE% during file system shell operations, so propogate.
+# Win32 may use %SYSTEMDRIVE% during file system shell operations, so propagate.
 if sys.platform == "win32" and "SYSTEMDRIVE" in os.environ:
     config.environment["SYSTEMDRIVE"] = os.environ["SYSTEMDRIVE"]

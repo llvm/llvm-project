@@ -119,6 +119,7 @@
 name:            foo
 tracksRegLiveness: true
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 stack:
   - { id: 0, name: a.addr, size: 4, alignment: 4, debug-info-variable: '!11',

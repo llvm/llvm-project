@@ -82,6 +82,10 @@ COMMON_FLAGS="-fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling -
 ${CLANG} ${COMMON_FLAGS} -fmemory-profile ${OUTDIR}/memprof.cc -o ${OUTDIR}/memprof.exe
 env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof.exe > ${OUTDIR}/memprof.memprofraw
 
+# Generate another profile without any column numbers.
+${CLANG} ${COMMON_FLAGS} -gno-column-info -fmemory-profile ${OUTDIR}/memprof.cc -o ${OUTDIR}/memprof.nocolinfo.exe
+env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof.nocolinfo.exe > ${OUTDIR}/memprof.nocolinfo.memprofraw
+
 ${CLANG} ${COMMON_FLAGS} -fprofile-generate=. \
   ${OUTDIR}/memprof.cc -o ${OUTDIR}/pgo.exe
 env LLVM_PROFILE_FILE=${OUTDIR}/memprof_pgo.profraw ${OUTDIR}/pgo.exe
@@ -90,3 +94,50 @@ ${LLVMPROFDATA} merge --text ${OUTDIR}/memprof_pgo.profraw -o ${OUTDIR}/memprof_
 rm ${OUTDIR}/memprof.cc
 rm ${OUTDIR}/pgo.exe
 rm ${OUTDIR}/memprof_pgo.profraw
+
+cat > ${OUTDIR}/memprof_internal_linkage.cc << EOF
+#include <cstring>
+#include <unistd.h>
+static void foo() {
+  int *a = new int[5];
+  memset(a, 0, 5);
+}
+int main(int argc, char **argv) {
+  foo();
+  return 0;
+}
+EOF
+
+${CLANG} ${COMMON_FLAGS} -fmemory-profile -funique-internal-linkage-names ${OUTDIR}/memprof_internal_linkage.cc -o ${OUTDIR}/memprof_internal_linkage.exe
+env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof_internal_linkage.exe > ${OUTDIR}/memprof_internal_linkage.memprofraw
+
+rm ${OUTDIR}/memprof_internal_linkage.cc
+
+cat > ${OUTDIR}/memprof_loop_unroll_a.cc << EOF
+int* a[2];
+extern void foo();
+int main() {
+    foo();
+    for (int i = 0; i < 1000000; ++i) {
+        *a[0] = 1;
+    }
+    return 0;
+}
+EOF
+cat > ${OUTDIR}/memprof_loop_unroll_b.cc << EOF
+#include <string>
+extern int* a[2];
+void foo() {
+    for (int i = 0; i < 2; ++i) {
+        a[i] = new int[1];
+    }
+}
+EOF
+${CLANG} ${COMMON_FLAGS} -fmemory-profile ${OUTDIR}/memprof_loop_unroll_a.cc -O0 -o ${OUTDIR}/memprof_loop_unroll_a.o -c
+${CLANG} ${COMMON_FLAGS} -fmemory-profile ${OUTDIR}/memprof_loop_unroll_b.cc -O3 -o ${OUTDIR}/memprof_loop_unroll_b.o -c
+${CLANG} ${COMMON_FLAGS} -fmemory-profile ${OUTDIR}/memprof_loop_unroll_a.o ${OUTDIR}/memprof_loop_unroll_b.o -o ${OUTDIR}/memprof_loop_unroll.exe
+env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof_loop_unroll.exe > ${OUTDIR}/memprof_loop_unroll.memprofraw
+rm ${OUTDIR}/memprof_loop_unroll_a.cc
+rm ${OUTDIR}/memprof_loop_unroll_a.o
+rm ${OUTDIR}/memprof_loop_unroll_b.cc
+rm ${OUTDIR}/memprof_loop_unroll_b.o

@@ -3,6 +3,9 @@
 //
 // REQUIRES: stable-runtime
 
+// MSVC doesn't support VLAs
+// UNSUPPORTED: msvc
+
 #include <assert.h>
 #include <stdint.h>
 

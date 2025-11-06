@@ -9,13 +9,14 @@
 #include "pthread_self.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <pthread.h> // For pthread_* type definitions.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
-static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread),
+static_assert(sizeof(pthread_t) == sizeof(LIBC_NAMESPACE::Thread),
               "Mismatch between pthread_t and internal Thread.");
 
 LLVM_LIBC_FUNCTION(pthread_t, pthread_self, ()) {
@@ -24,4 +25,4 @@ LLVM_LIBC_FUNCTION(pthread_t, pthread_self, ()) {
   return th;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

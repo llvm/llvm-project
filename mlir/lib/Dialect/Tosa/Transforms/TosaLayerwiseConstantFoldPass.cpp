@@ -13,8 +13,6 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -45,6 +43,8 @@ void populateTosaOpsCanonicalizationPatterns(MLIRContext *ctx,
 struct TosaLayerwiseConstantFoldPass
     : public tosa::impl::TosaLayerwiseConstantFoldPassBase<
           TosaLayerwiseConstantFoldPass> {
+  using Base::Base;
+
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
@@ -52,15 +52,13 @@ struct TosaLayerwiseConstantFoldPass
 
     mlir::tosa::populateTosaFoldConstantReciprocalPatterns(ctx, patterns);
     mlir::tosa::populateTosaFoldConstantTransposePatterns(ctx, patterns);
+    mlir::tosa::populateTosaConstantReduction(ctx, patterns,
+                                              aggressiveReduceConstant);
     populateTosaOpsCanonicalizationPatterns(ctx, patterns);
 
-    if (applyPatternsAndFoldGreedily(func, std::move(patterns)).failed())
+    if (applyPatternsGreedily(func, std::move(patterns)).failed())
       signalPassFailure();
   }
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::tosa::createTosaLayerwiseConstantFoldPass() {
-  return std::make_unique<TosaLayerwiseConstantFoldPass>();
-}

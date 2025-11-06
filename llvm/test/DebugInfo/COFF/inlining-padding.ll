@@ -33,6 +33,15 @@
 ; CHECK:    )
 ; CHECK:  }
 
+; CHECK:      InlineesSym {
+; CHECK-NEXT:   Kind: S_INLINEES (0x1168)
+; CHECK-NEXT:   Inlinees [
+; CHECK-NEXT:     FuncID: a (0x1002)
+; CHECK-NEXT:     FuncID: ab (0x1003)
+; CHECK-NEXT:     FuncID: abc (0x1004)
+; CHECK-NEXT:     FuncID: abcd (0x1005)
+; CHECK-NEXT:   ]
+
 ; C++ source used to generate the IR:
 ;
 ; extern volatile int x;
@@ -64,7 +73,7 @@ entry:
   ret i32 0, !dbg !29
 }
 
-attributes #0 = { norecurse nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

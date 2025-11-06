@@ -7,14 +7,14 @@ define i32 @main(ptr %p, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BLOCK2:%.*]], label [[BLOCK3:%.*]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    br label [[BLOCK4:%.*]]
 ; CHECK:       block3:
-; CHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[P]]
+; CHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    br label [[BLOCK4]]
 ; CHECK:       block4:
 ; CHECK-NEXT:    [[EXISTINGPHI:%.*]] = phi ptr [ [[A]], [[BLOCK2]] ], [ [[B]], [[BLOCK3]] ]
-; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[EXISTINGPHI]]
+; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[EXISTINGPHI]], align 4
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[C]], [[C]]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;

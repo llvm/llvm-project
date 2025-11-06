@@ -176,7 +176,7 @@ static void HwasanFormatMemoryUsage(InternalScopedString &s) {
       "HWASAN pid: %d rss: %zd threads: %zd stacks: %zd"
       " thr_aux: %zd stack_depot: %zd uniq_stacks: %zd"
       " heap: %zd",
-      internal_getpid(), GetRSS(), thread_stats.n_live_threads,
+      (int)internal_getpid(), GetRSS(), thread_stats.n_live_threads,
       thread_stats.total_stack_size,
       thread_stats.n_live_threads * thread_list.MemoryUsedPerThread(),
       sds.allocated, sds.n_uniq_ids, asc[AllocatorStatMapped]);
@@ -357,8 +357,6 @@ __attribute__((constructor(0))) void __hwasan_init() {
   hwasan_init_is_running = 1;
   SanitizerToolName = "HWAddressSanitizer";
 
-  InitTlsSize();
-
   CacheBinaryName();
   InitializeFlags();
 
@@ -366,6 +364,8 @@ __attribute__((constructor(0))) void __hwasan_init() {
   SetCheckUnwindCallback(CheckUnwind);
 
   __sanitizer_set_report_path(common_flags()->log_path);
+
+  InitializePlatformEarly();
 
   AndroidTestTlsSlot();
 
@@ -678,6 +678,8 @@ uptr __hwasan_tag_pointer(uptr p, u8 tag) {
   return AddTagToPointer(p, tag);
 }
 
+u8 __hwasan_get_tag_from_pointer(uptr p) { return GetTagFromPointer(p); }
+
 void __hwasan_handle_longjmp(const void *sp_dst) {
   uptr dst = (uptr)sp_dst;
   // HWASan does not support tagged SP.
@@ -690,7 +692,7 @@ void __hwasan_handle_longjmp(const void *sp_dst) {
         "WARNING: HWASan is ignoring requested __hwasan_handle_longjmp: "
         "stack top: %p; target %p; distance: %p (%zd)\n"
         "False positive error reports may follow\n",
-        (void *)sp, (void *)dst, dst - sp);
+        (void *)sp, (void *)dst, (void *)(dst - sp), dst - sp);
     return;
   }
   TagMemory(sp, dst - sp, 0);

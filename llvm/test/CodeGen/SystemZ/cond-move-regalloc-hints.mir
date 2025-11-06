@@ -10,13 +10,13 @@
   target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
   target triple = "s390x-unknown-linux-gnu"
   
-  %0 = type { i32, i32, i32, float, float, float, i8*, i32 }
+  %0 = type { i32, i32, i32, float, float, float, ptr, i32 }
   
   define void @fun(i32 signext %arg, i32 zeroext %arg1) #0 {
   bb:
     %tmp = sext i32 %arg to i64
-    %tmp2 = tail call i8* @sre_malloc()
-    %tmp4 = tail call i8* @sre_malloc()
+    %tmp2 = tail call ptr @sre_malloc()
+    %tmp4 = tail call ptr @sre_malloc()
     %tmp6 = add i32 %arg, -1
     tail call void @malloc()
     %0 = trunc i32 %arg to i2
@@ -36,29 +36,29 @@
     %tmp15 = phi i64 [ 0, %bb8 ], [ %tmp19, %bb39 ]
     %tmp17 = phi i32 [ %tmp6, %bb8 ], [ %tmp35, %bb39 ]
     %tmp18 = phi i32 [ 0, %bb8 ], [ %tmp34, %bb39 ]
-    %2 = bitcast i8* %tmp2 to float**
+    %2 = bitcast ptr %tmp2 to ptr
     %tmp19 = add nuw nsw i64 %tmp15, 1
     %3 = zext i2 %lsr.iv8 to i64
     %4 = mul i64 %3, -1
-    %tmp21 = getelementptr inbounds float*, float** %2, i64 %tmp15
-    %tmp22 = load float*, float** %tmp21
+    %tmp21 = getelementptr inbounds ptr, ptr %2, i64 %tmp15
+    %tmp22 = load ptr, ptr %tmp21
     %tmp23 = trunc i64 %tmp15 to i32
-    %scevgep = getelementptr float, float* %tmp22, i64 %tmp15
+    %scevgep = getelementptr float, ptr %tmp22, i64 %tmp15
     br label %bb25
   
   bb25:                                             ; preds = %bb25, %bb14
     %lsr.iv10 = phi i64 [ %lsr.iv.next11, %bb25 ], [ %4, %bb14 ]
-    %lsr.iv3 = phi float* [ %scevgep4, %bb25 ], [ %scevgep, %bb14 ]
+    %lsr.iv3 = phi ptr [ %scevgep4, %bb25 ], [ %scevgep, %bb14 ]
     %lsr.iv1 = phi i32 [ %lsr.iv.next2, %bb25 ], [ %lsr.iv, %bb14 ]
     %tmp27 = phi i32 [ %tmp35, %bb25 ], [ %tmp17, %bb14 ]
     %tmp28 = phi i32 [ %tmp34, %bb25 ], [ %tmp18, %bb14 ]
-    %scevgep5 = getelementptr float, float* %lsr.iv3, i64 1
-    %tmp31 = load float, float* %scevgep5
+    %scevgep5 = getelementptr float, ptr %lsr.iv3, i64 1
+    %tmp31 = load float, ptr %scevgep5
     %tmp32 = fcmp olt float %tmp31, undef
     %tmp34 = select i1 %tmp32, i32 %lsr.iv1, i32 %tmp28
     %tmp35 = select i1 %tmp32, i32 %tmp23, i32 %tmp27
     %lsr.iv.next2 = add i32 %lsr.iv1, 1
-    %scevgep4 = getelementptr float, float* %lsr.iv3, i64 1
+    %scevgep4 = getelementptr float, ptr %lsr.iv3, i64 1
     %lsr.iv.next11 = add i64 %lsr.iv10, 1
     %tmp38 = icmp eq i64 %lsr.iv.next11, 0
     br i1 %tmp38, label %bb39, label %bb25
@@ -70,38 +70,38 @@
     br i1 %tmp41, label %bb42, label %bb14
   
   bb42:                                             ; preds = %bb39
-    %5 = bitcast i8* %tmp4 to i32*
-    %tmp43 = getelementptr inbounds i32, i32* %5, i64 undef
-    %tmp44 = load i32, i32* %tmp43
+    %5 = bitcast ptr %tmp4 to ptr
+    %tmp43 = getelementptr inbounds i32, ptr %5, i64 undef
+    %tmp44 = load i32, ptr %tmp43
     %tmp45 = sub nsw i32 %tmp44, %arg
     %tmp46 = sext i32 %tmp45 to i64
-    %tmp47 = getelementptr inbounds %0, %0* null, i64 %tmp46, i32 7
-    %tmp48 = load i32, i32* %tmp47
+    %tmp47 = getelementptr inbounds %0, ptr null, i64 %tmp46, i32 7
+    %tmp48 = load i32, ptr %tmp47
     %tmp49 = add nsw i32 0, %tmp48
-    store i32 %tmp49, i32* undef
+    store i32 %tmp49, ptr undef
     %cond = icmp eq i32 %arg1, 0
     br i1 %cond, label %bb52, label %bb54
   
   bb52:                                             ; preds = %bb42
-    %tmp5312 = bitcast float* undef to float*
+    %tmp5312 = bitcast ptr undef to ptr
     br label %bb54
   
   bb54:                                             ; preds = %bb42, %bb52
-    %6 = bitcast i8* %tmp4 to i32*
+    %6 = bitcast ptr %tmp4 to ptr
     %tmp55 = add i32 0, %arg
-    %tmp56 = getelementptr inbounds i32, i32* %6, i64 undef
-    store i32 %tmp55, i32* %tmp56
+    %tmp56 = getelementptr inbounds i32, ptr %6, i64 undef
+    store i32 %tmp55, ptr %tmp56
     %tmp57 = add i64 %tmp9, 1
     %lsr.iv.next7 = add i2 %lsr.iv6, -1
     br label %bb8
   }
   
-  declare i8* @sre_malloc() #0
+  declare ptr @sre_malloc() #0
   
   declare void @malloc() #0
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
   
   attributes #0 = { "target-cpu"="z13" }
   attributes #1 = { nounwind }
@@ -192,6 +192,7 @@ liveins:
   - { reg: '$r2d', virtual-reg: '%31' }
   - { reg: '$r3d', virtual-reg: '%32' }
 frameInfo:       
+  adjustsStack:    true
   hasCalls:        true
 body:             |
   bb.0.bb:
@@ -199,18 +200,12 @@ body:             |
   
     %32:gr64bit = COPY $r3d
     %0:gr64bit = COPY $r2d
-    ADJCALLSTACKDOWN 0, 0
     CallBRASL @sre_malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
     %1:addr64bit = COPY $r2d
-    ADJCALLSTACKUP 0, 0
-    ADJCALLSTACKDOWN 0, 0
     CallBRASL @sre_malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
     %2:addr64bit = COPY $r2d
-    ADJCALLSTACKUP 0, 0
     %3:gr32bit = AHIMuxK %0.subreg_l32, -1, implicit-def dead $cc
-    ADJCALLSTACKDOWN 0, 0
     CallBRASL @malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
-    ADJCALLSTACKUP 0, 0
     %55:gr32bit = AHIMuxK %0.subreg_l32, 3, implicit-def dead $cc
     %56:addr64bit = LGHI 0
     %57:gr64bit = COPY %0
@@ -263,7 +258,7 @@ body:             |
     %50:gr32bit = nsw SR %50, %0.subreg_l32, implicit-def dead $cc
     %52:addr64bit = LGFR %50
     %52:addr64bit = MGHI %52, 40
-    MVC undef %53:addr64bit, 0, 4, %52, 32 :: (store (s32) into `i32* undef`), (load (s32) from %ir.tmp47)
+    MVC undef %53:addr64bit, 0, 4, %52, 32 :: (store (s32) into `ptr undef`), (load (s32) from %ir.tmp47)
     CHIMux %32.subreg_l32, 0, implicit-def $cc
     BRC 14, 6, %bb.7, implicit killed $cc
     J %bb.6

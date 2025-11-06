@@ -61,7 +61,8 @@ RegisterBankInfo::RegisterBankInfo(const RegisterBank **RegBanks,
 #ifndef NDEBUG
   for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
     assert(RegBanks[Idx] != nullptr && "Invalid RegisterBank");
-    assert(RegBanks[Idx]->isValid() && "RegisterBank should be valid");
+    assert(RegBanks[Idx]->getID() == Idx &&
+           "RegisterBank ID should match index");
   }
 #endif // NDEBUG
 }
@@ -99,15 +100,12 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
 }
 
 const TargetRegisterClass *
-RegisterBankInfo::getMinimalPhysRegClass(Register Reg,
+RegisterBankInfo::getMinimalPhysRegClass(MCRegister Reg,
                                          const TargetRegisterInfo &TRI) const {
-  assert(Reg.isPhysical() && "Reg must be a physreg");
-  const auto &RegRCIt = PhysRegMinimalRCs.find(Reg);
-  if (RegRCIt != PhysRegMinimalRCs.end())
-    return RegRCIt->second;
-  const TargetRegisterClass *PhysRC = TRI.getMinimalPhysRegClassLLT(Reg, LLT());
-  PhysRegMinimalRCs[Reg] = PhysRC;
-  return PhysRC;
+  const auto [RegRCIt, Inserted] = PhysRegMinimalRCs.try_emplace(Reg);
+  if (Inserted)
+    RegRCIt->second = TRI.getMinimalPhysRegClassLLT(Reg, LLT());
+  return RegRCIt->second;
 }
 
 const RegisterBank *RegisterBankInfo::getRegBankFromConstraints(
@@ -214,8 +212,9 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
       }
     }
 
-    unsigned Size = getSizeInBits(Reg, MRI, TRI);
-    const ValueMapping *ValMapping = &getValueMapping(0, Size, *CurRegBank);
+    TypeSize Size = getSizeInBits(Reg, MRI, TRI);
+    const ValueMapping *ValMapping =
+        &getValueMapping(0, Size.getKnownMinValue(), *CurRegBank);
     if (IsCopyLike) {
       if (!OperandsMapping[0]) {
         if (MI.isRegSequence()) {
@@ -283,13 +282,13 @@ RegisterBankInfo::getPartialMapping(unsigned StartIdx, unsigned Length,
   ++NumPartialMappingsAccessed;
 
   hash_code Hash = hashPartialMapping(StartIdx, Length, &RegBank);
-  const auto &It = MapOfPartialMappings.find(Hash);
-  if (It != MapOfPartialMappings.end())
+  auto [It, Inserted] = MapOfPartialMappings.try_emplace(Hash);
+  if (!Inserted)
     return *It->second;
 
   ++NumPartialMappingsCreated;
 
-  auto &PartMapping = MapOfPartialMappings[Hash];
+  auto &PartMapping = It->second;
   PartMapping = std::make_unique<PartialMapping>(StartIdx, Length, RegBank);
   return *PartMapping;
 }
@@ -308,7 +307,7 @@ hashValueMapping(const RegisterBankInfo::PartialMapping *BreakDown,
   SmallVector<size_t, 8> Hashes(NumBreakDowns);
   for (unsigned Idx = 0; Idx != NumBreakDowns; ++Idx)
     Hashes.push_back(hash_value(BreakDown[Idx]));
-  return hash_combine_range(Hashes.begin(), Hashes.end());
+  return hash_combine_range(Hashes);
 }
 
 const RegisterBankInfo::ValueMapping &
@@ -317,13 +316,13 @@ RegisterBankInfo::getValueMapping(const PartialMapping *BreakDown,
   ++NumValueMappingsAccessed;
 
   hash_code Hash = hashValueMapping(BreakDown, NumBreakDowns);
-  const auto &It = MapOfValueMappings.find(Hash);
-  if (It != MapOfValueMappings.end())
+  auto [It, Inserted] = MapOfValueMappings.try_emplace(Hash);
+  if (!Inserted)
     return *It->second;
 
   ++NumValueMappingsCreated;
 
-  auto &ValMapping = MapOfValueMappings[Hash];
+  auto &ValMapping = It->second;
   ValMapping = std::make_unique<ValueMapping>(BreakDown, NumBreakDowns);
   return *ValMapping;
 }
@@ -391,13 +390,13 @@ RegisterBankInfo::getInstructionMappingImpl(
 
   hash_code Hash =
       hashInstructionMapping(ID, Cost, OperandsMapping, NumOperands);
-  const auto &It = MapOfInstructionMappings.find(Hash);
-  if (It != MapOfInstructionMappings.end())
+  auto [It, Inserted] = MapOfInstructionMappings.try_emplace(Hash);
+  if (!Inserted)
     return *It->second;
 
   ++NumInstructionMappingsCreated;
 
-  auto &InstrMapping = MapOfInstructionMappings[Hash];
+  auto &InstrMapping = It->second;
   InstrMapping = std::make_unique<InstructionMapping>(
       ID, Cost, OperandsMapping, NumOperands);
   return *InstrMapping;
@@ -483,9 +482,10 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
       // the storage. However, right now we don't necessarily bump all
       // the types to storage size. For instance, we can consider
       // s16 G_AND legal whereas the storage size is going to be 32.
-      assert(OrigTy.getSizeInBits() <= NewTy.getSizeInBits() &&
-             "Types with difference size cannot be handled by the default "
-             "mapping");
+      assert(
+          TypeSize::isKnownLE(OrigTy.getSizeInBits(), NewTy.getSizeInBits()) &&
+          "Types with difference size cannot be handled by the default "
+          "mapping");
       LLVM_DEBUG(dbgs() << "\nChange type of new opd from " << NewTy << " to "
                         << OrigTy);
       MRI.setType(NewReg, OrigTy);
@@ -494,7 +494,7 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
   }
 }
 
-unsigned RegisterBankInfo::getSizeInBits(Register Reg,
+TypeSize RegisterBankInfo::getSizeInBits(Register Reg,
                                          const MachineRegisterInfo &MRI,
                                          const TargetRegisterInfo &TRI) const {
   if (Reg.isPhysical()) {
@@ -552,7 +552,7 @@ bool RegisterBankInfo::ValueMapping::partsAllUniform() const {
 }
 
 bool RegisterBankInfo::ValueMapping::verify(const RegisterBankInfo &RBI,
-                                            unsigned MeaningfulBitWidth) const {
+                                            TypeSize MeaningfulBitWidth) const {
   assert(NumBreakDowns && "Value mapped nowhere?!");
   unsigned OrigValueBitWidth = 0;
   for (const RegisterBankInfo::PartialMapping &PartMap : *this) {
@@ -564,7 +564,8 @@ bool RegisterBankInfo::ValueMapping::verify(const RegisterBankInfo &RBI,
     OrigValueBitWidth =
         std::max(OrigValueBitWidth, PartMap.getHighBitIdx() + 1);
   }
-  assert(OrigValueBitWidth >= MeaningfulBitWidth &&
+  assert((MeaningfulBitWidth.isScalable() ||
+          OrigValueBitWidth >= MeaningfulBitWidth) &&
          "Meaningful bits not covered by the mapping");
   APInt ValueMask(OrigValueBitWidth, 0);
   for (const RegisterBankInfo::PartialMapping &PartMap : *this) {

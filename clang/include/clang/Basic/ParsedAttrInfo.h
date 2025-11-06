@@ -17,6 +17,7 @@
 
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Registry.h"
 #include <climits>
@@ -24,6 +25,7 @@
 
 namespace clang {
 
+class Attr;
 class Decl;
 class LangOptions;
 class ParsedAttr;
@@ -33,6 +35,7 @@ class TargetInfo;
 
 struct ParsedAttrInfo {
   /// Corresponds to the Kind enum.
+  LLVM_PREFERRED_TYPE(AttributeCommonInfo::Kind)
   unsigned AttrKind : 16;
   /// The number of required arguments of this attribute.
   unsigned NumArgs : 4;
@@ -41,18 +44,25 @@ struct ParsedAttrInfo {
   /// The number of non-fake arguments specified in the attribute definition.
   unsigned NumArgMembers : 4;
   /// True if the parsing does not match the semantic content.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasCustomParsing : 1;
   // True if this attribute accepts expression parameter pack expansions.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AcceptsExprPack : 1;
   /// True if this attribute is only available for certain targets.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsTargetSpecific : 1;
   /// True if this attribute applies to types.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsType : 1;
   /// True if this attribute applies to statements.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsStmt : 1;
   /// True if this attribute has any spellings that are known to gcc.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsKnownToGCC : 1;
   /// True if this attribute is supported by #pragma clang attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsSupportedByPragmaAttribute : 1;
   /// The syntaxes supported by this attribute and how they're spelled.
   struct Spelling {
@@ -116,6 +126,14 @@ public:
 
   /// Check if this attribute is allowed when compiling for the given target.
   virtual bool existsInTarget(const TargetInfo &Target) const { return true; }
+
+  /// Check if this attribute's spelling is allowed when compiling for the given
+  /// target.
+  virtual bool spellingExistsInTarget(const TargetInfo &Target,
+                                      const unsigned SpellingListIndex) const {
+    return true;
+  }
+
   /// Convert the spelling index of Attr to a semantic spelling enum value.
   virtual unsigned
   spellingIndexToSemanticSpelling(const ParsedAttr &Attr) const {
@@ -138,6 +156,15 @@ public:
                                            const ParsedAttr &Attr) const {
     return NotHandled;
   }
+  /// If this ParsedAttrInfo knows how to handle this ParsedAttr applied to this
+  /// Stmt then do so (referencing the resulting Attr in Result) and return
+  /// either AttributeApplied if it was applied or AttributeNotApplied if it
+  /// wasn't. Otherwise return NotHandled.
+  virtual AttrHandling handleStmtAttribute(Sema &S, Stmt *St,
+                                           const ParsedAttr &Attr,
+                                           class Attr *&Result) const {
+    return NotHandled;
+  }
 
   static const ParsedAttrInfo &get(const AttributeCommonInfo &A);
   static ArrayRef<const ParsedAttrInfo *> getAllBuiltin();
@@ -148,5 +175,9 @@ typedef llvm::Registry<ParsedAttrInfo> ParsedAttrInfoRegistry;
 const std::list<std::unique_ptr<ParsedAttrInfo>> &getAttributePluginInstances();
 
 } // namespace clang
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI Registry<clang::ParsedAttrInfo>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_BASIC_PARSEDATTRINFO_H

@@ -9,8 +9,6 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
 
-// UNSUPPORTED: availability-shared_mutex-missing
-
 // <shared_mutex>
 
 // class shared_timed_mutex;

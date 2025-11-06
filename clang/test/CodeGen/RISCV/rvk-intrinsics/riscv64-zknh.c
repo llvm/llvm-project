@@ -3,7 +3,7 @@
 // RUN:     -disable-O0-optnone | opt -S -passes=mem2reg \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZKNH
 
-#include <stdint.h>
+#include <riscv_crypto.h>
 
 // RV64ZKNH-LABEL: @sha512sig0(
 // RV64ZKNH-NEXT:  entry:
@@ -11,7 +11,7 @@
 // RV64ZKNH-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t sha512sig0(uint64_t rs1) {
-  return __builtin_riscv_sha512sig0(rs1);
+  return __riscv_sha512sig0(rs1);
 }
 
 
@@ -21,7 +21,7 @@ uint64_t sha512sig0(uint64_t rs1) {
 // RV64ZKNH-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t sha512sig1(uint64_t rs1) {
-  return __builtin_riscv_sha512sig1(rs1);
+  return __riscv_sha512sig1(rs1);
 }
 
 
@@ -31,7 +31,7 @@ uint64_t sha512sig1(uint64_t rs1) {
 // RV64ZKNH-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t sha512sum0(uint64_t rs1) {
-  return __builtin_riscv_sha512sum0(rs1);
+  return __riscv_sha512sum0(rs1);
 }
 
 
@@ -41,7 +41,7 @@ uint64_t sha512sum0(uint64_t rs1) {
 // RV64ZKNH-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t sha512sum1(uint64_t rs1) {
-  return __builtin_riscv_sha512sum1(rs1);
+  return __riscv_sha512sum1(rs1);
 }
 
 
@@ -51,7 +51,7 @@ uint64_t sha512sum1(uint64_t rs1) {
 // RV64ZKNH-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t sha256sig0(uint32_t rs1) {
-  return __builtin_riscv_sha256sig0(rs1);
+  return __riscv_sha256sig0(rs1);
 }
 
 // RV64ZKNH-LABEL: @sha256sig1(
@@ -60,7 +60,7 @@ uint32_t sha256sig0(uint32_t rs1) {
 // RV64ZKNH-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t sha256sig1(uint32_t rs1) {
-  return __builtin_riscv_sha256sig1(rs1);
+  return __riscv_sha256sig1(rs1);
 }
 
 
@@ -70,7 +70,7 @@ uint32_t sha256sig1(uint32_t rs1) {
 // RV64ZKNH-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t sha256sum0(uint32_t rs1) {
-  return __builtin_riscv_sha256sum0(rs1);
+  return __riscv_sha256sum0(rs1);
 }
 
 // RV64ZKNH-LABEL: @sha256sum1(
@@ -79,5 +79,5 @@ uint32_t sha256sum0(uint32_t rs1) {
 // RV64ZKNH-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t sha256sum1(uint32_t rs1) {
-  return __builtin_riscv_sha256sum1(rs1);
+  return __riscv_sha256sum1(rs1);
 }

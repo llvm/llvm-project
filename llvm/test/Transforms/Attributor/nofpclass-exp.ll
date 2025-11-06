@@ -18,7 +18,7 @@ define float @ret_exp(float %arg0) {
 define float @ret_exp_noinf(float nofpclass(inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(inf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp.f32(float %arg0)
@@ -28,7 +28,7 @@ define float @ret_exp_noinf(float nofpclass(inf) %arg0) {
 define float @ret_exp_nopinf(float nofpclass(pinf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp_nopinf
 ; CHECK-SAME: (float nofpclass(pinf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(pinf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp.f32(float %arg0)
@@ -38,7 +38,7 @@ define float @ret_exp_nopinf(float nofpclass(pinf) %arg0) {
 define float @ret_exp_noninf(float nofpclass(ninf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp_noninf
 ; CHECK-SAME: (float nofpclass(ninf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(ninf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp.f32(float %arg0)
@@ -48,7 +48,7 @@ define float @ret_exp_noninf(float nofpclass(ninf) %arg0) {
 define float @ret_exp_nonan(float nofpclass(nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(nan) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp.f32(float %arg0)
@@ -58,7 +58,7 @@ define float @ret_exp_nonan(float nofpclass(nan) %arg0) {
 define float @ret_exp_nonan_noinf(float nofpclass(nan inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp_nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(nan inf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp.f32(float %arg0)
@@ -68,7 +68,7 @@ define float @ret_exp_nonan_noinf(float nofpclass(nan inf) %arg0) {
 define float @ret_exp_nonan_noinf_nozero(float nofpclass(nan inf zero) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp_nonan_noinf_nozero
 ; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(nan inf zero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp.f32(float %arg0)
@@ -78,7 +78,7 @@ define float @ret_exp_nonan_noinf_nozero(float nofpclass(nan inf zero) %arg0) {
 define float @ret_exp_noinf_nozero(float nofpclass(inf zero) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp_noinf_nozero
 ; CHECK-SAME: (float nofpclass(inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(inf zero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp.f32(float %arg0)
@@ -88,7 +88,7 @@ define float @ret_exp_noinf_nozero(float nofpclass(inf zero) %arg0) {
 define float @ret_exp_noinf_nonegzero(float nofpclass(inf nzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp_noinf_nonegzero
 ; CHECK-SAME: (float nofpclass(inf nzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(inf nzero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp.f32(float %arg0)
@@ -133,7 +133,7 @@ define float @ret_exp2(float %arg0) {
 define float @ret_exp2_noinf(float nofpclass(inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp2_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float nofpclass(inf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp2.f32(float %arg0)
@@ -143,7 +143,7 @@ define float @ret_exp2_noinf(float nofpclass(inf) %arg0) {
 define float @ret_exp2_nopinf(float nofpclass(pinf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp2_nopinf
 ; CHECK-SAME: (float nofpclass(pinf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float nofpclass(pinf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp2.f32(float %arg0)
@@ -153,7 +153,7 @@ define float @ret_exp2_nopinf(float nofpclass(pinf) %arg0) {
 define float @ret_exp2_noninf(float nofpclass(ninf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp2_noninf
 ; CHECK-SAME: (float nofpclass(ninf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float nofpclass(ninf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp2.f32(float %arg0)
@@ -163,7 +163,7 @@ define float @ret_exp2_noninf(float nofpclass(ninf) %arg0) {
 define float @ret_exp2_nonan(float nofpclass(nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp2_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float nofpclass(nan) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp2.f32(float %arg0)
@@ -173,7 +173,7 @@ define float @ret_exp2_nonan(float nofpclass(nan) %arg0) {
 define float @ret_exp2_nonan_noinf(float nofpclass(nan inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp2_nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float nofpclass(nan inf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp2.f32(float %arg0)
@@ -183,7 +183,7 @@ define float @ret_exp2_nonan_noinf(float nofpclass(nan inf) %arg0) {
 define float @ret_exp2_nonan_noinf_nozero(float nofpclass(nan inf zero) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp2_nonan_noinf_nozero
 ; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float nofpclass(nan inf zero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp2.f32(float %arg0)
@@ -193,7 +193,7 @@ define float @ret_exp2_nonan_noinf_nozero(float nofpclass(nan inf zero) %arg0) {
 define float @ret_exp2_noinf_nozero(float nofpclass(inf zero) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp2_noinf_nozero
 ; CHECK-SAME: (float nofpclass(inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float nofpclass(inf zero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp2.f32(float %arg0)
@@ -203,7 +203,7 @@ define float @ret_exp2_noinf_nozero(float nofpclass(inf zero) %arg0) {
 define float @ret_exp2_noinf_nonegzero(float nofpclass(inf nzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp2_noinf_nonegzero
 ; CHECK-SAME: (float nofpclass(inf nzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float nofpclass(inf nzero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp2.f32(float %arg0)
@@ -248,7 +248,7 @@ define float @ret_exp10(float %arg0) {
 define float @ret_exp10_noinf(float nofpclass(inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp10_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float nofpclass(inf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp10.f32(float %arg0)
@@ -258,7 +258,7 @@ define float @ret_exp10_noinf(float nofpclass(inf) %arg0) {
 define float @ret_exp10_nopinf(float nofpclass(pinf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp10_nopinf
 ; CHECK-SAME: (float nofpclass(pinf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float nofpclass(pinf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp10.f32(float %arg0)
@@ -268,7 +268,7 @@ define float @ret_exp10_nopinf(float nofpclass(pinf) %arg0) {
 define float @ret_exp10_noninf(float nofpclass(ninf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp10_noninf
 ; CHECK-SAME: (float nofpclass(ninf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float nofpclass(ninf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp10.f32(float %arg0)
@@ -278,7 +278,7 @@ define float @ret_exp10_noninf(float nofpclass(ninf) %arg0) {
 define float @ret_exp10_nonan(float nofpclass(nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp10_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp10.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp10.f32(float nofpclass(nan) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp10.f32(float %arg0)
@@ -288,7 +288,7 @@ define float @ret_exp10_nonan(float nofpclass(nan) %arg0) {
 define float @ret_exp10_nonan_noinf(float nofpclass(nan inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp10_nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp10.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp10.f32(float nofpclass(nan inf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp10.f32(float %arg0)
@@ -298,7 +298,7 @@ define float @ret_exp10_nonan_noinf(float nofpclass(nan inf) %arg0) {
 define float @ret_exp10_nonan_noinf_nozero(float nofpclass(nan inf zero) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp10_nonan_noinf_nozero
 ; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp10.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp10.f32(float nofpclass(nan inf zero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp10.f32(float %arg0)
@@ -308,7 +308,7 @@ define float @ret_exp10_nonan_noinf_nozero(float nofpclass(nan inf zero) %arg0) 
 define float @ret_exp10_noinf_nozero(float nofpclass(inf zero) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp10_noinf_nozero
 ; CHECK-SAME: (float nofpclass(inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float nofpclass(inf zero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp10.f32(float %arg0)
@@ -318,7 +318,7 @@ define float @ret_exp10_noinf_nozero(float nofpclass(inf zero) %arg0) {
 define float @ret_exp10_noinf_nonegzero(float nofpclass(inf nzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp10_noinf_nonegzero
 ; CHECK-SAME: (float nofpclass(inf nzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp10.f32(float nofpclass(inf nzero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.exp10.f32(float %arg0)

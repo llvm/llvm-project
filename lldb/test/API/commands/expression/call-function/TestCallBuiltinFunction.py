@@ -23,4 +23,3 @@ class ExprCommandCallBuiltinFunction(TestBase):
             "__builtin_isnormal(0.0f)", result_type="int", result_value="0"
         )
         self.expect_expr("__builtin_constant_p(1)", result_type="int", result_value="1")
-        self.expect_expr("__builtin_abs(-14)", result_type="int", result_value="14")

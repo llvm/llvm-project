@@ -15,6 +15,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -34,7 +35,7 @@ namespace msf {
 /// the MSF.  MappedBlockStream provides methods for reading from and writing
 /// to one of these streams transparently, as if it were a contiguous sequence
 /// of bytes.
-class MappedBlockStream : public BinaryStream {
+class LLVM_ABI MappedBlockStream : public BinaryStream {
   friend class WritableMappedBlockStream;
 
 public:
@@ -54,8 +55,8 @@ public:
   createDirectoryStream(const MSFLayout &Layout, BinaryStreamRef MsfData,
                         BumpPtrAllocator &Allocator);
 
-  support::endianness getEndian() const override {
-    return support::little;
+  llvm::endianness getEndian() const override {
+    return llvm::endianness::little;
   }
 
   Error readBytes(uint64_t Offset, uint64_t Size,
@@ -102,7 +103,7 @@ private:
   DenseMap<uint32_t, std::vector<CacheEntry>> CacheMap;
 };
 
-class WritableMappedBlockStream : public WritableBinaryStream {
+class LLVM_ABI WritableMappedBlockStream : public WritableBinaryStream {
 public:
   static std::unique_ptr<WritableMappedBlockStream>
   createStream(uint32_t BlockSize, const MSFStreamLayout &Layout,
@@ -121,8 +122,8 @@ public:
   createFpmStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData,
                   BumpPtrAllocator &Allocator, bool AltFpm = false);
 
-  support::endianness getEndian() const override {
-    return support::little;
+  llvm::endianness getEndian() const override {
+    return llvm::endianness::little;
   }
 
   Error readBytes(uint64_t Offset, uint64_t Size,

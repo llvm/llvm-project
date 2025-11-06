@@ -92,15 +92,16 @@ extern "C" void __lsan_init() {
   CacheBinaryName();
   AvoidCVE_2016_2143();
   InitializeFlags();
+  InitializePlatformEarly();
   InitCommonLsan();
   InitializeAllocator();
   ReplaceSystemMalloc();
-  InitTlsSize();
   InitializeInterceptors();
   InitializeThreads();
   InstallDeadlySignalHandlers(LsanOnDeadlySignal);
   InitializeMainThread();
   InstallAtExitCheckLeaks();
+  InstallAtForkHandler();
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
 

@@ -29,12 +29,12 @@
 # FIRST:      Indirect symbols for (__DATA_CONST,__got)
 # FIRST-NEXT: address                    index name
 # FIRST-DAG:  0x[[#%x,GXX_PERSONALITY:]] [[#]] ___gxx_personality_v0
-# FIRST-DAG:  0x[[#%x,MY_PERSONALITY:]]  LOCAL
+# FIRST-DAG:  0x[[#%x,MY_PERSONALITY:]] LOCAL
 
 # SECOND:      Indirect symbols for (__DATA_CONST,__got)
 # SECOND-NEXT: address                    index name
 # SECOND-DAG:  0x[[#%x,GXX_PERSONALITY:]] [[#]] ___gxx_personality_v0
-# SECOND-DAG:  0x[[#%x,MY_PERSONALITY:]]  [[#]] _my_personality
+# SECOND-DAG:  0x[[#%x,MY_PERSONALITY:]] LOCAL
 
 # CHECK:      SYMBOL TABLE:
 # CHECK-DAG:  [[#%x,MAIN:]]       g  F __TEXT,__text _main

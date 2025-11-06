@@ -1,6 +1,6 @@
-// RUN: %clang -arch armv6m -dM -E %s | FileCheck %s
-// RUN: %clang -arch armv7m -dM -E %s | FileCheck %s
-// RUN: %clang -arch armv7em -dM -E %s | FileCheck %s
+// RUN: %clang --target=armv6m-apple-darwin -dM -E %s | FileCheck %s
+// RUN: %clang --target=armv7m-apple-darwin -dM -E %s | FileCheck %s
+// RUN: %clang --target=armv7em-apple-darwin -dM -E %s | FileCheck %s
 // RUN: %clang_cc1 -triple thumbv7m-apple-unknown-macho -dM -E %s | FileCheck %s
 
 // CHECK-NOT: __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__

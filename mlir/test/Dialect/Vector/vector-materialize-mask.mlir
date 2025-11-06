@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 func.func @select_single_i1_vector(%cond : i1) -> vector<1xi1> {
   %true = arith.constant dense<true> : vector<1xi1>
@@ -7,11 +7,14 @@ func.func @select_single_i1_vector(%cond : i1) -> vector<1xi1> {
   return %select : vector<1xi1>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.materialize_masks
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.materialize_masks
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // CHECK-LABEL: func @select_single_i1_vector

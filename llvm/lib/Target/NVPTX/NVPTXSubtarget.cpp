@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXSubtarget.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 
@@ -26,19 +29,29 @@ static cl::opt<bool>
     NoF16Math("nvptx-no-f16-math", cl::Hidden,
               cl::desc("NVPTX Specific: Disable generation of f16 math ops."),
               cl::init(false));
+
+static cl::opt<bool> NoF32x2("nvptx-no-f32x2", cl::Hidden,
+                             cl::desc("NVPTX Specific: Disable generation of "
+                                      "f32x2 instructions and registers."),
+                             cl::init(false));
+
 // Pin the vtable to this file.
 void NVPTXSubtarget::anchor() {}
 
 NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
-    // Provide the default CPU if we don't have one.
-    TargetName = std::string(CPU.empty() ? "sm_30" : CPU);
+  TargetName = std::string(CPU);
 
-    ParseSubtargetFeatures(TargetName, /*TuneCPU*/ TargetName, FS);
+  ParseSubtargetFeatures(getTargetName(), /*TuneCPU=*/getTargetName(), FS);
 
-    // Set default to PTX 6.0 (CUDA 9.0)
-    if (PTXVersion == 0) {
-      PTXVersion = 60;
+  // Re-map SM version numbers, SmVersion carries the regular SMs which do
+  // have relative order, while FullSmVersion allows distinguishing sm_90 from
+  // sm_90a, which would *not* be a subset of sm_91.
+  SmVersion = getSmVersion();
+
+  // Set default to PTX 6.0 (CUDA 9.0)
+  if (PTXVersion == 0) {
+    PTXVersion = 60;
   }
 
   return *this;
@@ -48,19 +61,98 @@ NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const NVPTXTargetMachine &TM)
     : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
-      SmVersion(20), TM(TM),
-      TLInfo(TM, initializeSubtargetDependencies(CPU, FS)) {}
+      FullSmVersion(200), SmVersion(getSmVersion()),
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
+  TSInfo = std::make_unique<NVPTXSelectionDAGInfo>();
+}
 
-bool NVPTXSubtarget::hasImageHandles() const {
-  // Enable handles for Kepler+, where CUDA supports indirect surfaces and
-  // textures
-  if (TM.getDrvInterface() == NVPTX::CUDA)
-    return (SmVersion >= 30);
+NVPTXSubtarget::~NVPTXSubtarget() = default;
 
-  // Disabled, otherwise
-  return false;
+const SelectionDAGTargetInfo *NVPTXSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}
+
+bool NVPTXSubtarget::hasPTXWithFamilySMs(unsigned PTXVersion,
+                                         ArrayRef<unsigned> SMVersions) const {
+  unsigned PTXVer = getPTXVersion();
+  if (!hasFamilySpecificFeatures() || PTXVer < PTXVersion)
+    return false;
+
+  unsigned SMVer = getSmVersion();
+  return llvm::any_of(SMVersions, [&](unsigned SM) {
+    // sm_101 is a different family, never group it with sm_10x.
+    if (SMVer == 101 || SM == 101)
+      return SMVer == SM &&
+             // PTX 9.0 and later renamed sm_101 to sm_110, so sm_101 is not
+             // supported.
+             !(PTXVer >= 90 && SMVer == 101);
+
+    return getSmFamilyVersion() == SM / 10 && SMVer >= SM;
+  });
+}
+
+bool NVPTXSubtarget::hasPTXWithAccelSMs(unsigned PTXVersion,
+                                        ArrayRef<unsigned> SMVersions) const {
+  unsigned PTXVer = getPTXVersion();
+  if (!hasArchAccelFeatures() || PTXVer < PTXVersion)
+    return false;
+
+  unsigned SMVer = getSmVersion();
+  return llvm::any_of(SMVersions, [&](unsigned SM) {
+    return SMVer == SM &&
+           // PTX 9.0 and later renamed sm_101 to sm_110, so sm_101 is not
+           // supported.
+           !(PTXVer >= 90 && SMVer == 101);
+  });
 }
 
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
+}
+
+bool NVPTXSubtarget::hasF32x2Instructions() const {
+  return SmVersion >= 100 && PTXVersion >= 86 && !NoF32x2;
+}
+
+bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
+  if (!hasBF16Math())
+    return false;
+
+  switch (Opcode) {
+  // Several BF16 instructions are available on sm_90 only.
+  case ISD::FADD:
+  case ISD::FMUL:
+  case ISD::FSUB:
+  case ISD::SELECT:
+  case ISD::SELECT_CC:
+  case ISD::SETCC:
+  case ISD::FEXP2:
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+  case ISD::FNEARBYINT:
+  case ISD::FRINT:
+  case ISD::FROUNDEVEN:
+  case ISD::FTRUNC:
+    return getSmVersion() >= 90 && getPTXVersion() >= 78;
+  // Several BF16 instructions are available on sm_80 only.
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUM:
+    return getSmVersion() >= 80 && getPTXVersion() >= 70;
+  }
+  return true;
+}
+
+void NVPTXSubtarget::failIfClustersUnsupported(
+    std::string const &FailureMessage) const {
+  if (hasClusters())
+    return;
+
+  report_fatal_error(formatv(
+      "NVPTX SM architecture \"{}\" and PTX version \"{}\" do not support {}. "
+      "Requires SM >= 90 and PTX >= 78.",
+      getFullSmVersion(), PTXVersion, FailureMessage));
 }

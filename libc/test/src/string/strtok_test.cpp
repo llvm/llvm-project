@@ -11,68 +11,82 @@
 
 TEST(LlvmLibcStrTokTest, NoTokenFound) {
   char empty[] = "";
-  ASSERT_STREQ(__llvm_libc::strtok(empty, ""), nullptr);
-  ASSERT_STREQ(__llvm_libc::strtok(empty, "_"), nullptr);
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(empty, ""), nullptr);
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(empty, "_"), nullptr);
 
   char single[] = "_";
-  ASSERT_STREQ(__llvm_libc::strtok(single, ""), "_");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(single, ""), "_");
 
   char multiple[] = "1,2";
-  ASSERT_STREQ(__llvm_libc::strtok(multiple, ":"), "1,2");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(multiple, ":"), "1,2");
 }
 
 TEST(LlvmLibcStrTokTest, DelimiterAsFirstCharacterShouldBeIgnored) {
   char src[] = ".123";
-  ASSERT_STREQ(__llvm_libc::strtok(src, "."), "123");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(src, "."), "123");
 }
 
 TEST(LlvmLibcStrTokTest, DelimiterIsMiddleCharacter) {
   char src[] = "12,34";
-  ASSERT_STREQ(__llvm_libc::strtok(src, ","), "12");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(src, ","), "12");
 }
 
 TEST(LlvmLibcStrTokTest, DelimiterAsLastCharacterShouldBeIgnored) {
   char src[] = "1234:";
-  ASSERT_STREQ(__llvm_libc::strtok(src, ":"), "1234");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(src, ":"), "1234");
 }
 
 TEST(LlvmLibcStrTokTest, MultipleDelimiters) {
   char src[] = "12,.34";
-  ASSERT_STREQ(__llvm_libc::strtok(src, "."), "12,");
-  ASSERT_STREQ(__llvm_libc::strtok(src, ".,"), "12");
-  ASSERT_STREQ(__llvm_libc::strtok(src, ",."), "12");
-  ASSERT_STREQ(__llvm_libc::strtok(src, ":,."), "12");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(src, "."), "12,");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(src, ".,"), "12");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(src, ",."), "12");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(src, ":,."), "12");
 }
 
 TEST(LlvmLibcStrTokTest, ShouldNotGoPastNullTerminator) {
   char src[] = {'1', '2', '\0', ',', '3'};
-  ASSERT_STREQ(__llvm_libc::strtok(src, ","), "12");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(src, ","), "12");
 }
 
 TEST(LlvmLibcStrTokTest, SubsequentCallsShouldFindFollowingDelimiters) {
   char src[] = "12,34.56";
-  char *token = __llvm_libc::strtok(src, ",.");
+  char *token = LIBC_NAMESPACE::strtok(src, ",.");
   ASSERT_STREQ(token, "12");
-  token = __llvm_libc::strtok(nullptr, ",.");
+  token = LIBC_NAMESPACE::strtok(nullptr, ",.");
   ASSERT_STREQ(token, "34");
-  token = __llvm_libc::strtok(nullptr, ",.");
+  token = LIBC_NAMESPACE::strtok(nullptr, ",.");
   ASSERT_STREQ(token, "56");
-  token = __llvm_libc::strtok(nullptr, "_:,_");
+  token = LIBC_NAMESPACE::strtok(nullptr, "_:,_");
   ASSERT_STREQ(token, nullptr);
   // Subsequent calls after hitting the end of the string should also return
   // nullptr.
-  token = __llvm_libc::strtok(nullptr, "_:,_");
+  token = LIBC_NAMESPACE::strtok(nullptr, "_:,_");
   ASSERT_STREQ(token, nullptr);
 }
 
 TEST(LlvmLibcStrTokTest, DelimitersShouldNotBeIncludedInToken) {
   char src[] = "__ab__:_cd__:__ef__:__";
-  char *token = __llvm_libc::strtok(src, "_:");
+  char *token = LIBC_NAMESPACE::strtok(src, "_:");
   ASSERT_STREQ(token, "ab");
-  token = __llvm_libc::strtok(nullptr, ":_");
+  token = LIBC_NAMESPACE::strtok(nullptr, ":_");
   ASSERT_STREQ(token, "cd");
-  token = __llvm_libc::strtok(nullptr, "_:,");
+  token = LIBC_NAMESPACE::strtok(nullptr, "_:,");
   ASSERT_STREQ(token, "ef");
-  token = __llvm_libc::strtok(nullptr, "_:,_");
+  token = LIBC_NAMESPACE::strtok(nullptr, "_:,_");
   ASSERT_STREQ(token, nullptr);
+}
+
+TEST(LlvmLibcStrTokTest, SubsequentSearchesReturnNull) {
+  char src[] = "a";
+  ASSERT_STREQ("a", LIBC_NAMESPACE::strtok(src, ":"));
+  ASSERT_EQ(LIBC_NAMESPACE::strtok(nullptr, ":"), nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::strtok(nullptr, ":"), nullptr);
+}
+
+TEST(LlvmLibcStrTokTest, TopBitSet) {
+  char top_bit_set_str[] = "hello\x80world";
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(top_bit_set_str, "\x80"), "hello");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(nullptr, "\x80"), "world");
+  ASSERT_EQ(LIBC_NAMESPACE::strtok(nullptr, "\x80"), nullptr);
 }

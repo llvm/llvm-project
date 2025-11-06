@@ -1,4 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefix=GCN
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefix=GCN
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -passes=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefix=GCN
 
 ---
 # old is undefined: only combine when masks are fully enabled and

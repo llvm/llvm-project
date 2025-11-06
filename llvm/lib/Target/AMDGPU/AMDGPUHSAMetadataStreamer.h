@@ -15,12 +15,15 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 
+#include "Utils/AMDGPUDelayedMCExpr.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
+class AMDGPUTargetMachine;
 class AMDGPUTargetStreamer;
 class Argument;
 class DataLayout;
@@ -30,7 +33,6 @@ class MDNode;
 class Module;
 struct SIProgramInfo;
 class Type;
-class GCNSubtarget;
 
 namespace AMDGPU {
 
@@ -58,12 +60,17 @@ protected:
   virtual void emitVersion() = 0;
   virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
-  virtual void emitKernelAttrs(const Function &Func,
+  virtual void emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                               const MachineFunction &MF,
                                msgpack::MapDocNode Kern) = 0;
 };
 
-class MetadataStreamerMsgPackV3 : public MetadataStreamer {
+class LLVM_EXTERNAL_VISIBILITY MetadataStreamerMsgPackV4
+    : public MetadataStreamer {
 protected:
+  std::unique_ptr<DelayedMCExprs> DelayedExprs =
+      std::make_unique<DelayedMCExprs>();
+
   std::unique_ptr<msgpack::Document> HSAMetadataDoc =
       std::make_unique<msgpack::Document>();
 
@@ -89,11 +96,14 @@ protected:
 
   void emitVersion() override;
 
+  void emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID);
+
   void emitPrintf(const Module &Mod);
 
   void emitKernelLanguage(const Function &Func, msgpack::MapDocNode Kern);
 
-  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
+                       msgpack::MapDocNode Kern) override;
 
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
 
@@ -120,8 +130,8 @@ protected:
   }
 
 public:
-  MetadataStreamerMsgPackV3() = default;
-  ~MetadataStreamerMsgPackV3() = default;
+  MetadataStreamerMsgPackV4() = default;
+  ~MetadataStreamerMsgPackV4() override = default;
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
@@ -134,105 +144,29 @@ public:
                   const SIProgramInfo &ProgramInfo) override;
 };
 
-class MetadataStreamerMsgPackV4 : public MetadataStreamerMsgPackV3 {
-protected:
-  void emitVersion() override;
-  void emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID);
-
-public:
-  MetadataStreamerMsgPackV4() = default;
-  ~MetadataStreamerMsgPackV4() = default;
-
-  void begin(const Module &Mod,
-             const IsaInfo::AMDGPUTargetID &TargetID) override;
-};
-
-class MetadataStreamerMsgPackV5 final : public MetadataStreamerMsgPackV4 {
+class MetadataStreamerMsgPackV5 : public MetadataStreamerMsgPackV4 {
 protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
-  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
+                       msgpack::MapDocNode Kern) override;
 
 public:
   MetadataStreamerMsgPackV5() = default;
-  ~MetadataStreamerMsgPackV5() = default;
+  ~MetadataStreamerMsgPackV5() override = default;
 };
 
-// TODO: Rename MetadataStreamerV2 -> MetadataStreamerYamlV2.
-class MetadataStreamerYamlV2 final : public MetadataStreamer {
-private:
-  Metadata HSAMetadata;
-
-  void dump(StringRef HSAMetadataString) const;
-
-  void verify(StringRef HSAMetadataString) const;
-
-  AccessQualifier getAccessQualifier(StringRef AccQual) const;
-
-  AddressSpaceQualifier getAddressSpaceQualifier(unsigned AddressSpace) const;
-
-  ValueKind getValueKind(Type *Ty, StringRef TypeQual,
-                         StringRef BaseTypeName) const;
-
-  std::string getTypeName(Type *Ty, bool Signed) const;
-
-  std::vector<uint32_t> getWorkGroupDimensions(MDNode *Node) const;
-
-  Kernel::CodeProps::Metadata getHSACodeProps(
-      const MachineFunction &MF,
-      const SIProgramInfo &ProgramInfo) const;
-  Kernel::DebugProps::Metadata getHSADebugProps(
-      const MachineFunction &MF,
-      const SIProgramInfo &ProgramInfo) const;
-
-  void emitPrintf(const Module &Mod);
-
-  void emitKernelLanguage(const Function &Func);
-
-  void emitKernelAttrs(const Function &Func);
-
-  void emitKernelArgs(const Function &Func, const GCNSubtarget &ST);
-
-  void emitKernelArg(const Argument &Arg);
-
-  void emitKernelArg(const DataLayout &DL, Type *Ty, Align Alignment,
-                     ValueKind ValueKind,
-                     MaybeAlign PointeeAlign = std::nullopt,
-                     StringRef Name = "", StringRef TypeName = "",
-                     StringRef BaseTypeName = "", StringRef AccQual = "",
-                     StringRef TypeQual = "");
-
-  void emitHiddenKernelArgs(const Function &Func, const GCNSubtarget &ST);
-
-  const Metadata &getHSAMetadata() const {
-    return HSAMetadata;
-  }
-
+class MetadataStreamerMsgPackV6 final : public MetadataStreamerMsgPackV5 {
 protected:
   void emitVersion() override;
-  void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
-                            msgpack::ArrayDocNode Args) override {
-    llvm_unreachable("Dummy override should not be invoked!");
-  }
-  void emitKernelAttrs(const Function &Func,
-                       msgpack::MapDocNode Kern) override {
-    llvm_unreachable("Dummy override should not be invoked!");
-  }
 
 public:
-  MetadataStreamerYamlV2() = default;
-  ~MetadataStreamerYamlV2() = default;
+  MetadataStreamerMsgPackV6() = default;
+  ~MetadataStreamerMsgPackV6() override = default;
 
-  bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
-
-  void begin(const Module &Mod,
-             const IsaInfo::AMDGPUTargetID &TargetID) override;
-
-  void end() override;
-
-  void emitKernel(const MachineFunction &MF,
-                  const SIProgramInfo &ProgramInfo) override;
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
+                       msgpack::MapDocNode Kern) override;
 };
 
 } // end namespace HSAMD

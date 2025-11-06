@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMCMP_H
 #define LLVM_LIBC_SRC_STRING_MEMCMP_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int memcmp(const void *lhs, const void *rhs, size_t count);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMCMP_H

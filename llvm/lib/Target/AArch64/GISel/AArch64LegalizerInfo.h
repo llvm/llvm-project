@@ -23,12 +23,12 @@ namespace llvm {
 
 class AArch64Subtarget;
 
-/// This class provides the information for the target register banks.
 class AArch64LegalizerInfo : public LegalizerInfo {
 public:
   AArch64LegalizerInfo(const AArch64Subtarget &ST);
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
@@ -46,11 +46,12 @@ private:
   bool legalizeSmallCMGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
                                   MachineIRBuilder &MIRBuilder,
                                   GISelChangeObserver &Observer) const;
-  bool legalizeVectorTrunc(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeBitfieldExtract(MachineInstr &MI, MachineRegisterInfo &MRI,
                                LegalizerHelper &Helper) const;
   bool legalizeRotate(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
+  bool legalizeICMP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &MIRBuilder) const;
   bool legalizeFunnelShift(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer,
@@ -61,9 +62,11 @@ private:
                                 LegalizerHelper &Helper) const;
   bool legalizeCTTZ(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeMemOps(MachineInstr &MI, LegalizerHelper &Helper) const;
-  bool legalizeFCopySign(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 LegalizerHelper &Helper) const;
+  bool legalizeDynStackAlloc(MachineInstr &MI, LegalizerHelper &Helper) const;
+  bool legalizePrefetch(MachineInstr &MI, LegalizerHelper &Helper) const;
+  bool legalizeBitcast(MachineInstr &MI, LegalizerHelper &Helper) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

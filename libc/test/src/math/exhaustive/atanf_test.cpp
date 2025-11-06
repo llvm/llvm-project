@@ -10,11 +10,11 @@
 #include "src/math/atanf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 using LlvmLibcAtanfExhaustiveTest =
     LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Atan,
-                                      __llvm_libc::atanf>;
+                                      LIBC_NAMESPACE::atanf>;
 
 // Range: [0, Inf];
 static constexpr uint32_t POS_START = 0x0000'0000U;
@@ -25,7 +25,7 @@ TEST_F(LlvmLibcAtanfExhaustiveTest, PostiveRange) {
 }
 
 // Range: [-Inf, 0];
-static constexpr uint32_t NEG_START = 0xb000'0000U;
+static constexpr uint32_t NEG_START = 0x8000'0000U;
 static constexpr uint32_t NEG_STOP = 0xff80'0000U;
 
 TEST_F(LlvmLibcAtanfExhaustiveTest, NegativeRange) {

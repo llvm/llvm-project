@@ -15,10 +15,11 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
 #include <unordered_map>
 
 namespace llvm {
@@ -47,10 +48,10 @@ using FuncProbeFactorMap = StringMap<ProbeFactorMap>;
 // function pass, the factor sum for a probe would be typically 100%.
 class PseudoProbeVerifier {
 public:
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
   // Implementation of pass instrumentation callbacks for new pass manager.
-  void runAfterPass(StringRef PassID, Any IR);
+  LLVM_ABI void runAfterPass(StringRef PassID, Any IR);
 
 private:
   // Allow a little bias due the rounding to integral factors.
@@ -74,17 +75,24 @@ private:
 class SampleProfileProber {
 public:
   // Give an empty module id when the prober is not used for instrumentation.
-  SampleProfileProber(Function &F, const std::string &CurModuleUniqueId);
-  void instrumentOneFunc(Function &F, TargetMachine *TM);
+  LLVM_ABI SampleProfileProber(Function &F);
+  LLVM_ABI void instrumentOneFunc(Function &F, TargetMachine *TM);
 
 private:
   Function *getFunction() const { return F; }
   uint64_t getFunctionHash() const { return FunctionHash; }
   uint32_t getBlockId(const BasicBlock *BB) const;
   uint32_t getCallsiteId(const Instruction *Call) const;
-  void computeCFGHash();
-  void computeProbeIdForBlocks();
-  void computeProbeIdForCallsites();
+  void findUnreachableBlocks(DenseSet<BasicBlock *> &BlocksToIgnore);
+  void findInvokeNormalDests(DenseSet<BasicBlock *> &InvokeNormalDests);
+  void computeBlocksToIgnore(DenseSet<BasicBlock *> &BlocksToIgnore,
+                             DenseSet<BasicBlock *> &BlocksAndCallsToIgnore);
+  const Instruction *
+  getOriginalTerminator(const BasicBlock *Head,
+                        const DenseSet<BasicBlock *> &BlocksToIgnore);
+  void computeCFGHash(const DenseSet<BasicBlock *> &BlocksToIgnore);
+  void computeProbeId(const DenseSet<BasicBlock *> &BlocksToIgnore,
+                      const DenseSet<BasicBlock *> &BlocksAndCallsToIgnore);
 
   Function *F;
 
@@ -110,7 +118,7 @@ class SampleProfileProbePass : public PassInfoMixin<SampleProfileProbePass> {
 
 public:
   SampleProfileProbePass(TargetMachine *TM) : TM(TM) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 // Pseudo probe distribution factor updater.
@@ -130,7 +138,7 @@ class PseudoProbeUpdatePass : public PassInfoMixin<PseudoProbeUpdatePass> {
 
 public:
   PseudoProbeUpdatePass() = default;
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

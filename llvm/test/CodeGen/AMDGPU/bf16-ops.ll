@@ -1,7 +1,7 @@
-; RUN: not llc < %s -march=amdgcn -mcpu=hawaii
-; RUN: not llc < %s -march=amdgcn -mcpu=tonga
-; RUN: not llc < %s -march=amdgcn -mcpu=gfx900
-; RUN: not llc < %s -march=amdgcn -mcpu=gfx1010
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=hawaii
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=gfx900
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=gfx1010
 
 ; TODO: Add GlobalISel tests, currently it silently miscompiles as GISel does not handle BF16 at all.
 

@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// UNSUPPORTED: availability-filesystem-missing
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
 // typedef TrivialClock file_time_type;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <chrono>
 #include <type_traits>
 
 #include "test_macros.h"
+namespace fs = std::filesystem;
 
 // system_clock is used because it meets the requirements of TrivialClock,
 // and the resolution and range of system_clock should match the operating

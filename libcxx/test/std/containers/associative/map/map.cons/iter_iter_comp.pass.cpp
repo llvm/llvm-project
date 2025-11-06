@@ -20,12 +20,10 @@
 #include "../../../test_compare.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::pair<const int, double> V;
-    V ar[] =
-    {
+    V ar[] = {
         V(1, 1),
         V(1, 1.5),
         V(1, 2),
@@ -37,19 +35,18 @@ int main(int, char**)
         V(3, 2),
     };
     typedef test_less<int> C;
-    std::map<int, double, C> m(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5));
+    std::map<int, double, C> m(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5));
     assert(m.key_comp() == C(5));
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
     assert(*std::next(m.begin()) == V(2, 1));
     assert(*std::next(m.begin(), 2) == V(3, 1));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::pair<const int, double> V;
-    V ar[] =
-    {
+    V ar[] = {
         V(1, 1),
         V(1, 1.5),
         V(1, 2),
@@ -61,14 +58,14 @@ int main(int, char**)
         V(3, 2),
     };
     typedef test_less<int> C;
-    std::map<int, double, C, min_allocator<std::pair<const int, double>>> m(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5));
+    std::map<int, double, C, min_allocator<std::pair<const int, double>>> m(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5));
     assert(m.key_comp() == C(5));
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
     assert(*std::next(m.begin()) == V(2, 1));
     assert(*std::next(m.begin(), 2) == V(3, 1));
-    }
+  }
 #endif
 
   return 0;

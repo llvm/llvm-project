@@ -13,7 +13,7 @@ body: |
     %2:gprc = RLWINM %1:gprc, 27, 5, 31
     ; CHECK-NOT: %2:gprc = RLWINM %1, 27, 5, 31
     %3:gprc = RLWINM %2:gprc, 19, 0, 12
-    ; CHECK: %3:gprc = RLWINM %1, 14, 0, 12
+    ; CHECK: %3:gprc = RLWINM killed %1, 14, 0, 12
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -28,7 +28,7 @@ body: |
     %2:gprc = RLWINM %1:gprc, 27, 0, 31
     ; CHECK-NOT: %2:gprc = RLWINM %1, 27, 0, 31
     %3:gprc = RLWINM %2:gprc, 19, 0, 12
-    ; CHECK: %3:gprc = RLWINM %1, 14, 0, 12
+    ; CHECK: %3:gprc = RLWINM killed %1, 14, 0, 12
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -43,7 +43,7 @@ body: |
     %2:gprc = RLWINM %1:gprc, 27, 10, 9 
     ; CHECK-NOT: %2:gprc = RLWINM %1, 27, 10, 9
     %3:gprc = RLWINM %2:gprc, 19, 10, 1
-    ; CHECK: %3:gprc = RLWINM %1, 14, 10, 1
+    ; CHECK: %3:gprc = RLWINM killed %1, 14, 10, 1
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -58,7 +58,7 @@ body: |
     %2:gprc = RLWINM %1:gprc, 27, 30, 10
     ; CHECK-NOT: %2:gprc = RLWINM %1, 27, 30, 10 
     %3:gprc = RLWINM %2:gprc, 19, 0, 12
-    ; CHECK: %3:gprc = RLWINM %1, 14, 11, 12
+    ; CHECK: %3:gprc = RLWINM killed %1, 14, 11, 12
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -71,9 +71,9 @@ body: |
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc
     %2:gprc = RLWINM %1:gprc, 10, 5, 31
-    ; CHECK: %2:gprc = RLWINM %1, 10, 5, 31
+    ; CHECK: %2:gprc = RLWINM killed %1, 10, 5, 31
     %3:gprc = RLWINM %2:gprc, 10, 30, 5
-    ; CHECK: %3:gprc = RLWINM %2, 10, 30, 5
+    ; CHECK: %3:gprc = RLWINM killed %2, 10, 30, 5
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -85,10 +85,10 @@ body: |
     liveins: $x3
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc
-    %2:gprc = RLWINM %1:gprc, 10, 20, 10
-    ; CHECK: %2:gprc = RLWINM %1, 10, 20, 10
-    %3:gprc = RLWINM %2:gprc, 10, 0, 31
-    ; CHECK: %3:gprc = RLWINM %2, 10, 0, 31
+    %2:gprc = RLWINM killed %1:gprc, 10, 20, 10
+    ; CHECK: %2:gprc = RLWINM killed %1, 10, 20, 10
+    %3:gprc = RLWINM killed %2:gprc, 10, 0, 31
+    ; CHECK: %3:gprc = RLWINM killed %2, 10, 0, 31
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -105,7 +105,7 @@ body: |
     %3:gprc = RLWINM %2:gprc, 19, 0, 12
     ; CHECK: %3:gprc = RLWINM killed %1, 14, 0, 12
     STW %3:gprc, %2:gprc, 100 
-    ; CHECK: STW %3, %2, 100
+    ; CHECK: STW killed %3, killed %2, 100
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -135,7 +135,7 @@ body: |
     %2:gprc = RLWINM %1:gprc, 27, 5, 10
     ; CHECK-NOT: RLWINM %1,
     %3:gprc = RLWINM_rec %2:gprc, 8, 5, 10, implicit-def $cr0
-    ; CHECK: %3:gprc = ANDI_rec %1, 0, implicit-def $cr0
+    ; CHECK: %3:gprc = ANDI_rec killed %1, 0, implicit-def dead $cr0
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -147,10 +147,10 @@ body: |
     liveins: $x3
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc
-    %2:gprc = RLWINM_rec %1:gprc, 27, 5, 10, implicit-def $cr0
-    ; CHECK: %2:gprc = RLWINM_rec %1, 27, 5, 10, implicit-def $cr0
-    %3:gprc = RLWINM_rec %2:gprc, 8, 5, 10, implicit-def $cr0
-    ; CHECK: %3:gprc = ANDI_rec %1, 0, implicit-def $cr0
+    %2:gprc = RLWINM_rec killed %1:gprc, 27, 5, 10, implicit-def $cr0
+    ; CHECK: %2:gprc = RLWINM_rec %1, 27, 5, 10, implicit-def dead $cr0
+    %3:gprc = RLWINM_rec killed %2:gprc, 8, 5, 10, implicit-def $cr0
+    ; CHECK: %3:gprc = ANDI_rec killed %1, 0, implicit-def dead $cr0
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -163,9 +163,9 @@ body: |
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc
     %2:gprc = RLWINM %1:gprc, 20, 5, 31
-    ; CHECK: %2:gprc = RLWINM %1, 20, 5, 31
+    ; CHECK: %2:gprc = RLWINM killed %1, 20, 5, 31
     %3:gprc = RLWINM %2:gprc, 19, 10, 20
-    ; CHECK: %3:gprc = RLWINM %2, 19, 10, 20
+    ; CHECK: %3:gprc = RLWINM killed %2, 19, 10, 20
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -190,10 +190,10 @@ body: |
     liveins: $x3
     ; CHECK-LABEL: name: testFoldRLWINMAndANDI
     ; CHECK: liveins: $x3
-    ; CHECK: [[COPY:%[0-9]+]]:g8rc = COPY $x3
-    ; CHECK: [[COPY1:%[0-9]+]]:gprc = COPY [[COPY]].sub_32
-    ; CHECK: [[RLWINM:%[0-9]+]]:gprc = RLWINM [[COPY1]], 4, 28, 31
-    ; CHECK: [[ANDI_rec:%[0-9]+]]:gprc = ANDI_rec [[RLWINM]], 4, implicit-def $cr0
+    ; CHECK: [[COPY:%[0-9]+]]:g8rc = COPY killed $x3
+    ; CHECK: [[COPY1:%[0-9]+]]:gprc = COPY killed [[COPY]].sub_32
+    ; CHECK: [[RLWINM:%[0-9]+]]:gprc = RLWINM killed [[COPY1]], 4, 28, 31
+    ; CHECK: [[ANDI_rec:%[0-9]+]]:gprc = ANDI_rec killed [[RLWINM]], 4, implicit-def dead $cr0
     ; CHECK: BLR8 implicit $lr8, implicit $rm
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc

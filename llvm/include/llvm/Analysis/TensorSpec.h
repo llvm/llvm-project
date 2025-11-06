@@ -10,27 +10,36 @@
 #define LLVM_ANALYSIS_TENSORSPEC_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/JSON.h"
 
 #include <memory>
 #include <optional>
 #include <vector>
 
 namespace llvm {
+namespace json {
+class OStream;
+class Value;
+} // namespace json
+
 /// TensorSpec encapsulates the specification of a tensor: its dimensions, or
 /// "shape" (row-major), its type (see TensorSpec::getDataType specializations
 /// for supported types), its name and port (see "TensorFlow: Large-Scale
 /// Machine Learning on Heterogeneous Distributed Systems", section 4.2, para 2:
 /// https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/45166.pdf)
 ///
-/// Known tensor types. The left part is the C type, the right is a name we
-/// can use to identify the type (to implement TensorSpec equality checks), and
-/// to use, if needed, when mapping to an underlying evaluator's type system.
-/// The main requirement is that the C type we use has the same size and
-/// encoding (e.g. endian-ness) as the one used by the evaluator.
+/// Note that the design is motivated by Tensorflow, but it is not intended to
+/// be Tensorflow-specific.
+///
+/// Known tensor types. The left part is the C type, the
+/// right is a name we can use to identify the type (to implement TensorSpec
+/// equality checks), and to use, if needed, when mapping to an underlying
+/// evaluator's type system. The main requirement is that the C type we use has
+/// the same size and encoding (e.g. endian-ness) as the one used by the
+/// evaluator.
 #define SUPPORTED_TENSOR_TYPES(M)                                              \
   M(float, Float)                                                              \
   M(double, Double)                                                            \
@@ -87,11 +96,11 @@ public:
       : TensorSpec(NewName, Other.Port, Other.Type, Other.ElementSize,
                    Other.Shape) {}
 
-  void toJSON(json::OStream &OS) const;
+  LLVM_ABI void toJSON(json::OStream &OS) const;
 
 private:
-  TensorSpec(const std::string &Name, int Port, TensorType Type,
-             size_t ElementSize, const std::vector<int64_t> &Shape);
+  LLVM_ABI TensorSpec(const std::string &Name, int Port, TensorType Type,
+                      size_t ElementSize, const std::vector<int64_t> &Shape);
 
   template <typename T> static TensorType getDataType();
 
@@ -104,7 +113,8 @@ private:
 };
 
 /// For debugging.
-std::string tensorValueToString(const char *Buffer, const TensorSpec &Spec);
+LLVM_ABI std::string tensorValueToString(const char *Buffer,
+                                         const TensorSpec &Spec);
 
 /// Construct a TensorSpec from a JSON dictionary of the form:
 /// { "name": <string>,
@@ -113,11 +123,11 @@ std::string tensorValueToString(const char *Buffer, const TensorSpec &Spec);
 ///   "shape": <array of ints> }
 /// For the "type" field, see the C++ primitive types used in
 /// TFUTILS_SUPPORTED_TYPES.
-std::optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
-                                                const json::Value &Value);
+LLVM_ABI std::optional<TensorSpec>
+getTensorSpecFromJSON(LLVMContext &Ctx, const json::Value &Value);
 
 #define TFUTILS_GETDATATYPE_DEF(T, Name)                                       \
-  template <> TensorType TensorSpec::getDataType<T>();
+  template <> LLVM_ABI TensorType TensorSpec::getDataType<T>();
 SUPPORTED_TENSOR_TYPES(TFUTILS_GETDATATYPE_DEF)
 
 #undef TFUTILS_GETDATATYPE_DEF

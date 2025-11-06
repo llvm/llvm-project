@@ -5,6 +5,7 @@
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR5 %s 2>&1 | FileCheck --check-prefix=ERROR5 %s
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR6 %s 2>&1 | FileCheck --check-prefix=ERROR6 %s
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR7 %s 2>&1 | FileCheck --check-prefix=ERROR7 %s
+// RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR8 %s 2>&1 | FileCheck --check-prefix=ERROR8 %s
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/PatternBase.td"
@@ -63,4 +64,18 @@ def : Pat<(OpB:$result $val, $attr), (OpA $val, $val), [(AnyInteger:$result)]>;
 // Check that type constraint has one argument
 // ERROR7: [[@LINE+1]]:1: error: type constraint requires exactly one argument
 def : Pat<(OpB:$opB $val, $attr), (OpA $val, $val), [(AnyInteger $opB, $val)]>;
+#endif
+
+def OpC : A_Op<"op_c">, Results<(outs AnyInteger)>;
+def OpD : A_Op<"op_d">, Arguments<(ins Variadic<AnyInteger>:$vargs)>, Results<(outs AnyInteger)>;
+
+#ifdef ERROR8
+// Check that op with variadic operand gets variadic operand in target,
+//
+// FIXME: this should be an error.
+def : Pat<(OpB:$opB $val, $attr), (OpD $val)>;
+
+// ERROR8: [[@LINE+2]]
+// ERROR8-SAME: op expects variadic operand `vargs`, while provided is non-variadic
+def : Pat<(OpB:$opB $val, $attr), (OpD (OpC))>;
 #endif

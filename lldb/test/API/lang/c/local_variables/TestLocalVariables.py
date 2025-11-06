@@ -19,7 +19,6 @@ class LocalVariablesTestCase(TestBase):
         self.source = "main.c"
         self.line = line_number(self.source, "// Set break point at this line.")
 
-    @skipIfWindows
     def test_c_local_variables(self):
         """Test local variable value."""
         self.build()

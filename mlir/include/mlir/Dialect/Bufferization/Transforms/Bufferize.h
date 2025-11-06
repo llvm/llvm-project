@@ -26,6 +26,7 @@ namespace bufferization {
 
 class AnalysisState;
 struct BufferizationOptions;
+class BufferizationState;
 class OpFilter;
 
 /// Bufferization statistics for debugging. These can be printed after running
@@ -38,50 +39,20 @@ struct BufferizationStatistics {
   int64_t numTensorOutOfPlace = 0;
 };
 
-/// A helper type converter class that automatically populates the relevant
-/// materializations and type conversions for bufferization.
-class BufferizeTypeConverter : public TypeConverter {
-public:
-  BufferizeTypeConverter();
-};
-
-/// Marks ops used by bufferization for type conversion materializations as
-/// "legal" in the given ConversionTarget.
-///
-/// This function should be called by all bufferization passes using
-/// BufferizeTypeConverter so that materializations work properly. One exception
-/// is bufferization passes doing "full" conversions, where it can be desirable
-/// for even the materializations to remain illegal so that they are eliminated,
-/// such as via the patterns in
-/// populateEliminateBufferizeMaterializationsPatterns.
-void populateBufferizeMaterializationLegality(ConversionTarget &target);
-
-/// Populate patterns to eliminate bufferize materializations.
-///
-/// In particular, these are the tensor_load/buffer_cast ops.
-void populateEliminateBufferizeMaterializationsPatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
-
 /// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
-/// If `copyBeforeWrite`, buffers are duplicated and copied before any tensor
-/// use that bufferizes to a memory write.
 ///
-/// Note: In the general case, it unsafe to run with `copyBeforeWrite = false`
-/// because read-after-write conflicts may materialize during bufferization.
-/// `copyBeforeWrite = false` is safe only if the input IR is guaranteed to
-/// *not* require any out-of-place bufferization.
-///
-/// Note: This function bufferizes ops without utilizing analysis results. It
-/// can be used to implement partial bufferization passes.
+/// Note: This function does not resolve read-after-write conflicts. Use this
+/// function only if it is guaranteed that the input IR can bufferize without
+/// additional buffer copies or set "options.copyBeforeWrite = true". The
+/// general bufferization entry point is `runOneShotBufferize`.
 LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
-                          bool copyBeforeWrite = true,
-                          const OpFilter *opFilter = nullptr,
+                          BufferizationState &bufferizationState,
                           BufferizationStatistics *statistics = nullptr);
 
 /// Bufferize the signature of `block` and its callers (i.e., ops that have the
 /// given block as a successor). All block argument types are changed to memref
 /// types. All corresponding operands of all callers  are wrapped in
-/// bufferization.to_memref ops. All uses of bufferized tensor block arguments
+/// bufferization.to_buffer ops. All uses of bufferized tensor block arguments
 /// are wrapped in bufferization.to_tensor ops.
 ///
 /// It is expected that all callers implement the `BranchOpInterface`.
@@ -92,9 +63,8 @@ LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
 /// `BufferizableOpInterface`. The buffer types of tensor block arguments are
 /// computed with `BufferizableOpIntercace::getBufferType`.
 LogicalResult bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
-                                      const BufferizationOptions &options);
-
-BufferizationOptions getPartialBufferizationOptions();
+                                      const BufferizationOptions &options,
+                                      BufferizationState &state);
 
 } // namespace bufferization
 } // namespace mlir

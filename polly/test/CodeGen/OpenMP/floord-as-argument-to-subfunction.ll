@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-opt-max-coefficient=-1 -polly-parallel -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-opt-isl -polly-opt-max-coefficient=-1 -polly-parallel -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; Check that we do not crash but generate parallel code
 ;
@@ -20,9 +20,9 @@ for.cond39.for.cond66.preheader.loopexit67_crit_edge: ; preds = %for.body42
   br label %for.cond66.preheader
 
 for.cond66.preheader:                             ; preds = %for.cond39.for.cond66.preheader.loopexit67_crit_edge, %if.end
-  %rawout1.3.ph = phi ptr [ %add.ptr62.lcssa, %for.cond39.for.cond66.preheader.loopexit67_crit_edge ], [ undef, %if.end ]
+  %rawout1.3.ph = phi ptr [ %add.ptr62.lcssa, %for.cond39.for.cond66.preheader.loopexit67_crit_edge ], [ poison, %if.end ]
   %sb.3.ph = phi i32 [ 0, %for.cond39.for.cond66.preheader.loopexit67_crit_edge ], [ 0, %if.end ]
-  %tspnt.3.ph = phi ptr [ undef, %for.cond39.for.cond66.preheader.loopexit67_crit_edge ], [ %tsOut, %if.end ]
+  %tspnt.3.ph = phi ptr [ poison, %for.cond39.for.cond66.preheader.loopexit67_crit_edge ], [ %tsOut, %if.end ]
   br label %for.cond69.preheader
 
 for.body42:                                       ; preds = %if.end
@@ -31,12 +31,12 @@ for.body42:                                       ; preds = %if.end
 for.cond69.preheader:                             ; preds = %for.end76, %for.cond66.preheader
   %tspnt.375 = phi ptr [ %incdec.ptr79, %for.end76 ], [ %tspnt.3.ph, %for.cond66.preheader ]
   %sb.374 = phi i32 [ %inc78, %for.end76 ], [ %sb.3.ph, %for.cond66.preheader ]
-  %rawout1.373 = phi ptr [ undef, %for.end76 ], [ %rawout1.3.ph, %for.cond66.preheader ]
+  %rawout1.373 = phi ptr [ poison, %for.end76 ], [ %rawout1.3.ph, %for.cond66.preheader ]
   br label %for.body71
 
 for.body71:                                       ; preds = %for.body71, %for.cond69.preheader
   %indvars.iv = phi i64 [ 0, %for.cond69.preheader ], [ %indvars.iv.next, %for.body71 ]
-  %rawout1.469 = phi ptr [ %rawout1.373, %for.cond69.preheader ], [ undef, %for.body71 ]
+  %rawout1.469 = phi ptr [ %rawout1.373, %for.cond69.preheader ], [ poison, %for.body71 ]
   %0 = load i64, ptr %rawout1.469, align 8
   %1 = shl nsw i64 %indvars.iv, 5
   %arrayidx73 = getelementptr inbounds double, ptr %tspnt.375, i64 %1

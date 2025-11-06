@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -relax-elf-relocations=true -mtriple=x86_64-linux-gnu -o - %s |  llvm-objdump - -d -r | FileCheck %s
+; RUN: llc -filetype=obj -x86-relax-relocations=true -mtriple=x86_64-linux-gnu -o - %s |  llvm-objdump - -d -r | FileCheck %s
 
 ; CHECK: jmpq *(%rip)
 ; CHECK-NEXT: R_X86_64_GOTPCRELX

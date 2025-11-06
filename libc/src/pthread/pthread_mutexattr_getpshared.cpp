@@ -10,10 +10,9 @@
 #include "pthread_mutexattr.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-#include <errno.h>
-
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_mutexattr_getpshared,
                    (const pthread_mutexattr_t *__restrict attr,
@@ -23,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, pthread_mutexattr_getpshared,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

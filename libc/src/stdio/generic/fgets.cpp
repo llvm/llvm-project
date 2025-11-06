@@ -9,11 +9,12 @@
 #include "src/stdio/fgets.h"
 #include "src/__support/File/file.h"
 
-#include "src/errno/libc_errno.h"
+#include "hdr/types/FILE.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h>
-#include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, fgets,
                    (char *__restrict str, int count,
@@ -22,7 +23,7 @@ LLVM_LIBC_FUNCTION(char *, fgets,
     return nullptr;
 
   unsigned char c = '\0';
-  auto stream = reinterpret_cast<__llvm_libc::File *__restrict>(raw_stream);
+  auto stream = reinterpret_cast<LIBC_NAMESPACE::File *__restrict>(raw_stream);
   stream->lock();
 
   // i is an int because it's frequently compared to count, which is also int.
@@ -52,4 +53,4 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   return str;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

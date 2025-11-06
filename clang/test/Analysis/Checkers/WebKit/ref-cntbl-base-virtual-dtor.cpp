@@ -1,5 +1,13 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.RefCntblBaseVirtualDtor -verify %s
 
+namespace WTF {
+
+class NoVirtualDestructorBase { };
+
+};
+
+using WTF::NoVirtualDestructorBase;
+
 struct RefCntblBase {
   void ref() {}
   void deref() {}
@@ -13,7 +21,26 @@ struct DerivedWithVirtualDtor : RefCntblBase {
   virtual ~DerivedWithVirtualDtor() {}
 };
 
+// Confirm that the checker respects [[clang::suppress]]
+struct [[clang::suppress]] SuppressedDerived : RefCntblBase { };
+struct [[clang::suppress]] SuppressedDerivedWithVirtualDtor : RefCntblBase {
+  virtual ~SuppressedDerivedWithVirtualDtor() {}
+};
 
+class ClassWithoutVirtualDestructor : public NoVirtualDestructorBase {
+public:
+  void ref() const;
+  void deref() const;
+};
+
+class DerivedClassWithoutVirtualDestructor : public ClassWithoutVirtualDestructor {
+};
+
+// FIXME: Support attributes on base specifiers? Currently clang
+// doesn't support such attributes at all, even though it knows
+// how to parse them.
+//
+// struct SuppressedBaseSpecDerived : [[clang::suppress]] RefCntblBase { };
 
 template<class T>
 struct DerivedClassTmpl : T { };

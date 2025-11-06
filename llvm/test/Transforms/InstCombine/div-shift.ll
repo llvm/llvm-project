@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i8)
+declare void @use32(i32)
 
 declare i8 @llvm.umin.i8(i8, i8)
 declare i8 @llvm.umax.i8(i8, i8)
@@ -24,7 +25,7 @@ define i32 @t1(i16 zeroext %x, i32 %y) {
 define <2 x i32> @t1vec(<2 x i16> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t1vec(
 ; CHECK-NEXT:    [[CONV:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[Y:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[Y:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[D1:%.*]] = lshr <2 x i32> [[CONV]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[D1]]
 ;
@@ -37,7 +38,7 @@ define <2 x i32> @t1vec(<2 x i16> %x, <2 x i32> %y) {
 ; rdar://11721329
 define i64 @t2(i64 %x, i32 %y) {
 ; CHECK-LABEL: @t2(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
@@ -51,7 +52,7 @@ define i64 @t2(i64 %x, i32 %y) {
 define i64 @t3(i64 %x, i32 %y) {
 ; CHECK-LABEL: @t3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[X:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
@@ -143,11 +144,10 @@ define i8 @udiv_umin_(i8 %x, i8 %y, i8 %z) {
 ; Negative test, extra use
 define i8 @udiv_umin_extra_use(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_umin_extra_use(
-; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y2]], i8 [[Z2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[Y:%.*]], i8 [[Z:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 1, [[TMP1]]
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %y2 = shl i8 1, %y
@@ -164,7 +164,8 @@ define i8 @udiv_smin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y2]], i8 [[Z2]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[M]], i1 true)
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %y2 = shl i8 1, %y
@@ -180,7 +181,8 @@ define i8 @udiv_smax(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[Y2]], i8 [[Z2]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[M]], i1 true)
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %y2 = shl i8 1, %y
@@ -235,7 +237,7 @@ define i32 @t10(i32 %x, i32 %y) {
 
 define <2 x i32> @t11(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t11(
-; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i32> <i32 1, i32 1>, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i32> splat (i32 1), [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shl = shl nsw <2 x i32> %x, %y
@@ -286,7 +288,7 @@ define i32 @t15(i32 %x, i32 %y) {
 
 define <2 x i32> @t16(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t16(
-; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i32> splat (i32 1), [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shl = shl nuw <2 x i32> %x, %y
@@ -567,7 +569,7 @@ define i5 @udiv_shl_mul_nuw_exact(i5 %x, i5 %y, i5 %z) {
 
 define <2 x i4> @udiv_shl_mul_nuw_vec(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
 ; CHECK-LABEL: @udiv_shl_mul_nuw_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <2 x i4> <i4 1, i4 1>, [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <2 x i4> splat (i4 1), [[Z:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = udiv <2 x i4> [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i4> [[D]]
 ;
@@ -1005,7 +1007,8 @@ define i8 @udiv_fail_shl_overflow(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_fail_shl_overflow(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 2, [[Y:%.*]]
 ; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umax.i8(i8 [[SHL]], i8 1)
-; CHECK-NEXT:    [[MUL:%.*]] = udiv i8 [[X:%.*]], [[MIN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[MIN]], i1 true)
+; CHECK-NEXT:    [[MUL:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ;
   %shl = shl i8 2, %y
@@ -1024,4 +1027,373 @@ define i8 @udiv_shl_no_overflow(i8 %x, i8 %y) {
   %min = call i8 @llvm.umax.i8(i8 %shl, i8 1)
   %mul = udiv i8 %x, %min
   ret i8 %mul
+}
+
+; (X<<Y) / (X<<Z) -> 1 << Y >> Z
+
+define i32 @sdiv_shl_pair_const(i32 %a) {
+; CHECK-LABEL: @sdiv_shl_pair_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 2
+;
+entry:
+  %lhs = shl nsw i32 %a, 2
+  %rhs = shl nsw i32 %a, 1
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair_const(i32 %a) {
+; CHECK-LABEL: @udiv_shl_pair_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 2
+;
+entry:
+  %lhs = shl nuw i32 %a, 2
+  %rhs = shl nuw i32 %a, 1
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl nuw nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair3(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_no_pair_fail(i32 %a, i32 %b, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_no_pair_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[B:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nuw i32 %b, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw i32 %a, %x
+  %rhs = shl nuw i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nuw i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair3(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw i32 %a, %x
+  %rhs = shl nuw nsw i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_overflow_fail1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_overflow_fail1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_overflow_fail2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_overflow_fail2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl nuw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair_overflow_fail1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair_overflow_fail1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl nuw i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair_overflow_fail2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair_overflow_fail2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair_overflow_fail3(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair_overflow_fail3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_multiuse1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_multiuse1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[LHS]])
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  call void @use32(i32 %lhs)
+  %rhs = shl nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_multiuse2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_multiuse2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[RHS]])
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  call void @use32(i32 %rhs)
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_multiuse3(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_multiuse3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[LHS]])
+; CHECK-NEXT:    call void @use32(i32 [[RHS]])
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  call void @use32(i32 %lhs)
+  call void @use32(i32 %rhs)
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+@a = external global i32
+define i32 @pr69291() {
+; CHECK-LABEL: @pr69291(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  %conv = load i32, ptr @a, align 1
+  %add = shl nuw nsw i32 %conv, 1
+  %add2 = shl nuw nsw i32 %conv, 1
+  %div = sdiv i32 %add, %add2
+  ret i32 %div
+}
+
+define i8 @udiv_if_power_of_two(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_if_power_of_two(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[Y]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i8 [[X:%.*]], [[TMP2]]
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[_0_SROA_0_0:%.*]] = phi i8 [ [[TMP3]], [[BB1]] ], [ 0, [[START:%.*]] ]
+; CHECK-NEXT:    ret i8 [[_0_SROA_0_0]]
+;
+start:
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %y)
+  %cmp = icmp eq i8 %ctpop, 1
+  br i1 %cmp, label %bb1, label %bb3
+
+bb1:
+  %div = udiv i8 %x, %y
+  br label %bb3
+
+bb3:
+  %result = phi i8 [ %div, %bb1 ], [ 0, %start ]
+  ret i8 %result
+}
+
+define i8 @udiv_exact_assume_power_of_two(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_exact_assume_power_of_two(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i8 1, 9) i8 @llvm.ctpop.i8(i8 [[Y:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[TMP0]], 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[Y]], i1 true)
+; CHECK-NEXT:    [[_0:%.*]] = lshr exact i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[_0]]
+;
+start:
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %y)
+  %cond = icmp eq i8 %ctpop, 1
+  tail call void @llvm.assume(i1 %cond)
+  %div = udiv exact i8 %x, %y
+  ret i8 %div
+}
+
+define i7 @udiv_assume_power_of_two_illegal_type(i7 %x, i7 %y) {
+; CHECK-LABEL: @udiv_assume_power_of_two_illegal_type(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i7 1, 8) i7 @llvm.ctpop.i7(i7 [[Y:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i7 [[TMP0]], 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i7 0, 8) i7 @llvm.cttz.i7(i7 [[Y]], i1 true)
+; CHECK-NEXT:    [[_0:%.*]] = lshr i7 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i7 [[_0]]
+;
+start:
+  %ctpop = tail call i7 @llvm.ctpop.i7(i7 %y)
+  %cond = icmp eq i7 %ctpop, 1
+  tail call void @llvm.assume(i1 %cond)
+  %div = udiv i7 %x, %y
+  ret i7 %div
+}
+
+define i8 @udiv_assume_power_of_two_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_assume_power_of_two_multiuse(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i8 1, 9) i8 @llvm.ctpop.i8(i8 [[Y:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[TMP0]], 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[Y]], i1 true)
+; CHECK-NEXT:    [[_0:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    call void @use(i8 [[_0]])
+; CHECK-NEXT:    ret i8 [[_0]]
+;
+start:
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %y)
+  %cond = icmp eq i8 %ctpop, 1
+  tail call void @llvm.assume(i1 %cond)
+  %div = udiv i8 %x, %y
+  call void @use(i8 %div)
+  ret i8 %div
+}
+
+define i8 @udiv_power_of_two_negative(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_power_of_two_negative(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[Z:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[CTPOP]], 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[_0:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[_0]]
+;
+start:
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %z)
+  %cond = icmp eq i8 %ctpop, 1
+  tail call void @llvm.assume(i1 %cond)
+  %div = udiv i8 %x, %y
+  ret i8 %div
 }

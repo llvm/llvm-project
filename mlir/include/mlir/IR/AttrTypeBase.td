@@ -56,6 +56,9 @@ class ParamNativeTypeTrait<string prop, string params>
 class GenInternalTypeTrait<string prop> : GenInternalTrait<prop, "Type">;
 class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
+// Trait required to be added to any type which is mutable.
+def MutableType : NativeTypeTrait<"IsMutable">;
+
 //===----------------------------------------------------------------------===//
 // Builders
 //===----------------------------------------------------------------------===//
@@ -246,6 +249,9 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
   // generated code is placed inside the class's C++ namespace. `$cppClass` is
   // replaced by the class name.
   code extraClassDefinition = [{}];
+
+  // Generate a default 'getAlias' method for OpAsm{Type,Attr}Interface.
+  bit genMnemonicAlias = 0;
 }
 
 // Define a new attribute, named `name`, belonging to `dialect` that inherits
@@ -256,13 +262,16 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
       AttrOrTypeDef<"Attr", name, traits, baseCppClass> {
   // The name of the C++ Attribute class.
   string cppClassName = name # "Attr";
-  let storageType = dialect.cppNamespace # "::" # name # "Attr";
+  let storageType = dialect.cppNamespace # "::" # cppClassName;
 
   // The underlying C++ value type
   let returnType = dialect.cppNamespace # "::" # cppClassName;
 
   // Make it possible to use such attributes as parameters for other attributes.
   string cppType = dialect.cppNamespace # "::" # cppClassName;
+
+  // The unique attribute name.
+  string attrName = dialect.name # "." # mnemonic;
 
   // The call expression to convert from the storage type to the return
   // type. For example, an enum can be stored as an int but returned as an
@@ -272,13 +281,17 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   //
   // For example, `$_self.getValue().getSExtValue()` for `IntegerAttr val` will
   // expand to `getAttrOfType<IntegerAttr>("val").getValue().getSExtValue()`.
-  let convertFromStorage = "::llvm::cast<" # dialect.cppNamespace #
-                                 "::" # cppClassName # ">($_self)";
+  let convertFromStorage = "::llvm::cast<" # cppType # ">($_self)";
 
   // The predicate for when this def is used as a constraint.
-  let predicate = CPred<"::llvm::isa<" # dialect.cppNamespace #
-                                 "::" # cppClassName # ">($_self)">;
+  let predicate = CPred<"::llvm::isa<" # cppType # ">($_self)">;
 }
+
+// Provide a LocationAttrDef for dialects to provide their own locations
+// that subclass LocationAttr.
+class LocationAttrDef<Dialect dialect, string name, list<Trait> traits = []>
+    : AttrDef<dialect, name, traits # [NativeAttrTrait<"IsLocation">],
+              "::mlir::LocationAttr">;
 
 // Define a new type, named `name`, belonging to `dialect` that inherits from
 // the given C++ base class.
@@ -286,17 +299,22 @@ class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
               string baseCppClass = "::mlir::Type">
     : DialectType<dialect, CPred<"">, /*descr*/"", name # "Type">,
       AttrOrTypeDef<"Type", name, traits, baseCppClass> {
+  // The name of the C++ Type class.
+  string cppClassName = name # "Type";
+
   // Make it possible to use such type as parameters for other types.
   string cppType = dialect.cppNamespace # "::" # cppClassName;
 
+  // The unique type name.
+  string typeName = dialect.name # "." # mnemonic;
+
   // A constant builder provided when the type has no parameters.
   let builderCall = !if(!empty(parameters),
-                           "$_builder.getType<" # dialect.cppNamespace #
-                               "::" # cppClassName # ">()",
+                           "$_builder.getType<" # cppType # ">()",
                            "");
+
   // The predicate for when this def is used as a constraint.
-  let predicate = CPred<"::llvm::isa<" # dialect.cppNamespace #
-                                 "::" # cppClassName # ">($_self)">;
+  let predicate = CPred<"::llvm::isa<" # cppType # ">($_self)">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -368,6 +386,14 @@ class StringRefParameter<string desc = "", string value = ""> :
   let defaultValue = value;
 }
 
+// For APInts, which require comparison supporting different bitwidths. The
+// default APInt comparison operator asserts when the bitwidths differ, so
+// a custom implementation is necessary.
+class APIntParameter<string desc> :
+    AttrOrTypeParameter<"::llvm::APInt", desc> {
+  let comparator = "$_lhs.getBitWidth() == $_rhs.getBitWidth() && $_lhs == $_rhs";
+}
+
 // For APFloats, which require comparison.
 class APFloatParameter<string desc> :
     AttrOrTypeParameter<"::llvm::APFloat", desc> {
@@ -431,15 +457,15 @@ class AttributeSelfTypeParameter<string desc,
 /// This class defines an attribute that contains an array of elements. The
 /// elements can be any type, but if they are attributes, the nested elements
 /// are parsed and printed using the custom attribute syntax.
-class ArrayOfAttr<Dialect dialect, string attrName, string attrMnemonic,
+class ArrayOfAttr<Dialect dialect, string name, string attrMnemonic,
                   string eltName, list<Trait> traits = []>
-    : AttrDef<dialect, attrName, traits> {
+    : AttrDef<dialect, name, traits> {
   let parameters = (ins OptionalArrayRefParameter<eltName>:$value);
   let mnemonic = attrMnemonic;
   let assemblyFormat = "`[` (`]`) : ($value^ `]`)?";
 
   let returnType = "::llvm::ArrayRef<" # eltName # ">";
-  let constBuilderCall = "$_builder.getAttr<" # attrName # "Attr>($0)";
+  let constBuilderCall = "$_builder.getAttr<" # name # "Attr>($0)";
   let convertFromStorage = "$_self.getValue()";
 
   let extraClassDeclaration = [{

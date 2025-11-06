@@ -19,20 +19,25 @@ let TargetPrefix = "loongarch" in {
 class MaskedAtomicRMW<LLVMType itype>
     : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype],
                 [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
+// T @llvm.<name>.T.<p>(any*, T, T, T, T imm);
+class LoongArchMaskedAtomicRMWFiveArg<LLVMType itype>
+    : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype, itype],
+                [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<4>>]>;
 
 // We define 32-bit and 64-bit variants of the above, where T stands for i32
 // or i64 respectively:
 multiclass MaskedAtomicRMWIntrinsics {
   // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32 imm);
   def _i32 : MaskedAtomicRMW<llvm_i32_ty>;
-  // i64 @llvm.<name>.i32.<p>(any*, i64, i64, i64 imm);
+  // i64 @llvm.<name>.i64.<p>(any*, i64, i64, i64 imm);
   def _i64 : MaskedAtomicRMW<llvm_i64_ty>;
 }
 
 multiclass MaskedAtomicRMWFiveOpIntrinsics {
-  // TODO: Support cmpxchg on LA32.
+  // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32, i32 imm);
+  def _i32 : LoongArchMaskedAtomicRMWFiveArg<llvm_i32_ty>;
   // i64 @llvm.<name>.i64.<p>(any*, i64, i64, i64, i64 imm);
-  def _i64 : MaskedAtomicRMWFiveArg<llvm_i64_ty>;
+  def _i64 : LoongArchMaskedAtomicRMWFiveArg<llvm_i64_ty>;
 }
 
 defm int_loongarch_masked_atomicrmw_xchg : MaskedAtomicRMWIntrinsics;
@@ -44,7 +49,7 @@ defm int_loongarch_masked_atomicrmw_umin : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_max : MaskedAtomicRMWFiveOpIntrinsics;
 defm int_loongarch_masked_atomicrmw_min : MaskedAtomicRMWFiveOpIntrinsics;
 
-// @llvm.loongarch.masked.cmpxchg.i64.<p>(
+// @llvm.loongarch.masked.cmpxchg.<i32,i64>.<p>(
 //   ptr addr, grlen cmpval, grlen newval, grlen mask, grlenimm ordering)
 defm int_loongarch_masked_cmpxchg : MaskedAtomicRMWFiveOpIntrinsics;
 
@@ -122,6 +127,15 @@ def int_loongarch_lddir_d : BaseInt<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
                                     [ImmArg<ArgIndex<1>>]>;
 def int_loongarch_ldpte_d : BaseInt<[], [llvm_i64_ty, llvm_i64_ty],
                                     [ImmArg<ArgIndex<1>>]>;
+
+def int_loongarch_frecipe_s : BaseInt<[llvm_float_ty], [llvm_float_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_frecipe_d : BaseInt<[llvm_double_ty], [llvm_double_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_frsqrte_s : BaseInt<[llvm_float_ty], [llvm_float_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_frsqrte_d : BaseInt<[llvm_double_ty], [llvm_double_ty],
+                                      [IntrNoMem]>;
 } // TargetPrefix = "loongarch"
 
 /// Vector intrinsic
@@ -129,6 +143,11 @@ def int_loongarch_ldpte_d : BaseInt<[], [llvm_i64_ty, llvm_i64_ty],
 class VecInt<list<LLVMType> ret_types, list<LLVMType> param_types,
              list<IntrinsicProperty> intr_properties = []>
     : Intrinsic<ret_types, param_types, intr_properties>,
+      ClangBuiltin<!subst("int_loongarch", "__builtin", NAME)>;
+
+class DefaultAttrsVecInt<list<LLVMType> ret_types, list<LLVMType> param_types,
+             list<IntrinsicProperty> intr_properties = []>
+    : DefaultAttrsIntrinsic<ret_types, param_types, intr_properties>,
       ClangBuiltin<!subst("int_loongarch", "__builtin", NAME)>;
 
 //===----------------------------------------------------------------------===//
@@ -527,10 +546,12 @@ foreach inst = ["vfmadd_d", "vfmsub_d", "vfnmadd_d", "vfnmsub_d"] in
              [IntrNoMem]>;
 
 foreach inst = ["vflogb_s", "vfsqrt_s", "vfrecip_s", "vfrsqrt_s", "vfrint_s",
+                "vfrecipe_s", "vfrsqrte_s",
                 "vfrintrne_s", "vfrintrz_s", "vfrintrp_s", "vfrintrm_s"] in
   def int_loongarch_lsx_#inst : VecInt<[llvm_v4f32_ty], [llvm_v4f32_ty],
                                        [IntrNoMem]>;
 foreach inst = ["vflogb_d", "vfsqrt_d", "vfrecip_d", "vfrsqrt_d", "vfrint_d",
+                "vfrecipe_d", "vfrsqrte_d",
                 "vfrintrne_d", "vfrintrz_d", "vfrintrp_d", "vfrintrm_d"] in
   def int_loongarch_lsx_#inst : VecInt<[llvm_v2f64_ty], [llvm_v2f64_ty],
                                        [IntrNoMem]>;
@@ -609,22 +630,22 @@ foreach inst = ["vfcmp_caf_d", "vfcmp_cun_d", "vfcmp_ceq_d", "vfcmp_cueq_d",
 
 // LSX load/store
 def int_loongarch_lsx_vld
-  : VecInt<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 def int_loongarch_lsx_vldx
-  : VecInt<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i64_ty],
+  : DefaultAttrsVecInt<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i64_ty],
            [IntrReadMem, IntrArgMemOnly]>;
 def int_loongarch_lsx_vldrepl_b
-  : VecInt<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 def int_loongarch_lsx_vldrepl_h
-  : VecInt<[llvm_v8i16_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v8i16_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 def int_loongarch_lsx_vldrepl_w
-  : VecInt<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 def int_loongarch_lsx_vldrepl_d
-  : VecInt<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 
 def int_loongarch_lsx_vst
@@ -1044,10 +1065,12 @@ foreach inst = ["xvfmadd_d", "xvfmsub_d", "xvfnmadd_d", "xvfnmsub_d"] in
              [IntrNoMem]>;
 
 foreach inst = ["xvflogb_s", "xvfsqrt_s", "xvfrecip_s", "xvfrsqrt_s", "xvfrint_s",
+                "xvfrecipe_s", "xvfrsqrte_s",
                 "xvfrintrne_s", "xvfrintrz_s", "xvfrintrp_s", "xvfrintrm_s"] in
   def int_loongarch_lasx_#inst : VecInt<[llvm_v8f32_ty], [llvm_v8f32_ty],
                                         [IntrNoMem]>;
 foreach inst = ["xvflogb_d", "xvfsqrt_d", "xvfrecip_d", "xvfrsqrt_d", "xvfrint_d",
+                "xvfrecipe_d", "xvfrsqrte_d",
                 "xvfrintrne_d", "xvfrintrz_d", "xvfrintrp_d", "xvfrintrm_d"] in
   def int_loongarch_lasx_#inst : VecInt<[llvm_v4f64_ty], [llvm_v4f64_ty],
                                         [IntrNoMem]>;
@@ -1133,22 +1156,22 @@ def int_loongarch_lasx_xvpickve_d_f
 
 // LASX load/store
 def int_loongarch_lasx_xvld
-  : VecInt<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 def int_loongarch_lasx_xvldx
-  : VecInt<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_i64_ty],
+  : DefaultAttrsVecInt<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_i64_ty],
            [IntrReadMem, IntrArgMemOnly]>;
 def int_loongarch_lasx_xvldrepl_b
-  : VecInt<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 def int_loongarch_lasx_xvldrepl_h
-  : VecInt<[llvm_v16i16_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v16i16_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 def int_loongarch_lasx_xvldrepl_w
-  : VecInt<[llvm_v8i32_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v8i32_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 def int_loongarch_lasx_xvldrepl_d
-  : VecInt<[llvm_v4i64_ty], [llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsVecInt<[llvm_v4i64_ty], [llvm_ptr_ty, llvm_i32_ty],
            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 
 def int_loongarch_lasx_xvst
@@ -1169,4 +1192,42 @@ def int_loongarch_lasx_xvstelm_w
 def int_loongarch_lasx_xvstelm_d
   : VecInt<[], [llvm_v4i64_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
            [IntrWriteMem, IntrArgMemOnly, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+
+// LASX and LSX conversion
+def int_loongarch_lasx_cast_128_s
+  : VecInt<[llvm_v8f32_ty], [llvm_v4f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_cast_128_d
+  : VecInt<[llvm_v4f64_ty], [llvm_v2f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_cast_128
+  : VecInt<[llvm_v4i64_ty], [llvm_v2i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_concat_128_s
+  : VecInt<[llvm_v8f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_concat_128_d
+  : VecInt<[llvm_v4f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_concat_128
+  : VecInt<[llvm_v4i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_lo_s
+  : VecInt<[llvm_v4f32_ty], [llvm_v8f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_lo_d
+  : VecInt<[llvm_v2f64_ty], [llvm_v4f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_lo
+  : VecInt<[llvm_v2i64_ty], [llvm_v4i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_hi_s
+  : VecInt<[llvm_v4f32_ty], [llvm_v8f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_hi_d
+  : VecInt<[llvm_v2f64_ty], [llvm_v4f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_hi
+  : VecInt<[llvm_v2i64_ty], [llvm_v4i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_lo_s
+  : VecInt<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v4f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_lo_d
+  : VecInt<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_v2f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_lo
+  : VecInt<[llvm_v4i64_ty], [llvm_v4i64_ty, llvm_v2i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_hi_s
+  : VecInt<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v4f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_hi_d
+  : VecInt<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_v2f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_hi
+  : VecInt<[llvm_v4i64_ty], [llvm_v4i64_ty, llvm_v2i64_ty], [IntrNoMem]>;
 } // TargetPrefix = "loongarch"

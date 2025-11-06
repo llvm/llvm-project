@@ -16,25 +16,26 @@
 #include "test/UnitTest/PrintfMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using __llvm_libc::cpp::string_view;
+using LIBC_NAMESPACE::cpp::string_view;
+using LIBC_NAMESPACE::internal::ArgList;
 
 void init(const char *__restrict str, ...) {
   va_list vlist;
   va_start(vlist, str);
-  __llvm_libc::internal::ArgList v(vlist);
+  ArgList v(vlist);
   va_end(vlist);
 
-  __llvm_libc::printf_core::Parser parser(str, v);
+  LIBC_NAMESPACE::printf_core::Parser<ArgList> parser(str, v);
 }
 
-void evaluate(__llvm_libc::printf_core::FormatSection *format_arr,
+void evaluate(LIBC_NAMESPACE::printf_core::FormatSection *format_arr,
               const char *__restrict str, ...) {
   va_list vlist;
   va_start(vlist, str);
-  __llvm_libc::internal::ArgList v(vlist);
+  ArgList v(vlist);
   va_end(vlist);
 
-  __llvm_libc::printf_core::Parser parser(str, v);
+  LIBC_NAMESPACE::printf_core::Parser<ArgList> parser(str, v);
 
   for (auto cur_section = parser.get_next_section();
        !cur_section.raw_string.empty();
@@ -47,11 +48,11 @@ void evaluate(__llvm_libc::printf_core::FormatSection *format_arr,
 TEST(LlvmLibcPrintfParserTest, Constructor) { init("test", 1, 2); }
 
 TEST(LlvmLibcPrintfParserTest, EvalRaw) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "test";
   evaluate(format_arr, str);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = false;
 
   expected.raw_string = {str, 4};
@@ -61,11 +62,11 @@ TEST(LlvmLibcPrintfParserTest, EvalRaw) {
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalSimple) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "test %% test";
   evaluate(format_arr, str);
 
-  __llvm_libc::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
   expected0.has_conv = false;
 
   expected0.raw_string = {str, 5};
@@ -87,28 +88,29 @@ TEST(LlvmLibcPrintfParserTest, EvalSimple) {
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArg) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%d";
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 2};
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalBadArg) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%\0abc";
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = false;
   expected.raw_string = {str, 1};
 
@@ -116,148 +118,194 @@ TEST(LlvmLibcPrintfParserTest, EvalBadArg) {
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%+-0 #d";
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 7};
-  expected.flags = static_cast<__llvm_libc::printf_core::FormatFlags>(
-      __llvm_libc::printf_core::FormatFlags::FORCE_SIGN |
-      __llvm_libc::printf_core::FormatFlags::LEFT_JUSTIFIED |
-      __llvm_libc::printf_core::FormatFlags::LEADING_ZEROES |
-      __llvm_libc::printf_core::FormatFlags::SPACE_PREFIX |
-      __llvm_libc::printf_core::FormatFlags::ALTERNATE_FORM);
-  expected.conv_val_raw = arg1;
+  expected.flags = static_cast<LIBC_NAMESPACE::printf_core::FormatFlags>(
+      LIBC_NAMESPACE::printf_core::FormatFlags::FORCE_SIGN |
+      LIBC_NAMESPACE::printf_core::FormatFlags::LEFT_JUSTIFIED |
+      LIBC_NAMESPACE::printf_core::FormatFlags::LEADING_ZEROES |
+      LIBC_NAMESPACE::printf_core::FormatFlags::SPACE_PREFIX |
+      LIBC_NAMESPACE::printf_core::FormatFlags::ALTERNATE_FORM);
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%12d";
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 4};
   expected.min_width = 12;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%.34d";
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 5};
   expected.precision = 34;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%.d";
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 3};
   expected.precision = 0;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%hd";
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 3};
-  expected.length_modifier = __llvm_libc::printf_core::LengthModifier::h;
-  expected.conv_val_raw = arg1;
+  expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::h;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%lld";
   long long arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 4};
-  expected.length_modifier = __llvm_libc::printf_core::LengthModifier::ll;
-  expected.conv_val_raw = arg1;
+  expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::ll;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
+  expected.conv_name = 'd';
+
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
+}
+
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier) {
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
+  const char *str = "%w32d";
+  long long arg1 = 12345;
+  evaluate(format_arr, str, arg1);
+
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = {str, 5};
+  expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::w;
+  expected.bit_width = 32;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
+  expected.conv_name = 'd';
+
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
+}
+
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier) {
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
+  const char *str = "%wf32d";
+  long long arg1 = 12345;
+  evaluate(format_arr, str, arg1);
+
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = {str, 6};
+  expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::wf;
+  expected.bit_width = 32;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "% -056.78jd";
   intmax_t arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 11};
-  expected.flags = static_cast<__llvm_libc::printf_core::FormatFlags>(
-      __llvm_libc::printf_core::FormatFlags::LEFT_JUSTIFIED |
-      __llvm_libc::printf_core::FormatFlags::LEADING_ZEROES |
-      __llvm_libc::printf_core::FormatFlags::SPACE_PREFIX);
+  expected.flags = static_cast<LIBC_NAMESPACE::printf_core::FormatFlags>(
+      LIBC_NAMESPACE::printf_core::FormatFlags::LEFT_JUSTIFIED |
+      LIBC_NAMESPACE::printf_core::FormatFlags::LEADING_ZEROES |
+      LIBC_NAMESPACE::printf_core::FormatFlags::SPACE_PREFIX);
   expected.min_width = 56;
   expected.precision = 78;
-  expected.length_modifier = __llvm_libc::printf_core::LengthModifier::j;
-  expected.conv_val_raw = arg1;
+  expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::j;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%d%f%s";
   int arg1 = 12345;
   double arg2 = 123.45;
   const char *arg3 = "12345";
   evaluate(format_arr, str, arg1, arg2, arg3);
 
-  __llvm_libc::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 2};
-  expected0.conv_val_raw = arg1;
+  expected0.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected0.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
@@ -265,7 +313,7 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected1.has_conv = true;
 
   expected1.raw_string = {str + 2, 2};
-  expected1.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
+  expected1.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
   ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
@@ -279,37 +327,82 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithOverflowingWidthAndPrecision) {
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
+  const char *str = "%-999999999999.999999999999d";
+  int arg1 = 12345;
+  evaluate(format_arr, str, arg1);
+
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = {str, 28};
+  expected.flags = LIBC_NAMESPACE::printf_core::FormatFlags::LEFT_JUSTIFIED;
+  expected.min_width = INT_MAX;
+  expected.precision = INT_MAX;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
+  expected.conv_name = 'd';
+
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
+}
+
+TEST(LlvmLibcPrintfParserTest,
+     EvalOneArgWithOverflowingWidthAndPrecisionAsArgs) {
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
+  const char *str = "%*.*d";
+  int arg1 = INT_MIN; // INT_MIN = -2147483648 if int is 32 bits.
+  int arg2 = INT_MIN;
+  int arg3 = 12345;
+  evaluate(format_arr, str, arg1, arg2, arg3);
+
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = {str, 5};
+  expected.flags = LIBC_NAMESPACE::printf_core::FormatFlags::LEFT_JUSTIFIED;
+  expected.min_width = INT_MAX;
+  expected.precision = arg2;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg3);
+  expected.conv_name = 'd';
+
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
+}
+
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
 TEST(LlvmLibcPrintfParserTest, IndexModeOneArg) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%1$d";
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 4};
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%1$d%2$f%3$s";
   int arg1 = 12345;
   double arg2 = 123.45;
   const char *arg3 = "12345";
   evaluate(format_arr, str, arg1, arg2, arg3);
 
-  __llvm_libc::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 4};
-  expected0.conv_val_raw = arg1;
+  expected0.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected0.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
@@ -317,7 +410,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
   expected1.has_conv = true;
 
   expected1.raw_string = {str + 4, 4};
-  expected1.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
+  expected1.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
   ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
@@ -332,18 +425,19 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
 }
 
 TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%3$d%2$f%1$s";
   int arg1 = 12345;
   double arg2 = 123.45;
   const char *arg3 = "12345";
   evaluate(format_arr, str, arg3, arg2, arg1);
 
-  __llvm_libc::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 4};
-  expected0.conv_val_raw = arg1;
+  expected0.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected0.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
@@ -351,7 +445,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
   expected1.has_conv = true;
 
   expected1.raw_string = {str + 4, 4};
-  expected1.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
+  expected1.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
   ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
@@ -366,14 +460,14 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
 }
 
 TEST(LlvmLibcPrintfParserTest, IndexModeTenArgsRandom) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%6$d%3$d%7$d%2$d%8$d%1$d%4$d%9$d%5$d%10$d";
   int args[10] = {6, 4, 2, 7, 9, 1, 3, 5, 8, 10};
   evaluate(format_arr, str, args[0], args[1], args[2], args[3], args[4],
            args[5], args[6], args[7], args[8], args[9]);
 
   for (size_t i = 0; i < 10; ++i) {
-    __llvm_libc::printf_core::FormatSection expected;
+    LIBC_NAMESPACE::printf_core::FormatSection expected;
     expected.has_conv = true;
 
     expected.raw_string = {str + (4 * i),
@@ -385,7 +479,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeTenArgsRandom) {
 }
 
 TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "normal text %3$llu %% %2$ *4$f %2$ .*4$f %1$1.1c";
   char arg1 = '1';
   double arg2 = 123.45;
@@ -393,7 +487,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   int arg4 = 10;
   evaluate(format_arr, str, arg1, arg2, arg3, arg4);
 
-  __llvm_libc::printf_core::FormatSection expected0, expected1, expected2,
+  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2,
       expected3, expected4, expected5, expected6, expected7, expected8,
       expected9;
 
@@ -406,8 +500,9 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected1.has_conv = true;
 
   expected1.raw_string = {str + 12, 6};
-  expected1.length_modifier = __llvm_libc::printf_core::LengthModifier::ll;
-  expected1.conv_val_raw = arg3;
+  expected1.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::ll;
+  expected1.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg3);
   expected1.conv_name = 'u';
 
   EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
@@ -434,9 +529,9 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected5.has_conv = true;
 
   expected5.raw_string = {str + 22, 8};
-  expected5.flags = __llvm_libc::printf_core::FormatFlags::SPACE_PREFIX;
+  expected5.flags = LIBC_NAMESPACE::printf_core::FormatFlags::SPACE_PREFIX;
   expected5.min_width = arg4;
-  expected5.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
+  expected5.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
   expected5.conv_name = 'f';
 
   EXPECT_PFORMAT_EQ(expected5, format_arr[5]);
@@ -450,9 +545,9 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected7.has_conv = true;
 
   expected7.raw_string = {str + 31, 9};
-  expected7.flags = __llvm_libc::printf_core::FormatFlags::SPACE_PREFIX;
+  expected7.flags = LIBC_NAMESPACE::printf_core::FormatFlags::SPACE_PREFIX;
   expected7.precision = arg4;
-  expected7.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
+  expected7.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
   expected7.conv_name = 'f';
 
   EXPECT_PFORMAT_EQ(expected7, format_arr[7]);
@@ -468,14 +563,15 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected9.raw_string = {str + 41, 7};
   expected9.min_width = 1;
   expected9.precision = 1;
-  expected9.conv_val_raw = arg1;
+  expected9.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected9.conv_name = 'c';
 
   EXPECT_PFORMAT_EQ(expected9, format_arr[9]);
 }
 
 TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%1$d%2$d%4$d";
   int arg1 = 1;
   int arg2 = 2;
@@ -484,18 +580,20 @@ TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
 
   evaluate(format_arr, str, arg1, arg2, arg3, arg4);
 
-  __llvm_libc::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
 
   expected0.has_conv = true;
   expected0.raw_string = {str, 4};
-  expected0.conv_val_raw = arg1;
+  expected0.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected0.conv_name = 'd';
 
   EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
   expected1.raw_string = {str + 4, 4};
-  expected1.conv_val_raw = arg2;
+  expected1.conv_val_raw =
+      static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg2);
   expected1.conv_name = 'd';
 
   EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
@@ -507,11 +605,11 @@ TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
 }
 
 TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%2$d%";
   evaluate(format_arr, str, 1, 2);
 
-  __llvm_libc::printf_core::FormatSection expected0, expected1;
+  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1;
   expected0.has_conv = false;
 
   expected0.raw_string = {str, 4};
@@ -524,7 +622,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash) {
 }
 
 TEST(LlvmLibcPrintfParserTest, DoublePercentIsAllowedInvalidIndex) {
-  __llvm_libc::printf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
 
   // Normally this conversion specifier would be raw (due to having a width
   // defined as an invalid argument) but since it's a % conversion it's allowed
@@ -540,7 +638,7 @@ TEST(LlvmLibcPrintfParserTest, DoublePercentIsAllowedInvalidIndex) {
 
   evaluate(format_arr, str, 1, 2);
 
-  __llvm_libc::printf_core::FormatSection expected0;
+  LIBC_NAMESPACE::printf_core::FormatSection expected0;
   expected0.has_conv = true;
 
   expected0.raw_string = str;

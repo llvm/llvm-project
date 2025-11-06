@@ -21,14 +21,13 @@
 #include <__config>
 #include <__fwd/mdspan.h>
 #include <__mdspan/extents.h>
+#include <__memory/addressof.h>
+#include <__type_traits/common_type.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__utility/integer_sequence.h>
 #include <array>
-#include <cinttypes>
-#include <cstddef>
-#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -60,14 +59,14 @@ private:
 
     index_type __prod = __ext.extent(0);
     for (rank_type __r = 1; __r < extents_type::rank(); __r++) {
-      bool __overflowed = __builtin_mul_overflow(__prod, __ext.extent(__r), &__prod);
+      bool __overflowed = __builtin_mul_overflow(__prod, __ext.extent(__r), std::addressof(__prod));
       if (__overflowed)
         return false;
     }
     return true;
   }
 
-  static_assert((extents_type::rank_dynamic() > 0) || __required_span_size_is_representable(extents_type()),
+  static_assert(extents_type::rank_dynamic() > 0 || __required_span_size_is_representable(extents_type()),
                 "layout_left::mapping product of static extents must be representable as index_type.");
 
 public:
@@ -110,12 +109,27 @@ public:
         "layout_left::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
 
-// FIXME: add when we add other layouts
-#  if 0
-    template<class _OtherExtents>
-      constexpr explicit(extents_type::rank() > 0)
-        mapping(const layout_stride::mapping_<OtherExtents>&) noexcept;
-#  endif
+  template <class _OtherExtents>
+    requires(is_constructible_v<extents_type, _OtherExtents>)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(extents_type::rank() > 0)
+      mapping(const layout_stride::mapping<_OtherExtents>& __other) noexcept
+      : __extents_(__other.extents()) {
+    if constexpr (extents_type::rank() > 0) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          ([&]() {
+            using _CommonType = common_type_t<typename extents_type::index_type, typename _OtherExtents::index_type>;
+            for (rank_type __r = 0; __r < extents_type::rank(); __r++)
+              if (static_cast<_CommonType>(stride(__r)) != static_cast<_CommonType>(__other.stride(__r)))
+                return false;
+            return true;
+          }()),
+          "layout_left::mapping from layout_stride ctor: strides are not compatible with layout_left.");
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
+          "layout_left::mapping from layout_stride ctor: other.required_span_size() must be representable as "
+          "index_type.");
+    }
+  }
 
   _LIBCPP_HIDE_FROM_ABI constexpr mapping& operator=(const mapping&) noexcept = default;
 

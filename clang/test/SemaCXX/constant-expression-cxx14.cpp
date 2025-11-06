@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23          %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23,cxx20 %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14          %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++23 -Werror=return-type -fsyntax-only -verify=expected,cxx20_23,cxx23          %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++20 -Werror=return-type -fsyntax-only -verify=expected,cxx14_20,cxx20_23,cxx20 %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++14 -Werror=return-type -fsyntax-only -verify=expected,cxx14_20,cxx14          %s -fcxx-exceptions -triple=x86_64-linux-gnu
 
 struct S {
   // dummy ctor to make this a literal type
@@ -44,13 +44,13 @@ constexpr int g(int k) {
   return 3 * k3 + 5 * k2 + n * k - 20;
 }
 static_assert(g(2) == 42, "");
-constexpr int h(int n) {  // expected-error {{constexpr function never produces a constant expression}}
-  static const int m = n; // expected-note {{control flows through the definition of a static variable}} \
+constexpr int h(int n) {  // cxx14_20-error {{constexpr function never produces a constant expression}}
+  static const int m = n; // cxx14_20-note {{control flows through the definition of a static variable}} \
                           // cxx14_20-warning {{definition of a static variable in a constexpr function is a C++23 extension}}
   return m;
 }
-constexpr int i(int n) {        // expected-error {{constexpr function never produces a constant expression}}
-  thread_local const int m = n; // expected-note {{control flows through the definition of a thread_local variable}} \
+constexpr int i(int n) {        // cxx14_20-error {{constexpr function never produces a constant expression}}
+  thread_local const int m = n; // cxx14_20-note {{control flows through the definition of a thread_local variable}} \
                                 // cxx14_20-warning {{definition of a thread_local variable in a constexpr function is a C++23 extension}}
   return m;
 }
@@ -68,6 +68,7 @@ constexpr int j(int k) {
     }
   }
 } // expected-note 2{{control reached end of constexpr function}}
+  // cxx23-error@-1 {{does not return a value in all control paths}}
 static_assert(j(0) == -3, "");
 static_assert(j(1) == 5, "");
 static_assert(j(2), ""); // expected-error {{constant expression}} expected-note {{in call to 'j(2)'}}
@@ -81,7 +82,7 @@ constexpr void k() {
 
 // If the return type is not 'void', no return statements => never a constant
 // expression, so still diagnose that case.
-[[noreturn]] constexpr int fn() { // expected-error {{no return statement in constexpr function}}
+[[noreturn]] constexpr int fn() { // cxx14_20-error {{no return statement in constexpr function}}
   fn();
 }
 
@@ -104,10 +105,10 @@ static_assert(l(false) == 5, "");
 static_assert(l(true), ""); // expected-error {{constant expression}} expected-note {{in call to 'l(true)'}}
 
 // Potential constant expression checking is still applied where possible.
-constexpr int htonl(int x) { // expected-error {{never produces a constant expression}}
+constexpr int htonl(int x) { // cxx14_20-error {{never produces a constant expression}}
   typedef unsigned char uchar;
   uchar arr[4] = { uchar(x >> 24), uchar(x >> 16), uchar(x >> 8), uchar(x) };
-  return *reinterpret_cast<int*>(arr); // expected-note {{reinterpret_cast is not allowed in a constant expression}}
+  return *reinterpret_cast<int*>(arr); // cxx14_20-note {{reinterpret_cast is not allowed in a constant expression}}
 }
 
 constexpr int maybe_htonl(bool isBigEndian, int x) {
@@ -183,7 +184,7 @@ namespace string_assign {
   static_assert(!test1(100), "");
   static_assert(!test1(101), ""); // expected-error {{constant expression}} expected-note {{in call to 'test1(101)'}}
 
-  constexpr void f() { // expected-error{{constexpr function never produces a constant expression}} expected-note@+2{{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+  constexpr void f() { // cxx14_20-error{{constexpr function never produces a constant expression}} cxx14_20-note@+2{{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}}
     char foo[10] = { "z" }; // expected-note {{here}}
     foo[10] = 'x'; // expected-warning {{past the end}}
   }
@@ -207,14 +208,14 @@ namespace array_resize {
 namespace potential_const_expr {
   constexpr void set(int &n) { n = 1; }
   constexpr int div_zero_1() { int z = 0; set(z); return 100 / z; } // no error
-  constexpr int div_zero_2() { // expected-error {{never produces a constant expression}}
+  constexpr int div_zero_2() { // cxx14_20-error {{never produces a constant expression}}
     int z = 0;
-    return 100 / (set(z), 0); // expected-note {{division by zero}}
+    return 100 / (set(z), 0); // cxx14_20-note {{division by zero}}
   }
-  int n; // expected-note {{declared here}}
-  constexpr int ref() { // expected-error {{never produces a constant expression}}
+  int n; // cxx14_20-note {{declared here}}
+  constexpr int ref() { // cxx14_20-error {{never produces a constant expression}}
     int &r = n;
-    return r; // expected-note {{read of non-const variable 'n'}}
+    return r; // cxx14_20-note {{read of non-const variable 'n'}}
   }
 }
 
@@ -264,7 +265,7 @@ namespace const_modify {
 
 namespace null {
   constexpr int test(int *p) {
-    return *p = 123; // expected-note {{assignment to dereferenced null pointer}}
+    return *p = 123; // expected-note {{dereferencing a null pointer}}
   }
   static_assert(test(0), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
@@ -846,8 +847,8 @@ namespace StmtExpr {
   static_assert(g() == 0, ""); // expected-error {{constant expression}} expected-note {{in call}}
 
   // FIXME: We should handle the void statement expression case.
-  constexpr int h() { // expected-error {{never produces a constant}}
-    ({ if (true) {} }); // expected-note {{not supported}}
+  constexpr int h() { // cxx14_20-error {{never produces a constant}}
+    ({ if (true) {} }); // cxx14_20-note {{not supported}}
     return 0;
   }
 }
@@ -1043,10 +1044,10 @@ static_assert(sum(Cs) == 'a' + 'b', ""); // expected-error{{not an integral cons
 constexpr int S = sum(Cs); // expected-error{{must be initialized by a constant expression}} expected-note{{in call}}
 }
 
-constexpr void PR28739(int n) { // expected-error {{never produces a constant}}
+constexpr void PR28739(int n) { // cxx14_20-error {{never produces a constant}}
   int *p = &n;                  // expected-note {{array 'p' declared here}}
-  p += (__int128)(unsigned long)-1; // expected-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
-  // expected-warning@-1 {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4611686018427387904 elements)}}
+  p += (__int128)(unsigned long)-1; // cxx14_20-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
+  // expected-warning@-1 {{the pointer incremented by 18'446'744'073'709'551'615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4'611'686'018'427'387'904 elements)}}
 }
 
 constexpr void Void(int n) {
@@ -1304,4 +1305,154 @@ constexpr int field(int a) {
 }
 static_assert(field(3), ""); // expected-error {{constant expression}} \
                              // expected-note {{in call to 'field(3)'}}
+}
+
+namespace literal_comparison {
+
+constexpr bool different_in_loop(bool b = false) {
+  if (b) return false;
+
+  const char *p[2] = {};
+  for (const char *&r : p)
+    r = "hello";
+  return p[0] == p[1]; // expected-note {{addresses of potentially overlapping literals}}
+}
+constexpr bool check = different_in_loop();
+  // expected-error@-1 {{}} expected-note@-1 {{in call}}
+
+}
+
+namespace comparison_dead_variable {
+  constexpr bool f() {
+    int *p1 = 0, *p2 = 0;
+    {
+        int x = 0; p1 = &x;
+    }
+    {
+        int x = 0; p2 = &x;
+    }
+    return p1 != p2;
+  }
+  // FIXME: This should fail.
+  static_assert(f(),"");
+
+}
+namespace GH48665 {
+constexpr bool foo(int *i) {
+    int &j = *i;
+    // expected-note@-1 {{dereferencing a null pointer}}
+    return true;
+}
+
+static_assert(foo(nullptr), ""); // expected-note {{in call to 'foo(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+constexpr bool foo_rvalue(int *i) {
+    int &&j = (int&&)*i;
+    // expected-note@-1 {{dereferencing a null pointer}}
+    return true;
+}
+static_assert(foo_rvalue(nullptr), ""); // expected-note {{in call to 'foo_rvalue(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+int arr[3]; // expected-note {{declared here}}
+constexpr bool f() { // cxx14_20-error {{constexpr function never produces a constant expression}}
+  int &r  = arr[3]; // expected-note {{read of dereferenced one-past-the-end pointer}} \
+                    // cxx14_20-note {{read of dereferenced one-past-the-end pointer}} \
+                    // expected-warning {{array index 3 is past the end of the array}}
+  return true;
+}
+static_assert(f(), ""); // expected-note {{in call to 'f()'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+
+struct Aggregate {
+   int &r;
+};
+constexpr bool test_agg(int *i) {
+   Aggregate a{*i}; //expected-note {{dereferencing a null pointer}}
+   return true;
+}
+static_assert(test_agg(nullptr), ""); // expected-note {{in call to 'test_agg(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+struct B {
+  constexpr B(int *p) : r{*p} {}  // expected-note {{dereferencing a null pointer}}
+  int &r;
+};
+
+constexpr bool test_ctr(int *i) {
+    B b(i); // expected-note {{in call to 'B(nullptr)'}}
+    return true;
+}
+
+static_assert(test_ctr(nullptr), ""); // expected-note {{in call to 'test_ctr(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+
+// verify that we can dereference function pointers
+namespace functions {
+
+constexpr int f() {return 0;}
+constexpr int(*f_ptr)() = &f;
+constexpr int(*null_ptr)() = nullptr;
+
+constexpr int(&f_ref)() = f;
+constexpr int test = (*f_ptr)();
+constexpr int test2 = (*f_ref)();
+constexpr int test3 = (*f_ref)();
+constexpr int test4 = (*null_ptr)();
+//expected-error@-1 {{constexpr variable 'test4' must be initialized by a constant expression}} \
+//expected-note@-1 {{'(*null_ptr)' evaluates to a null function pointer}}
+
+constexpr int(*f_ptr_arr[1])() = {&f};
+constexpr int test_array_ok = (f_ptr_arr[0])();
+constexpr int test_array_err = (f_ptr_arr[1])();
+// expected-error@-1 {{constexpr variable 'test_array_err' must be initialized by a constant expression}} \
+// expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+
+struct S {
+    int(*f_ptr)() = &f;
+    int(*f_ptr_arr[1])() = {&f};
+    int(&f_ref)() = f;
+    int(*null_ptr)() = nullptr;
+};
+
+constexpr int test_member() {
+    S s {};
+    (*s.f_ptr)();
+    (*s.f_ref)();
+    (s.f_ref)();
+    (s.f_ptr_arr[0])();
+    (s.f_ptr_arr[1])();
+    // expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+    return 0;
+}
+constexpr int test_member_null() { // cxx14_20-error {{never produces a constant expression}}
+    S s {};
+    (*s.null_ptr)(); // expected-note {{'(*s.null_ptr)' evaluates to a null function pointer}} \
+                     // cxx14_20-note {{'(*s.null_ptr)' evaluates to a null function pointer}}
+    return 0;
+}
+
+static_assert(test_member(), "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+// expected-note@-1 {{in call to 'test_member()'}}
+
+static_assert(test_member_null(), "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+// expected-note@-1 {{in call to 'test_member_null()'}}
+
+}
+}
+
+namespace GH149500 {
+  unsigned int * p = &(*(unsigned int *)0x400);
+  static const void *q = &(*(const struct sysrq_key_op *)0);
+}
+
+constexpr bool missingCase() {
+  switch (1) {
+    1u: return false; // expected-error {{expected 'case' keyword before expression}}
+  }
 }

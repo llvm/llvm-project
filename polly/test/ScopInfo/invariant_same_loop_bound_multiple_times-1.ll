@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Verify that we only have one parameter and one invariant load for all
-; three loads that occure in the region but actually access the same
+; three loads that occur in the region but actually access the same
 ; location. Also check that the execution context is the most generic
 ; one, e.g., here the universal set.
 ;

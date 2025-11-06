@@ -20,6 +20,9 @@
 //       -- File: dict => Coverage for a single file
 //         -- Branches: array => List of Branches in the file
 //           -- Branch: dict => Describes a branch of the file with counters
+//         -- MCDC Records: array => List of MCDC records in the file
+//           -- MCDC Values: array => List of T/F covered condition values and
+//           list of executed test vectors
 //         -- Segments: array => List of Segments contained in the file
 //           -- Segment: dict => Describes a segment of the file with a counter
 //         -- Expansions: array => List of expansion records
@@ -34,6 +37,7 @@
 //           -- FunctionCoverage: dict => Object summarizing function coverage
 //           -- RegionCoverage: dict => Object summarizing region coverage
 //           -- BranchCoverage: dict => Object summarizing branch coverage
+//           -- MCDCCoverage: dict => Object summarizing MC/DC coverage
 //     -- Functions: array => List of objects describing coverage for functions
 //       -- Function: dict => Coverage info for a single function
 //         -- Filenames: array => List of filenames that the function relates to
@@ -43,6 +47,7 @@
 //     -- InstantiationCoverage: dict => Object summarizing inst. coverage
 //     -- RegionCoverage: dict => Object summarizing region coverage
 //     -- BranchCoverage: dict => Object summarizing branch coverage
+//     -- MCDCCoverage: dict => Object summarizing MC/DC coverage
 //
 //===----------------------------------------------------------------------===//
 
@@ -58,7 +63,7 @@
 #include <utility>
 
 /// The semantic version combined as a string.
-#define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.1"
+#define LLVM_COVERAGE_EXPORT_JSON_STR "3.1.0"
 
 /// Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
@@ -97,6 +102,52 @@ json::Array renderBranch(const coverage::CountedRegion &Region) {
        Region.ExpandedFileID, int64_t(Region.Kind)});
 }
 
+json::Array gatherConditions(const coverage::MCDCRecord &Record) {
+  json::Array Conditions;
+  for (unsigned c = 0; c < Record.getNumConditions(); c++)
+    Conditions.push_back(Record.isConditionIndependencePairCovered(c));
+  return Conditions;
+}
+
+json::Value renderCondState(const coverage::MCDCRecord::CondState CondState) {
+  switch (CondState) {
+  case coverage::MCDCRecord::MCDC_DontCare:
+    return json::Value(nullptr);
+  case coverage::MCDCRecord::MCDC_True:
+    return json::Value(true);
+  case coverage::MCDCRecord::MCDC_False:
+    return json::Value(false);
+  }
+  llvm_unreachable("Unknown llvm::coverage::MCDCRecord::CondState enum");
+}
+
+json::Array gatherTestVectors(coverage::MCDCRecord &Record) {
+  json::Array TestVectors;
+  unsigned NumConditions = Record.getNumConditions();
+  for (unsigned tv = 0; tv < Record.getNumTestVectors(); tv++) {
+
+    json::Array TVConditions;
+    for (unsigned c = 0; c < NumConditions; c++)
+      TVConditions.push_back(renderCondState(Record.getTVCondition(tv, c)));
+
+    TestVectors.push_back(
+        json::Object({{"executed", json::Value(true)},
+                      {"result", renderCondState(Record.getTVResult(tv))},
+                      {"conditions", std::move(TVConditions)}}));
+  }
+  return TestVectors;
+}
+
+json::Array renderMCDCRecord(const coverage::MCDCRecord &Record) {
+  const llvm::coverage::CounterMappingRegion &CMR = Record.getDecisionRegion();
+  const auto [TrueDecisions, FalseDecisions] = Record.getDecisions();
+  return json::Array(
+      {CMR.LineStart, CMR.ColumnStart, CMR.LineEnd, CMR.ColumnEnd,
+       TrueDecisions, FalseDecisions, CMR.FileID, CMR.ExpandedFileID,
+       int64_t(CMR.Kind), gatherConditions(Record),
+       gatherTestVectors(const_cast<coverage::MCDCRecord &>(Record))});
+}
+
 json::Array renderRegions(ArrayRef<coverage::CountedRegion> Regions) {
   json::Array RegionArray;
   for (const auto &Region : Regions)
@@ -107,9 +158,16 @@ json::Array renderRegions(ArrayRef<coverage::CountedRegion> Regions) {
 json::Array renderBranchRegions(ArrayRef<coverage::CountedRegion> Regions) {
   json::Array RegionArray;
   for (const auto &Region : Regions)
-    if (!Region.Folded)
+    if (!Region.TrueFolded || !Region.FalseFolded)
       RegionArray.push_back(renderBranch(Region));
   return RegionArray;
+}
+
+json::Array renderMCDCRecords(ArrayRef<coverage::MCDCRecord> Records) {
+  json::Array RecordArray;
+  for (auto &Record : Records)
+    RecordArray.push_back(renderMCDCRecord(Record));
+  return RecordArray;
 }
 
 std::vector<llvm::coverage::CountedRegion>
@@ -178,32 +236,43 @@ json::Object renderSummary(const FileCoverageSummary &Summary) {
              {"covered", int64_t(Summary.BranchCoverage.getCovered())},
              {"notcovered", int64_t(Summary.BranchCoverage.getNumBranches() -
                                     Summary.BranchCoverage.getCovered())},
-             {"percent", Summary.BranchCoverage.getPercentCovered()}})}});
+             {"percent", Summary.BranchCoverage.getPercentCovered()}})},
+       {"mcdc",
+        json::Object(
+            {{"count", int64_t(Summary.MCDCCoverage.getNumPairs())},
+             {"covered", int64_t(Summary.MCDCCoverage.getCoveredPairs())},
+             {"notcovered", int64_t(Summary.MCDCCoverage.getNumPairs() -
+                                    Summary.MCDCCoverage.getCoveredPairs())},
+             {"percent", Summary.MCDCCoverage.getPercentCovered()}})}});
 }
 
 json::Array renderFileExpansions(const coverage::CoverageMapping &Coverage,
-                                 const coverage::CoverageData &FileCoverage,
-                                 const FileCoverageSummary &FileReport) {
+                                 const coverage::CoverageData &FileCoverage) {
   json::Array ExpansionArray;
   for (const auto &Expansion : FileCoverage.getExpansions())
     ExpansionArray.push_back(renderExpansion(Coverage, Expansion));
   return ExpansionArray;
 }
 
-json::Array renderFileSegments(const coverage::CoverageData &FileCoverage,
-                               const FileCoverageSummary &FileReport) {
+json::Array renderFileSegments(const coverage::CoverageData &FileCoverage) {
   json::Array SegmentArray;
   for (const auto &Segment : FileCoverage)
     SegmentArray.push_back(renderSegment(Segment));
   return SegmentArray;
 }
 
-json::Array renderFileBranches(const coverage::CoverageData &FileCoverage,
-                               const FileCoverageSummary &FileReport) {
+json::Array renderFileBranches(const coverage::CoverageData &FileCoverage) {
   json::Array BranchArray;
   for (const auto &Branch : FileCoverage.getBranches())
     BranchArray.push_back(renderBranch(Branch));
   return BranchArray;
+}
+
+json::Array renderFileMCDC(const coverage::CoverageData &FileCoverage) {
+  json::Array MCDCRecordArray;
+  for (const auto &Record : FileCoverage.getMCDCRecords())
+    MCDCRecordArray.push_back(renderMCDCRecord(Record));
+  return MCDCRecordArray;
 }
 
 json::Object renderFile(const coverage::CoverageMapping &Coverage,
@@ -214,11 +283,11 @@ json::Object renderFile(const coverage::CoverageMapping &Coverage,
   if (!Options.ExportSummaryOnly) {
     // Calculate and render detailed coverage information for given file.
     auto FileCoverage = Coverage.getCoverageForFile(Filename);
-    File["segments"] = renderFileSegments(FileCoverage, FileReport);
-    File["branches"] = renderFileBranches(FileCoverage, FileReport);
+    File["segments"] = renderFileSegments(FileCoverage);
+    File["branches"] = renderFileBranches(FileCoverage);
+    File["mcdc_records"] = renderFileMCDC(FileCoverage);
     if (!Options.SkipExpansions) {
-      File["expansions"] =
-          renderFileExpansions(Coverage, FileCoverage, FileReport);
+      File["expansions"] = renderFileExpansions(Coverage, FileCoverage);
     }
   }
   File["summary"] = renderSummary(FileReport);
@@ -236,7 +305,7 @@ json::Array renderFiles(const coverage::CoverageMapping &Coverage,
     S = heavyweight_hardware_concurrency(SourceFiles.size());
     S.Limit = true;
   }
-  ThreadPool Pool(S);
+  DefaultThreadPool Pool(S);
   json::Array FileArray;
   std::mutex FileArrayMutex;
 
@@ -264,6 +333,7 @@ json::Array renderFunctions(
                       {"count", clamp_uint64_to_int64(F.ExecutionCount)},
                       {"regions", renderRegions(F.CountedRegions)},
                       {"branches", renderBranchRegions(F.CountedBranchRegions)},
+                      {"mcdc_records", renderMCDCRecords(F.MCDCRecords)},
                       {"filenames", json::Array(F.Filenames)}}));
   return FunctionArray;
 }

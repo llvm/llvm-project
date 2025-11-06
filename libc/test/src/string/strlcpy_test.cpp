@@ -8,23 +8,21 @@
 
 #include "src/string/strlcpy.h"
 #include "test/UnitTest/Test.h"
-#include <stdlib.h>
 
 TEST(LlvmLibcStrlcpyTest, TooBig) {
   const char *str = "abc";
   char buf[2];
-  EXPECT_EQ(__llvm_libc::strlcpy(buf, str, 2), size_t(3));
+  EXPECT_EQ(LIBC_NAMESPACE::strlcpy(buf, str, 2), size_t(3));
   EXPECT_STREQ(buf, "a");
-
-  EXPECT_EQ(__llvm_libc::strlcpy(nullptr, str, 0), size_t(3));
+  char dst[] = "";
+  EXPECT_EQ(LIBC_NAMESPACE::strlcpy(dst, str, 0), size_t(3));
 }
 
 TEST(LlvmLibcStrlcpyTest, Smaller) {
   const char *str = "abc";
   char buf[7]{"111111"};
 
-  EXPECT_EQ(__llvm_libc::strlcpy(buf, str, 7), size_t(3));
+  EXPECT_EQ(LIBC_NAMESPACE::strlcpy(buf, str, 7), size_t(3));
   EXPECT_STREQ(buf, "abc");
-  for (const char *p = buf + 3; p < buf + 7; p++)
-    EXPECT_EQ(*p, '\0');
+  EXPECT_STREQ(buf + 4, "11");
 }

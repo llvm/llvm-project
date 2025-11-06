@@ -4,11 +4,6 @@
 ; Make sure the SCEV for %invar is invalidated properly when the instruction is
 ; moved by LoopDeletion.
 
-; CHECK:      Determining loop execution counts for: @test
-; CHECK-NEXT: Loop %inner: backedge-taken count is (405 + %invar)<nuw><nsw>
-; CHECK-NEXT: Loop %inner: constant max backedge-taken count is 405
-; CHECK-NEXT: Loop %inner: symbolic max backedge-taken count is (405 + %invar)<nuw><nsw>
-; CHECK-NEXT: Loop %inner: Predicated backedge-taken count is (405 + %invar)<nuw><nsw>
 
 define void @test_pr57837() {
 ; CHECK-LABEL: @test_pr57837(
@@ -26,7 +21,7 @@ define void @test_pr57837() {
 ; CHECK-NEXT:    call void @use(i32 [[ADD_1]])
 ; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i32 [[INNER_IV]], 1
 ; CHECK-NEXT:    [[INVAR_ADD:%.*]] = add i32 [[INVAR]], 407
-; CHECK-NEXT:    [[INNER_CMP:%.*]] = icmp ult i32 [[INNER_IV_NEXT]], [[INVAR_ADD]]
+; CHECK-NEXT:    [[INNER_CMP:%.*]] = icmp samesign ult i32 [[INNER_IV_NEXT]], [[INVAR_ADD]]
 ; CHECK-NEXT:    br i1 [[INNER_CMP]], label [[INNER]], label [[INNER_EXIT:%.*]]
 ; CHECK:       inner.exit:
 ; CHECK-NEXT:    [[INVAR_LCSSA:%.*]] = phi i32 [ [[INVAR]], [[INNER]] ]
@@ -89,13 +84,13 @@ define i32 @scev_invalidation_after_deleting(ptr %src) {
 ; CHECK:       inner.2.preheader:
 ; CHECK-NEXT:    br label [[INNER_3_PH:%.*]]
 ; CHECK:       inner.3.ph:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    br label [[INNER_3:%.*]]
 ; CHECK:       inner.3:
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[SRC:%.*]], align 4
 ; CHECK-NEXT:    br i1 false, label [[OUTER_LATCH]], label [[INNER_3]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[L_LCSSA:%.*]] = phi i32 [ [[L]], [[INNER_3]] ]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i32 [[L_LCSSA]], [[TRUNC]]
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ;

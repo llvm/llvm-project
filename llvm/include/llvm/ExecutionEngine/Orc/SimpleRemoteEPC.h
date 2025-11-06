@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -28,8 +29,9 @@
 namespace llvm {
 namespace orc {
 
-class SimpleRemoteEPC : public ExecutorProcessControl,
-                        public SimpleRemoteEPCTransportClient {
+class LLVM_ABI SimpleRemoteEPC : public ExecutorProcessControl,
+                                 public SimpleRemoteEPCTransportClient,
+                                 private DylibManager {
 public:
   /// A setup object containing callbacks to construct a memory manager and
   /// memory access object. Both are optional. If not specified,
@@ -67,12 +69,7 @@ public:
   SimpleRemoteEPC &operator=(const SimpleRemoteEPC &) = delete;
   SimpleRemoteEPC(SimpleRemoteEPC &&) = delete;
   SimpleRemoteEPC &operator=(SimpleRemoteEPC &&) = delete;
-  ~SimpleRemoteEPC();
-
-  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
-
-  Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) override;
+  ~SimpleRemoteEPC() override;
 
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
@@ -96,7 +93,9 @@ public:
 private:
   SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP,
                   std::unique_ptr<TaskDispatcher> D)
-    : ExecutorProcessControl(std::move(SSP), std::move(D)) {}
+      : ExecutorProcessControl(std::move(SSP), std::move(D)) {
+    this->DylibMgr = this;
+  }
 
   static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
   createDefaultMemoryManager(SimpleRemoteEPC &SREPC);
@@ -119,6 +118,11 @@ private:
   uint64_t getNextSeqNo() { return NextSeqNo++; }
   void releaseSeqNo(uint64_t SeqNo) {}
 
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
+
+  void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                          SymbolLookupCompleteFn F) override;
+
   using PendingCallWrapperResultsMap =
     DenseMap<uint64_t, IncomingWFRHandler>;
 
@@ -131,7 +135,7 @@ private:
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   std::unique_ptr<MemoryAccess> OwnedMemAccess;
 
-  std::unique_ptr<EPCGenericDylibManager> DylibMgr;
+  std::unique_ptr<EPCGenericDylibManager> EPCDylibMgr;
   ExecutorAddr RunAsMainAddr;
   ExecutorAddr RunAsVoidFunctionAddr;
   ExecutorAddr RunAsIntFunctionAddr;

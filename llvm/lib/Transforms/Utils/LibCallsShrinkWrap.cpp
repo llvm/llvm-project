@@ -101,7 +101,7 @@ private:
                     float Val) {
     Constant *V = ConstantFP::get(BBBuilder.getContext(), APFloat(Val));
     if (!Arg->getType()->isFloatTy())
-      V = ConstantExpr::getFPExtend(V, Arg->getType());
+      V = ConstantFoldCastInstruction(Instruction::FPExt, V, Arg->getType());
     if (BBBuilder.GetInsertBlock()->getParent()->hasFnAttribute(Attribute::StrictFP))
       BBBuilder.setIsFPConstrained(true);
     return BBBuilder.CreateFCmp(Cmp, Arg, V);
@@ -467,7 +467,7 @@ Value *LibCallsShrinkWrap::generateCondForPow(CallInst *CI,
 void LibCallsShrinkWrap::shrinkWrapCI(CallInst *CI, Value *Cond) {
   assert(Cond != nullptr && "ShrinkWrapCI is not expecting an empty call inst");
   MDNode *BranchWeights =
-      MDBuilder(CI->getContext()).createBranchWeights(1, 2000);
+      MDBuilder(CI->getContext()).createUnlikelyBranchWeights();
 
   Instruction *NewInst =
       SplitBlockAndInsertIfThen(Cond, CI, false, BranchWeights, &DTU);
@@ -498,7 +498,7 @@ bool LibCallsShrinkWrap::perform(CallInst *CI) {
 
 static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
                     DominatorTree *DT) {
-  if (F.hasFnAttribute(Attribute::OptimizeForSize))
+  if (F.hasOptSize())
     return false;
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   LibCallsShrinkWrap CCDCE(TLI, DTU);

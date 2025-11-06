@@ -25,13 +25,13 @@
 ; optimally packed, this requires
 
 
-@lds0 = internal unnamed_addr addrspace(3) global [32 x <4 x i32>] undef, align 16
-@lds2 = internal unnamed_addr addrspace(3) global [32 x i64] undef, align 8
-@lds1 = internal unnamed_addr addrspace(3) global [73 x i32] undef, align 4
+@lds0 = internal unnamed_addr addrspace(3) global [32 x <4 x i32>] poison, align 16
+@lds2 = internal unnamed_addr addrspace(3) global [32 x i64] poison, align 8
+@lds1 = internal unnamed_addr addrspace(3) global [73 x i32] poison, align 4
 
 
 ; GCN-LABEL: {{^}}promote_alloca_size_order_0:
-; GCN: workgroup_group_segment_byte_size = 1060
+; GCN: .amdhsa_group_segment_fixed_size 1060
 define amdgpu_kernel void @promote_alloca_size_order_0(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in, i32 %idx) #0 {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
@@ -62,7 +62,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}promote_alloca_size_order_1:
-; GCN: workgroup_group_segment_byte_size = 1072
+; GCN: .amdhsa_group_segment_fixed_size 1072
 define amdgpu_kernel void @promote_alloca_size_order_1(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in, i32 %idx) #0 {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
@@ -92,14 +92,14 @@ entry:
   ret void
 }
 
-@lds3 = internal unnamed_addr addrspace(3) global [13 x i32] undef, align 4
-@lds4 = internal unnamed_addr addrspace(3) global [63 x <4 x i32>] undef, align 16
+@lds3 = internal unnamed_addr addrspace(3) global [13 x i32] poison, align 4
+@lds4 = internal unnamed_addr addrspace(3) global [63 x <4 x i32>] poison, align 16
 
 ; The guess from the alignment padding pushes this over the determined
 ; size limit, so it isn't promoted
 
 ; GCN-LABEL: {{^}}promote_alloca_align_pad_guess_over_limit:
-; GCN: workgroup_group_segment_byte_size = 1060
+; GCN: .amdhsa_group_segment_fixed_size 1060
 define amdgpu_kernel void @promote_alloca_align_pad_guess_over_limit(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in, i32 %idx) #0 {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
@@ -129,4 +129,4 @@ entry:
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,7" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

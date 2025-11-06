@@ -32,15 +32,6 @@ void foo() {
                         // debug-note{{safe buffers debug: gadget 'ULCArraySubscript' refused to produce a fix}}
 }
 
-void failed_decl() {
-  int a[10];  // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}} \
-              // debug-note{{safe buffers debug: failed to produce fixit for declaration 'a' : not a pointer}}
-  
-  for (int i = 0; i < 10; i++) {
-    a[i] = i;  // expected-note{{used in buffer access here}}
-  }
-}
-
 void failed_multiple_decl() {
   int *a = new int[4], b;  // expected-warning{{'a' is an unsafe pointer used for buffer access}} \
                           // debug-note{{safe buffers debug: failed to produce fixit for declaration 'a' : multiple VarDecls}}
@@ -62,7 +53,7 @@ void unclaimed_use() {
 void implied_unclaimed_var(int *b) {  // expected-warning{{'b' is an unsafe pointer used for buffer access}}
   int *a = new int[3];  // expected-warning{{'a' is an unsafe pointer used for buffer access}}
   a[4] = 7;  // expected-note{{used in buffer access here}}
-  a = b;  // debug-note{{safe buffers debug: gadget 'PointerAssignment' refused to produce a fix}}
+  a = b;  // debug-note{{safe buffers debug: gadget 'PtrToPtrAssignment' refused to produce a fix}}
   b++;  // expected-note{{used in pointer arithmetic here}} \
         // debug-note{{safe buffers debug: failed to produce fixit for 'b' : has an unclaimed use}}
 }
@@ -97,4 +88,11 @@ void test_struct_claim_use() {
   auto [x] = f();
   x[6] = 8;  // expected-warning{{unsafe buffer access}}
   x++;  // expected-warning{{unsafe pointer arithmetic}}
+}
+
+void use(int*);
+void array2d(int idx) {
+  int buffer[10][5]; // expected-warning{{'buffer' is an unsafe buffer that does not perform bounds checks}}
+  use(buffer[idx]);  // expected-note{{used in buffer access here}} \
+  // debug-note{{safe buffers debug: failed to produce fixit for 'buffer' : has an unclaimed use}}
 }

@@ -35,7 +35,7 @@ class BinaryFunction;
 // counters. It also provides function names and offsets used when writing the
 // fdata file.
 
-// Location information -- analoguous to the concept of the same name in fdata
+// Location information -- analogous to the concept of the same name in fdata
 // writing/reading. The difference is that the name is stored as an index to a
 // string table written separately.
 struct LocDescription {

@@ -1,30 +1,30 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the stack protector stack
 # object reference in the machine frame info correctly.
 
 --- |
   @.str = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
-  @__stack_chk_guard = external global i8*
+  @__stack_chk_guard = external global ptr
 
   define i32 @test() #0 {
   entry:
-    %StackGuardSlot = alloca i8*
-    %StackGuard = load i8*, i8** @__stack_chk_guard
-    call void @llvm.stackprotector(i8* %StackGuard, i8** %StackGuardSlot)
-    %test = alloca i8*, align 8
+    %StackGuardSlot = alloca ptr
+    %StackGuard = load ptr, ptr @__stack_chk_guard
+    call void @llvm.stackprotector(ptr %StackGuard, ptr %StackGuardSlot)
+    %test = alloca ptr, align 8
     %a = alloca i8, i64 5
-    store i8* %a, i8** %test, align 8
-    %b = load i8*, i8** %test, align 8
-    %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %b)
-    call void @llvm.stackprotectorcheck(i8** @__stack_chk_guard)
+    store ptr %a, ptr %test, align 8
+    %b = load ptr, ptr %test, align 8
+    %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
+    call void @llvm.stackprotectorcheck(ptr @__stack_chk_guard)
     ret i32 %call
   }
 
-  declare i32 @printf(i8*, ...)
+  declare i32 @printf(ptr, ...)
 
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
-  declare void @llvm.stackprotectorcheck(i8**) #2
+  declare void @llvm.stackprotectorcheck(ptr) #2
 
   attributes #0 = { ssp "stack-protector-buffer-size"="5" }
   attributes #1 = { nounwind }

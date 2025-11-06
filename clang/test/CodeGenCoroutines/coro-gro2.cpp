@@ -34,13 +34,13 @@ struct coro {
 };
 
 // Verify that the RVO is applied.
-// CHECK-LABEL: define{{.*}} void @_Z1fi(ptr noalias sret(%struct.coro) align 8 %agg.result, i32 noundef %0)
+// CHECK-LABEL: define{{.*}} void @_Z1fi(ptr dead_on_unwind noalias writable sret(%struct.coro) align 8 %agg.result, i32 noundef %0)
 coro f(int) {
 // CHECK: %call = call noalias noundef nonnull ptr @_Znwm(
 // CHECK-NEXT: br label %[[CoroInit:.*]]
 
 // CHECK: {{.*}}[[CoroInit]]:
-// CHECK: call void @{{.*get_return_objectEv}}(ptr sret(%struct.coro) align 8 %agg.result
+// CHECK: call void @{{.*get_return_objectEv}}(ptr dead_on_unwind writable sret(%struct.coro) align 8 %agg.result
 co_return;
 }
 
@@ -63,7 +63,7 @@ struct coro_two {
 };
 
 // Verify that the RVO is applied.
-// CHECK-LABEL: define{{.*}} void @_Z1hi(ptr noalias sret(%struct.coro_two) align 8 %agg.result, i32 noundef %0)
+// CHECK-LABEL: define{{.*}} void @_Z1hi(ptr dead_on_unwind noalias writable sret(%struct.coro_two) align 8 %agg.result, i32 noundef %0)
 coro_two h(int) {
 
   // CHECK: %call = call noalias noundef ptr @_ZnwmRKSt9nothrow_t
@@ -71,11 +71,11 @@ coro_two h(int) {
   // CHECK-NEXT: br i1 %[[CheckNull]], label %[[InitOnSuccess:.*]], label %[[InitOnFailure:.*]]
 
   // CHECK: {{.*}}[[InitOnFailure]]:
-  // CHECK-NEXT: call void @{{.*get_return_object_on_allocation_failureEv}}(ptr sret(%struct.coro_two) align 8 %agg.result
+  // CHECK-NEXT: call void @{{.*get_return_object_on_allocation_failureEv}}(ptr dead_on_unwind writable sret(%struct.coro_two) align 8 %agg.result
   // CHECK-NEXT: br label %[[RetLabel:.*]]
 
   // CHECK: {{.*}}[[InitOnSuccess]]:
-  // CHECK: call void @{{.*get_return_objectEv}}(ptr sret(%struct.coro_two) align 8 %agg.result
+  // CHECK: call void @{{.*get_return_objectEv}}(ptr dead_on_unwind writable sret(%struct.coro_two) align 8 %agg.result
 
   // CHECK: [[RetLabel]]:
   // CHECK-NEXT: ret void

@@ -11,6 +11,7 @@
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -34,7 +35,7 @@ SimpleTypeSerializer::~SimpleTypeSerializer() = default;
 
 template <typename T>
 ArrayRef<uint8_t> SimpleTypeSerializer::serialize(T &Record) {
-  BinaryStreamWriter Writer(ScratchBuffer, support::little);
+  BinaryStreamWriter Writer(ScratchBuffer, llvm::endianness::little);
   TypeRecordMapping Mapping(Writer);
 
   // Write the record prefix first with a dummy length but real kind.
@@ -60,8 +61,8 @@ ArrayRef<uint8_t> SimpleTypeSerializer::serialize(T &Record) {
 // Explicitly instantiate the member function for each known type so that we can
 // implement this in the cpp file.
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  template ArrayRef<uint8_t> llvm::codeview::SimpleTypeSerializer::serialize(  \
-      Name##Record &Record);
+  template LLVM_ABI ArrayRef<uint8_t>                                          \
+  llvm::codeview::SimpleTypeSerializer::serialize(Name##Record &Record);
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD(EnumName, EnumVal, Name)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)

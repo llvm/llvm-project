@@ -25,6 +25,7 @@
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -64,7 +65,7 @@ static SymbolMapTy getSectionSyms(ArrayRef<DefinedRegular *> syms) {
   // Sort symbols by address.
   for (auto &it : ret) {
     SmallVectorImpl<DefinedRegular *> &v = it.second;
-    std::stable_sort(v.begin(), v.end(), [](DefinedRegular *a, DefinedRegular *b) {
+    llvm::stable_sort(v, [](DefinedRegular *a, DefinedRegular *b) {
       return a->getRVA() < b->getRVA();
     });
   }
@@ -92,6 +93,7 @@ void lld::coff::writeLLDMapFile(const COFFLinkerContext &ctx) {
   if (ctx.config.lldmapFile.empty())
     return;
 
+  llvm::TimeTraceScope timeScope(".lldmap file");
   std::error_code ec;
   raw_fd_ostream os(ctx.config.lldmapFile, ec, sys::fs::OF_None);
   if (ec)

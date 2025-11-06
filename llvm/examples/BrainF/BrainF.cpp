@@ -37,7 +37,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/Casting.h"
 #include <cstdlib>
 #include <iostream>
 
@@ -67,9 +66,9 @@ void BrainF::header(LLVMContext& C) {
   //Function prototypes
 
   //declare void @llvm.memset.p0i8.i32(i8 *, i8, i32, i1)
-  Type *Tys[] = { Type::getInt8PtrTy(C), Type::getInt32Ty(C) };
-  Function *memset_func = Intrinsic::getDeclaration(module, Intrinsic::memset,
-                                                    Tys);
+  Type *Tys[] = {PointerType::getUnqual(C), Type::getInt32Ty(C)};
+  Function *memset_func =
+      Intrinsic::getOrInsertDeclaration(module, Intrinsic::memset, Tys);
 
   //declare i32 @getchar()
   getchar_func =
@@ -89,14 +88,12 @@ void BrainF::header(LLVMContext& C) {
 
   //%arr = malloc i8, i32 %d
   ConstantInt *val_mem = ConstantInt::get(C, APInt(32, memtotal));
-  BasicBlock* BB = builder->GetInsertBlock();
   Type* IntPtrTy = IntegerType::getInt32Ty(C);
   Type* Int8Ty = IntegerType::getInt8Ty(C);
   Constant* allocsize = ConstantExpr::getSizeOf(Int8Ty);
   allocsize = ConstantExpr::getTruncOrBitCast(allocsize, IntPtrTy);
-  ptr_arr = CallInst::CreateMalloc(BB, IntPtrTy, Int8Ty, allocsize, val_mem, 
-                                   nullptr, "arr");
-  cast<Instruction>(ptr_arr)->insertInto(BB, BB->end());
+  ptr_arr = builder->CreateMalloc(IntPtrTy, Int8Ty, allocsize, val_mem, nullptr,
+                                  "arr");
 
   //call void @llvm.memset.p0i8.i32(i8 *%arr, i8 0, i32 %d, i1 0)
   {
@@ -127,8 +124,9 @@ void BrainF::header(LLVMContext& C) {
   //brainf.end:
   endbb = BasicBlock::Create(C, label, brainf_func);
 
-  //call free(i8 *%arr)
-  CallInst::CreateFree(ptr_arr, endbb)->insertInto(endbb, endbb->end());
+  // call free(i8 *%arr)
+  builder->SetInsertPoint(endbb);
+  builder->CreateFree(ptr_arr);
 
   //ret void
   ReturnInst::Create(C, endbb);
@@ -151,8 +149,7 @@ void BrainF::header(LLVMContext& C) {
 
     //declare i32 @puts(i8 *)
     FunctionCallee puts_func = module->getOrInsertFunction(
-        "puts", IntegerType::getInt32Ty(C),
-        PointerType::getUnqual(IntegerType::getInt8Ty(C)));
+        "puts", IntegerType::getInt32Ty(C), PointerType::getUnqual(C));
 
     //brainf.aberror:
     aberrorbb = BasicBlock::Create(C, label, brainf_func);
@@ -298,8 +295,8 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
           builder->SetInsertPoint(bb_1);
 
           // Make part of PHI instruction now, wait until end of loop to finish
-          PHINode *phi_0 = PHINode::Create(PointerType::getUnqual(Int8Ty), 2,
-                                           headreg, testbb);
+          PHINode *phi_0 =
+              PHINode::Create(PointerType::getUnqual(C), 2, headreg, testbb);
           phi_0->addIncoming(curhead, bb_0);
           curhead = phi_0;
 
@@ -441,7 +438,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
       LoadInst *tape_0 = new LoadInst(Int8Ty, head_0, tapereg, testbb);
 
       //%test.%d = icmp eq i8 %tape.%d, 0
-      ICmpInst *test_0 = new ICmpInst(*testbb, ICmpInst::ICMP_EQ, tape_0,
+      ICmpInst *test_0 = new ICmpInst(testbb, ICmpInst::ICMP_EQ, tape_0,
                                     ConstantInt::get(C, APInt(8, 0)), testreg);
 
       //br i1 %test.%d, label %main.%d, label %main.%d
@@ -453,7 +450,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
 
       //%head.%d = phi i8 *[%head.%d, %main.%d]
       PHINode *phi_1 =
-          builder->CreatePHI(PointerType::getUnqual(Int8Ty), 1, headreg);
+          builder->CreatePHI(PointerType::getUnqual(C), 1, headreg);
       phi_1->addIncoming(head_0, testbb);
       curhead = phi_1;
     }

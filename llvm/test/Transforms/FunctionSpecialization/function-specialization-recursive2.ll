@@ -2,8 +2,8 @@
 
 ; Volatile store preventing recursive specialisation:
 ;
-; CHECK:     @recursiveFunc.1
-; CHECK-NOT: @recursiveFunc.2
+; CHECK:     @recursiveFunc.specialized.1
+; CHECK-NOT: @recursiveFunc.specialized.2
 
 @Global = internal constant i32 1, align 4
 

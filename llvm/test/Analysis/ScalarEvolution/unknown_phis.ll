@@ -39,20 +39,18 @@ define void @merge_values_with_ranges_looped(ptr %a_len_ptr, ptr %b_len_ptr) {
 ; CHECK-NEXT:    %len_b = load i32, ptr %b_len_ptr, align 4, !range !0
 ; CHECK-NEXT:    --> %len_b U: [0,2147483647) S: [0,2147483647)
 ; CHECK-NEXT:    %p1 = phi i32 [ %len_a, %entry ], [ %p2, %loop ]
-; CHECK-NEXT:    --> %p1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %p1 U: [0,-2147483648) S: [0,-2147483648) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %p2 = phi i32 [ %len_b, %entry ], [ %p1, %loop ]
-; CHECK-NEXT:    --> %p2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %p2 U: [0,-2147483648) S: [0,-2147483648) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,100) S: [0,100) Exits: 99 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,101) S: [1,101) Exits: 100 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @merge_values_with_ranges_looped
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 99
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 99
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 99
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 99
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 100
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 99
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 99
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 99
+; CHECK-NEXT:  Loop %loop: Trip multiple is 100
 ;
 
   entry:

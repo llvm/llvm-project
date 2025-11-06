@@ -1,4 +1,4 @@
-//===--- DuplicateIncludeCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,7 +47,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void MacroDefined(const Token &MacroNameTok,
@@ -63,6 +64,8 @@ private:
   const SourceManager &SM;
 };
 
+} // namespace
+
 void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
                                             FileChangeReason Reason,
                                             SrcMgr::CharacteristicKind FileType,
@@ -76,8 +79,12 @@ void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
 void DuplicateIncludeCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
+  // Skip includes behind macros
+  if (FilenameRange.getBegin().isMacroID() ||
+      FilenameRange.getEnd().isMacroID())
+    return;
   if (llvm::is_contained(Files.back(), FileName)) {
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.
@@ -101,8 +108,6 @@ void DuplicateIncludeCallbacks::MacroUndefined(const Token &MacroNameTok,
                                                const MacroDirective *Undef) {
   Files.back().clear();
 }
-
-} // namespace
 
 void DuplicateIncludeCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {

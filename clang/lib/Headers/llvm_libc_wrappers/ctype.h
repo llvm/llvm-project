@@ -13,7 +13,18 @@
 #error "This file is for GPU offloading compilation only"
 #endif
 
+// The GNU headers like to define 'toupper' and 'tolower' redundantly. This is
+// necessary to prevent it from doing that and remapping our implementation.
+#if (defined(__NVPTX__) || defined(__AMDGPU__)) && defined(__GLIBC__)
+#pragma push_macro("__USE_EXTERN_INLINES")
+#undef __USE_EXTERN_INLINES
+#endif
+
 #include_next <ctype.h>
+
+#if (defined(__NVPTX__) || defined(__AMDGPU__)) && defined(__GLIBC__)
+#pragma pop_macro("__USE_EXTERN_INLINES")
+#endif
 
 #if __has_include(<llvm-libc-decls/ctype.h>)
 
@@ -26,6 +37,7 @@
 
 #pragma push_macro("isalnum")
 #pragma push_macro("isalpha")
+#pragma push_macro("isascii")
 #pragma push_macro("isblank")
 #pragma push_macro("iscntrl")
 #pragma push_macro("isdigit")
@@ -36,11 +48,26 @@
 #pragma push_macro("isspace")
 #pragma push_macro("isupper")
 #pragma push_macro("isxdigit")
+#pragma push_macro("toascii")
 #pragma push_macro("tolower")
 #pragma push_macro("toupper")
+#pragma push_macro("isalnum_l")
+#pragma push_macro("isalpha_l")
+#pragma push_macro("isascii_l")
+#pragma push_macro("isblank_l")
+#pragma push_macro("iscntrl_l")
+#pragma push_macro("isdigit_l")
+#pragma push_macro("isgraph_l")
+#pragma push_macro("islower_l")
+#pragma push_macro("isprint_l")
+#pragma push_macro("ispunct_l")
+#pragma push_macro("isspace_l")
+#pragma push_macro("isupper_l")
+#pragma push_macro("isxdigit_l")
 
 #undef isalnum
 #undef isalpha
+#undef isascii
 #undef iscntrl
 #undef isdigit
 #undef islower
@@ -51,8 +78,21 @@
 #undef isupper
 #undef isblank
 #undef isxdigit
+#undef toascii
 #undef tolower
 #undef toupper
+#undef isalnum_l
+#undef isalpha_l
+#undef iscntrl_l
+#undef isdigit_l
+#undef islower_l
+#undef isgraph_l
+#undef isprint_l
+#undef ispunct_l
+#undef isspace_l
+#undef isupper_l
+#undef isblank_l
+#undef isxdigit_l
 
 #pragma omp begin declare target
 
@@ -64,6 +104,7 @@
 #if !defined(__NVPTX__) && !defined(__AMDGPU__)
 #pragma pop_macro("isalnum")
 #pragma pop_macro("isalpha")
+#pragma pop_macro("isascii")
 #pragma pop_macro("isblank")
 #pragma pop_macro("iscntrl")
 #pragma pop_macro("isdigit")
@@ -74,8 +115,22 @@
 #pragma pop_macro("isspace")
 #pragma pop_macro("isupper")
 #pragma pop_macro("isxdigit")
+#pragma pop_macro("toascii")
 #pragma pop_macro("tolower")
 #pragma pop_macro("toupper")
+#pragma pop_macro("isalnum_l")
+#pragma pop_macro("isalpha_l")
+#pragma pop_macro("isascii_l")
+#pragma pop_macro("isblank_l")
+#pragma pop_macro("iscntrl_l")
+#pragma pop_macro("isdigit_l")
+#pragma pop_macro("isgraph_l")
+#pragma pop_macro("islower_l")
+#pragma pop_macro("isprint_l")
+#pragma pop_macro("ispunct_l")
+#pragma pop_macro("isspace_l")
+#pragma pop_macro("isupper_l")
+#pragma pop_macro("isxdigit_l")
 #endif
 
 #undef __LIBC_ATTRS

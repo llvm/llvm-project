@@ -70,7 +70,7 @@ namespace test2 {
     }
 
     void test1() {
-      B<T>::foo();
+      B<T>::foo(); // expected-error {{call to non-static member function without an object argument}}
     }
 
     static void test2() {
@@ -91,8 +91,95 @@ namespace test2 {
   int test() {
     A<int> a;
     a.test0(); // no instantiation note here, decl is ill-formed
-    a.test1();
+    a.test1(); // expected-note {{in instantiation}}
     a.test2(); // expected-note {{in instantiation}}
     a.test3(); // expected-note {{in instantiation}}
   }
+}
+
+namespace test3 {
+  struct A {
+    void f0();
+
+    template<typename T>
+    void f1();
+
+    static void f2();
+
+    template<typename T>
+    static void f3();
+
+    int x0;
+
+    static constexpr int x1 = 0;
+
+    template<typename T>
+    static constexpr int x2 = 0;
+  };
+
+  template<typename T>
+  struct B : T {
+    auto g0() -> decltype(T::f0());
+
+    auto g1() -> decltype(T::template f1<int>());
+
+    auto g2() -> decltype(T::f2());
+
+    auto g3() -> decltype(T::template f3<int>());
+
+    auto g4() -> decltype(T::x0);
+
+    auto g5() -> decltype(T::x1);
+
+    auto g6() -> decltype(T::template x2<int>);
+
+    decltype(T::f0()) g7(); // expected-error {{call to non-static member function without an object argument}}
+
+    decltype(T::template f1<int>()) g8(); // expected-error {{call to non-static member function without an object argument}}
+
+    decltype(T::f2()) g9();
+
+    decltype(T::template f3<int>()) g10();
+
+    decltype(T::x0) g11();
+
+    decltype(T::x1) g12();
+
+    decltype(T::template x2<int>) g13();
+  };
+
+  template struct B<A>; // expected-note {{in instantiation of}}
+
+  template<typename T>
+  struct C : T {
+    static auto g0() -> decltype(T::f0()); // expected-error {{'this' cannot be implicitly used in a static member function declaration}}
+
+    static auto g1() -> decltype(T::template f1<int>()); // expected-error {{'this' cannot be implicitly used in a static member function declaration}}
+
+    static auto g2() -> decltype(T::f2());
+
+    static auto g3() -> decltype(T::template f3<int>());
+
+    static auto g4() -> decltype(T::x0); // expected-error {{'this' cannot be implicitly used in a static member function declaration}}
+
+    static auto g5() -> decltype(T::x1);
+
+    static auto g6() -> decltype(T::template x2<int>);
+
+    static decltype(T::f0()) g7(); // expected-error {{call to non-static member function without an object argument}}
+
+    static decltype(T::template f1<int>()) g8(); // expected-error {{call to non-static member function without an object argument}}
+
+    static decltype(T::f2()) g9();
+
+    static decltype(T::template f3<int>()) g10();
+
+    static decltype(T::x0) g11();
+
+    static decltype(T::x1) g12();
+
+    static decltype(T::template x2<int>) g13();
+  };
+
+  template struct C<A>; // expected-note {{in instantiation of}}
 }

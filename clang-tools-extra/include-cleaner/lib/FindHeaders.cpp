@@ -13,10 +13,12 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -116,6 +118,8 @@ std::optional<tooling::stdlib::Header>
 headerForAmbiguousStdSymbol(const NamedDecl *ND) {
   if (!ND->isInStdNamespace())
     return {};
+  if (auto* USD = llvm::dyn_cast<UsingShadowDecl>(ND))
+    ND = USD->getTargetDecl();
   const auto *FD = ND->getAsFunction();
   if (!FD)
     return std::nullopt;
@@ -236,8 +240,9 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
 }
 
 llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
-                                           const SourceManager &SM,
+                                           const Preprocessor &PP,
                                            const PragmaIncludes *PI) {
+  const auto &SM = PP.getSourceManager();
   // Get headers for all the locations providing Symbol. Same header can be
   // reached through different traversals, deduplicate those into a single
   // Header by merging their hints.
@@ -245,7 +250,7 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
   if (auto SpecialHeaders = headersForSpecialSymbol(S, SM, PI)) {
     Headers = std::move(*SpecialHeaders);
   } else {
-    for (auto &Loc : locateSymbol(S))
+    for (auto &Loc : locateSymbol(S, PP.getLangOpts()))
       Headers.append(applyHints(findHeaders(Loc, SM, PI), Loc.Hint));
   }
   // If two Headers probably refer to the same file (e.g. Verbatim(foo.h) and
@@ -271,6 +276,12 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
     // Don't apply name match hints to standard headers as the standard headers
     // are already ranked in the stdlib mapping.
     if (H.kind() == Header::Standard)
+      continue;
+    // Don't apply name match hints to exporting headers. As they usually have
+    // names similar to the original header, e.g. foo_wrapper/foo.h vs
+    // foo/foo.h, but shouldn't be preferred (unless marked as the public
+    // interface).
+    if ((H.Hint & Hints::OriginHeader) == Hints::None)
       continue;
     if (nameMatch(SymbolName, H))
       H.Hint |= Hints::PreferredHeader;

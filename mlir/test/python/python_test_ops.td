@@ -32,7 +32,9 @@ class TestAttr<string name, string attrMnemonic>
 }
 
 class TestOp<string mnemonic, list<Trait> traits = []>
-    : Op<Python_Test_Dialect, mnemonic, traits>;
+    : Op<Python_Test_Dialect, mnemonic, traits> {
+  let assemblyFormat = "operands attr-dict functional-type(operands, results)";
+}
 
 //===----------------------------------------------------------------------===//
 // Type definitions.
@@ -54,6 +56,10 @@ def AttributedOp : TestOp<"attributed_op"> {
   let arguments = (ins I32Attr:$mandatory_i32,
                    OptionalAttr<I32Attr>:$optional_i32,
                    UnitAttr:$unit);
+}
+
+def CustomAttributedOp : TestOp<"custom_attributed_op"> {
+  let arguments = (ins TestAttr:$test_attr);
 }
 
 def AttributesOp : TestOp<"attributes_op"> {
@@ -126,7 +132,7 @@ def InferResultsOp : TestOp<"infer_results_op", [InferTypeOpInterface]> {
   let results = (outs AnyInteger:$single, AnyInteger:$doubled);
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(
+    static ::llvm::LogicalResult inferReturnTypes(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
       ::mlir::OpaqueProperties,
@@ -149,7 +155,7 @@ def InferResultsVariadicInputsOp : TestOp<"infer_results_variadic_inputs_op",
   let results = (outs I32OrF32:$res);
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(
+    static ::llvm::LogicalResult inferReturnTypes(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
       ::mlir::OpaqueProperties,
@@ -178,7 +184,7 @@ def InferShapedTypeComponentsOp : TestOp<"infer_shaped_type_components_op",
   let results = (outs AnyTensor:$result);
 
   let extraClassDefinition = [{
-    ::mlir::LogicalResult $cppClass::inferReturnTypeComponents(
+    ::llvm::LogicalResult $cppClass::inferReturnTypeComponents(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueShapeRange operands, ::mlir::DictionaryAttr attributes,
       ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
@@ -219,6 +225,53 @@ def FirstAttrDeriveAttrOp : TestOp<"first_attr_derive_attr_op",
 def OptionalOperandOp : TestOp<"optional_operand_op"> {
   let arguments = (ins Optional<AnyType>:$input);
   let results = (outs I32:$result);
+}
+
+def SameVariadicOperandSizeOp : TestOp<"same_variadic_operand",
+                                       [SameVariadicOperandSize]> {
+  let arguments = (ins Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
+                   Variadic<AnyType>:$variadic2);
+}
+
+// Check different arrangements of variadic groups
+def SameVariadicResultSizeOpVFV : TestOp<"same_variadic_result_vfv",
+                                        [SameVariadicResultSize]> {
+  let results = (outs Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
+                 Variadic<AnyType>:$variadic2);
+}
+
+def SameVariadicResultSizeOpVVV : TestOp<"same_variadic_result_vvv",
+                                        [SameVariadicResultSize]> {
+  let results = (outs Variadic<AnyType>:$variadic1, Variadic<AnyType>:$variadic2,
+                 Variadic<AnyType>:$variadic3);
+}
+
+def SameVariadicResultSizeOpFFV : TestOp<"same_variadic_result_ffv",
+                                        [SameVariadicResultSize]> {
+  let results = (outs AnyType:$non_variadic1, AnyType:$non_variadic2,
+                 Variadic<AnyType>:$variadic);
+}
+
+def SameVariadicResultSizeOpVVF : TestOp<"same_variadic_result_vvf",
+                                        [SameVariadicResultSize]> {
+  let results = (outs Variadic<AnyType>:$variadic1, Variadic<AnyType>:$variadic2,
+                 AnyType:$non_variadic);
+}
+
+def SameVariadicResultSizeOpFVFVF : TestOp<"same_variadic_result_fvfvf",
+                                          [SameVariadicResultSize]> {
+  let results = (outs AnyType:$non_variadic1, Variadic<AnyType>:$variadic1,
+                 AnyType:$non_variadic2, Variadic<AnyType>:$variadic2,
+                 AnyType:$non_variadic3);
+}
+
+def ResultsVariadicOp : TestOp<"results_variadic"> {
+  let results = (outs Variadic<AnyType>:$res);
+}
+
+def VariadicAndNormalRegionOp : TestOp<"variadic_and_normal_region"> {
+  let regions = (region AnyRegion:$region, VariadicRegion<AnyRegion>:$variadic);
+  let assemblyFormat = "$region $variadic attr-dict";
 }
 
 #endif // PYTHON_TEST_OPS

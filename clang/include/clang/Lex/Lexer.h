@@ -124,7 +124,7 @@ class Lexer : public PreprocessorLexer {
   //===--------------------------------------------------------------------===//
   // Context that changes as the file is lexed.
   // NOTE: any state that mutates when in raw mode must have save/restore code
-  // in Lexer::isNextPPTokenLParen.
+  // in Lexer::peekNextPPToken.
 
   // BufferPtr - Current pointer into the buffer.  This is the next character
   // to be lexed.
@@ -198,11 +198,11 @@ public:
   /// from.  Currently this is only used by _Pragma handling.
   SourceLocation getFileLoc() const { return FileLoc; }
 
-private:
   /// Lex - Return the next token in the file.  If this is the end of file, it
   /// return the tok::eof token.  This implicitly involves the preprocessor.
   bool Lex(Token &Result);
 
+private:
   /// Called when the preprocessor is in 'dependency scanning lexing mode'.
   bool LexDependencyDirectiveToken(Token &Result);
 
@@ -554,7 +554,14 @@ public:
   /// Returns the next token, or std::nullopt if the location is inside a macro.
   static std::optional<Token> findNextToken(SourceLocation Loc,
                                             const SourceManager &SM,
-                                            const LangOptions &LangOpts);
+                                            const LangOptions &LangOpts,
+                                            bool IncludeComments = false);
+
+  /// Finds the token that comes before the given location.
+  static std::optional<Token> findPreviousToken(SourceLocation Loc,
+                                                const SourceManager &SM,
+                                                const LangOptions &LangOpts,
+                                                bool IncludeComments);
 
   /// Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the
@@ -575,19 +582,34 @@ public:
   /// sequence.
   static bool isNewLineEscaped(const char *BufferStart, const char *Str);
 
+  /// getEscapedNewLineSize - Return the size of the specified escaped newline,
+  /// or 0 if it is not an escaped newline. P[-1] is known to be a "\" on entry
+  /// to this function.
+  static unsigned getEscapedNewLineSize(const char *P);
+
+  /// Diagnose use of a delimited or named escape sequence.
+  static void DiagnoseDelimitedOrNamedEscapeSequence(SourceLocation Loc,
+                                                     bool Named,
+                                                     const LangOptions &Opts,
+                                                     DiagnosticsEngine &Diags);
+
+  /// Represents a char and the number of bytes parsed to produce it.
+  struct SizedChar {
+    char Char;
+    unsigned Size;
+  };
+
   /// getCharAndSizeNoWarn - Like the getCharAndSize method, but does not ever
   /// emit a warning.
-  static inline char getCharAndSizeNoWarn(const char *Ptr, unsigned &Size,
-                                          const LangOptions &LangOpts) {
+  static inline SizedChar getCharAndSizeNoWarn(const char *Ptr,
+                                               const LangOptions &LangOpts) {
     // If this is not a trigraph and not a UCN or escaped newline, return
     // quickly.
     if (isObviouslySimpleCharacter(Ptr[0])) {
-      Size = 1;
-      return *Ptr;
+      return {*Ptr, 1u};
     }
 
-    Size = 0;
-    return getCharAndSizeSlowNoWarn(Ptr, Size, LangOpts);
+    return getCharAndSizeSlowNoWarn(Ptr, LangOpts);
   }
 
   /// Returns the leading whitespace for line that corresponds to the given
@@ -625,10 +647,10 @@ private:
     BufferPtr = TokEnd;
   }
 
-  /// isNextPPTokenLParen - Return 1 if the next unexpanded token will return a
-  /// tok::l_paren token, 0 if it is something else and 2 if there are no more
-  /// tokens in the buffer controlled by this lexer.
-  unsigned isNextPPTokenLParen();
+  /// peekNextPPToken - Return std::nullopt if there are no more tokens in the
+  /// buffer controlled by this lexer, otherwise return the next unexpanded
+  /// token.
+  std::optional<Token> peekNextPPToken();
 
   //===--------------------------------------------------------------------===//
   // Lexer character reading interfaces.
@@ -665,8 +687,7 @@ private:
     // quickly.
     if (isObviouslySimpleCharacter(Ptr[0])) return *Ptr++;
 
-    unsigned Size = 0;
-    char C = getCharAndSizeSlow(Ptr, Size, &Tok);
+    auto [C, Size] = getCharAndSizeSlow(Ptr, &Tok);
     Ptr += Size;
     return C;
   }
@@ -682,9 +703,7 @@ private:
 
     // Otherwise, re-lex the character with a current token, allowing
     // diagnostics to be emitted and flags to be set.
-    Size = 0;
-    getCharAndSizeSlow(Ptr, Size, &Tok);
-    return Ptr+Size;
+    return Ptr + getCharAndSizeSlow(Ptr, &Tok).Size;
   }
 
   /// getCharAndSize - Peek a single 'character' from the specified buffer,
@@ -699,19 +718,14 @@ private:
       return *Ptr;
     }
 
-    Size = 0;
-    return getCharAndSizeSlow(Ptr, Size);
+    auto CharAndSize = getCharAndSizeSlow(Ptr);
+    Size = CharAndSize.Size;
+    return CharAndSize.Char;
   }
 
   /// getCharAndSizeSlow - Handle the slow/uncommon case of the getCharAndSize
   /// method.
-  char getCharAndSizeSlow(const char *Ptr, unsigned &Size,
-                          Token *Tok = nullptr);
-
-  /// getEscapedNewLineSize - Return the size of the specified escaped newline,
-  /// or 0 if it is not an escaped newline. P[-1] is known to be a "\" on entry
-  /// to this function.
-  static unsigned getEscapedNewLineSize(const char *P);
+  SizedChar getCharAndSizeSlow(const char *Ptr, Token *Tok = nullptr);
 
   /// SkipEscapedNewLines - If P points to an escaped newline (or a series of
   /// them), skip over them and return the first non-escaped-newline found,
@@ -720,8 +734,8 @@ private:
 
   /// getCharAndSizeSlowNoWarn - Same as getCharAndSizeSlow, but never emits a
   /// diagnostic.
-  static char getCharAndSizeSlowNoWarn(const char *Ptr, unsigned &Size,
-                                       const LangOptions &LangOpts);
+  static SizedChar getCharAndSizeSlowNoWarn(const char *Ptr,
+                                            const LangOptions &LangOpts);
 
   //===--------------------------------------------------------------------===//
   // Other lexer functions.

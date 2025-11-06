@@ -1,15 +1,15 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+c -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+c -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s -triple riscv64 -mattr=+c -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple riscv64 -mattr=+c -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c < %s \
-# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | llvm-objdump -M no-aliases --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | llvm-objdump -M no-aliases --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: c.nop 8
@@ -48,18 +48,34 @@ c.add x0, a0
 # CHECK-ASM: encoding: [0x06,0x00]
 c.slli x0, 1
 
-# CHECK-ASM-AND-OBJ: c.slli64 zero
+# CHECK-ASM-AND-OBJ: c.slli zero, 0
 # CHECK-ASM: encoding: [0x02,0x00]
 c.slli64 x0
 
-# CHECK-ASM-AND-OBJ: c.slli64 a0
+# CHECK-ASM-AND-OBJ: c.slli zero, 0
+# CHECK-ASM: encoding: [0x02,0x00]
+c.slli x0, 0
+
+# CHECK-ASM-AND-OBJ: c.slli a0, 0
 # CHECK-ASM: encoding: [0x02,0x05]
 c.slli64 a0
 
-# CHECK-ASM-AND-OBJ: c.srli64 a1
+# CHECK-ASM-AND-OBJ: c.slli a0, 0
+# CHECK-ASM: encoding: [0x02,0x05]
+c.slli a0, 0
+
+# CHECK-ASM-AND-OBJ: c.srli a1, 0
 # CHECK-ASM: encoding: [0x81,0x81]
 c.srli64 a1
 
-# CHECK-ASM-AND-OBJ: c.srai64 a0
+# CHECK-ASM-AND-OBJ: c.srli a1, 0
+# CHECK-ASM: encoding: [0x81,0x81]
+c.srli a1, 0
+
+# CHECK-ASM-AND-OBJ: c.srai a0, 0
 # CHECK-ASM: encoding: [0x01,0x85]
 c.srai64 a0
+
+# CHECK-ASM-AND-OBJ: c.srai a0, 0
+# CHECK-ASM: encoding: [0x01,0x85]
+c.srai a0, 0

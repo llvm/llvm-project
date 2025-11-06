@@ -54,9 +54,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %index.03 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   call void asm sideeffect "", "~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27}"() nounwind
-  %ptrue.ins = insertelement <vscale x 16 x i1> poison, i1 1, i32 0
-  %ptrue = shufflevector <vscale x 16 x i1> %ptrue.ins, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  call void @bar(<vscale x 16 x i1> %ptrue)
+  call void @bar(<vscale x 16 x i1> splat(i1 true))
   %inc = add nuw nsw i32 %index.03, 1
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body

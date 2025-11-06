@@ -20,14 +20,6 @@ define void @wrong_token() {
   ret void
 }
 
-; CHECK: Convergence control token can only be used in a convergent call.
-; CHECK-NEXT  call void @g(){{.*}}%t05_tok1
-define void @missing.attribute() {
-  %t05_tok1 = call token @llvm.experimental.convergence.anchor()
-  call void @g() [ "convergencectrl"(token %t05_tok1) ]
-  ret void
-}
-
 ; CHECK: The 'convergencectrl' bundle requires exactly one token use.
 ; CHECK-NEXT:  call void @g()
 define void @multiple_tokens() {
@@ -126,13 +118,18 @@ define void @entry_in_convergent(i32 %x, i32 %y) {
 }
 
 ; CHECK: Loop intrinsic cannot be preceded by a convergent operation in the same basic block.
-; CHECK:   %t60_tok3
+; CHECK-NEXT: %h1
+; CHECK-SAME: %t60_tok3
 define void @loop_at_start(i32 %x, i32 %y) convergent {
 A:
   %t60_tok3 = call token @llvm.experimental.convergence.entry()
   br label %B
 B:
   %z = add i32 %x, %y
+  ; This is not an error
+  %h2 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %t60_tok3) ]
+  br label %C
+C:
   call void @f()
   %h1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %t60_tok3) ]
   ret void

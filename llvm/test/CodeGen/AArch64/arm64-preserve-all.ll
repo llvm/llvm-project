@@ -1,6 +1,6 @@
-; RUN: llc -O0 --march=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
-; RUN: llc -O1 --march=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
-; RUN: llc -O2 --march=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O0 --mtriple=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O1 --mtriple=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O2 --mtriple=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -48,9 +48,9 @@ entry:
 
 
   call preserve_allcc void @preserve_all()
-  %0 = load i32, i32* %v, align 4
+  %0 = load i32, ptr %v, align 4
   %1 = call i32 asm sideeffect "mov ${0:w}, w9", "=r,r"(i32 %0) #2
   %2 = call i32 asm sideeffect "fneg v9.4s, v9.4s", "=r,~{v9}"() #2
-  store i32 %1, i32* %v, align 4
+  store i32 %1, ptr %v, align 4
   ret void
 }

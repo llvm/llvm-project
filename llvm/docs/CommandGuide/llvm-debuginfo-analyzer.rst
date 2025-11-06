@@ -14,9 +14,9 @@ DESCRIPTION
 -----------
 :program:`llvm-debuginfo-analyzer` parses debug and text sections in
 binary object files and prints their contents in a logical view, which
-is a human readable representation that closely matches the structure
+is a human-readable representation that closely matches the structure
 of the original user source code. Supported object file formats include
-ELF, Mach-O, PDB and COFF.
+ELF, Mach-O, WebAssembly, PDB and COFF.
 
 The **logical view** abstracts the complexity associated with the
 different low-level representations of the debugging information that
@@ -134,12 +134,13 @@ toolchain name, binary file format, etc.
  The following attributes describe the most common information for a
  logical element. They help to identify the lexical scope level; the
  element visibility across modules (global, local); the toolchain name
- that produced the binary file.
+ and source language that produced the binary file.
 
  .. code-block:: text
 
    =global: Element referenced across Compile Units.
    =format: Object file format name.
+   =language: Source language name.
    =level: Lexical scope level (File=0, Compile Unit=1).
    =local: Element referenced only in the Compile Unit.
    =producer: Toolchain identification name.
@@ -161,7 +162,8 @@ toolchain name, binary file format, etc.
  transformations, in order to display built-in types (int, bool, etc.);
  parameters and arguments used during template instantiation; parent
  name hierarchy; array dimensions information; compiler generated
- elements and the underlying types associated with the types aliases.
+ elements; type sizes and the underlying types associated with the types
+ aliases.
 
  .. code-block:: text
 
@@ -171,6 +173,7 @@ toolchain name, binary file format, etc.
    =encoded: Template arguments encoded in the template name.
    =qualified: The element type include parents in its name.
    =reference: Element declaration and definition references.
+   =size: Sizes for compound and base types.
    =subrange: Subrange encoding information for arrays.
    =typename: Template parameters.
    =underlying: Underlying type for type definitions.
@@ -229,6 +232,7 @@ toolchain name, binary file format, etc.
    =filename
    =files
    =format
+   =language
    =level
    =producer
    =publics
@@ -258,6 +262,7 @@ toolchain name, binary file format, etc.
    =qualified
    =qualifier
    =register
+   =size
    =subrange
    =system
    =typename
@@ -360,6 +365,8 @@ output for a single compilation unit.
 
  .. code-block:: text
 
+   =none: Unsorted output (i.e. as read from input).
+   =id: Sort by unique element ID.
    =kind: Sort by element kind.
    =line: Sort by element line number.
    =name: Sort by element name.
@@ -468,8 +475,9 @@ If the <pattern> criteria is too general, a more selective option can
 be specified to target a particular category of elements:
 lines (:option:`--select-lines`), scopes (:option:`--select-scopes`),
 symbols (:option:`--select-symbols`) and types (:option:`--select-types`).
+
 These options require knowledge of the debug information format (DWARF,
-CodeView, COFF), as the given **kind** describes a very specific type
+CodeView), as the given **kind** describes a very specific type
 of element.
 
 LINES
@@ -488,8 +496,8 @@ The given criteria describes the debug line state machine registers.
    =Discriminator: Line that has a discriminator.
    =EndSequence: Marks the end in the sequence of lines.
    =EpilogueBegin: Marks the start of a function epilogue.
-   =LineDebug: Lines that correspond to debug lines.
    =LineAssembler: Lines that correspond to disassembly text.
+   =LineDebug: Lines that correspond to debug lines.
    =NeverStepInto: marks a never step into.
    =NewStatement: Marks a new statement.
    =PrologueEnd: Marks the end of a function prologue.
@@ -518,6 +526,7 @@ The following options allow printing of scopes that match the given <kind>.
     =InlinedFunction: An inlined function.
     =Label: A label.
     =LexicalBlock: A lexical block.
+    =Module: A module.
     =Namespace: A namespace.
     =Root: The element representing the main scope.
     =Structure: A structure.
@@ -598,7 +607,7 @@ When comparing logical views created from different debug formats, its
 accuracy depends on how close the debug information represents the
 user code. For instance, a logical view created from a binary file with
 DWARF debug information may include more detailed data than a logical
-view created from a binary file with CodeView/COFF debug information.
+view created from a binary file with CodeView debug information.
 
 The following options describe the elements to compare.
 
@@ -669,8 +678,7 @@ INTERNAL
  Typically these kind of options are available only in *debug* builds.
 
  :program:`llvm-debuginfo-analyzer` supports these advanced options in
- both *release* and *debug* builds, with the exception of the unique ID
- that is generated only in *debug* builds.
+ both *release* and *debug* builds.
 
 .. option:: --internal=<value[,value,...]>
 
@@ -1741,7 +1749,7 @@ DWARF - Clang (Linux)
   [003]     3           {Variable} 'Var_1' -> 'int'
   [002]    11         {Function} extern not_inlined 'test' -> 'int'
   [003]    12           {Variable} 'A' -> 'int'
-  [003]    14           {InlinedFunction} inlined 'InlineFunction' -> 'int'
+  [003]    13           {InlinedFunction} inlined 'InlineFunction' -> 'int'
   [004]                   {Block}
   [005]                     {Variable} 'Var_2' -> 'int'
   [004]                   {Parameter} 'Param' -> 'int'
@@ -1952,10 +1960,323 @@ The **{Coverage}** and **{Location}** attributes describe the debug
 location and coverage for logical symbols. For optimized code, the
 coverage value decreases and it affects the program debuggability.
 
+WEBASSEMBLY SUPPORT
+~~~~~~~~~~~~~~~~~~~
+The below example is used to show the WebAssembly output generated by
+:program:`llvm-debuginfo-analyzer`. We compiled the example for a
+WebAssembly 32-bit target with Clang (-O0 -g --target=wasm32):
+
+.. code-block:: c++
+
+  1  using INTPTR = const int *;
+  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+  3    if (ParamBool) {
+  4      typedef int INTEGER;
+  5      const INTEGER CONSTANT = 7;
+  6      return CONSTANT;
+  7    }
+  8    return ParamUnsigned;
+  9  }
+
+PRINT BASIC DETAILS
+^^^^^^^^^^^^^^^^^^^
+The following command prints basic details for all the logical elements
+sorted by the debug information internal offset; it includes its lexical
+level and debug info format.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --attribute=level,format
+                          --output-sort=offset
+                          --print=scopes,symbols,types,lines,instructions
+                          test-clang.o
+
+or
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --attribute=level,format
+                          --output-sort=offset
+                          --print=elements
+                          test-clang.o
+
+Each row represents an element that is present within the debug
+information. The first column represents the scope level, followed by
+the associated line number (if any), and finally the description of
+the element.
+
+.. code-block:: none
+
+  Logical View:
+  [000]           {File} 'test-clang.o' -> WASM
+
+  [001]             {CompileUnit} 'test.cpp'
+  [002]     2         {Function} extern not_inlined 'foo' -> 'int'
+  [003]     2           {Parameter} 'ParamPtr' -> 'INTPTR'
+  [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'
+  [003]     2           {Parameter} 'ParamBool' -> 'bool'
+  [003]                 {Block}
+  [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
+  [004]     5             {Line}
+  [004]                   {Code} 'i32.const	7'
+  [004]                   {Code} 'local.set	10'
+  [004]                   {Code} 'local.get	5'
+  [004]                   {Code} 'local.get	10'
+  [004]                   {Code} 'i32.store	12'
+  [004]     6             {Line}
+  [004]                   {Code} 'i32.const	7'
+  [004]                   {Code} 'local.set	11'
+  [004]                   {Code} 'local.get	5'
+  [004]                   {Code} 'local.get	11'
+  [004]                   {Code} 'i32.store	28'
+  [004]                   {Code} 'br      	1'
+  [004]     -             {Line}
+  [004]                   {Code} 'end'
+  [003]     4           {TypeAlias} 'INTEGER' -> 'int'
+  [003]     2           {Line}
+  [003]                 {Code} 'nop'
+  [003]                 {Code} 'end'
+  [003]                 {Code} 'i64.div_s'
+  [003]                 {Code} 'global.get	0'
+  [003]                 {Code} 'local.set	3'
+  [003]                 {Code} 'i32.const	32'
+  [003]                 {Code} 'local.set	4'
+  [003]                 {Code} 'local.get	3'
+  [003]                 {Code} 'local.get	4'
+  [003]                 {Code} 'i32.sub'
+  [003]                 {Code} 'local.set	5'
+  [003]                 {Code} 'local.get	5'
+  [003]                 {Code} 'local.get	0'
+  [003]                 {Code} 'i32.store	24'
+  [003]                 {Code} 'local.get	5'
+  [003]                 {Code} 'local.get	1'
+  [003]                 {Code} 'i32.store	20'
+  [003]                 {Code} 'local.get	2'
+  [003]                 {Code} 'local.set	6'
+  [003]                 {Code} 'local.get	5'
+  [003]                 {Code} 'local.get	6'
+  [003]                 {Code} 'i32.store8	19'
+  [003]     3           {Line}
+  [003]                 {Code} 'local.get	5'
+  [003]                 {Code} 'i32.load8_u	19'
+  [003]                 {Code} 'local.set	7'
+  [003]     3           {Line}
+  [003]                 {Code} 'i32.const	1'
+  [003]                 {Code} 'local.set	8'
+  [003]                 {Code} 'local.get	7'
+  [003]                 {Code} 'local.get	8'
+  [003]                 {Code} 'i32.and'
+  [003]                 {Code} 'local.set	9'
+  [003]                 {Code} 'block'
+  [003]                 {Code} 'block'
+  [003]                 {Code} 'local.get	9'
+  [003]                 {Code} 'i32.eqz'
+  [003]                 {Code} 'br_if   	0'
+  [003]     8           {Line}
+  [003]                 {Code} 'local.get	5'
+  [003]                 {Code} 'i32.load	20'
+  [003]                 {Code} 'local.set	12'
+  [003]     8           {Line}
+  [003]                 {Code} 'local.get	5'
+  [003]                 {Code} 'local.get	12'
+  [003]                 {Code} 'i32.store	28'
+  [003]     -           {Line}
+  [003]                 {Code} 'end'
+  [003]     9           {Line}
+  [003]                 {Code} 'local.get	5'
+  [003]                 {Code} 'i32.load	28'
+  [003]                 {Code} 'local.set	13'
+  [003]                 {Code} 'local.get	13'
+  [003]                 {Code} 'return'
+  [003]                 {Code} 'end'
+  [003]     9           {Line}
+  [003]                 {Code} 'unreachable'
+  [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
+
+SELECT LOGICAL ELEMENTS
+^^^^^^^^^^^^^^^^^^^^^^^
+The following prints all *instructions*, *symbols* and *types* that
+contain **'block'** or **'.store'** in their names or types, using a tab
+layout and given the number of matches.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --attribute=level
+                          --select-nocase --select-regex
+                          --select=BLOCK --select=.store
+                          --report=list
+                          --print=symbols,types,instructions,summary
+                          test-clang.o
+
+  Logical View:
+  [000]           {File} 'test-clang.o'
+
+  [001]           {CompileUnit} 'test.cpp'
+  [003]           {Code} 'block'
+  [003]           {Code} 'block'
+  [004]           {Code} 'i32.store	12'
+  [003]           {Code} 'i32.store	20'
+  [003]           {Code} 'i32.store	24'
+  [004]           {Code} 'i32.store	28'
+  [003]           {Code} 'i32.store	28'
+  [003]           {Code} 'i32.store8	19'
+
+  -----------------------------
+  Element      Total    Printed
+  -----------------------------
+  Scopes           3          0
+  Symbols          4          0
+  Types            2          0
+  Lines           62          8
+  -----------------------------
+  Total           71          8
+
+COMPARISON MODE
+^^^^^^^^^^^^^^^
+Given the previous example we found the above debug information issue
+(related to the previous invalid scope location for the **'typedef int
+INTEGER'**) by comparing against another compiler.
+
+Using GCC to generate test-dwarf-gcc.o, we can apply a selection pattern
+with the printing mode to obtain the following logical view output.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --attribute=level
+                          --select-regex --select-nocase --select=INTe
+                          --report=list
+                          --print=symbols,types
+                          test-clang.o test-dwarf-gcc.o
+
+  Logical View:
+  [000]           {File} 'test-clang.o'
+
+  [001]           {CompileUnit} 'test.cpp'
+  [003]     4     {TypeAlias} 'INTEGER' -> 'int'
+  [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
+
+  Logical View:
+  [000]           {File} 'test-dwarf-gcc.o'
+
+  [001]           {CompileUnit} 'test.cpp'
+  [004]     4     {TypeAlias} 'INTEGER' -> 'int'
+  [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
+
+The output shows that both objects contain the same elements. But the
+**'typedef INTEGER'** is located at different scope level. The GCC
+generated object, shows **'4'**, which is the correct value.
+
+There are 2 comparison methods: logical view and logical elements.
+
+LOGICAL VIEW
+""""""""""""
+It compares the logical view as a whole unit; for a match, each compared
+logical element must have the same parents and children.
+
+The output shows in view form the **missing (-), added (+)** elements,
+giving more context by swapping the reference and target object files.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --attribute=level
+                          --compare=types
+                          --report=view
+                          --print=symbols,types
+                          test-clang.o test-dwarf-gcc.o
+
+  Reference: 'test-clang.o'
+  Target:    'test-dwarf-gcc.o'
+
+  Logical View:
+   [000]           {File} 'test-clang.o'
+
+   [001]             {CompileUnit} 'test.cpp'
+   [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
+   [002]     2         {Function} extern not_inlined 'foo' -> 'int'
+   [003]                 {Block}
+   [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
+  +[004]     4             {TypeAlias} 'INTEGER' -> 'int'
+   [003]     2           {Parameter} 'ParamBool' -> 'bool'
+   [003]     2           {Parameter} 'ParamPtr' -> 'INTPTR'
+   [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'
+  -[003]     4           {TypeAlias} 'INTEGER' -> 'int'
+
+The output shows the merging view path (reference and target) with the
+missing and added elements.
+
+LOGICAL ELEMENTS
+""""""""""""""""
+It compares individual logical elements without considering if their
+parents are the same. For both comparison methods, the equal criteria
+includes the name, source code location, type, lexical scope level.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --attribute=level
+                          --compare=types
+                          --report=list
+                          --print=symbols,types,summary
+                          test-clang.o test-dwarf-gcc.o
+
+  Reference: 'test-clang.o'
+  Target:    'test-dwarf-gcc.o'
+
+  (1) Missing Types:
+  -[003]     4     {TypeAlias} 'INTEGER' -> 'int'
+
+  (1) Added Types:
+  +[004]     4     {TypeAlias} 'INTEGER' -> 'int'
+
+  ----------------------------------------
+  Element   Expected    Missing      Added
+  ----------------------------------------
+  Scopes           4          0          0
+  Symbols          0          0          0
+  Types            2          1          1
+  Lines            0          0          0
+  ----------------------------------------
+  Total            6          1          1
+
+Changing the *Reference* and *Target* order:
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --attribute=level
+                          --compare=types
+                          --report=list
+                          --print=symbols,types,summary
+                          test-dwarf-gcc.o test-clang.o
+
+  Reference: 'test-dwarf-gcc.o'
+  Target:    'test-clang.o'
+
+  (1) Missing Types:
+  -[004]     4     {TypeAlias} 'INTEGER' -> 'int'
+
+  (1) Added Types:
+  +[003]     4     {TypeAlias} 'INTEGER' -> 'int'
+
+  ----------------------------------------
+  Element   Expected    Missing      Added
+  ----------------------------------------
+  Scopes           4          0          0
+  Symbols          0          0          0
+  Types            2          1          1
+  Lines            0          0          0
+  ----------------------------------------
+  Total            6          1          1
+
+As the *Reference* and *Target* are switched, the *Added Types* from
+the first case now are listed as *Missing Types*.
+
 EXIT STATUS
 -----------
 :program:`llvm-debuginfo-analyzer` returns 0 if the input files were
 parsed and printed successfully. Otherwise, it returns 1.
+
+LIMITATIONS AND KNOWN ISSUES
+----------------------------
+See :download:`Limitations <../../tools/llvm-debuginfo-analyzer/README.md>`.
 
 SEE ALSO
 --------

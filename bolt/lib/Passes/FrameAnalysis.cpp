@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/FrameAnalysis.h"
+#include "bolt/Core/CallGraphWalker.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Passes/CallGraphWalker.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Timer.h"
 #include <fstream>
@@ -124,7 +124,7 @@ class FrameAccessAnalysis {
     if (IsIndexed || (!FIE.Size && (FIE.IsLoad || FIE.IsStore))) {
       LLVM_DEBUG(dbgs() << "Giving up on indexed memory access/unknown size\n");
       LLVM_DEBUG(dbgs() << "Blame insn: ");
-      LLVM_DEBUG(BC.printInstruction(outs(), Inst, 0, &BF, true, false, false));
+      LLVM_DEBUG(BC.printInstruction(dbgs(), Inst, 0, &BF, true, false, false));
       LLVM_DEBUG(Inst.dump());
       return false;
     }
@@ -198,7 +198,7 @@ public:
         if (CFIStack.empty())
           dbgs() << "Assertion is about to fail: " << BF.getPrintName() << "\n";
         assert(!CFIStack.empty() && "Corrupt CFI stack");
-        std::pair<int64_t, uint16_t> &Elem = CFIStack.top();
+        std::pair<int64_t, uint16_t> Elem = CFIStack.top();
         CFIStack.pop();
         CfaOffset = Elem.first;
         CfaReg = Elem.second;
@@ -320,7 +320,6 @@ bool FrameAnalysis::updateArgsTouchedFor(const BinaryFunction &BF, MCInst &Inst,
   if (!BC.MIB->isCall(Inst))
     return false;
 
-  std::set<int64_t> Res;
   const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
   // If indirect call, we conservatively assume it accesses all stack positions
   if (TargetSymbol == nullptr) {
@@ -561,22 +560,18 @@ FrameAnalysis::FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG)
     NamedRegionTimer T1("clearspt", "clear spt", "FA", "FA breakdown",
                         opts::TimeFA);
     clearSPTMap();
-
-    // Clean up memory allocated for annotation values
-    if (!opts::NoThreads)
-      for (MCPlusBuilder::AllocatorIdTy Id : SPTAllocatorsId)
-        BC.MIB->freeValuesAllocator(Id);
   }
 }
 
 void FrameAnalysis::printStats() {
-  outs() << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsNotOptimized
-         << " function(s) were not optimized.\n"
-         << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsFailedRestoreFI
-         << " function(s) "
-         << format("(%.1lf%% dyn cov)",
+  BC.outs() << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsNotOptimized
+            << " function(s) were not optimized.\n"
+            << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsFailedRestoreFI
+            << " function(s) "
+            << format(
+                   "(%.1lf%% dyn cov)",
                    (100.0 * CountFunctionsFailedRestoreFI / CountDenominator))
-         << " could not have its frame indices restored.\n";
+            << " could not have its frame indices restored.\n";
 }
 
 void FrameAnalysis::clearSPTMap() {

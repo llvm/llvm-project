@@ -44,6 +44,10 @@
 // greater than 50% chance for each character to end the string, making the odds
 // of getting long numbers very low.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+  if (size < 2) // Needs at least one byte for the base and one byte for the
+                // string.
+    return 0;
+
   uint8_t *container = new uint8_t[size + 1];
   if (!container)
     __builtin_trap();
@@ -61,19 +65,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // random even when the input is cleaned.
   container[0] = data[0];
 
-  StringParserOutputDiff<int>(&__llvm_libc::atoi, &::atoi, container, size);
-  StringParserOutputDiff<long>(&__llvm_libc::atol, &::atol, container, size);
-  StringParserOutputDiff<long long>(&__llvm_libc::atoll, &::atoll, container,
+  StringParserOutputDiff<int>(&LIBC_NAMESPACE::atoi, &::atoi, container, size);
+  StringParserOutputDiff<long>(&LIBC_NAMESPACE::atol, &::atol, container, size);
+  StringParserOutputDiff<long long>(&LIBC_NAMESPACE::atoll, &::atoll, container,
                                     size);
 
-  StringToNumberOutputDiff<long>(&__llvm_libc::strtol, &::strtol, container,
+  StringToNumberOutputDiff<long>(&LIBC_NAMESPACE::strtol, &::strtol, container,
                                  size);
-  StringToNumberOutputDiff<long long>(&__llvm_libc::strtoll, &::strtoll,
+  StringToNumberOutputDiff<long long>(&LIBC_NAMESPACE::strtoll, &::strtoll,
                                       container, size);
 
-  StringToNumberOutputDiff<unsigned long>(&__llvm_libc::strtoul, &::strtoul,
+  StringToNumberOutputDiff<unsigned long>(&LIBC_NAMESPACE::strtoul, &::strtoul,
                                           container, size);
-  StringToNumberOutputDiff<unsigned long long>(&__llvm_libc::strtoull,
+  StringToNumberOutputDiff<unsigned long long>(&LIBC_NAMESPACE::strtoull,
                                                &::strtoull, container, size);
 
   delete[] container;

@@ -1,4 +1,4 @@
-//===--- LoopConvertCheck.cpp - clang-tidy---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,12 +18,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstring>
 #include <optional>
-#include <tuple>
 #include <utility>
 
 using namespace clang::ast_matchers;
@@ -116,7 +114,7 @@ arrayConditionMatcher(internal::Matcher<Expr> LimitExpr) {
 /// Client code will need to make sure that:
 ///   - The index variable is only used as an array index.
 ///   - All arrays indexed by the loop are the same.
-StatementMatcher makeArrayLoopMatcher() {
+static StatementMatcher makeArrayLoopMatcher() {
   StatementMatcher ArrayBoundMatcher =
       expr(hasType(isInteger())).bind(ConditionBoundName);
 
@@ -157,7 +155,7 @@ StatementMatcher makeArrayLoopMatcher() {
 ///
 /// Client code will need to make sure that:
 ///   - The two containers on which 'begin' and 'end' are called are the same.
-StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
+static StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
 
   auto BeginNameMatcher = IsReverse ? hasAnyName("rbegin", "crbegin")
                                     : hasAnyName("begin", "cbegin");
@@ -262,14 +260,14 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
 ///     EndVarName: 'j' (as a VarDecl)
 ///   In the second example only:
 ///     EndCallName: 'container.size()' (as a CXXMemberCallExpr) or
-///     'size(contaner)' (as a CallExpr)
+///     'size(container)' (as a CallExpr)
 ///
 /// Client code will need to make sure that:
 ///   - The containers on which 'size()' is called is the container indexed.
 ///   - The index variable is only used in overloaded operator[] or
 ///     container.at().
 ///   - The container's iterators would not be invalidated during the loop.
-StatementMatcher makePseudoArrayLoopMatcher() {
+static StatementMatcher makePseudoArrayLoopMatcher() {
   // Test that the incoming type has a record declaration that has methods
   // called 'begin' and 'end'. If the incoming type is const, then make sure
   // these methods are also marked const.
@@ -421,7 +419,7 @@ getContainerFromBeginEndCall(const Expr *Init, bool IsBegin, bool *IsArrow,
     return {};
   if (IsReverse && !Call->Name.consume_back("r"))
     return {};
-  if (!Call->Name.empty() && !Call->Name.equals("c"))
+  if (!Call->Name.empty() && Call->Name != "c")
     return {};
   return std::make_pair(Call->Container, Call->CallKind);
 }
@@ -491,7 +489,7 @@ static bool isDirectMemberExpr(const Expr *E) {
 }
 
 /// Given an expression that represents an usage of an element from the
-/// containter that we are iterating over, returns false when it can be
+/// container that we are iterating over, returns false when it can be
 /// guaranteed this element cannot be modified as a result of this usage.
 static bool canBeModified(ASTContext *Context, const Expr *E) {
   if (E->getType().isConstQualified())
@@ -501,7 +499,7 @@ static bool canBeModified(ASTContext *Context, const Expr *E) {
     return true;
   if (const auto *Cast = Parents[0].get<ImplicitCastExpr>()) {
     if ((Cast->getCastKind() == CK_NoOp &&
-         Context->hasSameType(Cast->getType(), E->getType().withConst())) ||
+         ASTContext::hasSameType(Cast->getType(), E->getType().withConst())) ||
         (Cast->getCastKind() == CK_LValueToRValue &&
          !Cast->getType().isNull() && Cast->getType()->isFundamentalType()))
       return false;
@@ -666,7 +664,8 @@ void LoopConvertCheck::doConversion(
         AliasVarIsRef = true;
       }
       if (Descriptor.ElemType.isNull() ||
-          !Context->hasSameUnqualifiedType(AliasVarType, Descriptor.ElemType))
+          !ASTContext::hasSameUnqualifiedType(AliasVarType,
+                                              Descriptor.ElemType))
         Descriptor.ElemType = AliasVarType;
     }
 
@@ -706,13 +705,17 @@ void LoopConvertCheck::doConversion(
         ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow
                           ? VarNameOrStructuredBinding + "."
                           : VarNameOrStructuredBinding;
-        auto Parents = Context->getParents(*Usage.Expression);
+        const DynTypedNodeList Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
             // Usage.Expression will be replaced with the new index variable,
             // and parenthesis around a simple DeclRefExpr can always be
-            // removed.
-            Range = Paren->getSourceRange();
+            // removed except in case of a `sizeof` operator call.
+            const DynTypedNodeList GrandParents = Context->getParents(*Paren);
+            if (GrandParents.size() != 1 ||
+                GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr) {
+              Range = Paren->getSourceRange();
+            }
           } else if (const auto *UOP = Parents[0].get<UnaryOperator>()) {
             // If we are taking the address of the loop variable, then we must
             // not use a copy, as it would mean taking the address of the loop's
@@ -753,6 +756,7 @@ void LoopConvertCheck::doConversion(
   bool IsCheapToCopy =
       !Descriptor.ElemType.isNull() &&
       Descriptor.ElemType.isTriviallyCopyableType(*Context) &&
+      !Descriptor.ElemType->isDependentSizedArrayType() &&
       // TypeInfo::Width is in bits.
       Context->getTypeInfo(Descriptor.ElemType).Width <= 8 * MaxCopySize;
   bool UseCopy = CanCopy && ((VarNameFromAlias && !AliasVarIsRef) ||
@@ -917,12 +921,12 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
                                      const ast_matchers::BoundNodes &Nodes,
                                      const ForStmt *Loop,
                                      LoopFixerKind FixerKind) {
-  // In self contained diagnosics mode we don't want dependancies on other
+  // In self contained diagnostic mode we don't want dependencies on other
   // loops, otherwise, If we already modified the range of this for loop, don't
   // do any further updates on this iteration.
   if (areDiagsSelfContained())
     TUInfo = std::make_unique<TUTrackingInfo>();
-  else if (TUInfo->getReplacedVars().count(Loop))
+  else if (TUInfo->getReplacedVars().contains(Loop))
     return false;
 
   // Check that we have exactly one index variable and at most one end variable.
@@ -941,11 +945,15 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
         CanonicalInitVarType->isPointerType()) {
       // If the initializer and the variable are both pointers check if the
       // un-qualified pointee types match, otherwise we don't use auto.
-      if (!Context->hasSameUnqualifiedType(
-              CanonicalBeginType->getPointeeType(),
-              CanonicalInitVarType->getPointeeType()))
-        return false;
+      return ASTContext::hasSameUnqualifiedType(
+          CanonicalBeginType->getPointeeType(),
+          CanonicalInitVarType->getPointeeType());
     }
+
+    if (CanonicalBeginType->isBuiltinType() ||
+        CanonicalInitVarType->isBuiltinType())
+      return false;
+
   } else if (FixerKind == LFK_PseudoArray) {
     if (const auto *EndCall = Nodes.getNodeAs<CXXMemberCallExpr>(EndCallName)) {
       // This call is required to obtain the container.

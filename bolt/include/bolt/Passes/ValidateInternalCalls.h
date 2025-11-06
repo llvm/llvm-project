@@ -54,7 +54,7 @@ public:
 
   const char *getName() const override { return "validate-internal-calls"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 
 private:
   /// Fix the CFG to take into consideration internal calls that do not

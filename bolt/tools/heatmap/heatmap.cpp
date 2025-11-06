@@ -1,4 +1,11 @@
-#include "bolt/Profile/DataAggregator.h"
+//===- bolt/tools/heatmap/heatmap.cpp - Profile heatmap visualization tool ===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -6,7 +13,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace llvm;
@@ -46,19 +54,39 @@ static std::string GetExecutablePath(const char *Argv0) {
     if (llvm::ErrorOr<std::string> P =
             llvm::sys::findProgramByName(ExecutablePath))
       ExecutablePath = *P;
-  return std::string(ExecutablePath.str());
+  return std::string(ExecutablePath);
 }
 
 int main(int argc, char **argv) {
   cl::HideUnrelatedOptions(ArrayRef(opts::HeatmapCategories));
-  cl::ParseCommandLineOptions(argc, argv, "");
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      " BOLT Code Heatmap tool\n\n"
+      "  Produces code heatmaps using sampled profile\n\n"
+
+      "  Inputs:\n"
+      "  - Binary (supports BOLT-optimized binaries),\n"
+      "  - Sampled profile collected from the binary:\n"
+      "    - perf data or pre-aggregated profile data (instrumentation profile "
+      "not supported)\n"
+      "    - perf data can have basic (IP) or branch-stack (brstack) "
+      "samples\n\n"
+
+      "  Outputs:\n"
+      "  - Heatmaps: colored ASCII (requires a color-capable terminal or a"
+      " conversion tool like `aha`)\n"
+      "    Multiple heatmaps are produced by default with different "
+      "granularities (set by `block-size` option)\n"
+      "  - Section hotness: per-section samples% and utilization%\n"
+      "  - Cumulative distribution: working set size corresponding to a "
+      "given percentile of samples\n");
 
   if (opts::PerfData.empty()) {
     errs() << ToolName << ": expected -perfdata=<filename> option.\n";
     exit(1);
   }
 
-  opts::HeatmapMode = true;
+  opts::HeatmapMode = opts::HM_Exclusive;
   opts::AggregateOnly = true;
   if (!sys::fs::exists(opts::InputFilename))
     report_error(opts::InputFilename, errc::no_such_file_or_directory);
@@ -66,15 +94,18 @@ int main(int argc, char **argv) {
   // Output to stdout by default
   if (opts::OutputFilename.empty())
     opts::OutputFilename = "-";
+  opts::HeatmapOutput.assign(opts::OutputFilename);
 
   // Initialize targets and assembly printers/parsers.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmParsers();
-  llvm::InitializeAllDisassemblers();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
 
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
+#include "bolt/Core/TargetConfig.def"
 
   ToolName = argv[0];
   std::string ToolPath = GetExecutablePath(argv[0]);

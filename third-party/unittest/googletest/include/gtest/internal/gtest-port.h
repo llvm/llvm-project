@@ -652,7 +652,7 @@ typedef struct _RTL_CRITICAL_SECTION GTEST_CRITICAL_SECTION;
 // Determines whether to support death tests.
 // pops up a dialog window that cannot be suppressed programmatically.
 #if (defined(GTEST_OS_LINUX) || defined(GTEST_OS_CYGWIN) ||           \
-     defined(GTEST_OS_SOLARIS) ||                                     \
+     defined(GTEST_OS_SOLARIS) || defined(GTEST_OS_ZOS) ||            \
      (defined(GTEST_OS_MAC) && !defined(GTEST_OS_IOS)) ||             \
      (defined(GTEST_OS_WINDOWS_DESKTOP) && _MSC_VER) ||               \
      defined(GTEST_OS_WINDOWS_MINGW) || defined(GTEST_OS_AIX) ||      \
@@ -2087,7 +2087,10 @@ GTEST_DISABLE_MSC_DEPRECATED_PUSH_()
 inline int ChDir(const char* dir) { return chdir(dir); }
 #endif
 inline FILE* FOpen(const char* path, const char* mode) {
-#if defined(GTEST_OS_WINDOWS) && !defined(GTEST_OS_WINDOWS_MINGW)
+// FIXME: This doesn't work when building with rpmalloc, see
+// https://github.com/llvm/llvm-project/pull/65823#issuecomment-1739820534
+// so hacking it out for now.
+#if defined(GTEST_OS_WINDOWS) && !defined(GTEST_OS_WINDOWS_MINGW) && 0
   struct wchar_codecvt : public std::codecvt<wchar_t, char, std::mbstate_t> {};
   std::wstring_convert<wchar_codecvt> converter;
   std::wstring wide_path = converter.from_bytes(path);

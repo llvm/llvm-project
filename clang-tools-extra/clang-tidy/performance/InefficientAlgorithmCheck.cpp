@@ -1,4 +1,4 @@
-//===--- InefficientAlgorithmCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -97,7 +97,7 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   if (!AlgDecl)
     return;
 
-  if (Unordered && AlgDecl->getName().find("bound") != llvm::StringRef::npos)
+  if (Unordered && AlgDecl->getName().contains("bound"))
     return;
 
   const auto *AlgParam = Result.Nodes.getNodeAs<Expr>("AlgParam");

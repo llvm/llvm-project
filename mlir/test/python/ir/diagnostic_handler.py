@@ -2,6 +2,9 @@
 
 import gc
 from mlir.ir import *
+from mlir._mlir_libs._mlirPythonTestNanobind import (
+    test_diagnostics_with_errors_and_notes,
+)
 
 
 def run(f):
@@ -113,7 +116,7 @@ def testDiagnosticNonEmptyNotes():
     def callback(d):
         # CHECK: DIAGNOSTIC:
         # CHECK:   message='arith.addi' op requires one result
-        # CHECK:   notes=['see current operation: "arith.addi"() : () -> ()']
+        # CHECK:   notes=['see current operation: "arith.addi"() {{.*}} : () -> ()']
         print(f"DIAGNOSTIC:")
         print(f"  message={d.message}")
         print(f"  notes={list(map(str, d.notes))}")
@@ -222,3 +225,16 @@ def testDiagnosticReturnFalseDoesNotHandle():
     # CHECK: CALLBACK2: foobar
     # CHECK: CALLBACK1: foobar
     loc.emit_error("foobar")
+
+
+# CHECK-LABEL: TEST: testBuiltInDiagnosticsHandler
+@run
+def testBuiltInDiagnosticsHandler():
+    ctx = Context()
+
+    try:
+        test_diagnostics_with_errors_and_notes(ctx)
+    except ValueError as e:
+        # CHECK: created error
+        # CHECK: attached note
+        print(e)

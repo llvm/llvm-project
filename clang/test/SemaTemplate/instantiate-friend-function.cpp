@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -S -triple %itanium_abi_triple -std=c++11 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -emit-llvm %s -o - | FileCheck %s
 // expected-no-diagnostics
 
 namespace PR10856 {

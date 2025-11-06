@@ -15,8 +15,8 @@
 #ifndef LLVM_ADT_SPARSEBITVECTOR_H
 #define LLVM_ADT_SPARSEBITVECTOR_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
@@ -119,8 +119,8 @@ public:
 
   size_type count() const {
     unsigned NumBits = 0;
-    for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i)
-      NumBits += llvm::popcount(Bits[i]);
+    for (BitWord Bit : Bits)
+      NumBits += llvm::popcount(Bit);
     return NumBits;
   }
 
@@ -799,11 +799,8 @@ public:
 
   unsigned count() const {
     unsigned BitCount = 0;
-    for (ElementListConstIter Iter = Elements.begin();
-         Iter != Elements.end();
-         ++Iter)
-      BitCount += Iter->count();
-
+    for (const SparseBitVectorElement<ElementSize> &Elem : Elements)
+      BitCount += Elem.count();
     return BitCount;
   }
 

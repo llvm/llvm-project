@@ -202,7 +202,7 @@ class Lookup : public Command {
     }
 
     LookupRequest Request;
-    Request.IDs.insert(IDs.begin(), IDs.end());
+    Request.IDs.insert_range(IDs);
     bool FoundSymbol = false;
     Index->lookup(Request, [&](const Symbol &Sym) {
       FoundSymbol = true;
@@ -255,7 +255,7 @@ class Refs : public Command {
       }
     }
     RefsRequest RefRequest;
-    RefRequest.IDs.insert(IDs.begin(), IDs.end());
+    RefRequest.IDs.insert_range(IDs);
     llvm::Regex RegexFilter(Filter);
     Index->refs(RefRequest, [&RegexFilter](const Ref &R) {
       auto U = URI::parse(R.Location.FileURI);
@@ -372,15 +372,16 @@ struct {
 };
 
 std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
-  return Index.startswith("remote:")
+  return Index.starts_with("remote:")
              ? remote::getClient(Index.drop_front(strlen("remote:")),
                                  ProjectRoot)
-             : loadIndex(Index, SymbolOrigin::Static, /*UseDex=*/true);
+             : loadIndex(Index, SymbolOrigin::Static, /*UseDex=*/true,
+                         /*SupportContainedRefs=*/true);
 }
 
 bool runCommand(std::string Request, const SymbolIndex &Index) {
   // Split on spaces and add required null-termination.
-  std::replace(Request.begin(), Request.end(), ' ', '\0');
+  llvm::replace(Request, ' ', '\0');
   llvm::SmallVector<llvm::StringRef> Args;
   llvm::StringRef(Request).split(Args, '\0', /*MaxSplit=*/-1,
                                  /*KeepEmpty=*/false);
@@ -424,7 +425,7 @@ int main(int argc, const char *argv[]) {
   llvm::cl::ResetCommandLineParser(); // We reuse it for REPL commands.
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
-  bool RemoteMode = llvm::StringRef(IndexLocation).startswith("remote:");
+  bool RemoteMode = llvm::StringRef(IndexLocation).starts_with("remote:");
   if (RemoteMode && ProjectRoot.empty()) {
     llvm::errs() << "--project-root is required in remote mode\n";
     return -1;

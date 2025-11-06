@@ -20,27 +20,30 @@ using namespace mlir;
 using namespace presburger;
 
 /// Convenience functions to pass literals to Simplex.
-void addInequality(SimplexBase &simplex, ArrayRef<int64_t> coeffs) {
-  simplex.addInequality(getMPIntVec(coeffs));
+static void addInequality(SimplexBase &simplex, ArrayRef<int64_t> coeffs) {
+  simplex.addInequality(getDynamicAPIntVec(coeffs));
 }
-void addEquality(SimplexBase &simplex, ArrayRef<int64_t> coeffs) {
-  simplex.addEquality(getMPIntVec(coeffs));
+static void addEquality(SimplexBase &simplex, ArrayRef<int64_t> coeffs) {
+  simplex.addEquality(getDynamicAPIntVec(coeffs));
 }
-bool isRedundantInequality(Simplex &simplex, ArrayRef<int64_t> coeffs) {
-  return simplex.isRedundantInequality(getMPIntVec(coeffs));
+static bool isRedundantInequality(Simplex &simplex, ArrayRef<int64_t> coeffs) {
+  return simplex.isRedundantInequality(getDynamicAPIntVec(coeffs));
 }
-bool isRedundantInequality(LexSimplex &simplex, ArrayRef<int64_t> coeffs) {
-  return simplex.isRedundantInequality(getMPIntVec(coeffs));
+static bool isRedundantInequality(LexSimplex &simplex,
+                                  ArrayRef<int64_t> coeffs) {
+  return simplex.isRedundantInequality(getDynamicAPIntVec(coeffs));
 }
-bool isRedundantEquality(Simplex &simplex, ArrayRef<int64_t> coeffs) {
-  return simplex.isRedundantEquality(getMPIntVec(coeffs));
+static bool isRedundantEquality(Simplex &simplex, ArrayRef<int64_t> coeffs) {
+  return simplex.isRedundantEquality(getDynamicAPIntVec(coeffs));
 }
-bool isSeparateInequality(LexSimplex &simplex, ArrayRef<int64_t> coeffs) {
-  return simplex.isSeparateInequality(getMPIntVec(coeffs));
+static bool isSeparateInequality(LexSimplex &simplex,
+                                 ArrayRef<int64_t> coeffs) {
+  return simplex.isSeparateInequality(getDynamicAPIntVec(coeffs));
 }
 
-Simplex::IneqType findIneqType(Simplex &simplex, ArrayRef<int64_t> coeffs) {
-  return simplex.findIneqType(getMPIntVec(coeffs));
+static Simplex::IneqType findIneqType(Simplex &simplex,
+                                      ArrayRef<int64_t> coeffs) {
+  return simplex.findIneqType(getDynamicAPIntVec(coeffs));
 }
 
 /// Take a snapshot, add constraints making the set empty, and rollback.
@@ -81,8 +84,9 @@ TEST(SimplexTest, addEquality_separate) {
   EXPECT_TRUE(simplex.isEmpty());
 }
 
-void expectInequalityMakesSetEmpty(Simplex &simplex, ArrayRef<int64_t> coeffs,
-                                   bool expect) {
+static void expectInequalityMakesSetEmpty(Simplex &simplex,
+                                          ArrayRef<int64_t> coeffs,
+                                          bool expect) {
   ASSERT_FALSE(simplex.isEmpty());
   unsigned snapshot = simplex.getSnapshot();
   addInequality(simplex, coeffs);
@@ -121,9 +125,9 @@ TEST(SimplexTest, addInequality_rollback) {
   }
 }
 
-Simplex simplexFromConstraints(unsigned nDim,
-                               ArrayRef<SmallVector<int64_t, 8>> ineqs,
-                               ArrayRef<SmallVector<int64_t, 8>> eqs) {
+static Simplex simplexFromConstraints(unsigned nDim,
+                                      ArrayRef<SmallVector<int64_t, 8>> ineqs,
+                                      ArrayRef<SmallVector<int64_t, 8>> eqs) {
   Simplex simplex(nDim);
   for (const auto &ineq : ineqs)
     addInequality(simplex, ineq);
@@ -433,8 +437,8 @@ TEST(SimplexTest, pivotRedundantRegressionTest) {
   // After the rollback, the only remaining constraint is x <= -1.
   // The maximum value of x should be -1.
   simplex.rollback(snapshot);
-  MaybeOptimum<Fraction> maxX =
-      simplex.computeOptimum(Simplex::Direction::Up, getMPIntVec({1, 0, 0}));
+  MaybeOptimum<Fraction> maxX = simplex.computeOptimum(
+      Simplex::Direction::Up, getDynamicAPIntVec({1, 0, 0}));
   EXPECT_TRUE(maxX.isBounded() && *maxX == Fraction(-1, 1));
 }
 
@@ -467,9 +471,9 @@ TEST(SimplexTest, appendVariable) {
 
   EXPECT_EQ(simplex.getNumVariables(), 2u);
   EXPECT_EQ(simplex.getNumConstraints(), 2u);
-  EXPECT_EQ(simplex.computeIntegerBounds(getMPIntVec({0, 1, 0})),
-            std::make_pair(MaybeOptimum<MPInt>(MPInt(yMin)),
-                           MaybeOptimum<MPInt>(MPInt(yMax))));
+  EXPECT_EQ(simplex.computeIntegerBounds(getDynamicAPIntVec({0, 1, 0})),
+            std::make_pair(MaybeOptimum<DynamicAPInt>(DynamicAPInt(yMin)),
+                           MaybeOptimum<DynamicAPInt>(DynamicAPInt(yMax))));
 
   simplex.rollback(snapshot1);
   EXPECT_EQ(simplex.getNumVariables(), 1u);
@@ -569,10 +573,11 @@ TEST(SimplexTest, IsRationalSubsetOf) {
 
 TEST(SimplexTest, addDivisionVariable) {
   Simplex simplex(/*nVar=*/1);
-  simplex.addDivisionVariable(getMPIntVec({1, 0}), MPInt(2));
+  simplex.addDivisionVariable(getDynamicAPIntVec({1, 0}), DynamicAPInt(2));
   addInequality(simplex, {1, 0, -3}); // x >= 3.
   addInequality(simplex, {-1, 0, 9}); // x <= 9.
-  std::optional<SmallVector<MPInt, 8>> sample = simplex.findIntegerSample();
+  std::optional<SmallVector<DynamicAPInt, 8>> sample =
+      simplex.findIntegerSample();
   ASSERT_TRUE(sample.has_value());
   EXPECT_EQ((*sample)[0] / 2, (*sample)[1]);
 }

@@ -39,6 +39,13 @@
 # MIX2-NEXT: [[#]] foo3@v1
 # MIX2-NOT:  {{.}}
 
+# RUN: ld.lld --version-script %t4.script -pie --export-dynamic %t.o -o %t4
+# RUN: llvm-readelf --dyn-syms %t4 | FileCheck --check-prefix=MIX2 %s
+# RUN: ld.lld --version-script %t4.script -pie %t.o -o %t4
+# RUN: llvm-readelf --dyn-syms %t4 | FileCheck --check-prefix=EXE %s
+
+# EXE: Symbol table '.dynsym' contains 1 entries:
+
 # RUN: ld.lld --version-script %t4.script -shared %t.o %tref.o -o %t5.so
 # RUN: llvm-readelf -r %t5.so | FileCheck --check-prefix=RELOC %s
 

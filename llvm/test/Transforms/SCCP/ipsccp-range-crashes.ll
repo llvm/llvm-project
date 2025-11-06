@@ -174,7 +174,7 @@ define i64 @crash_ctpop(i1 %cond, ptr %addr) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[ADDR:%.*]], align 8
 ; CHECK-NEXT:    [[ANDV:%.*]] = and i32 [[LV]], 16777215
-; CHECK-NEXT:    [[TRUNCV:%.*]] = zext i32 [[ANDV]] to i64
+; CHECK-NEXT:    [[TRUNCV:%.*]] = zext nneg i32 [[ANDV]] to i64
 ; CHECK-NEXT:    [[RES:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TRUNCV]])
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;

@@ -2,8 +2,8 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1                        | FileCheck %s --check-prefix=FMFDEBUG
 ; RUN: llc < %s -mtriple=powerpc64le                                                           | FileCheck %s --check-prefix=FMF
-; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1 -enable-unsafe-fp-math -enable-no-nans-fp-math | FileCheck %s --check-prefix=GLOBALDEBUG
-; RUN: llc < %s -mtriple=powerpc64le -enable-unsafe-fp-math -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math | FileCheck %s --check-prefix=GLOBAL
+; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1 -fp-contract=fast -enable-no-nans-fp-math | FileCheck %s --check-prefix=GLOBALDEBUG
+; RUN: llc < %s -mtriple=powerpc64le -fp-contract=fast -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math | FileCheck %s --check-prefix=GLOBAL
 
 ; Test FP transforms using instruction/node-level fast-math-flags.
 ; We're also checking debug output to verify that FMF is propagated to the newly created nodes.
@@ -325,24 +325,21 @@ define float @sqrt_afn_ieee(float %x) #0 {
 ;
 ; GLOBAL-LABEL: sqrt_afn_ieee:
 ; GLOBAL:       # %bb.0:
-; GLOBAL-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
-; GLOBAL-NEXT:    xsabsdp 0, 1
-; GLOBAL-NEXT:    lfs 2, .LCPI11_1@toc@l(3)
-; GLOBAL-NEXT:    fcmpu 0, 0, 2
-; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    blt 0, .LBB11_2
-; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
-; GLOBAL-NEXT:    xvcvsxwdp 2, 34
-; GLOBAL-NEXT:    xsmulsp 1, 1, 0
-; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xvcvsxwdp 3, 34
+; GLOBAL-NEXT:    xsmulsp 2, 1, 0
+; GLOBAL-NEXT:    xsabsdp 1, 1
+; GLOBAL-NEXT:    xsmaddasp 3, 2, 0
 ; GLOBAL-NEXT:    lfs 0, .LCPI11_0@toc@l(3)
-; GLOBAL-NEXT:    xsmulsp 0, 1, 0
-; GLOBAL-NEXT:    xsmulsp 0, 0, 2
-; GLOBAL-NEXT:  .LBB11_2:
-; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
+; GLOBAL-NEXT:    xsmulsp 0, 2, 0
+; GLOBAL-NEXT:    lfs 2, .LCPI11_1@toc@l(3)
+; GLOBAL-NEXT:    xssubsp 1, 1, 2
+; GLOBAL-NEXT:    xxlxor 2, 2, 2
+; GLOBAL-NEXT:    xsmulsp 0, 0, 3
+; GLOBAL-NEXT:    fsel 1, 1, 0, 2
 ; GLOBAL-NEXT:    blr
   %rt = call afn ninf float @llvm.sqrt.f32(float %x)
   ret float %rt
@@ -393,21 +390,19 @@ define float @sqrt_afn_preserve_sign(float %x) #1 {
 ;
 ; GLOBAL-LABEL: sqrt_afn_preserve_sign:
 ; GLOBAL:       # %bb.0:
-; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    fcmpu 0, 1, 0
-; GLOBAL-NEXT:    beq 0, .LBB13_2
-; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI13_0@toc@ha
-; GLOBAL-NEXT:    xvcvsxwdp 2, 34
-; GLOBAL-NEXT:    xsmulsp 1, 1, 0
-; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xvcvsxwdp 3, 34
+; GLOBAL-NEXT:    xsmulsp 2, 1, 0
+; GLOBAL-NEXT:    xsmaddasp 3, 2, 0
 ; GLOBAL-NEXT:    lfs 0, .LCPI13_0@toc@l(3)
-; GLOBAL-NEXT:    xsmulsp 0, 1, 0
-; GLOBAL-NEXT:    xsmulsp 0, 0, 2
-; GLOBAL-NEXT:  .LBB13_2:
-; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    xsmulsp 0, 2, 0
+; GLOBAL-NEXT:    xxlxor 2, 2, 2
+; GLOBAL-NEXT:    xsmulsp 0, 0, 3
+; GLOBAL-NEXT:    fsel 2, 1, 2, 0
+; GLOBAL-NEXT:    xsnegdp 1, 1
+; GLOBAL-NEXT:    fsel 1, 1, 2, 0
 ; GLOBAL-NEXT:    blr
   %rt = call afn ninf float @llvm.sqrt.f32(float %x)
   ret float %rt
@@ -462,24 +457,21 @@ define float @sqrt_fast_ieee(float %x) #0 {
 ;
 ; GLOBAL-LABEL: sqrt_fast_ieee:
 ; GLOBAL:       # %bb.0:
-; GLOBAL-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
-; GLOBAL-NEXT:    xsabsdp 0, 1
-; GLOBAL-NEXT:    lfs 2, .LCPI15_1@toc@l(3)
-; GLOBAL-NEXT:    fcmpu 0, 0, 2
-; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    blt 0, .LBB15_2
-; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI15_0@toc@ha
-; GLOBAL-NEXT:    xvcvsxwdp 2, 34
-; GLOBAL-NEXT:    xsmulsp 1, 1, 0
-; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xvcvsxwdp 3, 34
+; GLOBAL-NEXT:    xsmulsp 2, 1, 0
+; GLOBAL-NEXT:    xsabsdp 1, 1
+; GLOBAL-NEXT:    xsmaddasp 3, 2, 0
 ; GLOBAL-NEXT:    lfs 0, .LCPI15_0@toc@l(3)
-; GLOBAL-NEXT:    xsmulsp 0, 1, 0
-; GLOBAL-NEXT:    xsmulsp 0, 0, 2
-; GLOBAL-NEXT:  .LBB15_2:
-; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
+; GLOBAL-NEXT:    xsmulsp 0, 2, 0
+; GLOBAL-NEXT:    lfs 2, .LCPI15_1@toc@l(3)
+; GLOBAL-NEXT:    xssubsp 1, 1, 2
+; GLOBAL-NEXT:    xxlxor 2, 2, 2
+; GLOBAL-NEXT:    xsmulsp 0, 0, 3
+; GLOBAL-NEXT:    fsel 1, 1, 0, 2
 ; GLOBAL-NEXT:    blr
   %rt = call contract reassoc afn ninf float @llvm.sqrt.f32(float %x)
   ret float %rt
@@ -517,21 +509,19 @@ define float @sqrt_fast_preserve_sign(float %x) #1 {
 ;
 ; GLOBAL-LABEL: sqrt_fast_preserve_sign:
 ; GLOBAL:       # %bb.0:
-; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    fcmpu 0, 1, 0
-; GLOBAL-NEXT:    beq 0, .LBB16_2
-; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI16_0@toc@ha
-; GLOBAL-NEXT:    xvcvsxwdp 2, 34
-; GLOBAL-NEXT:    xsmulsp 1, 1, 0
-; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xvcvsxwdp 3, 34
+; GLOBAL-NEXT:    xsmulsp 2, 1, 0
+; GLOBAL-NEXT:    xsmaddasp 3, 2, 0
 ; GLOBAL-NEXT:    lfs 0, .LCPI16_0@toc@l(3)
-; GLOBAL-NEXT:    xsmulsp 0, 1, 0
-; GLOBAL-NEXT:    xsmulsp 0, 0, 2
-; GLOBAL-NEXT:  .LBB16_2:
-; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    xsmulsp 0, 2, 0
+; GLOBAL-NEXT:    xxlxor 2, 2, 2
+; GLOBAL-NEXT:    xsmulsp 0, 0, 3
+; GLOBAL-NEXT:    fsel 2, 1, 2, 0
+; GLOBAL-NEXT:    xsnegdp 1, 1
+; GLOBAL-NEXT:    fsel 1, 1, 2, 0
 ; GLOBAL-NEXT:    blr
   %rt = call contract reassoc ninf afn float @llvm.sqrt.f32(float %x)
   ret float %rt
@@ -577,15 +567,15 @@ define double @fcmp_nnan(double %a, double %y, double %z) {
 ; FP library calls can have fast-math-flags.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
-; FMFDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<ptr @log2>
-; FMFDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
-; FMFDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
+; FMFDEBUG:         ch,glue = PPCISD::CALL_NOP {{t[0-9]+}}, TargetGlobalAddress:i64<ptr @log2>
+; FMFDEBUG:         ch,glue = callseq_end [[T15:t[0-9]+]], TargetConstant:i64<32>, TargetConstant:i64<0>, [[T15]]:1
+; FMFDEBUG:         f64,ch,glue = CopyFromReg [[T16:t[0-9]+]], Register:f64 $f1, [[T16]]:1
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
-; GLOBALDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<ptr @log2>
-; GLOBALDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
-; GLOBALDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
+; GLOBALDEBUG:         ch,glue = PPCISD::CALL_NOP {{t[0-9]+}}, TargetGlobalAddress:i64<ptr @log2>
+; GLOBALDEBUG:         ch,glue = callseq_end [[T15:t[0-9]+]], TargetConstant:i64<32>, TargetConstant:i64<0>, [[T15]]:1
+; GLOBALDEBUG:         f64,ch,glue = CopyFromReg [[T16:t[0-9]+]], Register:f64 $f1, [[T16]]:1
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'
 
 declare double @log2(double)

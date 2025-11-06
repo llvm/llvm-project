@@ -5,14 +5,14 @@ define void @f() {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_1: # %for.cond
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    imull %eax, %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movapd %xmm0, %xmm1
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1
 ; CHECK-NEXT:    subsd %xmm0, %xmm1
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB0_1: # %for.cond
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    imull %eax, %eax
 ; CHECK-NEXT:    cwtl
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
 ; CHECK-NEXT:    cvtsi2sd %eax, %xmm2
@@ -21,9 +21,10 @@ define void @f() {
 ; CHECK-NEXT:    movapd %xmm2, %xmm3
 ; CHECK-NEXT:    mulsd %xmm1, %xmm3
 ; CHECK-NEXT:    mulsd %xmm0, %xmm2
-; CHECK-NEXT:    subsd %xmm3, %xmm1
-; CHECK-NEXT:    addsd %xmm2, %xmm1
-; CHECK-NEXT:    cvttsd2si %xmm1, %eax
+; CHECK-NEXT:    movapd %xmm1, %xmm4
+; CHECK-NEXT:    subsd %xmm3, %xmm4
+; CHECK-NEXT:    addsd %xmm2, %xmm4
+; CHECK-NEXT:    cvttsd2si %xmm4, %eax
 ; CHECK-NEXT:    jmp .LBB0_1
 entry:
   br label %for.cond

@@ -8,20 +8,25 @@
 
 #include "src/sys/stat/mkdirat.h"
 #include "src/unistd/rmdir.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 
-TEST(LlvmLibcMkdiratTest, CreateAndRemove) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_DIR = "testdata/mkdirat.testdir";
-  ASSERT_THAT(__llvm_libc::mkdirat(AT_FDCWD, TEST_DIR, S_IRWXU), Succeeds(0));
-  ASSERT_THAT(__llvm_libc::rmdir(TEST_DIR), Succeeds(0));
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcMkdiratTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcMkdiratTest, CreateAndRemove) {
+  constexpr const char *FILENAME = "testdata/mkdirat.testdir";
+  auto TEST_DIR = libc_make_test_file_path(FILENAME);
+  ASSERT_THAT(LIBC_NAMESPACE::mkdirat(AT_FDCWD, TEST_DIR, S_IRWXU),
+              Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::rmdir(TEST_DIR), Succeeds(0));
 }
 
-TEST(LlvmLibcMkdiratTest, BadPath) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(__llvm_libc::mkdirat(AT_FDCWD, "non-existent-dir/test", S_IRWXU),
-              Fails(ENOENT));
+TEST_F(LlvmLibcMkdiratTest, BadPath) {
+  ASSERT_THAT(
+      LIBC_NAMESPACE::mkdirat(AT_FDCWD, "non-existent-dir/test", S_IRWXU),
+      Fails(ENOENT));
 }

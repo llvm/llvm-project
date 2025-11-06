@@ -10,10 +10,11 @@ body:             |
 
     ; MIPS32-LABEL: name: ctlz_i32
     ; MIPS32: liveins: $a0
-    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
-    ; MIPS32: $v0 = COPY [[CTLZ]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32-NEXT: {{  $}}
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
+    ; MIPS32-NEXT: $v0 = COPY [[CTLZ]](s32)
+    ; MIPS32-NEXT: RetRA implicit $v0
     %0:_(s32) = COPY $a0
     %1:_(s32) = G_CTLZ %0(s32)
     $v0 = COPY %1(s32)
@@ -30,20 +31,19 @@ body:             |
 
     ; MIPS32-LABEL: name: ctlz_i64
     ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
-    ; MIPS32: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ]], [[C1]]
-    ; MIPS32: [[CTLZ1:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
-    ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C2]]
-    ; MIPS32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[ADD]], [[CTLZ1]]
-    ; MIPS32: $v0 = COPY [[SELECT]](s32)
-    ; MIPS32: $v1 = COPY [[C]](s32)
-    ; MIPS32: RetRA implicit $v0, implicit $v1
+    ; MIPS32-NEXT: {{  $}}
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; MIPS32-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
+    ; MIPS32-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
+    ; MIPS32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; MIPS32-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ]], [[C1]]
+    ; MIPS32-NEXT: [[CTLZ1:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
+    ; MIPS32-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[ADD]], [[CTLZ1]]
+    ; MIPS32-NEXT: $v0 = COPY [[SELECT]](s32)
+    ; MIPS32-NEXT: $v1 = COPY [[C]](s32)
+    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)

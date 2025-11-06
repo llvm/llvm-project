@@ -1,4 +1,4 @@
-//=== ClangASTNodesEmitter.cpp - Generate Clang AST node tables -*- C++ -*-===//
+//===-- ClangASTNodesEmitter.cpp - Generate Clang AST node tables ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <cctype>
 #include <map>
 #include <set>
 #include <string>
@@ -33,7 +32,8 @@ class ClangASTNodesEmitter {
   typedef std::multimap<ASTNode, ASTNode> ChildMap;
   typedef ChildMap::const_iterator ChildIterator;
 
-  RecordKeeper &Records;
+  std::set<ASTNode> PrioritizedClasses;
+  const RecordKeeper &Records;
   ASTNode Root;
   const std::string &NodeClassName;
   const std::string &BaseSuffix;
@@ -41,17 +41,12 @@ class ClangASTNodesEmitter {
   ChildMap Tree;
 
   // Create a macro-ized version of a name
-  static std::string macroName(std::string S) {
-    for (unsigned i = 0; i < S.size(); ++i)
-      S[i] = std::toupper(S[i]);
-
-    return S;
-  }
+  static std::string macroName(StringRef S) { return S.upper(); }
 
   const std::string &macroHierarchyName() {
     assert(Root && "root node not yet derived!");
     if (MacroHierarchyName.empty())
-      MacroHierarchyName = macroName(std::string(Root.getName()));
+      MacroHierarchyName = macroName(Root.getName());
     return MacroHierarchyName;
   }
 
@@ -69,9 +64,15 @@ class ClangASTNodesEmitter {
 
   std::pair<ASTNode, ASTNode> EmitNode(raw_ostream& OS, ASTNode Base);
 public:
-  explicit ClangASTNodesEmitter(RecordKeeper &R, const std::string &N,
-                                const std::string &S)
-    : Records(R), NodeClassName(N), BaseSuffix(S) {}
+  explicit ClangASTNodesEmitter(const RecordKeeper &R, const std::string &N,
+                                const std::string &S,
+                                std::string_view PriorizeIfSubclassOf)
+      : Records(R), NodeClassName(N), BaseSuffix(S) {
+    ArrayRef<const Record *> vecPrioritized =
+        R.getAllDerivedDefinitionsIfDefined(PriorizeIfSubclassOf);
+    PrioritizedClasses =
+        std::set<ASTNode>(vecPrioritized.begin(), vecPrioritized.end());
+  }
 
   // run - Output the .inc file contents
   void run(raw_ostream &OS);
@@ -86,19 +87,30 @@ public:
 // Called recursively to ensure that nodes remain contiguous
 std::pair<ASTNode, ASTNode> ClangASTNodesEmitter::EmitNode(raw_ostream &OS,
                                                            ASTNode Base) {
-  std::string BaseName = macroName(std::string(Base.getName()));
+  std::string BaseName = macroName(Base.getName());
 
-  ChildIterator i = Tree.lower_bound(Base), e = Tree.upper_bound(Base);
-  bool HasChildren = (i != e);
+  auto [II, E] = Tree.equal_range(Base);
+  bool HasChildren = II != E;
 
   ASTNode First, Last;
   if (!Base.isAbstract())
     First = Last = Base;
 
-  for (; i != e; ++i) {
-    ASTNode Child = i->second;
+  auto Comp = [this](const ASTNode &LHS, const ASTNode &RHS) {
+    bool LHSPrioritized = PrioritizedClasses.count(LHS) > 0;
+    bool RHSPrioritized = PrioritizedClasses.count(RHS) > 0;
+    return std::tuple(LHSPrioritized, LHS.getName()) >
+           std::tuple(RHSPrioritized, RHS.getName());
+  };
+  auto SortedChildren = std::set<ASTNode, decltype(Comp)>(Comp);
+
+  for (; II != E; ++II) {
+    SortedChildren.insert(II->second);
+  }
+
+  for (const auto &Child : SortedChildren) {
     bool Abstract = Child.isAbstract();
-    std::string NodeName = macroName(std::string(Child.getName()));
+    std::string NodeName = macroName(Child.getName());
 
     OS << "#ifndef " << NodeName << "\n";
     OS << "#  define " << NodeName << "(Type, Base) "
@@ -122,9 +134,8 @@ std::pair<ASTNode, ASTNode> ClangASTNodesEmitter::EmitNode(raw_ostream &OS,
 
   // If there aren't first/last nodes, it must be because there were no
   // children and this node was abstract, which is not a sensible combination.
-  if (!First) {
+  if (!First)
     PrintFatalError(Base.getLoc(), "abstract node has no children");
-  }
   assert(Last && "set First without Last");
 
   if (HasChildren) {
@@ -145,14 +156,9 @@ void ClangASTNodesEmitter::deriveChildTree() {
   assert(!Root && "already computed tree");
 
   // Emit statements
-  const std::vector<Record*> Stmts
-    = Records.getAllDerivedDefinitions(NodeClassName);
-
-  for (unsigned i = 0, e = Stmts.size(); i != e; ++i) {
-    Record *R = Stmts[i];
-
+  for (const Record *R : Records.getAllDerivedDefinitions(NodeClassName)) {
     if (auto B = R->getValueAsOptionalDef(BaseFieldName))
-      Tree.insert(std::make_pair(B, R));
+      Tree.insert({B, R});
     else if (Root)
       PrintFatalError(R->getLoc(),
                       Twine("multiple root nodes in \"") + NodeClassName
@@ -169,7 +175,7 @@ void ClangASTNodesEmitter::deriveChildTree() {
 void ClangASTNodesEmitter::run(raw_ostream &OS) {
   deriveChildTree();
 
-  emitSourceFileHeader("List of AST nodes of a particular kind", OS);
+  emitSourceFileHeader("List of AST nodes of a particular kind", OS, Records);
 
   // Write the preamble
   OS << "#ifndef ABSTRACT_" << macroHierarchyName() << "\n";
@@ -182,9 +188,9 @@ void ClangASTNodesEmitter::run(raw_ostream &OS) {
   OS << "#endif\n\n";
 
   OS << "#ifndef LAST_" << macroHierarchyName() << "_RANGE\n";
-  OS << "#  define LAST_" 
-     << macroHierarchyName() << "_RANGE(Base, First, Last) " 
-     << macroHierarchyName() << "_RANGE(Base, First, Last)\n";
+  OS << "#  define LAST_" << macroHierarchyName()
+     << "_RANGE(Base, First, Last) " << macroHierarchyName()
+     << "_RANGE(Base, First, Last)\n";
   OS << "#endif\n\n";
 
   EmitNode(OS, Root);
@@ -195,53 +201,45 @@ void ClangASTNodesEmitter::run(raw_ostream &OS) {
   OS << "#undef ABSTRACT_" << macroHierarchyName() << "\n";
 }
 
-void clang::EmitClangASTNodes(RecordKeeper &RK, raw_ostream &OS,
-                              const std::string &N, const std::string &S) {
-  ClangASTNodesEmitter(RK, N, S).run(OS);
+void clang::EmitClangASTNodes(const RecordKeeper &RK, raw_ostream &OS,
+                              const std::string &N, const std::string &S,
+                              std::string_view PriorizeIfSubclassOf) {
+  ClangASTNodesEmitter(RK, N, S, PriorizeIfSubclassOf).run(OS);
+}
+
+static void
+printDeclContext(const std::multimap<const Record *, const Record *> &Tree,
+                 const Record *DeclContext, raw_ostream &OS) {
+  if (!DeclContext->getValueAsBit(AbstractFieldName))
+    OS << "DECL_CONTEXT(" << DeclContext->getName() << ")\n";
+  auto [II, E] = Tree.equal_range(DeclContext);
+  for (; II != E; ++II) {
+    printDeclContext(Tree, II->second, OS);
+  }
 }
 
 // Emits and addendum to a .inc file to enumerate the clang declaration
 // contexts.
-void clang::EmitClangDeclContext(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangDeclContext(const RecordKeeper &Records, raw_ostream &OS) {
   // FIXME: Find a .td file format to allow for this to be represented better.
 
-  emitSourceFileHeader("List of AST Decl nodes", OS);
+  emitSourceFileHeader("List of AST Decl nodes", OS, Records);
 
   OS << "#ifndef DECL_CONTEXT\n";
   OS << "#  define DECL_CONTEXT(DECL)\n";
   OS << "#endif\n";
-  
-  OS << "#ifndef DECL_CONTEXT_BASE\n";
-  OS << "#  define DECL_CONTEXT_BASE(DECL) DECL_CONTEXT(DECL)\n";
-  OS << "#endif\n";
-  
-  typedef std::set<Record*> RecordSet;
-  typedef std::vector<Record*> RecordVector;
-  
-  RecordVector DeclContextsVector
-    = Records.getAllDerivedDefinitions(DeclContextNodeClassName);
-  RecordVector Decls = Records.getAllDerivedDefinitions(DeclNodeClassName);
-  RecordSet DeclContexts (DeclContextsVector.begin(), DeclContextsVector.end());
-   
-  for (RecordVector::iterator i = Decls.begin(), e = Decls.end(); i != e; ++i) {
-    Record *R = *i;
 
-    if (Record *B = R->getValueAsOptionalDef(BaseFieldName)) {
-      if (DeclContexts.find(B) != DeclContexts.end()) {
-        OS << "DECL_CONTEXT_BASE(" << B->getName() << ")\n";
-        DeclContexts.erase(B);
-      }
-    }
+  std::multimap<const Record *, const Record *> Tree;
+
+  for (const Record *R : Records.getAllDerivedDefinitions(DeclNodeClassName)) {
+    if (auto *B = R->getValueAsOptionalDef(BaseFieldName))
+      Tree.insert({B, R});
   }
 
-  // To keep identical order, RecordVector may be used
-  // instead of RecordSet.
-  for (RecordVector::iterator
-         i = DeclContextsVector.begin(), e = DeclContextsVector.end();
-       i != e; ++i)
-    if (DeclContexts.find(*i) != DeclContexts.end())
-      OS << "DECL_CONTEXT(" << (*i)->getName() << ")\n";
+  for (const Record *DeclContext :
+       Records.getAllDerivedDefinitions(DeclContextNodeClassName)) {
+    printDeclContext(Tree, DeclContext, OS);
+  }
 
   OS << "#undef DECL_CONTEXT\n";
-  OS << "#undef DECL_CONTEXT_BASE\n";
 }

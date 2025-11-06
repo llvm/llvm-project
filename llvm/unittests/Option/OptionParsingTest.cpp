@@ -9,6 +9,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "gtest/gtest.h"
 
@@ -19,6 +20,10 @@ using namespace llvm::opt;
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+#define OPTTABLE_STR_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_STR_TABLE_CODE
+
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -27,20 +32,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_PREFIXES_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
-static constexpr const StringLiteral PrefixTable_init[] =
-#define PREFIX_UNION(VALUES) VALUES
+#define OPTTABLE_PREFIXES_UNION_CODE
 #include "Opts.inc"
-#undef PREFIX_UNION
-    ;
-static constexpr const ArrayRef<StringLiteral>
-    PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
+#undef OPTTABLE_PREFIXES_UNION_CODE
 
 enum OptionFlags {
   OptFlag1 = (1 << 4),
@@ -50,6 +48,7 @@ enum OptionFlags {
 
 enum OptionVisibility {
   SubtoolVis = (1 << 2),
+  MultiLineVis = (1 << 3),
 };
 
 static constexpr OptTable::Info InfoTable[] = {
@@ -62,13 +61,15 @@ namespace {
 class TestOptTable : public GenericOptTable {
 public:
   TestOptTable(bool IgnoreCase = false)
-      : GenericOptTable(InfoTable, IgnoreCase) {}
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                        IgnoreCase) {}
 };
 
 class TestPrecomputedOptTable : public PrecomputedOptTable {
 public:
   TestPrecomputedOptTable(bool IgnoreCase = false)
-      : PrecomputedOptTable(InfoTable, PrefixTable, IgnoreCase) {}
+      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                            OptionPrefixesUnion, IgnoreCase) {}
 };
 }
 
@@ -537,4 +538,24 @@ TYPED_TEST(OptTableTest, UnknownGroupedShortOptions) {
   EXPECT_EQ("-z", Unknown[1]);
   EXPECT_EQ("-u", Unknown[2]);
   EXPECT_EQ("-z", Unknown[3]);
+}
+
+TYPED_TEST(OptTableTest, PrintMultilineHelpText) {
+  TypeParam T;
+  std::string Help;
+  raw_string_ostream RSO(Help);
+  T.printHelp(RSO, "usage", "title", /*ShowHidden=*/false,
+              /*ShowAllAliases=*/false, Visibility(MultiLineVis));
+  EXPECT_STREQ(Help.c_str(), R"(OVERVIEW: title
+
+USAGE: usage
+
+OPTIONS:
+  -multiline-help-with-long-name
+                  This a help text that has
+                  multiple lines in it
+                  and a long name
+  -multiline-help This a help text that has
+                  multiple lines in it
+)");
 }

@@ -1,8 +1,12 @@
 add_mlir_unittest(MLIRTransformDialectTests
   BuildOnlyExtensionTest.cpp
+  Preload.cpp
 )
-target_link_libraries(MLIRTransformDialectTests
+mlir_target_link_libraries(MLIRTransformDialectTests
   PRIVATE
   MLIRFuncDialect
+  MLIRTestTransformDialect
+  MLIRTransformDebugExtension
   MLIRTransformDialect
+  MLIRTransformDialectTransforms
 )

@@ -20,7 +20,7 @@
 #include <random>
 #include <stack>
 
-#undef  DEBUG_TYPE
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
 
 using namespace llvm;
@@ -425,7 +425,7 @@ void TSPReorderAlgorithm::reorderBasicBlocks(BinaryFunction &BF,
   }
 
   std::vector<std::vector<int64_t>> DP;
-  DP.resize(1 << N);
+  DP.resize(static_cast<size_t>(1) << N);
   for (std::vector<int64_t> &Elmt : DP)
     Elmt.resize(N, -1);
 
@@ -531,21 +531,21 @@ void ExtTSPReorderAlgorithm::reorderBasicBlocks(BinaryFunction &BF,
   }
 
   // Initialize CFG edges
-  using JumpT = std::pair<uint64_t, uint64_t>;
-  std::vector<std::pair<JumpT, uint64_t>> JumpCounts;
+  std::vector<codelayout::EdgeCount> JumpCounts;
   for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     auto BI = BB->branch_info_begin();
     for (BinaryBasicBlock *SuccBB : BB->successors()) {
       assert(BI->Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
              "missing profile for a jump");
-      auto It = std::make_pair(BB->getLayoutIndex(), SuccBB->getLayoutIndex());
-      JumpCounts.push_back(std::make_pair(It, BI->Count));
+      JumpCounts.push_back(
+          {BB->getLayoutIndex(), SuccBB->getLayoutIndex(), BI->Count});
       ++BI;
     }
   }
 
   // Run the layout algorithm
-  auto Result = applyExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
+  auto Result =
+      codelayout::computeExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
   Order.reserve(BF.getLayout().block_size());
   for (uint64_t R : Result)
     Order.push_back(OrigOrder[R]);

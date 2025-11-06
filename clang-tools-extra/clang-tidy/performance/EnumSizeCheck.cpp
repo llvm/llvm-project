@@ -1,4 +1,4 @@
-//===--- EnumSizeCheck.cpp - clang-tidy -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,6 +23,8 @@ namespace clang::tidy::performance {
 
 namespace {
 
+AST_MATCHER(EnumDecl, hasEnumerators) { return !Node.enumerators().empty(); }
+
 const std::uint64_t Min8 =
     std::imaxabs(std::numeric_limits<std::int8_t>::min());
 const std::uint64_t Max8 = std::numeric_limits<std::int8_t>::max();
@@ -33,7 +35,8 @@ const std::uint64_t Min32 =
     std::imaxabs(std::numeric_limits<std::int32_t>::min());
 const std::uint64_t Max32 = std::numeric_limits<std::int32_t>::max();
 
-std::pair<const char *, std::uint32_t>
+} // namespace
+static std::pair<const char *, std::uint32_t>
 getNewType(std::size_t Size, std::uint64_t Min, std::uint64_t Max) noexcept {
   if (Min) {
     if (Min <= Min8 && Max <= Max8) {
@@ -73,8 +76,6 @@ getNewType(std::size_t Size, std::uint64_t Min, std::uint64_t Max) noexcept {
   return {"std::uint8_t", sizeof(std::uint8_t)};
 }
 
-} // namespace
-
 EnumSizeCheck::EnumSizeCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       EnumIgnoreList(
@@ -93,6 +94,7 @@ bool EnumSizeCheck::isLanguageVersionSupported(
 void EnumSizeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       enumDecl(unless(isExpansionInSystemHeader()), isDefinition(),
+               hasEnumerators(),
                unless(matchers::matchesAnyListedName(EnumIgnoreList)))
           .bind("e"),
       this);

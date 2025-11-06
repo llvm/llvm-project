@@ -8,13 +8,14 @@
 
 #include "src/threads/thrd_join.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <threads.h> // For thrd_* type definitions.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
-static_assert(sizeof(thrd_t) == sizeof(__llvm_libc::Thread),
+static_assert(sizeof(thrd_t) == sizeof(LIBC_NAMESPACE::Thread),
               "Mismatch between thrd_t and internal Thread.");
 
 LLVM_LIBC_FUNCTION(int, thrd_join, (thrd_t th, int *retval)) {
@@ -23,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, thrd_join, (thrd_t th, int *retval)) {
   return result == 0 ? thrd_success : thrd_error;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

@@ -90,6 +90,10 @@ static void DescribeOrigin(u32 id) {
         Printf("  %sVirtual table ptr was destroyed%s\n", d.Origin(),
                d.Default());
         break;
+      case STACK_TRACE_TAG_ALLOC_PADDING:
+        Printf("  %sUninitialized value is outside of heap allocation%s\n",
+               d.Origin(), d.Default());
+        break;
       default:
         Printf("  %sUninitialized value was created%s\n", d.Origin(),
                d.Default());
@@ -269,7 +273,7 @@ void DescribeMemoryRange(const void *x, uptr size) {
 
 void ReportUMRInsideAddressRange(const char *function, const void *start,
                                  uptr size, uptr offset) {
-  function = StripFunctionName(function);
+  function = StackTracePrinter::GetOrInit()->StripFunctionName(function);
   Decorator d;
   Printf("%s", d.Warning());
   Printf("%sUninitialized bytes in %s%s%s at offset %zu inside [%p, %zu)%s\n",

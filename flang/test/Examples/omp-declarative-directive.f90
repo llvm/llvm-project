@@ -1,13 +1,13 @@
 ! REQUIRES: plugins, examples, shell
 
-! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport.so -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport%pluginext -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
 
 ! Check OpenMP declarative directives
 
 ! 2.8.2 declare-simd
 
 subroutine declare_simd_1(a, b)
-  real(8), intent(inout) :: a, b
+  real(8), intent(inout), allocatable :: a, b
   !$omp declare simd(declare_simd_1) aligned(a)
   a = 3.14 + b
 end subroutine declare_simd_1

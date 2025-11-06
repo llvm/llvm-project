@@ -21,8 +21,10 @@
  */
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
-    const char *CountersBegin, const char *CountersEnd, const char *NamesBegin,
-    const char *NamesEnd);
+    const char *CountersBegin, const char *CountersEnd, const char *BitmapBegin,
+    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd,
+    const VTableProfData *VTableBegin, const VTableProfData *VTableEnd,
+    const char *VNamesBegin, const char *VNamesEnd);
 
 /*!
  * \brief Write instrumentation data to the given buffer, given explicit
@@ -36,7 +38,8 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
 int __llvm_profile_write_buffer_internal(
     char *Buffer, const __llvm_profile_data *DataBegin,
     const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
+    const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
+    const char *NamesBegin, const char *NamesEnd);
 
 /*!
  * The data structure describing the data to be written by the
@@ -125,7 +128,7 @@ typedef struct VPDataReaderType {
                            uint8_t *SiteCountArray[]);
   /* Function pointer to getValueProfRecordHeader method. */
   uint32_t (*GetValueProfRecordHeaderSize)(uint32_t NumSites);
-  /* Function pointer to getFristValueProfRecord method. */  
+  /* Function pointer to getFirstValueProfRecord method. */
   struct ValueProfRecord *(*GetFirstValueProfRecord)(struct ValueProfData *);
   /* Return the number of value data for site \p Site.  */
   uint32_t (*GetNumValueDataForSite)(uint32_t VK, uint32_t Site);
@@ -153,28 +156,32 @@ int lprofWriteDataImpl(ProfDataWriter *Writer,
                        const __llvm_profile_data *DataBegin,
                        const __llvm_profile_data *DataEnd,
                        const char *CountersBegin, const char *CountersEnd,
+                       const char *BitmapBegin, const char *BitmapEnd,
                        VPDataReaderType *VPDataReader, const char *NamesBegin,
-                       const char *NamesEnd, int SkipNameDataWrite);
+                       const char *NamesEnd, const VTableProfData *VTableBegin,
+                       const VTableProfData *VTableEnd, const char *VNamesBegin,
+                       const char *VNamesEnd, int SkipNameDataWrite,
+                       uint64_t Version);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */
 void lprofMergeValueProfData(struct ValueProfData *SrcValueProfData,
                              __llvm_profile_data *DstData);
 
-VPDataReaderType *lprofGetVPDataReader();
+VPDataReaderType *lprofGetVPDataReader(void);
 
 /* Internal interface used by test to reset the max number of 
  * tracked values per value site to be \p MaxVals.
  */
 void lprofSetMaxValsPerSite(uint32_t MaxVals);
-void lprofSetupValueProfiler();
+void lprofSetupValueProfiler(void);
 
 /* Return the profile header 'signature' value associated with the current
  * executable or shared library. The signature value can be used to for
  * a profile name that is unique to this load module so that it does not
  * collide with profiles from other binaries. It also allows shared libraries
  * to dump merged profile data into its own profile file. */
-uint64_t lprofGetLoadModuleSignature();
+uint64_t lprofGetLoadModuleSignature(void);
 
 /* 
  * Return non zero value if the profile data has already been

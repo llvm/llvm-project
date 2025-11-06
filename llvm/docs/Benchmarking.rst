@@ -10,31 +10,31 @@ For benchmarking a patch we want to reduce all possible sources of
 noise as much as possible. How to do that is very OS dependent.
 
 Note that low noise is required, but not sufficient. It does not
-exclude measurement bias. See
-https://www.cis.upenn.edu/~cis501/papers/producing-wrong-data.pdf for
-example.
+exclude measurement bias.
+See `"Producing Wrong Data Without Doing Anything Obviously Wrong!" by Mytkowicz, Diwan, Hauswith and Sweeney (ASPLOS 2009) <https://users.cs.northwestern.edu/~robby/courses/322-2013-spring/mytkowicz-wrong-data.pdf>`_
+for example.
 
 General
 ================================
 
-* Use a high resolution timer, e.g. perf under linux.
+* Use a high-resolution timer, e.g., perf under Linux.
 
 * Run the benchmark multiple times to be able to recognize noise.
 
 * Disable as many processes or services as possible on the target system.
 
-* Disable frequency scaling, turbo boost and address space
-  randomization (see OS specific section).
+* Disable frequency scaling, Turbo Boost and address space
+  randomization (see OS-specific section).
 
-* Static link if the OS supports it. That avoids any variation that
+* Use static linking if the OS supports it. That avoids any variation that
   might be introduced by loading dynamic libraries. This can be done
-  by passing ``-DLLVM_BUILD_STATIC=ON`` to cmake.
+  by passing ``-DLLVM_BUILD_STATIC=ON`` to CMake.
 
-* Try to avoid storage. On some systems you can use tmpfs. Putting the
+* Try to avoid storage. On some systems, you can use tmpfs. Putting the
   program, inputs and outputs on tmpfs avoids touching a real storage
   system, which can have a pretty big variability.
 
-  To mount it (on linux and freebsd at least)::
+  To mount it (on Linux and FreeBSD at least)::
 
     mount -t tmpfs -o size=<XX>g none dir_to_mount
 
@@ -49,10 +49,10 @@ Linux
 
    for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
    do
-     echo performance > /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+     echo performance > $i
    done
 
-* Use https://github.com/lpechacek/cpuset to reserve cpus for just the
+* Use https://github.com/lpechacek/cpuset to reserve CPU cores for just the
   program you are benchmarking. If using perf, leave at least 2 cores
   so that perf runs in one and your program in another::
 
@@ -73,7 +73,7 @@ Linux
 
     cset shield --exec -- perf stat -r 10 <cmd>
 
-  This will run the command after ``--`` in the isolated cpus. The
+  This will run the command after ``--`` in the isolated CPU cores. The
   particular perf command runs the ``<cmd>`` 10 times and reports
   statistics.
 
@@ -82,6 +82,6 @@ With these in place you can expect perf variations of less than 0.1%.
 Linux Intel
 -----------
 
-* Disable turbo mode::
+* Disable Turbo Boost::
 
     echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo

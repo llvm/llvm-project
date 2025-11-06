@@ -163,7 +163,7 @@ public:
 class LLVM_LIBRARY_VISIBILITY OffloadPackager final : public Tool {
 public:
   OffloadPackager(const ToolChain &TC)
-      : Tool("Offload::Packager", "clang-offload-packager", TC) {}
+      : Tool("Offload::Packager", "llvm-offload-binary", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   void ConstructJob(Compilation &C, const JobAction &JA,
@@ -187,11 +187,20 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-enum class DwarfFissionKind { None, Split, Single };
-
-DwarfFissionKind getDebugFissionKind(const Driver &D,
-                                     const llvm::opt::ArgList &Args,
-                                     llvm::opt::Arg *&Arg);
+// Calculate the output path of the module file when compiling a module unit
+// with the `-fmodule-output` option or `-fmodule-output=` option specified.
+// The behavior is:
+// - If `-fmodule-output=` is specfied, then the module file is
+//   writing to the value.
+// - Otherwise if the output object file of the module unit is specified, the
+// output path
+//   of the module file should be the same with the output object file except
+//   the corresponding suffix. This requires both `-o` and `-c` are specified.
+// - Otherwise, the output path of the module file will be the same with the
+//   input with the corresponding suffix.
+llvm::SmallString<256>
+getCXX20NamedModuleOutputPath(const llvm::opt::ArgList &Args,
+                              const char *BaseInput);
 
 } // end namespace tools
 

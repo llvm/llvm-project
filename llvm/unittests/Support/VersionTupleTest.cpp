@@ -47,3 +47,33 @@ TEST(VersionTuple, tryParse) {
   EXPECT_TRUE(VT.tryParse("1 "));
   EXPECT_TRUE(VT.tryParse("."));
 }
+
+TEST(VersionTuple, withMajorReplaced) {
+  VersionTuple VT(2);
+  VersionTuple ReplacedVersion = VT.withMajorReplaced(7);
+  EXPECT_FALSE(ReplacedVersion.getMinor().has_value());
+  EXPECT_FALSE(ReplacedVersion.getSubminor().has_value());
+  EXPECT_FALSE(ReplacedVersion.getBuild().has_value());
+  EXPECT_EQ(VersionTuple(7), ReplacedVersion);
+
+  VT = VersionTuple(100, 1);
+  ReplacedVersion = VT.withMajorReplaced(7);
+  EXPECT_TRUE(ReplacedVersion.getMinor().has_value());
+  EXPECT_FALSE(ReplacedVersion.getSubminor().has_value());
+  EXPECT_FALSE(ReplacedVersion.getBuild().has_value());
+  EXPECT_EQ(VersionTuple(7, 1), ReplacedVersion);
+
+  VT = VersionTuple(101, 11, 12);
+  ReplacedVersion = VT.withMajorReplaced(7);
+  EXPECT_TRUE(ReplacedVersion.getMinor().has_value());
+  EXPECT_TRUE(ReplacedVersion.getSubminor().has_value());
+  EXPECT_FALSE(ReplacedVersion.getBuild().has_value());
+  EXPECT_EQ(VersionTuple(7, 11, 12), ReplacedVersion);
+
+  VT = VersionTuple(101, 11, 12, 2);
+  ReplacedVersion = VT.withMajorReplaced(7);
+  EXPECT_TRUE(ReplacedVersion.getMinor().has_value());
+  EXPECT_TRUE(ReplacedVersion.getSubminor().has_value());
+  EXPECT_TRUE(ReplacedVersion.getBuild().has_value());
+  EXPECT_EQ(VersionTuple(7, 11, 12, 2), ReplacedVersion);
+}

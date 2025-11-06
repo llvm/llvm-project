@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test that IO item list are lowered and passed correctly
 
@@ -29,7 +29,7 @@ end
 ! CHECK-LABEL: func @_QPpass_array_slice_read(
 ! CHECK-SAME:            %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>>{{.*}}) {
 ! CHECK:         %[[VAL_1:.*]] = arith.constant 5 : i32
-! CHECK:         %[[VAL_2:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_2:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,{{[0-9]+}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_4:.*]] = arith.constant {{[0-9]+}} : i32
 ! CHECK:         %[[VAL_5:.*]] = fir.call @_FortranAioBeginExternalListInput(%[[VAL_1]], %[[VAL_3]], %[[VAL_4]]) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
@@ -55,7 +55,7 @@ end
 ! CHECK-LABEL: func @_QPpass_array_slice_write(
 ! CHECK-SAME:                   %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>>{{.*}}) {
 ! CHECK:         %[[VAL_1:.*]] = arith.constant 1 : i32
-! CHECK:         %[[VAL_2:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_2:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,{{[0-9]+}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_4:.*]] = arith.constant {{[0-9]+}} : i32
 ! CHECK:         %[[VAL_5:.*]] = fir.call @_FortranAioBeginUnformattedOutput(%[[VAL_1]], %[[VAL_3]], %[[VAL_4]]) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>

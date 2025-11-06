@@ -13,13 +13,38 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
+
 #include "safestack_platform.h"
 #include "safestack_util.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 
 #include <errno.h>
+#include <string.h>
 #include <sys/resource.h>
 
 #include "interception/interception.h"
+
+// interception.h drags in sanitizer_redefine_builtins.h, which in turn
+// creates references to __sanitizer_internal_memcpy etc.  The interceptors
+// aren't needed here, so just forward to libc.
+extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memcpy(void *dest,
+                                                                const void *src,
+                                                                size_t n) {
+  return memcpy(dest, src, n);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memmove(
+    void *dest, const void *src, size_t n) {
+  return memmove(dest, src, n);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memset(void *s, int c,
+                                                                size_t n) {
+  return memset(s, c, n);
+}
+}  // extern "C"
 
 using namespace safestack;
 
@@ -223,6 +248,17 @@ INTERCEPTOR(int, pthread_create, pthread_t *thread,
     pthread_attr_getguardsize(&tmpattr, &guard);
     pthread_attr_destroy(&tmpattr);
   }
+
+#if SANITIZER_SOLARIS
+  // Solaris pthread_attr_init initializes stacksize to 0 (the default), so
+  // hardcode the actual values as documented in pthread_create(3C).
+  if (size == 0)
+#  if defined(_LP64)
+    size = 2 * 1024 * 1024;
+#  else
+    size = 1024 * 1024;
+#  endif
+#endif
 
   SFS_CHECK(size);
   size = RoundUpTo(size, kStackAlign);

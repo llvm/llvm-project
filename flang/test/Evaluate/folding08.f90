@@ -11,6 +11,11 @@ module m
   end type
   type(t) :: ta(0:2)
   character(len=2) :: ca(-1:1)
+  interface
+    function foo()
+      real :: foo(2:3,4:6)
+    end function
+  end interface
   integer, parameter :: lbtadim = lbound(ta,1)
   logical, parameter :: test_lbtadim = lbtadim == 0
   integer, parameter :: ubtadim = ubound(ta,1)
@@ -47,9 +52,6 @@ module m
   logical, parameter :: test_lb_empty_dim = lbound(empty, 1) == 1
   logical, parameter :: test_ub_empty_dim = ubound(empty, 1) == 0
  contains
-  function foo()
-    real :: foo(2:3,4:6)
-  end function
   subroutine test(n1,a1,a2)
     integer, intent(in) :: n1
     real, intent(in) :: a1(1:n1), a2(0:*)
@@ -146,4 +148,10 @@ module m
     logical, parameter :: test_ubpa4_dim = ubound((pa4), 1) == 5 .and. &
          ubound((pa4), 2) == 4
   end
+  subroutine test5_max_ubound
+    ! Test maximum ubound value
+    integer(8), parameter :: I64_MAX = INT(z'7fffffffffffffff', kind=8)
+    integer, parameter :: a5(I64_MAX - 2 : I64_MAX) = [1, 2, 3]
+    logical, parameter :: test_uba5 = ubound(a5, 1, kind=8) == I64_MAX
+  end subroutine
 end

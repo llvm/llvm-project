@@ -9,7 +9,7 @@
 // CHECK:      %[[D:.*]] = vector.extract_strided_slice %[[ARG0]] {offsets = [1], sizes = [1], strides = [1]} : vector<2xi32> to vector<1xi32>
 // CHECK:      %[[E:.*]] = arith.addi %[[B]], %[[D]] : vector<1xi32>
 // CHECK:      %[[F:.*]] = vector.insert_strided_slice %[[E]], %[[C]] {offsets = [1], strides = [1]} : vector<1xi32> into vector<2xi32>
-// CHECK:      %[[G:.*]] = vector.extract %[[E]][0] : vector<1xi32>
+// CHECK:      %[[G:.*]] = vector.extract %[[E]][0] : i32 from vector<1xi32>
 // CHECK:      %[[H:.*]] = vector.broadcast %[[G]] : i32 to vector<i32>
 // CHECK:      return %[[F]], %[[H]] : vector<2xi32>, vector<i32>
 func.func @scan1d_inc(%arg0 : vector<2xi32>, %arg1 : vector<i32>) -> (vector<2xi32>, vector<i32>) {
@@ -27,7 +27,7 @@ func.func @scan1d_inc(%arg0 : vector<2xi32>, %arg1 : vector<i32>) -> (vector<2xi
 // CHECK:      %[[D:.*]] = vector.insert_strided_slice %[[C]], %[[A]] {offsets = [0], strides = [1]} : vector<1xi32> into vector<2xi32>
 // CHECK:      %[[E:.*]] = arith.addi %[[C]], %[[B]] : vector<1xi32>
 // CHECK:      %[[F:.*]] = vector.insert_strided_slice %[[E]], %[[D]] {offsets = [1], strides = [1]} : vector<1xi32> into vector<2xi32>
-// CHECK:      %[[G:.*]] = vector.extract %[[E]][0] : vector<1xi32>
+// CHECK:      %[[G:.*]] = vector.extract %[[E]][0] : i32 from vector<1xi32>
 // CHECK:      %[[H:.*]] = vector.broadcast %[[G]] : i32 to vector<i32>
 // CHECK:      return %[[F]], %[[H]] : vector<2xi32>, vector<i32>
 func.func @scan1d_exc(%arg0 : vector<2xi32>, %arg1 : vector<i32>) -> (vector<2xi32>, vector<i32>) {

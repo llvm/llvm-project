@@ -280,6 +280,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qSupported;
       if (PACKET_MATCHES("qSyncThreadStateSupported"))
         return eServerPacketType_qSyncThreadStateSupported;
+      if (PACKET_MATCHES("qStructuredDataPlugins"))
+        return eServerPacketType_qStructuredDataPlugins;
       break;
 
     case 'T':
@@ -500,13 +502,11 @@ lldb_private::Status StringExtractorGDBRemote::GetStatus() {
   if (GetResponseType() == eError) {
     SetFilePos(1);
     uint8_t errc = GetHexU8(255);
-    error.SetError(errc, lldb::eErrorTypeGeneric);
-
-    error.SetErrorStringWithFormat("Error %u", errc);
+    error = lldb_private::Status::FromErrorStringWithFormat("Error %u", errc);
     std::string error_messg;
     if (GetChar() == ';') {
       GetHexByteString(error_messg);
-      error.SetErrorString(error_messg);
+      error = lldb_private::Status(error_messg);
     }
   }
   return error;
