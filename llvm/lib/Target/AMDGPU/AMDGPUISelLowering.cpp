@@ -5305,8 +5305,7 @@ SDValue AMDGPUTargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
   if (!IsNegative)
     return TruncResult;
 
-  return DAG.getNode(ISD::SUB, DL, N->getValueType(0),
-                     DAG.getConstant(0, DL, N->getValueType(0)), TruncResult);
+  return DAG.getNegative(TruncResult,DL,N->getValueType(0));
 }
 
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
