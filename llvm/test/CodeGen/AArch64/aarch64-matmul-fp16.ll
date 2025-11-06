@@ -5,7 +5,7 @@
 define <8 x half> @fmmla.v8f16.v16i8(<8 x half> %r, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: fmmla.v8f16.v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmmla v0.4h, v1.16b, v2.16b
+; CHECK-NEXT:    fmmla v0.8h, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vfmmla1.i = tail call <8 x half> @llvm.aarch64.neon.fmmla.v8f16.v16i8(<8 x half> %r, <16 x i8> %a, <16 x i8> %b) #3

@@ -1731,20 +1731,10 @@ def BFCVT : BF16ToSinglePrecision<"bfcvt">;
 let Predicates = [HasMatMulInt8] in {
 def  SMMLA : SIMDThreeSameVectorMatMul<0, 0, "smmla", int_aarch64_neon_smmla>;
 def  UMMLA : SIMDThreeSameVectorMatMul<0, 1, "ummla", int_aarch64_neon_ummla>;
-defm FMMLA : SIMDThreeSameVectorMatMulFP<1, 1, "fmmla", int_aarch64_neon_fmmla>;
 def USMMLA : SIMDThreeSameVectorMatMul<1, 0, "usmmla", int_aarch64_neon_usmmla>;
 defm USDOT : SIMDThreeSameVectorDot<0, 1, "usdot", AArch64usdot>;
 defm USDOTlane : SIMDThreeSameVectorDotIndex<0, 1, 0b10, "usdot", AArch64usdot>;
 
-// FMMLA fp16
-def : Pat<(v8f16 (int_aarch64_neon_fmmla
-            (v8f16 V128:$Rd), (v16i8 V128:$Rn), (v16i8 V128:$Rm))),
-          (FMMLAfp16 V128:$Rd, V128:$Rn, V128:$Rm)>;
-
-// FMMLA fp32
-def : Pat<(v4f32 (int_aarch64_neon_fmmla
-            (v4f32 V128:$Rd), (v16i8 V128:$Rn), (v16i8 V128:$Rm))),
-          (FMMLAfp32 V128:$Rd, V128:$Rn, V128:$Rm)>;
 
 // sudot lane has a pattern where usdot is expected (there is no sudot).
 // The second operand is used in the dup operation to repeat the indexed
@@ -11428,7 +11418,7 @@ let Predicates = [HasF16F32MM] in
   defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla">;
 
 let Uses = [FPMR, FPCR] in
-  defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
 
 //===----------------------------------------------------------------------===//
 // Contention Management Hints (FEAT_CMH)
