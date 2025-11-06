@@ -361,7 +361,7 @@ bool ValueBoundsConstraintSet::isMapped(Value value,
 }
 
 void ValueBoundsConstraintSet::processWorklist() {
-  LDBG() << "Processing value bounds worklist...\n";
+  LDBG() << "Processing value bounds worklist...";
   while (!worklist.empty()) {
     int64_t pos = worklist.front();
     worklist.pop();
