@@ -66,6 +66,8 @@ if config.enable_profcheck:
     config.excludes.append("UpdateTestChecks")
     # TODO(#166655): Reenable Instrumentation tests
     config.excludes.append("Instrumentation")
+    # profiling doesn't work quite well on GPU, excluding
+    config.excludes.append("AMDGPU")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
