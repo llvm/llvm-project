@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-convert-to-spirv="run-signature-conversion=false run-vector-unrolling=true" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt --test-convert-to-spirv="run-signature-conversion=false run-vector-unrolling=true" --split-input-file %s | FileCheck %s
 
 // COM: This file tests the current behaviour of the SignatureConversion
 // COM: and the unrolling of vector.to_elements to vectors of valid SPIR-V
