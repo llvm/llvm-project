@@ -2680,7 +2680,8 @@ static bool OptimizeNonTrivialIFuncs(
         // prevents considering the current callee as a candidate for static
         // resolution by following callers.
         while (CallerBits.isSubsetOf(FeatureMask[Callees[I]]) &&
-               ++I < Callees.size());
+               ++I < Callees.size())
+          ;
       }
     };
 
