@@ -637,7 +637,7 @@ public:
   void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
   bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait);
   bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait);
-  void simplifyXcnt(AMDGPU::Waitcnt &Wait);
+  void simplifyXcnt(AMDGPU::Waitcnt &CheckWait, AMDGPU::Waitcnt &UpdateWait);
 
   void determineWait(InstCounterType T, RegInterval Interval,
                      AMDGPU::Waitcnt &Wait) const;
@@ -1202,7 +1202,7 @@ void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) {
   simplifyWaitcnt(SAMPLE_CNT, Wait.SampleCnt);
   simplifyWaitcnt(BVH_CNT, Wait.BvhCnt);
   simplifyWaitcnt(KM_CNT, Wait.KmCnt);
-  simplifyXcnt(Wait);
+  simplifyXcnt(Wait, Wait);
 }
 
 void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
@@ -1304,12 +1304,12 @@ bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
          !hasPendingEvent(STORE_CNT) && !hasPendingEvent(SMEM_GROUP);
 }
 
-void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &Wait) {
+void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &CheckWait, AMDGPU::Waitcnt &UpdateWait) {
   // Try to simplify xcnt further by checking for joint kmcnt and loadcnt
   // optimizations. On entry to a block with multiple predescessors, there may
   // be pending SMEM and VMEM events active at the same time.
   // In such cases, only clear one active event at a time.
-  if (hasRedundantXCntWithKmCnt(Wait)) {
+  if (hasRedundantXCntWithKmCnt(CheckWait)) {
     if (hasPendingEvent(VMEM_GROUP)) {
       // Only clear the SMEM_GROUP event, but VMEM_GROUP could still require
       // handling.
@@ -1317,10 +1317,10 @@ void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &Wait) {
     } else {
       applyWaitcnt(X_CNT, 0);
     }
-  } else if (canOptimizeXCntWithLoadCnt(Wait)) {
-    applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
+  } else if (canOptimizeXCntWithLoadCnt(CheckWait)) {
+    applyWaitcnt(X_CNT, std::min(CheckWait.XCnt, CheckWait.LoadCnt));
   }
-  simplifyWaitcnt(X_CNT, Wait.XCnt);
+  simplifyWaitcnt(X_CNT, UpdateWait.XCnt);
 }
 
 // Where there are multiple types of event in the bracket of a counter,
@@ -1752,7 +1752,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
          ScoreBrackets.canOptimizeXCntWithLoadCnt(PreCombine))) {
       // Xcnt may need to be updated depending on a pre-existing KM/LOAD_CNT
       // due to taking the backedge of a block.
-      ScoreBrackets.simplifyXcnt(PreCombine);
+      ScoreBrackets.simplifyXcnt(PreCombine, Wait);
     }
     if (!WaitInstrs[CT])
       continue;
@@ -2100,6 +2100,14 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
 
+  // Since the translation for VMEM addresses occur in-order, we can apply the
+  // XCnt if the current instruction is of VMEM type and has a memory
+  // dependency with another VMEM instruction in flight.
+  if (Wait.XCnt != ~0u && isVmemAccess(MI)) {
+    ScoreBrackets.applyWaitcnt(X_CNT, Wait.XCnt);
+    Wait.XCnt = ~0u;
+  }
+
   // When forcing emit, we need to skip terminators because that would break the
   // terminators of the MBB if we emit a waitcnt between terminators.
   if (ForceEmitZeroFlag && !MI.isTerminator())
@@ -2166,13 +2174,6 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n"
                       << "Update Instr: " << *It);
-  }
-
-  // Since the translation for VMEM addresses occur in-order, we can skip the
-  // XCnt if the current instruction is of VMEM type and has a memory
-  // dependency with another VMEM instruction in flight.
-  if (Wait.XCnt != ~0u && isVmemAccess(*It)) {
-    Wait.XCnt = ~0u;
   }
 
   if (WCG->createNewWaitcnt(Block, It, Wait))
