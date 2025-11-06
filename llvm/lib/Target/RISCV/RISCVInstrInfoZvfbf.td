@@ -438,43 +438,6 @@ let Predicates = [HasStdExtZvfbfmin] in {
                   FRM_DYN,
                   fvti.AVL, fvti.Log2SEW, TA_MA)>;
   }
-
-  foreach fvti = AllBF16Vectors in {
-    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
-
-    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
-                                    (SplatFPOp (SelectScalarFPAsInt (XLenVT GPR:$imm))),
-                                    fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
-                   (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2, GPR:$imm, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
-                                    (SplatFPOp (fvti.Scalar fpimm0)),
-                                    fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
-                   (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2, 0, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
-                                            (SplatFPOp (SelectScalarFPAsInt (XLenVT GPR:$imm))),
-                                            fvti.RegClass:$rs2,
-                                            fvti.RegClass:$passthru,
-                                            VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
-                   fvti.RegClass:$passthru, fvti.RegClass:$rs2, GPR:$imm, (fvti.Mask VMV0:$vm),
-                   GPR:$vl, fvti.Log2SEW)>;
-
-
-    def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
-                                            (SplatFPOp (fvti.Scalar fpimm0)),
-                                            fvti.RegClass:$rs2,
-                                            fvti.RegClass:$passthru,
-                                            VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
-                   fvti.RegClass:$passthru, fvti.RegClass:$rs2, 0, (fvti.Mask VMV0:$vm),
-                   GPR:$vl, fvti.Log2SEW)>;
-  }
 }
 
 let Predicates = [HasStdExtZvfbfwma] in {
@@ -704,5 +667,39 @@ foreach vti = NoGroupBF16Vectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in
   def : Pat<(vti.Scalar (extractelt (vti.Vector vti.RegClass:$rs2), 0)),
             (vfmv_f_s_inst vti.RegClass:$rs2, vti.Log2SEW)>;
+}
+
+let Predicates = [HasStdExtZvfbfa] in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    def : Pat<(fwti.Vector (any_riscv_fpextend_vl
+                               (fvti.Vector fvti.RegClass:$rs1),
+                               (fvti.Mask VMV0:$vm),
+                               VLOpFrag)),
+              (!cast<Instruction>("PseudoVFWCVT_F_F_ALT_V_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
+                  (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
+                  (fvti.Mask VMV0:$vm),
+                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
+
+    def : Pat<(fvti.Vector (any_riscv_fpround_vl
+                               (fwti.Vector fwti.RegClass:$rs1),
+                               (fwti.Mask VMV0:$vm), VLOpFrag)),
+              (!cast<Instruction>("PseudoVFNCVT_F_F_ALT_W_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
+                  (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
+                  (fwti.Mask VMV0:$vm),
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
+    def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
+              (!cast<Instruction>("PseudoVFNCVT_F_F_ALT_W_"#fvti.LMul.MX#"_E"#fvti.SEW)
+                  (fvti.Vector (IMPLICIT_DEF)),
+                  fwti.RegClass:$rs1,
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  fvti.AVL, fvti.Log2SEW, TA_MA)>;
+  }
 }
 } // Predicates = [HasStdExtZvfbfa]

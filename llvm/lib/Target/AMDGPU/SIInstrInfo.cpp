@@ -4032,28 +4032,31 @@ static unsigned getNewFMAInst(const GCNSubtarget &ST, unsigned Opc) {
   }
 }
 
+/// Helper struct for the implementation of 3-address conversion to communicate
+/// updates made to instruction operands.
+struct SIInstrInfo::ThreeAddressUpdates {
+  /// Other instruction whose def is no longer used by the converted
+  /// instruction.
+  MachineInstr *RemoveMIUse = nullptr;
+};
+
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                                  LiveVariables *LV,
                                                  LiveIntervals *LIS) const {
   MachineBasicBlock &MBB = *MI.getParent();
-  unsigned Opc = MI.getOpcode();
+  ThreeAddressUpdates U;
+  MachineInstr *NewMI = convertToThreeAddressImpl(MI, U);
 
-  // Handle MFMA.
-  int NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
-  if (NewMFMAOpc != -1) {
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
-      MIB.add(MI.getOperand(I));
-    updateLiveVariables(LV, MI, *MIB);
+  if (NewMI) {
+    updateLiveVariables(LV, MI, *NewMI);
     if (LIS) {
-      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+      LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
       // SlotIndex of defs needs to be updated when converting to early-clobber
-      MachineOperand &Def = MIB->getOperand(0);
+      MachineOperand &Def = NewMI->getOperand(0);
       if (Def.isEarlyClobber() && Def.isReg() &&
           LIS->hasInterval(Def.getReg())) {
-        SlotIndex OldIndex = LIS->getInstructionIndex(*MIB).getRegSlot(false);
-        SlotIndex NewIndex = LIS->getInstructionIndex(*MIB).getRegSlot(true);
+        SlotIndex OldIndex = LIS->getInstructionIndex(*NewMI).getRegSlot(false);
+        SlotIndex NewIndex = LIS->getInstructionIndex(*NewMI).getRegSlot(true);
         auto &LI = LIS->getInterval(Def.getReg());
         auto UpdateDefIndex = [&](LiveRange &LR) {
           auto *S = LR.find(OldIndex);
@@ -4068,6 +4071,58 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
           UpdateDefIndex(SR);
       }
     }
+  }
+
+  if (U.RemoveMIUse) {
+    MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+    // The only user is the instruction which will be killed.
+    Register DefReg = U.RemoveMIUse->getOperand(0).getReg();
+
+    if (MRI.hasOneNonDBGUse(DefReg)) {
+      // We cannot just remove the DefMI here, calling pass will crash.
+      U.RemoveMIUse->setDesc(get(AMDGPU::IMPLICIT_DEF));
+      U.RemoveMIUse->getOperand(0).setIsDead(true);
+      for (unsigned I = U.RemoveMIUse->getNumOperands() - 1; I != 0; --I)
+        U.RemoveMIUse->removeOperand(I);
+      if (LV)
+        LV->getVarInfo(DefReg).AliveBlocks.clear();
+    }
+
+    if (LIS) {
+      LiveInterval &DefLI = LIS->getInterval(DefReg);
+
+      // We cannot delete the original instruction here, so hack out the use
+      // in the original instruction with a dummy register so we can use
+      // shrinkToUses to deal with any multi-use edge cases. Other targets do
+      // not have the complexity of deleting a use to consider here.
+      Register DummyReg = MRI.cloneVirtualRegister(DefReg);
+      for (MachineOperand &MIOp : MI.uses()) {
+        if (MIOp.isReg() && MIOp.getReg() == DefReg) {
+          MIOp.setIsUndef(true);
+          MIOp.setReg(DummyReg);
+        }
+      }
+
+      LIS->shrinkToUses(&DefLI);
+    }
+  }
+
+  return NewMI;
+}
+
+MachineInstr *
+SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
+                                       ThreeAddressUpdates &U) const {
+  MachineBasicBlock &MBB = *MI.getParent();
+  unsigned Opc = MI.getOpcode();
+
+  // Handle MFMA.
+  int NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
+  if (NewMFMAOpc != -1) {
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
+    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+      MIB.add(MI.getOperand(I));
     return MIB;
   }
 
@@ -4077,11 +4132,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                   .setMIFlags(MI.getFlags());
     for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
       MIB->addOperand(MI.getOperand(I));
-
-    updateLiveVariables(LV, MI, *MIB);
-    if (LIS)
-      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-
     return MIB;
   }
 
@@ -4152,39 +4202,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     MachineInstr *DefMI;
-    const auto killDef = [&]() -> void {
-      MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-      // The only user is the instruction which will be killed.
-      Register DefReg = DefMI->getOperand(0).getReg();
-
-      if (MRI.hasOneNonDBGUse(DefReg)) {
-        // We cannot just remove the DefMI here, calling pass will crash.
-        DefMI->setDesc(get(AMDGPU::IMPLICIT_DEF));
-        DefMI->getOperand(0).setIsDead(true);
-        for (unsigned I = DefMI->getNumOperands() - 1; I != 0; --I)
-          DefMI->removeOperand(I);
-        if (LV)
-          LV->getVarInfo(DefReg).AliveBlocks.clear();
-      }
-
-      if (LIS) {
-        LiveInterval &DefLI = LIS->getInterval(DefReg);
-
-        // We cannot delete the original instruction here, so hack out the use
-        // in the original instruction with a dummy register so we can use
-        // shrinkToUses to deal with any multi-use edge cases. Other targets do
-        // not have the complexity of deleting a use to consider here.
-        Register DummyReg = MRI.cloneVirtualRegister(DefReg);
-        for (MachineOperand &MIOp : MI.uses()) {
-          if (MIOp.isReg() && MIOp.getReg() == DefReg) {
-            MIOp.setIsUndef(true);
-            MIOp.setReg(DummyReg);
-          }
-        }
-
-        LIS->shrinkToUses(&DefLI);
-      }
-    };
 
     int64_t Imm;
     if (!Src0Literal && getFoldableImm(Src2, Imm, &DefMI)) {
@@ -4196,10 +4213,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Src1)
                   .addImm(Imm)
                   .setMIFlags(MI.getFlags());
-        updateLiveVariables(LV, MI, *MIB);
-        if (LIS)
-          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        killDef();
+        U.RemoveMIUse = DefMI;
         return MIB;
       }
     }
@@ -4212,11 +4226,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .addImm(Imm)
                   .add(*Src2)
                   .setMIFlags(MI.getFlags());
-        updateLiveVariables(LV, MI, *MIB);
-
-        if (LIS)
-          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        killDef();
+        U.RemoveMIUse = DefMI;
         return MIB;
       }
     }
@@ -4235,12 +4245,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .addImm(Imm)
                   .add(*Src2)
                   .setMIFlags(MI.getFlags());
-        updateLiveVariables(LV, MI, *MIB);
-
-        if (LIS)
-          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        if (DefMI)
-          killDef();
+        U.RemoveMIUse = DefMI;
         return MIB;
       }
     }
@@ -4269,9 +4274,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
             .setMIFlags(MI.getFlags());
   if (AMDGPU::hasNamedOperand(NewOpc, AMDGPU::OpName::op_sel))
     MIB.addImm(OpSel ? OpSel->getImm() : 0);
-  updateLiveVariables(LV, MI, *MIB);
-  if (LIS)
-    LIS->ReplaceMachineInstrInMaps(MI, *MIB);
   return MIB;
 }
 
@@ -6151,7 +6153,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   // information.
   if (AMDGPU::isPackedFP32Inst(MI.getOpcode()) && AMDGPU::isGFX12Plus(ST) &&
       MO.isReg() && RI.isSGPRReg(MRI, MO.getReg())) {
-    constexpr const AMDGPU::OpName OpNames[] = {
+    constexpr AMDGPU::OpName OpNames[] = {
         AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2};
 
     for (auto [I, OpName] : enumerate(OpNames)) {
@@ -6213,8 +6215,8 @@ bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
 bool SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand(
     const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
     const MachineOperand *MO) const {
-  constexpr const unsigned NumOps = 3;
-  constexpr const AMDGPU::OpName OpNames[NumOps * 2] = {
+  constexpr unsigned NumOps = 3;
+  constexpr AMDGPU::OpName OpNames[NumOps * 2] = {
       AMDGPU::OpName::src0,           AMDGPU::OpName::src1,
       AMDGPU::OpName::src2,           AMDGPU::OpName::src0_modifiers,
       AMDGPU::OpName::src1_modifiers, AMDGPU::OpName::src2_modifiers};
@@ -7943,7 +7945,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     }
     legalizeOperands(*NewInstr, MDT);
     int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC, /*TRI=*/nullptr);
-    MachineOperand SCCOp = Inst.getOperand(SCCIdx);
+    const MachineOperand &SCCOp = Inst.getOperand(SCCIdx);
     addSCCDefUsersToVALUWorklist(SCCOp, Inst, Worklist, CondReg);
     Inst.eraseFromParent();
     return;
@@ -7983,7 +7985,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     legalizeOperandsVALUt16(*NewInstr, MRI);
     legalizeOperands(*NewInstr, MDT);
     int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC, /*TRI=*/nullptr);
-    MachineOperand SCCOp = Inst.getOperand(SCCIdx);
+    const MachineOperand &SCCOp = Inst.getOperand(SCCIdx);
     addSCCDefUsersToVALUWorklist(SCCOp, Inst, Worklist, CondReg);
     Inst.eraseFromParent();
     return;
@@ -8181,7 +8183,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                    AMDGPU::OpName::src0_modifiers) >= 0)
       NewInstr.addImm(0);
     if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::src0)) {
-      MachineOperand Src = Inst.getOperand(1);
+      const MachineOperand &Src = Inst.getOperand(1);
       NewInstr->addOperand(Src);
     }
 
@@ -9197,7 +9199,7 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
 }
 
-void SIInstrInfo::addSCCDefUsersToVALUWorklist(MachineOperand &Op,
+void SIInstrInfo::addSCCDefUsersToVALUWorklist(const MachineOperand &Op,
                                                MachineInstr &SCCDefInst,
                                                SIInstrWorklist &Worklist,
                                                Register NewCond) const {
@@ -10616,6 +10618,42 @@ bool SIInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   return false;
 }
 
+// SCC is already valid after SCCValid.
+// SCCRedefine will redefine SCC to the same value already available after
+// SCCValid. If there are no intervening SCC conflicts delete SCCRedefine and
+// update kill/dead flags if necessary.
+static bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
+                        const SIRegisterInfo &RI) {
+  MachineInstr *KillsSCC = nullptr;
+  for (MachineInstr &MI : make_range(std::next(SCCValid->getIterator()),
+                                     SCCRedefine->getIterator())) {
+    if (MI.modifiesRegister(AMDGPU::SCC, &RI))
+      return false;
+    if (MI.killsRegister(AMDGPU::SCC, &RI))
+      KillsSCC = &MI;
+  }
+  if (MachineOperand *SccDef =
+          SCCValid->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
+    SccDef->setIsDead(false);
+  if (KillsSCC)
+    KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
+  SCCRedefine->eraseFromParent();
+  return true;
+}
+
+static bool foldableSelect(const MachineInstr &Def) {
+  if (Def.getOpcode() != AMDGPU::S_CSELECT_B32 &&
+      Def.getOpcode() != AMDGPU::S_CSELECT_B64)
+    return false;
+  bool Op1IsNonZeroImm =
+      Def.getOperand(1).isImm() && Def.getOperand(1).getImm() != 0;
+  bool Op2IsZeroImm =
+      Def.getOperand(2).isImm() && Def.getOperand(2).getImm() == 0;
+  if (!Op1IsNonZeroImm || !Op2IsZeroImm)
+    return false;
+  return true;
+}
+
 bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                                        Register SrcReg2, int64_t CmpMask,
                                        int64_t CmpValue,
@@ -10625,6 +10663,34 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
   if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
     return false;
+
+  const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
+                                  this]() -> bool {
+    if (CmpValue != 0)
+      return false;
+
+    MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
+    if (!Def || Def->getParent() != CmpInstr.getParent())
+      return false;
+
+    // For S_OP that set SCC = DST!=0, do the transformation
+    //
+    //   s_cmp_lg_* (S_OP ...), 0 => (S_OP ...)
+
+    // If foldableSelect, s_cmp_lg_* is redundant because the SCC input value
+    // for S_CSELECT* already has the same value that will be calculated by
+    // s_cmp_lg_*
+    //
+    //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
+    //   imm), 0)
+    if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(*Def))
+      return false;
+
+    if (!optimizeSCC(Def, &CmpInstr, RI))
+      return false;
+
+    return true;
+  };
 
   const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
                                this](int64_t ExpectedValue, unsigned SrcSize,
@@ -10700,17 +10766,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
-         I != E; ++I) {
-      if (I->modifiesRegister(AMDGPU::SCC, &RI) ||
-          I->killsRegister(AMDGPU::SCC, &RI))
-        return false;
-    }
-
-    MachineOperand *SccDef =
-        Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
-    SccDef->setIsDead(false);
-    CmpInstr.eraseFromParent();
+    if (!optimizeSCC(Def, &CmpInstr, RI))
+      return false;
 
     if (!MRI->use_nodbg_empty(DefReg)) {
       assert(!IsReversedCC);
@@ -10753,7 +10810,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
   case AMDGPU::S_CMPK_LG_I32:
-    return optimizeCmpAnd(0, 32, true, false);
+    return optimizeCmpAnd(0, 32, true, false) || optimizeCmpSelect();
   case AMDGPU::S_CMP_GT_U32:
   case AMDGPU::S_CMPK_GT_U32:
     return optimizeCmpAnd(0, 32, false, false);
@@ -10761,7 +10818,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GT_I32:
     return optimizeCmpAnd(0, 32, false, true);
   case AMDGPU::S_CMP_LG_U64:
-    return optimizeCmpAnd(0, 64, true, false);
+    return optimizeCmpAnd(0, 64, true, false) || optimizeCmpSelect();
   }
 
   return false;

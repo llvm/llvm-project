@@ -129,8 +129,7 @@ void RedundantSmartptrGetCheck::registerMatchers(MatchFinder *Finder) {
   registerMatchersForGetEquals(Finder, this);
 }
 
-namespace {
-bool allReturnTypesMatch(const MatchFinder::MatchResult &Result) {
+static bool allReturnTypesMatch(const MatchFinder::MatchResult &Result) {
   if (Result.Nodes.getNodeAs<Decl>("duck_typing") == nullptr)
     return true;
   // Verify that the types match.
@@ -145,7 +144,6 @@ bool allReturnTypesMatch(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<Type>("getType")->getUnqualifiedDesugaredType();
   return OpArrowType == OpStarType && OpArrowType == GetType;
 }
-} // namespace
 
 void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
   if (!allReturnTypesMatch(Result))

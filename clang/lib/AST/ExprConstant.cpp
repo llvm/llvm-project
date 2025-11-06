@@ -44,6 +44,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
@@ -5451,10 +5452,13 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
     }
 
     const CaseStmt *CS = cast<CaseStmt>(SC);
-    APSInt LHS = CS->getLHS()->EvaluateKnownConstInt(Info.Ctx);
-    APSInt RHS = CS->getRHS() ? CS->getRHS()->EvaluateKnownConstInt(Info.Ctx)
-                              : LHS;
-    if (LHS <= Value && Value <= RHS) {
+    const Expr *LHS = CS->getLHS();
+    const Expr *RHS = CS->getRHS();
+    if (LHS->isValueDependent() || (RHS && RHS->isValueDependent()))
+      return ESR_Failed;
+    APSInt LHSValue = LHS->EvaluateKnownConstInt(Info.Ctx);
+    APSInt RHSValue = RHS ? RHS->EvaluateKnownConstInt(Info.Ctx) : LHSValue;
+    if (LHSValue <= Value && Value <= RHSValue) {
       Found = SC;
       break;
     }
@@ -11618,6 +11622,64 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   return true;
 }
 
+static bool evalShuffleGeneric(
+    EvalInfo &Info, const CallExpr *Call, APValue &Out,
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
+        GetSourceIndex) {
+
+  const auto *VT = Call->getType()->getAs<VectorType>();
+  if (!VT)
+    return false;
+
+  unsigned ShuffleMask = 0;
+  APValue A, MaskVector, B;
+  bool IsVectorMask = false;
+
+  QualType Arg2Type = Call->getArg(2)->getType();
+  if (Arg2Type->isVectorType()) {
+    IsVectorMask = true;
+    if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+        !EvaluateAsRValue(Info, Call->getArg(1), MaskVector) ||
+        !EvaluateAsRValue(Info, Call->getArg(2), B))
+      return false;
+  } else if (Arg2Type->isIntegerType()) {
+    APSInt MaskImm;
+    if (!EvaluateInteger(Call->getArg(2), MaskImm, Info))
+      return false;
+    ShuffleMask = static_cast<unsigned>(MaskImm.getZExtValue());
+    if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+        !EvaluateAsRValue(Info, Call->getArg(1), B))
+      return false;
+  } else {
+    return false;
+  }
+
+  unsigned NumElts = VT->getNumElements();
+  SmallVector<APValue, 64> ResultElements;
+  ResultElements.reserve(NumElts);
+
+  for (unsigned DstIdx = 0; DstIdx != NumElts; ++DstIdx) {
+    if (IsVectorMask) {
+      ShuffleMask = static_cast<unsigned>(
+          MaskVector.getVectorElt(DstIdx).getInt().getZExtValue());
+    }
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
+
+    if (SrcIdx < 0) {
+      // Zero out this element
+      QualType ElemTy = VT->getElementType();
+      ResultElements.push_back(
+          APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+    } else {
+      const APValue &Src = (SrcVecIdx == 0) ? A : B;
+      ResultElements.push_back(Src.getVectorElt(SrcIdx));
+    }
+  }
+
+  Out = APValue(ResultElements.data(), ResultElements.size());
+  return true;
+}
+
 static bool evalPshufbBuiltin(EvalInfo &Info, const CallExpr *Call,
                               APValue &Out) {
   APValue SrcVec, ControlVec;
@@ -11810,6 +11872,73 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return EvaluateBinOpExpr([](const APSInt &LHS, const APSInt &RHS) {
       return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
     });
+
+  case X86::BI__builtin_ia32_extract128i256:
+  case X86::BI__builtin_ia32_vextractf128_pd256:
+  case X86::BI__builtin_ia32_vextractf128_ps256:
+  case X86::BI__builtin_ia32_vextractf128_si256: {
+    APValue SourceVec, SourceImm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceImm))
+      return false;
+
+    if (!SourceVec.isVector())
+      return false;
+
+    const auto *RetVT = E->getType()->castAs<VectorType>();
+    unsigned RetLen = RetVT->getNumElements();
+    unsigned Idx = SourceImm.getInt().getZExtValue() & 1;
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(RetLen);
+
+    for (unsigned I = 0; I < RetLen; I++)
+      ResultElements.push_back(SourceVec.getVectorElt(Idx * RetLen + I));
+
+    return Success(APValue(ResultElements.data(), RetLen), E);
+  }
+
+  case X86::BI__builtin_ia32_extracti32x4_256_mask:
+  case X86::BI__builtin_ia32_extractf32x4_256_mask:
+  case X86::BI__builtin_ia32_extracti32x4_mask:
+  case X86::BI__builtin_ia32_extractf32x4_mask:
+  case X86::BI__builtin_ia32_extracti32x8_mask:
+  case X86::BI__builtin_ia32_extractf32x8_mask:
+  case X86::BI__builtin_ia32_extracti64x2_256_mask:
+  case X86::BI__builtin_ia32_extractf64x2_256_mask:
+  case X86::BI__builtin_ia32_extracti64x2_512_mask:
+  case X86::BI__builtin_ia32_extractf64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x4_mask:
+  case X86::BI__builtin_ia32_extractf64x4_mask: {
+    APValue SourceVec, MergeVec;
+    APSInt Imm, MaskImm;
+
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info) ||
+        !EvaluateAsRValue(Info, E->getArg(2), MergeVec) ||
+        !EvaluateInteger(E->getArg(3), MaskImm, Info))
+      return false;
+
+    const auto *RetVT = E->getType()->castAs<VectorType>();
+    unsigned RetLen = RetVT->getNumElements();
+
+    if (!SourceVec.isVector() || !MergeVec.isVector())
+      return false;
+    unsigned SrcLen = SourceVec.getVectorLength();
+    unsigned Lanes = SrcLen / RetLen;
+    unsigned Lane = static_cast<unsigned>(Imm.getZExtValue() % Lanes);
+    unsigned Base = Lane * RetLen;
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(RetLen);
+    for (unsigned I = 0; I < RetLen; ++I) {
+      if (MaskImm[I])
+        ResultElements.push_back(SourceVec.getVectorElt(Base + I));
+      else
+        ResultElements.push_back(MergeVec.getVectorElt(I));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
 
   case clang::X86::BI__builtin_ia32_pavgb128:
   case clang::X86::BI__builtin_ia32_pavgw128:
@@ -12245,6 +12374,20 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case X86::BI__builtin_ia32_psignb128:
+  case X86::BI__builtin_ia32_psignb256:
+  case X86::BI__builtin_ia32_psignw128:
+  case X86::BI__builtin_ia32_psignw256:
+  case X86::BI__builtin_ia32_psignd128:
+  case X86::BI__builtin_ia32_psignd256:
+    return EvaluateBinOpExpr([](const APInt &AElem, const APInt &BElem) {
+      if (BElem.isZero())
+        return APInt::getZero(AElem.getBitWidth());
+      if (BElem.isNegative())
+        return -AElem;
+      return AElem;
+    });
+
   case X86::BI__builtin_ia32_blendvpd:
   case X86::BI__builtin_ia32_blendvpd256:
   case X86::BI__builtin_ia32_blendvps:
@@ -12316,7 +12459,80 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-
+  case X86::BI__builtin_ia32_shufps:
+  case X86::BI__builtin_ia32_shufps256:
+  case X86::BI__builtin_ia32_shufps512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx,
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
+              constexpr unsigned LaneBits = 128u;
+              unsigned NumElemPerLane = LaneBits / 32;
+              unsigned NumSelectableElems = NumElemPerLane / 2;
+              unsigned BitsPerElem = 2;
+              unsigned IndexMask = (1u << BitsPerElem) - 1;
+              unsigned MaskBits = 8;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned ElemInLane = DstIdx % NumElemPerLane;
+              unsigned LaneOffset = Lane * NumElemPerLane;
+              unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+              unsigned SrcIdx = (ElemInLane < NumSelectableElems) ? 0 : 1;
+              unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+              return {SrcIdx, static_cast<int>(LaneOffset + Index)};
+            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_shufpd:
+  case X86::BI__builtin_ia32_shufpd256:
+  case X86::BI__builtin_ia32_shufpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx,
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
+              constexpr unsigned LaneBits = 128u;
+              unsigned NumElemPerLane = LaneBits / 64;
+              unsigned NumSelectableElems = NumElemPerLane / 2;
+              unsigned BitsPerElem = 1;
+              unsigned IndexMask = (1u << BitsPerElem) - 1;
+              unsigned MaskBits = 8;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned ElemInLane = DstIdx % NumElemPerLane;
+              unsigned LaneOffset = Lane * NumElemPerLane;
+              unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+              unsigned SrcIdx = (ElemInLane < NumSelectableElems) ? 0 : 1;
+              unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+              return {SrcIdx, static_cast<int>(LaneOffset + Index)};
+            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_insertps128: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              // Bits [3:0]: zero mask - if bit is set, zero this element
+              if ((Mask & (1 << DstIdx)) != 0) {
+                return {0, -1};
+              }
+              // Bits [7:6]: select element from source vector Y (0-3)
+              // Bits [5:4]: select destination position (0-3)
+              unsigned SrcElem = (Mask >> 6) & 0x3;
+              unsigned DstElem = (Mask >> 4) & 0x3;
+              if (DstIdx == DstElem) {
+                // Insert element from source vector (B) at this position
+                return {1, static_cast<int>(SrcElem)};
+              } else {
+                // Copy from destination vector (A)
+                return {0, static_cast<int>(DstIdx)};
+              }
+            }))
+      return false;
+    return Success(R, E);
+  }
   case X86::BI__builtin_ia32_pshufb128:
   case X86::BI__builtin_ia32_pshufb256:
   case X86::BI__builtin_ia32_pshufb512: {
@@ -12351,6 +12567,40 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!evalPshufBuiltin(Info, E, false, R))
       return false;
     return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_phminposuw128: {
+    APValue Source;
+    if (!Evaluate(Source, Info, E->getArg(0)))
+      return false;
+    unsigned SourceLen = Source.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ElemBitWidth = Info.Ctx.getTypeSize(ElemQT);
+
+    APInt MinIndex(ElemBitWidth, 0);
+    APInt MinVal = Source.getVectorElt(0).getInt();
+    for (unsigned I = 1; I != SourceLen; ++I) {
+      APInt Val = Source.getVectorElt(I).getInt();
+      if (MinVal.ugt(Val)) {
+        MinVal = Val;
+        MinIndex = I;
+      }
+    }
+
+    bool ResultUnsigned = E->getCallReturnType(Info.Ctx)
+                              ->castAs<VectorType>()
+                              ->getElementType()
+                              ->isUnsignedIntegerOrEnumerationType();
+
+    SmallVector<APValue, 8> Result;
+    Result.reserve(SourceLen);
+    Result.emplace_back(APSInt(MinVal, ResultUnsigned));
+    Result.emplace_back(APSInt(MinIndex, ResultUnsigned));
+    for (unsigned I = 0; I != SourceLen - 2; ++I) {
+      Result.emplace_back(APSInt(APInt(ElemBitWidth, 0), ResultUnsigned));
+    }
+    return Success(APValue(Result.data(), Result.size()), E);
   }
 
   case X86::BI__builtin_ia32_pternlogd128_mask:
@@ -12789,6 +13039,144 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       Elems.push_back(ElemNum == Index ? ElemAV : VecVal.getVectorElt(ElemNum));
 
     return Success(APValue(Elems.data(), NumElems), E);
+  }
+
+  case X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_pslldqi512_byteshift: {
+    assert(E->getNumArgs() == 2);
+
+    APValue Src;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Src) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info))
+      return false;
+
+    unsigned VecLen = Src.getVectorLength();
+    unsigned Shift = Imm.getZExtValue() & 0xff;
+
+    SmallVector<APValue> ResultElements;
+    for (unsigned Lane = 0; Lane != VecLen; Lane += 16) {
+      for (unsigned I = 0; I != 16; ++I) {
+        if (I < Shift) {
+          APSInt Zero(8, /*isUnsigned=*/true);
+          Zero = 0;
+          ResultElements.push_back(APValue(Zero));
+        } else {
+          ResultElements.push_back(Src.getVectorElt(Lane + I - Shift));
+        }
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi512_byteshift: {
+    assert(E->getNumArgs() == 2);
+
+    APValue Src;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Src) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info))
+      return false;
+
+    unsigned VecLen = Src.getVectorLength();
+    unsigned Shift = Imm.getZExtValue() & 0xff;
+
+    SmallVector<APValue> ResultElements;
+    for (unsigned Lane = 0; Lane != VecLen; Lane += 16) {
+      for (unsigned I = 0; I != 16; ++I) {
+        if (I + Shift < 16) {
+          ResultElements.push_back(Src.getVectorElt(Lane + I + Shift));
+        } else {
+          APSInt Zero(8, /*isUnsigned=*/true);
+          Zero = 0;
+          ResultElements.push_back(APValue(Zero));
+        }
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varq128:
+  case X86::BI__builtin_ia32_vpermi2varpd128: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1;
+                              unsigned SrcIdx = (ShuffleMask >> 1) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2vard128:
+  case X86::BI__builtin_ia32_vpermi2varps128:
+  case X86::BI__builtin_ia32_vpermi2varq256:
+  case X86::BI__builtin_ia32_vpermi2varpd256: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3;
+                              unsigned SrcIdx = (ShuffleMask >> 2) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varhi128:
+  case X86::BI__builtin_ia32_vpermi2vard256:
+  case X86::BI__builtin_ia32_vpermi2varps256:
+  case X86::BI__builtin_ia32_vpermi2varq512:
+  case X86::BI__builtin_ia32_vpermi2varpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x7;
+                              unsigned SrcIdx = (ShuffleMask >> 3) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi128:
+  case X86::BI__builtin_ia32_vpermi2varhi256:
+  case X86::BI__builtin_ia32_vpermi2vard512:
+  case X86::BI__builtin_ia32_vpermi2varps512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0xF;
+                              unsigned SrcIdx = (ShuffleMask >> 4) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi256:
+  case X86::BI__builtin_ia32_vpermi2varhi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1F;
+                              unsigned SrcIdx = (ShuffleMask >> 5) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3F;
+                              unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
   }
   }
 }
@@ -14548,6 +14936,27 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Result, E);
   }
 
+  case Builtin::BI__builtin_infer_alloc_token: {
+    // If we fail to infer a type, this fails to be a constant expression; this
+    // can be checked with __builtin_constant_p(...).
+    QualType AllocType = infer_alloc::inferPossibleType(E, Info.Ctx, nullptr);
+    if (AllocType.isNull())
+      return Error(
+          E, diag::note_constexpr_infer_alloc_token_type_inference_failed);
+    auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, Info.Ctx);
+    if (!ATMD)
+      return Error(E, diag::note_constexpr_infer_alloc_token_no_metadata);
+    auto Mode =
+        Info.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+    uint64_t BitWidth = Info.Ctx.getTypeSize(Info.Ctx.getSizeType());
+    uint64_t MaxTokens =
+        Info.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
+    auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
+    if (!MaybeToken)
+      return Error(E, diag::note_constexpr_infer_alloc_token_stateful_mode);
+    return Success(llvm::APInt(BitWidth, *MaybeToken), E);
+  }
+
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
   case Builtin::BI__builtin_ffsll: {
@@ -15268,6 +15677,36 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(CarryOut, E);
   }
 
+  case clang::X86::BI__builtin_ia32_movmskps:
+  case clang::X86::BI__builtin_ia32_movmskpd:
+  case clang::X86::BI__builtin_ia32_pmovmskb128:
+  case clang::X86::BI__builtin_ia32_pmovmskb256:
+  case clang::X86::BI__builtin_ia32_movmskps256:
+  case clang::X86::BI__builtin_ia32_movmskpd256: {
+    APValue Source;
+    if (!Evaluate(Source, Info, E->getArg(0)))
+      return false;
+    unsigned SourceLen = Source.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ResultLen = Info.Ctx.getTypeSize(
+        E->getCallReturnType(Info.Ctx)); // Always 32-bit integer.
+    APInt Result(ResultLen, 0);
+
+    for (unsigned I = 0; I != SourceLen; ++I) {
+      APInt Elem;
+      if (ElemQT->isIntegerType()) {
+        Elem = Source.getVectorElt(I).getInt();
+      } else if (ElemQT->isRealFloatingType()) {
+        Elem = Source.getVectorElt(I).getFloat().bitcastToAPInt();
+      } else {
+        return false;
+      }
+      Result.setBitVal(I, Elem.isNegative());
+    }
+    return Success(Result, E);
+  }
+
   case clang::X86::BI__builtin_ia32_bextr_u32:
   case clang::X86::BI__builtin_ia32_bextr_u64:
   case clang::X86::BI__builtin_ia32_bextri_u32:
@@ -15456,6 +15895,89 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     unsigned N = Vec.getVectorLength();
     unsigned Idx = static_cast<unsigned>(IdxAPS.getZExtValue() & (N - 1));
     return Success(Vec.getVectorElt(Idx).getInt(), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_cmpb128_mask:
+  case clang::X86::BI__builtin_ia32_cmpw128_mask:
+  case clang::X86::BI__builtin_ia32_cmpd128_mask:
+  case clang::X86::BI__builtin_ia32_cmpq128_mask:
+  case clang::X86::BI__builtin_ia32_cmpb256_mask:
+  case clang::X86::BI__builtin_ia32_cmpw256_mask:
+  case clang::X86::BI__builtin_ia32_cmpd256_mask:
+  case clang::X86::BI__builtin_ia32_cmpq256_mask:
+  case clang::X86::BI__builtin_ia32_cmpb512_mask:
+  case clang::X86::BI__builtin_ia32_cmpw512_mask:
+  case clang::X86::BI__builtin_ia32_cmpd512_mask:
+  case clang::X86::BI__builtin_ia32_cmpq512_mask:
+  case clang::X86::BI__builtin_ia32_ucmpb128_mask:
+  case clang::X86::BI__builtin_ia32_ucmpw128_mask:
+  case clang::X86::BI__builtin_ia32_ucmpd128_mask:
+  case clang::X86::BI__builtin_ia32_ucmpq128_mask:
+  case clang::X86::BI__builtin_ia32_ucmpb256_mask:
+  case clang::X86::BI__builtin_ia32_ucmpw256_mask:
+  case clang::X86::BI__builtin_ia32_ucmpd256_mask:
+  case clang::X86::BI__builtin_ia32_ucmpq256_mask:
+  case clang::X86::BI__builtin_ia32_ucmpb512_mask:
+  case clang::X86::BI__builtin_ia32_ucmpw512_mask:
+  case clang::X86::BI__builtin_ia32_ucmpd512_mask:
+  case clang::X86::BI__builtin_ia32_ucmpq512_mask: {
+    assert(E->getNumArgs() == 4);
+
+    bool IsUnsigned =
+        (BuiltinOp >= clang::X86::BI__builtin_ia32_ucmpb128_mask &&
+         BuiltinOp <= clang::X86::BI__builtin_ia32_ucmpq512_mask);
+
+    APValue LHS, RHS;
+    APSInt Mask, Opcode;
+    if (!EvaluateVector(E->getArg(0), LHS, Info) ||
+        !EvaluateVector(E->getArg(1), RHS, Info) ||
+        !EvaluateInteger(E->getArg(2), Opcode, Info) ||
+        !EvaluateInteger(E->getArg(3), Mask, Info))
+      return false;
+
+    assert(LHS.getVectorLength() == RHS.getVectorLength());
+
+    unsigned VectorLen = LHS.getVectorLength();
+    unsigned RetWidth = Mask.getBitWidth();
+
+    APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
+
+    for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
+      const APSInt &A = LHS.getVectorElt(ElemNum).getInt();
+      const APSInt &B = RHS.getVectorElt(ElemNum).getInt();
+      bool Result = false;
+
+      switch (Opcode.getExtValue() & 0x7) {
+      case 0: // _MM_CMPINT_EQ
+        Result = (A == B);
+        break;
+      case 1: // _MM_CMPINT_LT
+        Result = IsUnsigned ? A.ult(B) : A.slt(B);
+        break;
+      case 2: // _MM_CMPINT_LE
+        Result = IsUnsigned ? A.ule(B) : A.sle(B);
+        break;
+      case 3: // _MM_CMPINT_FALSE
+        Result = false;
+        break;
+      case 4: // _MM_CMPINT_NE
+        Result = (A != B);
+        break;
+      case 5: // _MM_CMPINT_NLT (>=)
+        Result = IsUnsigned ? A.uge(B) : A.sge(B);
+        break;
+      case 6: // _MM_CMPINT_NLE (>)
+        Result = IsUnsigned ? A.ugt(B) : A.sgt(B);
+        break;
+      case 7: // _MM_CMPINT_TRUE
+        Result = true;
+        break;
+      }
+
+      RetMask.setBitVal(ElemNum, Mask[ElemNum] && Result);
+    }
+
+    return Success(APValue(RetMask), E);
   }
   }
 }

@@ -354,6 +354,7 @@ void createDebugPasses(mlir::PassManager &pm,
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,
                                          llvm::StringRef inputFilename) {
+  pm.addPass(fir::createMIFOpConversion());
   fir::addBoxedProcedurePass(pm);
   if (config.OptLevel.isOptimizingForSpeed() && config.AliasAnalysis &&
       !disableFirAliasTags && !useOldAliasTags)
@@ -425,6 +426,12 @@ void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
 
   // Add codegen pass pipeline.
   fir::createDefaultFIRCodeGenPassPipeline(pm, config, inputFilename);
+
+  // Run a pass to prepare for translation of delayed privatization in the
+  // context of deferred target tasks.
+  addPassConditionally(pm, disableFirToLlvmIr, [&]() {
+    return mlir::omp::createPrepareForOMPOffloadPrivatizationPass();
+  });
 }
 
 } // namespace fir

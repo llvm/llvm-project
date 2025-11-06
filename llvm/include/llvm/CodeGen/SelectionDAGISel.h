@@ -46,6 +46,7 @@ class SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
+  const RTLIB::RuntimeLibcallsInfo *RuntimeLibCallInfo;
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;

@@ -88,6 +88,7 @@ add_llvm_component_library(LLVMCodeGen
   LatencyPriorityQueue.cpp
   LazyMachineBlockFrequencyInfo.cpp
   LexicalScopes.cpp
+  LibcallLoweringInfo.cpp
   LiveDebugVariables.cpp
   LiveIntervals.cpp
   LiveInterval.cpp
@@ -108,6 +109,7 @@ add_llvm_component_library(LLVMCodeGen
   LowerEmuTLS.cpp
   MachineBasicBlock.cpp
   MachineBlockFrequencyInfo.cpp
+  MachineBlockHashInfo.cpp
   MachineBlockPlacement.cpp
   MachineBranchProbabilityInfo.cpp
   MachineCFGPrinter.cpp

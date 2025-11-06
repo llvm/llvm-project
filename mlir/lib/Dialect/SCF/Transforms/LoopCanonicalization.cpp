@@ -55,7 +55,7 @@ static bool isShapePreserving(ForOp forOp, int64_t arg) {
                              ? forOp.getInitArgs()[opResult.getResultNumber()]
                              : Value();
                 })
-                .Default([&](auto op) { return Value(); });
+                .Default(nullptr);
   }
   return false;
 }

@@ -39,6 +39,7 @@ class DAPTestCaseBase(TestBase):
             log_file=log_file_path,
             env=lldbDAPEnv,
             additional_args=additional_args or [],
+            spawn_helper=self.spawnSubprocess,
         )
 
     def build_and_create_debug_adapter(
@@ -222,6 +223,16 @@ class DAPTestCaseBase(TestBase):
                 if expected_description == description:
                     return True
         return False
+
+    def verify_stop_on_entry(self) -> None:
+        """Waits for the process to be stopped and then verifies at least one
+        thread has the stop reason 'entry'."""
+        self.dap_server.wait_for_stopped()
+        self.assertIn(
+            "entry",
+            (t["reason"] for t in self.dap_server.thread_stop_reasons.values()),
+            "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
+        )
 
     def verify_commands(self, flavor: str, output: str, commands: list[str]):
         self.assertTrue(output and len(output) > 0, "expect console output")

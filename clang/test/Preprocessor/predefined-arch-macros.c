@@ -1841,7 +1841,6 @@
 // CHECK_DMR_M32: #define __AMX_MOVRS__ 1
 // CHECK_DMR_M32: #define __AMX_TF32__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
-// CHECK_DMR_M32: #define __AMX_TRANSPOSE__ 1
 // CHECK_DMR_M32: #define __AVX10_2_512__ 1
 // CHECK_DMR_M32: #define __AVX10_2__ 1
 // CHECK_GNR_M32: #define __AVX2__ 1
@@ -1911,7 +1910,6 @@
 // CHECK_GNR_M32: #define __TSXLDTRK__ 1
 // CHECK_GNR_M32: #define __UINTR__ 1
 // CHECK_GNR_M32-NOT: #define __USERMSR__ 1
-// CHECK_DMR_M32: #define __USERMSR__ 1
 // CHECK_GNR_M32: #define __VAES__ 1
 // CHECK_GNR_M32: #define __VPCLMULQDQ__ 1
 // CHECK_GNR_M32: #define __WAITPKG__ 1
@@ -1948,7 +1946,6 @@
 // CHECK_DMR_M64: #define __AMX_MOVRS__ 1
 // CHECK_DMR_M64: #define __AMX_TF32__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1
-// CHECK_DMR_M64: #define __AMX_TRANSPOSE__ 1
 // CHECK_DMR_M64: #define __AVX10_2_512__ 1
 // CHECK_DMR_M64: #define __AVX10_2__ 1
 // CHECK_GNR_M64: #define __AVX2__ 1
@@ -2018,7 +2015,6 @@
 // CHECK_GNR_M64: #define __TSXLDTRK__ 1
 // CHECK_GNR_M64: #define __UINTR__ 1
 // CHECK_GNR_M64-NOT: #define __USERMSR__ 1
-// CHECK_DMR_M64: #define __USERMSR__ 1
 // CHECK_GNR_M64: #define __VAES__ 1
 // CHECK_GNR_M64: #define __VPCLMULQDQ__ 1
 // CHECK_GNR_M64: #define __WAITPKG__ 1
@@ -4420,7 +4416,6 @@
 // CHECK_AMDGCN_NONE-NOT: #define __HAS_FMAF__
 // CHECK_AMDGCN_NONE-NOT: #define __HAS_FP64__
 // CHECK_AMDGCN_NONE-NOT: #define __HAS_LDEXPF__
-// CHECK_AMDGCN_NONE-NOT: #define __AMDGCN_WAVEFRONT_SIZE__
 
 // Begin r600 tests ----------------
 
@@ -4441,7 +4436,6 @@
 // RUN: %clang -x hip -E -dM %s -o - 2>&1 --offload-host-only -nogpulib \
 // RUN:     -nogpuinc --offload-arch=gfx803 -target x86_64-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_HIP_HOST
-// CHECK_HIP_HOST: #define __AMDGCN_WAVEFRONT_SIZE__ 64
 // CHECK_HIP_HOST: #define __AMDGPU__ 1
 // CHECK_HIP_HOST: #define __AMD__ 1
 

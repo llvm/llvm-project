@@ -547,9 +547,9 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
   if (MI.getOpcode() == SPIRV::OpDecorate) {
     // If it's got Import linkage.
     auto Dec = MI.getOperand(1).getImm();
-    if (Dec == static_cast<unsigned>(SPIRV::Decoration::LinkageAttributes)) {
+    if (Dec == SPIRV::Decoration::LinkageAttributes) {
       auto Lnk = MI.getOperand(MI.getNumOperands() - 1).getImm();
-      if (Lnk == static_cast<unsigned>(SPIRV::LinkageType::Import)) {
+      if (Lnk == SPIRV::LinkageType::Import) {
         // Map imported function name to function ID register.
         const Function *ImportedFunc =
             F->getParent()->getFunction(getStringImm(MI, 2));
@@ -613,8 +613,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
               << FinalFlags << "\n";
           MachineInstr *OrigMINonConst = const_cast<MachineInstr *>(OrigMI);
           MachineOperand &OrigFlagsOp = OrigMINonConst->getOperand(2);
-          OrigFlagsOp =
-              MachineOperand::CreateImm(static_cast<unsigned>(FinalFlags));
+          OrigFlagsOp = MachineOperand::CreateImm(FinalFlags);
           return; // Merge done, so we found a duplicate; don't add it to MAI.MS
         }
       }
@@ -635,7 +634,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
   InstrTraces IS;
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    if ((*F).isDeclaration())
+    if (F->isDeclaration())
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*F);
     assert(MF);
@@ -1436,6 +1435,8 @@ void addInstrRequirements(const MachineInstr &MI,
       addPrintfRequirements(MI, Reqs, ST);
       break;
     }
+    // TODO: handle bfloat16 extended instructions when
+    // SPV_INTEL_bfloat16_arithmetic is enabled.
     break;
   }
   case SPIRV::OpAliasDomainDeclINTEL:
@@ -1884,6 +1885,13 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixCheckedInstructionsINTEL);
     break;
+  case SPIRV::OpReadPipeBlockingALTERA:
+  case SPIRV::OpWritePipeBlockingALTERA:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes);
+      Reqs.addCapability(SPIRV::Capability::BlockingPipesALTERA);
+    }
+    break;
   case SPIRV::OpCooperativeMatrixGetElementCoordINTEL:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
       report_fatal_error("OpCooperativeMatrixGetElementCoordINTEL requires the "
@@ -2061,7 +2069,64 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::PredicatedIOINTEL);
     break;
   }
-
+  case SPIRV::OpFAddS:
+  case SPIRV::OpFSubS:
+  case SPIRV::OpFMulS:
+  case SPIRV::OpFDivS:
+  case SPIRV::OpFRemS:
+  case SPIRV::OpFMod:
+  case SPIRV::OpFNegate:
+  case SPIRV::OpFAddV:
+  case SPIRV::OpFSubV:
+  case SPIRV::OpFMulV:
+  case SPIRV::OpFDivV:
+  case SPIRV::OpFRemV:
+  case SPIRV::OpFNegateV: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+      TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef)) {
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+        report_fatal_error(
+            "Arithmetic instructions with bfloat16 arguments require the "
+            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
+            false);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+    }
+    break;
+  }
+  case SPIRV::OpOrdered:
+  case SPIRV::OpUnordered:
+  case SPIRV::OpFOrdEqual:
+  case SPIRV::OpFOrdNotEqual:
+  case SPIRV::OpFOrdLessThan:
+  case SPIRV::OpFOrdLessThanEqual:
+  case SPIRV::OpFOrdGreaterThan:
+  case SPIRV::OpFOrdGreaterThanEqual:
+  case SPIRV::OpFUnordEqual:
+  case SPIRV::OpFUnordNotEqual:
+  case SPIRV::OpFUnordLessThan:
+  case SPIRV::OpFUnordLessThanEqual:
+  case SPIRV::OpFUnordGreaterThan:
+  case SPIRV::OpFUnordGreaterThanEqual: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    MachineInstr *OperandDef = MRI.getVRegDef(MI.getOperand(2).getReg());
+    SPIRVType *TypeDef = MRI.getVRegDef(OperandDef->getOperand(1).getReg());
+    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+      TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef)) {
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+        report_fatal_error(
+            "Relational instructions with bfloat16 arguments require the "
+            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
+            false);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+    }
+    break;
+  }
   default:
     break;
   }
@@ -2181,6 +2246,10 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::SubgroupSize, ST);
+    if (F.getMetadata("max_work_group_size"))
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL, ST);
     if (F.getMetadata("vec_type_hint"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
