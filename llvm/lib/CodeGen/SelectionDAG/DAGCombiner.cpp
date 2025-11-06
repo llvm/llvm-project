@@ -4046,6 +4046,8 @@ static SDValue foldSubCtlzNot(SDNode *N, SelectionDAG &DAG) {
                                     m_ConstInt(AndMask)))) {
     // Type Legalisation Pattern:
     // (sub (ctlz (and (xor Op XorMask) AndMask)) BitWidthDiff)
+    if (BitWidthDiff.getZExtValue() >= BitWidth)
+      return SDValue();
     unsigned AndMaskWidth = BitWidth - BitWidthDiff.getZExtValue();
     if (!(AndMask.isMask(AndMaskWidth) && XorMask.countr_one() >= AndMaskWidth))
       return SDValue();
