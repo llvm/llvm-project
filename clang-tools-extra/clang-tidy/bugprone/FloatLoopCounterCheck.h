@@ -6,27 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_FLOAT_LOOP_COUNTER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_FLOAT_LOOP_COUNTER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FLOATLOOPCOUNTERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FLOATLOOPCOUNTERCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
 /// This check diagnoses when the loop induction expression of a for loop has
 /// floating-point type. The check corresponds to:
 /// https://www.securecoding.cert.org/confluence/display/c/FLP30-C.+Do+not+use+floating-point+variables+as+loop+counters
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/cert/flp30-c.html
-class FloatLoopCounter : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/float-loop-counter.html
+class FloatLoopCounterCheck : public ClangTidyCheck {
 public:
-  FloatLoopCounter(StringRef Name, ClangTidyContext *Context)
+  FloatLoopCounterCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_FLOAT_LOOP_COUNTER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FLOATLOOPCOUNTERCHECK_H

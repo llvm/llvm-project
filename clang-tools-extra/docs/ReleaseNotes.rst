@@ -269,6 +269,11 @@ New check aliases
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` to
+  :doc:`bugprone-float-loop-counter
+  <clang-tidy/checks/bugprone/float-loop-counter>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-mem57-cpp <clang-tidy/checks/cert/mem57-cpp>` to
   :doc:`bugprone-default-operator-new-on-overaligned-type
   <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
