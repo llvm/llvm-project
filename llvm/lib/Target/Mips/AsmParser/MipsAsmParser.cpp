@@ -3677,7 +3677,7 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                       Out, STI))
       return true;
 
-    if (IsLikely) {
+    if (IsLikely && MemOffsetOp.isExpr()) {
       TOut.emitRRX(OpCode, DstRegOp.getReg(), ATReg,
               MCOperand::createExpr(MemOffsetOp.getExpr()), IDLoc, STI);
       TOut.emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
@@ -6176,7 +6176,7 @@ int MipsAsmParser::matchCPURegisterName(StringRef Name) {
 
   CC = StringSwitch<unsigned>(Name)
            .Case("zero", 0)
-           .Cases("at", "AT", 1)
+           .Cases({"at", "AT"}, 1)
            .Case("a0", 4)
            .Case("a1", 5)
            .Case("a2", 6)

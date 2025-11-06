@@ -307,7 +307,6 @@ Status ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
   bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
@@ -337,7 +336,7 @@ Status ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
     if (is_complex)
       error = Status::FromErrorString(
           "We don't support returning complex values at present");
@@ -587,7 +586,6 @@ static bool FlattenAggregateType(
   for (uint32_t idx = 0; idx < num_children; ++idx) {
     std::string name;
     bool is_signed;
-    uint32_t count;
     bool is_complex;
 
     uint64_t field_bit_offset = 0;
@@ -606,7 +604,7 @@ static bool FlattenAggregateType(
     const uint32_t field_type_flags = field_compiler_type.GetTypeInfo();
     if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
         field_compiler_type.IsPointerType() ||
-        field_compiler_type.IsFloatingPointType(count, is_complex)) {
+        field_compiler_type.IsFloatingPointType(is_complex)) {
       aggregate_field_offsets.push_back(field_byte_offset);
       aggregate_compiler_types.push_back(field_compiler_type);
     } else if (field_type_flags & eTypeHasChildren) {
@@ -696,7 +694,6 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
       is_memory = false;
       for (uint32_t idx = 0; idx < num_children; idx++) {
         bool is_signed;
-        uint32_t count;
         bool is_complex;
 
         CompilerType field_compiler_type = aggregate_compiler_types[idx];
@@ -736,7 +733,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
             // return a nullptr return value object.
             return return_valobj_sp;
           }
-        } else if (field_compiler_type.IsFloatingPointType(count, is_complex)) {
+        } else if (field_compiler_type.IsFloatingPointType(is_complex)) {
           // Structs with long doubles are always passed in memory.
           if (field_bit_width == 128) {
             is_memory = true;
@@ -929,8 +926,8 @@ bool ABISysV_x86_64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
   std::string Name = std::string(reg_info->name);
   bool IsCalleeSaved =
       llvm::StringSwitch<bool>(Name)
-          .Cases("r12", "r13", "r14", "r15", "rbp", "ebp", "rbx", "ebx", true)
-          .Cases("rip", "eip", "rsp", "esp", "sp", "fp", "pc", true)
+          .Cases({"r12", "r13", "r14", "r15", "rbp", "ebp", "rbx", "ebx"}, true)
+          .Cases({"rip", "eip", "rsp", "esp", "sp", "fp", "pc"}, true)
           .Default(false);
   return IsCalleeSaved;
 }

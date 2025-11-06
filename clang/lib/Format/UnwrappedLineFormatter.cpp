@@ -285,7 +285,8 @@ private:
       if (Tok && Tok->is(tok::kw_typedef))
         Tok = Tok->getNextNonComment();
       if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
-                              tok::kw_extern, Keywords.kw_interface)) {
+                              tok::kw_extern, Keywords.kw_interface,
+                              Keywords.kw_record)) {
         return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
@@ -498,7 +499,8 @@ private:
         ShouldMerge = Style.AllowShortEnumsOnASingleLine;
       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
-      } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace)) {
+      } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+                                        TT_RecordLBrace)) {
         // NOTE: We use AfterClass (whereas AfterStruct exists) for both classes
         // and structs, but it seems that wrapping is still handled correctly
         // elsewhere.
@@ -506,8 +508,8 @@ private:
                       (NextLine.First->is(tok::r_brace) &&
                        !Style.BraceWrapping.SplitEmptyRecord);
       } else if (TheLine->InPPDirective ||
-                 !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
-                                          tok::kw_struct)) {
+                 TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
+                                          tok::kw_struct, Keywords.kw_record)) {
         // Try to merge a block with left brace unwrapped that wasn't yet
         // covered.
         ShouldMerge = !Style.BraceWrapping.AfterFunction ||
@@ -686,8 +688,8 @@ private:
     }
     Limit = limitConsideringMacros(I + 1, E, Limit);
     AnnotatedLine &Line = **I;
-    if (Line.First->isNot(tok::kw_do) && Line.First->isNot(tok::kw_else) &&
-        Line.Last->isNot(tok::kw_else) && Line.Last->isNot(tok::r_paren)) {
+    if (Line.First->isNoneOf(tok::kw_do, tok::kw_else) &&
+        Line.Last->isNoneOf(tok::kw_else, tok::r_paren)) {
       return 0;
     }
     // Only merge `do while` if `do` is the only statement on the line.

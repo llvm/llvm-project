@@ -251,10 +251,10 @@ constexpr const char *const HangulSyllables[][3] = {
 
 // Unicode 15.0
 // 3.12 Conjoining Jamo Behavior Common constants
-constexpr const char32_t SBase = 0xAC00;
-constexpr const uint32_t LCount = 19;
-constexpr const uint32_t VCount = 21;
-constexpr const uint32_t TCount = 28;
+constexpr char32_t SBase = 0xAC00;
+constexpr uint32_t LCount = 19;
+constexpr uint32_t VCount = 21;
+constexpr uint32_t TCount = 28;
 
 static std::size_t findSyllable(StringRef Name, bool Strict,
                                 char &PreviousInName, int &Pos, int Column) {
@@ -476,7 +476,7 @@ nearestMatchesForCodepointName(StringRef Pattern, std::size_t MaxMatchesCount) {
       std::min(NormalizedName.size(), UnicodeNameToCodepointLargestNameSize) +
       1;
 
-  LLVM_ATTRIBUTE_UNUSED static std::size_t Rows =
+  [[maybe_unused]] static std::size_t Rows =
       UnicodeNameToCodepointLargestNameSize + 1;
 
   std::vector<char> Distances(

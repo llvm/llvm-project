@@ -2,6 +2,162 @@
 // RUN: %clang_cc1 -triple powerpc64le-linux-unknown -target-cpu future \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 
+// CHECK-LABEL: @test_dmrp_copy(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[PTR1_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[PTR2_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[PTR1:%.*]], ptr [[PTR1_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[PTR2:%.*]], ptr [[PTR2_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR1_ADDR]], align 8
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds <2048 x i1>, ptr [[TMP0]], i64 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2048 x i1>, ptr [[ADD_PTR]], align 256
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PTR2_ADDR]], align 8
+// CHECK-NEXT:    [[ADD_PTR1:%.*]] = getelementptr inbounds <2048 x i1>, ptr [[TMP2]], i64 1
+// CHECK-NEXT:    store <2048 x i1> [[TMP1]], ptr [[ADD_PTR1]], align 256
+// CHECK-NEXT:    ret void
+//
+void test_dmrp_copy(__dmr2048 *ptr1, __dmr2048 *ptr2) {
+  *(ptr2 + 1) = *(ptr1 + 2);
+}
+
+// CHECK-LABEL: @test_dmrp_typedef(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[INP_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[OUTP_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[VDMRPIN:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[VDMRPOUT:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[INP:%.*]], ptr [[INP_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[OUTP:%.*]], ptr [[OUTP_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[INP_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[VDMRPIN]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[OUTP_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP1]], ptr [[VDMRPOUT]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VDMRPIN]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load <2048 x i1>, ptr [[TMP2]], align 256
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VDMRPOUT]], align 8
+// CHECK-NEXT:    store <2048 x i1> [[TMP3]], ptr [[TMP4]], align 256
+// CHECK-NEXT:    ret void
+//
+void test_dmrp_typedef(int *inp, int *outp) {
+  __dmr2048 *vdmrpin = (__dmr2048 *)inp;
+  __dmr2048 *vdmrpout = (__dmr2048 *)outp;
+  *vdmrpout = *vdmrpin;
+}
+
+// CHECK-LABEL: @test_dmrp_arg(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VDMRP_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[VDMRPP:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[VDMRP:%.*]], ptr [[VDMRP_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VDMRP_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2048 x i1>, ptr [[TMP1]], align 256
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    store <2048 x i1> [[TMP2]], ptr [[TMP3]], align 256
+// CHECK-NEXT:    ret void
+//
+void test_dmrp_arg(__dmr2048 *vdmrp, int *ptr) {
+  __dmr2048 *vdmrpp = (__dmr2048 *)ptr;
+  *vdmrpp = *vdmrp;
+}
+
+// CHECK-LABEL: @test_dmrp_const_arg(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VDMRP_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[VDMRPP:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[VDMRP:%.*]], ptr [[VDMRP_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VDMRP_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2048 x i1>, ptr [[TMP1]], align 256
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    store <2048 x i1> [[TMP2]], ptr [[TMP3]], align 256
+// CHECK-NEXT:    ret void
+//
+void test_dmrp_const_arg(const __dmr2048 *const vdmrp, int *ptr) {
+  __dmr2048 *vdmrpp = (__dmr2048 *)ptr;
+  *vdmrpp = *vdmrp;
+}
+
+// CHECK-LABEL: @test_dmrp_array_arg(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VDMRPA_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[VDMRPP:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[VDMRPA:%.*]], ptr [[VDMRPA_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VDMRPA_ADDR]], align 8
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds <2048 x i1>, ptr [[TMP1]], i64 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2048 x i1>, ptr [[ARRAYIDX]], align 256
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    store <2048 x i1> [[TMP2]], ptr [[TMP3]], align 256
+// CHECK-NEXT:    ret void
+//
+void test_dmrp_array_arg(__dmr2048 vdmrpa[], int *ptr) {
+  __dmr2048 *vdmrpp = (__dmr2048 *)ptr;
+  *vdmrpp = vdmrpa[0];
+}
+
+// CHECK-LABEL: @test_dmrp_ret_const(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[VDMRPP:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds <2048 x i1>, ptr [[TMP1]], i64 2
+// CHECK-NEXT:    ret ptr [[ADD_PTR]]
+//
+const __dmr2048 *test_dmrp_ret_const(int *ptr) {
+  __dmr2048 *vdmrpp = (__dmr2048 *)ptr;
+  return vdmrpp + 2;
+}
+
+// CHECK-LABEL: @test_dmrp_sizeof_alignof(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[VDMRPP:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[VDMRP:%.*]] = alloca <2048 x i1>, align 256
+// CHECK-NEXT:    [[SIZET:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[ALIGNT:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[SIZEV:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[ALIGNV:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VDMRPP]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2048 x i1>, ptr [[TMP1]], align 256
+// CHECK-NEXT:    store <2048 x i1> [[TMP2]], ptr [[VDMRP]], align 256
+// CHECK-NEXT:    store i32 256, ptr [[SIZET]], align 4
+// CHECK-NEXT:    store i32 256, ptr [[ALIGNT]], align 4
+// CHECK-NEXT:    store i32 256, ptr [[SIZEV]], align 4
+// CHECK-NEXT:    store i32 256, ptr [[ALIGNV]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SIZET]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNT]], align 4
+// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP3]], [[TMP4]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SIZEV]], align 4
+// CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[ADD]], [[TMP5]]
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ALIGNV]], align 4
+// CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[TMP6]]
+// CHECK-NEXT:    ret i32 [[ADD2]]
+//
+int test_dmrp_sizeof_alignof(int *ptr) {
+  __dmr2048 *vdmrpp = (__dmr2048 *)ptr;
+  __dmr2048 vdmrp = *vdmrpp;
+  unsigned sizet = sizeof(__dmr2048);
+  unsigned alignt = __alignof__(__dmr2048);
+   unsigned sizev = sizeof(vdmrp);
+  unsigned alignv = __alignof__(vdmrp);
+  return sizet + alignt + sizev + alignv;
+}
 
 // CHECK-LABEL: @test_dmr_copy(
 // CHECK-NEXT:  entry:

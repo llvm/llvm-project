@@ -24,20 +24,8 @@ define i32 @reduction_sum(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[BODY:.*]]
-; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[BODY]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[SUM_TMP:%.*]] = phi i32 [ [[SUM:%.*]], %[[BODY]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[LOAD0:%.*]] = load i32, ptr [[GEP0]], align 4
-; CHECK-NEXT:    [[SUM]] = add i32 [[SUM_TMP]], [[LOAD0]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 256
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ [[SUM]], %[[BODY]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:
   br label %body

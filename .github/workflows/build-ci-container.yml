@@ -103,7 +103,7 @@ jobs:
           }
 
           podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
-          for f in $(find . -iname *.tar); do
+          for f in $(find . -iname '*.tar'); do
             image_name=$(podman load -q -i $f | sed 's/Loaded image: //g')
             push_container $image_name
 

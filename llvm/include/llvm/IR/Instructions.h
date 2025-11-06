@@ -32,6 +32,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -1714,7 +1715,7 @@ public:
   static SelectInst *Create(Value *C, Value *S1, Value *S2,
                             const Twine &NameStr = "",
                             InsertPosition InsertBefore = nullptr,
-                            Instruction *MDFrom = nullptr) {
+                            const Instruction *MDFrom = nullptr) {
     SelectInst *Sel =
         new (AllocMarker) SelectInst(C, S1, S2, NameStr, InsertBefore);
     if (MDFrom)
@@ -3536,8 +3537,6 @@ class SwitchInstProfUpdateWrapper {
   bool Changed = false;
 
 protected:
-  LLVM_ABI MDNode *buildProfBranchWeightsMD();
-
   LLVM_ABI void init();
 
 public:
@@ -3549,13 +3548,18 @@ public:
   SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 
   ~SwitchInstProfUpdateWrapper() {
-    if (Changed)
-      SI.setMetadata(LLVMContext::MD_prof, buildProfBranchWeightsMD());
+    if (Changed && Weights.has_value() && Weights->size() >= 2)
+      setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
   }
 
   /// Delegate the call to the underlying SwitchInst::removeCase() and remove
   /// correspondent branch weight.
   LLVM_ABI SwitchInst::CaseIt removeCase(SwitchInst::CaseIt I);
+
+  /// Replace the default destination by given case. Delegate the call to
+  /// the underlying SwitchInst::setDefaultDest and remove correspondent branch
+  /// weight.
+  LLVM_ABI void replaceDefaultDest(SwitchInst::CaseIt I);
 
   /// Delegate the call to the underlying SwitchInst::addCase() and set the
   /// specified branch weight for the added case.

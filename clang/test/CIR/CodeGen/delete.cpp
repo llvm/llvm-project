@@ -21,7 +21,7 @@ void test_sized_delete(SizedDelete *x) {
 
 // CIR: cir.func dso_local @_Z17test_sized_deleteP11SizedDelete
 // CIR:   %[[X:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[X_CAST:.*]] = cir.cast(bitcast, %[[X]] : !cir.ptr<!rec_SizedDelete>), !cir.ptr<!void>
+// CIR:   %[[X_CAST:.*]] = cir.cast bitcast %[[X]] : !cir.ptr<!rec_SizedDelete> -> !cir.ptr<!void>
 // CIR:   %[[OBJ_SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CIR:   cir.call @_ZN11SizedDeletedlEPvm(%[[X_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void>, !u64i) -> ()
 
@@ -62,7 +62,7 @@ Container::~Container() { delete contents; }
 // CIR:   %[[CONTENTS_PTR_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "contents"} : !cir.ptr<!rec_Container> -> !cir.ptr<!cir.ptr<!rec_Contents>>
 // CIR:   %[[CONTENTS_PTR:.*]] = cir.load{{.*}} %[[CONTENTS_PTR_ADDR]]
 // CIR:   cir.call @_ZN8ContentsD2Ev(%[[CONTENTS_PTR]]) nothrow : (!cir.ptr<!rec_Contents>) -> ()
-// CIR:   %[[CONTENTS_CAST:.*]] = cir.cast(bitcast, %[[CONTENTS_PTR]] : !cir.ptr<!rec_Contents>), !cir.ptr<!void>
+// CIR:   %[[CONTENTS_CAST:.*]] = cir.cast bitcast %[[CONTENTS_PTR]] : !cir.ptr<!rec_Contents> -> !cir.ptr<!void>
 // CIR:   %[[OBJ_SIZE:.*]] = cir.const #cir.int<1> : !u64i
 // CIR:   cir.call @_ZdlPvm(%[[CONTENTS_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void>, !u64i) -> ()
 
@@ -86,3 +86,42 @@ Container::~Container() { delete contents; }
 // These functions are declared/defined below the calls in OGCG.
 // OGCG: define linkonce_odr void @_ZN8ContentsD2Ev
 // OGCG: declare void @_ZdlPvm(ptr noundef, i64 noundef)
+
+struct StructWithVirtualDestructor {
+  virtual ~StructWithVirtualDestructor();
+};
+
+void destroy(StructWithVirtualDestructor *x) {
+  delete x;
+}
+
+// CIR: cir.func {{.*}} @_Z7destroyP27StructWithVirtualDestructor(%[[X_ARG:.*]]: !cir.ptr<!rec_StructWithVirtualDestructor> {{.*}})
+// CIR:   %[[X_ADDR:.*]] = cir.alloca !cir.ptr<!rec_StructWithVirtualDestructor>
+// CIR:   cir.store %[[X_ARG]], %[[X_ADDR]]
+// CIR:   %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
+// CIR:   %[[VTABLE_PTR:.*]] = cir.vtable.get_vptr %[[X]] : !cir.ptr<!rec_StructWithVirtualDestructor> -> !cir.ptr<!cir.vptr>
+// CIR:   %[[VTABLE:.*]] = cir.load{{.*}} %[[VTABLE_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR:   %[[DTOR_FN_ADDR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VTABLE]][1]
+// CIR:   %[[DTOR_FN_ADDR:.*]] = cir.load{{.*}} %[[DTOR_FN_ADDR_PTR]]
+// CIR:   cir.call %[[DTOR_FN_ADDR]](%[[X]])
+
+// LLVM: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr %[[X_ARG:.*]])
+// LLVM:   %[[X_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[X_ARG]], ptr %[[X_ADDR]]
+// LLVM:   %[[X:.*]] = load ptr, ptr %[[X_ADDR]]
+// LLVM:   %[[VTABLE:.*]] = load ptr, ptr %[[X]]
+// LLVM:   %[[DTOR_FN_ADDR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i32 1
+// LLVM:   %[[DTOR_FN_ADDR:.*]] = load ptr, ptr %[[DTOR_FN_ADDR_PTR]]
+// LLVM:   call void %[[DTOR_FN_ADDR]](ptr %[[X]])
+
+// OGCG: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr {{.*}} %[[X_ARG:.*]])
+// OGCG:   %[[X_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[X_ARG]], ptr %[[X_ADDR]]
+// OGCG:   %[[X:.*]] = load ptr, ptr %[[X_ADDR]]
+// OGCG:   %[[ISNULL:.*]] = icmp eq ptr %[[X]], null
+// OGCG:   br i1 %[[ISNULL]], label %{{.*}}, label %[[DELETE_NOTNULL:.*]]
+// OGCG: [[DELETE_NOTNULL]]:
+// OGCG:   %[[VTABLE:.*]] = load ptr, ptr %[[X]]
+// OGCG:   %[[DTOR_FN_ADDR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i64 1
+// OGCG:   %[[DTOR_FN_ADDR:.*]] = load ptr, ptr %[[DTOR_FN_ADDR_PTR]]
+// OGCG:   call void %[[DTOR_FN_ADDR]](ptr {{.*}} %[[X]])

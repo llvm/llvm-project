@@ -301,3 +301,135 @@ define void @vfmv.s.f(ptr %p, double %x) {
   store volatile double %x, ptr %p
   ret void
 }
+
+; This test is fairly fragile, but it's trying to cover the case which
+; caused the revert of bba9172 due to interaction with how rematerialize
+; instructions are pruned from the original live interval.  In the result
+; below, we remat the vmv.v.x into the loop, but fail to remat the vmv.v.x
+; a second time after further splitting it's live range.  We shouldn't need
+; to spill it to the stack at all.
+define i64 @dual_remat(i64 %0, <vscale x 16 x i64> %1, <vscale x 16 x i64> %2, ptr %p) #0 {
+; CHECK-LABEL: dual_remat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a2, a1, 5
+; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x21, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 33 * vlenb
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a1, a2, 3
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    add a2, a3, a2
+; CHECK-NEXT:    vmv.v.i v0, 0
+; CHECK-NEXT:  .LBB8_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    mv a5, a4
+; CHECK-NEXT:    slli a4, a4, 3
+; CHECK-NEXT:    add a5, a5, a4
+; CHECK-NEXT:    slli a4, a4, 1
+; CHECK-NEXT:    add a4, a4, a5
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vs8r.v v16, (a4) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    slli a5, a4, 4
+; CHECK-NEXT:    add a4, a5, a4
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vs8r.v v8, (a4) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    mv a5, a4
+; CHECK-NEXT:    slli a4, a4, 3
+; CHECK-NEXT:    add a5, a5, a4
+; CHECK-NEXT:    slli a4, a4, 1
+; CHECK-NEXT:    add a4, a4, a5
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vl8r.v v16, (a4) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vand.vv v16, v16, v8
+; CHECK-NEXT:    vmsne.vi v24, v16, 0
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    slli a4, a4, 4
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vs1r.v v24, (a4) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vand.vv v16, v0, v8
+; CHECK-NEXT:    vmsne.vi v8, v16, 0
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    mv a5, a4
+; CHECK-NEXT:    slli a4, a4, 3
+; CHECK-NEXT:    add a5, a5, a4
+; CHECK-NEXT:    slli a4, a4, 1
+; CHECK-NEXT:    add a4, a4, a5
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vl8r.v v16, (a4) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    slli a4, a4, 4
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vl1r.v v9, (a4) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vslideup.vx v9, v8, a1
+; CHECK-NEXT:    vsetvli a4, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vcpop.m a4, v9
+; CHECK-NEXT:    csrr a5, vlenb
+; CHECK-NEXT:    slli a6, a5, 4
+; CHECK-NEXT:    add a5, a6, a5
+; CHECK-NEXT:    add a5, sp, a5
+; CHECK-NEXT:    addi a5, a5, 16
+; CHECK-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vs8r.v v8, (a3)
+; CHECK-NEXT:    vs8r.v v8, (a2)
+; CHECK-NEXT:    addi a5, sp, 16
+; CHECK-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli a5, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vor.vv v16, v16, v8
+; CHECK-NEXT:    csrr a5, vlenb
+; CHECK-NEXT:    slli a5, a5, 3
+; CHECK-NEXT:    add a5, sp, a5
+; CHECK-NEXT:    addi a5, a5, 16
+; CHECK-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vor.vv v0, v0, v8
+; CHECK-NEXT:    beqz a4, .LBB8_1
+; CHECK-NEXT:  # %bb.2: # %middle.block
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a2, a1, 5
+; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    add sp, sp, a1
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+entry:
+  %broadcast.splatinsert = insertelement <vscale x 16 x i64> zeroinitializer, i64 %0, i64 0
+  %broadcast.splat = shufflevector <vscale x 16 x i64> %broadcast.splatinsert, <vscale x 16 x i64> zeroinitializer, <vscale x 16 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %vec.ind = phi <vscale x 16 x i64> [ zeroinitializer, %entry ], [ %vec.ind.next, %vector.body ]
+  %3 = and <vscale x 16 x i64> %vec.ind, %broadcast.splat
+  %4 = icmp ne <vscale x 16 x i64> %3, zeroinitializer
+  store <vscale x 16 x i64> %broadcast.splat, ptr %p
+  %5 = tail call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> %4)
+  %vec.ind.next = or <vscale x 16 x i64> %vec.ind, %1
+  br i1 %5, label %middle.block, label %vector.body
+
+middle.block:                                     ; preds = %vector.body
+  %and.i = and i64 1, %0
+  ret i64 %and.i
+}

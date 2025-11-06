@@ -28,7 +28,7 @@
 // CHECK:      operation "test.op3"
 // CHECK:  )mlir", context), std::forward<ConfigsT>(configs)...)
 
-// CHECK:      static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns(::mlir::RewritePatternSet &patterns, ConfigsT &&...configs) {
+// CHECK{LITERAL}: [[maybe_unused]] static void populateGeneratedPDLLPatterns(::mlir::RewritePatternSet &patterns, ConfigsT &&...configs) {
 // CHECK-NEXT:   patterns.add<GeneratedPDLLPattern0>(patterns.getContext(), configs...);
 // CHECK-NEXT:   patterns.add<NamedPattern>(patterns.getContext(), configs...);
 // CHECK-NEXT:   patterns.add<GeneratedPDLLPattern1>(patterns.getContext(), configs...);

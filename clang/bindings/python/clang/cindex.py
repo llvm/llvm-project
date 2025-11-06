@@ -2363,6 +2363,13 @@ class Cursor(Structure):
         return conf.lib.clang_getFieldDeclBitWidth(self)  # type: ignore [no-any-return]
 
     @cursor_null_guard
+    def is_function_inlined(self) -> bool:
+        """
+        Check if the function is inlined.
+        """
+        return bool(conf.lib.clang_Cursor_isFunctionInlined(self))
+
+    @cursor_null_guard
     def has_attrs(self) -> bool:
         """
         Determine whether the given cursor has any attributes.
@@ -3015,7 +3022,7 @@ class _CXUnsavedFile(Structure):
 
 
 # Functions calls through the python interface are rather slow. Fortunately,
-# for most symboles, we do not need to perform a function call. Their spelling
+# for most symbols, we do not need to perform a function call. Their spelling
 # never changes and is consequently provided by this spelling cache.
 SPELLING_CACHE = {
     # 0: CompletionChunk.Kind("Optional"),
@@ -3939,6 +3946,8 @@ class Token(Structure):
         cursor._tu = self._tu
 
         conf.lib.clang_annotateTokens(self._tu, byref(self), 1, byref(cursor))
+        if cursor.is_null():
+            return None
 
         return cursor
 
@@ -4308,6 +4317,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_isAnonymous", [Cursor], bool),
     ("clang_Cursor_isAnonymousRecordDecl", [Cursor], bool),
     ("clang_Cursor_isBitField", [Cursor], bool),
+    ("clang_Cursor_isFunctionInlined", [Cursor], c_uint),
     ("clang_Location_isInSystemHeader", [SourceLocation], bool),
     ("clang_PrintingPolicy_dispose", [PrintingPolicy]),
     ("clang_PrintingPolicy_getProperty", [PrintingPolicy, c_int], c_uint),

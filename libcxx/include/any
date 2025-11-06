@@ -84,10 +84,8 @@ namespace std {
 #  include <__cxx03/__config>
 #else
 #  include <__config>
-#  include <__memory/allocator.h>
-#  include <__memory/allocator_destructor.h>
-#  include <__memory/allocator_traits.h>
-#  include <__memory/unique_ptr.h>
+#  include <__memory/construct_at.h>
+#  include <__new/allocate.h>
 #  include <__type_traits/add_cv_quals.h>
 #  include <__type_traits/add_pointer.h>
 #  include <__type_traits/aligned_storage.h>
@@ -103,6 +101,7 @@ namespace std {
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
+#  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
 #  include <__utility/in_place.h>
 #  include <__utility/move.h>
@@ -339,22 +338,14 @@ struct _SmallHandler {
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI static _Tp& __create(any& __dest, _Args&&... __args) {
-    typedef allocator<_Tp> _Alloc;
-    typedef allocator_traits<_Alloc> _ATraits;
-    _Alloc __a;
-    _Tp* __ret = static_cast<_Tp*>(static_cast<void*>(&__dest.__s_.__buf));
-    _ATraits::construct(__a, __ret, std::forward<_Args>(__args)...);
+    auto __ret  = std::__construct_at(reinterpret_cast<_Tp*>(&__dest.__s_.__buf), std::forward<_Args>(__args)...);
     __dest.__h_ = &_SmallHandler::__handle;
     return *__ret;
   }
 
 private:
   _LIBCPP_HIDE_FROM_ABI static void __destroy(any& __this) {
-    typedef allocator<_Tp> _Alloc;
-    typedef allocator_traits<_Alloc> _ATraits;
-    _Alloc __a;
-    _Tp* __p = static_cast<_Tp*>(static_cast<void*>(&__this.__s_.__buf));
-    _ATraits::destroy(__a, __p);
+    std::__destroy_at(reinterpret_cast<_Tp*>(&__this.__s_.__buf));
     __this.__h_ = nullptr;
   }
 
@@ -406,26 +397,20 @@ struct _LargeHandler {
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI static _Tp& __create(any& __dest, _Args&&... __args) {
-    typedef allocator<_Tp> _Alloc;
-    typedef allocator_traits<_Alloc> _ATraits;
-    typedef __allocator_destructor<_Alloc> _Dp;
-    _Alloc __a;
-    unique_ptr<_Tp, _Dp> __hold(_ATraits::allocate(__a, 1), _Dp(__a, 1));
-    _Tp* __ret = __hold.get();
-    _ATraits::construct(__a, __ret, std::forward<_Args>(__args)...);
-    __dest.__s_.__ptr = __hold.release();
+    _Tp* __ptr = static_cast<_Tp*>(std::__libcpp_allocate<_Tp>(__element_count(1)));
+    std::__exception_guard __guard([&] { std::__libcpp_deallocate<_Tp>(__ptr, __element_count(1)); });
+    std::__construct_at(__ptr, std::forward<_Args>(__args)...);
+    __guard.__complete();
+    __dest.__s_.__ptr = __ptr;
     __dest.__h_       = &_LargeHandler::__handle;
-    return *__ret;
+    return *__ptr;
   }
 
 private:
   _LIBCPP_HIDE_FROM_ABI static void __destroy(any& __this) {
-    typedef allocator<_Tp> _Alloc;
-    typedef allocator_traits<_Alloc> _ATraits;
-    _Alloc __a;
     _Tp* __p = static_cast<_Tp*>(__this.__s_.__ptr);
-    _ATraits::destroy(__a, __p);
-    _ATraits::deallocate(__a, __p, 1);
+    std::__destroy_at(__p);
+    std::__libcpp_deallocate<_Tp>(__p, __element_count(1));
     __this.__h_ = nullptr;
   }
 
@@ -612,6 +597,11 @@ _LIBCPP_POP_MACROS
 #    include <stdexcept>
 #    include <type_traits>
 #    include <variant>
+#  endif
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#    include <cstring>
+#    include <limits>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

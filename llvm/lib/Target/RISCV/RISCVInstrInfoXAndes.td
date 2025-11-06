@@ -560,7 +560,7 @@ multiclass VPseudoVNCVT_BF16_S {
 }
 
 multiclass VPatConversionS_BF16<string intrinsic, string instruction> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = [HasVendorXAndesVBFHCvt] in
@@ -572,7 +572,7 @@ multiclass VPatConversionS_BF16<string intrinsic, string instruction> {
 }
 
 multiclass VPatConversionBF16_S<string intrinsic, string instruction> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = [HasVendorXAndesVBFHCvt] in

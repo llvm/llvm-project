@@ -4,7 +4,7 @@ AMOAND_D:      ---
 AMOAND_D-NEXT: mode: latency
 AMOAND_D-NEXT: key:
 AMOAND_D-NEXT:   instructions:
-AMOAND_D-NEXT:     - 'AMOAND_D [[RE01:X[0-9]+]] X10 [[RE01:X[0-9]+]]'
+AMOAND_D-NEXT:     - 'AMOAND_D [[RE01:X[0-9]+]] [[RE01:X[0-9]+]] X10'
 AMOAND_D-NEXT: config: ''
 AMOAND_D-NEXT: register_initial_values:
 AMOAND_D-NEXT: - '[[RE01:X[0-9]+]]=0x0'
@@ -16,7 +16,7 @@ AMOADD_W:      ---
 AMOADD_W-NEXT: mode: latency
 AMOADD_W-NEXT: key:
 AMOADD_W-NEXT:   instructions:
-AMOADD_W-NEXT:     - 'AMOADD_W [[RE02:X[0-9]+]] X10 [[RE02:X[0-9]+]]'
+AMOADD_W-NEXT:     - 'AMOADD_W [[RE02:X[0-9]+]] [[RE02:X[0-9]+]] X10'
 AMOADD_W-NEXT: config: ''
 AMOADD_W-NEXT: register_initial_values:
 AMOADD_W-NEXT: - '[[RE02:X[0-9]+]]=0x0'
@@ -28,7 +28,7 @@ AMOMAXU_D:      ---
 AMOMAXU_D-NEXT: mode: latency
 AMOMAXU_D-NEXT: key:
 AMOMAXU_D-NEXT:   instructions:
-AMOMAXU_D-NEXT:     - 'AMOMAXU_D [[RE03:X[0-9]+]] X10 [[RE03:X[0-9]+]]'
+AMOMAXU_D-NEXT:     - 'AMOMAXU_D [[RE03:X[0-9]+]] [[RE03:X[0-9]+]] X10'
 AMOMAXU_D-NEXT: config: ''
 AMOMAXU_D-NEXT: register_initial_values:
 AMOMAXU_D-NEXT: - '[[RE03:X[0-9]+]]=0x0'
@@ -40,7 +40,7 @@ AMOMIN_W:      ---
 AMOMIN_W-NEXT: mode: latency
 AMOMIN_W-NEXT: key:
 AMOMIN_W-NEXT:   instructions:
-AMOMIN_W-NEXT:     - 'AMOMIN_W [[RE04:X[0-9]+]] X10 [[RE04:X[0-9]+]]'
+AMOMIN_W-NEXT:     - 'AMOMIN_W [[RE04:X[0-9]+]] [[RE04:X[0-9]+]] X10'
 AMOMIN_W-NEXT: config: ''
 AMOMIN_W-NEXT: register_initial_values:
 AMOMIN_W-NEXT: - '[[RE04:X[0-9]+]]=0x0'
@@ -52,7 +52,7 @@ AMOXOR_D:      ---
 AMOXOR_D-NEXT: mode: latency
 AMOXOR_D-NEXT: key:
 AMOXOR_D-NEXT:   instructions:
-AMOXOR_D-NEXT:     - 'AMOXOR_D [[RE05:X[0-9]+]] X10 [[RE05:X[0-9]+]]'
+AMOXOR_D-NEXT:     - 'AMOXOR_D [[RE05:X[0-9]+]] [[RE05:X[0-9]+]] X10'
 AMOXOR_D-NEXT: config: ''
 AMOXOR_D-NEXT: register_initial_values:
 AMOXOR_D-NEXT: - '[[RE05:X[0-9]+]]=0x0'

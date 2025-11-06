@@ -65,7 +65,7 @@ public:
   void setCurrentUnit(DWARFUnit &Unit, const uint64_t UnitStartOffset);
   /// Emit Accelerator table.
   void emitAccelTable();
-  /// Returns true if the table was crated.
+  /// Returns true if the table was created.
   bool isCreated() const { return NeedToCreate; }
   /// Returns buffer containing the accelerator table.
   std::unique_ptr<DebugBufferVector> releaseBuffer() {
@@ -91,7 +91,7 @@ private:
   uint64_t CurrentUnitOffset = 0;
   const DWARFUnit *CurrentUnit = nullptr;
   std::unordered_map<uint32_t, uint32_t> AbbrevTagToIndexMap;
-  /// Contains a map of TU hashes to a Foreign TU indecies.
+  /// Contains a map of TU hashes to a Foreign TU indices.
   /// This is used to reduce the size of Foreign TU list since there could be
   /// multiple TUs with the same hash.
   DenseMap<uint64_t, uint32_t> TUHashToIndexMap;

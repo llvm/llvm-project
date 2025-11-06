@@ -2217,23 +2217,6 @@ func.func @compress_store_op_with_alignment(%arg0: memref<?xindex>, %arg1: vecto
 // -----
 
 //===----------------------------------------------------------------------===//
-// vector.splat
-//===----------------------------------------------------------------------===//
-
-// vector.splat is converted to vector.broadcast. Then, vector.broadcast is converted to LLVM.
-// CHECK-LABEL: @splat_0d
-// CHECK-NOT: splat
-// CHECK: return
-func.func @splat_0d(%elt: f32) -> (vector<f32>, vector<4xf32>, vector<[4]xf32>) {
-  %a = vector.splat %elt : vector<f32>
-  %b = vector.splat %elt : vector<4xf32>
-  %c = vector.splat %elt : vector<[4]xf32>
-  return %a, %b, %c : vector<f32>, vector<4xf32>, vector<[4]xf32>
-}
-
-// -----
-
-//===----------------------------------------------------------------------===//
 // vector.scalable_insert
 //===----------------------------------------------------------------------===//
 

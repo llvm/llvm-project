@@ -622,7 +622,7 @@ static spirv::Dim convertRank(int64_t rank) {
 }
 
 static spirv::ImageFormat getImageFormat(Type elementType) {
-  return llvm::TypeSwitch<Type, spirv::ImageFormat>(elementType)
+  return TypeSwitch<Type, spirv::ImageFormat>(elementType)
       .Case<Float16Type>([](Float16Type) { return spirv::ImageFormat::R16f; })
       .Case<Float32Type>([](Float32Type) { return spirv::ImageFormat::R32f; })
       .Case<IntegerType>([](IntegerType intType) {
@@ -639,11 +639,7 @@ static spirv::ImageFormat getImageFormat(Type elementType) {
           llvm_unreachable("Unhandled integer type!");
         }
       })
-      .Default([](Type) {
-        llvm_unreachable("Unhandled element type!");
-        // We need to return something here to satisfy the type switch.
-        return spirv::ImageFormat::R32f;
-      });
+      .DefaultUnreachable("Unhandled element type!");
 #undef BIT_WIDTH_CASE
 }
 
@@ -1471,7 +1467,7 @@ mlir::spirv::getNativeVectorShape(Operation *op) {
   return TypeSwitch<Operation *, std::optional<SmallVector<int64_t>>>(op)
       .Case<vector::ReductionOp, vector::TransposeOp>(
           [](auto typedOp) { return getNativeVectorShapeImpl(typedOp); })
-      .Default([](Operation *) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {

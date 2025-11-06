@@ -303,8 +303,7 @@ bool TypeSpecTypeLoc::isKind(const TypeLoc &TL) {
 }
 
 bool TagTypeLoc::isDefinition() const {
-  return getTypePtr()->isTagOwned() &&
-         getOriginalDecl()->isCompleteDefinition();
+  return getTypePtr()->isTagOwned() && getDecl()->isCompleteDefinition();
 }
 
 // Reimplemented to account for GNU/C++ extension
@@ -491,39 +490,6 @@ NestedNameSpecifierLoc TypeLoc::getPrefix() const {
     return castAs<UsingTypeLoc>().getQualifierLoc();
   default:
     return NestedNameSpecifierLoc();
-  }
-}
-
-SourceLocation TypeLoc::getNonPrefixBeginLoc() const {
-  switch (getTypeLocClass()) {
-  case TypeLoc::TemplateSpecialization: {
-    auto TL = castAs<TemplateSpecializationTypeLoc>();
-    SourceLocation Loc = TL.getTemplateKeywordLoc();
-    if (!Loc.isValid())
-      Loc = TL.getTemplateNameLoc();
-    return Loc;
-  }
-  case TypeLoc::DeducedTemplateSpecialization: {
-    auto TL = castAs<DeducedTemplateSpecializationTypeLoc>();
-    SourceLocation Loc = TL.getTemplateKeywordLoc();
-    if (!Loc.isValid())
-      Loc = TL.getTemplateNameLoc();
-    return Loc;
-  }
-  case TypeLoc::DependentName:
-    return castAs<DependentNameTypeLoc>().getNameLoc();
-  case TypeLoc::Enum:
-  case TypeLoc::Record:
-  case TypeLoc::InjectedClassName:
-    return castAs<TagTypeLoc>().getNameLoc();
-  case TypeLoc::Typedef:
-    return castAs<TypedefTypeLoc>().getNameLoc();
-  case TypeLoc::UnresolvedUsing:
-    return castAs<UnresolvedUsingTypeLoc>().getNameLoc();
-  case TypeLoc::Using:
-    return castAs<UsingTypeLoc>().getNameLoc();
-  default:
-    return getBeginLoc();
   }
 }
 

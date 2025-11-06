@@ -93,12 +93,6 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     auto &Tok = *Tokens.back();
     const auto NewlinesBefore = Tok.NewlinesBefore;
     switch (FormatOff) {
-    case FO_CurrentLine:
-      if (NewlinesBefore == 0)
-        Tok.Finalized = true;
-      else
-        FormatOff = FO_None;
-      break;
     case FO_NextLine:
       if (NewlinesBefore > 1) {
         FormatOff = FO_None;
@@ -107,6 +101,13 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
         FormatOff = FO_CurrentLine;
       }
       break;
+    case FO_CurrentLine:
+      if (NewlinesBefore == 0) {
+        Tok.Finalized = true;
+        break;
+      }
+      FormatOff = FO_None;
+      [[fallthrough]];
     default:
       if (!FormattingDisabled && FormatOffRegex.match(Tok.TokenText)) {
         if (Tok.is(tok::comment) &&
@@ -317,11 +318,18 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                            {tok::equal, tok::greater},
                            {tok::star, tok::greater},
                            {tok::pipeequal, tok::greater},
-                           {tok::pipe, tok::arrow},
-                           {tok::hash, tok::minus, tok::hash},
-                           {tok::hash, tok::equal, tok::hash}},
+                           {tok::pipe, tok::arrow}},
                           TT_BinaryOperator) ||
         Tokens.back()->is(tok::arrow)) {
+      Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+    if (Tokens.size() >= 3 &&
+        Tokens[Tokens.size() - 3]->is(Keywords.kw_verilogHash) &&
+        Tokens[Tokens.size() - 2]->isOneOf(tok::minus, tok::equal) &&
+        Tokens[Tokens.size() - 1]->is(Keywords.kw_verilogHash) &&
+        tryMergeTokens(3, TT_BinaryOperator)) {
+      Tokens.back()->setFinalizedType(TT_BinaryOperator);
       Tokens.back()->ForcedPrecedence = prec::Comma;
       return;
     }
@@ -733,7 +741,7 @@ void FormatTokenLexer::tryParseJavaTextBlock() {
 // its text if successful.
 void FormatTokenLexer::tryParseJSRegexLiteral() {
   FormatToken *RegexToken = Tokens.back();
-  if (!RegexToken->isOneOf(tok::slash, tok::slashequal))
+  if (RegexToken->isNoneOf(tok::slash, tok::slashequal))
     return;
 
   FormatToken *Prev = nullptr;
@@ -1041,7 +1049,7 @@ void FormatTokenLexer::handleTemplateStrings() {
 
 void FormatTokenLexer::tryParsePythonComment() {
   FormatToken *HashToken = Tokens.back();
-  if (!HashToken->isOneOf(tok::hash, tok::hashhash))
+  if (HashToken->isNoneOf(tok::hash, tok::hashhash))
     return;
   // Turn the remainder of this line into a comment.
   const char *CommentBegin =

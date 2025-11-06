@@ -13,8 +13,6 @@
 // the test is a no-op (and would XPASS) on some targets.
 // UNSUPPORTED: using-built-library-before-llvm-19
 
-// XFAIL: availability-synchronization_library-missing
-
 // This is a regression test for https://llvm.org/PR85107, which describes how we were using UL_COMPARE_AND_WAIT instead
 // of UL_COMPARE_AND_WAIT64 in the implementation of atomic::wait, leading to potential infinite hangs.
 

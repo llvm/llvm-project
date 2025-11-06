@@ -108,25 +108,8 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[FOR_PREV:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[FOR]], 15
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i1 [[CMP]], true
-; CHECK-NEXT:    [[VEC_DEAD:%.*]] = and i1 [[C]], true
-; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
-; CHECK-NEXT:    [[B1:%.*]] = or i16 [[IV_NEXT]], [[IV_NEXT]]
-; CHECK-NEXT:    [[B3:%.*]] = and i1 [[CMP]], [[C]]
-; CHECK-NEXT:    [[FOR_PREV]] = zext i16 [[B1]] to i32
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[B3]] to i32
-; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr i32, ptr [[A_PTR]], i16 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[A_GEP]], align 4
-; CHECK-NEXT:    br i1 [[VEC_DEAD]], label %[[FOR_END]], label %[[LOOP]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[FOR_LCSSA:%.*]] = phi i32 [ [[FOR]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[FOR_LCSSA]]
+; CHECK-NEXT:    ret i32 [[VECTOR_RECUR_EXTRACT_FOR_PHI]]
 ;
 entry:
   br label %loop

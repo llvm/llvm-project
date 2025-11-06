@@ -1069,27 +1069,22 @@ struct LoweredPHIRecord {
 };
 } // namespace
 
-namespace llvm {
-  template<>
-  struct DenseMapInfo<LoweredPHIRecord> {
-    static inline LoweredPHIRecord getEmptyKey() {
-      return LoweredPHIRecord(nullptr, 0);
-    }
-    static inline LoweredPHIRecord getTombstoneKey() {
-      return LoweredPHIRecord(nullptr, 1);
-    }
-    static unsigned getHashValue(const LoweredPHIRecord &Val) {
-      return DenseMapInfo<PHINode*>::getHashValue(Val.PN) ^ (Val.Shift>>3) ^
-             (Val.Width>>3);
-    }
-    static bool isEqual(const LoweredPHIRecord &LHS,
-                        const LoweredPHIRecord &RHS) {
-      return LHS.PN == RHS.PN && LHS.Shift == RHS.Shift &&
-             LHS.Width == RHS.Width;
-    }
-  };
-} // namespace llvm
-
+template <> struct llvm::DenseMapInfo<LoweredPHIRecord> {
+  static inline LoweredPHIRecord getEmptyKey() {
+    return LoweredPHIRecord(nullptr, 0);
+  }
+  static inline LoweredPHIRecord getTombstoneKey() {
+    return LoweredPHIRecord(nullptr, 1);
+  }
+  static unsigned getHashValue(const LoweredPHIRecord &Val) {
+    return DenseMapInfo<PHINode *>::getHashValue(Val.PN) ^ (Val.Shift >> 3) ^
+           (Val.Width >> 3);
+  }
+  static bool isEqual(const LoweredPHIRecord &LHS,
+                      const LoweredPHIRecord &RHS) {
+    return LHS.PN == RHS.PN && LHS.Shift == RHS.Shift && LHS.Width == RHS.Width;
+  }
+};
 
 /// This is an integer PHI and we know that it has an illegal type: see if it is
 /// only used by trunc or trunc(lshr) operations. If so, we split the PHI into

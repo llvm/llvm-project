@@ -29,7 +29,7 @@ using internal::Matcher;
 
 static const RecordDecl *getRecordDeclOfFriend(FriendDecl *FD) {
   QualType Ty = FD->getFriendType()->getType().getCanonicalType();
-  return cast<RecordType>(Ty)->getOriginalDecl();
+  return cast<RecordType>(Ty)->getDecl();
 }
 
 struct ImportExpr : TestImportBase {};
@@ -4614,7 +4614,7 @@ TEST_P(ImportFriendClasses, ImportOfClassDefinitionAndFwdFriendShouldBeLinked) {
   auto *Friend = FirstDeclMatcher<FriendDecl>().match(FromTU0, friendDecl());
   QualType FT = Friend->getFriendType()->getType();
   FT = FromTU0->getASTContext().getCanonicalType(FT);
-  auto *Fwd = cast<TagType>(FT)->getOriginalDecl();
+  auto *Fwd = cast<TagType>(FT)->getDecl();
   auto *ImportedFwd = Import(Fwd, Lang_CXX03);
   Decl *FromTU1 = getTuDecl(
       R"(

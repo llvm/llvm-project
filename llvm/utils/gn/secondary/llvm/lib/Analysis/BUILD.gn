@@ -116,6 +116,7 @@ static_library("Analysis") {
     "RegionPass.cpp",
     "RegionPrinter.cpp",
     "ReplayInlineAdvisor.cpp",
+    "RuntimeLibcallInfo.cpp",
     "ScalarEvolution.cpp",
     "ScalarEvolutionAliasAnalysis.cpp",
     "ScalarEvolutionDivision.cpp",

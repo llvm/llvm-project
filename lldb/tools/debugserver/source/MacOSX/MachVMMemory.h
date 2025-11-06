@@ -28,6 +28,8 @@ public:
   nub_size_t PageSize(task_t task);
   nub_bool_t GetMemoryRegionInfo(task_t task, nub_addr_t address,
                                  DNBRegionInfo *region_info);
+  nub_bool_t GetMemoryTags(task_t task, nub_addr_t address, nub_size_t size,
+                           std::vector<uint8_t> &tags);
   nub_bool_t GetMemoryProfile(DNBProfileDataScanType scanType, task_t task,
                               struct task_basic_info ti, cpu_type_t cputype,
                               nub_process_t pid, vm_statistics64_data_t &vminfo,

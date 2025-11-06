@@ -718,7 +718,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
     // and followed by a semicolon, GCC will reject (it appears to parse the
     // attributes as part of a statement in that case). That looks like a bug.
     if (!getLangOpts().CPlusPlus || Tok.is(tok::semi))
-      Attrs.takeAllFrom(TempAttrs);
+      Attrs.takeAllAppendingFrom(TempAttrs);
     else {
       StmtVector Stmts;
       ParsedAttributes EmptyCXX11Attrs(AttrFactory);
@@ -813,7 +813,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
           return StmtError();
       }
     } else {
-      LHS = Expr;
+      LHS = Actions.ActOnCaseExpr(CaseLoc, Expr);
       MissingCase = false;
     }
 
@@ -2407,7 +2407,7 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs,
       PrecedingLabel);
 
-  Attrs.takeAllFrom(TempAttrs);
+  Attrs.takeAllPrependingFrom(TempAttrs);
 
   // Start of attribute range may already be set for some invalid input.
   // See PR46336.

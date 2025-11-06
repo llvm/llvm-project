@@ -41,9 +41,7 @@ struct start_args_t {
 };
 
 /// The arguments to the '_end' kernel.
-struct end_args_t {
-  int argc;
-};
+struct end_args_t {};
 
 /// Generic interface to load the \p image and launch execution of the _start
 /// kernel on the target device. Copies \p argc and \p argv to the device.

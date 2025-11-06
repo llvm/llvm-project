@@ -230,6 +230,16 @@ func.func @trigonometrics(%arg0: f32) {
 
 // -----
 
+// CHECK-LABEL: func @sincos
+// CHECK-SAME: [[ARG0:%.+]]: f32
+func.func @sincos(%arg0: f32) {
+  // CHECK: llvm.intr.sincos([[ARG0]]) : (f32) -> !llvm.struct<(f32, f32)>
+  %0:2 = math.sincos %arg0 : f32
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @inverse_trigonometrics
 // CHECK-SAME: [[ARG0:%.+]]: f32
 func.func @inverse_trigonometrics(%arg0: f32) {
