@@ -30,13 +30,10 @@ static llvm::Type *X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
   bool IsMMXCons = llvm::StringSwitch<bool>(Constraint)
                        .Cases({"y", "&y", "^Ym"}, true)
                        .Default(false);
-  if (IsMMXCons && Ty->isVectorTy()) {
-    if (cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedValue() !=
-        64) {
-      // Invalid MMX constraint
-      return nullptr;
-    }
-  }
+  if (IsMMXCons && Ty->isVectorTy() &&
+      cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedValue() !=
+          64)
+    return nullptr; // Invalid MMX constraint
 
   if (Constraint == "k") {
     llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGF.getLLVMContext());
