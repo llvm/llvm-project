@@ -93,36 +93,20 @@ void TargetFrameLowering::getCalleeSaves(const MachineFunction &MF,
     CalleeSaves.set(Info.getReg());
 }
 
+LLVM_DEPRECATED("Use determinePrologCalleeSaves instead",
+                "determinePrologCalleeSaves")
 void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
+  determinePrologCalleeSaves(MF, SavedRegs, RS);
+}
+
+const MCPhysReg *
+TargetFrameLowering::getMustPreserveRegisters(MachineFunction &MF) const {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-
-  // Resize before the early returns. Some backends expect that
-  // SavedRegs.size() == TRI.getNumRegs() after this call even if there are no
-  // saved registers.
-  SavedRegs.resize(TRI.getNumRegs());
-
-  // Get the callee saved register list...
-  const MCPhysReg *CSRegs = nullptr;
-
-  // When interprocedural register allocation is enabled, callee saved register
-  // list should be empty, since caller saved registers are preferred over
-  // callee saved registers. Unless it has some risked CSR to be optimized out.
-  if (MF.getTarget().Options.EnableIPRA &&
-      isSafeForNoCSROpt(MF.getFunction()) &&
-      isProfitableForNoCSROpt(MF.getFunction()))
-    CSRegs = TRI.getIPRACSRegs(&MF);
-  else
-    CSRegs = MF.getRegInfo().getCalleeSavedRegs();
-
-  // Early exit if there are no callee saved registers.
-  if (!CSRegs || CSRegs[0] == 0)
-    return;
-
   // In Naked functions we aren't going to save any registers.
   if (MF.getFunction().hasFnAttribute(Attribute::Naked))
-    return;
+    return nullptr;
 
   // Noreturn+nounwind functions never restore CSR, so no saves are needed.
   // Purely noreturn functions may still return through throws, so those must
@@ -135,15 +119,81 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
         MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
         !MF.getFunction().hasFnAttribute(Attribute::UWTable) &&
         enableCalleeSaveSkip(MF))
+    return nullptr;
+
+  // When interprocedural register allocation is enabled, callee saved register
+  // list should be empty, since caller saved registers are preferred over
+  // callee saved registers. Unless it has some risked CSR to be optimized out.
+  if (MF.getTarget().Options.EnableIPRA &&
+      isSafeForNoCSROpt(MF.getFunction()) &&
+      isProfitableForNoCSROpt(MF.getFunction()))
+    return TRI.getIPRACSRegs(&MF);
+  return MF.getRegInfo().getCalleeSavedRegs();
+}
+
+void TargetFrameLowering::determineUncondPrologCalleeSaves(
+    MachineFunction &MF, const MCPhysReg *CSRegs,
+    BitVector &UncondPrologCSRs) const {
+  // Functions which call __builtin_unwind_init get all their registers saved.
+  if (MF.callsUnwindInit()) {
+    for (unsigned i = 0; CSRegs[i]; ++i) {
+      unsigned Reg = CSRegs[i];
+      UncondPrologCSRs.set(Reg);
+    }
+  }
+  return;
+}
+
+void TargetFrameLowering::determineEarlyCalleeSaves(
+    MachineFunction &MF, BitVector &EarlyCSRs) const {
+  const auto &ST = MF.getSubtarget();
+  if (!ST.savesCSRsEarly())
     return;
 
-  // Functions which call __builtin_unwind_init get all their registers saved.
-  bool CallsUnwindInit = MF.callsUnwindInit();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  // Get the callee saved register list...
+  const MCPhysReg *CSRegs = getMustPreserveRegisters(MF);
+  // Early exit if there are no callee saved registers.
+  if (!CSRegs || CSRegs[0] == 0)
+    return;
+
+  BitVector UncondPrologCSRs(TRI.getNumRegs(), false);
+  determineUncondPrologCalleeSaves(MF, CSRegs, UncondPrologCSRs);
+
+  EarlyCSRs.resize(TRI.getNumRegs());
+  for (unsigned i = 0; CSRegs[i]; ++i) {
+    unsigned Reg = CSRegs[i];
+    if (!UncondPrologCSRs[Reg])
+      EarlyCSRs.set(Reg);
+  }
+}
+
+void TargetFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                     BitVector &PrologCSRs,
+                                                     RegScavenger *RS) const {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
+  // Resize before the early returns. Some backends expect that
+  // SavedRegs.size() == TRI.getNumRegs() after this call even if there are no
+  // saved registers.
+  PrologCSRs.resize(TRI.getNumRegs());
+
+  // Get the callee saved register list...
+  const MCPhysReg *CSRegs = getMustPreserveRegisters(MF);
+  // Early exit if there are no callee saved registers.
+  if (!CSRegs || CSRegs[0] == 0)
+    return;
+
+  determineUncondPrologCalleeSaves(MF, CSRegs, PrologCSRs);
+
+  BitVector EarlyCSRs(TRI.getNumRegs(), false);
+  determineEarlyCalleeSaves(MF, EarlyCSRs);
+
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned i = 0; CSRegs[i]; ++i) {
     unsigned Reg = CSRegs[i];
-    if (CallsUnwindInit || MRI.isPhysRegModified(Reg))
-      SavedRegs.set(Reg);
+    if (MRI.isPhysRegModified(Reg) && !EarlyCSRs[Reg])
+      PrologCSRs.set(Reg);
   }
 }
 

@@ -32,6 +32,12 @@
 
 using namespace llvm;
 
+static cl::opt<std::string> UserDefinedUncondPrologCSRs(
+    "riscv-user-defined-uncond-prolog-csrs",
+    cl::desc("Comma-separated list of registerst that have to be saved / "
+             "restored in prolog / epilog. Used for testing only"),
+    cl::init(""), cl::Hidden);
+
 static Align getABIStackAlignment(RISCVABI::ABI ABI) {
   if (ABI == RISCVABI::ABI_ILP32E)
     return Align(4);
@@ -1578,6 +1584,34 @@ static MCRegister getRVVBaseRegister(const RISCVRegisterInfo &TRI,
   if (!BaseReg.isValid())
     BaseReg = Reg;
   return BaseReg;
+}
+
+#define GET_REGISTER_MATCHER
+#include "RISCVGenAsmMatcher.inc"
+
+void RISCVFrameLowering::determineUncondPrologCalleeSaves(
+    MachineFunction &MF, const MCPhysReg *CSRegs,
+    BitVector &UncondPrologCSRs) const {
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
+
+  StringRef RegString(UserDefinedUncondPrologCSRs);
+  SmallVector<llvm::StringRef, 4> RegNames;
+  llvm::SplitString(RegString, RegNames, ",");
+  for (auto &Name : RegNames) {
+    Register Reg = MatchRegisterName(Name);
+    if (!Reg)
+      Reg = MatchRegisterAltName(Name);
+    if (!Reg) {
+      std::string msg;
+      raw_string_ostream Msg(msg);
+      Msg << "Couldn't parse register: " << Name << "\n";
+      report_fatal_error(Twine(msg));
+    }
+    UncondPrologCSRs.set(Reg.id());
+  }
+
+  TargetFrameLowering::determineUncondPrologCalleeSaves(MF, CSRegs,
+                                                        UncondPrologCSRs);
 }
 
 void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
