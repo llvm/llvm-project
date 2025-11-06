@@ -2739,8 +2739,14 @@ void StmtPrinter::VisitRequiresExpr(RequiresExpr *E) {
         PrintExpr(ExprReq->getExpr());
       if (ExprReq->isCompound()) {
         OS << " }";
-        if (ExprReq->getNoexceptLoc().isValid())
+        if (ExprReq->hasNoexceptRequirement()) {
           OS << " noexcept";
+          if (ExprReq->getNoexceptExpr()) {
+            OS << "(";
+            PrintExpr(ExprReq->getNoexceptExpr());
+            OS << ")";
+          }
+        }
         const auto &RetReq = ExprReq->getReturnTypeRequirement();
         if (!RetReq.isEmpty()) {
           OS << " -> ";

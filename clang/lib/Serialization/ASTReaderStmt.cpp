@@ -902,11 +902,14 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
 
         std::optional<concepts::ExprRequirement::ReturnTypeRequirement> Req;
         ConceptSpecializationExpr *SubstitutedConstraintExpr = nullptr;
-        SourceLocation NoexceptLoc;
+        ExceptionSpecificationType NoexceptType = EST_None;
+        Expr *NoexceptExpr = nullptr;
         if (RK == concepts::Requirement::RK_Simple) {
           Req.emplace();
         } else {
-          NoexceptLoc = Record.readSourceLocation();
+          NoexceptType =
+              static_cast<ExceptionSpecificationType>(Record.readInt());
+          NoexceptExpr = Record.readExpr();
           switch (/* returnTypeRequirementKind */Record.readInt()) {
             case 0:
               // No return type requirement.
@@ -929,13 +932,13 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
         }
         if (Expr *Ex = E.dyn_cast<Expr *>())
           R = new (Record.getContext()) concepts::ExprRequirement(
-                  Ex, RK == concepts::Requirement::RK_Simple, NoexceptLoc,
-                  std::move(*Req), Status, SubstitutedConstraintExpr);
+              Ex, RK == concepts::Requirement::RK_Simple, NoexceptType,
+              NoexceptExpr, std::move(*Req), Status, SubstitutedConstraintExpr);
         else
           R = new (Record.getContext()) concepts::ExprRequirement(
               cast<concepts::Requirement::SubstitutionDiagnostic *>(E),
-              RK == concepts::Requirement::RK_Simple, NoexceptLoc,
-              std::move(*Req));
+              RK == concepts::Requirement::RK_Simple, NoexceptType,
+              NoexceptExpr, std::move(*Req));
       } break;
       case concepts::Requirement::RK_Nested: {
         ASTContext &C = Record.getContext();

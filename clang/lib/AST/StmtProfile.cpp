@@ -1746,7 +1746,9 @@ void StmtProfiler::VisitRequiresExpr(const RequiresExpr *S) {
       //    [...] The compound-requirement in C1 requires that x++ is a valid
       //    expression. It is equivalent to the simple-requirement x++; [...]
       // We therefore do not profile isSimple() here.
-      ID.AddBoolean(ExprReq->getNoexceptLoc().isValid());
+      ID.AddInteger(ExprReq->getNoexceptType());
+      if (ExprReq->getNoexceptExpr())
+        Visit(ExprReq->getNoexceptExpr());
       const concepts::ExprRequirement::ReturnTypeRequirement &RetReq =
           ExprReq->getReturnTypeRequirement();
       if (RetReq.isEmpty()) {

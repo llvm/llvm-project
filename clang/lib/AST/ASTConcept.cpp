@@ -136,17 +136,18 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
 }
 
 concepts::ExprRequirement::ExprRequirement(
-    Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
-    ReturnTypeRequirement Req, SatisfactionStatus Status,
+    Expr *E, bool IsSimple, ExceptionSpecificationType NoexceptType,
+    Expr *NoexceptExpr, ReturnTypeRequirement Req, SatisfactionStatus Status,
     ConceptSpecializationExpr *SubstitutedConstraintExpr)
     : Requirement(IsSimple ? RK_Simple : RK_Compound, Status == SS_Dependent,
                   Status == SS_Dependent &&
                       (E->containsUnexpandedParameterPack() ||
                        Req.containsUnexpandedParameterPack()),
                   Status == SS_Satisfied),
-      Value(E), NoexceptLoc(NoexceptLoc), TypeReq(Req),
-      SubstitutedConstraintExpr(SubstitutedConstraintExpr), Status(Status) {
-  assert((!IsSimple || (Req.isEmpty() && NoexceptLoc.isInvalid())) &&
+      Value(E), NoexceptExpr(NoexceptExpr), NoexceptType(NoexceptType),
+      TypeReq(Req), SubstitutedConstraintExpr(SubstitutedConstraintExpr),
+      Status(Status) {
+  assert((!IsSimple || (Req.isEmpty() && NoexceptType == EST_None)) &&
          "Simple requirement must not have a return type requirement or a "
          "noexcept specification");
   assert((Status > SS_TypeRequirementSubstitutionFailure &&
@@ -155,12 +156,14 @@ concepts::ExprRequirement::ExprRequirement(
 
 concepts::ExprRequirement::ExprRequirement(
     SubstitutionDiagnostic *ExprSubstDiag, bool IsSimple,
-    SourceLocation NoexceptLoc, ReturnTypeRequirement Req)
+    ExceptionSpecificationType NoexceptType, Expr *NoexceptExpr,
+    ReturnTypeRequirement Req)
     : Requirement(IsSimple ? RK_Simple : RK_Compound, Req.isDependent(),
                   Req.containsUnexpandedParameterPack(), /*IsSatisfied=*/false),
-      Value(ExprSubstDiag), NoexceptLoc(NoexceptLoc), TypeReq(Req),
+      Value(ExprSubstDiag), NoexceptExpr(NoexceptExpr),
+      NoexceptType(NoexceptType), TypeReq(Req),
       Status(SS_ExprSubstitutionFailure) {
-  assert((!IsSimple || (Req.isEmpty() && NoexceptLoc.isInvalid())) &&
+  assert((!IsSimple || (Req.isEmpty() && NoexceptType == EST_None)) &&
          "Simple requirement must not have a return type requirement or a "
          "noexcept specification");
 }

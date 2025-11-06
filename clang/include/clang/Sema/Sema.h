@@ -8883,18 +8883,21 @@ public:
                                               SourceLocation NameLoc,
                                               const IdentifierInfo *TypeName,
                                               TemplateIdAnnotation *TemplateId);
-  concepts::Requirement *ActOnCompoundRequirement(Expr *E,
-                                                  SourceLocation NoexceptLoc);
+  concepts::Requirement *
+  ActOnCompoundRequirement(Expr *E, ExceptionSpecificationType NoexceptType,
+                           Expr *NoexceptExpr);
   concepts::Requirement *ActOnCompoundRequirement(
-      Expr *E, SourceLocation NoexceptLoc, CXXScopeSpec &SS,
-      TemplateIdAnnotation *TypeConstraint, unsigned Depth);
+      Expr *E, ExceptionSpecificationType NoexceptType, Expr *NoexceptExpr,
+      CXXScopeSpec &SS, TemplateIdAnnotation *TypeConstraint, unsigned Depth);
   concepts::Requirement *ActOnNestedRequirement(Expr *Constraint);
   concepts::ExprRequirement *BuildExprRequirement(
-      Expr *E, bool IsSatisfied, SourceLocation NoexceptLoc,
+      Expr *E, bool IsSatisfied, ExceptionSpecificationType NoexceptType,
+      Expr *NoexceptExpr,
       concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement);
   concepts::ExprRequirement *BuildExprRequirement(
       concepts::Requirement::SubstitutionDiagnostic *ExprSubstDiag,
-      bool IsSatisfied, SourceLocation NoexceptLoc,
+      bool IsSatisfied, ExceptionSpecificationType NoexceptType,
+      Expr *NoexceptExpr,
       concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement);
   concepts::TypeRequirement *BuildTypeRequirement(TypeSourceInfo *Type);
   concepts::TypeRequirement *BuildTypeRequirement(

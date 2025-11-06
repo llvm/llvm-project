@@ -225,3 +225,139 @@ static_assert(has_field2<A>);
 
 }  // namespace access_checks
 }  // namespace in_return_type_requirement
+
+// Test noexcept(expression) with constant expressions
+namespace noexcept_expression {
+
+void maythrow();
+void nothrow() noexcept;
+
+// Test noexcept(true) - should behave like basic noexcept
+static_assert(requires { { nothrow() } noexcept(true); });
+static_assert(!requires { { maythrow() } noexcept(true); });
+
+// Test noexcept(false) - should always succeed regardless of whether expression can throw
+static_assert(requires { { maythrow() } noexcept(false); });
+static_assert(requires { { nothrow() } noexcept(false); });
+
+// Test noexcept with constant expressions
+static_assert(requires { { 1 } noexcept(1 + 1 == 2); }); // noexcept(true)
+static_assert(requires { { 1 } noexcept(1 + 1 == 3); }); // noexcept(false)
+static_assert(requires { { maythrow() } noexcept(sizeof(int) == 1); }); // noexcept(false) on most platforms
+
+template<typename T>
+concept NoexceptIfSmall = requires(T t) {
+  { t } noexcept(sizeof(T) <= 4); // Only require noexcept for small types
+};
+
+struct Small { char c; };
+struct Large { char c[100]; };
+
+static_assert(NoexceptIfSmall<int>);
+static_assert(NoexceptIfSmall<Small>);
+static_assert(NoexceptIfSmall<Large>); // Large types don't require noexcept
+
+// Test dependent noexcept expressions with template instantiation
+template<typename T>
+concept ConditionalNoexcept = requires(T t) {
+  { t.foo() } noexcept(sizeof(T) == 1);
+};
+
+struct HasFooNoexcept {
+  void foo() noexcept {}
+};
+
+struct HasFooThrows {
+  void foo() {}
+};
+
+// For sizeof == 1, noexcept(true), so HasFooNoexcept satisfies but HasFooThrows doesn't
+static_assert(ConditionalNoexcept<HasFooNoexcept>);
+static_assert(!ConditionalNoexcept<HasFooThrows>);
+
+// Test with dependent expression evaluation during template instantiation
+template<typename T>
+struct TypeWithValue {
+  static constexpr bool value = sizeof(T) > 4;
+};
+
+template<typename T>
+concept NoexceptIfValueTrue = requires(T t) {
+  { t } noexcept(TypeWithValue<T>::value);
+};
+
+static_assert(NoexceptIfValueTrue<long long>); // sizeof(long long) > 4 -> noexcept(true) -> always OK
+static_assert(NoexceptIfValueTrue<char>);      // sizeof(char) <= 4 -> noexcept(false) -> always OK
+
+// Test combination of dependent noexcept with return type requirements
+template<typename T>
+concept ComplexRequirement = requires(T t) {
+  { t.get() } noexcept(sizeof(T) <= 8) -> Same<int>;
+};
+
+struct SmallGetter {
+  int get() noexcept { return 0; }
+};
+
+struct LargeGetter {
+  char padding[100];
+  int get() noexcept { return 0; }
+};
+
+static_assert(ComplexRequirement<SmallGetter>); // Small, requires noexcept, has noexcept
+static_assert(ComplexRequirement<LargeGetter>); // Large, doesn't require noexcept
+
+struct SmallGetterThrows {
+  int get() { return 0; } // throws
+};
+
+static_assert(!ComplexRequirement<SmallGetterThrows>); // Small, requires noexcept, but throws
+
+// Test that noexcept expression itself can be dependent
+template<bool B>
+struct BoolValue {
+  static constexpr bool value = B;
+};
+
+template<typename T, bool B>
+concept DependentNoexceptExpr = requires(T t) {
+  { t } noexcept(BoolValue<B>::value);
+};
+
+static_assert(DependentNoexceptExpr<int, true>);
+static_assert(DependentNoexceptExpr<int, false>);
+
+} // namespace noexcept_expression
+
+// Test case from the paper (P3822R0)
+namespace paper_example {
+
+template<typename F, bool noexc>
+concept invocable = requires(F f) {
+  { f() } noexcept(noexc);
+};
+
+template<bool noexc>
+struct callable_ref {
+  callable_ref(invocable<noexc> auto&& fn);
+};
+
+void noexcept_func() noexcept {}
+void throwing_func() {}
+
+// Test with noexc = true (requires noexcept)
+static_assert(invocable<decltype(noexcept_func), true>);
+static_assert(!invocable<decltype(throwing_func), true>);
+
+// Test with noexc = false (does not require noexcept)
+static_assert(invocable<decltype(noexcept_func), false>);
+static_assert(invocable<decltype(throwing_func), false>);
+
+// Verify callable_ref can be instantiated correctly
+callable_ref<true> cr1{noexcept_func};
+// callable_ref<true> cr2{throwing_func}; // Would fail: throwing_func doesn't satisfy invocable<true>
+
+callable_ref<false> cr3{noexcept_func};
+callable_ref<false> cr4{throwing_func};
+
+} // namespace paper_example

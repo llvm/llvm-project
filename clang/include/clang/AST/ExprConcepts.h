@@ -354,7 +354,9 @@ public:
   };
 private:
   llvm::PointerUnion<Expr *, SubstitutionDiagnostic *> Value;
-  SourceLocation NoexceptLoc; // May be empty if noexcept wasn't specified.
+  Expr *NoexceptExpr; // May be nullptr if noexcept wasn't specified or basic
+                      // noexcept.
+  ExceptionSpecificationType NoexceptType; // Type of noexcept specification
   ReturnTypeRequirement TypeReq;
   ConceptSpecializationExpr *SubstitutedConstraintExpr;
   SatisfactionStatus Status;
@@ -365,13 +367,15 @@ public:
   /// \brief Construct a compound requirement.
   /// \param E the expression which is checked by this requirement.
   /// \param IsSimple whether this was a simple requirement in source.
-  /// \param NoexceptLoc the location of the noexcept keyword, if it was
-  /// specified, otherwise an empty location.
+  /// \param NoexceptType the type of noexcept specification (EST_None for no
+  /// noexcept).
+  /// \param NoexceptExpr the constant expression from noexcept(expr), or
+  /// nullptr if noexcept wasn't specified or was basic noexcept.
   /// \param Req the requirement for the type of the checked expression.
   /// \param Status the satisfaction status of this requirement.
   ExprRequirement(
-      Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
-      ReturnTypeRequirement Req, SatisfactionStatus Status,
+      Expr *E, bool IsSimple, ExceptionSpecificationType NoexceptType,
+      Expr *NoexceptExpr, ReturnTypeRequirement Req, SatisfactionStatus Status,
       ConceptSpecializationExpr *SubstitutedConstraintExpr = nullptr);
 
   /// \brief Construct a compound requirement whose expression was a
@@ -379,18 +383,22 @@ public:
   /// \param E the diagnostic emitted while instantiating the original
   /// expression.
   /// \param IsSimple whether this was a simple requirement in source.
-  /// \param NoexceptLoc the location of the noexcept keyword, if it was
-  /// specified, otherwise an empty location.
+  /// \param NoexceptType the type of noexcept specification (EST_None for no
+  /// noexcept).
+  /// \param NoexceptExpr the constant expression from noexcept(expr), or
+  /// nullptr if noexcept wasn't specified or was basic noexcept.
   /// \param Req the requirement for the type of the checked expression (omit
   /// if no requirement was specified).
   ExprRequirement(SubstitutionDiagnostic *E, bool IsSimple,
-                  SourceLocation NoexceptLoc, ReturnTypeRequirement Req = {});
+                  ExceptionSpecificationType NoexceptType, Expr *NoexceptExpr,
+                  ReturnTypeRequirement Req = {});
 
   bool isSimple() const { return getKind() == RK_Simple; }
   bool isCompound() const { return getKind() == RK_Compound; }
 
-  bool hasNoexceptRequirement() const { return NoexceptLoc.isValid(); }
-  SourceLocation getNoexceptLoc() const { return NoexceptLoc; }
+  bool hasNoexceptRequirement() const { return NoexceptType != EST_None; }
+  ExceptionSpecificationType getNoexceptType() const { return NoexceptType; }
+  Expr *getNoexceptExpr() const { return NoexceptExpr; }
 
   SatisfactionStatus getSatisfactionStatus() const { return Status; }
 

@@ -7833,8 +7833,8 @@ IfExistsResult Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
 }
 
 concepts::Requirement *Sema::ActOnSimpleRequirement(Expr *E) {
-  return BuildExprRequirement(E, /*IsSimple=*/true,
-                              /*NoexceptLoc=*/SourceLocation(),
+  return BuildExprRequirement(E, /*IsSimple=*/true, /*NoexceptType=*/EST_None,
+                              /*NoexceptExpr=*/nullptr,
                               /*ReturnTypeRequirement=*/{});
 }
 
@@ -7869,15 +7869,15 @@ concepts::Requirement *Sema::ActOnTypeRequirement(
 }
 
 concepts::Requirement *
-Sema::ActOnCompoundRequirement(Expr *E, SourceLocation NoexceptLoc) {
-  return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptLoc,
+Sema::ActOnCompoundRequirement(Expr *E, ExceptionSpecificationType NoexceptType,
+                               Expr *NoexceptExpr) {
+  return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptType, NoexceptExpr,
                               /*ReturnTypeRequirement=*/{});
 }
 
-concepts::Requirement *
-Sema::ActOnCompoundRequirement(
-    Expr *E, SourceLocation NoexceptLoc, CXXScopeSpec &SS,
-    TemplateIdAnnotation *TypeConstraint, unsigned Depth) {
+concepts::Requirement *Sema::ActOnCompoundRequirement(
+    Expr *E, ExceptionSpecificationType NoexceptType, Expr *NoexceptExpr,
+    CXXScopeSpec &SS, TemplateIdAnnotation *TypeConstraint, unsigned Depth) {
   // C++2a [expr.prim.req.compound] p1.3.3
   //   [..] the expression is deduced against an invented function template
   //   F [...] F is a void function template with a single type template
@@ -7902,7 +7902,8 @@ Sema::ActOnCompoundRequirement(
                           /*EllipsisLoc=*/SourceLocation(),
                           /*AllowUnexpandedPack=*/true))
     // Just produce a requirement with no type requirements.
-    return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptLoc, {});
+    return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptType,
+                                NoexceptExpr, {});
 
   auto *TPL = TemplateParameterList::Create(Context, SourceLocation(),
                                             SourceLocation(),
@@ -7910,24 +7911,58 @@ Sema::ActOnCompoundRequirement(
                                             SourceLocation(),
                                             /*RequiresClause=*/nullptr);
   return BuildExprRequirement(
-      E, /*IsSimple=*/false, NoexceptLoc,
+      E, /*IsSimple=*/false, NoexceptType, NoexceptExpr,
       concepts::ExprRequirement::ReturnTypeRequirement(TPL));
 }
 
-concepts::ExprRequirement *
-Sema::BuildExprRequirement(
-    Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
+concepts::ExprRequirement *Sema::BuildExprRequirement(
+    Expr *E, bool IsSimple, ExceptionSpecificationType NoexceptType,
+    Expr *NoexceptExpr,
     concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement) {
   auto Status = concepts::ExprRequirement::SS_Satisfied;
   ConceptSpecializationExpr *SubstitutedConstraintExpr = nullptr;
   if (E->isInstantiationDependent() || E->getType()->isPlaceholderType() ||
       ReturnTypeRequirement.isDependent())
     Status = concepts::ExprRequirement::SS_Dependent;
-  else if (NoexceptLoc.isValid() && canThrow(E) == CanThrowResult::CT_Can)
-    Status = concepts::ExprRequirement::SS_NoexceptNotMet;
-  else if (ReturnTypeRequirement.isSubstitutionFailure())
+  else if (NoexceptType == EST_BasicNoexcept ||
+           NoexceptType == EST_NoexceptTrue ||
+           NoexceptType == EST_NoexceptFalse ||
+           NoexceptType == EST_DependentNoexcept) {
+    // Determine whether we need to check noexcept
+    bool NoexceptValue = false;
+
+    if (NoexceptType == EST_BasicNoexcept || NoexceptType == EST_NoexceptTrue) {
+      // Bare noexcept or noexcept(true) - requires noexcept
+      NoexceptValue = true;
+    } else if (NoexceptType == EST_NoexceptFalse) {
+      // noexcept(false) - does not require noexcept, always satisfied
+      NoexceptValue = false;
+    } else if (NoexceptType == EST_DependentNoexcept) {
+      // noexcept(expr) where expr is dependent
+      if (NoexceptExpr && NoexceptExpr->isInstantiationDependent()) {
+        // If the noexcept expression is dependent, the requirement is dependent
+        Status = concepts::ExprRequirement::SS_Dependent;
+      } else if (NoexceptExpr) {
+        // Evaluate the noexcept expression as a boolean condition
+        if (!NoexceptExpr->EvaluateAsBooleanCondition(NoexceptValue, Context)) {
+          // If we can't evaluate it, treat it as noexcept(true) for backward
+          // compatibility
+          NoexceptValue = true;
+        }
+      }
+    }
+
+    // Only check if the expression can throw if noexcept is required and not
+    // dependent
+    if (Status != concepts::ExprRequirement::SS_Dependent && NoexceptValue &&
+        canThrow(E) == CanThrowResult::CT_Can)
+      Status = concepts::ExprRequirement::SS_NoexceptNotMet;
+  }
+  if (Status == concepts::ExprRequirement::SS_Satisfied &&
+      ReturnTypeRequirement.isSubstitutionFailure())
     Status = concepts::ExprRequirement::SS_TypeRequirementSubstitutionFailure;
-  else if (ReturnTypeRequirement.isTypeConstraint()) {
+  else if (Status == concepts::ExprRequirement::SS_Satisfied &&
+           ReturnTypeRequirement.isTypeConstraint()) {
     // C++2a [expr.prim.req]p1.3.3
     //     The immediately-declared constraint ([temp]) of decltype((E)) shall
     //     be satisfied.
@@ -7960,24 +7995,23 @@ Sema::BuildExprRequirement(
                               IDC->printPretty(OS, /*Helper=*/nullptr,
                                                getPrintingPolicy());
                             }),
-          IsSimple, NoexceptLoc, ReturnTypeRequirement);
+          IsSimple, NoexceptType, NoexceptExpr, ReturnTypeRequirement);
     }
     if (!SubstitutedConstraintExpr->isSatisfied())
       Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
   }
-  return new (Context) concepts::ExprRequirement(E, IsSimple, NoexceptLoc,
-                                                 ReturnTypeRequirement, Status,
-                                                 SubstitutedConstraintExpr);
+  return new (Context) concepts::ExprRequirement(
+      E, IsSimple, NoexceptType, NoexceptExpr, ReturnTypeRequirement, Status,
+      SubstitutedConstraintExpr);
 }
 
-concepts::ExprRequirement *
-Sema::BuildExprRequirement(
+concepts::ExprRequirement *Sema::BuildExprRequirement(
     concepts::Requirement::SubstitutionDiagnostic *ExprSubstitutionDiagnostic,
-    bool IsSimple, SourceLocation NoexceptLoc,
+    bool IsSimple, ExceptionSpecificationType NoexceptType, Expr *NoexceptExpr,
     concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement) {
-  return new (Context) concepts::ExprRequirement(ExprSubstitutionDiagnostic,
-                                                 IsSimple, NoexceptLoc,
-                                                 ReturnTypeRequirement);
+  return new (Context) concepts::ExprRequirement(
+      ExprSubstitutionDiagnostic, IsSimple, NoexceptType, NoexceptExpr,
+      ReturnTypeRequirement);
 }
 
 concepts::TypeRequirement *

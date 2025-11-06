@@ -113,6 +113,16 @@ namespace ns { template<typename T> concept C = true; }
 
 bool r31 = requires { { 0 } noexcept -> ns::C; };
 
+// Test noexcept with parenthesized constant expression
+bool r31a = requires { { 0 } noexcept(true); };
+bool r31b = requires { { 0 } noexcept(false); };
+bool r31c = requires { { 0 } noexcept(sizeof(int) == 4); };
+bool r31d = requires { { 0 } noexcept(1 + 1 == 2); };
+
+// Test noexcept(expression) with return type requirement
+bool r31e = requires { { 0 } noexcept(true) -> C1; };
+bool r31f = requires { { 0 } noexcept(false) -> C2<int>; };
+
 template<typename T>
 T i1 = 0;
 

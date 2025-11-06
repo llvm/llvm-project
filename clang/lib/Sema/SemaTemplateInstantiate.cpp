@@ -2668,12 +2668,24 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
     }
   }
   assert(TransRetReq && "All code paths leading here must set TransRetReq");
+
+  // Transform the noexcept expression if present
+  ExceptionSpecificationType TransNoexceptType = Req->getNoexceptType();
+  Expr *TransNoexceptExpr = nullptr;
+  if (Req->getNoexceptExpr()) {
+    ExprResult TransNoexceptExprRes = TransformExpr(Req->getNoexceptExpr());
+    if (TransNoexceptExprRes.isInvalid())
+      return nullptr;
+    TransNoexceptExpr = TransNoexceptExprRes.get();
+  }
+
   if (Expr *E = TransExpr.dyn_cast<Expr *>())
-    return RebuildExprRequirement(E, Req->isSimple(), Req->getNoexceptLoc(),
-                                  std::move(*TransRetReq));
+    return RebuildExprRequirement(E, Req->isSimple(), TransNoexceptType,
+                                  TransNoexceptExpr, std::move(*TransRetReq));
   return RebuildExprRequirement(
       cast<concepts::Requirement::SubstitutionDiagnostic *>(TransExpr),
-      Req->isSimple(), Req->getNoexceptLoc(), std::move(*TransRetReq));
+      Req->isSimple(), TransNoexceptType, TransNoexceptExpr,
+      std::move(*TransRetReq));
 }
 
 concepts::NestedRequirement *

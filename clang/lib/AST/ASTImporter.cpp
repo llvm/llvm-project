@@ -1166,23 +1166,29 @@ ASTNodeImporter::ImportExprRequirement(concepts::ExprRequirement *From) {
     }
   }
 
-  ExpectedSLoc NoexceptLocOrErr = import(From->getNoexceptLoc());
-  if (!NoexceptLocOrErr)
-    return NoexceptLocOrErr.takeError();
+  // Import noexcept specification
+  ExceptionSpecificationType NoexceptType = From->getNoexceptType();
+  Expr *NoexceptExpr = nullptr;
+  if (From->getNoexceptExpr()) {
+    Expected<Expr *> NoexceptExprOrErr = import(From->getNoexceptExpr());
+    if (!NoexceptExprOrErr)
+      return NoexceptExprOrErr.takeError();
+    NoexceptExpr = *NoexceptExprOrErr;
+  }
 
   if (Status == ExprRequirement::SS_ExprSubstitutionFailure) {
     auto DiagOrErr = import(From->getExprSubstitutionDiagnostic());
     if (!DiagOrErr)
       return DiagOrErr.takeError();
     return new (Importer.getToContext()) ExprRequirement(
-        *DiagOrErr, IsRKSimple, *NoexceptLocOrErr, std::move(*Req));
+        *DiagOrErr, IsRKSimple, NoexceptType, NoexceptExpr, std::move(*Req));
   } else {
     Expected<Expr *> ExprOrErr = import(From->getExpr());
     if (!ExprOrErr)
       return ExprOrErr.takeError();
     return new (Importer.getToContext()) concepts::ExprRequirement(
-        *ExprOrErr, IsRKSimple, *NoexceptLocOrErr, std::move(*Req), Status,
-        SubstitutedConstraintExpr);
+        *ExprOrErr, IsRKSimple, NoexceptType, NoexceptExpr, std::move(*Req),
+        Status, SubstitutedConstraintExpr);
   }
 }
 

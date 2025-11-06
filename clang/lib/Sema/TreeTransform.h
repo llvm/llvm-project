@@ -3822,19 +3822,20 @@ public:
     return SemaRef.BuildTypeRequirement(T);
   }
 
-  concepts::ExprRequirement *
-  RebuildExprRequirement(
+  concepts::ExprRequirement *RebuildExprRequirement(
       concepts::Requirement::SubstitutionDiagnostic *SubstDiag, bool IsSimple,
-      SourceLocation NoexceptLoc,
+      ExceptionSpecificationType NoexceptType, Expr *NoexceptExpr,
       concepts::ExprRequirement::ReturnTypeRequirement Ret) {
-    return SemaRef.BuildExprRequirement(SubstDiag, IsSimple, NoexceptLoc,
-                                        std::move(Ret));
+    return SemaRef.BuildExprRequirement(SubstDiag, IsSimple, NoexceptType,
+                                        NoexceptExpr, std::move(Ret));
   }
 
   concepts::ExprRequirement *
-  RebuildExprRequirement(Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
+  RebuildExprRequirement(Expr *E, bool IsSimple,
+                         ExceptionSpecificationType NoexceptType,
+                         Expr *NoexceptExpr,
                          concepts::ExprRequirement::ReturnTypeRequirement Ret) {
-    return SemaRef.BuildExprRequirement(E, IsSimple, NoexceptLoc,
+    return SemaRef.BuildExprRequirement(E, IsSimple, NoexceptType, NoexceptExpr,
                                         std::move(Ret));
   }
 
@@ -15380,14 +15381,27 @@ TreeTransform<Derived>::TransformExprRequirement(concepts::ExprRequirement *Req)
       return nullptr;
     TransRetReq.emplace(TPL);
   }
+
+  // Transform the noexcept expression if present
+  ExceptionSpecificationType TransNoexceptType = Req->getNoexceptType();
+  Expr *TransNoexceptExpr = nullptr;
+  if (Req->getNoexceptExpr()) {
+    ExprResult TransNoexceptExprRes =
+        getDerived().TransformExpr(Req->getNoexceptExpr());
+    if (TransNoexceptExprRes.isInvalid())
+      return nullptr;
+    TransNoexceptExpr = TransNoexceptExprRes.get();
+  }
+
   assert(TransRetReq && "All code paths leading here must set TransRetReq");
   if (Expr *E = dyn_cast<Expr *>(TransExpr))
-    return getDerived().RebuildExprRequirement(E, Req->isSimple(),
-                                               Req->getNoexceptLoc(),
-                                               std::move(*TransRetReq));
+    return getDerived().RebuildExprRequirement(
+        E, Req->isSimple(), TransNoexceptType, TransNoexceptExpr,
+        std::move(*TransRetReq));
   return getDerived().RebuildExprRequirement(
       cast<concepts::Requirement::SubstitutionDiagnostic *>(TransExpr),
-      Req->isSimple(), Req->getNoexceptLoc(), std::move(*TransRetReq));
+      Req->isSimple(), TransNoexceptType, TransNoexceptExpr,
+      std::move(*TransRetReq));
 }
 
 template<typename Derived>

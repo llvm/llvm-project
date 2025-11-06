@@ -3217,10 +3217,31 @@ ExprResult Parser::ParseRequiresExpression() {
           break;
 
         concepts::Requirement *Req = nullptr;
-        SourceLocation NoexceptLoc;
-        TryConsumeToken(tok::kw_noexcept, NoexceptLoc);
+        ExceptionSpecificationType NoexceptType = EST_None;
+        Expr *NoexceptExpr = nullptr;
+        if (Tok.is(tok::kw_noexcept)) {
+          // Parse the noexcept specification using the standard parser
+          SourceRange SpecRange;
+          SmallVector<ParsedType, 2> DynamicExceptions;
+          SmallVector<SourceRange, 2> DynamicExceptionRanges;
+          ExprResult NoexceptResult;
+          CachedTokens *ExceptionSpecTokens = nullptr;
+
+          NoexceptType = tryParseExceptionSpecification(
+              /*Delayed=*/false, SpecRange, DynamicExceptions,
+              DynamicExceptionRanges, NoexceptResult, ExceptionSpecTokens);
+
+          if (NoexceptType == EST_DependentNoexcept &&
+              NoexceptResult.isUsable()) {
+            // noexcept(expression)
+            NoexceptExpr = NoexceptResult.get();
+          }
+          // For basic noexcept (EST_BasicNoexcept), NoexceptExpr remains
+          // nullptr
+        }
         if (Tok.is(tok::semi)) {
-          Req = Actions.ActOnCompoundRequirement(Expression.get(), NoexceptLoc);
+          Req = Actions.ActOnCompoundRequirement(Expression.get(), NoexceptType,
+                                                 NoexceptExpr);
           if (Req)
             Requirements.push_back(Req);
           break;
@@ -3248,8 +3269,8 @@ ExprResult Parser::ParseRequiresExpression() {
         }
 
         Req = Actions.ActOnCompoundRequirement(
-            Expression.get(), NoexceptLoc, SS, takeTemplateIdAnnotation(Tok),
-            TemplateParameterDepth);
+            Expression.get(), NoexceptType, NoexceptExpr, SS,
+            takeTemplateIdAnnotation(Tok), TemplateParameterDepth);
         ConsumeAnnotationToken();
         if (Req)
           Requirements.push_back(Req);
