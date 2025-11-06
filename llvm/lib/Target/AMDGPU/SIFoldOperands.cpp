@@ -733,14 +733,11 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     }
   }
 
-  // Rework once the VS_16 register class is updated to include proper
-  // 16-bit SGPRs instead of 32-bit ones.
-  if (Old.getSubReg() == AMDGPU::lo16 && TRI->isSGPRReg(*MRI, New->getReg()))
-    Old.setSubReg(AMDGPU::NoSubRegister);
+  Old.setSubReg(New->getSubReg());
   if (New->getReg().isPhysical()) {
     Old.substPhysReg(New->getReg(), *TRI);
   } else {
-    Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
+    Old.substVirtReg(New->getReg(), 0, *TRI);
     Old.setIsUndef(New->isUndef());
   }
   return true;
@@ -1186,10 +1183,14 @@ void SIFoldOperandsImpl::foldOperand(
   if (UseOp->isReg() && OpToFold.isReg()) {
     if (UseOp->isImplicit())
       return;
-    // Allow folding from SGPRs to 16-bit VGPRs.
+
+    MachineInstr *SourceInstruction = MRI->getVRegDef(UseOp->getReg());
+    // Allow folding from SGPRs to 16-bit VGPRs
+    // or folding of non-subregs through REG_SEQUENCES.
     if (UseOp->getSubReg() != AMDGPU::NoSubRegister &&
         (UseOp->getSubReg() != AMDGPU::lo16 ||
-         !TRI->isSGPRReg(*MRI, OpToFold.getReg())))
+         !TRI->isSGPRReg(*MRI, OpToFold.getReg())) &&
+        !SourceInstruction->isRegSequence())
       return;
   }
 
@@ -1489,6 +1490,35 @@ void SIFoldOperandsImpl::foldOperand(
     if (UseDesc.isVariadic() || UseOp->isImplicit() ||
         UseDesc.operands()[UseOpIdx].RegClass == -1)
       return;
+  }
+
+  // FIXME: If we properly encode the 32-bit aligned register requirement for
+  // these DS_GWS instructions, this can be removed.
+  if (!FoldingImmLike && OpToFold.isReg() && ST->needsAlignedVGPRs()) {
+    unsigned Opc = UseMI->getOpcode();
+    // Special case for DS_GWS instructions that only use 32 bits but hardware
+    // treats it as a 64 bit read.
+    if (Opc == AMDGPU::DS_GWS_INIT || Opc == AMDGPU::DS_GWS_SEMA_BR ||
+        Opc == AMDGPU::DS_GWS_BARRIER) {
+      const TargetRegisterClass *RC =
+          TRI->getRegClassForReg(*MRI, OpToFold.getReg());
+      assert(RC);
+
+      const auto isAlignedReg = [&OpToFold, &UseOp, &UseMI, &RC,
+                                 this](AMDGPU::OpName OpName) -> bool {
+        const MachineOperand *Op = TII->getNamedOperand(*UseMI, OpName);
+        if (Op != UseOp)
+          return true;
+        Register Reg = OpToFold.getReg();
+        assert(!Reg.isPhysical());
+        return TRI->getRegSizeInBits(*RC) > 32 &&
+               !(TRI->getChannelFromSubReg(OpToFold.getSubReg()) & 1) &&
+               TRI->isProperlyAlignedRC(*RC);
+      };
+
+      if (!isAlignedReg(AMDGPU::OpName::data0))
+        return;
+    }
   }
 
   // FIXME: We could try to change the instruction from 64-bit to 32-bit
