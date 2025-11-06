@@ -383,7 +383,7 @@ def SPV_INTEL_inline_assembly                    : I32EnumAttrCase<"SPV_INTEL_in
 def SPV_INTEL_vector_compute                     : I32EnumAttrCase<"SPV_INTEL_vector_compute", 4007>;
 def SPV_INTEL_variable_length_array              : I32EnumAttrCase<"SPV_INTEL_variable_length_array", 4008>;
 def SPV_INTEL_fpga_memory_attributes             : I32EnumAttrCase<"SPV_INTEL_fpga_memory_attributes", 4009>;
-def SPV_INTEL_arbitrary_precision_integers       : I32EnumAttrCase<"SPV_INTEL_arbitrary_precision_integers", 4010>;
+def SPV_ALTERA_arbitrary_precision_integers       : I32EnumAttrCase<"SPV_ALTERA_arbitrary_precision_integers", 4010>;
 def SPV_INTEL_arbitrary_precision_floating_point : I32EnumAttrCase<"SPV_INTEL_arbitrary_precision_floating_point", 4011>;
 def SPV_INTEL_unstructured_loop_controls         : I32EnumAttrCase<"SPV_INTEL_unstructured_loop_controls", 4012>;
 def SPV_INTEL_fpga_loop_controls                 : I32EnumAttrCase<"SPV_INTEL_fpga_loop_controls", 4013>;
@@ -392,7 +392,7 @@ def SPV_INTEL_fpga_memory_accesses               : I32EnumAttrCase<"SPV_INTEL_fp
 def SPV_INTEL_fpga_cluster_attributes            : I32EnumAttrCase<"SPV_INTEL_fpga_cluster_attributes", 4016>;
 def SPV_INTEL_loop_fuse                          : I32EnumAttrCase<"SPV_INTEL_loop_fuse", 4017>;
 def SPV_INTEL_fpga_buffer_location               : I32EnumAttrCase<"SPV_INTEL_fpga_buffer_location", 4018>;
-def SPV_INTEL_arbitrary_precision_fixed_point    : I32EnumAttrCase<"SPV_INTEL_arbitrary_precision_fixed_point", 4019>;
+def SPV_ALTERA_arbitrary_precision_fixed_point    : I32EnumAttrCase<"SPV_ALTERA_arbitrary_precision_fixed_point", 4019>;
 def SPV_INTEL_usm_storage_classes                : I32EnumAttrCase<"SPV_INTEL_usm_storage_classes", 4020>;
 def SPV_INTEL_io_pipes                           : I32EnumAttrCase<"SPV_INTEL_io_pipes", 4021>;
 def SPV_ALTERA_blocking_pipes                     : I32EnumAttrCase<"SPV_ALTERA_blocking_pipes", 4022>;
@@ -461,10 +461,10 @@ def SPIRV_ExtensionAttr :
       SPV_INTEL_float_controls2, SPV_INTEL_function_pointers, SPV_INTEL_inline_assembly,
       SPV_INTEL_variable_length_array, SPV_INTEL_fpga_memory_attributes,
       SPV_INTEL_unstructured_loop_controls, SPV_INTEL_fpga_loop_controls,
-      SPV_INTEL_arbitrary_precision_integers, SPV_INTEL_arbitrary_precision_floating_point,
+      SPV_ALTERA_arbitrary_precision_integers, SPV_INTEL_arbitrary_precision_floating_point,
       SPV_INTEL_kernel_attributes, SPV_INTEL_fpga_memory_accesses,
       SPV_INTEL_fpga_cluster_attributes, SPV_INTEL_loop_fuse,
-      SPV_INTEL_fpga_buffer_location, SPV_INTEL_arbitrary_precision_fixed_point,
+      SPV_INTEL_fpga_buffer_location, SPV_ALTERA_arbitrary_precision_fixed_point,
       SPV_INTEL_usm_storage_classes, SPV_INTEL_io_pipes, SPV_ALTERA_blocking_pipes,
       SPV_INTEL_fpga_reg, SPV_INTEL_long_constant_composite, SPV_INTEL_optnone,
       SPV_INTEL_debug_module, SPV_INTEL_fp_fast_math_mode,
@@ -737,9 +737,9 @@ def SPIRV_C_FPGAMemoryAttributesINTEL                   : I32EnumAttrCase<"FPGAM
     Extension<[SPV_INTEL_fpga_memory_attributes]>
   ];
 }
-def SPIRV_C_ArbitraryPrecisionIntegersINTEL             : I32EnumAttrCase<"ArbitraryPrecisionIntegersINTEL", 5844> {
+def SPIRV_C_ArbitraryPrecisionIntegersALTERA             : I32EnumAttrCase<"ArbitraryPrecisionIntegersALTERA", 5844> {
   list<Availability> availability = [
-    Extension<[SPV_INTEL_arbitrary_precision_integers]>
+    Extension<[SPV_ALTERA_arbitrary_precision_integers]>
   ];
 }
 def SPIRV_C_ArbitraryPrecisionFloatingPointINTEL        : I32EnumAttrCase<"ArbitraryPrecisionFloatingPointINTEL", 5845> {
@@ -792,9 +792,9 @@ def SPIRV_C_FPGABufferLocationINTEL                     : I32EnumAttrCase<"FPGAB
     Extension<[SPV_INTEL_fpga_buffer_location]>
   ];
 }
-def SPIRV_C_ArbitraryPrecisionFixedPointINTEL           : I32EnumAttrCase<"ArbitraryPrecisionFixedPointINTEL", 5922> {
+def SPIRV_C_ArbitraryPrecisionFixedPointALTERA           : I32EnumAttrCase<"ArbitraryPrecisionFixedPointALTERA", 5922> {
   list<Availability> availability = [
-    Extension<[SPV_INTEL_arbitrary_precision_fixed_point]>
+    Extension<[SPV_ALTERA_arbitrary_precision_fixed_point]>
   ];
 }
 def SPIRV_C_USMStorageClassesINTEL                      : I32EnumAttrCase<"USMStorageClassesINTEL", 5935> {
@@ -1518,7 +1518,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_KernelAttributesINTEL, SPIRV_C_FPGAKernelAttributesINTEL,
       SPIRV_C_FPGAMemoryAccessesINTEL, SPIRV_C_FPGAClusterAttributesINTEL,
       SPIRV_C_LoopFuseINTEL, SPIRV_C_MemoryAccessAliasingINTEL,
-      SPIRV_C_FPGABufferLocationINTEL, SPIRV_C_ArbitraryPrecisionFixedPointINTEL,
+      SPIRV_C_FPGABufferLocationINTEL, SPIRV_C_ArbitraryPrecisionFixedPointALTERA,
       SPIRV_C_USMStorageClassesINTEL, SPIRV_C_IOPipesINTEL, SPIRV_C_BlockingPipesALTERA,
       SPIRV_C_FPGARegINTEL, SPIRV_C_DotProductInputAll,
       SPIRV_C_DotProductInput4x8BitPacked, SPIRV_C_DotProduct, SPIRV_C_RayCullMaskKHR,
