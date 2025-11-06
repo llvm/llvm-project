@@ -6,7 +6,7 @@
 
 declare void @foo();
 
-@global_var = local_unnamed_addr global i32 undef
+@global_var = local_unnamed_addr global i32 0
 
 define %funcref @cast_const_funcptr() {
 ; CHECK-LABEL: cast_const_funcptr:
