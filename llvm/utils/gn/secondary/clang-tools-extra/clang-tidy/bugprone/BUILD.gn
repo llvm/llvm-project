@@ -82,6 +82,7 @@ static_library("bugprone") {
     "SmartPtrArrayMismatchCheck.cpp",
     "SpuriouslyWakeUpFunctionsCheck.cpp",
     "StandaloneEmptyCheck.cpp",
+    "StdNamespaceModificationCheck.cpp",
     "StringConstructorCheck.cpp",
     "StringIntegerAssignmentCheck.cpp",
     "StringLiteralWithEmbeddedNulCheck.cpp",

@@ -214,6 +214,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__builtin_elementwise_ldexp``.
+
 - Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.
 
 - ``__builtin_elementwise_abs`` can now be used in constant expression.
