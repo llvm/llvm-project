@@ -6216,15 +6216,21 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
                                         SDLoc(N), VT, N0, N1))
     return SD;
 
-  // (umin (sub a, b) a) -> (usubo a, b); (select usubo.1, a, usubo.0)
-  {
+  if (TLI.isOperationLegalOrCustom(ISD::USUBO, VT)) {
     SDValue B;
-    if (sd_match(N0, m_Sub(m_Specific(N1), m_Value(B))) &&
-        TLI.isOperationLegalOrCustom(ISD::USUBO, VT)) {
-      EVT SETCCT = getSetCCResultType(VT);
-      SDVTList VTs = DAG.getVTList(VT, SETCCT);
+
+    // (umin (sub a, b), a) -> (usubo a, b); (select usubo.1, a, usubo.0)
+    if (sd_match(N0, m_Sub(m_Specific(N1), m_Value(B)))) {
+      SDVTList VTs = DAG.getVTList(VT, getSetCCResultType(VT));
       SDValue USO = DAG.getNode(ISD::USUBO, DL, VTs, N1, B);
       return DAG.getSelect(DL, VT, USO.getValue(1), N1, USO.getValue(0));
+    }
+
+    // (umin a, (sub a, b)) -> (usubo a, b); (select usubo.1, a, usubo.0)
+    if (sd_match(N1, m_Sub(m_Specific(N0), m_Value(B)))) {
+      SDVTList VTs = DAG.getVTList(VT, getSetCCResultType(VT));
+      SDValue USO = DAG.getNode(ISD::USUBO, DL, VTs, N0, B);
+      return DAG.getSelect(DL, VT, USO.getValue(1), N0, USO.getValue(0));
     }
   }
 
@@ -9386,7 +9392,7 @@ static unsigned bigEndianByteAt(unsigned BW, unsigned i) {
 // Check if the bytes offsets we are looking at match with either big or
 // little endian value loaded. Return true for big endian, false for little
 // endian, and std::nullopt if match failed.
-static std::optional<bool> isBigEndian(const ArrayRef<int64_t> ByteOffsets,
+static std::optional<bool> isBigEndian(ArrayRef<int64_t> ByteOffsets,
                                        int64_t FirstOffset) {
   // The endian can be decided only when it is 2 bytes at least.
   unsigned Width = ByteOffsets.size();
