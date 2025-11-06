@@ -10968,26 +10968,22 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     }
   }
 
-  // fold (sra (xor (sra x, c1), -1), c2) -> (sra (xor x, -1), c3)
-  if (N0.getOpcode() == ISD::XOR && N0.hasOneUse() &&
-      isAllOnesConstant(N0.getOperand(1))) {
-    SDValue Inner = N0.getOperand(0);
-    if (Inner.getOpcode() == ISD::SRA && N1C) {
-      if (ConstantSDNode *InnerShiftAmt =
-              isConstOrConstSplat(Inner.getOperand(1))) {
-        APInt c1 = InnerShiftAmt->getAPIntValue();
-        APInt c2 = N1C->getAPIntValue();
-        zeroExtendToMatch(c1, c2, 1 /* Overflow Bit */);
-        APInt Sum = c1 + c2;
-        unsigned ShiftSum =
-            Sum.uge(OpSizeInBits) ? (OpSizeInBits - 1) : Sum.getZExtValue();
-        SDValue NewShift =
-            DAG.getNode(ISD::SRA, DL, VT, Inner.getOperand(0),
-                        DAG.getConstant(ShiftSum, DL, N1.getValueType()));
-        return DAG.getNode(ISD::XOR, DL, VT, NewShift,
-                           DAG.getAllOnesConstant(DL, VT));
-      }
-    }
+  // fold (sra (xor (sra x, c1), -1), c2) -> (xor (sra x, c1+c2), -1)
+  // This allows merging two arithmetic shifts even when there's a NOT in
+  // between.
+  SDValue X;
+  APInt C1, C2;
+  if (sd_match(N0, m_OneUse(m_Xor(m_OneUse(m_Sra(m_Value(X), m_ConstInt(C1))),
+                                  m_AllOnes()))) &&
+      sd_match(N1, m_ConstInt(C2))) {
+    zeroExtendToMatch(C1, C2, 1 /* Overflow Bit */);
+    APInt Sum = C1 + C2;
+    unsigned ShiftSum =
+        Sum.uge(OpSizeInBits) ? (OpSizeInBits - 1) : Sum.getZExtValue();
+    SDValue NewShift = DAG.getNode(
+        ISD::SRA, DL, VT, X, DAG.getConstant(ShiftSum, DL, N1.getValueType()));
+    return DAG.getNode(ISD::XOR, DL, VT, NewShift,
+                       DAG.getAllOnesConstant(DL, VT));
   }
 
   // fold (sra (shl X, m), (sub result_size, n))
