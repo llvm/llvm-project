@@ -1110,9 +1110,8 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPInstruction *clone() override {
-    SmallVector<VPValue *, 2> Operands(operands());
-    auto *New =
-        new VPInstruction(Opcode, Operands, *this, *this, getDebugLoc(), Name);
+    auto *New = new VPInstruction(Opcode, operands(), *this, *this,
+                                  getDebugLoc(), Name);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
@@ -1226,10 +1225,9 @@ public:
   }
 
   VPInstruction *clone() override {
-    SmallVector<VPValue *, 2> Operands(operands());
     auto *New =
-        new VPInstructionWithType(getOpcode(), Operands, getResultType(), *this,
-                                  getDebugLoc(), getName());
+        new VPInstructionWithType(getOpcode(), operands(), getResultType(),
+                                  *this, getDebugLoc(), getName());
     New->setUnderlyingValue(getUnderlyingValue());
     return New;
   }
@@ -1727,7 +1725,9 @@ public:
 #endif
 };
 
-/// A recipe for widening select instructions.
+/// A recipe for widening select instructions. Supports both wide vector and
+/// single-scalar conditions, matching the behavior of LLVM IR's select
+/// instruction.
 struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
                                                public VPIRMetadata {
   VPWidenSelectRecipe(SelectInst &I, ArrayRef<VPValue *> Operands)

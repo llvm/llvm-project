@@ -229,6 +229,10 @@ public:
 
   bool hasPairedLoad(EVT LoadedType, Align &RequiredAlignment) const override;
 
+  bool isProfitableToInterleaveWithGatherScatter() const override {
+    return true;
+  }
+
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
   bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
@@ -238,6 +242,9 @@ public:
   bool lowerInterleavedStore(Instruction *Store, Value *Mask,
                              ShuffleVectorInst *SVI, unsigned Factor,
                              const APInt &GapMask) const override;
+
+  bool lowerInterleavedStoreWithShuffle(StoreInst *SI, ShuffleVectorInst *SVI,
+                                        unsigned Factor) const;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
                                         IntrinsicInst *DI) const override;
@@ -745,7 +752,6 @@ private:
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLOOP_DEPENDENCE_MASK(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;
