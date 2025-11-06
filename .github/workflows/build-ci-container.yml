@@ -44,7 +44,7 @@ jobs:
       - name: Build Container
         uses: ./.github/workflows/build-container
         with:
-          container-name: ci-ubuntu-24.04-${{ matrix.container-name && format('-{0}', matrix.container-name)}}
+          container-name: ci-ubuntu-24.04${{ matrix.container-name && format('-{0}', matrix.container-name)}}
           context: .github/workflows/containers/github-action-ci/
           dockerfile: .github/workflows/containers/github-action-ci/Dockerfile
           target: ci-container${{ matrix.container-name && format('-{0}', matrix.container-name) }}
