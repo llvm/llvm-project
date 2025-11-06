@@ -3798,7 +3798,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_ktestcdi:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &A, const APSInt &B) {
-          return APInt(sizeof(unsigned char) * 8, (unsigned char)((~A & B) == 0));
+          return APInt(sizeof(unsigned char) * 8,
+                       (unsigned char)((~A & B) == 0));
         });
 
   case clang::X86::BI__builtin_ia32_ktestzqi:
@@ -3807,7 +3808,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_ktestzdi:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &A, const APSInt &B) {
-          return APInt(sizeof(unsigned char) * 8, (unsigned char)((A & B) == 0));
+          return APInt(sizeof(unsigned char) * 8,
+                       (unsigned char)((A & B) == 0));
         });
 
   case clang::X86::BI__builtin_ia32_kortestcqi:
@@ -3816,7 +3818,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_kortestcdi:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &A, const APSInt &B) {
-          return APInt(sizeof(unsigned char) * 8, (unsigned char)(~(A | B) == 0));
+          return APInt(sizeof(unsigned char) * 8,
+                       (unsigned char)(~(A | B) == 0));
         });
 
   case clang::X86::BI__builtin_ia32_kortestzqi:
@@ -3825,7 +3828,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_kortestzdi:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &A, const APSInt &B) {
-          return APInt(sizeof(unsigned char) * 8, (unsigned char)((A | B) == 0));
+          return APInt(sizeof(unsigned char) * 8,
+                       (unsigned char)((A | B) == 0));
         });
 
   case clang::X86::BI__builtin_ia32_lzcnt_u16:

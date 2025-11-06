@@ -15623,7 +15623,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), B, Info))
       return false;
 
-    return Success(APInt(sizeof(unsigned char) * 8, (unsigned char)((~A & B) == 0)), E);
+    return Success(
+        APInt(sizeof(unsigned char) * 8, (unsigned char)((~A & B) == 0)), E);
   }
 
   case clang::X86::BI__builtin_ia32_ktestzqi:
@@ -15635,7 +15636,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), B, Info))
       return false;
 
-    return Success(APInt(sizeof(unsigned char) * 8, (unsigned char)((A & B) == 0)), E);
+    return Success(
+        APInt(sizeof(unsigned char) * 8, (unsigned char)((A & B) == 0)), E);
   }
 
   case clang::X86::BI__builtin_ia32_kortestcqi:
@@ -15647,7 +15649,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), B, Info))
       return false;
 
-    return Success(APInt(sizeof(unsigned char) * 8, (unsigned char)(~(A | B) == 0)), E);
+    return Success(
+        APInt(sizeof(unsigned char) * 8, (unsigned char)(~(A | B) == 0)), E);
   }
 
   case clang::X86::BI__builtin_ia32_kortestzqi:
@@ -15659,7 +15662,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), B, Info))
       return false;
 
-    return Success(APInt(sizeof(unsigned char) * 8, (unsigned char)((A | B) == 0)), E);
+    return Success(
+        APInt(sizeof(unsigned char) * 8, (unsigned char)((A | B) == 0)), E);
   }
 
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
