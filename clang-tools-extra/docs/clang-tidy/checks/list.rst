@@ -98,7 +98,7 @@ Clang-Tidy Checks
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
    :doc:`bugprone-empty-catch <bugprone/empty-catch>`,
    :doc:`bugprone-exception-escape <bugprone/exception-escape>`,
-   :doc:`bugprone-float-loop-counter <bugprone/avoid-float-loop-counter>`,
+   :doc:`bugprone-float-loop-counter <bugprone/float-loop-counter>`,
    :doc:`bugprone-fold-init-type <bugprone/fold-init-type>`,
    :doc:`bugprone-forward-declaration-namespace <bugprone/forward-declaration-namespace>`,
    :doc:`bugprone-forwarding-reference-overload <bugprone/forwarding-reference-overload>`,
