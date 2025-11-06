@@ -204,7 +204,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
           return cast<VPRecipeBase>(U)->getParent() != SinkTo;
         });
     if (any_of(UsersOutsideSinkTo, [SinkCandidate](VPUser *U) {
-          return !U->onlyFirstLaneUsed(SinkCandidate);
+          return !U->usesFirstLaneOnly(SinkCandidate);
         }))
       continue;
     bool NeedsDuplicating = !UsersOutsideSinkTo.empty();
