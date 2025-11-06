@@ -9828,7 +9828,7 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
 void Sema::CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
                                                const FunctionDecl *FDecl) {
   // Thread sanitizer currently does not support `std::atomic_thread_fence`,
-  // leading to false positive. Example issue:
+  // leading to false positives. Example issue:
   // https://github.com/llvm/llvm-project/issues/52942
 
   if (!Call || !FDecl)
@@ -9837,21 +9837,33 @@ void Sema::CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
   if (!IsStdFunction(FDecl, "atomic_thread_fence"))
     return;
 
-  // See if TSan is enabled in this function
+  // Check that TSan is enabled in this context
   const auto EnabledTSanMask =
       Context.getLangOpts().Sanitize.Mask & (SanitizerKind::Thread);
   if (!EnabledTSanMask)
     return;
 
+  // Check that the file isn't in the no-sanitize list
   const auto &NoSanitizeList = Context.getNoSanitizeList();
   if (NoSanitizeList.containsLocation(EnabledTSanMask,
                                       Call->getSourceRange().getBegin()))
-    // File is excluded
     return;
-  if (NoSanitizeList.containsFunction(EnabledTSanMask,
-                                      FDecl->getQualifiedNameAsString()))
-    // Function is excluded
-    return;
+
+  // Check that the calling function:
+  //  - Does not have any attributes preventing TSan checking
+  //  - Is not in the ignore list
+  if (const NamedDecl *Caller = getCurFunctionOrMethodDecl()) {
+    if (Caller->hasAttr<DisableSanitizerInstrumentationAttr>())
+      return;
+
+    for (const auto *Attr : Caller->specific_attrs<NoSanitizeAttr>())
+      if (Attr->getMask() & SanitizerKind::Thread)
+        return;
+
+    if (NoSanitizeList.containsFunction(EnabledTSanMask,
+                                        Caller->getQualifiedNameAsString()))
+      return;
+  }
 
   Diag(Call->getExprLoc(), diag::warn_atomic_thread_fence_with_tsan);
 }

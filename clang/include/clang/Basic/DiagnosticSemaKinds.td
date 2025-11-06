@@ -113,8 +113,8 @@ def warn_max_unsigned_zero : Warning<
   "is always equal to the other value">,
   InGroup<MaxUnsignedZero>;
 def warn_atomic_thread_fence_with_tsan : Warning<
-  "`std::atomic_thread_fence` is not supported with `-fsanitize=thread`">,
-  InGroup<TSan>;
+  "'std::atomic_thread_fence' is not supported with '-fsanitize=thread'">,
+  InGroup<DiagGroup<"tsan">>;
 def note_remove_max_call : Note<
   "remove call to max function and unsigned zero argument">;
 
