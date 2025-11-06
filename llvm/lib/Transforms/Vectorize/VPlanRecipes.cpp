@@ -659,7 +659,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    Value *Cond = State.get(getOperand(0), OnlyFirstLaneUsed);
+    Value *Cond =
+        State.get(getOperand(0),
+                  OnlyFirstLaneUsed || vputils::isSingleScalar(getOperand(0)));
     Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
@@ -1968,16 +1970,13 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
   getOperand(1)->printAsOperand(O, SlotTracker);
   O << ", ";
   getOperand(2)->printAsOperand(O, SlotTracker);
-  O << (isInvariantCond() ? " (condition is loop invariant)" : "");
+  O << (vputils::isSingleScalar(getCond()) ? " (condition is single-scalar)"
+                                           : "");
 }
 #endif
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  // The condition can be loop invariant but still defined inside the
-  // loop. This means that we can't just use the original 'cond' value.
-  // We have to take the 'vectorized' value and pick the first lane.
-  // Instcombine will make this a no-op.
-  Value *Cond = State.get(getCond(), isInvariantCond());
+  Value *Cond = State.get(getCond(), vputils::isSingleScalar(getCond()));
 
   Value *Op0 = State.get(getOperand(1));
   Value *Op1 = State.get(getOperand(2));
