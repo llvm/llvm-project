@@ -216,7 +216,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Combine fp_to_{s,u}int_sat or fp_round of concat_vectors or vice versa
     // into conversion ops
     setTargetDAGCombine({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT,
-                         ISD::FP_ROUND, ISD::CONCAT_VECTORS});
+                         ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_ROUND,
+                         ISD::CONCAT_VECTORS});
 
     setTargetDAGCombine(ISD::TRUNCATE);
 
@@ -3580,6 +3581,64 @@ static SDValue performMulCombine(SDNode *N,
   }
 }
 
+SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
+                          SelectionDAG &DAG) {
+  SDLoc DL(In);
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT InVT = In.getValueType();
+  unsigned NumElems = InVT.getVectorNumElements() * 2;
+  EVT OutVT = EVT::getVectorVT(Ctx, InVT.getVectorElementType(), NumElems);
+  SDValue Concat =
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getPOISON(InVT));
+  if (NumElems < RequiredNumElems) {
+    return DoubleVectorWidth(Concat, RequiredNumElems, DAG);
+  }
+  return Concat;
+}
+
+SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT OutVT = N->getValueType(0);
+  if (!OutVT.isVector())
+    return SDValue();
+
+  EVT OutElTy = OutVT.getVectorElementType();
+  if (OutElTy != MVT::i8 && OutElTy != MVT::i16)
+    return SDValue();
+
+  unsigned NumElems = OutVT.getVectorNumElements();
+  if (!isPowerOf2_32(NumElems))
+    return SDValue();
+
+  EVT FPVT = N->getOperand(0)->getValueType(0);
+  if (FPVT.getVectorElementType() != MVT::f32)
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // First, convert to i32.
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT IntVT = EVT::getVectorVT(Ctx, MVT::i32, NumElems);
+  SDValue ToInt = DAG.getNode(N->getOpcode(), DL, IntVT, N->getOperand(0));
+  APInt Mask = APInt::getLowBitsSet(IntVT.getScalarSizeInBits(),
+                                    OutVT.getScalarSizeInBits());
+  // Mask out the top MSBs.
+  SDValue Masked =
+      DAG.getNode(ISD::AND, DL, IntVT, ToInt, DAG.getConstant(Mask, DL, IntVT));
+
+  if (OutVT.getSizeInBits() < 128) {
+    // Create a wide enough vector that we can use narrow.
+    EVT NarrowedVT = OutElTy == MVT::i8 ? MVT::v16i8 : MVT::v8i16;
+    unsigned NumRequiredElems = NarrowedVT.getVectorNumElements();
+    SDValue WideVector = DoubleVectorWidth(Masked, NumRequiredElems, DAG);
+    SDValue Trunc = truncateVectorWithNARROW(NarrowedVT, WideVector, DL, DAG);
+    return DAG.getBitcast(
+        OutVT, extractSubVector(Trunc, 0, DAG, DL, OutVT.getSizeInBits()));
+  } else {
+    return truncateVectorWithNARROW(OutVT, Masked, DL, DAG);
+  }
+  return SDValue();
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3606,6 +3665,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:
   case ISD::CONCAT_VECTORS:
     return performVectorTruncZeroCombine(N, DCI);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return performConvertFPCombine(N, DCI.DAG);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
