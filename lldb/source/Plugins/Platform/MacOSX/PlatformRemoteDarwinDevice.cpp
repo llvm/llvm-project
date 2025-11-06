@@ -53,7 +53,7 @@ void PlatformRemoteDarwinDevice::GetStatus(Stream &strm) {
   if (sdk_directory)
     strm.Printf("  SDK Path: \"%s\"\n", sdk_directory);
   else
-    strm.PutCString("  SDK Path: error: unable to locate SDK\n");
+    strm.PutCString("  SDK Path: <unable to locate SDK>\n");
 
   const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
   for (uint32_t i = 0; i < num_sdk_infos; ++i) {
