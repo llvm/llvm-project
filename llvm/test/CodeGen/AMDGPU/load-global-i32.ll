@@ -3313,12 +3313,12 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x90
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[32:33], v[24:27]
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[38:39], v[20:23]
 ; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[12:15]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x60
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[32:33], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[38:39], v[20:23]
 ; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v26, 31, v7
 ; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v24, 31, v6
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v23, v6
@@ -3726,7 +3726,6 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    s_nop 0
 ; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v12, v[37:40], s[0:1] offset:224
 ; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v12, v[33:36], s[0:1] offset:240
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v12, v[8:11], s[0:1] offset:192
 ; GCN-GFX900-HSA-NEXT:    buffer_load_dword v33, off, s[20:23], 0 ; 4-byte Folded Reload
 ; GCN-GFX900-HSA-NEXT:    s_nop 0
 ; GCN-GFX900-HSA-NEXT:    buffer_load_dword v34, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
@@ -3740,7 +3739,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v43, v26
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v29, v27
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v31, v28
-; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(12)
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(11)
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v60, 31, v3
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v58, 31, v2
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v28, 31, v1
@@ -3749,6 +3748,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v27, v1
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v57, v2
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v59, v3
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v12, v[8:11], s[0:1] offset:192
 ; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(7)
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v24
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v23
@@ -3758,7 +3758,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v21
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v8, v21
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v10, v22
-; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v12, v[33:36], s[0:1] offset:208
 ; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v12, v[41:44], s[0:1] offset:160
 ; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v12, v[29:32], s[0:1] offset:176

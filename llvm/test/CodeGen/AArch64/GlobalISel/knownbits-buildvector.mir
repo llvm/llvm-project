@@ -22,7 +22,7 @@ body:             |
   ; CHECK-NEXT: %1:_ KnownBits:00001010 SignBits:4
   ; CHECK-NEXT: %2:_ KnownBits:0000?01? SignBits:4
   ; CHECK-NEXT: %idx:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000001 SignBits:63
-  ; CHECK-NEXT: %4:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %4:_ KnownBits:00001010 SignBits:4
     %0:_(s8) = G_CONSTANT i8 3
     %1:_(s8) = G_CONSTANT i8 10
     %2:_(<2 x s8>) = G_BUILD_VECTOR %0, %1

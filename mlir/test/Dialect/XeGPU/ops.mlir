@@ -278,6 +278,15 @@ gpu.func @subgroup_load_nd_offset_1(%src: memref<24x32xf32>, %x : index, %y : in
   gpu.return
 }
 
+// CHECK: func @subgroup_load_nd_offset_2(%[[arg0:.*]]: memref<24x32xf32>, %arg1: index) {
+gpu.func @subgroup_load_nd_offset_2(%src: memref<24x32xf32>, %x : index) {
+  // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0 : memref<24x32xf32> -> !xegpu.tensor_desc<16x8xf32>
+  %1 = xegpu.create_nd_tdesc %src : memref<24x32xf32> -> !xegpu.tensor_desc<16x8xf32>
+  // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]][%arg1, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<16x8xf32> -> vector<8x16xf32>
+  %2 = xegpu.load_nd %1[%x, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<16x8xf32> -> vector<8x16xf32>
+  gpu.return
+}
+
 // CHECK: func @simt_load_nd_8(%[[arg0:.*]]: memref<24x32xf32>) {
 gpu.func @simt_load_nd_8(%src: memref<24x32xf32>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<16x8xf32>
