@@ -360,6 +360,10 @@ let Predicates = [HasVSX, IsISAFuture] in {
     def LXVPRLL : XForm_XTp5_RAB5<31, 621, (outs vsrprc:$XTp),
                                   (ins (memr $RA):$addr, g8rc:$RB),
                                   "lxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
+    def LXVPB32X
+        : XForm_XTp5_RAB5<31, 877, (outs vsrprc:$XTp),
+                          (ins (memr $RA):$addr, g8rc:$RB),
+                          "lxvpb32x $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
   let mayStore = 1 in {
@@ -376,6 +380,10 @@ let Predicates = [HasVSX, IsISAFuture] in {
         : XForm_XTp5_RAB5<31, 749, (outs),
                           (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
                           "stxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
+    def STXVPB32X
+        : XForm_XTp5_RAB5<31, 1005, (outs),
+                          (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
+                          "stxvpb32x $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
   def VUPKHSNTOB : VXForm_VRTB5<387, 0, (outs vrrc:$VRT), (ins vrrc:$VRB),
@@ -411,6 +419,9 @@ let Predicates = [HasVSX, IsISAFuture] in {
   def VUCMPRLH
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
                       "vucmprlh $VRT, $VRA, $VRB", []>;
+
+  def XVRLW: XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvrlw $XT, $XA, $XB", []>;
 
   // AES Acceleration Instructions
   def XXAESENCP : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),

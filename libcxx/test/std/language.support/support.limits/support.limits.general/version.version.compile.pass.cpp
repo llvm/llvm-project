@@ -204,6 +204,14 @@
 #    error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_flat_map
+#    error "__cpp_lib_constexpr_flat_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_forward_list
 #    error "__cpp_lib_constexpr_forward_list should not be defined before c++26"
 #  endif
@@ -1118,6 +1126,14 @@
 
 #  ifdef __cpp_lib_constexpr_dynamic_alloc
 #    error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_flat_map
+#    error "__cpp_lib_constexpr_flat_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_forward_list
@@ -2136,6 +2152,14 @@
 
 #  ifdef __cpp_lib_constexpr_dynamic_alloc
 #    error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_flat_map
+#    error "__cpp_lib_constexpr_flat_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_forward_list
@@ -3394,6 +3418,14 @@
 #  endif
 #  if __cpp_lib_constexpr_dynamic_alloc != 201907L
 #    error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_flat_map
+#    error "__cpp_lib_constexpr_flat_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_forward_list
@@ -4874,6 +4906,14 @@
 #  endif
 #  if __cpp_lib_constexpr_dynamic_alloc != 201907L
 #    error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_flat_map
+#    error "__cpp_lib_constexpr_flat_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_forward_list
@@ -6569,6 +6609,20 @@
 #    error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++26"
 #  endif
 
+#  ifndef __cpp_lib_constexpr_flat_map
+#    error "__cpp_lib_constexpr_flat_map should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_flat_map != 202502L
+#    error "__cpp_lib_constexpr_flat_map should have the value 202502L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_flat_set != 202502L
+#    error "__cpp_lib_constexpr_flat_set should have the value 202502L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_forward_list
 #    error "__cpp_lib_constexpr_forward_list should be defined in c++26"
 #  endif
@@ -7283,7 +7337,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if __has_builtin(__builtin_is_within_lifetime)
 #    ifndef __cpp_lib_is_within_lifetime
 #      error "__cpp_lib_is_within_lifetime should be defined in c++26"
 #    endif
@@ -7292,7 +7346,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_is_within_lifetime
-#      error "__cpp_lib_is_within_lifetime should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_is_within_lifetime should not be defined when the requirement '__has_builtin(__builtin_is_within_lifetime)' is not met!"
 #    endif
 #  endif
 

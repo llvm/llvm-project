@@ -5452,10 +5452,13 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
     }
 
     const CaseStmt *CS = cast<CaseStmt>(SC);
-    APSInt LHS = CS->getLHS()->EvaluateKnownConstInt(Info.Ctx);
-    APSInt RHS = CS->getRHS() ? CS->getRHS()->EvaluateKnownConstInt(Info.Ctx)
-                              : LHS;
-    if (LHS <= Value && Value <= RHS) {
+    const Expr *LHS = CS->getLHS();
+    const Expr *RHS = CS->getRHS();
+    if (LHS->isValueDependent() || (RHS && RHS->isValueDependent()))
+      return ESR_Failed;
+    APSInt LHSValue = LHS->EvaluateKnownConstInt(Info.Ctx);
+    APSInt RHSValue = RHS ? RHS->EvaluateKnownConstInt(Info.Ctx) : LHSValue;
+    if (LHSValue <= Value && Value <= RHSValue) {
       Found = SC;
       break;
     }
@@ -11621,31 +11624,56 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
 
 static bool evalShuffleGeneric(
     EvalInfo &Info, const CallExpr *Call, APValue &Out,
-    llvm::function_ref<std::pair<unsigned, unsigned>(unsigned, unsigned)>
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
         GetSourceIndex) {
 
   const auto *VT = Call->getType()->getAs<VectorType>();
   if (!VT)
     return false;
 
-  APSInt MaskImm;
-  if (!EvaluateInteger(Call->getArg(2), MaskImm, Info))
-    return false;
-  unsigned ShuffleMask = static_cast<unsigned>(MaskImm.getZExtValue());
+  unsigned ShuffleMask = 0;
+  APValue A, MaskVector, B;
+  bool IsVectorMask = false;
 
-  APValue A, B;
-  if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
-      !EvaluateAsRValue(Info, Call->getArg(1), B))
+  QualType Arg2Type = Call->getArg(2)->getType();
+  if (Arg2Type->isVectorType()) {
+    IsVectorMask = true;
+    if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+        !EvaluateAsRValue(Info, Call->getArg(1), MaskVector) ||
+        !EvaluateAsRValue(Info, Call->getArg(2), B))
+      return false;
+  } else if (Arg2Type->isIntegerType()) {
+    APSInt MaskImm;
+    if (!EvaluateInteger(Call->getArg(2), MaskImm, Info))
+      return false;
+    ShuffleMask = static_cast<unsigned>(MaskImm.getZExtValue());
+    if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+        !EvaluateAsRValue(Info, Call->getArg(1), B))
+      return false;
+  } else {
     return false;
+  }
 
   unsigned NumElts = VT->getNumElements();
-  SmallVector<APValue, 16> ResultElements;
+  SmallVector<APValue, 64> ResultElements;
   ResultElements.reserve(NumElts);
 
   for (unsigned DstIdx = 0; DstIdx != NumElts; ++DstIdx) {
+    if (IsVectorMask) {
+      ShuffleMask = static_cast<unsigned>(
+          MaskVector.getVectorElt(DstIdx).getInt().getZExtValue());
+    }
     auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
-    const APValue &Src = (SrcVecIdx == 0) ? A : B;
-    ResultElements.push_back(Src.getVectorElt(SrcIdx));
+
+    if (SrcIdx < 0) {
+      // Zero out this element
+      QualType ElemTy = VT->getElementType();
+      ResultElements.push_back(
+          APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+    } else {
+      const APValue &Src = (SrcVecIdx == 0) ? A : B;
+      ResultElements.push_back(Src.getVectorElt(SrcIdx));
+    }
   }
 
   Out = APValue(ResultElements.data(), ResultElements.size());
@@ -12438,7 +12466,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!evalShuffleGeneric(
             Info, E, R,
             [](unsigned DstIdx,
-               unsigned ShuffleMask) -> std::pair<unsigned, unsigned> {
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
               constexpr unsigned LaneBits = 128u;
               unsigned NumElemPerLane = LaneBits / 32;
               unsigned NumSelectableElems = NumElemPerLane / 2;
@@ -12451,7 +12479,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
               unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
               unsigned SrcIdx = (ElemInLane < NumSelectableElems) ? 0 : 1;
               unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
-              return {SrcIdx, LaneOffset + Index};
+              return {SrcIdx, static_cast<int>(LaneOffset + Index)};
             }))
       return false;
     return Success(R, E);
@@ -12463,7 +12491,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!evalShuffleGeneric(
             Info, E, R,
             [](unsigned DstIdx,
-               unsigned ShuffleMask) -> std::pair<unsigned, unsigned> {
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
               constexpr unsigned LaneBits = 128u;
               unsigned NumElemPerLane = LaneBits / 64;
               unsigned NumSelectableElems = NumElemPerLane / 2;
@@ -12476,7 +12504,31 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
               unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
               unsigned SrcIdx = (ElemInLane < NumSelectableElems) ? 0 : 1;
               unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
-              return {SrcIdx, LaneOffset + Index};
+              return {SrcIdx, static_cast<int>(LaneOffset + Index)};
+            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_insertps128: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              // Bits [3:0]: zero mask - if bit is set, zero this element
+              if ((Mask & (1 << DstIdx)) != 0) {
+                return {0, -1};
+              }
+              // Bits [7:6]: select element from source vector Y (0-3)
+              // Bits [5:4]: select destination position (0-3)
+              unsigned SrcElem = (Mask >> 6) & 0x3;
+              unsigned DstElem = (Mask >> 4) & 0x3;
+              if (DstIdx == DstElem) {
+                // Insert element from source vector (B) at this position
+                return {1, static_cast<int>(SrcElem)};
+              } else {
+                // Copy from destination vector (A)
+                return {0, static_cast<int>(DstIdx)};
+              }
             }))
       return false;
     return Success(R, E);
@@ -13047,6 +13099,84 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varq128:
+  case X86::BI__builtin_ia32_vpermi2varpd128: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1;
+                              unsigned SrcIdx = (ShuffleMask >> 1) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2vard128:
+  case X86::BI__builtin_ia32_vpermi2varps128:
+  case X86::BI__builtin_ia32_vpermi2varq256:
+  case X86::BI__builtin_ia32_vpermi2varpd256: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3;
+                              unsigned SrcIdx = (ShuffleMask >> 2) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varhi128:
+  case X86::BI__builtin_ia32_vpermi2vard256:
+  case X86::BI__builtin_ia32_vpermi2varps256:
+  case X86::BI__builtin_ia32_vpermi2varq512:
+  case X86::BI__builtin_ia32_vpermi2varpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x7;
+                              unsigned SrcIdx = (ShuffleMask >> 3) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi128:
+  case X86::BI__builtin_ia32_vpermi2varhi256:
+  case X86::BI__builtin_ia32_vpermi2vard512:
+  case X86::BI__builtin_ia32_vpermi2varps512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0xF;
+                              unsigned SrcIdx = (ShuffleMask >> 4) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi256:
+  case X86::BI__builtin_ia32_vpermi2varhi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1F;
+                              unsigned SrcIdx = (ShuffleMask >> 5) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3F;
+                              unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
   }
   }
 }

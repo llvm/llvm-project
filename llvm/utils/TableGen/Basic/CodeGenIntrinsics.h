@@ -114,6 +114,9 @@ struct CodeGenIntrinsic {
   // True if the intrinsic is marked as strictfp.
   bool isStrictFP = false;
 
+  // True if the intrinsic is marked as IntrNoCreateUndefOrPoison.
+  bool isNoCreateUndefOrPoison = false;
+
   enum ArgAttrKind {
     NoCapture,
     NoAlias,

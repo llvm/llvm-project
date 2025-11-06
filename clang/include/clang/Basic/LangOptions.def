@@ -216,6 +216,7 @@ LANGOPT(OpenCLGenericAddressSpace, 1, 0, NotCompatible, "OpenCL generic keyword"
 LANGOPT(OpenCLPipes              , 1, 0, NotCompatible, "OpenCL pipes language constructs and built-ins")
 LANGOPT(NativeHalfType    , 1, 0, NotCompatible, "Native half type support")
 LANGOPT(NativeHalfArgsAndReturns, 1, 0, NotCompatible, "Native half args and returns")
+LANGOPT(NativeInt16Type   , 1, 1, NotCompatible, "Native int 16 type support")
 LANGOPT(CUDA              , 1, 0, NotCompatible, "CUDA")
 LANGOPT(HIP               , 1, 0, NotCompatible, "HIP")
 LANGOPT(OpenMP            , 32, 0, NotCompatible, "OpenMP support and version of OpenMP (31, 40 or 45)")
@@ -453,7 +454,7 @@ LANGOPT(BranchTargetEnforcement, 1, 0, NotCompatible, "Branch-target enforcement
 LANGOPT(BranchProtectionPAuthLR, 1, 0, NotCompatible, "Use PC as a diversifier using PAuthLR NOP instructions.")
 LANGOPT(GuardedControlStack, 1, 0, NotCompatible, "Guarded control stack enabled")
 
-LANGOPT(SpeculativeLoadHardening, 1, 0, NotCompatible, "Speculative load hardening enabled")
+LANGOPT(SpeculativeLoadHardening, 1, 0, Benign, "Speculative load hardening enabled")
 
 LANGOPT(RelativeCXXABIVTables, 1, 0, NotCompatible,
         "Use an ABI-incompatible v-table layout that uses relative references")
