@@ -125,9 +125,13 @@ LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   Options.AllowOverlappingLoads = true;
 
   // TODO: Support for vectors.
-  if (ST->is64Bit())
-    Options.LoadSizes.push_back(8);
-  Options.LoadSizes.append({4, 2, 1});
+  if (ST->is64Bit()) {
+    Options.LoadSizes = {8, 4, 2, 1};
+    Options.AllowedTailExpansions = {3, 5, 6};
+  } else {
+    Options.LoadSizes = {4, 2, 1};
+    Options.AllowedTailExpansions = {3};
+  }
 
   return Options;
 }
