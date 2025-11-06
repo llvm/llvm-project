@@ -142,7 +142,7 @@ static bool checkForCUDA() {
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(CudaLib, &ErrMsg));
   if (!DynlibHandle->isValid()) {
-    DP("Unable to load library '%s': %s!\n", CudaLib, ErrMsg.c_str());
+    DPIF(RTL, "Unable to load library '%s': %s!\n", CudaLib, ErrMsg.c_str());
     return false;
   }
 
@@ -154,7 +154,7 @@ static bool checkForCUDA() {
       const char *First = It->second;
       void *P = DynlibHandle->getAddressOfSymbol(First);
       if (P) {
-        DP("Implementing %s with dlsym(%s) -> %p\n", Sym, First, P);
+        DPIF(RTL, "Implementing %s with dlsym(%s) -> %p\n", Sym, First, P);
         *dlwrap::pointer(I) = P;
         continue;
       }
@@ -162,10 +162,10 @@ static bool checkForCUDA() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, CudaLib);
+      DPIF(RTL, "Unable to find '%s' in '%s'!\n", Sym, CudaLib);
       return false;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    DPIF(RTL, "Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
 
     *dlwrap::pointer(I) = P;
   }
