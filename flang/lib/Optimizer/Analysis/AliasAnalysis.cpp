@@ -22,6 +22,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 using namespace mlir;
 
@@ -535,6 +536,42 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   mlir::Operation *instantiationPoint{nullptr};
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
+
+    // Effect-based detection using op-scoped Allocate with conservative
+    // heuristics (ignore value-scoped signals per request).
+    if (auto memIface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(defOp)) {
+      llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
+      memIface.getEffects(effects);
+      bool sawOpScopedAlloc = false;
+      for (auto &ei : effects) {
+        bool isAlloc = mlir::isa<mlir::MemoryEffects::Allocate>(ei.getEffect());
+        if (!ei.getValue() && isAlloc) {
+          sawOpScopedAlloc = true;
+        }
+      }
+      if (sawOpScopedAlloc) {
+        auto isMemoryRefLikeType = [](mlir::Type t) {
+          return fir::isa_ref_type(t) || mlir::isa<mlir::BaseMemRefType>(t) ||
+                 mlir::isa<mlir::LLVM::LLVMPointerType>(t);
+        };
+        bool opIsViewLike = (bool)mlir::dyn_cast_or_null<mlir::ViewLikeOpInterface>(defOp);
+        bool hasMemOperands = llvm::any_of(defOp->getOperands(), [&](mlir::Value opnd) {
+          return isMemoryRefLikeType(opnd.getType());
+        });
+        if (!opIsViewLike && !hasMemOperands) {
+          for (mlir::Value res : defOp->getResults()) {
+            if (res == v && isMemoryRefLikeType(res.getType())) {
+              type = SourceKind::Allocate;
+              breakFromLoop = true;
+              break;
+            }
+          }
+          if (breakFromLoop)
+            break;
+        }
+      }
+    }
+
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<hlfir::AsExprOp>([&](auto op) {
           v = op.getVar();
