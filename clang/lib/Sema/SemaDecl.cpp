@@ -8492,7 +8492,7 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    if (CXXMethodDecl *MD =
+    if (const auto *MD =
             dyn_cast<CXXMethodDecl>(getFunctionLevelDeclContext())) {
       // Fields aren't shadowed in C++ static members or in member functions
       // with an explicit object parameter.
