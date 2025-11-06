@@ -1432,7 +1432,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         VPBuilder Builder(CastR);
         auto *Clone = Builder.createScalarCast(
             CastR->getOpcode(), CastR->getOperand(0), CastR->getResultType(),
-            CastR->getDebugLoc());
+            CastR->getDebugLoc(), *CastR, *CastR);
         CastR->replaceAllUsesWith(Clone);
         CastR->eraseFromParent();
         continue;
