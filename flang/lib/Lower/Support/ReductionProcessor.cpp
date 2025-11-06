@@ -577,11 +577,10 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   // variable, `real` should be stored.
   mlir::TypeAttr boxedTy{};
 
-  if (!isByRef)
-    type = valTy;
-
   if (isByRef)
     boxedTy = mlir::TypeAttr::get(fir::unwrapPassByRefType(valTy));
+  else
+    type = valTy;
 
   decl = DeclareRedType::create(modBuilder, loc, reductionOpName, type, boxedTy);
   createReductionAllocAndInitRegions(converter, loc, decl, genInitValueCB, type,
