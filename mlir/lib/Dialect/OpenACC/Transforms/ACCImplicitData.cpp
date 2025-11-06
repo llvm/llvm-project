@@ -230,11 +230,9 @@ using namespace mlir;
 
 namespace {
 
-class ACCImplicitData
-    : public mlir::acc::impl::ACCImplicitDataBase<ACCImplicitData> {
+class ACCImplicitData : public acc::impl::ACCImplicitDataBase<ACCImplicitData> {
 public:
-  using mlir::acc::impl::ACCImplicitDataBase<
-      ACCImplicitData>::ACCImplicitDataBase;
+  using acc::impl::ACCImplicitDataBase<ACCImplicitData>::ACCImplicitDataBase;
 
   void runOnOperation() override;
 
@@ -242,22 +240,21 @@ private:
   /// Collects all data clauses that dominate the compute construct.
   /// Needed to determine if a variable is already covered by an existing data
   /// clause.
-  SmallVector<mlir::Value>
-  getDominatingDataClauses(Operation *computeConstructOp);
+  SmallVector<Value> getDominatingDataClauses(Operation *computeConstructOp);
 
   /// Looks through the `dominatingDataClauses` to find the original data clause
   /// op for an alias. Returns nullptr if no original data clause op is found.
   template <typename OpT>
   Operation *getOriginalDataClauseOpForAlias(
       Value var, OpBuilder &builder, OpT computeConstructOp,
-      const SmallVector<mlir::Value> &dominatingDataClauses);
+      const SmallVector<Value> &dominatingDataClauses);
 
   /// Generates the appropriate `acc.copyin`, `acc.present`,`acc.firstprivate`,
   /// etc. data clause op for a candidate variable.
   template <typename OpT>
   Operation *generateDataClauseOpForCandidate(
       Value var, ModuleOp &module, OpBuilder &builder, OpT computeConstructOp,
-      const SmallVector<mlir::Value> &dominatingDataClauses,
+      const SmallVector<Value> &dominatingDataClauses,
       const std::optional<acc::ClauseDefaultValue> &defaultClause);
 
   /// Generates the implicit data ops for a compute construct.
@@ -267,15 +264,14 @@ private:
       std::optional<acc::ClauseDefaultValue> &defaultClause);
 
   /// Generates a private recipe for a variable.
-  acc::PrivateRecipeOp generatePrivateRecipe(ModuleOp &module, mlir::Value var,
-                                             mlir::Location loc,
-                                             OpBuilder &builder,
+  acc::PrivateRecipeOp generatePrivateRecipe(ModuleOp &module, Value var,
+                                             Location loc, OpBuilder &builder,
                                              acc::OpenACCSupport &accSupport);
 
   /// Generates a firstprivate recipe for a variable.
   acc::FirstprivateRecipeOp
-  generateFirstprivateRecipe(ModuleOp &module, mlir::Value var,
-                             mlir::Location loc, OpBuilder &builder,
+  generateFirstprivateRecipe(ModuleOp &module, Value var, Location loc,
+                             OpBuilder &builder,
                              acc::OpenACCSupport &accSupport);
 
   /// Generates recipes for a list of variables.
@@ -305,9 +301,9 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion) {
   return true;
 }
 
-SmallVector<mlir::Value>
+SmallVector<Value>
 ACCImplicitData::getDominatingDataClauses(Operation *computeConstructOp) {
-  llvm::SmallSetVector<mlir::Value, 8> dominatingDataClauses;
+  llvm::SmallSetVector<Value, 8> dominatingDataClauses;
 
   llvm::TypeSwitch<Operation *>(computeConstructOp)
       .Case<acc::ParallelOp, acc::KernelsOp, acc::SerialOp>([&](auto op) {
@@ -339,7 +335,7 @@ ACCImplicitData::getDominatingDataClauses(Operation *computeConstructOp) {
   // clauses to the list.
   auto &domInfo = this->getAnalysis<DominanceInfo>();
   auto &postDomInfo = this->getAnalysis<PostDominanceInfo>();
-  funcOp->walk([&](mlir::acc::DeclareEnterOp declareEnterOp) {
+  funcOp->walk([&](acc::DeclareEnterOp declareEnterOp) {
     if (domInfo.dominates(declareEnterOp.getOperation(), computeConstructOp)) {
       // Collect all `acc.declare_exit` ops for this token.
       SmallVector<acc::DeclareExitOp> exits;
@@ -364,7 +360,7 @@ ACCImplicitData::getDominatingDataClauses(Operation *computeConstructOp) {
 template <typename OpT>
 Operation *ACCImplicitData::getOriginalDataClauseOpForAlias(
     Value var, OpBuilder &builder, OpT computeConstructOp,
-    const SmallVector<mlir::Value> &dominatingDataClauses) {
+    const SmallVector<Value> &dominatingDataClauses) {
   auto &aliasAnalysis = this->getAnalysis<AliasAnalysis>();
   for (auto dataClause : dominatingDataClauses) {
     if (auto *dataClauseOp = dataClause.getDefiningOp()) {
@@ -379,22 +375,22 @@ Operation *ACCImplicitData::getOriginalDataClauseOpForAlias(
 }
 
 // Generates bounds for variables that have unknown dimensions
-static void fillInBoundsForUnknownDimensions(mlir::Operation *dataClauseOp,
+static void fillInBoundsForUnknownDimensions(Operation *dataClauseOp,
                                              OpBuilder &builder) {
 
-  if (!mlir::acc::getBounds(dataClauseOp).empty())
+  if (!acc::getBounds(dataClauseOp).empty())
     // If bounds are already present, do not overwrite them.
     return;
 
   // For types that have unknown dimensions, attempt to generate bounds by
   // relying on MappableType being able to extract it from the IR.
-  auto var = mlir::acc::getVar(dataClauseOp);
+  auto var = acc::getVar(dataClauseOp);
   auto type = var.getType();
   if (auto mappableTy = dyn_cast<acc::MappableType>(type)) {
     if (mappableTy.hasUnknownDimensions()) {
-      TypeSwitch<mlir::Operation *>(dataClauseOp)
+      TypeSwitch<Operation *>(dataClauseOp)
           .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClauseOp) {
-            if (std::is_same_v<decltype(dataClauseOp), mlir::acc::DevicePtrOp>)
+            if (std::is_same_v<decltype(dataClauseOp), acc::DevicePtrOp>)
               return;
             OpBuilder::InsertionGuard guard(builder);
             builder.setInsertionPoint(dataClauseOp);
@@ -407,8 +403,8 @@ static void fillInBoundsForUnknownDimensions(mlir::Operation *dataClauseOp,
 }
 
 acc::PrivateRecipeOp
-ACCImplicitData::generatePrivateRecipe(ModuleOp &module, mlir::Value var,
-                                       mlir::Location loc, OpBuilder &builder,
+ACCImplicitData::generatePrivateRecipe(ModuleOp &module, Value var,
+                                       Location loc, OpBuilder &builder,
                                        acc::OpenACCSupport &accSupport) {
   auto type = var.getType();
   std::string recipeName =
@@ -423,16 +419,17 @@ ACCImplicitData::generatePrivateRecipe(ModuleOp &module, mlir::Value var,
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(module.getBody());
 
-  auto recipe = mlir::acc::PrivateRecipeOp::createAndPopulate(builder, loc,
-                                                              recipeName, type);
+  auto recipe =
+      acc::PrivateRecipeOp::createAndPopulate(builder, loc, recipeName, type);
   if (!recipe.has_value())
     return accSupport.emitNYI(loc, "implicit private"), nullptr;
   return recipe.value();
 }
 
-acc::FirstprivateRecipeOp ACCImplicitData::generateFirstprivateRecipe(
-    ModuleOp &module, mlir::Value var, mlir::Location loc, OpBuilder &builder,
-    acc::OpenACCSupport &accSupport) {
+acc::FirstprivateRecipeOp
+ACCImplicitData::generateFirstprivateRecipe(ModuleOp &module, Value var,
+                                            Location loc, OpBuilder &builder,
+                                            acc::OpenACCSupport &accSupport) {
   auto type = var.getType();
   std::string recipeName =
       accSupport.getRecipeName(acc::RecipeKind::firstprivate_recipe, type, var);
@@ -447,8 +444,8 @@ acc::FirstprivateRecipeOp ACCImplicitData::generateFirstprivateRecipe(
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(module.getBody());
 
-  auto recipe = mlir::acc::FirstprivateRecipeOp::createAndPopulate(
-      builder, loc, recipeName, type);
+  auto recipe = acc::FirstprivateRecipeOp::createAndPopulate(builder, loc,
+                                                             recipeName, type);
   if (!recipe.has_value())
     return accSupport.emitNYI(loc, "implicit firstprivate"), nullptr;
   return recipe.value();
@@ -465,14 +462,14 @@ void ACCImplicitData::generateRecipes(ModuleOp &module, OpBuilder &builder,
       auto recipe = generatePrivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
-        newRecipeSyms.push_back(mlir::SymbolRefAttr::get(
-            module->getContext(), recipe.getSymName().str()));
+        newRecipeSyms.push_back(SymbolRefAttr::get(module->getContext(),
+                                                   recipe.getSymName().str()));
     } else if (isa<acc::FirstprivateOp>(var.getDefiningOp())) {
       auto recipe = generateFirstprivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
-        newRecipeSyms.push_back(mlir::SymbolRefAttr::get(
-            module->getContext(), recipe.getSymName().str()));
+        newRecipeSyms.push_back(SymbolRefAttr::get(module->getContext(),
+                                                   recipe.getSymName().str()));
     } else {
       accSupport.emitNYI(var.getLoc(), "implicit reduction");
     }
@@ -491,7 +488,7 @@ void ACCImplicitData::generateRecipes(ModuleOp &module, OpBuilder &builder,
 template <typename OpT>
 Operation *ACCImplicitData::generateDataClauseOpForCandidate(
     Value var, ModuleOp &module, OpBuilder &builder, OpT computeConstructOp,
-    const SmallVector<mlir::Value> &dominatingDataClauses,
+    const SmallVector<Value> &dominatingDataClauses,
     const std::optional<acc::ClauseDefaultValue> &defaultClause) {
   auto &accSupport = this->getAnalysis<acc::OpenACCSupport>();
   acc::VariableTypeCategory typeCategory =
@@ -509,7 +506,7 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       acc::bitEnumContainsAny(typeCategory, acc::VariableTypeCategory::scalar);
   bool isAnyAggregate = acc::bitEnumContainsAny(
       typeCategory, acc::VariableTypeCategory::aggregate);
-  mlir::Location loc = computeConstructOp->getLoc();
+  Location loc = computeConstructOp->getLoc();
 
   Operation *op = nullptr;
   op = getOriginalDataClauseOpForAlias(var, builder, computeConstructOp,
@@ -574,7 +571,7 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                          /*structured=*/true, /*implicit=*/true,
                                          accSupport.getVariableName(var));
     } else {
-      SmallVector<mlir::Value> bounds;
+      SmallVector<Value> bounds;
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
                                 /*structured=*/true, /*implicit=*/true,
@@ -619,17 +616,17 @@ static void legalizeValuesInRegion(Region &accRegion,
 // operation in a valid way (ensures that the index in the privatizationRecipes
 // array matches the position of the private operand).
 template <typename OpT>
-static void
-addNewPrivateOperands(OpT &accOp, mlir::SmallVector<Value> &privateOperands,
-                      mlir::SmallVector<Attribute> &privateRecipeSyms) {
+static void addNewPrivateOperands(OpT &accOp,
+                                  SmallVector<Value> &privateOperands,
+                                  SmallVector<Attribute> &privateRecipeSyms) {
   assert(privateOperands.size() == privateRecipeSyms.size());
   if (privateOperands.empty())
     return;
 
-  mlir::SmallVector<mlir::Attribute> completePrivateRecipesSyms;
-  mlir::SmallVector<mlir::Attribute> completeFirstprivateRecipesSyms;
-  mlir::SmallVector<mlir::Value> newPrivateOperands;
-  mlir::SmallVector<mlir::Value> newFirstprivateOperands;
+  SmallVector<Attribute> completePrivateRecipesSyms;
+  SmallVector<Attribute> completeFirstprivateRecipesSyms;
+  SmallVector<Value> newPrivateOperands;
+  SmallVector<Value> newFirstprivateOperands;
 
   // Collect all of the existing recipes since they are held in an attribute.
   // To add to it, we need to create a brand new one.
@@ -661,13 +658,13 @@ addNewPrivateOperands(OpT &accOp, mlir::SmallVector<Value> &privateOperands,
   // Update the privatizationRecipes attributes to hold all of the new recipes.
   if (!completePrivateRecipesSyms.empty())
     accOp.setPrivatizationRecipesAttr(
-        mlir::ArrayAttr::get(accOp.getContext(), completePrivateRecipesSyms));
+        ArrayAttr::get(accOp.getContext(), completePrivateRecipesSyms));
   if (!completeFirstprivateRecipesSyms.empty())
-    accOp.setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(
-        accOp.getContext(), completeFirstprivateRecipesSyms));
+    accOp.setFirstprivatizationRecipesAttr(
+        ArrayAttr::get(accOp.getContext(), completeFirstprivateRecipesSyms));
 }
 
-static mlir::Operation *findDataExitOp(mlir::Operation *dataEntryOp) {
+static Operation *findDataExitOp(Operation *dataEntryOp) {
   auto res = acc::getAccVar(dataEntryOp);
   for (auto *user : res.getUsers())
     if (isa<ACC_DATA_EXIT_OPS>(user))
@@ -685,8 +682,8 @@ static mlir::Operation *findDataExitOp(mlir::Operation *dataEntryOp) {
 // (after region)
 static void
 generateDataExitOperations(OpBuilder &builder, Operation *accOp,
-                           mlir::SmallVector<Value> &newDataClauseOperands,
-                           mlir::SmallVector<Value> &sortedDataClauseOperands) {
+                           SmallVector<Value> &newDataClauseOperands,
+                           SmallVector<Value> &sortedDataClauseOperands) {
   builder.setInsertionPointAfter(accOp);
   Value lastDataClause = nullptr;
   for (auto dataEntry : llvm::reverse(sortedDataClauseOperands)) {
@@ -733,13 +730,13 @@ static llvm::SmallVector<Value> getBaseRefsChain(Value val) {
   while (true) {
     Value prevVal = val;
 
-    val = mlir::acc::getBaseEntity(val);
+    val = acc::getBaseEntity(val);
     if (val != baseRefs.front())
       baseRefs.insert(baseRefs.begin(), val);
 
     // If this is a view-like operation, it is effectively another
     // view of the same entity so we should add it to the chain also.
-    if (auto viewLikeOp = val.getDefiningOp<mlir::ViewLikeOpInterface>()) {
+    if (auto viewLikeOp = val.getDefiningOp<ViewLikeOpInterface>()) {
       val = viewLikeOp.getViewSource();
       baseRefs.insert(baseRefs.begin(), val);
     }
