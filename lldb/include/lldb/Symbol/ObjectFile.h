@@ -758,6 +758,12 @@ public:
     return false;
   }
 
+  /// Returns true if the section is a global offset table section.
+  virtual bool IsGOTSection(const lldb_private::Section &section) const {
+    assert(section.GetObjectFile() == this && "Wrong object file!");
+    return false;
+  }
+
   /// Get a hash that can be used for caching object file releated information.
   ///
   /// Data for object files can be cached between runs of debug sessions and

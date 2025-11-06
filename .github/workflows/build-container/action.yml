@@ -1,0 +1,95 @@
+name: Build Container
+description: >-
+  Build and test a container using the standard llvm naming scheme for containers.
+
+inputs:
+  tag:
+    description: >-
+      The tag to use for this container.
+    required: false
+  container-name:
+    description: >-
+      The name for the container.
+    required: true
+  dockerfile:
+    description: >-
+      Path to docker file.
+    required: false
+  target:
+    description: >-
+      The container target to build 'passed to podman via ---target option'
+    required: false
+  context:
+    description: >-
+      Path to context for the container build.
+    required: false
+  test-command:
+    description: >-
+      Test command to run to ensure the container is working correctly.
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    # podman is not installed by default on the ARM64 images.
+    - name: Install Podman
+      if: runner.arch == 'ARM64'
+      shell: bash
+      run: |
+        sudo apt-get install podman
+
+    - name: Build Container
+      shell: bash
+      env:
+        INPUT_TAG: ${{inputs.tag }}
+        INPUT_CONTAINER_NAME: ${{ inputs.container-name }}
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_DOCKERFILE: ${{ inputs.dockerfile }}
+        INPUT_CONTEXT: ${{ inputs.context }}
+      id: build
+      run: |
+        env
+        tag="${INPUT_TAG:-$(git rev-parse --short=12 HEAD)}"
+
+        case "$RUNNER_ARCH" in
+          ARM64)
+            container_arch="arm64v8"
+            ;;
+          *)
+            container_arch="amd64"
+            ;;
+        esac
+
+        container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/$container_arch/$INPUT_CONTAINER_NAME:$tag"
+        container_filename="$(echo $container_name  | sed -e 's/\//-/g' -e 's/:/-/g').tar"
+        if [ -n "$INPUT_TARGET" ]; then
+          podman_options="$podman_options --target $INPUT_TARGET"
+        fi
+        if [ -n "$INPUT_DOCKERFILE" ]; then
+          podman_options="$podman_options -f $INPUT_DOCKERFILE"
+        fi
+        podman_options="$podman_options ${INPUT_CONTEXT:-.}"
+        echo "Podman Options: $podman_options"
+
+        podman build -t $container_name $podman_options
+
+        podman save $container_name > $container_filename
+
+        echo "container-full-name=$container_name" >> $GITHUB_OUTPUT
+
+    - name: Create container artifact
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+        name: ${{ inputs.container-name }}-${{ runner.arch }}
+        path: "*.tar"
+        retention-days: 14
+
+    - name: Test container
+      shell: bash
+      if: inputs.test-command
+      env:
+        INPUT_TEST_COMMAND: ${{ inputs.test-command }}
+        CONTAINER_FULL_NAME: ${{ steps.build.outputs.container-full-name }}
+      run: |
+        podman run --pull=never --rm -it $CONTAINER_FULL_NAME /usr/bin/bash -x -c "$INPUT_TEST_COMMAND"
+
