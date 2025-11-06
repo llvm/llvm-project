@@ -1813,7 +1813,7 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
 
   Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
   Type *RetTy =
-      VF.isVector() ? toVectorizedTy(ScalarRetTy, VF, ID) : ScalarRetTy;
+      VF.isVector() ? toVectorizedRetTy(ScalarRetTy, VF, ID) : ScalarRetTy;
   SmallVector<Type *> ParamTys;
   for (const VPValue *Op : Operands) {
     ParamTys.push_back(VF.isVector()

@@ -4103,7 +4103,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       unsigned IID = 0;
       if (auto *WI = dyn_cast<VPWidenIntrinsicRecipe>(&R))
         WI->getVectorIntrinsicID();
-      Type *WideTy = toVectorizedTy(ScalarTy, VF, IID);
+      Type *WideTy = toVectorizedRetTy(ScalarTy, VF, IID);
 
       if (any_of(getContainedTypes(WideTy), WillGenerateTargetVectors))
         return true;

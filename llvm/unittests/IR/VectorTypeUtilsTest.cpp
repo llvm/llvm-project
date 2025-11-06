@@ -57,7 +57,7 @@ TEST(VectorTypeUtilsTest, TestToVectorizedTy) {
 
     EXPECT_EQ(toVectorizedTy(VoidTy, VF), VoidTy);
     Type *WidenFFLoadRetTy =
-        toVectorizedTy(FFLoadRetTy, VF, Intrinsic::vp_load_ff);
+        toVectorizedRetTy(FFLoadRetTy, VF, Intrinsic::vp_load_ff);
     EXPECT_EQ(cast<StructType>(WidenFFLoadRetTy)->getElementType(0),
               VectorType::get(ITy, VF));
     EXPECT_EQ(cast<StructType>(WidenFFLoadRetTy)->getElementType(1), ITy);
