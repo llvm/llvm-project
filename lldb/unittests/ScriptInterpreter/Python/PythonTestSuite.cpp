@@ -160,6 +160,11 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(
   return nullptr;
 }
 
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
+  return nullptr;
+}
+
 lldb::ValueObjectSP
 lldb_private::python::SWIGBridge::LLDBSWIGPython_GetValueObjectSPFromSBValue(
     void *data) {
@@ -325,6 +330,11 @@ lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ThreadPlanSP) {
 
 python::PythonObject
 lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ProcessSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::StackFrameListSP) {
   return python::PythonObject();
 }
 
