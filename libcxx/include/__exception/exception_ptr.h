@@ -128,13 +128,13 @@ public:
 
 #  ifndef _LIBCPP_BUILDING_LIBRARY
 
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::exception_ptr(const exception_ptr& __other) _NOEXCEPT
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE inline exception_ptr::exception_ptr(const exception_ptr& __other) _NOEXCEPT
     : __ptr_(__other.__ptr_) {
   if (__ptr_)
     __increment_refcount(__ptr_);
 }
 
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(const exception_ptr& __other) _NOEXCEPT {
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE inline exception_ptr& exception_ptr::operator=(const exception_ptr& __other) _NOEXCEPT {
   if (__ptr_ != __other.__ptr_) {
     if (__other.__ptr_)
       __increment_refcount(__other.__ptr_);
@@ -145,7 +145,7 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(con
   return *this;
 }
 
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::~exception_ptr() _NOEXCEPT {
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE inline exception_ptr::~exception_ptr() _NOEXCEPT {
   if (__ptr_)
     __decrement_refcount(__ptr_);
 }
