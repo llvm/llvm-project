@@ -3,10 +3,10 @@
 
 # There should be two typedef DIE named "BarInt" in the resultant .dwarf file.
 # The second should refer to the first, which refer to "Foo<int>".
-# CHECK:      0x[[FIRST_BARINT_ADDR:[0-9a-f]{8}]]:  DW_TAG_typedef
-# CHECK-NEXT:     DW_AT_type  (0x{{([[:xdigit:]]{8})}} "Foo<int>")
+# CHECK:      0x[[FIRST_BARINT_ADDR:[0-9a-f]*]]:  DW_TAG_typedef
+# CHECK-NEXT:     DW_AT_type  (0x{{([[:xdigit:]]*)}} "Foo<int>")
 # CHECK-NEXT:     DW_AT_name  ("BarInt")
-# CHECK:      0x{{([[:xdigit:]]{8})}}:  DW_TAG_typedef
+# CHECK:      0x{{([[:xdigit:]]*)}}:  DW_TAG_typedef
 # CHECK-NEXT:     DW_AT_type  (0x[[FIRST_BARINT_ADDR]] "BarInt")
 # CHECK-NEXT:     DW_AT_name  ("BarInt")
 
