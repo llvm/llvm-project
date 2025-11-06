@@ -31,11 +31,11 @@ struct exception_ptr {
 
 [[noreturn]] void rethrow_exception(__exception_ptr::exception_ptr);
 
-void exception_ptr::__do_increment_refcount(void* __ptr) noexcept {
+void exception_ptr::__increment_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void* __ptr) noexcept {
   reinterpret_cast<__exception_ptr::exception_ptr*>(this)->_M_addref();
 }
 
-void exception_ptr::__do_decrement_refcount(void* __ptr) noexcept {
+void exception_ptr::__decrement_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void* __ptr) noexcept {
   reinterpret_cast<__exception_ptr::exception_ptr*>(this)->_M_release();
 }
 
@@ -44,6 +44,21 @@ exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept
   new (reinterpret_cast<void*>(&ptr)) __exception_ptr::exception_ptr(__e);
 
   return ptr;
+}
+
+exception_ptr::~exception_ptr() noexcept { __decrement_refcount(__ptr_); }
+
+exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {
+  __increment_refcount(__ptr_);
+}
+
+exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
+  if (__ptr_ != other.__ptr_) {
+    __increment_refcount(other.__ptr_);
+    __decrement_refcount(__ptr_);
+    __ptr_ = other.__ptr_;
+  }
+  return *this;
 }
 
 nested_exception::nested_exception() noexcept : __ptr_(current_exception()) {}
