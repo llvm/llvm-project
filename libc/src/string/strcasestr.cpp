@@ -21,8 +21,8 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(char *, strcasestr,
                    (const char *haystack, const char *needle)) {
   auto case_cmp = [](char a, char b) {
-    return LIBC_NAMESPACE::internal::tolower(a) -
-           LIBC_NAMESPACE::internal::tolower(b);
+    return static_cast<int>(LIBC_NAMESPACE::internal::tolower(a)) -
+           static_cast<int>(LIBC_NAMESPACE::internal::tolower(b));
   };
 
   LIBC_CRASH_ON_NULLPTR(haystack);
