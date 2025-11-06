@@ -1582,9 +1582,7 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // Expressions are copy-in, but not copy-out.
     return forCopyIn;
   }
-  auto maybeContigActual{IsContiguous(*actual, fc)};
-  bool isContiguousActual{
-      maybeContigActual.has_value() && maybeContigActual.value()};
+  bool isContiguousActual{IsSimplyContiguous(*actual, fc)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {
