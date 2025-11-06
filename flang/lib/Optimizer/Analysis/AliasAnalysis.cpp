@@ -69,18 +69,18 @@ tryClassifyAllocateFromEffects(mlir::Operation *op, mlir::Value candidate,
 
   bool opIsViewLike =
       (bool)mlir::dyn_cast_or_null<mlir::ViewLikeOpInterface>(op);
-  auto isMemoryRefLikeType = [](mlir::Type type) {
+  auto isMemRefLikeType = [](mlir::Type type) {
     return fir::isa_ref_type(type) || mlir::isa<mlir::BaseMemRefType>(type) ||
            mlir::isa<mlir::LLVM::LLVMPointerType>(type);
   };
   bool hasMemOperands = llvm::any_of(op->getOperands(), [&](mlir::Value o) {
-    return isMemoryRefLikeType(o.getType());
+    return isMemRefLikeType(o.getType());
   });
   if (opIsViewLike || hasMemOperands)
     return false;
 
   for (mlir::Value res : op->getResults()) {
-    if (res == candidate && isMemoryRefLikeType(res.getType())) {
+    if (res == candidate && isMemRefLikeType(res.getType())) {
       v = candidate;
       defOp = op;
       type = fir::AliasAnalysis::SourceKind::Allocate;
@@ -605,12 +605,6 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
     } else {
       type = SourceKind::Indirect;
     }
-  };
-
-  // Helper to detect memory-ref-like types.
-  auto isMemoryRefLikeType = [](mlir::Type t) {
-    return fir::isa_ref_type(t) || mlir::isa<mlir::BaseMemRefType>(t) ||
-           mlir::isa<mlir::LLVM::LLVMPointerType>(t);
   };
 
   while (defOp && !breakFromLoop) {
