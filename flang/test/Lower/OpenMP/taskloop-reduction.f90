@@ -1,9 +1,6 @@
 ! This test checks the lowering of the reduction clause in the taskloop construct
 ! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
-! RUN %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=45 -o - %s 2>&1 | FileCheck %s --check-prefix=CHECK-VERSION
-
-! CHECK-VERSION: error: REDUCTION clause is not allowed on directive TASKLOOP in OpenMP v4.5, try -fopenmp-version=50
 
 ! CHECK-LABEL: omp.private
 ! CHECK-SAME: {type = private} @[[I_PRIVATE:.*]] : i32
