@@ -12,6 +12,7 @@
 #include "WhitespaceManager.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
+#include <iostream>
 
 #define DEBUG_TYPE "format-formatter"
 
@@ -132,9 +133,18 @@ private:
       return Style.IndentAccessModifiers ? -Style.IndentWidth
                                          : Style.AccessModifierOffset;
     }
+
+    if(Line.First->is(tok::identifier) && Line.First->Next && Line.First->Next->is(TT_GotoLabelColon)){
+      if(Style.IndentGotoLabelsToCurrentScope){
+        std::cout << Line.First->TokenText.str() << ": indented to current scope" << std::endl;
+        std::cout << "IndentGotoLabelsToCurrentScope is true" << std::endl;
+        std::cout << Line.Level << " " << Style.IndentWidth << std::endl;
+        return Style.IndentWidth;
+      }
+    }
     return 0;
   }
-
+  
   /// Get the indent of \p Level from \p IndentForLevel.
   ///
   /// \p IndentForLevel must contain the indent for the level \c l

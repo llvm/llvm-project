@@ -1204,6 +1204,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentExportBlock", Style.IndentExportBlock);
     IO.mapOptional("IndentExternBlock", Style.IndentExternBlock);
     IO.mapOptional("IndentGotoLabels", Style.IndentGotoLabels);
+    IO.mapOptional("IndentGotoLabelsToCurrentScope", Style.IndentGotoLabelsToCurrentScope);
     IO.mapOptional("IndentPPDirectives", Style.IndentPPDirectives);
     IO.mapOptional("IndentRequiresClause", Style.IndentRequiresClause);
     IO.mapOptional("IndentWidth", Style.IndentWidth);
@@ -1748,6 +1749,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentExportBlock = true;
   LLVMStyle.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
   LLVMStyle.IndentGotoLabels = true;
+  LLVMStyle.IndentGotoLabelsToCurrentScope = false;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentRequiresClause = true;
   LLVMStyle.IndentWidth = 2;
@@ -1987,6 +1989,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     // TODO: enable once decided, in particular re disabling bin packing.
     // https://google.github.io/styleguide/jsguide.html#features-arrays-trailing-comma
     // GoogleStyle.InsertTrailingCommas = FormatStyle::TCS_Wrapped;
+    GoogleStyle.IndentGotoLabelsToCurrentScope = false;
     GoogleStyle.JavaScriptQuotes = FormatStyle::JSQS_Single;
     GoogleStyle.JavaScriptWrapImports = false;
     GoogleStyle.MaxEmptyLinesToKeep = 3;

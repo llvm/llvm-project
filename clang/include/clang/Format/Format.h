@@ -3067,7 +3067,7 @@ struct FormatStyle {
   /// IndentExternBlockStyle is the type of indenting of extern blocks.
   /// \version 11
   IndentExternBlockStyle IndentExternBlock;
-
+  
   /// Indent goto labels.
   ///
   /// When ``false``, goto labels are flushed left.
@@ -3084,6 +3084,24 @@ struct FormatStyle {
   /// \endcode
   /// \version 10
   bool IndentGotoLabels;
+  
+  /// If true, aligns labels according to the current indentation level
+  /// instead of flushing them to the left margin.
+  ///
+  /// \code
+  ///   true:                              false:
+  ///   int main() {                       int main() {
+  ///     for (int i = 0; i < 5; i++)       for (int i = 0; i < 5; i++)
+  ///       for (int j = 0; j < 5; j++) {      for (int j = 0; j < 5; j++) {
+  ///         // some code                       // some code
+  ///         goto end_double_loop;              goto end_double_loop;
+  ///       }                                   }
+  ///     }                                    }
+  ///     end_double_loop: {}                end_double_loop: {}
+  ///   }                                  }
+  /// \endcode
+  /// \version 19
+  bool IndentGotoLabelsToCurrentScope;
 
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle : int8_t {
