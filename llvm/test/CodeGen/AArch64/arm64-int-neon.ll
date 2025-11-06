@@ -15,6 +15,7 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqadd_s64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s64
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqdmulls_scalar
 
 define i32 @test_sqrshl_s32(float noundef %a){
 ; CHECK-LABEL: test_sqrshl_s32:
@@ -222,4 +223,16 @@ entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.uqsub.i64(i64 %cvt, i64 %cvt)
   ret i64 %res
+}
+
+define i64 @test_sqdmulls_scalar(float %A){
+; CHECK-LABEL: test_sqdmulls_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    sqdmull d0, s0, s0
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+  %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %A)
+  %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32  %cvt, i32  %cvt)
+  ret i64 %prod
 }

@@ -1012,24 +1012,15 @@ def AArch64fcvtnu_half : SDNode<"AArch64ISD::FCVTNU_HALF", SDTFPExtendOp>;
 def AArch64fcvtps_half : SDNode<"AArch64ISD::FCVTPS_HALF", SDTFPExtendOp>;
 def AArch64fcvtpu_half : SDNode<"AArch64ISD::FCVTPU_HALF", SDTFPExtendOp>;
 
-def AArch64sqadd_node:   SDNode<"AArch64ISD::SQADD",   SDTFPBinOp>;
+def AArch64sqadd:   SDNode<"AArch64ISD::SQADD",   SDTFPBinOp>;
 def AArch64sqrshl:  SDNode<"AArch64ISD::SQRSHL",  SDTFPBinOp>;
 def AArch64sqshl:   SDNode<"AArch64ISD::SQSHL",   SDTFPBinOp>;
-def AArch64sqsub_node:   SDNode<"AArch64ISD::SQSUB",   SDTFPBinOp>;
+def AArch64sqsub:   SDNode<"AArch64ISD::SQSUB",   SDTFPBinOp>;
 def AArch64uqadd:   SDNode<"AArch64ISD::UQADD",   SDTFPBinOp>;
 def AArch64uqrshl:  SDNode<"AArch64ISD::UQRSHL",  SDTFPBinOp>;
 def AArch64uqshl:   SDNode<"AArch64ISD::UQSHL",   SDTFPBinOp>;
 def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
-
-// This patfrags are temporary hack to get around pattern matching issues with not yet updated intrinsics.
-def AArch64sqadd: PatFrags<(ops node:$lhs, node:$rhs),
-                             [(bitconvert (AArch64sqadd_node (f32 (bitconvert node:$lhs)), (f32 (bitconvert node:$rhs)))),
-                              (bitconvert (AArch64sqadd_node (f64 (bitconvert node:$lhs)), (f64 (bitconvert node:$rhs)))),
-                              (int_aarch64_neon_sqadd node:$lhs, node:$rhs)]>;
-def AArch64sqsub: PatFrags<(ops node:$lhs, node:$rhs),
-                             [(bitconvert (AArch64sqsub_node (f32 (bitconvert node:$lhs)), (f32 (bitconvert node:$rhs)))),
-                              (bitconvert (AArch64sqsub_node (f64 (bitconvert node:$lhs)), (f64 (bitconvert node:$rhs)))),
-                              (int_aarch64_neon_sqsub node:$lhs, node:$rhs)]>;
+def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL", SDTFPMulOp>;
 
 //def Aarch64softf32tobf16v8: SDNode<"AArch64ISD::", SDTFPRoundOp>;
 
@@ -6433,12 +6424,12 @@ defm FCMGT    : SIMDThreeScalarFPCmp<1, 1, 0b100, "fcmgt", AArch64fcmgt>;
 defm FMULX    : SIMDFPThreeScalar<0, 0, 0b011, "fmulx", int_aarch64_neon_fmulx, HasNEONandIsStreamingSafe>;
 defm FRECPS   : SIMDFPThreeScalar<0, 0, 0b111, "frecps", int_aarch64_neon_frecps, HasNEONandIsStreamingSafe>;
 defm FRSQRTS  : SIMDFPThreeScalar<0, 1, 0b111, "frsqrts", int_aarch64_neon_frsqrts, HasNEONandIsStreamingSafe>;
-defm SQADD    : SIMDThreeScalarBHSD<0, 0b00001, "sqadd", AArch64sqadd_node, int_aarch64_neon_sqadd, saddsat>;
+defm SQADD    : SIMDThreeScalarBHSD<0, 0b00001, "sqadd", AArch64sqadd, int_aarch64_neon_sqadd, saddsat>;
 defm SQDMULH  : SIMDThreeScalarHS<  0, 0b10110, "sqdmulh", int_aarch64_neon_sqdmulh>;
 defm SQRDMULH : SIMDThreeScalarHS<  1, 0b10110, "sqrdmulh", int_aarch64_neon_sqrdmulh>;
 defm SQRSHL   : SIMDThreeScalarBHSD<0, 0b01011, "sqrshl", AArch64sqrshl, int_aarch64_neon_sqrshl, int_aarch64_neon_sqrshl>;
 defm SQSHL    : SIMDThreeScalarBHSD<0, 0b01001, "sqshl", AArch64sqshl, int_aarch64_neon_sqshl, int_aarch64_neon_sqshl>;
-defm SQSUB    : SIMDThreeScalarBHSD<0, 0b00101, "sqsub", AArch64sqsub_node, int_aarch64_neon_sqsub, ssubsat>;
+defm SQSUB    : SIMDThreeScalarBHSD<0, 0b00101, "sqsub", AArch64sqsub, int_aarch64_neon_sqsub, ssubsat>;
 defm SRSHL    : SIMDThreeScalarD<   0, 0b01010, "srshl", int_aarch64_neon_srshl>;
 defm SSHL     : SIMDThreeScalarD<   0, 0b01000, "sshl", int_aarch64_neon_sshl>;
 defm SUB      : SIMDThreeScalarD<   1, 0b10000, "sub", sub>;
@@ -6496,17 +6487,25 @@ def : InstAlias<"faclt $dst, $src1, $src2",
 // Advanced SIMD three scalar instructions (mixed operands).
 //===----------------------------------------------------------------------===//
 defm SQDMULL  : SIMDThreeScalarMixedHS<0, 0b11010, "sqdmull",
-                                       int_aarch64_neon_sqdmulls_scalar>;
+                                       int_aarch64_neon_sqdmulls_scalar,
+                                       AArch64sqdmull>;
 defm SQDMLAL  : SIMDThreeScalarMixedTiedHS<0, 0b10010, "sqdmlal">;
 defm SQDMLSL  : SIMDThreeScalarMixedTiedHS<0, 0b10110, "sqdmlsl">;
 
-def : Pat<(i64 (AArch64sqadd (i64 FPR64:$Rd),
-                   (i64 (int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
-                                                        (i32 FPR32:$Rm))))),
+def : Pat<(i64 (int_aarch64_neon_sqadd (i64 FPR64:$Rd),
+                   (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn, FPR32:$Rm))),
           (SQDMLALi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
-def : Pat<(i64 (AArch64sqsub (i64 FPR64:$Rd),
-                   (i64 (int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
-                                                        (i32 FPR32:$Rm))))),
+
+def : Pat<(f64 (AArch64sqadd FPR64:$Rd,
+                (AArch64sqdmull FPR32:$Rn, FPR32:$Rm))),
+          (SQDMLALi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+
+def : Pat<(i64 (int_aarch64_neon_sqsub (i64 FPR64:$Rd),
+                   (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn, FPR32:$Rm))),
+          (SQDMLSLi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+
+def : Pat<(f64 (AArch64sqsub FPR64:$Rd,
+               (AArch64sqdmull FPR32:$Rn, FPR32:$Rm))),
           (SQDMLSLi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 
 //===----------------------------------------------------------------------===//
@@ -8719,9 +8718,9 @@ defm SMLSL : SIMDVectorIndexedLongSDTied<0, 0b0110, "smlsl",
     TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull", AArch64smull>;
 defm SQDMLAL : SIMDIndexedLongSQDMLXSDTied<0, 0b0011, "sqdmlal", saddsat,
-                                           AArch64sqadd>;
+                                           AArch64sqadd, int_aarch64_neon_sqadd>;
 defm SQDMLSL : SIMDIndexedLongSQDMLXSDTied<0, 0b0111, "sqdmlsl", ssubsat,
-                                           AArch64sqsub>;
+                                           AArch64sqsub, int_aarch64_neon_sqsub>;
 defm SQRDMLAH : SIMDIndexedSQRDMLxHSDTied<1, 0b1101, "sqrdmlah",
                                           int_aarch64_neon_sqrdmlah>;
 defm SQRDMLSH : SIMDIndexedSQRDMLxHSDTied<1, 0b1111, "sqrdmlsh",
