@@ -270,8 +270,8 @@ New check aliases
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` to
-  :doc:`bugprone-avoid-float-loop-counter
-  <clang-tidy/checks/bugprone/avoid-float-loop-counter>`
+  :doc:`bugprone-float-loop-counter
+  <clang-tidy/checks/bugprone/float-loop-counter>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-mem57-cpp <clang-tidy/checks/cert/mem57-cpp>` to

@@ -3,8 +3,8 @@
 cert-flp30-c
 ============
 
-The `cert-flp30-c` is an aliaes, please see
-`bugprone-avoid-float-loop-counter <../bugprone/avoid-float-loop-counter.html>`_
+The `cert-flp30-c` check is an aliaes, please see
+`bugprone-float-loop-counter <../bugprone/float-loop-counter.html>`_
 for more information
 
 This check corresponds to the CERT C Coding Standard rule

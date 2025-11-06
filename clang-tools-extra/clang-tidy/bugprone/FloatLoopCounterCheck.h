@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_AVOIDFLOATLOOPCOUNTERCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_AVOIDFLOATLOOPCOUNTERCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FLOATLOOPCOUNTERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FLOATLOOPCOUNTERCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -18,10 +18,10 @@ namespace clang::tidy::bugprone {
 /// https://www.securecoding.cert.org/confluence/display/c/FLP30-C.+Do+not+use+floating-point+variables+as+loop+counters
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/avoid-float-loop-counter.html
-class AvoidFloatLoopCounterCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/float-loop-counter.html
+class FloatLoopCounterCheck : public ClangTidyCheck {
 public:
-  AvoidFloatLoopCounterCheck(StringRef Name, ClangTidyContext *Context)
+  FloatLoopCounterCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -29,4 +29,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_AVOIDFLOATLOOPCOUNTERCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FLOATLOOPCOUNTERCHECK_H

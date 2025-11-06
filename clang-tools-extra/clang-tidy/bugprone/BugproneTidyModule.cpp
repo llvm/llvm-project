@@ -12,7 +12,6 @@
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
 #include "AssignmentInIfConditionCheck.h"
-#include "AvoidFloatLoopCounterCheck.h"
 #include "BadSignalToKillThreadCheck.h"
 #include "BitwisePointerCastCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
@@ -31,6 +30,7 @@
 #include "EasilySwappableParametersCheck.h"
 #include "EmptyCatchCheck.h"
 #include "ExceptionEscapeCheck.h"
+#include "FloatLoopCounterCheck.h"
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
@@ -122,8 +122,6 @@ public:
         "bugprone-assert-side-effect");
     CheckFactories.registerCheck<AssignmentInIfConditionCheck>(
         "bugprone-assignment-in-if-condition");
-    CheckFactories.registerCheck<AvoidFloatLoopCounterCheck>(
-        "bugprone-avoid-float-loop-counter");
     CheckFactories.registerCheck<BadSignalToKillThreadCheck>(
         "bugprone-bad-signal-to-kill-thread");
     CheckFactories.registerCheck<BitwisePointerCastCheck>(
@@ -156,6 +154,8 @@ public:
     CheckFactories.registerCheck<EmptyCatchCheck>("bugprone-empty-catch");
     CheckFactories.registerCheck<ExceptionEscapeCheck>(
         "bugprone-exception-escape");
+    CheckFactories.registerCheck<FloatLoopCounterCheck>(
+        "bugprone-float-loop-counter");
     CheckFactories.registerCheck<FoldInitTypeCheck>("bugprone-fold-init-type");
     CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
         "bugprone-forward-declaration-namespace");

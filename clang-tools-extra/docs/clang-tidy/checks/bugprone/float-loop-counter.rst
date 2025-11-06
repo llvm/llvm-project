@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-avoid-float-loop-counter
+.. title:: clang-tidy - bugprone-float-loop-counter
 
-bugprone-avoid-float-loop-counter
-=================================
+bugprone-float-loop-counter
+===========================
 
 Flags ``for`` loops where the induction expression has a floating-point type.
 

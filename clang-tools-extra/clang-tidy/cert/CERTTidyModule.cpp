@@ -9,10 +9,10 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "../bugprone/AvoidFloatLoopCounterCheck.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
+#include "../bugprone/FloatLoopCounterCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
@@ -310,7 +310,7 @@ public:
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");
     // FLP
-    CheckFactories.registerCheck<bugprone::AvoidFloatLoopCounterCheck>(
+    CheckFactories.registerCheck<bugprone::FloatLoopCounterCheck>(
         "cert-flp30-c");
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-flp37-c");
