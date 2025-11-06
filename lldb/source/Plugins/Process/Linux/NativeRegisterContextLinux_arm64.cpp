@@ -365,7 +365,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       // P and FFR show as 0s.
       if (GetRegisterInfo().IsSVEPReg(reg) ||
           GetRegisterInfo().IsSVERegFFR(reg)) {
-        std::vector<uint8_t> fake_rreg(reg_info->byte_size, 0);
+        std::vector<uint8_t> fake_reg(reg_info->byte_size, 0);
         reg_value.SetFromMemoryData(*reg_info, &fake_reg[0],
                                     reg_info->byte_size, eByteOrderLittle,
                                     error);
