@@ -263,3 +263,35 @@ define i64 @test_inv_and_eqz(i64 %f, i64 %x, i1 %cond) {
   %7 = and i64 %6, %f
   ret i64 %7
 }
+
+define i32 @pr166596(i32 %conv.i, i1 %iszero) #0 {
+; RV32ZICOND-LABEL: pr166596:
+; RV32ZICOND:       # %bb.0: # %entry
+; RV32ZICOND-NEXT:    andi a1, a1, 1
+; RV32ZICOND-NEXT:    xori a0, a0, 1
+; RV32ZICOND-NEXT:    zext.h a0, a0
+; RV32ZICOND-NEXT:    clz a0, a0
+; RV32ZICOND-NEXT:    addi a0, a0, 41
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV32ZICOND-NEXT:    addi a0, a0, -9
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: pr166596:
+; RV64ZICOND:       # %bb.0: # %entry
+; RV64ZICOND-NEXT:    andi a1, a1, 1
+; RV64ZICOND-NEXT:    xori a0, a0, 1
+; RV64ZICOND-NEXT:    zext.h a0, a0
+; RV64ZICOND-NEXT:    clz a0, a0
+; RV64ZICOND-NEXT:    addi a0, a0, 9
+; RV64ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV64ZICOND-NEXT:    addi a0, a0, -9
+; RV64ZICOND-NEXT:    ret
+entry:
+  %not.i = xor i32 %conv.i, 1
+  %conv2.i = trunc i32 %not.i to i16
+  %conv22 = zext i16 %conv2.i to i64
+  %0 = call i64 @llvm.ctlz.i64(i64 %conv22, i1 false)
+  %cast = trunc i64 %0 to i32
+  %clzg = select i1 %iszero, i32 -9, i32 %cast
+  ret i32 %clzg
+}
