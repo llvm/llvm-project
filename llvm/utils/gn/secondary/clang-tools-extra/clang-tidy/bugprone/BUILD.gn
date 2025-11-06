@@ -38,6 +38,7 @@ static_library("bugprone") {
     "EasilySwappableParametersCheck.cpp",
     "EmptyCatchCheck.cpp",
     "ExceptionEscapeCheck.cpp",
+    "FloatLoopCounterCheck.cpp",
     "FoldInitTypeCheck.cpp",
     "ForwardDeclarationNamespaceCheck.cpp",
     "ForwardingReferenceOverloadCheck.cpp",
