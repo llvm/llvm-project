@@ -1602,11 +1602,6 @@ public:
 
   bool hasKernargPreload() const { return AMDGPU::hasKernargPreload(getSTI()); }
 
-  bool isFlatInstAndNVAllowed(const MCInst &Inst) const {
-    uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
-    return (TSFlags & SIInstrFlags::FLAT) && isGFX9() && !isGFX90A();
-  }
-
   AMDGPUTargetStreamer &getTargetStreamer() {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<AMDGPUTargetStreamer &>(TS);
@@ -5375,7 +5370,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
       Error(S, "scale_offset is not supported on this GPU");
     }
-    if ((CPol & CPol::NV) && !isFlatInstAndNVAllowed(Inst)) {
+    if (CPol & CPol::NV) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
@@ -7150,13 +7145,6 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
   unsigned Enabled = 0, Seen = 0;
   for (;;) {
     SMLoc S = getLoc();
-
-    if (isGFX9() && trySkipId("nv")) {
-      Enabled |= CPol::NV;
-      Seen |= CPol::NV;
-      continue;
-    }
-
     bool Disabling;
     unsigned CPol = getCPolKind(getId(), Mnemo, Disabling);
     if (!CPol)

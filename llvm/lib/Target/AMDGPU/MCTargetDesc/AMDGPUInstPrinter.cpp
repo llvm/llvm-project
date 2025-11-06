@@ -186,12 +186,8 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     O << " dlc";
   if ((Imm & CPol::SCC) && AMDGPU::isGFX90A(STI))
     O << (AMDGPU::isGFX940(STI) ? " sc1" : " scc");
-  if (Imm & ~CPol::ALL_pregfx12) {
-    if ((Imm & CPol::NV) && AMDGPU::isGFX9(STI) && !AMDGPU::isGFX90A(STI))
-      O << " nv";
-    else
-      O << " /* unexpected cache policy bit */";
-  }
+  if (Imm & ~CPol::ALL_pregfx12)
+    O << " /* unexpected cache policy bit */";
 }
 
 void AMDGPUInstPrinter::printTH(const MCInst *MI, int64_t TH, int64_t Scope,
