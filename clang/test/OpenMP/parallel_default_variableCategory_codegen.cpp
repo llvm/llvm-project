@@ -75,26 +75,22 @@ int main (int argc, char **argv) {
 
 // OMP60-LABEL: define {{.*}}main.omp_outlined{{.*}}
 // OMP60-NEXT:  entry:
-// OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
-// OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// OMP60: [[X_ADDR:%.*]] = alloca{{.*}}
-// OMP60: [[xPTR:%.*]] = alloca{{.*}}
-// OMP60: store ptr null, ptr [[xPTR]]{{.*}}
-// OMP60: store ptr [[xPTR]]{{.*}}
-// OMP60: store ptr [[X_ADDR]]{{.*}}
+// OMP60: %x.addr = alloca{{.*}}
+// OMP60: %xPtr = alloca
+// OMP60: store ptr null, ptr %xPtr{{.*}}
+// OMP60: store ptr %xPtr{{.*}}
+// OMP60: store ptr %x.addr{{.*}}
 // OMP60-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
 // OMP60: ret void
 //
 // OMP60: define {{.*}}main.omp_outlined{{.*}}
 // OMP60-NEXT:  entry:
-// OMP60:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
-// OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// OMP60: [[I_ADDR:%.*]] = alloca{{.*}}
+// OMP60: %i.addr = alloca{{.*}}
 // OMP60-NEXT:  [[N_ADDR:%.*]] = alloca{{.*}}
 // OMP60-NEXT:  [[AGGREGATE_ADDR:%.*]] = alloca{{.*}}
 // OMP60-NEXT:  [[X_ADDR:%.*]] = alloca{{.*}}
 // OMP60-NEXT:  [[ARR_ADDR:%.*]] = alloca{{.*}}
-// OMP60: [[TMP0:%.*]] = load{{.*}}[[I_ADDR]]
+// OMP60: [[TMP0:%.*]] = load{{.*}}%i.addr
 // OMP60-NEXT:  [[TMP1:%.*]] = load{{.*}}[[N_ADDR]]
 // OMP60-NEXT:  [[TMP2:%.*]] = load{{.*}}[[AGGREGATE_ADDR]]
 // OMP60-NEXT:  [[TMP3:%.*]] = load{{.*}}[[X_ADDR]]
