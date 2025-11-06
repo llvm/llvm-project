@@ -28,8 +28,8 @@ static llvm::Type *X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                                           StringRef Constraint,
                                           llvm::Type *Ty) {
   bool IsMMXCons = llvm::StringSwitch<bool>(Constraint)
-                     .Cases("y", "&y", "^Ym", true)
-                     .Default(false);
+                       .Cases("y", "&y", "^Ym", true)
+                       .Default(false);
   if (IsMMXCons && Ty->isVectorTy()) {
     if (cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedValue() !=
         64) {
