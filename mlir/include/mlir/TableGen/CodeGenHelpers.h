@@ -52,6 +52,8 @@ private:
   std::optional<llvm::NamespaceEmitter> nsEmitter;
 };
 
+/// This class represents how an error stream string being constructed will be
+/// consumed.
 enum class ErrorStreamType {
   // Inside a string that's streamed into an InflightDiagnostic.
   InString,
@@ -256,7 +258,9 @@ std::string stringify(T &&t) {
 /// C-expressions via tgfmt. It would effectively convert:
 ///   "failed to verify {{foo}}"
 /// into:
-///   "failed to verify " << tgfmt(foo, &ctx)
+///   "failed to verify " << bar
+/// where bar is the result of evaluating 'tgfmt("foo", &ctx)' at compile
+/// time.
 std::string buildErrorStreamingString(
     StringRef message, const FmtContext &ctx,
     ErrorStreamType errorStreamType = ErrorStreamType::InString);

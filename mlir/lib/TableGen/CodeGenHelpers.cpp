@@ -139,12 +139,11 @@ std::string mlir::tblgen::buildErrorStreamingString(
 
   // Split the message by '{{' and '}}' and build a streaming expression.
   auto split = msg.split("{{");
+  os << split.first;
   if (split.second.empty()) {
-    os << split.first;
     return msgStr;
   }
 
-  os << split.first;
   if (errorStreamType == ErrorStreamType::InsideOpError)
     os << "\")";
   else
