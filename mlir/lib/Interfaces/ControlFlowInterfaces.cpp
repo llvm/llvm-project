@@ -328,7 +328,6 @@ static bool traverseRegionGraph(Region *begin,
              << nextRegion->getRegionNumber() << ", returning true";
       return true;
     }
-    llvm::dbgs() << "Region: " << nextRegion << "\n";
     if (!nextRegion->getParentOp()) {
       llvm::errs() << "Region " << *nextRegion << " has no parent op\n";
       return false;

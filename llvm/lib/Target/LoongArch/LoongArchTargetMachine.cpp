@@ -62,6 +62,11 @@ static cl::opt<bool>
                           cl::desc("Enable the merge base offset pass"),
                           cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    EnableSinkFold("loongarch-enable-sink-fold",
+                   cl::desc("Enable sinking and folding of instruction copies"),
+                   cl::init(true), cl::Hidden);
+
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
@@ -146,7 +151,9 @@ namespace {
 class LoongArchPassConfig : public TargetPassConfig {
 public:
   LoongArchPassConfig(LoongArchTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    setEnableSinkAndFold(EnableSinkFold);
+  }
 
   LoongArchTargetMachine &getLoongArchTargetMachine() const {
     return getTM<LoongArchTargetMachine>();
