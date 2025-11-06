@@ -56,6 +56,7 @@ namespace {
     int AnonymousMember;
     // And a nested class within an anonymous namespace
     struct D {
+      static constexpr int StaticMember = 1;
       int AnonymousDMember;
     };
   };
@@ -177,6 +178,8 @@ int SI::*mp9 = nullptr;
 // CHECK: | `-CXXRecordDecl {{.*}} struct Anonymous<A::B::C<void>> definition
 // CHECK: |   |-FieldDecl {{.*}} AnonymousMember 'int'
 // CHECK: |   `-CXXRecordDecl {{.*}} struct D definition
+// CHECK: |     |-VarDecl {{.*}} StaticMember 'const int' static cinit
+// CHECK: |     | `-IntegerLiteral {{.*}} 'int' 1
 // CHECK: |     `-FieldDecl {{.*}} AnonymousDMember 'int'
 
 int main(int argc, char **argv) {
@@ -184,5 +187,5 @@ int main(int argc, char **argv) {
   AnonABCVoid.AnonymousMember = 2;
   AnonABCVoidD.AnonymousDMember = 3;
 
-  return 0;
+  return AnonABCVoidD.StaticMember;
 }
