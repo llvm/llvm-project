@@ -1069,7 +1069,6 @@ body: |
     $sgpr0 = S_MOV_B32 $sgpr0
 ...
 
-# FIXME: Missing S_WAIT_XCNT before overwriting vgpr0.
 ---
 name: mixed_pending_events
 tracksRegLiveness: true
@@ -1098,6 +1097,7 @@ body: |
   ; GCN-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
   ; GCN-NEXT:   S_WAIT_KMCNT 0
   ; GCN-NEXT:   $sgpr2 = S_MOV_B32 $sgpr2
+  ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   bb.0:
     liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $scc

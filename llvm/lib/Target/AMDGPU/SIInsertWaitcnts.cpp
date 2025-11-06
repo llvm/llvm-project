@@ -1310,7 +1310,7 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
       !hasPendingEvent(STORE_CNT)) {
     if (!hasMixedPendingEvents(X_CNT))
       applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
-    else
+    else if (Wait.LoadCnt == 0)
       PendingEvents &= ~(1 << VMEM_GROUP);
     return;
   }
