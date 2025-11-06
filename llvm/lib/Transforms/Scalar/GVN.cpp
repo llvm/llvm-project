@@ -898,7 +898,8 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   
   // Skip the pass if function has zero entry count in PGO.
-  // This indicates that the function is never executed according to the profile data.
+  // This indicates that the function is never executed according to the profile
+  // data.
   auto EntryCount = F.getEntryCount();
   if (GVNSkipZeroEntryCount && EntryCount && EntryCount->getCount() == 0) {
     LLVM_DEBUG(dbgs() << "GVN: Skipping function '" << F.getName()
