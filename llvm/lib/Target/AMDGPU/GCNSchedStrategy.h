@@ -74,10 +74,6 @@ protected:
 
   std::vector<unsigned> MaxPressure;
 
-  unsigned SGPRExcessLimit;
-
-  unsigned VGPRExcessLimit;
-
   unsigned TargetOccupancy;
 
   MachineFunction *MF;
@@ -114,13 +110,24 @@ public:
   // Bias for VGPR limits under a high register pressure.
   const unsigned HighRPVGPRBias = 7;
 
+  // Bias for AGPR limits under a high register pressure.
+  const unsigned HighRPAGPRBias = 7;
+
   unsigned SGPRCriticalLimit;
 
   unsigned VGPRCriticalLimit;
 
+  unsigned SGPRExcessLimit;
+
+  unsigned VGPRExcessLimit;
+
+  unsigned AGPRExcessLimit;
+
   unsigned SGPRLimitBias = 0;
 
   unsigned VGPRLimitBias = 0;
+
+  unsigned AGPRLimitBias = 0;
 
   GCNSchedStrategy(const MachineSchedContext *C);
 
@@ -393,6 +400,11 @@ public:
 
   // The region number this stage is currently working on
   unsigned getRegionIdx() { return RegionIdx; }
+
+  // Returns true if spilling caused by the new schedule will be in
+  // the form of AVGPR <-> VGPR copies and adding those copies to
+  // the new schedule is still better than reverting.
+  bool spillsAsCopiesProfitable();
 
   // Returns true if the new schedule may result in more spilling.
   bool mayCauseSpilling(unsigned WavesAfter);
