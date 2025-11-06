@@ -398,6 +398,29 @@ std::int64_t RTNAME(time)() { return time(nullptr); }
 // MCLOCK: returns accumulated CPU time in ticks
 std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
 
+// IRAND(I)
+int FORTRAN_PROCEDURE_NAME(irand)(int i) {
+  switch (i) {
+  case 0:
+    break;
+  case 1:
+    FORTRAN_PROCEDURE_NAME(srand)(0);
+    break;
+  default:
+    FORTRAN_PROCEDURE_NAME(srand)(i);
+    break;
+  }
+  return rand();
+}
+
+// RAND(I)
+float FORTRAN_PROCEDURE_NAME(rand)(int i) {
+  return (float)(FORTRAN_PROCEDURE_NAME(irand)(i));
+}
+
+// SRAND(SEED)
+void FORTRAN_PROCEDURE_NAME(srand)(int seed) { srand(seed); }
+
 // Extension procedures related to I/O
 
 namespace io {

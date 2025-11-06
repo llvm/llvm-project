@@ -101,5 +101,14 @@ int FORTRAN_PROCEDURE_NAME(mclock)();
 float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime);
 float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
 
+// GNU extension function IRAND(I)
+int FORTRAN_PROCEDURE_NAME(irand)(int i = 0);
+
+// GNU extension function RAND(I)
+float FORTRAN_PROCEDURE_NAME(rand)(int i = 0);
+
+// GNU extension subroutine SRAND(SEED)
+void FORTRAN_PROCEDURE_NAME(srand)(int seed);
+
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_
