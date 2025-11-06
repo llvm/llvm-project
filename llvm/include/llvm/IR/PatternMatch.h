@@ -3069,12 +3069,26 @@ m_c_MaxOrMin(const LHS &L, const RHS &R) {
                      m_CombineOr(m_c_UMax(L, R), m_c_UMin(L, R)));
 }
 
+template <Intrinsic::ID IntrID, typename LHS, typename RHS>
+struct CommutativeBinaryIntrinsic_match {
+  LHS L;
+  RHS R;
+
+  CommutativeBinaryIntrinsic_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    const auto *II = dyn_cast<IntrinsicInst>(V);
+    if (!II || II->getIntrinsicID() != IntrID)
+      return false;
+    return (L.match(II->getArgOperand(0)) && R.match(II->getArgOperand(1))) ||
+           (L.match(II->getArgOperand(1)) && R.match(II->getArgOperand(0)));
+  }
+};
+
 template <Intrinsic::ID IntrID, typename T0, typename T1>
-inline match_combine_or<typename m_Intrinsic_Ty<T0, T1>::Ty,
-                        typename m_Intrinsic_Ty<T1, T0>::Ty>
+inline CommutativeBinaryIntrinsic_match<IntrID, T0, T1>
 m_c_Intrinsic(const T0 &Op0, const T1 &Op1) {
-  return m_CombineOr(m_Intrinsic<IntrID>(Op0, Op1),
-                     m_Intrinsic<IntrID>(Op1, Op0));
+  return CommutativeBinaryIntrinsic_match<IntrID, T0, T1>(Op0, Op1);
 }
 
 /// Matches FAdd with LHS and RHS in either order.
