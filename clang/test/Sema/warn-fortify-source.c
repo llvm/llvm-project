@@ -319,17 +319,15 @@ template <int A, int B>
 void call_memcpy_dep() {
   char bufferA[A];
   char bufferB[B];
+  memcpy(bufferA, bufferB, 10);
   if (sizeof(bufferA) < 10 && sizeof(bufferB) < 10) {
-    memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}} \
-                                  // expected-warning{{'memcpy' will always over-read; source buffer has size 9, but size argument is 10}}
+    // expected-warning@-2{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
+    // expected-warning@-3{{'memcpy' will always over-read; source buffer has size 9, but size argument is 10}}
   } else if (sizeof(bufferA) < 10) {
-    memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
+    // expected-warning@-5{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
   } else if (sizeof(bufferB) < 10) {
-    memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always over-read; source buffer has size 9, but size argument is 10}}
-  } else {
-    memcpy(bufferA, bufferB, 10);
+    // expected-warning@-7{{'memcpy' will always over-read; source buffer has size 9, but size argument is 10}}
   }
-
 }
 
 void call_call_memcpy() {
