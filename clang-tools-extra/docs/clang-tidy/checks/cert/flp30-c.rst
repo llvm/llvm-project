@@ -3,7 +3,7 @@
 cert-flp30-c
 ============
 
-The `cert-flp30-c` check is an aliaes, please see
+The `cert-flp30-c` check is an alias, please see
 `bugprone-float-loop-counter <../bugprone/float-loop-counter.html>`_
 for more information
 
