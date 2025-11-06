@@ -1992,9 +1992,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
 
   // Merge the two adding any new sections, and overwriting any existing
   // sections that are SHT_NOBITS
-  std::shared_ptr<SectionList> merged_section_list =
+  unified_section_list =
       SectionList::Merge(unified_section_list, *m_sections_up, MergeSections);
-  unified_section_list = *merged_section_list;
 
   // If there's a .gnu_debugdata section, we'll try to read the .symtab that's
   // embedded in there and replace the one in the original object file (if any).

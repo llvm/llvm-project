@@ -46,6 +46,8 @@ public:
   /// Create an empty list.
   SectionList() = default;
 
+  SectionList(const SectionList &lhs);
+
   SectionList &operator=(const SectionList &rhs);
 
   size_t AddSection(const lldb::SectionSP &section_sp);
@@ -104,8 +106,8 @@ public:
   // Function that merges two different sections into a new output list. All
   // unique sections will be checked for conflict and resolved using the
   // supplied merging callback.
-  static std::shared_ptr<SectionList> Merge(SectionList &lhs, SectionList &rhs,
-                                            MergeCallback filter);
+  static SectionList Merge(SectionList &lhs, SectionList &rhs,
+                           MergeCallback filter);
 
 protected:
   collection m_sections;

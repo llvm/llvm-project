@@ -473,6 +473,8 @@ bool Section::ContainsOnlyDebugInfo() const {
 
 #pragma mark SectionList
 
+SectionList::SectionList(const SectionList &rhs) : m_sections(rhs.m_sections) {}
+
 SectionList &SectionList::operator=(const SectionList &rhs) {
   if (this != &rhs)
     m_sections = rhs.m_sections;
@@ -683,18 +685,18 @@ uint64_t SectionList::GetDebugInfoSize() const {
   return debug_info_size;
 }
 
-std::shared_ptr<SectionList>
-SectionList::Merge(SectionList &lhs, SectionList &rhs, MergeCallback filter) {
-  std::shared_ptr<SectionList> output_sp = std::make_shared<SectionList>();
+SectionList SectionList::Merge(SectionList &lhs, SectionList &rhs,
+                               MergeCallback filter) {
+  SectionList output_list;
 
   // Iterate through all the sections in lhs and see if we have matches in
   // the rhs list.
   for (const auto &lhs_section : lhs) {
     auto rhs_section = rhs.FindSectionByName(lhs_section->GetName());
     if (rhs_section)
-      output_sp->AddSection(filter(lhs_section, rhs_section));
+      output_list.AddSection(filter(lhs_section, rhs_section));
     else
-      output_sp->AddSection(lhs_section);
+      output_list.AddSection(lhs_section);
   }
 
   // Now that we've visited all possible duplicates, we can iterate over
@@ -704,10 +706,10 @@ SectionList::Merge(SectionList &lhs, SectionList &rhs, MergeCallback filter) {
     // Because we already visited everything overlapping between rhs
     // and lhs, any section not in lhs is unique and can be output.
     if (!lhs_section)
-      output_sp->AddSection(rhs_section);
+      output_list.AddSection(rhs_section);
   }
 
-  return output_sp;
+  return output_list;
 }
 
 namespace llvm {
