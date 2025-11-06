@@ -2461,26 +2461,12 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
       break;
     case VarDecl::ParenListInit:
       OS << " parenlistinit";
-      break;
     }
   }
   if (D->needsDestruction(D->getASTContext()))
     OS << " destroyed";
   if (D->isParameterPack())
     OS << " pack";
-
-  VarDecl::DefinitionKind K = D->isThisDeclarationADefinition();
-  switch (K) {
-  case VarDecl::DefinitionKind::DeclarationOnly:
-    OS << " declaration";
-    break;
-  case VarDecl::DefinitionKind::Definition:
-    OS << " definition";
-    break;
-  case VarDecl::DefinitionKind::TentativeDefinition:
-    OS << " tentative definition";
-    break;
-  }
 
   if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
