@@ -159,6 +159,41 @@ constexpr bool test() {
     assert(*cit == b.back());
   }
 
+  // Cross-boundary decrement where the previous range is empty.
+  {
+    std::array<int, 0> e{};
+    auto v = std::views::concat(a, e, b);
+
+    auto it = v.begin();
+    it += a.size(); // points at beginning of b
+    --it;           // this skips e
+    assert(*it == a.back());
+
+    auto it2 = v.begin();
+    it2 += a.size();
+    auto old = it2--;
+    assert(*old == b.front());
+    assert(*it2 == a.back());
+
+    // const-iterator
+    const auto& cv = v;
+    auto cit       = cv.begin();
+    cit += a.size();
+    --cit;
+    assert(*cit == a.back());
+  }
+
+  // multiple empty ranges in the middle
+  {
+    std::array<int, 0> e1{}, e2{};
+    auto v = std::views::concat(a, e1, e2, b);
+
+    auto it = v.begin();
+    it += a.size(); // points to b[0]
+    --it;           // skip e2 and e1
+    assert(*it == a.back());
+  }
+
   return true;
 }
 
