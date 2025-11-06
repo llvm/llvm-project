@@ -3,7 +3,7 @@
 # RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
 # RUN: | FileCheck -check-prefixes=OUTLINED,RV64I-MO %s
 
-# Combined tests for outlining with CFI instructions on RISCV:
+# Combined tests for outlining with CFI instructions on RISC-V:
 # 1) All CFIs present in candidate: outline as tail-call and keep CFIs.
 # 2) Partial CFIs in function (extra outside candidate): do not outline.
 # 3) CFIs present but candidate is not a tail-call: do not outline.
