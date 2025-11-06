@@ -4374,8 +4374,7 @@ private:
     // parent of parent. We DON'T remove the enum constant from its parent. So
     // we don't need to care about merging problems here.
     if (auto *ECD = dyn_cast<EnumConstantDecl>(D);
-        ECD && DC.isFileContext() && ECD->getOwningModule() &&
-        ECD->getTopLevelOwningNamedModule()->isNamedModule()) {
+        ECD && DC.isFileContext() && ECD->getTopLevelOwningNamedModule()) {
       if (llvm::all_of(
               DC.noload_lookup(
                   cast<EnumDecl>(ECD->getDeclContext())->getDeclName()),
@@ -7882,6 +7881,14 @@ void OMPClauseWriter::VisitOMPPartialClause(OMPPartialClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPLoopRangeClause(OMPLoopRangeClause *C) {
+  Record.AddStmt(C->getFirst());
+  Record.AddStmt(C->getCount());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getFirstLoc());
+  Record.AddSourceLocation(C->getCountLoc());
+}
+
 void OMPClauseWriter::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
   Record.AddStmt(C->getAllocator());
   Record.AddSourceLocation(C->getLParenLoc());
@@ -7903,6 +7910,12 @@ void OMPClauseWriter::VisitOMPDefaultClause(OMPDefaultClause *C) {
   Record.AddSourceLocation(C->getDefaultKindKwLoc());
   Record.push_back(unsigned(C->getDefaultVC()));
   Record.AddSourceLocation(C->getDefaultVCLoc());
+}
+
+void OMPClauseWriter::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getThreadsetKindLoc());
+  Record.writeEnum(C->getThreadsetKind());
 }
 
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
@@ -7934,7 +7947,10 @@ void OMPClauseWriter::VisitOMPOrderedClause(OMPOrderedClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
-void OMPClauseWriter::VisitOMPNowaitClause(OMPNowaitClause *) {}
+void OMPClauseWriter::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  Record.AddStmt(C->getCondition());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
 
 void OMPClauseWriter::VisitOMPUntiedClause(OMPUntiedClause *) {}
 
@@ -8771,9 +8787,8 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(PC);
 
     for (const OpenACCPrivateRecipe &R : PC->getInitRecipes()) {
-      static_assert(sizeof(R) == 2 * sizeof(int *));
+      static_assert(sizeof(R) == 1 * sizeof(int *));
       AddDeclRef(R.AllocaDecl);
-      AddStmt(const_cast<Expr *>(R.InitExpr));
     }
     return;
   }
@@ -8795,9 +8810,8 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(FPC);
 
     for (const OpenACCFirstPrivateRecipe &R : FPC->getInitRecipes()) {
-      static_assert(sizeof(R) == 3 * sizeof(int *));
+      static_assert(sizeof(R) == 2 * sizeof(int *));
       AddDeclRef(R.AllocaDecl);
-      AddStmt(const_cast<Expr *>(R.InitExpr));
       AddDeclRef(R.InitFromTemporary);
     }
     return;
@@ -8919,9 +8933,17 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(RC);
 
     for (const OpenACCReductionRecipe &R : RC->getRecipes()) {
-      static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
       AddDeclRef(R.AllocaDecl);
-      AddStmt(const_cast<Expr *>(R.InitExpr));
+
+      static_assert(sizeof(OpenACCReductionRecipe::CombinerRecipe) ==
+                    3 * sizeof(int *));
+      writeUInt32(R.CombinerRecipes.size());
+
+      for (auto &CombinerRecipe : R.CombinerRecipes) {
+        AddDeclRef(CombinerRecipe.LHS);
+        AddDeclRef(CombinerRecipe.RHS);
+        AddStmt(CombinerRecipe.Op);
+      }
     }
     return;
   }

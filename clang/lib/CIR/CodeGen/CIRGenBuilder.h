@@ -89,6 +89,11 @@ public:
     return cir::ConstRecordAttr::get(sTy, arrayAttr);
   }
 
+  cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
+    cir::ConstRecordAttr anonRecord = getAnonConstRecord(fieldsAttr);
+    return cir::TypeInfoAttr::get(anonRecord.getType(), fieldsAttr);
+  }
+
   std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
 
   std::string getUniqueRecordName(const std::string &baseName) {
@@ -103,11 +108,11 @@ public:
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
     if (&format == &llvm::APFloat::IEEEdouble())
-      return cir::LongDoubleType::get(getContext(), typeCache.DoubleTy);
+      return cir::LongDoubleType::get(getContext(), typeCache.doubleTy);
     if (&format == &llvm::APFloat::x87DoubleExtended())
-      return cir::LongDoubleType::get(getContext(), typeCache.FP80Ty);
+      return cir::LongDoubleType::get(getContext(), typeCache.fP80Ty);
     if (&format == &llvm::APFloat::IEEEquad())
-      return cir::LongDoubleType::get(getContext(), typeCache.FP128Ty);
+      return cir::LongDoubleType::get(getContext(), typeCache.fP128Ty);
     if (&format == &llvm::APFloat::PPCDoubleDouble())
       llvm_unreachable("NYI: PPC double-double format for long double");
     llvm_unreachable("Unsupported format for long double");
@@ -115,6 +120,11 @@ public:
 
   mlir::Type getPtrToVPtrType() {
     return getPointerTo(cir::VPtrType::get(getContext()));
+  }
+
+  cir::FuncType getFuncType(llvm::ArrayRef<mlir::Type> params, mlir::Type retTy,
+                            bool isVarArg = false) {
+    return cir::FuncType::get(params, retTy, isVarArg);
   }
 
   /// Get a CIR record kind from a AST declaration tag.
@@ -248,17 +258,17 @@ public:
     }
   }
 
-  cir::VoidType getVoidTy() { return typeCache.VoidTy; }
+  cir::VoidType getVoidTy() { return typeCache.voidTy; }
 
-  cir::IntType getSInt8Ty() { return typeCache.SInt8Ty; }
-  cir::IntType getSInt16Ty() { return typeCache.SInt16Ty; }
-  cir::IntType getSInt32Ty() { return typeCache.SInt32Ty; }
-  cir::IntType getSInt64Ty() { return typeCache.SInt64Ty; }
+  cir::IntType getSInt8Ty() { return typeCache.sInt8Ty; }
+  cir::IntType getSInt16Ty() { return typeCache.sInt16Ty; }
+  cir::IntType getSInt32Ty() { return typeCache.sInt32Ty; }
+  cir::IntType getSInt64Ty() { return typeCache.sInt64Ty; }
 
-  cir::IntType getUInt8Ty() { return typeCache.UInt8Ty; }
-  cir::IntType getUInt16Ty() { return typeCache.UInt16Ty; }
-  cir::IntType getUInt32Ty() { return typeCache.UInt32Ty; }
-  cir::IntType getUInt64Ty() { return typeCache.UInt64Ty; }
+  cir::IntType getUInt8Ty() { return typeCache.uInt8Ty; }
+  cir::IntType getUInt16Ty() { return typeCache.uInt16Ty; }
+  cir::IntType getUInt32Ty() { return typeCache.uInt32Ty; }
+  cir::IntType getUInt64Ty() { return typeCache.uInt64Ty; }
 
   cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
 
@@ -270,21 +280,21 @@ public:
                              llvm::APFloat fpVal);
 
   bool isInt8Ty(mlir::Type i) {
-    return i == typeCache.UInt8Ty || i == typeCache.SInt8Ty;
+    return i == typeCache.uInt8Ty || i == typeCache.sInt8Ty;
   }
   bool isInt16Ty(mlir::Type i) {
-    return i == typeCache.UInt16Ty || i == typeCache.SInt16Ty;
+    return i == typeCache.uInt16Ty || i == typeCache.sInt16Ty;
   }
   bool isInt32Ty(mlir::Type i) {
-    return i == typeCache.UInt32Ty || i == typeCache.SInt32Ty;
+    return i == typeCache.uInt32Ty || i == typeCache.sInt32Ty;
   }
   bool isInt64Ty(mlir::Type i) {
-    return i == typeCache.UInt64Ty || i == typeCache.SInt64Ty;
+    return i == typeCache.uInt64Ty || i == typeCache.sInt64Ty;
   }
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
 
   // Fetch the type representing a pointer to unsigned int8 values.
-  cir::PointerType getUInt8PtrTy() { return typeCache.UInt8PtrTy; }
+  cir::PointerType getUInt8PtrTy() { return typeCache.uInt8PtrTy; }
 
   /// Get a CIR anonymous record type.
   cir::RecordType getAnonRecordTy(llvm::ArrayRef<mlir::Type> members,
@@ -307,12 +317,6 @@ public:
   cir::ConstantOp getSInt64(uint64_t c, mlir::Location loc) {
     cir::IntType sInt64Ty = getSInt64Ty();
     return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(sInt64Ty, c));
-  }
-
-  // Creates constant nullptr for pointer type ty.
-  cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
-    assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
-    return cir::ConstantOp::create(*this, loc, getConstPtrAttr(ty, 0));
   }
 
   mlir::Value createNeg(mlir::Value value) {
@@ -365,6 +369,25 @@ public:
     assert(!cir::MissingFeatures::fastMathFlags());
 
     return cir::BinOp::create(*this, loc, cir::BinOpKind::Div, lhs, rhs);
+  }
+
+  mlir::Value createDynCast(mlir::Location loc, mlir::Value src,
+                            cir::PointerType destType, bool isRefCast,
+                            cir::DynamicCastInfoAttr info) {
+    auto castKind =
+        isRefCast ? cir::DynamicCastKind::Ref : cir::DynamicCastKind::Ptr;
+    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src, info,
+                                      /*relative_layout=*/false);
+  }
+
+  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
+                                  bool vtableUseRelativeLayout) {
+    // TODO(cir): consider address space here.
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::PointerType destTy = getVoidPtrTy();
+    return cir::DynamicCastOp::create(
+        *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
+        cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
   }
 
   Address createBaseClassAddr(mlir::Location loc, Address addr,
@@ -504,6 +527,14 @@ public:
       uniqueName = name.str();
 
     return createGlobal(module, loc, uniqueName, type, isConstant, linkage);
+  }
+
+  cir::StackSaveOp createStackSave(mlir::Location loc, mlir::Type ty) {
+    return cir::StackSaveOp::create(*this, loc, ty);
+  }
+
+  cir::StackRestoreOp createStackRestore(mlir::Location loc, mlir::Value v) {
+    return cir::StackRestoreOp::create(*this, loc, v);
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,

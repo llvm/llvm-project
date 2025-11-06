@@ -1810,10 +1810,10 @@ define <32 x i64> @vp_cttz_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; RV32-NEXT:    vadd.vi v0, v16, -1
 ; RV32-NEXT:    vnot.v v16, v16
 ; RV32-NEXT:    vand.vv v0, v16, v0
+; RV32-NEXT:    addi a3, sp, 16
+; RV32-NEXT:    vs8r.v v0, (a3) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    vsetvli a3, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a2
-; RV32-NEXT:    addi a2, sp, 16
-; RV32-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vand.vv v8, v24, v16
 ; RV32-NEXT:    vsrl.vi v24, v24, 2
@@ -1825,14 +1825,14 @@ define <32 x i64> @vp_cttz_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; RV32-NEXT:    slli a2, a2, 3
 ; RV32-NEXT:    add a2, sp, a2
 ; RV32-NEXT:    addi a2, a2, 16
-; RV32-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vand.vv v24, v24, v16
+; RV32-NEXT:    vl8r.v v0, (a2) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vand.vv v24, v24, v0
+; RV32-NEXT:    addi a2, sp, 16
+; RV32-NEXT:    vl8r.v v0, (a2) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsub.vv v24, v0, v24
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsrl.vi v0, v8, 4
 ; RV32-NEXT:    vadd.vv v8, v8, v0
-; RV32-NEXT:    addi a2, sp, 16
-; RV32-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vand.vv v0, v24, v16
 ; RV32-NEXT:    vsrl.vi v24, v24, 2
@@ -3715,10 +3715,10 @@ define <32 x i64> @vp_cttz_zero_undef_v32i64_unmasked(<32 x i64> %va, i32 zeroex
 ; RV32-NEXT:    vadd.vi v0, v16, -1
 ; RV32-NEXT:    vnot.v v16, v16
 ; RV32-NEXT:    vand.vv v0, v16, v0
+; RV32-NEXT:    addi a3, sp, 16
+; RV32-NEXT:    vs8r.v v0, (a3) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    vsetvli a3, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a2
-; RV32-NEXT:    addi a2, sp, 16
-; RV32-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vand.vv v8, v24, v16
 ; RV32-NEXT:    vsrl.vi v24, v24, 2
@@ -3730,14 +3730,14 @@ define <32 x i64> @vp_cttz_zero_undef_v32i64_unmasked(<32 x i64> %va, i32 zeroex
 ; RV32-NEXT:    slli a2, a2, 3
 ; RV32-NEXT:    add a2, sp, a2
 ; RV32-NEXT:    addi a2, a2, 16
-; RV32-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vand.vv v24, v24, v16
+; RV32-NEXT:    vl8r.v v0, (a2) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vand.vv v24, v24, v0
+; RV32-NEXT:    addi a2, sp, 16
+; RV32-NEXT:    vl8r.v v0, (a2) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsub.vv v24, v0, v24
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsrl.vi v0, v8, 4
 ; RV32-NEXT:    vadd.vv v8, v8, v0
-; RV32-NEXT:    addi a2, sp, 16
-; RV32-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vand.vv v0, v24, v16
 ; RV32-NEXT:    vsrl.vi v24, v24, 2

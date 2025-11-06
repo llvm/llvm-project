@@ -214,7 +214,8 @@ struct __copy_backward_impl {
 
     auto __local_last = _Traits::__local(__result);
     while (true) {
-      using _DiffT = typename common_type<__iter_diff_t<_InIter>, __iter_diff_t<_OutIter> >::type;
+      using _DiffT =
+          typename common_type<__iterator_difference_type<_InIter>, __iterator_difference_type<_OutIter> >::type;
 
       auto __local_first = _Traits::__begin(__segment_iterator);
       auto __size        = std::min<_DiffT>(__local_last - __local_first, __last - __first);

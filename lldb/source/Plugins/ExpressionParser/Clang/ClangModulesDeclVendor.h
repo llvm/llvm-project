@@ -9,17 +9,16 @@
 #ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGMODULESDECLVENDOR_H
 #define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGMODULESDECLVENDOR_H
 
+#include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Platform.h"
-
-#include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
 
 #include <set>
 #include <vector>
 
 namespace lldb_private {
 
-class ClangModulesDeclVendor : public ClangDeclVendor {
+class ClangModulesDeclVendor : public DeclVendor {
 public:
   // Constructors and Destructors
   ClangModulesDeclVendor();
@@ -42,11 +41,11 @@ public:
   ///     The path to the exact module to be loaded.  E.g., if the desired
   ///     module is std.io, then this should be { "std", "io" }.
   ///
-  /// \param[in] exported_modules
+  /// \param[out] exported_modules
   ///     If non-NULL, a pointer to a vector to populate with the ID of every
   ///     module that is re-exported by the specified module.
   ///
-  /// \param[in] error_stream
+  /// \param[out] error_stream
   ///     A stream to populate with the output of the Clang parser when
   ///     it tries to load the module.
   ///
@@ -64,11 +63,11 @@ public:
   /// \param[in] cu
   ///     The compilation unit to scan for imported modules.
   ///
-  /// \param[in] exported_modules
+  /// \param[out] exported_modules
   ///     A vector to populate with the ID of each module loaded (directly
   ///     and via re-exports) in this way.
   ///
-  /// \param[in] error_stream
+  /// \param[out] error_stream
   ///     A stream to populate with the output of the Clang parser when
   ///     it tries to load the modules.
   ///

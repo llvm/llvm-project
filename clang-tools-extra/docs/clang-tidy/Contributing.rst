@@ -436,7 +436,7 @@ in the release notes, as the first sentence in the doxygen comments in the heade
 for your check class and as the first sentence of the check documentation.  Avoid the
 phrase "this check" in your check summary and check documentation.
 
-If your check relates to a published coding guideline (C++ Core Guidelines, MISRA, etc.)
+If your check relates to a published coding guideline (C++ Core Guidelines, SEI CERT, etc.)
 or style guide, provide links to the relevant guideline or style guide sections in your
 check documentation.
 

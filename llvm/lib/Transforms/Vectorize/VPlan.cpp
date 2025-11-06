@@ -217,32 +217,6 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
-bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
-                            const VPDominatorTree &VPDT) {
-  auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
-  if (!VPBB)
-    return false;
-
-  // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
-  // VPBB as its entry, i.e., free of predecessors.
-  if (auto *R = VPBB->getParent())
-    return !R->isReplicator() && !VPBB->hasPredecessors();
-
-  // A header dominates its second predecessor (the latch), with the other
-  // predecessor being the preheader
-  return VPB->getPredecessors().size() == 2 &&
-         VPDT.dominates(VPB, VPB->getPredecessors()[1]);
-}
-
-bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
-                           const VPDominatorTree &VPDT) {
-  // A latch has a header as its second successor, with its other successor
-  // leaving the loop. A preheader OTOH has a header as its first (and only)
-  // successor.
-  return VPB->getNumSuccessors() == 2 &&
-         VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
-}
-
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   iterator It = begin();
   while (It != end() && It->isPhi())
@@ -330,18 +304,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   }
 
   bool IsSingleScalar = vputils::isSingleScalar(Def);
-
   VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
-  // Check if there is a scalar value for the selected lane.
-  if (!hasScalarValue(Def, LastLane)) {
-    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be a single scalar.
-    assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
-                VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
-           "unexpected recipe found to be invariant");
-    IsSingleScalar = true;
-    LastLane = 0;
-  }
 
   // We need to construct the vector value for a single-scalar value by
   // broadcasting the scalar to all lanes.
@@ -635,9 +598,9 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   const VPRecipeBase *R = &VPBB->back();
   bool IsSwitch = isa<VPInstruction>(R) &&
                   cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
-  bool IsCondBranch = isa<VPBranchOnMaskRecipe>(R) ||
-                      match(R, m_BranchOnCond(m_VPValue())) ||
-                      match(R, m_BranchOnCount(m_VPValue(), m_VPValue()));
+  bool IsCondBranch =
+      isa<VPBranchOnMaskRecipe>(R) ||
+      match(R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()));
   (void)IsCondBranch;
   (void)IsSwitch;
   if (VPBB->getNumSuccessors() == 2 ||
@@ -768,8 +731,12 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
-  auto *NewRegion = getPlan()->createVPRegionBlock(NewEntry, NewExiting,
-                                                   getName(), isReplicator());
+  VPlan &Plan = *getPlan();
+  VPRegionBlock *NewRegion =
+      isReplicator()
+          ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
+          : Plan.createLoopRegion(getName(), NewEntry, NewExiting);
+
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;
@@ -845,19 +812,10 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
-  // First compute the cost of the conditionally executed recipes, followed by
-  // account for the branching cost, except if the mask is a header mask or
-  // uniform condition.
-  using namespace llvm::VPlanPatternMatch;
+  // Compute and return the cost of the conditionally executed recipes.
+  assert(VF.isVector() && "Can only compute vector cost at the moment.");
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  InstructionCost ThenCost = Then->cost(VF, Ctx);
-
-  // For the scalar case, we may not always execute the original predicated
-  // block, Thus, scale the block's cost by the probability of executing it.
-  if (VF.isScalar())
-    return ThenCost / getPredBlockCostDivisor(Ctx.CostKind);
-
-  return ThenCost;
+  return Then->cost(VF, Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -977,23 +935,35 @@ void VPlan::execute(VPTransformState *State) {
     // logic generic during VPlan execution.
     State->CFG.DTU.applyUpdates(
         {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
-  } else {
-    Loop *OrigLoop =
-        State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
-    // If the original loop is unreachable, we need to delete it.
-    auto Blocks = OrigLoop->getBlocksVector();
-    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
-    for (auto *BB : Blocks)
-      State->LI->removeBlock(BB);
-    State->LI->erase(OrigLoop);
   }
-
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
   // Generate code for the VPlan, in parts of the vector skeleton, loop body and
   // successor blocks including the middle, exit and scalar preheader blocks.
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
+
+  // If the original loop is unreachable, delete it and all its blocks.
+  if (!ScalarPhVPBB->hasPredecessors()) {
+    // DeleteDeadBlocks will remove single-entry phis. Remove them from the exit
+    // VPIRBBs in VPlan as well, otherwise we would retain references to deleted
+    // IR instructions.
+    for (VPIRBasicBlock *EB : getExitBlocks()) {
+      for (VPRecipeBase &R : make_early_inc_range(EB->phis())) {
+        if (R.getNumOperands() == 1)
+          R.eraseFromParent();
+      }
+    }
+
+    Loop *OrigLoop =
+        State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
+    auto Blocks = OrigLoop->getBlocksVector();
+    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    for (auto *BB : Blocks)
+      State->LI->removeBlock(BB);
+    DeleteDeadBlocks(Blocks, &State->CFG.DTU);
+    State->LI->erase(OrigLoop);
+  }
 
   State->CFG.DTU.flush();
 
@@ -1750,6 +1720,16 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
 }
 #endif
 
+bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
+                                 TTI::PartialReductionExtendKind ExtKind) {
+  APInt TruncatedVal = C->trunc(NarrowType->getScalarSizeInBits());
+  unsigned WideSize = C->getBitWidth();
+  APInt ExtendedVal = ExtKind == TTI::PR_SignExtend
+                          ? TruncatedVal.sext(WideSize)
+                          : TruncatedVal.zext(WideSize);
+  return ExtendedVal == *C;
+}
+
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {
   if (!V->isLiveIn())
@@ -1759,9 +1739,13 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 }
 
 InstructionCost VPCostContext::getScalarizationOverhead(
-    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF) {
+    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+    bool AlwaysIncludeReplicatingR) {
   if (VF.isScalar())
     return 0;
+
+  assert(!VF.isScalable() &&
+         "Scalarization overhead not supported for scalable vectors");
 
   InstructionCost ScalarizationCost = 0;
   // Compute the cost of scalarizing the result if needed.
@@ -1779,7 +1763,11 @@ InstructionCost VPCostContext::getScalarizationOverhead(
   SmallPtrSet<const VPValue *, 4> UniqueOperands;
   SmallVector<Type *> Tys;
   for (auto *Op : Operands) {
-    if (Op->isLiveIn() || isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op) ||
+    if (Op->isLiveIn() ||
+        (!AlwaysIncludeReplicatingR &&
+         isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
+        (isa<VPReplicateRecipe>(Op) &&
+         cast<VPReplicateRecipe>(Op)->getOpcode() == Instruction::Load) ||
         !UniqueOperands.insert(Op).second)
       continue;
     Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));

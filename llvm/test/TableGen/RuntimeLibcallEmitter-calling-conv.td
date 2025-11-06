@@ -48,47 +48,94 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:     Entry = DefaultCC;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
-// CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:      {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
-// CHECK-NEXT:    });
+// CHECK-NEXT:   static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:     0x0000000000001a
+// CHECK-NEXT:   });
+// CHECK-NEXT:   AvailableLibcallImpls = SystemAvailableImpls;
 // CHECK-EMPTY:
-// CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::SDIVREM_I8, RTLIB::impl___divmodqi4}, // __divmodqi4
-// CHECK-NEXT:        {RTLIB::UDIVREM_I16, RTLIB::impl___udivmodhi4}, // __udivmodhi4
-// CHECK-NEXT:    }, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:        RTLIB::impl_malloc, // malloc
+// CHECK-NEXT:    };
+// CHECK-EMPTY:
+// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:      setAvailable(Impl);
+// CHECK-NEXT:    }
+// CHECK-EMPTY:
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls_AlwaysAvailable_AVR_BUILTIN[] = {
+// CHECK-NEXT:        RTLIB::impl___divmodqi4, // __divmodqi4
+// CHECK-NEXT:        RTLIB::impl___udivmodhi4, // __udivmodhi4
+// CHECK-NEXT:    };
+// CHECK-EMPTY:
+// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls_AlwaysAvailable_AVR_BUILTIN) {
+// CHECK-NEXT:      setAvailable(Impl);
+// CHECK-NEXT:      setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    return;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::avr) {
-// CHECK-NEXT:   setLibcallsImpl({
-// CHECK-NEXT:       {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
+// CHECK-NEXT:   static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:     0x0000000000001a
 // CHECK-NEXT:   });
+// CHECK-NEXT:   AvailableLibcallImpls = SystemAvailableImpls;
 // CHECK-EMPTY:
-// CHECK-NEXT:   setLibcallsImpl({
-// CHECK-NEXT:       {RTLIB::SDIVREM_I8, RTLIB::impl___divmodqi4}, // __divmodqi4
-// CHECK-NEXT:       {RTLIB::UDIVREM_I16, RTLIB::impl___udivmodhi4}, // __udivmodhi4
-// CHECK-NEXT:   }, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:        RTLIB::impl_malloc, // malloc
+// CHECK-NEXT:    };
+// CHECK-EMPTY:
+// CHECK-NEXT:   for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:     setAvailable(Impl);
+// CHECK-NEXT:   }
+// CHECK-EMPTY:
+// CHECK-NEXT:   static const RTLIB::LibcallImpl LibraryCalls_AlwaysAvailable_AVR_BUILTIN[] = {
+// CHECK-NEXT:       RTLIB::impl___divmodqi4, // __divmodqi4
+// CHECK-NEXT:       RTLIB::impl___udivmodhi4, // __udivmodhi4
+// CHECK-NEXT:   };
+// CHECK-EMPTY:
+// CHECK-NEXT:   for (const RTLIB::LibcallImpl Impl : LibraryCalls_AlwaysAvailable_AVR_BUILTIN) {
+// CHECK-NEXT:     setAvailable(Impl);
+// CHECK-NEXT:     setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  if (TT.getArch() == Triple::msp430) {
-// CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
+// CHECK-NEXT:    static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:      0x00000000000010
 // CHECK-NEXT:    });
+// CHECK-NEXT:    AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:        RTLIB::impl_malloc, // malloc
+// CHECK-NEXT:    };
+// CHECK-EMPTY:
+// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:      setAvailable(Impl);
+// CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if ( isFoo() ) {
-// CHECK-NEXT:      setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::SDIVREM_I8, RTLIB::impl___divmodqi4}, // __divmodqi4
-// CHECK-NEXT:      }, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:      static const RTLIB::LibcallImpl LibraryCalls_anonymous_3_AVR_BUILTIN[] = {
+// CHECK-NEXT:          RTLIB::impl___divmodqi4, // __divmodqi4
+// CHECK-NEXT:      };
+// CHECK-EMPTY:
+// CHECK-NEXT:      for (const RTLIB::LibcallImpl Impl : LibraryCalls_anonymous_3_AVR_BUILTIN) {
+// CHECK-NEXT:        setAvailable(Impl);
+// CHECK-NEXT:        setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if ( isBar() ) {
-// CHECK-NEXT:      setLibcallsImpl({
-// CHECK-NEXT:          {RTLIB::UDIVREM_I16, RTLIB::impl___udivmodhi4}, // __udivmodhi4
-// CHECK-NEXT:      }, CallingConv::MSP430_BUILTIN);
+// CHECK-NEXT:      static const RTLIB::LibcallImpl LibraryCalls_anonymous_5_MSP430_BUILTIN[] = {
+// CHECK-NEXT:          RTLIB::impl___udivmodhi4, // __udivmodhi4
+// CHECK-NEXT:      };
+// CHECK-EMPTY:
+// CHECK-NEXT:      for (const RTLIB::LibcallImpl Impl : LibraryCalls_anonymous_5_MSP430_BUILTIN) {
+// CHECK-NEXT:        setAvailable(Impl);
+// CHECK-NEXT:        setLibcallImplCallingConv(Impl, CallingConv::MSP430_BUILTIN);
+// CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:

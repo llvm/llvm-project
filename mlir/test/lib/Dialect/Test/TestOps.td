@@ -32,6 +32,7 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ValueBoundsOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
+include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td"
 
 // Include the attribute definitions.
 include "TestAttrDefs.td"
@@ -1169,6 +1170,11 @@ def OpP : TEST_Op<"op_p"> {
   let results = (outs I32);
 }
 
+def OpQ : TEST_Op<"op_q"> {
+  let arguments = (ins AnyType, AnyType);
+  let results = (outs AnyType);
+}
+
 // Test constant-folding a pattern that maps `(F32) -> SI32`.
 def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
   let arguments = (ins RankedTensorOf<[F32]>:$operand);
@@ -1206,6 +1212,14 @@ def TestNestedSameOpAndSameArgEqualityPattern :
 // Test multiple equal arguments check enforced.
 def TestMultipleEqualArgsPattern :
   Pat<(OpP $a, $b, $a, $a, $b, $c), (OpN $c, $b)>;
+
+// Test equal arguments checks are applied before user provided constraints.
+def AssertBinOpEqualArgsAndReturnTrue : Constraint<
+  CPred<"assertBinOpEqualArgsAndReturnTrue($0)">>;
+def TestEqualArgsCheckBeforeUserConstraintsPattern :
+  Pat<(OpQ:$op $x, $x),
+      (replaceWithValue $x),
+      [(AssertBinOpEqualArgsAndReturnTrue $op)]>;
 
 // Test for memrefs normalization of an op with normalizable memrefs.
 def OpNorm : TEST_Op<"op_norm", [MemRefsNormalizable]> {
@@ -2322,7 +2336,7 @@ def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
 }
 
 //===----------------------------------------------------------------------===//
-// Copy Operation Test 
+// Copy Operation Test
 //===----------------------------------------------------------------------===//
 
 def CopyOp : TEST_Op<"copy", []> {
@@ -2567,7 +2581,7 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
 
 def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
     NoTerminator,
-    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorRegions"]>
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>
   ]> {
   let arguments = (ins Index:$arg, DenseI64ArrayAttr:$cases);
   let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
@@ -3663,10 +3677,10 @@ def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
         ["bufferize", "bufferizesToMemoryRead",
          "bufferizesToMemoryWrite", "getAliasingValues"]>]> {
   let arguments = (ins
-    Arg<TestTensorType>:$input
+    Arg<Bufferization_TensorLikeTypeInterface>:$input
   );
   let results = (outs
-    Arg<TestTensorType>:$output
+    Arg<Bufferization_TensorLikeTypeInterface>:$output
   );
 
   let extraClassDefinition = [{
@@ -3688,10 +3702,10 @@ def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
 
 def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   let arguments = (ins
-    Arg<TestMemrefType>:$input
+    Arg<Bufferization_BufferLikeTypeInterface>:$input
   );
   let results = (outs
-    Arg<TestMemrefType>:$output
+    Arg<Bufferization_BufferLikeTypeInterface>:$output
   );
 }
 
@@ -3701,7 +3715,7 @@ def TestCreateTensorOp : TEST_Op<"create_tensor_op",
          "bufferizesToMemoryWrite", "getAliasingValues",
          "bufferizesToAllocation"]>]> {
   let arguments = (ins);
-  let results = (outs Arg<TestTensorType>:$output);
+  let results = (outs Arg<Bufferization_TensorLikeTypeInterface>:$output);
   let extraClassDefinition = [{
     bool test::TestCreateTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
@@ -3725,7 +3739,7 @@ def TestCreateTensorOp : TEST_Op<"create_tensor_op",
 
 def TestCreateMemrefOp : TEST_Op<"create_memref_op"> {
   let arguments = (ins);
-  let results = (outs Arg<TestMemrefType>:$output);
+  let results = (outs Arg<Bufferization_BufferLikeTypeInterface>:$output);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3745,5 +3759,48 @@ def TestOpWithSuccessorRef : TEST_Op<"dummy_op_with_successor_ref"> {
     $successor attr-dict custom<DummySuccessorRef>(ref($successor))
   }];
 }
+
+def CallWithSegmentsOp : TEST_Op<"call_with_segments",
+    [AttrSizedOperandSegments,
+  DeclareOpInterfaceMethods<CallOpInterface>]> {
+  let summary = "test call op with segmented args";
+  let arguments = (ins
+    FlatSymbolRefAttr:$callee,
+    Variadic<AnyType>:$prefix,   // non-arg segment (e.g., 'in')
+    Variadic<AnyType>:$args,     // <-- the call *arguments* segment
+    Variadic<AnyType>:$suffix    // non-arg segment (e.g., 'out')
+  );
+  let results = (outs);
+  let assemblyFormat = [{
+    $callee `(` $prefix `:` type($prefix) `)`
+            `(` $args `:` type($args) `)`
+            `(` $suffix `:` type($suffix) `)` attr-dict
+  }];
+
+  // Provide stub implementations for the ArgAndResultAttrsOpInterface.
+  let extraClassDeclaration = [{
+    ::mlir::ArrayAttr getArgAttrsAttr() { return {}; }
+    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
+    void setArgAttrsAttr(::mlir::ArrayAttr) {}
+    void setResAttrsAttr(::mlir::ArrayAttr) {}
+    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
+    ::mlir::Attribute removeResAttrsAttr() { return {}; }
+  }];
+
+  let extraClassDefinition = [{
+    ::mlir::CallInterfaceCallable $cppClass::getCallableForCallee() {
+      if (auto sym = (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee"))
+        return ::mlir::CallInterfaceCallable(sym);
+      return ::mlir::CallInterfaceCallable();
+    }
+    void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      if (auto sym = callee.dyn_cast<::mlir::SymbolRefAttr>())
+        (*this)->setAttr("callee", sym);
+      else
+        (*this)->removeAttr("callee");
+    }
+  }];
+}
+
 
 #endif // TEST_OPS

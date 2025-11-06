@@ -146,9 +146,9 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v32, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v39, a2
 ; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, v32
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, v39
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; use a3 v[0:31]
 ; GFX908-NEXT:    ;;#ASMEND
@@ -437,9 +437,9 @@ define void @v32_asm_def_use(float %v0, float %v1) #4 {
 ; GFX908-NEXT:    ; copy
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    v_accvgpr_read_b32 v33, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v35, a2
 ; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, v33
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, v35
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; use a3 v[0:31]
 ; GFX908-NEXT:    ;;#ASMEND
@@ -1045,9 +1045,9 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v32, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v39, a2
 ; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, v32
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, v39
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; use a3 v[0:31]
 ; GFX908-NEXT:    ;;#ASMEND

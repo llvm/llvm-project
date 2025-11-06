@@ -5062,8 +5062,8 @@ TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected, RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.add(A2, RM);
 
       EXPECT_EQ(Expected, A1.getCategory())
@@ -5072,8 +5072,8 @@ TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.add(A1, RM);
 
       EXPECT_EQ(Expected, A2.getCategory())
@@ -5126,8 +5126,8 @@ TEST(APFloatTest, PPCDoubleDoubleAdd) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.add(A2, RM);
 
       EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5140,8 +5140,8 @@ TEST(APFloatTest, PPCDoubleDoubleAdd) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.add(A1, RM);
 
       EXPECT_EQ(Expected[0], A2.bitcastToAPInt().getRawData()[0])
@@ -5175,8 +5175,8 @@ TEST(APFloatTest, PPCDoubleDoubleSubtract) {
     APFloat::roundingMode RM;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.subtract(A2, RM);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5230,8 +5230,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiplySpecial) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected, RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.multiply(A2, RM);
 
       EXPECT_EQ(Expected, A1.getCategory())
@@ -5240,8 +5240,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiplySpecial) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.multiply(A1, RM);
 
       EXPECT_EQ(Expected, A2.getCategory())
@@ -5303,8 +5303,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiply) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.multiply(A2, RM);
 
       EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5317,8 +5317,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiply) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.multiply(A1, RM);
 
       EXPECT_EQ(Expected[0], A2.bitcastToAPInt().getRawData()[0])
@@ -5350,8 +5350,8 @@ TEST(APFloatTest, PPCDoubleDoubleDivide) {
     APFloat::roundingMode RM;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.divide(A2, RM);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5383,8 +5383,8 @@ TEST(APFloatTest, PPCDoubleDoubleRemainder) {
     uint64_t Op1[2], Op2[2], Expected[2];
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1]) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.remainder(A2);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5418,8 +5418,8 @@ TEST(APFloatTest, PPCDoubleDoubleMod) {
     uint64_t Op1[2], Op2[2], Expected[2];
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1]) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.mod(A2);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -6282,8 +6282,8 @@ TEST(APFloatTest, PPCDoubleDoubleCompare) {
     APFloat::cmpResult Expected;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     EXPECT_EQ(Expected, A1.compare(A2))
         << formatv("compare(({0:x} + {1:x}), ({2:x} + {3:x}))", Op1[0], Op1[1],
                    Op2[0], Op2[1])
@@ -6410,8 +6410,8 @@ TEST(APFloatTest, PPCDoubleDoubleBitwiseIsEqual) {
     bool Expected;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     EXPECT_EQ(Expected, A1.bitwiseIsEqual(A2))
         << formatv("({0:x} + {1:x}) = ({2:x} + {3:x})", Op1[0], Op1[1], Op2[0],
                    Op2[1])
@@ -6423,16 +6423,15 @@ TEST(APFloatTest, PPCDoubleDoubleHashValue) {
   uint64_t Data1[] = {0x3ff0000000000001ull, 0x0000000000000001ull};
   uint64_t Data2[] = {0x3ff0000000000001ull, 0};
   // The hash values are *hopefully* different.
-  EXPECT_NE(
-      hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Data1))),
-      hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Data2))));
+  EXPECT_NE(hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, Data1))),
+            hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, Data2))));
 }
 
 TEST(APFloatTest, PPCDoubleDoubleChangeSign) {
   uint64_t Data[] = {
       0x400f000000000000ull, 0xbcb0000000000000ull,
   };
-  APFloat Float(APFloat::PPCDoubleDouble(), APInt(128, 2, Data));
+  APFloat Float(APFloat::PPCDoubleDouble(), APInt(128, Data));
   {
     APFloat Actual =
         APFloat::copySign(Float, APFloat(APFloat::IEEEdouble(), "1"));
@@ -6452,14 +6451,14 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
     uint64_t Data[] = {
         0, 0,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getZero(APFloat::PPCDoubleDouble()).bitcastToAPInt());
   }
   {
     uint64_t Data[] = {
         0x7fefffffffffffffull, 0x7c8ffffffffffffeull,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getLargest(APFloat::PPCDoubleDouble()).bitcastToAPInt());
   }
   {
@@ -6467,12 +6466,12 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
         0x0000000000000001ull, 0,
     };
     EXPECT_EQ(
-        APInt(128, 2, Data),
+        APInt(128, Data),
         APFloat::getSmallest(APFloat::PPCDoubleDouble()).bitcastToAPInt());
   }
   {
     uint64_t Data[] = {0x0360000000000000ull, 0};
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getSmallestNormalized(APFloat::PPCDoubleDouble())
                   .bitcastToAPInt());
   }
@@ -6481,7 +6480,7 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
         0x8000000000000000ull, 0x0000000000000000ull,
     };
     EXPECT_EQ(
-        APInt(128, 2, Data),
+        APInt(128, Data),
         APFloat::getZero(APFloat::PPCDoubleDouble(), true).bitcastToAPInt());
   }
   {
@@ -6489,14 +6488,14 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
         0xffefffffffffffffull, 0xfc8ffffffffffffeull,
     };
     EXPECT_EQ(
-        APInt(128, 2, Data),
+        APInt(128, Data),
         APFloat::getLargest(APFloat::PPCDoubleDouble(), true).bitcastToAPInt());
   }
   {
     uint64_t Data[] = {
         0x8000000000000001ull, 0x0000000000000000ull,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getSmallest(APFloat::PPCDoubleDouble(), true)
                   .bitcastToAPInt());
   }
@@ -6504,7 +6503,7 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
     uint64_t Data[] = {
         0x8360000000000000ull, 0x0000000000000000ull,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getSmallestNormalized(APFloat::PPCDoubleDouble(), true)
                   .bitcastToAPInt());
   }
@@ -6523,7 +6522,7 @@ TEST(APFloatTest, PPCDoubleDoubleIsDenormal) {
         0x4010000000000000ull, 0x4008000000000000ull,
     };
     EXPECT_TRUE(
-        APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Data)).isDenormal());
+        APFloat(APFloat::PPCDoubleDouble(), APInt(128, Data)).isDenormal());
   }
 }
 
@@ -6533,7 +6532,7 @@ TEST(APFloatTest, PPCDoubleDoubleScalbn) {
       0x4008000000000000ull, 0x3cb8000000000000ull,
   };
   APFloat Result =
-      scalbn(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Input)), 1,
+      scalbn(APFloat(APFloat::PPCDoubleDouble(), APInt(128, Input)), 1,
              APFloat::rmNearestTiesToEven);
   // 6.0 + 6.0 << 53
   EXPECT_EQ(0x4018000000000000ull, Result.bitcastToAPInt().getRawData()[0]);
@@ -10119,7 +10118,7 @@ TEST(APFloatTest, Float4E2M1FNToFloat) {
 }
 
 TEST(APFloatTest, AddOrSubtractSignificand) {
-  typedef detail::IEEEFloatUnitTestHelper Helper;
+  using Helper = detail::IEEEFloatUnitTestHelper;
   // Test cases are all combinations of:
   // {equal exponents, LHS larger exponent, RHS larger exponent}
   // {equal significands, LHS larger significand, RHS larger significand}
@@ -10174,6 +10173,13 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::PPCDoubleDouble()));
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEquad()));
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
+}
+
+TEST(APFloatTest, FrexpQuietSNaN) {
+  APFloat SNaN = APFloat::getSNaN(APFloat::PPCDoubleDouble());
+  int Exp;
+  APFloat Result = frexp(SNaN, Exp, APFloat::rmNearestTiesToEven);
+  EXPECT_FALSE(Result.isSignaling());
 }
 
 } // namespace

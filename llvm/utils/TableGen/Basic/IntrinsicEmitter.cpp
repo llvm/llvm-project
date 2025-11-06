@@ -421,7 +421,8 @@ static bool compareFnAttributes(const CodeGenIntrinsic *L,
     return std::tie(I->canThrow, I->isNoDuplicate, I->isNoMerge, I->isNoReturn,
                     I->isNoCallback, I->isNoSync, I->isNoFree, I->isWillReturn,
                     I->isCold, I->isConvergent, I->isSpeculatable,
-                    I->hasSideEffects, I->isStrictFP);
+                    I->hasSideEffects, I->isStrictFP,
+                    I->isNoCreateUndefOrPoison);
   };
 
   auto TieL = TieBoolAttributes(L);
@@ -446,7 +447,8 @@ static bool hasFnAttributes(const CodeGenIntrinsic &Int) {
   return !Int.canThrow || Int.isNoReturn || Int.isNoCallback || Int.isNoSync ||
          Int.isNoFree || Int.isWillReturn || Int.isCold || Int.isNoDuplicate ||
          Int.isNoMerge || Int.isConvergent || Int.isSpeculatable ||
-         Int.isStrictFP || getEffectiveME(Int) != MemoryEffects::unknown();
+         Int.isStrictFP || Int.isNoCreateUndefOrPoison ||
+         getEffectiveME(Int) != MemoryEffects::unknown();
 }
 
 namespace {
@@ -605,6 +607,8 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
       addAttribute("Speculatable");
     if (Int.isStrictFP)
       addAttribute("StrictFP");
+    if (Int.isNoCreateUndefOrPoison)
+      addAttribute("NoCreateUndefOrPoison");
 
     const MemoryEffects ME = getEffectiveME(Int);
     if (ME != MemoryEffects::unknown()) {
@@ -794,12 +798,15 @@ AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
   if (id == 0)
     return AttributeSet();
   auto [FnAttrID, _] = unpackID(IntrinsicsToAttributesMap[id - 1]);
+  if (FnAttrID == {})
+    return AttributeSet();
   return getIntrinsicFnAttributeSet(C, FnAttrID);
 }
 #endif // GET_INTRINSIC_ATTRIBUTES
 
 )",
-                UniqAttributesBitSize, MaxNumAttrs, NoFunctionAttrsID);
+                UniqAttributesBitSize, MaxNumAttrs, NoFunctionAttrsID,
+                NoFunctionAttrsID);
 }
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(

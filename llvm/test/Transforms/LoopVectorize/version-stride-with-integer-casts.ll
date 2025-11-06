@@ -22,13 +22,11 @@ define void @test_versioned_with_sext_use(i32 %offset, ptr %dst) {
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[OFFSET]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 200, [[OFFSET_EXT]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_1]], [[TMP0]]
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_1]], 200
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], [[OFFSET_EXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -94,13 +92,11 @@ define void @test_versioned_with_zext_use(i32 %offset, ptr %dst) {
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[OFFSET]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 200, [[OFFSET_EXT]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_1]], [[TMP0]]
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_1]], 200
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], [[OFFSET_EXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -233,13 +229,11 @@ define void @test_versioned_with_different_uses(i32 %offset, ptr noalias %dst.1,
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[OFFSET]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 200, [[OFFSET_EXT]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_1]], [[TMP0]]
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_1]], 200
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], [[OFFSET_EXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[INDEX]]
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX2]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX2]], 1
@@ -336,12 +330,12 @@ define void @test_versioned_with_non_ex_use(i32 %offset, ptr noalias %dst.1, ptr
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP15]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP17]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP12]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[TMP14]], align 8
@@ -414,26 +408,20 @@ define void @zext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i1 [[G]], true
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], [[G_64]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[G_64]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i16> splat (i16 1), ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i16 [[G_16]], ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], [[G_64]]

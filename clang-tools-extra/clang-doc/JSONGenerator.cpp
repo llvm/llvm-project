@@ -468,7 +468,6 @@ static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
 static void serializeInfo(const RecordInfo &I, json::Object &Obj,
                           const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
-  Obj["FullName"] = I.FullName;
   Obj["TagType"] = getTagType(I.TagType);
   Obj["IsTypedef"] = I.IsTypeDef;
   Obj["MangledName"] = I.MangledName;
@@ -582,15 +581,22 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   if (I->IT == InfoType::IT_record) {
     auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
     FileName = RecordSymbolInfo->MangledName;
-  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
-    // Serialize the global namespace as index.json
+  } else if (I->USR == GlobalNamespaceID)
+    FileName = "index";
+  else if (I->IT == InfoType::IT_namespace) {
+    for (const auto &NS : I->Namespace) {
+      FileName += NS.Name;
+      FileName += "_";
+    }
+    FileName += I->Name;
+  } else
     FileName = I->Name;
-  else
-    FileName = I->getFileBaseName();
   sys::path::append(Path, FileName + ".json");
   return FileName;
 }
 
+// FIXME: Revert back to creating nested directories for namespaces instead of
+// putting everything in a flat directory structure.
 Error JSONGenerator::generateDocs(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
     const ClangDocContext &CDCtx) {

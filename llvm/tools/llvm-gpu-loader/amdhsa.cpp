@@ -192,7 +192,7 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   // Initialize all the arguments (explicit and implicit) to zero, then set the
   // explicit arguments to the values created above.
   std::memset(args, 0, args_size);
-  std::memcpy(args, &kernel_args, sizeof(args_t));
+  std::memcpy(args, &kernel_args, std::is_empty_v<args_t> ? 0 : sizeof(args_t));
 
   // Initialize the necessary implicit arguments to the proper values.
   int dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
@@ -563,7 +563,7 @@ int load_amdhsa(int argc, const char **argv, const char **envp, void *image,
   // Save the return value and perform basic clean-up.
   int ret = *static_cast<int *>(host_ret);
 
-  end_args_t fini_args = {ret};
+  end_args_t fini_args = {};
   if (hsa_status_t err = launch_kernel(
           dev_agent, executable, kernargs_pool, coarsegrained_pool, queue,
           server, single_threaded_params, "_end.kd", fini_args,

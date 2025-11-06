@@ -1644,9 +1644,9 @@ bool CursorVisitor::VisitTagTypeLoc(TagTypeLoc TL) {
     return true;
 
   if (TL.isDefinition())
-    return Visit(MakeCXCursor(TL.getOriginalDecl(), TU, RegionOfInterest));
+    return Visit(MakeCXCursor(TL.getDecl(), TU, RegionOfInterest));
 
-  return Visit(MakeCursorTypeRef(TL.getOriginalDecl(), TL.getNameLoc(), TU));
+  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
@@ -1852,7 +1852,7 @@ bool CursorVisitor::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  return Visit(MakeCursorTypeRef(TL.getOriginalDecl(), TL.getNameLoc(), TU));
+  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
@@ -2148,6 +2148,9 @@ public:
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
   void VisitOMPReverseDirective(const OMPReverseDirective *D);
   void VisitOMPInterchangeDirective(const OMPInterchangeDirective *D);
+  void VisitOMPCanonicalLoopSequenceTransformationDirective(
+      const OMPCanonicalLoopSequenceTransformationDirective *D);
+  void VisitOMPFuseDirective(const OMPFuseDirective *D);
   void VisitOMPForDirective(const OMPForDirective *D);
   void VisitOMPForSimdDirective(const OMPForSimdDirective *D);
   void VisitOMPSectionsDirective(const OMPSectionsDirective *D);
@@ -2353,6 +2356,11 @@ void OMPClauseEnqueue::VisitOMPPartialClause(const OMPPartialClause *C) {
   Visitor->AddStmt(C->getFactor());
 }
 
+void OMPClauseEnqueue::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
+  Visitor->AddStmt(C->getFirst());
+  Visitor->AddStmt(C->getCount());
+}
+
 void OMPClauseEnqueue::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
   Visitor->AddStmt(C->getAllocator());
 }
@@ -2378,7 +2386,9 @@ void OMPClauseEnqueue::VisitOMPDetachClause(const OMPDetachClause *C) {
   Visitor->AddStmt(C->getEventHandler());
 }
 
-void OMPClauseEnqueue::VisitOMPNowaitClause(const OMPNowaitClause *) {}
+void OMPClauseEnqueue::VisitOMPNowaitClause(const OMPNowaitClause *C) {
+  Visitor->AddStmt(C->getCondition());
+}
 
 void OMPClauseEnqueue::VisitOMPUntiedClause(const OMPUntiedClause *) {}
 
@@ -2395,6 +2405,8 @@ void OMPClauseEnqueue::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}
 
 void OMPClauseEnqueue::VisitOMPFailClause(const OMPFailClause *) {}
+
+void OMPClauseEnqueue::VisitOMPThreadsetClause(const OMPThreadsetClause *) {}
 
 void OMPClauseEnqueue::VisitOMPAbsentClause(const OMPAbsentClause *) {}
 
@@ -2824,10 +2836,8 @@ void OpenACCClauseEnqueue::VisitTileClause(const OpenACCTileClause &C) {
 
 void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
   VisitVarList(C);
-  for (const OpenACCPrivateRecipe &R : C.getInitRecipes()) {
+  for (const OpenACCPrivateRecipe &R : C.getInitRecipes())
     Visitor.AddDecl(R.AllocaDecl);
-    Visitor.AddStmt(R.InitExpr);
-  }
 }
 
 void OpenACCClauseEnqueue::VisitHostClause(const OpenACCHostClause &C) {
@@ -2843,7 +2853,6 @@ void OpenACCClauseEnqueue::VisitFirstPrivateClause(
   VisitVarList(C);
   for (const OpenACCFirstPrivateRecipe &R : C.getInitRecipes()) {
     Visitor.AddDecl(R.AllocaDecl);
-    Visitor.AddStmt(R.InitExpr);
     Visitor.AddDecl(R.InitFromTemporary);
   }
 }
@@ -2919,10 +2928,8 @@ void OpenACCClauseEnqueue::VisitDeviceTypeClause(
 void OpenACCClauseEnqueue::VisitReductionClause(
     const OpenACCReductionClause &C) {
   VisitVarList(C);
-  for (const OpenACCReductionRecipe &R : C.getRecipes()) {
+  for (const OpenACCReductionRecipe &R : C.getRecipes())
     Visitor.AddDecl(R.AllocaDecl);
-    Visitor.AddStmt(R.InitExpr);
-  }
 }
 void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
 void OpenACCClauseEnqueue::VisitIndependentClause(
@@ -3315,6 +3322,15 @@ void EnqueueVisitor::VisitOMPReverseDirective(const OMPReverseDirective *D) {
 void EnqueueVisitor::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPCanonicalLoopSequenceTransformationDirective(
+    const OMPCanonicalLoopSequenceTransformationDirective *D) {
+  VisitOMPExecutableDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPFuseDirective(const OMPFuseDirective *D) {
+  VisitOMPCanonicalLoopSequenceTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPForDirective(const OMPForDirective *D) {
@@ -6275,6 +6291,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPReverseDirective");
   case CXCursor_OMPInterchangeDirective:
     return cxstring::createRef("OMPInterchangeDirective");
+  case CXCursor_OMPFuseDirective:
+    return cxstring::createRef("OMPFuseDirective");
   case CXCursor_OMPForDirective:
     return cxstring::createRef("OMPForDirective");
   case CXCursor_OMPForSimdDirective:

@@ -398,12 +398,18 @@ namespace call_with_cf_constant {
   void baz(const NSDictionary *);
   void boo(NSNumber *);
   void boo(CFTypeRef);
-  void foo() {
+
+  struct Details {
+    int value;
+  };
+
+  void foo(Details* details) {
     CFArrayCreateMutable(kCFAllocatorDefault, 10);
     bar(@[@"hello"]);
     baz(@{@"hello": @3});
     boo(@YES);
     boo(@NO);
+    boo(@(details->value));
   }
 }
 
@@ -561,6 +567,64 @@ struct Derived : Base {
 
 } // namespace ns_retained_return_value
 
+namespace autoreleased {
+
+NSString *provideAutoreleased() __attribute__((ns_returns_autoreleased));
+void consume(NSString *);
+
+void foo() {
+  consume(provideAutoreleased());
+}
+
+} // autoreleased
+
+namespace sel_string {
+
+void consumeStr(NSString *);
+void consumeSel(SEL);
+void consumeClass(Class);
+void consumeProtocol(Protocol *);
+
+void foo() {
+  consumeStr(NSStringFromSelector(@selector(mutableCopy)));
+  consumeSel(NSSelectorFromString(@"mutableCopy"));
+  consumeStr(NSStringFromClass(NSNumber.class));
+  consumeClass(NSClassFromString(@"NSNumber"));
+  consumeStr(NSStringFromProtocol(@protocol(NSCopying)));
+  consumeProtocol(NSProtocolFromString(@"NSCopying"));
+}
+
+} // namespace sel_string
+
+namespace template_function {
+
+class Base {
+public:
+    virtual ~Base() = default;
+    void send(dispatch_queue_t) const;
+    void ref() const;
+    void deref() const;
+};
+
+template<typename Traits>
+class Derived : public Base {
+public:
+    virtual ~Derived() = default;
+
+    void send(typename Traits::MessageType) const;
+
+    virtual OSObjectPtr<dispatch_queue_t> msg(typename Traits::MessageType) const = 0;
+};
+
+template<typename Traits>
+void Derived<Traits>::send(typename Traits::MessageType messageType) const
+{
+    OSObjectPtr dictionary = msg(messageType);
+    Base::send(dictionary.get());
+}
+
+} // namespace template_function
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
@@ -582,6 +646,7 @@ struct Derived : Base {
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get(), OSObjectPtr { provide_dispatch() }.get()];
   [self doWork:__null];
   [self doWork:nil];
+  [NSApp run];
 }
 
 - (SomeObj *)getSomeObj {

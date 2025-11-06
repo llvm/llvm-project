@@ -396,8 +396,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   CmdArgs.push_back("--create");
   CmdArgs.push_back(*TempFileOrErr);
   for (const auto &[File, Arch] : InputFiles)
-    CmdArgs.push_back(
-        Args.MakeArgString("--image=profile=" + Arch + ",file=" + File));
+    CmdArgs.push_back(Args.MakeArgString(
+        "--image3=kind=elf,sm=" + Arch.drop_front(3) + ",file=" + File));
 
   if (Error Err = executeCommands(*FatBinaryPath, CmdArgs))
     return std::move(Err);
@@ -608,10 +608,10 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
 Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
                            const ArgList &Args) {
   llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  if (Kind != OFK_OpenMP || !Triple.isSPIRV() ||
-      Triple.getVendor() != llvm::Triple::Intel)
-    return Error::success();
-  return offloading::intel::containerizeOpenMPSPIRVImage(Img);
+  if (Kind == OFK_OpenMP && Triple.isSPIRV() &&
+      Triple.getVendor() == llvm::Triple::Intel)
+    return offloading::intel::containerizeOpenMPSPIRVImage(Img);
+  return Error::success();
 }
 
 Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
@@ -717,6 +717,14 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
             M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M)))
       return std::move(Err);
     break;
+  case OFK_SYCL: {
+    // TODO: fill these options once the Driver supports them.
+    offloading::SYCLJITOptions Options;
+    if (Error Err =
+            offloading::wrapSYCLBinaries(M, BuffersToWrap.front(), Options))
+      return std::move(Err);
+    break;
+  }
   default:
     return createStringError(getOffloadKindName(Kind) +
                              " wrapping is not supported");
@@ -750,6 +758,32 @@ bundleOpenMP(ArrayRef<OffloadingImage> Images) {
   for (const OffloadingImage &Image : Images)
     Buffers.emplace_back(
         MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image)));
+
+  return std::move(Buffers);
+}
+
+Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
+bundleSYCL(ArrayRef<OffloadingImage> Images) {
+  SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
+  if (DryRun) {
+    // In dry-run mode there is an empty input which is insufficient for the
+    // testing. Therefore, we return here a stub image.
+    OffloadingImage Image;
+    Image.TheImageKind = IMG_None;
+    Image.TheOffloadKind = OffloadKind::OFK_SYCL;
+    Image.StringData["symbols"] = "stub";
+    Image.Image = MemoryBuffer::getMemBufferCopy("");
+    SmallString<0> SerializedImage = OffloadBinary::write(Image);
+    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(SerializedImage));
+    return std::move(Buffers);
+  }
+
+  for (const OffloadingImage &Image : Images) {
+    // clang-sycl-linker packs outputs into one binary blob. Therefore, it is
+    // passed to Offload Wrapper as is.
+    StringRef S(Image.Image->getBufferStart(), Image.Image->getBufferSize());
+    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(S));
+  }
 
   return std::move(Buffers);
 }
@@ -806,8 +840,9 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:
-  case OFK_SYCL:
     return bundleOpenMP(Images);
+  case OFK_SYCL:
+    return bundleSYCL(Images);
   case OFK_Cuda:
     return bundleCuda(Images, Args);
   case OFK_HIP:
@@ -1260,12 +1295,18 @@ int main(int Argc, char **Argv) {
 
   parallel::strategy = hardware_concurrency(1);
   if (auto *Arg = Args.getLastArg(OPT_wrapper_jobs)) {
-    unsigned Threads = 0;
-    if (!llvm::to_integer(Arg->getValue(), Threads) || Threads == 0)
-      reportError(createStringError("%s: expected a positive integer, got '%s'",
-                                    Arg->getSpelling().data(),
-                                    Arg->getValue()));
-    parallel::strategy = hardware_concurrency(Threads);
+    StringRef Val = Arg->getValue();
+    if (Val.equals_insensitive("jobserver"))
+      parallel::strategy = jobserver_concurrency();
+    else {
+      unsigned Threads = 0;
+      if (!llvm::to_integer(Val, Threads) || Threads == 0)
+        reportError(createStringError(
+            "%s: expected a positive integer or 'jobserver', got '%s'",
+            Arg->getSpelling().data(), Val.data()));
+      else
+        parallel::strategy = hardware_concurrency(Threads);
+    }
   }
 
   if (Args.hasArg(OPT_wrapper_time_trace_eq)) {

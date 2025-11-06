@@ -8,6 +8,8 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #define ASSERT_STREQ_LEN(actual_written, actual_str, expected_str)             \
@@ -15,7 +17,7 @@
   EXPECT_STREQ(actual_str, expected_str);
 
 template <typename InputT>
-class StrfromTest : public LIBC_NAMESPACE::testing::Test {
+class StrfromTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
   static constexpr bool is_single_prec =
       LIBC_NAMESPACE::cpp::is_same<InputT, float>::value;
@@ -481,6 +483,16 @@ public:
     written = func(buff, 10, "%A", -ld_nan);
     ASSERT_STREQ_LEN(written, buff, "-NAN");
   }
+
+  void charsWrittenOverflow(FunctionT func) {
+    char buff[100];
+    // Trigger an overflow in the return value of strfrom by writing more than
+    // INT_MAX bytes.
+    int result = func(buff, sizeof(buff), "%.2147483647f", 1.0f);
+
+    EXPECT_LT(result, 0);
+    ASSERT_ERRNO_FAILURE();
+  }
 };
 
 #define STRFROM_TEST(InputType, name, func)                                    \
@@ -501,4 +513,7 @@ public:
   TEST_F(LlvmLibc##name##Test, InsufficientBufferSize) {                       \
     insufficentBufsize(func);                                                  \
   }                                                                            \
-  TEST_F(LlvmLibc##name##Test, InfAndNanValues) { infNanValues(func); }
+  TEST_F(LlvmLibc##name##Test, InfAndNanValues) { infNanValues(func); }        \
+  TEST_F(LlvmLibc##name##Test, CharsWrittenOverflow) {                         \
+    charsWrittenOverflow(func);                                                \
+  }

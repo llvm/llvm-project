@@ -2968,6 +2968,39 @@ OMPClause *Parser::ParseOpenMPSizesClause() {
                                                  OpenLoc, CloseLoc);
 }
 
+OMPClause *Parser::ParseOpenMPLoopRangeClause() {
+  SourceLocation ClauseNameLoc = ConsumeToken();
+  SourceLocation FirstLoc, CountLoc;
+
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected) << tok::l_paren;
+    return nullptr;
+  }
+
+  FirstLoc = Tok.getLocation();
+  ExprResult FirstVal = ParseConstantExpression();
+  if (!FirstVal.isUsable()) {
+    T.skipToEnd();
+    return nullptr;
+  }
+
+  ExpectAndConsume(tok::comma);
+
+  CountLoc = Tok.getLocation();
+  ExprResult CountVal = ParseConstantExpression();
+  if (!CountVal.isUsable()) {
+    T.skipToEnd();
+    return nullptr;
+  }
+
+  T.consumeClose();
+
+  return Actions.OpenMP().ActOnOpenMPLoopRangeClause(
+      FirstVal.get(), CountVal.get(), ClauseNameLoc, T.getOpenLocation(),
+      FirstLoc, CountLoc, T.getCloseLocation());
+}
+
 OMPClause *Parser::ParseOpenMPPermutationClause() {
   SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
   SmallVector<Expr *> ArgExprs;
@@ -3188,6 +3221,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     else
       Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
     break;
+  case OMPC_threadset:
   case OMPC_fail:
   case OMPC_proc_bind:
   case OMPC_atomic_default_mem_order:
@@ -3278,7 +3312,11 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
 
-    Clause = ParseOpenMPClause(CKind, WrongDirective);
+    if (CKind == OMPC_nowait && PP.LookAhead(/*N=*/0).is(tok::l_paren) &&
+        getLangOpts().OpenMP >= 60)
+      Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
+    else
+      Clause = ParseOpenMPClause(CKind, WrongDirective);
     break;
   case OMPC_self_maps:
     // OpenMP [6.0, self_maps clause]
@@ -3472,6 +3510,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
     Clause = ParseOpenMPClause(CKind, WrongDirective);
+    break;
+  case OMPC_looprange:
+    Clause = ParseOpenMPLoopRangeClause();
     break;
   default:
     break;

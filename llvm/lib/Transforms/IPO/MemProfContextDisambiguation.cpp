@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -40,6 +41,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/InterleavedRange.h"
+#include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
@@ -60,6 +62,9 @@ STATISTIC(FunctionClonesThinBackend,
           "Number of function clones created during ThinLTO backend");
 STATISTIC(FunctionsClonedThinBackend,
           "Number of functions that had clones created during ThinLTO backend");
+STATISTIC(
+    FunctionCloneDuplicatesThinBackend,
+    "Number of function clone duplicates detected during ThinLTO backend");
 STATISTIC(AllocTypeNotCold, "Number of not cold static allocations (possibly "
                             "cloned) during whole program analysis");
 STATISTIC(AllocTypeCold, "Number of cold static allocations (possibly cloned) "
@@ -214,10 +219,11 @@ static cl::opt<bool> MemProfRequireDefinitionForPromotion(
     "memprof-require-definition-for-promotion", cl::init(false), cl::Hidden,
     cl::desc(
         "Require target function definition when promoting indirect calls"));
-} // namespace llvm
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
+
+} // namespace llvm
 
 namespace {
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
@@ -1027,19 +1033,17 @@ private:
 };
 } // namespace
 
-namespace llvm {
 template <>
-struct DenseMapInfo<typename CallsiteContextGraph<
+struct llvm::DenseMapInfo<CallsiteContextGraph<
     ModuleCallsiteContextGraph, Function, Instruction *>::CallInfo>
     : public DenseMapInfo<std::pair<Instruction *, unsigned>> {};
 template <>
-struct DenseMapInfo<typename CallsiteContextGraph<
+struct llvm::DenseMapInfo<CallsiteContextGraph<
     IndexCallsiteContextGraph, FunctionSummary, IndexCall>::CallInfo>
     : public DenseMapInfo<std::pair<IndexCall, unsigned>> {};
 template <>
-struct DenseMapInfo<IndexCall>
+struct llvm::DenseMapInfo<IndexCall>
     : public DenseMapInfo<PointerUnion<CallsiteInfo *, AllocInfo *>> {};
-} // end namespace llvm
 
 namespace {
 
@@ -4526,6 +4530,16 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 //             If Clone not already assigned to a function clone:
 //                Assign to first function clone without assignment
 //             Assign caller to selected function clone
+//   For each call with graph Node having clones:
+//     If number func clones > number call's callsite Node clones:
+//        Record func CallInfo clones without Node clone in UnassignedCallClones
+// For callsite Nodes in DFS order from allocations:
+//   If IsAllocation:
+//     Update allocation with alloc type
+//   Else:
+//     For Call, all MatchingCalls, and associated UnnassignedCallClones:
+//       Update call to call recorded callee clone
+//
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
   bool Changed = false;
@@ -4552,6 +4566,34 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     // corresponding cloned call in this function clone).
     DenseMap<CallInfo, CallInfo> CallMap;
   };
+
+  // Map to keep track of information needed to update calls in function clones
+  // when their corresponding callsite node was not itself cloned for that
+  // function clone. Because of call context pruning (i.e. we only keep as much
+  // caller information as needed to distinguish hot vs cold), we may not have
+  // caller edges coming to each callsite node from all possible function
+  // callers. A function clone may get created for other callsites in the
+  // function for which there are caller edges that were not pruned. Any other
+  // callsites in that function clone, which were not themselved cloned for
+  // that function clone, should get updated the same way as the corresponding
+  // callsite in the original function (which may call a clone of its callee).
+  //
+  // We build this map after completing function cloning for each function, so
+  // that we can record the information from its call maps before they are
+  // destructed. The map will be used as we update calls to update any still
+  // unassigned call clones. Note that we may create new node clones as we clone
+  // other functions, so later on we check which node clones were still not
+  // created. To this end, the inner map is a map from function clone number to
+  // the list of calls cloned for that function (can be more than one due to the
+  // Node's MatchingCalls array).
+  //
+  // The alternative is creating new callsite clone nodes below as we clone the
+  // function, but that is tricker to get right and likely more overhead.
+  //
+  // Inner map is a std::map so sorted by key (clone number), in order to get
+  // ordered remarks in the full LTO case.
+  DenseMap<const ContextNode *, std::map<unsigned, SmallVector<CallInfo, 0>>>
+      UnassignedCallClones;
 
   // Walk all functions for which we saw calls with memprof metadata, and handle
   // cloning for each of its calls.
@@ -4996,6 +5038,63 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         }
       }
     }
+
+    if (FuncCloneInfos.size() < 2)
+      continue;
+
+    // In this case there is more than just the original function copy.
+    // Record call clones of any callsite nodes in the function that did not
+    // themselves get cloned for all of the function clones.
+    for (auto &Call : CallsWithMetadata) {
+      ContextNode *Node = getNodeForInst(Call);
+      if (!Node || !Node->hasCall() || Node->emptyContextIds())
+        continue;
+      // If Node has enough clones already to cover all function clones, we can
+      // skip it. Need to add one for the original copy.
+      // Use >= in case there were clones that were skipped due to having empty
+      // context ids
+      if (Node->Clones.size() + 1 >= FuncCloneInfos.size())
+        continue;
+      // First collect all function clones we cloned this callsite node for.
+      // They may not be sequential due to empty clones e.g.
+      DenseSet<unsigned> NodeCallClones;
+      for (auto *C : Node->Clones)
+        NodeCallClones.insert(C->Call.cloneNo());
+      unsigned I = 0;
+      // Now check all the function clones.
+      for (auto &FC : FuncCloneInfos) {
+        // Function clones should be sequential.
+        assert(FC.FuncClone.cloneNo() == I);
+        // Skip the first clone which got the original call.
+        // Also skip any other clones created for this Node.
+        if (++I == 1 || NodeCallClones.contains(I)) {
+          continue;
+        }
+        // Record the call clones created for this callsite in this function
+        // clone.
+        auto &CallVector = UnassignedCallClones[Node][I];
+        DenseMap<CallInfo, CallInfo> &CallMap = FC.CallMap;
+        if (auto It = CallMap.find(Call); It != CallMap.end()) {
+          CallInfo CallClone = It->second;
+          CallVector.push_back(CallClone);
+        } else {
+          // All but the original clone (skipped earlier) should have an entry
+          // for all calls.
+          assert(false && "Expected to find call in CallMap");
+        }
+        // Need to do the same for all matching calls.
+        for (auto &MatchingCall : Node->MatchingCalls) {
+          if (auto It = CallMap.find(MatchingCall); It != CallMap.end()) {
+            CallInfo CallClone = It->second;
+            CallVector.push_back(CallClone);
+          } else {
+            // All but the original clone (skipped earlier) should have an entry
+            // for all calls.
+            assert(false && "Expected to find call in CallMap");
+          }
+        }
+      }
+    }
   }
 
   uint8_t BothTypes =
@@ -5057,6 +5156,26 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     // Update all the matching calls as well.
     for (auto &Call : Node->MatchingCalls)
       updateCall(Call, CalleeFunc);
+
+    // Now update all calls recorded earlier that are still in function clones
+    // which don't have a clone of this callsite node.
+    if (!UnassignedCallClones.contains(Node))
+      return;
+    DenseSet<unsigned> NodeCallClones;
+    for (auto *C : Node->Clones)
+      NodeCallClones.insert(C->Call.cloneNo());
+    // Note that we already confirmed Node is in this map a few lines above.
+    auto &ClonedCalls = UnassignedCallClones[Node];
+    for (auto &[CloneNo, CallVector] : ClonedCalls) {
+      // Should start at 1 as we never create an entry for original node.
+      assert(CloneNo > 0);
+      // If we subsequently created a clone, skip this one.
+      if (NodeCallClones.contains(CloneNo))
+        continue;
+      // Use the original Node's CalleeFunc.
+      for (auto &Call : CallVector)
+        updateCall(Call, CalleeFunc);
+    }
   };
 
   // Performs DFS traversal starting from allocation nodes to update calls to
@@ -5071,19 +5190,127 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
   return Changed;
 }
 
+// Compute a SHA1 hash of the callsite and alloc version information of clone I
+// in the summary, to use in detection of duplicate clones.
+uint64_t ComputeHash(const FunctionSummary *FS, unsigned I) {
+  SHA1 Hasher;
+  // Update hash with any callsites that call non-default (non-zero) callee
+  // versions.
+  for (auto &SN : FS->callsites()) {
+    // In theory all callsites and allocs in this function should have the same
+    // number of clone entries, but handle any discrepancies gracefully below
+    // for NDEBUG builds.
+    assert(
+        SN.Clones.size() > I &&
+        "Callsite summary has fewer entries than other summaries in function");
+    if (SN.Clones.size() <= I || !SN.Clones[I])
+      continue;
+    uint8_t Data[sizeof(SN.Clones[I])];
+    support::endian::write32le(Data, SN.Clones[I]);
+    Hasher.update(Data);
+  }
+  // Update hash with any allocs that have non-default (non-None) hints.
+  for (auto &AN : FS->allocs()) {
+    // In theory all callsites and allocs in this function should have the same
+    // number of clone entries, but handle any discrepancies gracefully below
+    // for NDEBUG builds.
+    assert(AN.Versions.size() > I &&
+           "Alloc summary has fewer entries than other summaries in function");
+    if (AN.Versions.size() <= I ||
+        (AllocationType)AN.Versions[I] == AllocationType::None)
+      continue;
+    Hasher.update(ArrayRef<uint8_t>(&AN.Versions[I], 1));
+  }
+  return support::endian::read64le(Hasher.result().data());
+}
+
 static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
     Function &F, unsigned NumClones, Module &M, OptimizationRemarkEmitter &ORE,
     std::map<const Function *, SmallPtrSet<const GlobalAlias *, 1>>
-        &FuncToAliasMap) {
+        &FuncToAliasMap,
+    FunctionSummary *FS) {
+  auto TakeDeclNameAndReplace = [](GlobalValue *DeclGV, GlobalValue *NewGV) {
+    // We might have created this when adjusting callsite in another
+    // function. It should be a declaration.
+    assert(DeclGV->isDeclaration());
+    NewGV->takeName(DeclGV);
+    DeclGV->replaceAllUsesWith(NewGV);
+    DeclGV->eraseFromParent();
+  };
+
+  // Handle aliases to this function, and create analogous alias clones to the
+  // provided clone of this function.
+  auto CloneFuncAliases = [&](Function *NewF, unsigned I) {
+    if (!FuncToAliasMap.count(&F))
+      return;
+    for (auto *A : FuncToAliasMap[&F]) {
+      std::string AliasName = getMemProfFuncName(A->getName(), I);
+      auto *PrevA = M.getNamedAlias(AliasName);
+      auto *NewA = GlobalAlias::create(A->getValueType(),
+                                       A->getType()->getPointerAddressSpace(),
+                                       A->getLinkage(), AliasName, NewF);
+      NewA->copyAttributesFrom(A);
+      if (PrevA)
+        TakeDeclNameAndReplace(PrevA, NewA);
+    }
+  };
+
   // The first "clone" is the original copy, we should only call this if we
   // needed to create new clones.
   assert(NumClones > 1);
   SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> VMaps;
   VMaps.reserve(NumClones - 1);
   FunctionsClonedThinBackend++;
+
+  // Map of hash of callsite/alloc versions to the instantiated function clone
+  // (possibly the original) implementing those calls. Used to avoid
+  // instantiating duplicate function clones.
+  // FIXME: Ideally the thin link would not generate such duplicate clones to
+  // start with, but right now it happens due to phase ordering in the function
+  // assignment and possible new clones that produces. We simply make each
+  // duplicate an alias to the matching instantiated clone recorded in the map
+  // (except for available_externally which are made declarations as they would
+  // be aliases in the prevailing module, and available_externally aliases are
+  // not well supported right now).
+  DenseMap<uint64_t, Function *> HashToFunc;
+
+  // Save the hash of the original function version.
+  HashToFunc[ComputeHash(FS, 0)] = &F;
+
   for (unsigned I = 1; I < NumClones; I++) {
     VMaps.emplace_back(std::make_unique<ValueToValueMapTy>());
+    std::string Name = getMemProfFuncName(F.getName(), I);
+    auto Hash = ComputeHash(FS, I);
+    // If this clone would duplicate a previously seen clone, don't generate the
+    // duplicate clone body, just make an alias to satisfy any (potentially
+    // cross-module) references.
+    if (HashToFunc.contains(Hash)) {
+      FunctionCloneDuplicatesThinBackend++;
+      auto *Func = HashToFunc[Hash];
+      if (Func->hasAvailableExternallyLinkage()) {
+        // Skip these as EliminateAvailableExternallyPass does not handle
+        // available_externally aliases correctly and we end up with an
+        // available_externally alias to a declaration. Just create a
+        // declaration for now as we know we will have a definition in another
+        // module.
+        auto Decl = M.getOrInsertFunction(Name, Func->getFunctionType());
+        ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", &F)
+                 << "created clone decl " << ore::NV("Decl", Decl.getCallee()));
+        continue;
+      }
+      auto *PrevF = M.getFunction(Name);
+      auto *Alias = GlobalAlias::create(Name, Func);
+      if (PrevF)
+        TakeDeclNameAndReplace(PrevF, Alias);
+      ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", &F)
+               << "created clone alias " << ore::NV("Alias", Alias));
+
+      // Now handle aliases to this function, and clone those as well.
+      CloneFuncAliases(Func, I);
+      continue;
+    }
     auto *NewF = CloneFunction(&F, *VMaps.back());
+    HashToFunc[Hash] = NewF;
     FunctionClonesThinBackend++;
     // Strip memprof and callsite metadata from clone as they are no longer
     // needed.
@@ -5093,40 +5320,17 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
         Inst.setMetadata(LLVMContext::MD_callsite, nullptr);
       }
     }
-    std::string Name = getMemProfFuncName(F.getName(), I);
     auto *PrevF = M.getFunction(Name);
-    if (PrevF) {
-      // We might have created this when adjusting callsite in another
-      // function. It should be a declaration.
-      assert(PrevF->isDeclaration());
-      NewF->takeName(PrevF);
-      PrevF->replaceAllUsesWith(NewF);
-      PrevF->eraseFromParent();
-    } else
+    if (PrevF)
+      TakeDeclNameAndReplace(PrevF, NewF);
+    else
       NewF->setName(Name);
     updateSubprogramLinkageName(NewF, Name);
     ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", &F)
              << "created clone " << ore::NV("NewFunction", NewF));
 
     // Now handle aliases to this function, and clone those as well.
-    if (!FuncToAliasMap.count(&F))
-      continue;
-    for (auto *A : FuncToAliasMap[&F]) {
-      std::string Name = getMemProfFuncName(A->getName(), I);
-      auto *PrevA = M.getNamedAlias(Name);
-      auto *NewA = GlobalAlias::create(A->getValueType(),
-                                       A->getType()->getPointerAddressSpace(),
-                                       A->getLinkage(), Name, NewF);
-      NewA->copyAttributesFrom(A);
-      if (PrevA) {
-        // We might have created this when adjusting callsite in another
-        // function. It should be a declaration.
-        assert(PrevA->isDeclaration());
-        NewA->takeName(PrevA);
-        PrevA->replaceAllUsesWith(NewA);
-        PrevA->eraseFromParent();
-      }
-    }
+    CloneFuncAliases(NewF, I);
   }
   return VMaps;
 }
@@ -5286,7 +5490,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
     SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> VMaps;
     bool ClonesCreated = false;
     unsigned NumClonesCreated = 0;
-    auto CloneFuncIfNeeded = [&](unsigned NumClones) {
+    auto CloneFuncIfNeeded = [&](unsigned NumClones, FunctionSummary *FS) {
       // We should at least have version 0 which is the original copy.
       assert(NumClones > 0);
       // If only one copy needed use original.
@@ -5300,7 +5504,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         assert(NumClonesCreated == NumClones);
         return;
       }
-      VMaps = createFunctionClones(F, NumClones, M, ORE, FuncToAliasMap);
+      VMaps = createFunctionClones(F, NumClones, M, ORE, FuncToAliasMap, FS);
       // The first "clone" is the original copy, which doesn't have a VMap.
       assert(VMaps.size() == NumClones - 1);
       Changed = true;
@@ -5309,9 +5513,9 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
     };
 
     auto CloneCallsite = [&](const CallsiteInfo &StackNode, CallBase *CB,
-                             Function *CalledFunction) {
+                             Function *CalledFunction, FunctionSummary *FS) {
       // Perform cloning if not yet done.
-      CloneFuncIfNeeded(/*NumClones=*/StackNode.Clones.size());
+      CloneFuncIfNeeded(/*NumClones=*/StackNode.Clones.size(), FS);
 
       assert(!isMemProfClone(*CalledFunction));
 
@@ -5333,6 +5537,10 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
       // below.
       auto CalleeOrigName = CalledFunction->getName();
       for (unsigned J = 0; J < StackNode.Clones.size(); J++) {
+        // If the VMap is empty, this clone was a duplicate of another and was
+        // created as an alias or a declaration.
+        if (J > 0 && VMaps[J - 1]->empty())
+          continue;
         // Do nothing if this version calls the original version of its
         // callee.
         if (!StackNode.Clones[J])
@@ -5452,9 +5660,10 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof);
 
         // Include allocs that were already assigned a memprof function
-        // attribute in the statistics.
-        if (CB->getAttributes().hasFnAttr("memprof")) {
-          assert(!MemProfMD);
+        // attribute in the statistics. Only do this for those that do not have
+        // memprof metadata, since we add an "ambiguous" memprof attribute by
+        // default.
+        if (CB->getAttributes().hasFnAttr("memprof") && !MemProfMD) {
           CB->getAttributes().getFnAttr("memprof").getValueAsString() == "cold"
               ? AllocTypeColdThinBackend++
               : AllocTypeNotColdThinBackend++;
@@ -5476,7 +5685,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 #endif
 
           // Perform cloning if not yet done.
-          CloneFuncIfNeeded(/*NumClones=*/AllocNode.Versions.size());
+          CloneFuncIfNeeded(/*NumClones=*/AllocNode.Versions.size(), FS);
 
           OrigAllocsThinBackend++;
           AllocVersionsThinBackend += AllocNode.Versions.size();
@@ -5509,6 +5718,10 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
           // Update the allocation types per the summary info.
           for (unsigned J = 0; J < AllocNode.Versions.size(); J++) {
+            // If the VMap is empty, this clone was a duplicate of another and
+            // was created as an alias or a declaration.
+            if (J > 0 && VMaps[J - 1]->empty())
+              continue;
             // Ignore any that didn't get an assigned allocation type.
             if (AllocNode.Versions[J] == (uint8_t)AllocationType::None)
               continue;
@@ -5556,7 +5769,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             // we don't need to do ICP, but might need to clone this
             // function as it is the target of other cloned calls.
             if (NumClones)
-              CloneFuncIfNeeded(NumClones);
+              CloneFuncIfNeeded(NumClones, FS);
           }
 
           else {
@@ -5576,7 +5789,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             }
 #endif
 
-            CloneCallsite(StackNode, CB, CalledFunction);
+            CloneCallsite(StackNode, CB, CalledFunction, FS);
           }
         } else if (CB->isTailCall() && CalledFunction) {
           // Locate the synthesized callsite info for the callee VI, if any was
@@ -5586,7 +5799,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           if (CalleeVI && MapTailCallCalleeVIToCallsite.count(CalleeVI)) {
             auto Callsite = MapTailCallCalleeVIToCallsite.find(CalleeVI);
             assert(Callsite != MapTailCallCalleeVIToCallsite.end());
-            CloneCallsite(Callsite->second, CB, CalledFunction);
+            CloneCallsite(Callsite->second, CB, CalledFunction, FS);
           }
         }
       }
@@ -5732,6 +5945,10 @@ void MemProfContextDisambiguation::performICP(
       // check.
       CallBase *CBClone = CB;
       for (unsigned J = 0; J < NumClones; J++) {
+        // If the VMap is empty, this clone was a duplicate of another and was
+        // created as an alias or a declaration.
+        if (J > 0 && VMaps[J - 1]->empty())
+          continue;
         // Copy 0 is the original function.
         if (J > 0)
           CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
@@ -5777,6 +5994,10 @@ void MemProfContextDisambiguation::performICP(
     // TotalCount and the number promoted.
     CallBase *CBClone = CB;
     for (unsigned J = 0; J < NumClones; J++) {
+      // If the VMap is empty, this clone was a duplicate of another and was
+      // created as an alias or a declaration.
+      if (J > 0 && VMaps[J - 1]->empty())
+        continue;
       // Copy 0 is the original function.
       if (J > 0)
         CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
@@ -5928,4 +6149,43 @@ void MemProfContextDisambiguation::run(
 
   IndexCallsiteContextGraph CCG(Index, isPrevailing);
   CCG.process();
+}
+
+// Strips MemProf attributes and metadata. Can be invoked by the pass pipeline
+// when we don't have an index that has recorded that we are linking with
+// allocation libraries containing the necessary APIs for downstream
+// transformations.
+PreservedAnalyses MemProfRemoveInfo::run(Module &M, ModuleAnalysisManager &AM) {
+  // The profile matcher applies hotness attributes directly for allocations,
+  // and those will cause us to generate calls to the hot/cold interfaces
+  // unconditionally. If supports-hot-cold-new was not enabled in the LTO
+  // link then assume we don't want these calls (e.g. not linking with
+  // the appropriate library, or otherwise trying to disable this behavior).
+  bool Changed = false;
+  for (auto &F : M) {
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        auto *CI = dyn_cast<CallBase>(&I);
+        if (!CI)
+          continue;
+        if (CI->hasFnAttr("memprof")) {
+          CI->removeFnAttr("memprof");
+          Changed = true;
+        }
+        if (!CI->hasMetadata(LLVMContext::MD_callsite)) {
+          assert(!CI->hasMetadata(LLVMContext::MD_memprof));
+          continue;
+        }
+        // Strip off all memprof metadata as it is no longer needed.
+        // Importantly, this avoids the addition of new memprof attributes
+        // after inlining propagation.
+        CI->setMetadata(LLVMContext::MD_memprof, nullptr);
+        CI->setMetadata(LLVMContext::MD_callsite, nullptr);
+        Changed = true;
+      }
+    }
+  }
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }

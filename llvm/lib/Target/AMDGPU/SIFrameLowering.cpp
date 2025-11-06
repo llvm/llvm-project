@@ -306,7 +306,8 @@ class PrologEpilogSGPRSpillBuilder {
 
       buildEpilogRestore(ST, TRI, *FuncInfo, LiveUnits, MF, MBB, MI, DL,
                          TmpVGPR, FI, FrameReg, DwordOff);
-      MRI.constrainRegClass(SubReg, &AMDGPU::SReg_32_XM0RegClass);
+      assert(SubReg.isPhysical());
+
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), SubReg)
           .addReg(TmpVGPR, RegState::Kill);
       DwordOff += 4;
@@ -924,6 +925,7 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::SGPRSpill:
     return true;
   case TargetStackID::ScalableVector:
+  case TargetStackID::ScalablePredicateVector:
   case TargetStackID::WasmLocal:
     return false;
   }
@@ -1032,16 +1034,13 @@ void SIFrameLowering::emitCSRSpillStores(
 
   StoreWWMRegisters(WWMCalleeSavedRegs);
   if (FuncInfo->isWholeWaveFunction()) {
-    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose, so we can remove
-    // it now. If we have already saved some WWM CSR registers, then the EXEC is
-    // already -1 and we don't need to do anything else. Otherwise, set EXEC to
-    // -1 here.
+    // If we have already saved some WWM CSR registers, then the EXEC is already
+    // -1 and we don't need to do anything else. Otherwise, set EXEC to -1 here.
     if (!ScratchExecCopy)
       buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL, /*IsProlog*/ true,
                            /*EnableInactiveLanes*/ true);
     else if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
-    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
   } else if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     BuildMI(MBB, MBBI, DL, TII->get(LMC.MovOpc), LMC.ExecReg)
@@ -1338,6 +1337,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
          "Needed to save BP but didn't save it anywhere");
 
   assert((HasBP || !BPSaved) && "Saved BP but didn't need it");
+
+  if (FuncInfo->isWholeWaveFunction()) {
+    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose.
+    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
+  }
 }
 
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -2166,7 +2170,9 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
 
-  return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
+  return (frameTriviallyRequiresSP(MFI) &&
+          !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) ||
+         MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
          mayReserveScratchForCWSR(MF) ||

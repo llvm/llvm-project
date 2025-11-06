@@ -544,8 +544,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 #  include <__iterator/distance.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
-#  include <__iterator/ranges_iterator_traits.h>
-#  include <__memory/addressof.h>
 #  include <__memory/allocator.h>
 #  include <__memory/allocator_traits.h>
 #  include <__memory_resource/polymorphic_allocator.h>
@@ -558,7 +556,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 #  include <__type_traits/invoke.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_integral.h>
-#  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
@@ -913,9 +910,9 @@ public:
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Hash      = hash<__iter_value_type<_InputIterator>>,
-          class _Pred      = equal_to<__iter_value_type<_InputIterator>>,
-          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
+          class _Hash      = hash<__iterator_value_type<_InputIterator>>,
+          class _Pred      = equal_to<__iterator_value_type<_InputIterator>>,
+          class _Allocator = allocator<__iterator_value_type<_InputIterator>>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class            = enable_if_t<!__is_allocator_v<_Hash>>,
           class            = enable_if_t<!is_integral<_Hash>::value>,
@@ -926,7 +923,8 @@ unordered_set(_InputIterator,
               typename allocator_traits<_Allocator>::size_type = 0,
               _Hash                                            = _Hash(),
               _Pred                                            = _Pred(),
-              _Allocator = _Allocator()) -> unordered_set<__iter_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
+              _Allocator                                       = _Allocator())
+    -> unordered_set<__iterator_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
@@ -965,9 +963,9 @@ template <class _InputIterator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Allocator)
-    -> unordered_set<__iter_value_type<_InputIterator>,
-                     hash<__iter_value_type<_InputIterator>>,
-                     equal_to<__iter_value_type<_InputIterator>>,
+    -> unordered_set<__iterator_value_type<_InputIterator>,
+                     hash<__iterator_value_type<_InputIterator>>,
+                     equal_to<__iterator_value_type<_InputIterator>>,
                      _Allocator>;
 
 template <class _InputIterator,
@@ -978,7 +976,10 @@ template <class _InputIterator,
           class = enable_if_t<!is_integral<_Hash>::value>,
           class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
-    -> unordered_set<__iter_value_type<_InputIterator>, _Hash, equal_to<__iter_value_type<_InputIterator>>, _Allocator>;
+    -> unordered_set<__iterator_value_type<_InputIterator>,
+                     _Hash,
+                     equal_to<__iterator_value_type<_InputIterator>>,
+                     _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
 
@@ -1498,9 +1499,9 @@ public:
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Hash      = hash<__iter_value_type<_InputIterator>>,
-          class _Pred      = equal_to<__iter_value_type<_InputIterator>>,
-          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
+          class _Hash      = hash<__iterator_value_type<_InputIterator>>,
+          class _Pred      = equal_to<__iterator_value_type<_InputIterator>>,
+          class _Allocator = allocator<__iterator_value_type<_InputIterator>>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class            = enable_if_t<!__is_allocator_v<_Hash>>,
           class            = enable_if_t<!is_integral<_Hash>::value>,
@@ -1512,7 +1513,7 @@ unordered_multiset(
     typename allocator_traits<_Allocator>::size_type = 0,
     _Hash                                            = _Hash(),
     _Pred                                            = _Pred(),
-    _Allocator = _Allocator()) -> unordered_multiset<__iter_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
+    _Allocator = _Allocator()) -> unordered_multiset<__iterator_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
@@ -1551,9 +1552,9 @@ template <class _InputIterator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Allocator)
-    -> unordered_multiset<__iter_value_type<_InputIterator>,
-                          hash<__iter_value_type<_InputIterator>>,
-                          equal_to<__iter_value_type<_InputIterator>>,
+    -> unordered_multiset<__iterator_value_type<_InputIterator>,
+                          hash<__iterator_value_type<_InputIterator>>,
+                          equal_to<__iterator_value_type<_InputIterator>>,
                           _Allocator>;
 
 template <class _InputIterator,
@@ -1564,9 +1565,9 @@ template <class _InputIterator,
           class = enable_if_t<!is_integral<_Hash>::value>,
           class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
-    -> unordered_multiset<__iter_value_type<_InputIterator>,
+    -> unordered_multiset<__iterator_value_type<_InputIterator>,
                           _Hash,
-                          equal_to<__iter_value_type<_InputIterator>>,
+                          equal_to<__iterator_value_type<_InputIterator>>,
                           _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23

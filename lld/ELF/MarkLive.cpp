@@ -68,10 +68,9 @@ private:
   void mark();
 
   template <class RelTy>
-  void resolveReloc(InputSectionBase &sec, RelTy &rel, bool fromFDE);
+  void resolveReloc(InputSectionBase &sec, const RelTy &rel, bool fromFDE);
 
-  template <class RelTy>
-  void scanEhFrameSection(EhInputSection &eh, ArrayRef<RelTy> rels);
+  void scanEhFrameSection(EhInputSection &eh);
 
   Ctx &ctx;
   // The index of the partition that we are currently processing.
@@ -115,23 +114,38 @@ static uint64_t getAddend(Ctx &, InputSectionBase &sec,
 template <class ELFT, bool TrackWhyLive>
 template <class RelTy>
 void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
-                                                RelTy &rel, bool fromFDE) {
+                                                const RelTy &rel,
+                                                bool fromFDE) {
   // If a symbol is referenced in a live section, it is used.
-  Symbol &sym = sec.file->getRelocTargetSym(rel);
-  sym.used = true;
+  Symbol *sym;
+  if constexpr (std::is_same_v<RelTy, Relocation>) {
+    assert(isa<EhInputSection>(sec));
+    sym = rel.sym;
+  } else {
+    sym = &sec.file->getRelocTargetSym(rel);
+  }
+  sym->used = true;
 
   LiveReason reason;
-  if (TrackWhyLive)
-    reason = {SecOffset(&sec, rel.r_offset), "referenced by"};
+  if (TrackWhyLive) {
+    if constexpr (std::is_same_v<RelTy, Relocation>)
+      reason = {SecOffset(&sec, rel.offset), "referenced by"};
+    else
+      reason = {SecOffset(&sec, rel.r_offset), "referenced by"};
+  }
 
-  if (auto *d = dyn_cast<Defined>(&sym)) {
+  if (auto *d = dyn_cast<Defined>(sym)) {
     auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section);
     if (!relSec)
       return;
 
     uint64_t offset = d->value;
-    if (d->isSection())
-      offset += getAddend<ELFT>(ctx, sec, rel);
+    if (d->isSection()) {
+      if constexpr (std::is_same_v<RelTy, Relocation>)
+        offset += rel.addend;
+      else
+        offset += getAddend<ELFT>(ctx, sec, rel);
+    }
 
     // fromFDE being true means this is referenced by a FDE in a .eh_frame
     // piece. The relocation points to the described function or to a LSDA. We
@@ -141,8 +155,9 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
     // associated text section is live, the LSDA will be retained due to section
     // group/SHF_LINK_ORDER rules (b) if the associated text section should be
     // discarded, marking the LSDA will unnecessarily retain the text section.
-    if (!(fromFDE && ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
-                      relSec->nextInSectionGroup))) {
+    if (!(fromFDE && std::is_same_v<RelTy, Relocation> &&
+          ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
+           relSec->nextInSectionGroup))) {
       Symbol *canonicalSym = d;
       if (TrackWhyLive && d->isSection()) {
         // This is expensive, so ideally this would be deferred until it's known
@@ -159,15 +174,15 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
     return;
   }
 
-  if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
+  if (auto *ss = dyn_cast<SharedSymbol>(sym)) {
     if (!ss->isWeak()) {
       cast<SharedFile>(ss->file)->isNeeded = true;
       if (TrackWhyLive)
-        whyLive.try_emplace(&sym, reason);
+        whyLive.try_emplace(sym, reason);
     }
   }
 
-  for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
+  for (InputSectionBase *sec : cNamedSections.lookup(sym->getName()))
     enqueue(sec, /*offset=*/0, /*sym=*/nullptr, reason);
 }
 
@@ -186,9 +201,8 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
 // the gc pass. With that we would be able to also gc some sections holding
 // LSDAs and personality functions if we found that they were unused.
 template <class ELFT, bool TrackWhyLive>
-template <class RelTy>
-void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh,
-                                                      ArrayRef<RelTy> rels) {
+void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
+  ArrayRef<Relocation> rels = eh.rels;
   for (const EhSectionPiece &cie : eh.cies)
     if (cie.firstRelocation != unsigned(-1))
       resolveReloc(eh, rels[cie.firstRelocation], false);
@@ -198,7 +212,7 @@ void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh,
       continue;
     uint64_t pieceEnd = fde.inputOff + fde.size;
     for (size_t j = firstRelI, end2 = rels.size();
-         j < end2 && rels[j].r_offset < pieceEnd; ++j)
+         j < end2 && rels[j].offset < pieceEnd; ++j)
       resolveReloc(eh, rels[j], true);
   }
 }
@@ -360,14 +374,8 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
   // that point to .eh_frames. Otherwise, the garbage collector would drop
   // all of them. We also want to preserve personality routines and LSDA
   // referenced by .eh_frame sections, so we scan them for that here.
-  for (EhInputSection *eh : ctx.ehInputSections) {
-    const RelsOrRelas<ELFT> rels =
-        eh->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
-    if (rels.areRelocsRel())
-      scanEhFrameSection(*eh, rels.rels);
-    else if (rels.relas.size())
-      scanEhFrameSection(*eh, rels.relas);
-  }
+  for (EhInputSection *eh : ctx.ehInputSections)
+    scanEhFrameSection(*eh);
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
       enqueue(sec, /*offset=*/0, /*sym=*/nullptr, {std::nullopt, "retained"});

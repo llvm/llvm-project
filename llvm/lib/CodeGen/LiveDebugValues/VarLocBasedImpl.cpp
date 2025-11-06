@@ -1094,7 +1094,7 @@ public:
   /// Default construct and initialize the pass.
   VarLocBasedLDV();
 
-  ~VarLocBasedLDV();
+  ~VarLocBasedLDV() override;
 
   /// Print to ostream with a message.
   void printVarLocInMBB(const MachineFunction &MF, const VarLocInMBB &V,
@@ -2231,7 +2231,7 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
   TFI->getCalleeSaves(MF, CalleeSavedRegs);
   this->ShouldEmitDebugEntryValues = ShouldEmitDebugEntryValues;
 
-  LS.initialize(MF);
+  LS.scanFunction(MF);
 
   bool Changed = false;
   bool OLChanged = false;

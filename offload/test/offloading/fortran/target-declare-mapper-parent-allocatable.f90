@@ -24,7 +24,7 @@ program target_declare_mapper_parent_allocatable
   allocate(r%base_arr(10), source=1.0)
   allocate(r%real_arr(10), source=1.0)
 
-  !$omp target map(tofrom: r)
+  !$omp target map(mapper(custommapper), tofrom: r)
   do i = 1, size(r%base_arr)
     r%base_arr(i) = 2.0
     r%real_arr(i) = 3.0

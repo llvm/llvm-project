@@ -261,6 +261,12 @@ static StructType *getBinaryWithCarryType(LLVMContext &Context) {
   return StructType::create({Int32Ty, Int1Ty}, "dx.types.i32c");
 }
 
+static StructType *getDimensionsType(LLVMContext &Ctx) {
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  return getOrCreateStructType("dx.types.Dimensions",
+                               {Int32Ty, Int32Ty, Int32Ty, Int32Ty}, Ctx);
+}
+
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
                                     Type *OverloadTy) {
   switch (Kind) {
@@ -318,6 +324,8 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getSplitDoubleType(Ctx);
   case OpParamType::BinaryWithCarryTy:
     return getBinaryWithCarryType(Ctx);
+  case OpParamType::DimensionsTy:
+    return getDimensionsType(Ctx);
   }
   llvm_unreachable("Invalid parameter kind");
   return nullptr;

@@ -532,7 +532,7 @@ RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
           ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
           return common::nullopt;
         }
-        edit.ioType[edit.ioTypeChars++] = ch;
+        context.ioType[edit.ioTypeChars++] = ch;
         if (ch == quote) {
           ++offset_;
         }
@@ -556,7 +556,7 @@ RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
           ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
           return common::nullopt;
         }
-        edit.vList[edit.vListEntries++] = n;
+        context.vList[edit.vListEntries++] = n;
         auto ch{static_cast<char>(GetNextChar(context))};
         if (ch != ',') {
           ok = ch == ')';
