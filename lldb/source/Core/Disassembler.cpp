@@ -330,13 +330,13 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
 
   // If we lost module context, mark all live variables as undefined.
   if (!module_sp) {
-    for (const auto &KV : Live_) {
+    for (const auto &KV : m_live_vars) {
       auto annotation_entity = KV.second;
       annotation_entity.is_live = false;
       annotation_entity.location_description = kUndefLocation;
       annotations.push_back(annotation_entity);
     }
-    Live_.clear();
+    m_live_vars.clear();
     return annotations;
   }
 
@@ -347,13 +347,13 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
   if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
       !sc.function) {
     // No function context: everything dies here.
-    for (const auto &KV : Live_) {
+    for (const auto &KV : m_live_vars) {
       auto annotation_entity = KV.second;
       annotation_entity.is_live = false;
       annotation_entity.location_description = kUndefLocation;
       annotations.push_back(annotation_entity);
     }
-    Live_.clear();
+    m_live_vars.clear();
     return annotations;
   }
 
@@ -430,12 +430,12 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
                                            decl_line, type_name});
   }
 
-  // Diff Live_ → Current.
+  // Diff m_live_vars → Current.
 
-  // 1) Starts/changes: iterate Current and compare with Live_.
+  // 1) Starts/changes: iterate Current and compare with m_live_vars.
   for (const auto &KV : Current) {
-    auto it = Live_.find(KV.first);
-    if (it == Live_.end()) {
+    auto it = m_live_vars.find(KV.first);
+    if (it == m_live_vars.end()) {
       // Newly live.
       auto annotation_entity = KV.second;
       annotation_entity.is_live = true;
@@ -451,7 +451,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
 
   // 2) Ends: anything that was live but is not in Current becomes
   // <kUndefLocation>.
-  for (const auto &KV : Live_)
+  for (const auto &KV : m_live_vars)
     if (!Current.count(KV.first)) {
       auto annotation_entity = KV.second;
       annotation_entity.is_live = false;
@@ -460,7 +460,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
     }
 
   // Commit new state.
-  Live_ = std::move(Current);
+  m_live_vars = std::move(Current);
   return annotations;
 }
 
