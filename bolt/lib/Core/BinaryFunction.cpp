@@ -2049,41 +2049,47 @@ void BinaryFunction::postProcessJumpTables() {
   }
 }
 
-bool BinaryFunction::validateExternallyReferencedOffsets() {
-  SmallPtrSet<MCSymbol *, 4> JTTargets;
-  for (const JumpTable *JT : llvm::make_second_range(JumpTables))
-    JTTargets.insert_range(JT->Entries);
+bool BinaryFunction::validateInternalRefDataRelocations() {
+  if (InternalRefDataRelocations.empty())
+    return true;
 
-  bool HasUnclaimedReference = false;
-  for (uint64_t Destination : ExternallyReferencedOffsets) {
-    // Ignore __builtin_unreachable().
-    if (Destination == getSize())
-      continue;
-    // Ignore constant islands
-    if (isInConstantIsland(Destination + getAddress()))
-      continue;
+  // Rely on the user hint that all data refs are valid and only used as
+  // destinations by indirect branch in the same function.
+  if (opts::StrictMode)
+    return true;
 
-    if (BinaryBasicBlock *BB = getBasicBlockAtOffset(Destination)) {
-      // Check if the externally referenced offset is a recognized jump table
-      // target.
-      if (JTTargets.contains(BB->getLabel()))
-        continue;
-
-      if (opts::Verbosity >= 1) {
-        BC.errs() << "BOLT-WARNING: unclaimed data to code reference (possibly "
-                  << "an unrecognized jump table entry) to " << BB->getName()
-                  << " in " << *this << "\n";
-      }
-      auto L = BC.scopeLock();
-      addEntryPoint(*BB);
-    } else {
-      BC.errs() << "BOLT-WARNING: unknown data to code reference to offset "
-                << Twine::utohexstr(Destination) << " in " << *this << "\n";
-      setIgnored();
+  DenseSet<uint64_t> UnclaimedRelocations(InternalRefDataRelocations);
+  for (const JumpTable *JT : llvm::make_second_range(JumpTables)) {
+    uint64_t EntryAddress = JT->getAddress();
+    while (EntryAddress < JT->getAddress() + JT->getSize()) {
+      UnclaimedRelocations.erase(EntryAddress);
+      EntryAddress += JT->EntrySize;
     }
-    HasUnclaimedReference = true;
   }
-  return !HasUnclaimedReference;
+
+  if (UnclaimedRelocations.empty())
+    return true;
+
+  BC.errs() << "BOLT-WARNING: " << UnclaimedRelocations.size()
+            << " unclaimed data relocation"
+            << (UnclaimedRelocations.size() > 1 ? "s" : "")
+            << " remain against function " << *this;
+  if (opts::Verbosity) {
+    BC.errs() << ":\n";
+    for (uint64_t RelocationAddress : UnclaimedRelocations) {
+      const Relocation *Relocation = BC.getRelocationAt(RelocationAddress);
+      BC.errs() << "  ";
+      if (Relocation)
+        BC.errs() << *Relocation;
+      else
+        BC.errs() << "<missing relocation>";
+      BC.errs() << '\n';
+    }
+  } else {
+    BC.errs() << ". Re-run with -v=1 to see the list\n";
+  }
+
+  return false;
 }
 
 bool BinaryFunction::postProcessIndirectBranches(
@@ -2206,14 +2212,6 @@ bool BinaryFunction::postProcessIndirectBranches(
     HasUnknownControlFlow = false;
 
     LastIndirectJumpBB->updateJumpTableSuccessors();
-  }
-
-  // Validate that all data references to function offsets are claimed by
-  // recognized jump tables. Register externally referenced blocks as entry
-  // points.
-  if (!opts::StrictMode && hasInternalReference()) {
-    if (!validateExternallyReferencedOffsets())
-      return false;
   }
 
   if (HasUnknownControlFlow && !BC.HasRelocations)
@@ -2504,12 +2502,18 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   CurrentState = State::CFG;
 
   // Make any necessary adjustments for indirect branches.
-  if (!postProcessIndirectBranches(AllocatorId)) {
-    if (opts::Verbosity) {
-      BC.errs() << "BOLT-WARNING: failed to post-process indirect branches for "
-                << *this << '\n';
-    }
+  bool ValidCFG = postProcessIndirectBranches(AllocatorId);
+  if (!ValidCFG && opts::Verbosity) {
+    BC.errs() << "BOLT-WARNING: failed to post-process indirect branches for "
+              << *this << '\n';
+  }
 
+  // Validate that all data references to function offsets are claimed by
+  // recognized jump tables.
+  if (ValidCFG)
+    ValidCFG = validateInternalRefDataRelocations();
+
+  if (!ValidCFG) {
     if (BC.isAArch64())
       PreserveNops = BC.HasRelocations;
 
