@@ -116,6 +116,9 @@ def err_enumerator_unnamed_no_def : Error<
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
+def ext_ms_c_empty_enum_type : Extension<
+  "empty enumeration types are a Microsoft extension">,
+  InGroup<MicrosoftEmptyEnum>;
 def ext_c23_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a C23 extension">,
   InGroup<C23>;
