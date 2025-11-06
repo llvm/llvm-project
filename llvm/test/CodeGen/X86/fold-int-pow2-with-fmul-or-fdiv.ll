@@ -143,18 +143,17 @@ define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    subq $120, %rsp
 ; CHECK-SSE-NEXT:    .cfi_def_cfa_offset 128
-; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
-; CHECK-SSE-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
-; CHECK-SSE-NEXT:    pslld $23, %xmm2
-; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
-; CHECK-SSE-NEXT:    paddd %xmm3, %xmm2
-; CHECK-SSE-NEXT:    cvttps2dq %xmm2, %xmm2
-; CHECK-SSE-NEXT:    pslld $16, %xmm2
-; CHECK-SSE-NEXT:    movdqa %xmm2, (%rsp) # 16-byte Spill
-; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-SSE-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; CHECK-SSE-NEXT:    pslld $23, %xmm1
+; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1065353216,1065353216,1065353216,1065353216]
+; CHECK-SSE-NEXT:    paddd %xmm2, %xmm1
+; CHECK-SSE-NEXT:    cvttps2dq %xmm1, %xmm1
+; CHECK-SSE-NEXT:    pslld $16, %xmm1
+; CHECK-SSE-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
+; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; CHECK-SSE-NEXT:    pslld $23, %xmm0
-; CHECK-SSE-NEXT:    paddd %xmm3, %xmm0
+; CHECK-SSE-NEXT:    paddd %xmm2, %xmm0
 ; CHECK-SSE-NEXT:    cvttps2dq %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    pslld $16, %xmm0
 ; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1105,8 +1104,7 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_vec_fail_to_large:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    subq $40, %rsp
-; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
-; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; CHECK-SSE-NEXT:    pslld $23, %xmm0
 ; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE-NEXT:    cvttps2dq %xmm0, %xmm0
