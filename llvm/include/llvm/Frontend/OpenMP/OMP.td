@@ -1284,16 +1284,17 @@ def OMP_TaskGroup : Directive<[Spelling<"taskgroup">]> {
   let category = CA_Executable;
 }
 def OMP_TaskLoop : Directive<[Spelling<"taskloop">]> {
-  let allowedClauses = [VersionedClause<OMPC_Allocate>,
-                        VersionedClause<OMPC_FirstPrivate>,
-                        VersionedClause<OMPC_InReduction>,
-                        VersionedClause<OMPC_LastPrivate>,
-                        VersionedClause<OMPC_Mergeable>,
-                        VersionedClause<OMPC_NoGroup>,
-                        VersionedClause<OMPC_Private>,
-                        VersionedClause<OMPC_Reduction>,
-                        VersionedClause<OMPC_Shared>,
-                        VersionedClause<OMPC_Untied>,
+  let allowedClauses = [
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_InReduction>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Mergeable>,
+    VersionedClause<OMPC_NoGroup>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Untied>,
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
