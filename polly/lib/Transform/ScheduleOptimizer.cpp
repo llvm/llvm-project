@@ -932,13 +932,14 @@ static void runIslScheduleOptimizer(
     POLLY_DEBUG(dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
     return;
   } else if (isl_ctx_last_error(Ctx) != isl_error_none) {
-    const char *File = isl_ctx_last_error_file(Ctx);
-    int Line = isl_ctx_last_error_line(Ctx);
-    const char *Msg = isl_ctx_last_error_msg(Ctx);
-    POLLY_DEBUG(
-        dbgs()
-        << "ISL reported an error during the computation of a new schedule at "
-        << File << ":" << Line << ": " << Msg);
+    POLLY_DEBUG({
+      const char *File = isl_ctx_last_error_file(Ctx);
+      int Line = isl_ctx_last_error_line(Ctx);
+      const char *Msg = isl_ctx_last_error_msg(Ctx);
+      dbgs() << "ISL reported an error during the computation of a new "
+                "schedule at "
+             << File << ":" << Line << ": " << Msg;
+    });
     isl_ctx_reset_error(Ctx);
     return;
   } else if (Schedule.is_null()) {
