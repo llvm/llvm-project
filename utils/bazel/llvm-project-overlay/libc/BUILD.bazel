@@ -5281,6 +5281,7 @@ libc_function(
     hdrs = ["src/stdlib/strfromf.h"],
     deps = [
         ":__support_common",
+        ":printf_error_mapper",
         ":str_from_util",
     ],
 )
@@ -5291,6 +5292,7 @@ libc_function(
     hdrs = ["src/stdlib/strfromd.h"],
     deps = [
         ":__support_common",
+        ":printf_error_mapper",
         ":str_from_util",
     ],
 )
@@ -5301,6 +5303,7 @@ libc_function(
     hdrs = ["src/stdlib/strfroml.h"],
     deps = [
         ":__support_common",
+        ":printf_error_mapper",
         ":str_from_util",
     ],
 )
@@ -6526,12 +6529,12 @@ libc_support_library(
         ],
     }),
     deps = [
-        ":hdr_errno_macros",
-        ":printf_core_structs",
         ":__support_cpp_type_traits",
         ":__support_error_or",
         ":__support_macros_properties_architectures",
-    ]
+        ":hdr_errno_macros",
+        ":printf_core_structs",
+    ],
 )
 
 libc_support_library(
