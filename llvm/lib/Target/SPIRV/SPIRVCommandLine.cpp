@@ -159,7 +159,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_maximal_reconvergence",
          SPIRV::Extension::Extension::SPV_KHR_maximal_reconvergence},
         {"SPV_INTEL_kernel_attributes",
-         SPIRV::Extension::Extension::SPV_INTEL_kernel_attributes}};
+         SPIRV::Extension::Extension::SPV_INTEL_kernel_attributes},
+        {"SPV_ALTERA_blocking_pipes",
+         SPIRV::Extension::Extension::SPV_ALTERA_blocking_pipes}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,

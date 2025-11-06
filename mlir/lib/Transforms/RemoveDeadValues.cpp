@@ -742,25 +742,7 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   LDBG() << "Starting cleanup of dead values...";
 
-  // 1. Blocks
-  LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
-  for (auto &b : list.blocks) {
-    // blocks that are accessed via multiple codepaths processed once
-    if (b.b->getNumArguments() != b.nonLiveArgs.size())
-      continue;
-    LDBG() << "Erasing " << b.nonLiveArgs.count()
-           << " non-live arguments from block: " << b.b;
-    // it iterates backwards because erase invalidates all successor indexes
-    for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
-      if (!b.nonLiveArgs[i])
-        continue;
-      LDBG() << "  Erasing block argument " << i << ": " << b.b->getArgument(i);
-      b.b->getArgument(i).dropAllUses();
-      b.b->eraseArgument(i);
-    }
-  }
-
-  // 2. Operations
+  // 1. Operations
   LDBG() << "Cleaning up " << list.operations.size() << " operations";
   for (auto &op : list.operations) {
     LDBG() << "Erasing operation: "
@@ -769,14 +751,14 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     op->erase();
   }
 
-  // 3. Values
+  // 2. Values
   LDBG() << "Cleaning up " << list.values.size() << " values";
   for (auto &v : list.values) {
     LDBG() << "Dropping all uses of value: " << v;
     v.dropAllUses();
   }
 
-  // 4. Functions
+  // 3. Functions
   LDBG() << "Cleaning up " << list.functions.size() << " functions";
   // Record which function arguments were erased so we can shrink call-site
   // argument segments for CallOpInterface operations (e.g. ops using
@@ -798,7 +780,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
 
-  // 5. Operands
+  // 4. Operands
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperationToCleanup &o : list.operands) {
     // Handle call-specific cleanup only when we have a cached callee reference.
@@ -840,13 +822,31 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     }
   }
 
-  // 6. Results
+  // 5. Results
   LDBG() << "Cleaning up " << list.results.size() << " result lists";
   for (auto &r : list.results) {
     LDBG() << "Erasing " << r.nonLive.count()
            << " non-live results from operation: "
            << OpWithFlags(r.op, OpPrintingFlags().skipRegions());
     dropUsesAndEraseResults(r.op, r.nonLive);
+  }
+
+  // 6. Blocks
+  LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
+  for (auto &b : list.blocks) {
+    // blocks that are accessed via multiple codepaths processed once
+    if (b.b->getNumArguments() != b.nonLiveArgs.size())
+      continue;
+    LDBG() << "Erasing " << b.nonLiveArgs.count()
+           << " non-live arguments from block: " << b.b;
+    // it iterates backwards because erase invalidates all successor indexes
+    for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
+      if (!b.nonLiveArgs[i])
+        continue;
+      LDBG() << "  Erasing block argument " << i << ": " << b.b->getArgument(i);
+      b.b->getArgument(i).dropAllUses();
+      b.b->eraseArgument(i);
+    }
   }
 
   // 7. Successor Operands
