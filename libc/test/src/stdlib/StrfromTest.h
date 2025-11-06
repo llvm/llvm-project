@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -495,6 +496,16 @@ public:
   }
 };
 
+// https://github.com/llvm/llvm-project/issues/166795
+#ifndef LIBC_TARGET_ARCH_IS_RISCV32
+#define STRFROM_OVERFLOW_TEST(name, func)                                      \
+  TEST_F(LlvmLibc##name##Test, CharsWrittenOverflow) {                         \
+    charsWrittenOverflow(func);                                                \
+  }
+#else
+#define STRFROM_OVERFLOW_TEST(name, func)
+#endif
+
 #define STRFROM_TEST(InputType, name, func)                                    \
   using LlvmLibc##name##Test = StrfromTest<InputType>;                         \
   TEST_F(LlvmLibc##name##Test, FloatDecimalFormat) {                           \
@@ -514,6 +525,4 @@ public:
     insufficentBufsize(func);                                                  \
   }                                                                            \
   TEST_F(LlvmLibc##name##Test, InfAndNanValues) { infNanValues(func); }        \
-  // TEST_F(LlvmLibc##name##Test, CharsWrittenOverflow) { \
-  //   charsWrittenOverflow(func); \
-  // }
+  STRFROM_OVERFLOW_TEST(name, func)
