@@ -1373,7 +1373,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                              "applying corresponding DTU updates.");
   } else if (BBPhisMergeable) {
     //  Everything except CommonPred that jumped to BB now goes to Succ.
-    BB->replaceUsesWithIf(Succ, [BBPreds, CommonPreds](Use &U) -> bool {
+    BB->replaceUsesWithIf(Succ, [&BBPreds, &CommonPreds](Use &U) -> bool {
       if (Instruction *UseInst = dyn_cast<Instruction>(U.getUser()))
         return !CommonPreds.contains(UseInst->getParent()) &&
                BBPreds.contains(UseInst->getParent());
