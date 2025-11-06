@@ -116,7 +116,7 @@ functions:
       - type: int
   - name: pkey_get
     standards:
-      - GNUExtensions
+      - GNU
     return_type: int
     arguments:
       - type: int
@@ -131,7 +131,7 @@ functions:
       - type: int
   - name: pkey_set
     standards:
-      - GNUExtensions
+      - GNU
     return_type: int
     arguments:
       - type: int
