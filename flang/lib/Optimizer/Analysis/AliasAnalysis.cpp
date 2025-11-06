@@ -534,6 +534,16 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   mlir::Operation *instantiationPoint{nullptr};
+  // Helper to conservatively classify a candidate value as coming from a
+  // dummy argument or as indirect when no allocation or global can be proven.
+  auto classifyFallbackFrom = [&](mlir::Value candidate) {
+    if (isDummyArgument(candidate)) {
+      defOp = nullptr;
+      v = candidate;
+    } else {
+      type = SourceKind::Indirect;
+    }
+  };
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
 
@@ -578,22 +588,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           defOp = v.getDefiningOp();
         })
         .Case<hlfir::AssociateOp>([&](auto op) {
+          // Do not pattern-match Allocate. Trace through the source.
           mlir::Value source = op.getSource();
-          if (fir::isa_trivial(source.getType())) {
-            // Trivial values will always use distinct temp memory,
-            // so we can classify this as Allocate and stop.
-            type = SourceKind::Allocate;
-            breakFromLoop = true;
-          } else {
-            // AssociateOp may reuse the expression storage,
-            // so we have to trace further.
-            v = source;
-            defOp = v.getDefiningOp();
-          }
+          v = source;
+          defOp = v.getDefiningOp();
         })
         .Case<fir::AllocaOp, fir::AllocMemOp>([&](auto op) {
-          // Unique memory allocation.
-          type = SourceKind::Allocate;
+          // Do not pattern-match allocations by op name; rely on memory
+          // effects classification above. Nothing to do here.
           breakFromLoop = true;
         })
         .Case<fir::ConvertOp>([&](auto op) {
@@ -665,17 +667,60 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
               type = SourceKind::Global;
             } else {
               auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
-              // TODO: Add support to fir.allocmem
-              if (auto allocOp = def.template getDefiningOp<fir::AllocaOp>()) {
-                v = def;
-                defOp = v.getDefiningOp();
-                type = SourceKind::Allocate;
-              } else if (isDummyArgument(def)) {
-                defOp = nullptr;
-                v = def;
-              } else {
-                type = SourceKind::Indirect;
+              bool classified = false;
+              if (auto defDefOp = def.getDefiningOp()) {
+                if (auto defIface =
+                        llvm::dyn_cast<mlir::MemoryEffectOpInterface>(defDefOp)) {
+                  llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> eff;
+                  defIface.getEffects(eff);
+                  // Prefer value-scoped Allocate on the underlying storage.
+                  for (auto &e : eff) {
+                    if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
+                        e.getValue() && e.getValue() == def) {
+                      v = def;
+                      defOp = v.getDefiningOp();
+                      type = SourceKind::Allocate;
+                      classified = true;
+                      break;
+                    }
+                  }
+                  // Heuristic for op-scoped Allocate at the underlying defining op.
+                  if (!classified) {
+                    bool sawOpScopedAlloc = llvm::any_of(
+                        eff, [](auto &e) {
+                          return !e.getValue() &&
+                                 mlir::isa<mlir::MemoryEffects::Allocate>(
+                                     e.getEffect());
+                        });
+                    if (sawOpScopedAlloc) {
+                      auto isMemoryRefLikeType = [](mlir::Type t) {
+                        return fir::isa_ref_type(t) ||
+                               mlir::isa<mlir::BaseMemRefType>(t) ||
+                               mlir::isa<mlir::LLVM::LLVMPointerType>(t);
+                      };
+                      bool opIsViewLike = (bool)mlir::dyn_cast_or_null<
+                          mlir::ViewLikeOpInterface>(defDefOp);
+                      bool hasMemOperands = llvm::any_of(
+                          defDefOp->getOperands(), [&](mlir::Value opnd) {
+                            return isMemoryRefLikeType(opnd.getType());
+                          });
+                      if (!opIsViewLike && !hasMemOperands) {
+                        for (mlir::Value res : defDefOp->getResults()) {
+                          if (res == def && isMemoryRefLikeType(res.getType())) {
+                            v = def;
+                            defOp = v.getDefiningOp();
+                            type = SourceKind::Allocate;
+                            classified = true;
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
               }
+              if (!classified)
+                classifyFallbackFrom(def);
             }
             breakFromLoop = true;
             return;
