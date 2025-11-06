@@ -291,7 +291,7 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
   llvm_unreachable("Unsupported proxy kinds");
 }
 
-static unsigned getMemoryBarrierLevelID(NVVM::MemScopeKind scope) {
+static unsigned getMembarIntrinsicID(NVVM::MemScopeKind scope) {
   switch (scope) {
   case NVVM::MemScopeKind::CTA: {
     return llvm::Intrinsic::nvvm_membar_cta;

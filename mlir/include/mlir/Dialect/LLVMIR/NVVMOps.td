@@ -1249,7 +1249,7 @@ def NVVM_MembarOp : NVVM_Op<"memory_barrier">,
 
   let assemblyFormat = "$scope attr-dict";
   let llvmBuilder = [{
-    createIntrinsicCall(builder, getMemoryBarrierLevelID($scope), {});
+    createIntrinsicCall(builder, getMembarIntrinsicID($scope), {});
   }];
 }
 
