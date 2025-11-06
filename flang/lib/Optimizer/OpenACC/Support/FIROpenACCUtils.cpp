@@ -165,9 +165,8 @@ std::string getVariableName(Value v, bool preferDemangledName) {
   // When the demangled name is requested - demangle it.
   if (preferDemangledName) {
     auto [kind, deconstructed] = fir::NameUniquer::deconstruct(srcName);
-    if (kind != fir::NameUniquer::NameKind::NOT_UNIQUED) {
+    if (kind != fir::NameUniquer::NameKind::NOT_UNIQUED)
       return prefix + deconstructed.name + suffix;
-    }
   }
 
   return prefix + srcName + suffix;
@@ -182,13 +181,12 @@ bool areAllBoundsConstant(llvm::ArrayRef<Value> bounds) {
 
     // Check if this bound has constant values
     bool hasConstant = false;
-    if (dataBound.getLowerbound() && dataBound.getUpperbound()) {
+    if (dataBound.getLowerbound() && dataBound.getUpperbound())
       hasConstant =
           fir::getIntIfConstant(dataBound.getLowerbound()).has_value() &&
           fir::getIntIfConstant(dataBound.getUpperbound()).has_value();
-    } else if (dataBound.getExtent()) {
+    else if (dataBound.getExtent())
       hasConstant = fir::getIntIfConstant(dataBound.getExtent()).has_value();
-    }
 
     if (!hasConstant)
       return false;
@@ -247,21 +245,18 @@ std::string getRecipeName(mlir::acc::RecipeKind kind, Type type, Value var,
   case mlir::acc::RecipeKind::firstprivate_recipe:
     prefixOS << "firstprivatization";
     // Add bounds to the prefix if applicable (only for firstprivate)
-    if (!bounds.empty() && areAllBoundsConstant(bounds)) {
+    if (!bounds.empty() && areAllBoundsConstant(bounds))
       prefixOS << getBoundsString(bounds);
-    }
     break;
   case mlir::acc::RecipeKind::reduction_recipe:
     prefixOS << "reduction";
     // Embed the reduction operator in the prefix
-    if (reductionOp != mlir::acc::ReductionOperator::AccNone) {
+    if (reductionOp != mlir::acc::ReductionOperator::AccNone)
       prefixOS << "_"
                << mlir::acc::stringifyReductionOperator(reductionOp).str();
-    }
     // Add bounds to the prefix if applicable (only for reduction)
-    if (!bounds.empty() && areAllBoundsConstant(bounds)) {
+    if (!bounds.empty() && areAllBoundsConstant(bounds))
       prefixOS << getBoundsString(bounds);
-    }
     break;
   }
 
