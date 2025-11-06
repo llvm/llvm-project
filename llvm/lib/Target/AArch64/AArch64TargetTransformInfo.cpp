@@ -5936,6 +5936,14 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost;
   }
 
+  // f16 -> f32 is natively supported for fdot
+  if (ST->isSVEorStreamingSVEAvailable() && ST->hasSVE2p1() &&
+      Opcode == Instruction::FAdd) {
+    if (AccumLT.second.getScalarType() == MVT::f32 &&
+        InputLT.second.getScalarType() == MVT::f16)
+      return Cost;
+  }
+
   // Add additional cost for the extends that would need to be inserted.
   return Cost + 2;
 }
