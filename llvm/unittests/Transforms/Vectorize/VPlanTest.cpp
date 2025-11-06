@@ -706,12 +706,14 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
 
 TEST_F(VPBasicBlockTest, splitAtEnd) {
   VPlan &Plan = getPlan();
-  VPInstruction *I1 = new VPInstruction(0, {});
-  VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1", I1);
-  VPBlockUtils::connectBlocks(Plan.getEntry(), VPBB1);
-  VPBlockUtils::connectBlocks(VPBB1, Plan.getScalarHeader());
-  VPBB1->splitAt(VPBB1->end());
-  auto *Split = cast<VPBasicBlock>(VPBB1->getSingleSuccessor());
+  VPInstruction *VPI = new VPInstruction(0, {});
+  VPBasicBlock *VPBB = Plan.createVPBasicBlock("VPBB1", VPI);
+  VPBlockUtils::connectBlocks(Plan.getEntry(), VPBB);
+  VPBlockUtils::connectBlocks(VPBB, Plan.getScalarHeader());
+  VPBB->splitAt(VPBB->end());
+  EXPECT_EQ(VPBB->size(), 1u);
+  EXPECT_EQ(&VPBB->front(), VPI);
+  auto *Split = cast<VPBasicBlock>(VPBB->getSingleSuccessor());
   EXPECT_TRUE(Split->empty());
   EXPECT_EQ(Split->getSingleSuccessor(), Plan.getScalarHeader());
 }
