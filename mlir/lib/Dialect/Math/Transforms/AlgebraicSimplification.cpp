@@ -66,7 +66,7 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
   // Maybe broadcasts scalar value into vector type compatible with `op`.
   auto bcast = [&](Value value) -> Value {
     if (auto vec = dyn_cast<VectorType>(op.getType()))
-      return vector::BroadcastOp::create(rewriter, op.getLoc(), vec, value);
+      return vector::BroadcastOp::create(rewriter, loc, vec, value);
     return value;
   };
 
@@ -84,8 +84,7 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 
   // Replace `pow(x, 3.0)` with `x * x * x`.
   if (isExponentValue(3.0)) {
-    Value square =
-        arith::MulFOp::create(rewriter, op.getLoc(), ValueRange({x, x}));
+    Value square = arith::MulFOp::create(rewriter, loc, ValueRange({x, x}));
     rewriter.replaceOpWithNewOp<arith::MulFOp>(op, ValueRange({x, square}));
     return success();
   }
@@ -113,8 +112,8 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 
   // Replace `pow(x, 0.75)` with `sqrt(sqrt(x)) * sqrt(x)`.
   if (isExponentValue(0.75)) {
-    Value powHalf = math::SqrtOp::create(rewriter, op.getLoc(), x);
-    Value powQuarter = math::SqrtOp::create(rewriter, op.getLoc(), powHalf);
+    Value powHalf = math::SqrtOp::create(rewriter, loc, x);
+    Value powQuarter = math::SqrtOp::create(rewriter, loc, powHalf);
     rewriter.replaceOpWithNewOp<arith::MulFOp>(op,
                                                ValueRange{powHalf, powQuarter});
     return success();
