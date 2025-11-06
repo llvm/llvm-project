@@ -414,8 +414,8 @@ Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
       return *Found;
     SearchedPaths += *CompilerRTPath;
   } else {
-    return llvm::make_error<llvm::StringError>(
-        "CompilerRT path not found", std::error_code());
+    return llvm::make_error<llvm::StringError>("CompilerRT path not found",
+                                               std::error_code());
   }
 
   if (std::optional<std::string> ResourceDir = TC.getRuntimePath()) {
@@ -425,8 +425,8 @@ Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
       SearchedPaths += "; ";
     SearchedPaths += *ResourceDir;
   } else {
-    return llvm::make_error<llvm::StringError>(
-        "ResourceDir path not found", std::error_code());
+    return llvm::make_error<llvm::StringError>("ResourceDir path not found",
+                                               std::error_code());
   }
 
   return llvm::make_error<llvm::StringError>(
