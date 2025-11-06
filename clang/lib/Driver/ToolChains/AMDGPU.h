@@ -162,8 +162,7 @@ public:
     auto &Diags = getDriver().getDiags();
     for (auto *A : Args.filtered(options::OPT_fsanitize_EQ)) {
       for (const char *Value : A->getValues()) {
-        SanitizerMask K =
-            parseSanitizerValue(Value, /*Allow Groups*/ false);
+        SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ false);
         if (K != SanitizerKind::Address)
           Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
               << A->getAsString(Args) << getTriple().str();
