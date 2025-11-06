@@ -65,14 +65,12 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = freeze <4 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP18]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP6]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP6]], i64 [[IV]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP11]], <4 x float> [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
@@ -154,16 +152,14 @@ define float @test_fmax_and_fmin(ptr %src.0, ptr %src.1, i64 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP13]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP18]])
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i1> poison, i1 [[TMP19]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT7]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = or i1 [[TMP19]], [[TMP21]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP23:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP6]]
-; CHECK-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP7]]
-; CHECK-NEXT:    [[TMP25:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x float> [[VEC_PHI2]], <4 x float> [[TMP4]]
-; CHECK-NEXT:    [[TMP26:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x float> [[VEC_PHI3]], <4 x float> [[TMP5]]
+; CHECK-NEXT:    [[TMP23:%.*]] = select i1 [[TMP19]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP6]]
+; CHECK-NEXT:    [[TMP24:%.*]] = select i1 [[TMP19]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP7]]
+; CHECK-NEXT:    [[TMP25:%.*]] = select i1 [[TMP19]], <4 x float> [[VEC_PHI2]], <4 x float> [[TMP4]]
+; CHECK-NEXT:    [[TMP26:%.*]] = select i1 [[TMP19]], <4 x float> [[VEC_PHI3]], <4 x float> [[TMP5]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = select i1 [[TMP19]], i64 [[IV]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP23]], <4 x float> [[TMP24]])
 ; CHECK-NEXT:    [[TMP28:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[RDX_MINMAX]])

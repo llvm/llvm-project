@@ -93,6 +93,12 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableBitmaskMachineOperandTargetFlags() const override;
 
+  bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
+                           const MachineInstr &AddrI,
+                           ExtAddrMode &AM) const override;
+  MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
+                                 const ExtAddrMode &AM) const override;
+
 protected:
   const LoongArchSubtarget &STI;
 };
