@@ -10627,6 +10627,13 @@ TreeTransform<Derived>::TransformOMPThreadsetClause(OMPThreadsetClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPTransparentClause(OMPTransparentClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPProcBindClause(OMPProcBindClause *C) {
   return getDerived().RebuildOMPProcBindClause(
       C->getProcBindKind(), C->getProcBindKindKwLoc(), C->getBeginLoc(),

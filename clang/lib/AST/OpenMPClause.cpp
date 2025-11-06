@@ -125,6 +125,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadset:
+  case OMPC_transparent:
   case OMPC_threadprivate:
   case OMPC_groupprivate:
   case OMPC_flush:
@@ -2040,6 +2041,13 @@ void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
   OS << "threadset("
      << getOpenMPSimpleClauseTypeName(OMPC_threadset,
                                       unsigned(Node->getThreadsetKind()))
+     << ")";
+}
+
+void OMPClausePrinter::VisitOMPTransparentClause(OMPTransparentClause *Node) {
+  OS << "transparent("
+     << getOpenMPSimpleClauseTypeName(OMPC_transparent,
+                                      unsigned(Node->getTransparentKind()))
      << ")";
 }
 

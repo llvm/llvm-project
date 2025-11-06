@@ -1504,6 +1504,92 @@ public:
   }
 };
 
+/// This class represents the 'transparent' clause in the '#pragma omp task'
+/// directive.
+///
+/// \code
+/// #pragma omp task transparent(omp_not_impex)
+/// \endcode
+///
+/// In this example, the directive '#pragma omp task' has a 'transparent'
+/// clause with OpenMP keyword 'omp_not_impex`. Other valid keywords that may
+/// appear in this clause are 'omp_import', 'omp_export' and 'omp_impex'.
+///
+class OMPTransparentClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// A kind of the 'transparent' clause.
+  OpenMPTransparentKind Kind = OMPC_TRANSPARENT_unknown;
+
+  /// Start location of the kind in source code.
+  SourceLocation KindLoc;
+
+  /// Set kind of the clauses.
+  ///
+  /// \param K Argument of clause.
+  void setTransparentKind(OpenMPTransparentKind K) { Kind = K; }
+
+  /// Set argument location.
+  ///
+  /// \param KLoc Argument location.
+  void setTransparentKindLoc(SourceLocation KLoc) { KindLoc = KLoc; }
+
+public:
+  /// Build 'transparent' clause with argument \a A ('omp_not_impex',
+  /// 'omp_import', 'omp_export' or 'omp_impex')
+  ///
+  /// \param A Argument of the clause ('omp_not_impex', 'omp_import',
+  /// 'omp_export' or 'omp_impex')
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPTransparentClause(OpenMPTransparentKind A, SourceLocation ALoc,
+                     SourceLocation StartLoc, SourceLocation LParenLoc,
+                     SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_transparent, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Kind(A), KindLoc(ALoc) {}
+
+  /// Build an empty clause.
+  OMPTransparentClause()
+      : OMPClause(llvm::omp::OMPC_transparent, SourceLocation(),
+                  SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns kind of the clause.
+  OpenMPTransparentKind getTransparentKind() const { return Kind; }
+
+  /// Returns location of clause kind.
+  SourceLocation getTransparentKindLoc() const { return KindLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_transparent;
+  }
+};
+
 /// This represents 'proc_bind' clause in the '#pragma omp ...'
 /// directive.
 ///
