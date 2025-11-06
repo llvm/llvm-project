@@ -12,11 +12,11 @@ entry:
 
 loop:
   %acc0 = phi double [ %fadd0, %loop ], [ %d0, %entry ]
-  %counter = phi i64 [ %counter_updated, %loop ], [ %loop_count, %entry ]
+  %counter = phi i64 [ 0, %entry ], [ %counter_updated, %loop ]
   %fadd0 = fadd double %acc0, %d1
-  %counter_updated = add nsw i64 %counter, -1
-  %exit_cond = icmp samesign ugt i64 %counter, 1
-  br i1 %exit_cond, label %loop, label %loopexit
+  %counter_updated = add nsw nuw i64 %counter, 1
+  %exit_cond = icmp eq i64 %counter_updated, %loop_count
+  br i1 %exit_cond, label %loopexit, label %loop
 
 loopexit:
   ret double %fadd0
