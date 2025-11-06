@@ -3819,67 +3819,68 @@ struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
 
 /// Casting from VPRecipeBase -> VPIRMetadata is supported for all recipe types
 /// implementing VPIRMetadata. Used by isa<> & co.
-template <> struct CastIsPossible<VPIRMetadata, const VPRecipeBase *> {
-  static inline bool isPossible(const VPRecipeBase *R) {
+namespace detail {
+/// Returns const VPIRMetadata* if input is const, and VPIRMetadata* otherwise.
+template <typename RecipeBasePtrTy>
+static inline auto castToVPIRMetadata(RecipeBasePtrTy R) -> std::conditional_t<
+    std::is_const_v<std::remove_pointer_t<RecipeBasePtrTy>>,
+    const VPIRMetadata *, VPIRMetadata *> {
+  switch (R->getVPDefID()) {
+  case VPDef::VPInstructionSC:
+    return cast<VPInstruction>(R);
+  case VPDef::VPWidenSC:
+    return cast<VPWidenRecipe>(R);
+  case VPDef::VPWidenCastSC:
+    return cast<VPWidenCastRecipe>(R);
+  case VPDef::VPWidenIntrinsicSC:
+    return cast<VPWidenIntrinsicRecipe>(R);
+  case VPDef::VPWidenCallSC:
+    return cast<VPWidenCallRecipe>(R);
+  case VPDef::VPWidenSelectSC:
+    return cast<VPWidenSelectRecipe>(R);
+  case VPDef::VPReplicateSC:
+    return cast<VPReplicateRecipe>(R);
+  case VPDef::VPInterleaveSC:
+    return cast<VPInterleaveRecipe>(R);
+  case VPDef::VPInterleaveEVLSC:
+    return cast<VPInterleaveEVLRecipe>(R);
+  case VPDef::VPWidenLoadSC:
+    return cast<VPWidenLoadRecipe>(R);
+  case VPDef::VPWidenLoadEVLSC:
+    return cast<VPWidenLoadEVLRecipe>(R);
+  case VPDef::VPWidenStoreSC:
+    return cast<VPWidenStoreRecipe>(R);
+  case VPDef::VPWidenStoreEVLSC:
+    return cast<VPWidenStoreEVLRecipe>(R);
+  default:
+    llvm_unreachable("invalid recipe for VPIRMetadata cast");
+  }
+}
+} // namespace detail
+
+/// Support casting from VPRecipeBase -> VPIRMetadata, by down-casting to the
+/// recipe types implementing VPIRMetadata. Used by cast<>, dyn_cast<> & co.
+template <typename SrcTy>
+struct CastInfoVPIRMetadata : public CastIsPossible<VPIRMetadata, SrcTy> {
+  static inline bool isPossible(SrcTy R) {
     return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
                VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPWidenSelectRecipe,
                VPReplicateRecipe, VPInterleaveRecipe, VPInterleaveEVLRecipe,
                VPWidenLoadRecipe, VPWidenLoadEVLRecipe, VPWidenStoreRecipe,
                VPWidenStoreEVLRecipe>(R);
   }
-};
-
-/// Support casting from VPRecipeBase -> VPIRMetadata, by down-casting to the
-/// recipe types implementing VPIRMetadata. Used by cast<>, dyn_cast<> & co.
-template <typename SrcTy>
-struct CastInfoVPIRMetadata : public CastIsPossible<VPIRMetadata, SrcTy> {
 
   using Self = CastInfo<VPIRMetadata, SrcTy>;
+  using RetTy = decltype(detail::castToVPIRMetadata(std::declval<SrcTy>()));
 
-  /// doCast is used by cast<>.
-  static inline VPIRMetadata *doCast(SrcTy R) {
-    return const_cast<VPIRMetadata *>([R]() -> const VPIRMetadata * {
-      switch (R->getVPDefID()) {
-      case VPDef::VPInstructionSC:
-        return cast<VPInstruction>(R);
-      case VPDef::VPWidenSC:
-        return cast<VPWidenRecipe>(R);
-      case VPDef::VPWidenCastSC:
-        return cast<VPWidenCastRecipe>(R);
-      case VPDef::VPWidenIntrinsicSC:
-        return cast<VPWidenIntrinsicRecipe>(R);
-      case VPDef::VPWidenCallSC:
-        return cast<VPWidenCallRecipe>(R);
-      case VPDef::VPWidenSelectSC:
-        return cast<VPWidenSelectRecipe>(R);
-      case VPDef::VPReplicateSC:
-        return cast<VPReplicateRecipe>(R);
-      case VPDef::VPInterleaveSC:
-        return cast<VPInterleaveRecipe>(R);
-      case VPDef::VPInterleaveEVLSC:
-        return cast<VPInterleaveEVLRecipe>(R);
-      case VPDef::VPWidenLoadSC:
-        return cast<VPWidenLoadRecipe>(R);
-      case VPDef::VPWidenLoadEVLSC:
-        return cast<VPWidenLoadEVLRecipe>(R);
-      case VPDef::VPWidenStoreSC:
-        return cast<VPWidenStoreRecipe>(R);
-      case VPDef::VPWidenStoreEVLSC:
-        return cast<VPWidenStoreEVLRecipe>(R);
-      default:
-        llvm_unreachable("invalid recipe for VPIRMetadata cast");
-      }
-    }());
-  }
+  static inline RetTy doCast(SrcTy R) { return detail::castToVPIRMetadata(R); }
 
-  /// doCastIfPossible is used by dyn_cast<>.
-  static inline VPIRMetadata *doCastIfPossible(SrcTy f) {
-    if (!Self::isPossible(f))
+  static inline RetTy doCastIfPossible(SrcTy R) {
+    if (!Self::isPossible(R))
       return nullptr;
-    return doCast(f);
+    return doCast(R);
   }
 };
-
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
     : CastInfoVPIRMetadata<VPRecipeBase *> {};

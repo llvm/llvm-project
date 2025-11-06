@@ -1002,7 +1002,7 @@ TEST_F(VPRecipeTest, CastVPInstructionToVPUser) {
   VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPInstruction Recipe(Instruction::Add, {Op1, Op2});
 
-  checkVPRecipeCastImpl<VPInstruction, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPInstruction, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
@@ -1017,7 +1017,7 @@ TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   Args.push_back(Op2);
   VPWidenRecipe WidenR(*AI, make_range(Args.begin(), Args.end()));
 
-  checkVPRecipeCastImpl<VPWidenRecipe, VPUser>(&WidenR);
+  checkVPRecipeCastImpl<VPWidenRecipe, VPUser, VPIRMetadata>(&WidenR);
   delete AI;
 }
 
@@ -1036,7 +1036,7 @@ TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   Args.push_back(CalledFn);
   VPWidenCallRecipe Recipe(Call, Fn, Args);
 
-  checkVPRecipeCastImpl<VPWidenCallRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenCallRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   VPValue *VPV = &Recipe;
   EXPECT_TRUE(VPV->getDefiningRecipe());
@@ -1062,7 +1062,8 @@ TEST_F(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
   VPWidenSelectRecipe WidenSelectR(*SelectI,
                                    make_range(Args.begin(), Args.end()));
 
-  checkVPRecipeCastImpl<VPWidenSelectRecipe, VPUser>(&WidenSelectR);
+  checkVPRecipeCastImpl<VPWidenSelectRecipe, VPUser, VPIRMetadata>(
+      &WidenSelectR);
 
   VPValue *VPV = &WidenSelectR;
   EXPECT_EQ(&WidenSelectR, VPV->getDefiningRecipe());
@@ -1100,7 +1101,7 @@ TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, *Cast);
 
-  checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser, VPIRMetadata>(&Recipe);
   delete Cast;
 }
 
@@ -1111,7 +1112,7 @@ TEST_F(VPRecipeTest, CastVPWidenIntrinsicRecipeToVPUser) {
   VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenIntrinsicRecipe Recipe(Intrinsic::smax, {Op1, Op2}, Int32);
 
-  checkVPRecipeCastImpl<VPWidenIntrinsicRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenIntrinsicRecipe, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
@@ -1141,7 +1142,7 @@ TEST_F(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
   InterleaveGroup<Instruction> IG(4, false, Align(4));
   VPInterleaveRecipe Recipe(&IG, Addr, {}, Mask, false, {}, DebugLoc());
 
-  checkVPRecipeCastImpl<VPInterleaveRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPInterleaveRecipe, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
@@ -1157,7 +1158,7 @@ TEST_F(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
   auto *Call = CallInst::Create(FTy, PoisonValue::get(FTy));
   VPReplicateRecipe Recipe(Call, make_range(Args.begin(), Args.end()), true);
 
-  checkVPRecipeCastImpl<VPReplicateRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPReplicateRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   delete Call;
 }
@@ -1181,7 +1182,7 @@ TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, false, {}, {});
 
-  checkVPRecipeCastImpl<VPWidenLoadRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenLoadRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   VPValue *VPV = Recipe.getVPSingleValue();
   EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
@@ -1200,7 +1201,7 @@ TEST_F(VPRecipeTest, CastVPInterleaveEVLRecipeToVPUser) {
   VPInterleaveRecipe BaseRecipe(&IG, Addr, {}, Mask, false, {}, DebugLoc());
   VPInterleaveEVLRecipe Recipe(BaseRecipe, *EVL, Mask);
 
-  checkVPRecipeCastImpl<VPInterleaveEVLRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPInterleaveEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPWidenLoadEVLRecipeToVPUser) {
@@ -1215,7 +1216,7 @@ TEST_F(VPRecipeTest, CastVPWidenLoadEVLRecipeToVPUser) {
   VPWidenLoadRecipe BaseLoad(*Load, Addr, Mask, true, false, {}, {});
   VPWidenLoadEVLRecipe Recipe(BaseLoad, Addr, *EVL, Mask);
 
-  checkVPRecipeCastImpl<VPWidenLoadEVLRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenLoadEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   delete Load;
 }
@@ -1231,7 +1232,7 @@ TEST_F(VPRecipeTest, CastVPWidenStoreRecipeToVPUser) {
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenStoreRecipe Recipe(*Store, Addr, StoredVal, Mask, true, false, {}, {});
 
-  checkVPRecipeCastImpl<VPWidenStoreRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenStoreRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   delete Store;
 }
@@ -1250,7 +1251,7 @@ TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
                                {});
   VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, *EVL, Mask);
 
-  checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   delete Store;
 }
