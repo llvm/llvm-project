@@ -1327,6 +1327,8 @@ public:
   ///     an empty std::optional is returned in that case.
   std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
 
+  lldb::StackFrameListSP GetStackFrameList();
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1367,8 +1369,6 @@ protected:
   virtual lldb_private::StructuredData::ObjectSP FetchThreadExtendedInfo() {
     return StructuredData::ObjectSP();
   }
-
-  lldb::StackFrameListSP GetStackFrameList();
 
   void SetTemporaryResumeState(lldb::StateType new_state) {
     m_temporary_resume_state = new_state;
