@@ -4100,21 +4100,10 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       Type *ScalarTy = TypeInfo.inferScalarType(ToCheck);
       if (!Visited.insert({ScalarTy}).second)
         continue;
-      Type *WideTy;
-      if (auto *WI = dyn_cast<VPWidenIntrinsicRecipe>(&R);
-          WI && ScalarTy->isStructTy()) {
-        auto *StructTy = cast<StructType>(ScalarTy);
-        SmallVector<Type *, 2> Tys;
-        for (unsigned I = 0, E = StructTy->getNumElements(); I != E; ++I) {
-          Type *ElementTy = StructTy->getStructElementType(I);
-          if (!isVectorIntrinsicWithStructReturnScalarAtField(
-                  WI->getVectorIntrinsicID(), I))
-            ElementTy = toVectorizedTy(ElementTy, VF);
-          Tys.push_back(ElementTy);
-        }
-        WideTy = StructType::create(Tys);
-      } else
-        WideTy = toVectorizedTy(ScalarTy, VF);
+      unsigned IID = 0;
+      if (auto *WI = dyn_cast<VPWidenIntrinsicRecipe>(&R))
+        WI->getVectorIntrinsicID();
+      Type *WideTy = toVectorizedTy(ScalarTy, VF, IID);
 
       if (any_of(getContainedTypes(WideTy), WillGenerateTargetVectors))
         return true;

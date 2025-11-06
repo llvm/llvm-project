@@ -1811,20 +1811,9 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
     Arguments.push_back(V);
   }
 
-  Type *RetTy = Ctx.Types.inferScalarType(&R);
-
-  if (VF.isVector() && RetTy->isStructTy()) {
-    auto *StructTy = cast<StructType>(RetTy);
-    SmallVector<Type *> Tys;
-    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; ++I) {
-      Type *ElementTy = StructTy->getStructElementType(I);
-      if (!isVectorIntrinsicWithStructReturnScalarAtField(ID, I))
-        ElementTy = toVectorizedTy(ElementTy, VF);
-      Tys.push_back(ElementTy);
-    }
-    RetTy = StructType::get(StructTy->getContext(), Tys);
-  } else if (VF.isVector())
-    RetTy = toVectorizedTy(RetTy, VF);
+  Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
+  Type *RetTy =
+      VF.isVector() ? toVectorizedTy(ScalarRetTy, VF, ID) : ScalarRetTy;
   SmallVector<Type *> ParamTys;
   for (const VPValue *Op : Operands) {
     ParamTys.push_back(VF.isVector()

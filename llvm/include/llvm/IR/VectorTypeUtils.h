@@ -31,7 +31,11 @@ inline Type *toVectorTy(Type *Scalar, unsigned VF) {
 /// Note:
 ///   - If \p EC is scalar, \p StructTy is returned unchanged
 ///   - Only unpacked literal struct types are supported
-LLVM_ABI Type *toVectorizedStructTy(StructType *StructTy, ElementCount EC);
+///   vector types.
+///   - If IID (Intrinsic::ID) is provided, only fields that are vector types
+///   are widened.
+LLVM_ABI Type *toVectorizedStructTy(StructType *StructTy, ElementCount EC,
+                                    unsigned IID = 0);
 
 /// A helper for converting structs of vector types to structs of scalar types.
 /// Note: Only unpacked literal struct types are supported.
@@ -52,9 +56,9 @@ LLVM_ABI bool canVectorizeStructTy(StructType *StructTy);
 ///   - If the incoming type is void, we return void
 ///   - If \p EC is scalar, \p Ty is returned unchanged
 ///   - Only unpacked literal struct types are supported
-inline Type *toVectorizedTy(Type *Ty, ElementCount EC) {
+inline Type *toVectorizedTy(Type *Ty, ElementCount EC, unsigned IID = 0) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
-    return toVectorizedStructTy(StructTy, EC);
+    return toVectorizedStructTy(StructTy, EC, IID);
   return toVectorTy(Ty, EC);
 }
 
