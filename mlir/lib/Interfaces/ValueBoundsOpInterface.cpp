@@ -339,7 +339,7 @@ int64_t ValueBoundsConstraintSet::getPos(Value value,
 #endif // NDEBUG
   LDBG() << "Getting pos for: " << value
          << " (dim: " << dim.value_or(kIndexValue)
-         << ", owner: " << getOwnerOfValue(value)->getName() << ")\n";
+         << ", owner: " << getOwnerOfValue(value)->getName() << ")";
   auto it =
       valueDimToPosition.find(std::make_pair(value, dim.value_or(kIndexValue)));
   assert(it != valueDimToPosition.end() && "expected mapped entry");
