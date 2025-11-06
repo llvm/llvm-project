@@ -158,8 +158,9 @@ public:
   static PyObject *LLDBSwigPython_GetChildAtIndex(PyObject *implementor,
                                                   uint32_t idx);
 
-  static int LLDBSwigPython_GetIndexOfChildWithName(PyObject *implementor,
-                                                    const char *child_name);
+  static uint32_t
+  LLDBSwigPython_GetIndexOfChildWithName(PyObject *implementor,
+                                         const char *child_name);
 
   static lldb::ValueObjectSP
   LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data);

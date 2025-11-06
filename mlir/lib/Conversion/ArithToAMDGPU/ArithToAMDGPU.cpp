@@ -432,7 +432,7 @@ static Value getOriginalVectorValue(Value value) {
                         current = op.getSource();
                         return false;
                       })
-                      .Default([](Operation *) { return false; });
+                      .Default(false);
 
     if (!skipOp) {
       break;
