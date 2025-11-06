@@ -291,15 +291,18 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
   llvm_unreachable("Unsupported proxy kinds");
 }
 
-static unsigned getMembarLevelID(NVVM::MemLevelKind level) {
-  switch (level) {
-  case NVVM::MemLevelKind::CTA: {
+static unsigned getMemoryBarrierLevelID(NVVM::MemScopeKind scope) {
+  switch (scope) {
+  case NVVM::MemScopeKind::CTA: {
     return llvm::Intrinsic::nvvm_membar_cta;
   }
-  case NVVM::MemLevelKind::GL: {
+  case NVVM::MemScopeKind::CLUSTER: {
+    return llvm::Intrinsic::nvvm_fence_sc_cluster;
+  }
+  case NVVM::MemScopeKind::GPU: {
     return llvm::Intrinsic::nvvm_membar_gl;
   }
-  case NVVM::MemLevelKind::SYS: {
+  case NVVM::MemScopeKind::SYS: {
     return llvm::Intrinsic::nvvm_membar_sys;
   }
   }

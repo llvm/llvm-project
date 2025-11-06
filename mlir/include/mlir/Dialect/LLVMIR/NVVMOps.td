@@ -1236,24 +1236,8 @@ def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,
   let hasVerifier = 1;
 }
 
-// Attrs describing the level of the Memory Operation
-def MemLevelCTA : I32EnumAttrCase<"CTA", 0, "cta">;
-def MemLevelGL : I32EnumAttrCase<"GL", 1, "gl">;
-def MemLevelSys : I32EnumAttrCase<"SYS", 2, "sys">;
-
-def MemLevelKind
-    : I32EnumAttr<
-          "MemLevelKind",
-          "NVVM Memory Level kind", [MemLevelCTA, MemLevelGL, MemLevelSys]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def MemLevelKindAttr : EnumAttr<NVVM_Dialect, MemLevelKind, "mem_level"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def NVVM_MembarOp : NVVM_Op<"membar">,
-                    Arguments<(ins MemLevelKindAttr:$level)> {
+def NVVM_MembarOp : NVVM_Op<"memory_barrier">,
+                    Arguments<(ins MemScopeKindAttr:$scope)> {
   let summary = "Memory barrier operation";
   let description = [{
     `membar` operation guarantees that prior memory accesses requested by this
@@ -1263,9 +1247,9 @@ def NVVM_MembarOp : NVVM_Op<"membar">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar)
   }];
 
-  let assemblyFormat = "$level attr-dict";
+  let assemblyFormat = "$scope attr-dict";
   let llvmBuilder = [{
-    createIntrinsicCall(builder, getMembarLevelID($level), {});
+    createIntrinsicCall(builder, getMemoryBarrierLevelID($scope), {});
   }];
 }
 
