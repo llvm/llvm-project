@@ -564,6 +564,29 @@ static bool checkParamIsIntegerType(Sema &S, const Decl *D, const AttrInfo &AI,
   return true;
 }
 
+static bool isSpanLikeType(const QualType &Ty) {
+  // Check that the type is a plain record with the first field being a pointer
+  // type and the second field being an integer.
+  // This matches the common implementation of std::span or sized_allocation_t
+  // in P0901R11.
+  // Note that there may also be numerous cases of pointer+integer structures
+  // not actually exhibiting a std::span-like semantics, so sometimes
+  // this heuristic expectedly leads to false positive results.
+  const RecordDecl *RD = Ty->getAsRecordDecl();
+  if (!RD || RD->isUnion())
+    return false;
+  const RecordDecl *Def = RD->getDefinition();
+  if (!Def)
+    return false; // This is an incomplete type.
+  auto FieldsBegin = Def->field_begin();
+  if (std::distance(FieldsBegin, Def->field_end()) != 2)
+    return false;
+  const FieldDecl *FirstField = *FieldsBegin;
+  const FieldDecl *SecondField = *std::next(FieldsBegin);
+  return FirstField->getType()->isAnyPointerType() &&
+         SecondField->getType()->isIntegerType();
+}
+
 static void handleAllocSizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.checkAtLeastNumArgs(S, 1) || !AL.checkAtMostNumArgs(S, 2))
     return;
@@ -571,7 +594,7 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   assert(isFuncOrMethodForAttrSubject(D) && hasFunctionProto(D));
 
   QualType RetTy = getFunctionOrMethodResultType(D);
-  if (!RetTy->isPointerType() && !RetTy->isSpanLikeType()) {
+  if (!RetTy->isPointerType() && !isSpanLikeType(RetTy)) {
     S.Diag(AL.getLoc(), diag::warn_attribute_return_pointers_only) << AL;
     return;
   }
@@ -1751,7 +1774,7 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
   if (!ResultType->isAnyPointerType() && !ResultType->isBlockPointerType() &&
-      !ResultType->isSpanLikeType()) {
+      !isSpanLikeType(ResultType)) {
     S.Diag(AL.getLoc(), diag::warn_attribute_return_pointers_only)
         << AL << getFunctionOrMethodResultSourceRange(D);
     return;
