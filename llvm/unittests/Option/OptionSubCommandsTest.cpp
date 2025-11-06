@@ -200,7 +200,7 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     InputArgList AL = T.ParseArgs(Args, MAI, MAC);
     StringRef SC = AL.getSubCommand(
         T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
-    EXPECT_EQ(SC, "bar");                  // valid subcommand
+    EXPECT_EQ(SC, "bar"); // valid subcommand
     EXPECT_NE(std::string::npos,
               ErrMsg.find("Unregistered positionals passed"));
     EXPECT_NE(std::string::npos, ErrMsg.find("input"));
