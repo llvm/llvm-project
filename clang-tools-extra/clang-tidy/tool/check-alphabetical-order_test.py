@@ -36,8 +36,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
     def test_normalize_list_rst_sorts_rows(self):
         lines = [
             "Header\n",
-            "------"
-            "\n",
+            "------" "\n",
             ".. csv-table:: Clang-Tidy checks\n",
             '   :header: "Name", "Offers fixes"\n',
             "\n",
@@ -99,13 +98,18 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         # Expect one duplicate group for 'bugprone-easily-swappable-parameters' with two occurrences.
         self.assertEqual(len(dups), 1)
         key, occs = dups[0]
-        self.assertEqual(key.strip(), "- Improved :doc:`bugprone-easily-swappable-parameters")
+        self.assertEqual(
+            key.strip(), "- Improved :doc:`bugprone-easily-swappable-parameters"
+        )
         self.assertEqual(len(occs), 2)
 
         report = _mod._emit_duplicate_report(lines, "Changes in existing checks")
         self.assertIsInstance(report, str)
         self.assertIn("Duplicate entries in 'Changes in existing checks':", report)
-        self.assertIn("-- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters", report)
+        self.assertIn(
+            "-- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters",
+            report,
+        )
         self.assertEqual(report.count("- At line "), 2)
         self.assertIn("- At line 4:", report)
         self.assertIn("- At line 14:", report)
@@ -251,7 +255,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             '   :header: "Name", "Redirect", "Offers fixes"\n',
             "\n",
             '   :doc:`cert-dcl16-c <cert/dcl16-c>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"\n',
-            '   :doc:`cert-con36-c <cert/con36-c>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,\n',
+            "   :doc:`cert-con36-c <cert/con36-c>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,\n",
             '   :doc:`cert-dcl37-c <cert/dcl37-c>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"\n',
             "   :doc:`cert-arr39-c <cert/arr39-c>`, :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,\n",
         ]
