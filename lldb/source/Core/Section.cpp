@@ -691,10 +691,9 @@ SectionList::Merge(SectionList &lhs, SectionList &rhs, MergeCallback filter) {
   // the rhs list.
   for (const auto &lhs_section : lhs) {
     auto rhs_section = rhs.FindSectionByName(lhs_section->GetName());
-    if (rhs_section) {
-      assert(lhs_section->GetName() == rhs_section->GetName());
+    if (rhs_section)
       output_sp->AddSection(filter(lhs_section, rhs_section));
-    } else
+    else
       output_sp->AddSection(lhs_section);
   }
 

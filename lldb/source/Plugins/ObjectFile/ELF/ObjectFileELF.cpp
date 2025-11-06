@@ -134,27 +134,11 @@ private:
 lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
   assert(lhs && rhs);
 
-  // We only take the RHS is the LHS is SHT_NOBITS, which would be
-  // represented as a size of 0. Where we can take the rhs.
-  if (lhs->GetByteSize() == 0)
-    return rhs;
-
   lldb::ModuleSP lhs_module_parent = lhs->GetModule();
   lldb::ModuleSP rhs_module_parent = rhs->GetModule();
   assert(lhs_module_parent && rhs_module_parent);
 
-  // Now that we're taking the lhs, we should do some sanity checks to warn the
-  // user if this debuginfo/dwp looks invalid. However if RHS is SHT_NO_BITS
-  // we want to ignore the size comparison.
-  if (rhs->GetByteSize() > 0 && lhs->GetByteSize() != rhs->GetByteSize())
-    lhs_module_parent->ReportWarning(
-        "Mismatched size for section {0} when merging with {1}, expected: "
-        "{2:x}, "
-        "actual: {3:x}",
-        lhs->GetTypeAsCString(),
-        rhs_module_parent->GetFileSpec().GetPathAsConstString().GetCString(),
-        lhs->GetByteSize(), rhs->GetByteSize());
-
+  // Do a sanity check, these should be the same.
   if (lhs->GetFileAddress() != rhs->GetFileAddress())
     lhs_module_parent->ReportWarning(
         "Mismatch addresses for section {0} when "
@@ -164,7 +148,10 @@ lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
         rhs_module_parent->GetFileSpec().GetPathAsConstString().GetCString(),
         lhs->GetByteSize(), rhs->GetByteSize());
 
-  return lhs;
+  // We want to take the greater of two sections. If LHS and RHS are both
+  // SHT_NOBITS, we should default to LHS. If RHS has a bigger section,
+  // indicating it has data that wasn't stripped, we should take that instead.
+  return lhs->GetFileSize() > rhs->GetFileSize() ? lhs : rhs;
 }
 } // end anonymous namespace
 
