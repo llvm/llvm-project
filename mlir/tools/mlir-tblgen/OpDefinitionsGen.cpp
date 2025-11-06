@@ -49,15 +49,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <functional>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
 
 #define DEBUG_TYPE "mlir-tblgen-opdefgen"
 
