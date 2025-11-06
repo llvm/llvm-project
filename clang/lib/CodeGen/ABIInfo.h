@@ -147,6 +147,9 @@ protected:
   CodeGenTypes &CGT;
   bool SwiftErrorInRegister;
 
+  static void countOccupiedRegisters(ArrayRef<llvm::Type *> scalarTypes,
+                                     unsigned &intCount, unsigned &fpCount,
+                                     unsigned maxIntRegisterBitWidth);
   bool occupiesMoreThan(ArrayRef<llvm::Type *> scalarTypes,
                         unsigned maxAllRegisters) const;
 

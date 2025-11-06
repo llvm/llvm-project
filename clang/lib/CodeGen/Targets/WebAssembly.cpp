@@ -45,13 +45,44 @@ private:
                    AggValueSlot Slot) const override;
 };
 
+class WebAssemblySwiftABIInfo final : public SwiftABIInfo {
+  WebAssemblyABIKind Kind;
+
+public:
+  explicit WebAssemblySwiftABIInfo(CodeGen::CodeGenTypes &CGT,
+                                   WebAssemblyABIKind K)
+      : SwiftABIInfo(CGT, /*SwiftErrorInRegister=*/false), Kind(K) {}
+
+  bool shouldPassIndirectly(ArrayRef<llvm::Type *> ComponentTys,
+                            bool AsReturnValue) const override {
+    unsigned maxIntRegisterBitWidth = 64;
+    unsigned intCount = 0, fpCount = 0;
+    countOccupiedRegisters(ComponentTys, intCount, fpCount,
+                           maxIntRegisterBitWidth);
+
+    if (AsReturnValue) {
+      if (Kind == WebAssemblyABIKind::ExperimentalMV) {
+        // If the experimental multivalue ABI is enabled, try to return up to 2
+        // values for each of int and fp, which is a very conservative value
+        // based on the number of available physical gp return registers used in
+        // the major engines to minimize stack spills at JIT time.
+        return intCount > 2 || fpCount > 2;
+      }
+      // By default, limit to 1 total register.
+      return (intCount + fpCount > 1);
+    }
+    // For an argument, limit to 4 total registers, which is the default limit
+    // used by the default SwiftABIInfo implementation.
+    return (intCount + fpCount > 4);
+  }
+};
+
 class WebAssemblyTargetCodeGenInfo final : public TargetCodeGenInfo {
 public:
   explicit WebAssemblyTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT,
                                         WebAssemblyABIKind K)
       : TargetCodeGenInfo(std::make_unique<WebAssemblyABIInfo>(CGT, K)) {
-    SwiftInfo =
-        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+    SwiftInfo = std::make_unique<WebAssemblySwiftABIInfo>(CGT, K);
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,

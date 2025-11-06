@@ -254,6 +254,22 @@ void ABIInfo::createCoercedStore(llvm::Value *Val, Address DstAddr,
 // Pin the vtable to this file.
 SwiftABIInfo::~SwiftABIInfo() = default;
 
+void SwiftABIInfo::countOccupiedRegisters(ArrayRef<llvm::Type *> scalarTypes,
+                                          unsigned &intCount, unsigned &fpCount,
+                                          unsigned maxIntRegisterBitWidth) {
+  for (llvm::Type *type : scalarTypes) {
+    if (type->isPointerTy()) {
+      intCount++;
+    } else if (auto *intTy = dyn_cast<llvm::IntegerType>(type)) {
+      intCount += (intTy->getBitWidth() + maxIntRegisterBitWidth - 1) /
+                  maxIntRegisterBitWidth;
+    } else {
+      assert(type->isVectorTy() || type->isFloatingPointTy());
+      fpCount++;
+    }
+  }
+}
+
 /// Does the given lowering require more than the given number of
 /// registers when expanded?
 ///
@@ -269,18 +285,10 @@ SwiftABIInfo::~SwiftABIInfo() = default;
 /// return registers.
 bool SwiftABIInfo::occupiesMoreThan(ArrayRef<llvm::Type *> scalarTypes,
                                     unsigned maxAllRegisters) const {
+  // Use the pointer width as the maximum integer register bit width by default.
+  unsigned ptrWidth = CGT.getTarget().getPointerWidth(LangAS::Default);
   unsigned intCount = 0, fpCount = 0;
-  for (llvm::Type *type : scalarTypes) {
-    if (type->isPointerTy()) {
-      intCount++;
-    } else if (auto intTy = dyn_cast<llvm::IntegerType>(type)) {
-      auto ptrWidth = CGT.getTarget().getPointerWidth(LangAS::Default);
-      intCount += (intTy->getBitWidth() + ptrWidth - 1) / ptrWidth;
-    } else {
-      assert(type->isVectorTy() || type->isFloatingPointTy());
-      fpCount++;
-    }
-  }
+  countOccupiedRegisters(scalarTypes, intCount, fpCount, ptrWidth);
 
   return (intCount + fpCount > maxAllRegisters);
 }
