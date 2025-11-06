@@ -21,6 +21,7 @@ on:
 
 jobs:
   build-ci-container:
+    name: Build Container ${{ matrix.container-name }}
     if: github.repository_owner == 'llvm'
     runs-on: ${{ matrix.runs-on }}
     strategy:
