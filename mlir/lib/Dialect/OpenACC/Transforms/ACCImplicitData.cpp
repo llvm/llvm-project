@@ -602,9 +602,10 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
 // acc.kernels {
 //   use %dev
 // }
-static void legalizeValuesInRegion(Region &accRegion,
-                                   SmallVector<Value> &newPrivateOperands,
-                                   SmallVector<Value> &newDataClauseOperands) {
+static void
+legalizeValuesInRegion(Region &accRegion,
+                       const SmallVector<Value> &newPrivateOperands,
+                       const SmallVector<Value> &newDataClauseOperands) {
   for (Value dataClause :
        llvm::concat<Value>(newDataClauseOperands, newPrivateOperands)) {
     Value var = acc::getVar(dataClause.getDefiningOp());
@@ -616,9 +617,9 @@ static void legalizeValuesInRegion(Region &accRegion,
 // operation in a valid way (ensures that the index in the privatizationRecipes
 // array matches the position of the private operand).
 template <typename OpT>
-static void addNewPrivateOperands(OpT &accOp,
-                                  SmallVector<Value> &privateOperands,
-                                  SmallVector<Attribute> &privateRecipeSyms) {
+static void
+addNewPrivateOperands(OpT &accOp, const SmallVector<Value> &privateOperands,
+                      const SmallVector<Attribute> &privateRecipeSyms) {
   assert(privateOperands.size() == privateRecipeSyms.size());
   if (privateOperands.empty())
     return;
@@ -682,8 +683,8 @@ static Operation *findDataExitOp(Operation *dataEntryOp) {
 // (after region)
 static void
 generateDataExitOperations(OpBuilder &builder, Operation *accOp,
-                           SmallVector<Value> &newDataClauseOperands,
-                           SmallVector<Value> &sortedDataClauseOperands) {
+                           const SmallVector<Value> &newDataClauseOperands,
+                           const SmallVector<Value> &sortedDataClauseOperands) {
   builder.setInsertionPointAfter(accOp);
   Value lastDataClause = nullptr;
   for (auto dataEntry : llvm::reverse(sortedDataClauseOperands)) {
@@ -749,9 +750,8 @@ static SmallVector<Value> getBaseRefsChain(Value val) {
   return baseRefs;
 }
 
-static void
-insertInSortedOrder(SmallVector<Value> &sortedDataClauseOperands,
-                    Operation *newClause) {
+static void insertInSortedOrder(SmallVector<Value> &sortedDataClauseOperands,
+                                Operation *newClause) {
   auto *insertPos =
       std::find_if(sortedDataClauseOperands.begin(),
                    sortedDataClauseOperands.end(), [&](Value dataClauseVal) {
