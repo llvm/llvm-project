@@ -43,6 +43,7 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
                                        PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   Value x = op.getLhs();
+  arith::FastMathFlags fmf = op.getFastmathAttr().getValue();
 
   FloatAttr scalarExponent;
   DenseFPElementsAttr vectorExponent;
@@ -78,14 +79,14 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 
   // Replace `pow(x, 2.0)` with `x * x`.
   if (isExponentValue(2.0)) {
-    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, ValueRange({x, x}));
+    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, x, x, fmf);
     return success();
   }
 
   // Replace `pow(x, 3.0)` with `x * x * x`.
   if (isExponentValue(3.0)) {
-    Value square = arith::MulFOp::create(rewriter, loc, ValueRange({x, x}));
-    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, ValueRange({x, square}));
+    Value square = arith::MulFOp::create(rewriter, loc, x, x, fmf);
+    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, x, square, fmf);
     return success();
   }
 
@@ -94,28 +95,27 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
     Value one = arith::ConstantOp::create(
         rewriter, loc,
         rewriter.getFloatAttr(getElementTypeOrSelf(op.getType()), 1.0));
-    rewriter.replaceOpWithNewOp<arith::DivFOp>(op, ValueRange({bcast(one), x}));
+    rewriter.replaceOpWithNewOp<arith::DivFOp>(op, bcast(one), x, fmf);
     return success();
   }
 
   // Replace `pow(x, 0.5)` with `sqrt(x)`.
   if (isExponentValue(0.5)) {
-    rewriter.replaceOpWithNewOp<math::SqrtOp>(op, x);
+    rewriter.replaceOpWithNewOp<math::SqrtOp>(op, x, fmf);
     return success();
   }
 
   // Replace `pow(x, -0.5)` with `rsqrt(x)`.
   if (isExponentValue(-0.5)) {
-    rewriter.replaceOpWithNewOp<math::RsqrtOp>(op, x);
+    rewriter.replaceOpWithNewOp<math::RsqrtOp>(op, x, fmf);
     return success();
   }
 
   // Replace `pow(x, 0.75)` with `sqrt(sqrt(x)) * sqrt(x)`.
   if (isExponentValue(0.75)) {
-    Value powHalf = math::SqrtOp::create(rewriter, loc, x);
-    Value powQuarter = math::SqrtOp::create(rewriter, loc, powHalf);
-    rewriter.replaceOpWithNewOp<arith::MulFOp>(op,
-                                               ValueRange{powHalf, powQuarter});
+    Value powHalf = math::SqrtOp::create(rewriter, loc, x, fmf);
+    Value powQuarter = math::SqrtOp::create(rewriter, loc, powHalf, fmf);
+    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, powHalf, powQuarter, fmf);
     return success();
   }
 
