@@ -373,7 +373,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                             EVT(RegisterVT).getEVTString() +
                                             ") doesn't match operand type (" +
                                             EVT(PartVT).getEVTString() + ")");
-      return DAG.getUNDEF(ValueVT);
+      return DAG.getPOISON(ValueVT);
     }
 
     assert(RegisterVT.getSizeInBits() ==
