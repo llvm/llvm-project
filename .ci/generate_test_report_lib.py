@@ -4,6 +4,7 @@
 """Library to parse JUnit XML files and return a markdown report."""
 
 from typing import TypedDict
+import platform
 
 from junitparser import JUnitXml, Failure
 
@@ -305,3 +306,13 @@ def load_info_from_files(build_log_files):
 def generate_report_from_files(title, return_code, build_log_files):
     junit_objects, ninja_logs = load_info_from_files(build_log_files)
     return generate_report(title, return_code, junit_objects, ninja_logs)
+
+
+def compute_platform_title() -> str:
+    logo = ":window:" if platform.system() == "Windows" else ":penguin:"
+    # On Linux the machine value is x86_64 on Windows it is AMD64.
+    if platform.machine() == "x86_64" or platform.machine() == "AMD64":
+        arch = "x64"
+    else:
+        arch = platform.machine()
+    return f"{logo} {platform.system()} {arch} Test Results"
