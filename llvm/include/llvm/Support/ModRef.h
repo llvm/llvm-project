@@ -238,8 +238,6 @@ public:
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
     return getWithoutLoc(Location::InaccessibleMem)
-        .getWithoutLoc(IRMemLocation::TargetMem0)
-        .getWithoutLoc(IRMemLocation::TargetMem1)
         .doesNotAccessMemory();
   }
 
@@ -253,8 +251,6 @@ public:
   bool onlyAccessesInaccessibleOrArgMem() const {
     return getWithoutLoc(Location::InaccessibleMem)
         .getWithoutLoc(Location::ArgMem)
-        .getWithoutLoc(Location::TargetMem0)
-        .getWithoutLoc(Location::TargetMem1)
         .doesNotAccessMemory();
   }
 

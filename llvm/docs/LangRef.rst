@@ -2223,7 +2223,8 @@ For example:
     - ``errnomem``: This refers to accesses to the ``errno`` variable.
     - ``target_mem#`` : These refer to target specific state that cannot be
       accessed by any other means. # is a number between 0 and 1 inclusive.
-
+      Note: The target_mem locations are experimental and intended for internal
+      testing only. They must not be used in production code.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
