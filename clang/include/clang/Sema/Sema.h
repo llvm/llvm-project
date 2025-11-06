@@ -3033,7 +3033,8 @@ private:
 
   void CheckMaxUnsignedZero(const CallExpr *Call, const FunctionDecl *FDecl);
 
-  void CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call, const FunctionDecl *FDecl);
+  void CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
+                                           const FunctionDecl *FDecl);
 
   /// Check for dangerous or invalid arguments to memset().
   ///
