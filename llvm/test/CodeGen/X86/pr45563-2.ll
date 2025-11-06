@@ -39,7 +39,7 @@ define <9 x float> @mload_split9(<9 x i1> %mask, ptr %addr, <9 x float> %dst) {
 ; CHECK-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; CHECK-NEXT:    vmaskmovps (%rcx), %ymm1, %ymm4
 ; CHECK-NEXT:    vblendvps %ymm1, %ymm4, %ymm0, %ymm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 = xmm2[8,u,u,u],zero,xmm2[u,u,u],zero,xmm2[u,u,u],zero,xmm2[u,u,u]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 = xmm2[8,9,10,11],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vmaskmovps 32(%rcx), %ymm1, %ymm2
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
