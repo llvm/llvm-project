@@ -147,10 +147,9 @@ std::string getVariableName(Value v, bool preferDemangledName) {
             .Default([](mlir::Operation *) { return false; });
   }
 
-  if (srcName.empty()) {
-    // Fallback to the default implementation.
+  // Fallback to the default implementation.
+  if (srcName.empty())
     return acc::getVariableName(v);
-  }
 
   // Build array index suffix if present
   std::string suffix;
