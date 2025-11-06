@@ -1209,19 +1209,45 @@ static hlfir::Entity genDesignateWithTriplets(
   return hlfir::Entity{designate.getResult()};
 }
 
+// Designate uses triplets based on object lower bounds while acc.bounds are
+// zero based. This helper shift the bounds to create the designate triplets.
+static hlfir::DesignateOp::Subscripts
+genTripletsFromAccBounds(fir::FirOpBuilder &builder, mlir::Location loc,
+                         const llvm::SmallVector<mlir::Value> &accBounds,
+                         hlfir::Entity entity) {
+  assert(entity.getRank() * 3 == static_cast<int>(accBounds.size()) &&
+         "must get lb,ub,step for each dimension");
+  hlfir::DesignateOp::Subscripts triplets;
+  for (unsigned i = 0; i < accBounds.size(); i += 3) {
+    mlir::Value lb = hlfir::genLBound(loc, builder, entity, i / 3);
+    lb = builder.createConvert(loc, accBounds[i].getType(), lb);
+    assert(accBounds[i].getType() == accBounds[i + 1].getType() &&
+           "mix of integer types in triplets");
+    mlir::Value sliceLB =
+        builder.createOrFold<mlir::arith::AddIOp>(loc, accBounds[i], lb);
+    mlir::Value sliceUB =
+        builder.createOrFold<mlir::arith::AddIOp>(loc, accBounds[i + 1], lb);
+    triplets.emplace_back(
+        hlfir::DesignateOp::Triplet{sliceLB, sliceUB, accBounds[i + 2]});
+  }
+  return triplets;
+}
+
 static std::pair<hlfir::Entity, hlfir::Entity>
 genArraySectionsInRecipe(fir::FirOpBuilder &builder, mlir::Location loc,
                          llvm::SmallVector<mlir::Value> &dataOperationBounds,
                          mlir::ValueRange recipeArguments,
                          bool allConstantBound, hlfir::Entity lhs,
                          hlfir::Entity rhs) {
+  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+  rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
   // Get the list of lb,ub,step values for the sections that can be used inside
   // the recipe region.
   llvm::SmallVector<mlir::Value> bounds;
   if (allConstantBound) {
     // For constant bounds, the bounds are not region arguments. Materialize
     // constants looking at the IR for the bounds on the data operation.
-    for (auto bound : llvm::reverse(dataOperationBounds)) {
+    for (auto bound : dataOperationBounds) {
       auto dataBound =
           mlir::cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
       bounds.append(genConstantBounds(builder, loc, dataBound));
@@ -1237,20 +1263,24 @@ genArraySectionsInRecipe(fir::FirOpBuilder &builder, mlir::Location loc,
          "must get lb,ub,step for each dimension");
   llvm::SmallVector<mlir::Value> extents;
   mlir::Type idxTy = builder.getIndexType();
-  hlfir::DesignateOp::Subscripts triplets;
-  for (unsigned i = 0; i < bounds.size(); i += 3) {
+  for (unsigned i = 0; i < bounds.size(); i += 3)
     extents.push_back(builder.genExtentFromTriplet(
         loc, bounds[i], bounds[i + 1], bounds[i + 2], idxTy));
-    triplets.emplace_back(
-        hlfir::DesignateOp::Triplet{bounds[i], bounds[i + 1], bounds[i + 2]});
-  }
-  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
-  rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
   mlir::Value shape = fir::ShapeOp::create(builder, loc, extents);
+  hlfir::DesignateOp::Subscripts rhsTriplets =
+      genTripletsFromAccBounds(builder, loc, bounds, rhs);
+  hlfir::DesignateOp::Subscripts lhsTriplets;
+  // Share the bounds when both rhs/lhs are known to be 1-based to avoid noise
+  // in the IR for the most common cases.
+  if (!lhs.mayHaveNonDefaultLowerBounds() &&
+      !rhs.mayHaveNonDefaultLowerBounds())
+    lhsTriplets = rhsTriplets;
+  else
+    lhsTriplets = genTripletsFromAccBounds(builder, loc, bounds, lhs);
   hlfir::Entity leftSection =
-      genDesignateWithTriplets(builder, loc, lhs, triplets, shape);
+      genDesignateWithTriplets(builder, loc, lhs, lhsTriplets, shape);
   hlfir::Entity rightSection =
-      genDesignateWithTriplets(builder, loc, rhs, triplets, shape);
+      genDesignateWithTriplets(builder, loc, rhs, rhsTriplets, shape);
   return {leftSection, rightSection};
 }
 

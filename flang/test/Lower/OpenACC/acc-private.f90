@@ -174,8 +174,8 @@
 ! CHECK:   %[[CMP:.*]] = arith.cmpi sgt, %[[D2]], %[[C0]] : index
 ! CHECK:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D2]], %[[C0]] : index
 ! CHECK:   %[[SH:.*]] = fir.shape %[[SEL]] : (index) -> !fir.shape<1>
-! CHECK:   %[[SEC_SRC:.*]] = hlfir.designate %[[SRC]] (%[[C50]]:%[[C99]]:%[[C1]]) shape %[[SH]] : (!fir.ref<!fir.array<50xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
-! CHECK:   %[[SEC_DST:.*]] = hlfir.designate %[[DST]] (%[[C50]]:%[[C99]]:%[[C1]]) shape %[[SH]] : (!fir.ref<!fir.array<50xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
+! CHECK:   %[[SEC_SRC:.*]] = hlfir.designate %[[SRC]] (%c51{{.*}}:%c100{{.*}}:%c1{{.*}}) shape %[[SH]] : (!fir.ref<!fir.array<50xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
+! CHECK:   %[[SEC_DST:.*]] = hlfir.designate %[[DST]] (%c51{{.*}}:%c100{{.*}}:%c1{{.*}}) shape %[[SH]] : (!fir.ref<!fir.array<50xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
 ! CHECK:   hlfir.assign %[[SEC_SRC]] to %[[SEC_DST]] temporary_lhs : !fir.ref<!fir.array<50xf32>>, !fir.ref<!fir.array<50xf32>>
 ! CHECK:   acc.terminator
 ! CHECK: }

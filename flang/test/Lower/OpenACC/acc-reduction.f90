@@ -203,8 +203,14 @@
 ! CHECK:           %[[CMPI_0:.*]] = arith.cmpi sgt, %[[DIVSI_0]], %[[CONSTANT_3]] : index
 ! CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[DIVSI_0]], %[[CONSTANT_3]] : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[SELECT_0]] : (index) -> !fir.shape<1>
-! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%[[CONSTANT_0]]:%[[CONSTANT_1]]:%[[CONSTANT_2]])  shape %[[SHAPE_0]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:           %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[CONSTANT_0]]:%[[CONSTANT_1]]:%[[CONSTANT_2]])  shape %[[SHAPE_0]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+! CHECK:           %[[BD_LHS:.*]]:3 = fir.box_dims %[[VAL_0]], %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+! CHECK:           %[[LB_LHS:.*]] = arith.addi %[[BD_LHS]]#0, %c1{{.*}} : index
+! CHECK:           %[[UB_LHS:.*]] = arith.addi %[[BD_LHS]]#0, %c3{{.*}} : index
+! CHECK:           %[[BD_RHS:.*]]:3 = fir.box_dims %[[VAL_1]], %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+! CHECK:           %[[LB_RHS:.*]] = arith.addi %[[BD_RHS]]#0, %c1{{.*}} : index
+! CHECK:           %[[UB_RHS:.*]] = arith.addi %[[BD_RHS]]#0, %c3{{.*}} : index
+! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%[[LB_RHS]]:%[[UB_RHS]]:%c1{{.*}})  shape %[[SHAPE_0]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+! CHECK:           %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[LB_LHS]]:%[[UB_LHS]]:%c1{{.*}})  shape %[[SHAPE_0]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 1 : index
 ! CHECK:           fir.do_loop %[[VAL_2:.*]] = %[[CONSTANT_4]] to %[[SELECT_0]] step %[[CONSTANT_4]] unordered {
 ! CHECK:             %[[DESIGNATE_2:.*]] = hlfir.designate %[[DESIGNATE_0]] (%[[VAL_2]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
@@ -346,10 +352,10 @@
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<10x20xi32>>, %[[VAL_1:.*]]: !fir.ref<!fir.array<10x20xi32>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 19 : index
+! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 9 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 9 : index
+! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 19 : index
 ! CHECK:           %[[CONSTANT_5:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_6:.*]] = arith.constant 0 : index
 ! CHECK:           %[[SUBI_0:.*]] = arith.subi %[[CONSTANT_1]], %[[CONSTANT_0]] : index
@@ -364,8 +370,8 @@
 ! CHECK:           %[[CMPI_1:.*]] = arith.cmpi sgt, %[[DIVSI_1]], %[[CONSTANT_7]] : index
 ! CHECK:           %[[SELECT_1:.*]] = arith.select %[[CMPI_1]], %[[DIVSI_1]], %[[CONSTANT_7]] : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[SELECT_0]], %[[SELECT_1]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%[[CONSTANT_0]]:%[[CONSTANT_1]]:%[[CONSTANT_2]], %[[CONSTANT_3]]:%[[CONSTANT_4]]:%[[CONSTANT_5]])  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<10x20xi32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<10x20xi32>>
-! CHECK:           %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[CONSTANT_0]]:%[[CONSTANT_1]]:%[[CONSTANT_2]], %[[CONSTANT_3]]:%[[CONSTANT_4]]:%[[CONSTANT_5]])  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<10x20xi32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<10x20xi32>>
+! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%c1{{.*}}:%c10{{.*}}:%c1{{.*}}, %c1{{.*}}:%c20{{.*}}:%c1{{.*}})  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<10x20xi32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<10x20xi32>>
+! CHECK:           %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%c1{{.*}}:%c10{{.*}}:%c1{{.*}}, %c1{{.*}}:%c20{{.*}}:%c1{{.*}})  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<10x20xi32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<10x20xi32>>
 ! CHECK:           %[[CONSTANT_8:.*]] = arith.constant 1 : index
 ! CHECK:           fir.do_loop %[[VAL_2:.*]] = %[[CONSTANT_8]] to %[[SELECT_1]] step %[[CONSTANT_8]] unordered {
 ! CHECK:             fir.do_loop %[[VAL_3:.*]] = %[[CONSTANT_8]] to %[[SELECT_0]] step %[[CONSTANT_8]] unordered {
@@ -408,8 +414,8 @@
 ! CHECK:           %[[CMPI_0:.*]] = arith.cmpi sgt, %[[DIVSI_0]], %[[CONSTANT_3]] : index
 ! CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[DIVSI_0]], %[[CONSTANT_3]] : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[SELECT_0]] : (index) -> !fir.shape<1>
-! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%[[CONSTANT_0]]:%[[CONSTANT_1]]:%[[CONSTANT_2]])  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<100xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
-! CHECK:           %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[CONSTANT_0]]:%[[CONSTANT_1]]:%[[CONSTANT_2]])  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<100xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
+! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%c11{{.*}}:%c20{{.*}}:%c1{{.*}})  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<100xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
+! CHECK:           %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%c11{{.*}}:%c20{{.*}}:%c1{{.*}})  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<100xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
 ! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 1 : index
 ! CHECK:           fir.do_loop %[[VAL_2:.*]] = %[[CONSTANT_4]] to %[[SELECT_0]] step %[[CONSTANT_4]] unordered {
 ! CHECK:             %[[DESIGNATE_2:.*]] = hlfir.designate %[[DESIGNATE_0]] (%[[VAL_2]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
