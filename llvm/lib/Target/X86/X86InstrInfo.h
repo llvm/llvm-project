@@ -319,8 +319,7 @@ public:
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  Register isLoadFromStackSlot(const MachineInstr &MI,
-                               int &FrameIndex,
+  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
                                TypeSize &MemBytes) const override;
   /// isLoadFromStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
@@ -330,8 +329,7 @@ public:
 
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  Register isStoreToStackSlot(const MachineInstr &MI,
-                              int &FrameIndex,
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               TypeSize &MemBytes) const override;
   /// isStoreToStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
@@ -748,8 +746,7 @@ private:
   ///
   /// If IsIntrinsic is set, operand 1 will be ignored for commuting.
   bool findThreeSrcCommutedOpIndices(const MachineInstr &MI,
-                                     unsigned &SrcOpIdx1,
-                                     unsigned &SrcOpIdx2,
+                                     unsigned &SrcOpIdx1, unsigned &SrcOpIdx2,
                                      bool IsIntrinsic = false) const;
 
   /// Returns true when instruction \p FlagI produces the same flags as \p OI.
