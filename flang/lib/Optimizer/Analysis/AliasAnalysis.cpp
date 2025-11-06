@@ -19,7 +19,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -28,59 +27,23 @@ using namespace mlir;
 
 #define DEBUG_TYPE "fir-alias-analysis"
 
-//===----------------------------------------------------------------------===//
-// AliasAnalysis: allocation detection based on MemAlloc effect
-//===----------------------------------------------------------------------===//
-
-static bool
-tryClassifyAllocateFromEffects(mlir::Operation *op, mlir::Value candidate,
-                               bool allowValueScoped, bool allowOpScoped,
-                               mlir::Value &v, mlir::Operation *&defOp,
-                               fir::AliasAnalysis::SourceKind &type) {
+// Classify 'candidate' as an allocation based on value-scoped Allocate effects
+// attached by its defining operation 'op'. Returns true if classified and fills
+// out 'v', 'defOp' and 'type'.
+static bool classifyAllocateFromEffects(mlir::Operation *op,
+                                        mlir::Value candidate, mlir::Value &v,
+                                        mlir::Operation *&defOp,
+                                        fir::AliasAnalysis::SourceKind &type) {
+  if (!op)
+    return false;
   auto iface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
   if (!iface)
     return false;
-
   llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
   iface.getEffects(effects);
-
-  if (allowValueScoped) {
-    for (mlir::MemoryEffects::EffectInstance &e : effects) {
-      if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
-          e.getValue() && e.getValue() == candidate) {
-        v = candidate;
-        defOp = op;
-        type = fir::AliasAnalysis::SourceKind::Allocate;
-        return true;
-      }
-    }
-  }
-
-  if (!allowOpScoped)
-    return false;
-
-  bool hasOpScopedAlloc =
-      llvm::any_of(effects, [](const mlir::MemoryEffects::EffectInstance &e) {
-        return !e.getValue() &&
-               mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect());
-      });
-  if (!hasOpScopedAlloc)
-    return false;
-
-  bool opIsViewLike =
-      (bool)mlir::dyn_cast_or_null<mlir::ViewLikeOpInterface>(op);
-  auto isMemRefLikeType = [](mlir::Type type) {
-    return fir::isa_ref_type(type) || mlir::isa<mlir::BaseMemRefType>(type) ||
-           mlir::isa<mlir::LLVM::LLVMPointerType>(type);
-  };
-  bool hasMemOperands = llvm::any_of(op->getOperands(), [&](mlir::Value o) {
-    return isMemRefLikeType(o.getType());
-  });
-  if (opIsViewLike || hasMemOperands)
-    return false;
-
-  for (mlir::Value res : op->getResults()) {
-    if (res == candidate && isMemRefLikeType(res.getType())) {
+  for (mlir::MemoryEffects::EffectInstance &e : effects) {
+    if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
+        e.getValue() && e.getValue() == candidate) {
       v = candidate;
       defOp = op;
       type = fir::AliasAnalysis::SourceKind::Allocate;
@@ -596,41 +559,29 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   mlir::Operation *instantiationPoint{nullptr};
-  // Helper to conservatively classify a candidate value as coming from a
-  // dummy argument or as indirect when no allocation or global can be proven.
-  auto classifyFallbackFrom = [&](mlir::Value candidate) {
-    if (isDummyArgument(candidate)) {
-      defOp = nullptr;
-      v = candidate;
-    } else {
-      type = SourceKind::Indirect;
-    }
-  };
-
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
-
-    // Effect-based detection (op-scoped heuristic only at this level).
-    if (tryClassifyAllocateFromEffects(defOp, v,
-                                       /*allowValueScoped=*/false,
-                                       /*allowOpScoped=*/true, v, defOp, type))
+    // Value-scoped allocation detection via effects.
+    if (classifyAllocateFromEffects(defOp, v, v, defOp, type))
       break;
-
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<hlfir::AsExprOp>([&](auto op) {
           v = op.getVar();
           defOp = v.getDefiningOp();
         })
         .Case<hlfir::AssociateOp>([&](auto op) {
-          // Do not pattern-match Allocate. Trace through the source.
           mlir::Value source = op.getSource();
-          v = source;
-          defOp = v.getDefiningOp();
-        })
-        .Case<fir::AllocaOp, fir::AllocMemOp>([&](auto op) {
-          // Do not pattern-match allocations by op name; rely on memory
-          // effects classification above. Nothing to do here.
-          breakFromLoop = true;
+          if (fir::isa_trivial(source.getType())) {
+            // Trivial values will always use distinct temp memory,
+            // so we can classify this as Allocate and stop.
+            type = SourceKind::Allocate;
+            breakFromLoop = true;
+          } else {
+            // AssociateOp may reuse the expression storage,
+            // so we have to trace further.
+            v = source;
+            defOp = v.getDefiningOp();
+          }
         })
         .Case<fir::ConvertOp>([&](auto op) {
           // Skip ConvertOp's and track further through the operand.
@@ -700,15 +651,19 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             if (global) {
               type = SourceKind::Global;
             } else {
-              mlir::Value def = llvm::cast<mlir::Value>(boxSrc.origin.u);
+              auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
               bool classified = false;
               if (auto defDefOp = def.getDefiningOp())
-                classified = tryClassifyAllocateFromEffects(
-                    defDefOp, def,
-                    /*allowValueScoped=*/true, /*allowOpScoped=*/true, v, defOp,
-                    type);
-              if (!classified)
-                classifyFallbackFrom(def);
+                classified =
+                    classifyAllocateFromEffects(defDefOp, def, v, defOp, type);
+              if (!classified) {
+                if (isDummyArgument(def)) {
+                  defOp = nullptr;
+                  v = def;
+                } else {
+                  type = SourceKind::Indirect;
+                }
+              }
             }
             breakFromLoop = true;
             return;
