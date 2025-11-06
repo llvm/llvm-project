@@ -213,11 +213,20 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
         bytes[i] = src.GetU8(&src_offset);
 
       if (src.GetByteOrder() == eByteOrderBig)
+        // Transform the big-endian input to little-endian
+        // because that is what the "llvm::LoadIntFromMemory" function
+        // we call below expects.
         std::reverse(bytes.begin(), bytes.end());
 
-      // The number of 64-bit wide words that are stored in "src".
-      size_t size64 = (reg_info.byte_size - 1) / 8 + 1;
-      bytes.resize(size64 * sizeof(uint64_t), 0);
+      if (llvm::sys::IsBigEndianHost) {
+        // If LLDB runs on a big-endian architecture,
+        // make sure that the input data can be read in
+        // 64-bit chunks because that is what
+        // the "llvm::LoadIntFromMemory" function will do.
+        size_t size64 = (reg_info.byte_size - 1) / 8 + 1;
+        bytes.resize(size64 * sizeof(uint64_t), 0);
+      }
+
       llvm::APInt uint = llvm::APInt::getZero(src_len * 8);
       llvm::LoadIntFromMemory(uint, bytes.data(), src_len);
       SetUInt128(uint);
