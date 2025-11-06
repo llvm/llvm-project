@@ -355,6 +355,10 @@
 #CHECK-BE: vucmprhh 1, 3, 6               # encoding: [0x10,0x23,0x31,0x03]
 #CHECK-LE: vucmprhh 1, 3, 6               # encoding: [0x03,0x31,0x23,0x10]
 
+           xvrlw 34, 15, 16
+#CHECK-BE: xvrlw 34, 15, 16              # encoding: [0xf0,0x4f,0x85,0xc1]
+#CHECK-LE: xvrlw 34, 15, 16              # encoding: [0xc1,0x85,0x4f,0xf0]
+
            xxaes192encp 8, 10, 14
 #CHECK-BE: xxaes192encp 8, 10, 14         # encoding: [0xf1,0x0b,0x76,0x10]
 #CHECK-LE: xxaes192encp 8, 10, 14         # encoding: [0x10,0x76,0x0b,0xf1]

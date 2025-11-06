@@ -180,7 +180,7 @@ BUILTIN(__builtin_amdgcn_raw_buffer_load_b128, "V4UiQbiiIi", "n")
 BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32, "iiQbiiIi", "")
 
 TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32, "ffQbiiIi", "", "atomic-fadd-rtn-insts")
-TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16, "V2hV2hQbiiIi", "t", "atomic-buffer-global-pk-add-f16-insts")
+TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16, "V2hV2hQbiiIi", "", "atomic-buffer-global-pk-add-f16-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32, "ffQbiiIi", "", "atomic-fmin-fmax-global-f32")
 TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32, "ffQbiiIi", "", "atomic-fmin-fmax-global-f32")
