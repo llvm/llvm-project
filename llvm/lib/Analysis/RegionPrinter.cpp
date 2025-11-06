@@ -45,7 +45,7 @@ llvm::DOTGraphTraits<RegionNode *>::getNodeLabel(RegionNode *Node,
 }
 
 template <>
-struct DOTGraphTraits<RegionInfo *>
+struct llvm::DOTGraphTraits<RegionInfo *>
     : public llvm::DOTGraphTraits<RegionNode *> {
 
   DOTGraphTraits (bool isSimple = false)
