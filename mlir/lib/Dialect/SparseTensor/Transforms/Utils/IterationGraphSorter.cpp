@@ -85,7 +85,8 @@ inline static bool includesDenseOutput(SortMask mask) {
 /// 0 = Dense, 1 = Compressed, 2 = Singleton, 3 = Other/Unknown.
 static unsigned getLoopSparsityRank(unsigned loop, ArrayRef<Value> allTensors,
                                     ArrayRef<AffineMap> allMaps) {
-  unsigned bestRank = 3; // Default: most sparse (unknown/singleton-like).
+  // Start with highest rank.
+  unsigned minRank = 3;
 
   for (auto [tensor, map] : llvm::zip(allTensors, allMaps)) {
     // Check if this loop accesses this tensor.
@@ -104,7 +105,7 @@ static unsigned getLoopSparsityRank(unsigned loop, ArrayRef<Value> allTensors,
     if (loopAccessesTensor) {
       const auto enc = getSparseTensorEncoding(tensor.getType());
       if (!enc) {
-        // Dense tensor - highest priority.
+        // Dense tensor - lowest rank.
         return 0;
       } else {
         // Sparse tensor - check the level type for this dimension.
@@ -114,16 +115,16 @@ static unsigned getLoopSparsityRank(unsigned loop, ArrayRef<Value> allTensors,
           if (isDenseLT(lvlType)) {
             return 0; // Dense level.
           } else if (isCompressedLT(lvlType)) {
-            bestRank = std::min(bestRank, 1u); // Compressed level.
+            minRank = std::min(minRank, 1u); // Compressed level.
           } else if (isSingletonLT(lvlType)) {
-            bestRank = std::min(bestRank, 2u); // Singleton level.
+            minRank = std::min(minRank, 2u); // Singleton level.
           }
         }
       }
     }
   }
 
-  return bestRank;
+  return minRank;
 }
 
 AffineMap IterationGraphSorter::topoSort() {
@@ -161,18 +162,18 @@ AffineMap IterationGraphSorter::topoSort() {
       SmallVector<AffineMap> allMaps = loop2InsLvl;
       allMaps.push_back(loop2OutLvl);
 
-      // Find loop with best (lowest) sparsity rank.
-      unsigned bestLoop = it[0];
-      unsigned bestRank = getLoopSparsityRank(bestLoop, allTensors, allMaps);
+      // Find loop with minimum (lowest) sparsity rank.
+      unsigned minLoop = it[0];
+      unsigned minRank = getLoopSparsityRank(minLoop, allTensors, allMaps);
 
       for (auto candidateLoop : it) {
         unsigned rank = getLoopSparsityRank(candidateLoop, allTensors, allMaps);
-        if (rank < bestRank || (rank == bestRank && candidateLoop < bestLoop)) {
-          bestLoop = candidateLoop;
-          bestRank = rank;
+        if (rank < minRank || (rank == minRank && candidateLoop < minLoop)) {
+          minLoop = candidateLoop;
+          minRank = rank;
         }
       }
-      src = bestLoop;
+      src = minLoop;
       break;
     }
     }
