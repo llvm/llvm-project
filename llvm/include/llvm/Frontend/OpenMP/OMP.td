@@ -1291,7 +1291,7 @@ def OMP_TaskLoop : Directive<[Spelling<"taskloop">]> {
                         VersionedClause<OMPC_Mergeable>,
                         VersionedClause<OMPC_NoGroup>,
                         VersionedClause<OMPC_Private>,
-                        VersionedClause<OMPC_Reduction, 50>,
+                        VersionedClause<OMPC_Reduction>,
                         VersionedClause<OMPC_Shared>,
                         VersionedClause<OMPC_Untied>,
   ];
