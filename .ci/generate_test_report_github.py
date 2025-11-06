@@ -8,6 +8,7 @@ import platform
 
 import generate_test_report_lib
 
+
 def compute_platform_title() -> str:
     logo = ":window:" if platform.system() == "Windows" else ":penguin:"
     # On Linux the machine value is x86_64 on Windows it is AMD64.

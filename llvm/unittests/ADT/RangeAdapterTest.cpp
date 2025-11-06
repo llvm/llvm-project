@@ -24,8 +24,8 @@ class ReverseOnlyVector {
 public:
   ReverseOnlyVector(std::initializer_list<int> list) : Vec(list) {}
 
-  typedef std::vector<int>::reverse_iterator reverse_iterator;
-  typedef std::vector<int>::const_reverse_iterator const_reverse_iterator;
+  using reverse_iterator = std::vector<int>::reverse_iterator;
+  using const_reverse_iterator = std::vector<int>::const_reverse_iterator;
   reverse_iterator rbegin() { return Vec.rbegin(); }
   reverse_iterator rend() { return Vec.rend(); }
   const_reverse_iterator rbegin() const { return Vec.rbegin(); }
@@ -41,11 +41,11 @@ class BidirectionalVector {
 public:
   BidirectionalVector(std::initializer_list<int> list) : Vec(list) {}
 
-  typedef std::vector<int>::iterator iterator;
+  using iterator = std::vector<int>::iterator;
   iterator begin() const;
   iterator end() const;
 
-  typedef std::vector<int>::reverse_iterator reverse_iterator;
+  using reverse_iterator = std::vector<int>::reverse_iterator;
   reverse_iterator rbegin() const { return Vec.rbegin(); }
   reverse_iterator rend() const { return Vec.rend(); }
 };
@@ -58,15 +58,15 @@ class BidirectionalVectorConsts {
 public:
   BidirectionalVectorConsts(std::initializer_list<int> list) : Vec(list) {}
 
-  typedef std::vector<int>::iterator iterator;
-  typedef std::vector<int>::const_iterator const_iterator;
+  using iterator = std::vector<int>::iterator;
+  using const_iterator = std::vector<int>::const_iterator;
   iterator begin();
   iterator end();
   const_iterator begin() const;
   const_iterator end() const;
 
-  typedef std::vector<int>::reverse_iterator reverse_iterator;
-  typedef std::vector<int>::const_reverse_iterator const_reverse_iterator;
+  using reverse_iterator = std::vector<int>::reverse_iterator;
+  using const_reverse_iterator = std::vector<int>::const_reverse_iterator;
   reverse_iterator rbegin() { return Vec.rbegin(); }
   reverse_iterator rend() { return Vec.rend(); }
   const_reverse_iterator rbegin() const { return Vec.rbegin(); }
@@ -80,7 +80,7 @@ class CustomIteratorVector {
 public:
   CustomIteratorVector(std::initializer_list<int> list) : V(list) {}
 
-  typedef std::vector<int>::iterator iterator;
+  using iterator = std::vector<int>::iterator;
   class reverse_iterator {
     std::vector<int>::iterator I;
 
@@ -126,8 +126,8 @@ template <typename R> void TestRev(const R &r) {
 // Test fixture
 template <typename T> class RangeAdapterLValueTest : public ::testing::Test {};
 
-typedef ::testing::Types<std::vector<int>, std::list<int>, int[4]>
-    RangeAdapterLValueTestTypes;
+using RangeAdapterLValueTestTypes =
+    ::testing::Types<std::vector<int>, std::list<int>, int[4]>;
 TYPED_TEST_SUITE(RangeAdapterLValueTest, RangeAdapterLValueTestTypes, );
 
 TYPED_TEST(RangeAdapterLValueTest, TrivialOperation) {
@@ -140,10 +140,10 @@ TYPED_TEST(RangeAdapterLValueTest, TrivialOperation) {
 
 template <typename T> struct RangeAdapterRValueTest : testing::Test {};
 
-typedef ::testing::Types<std::vector<int>, std::list<int>, CustomIteratorVector,
-                         ReverseOnlyVector, BidirectionalVector,
-                         BidirectionalVectorConsts>
-    RangeAdapterRValueTestTypes;
+using RangeAdapterRValueTestTypes =
+    ::testing::Types<std::vector<int>, std::list<int>, CustomIteratorVector,
+                     ReverseOnlyVector, BidirectionalVector,
+                     BidirectionalVectorConsts>;
 TYPED_TEST_SUITE(RangeAdapterRValueTest, RangeAdapterRValueTestTypes, );
 
 TYPED_TEST(RangeAdapterRValueTest, TrivialOperation) {
