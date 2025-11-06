@@ -42,9 +42,6 @@ _LIBCPP_PUSH_MACROS
 #    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE _LIBCPP_HIDE_FROM_ABI
 #  endif
 
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgnu-inline-cpp-without-extern")
-
 #  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
 
 namespace __cxxabiv1 {
@@ -223,8 +220,6 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT {
   _LIBCPP_VERBOSE_ABORT("make_exception_ptr was called in -fno-exceptions mode");
 }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
-
-_LIBCPP_DIAGNOSTIC_POP
 
 #else // _LIBCPP_ABI_MICROSOFT
 

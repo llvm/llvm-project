@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // libsupc++ does not implement the dependent EH ABI and the functionality
 // it uses to implement std::exception_ptr (which it declares as an alias of
 // std::__exception_ptr::exception_ptr) is not directly exported to clients. So
