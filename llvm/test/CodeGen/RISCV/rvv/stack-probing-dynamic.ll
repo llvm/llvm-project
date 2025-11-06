@@ -460,9 +460,9 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    .cfi_def_cfa_offset 4096
+; RV64I-NEXT:    .cfi_def_cfa_offset 6128
 ; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    .cfi_def_cfa_offset 4144
+; RV64I-NEXT:    .cfi_def_cfa_offset 6176
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    call callee_stack_args
@@ -485,9 +485,9 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    sub sp, sp, a0
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    .cfi_def_cfa_offset 4096
+; RV32I-NEXT:    .cfi_def_cfa_offset 6128
 ; RV32I-NEXT:    addi sp, sp, -80
-; RV32I-NEXT:    .cfi_def_cfa_offset 4176
+; RV32I-NEXT:    .cfi_def_cfa_offset 6208
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    addi a0, a0, 36
 ; RV32I-NEXT:    add a0, sp, a0

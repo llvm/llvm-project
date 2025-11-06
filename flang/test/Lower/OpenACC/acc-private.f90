@@ -21,10 +21,7 @@
 ! CHECK:   acc.yield %[[DECL]]#0 : !fir.box<!fir.array<?x?x2xi32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?x?x2xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?x?x2xi32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.shape<3>
-! CHECK:   %[[DES_SRC:.*]] = hlfir.designate %[[ARG0]] shape %[[SHAPE]] : (!fir.box<!fir.array<?x?x2xi32>>, !fir.shape<3>) -> !fir.box<!fir.array<?x?x2xi32>>
-! CHECK:   %[[DES_DST:.*]] = hlfir.designate %[[ARG1]] shape %[[SHAPE]] : (!fir.box<!fir.array<?x?x2xi32>>, !fir.shape<3>) -> !fir.box<!fir.array<?x?x2xi32>>
-! CHECK:   hlfir.assign %[[DES_SRC]] to %[[DES_DST]] : !fir.box<!fir.array<?x?x2xi32>>, !fir.box<!fir.array<?x?x2xi32>>
+! CHECK:   hlfir.assign %[[ARG0]] to %[[ARG1]] temporary_lhs : !fir.box<!fir.array<?x?x2xi32>>, !fir.box<!fir.array<?x?x2xi32>>
 ! CHECK:   acc.terminator
 ! CHECK: } destroy {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?x?x2xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?x?x2xi32>>):
@@ -38,20 +35,7 @@
 ! CHECK: ^bb0(%{{.*}}: !fir.box<!fir.array<?xi32>>):
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
-! CHECK:   %[[LB:.*]] = arith.constant 4 : index
-! CHECK:   %[[UB:.*]] = arith.constant 9 : index
-! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   %[[C1:.*]] = arith.constant 1 : index
-! CHECK:   %[[C0:.*]] = arith.constant 0 : index
-! CHECK:   %[[EXT0:.*]] = arith.subi %[[UB]], %[[LB]] : index
-! CHECK:   %[[EXT1:.*]] = arith.addi %[[EXT0]], %[[C1]] : index
-! CHECK:   %[[EXT2:.*]] = arith.divsi %[[EXT1]], %[[STEP]] : index
-! CHECK:   %[[CMP:.*]] = arith.cmpi sgt, %[[EXT2]], %[[C0]] : index
-! CHECK:   %[[SELECT:.*]] = arith.select %[[CMP]], %[[EXT2]], %[[C0]] : index
-! CHECK:   %[[SHAPE:.*]] = fir.shape %[[SELECT]] : (index) -> !fir.shape<1>
-! CHECK:   %[[LEFT:.*]] = hlfir.designate %[[ARG0]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:   %[[RIGHT:.*]] = hlfir.designate %[[ARG1]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:   hlfir.assign %[[LEFT]] to %[[RIGHT]] : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
+! CHECK:   hlfir.assign {{.*}} to {{.*}} temporary_lhs : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
 ! CHECK:   acc.terminator
 ! CHECK: } destroy {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
@@ -71,10 +55,7 @@
 ! CHECK:   acc.yield %[[DECL]]#0 : !fir.box<!fir.array<?xi32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-! CHECK:   %[[DES_V1:.*]] = hlfir.designate %[[ARG0]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:   %[[DES_V2:.*]] = hlfir.designate %[[ARG1]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:   hlfir.assign %[[DES_V1]] to %[[DES_V2]] : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
+! CHECK:   hlfir.assign %[[ARG0]] to %[[ARG1]] temporary_lhs : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
 ! CHECK:   acc.terminator
 ! CHECK: } destroy {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
@@ -183,12 +164,19 @@
 ! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<50xf32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<50xf32>>, %[[DST:.*]]: !fir.ref<!fir.array<50xf32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-! CHECK:   %[[DECL_SRC:.*]]:2 = hlfir.declare %[[SRC]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<50xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<50xf32>>, !fir.ref<!fir.array<50xf32>>)
-! CHECK:   %[[DECL_DST:.*]]:2 = hlfir.declare %[[DST]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<50xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<50xf32>>, !fir.ref<!fir.array<50xf32>>)
-! CHECK:   %[[DES_SRC:.*]] = hlfir.designate %[[DECL_SRC]]#0 shape %[[SHAPE:.*]] : (!fir.ref<!fir.array<50xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
-! CHECK:   %[[DES_DST:.*]] = hlfir.designate %[[DECL_DST]]#0 shape %[[SHAPE:.*]] : (!fir.ref<!fir.array<50xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
-! CHECK:   hlfir.assign %[[DES_SRC]] to %[[DES_DST]] : !fir.ref<!fir.array<50xf32>>, !fir.ref<!fir.array<50xf32>>
+! CHECK:   %[[C50:.*]] = arith.constant 50 : index
+! CHECK:   %[[C99:.*]] = arith.constant 99 : index
+! CHECK:   %[[C1:.*]] = arith.constant 1 : index
+! CHECK:   %[[C0:.*]] = arith.constant 0 : index
+! CHECK:   %[[D0:.*]] = arith.subi %[[C99]], %[[C50]] : index
+! CHECK:   %[[D1:.*]] = arith.addi %[[D0]], %[[C1]] : index
+! CHECK:   %[[D2:.*]] = arith.divsi %[[D1]], %[[C1]] : index
+! CHECK:   %[[CMP:.*]] = arith.cmpi sgt, %[[D2]], %[[C0]] : index
+! CHECK:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D2]], %[[C0]] : index
+! CHECK:   %[[SH:.*]] = fir.shape %[[SEL]] : (index) -> !fir.shape<1>
+! CHECK:   %[[SEC_SRC:.*]] = hlfir.designate %[[SRC]] (%c51{{.*}}:%c100{{.*}}:%c1{{.*}}) shape %[[SH]] : (!fir.ref<!fir.array<50xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
+! CHECK:   %[[SEC_DST:.*]] = hlfir.designate %[[DST]] (%c51{{.*}}:%c100{{.*}}:%c1{{.*}}) shape %[[SH]] : (!fir.ref<!fir.array<50xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
+! CHECK:   hlfir.assign %[[SEC_SRC]] to %[[SEC_DST]] temporary_lhs : !fir.ref<!fir.array<50xf32>>, !fir.ref<!fir.array<50xf32>>
 ! CHECK:   acc.terminator
 ! CHECK: }
 
@@ -200,12 +188,7 @@
 ! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xf32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<100xf32>>, %[[DST:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-! CHECK:   %[[DECL_SRC:.*]]:2 = hlfir.declare %[[SRC]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-! CHECK:   %[[DECL_DST:.*]]:2 = hlfir.declare %[[DST]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-! CHECK:   %[[DES_SRC:.*]] = hlfir.designate %[[DECL_SRC]]#0 shape %[[SHAPE]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:   %[[DES_DST:.*]] = hlfir.designate %[[DECL_DST]]#0 shape %[[SHAPE]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:   hlfir.assign %[[DES_SRC]] to %[[DES_DST]] : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+! CHECK:   hlfir.assign %[[SRC]] to %[[DST]] temporary_lhs : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
 ! CHECK:   acc.terminator
 ! CHECK: }
 
@@ -217,7 +200,7 @@
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
 ! CHECK:   %[[VALUE:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
-! CHECK:   fir.store %[[VALUE]] to %[[DST]] : !fir.ref<i32>
+! CHECK:   fir.assign %[[VALUE]] to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:   acc.terminator
 ! CHECK: }
 

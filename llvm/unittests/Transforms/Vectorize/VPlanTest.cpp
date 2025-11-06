@@ -704,6 +704,20 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
   }
 }
 
+TEST_F(VPBasicBlockTest, splitAtEnd) {
+  VPlan &Plan = getPlan();
+  VPInstruction *VPI = new VPInstruction(0, {});
+  VPBasicBlock *VPBB = Plan.createVPBasicBlock("VPBB1", VPI);
+  VPBlockUtils::connectBlocks(Plan.getEntry(), VPBB);
+  VPBlockUtils::connectBlocks(VPBB, Plan.getScalarHeader());
+  VPBB->splitAt(VPBB->end());
+  EXPECT_EQ(VPBB->size(), 1u);
+  EXPECT_EQ(&VPBB->front(), VPI);
+  auto *Split = cast<VPBasicBlock>(VPBB->getSingleSuccessor());
+  EXPECT_TRUE(Split->empty());
+  EXPECT_EQ(Split->getSingleSuccessor(), Plan.getScalarHeader());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPBasicBlockTest, print) {
   VPInstruction *TC = new VPInstruction(Instruction::PHI, {});
