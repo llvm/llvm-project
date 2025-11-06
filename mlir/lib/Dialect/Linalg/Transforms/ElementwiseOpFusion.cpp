@@ -136,7 +136,7 @@ mlir::linalg::getPreservedProducerResults(LinalgOp producer, LinalgOp consumer,
   return preservedProducerResults;
 }
 
-/// Conditions for elementwise fusion of generic operations.
+/// Conditions for elementwise fusion of linalg operations.
 bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   if (!fusedOperand)
     return false;
@@ -144,7 +144,7 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   auto producer = fusedOperand->get().getDefiningOp<LinalgOp>();
   auto consumer = dyn_cast<LinalgOp>(fusedOperand->getOwner());
 
-  // Check producer and consumer are generic ops.
+  // Check producer and consumer are linalg ops.
   if (!producer || !consumer)
     return false;
 
@@ -180,7 +180,7 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
     return false;
 
   // Ensure that the fusion does not remove size information required to
-  // get the loop bounds. For non-reduction generics, this is trivially the
+  // get the loop bounds. For non-reduction ops, this is trivially the
   // case due to the output operand. For reductions, we need to check that after
   // the fusion, each loop dimension has at least one input that defines it.
   if ((consumer.getNumReductionLoops())) {
@@ -459,7 +459,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
 }
 
 namespace {
-/// Patterns to fuse a generic op, with the producer of its operands.
+/// Patterns to fuse a linalg op, with the producer of its operands.
 class FuseElementwiseOps : public OpInterfaceRewritePattern<LinalgOp> {
 public:
   FuseElementwiseOps(MLIRContext *context, ControlFusionFn fun,
@@ -467,10 +467,10 @@ public:
       : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
         controlFn(std::move(fun)) {}
 
-  LogicalResult matchAndRewrite(LinalgOp genericOp,
+  LogicalResult matchAndRewrite(LinalgOp linalgOp,
                                 PatternRewriter &rewriter) const override {
-    // Find the first operand that is defined by another generic op on tensors.
-    for (OpOperand &opOperand : genericOp->getOpOperands()) {
+    // Find the first operand that is defined by another linalg op on tensors.
+    for (OpOperand &opOperand : linalgOp->getOpOperands()) {
       if (!areElementwiseOpsFusable(&opOperand))
         continue;
       if (!controlFn(&opOperand))
@@ -482,7 +482,7 @@ public:
       FailureOr<ElementwiseOpFusionResult> fusionResult =
           fuseElementwiseOps(rewriter, &opOperand);
       if (failed(fusionResult))
-        return rewriter.notifyMatchFailure(genericOp, "fusion failed");
+        return rewriter.notifyMatchFailure(linalgOp, "fusion failed");
 
       // Perform the fusion.
       for (auto [origVal, replacement] : fusionResult->replacements) {
@@ -491,10 +491,10 @@ public:
           return use.get().getDefiningOp() != producer;
         });
       }
-      rewriter.eraseOp(genericOp);
+      rewriter.eraseOp(linalgOp);
       return success();
     }
-    return rewriter.notifyMatchFailure(genericOp, "no fusable operands");
+    return rewriter.notifyMatchFailure(linalgOp, "no fusable operands");
   }
 
 private:
@@ -2278,7 +2278,7 @@ void mlir::linalg::populateCollapseDimensions(
 
 namespace {
 
-/// Pass that fuses generic ops on tensors. Used only for testing.
+/// Pass that fuses linalg ops on tensors. Used only for testing.
 // TODO(ravishankarm): This pass is to be deprecated. The efficacy of the
 // patterns added here heavily depends on the cost function used. Having an
 // opinionated pass of this form is not recommended. Deprecate this pass in

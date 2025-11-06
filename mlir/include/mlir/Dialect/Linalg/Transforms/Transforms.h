@@ -554,9 +554,11 @@ FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
                                            GenericOp genericOp,
                                            const ControlDropUnitDims &options);
 
-/// Fuse two `linalg.generic` operations that have a producer-consumer
+/// Fuse two linalg operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
 /// that `areElementwiseOpsFusable` returns true for the given `fusedOperand`.
+/// The resulting fused operation is always a `linalg.generic`.
+/// TODO: Support fusing to named ops when possible.
 struct ElementwiseOpFusionResult {
   Operation *fusedOp;
   llvm::DenseMap<Value, Value> replacements;
@@ -1921,8 +1923,10 @@ using ControlFusionFn = std::function<bool(OpOperand *fusedOperand)>;
 
 /// Patterns for fusing linalg operation on tensors.
 
-/// Pattern to fuse `linalg.generic` -> `linalg.generic` operations
-/// when both operations are fusable elementwise operations.
+/// Pattern to fuse two linalg operations
+/// when both operations are fusable operations.
+/// The producer must always be an elementwise operation
+/// and operations are opted into fusion via `controlElementwiseOpFusion`.
 void populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
     const ControlFusionFn &controlElementwiseOpFusion);
