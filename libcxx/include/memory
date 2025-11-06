@@ -931,6 +931,92 @@ template<class Smart, class Pointer, class... Args>
 template<class Pointer = void, class Smart, class... Args>
   auto inout_ptr(Smart& s, Args&&... args);                 // since c++23
 
+// [indirect], class template indirect
+template<class T, class Allocator = allocator<T>>
+class indirect // since C++26
+{
+public:
+    using value_type = T;
+    using allocator_type = Allocator;
+    using pointer = allocator_traits<Allocator>::pointer;
+    using const_pointer = allocator_traits<Allocator>::const_pointer;
+
+    // [indirect.ctor], constructors
+    constexpr explicit indirect();
+    constexpr explicit indirect(allocator_arg_t, const Allocator& a);
+    constexpr indirect(const indirect& other);
+    constexpr indirect(allocator_arg_t, const Allocator& a, const indirect& other);
+    constexpr indirect(indirect&& other) noexcept;
+    constexpr indirect(allocator_arg_t, const Allocator& a, indirect&& other)
+      noexcept(see below);
+    template<class U = T>
+      constexpr explicit indirect(U&& u);
+    template<class U = T>
+      constexpr explicit indirect(allocator_arg_t, const Allocator& a, U&& u);
+    template<class... Us>
+      constexpr explicit indirect(in_place_t, Us&&... us);
+    template<class... Us>
+      constexpr explicit indirect(allocator_arg_t, const Allocator& a,
+                                  in_place_t, Us&&... us);
+    template<class I, class... Us>
+      constexpr explicit indirect(in_place_t, initializer_list<I> ilist, Us&&... us);
+    template<class I, class... Us>
+      constexpr explicit indirect(allocator_arg_t, const Allocator& a,
+                                  in_place_t, initializer_list<I> ilist, Us&&... us);
+
+    // [indirect.dtor], destructor
+    constexpr ~indirect();
+
+    // [indirect.assign], assignment
+    constexpr indirect& operator=(const indirect& other);
+    constexpr indirect& operator=(indirect&& other) noexcept(see below);
+    template<class U = T>
+      constexpr indirect& operator=(U&& u);
+
+    // [indirect.obs], observers
+    constexpr const T& operator*() const & noexcept;
+    constexpr T& operator*() & noexcept;
+    constexpr const T&& operator*() const && noexcept;
+    constexpr T&& operator*() && noexcept;
+    constexpr const_pointer operator->() const noexcept;
+    constexpr pointer operator->() noexcept;
+    constexpr bool valueless_after_move() const noexcept;
+    constexpr allocator_type get_allocator() const noexcept;
+
+    // [indirect.swap], swap
+    constexpr void swap(indirect& other) noexcept(see below);
+    friend constexpr void swap(indirect& lhs, indirect& rhs) noexcept(see below);
+
+    // [indirect.relops], relational operators
+    template<class U, class AA>
+      friend constexpr bool operator==(const indirect& lhs, const indirect<U, AA>& rhs)
+        noexcept(see below);
+    template<class U, class AA>
+      friend constexpr auto operator<=>(const indirect& lhs, const indirect<U, AA>& rhs)
+        -> synth-three-way-result<T, U>;
+
+    // [indirect.comp.with.t], comparison with T
+    template<class U>
+      friend constexpr bool operator==(const indirect& lhs, const U& rhs) noexcept(see below);
+    template<class U>
+      friend constexpr auto operator<=>(const indirect& lhs, const U& rhs)
+        -> synth-three-way-result<T, U>;
+};
+
+template<class Value>
+  indirect(Value) -> indirect<Value>;
+
+template<class Allocator, class Value>
+  indirect(allocator_arg_t, Allocator, Value)
+    -> indirect<Value, typename allocator_traits<Allocator>::template rebind_alloc<Value>>;
+
+// [indirect.hash], hash support
+template<class T, class Alloc> struct hash<indirect<T, Alloc>>; // since C++26
+
+namespace pmr {
+  template<class T> using indirect    = indirect<T, polymorphic_allocator<T>>;    // since C++26
+}
+
 }  // std
 
 */
@@ -976,6 +1062,10 @@ template<class Pointer = void, class Smart, class... Args>
 
 #  if _LIBCPP_STD_VER >= 23
 #    include <__memory/allocate_at_least.h>
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+#    include <__memory/indirect.h>
 #  endif
 
 #  include <version>
