@@ -28,7 +28,7 @@ class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
 
 def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
-    MemoryEffectsOpInterface]> {
+    MemoryEffects<[MemAlloc]>]> {
   let summary = "Allocate an object on device";
 
   let description = [{
@@ -62,11 +62,6 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
       CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::ValueRange", "{}">:$shape,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
-
-  let extraClassDeclaration = [{
-    void getEffects(
-        llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects);
-  }];
 
   let hasVerifier = 1;
 }
