@@ -382,7 +382,8 @@ def get_python_module_path(options):
                 module_path = get_python_lib(True, False, options.prefix)
             else:
                 module_path = get_python_lib(True, False)
-            return os.path.normcase(os.path.join(module_path, "lldb"))
+
+        return os.path.normcase(os.path.join(module_path, "lldb"))
 
 
 def main(options):
