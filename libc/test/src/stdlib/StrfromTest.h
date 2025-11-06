@@ -485,7 +485,9 @@ public:
     ASSERT_STREQ_LEN(written, buff, "-NAN");
   }
 
+  // https://github.com/llvm/llvm-project/issues/166795
   void charsWrittenOverflow(FunctionT func) {
+#ifndef LIBC_TARGET_ARCH_IS_RISCV32
     char buff[100];
     // Trigger an overflow in the return value of strfrom by writing more than
     // INT_MAX bytes.
@@ -493,18 +495,9 @@ public:
 
     EXPECT_LT(result, 0);
     ASSERT_ERRNO_FAILURE();
+#endif
   }
 };
-
-// https://github.com/llvm/llvm-project/issues/166795
-#ifndef LIBC_TARGET_ARCH_IS_RISCV32
-#define STRFROM_OVERFLOW_TEST(name, func)                                      \
-  TEST_F(LlvmLibc##name##Test, CharsWrittenOverflow) {                         \
-    charsWrittenOverflow(func);                                                \
-  }
-#else
-#define STRFROM_OVERFLOW_TEST(name, func)
-#endif
 
 #define STRFROM_TEST(InputType, name, func)                                    \
   using LlvmLibc##name##Test = StrfromTest<InputType>;                         \
@@ -525,4 +518,6 @@ public:
     insufficentBufsize(func);                                                  \
   }                                                                            \
   TEST_F(LlvmLibc##name##Test, InfAndNanValues) { infNanValues(func); }        \
-  STRFROM_OVERFLOW_TEST(name, func)
+  TEST_F(LlvmLibc##name##Test, CharsWrittenOverflow) {                         \
+    charsWrittenOverflow(func);                                                \
+  }
