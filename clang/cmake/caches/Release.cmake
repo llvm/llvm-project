@@ -171,6 +171,7 @@ set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
 set_final_stage_var(LLVM_USE_STATIC_ZSTD "ON" BOOL)
+set_final_stage_var(LLVM_USE_STATIC_LIBXML2 "ON" BOOL)
 if (LLVM_RELEASE_ENABLE_LTO)
   set_final_stage_var(LLVM_ENABLE_FATLTO "ON" BOOL)
   set_final_stage_var(CPACK_PRE_BUILD_SCRIPTS "${CMAKE_CURRENT_LIST_DIR}/release_cpack_pre_build_strip_lto.cmake" STRING)
