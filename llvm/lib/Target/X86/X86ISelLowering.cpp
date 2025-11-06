@@ -53442,7 +53442,8 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
   }
 
   SDValue NewStore =
-      DAG.getStore(St->getChain(), DL, Res, NewPtr, St->getPointerInfo(),
+      DAG.getStore(St->getChain(), DL, Res, NewPtr,
+                   MachinePointerInfo(St->getPointerInfo().getAddrSpace()),
                    Align(), St->getMemOperand()->getFlags());
 
   // If there are other uses of StoredVal, replace with a new load of the
@@ -54639,7 +54640,8 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
         SDValue NewPtr = DAG.getMemBasePlusOffset(
             Ld->getBasePtr(), PtrByteOfs, DL, SDNodeFlags::NoUnsignedWrap);
         SDValue NewLoad =
-            DAG.getLoad(VT, DL, Ld->getChain(), NewPtr, Ld->getPointerInfo(),
+            DAG.getLoad(VT, DL, Ld->getChain(), NewPtr,
+                        MachinePointerInfo(Ld->getPointerInfo().getAddrSpace()),
                         Align(), Ld->getMemOperand()->getFlags());
         DAG.makeEquivalentMemoryOrdering(Ld, NewLoad);
         return NewLoad;
