@@ -30,14 +30,6 @@ void *KR() __attribute__((alloc_size(1))); //expected-warning{{'alloc_size' attr
 void *(__attribute__((alloc_size(1))) * func_ptr1)(int);
 void *(__attribute__((alloc_size(1, 2))) func_ptr2)(int, int);
 
-// Applying alloc_size to functions returning a struct with a pointer as a first field should work.
-typedef struct {
-  void* p;
-  int n;
-} sized_ptr;
-
-sized_ptr sized_ptr_alloc(int len) __attribute__((alloc_size(1)));
-
 // TODO: according to GCC documentation the following should actually be the type
 // “pointer to pointer to alloc_size attributed function returning void*” and should
 // therefore be supported
