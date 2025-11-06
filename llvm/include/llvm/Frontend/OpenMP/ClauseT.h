@@ -1175,14 +1175,6 @@ struct ThreadsetT {
   ThreadsetPolicy v;
 };
 
-// V6.0: [17.9.6] `transparent` clause
-template <typename T, typename I, typename E> //
-struct TransparentT {
-  ENUM(TransparentPolicy, Omp_not_impex, Omp_import, Omp_export, Omp_impex);
-  using WrapperTrait = std::true_type;
-  TransparentPolicy v;
-};
-
 // V5.2: [5.9.1] `to` clause
 template <typename T, typename I, typename E> //
 struct ToT {
@@ -1196,10 +1188,12 @@ struct ToT {
   std::tuple<OPT(Expectation), OPT(Mappers), OPT(Iterator), LocatorList> t;
 };
 
-// [6.0:440-441] `transparent` clause
+// V6.0: [17.9.6] `transparent` clause
 template <typename T, typename I, typename E> //
 struct TransparentT {
-  using IncompleteTrait = std::true_type;
+  ENUM(TransparentPolicy, Omp_not_impex, Omp_import, Omp_export, Omp_impex);
+  using WrapperTrait = std::true_type;
+  TransparentPolicy v;
 };
 
 // V5.2: [8.2.1] `requirement` clauses
