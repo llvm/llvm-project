@@ -50,7 +50,7 @@ static cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
                clEnumValN(PPP_All, "all", "enable all debugging printout")),
     cl::Hidden, cl::cat(BoltCategory));
 
-extern cl::opt<bool> ProfileWritePseudoProbes;
+extern cl::opt<ProbesWriteMode> ProfileWritePseudoProbes;
 extern cl::opt<bool> StaleMatchingWithPseudoProbes;
 } // namespace opts
 

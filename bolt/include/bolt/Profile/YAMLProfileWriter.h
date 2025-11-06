@@ -41,10 +41,9 @@ public:
     GUIDNumMap HashIdxMap;
   };
 
-  static std::tuple<std::vector<yaml::bolt::InlineTreeNode>, InlineTreeMapTy>
-  convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
-                      const InlineTreeDesc &InlineTree,
-                      const BinaryFunction &BF);
+  static InlineTreeMapTy convertBFInlineTree(
+      const MCPseudoProbeDecoder &Decoder, const InlineTreeDesc &InlineTree,
+      const BinaryFunction &BF, yaml::bolt::BinaryFunctionProfile &YamlBF);
 
   static std::tuple<yaml::bolt::ProfilePseudoProbeDesc, InlineTreeDesc>
   convertPseudoProbeDesc(const MCPseudoProbeDecoder &PseudoProbeDecoder);

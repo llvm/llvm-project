@@ -140,6 +140,7 @@ struct BinaryBasicBlockProfile {
   std::vector<CallSiteInfo> CallSites;
   std::vector<SuccessorInfo> Successors;
   std::vector<PseudoProbeInfo> PseudoProbes;
+  std::string PseudoProbesStr;
 
   bool operator==(const BinaryBasicBlockProfile &Other) const {
     return Index == Other.Index;
@@ -163,6 +164,7 @@ template <> struct MappingTraits<bolt::BinaryBasicBlockProfile> {
                        std::vector<bolt::SuccessorInfo>());
     YamlIO.mapOptional("probes", BBP.PseudoProbes,
                        std::vector<bolt::PseudoProbeInfo>());
+    YamlIO.mapOptional("probe", BBP.PseudoProbesStr, std::string());
   }
 };
 
@@ -207,6 +209,7 @@ struct BinaryFunctionProfile {
   uint64_t ExternEntryCount{0};
   std::vector<BinaryBasicBlockProfile> Blocks;
   std::vector<InlineTreeNode> InlineTree;
+  std::string InlineTreeStr;
   bool Used{false};
 };
 } // end namespace bolt
@@ -223,6 +226,7 @@ template <> struct MappingTraits<bolt::BinaryFunctionProfile> {
                        std::vector<bolt::BinaryBasicBlockProfile>());
     YamlIO.mapOptional("inline_tree", BFP.InlineTree,
                        std::vector<bolt::InlineTreeNode>());
+    YamlIO.mapOptional("ppit", BFP.InlineTreeStr, std::string());
   }
 };
 

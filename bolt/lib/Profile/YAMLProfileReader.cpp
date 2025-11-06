@@ -370,6 +370,7 @@ bool YAMLProfileReader::parseFunctionProfile(
 static void
 decodeYamlInlineTree(const yaml::bolt::ProfilePseudoProbeDesc &YamlPD,
                      yaml::bolt::BinaryFunctionProfile &YamlBF) {
+  // Decompress inline tree
   uint32_t ParentId = 0;
   uint32_t PrevGUIDIdx = 0;
   for (yaml::bolt::InlineTreeNode &InlineTreeNode : YamlBF.InlineTree) {
@@ -383,6 +384,11 @@ decodeYamlInlineTree(const yaml::bolt::ProfilePseudoProbeDesc &YamlPD,
     InlineTreeNode.GUID = YamlPD.GUID[GUIDIdx];
     InlineTreeNode.Hash = YamlPD.Hash[HashIdx];
     InlineTreeNode.ParentIndexDelta = ParentId;
+  }
+  // Decompress probe descriptors
+  for (yaml::bolt::BinaryBasicBlockProfile &BB : YamlBF.Blocks) {
+    if (BB.PseudoProbesStr.empty())
+      continue;
   }
 }
 
