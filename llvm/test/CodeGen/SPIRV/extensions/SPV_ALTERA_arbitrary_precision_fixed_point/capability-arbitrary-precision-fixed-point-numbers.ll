@@ -1,12 +1,11 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_fixed_point,+SPV_INTEL_arbitrary_precision_integers %s -o - | FileCheck %s 
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_fixed_point,+SPV_INTEL_arbitrary_precision_integers %s -o - -filetype=obj | spirv-val %}
-
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_fixed_point,+SPV_ALTERA_arbitrary_precision_integers %s -o - | FileCheck %s 
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_fixed_point,+SPV_ALTERA_arbitrary_precision_integers %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability Kernel
-; CHECK-DAG: OpCapability ArbitraryPrecisionIntegersINTEL
-; CHECK-DAG: OpCapability ArbitraryPrecisionFixedPointINTEL
-; CHECK-DAG: OpExtension "SPV_INTEL_arbitrary_precision_fixed_point"
-; CHECK-DAG: OpExtension "SPV_INTEL_arbitrary_precision_integers"
+; CHECK-DAG: OpCapability ArbitraryPrecisionIntegersALTERA
+; CHECK-DAG: OpCapability ArbitraryPrecisionFixedPointALTERA
+; CHECK-DAG: OpExtension "SPV_ALTERA_arbitrary_precision_fixed_point"
+; CHECK-DAG: OpExtension "SPV_ALTERA_arbitrary_precision_integers"
 
 ; CHECK-DAG: %[[Ty_8:[0-9]+]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[Ty_13:[0-9]+]] = OpTypeInt 13 0
@@ -27,46 +26,46 @@
 ; CHECK-DAG: %[[Ty_51:[0-9]+]] = OpTypeInt 51 0
 
 ; CHECK:        %[[Sqrt_InId:[0-9]+]] = OpLoad %[[Ty_13]]
-; CHECK-NEXT:  %[[#]] = OpFixedSqrtINTEL %[[Ty_5]] %[[Sqrt_InId]] 0 2 2 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedSqrtALTERA %[[Ty_5]] %[[Sqrt_InId]] 0 2 2 0 0
 
 ; CHECK:        %[[Recip_InId:[0-9]+]] = OpLoad %[[Ty_3]]
-; CHECK-NEXT:  %[[#]] = OpFixedRecipINTEL %[[Ty_8]] %[[Recip_InId]] 1 4 4 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedRecipALTERA %[[Ty_8]] %[[Recip_InId]] 1 4 4 0 0
 
 ; CHECK:        %[[Rsqrt_InId:[0-9]+]] = OpLoad %[[Ty_11]]
-; CHECK-NEXT:  %[[#]] = OpFixedRsqrtINTEL %[[Ty_10]] %[[Rsqrt_InId]] 0 8 6 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedRsqrtALTERA %[[Ty_10]] %[[Rsqrt_InId]] 0 8 6 0 0
 
 ; CHECK:        %[[Sin_InId:[0-9]+]] = OpLoad %[[Ty_17]]
-; CHECK-NEXT:  %[[#]] = OpFixedSinINTEL %[[Ty_11]] %[[Sin_InId]] 1 7 5 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedSinALTERA %[[Ty_11]] %[[Sin_InId]] 1 7 5 0 0
 
 ; CHECK:        %[[Cos_InId:[0-9]+]] = OpLoad %[[Ty_35]]
-; CHECK-NEXT:  %[[#]] = OpFixedCosINTEL %[[Ty_28]] %[[Cos_InId]] 0 9 3 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedCosALTERA %[[Ty_28]] %[[Cos_InId]] 0 9 3 0 0
 
 ; CHECK:        %[[SinCos_InId:[0-9]+]] = OpLoad %[[Ty_31]]
-; CHECK-NEXT:  %[[#]] = OpFixedSinCosINTEL %[[Ty_40]] %[[SinCos_InId]] 1 10 12 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedSinCosALTERA %[[Ty_40]] %[[SinCos_InId]] 1 10 12 0 0
 
 ; CHECK:        %[[SinPi_InId:[0-9]+]] = OpLoad %[[Ty_60]]
-; CHECK-NEXT:  %[[#]] = OpFixedSinPiINTEL %[[Ty_5]] %[[SinPi_InId]] 0 2 2 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedSinPiALTERA %[[Ty_5]] %[[SinPi_InId]] 0 2 2 0 0
 
 ; CHECK:        %[[CosPi_InId:[0-9]+]] = OpLoad %[[Ty_28]]
-; CHECK-NEXT:  %[[#]] = OpFixedCosPiINTEL %[[Ty_16]] %[[CosPi_InId]] 0 8 5 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedCosPiALTERA %[[Ty_16]] %[[CosPi_InId]] 0 8 5 0 0
 
 ; CHECK:        %[[SinCosPi_InId:[0-9]+]] = OpLoad %[[Ty_13]]
-; CHECK-NEXT:  %[[#]] = OpFixedSinCosPiINTEL %[[Ty_10]] %[[SinCosPi_InId]] 0 2 2 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedSinCosPiALTERA %[[Ty_10]] %[[SinCosPi_InId]] 0 2 2 0 0
 
 ; CHECK:        %[[Log_InId:[0-9]+]] = OpLoad %[[Ty_64]]
-; CHECK-NEXT:  %[[#]] = OpFixedLogINTEL %[[Ty_44]] %[[Log_InId]] 1 24 22 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedLogALTERA %[[Ty_44]] %[[Log_InId]] 1 24 22 0 0
 
 ; CHECK:        %[[Exp_InId:[0-9]+]] = OpLoad %[[Ty_44]]
-; CHECK-NEXT:  %[[#]] = OpFixedExpINTEL %[[Ty_34]] %[[Exp_InId]] 0 20 20 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedExpALTERA %[[Ty_34]] %[[Exp_InId]] 0 20 20 0 0
 
 ; CHECK:        %[[SinCos_InId:[0-9]+]] = OpLoad %[[Ty_34]]
-; CHECK-NEXT:  %[[SinCos_ResultId:[0-9]+]] = OpFixedSinCosINTEL %[[Ty_51]] %[[SinCos_InId]] 1 3 2 0 0
+; CHECK-NEXT:  %[[SinCos_ResultId:[0-9]+]] = OpFixedSinCosALTERA %[[Ty_51]] %[[SinCos_InId]] 1 3 2 0 0
 ; CHECK-NEXT:        OpStore %[[#]] %[[SinCos_ResultId]]
 
 ; CHECK:       %[[ResId:[0-9]+]] = OpLoad %[[Ty_51]]
 ; CHECK-NEXT:  OpStore %[[PtrId:[0-9]+]] %[[ResId]]
 ; CHECK-NEXT:  %[[ExpInId2:[0-9]+]] = OpLoad %[[Ty_51]] %[[PtrId]]
-; CHECK-NEXT:  %[[#]] = OpFixedExpINTEL %[[Ty_51]] %[[ExpInId2]] 0 20 20 0 0
+; CHECK-NEXT:  %[[#]] = OpFixedExpALTERA %[[Ty_51]] %[[ExpInId2]] 0 20 20 0 0
 
 %"class._ZTSZ4mainE3$_0.anon" = type { i8 }
 
