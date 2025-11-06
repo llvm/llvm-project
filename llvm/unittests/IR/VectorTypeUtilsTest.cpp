@@ -8,6 +8,7 @@
 
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "gtest/gtest.h"
 
@@ -24,6 +25,7 @@ TEST(VectorTypeUtilsTest, TestToVectorizedTy) {
   Type *FTy = Type::getFloatTy(C);
   Type *HomogeneousStructTy = StructType::get(FTy, FTy, FTy);
   Type *MixedStructTy = StructType::get(FTy, ITy);
+  Type *FFLoadRetTy = StructType::get(ITy, ITy);
   Type *VoidTy = Type::getVoidTy(C);
 
   for (ElementCount VF :
@@ -54,6 +56,11 @@ TEST(VectorTypeUtilsTest, TestToVectorizedTy) {
                 VectorType::get(ITy, VF));
 
     EXPECT_EQ(toVectorizedTy(VoidTy, VF), VoidTy);
+    Type *WidenFFLoadRetTy =
+        toVectorizedTy(FFLoadRetTy, VF, Intrinsic::vp_load_ff);
+    EXPECT_EQ(cast<StructType>(WidenFFLoadRetTy)->getElementType(0),
+              VectorType::get(ITy, VF));
+    EXPECT_EQ(cast<StructType>(WidenFFLoadRetTy)->getElementType(1), ITy);
   }
 
   ElementCount ScalarVF = ElementCount::getFixed(1);
