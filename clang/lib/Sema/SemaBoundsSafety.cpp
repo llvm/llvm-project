@@ -286,8 +286,6 @@ GetCountedByAttrOnIncompletePointee(QualType Ty, NamedDecl **ND) {
   if (!PointeeTy->isIncompleteType(ND))
     return {};
 
-  // If counted_by is on void*, it was already validated at declaration time
-  // as a GNU extension. No need to re-check GNU mode here.
   if (PointeeTy->isVoidType())
     return {};
 
