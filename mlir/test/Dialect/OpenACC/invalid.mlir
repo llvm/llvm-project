@@ -492,6 +492,15 @@ func.func @fct1(%0 : !llvm.ptr) -> () {
 
 // -----
 
+%i1 = arith.constant 1 : i32
+%i2 = arith.constant 10 : i32
+// expected-error@+1 {{unstructured acc.loop must not have induction variables}}
+acc.loop control(%iv : i32) = (%i1 : i32) to (%i2 : i32) step (%i1 : i32) {
+  acc.yield
+} attributes {independent = [#acc.device_type<none>], unstructured}
+
+// -----
+
 // expected-error@+1 {{expect at least one of num, dim or static values}}
 acc.loop gang({}) {
   "test.openacc_dummy_op"() : () -> ()

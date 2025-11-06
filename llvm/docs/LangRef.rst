@@ -2741,6 +2741,11 @@ For example:
 ``"nooutline"``
     This attribute indicates that outlining passes should not modify the
     function.
+``nocreateundeforpoison``
+    This attribute indicates that the result of the function (prior to
+    application of return attributes/metadata) will not be undef or poison if
+    all arguments are not undef and not poison. Otherwise, it is undefined
+    behavior.
 
 Call Site Attributes
 ----------------------
@@ -30962,6 +30967,37 @@ Semantics:
 This intrinsic does nothing, but optimizers must consider it a use of its single
 operand and should try to preserve the intrinsic and its position in the
 function.
+
+.. _llvm_reloc_none:
+
+'``llvm.reloc.none``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.reloc.none(metadata !<name_str>)
+
+Overview:
+"""""""""
+
+The ``llvm.reloc.none`` intrinsic emits a no-op relocation against a given
+operand symbol. This can bring the symbol definition into the link without
+emitting any code or data to the binary for that purpose.
+
+Arguments:
+""""""""""
+
+The ``llvm.reloc.none`` intrinsic takes the symbol as a metadata string
+argument.
+
+Semantics:
+""""""""""
+
+This intrinsic emits a no-op relocation for the symbol at the location of the
+intrinsic call.
 
 
 Stack Map Intrinsics

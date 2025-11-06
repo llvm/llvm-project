@@ -7419,84 +7419,20 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
         if (cast<ConstantInt>(II->getArgOperand(1))->isNullValue())
           return false;
         break;
-      case Intrinsic::ctpop:
-      case Intrinsic::bswap:
-      case Intrinsic::bitreverse:
-      case Intrinsic::fshl:
-      case Intrinsic::fshr:
-      case Intrinsic::smax:
-      case Intrinsic::smin:
-      case Intrinsic::scmp:
-      case Intrinsic::umax:
-      case Intrinsic::umin:
-      case Intrinsic::ucmp:
-      case Intrinsic::ptrmask:
-      case Intrinsic::fptoui_sat:
-      case Intrinsic::fptosi_sat:
-      case Intrinsic::sadd_with_overflow:
-      case Intrinsic::ssub_with_overflow:
-      case Intrinsic::smul_with_overflow:
-      case Intrinsic::uadd_with_overflow:
-      case Intrinsic::usub_with_overflow:
-      case Intrinsic::umul_with_overflow:
-      case Intrinsic::sadd_sat:
-      case Intrinsic::uadd_sat:
-      case Intrinsic::ssub_sat:
-      case Intrinsic::usub_sat:
-        return false;
       case Intrinsic::sshl_sat:
       case Intrinsic::ushl_sat:
-        return includesPoison(Kind) &&
-               !shiftAmountKnownInRange(II->getArgOperand(1));
-      case Intrinsic::fma:
-      case Intrinsic::fmuladd:
-      case Intrinsic::sqrt:
-      case Intrinsic::powi:
-      case Intrinsic::sin:
-      case Intrinsic::cos:
-      case Intrinsic::pow:
-      case Intrinsic::log:
-      case Intrinsic::log10:
-      case Intrinsic::log2:
-      case Intrinsic::exp:
-      case Intrinsic::exp2:
-      case Intrinsic::exp10:
-      case Intrinsic::fabs:
-      case Intrinsic::copysign:
-      case Intrinsic::floor:
-      case Intrinsic::ceil:
-      case Intrinsic::trunc:
-      case Intrinsic::rint:
-      case Intrinsic::nearbyint:
-      case Intrinsic::round:
-      case Intrinsic::roundeven:
-      case Intrinsic::fptrunc_round:
-      case Intrinsic::canonicalize:
-      case Intrinsic::arithmetic_fence:
-      case Intrinsic::minnum:
-      case Intrinsic::maxnum:
-      case Intrinsic::minimum:
-      case Intrinsic::maximum:
-      case Intrinsic::minimumnum:
-      case Intrinsic::maximumnum:
-      case Intrinsic::is_fpclass:
-      case Intrinsic::ldexp:
-      case Intrinsic::frexp:
-        return false;
-      case Intrinsic::lround:
-      case Intrinsic::llround:
-      case Intrinsic::lrint:
-      case Intrinsic::llrint:
-        // If the value doesn't fit an unspecified value is returned (but this
-        // is not poison).
-        return false;
+        if (!includesPoison(Kind) ||
+            shiftAmountKnownInRange(II->getArgOperand(1)))
+          return false;
+        break;
       }
     }
     [[fallthrough]];
   case Instruction::CallBr:
   case Instruction::Invoke: {
     const auto *CB = cast<CallBase>(Op);
-    return !CB->hasRetAttr(Attribute::NoUndef);
+    return !CB->hasRetAttr(Attribute::NoUndef) &&
+           !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
   }
   case Instruction::InsertElement:
   case Instruction::ExtractElement: {
@@ -10404,4 +10340,56 @@ const Value *llvm::stripNullTest(const Value *V) {
 
 Value *llvm::stripNullTest(Value *V) {
   return const_cast<Value *>(stripNullTest(const_cast<const Value *>(V)));
+}
+
+bool llvm::collectPossibleValues(const Value *V,
+                                 SmallPtrSetImpl<const Constant *> &Constants,
+                                 unsigned MaxCount, bool AllowUndefOrPoison) {
+  SmallPtrSet<const Instruction *, 8> Visited;
+  SmallVector<const Instruction *, 8> Worklist;
+  auto Push = [&](const Value *V) -> bool {
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (!AllowUndefOrPoison && !isGuaranteedNotToBeUndefOrPoison(C))
+        return false;
+      // Check existence first to avoid unnecessary allocations.
+      if (Constants.contains(C))
+        return true;
+      if (Constants.size() == MaxCount)
+        return false;
+      Constants.insert(C);
+      return true;
+    }
+
+    if (auto *Inst = dyn_cast<Instruction>(V)) {
+      if (Visited.insert(Inst).second)
+        Worklist.push_back(Inst);
+      return true;
+    }
+    return false;
+  };
+  if (!Push(V))
+    return false;
+  while (!Worklist.empty()) {
+    const Instruction *CurInst = Worklist.pop_back_val();
+    switch (CurInst->getOpcode()) {
+    case Instruction::Select:
+      if (!Push(CurInst->getOperand(1)))
+        return false;
+      if (!Push(CurInst->getOperand(2)))
+        return false;
+      break;
+    case Instruction::PHI:
+      for (Value *IncomingValue : cast<PHINode>(CurInst)->incoming_values()) {
+        // Fast path for recurrence PHI.
+        if (IncomingValue == CurInst)
+          continue;
+        if (!Push(IncomingValue))
+          return false;
+      }
+      break;
+    default:
+      return false;
+    }
+  }
+  return true;
 }

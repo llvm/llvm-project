@@ -375,9 +375,6 @@ llvm::hash_code Operation::hashProperties() {
 // Operation Ordering
 //===----------------------------------------------------------------------===//
 
-constexpr unsigned Operation::kInvalidOrderIdx;
-constexpr unsigned Operation::kOrderStride;
-
 /// Given an operation 'other' that is within the same parent block, return
 /// whether the current operation is before 'other' in the operation list
 /// of the parent block.
@@ -463,28 +460,26 @@ void Operation::updateOrderIfNecessary() {
 //===----------------------------------------------------------------------===//
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(pointer n) -> node_type * {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getNodePtr(pointer n) -> node_type * {
   return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(const_pointer n)
-    -> const node_type * {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getNodePtr(const_pointer n) -> const node_type * {
   return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(node_type *n) -> pointer {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getValuePtr(node_type *n) -> pointer {
   return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(const node_type *n)
-    -> const_pointer {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getValuePtr(const node_type *n) -> const_pointer {
   return NodeAccess::getValuePtr<OptionsT>(n);
 }
 

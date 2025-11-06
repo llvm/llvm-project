@@ -388,6 +388,10 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
         TLI.setAvailableWithName(LibFunc_logbf, "_logbf");
       else
         TLI.setUnavailable(LibFunc_logbf);
+      TLI.setUnavailable(LibFunc_nextafter);
+      TLI.setUnavailable(LibFunc_nextafterf);
+      TLI.setUnavailable(LibFunc_nexttoward);
+      TLI.setUnavailable(LibFunc_nexttowardf);
       TLI.setUnavailable(LibFunc_rint);
       TLI.setUnavailable(LibFunc_rintf);
       TLI.setUnavailable(LibFunc_round);
@@ -418,6 +422,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_logbl);
     TLI.setUnavailable(LibFunc_ilogbl);
     TLI.setUnavailable(LibFunc_nearbyintl);
+    TLI.setUnavailable(LibFunc_nextafterl);
+    TLI.setUnavailable(LibFunc_nexttowardl);
     TLI.setUnavailable(LibFunc_rintl);
     TLI.setUnavailable(LibFunc_roundl);
     TLI.setUnavailable(LibFunc_scalblnl);

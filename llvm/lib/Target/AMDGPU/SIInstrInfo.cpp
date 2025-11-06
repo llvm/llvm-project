@@ -3917,6 +3917,9 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (isLDSDMA(MIa) || isLDSDMA(MIb))
     return false;
 
+  if (MIa.isBundle() || MIb.isBundle())
+    return false;
+
   // TODO: Should we check the address space from the MachineMemOperand? That
   // would allow us to distinguish objects we know don't alias based on the
   // underlying address space, even if it was lowered to a different one,
@@ -6153,7 +6156,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   // information.
   if (AMDGPU::isPackedFP32Inst(MI.getOpcode()) && AMDGPU::isGFX12Plus(ST) &&
       MO.isReg() && RI.isSGPRReg(MRI, MO.getReg())) {
-    constexpr const AMDGPU::OpName OpNames[] = {
+    constexpr AMDGPU::OpName OpNames[] = {
         AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2};
 
     for (auto [I, OpName] : enumerate(OpNames)) {
@@ -6215,8 +6218,8 @@ bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
 bool SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand(
     const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
     const MachineOperand *MO) const {
-  constexpr const unsigned NumOps = 3;
-  constexpr const AMDGPU::OpName OpNames[NumOps * 2] = {
+  constexpr unsigned NumOps = 3;
+  constexpr AMDGPU::OpName OpNames[NumOps * 2] = {
       AMDGPU::OpName::src0,           AMDGPU::OpName::src1,
       AMDGPU::OpName::src2,           AMDGPU::OpName::src0_modifiers,
       AMDGPU::OpName::src1_modifiers, AMDGPU::OpName::src2_modifiers};
@@ -7945,7 +7948,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     }
     legalizeOperands(*NewInstr, MDT);
     int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC, /*TRI=*/nullptr);
-    MachineOperand SCCOp = Inst.getOperand(SCCIdx);
+    const MachineOperand &SCCOp = Inst.getOperand(SCCIdx);
     addSCCDefUsersToVALUWorklist(SCCOp, Inst, Worklist, CondReg);
     Inst.eraseFromParent();
     return;
@@ -7985,7 +7988,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     legalizeOperandsVALUt16(*NewInstr, MRI);
     legalizeOperands(*NewInstr, MDT);
     int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC, /*TRI=*/nullptr);
-    MachineOperand SCCOp = Inst.getOperand(SCCIdx);
+    const MachineOperand &SCCOp = Inst.getOperand(SCCIdx);
     addSCCDefUsersToVALUWorklist(SCCOp, Inst, Worklist, CondReg);
     Inst.eraseFromParent();
     return;
@@ -8183,7 +8186,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                    AMDGPU::OpName::src0_modifiers) >= 0)
       NewInstr.addImm(0);
     if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::src0)) {
-      MachineOperand Src = Inst.getOperand(1);
+      const MachineOperand &Src = Inst.getOperand(1);
       NewInstr->addOperand(Src);
     }
 
@@ -9199,7 +9202,7 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
 }
 
-void SIInstrInfo::addSCCDefUsersToVALUWorklist(MachineOperand &Op,
+void SIInstrInfo::addSCCDefUsersToVALUWorklist(const MachineOperand &Op,
                                                MachineInstr &SCCDefInst,
                                                SIInstrWorklist &Worklist,
                                                Register NewCond) const {
