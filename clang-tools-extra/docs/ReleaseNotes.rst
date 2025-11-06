@@ -480,6 +480,12 @@ Changes in existing checks
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
 
+- Improved :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check by
+  adding the option `PreserveConsistency`, which prevents shortening
+  directives if it would break visual consistency with other directives in the
+  ``#if`` chain.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
