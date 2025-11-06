@@ -184,7 +184,7 @@ public:
 };
 
 #define COMMON_LOCK_TESTS(NAME, GETLK_CMD, SETLK_CMD)                          \
-  using NAME = LibcFcntlCommonLockTests<GETLK_CMD, GETLK_CMD>;                 \
+  using NAME = LibcFcntlCommonLockTests<GETLK_CMD, SETLK_CMD>;                 \
   TEST_F(NAME, GetLkRead) { GetLkRead(); }                                     \
   TEST_F(NAME, GetLkWrite) { GetLkWrite(); }                                   \
   TEST_F(NAME, UseAfterClose) { UseAfterClose(); }                             \
