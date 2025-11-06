@@ -2169,56 +2169,56 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
     break;
   }
-  case SPIRV::OpArbitraryFloatEQINTEL:
-  case SPIRV::OpArbitraryFloatGEINTEL:
-  case SPIRV::OpArbitraryFloatGTINTEL:
-  case SPIRV::OpArbitraryFloatLEINTEL:
-  case SPIRV::OpArbitraryFloatLTINTEL:
-  case SPIRV::OpArbitraryFloatCbrtINTEL:
-  case SPIRV::OpArbitraryFloatCosINTEL:
-  case SPIRV::OpArbitraryFloatCosPiINTEL:
-  case SPIRV::OpArbitraryFloatExp10INTEL:
-  case SPIRV::OpArbitraryFloatExp2INTEL:
-  case SPIRV::OpArbitraryFloatExpINTEL:
-  case SPIRV::OpArbitraryFloatExpm1INTEL:
-  case SPIRV::OpArbitraryFloatHypotINTEL:
-  case SPIRV::OpArbitraryFloatLog10INTEL:
-  case SPIRV::OpArbitraryFloatLog1pINTEL:
-  case SPIRV::OpArbitraryFloatLog2INTEL:
-  case SPIRV::OpArbitraryFloatLogINTEL:
-  case SPIRV::OpArbitraryFloatRecipINTEL:
-  case SPIRV::OpArbitraryFloatSinCosINTEL:
-  case SPIRV::OpArbitraryFloatSinCosPiINTEL:
-  case SPIRV::OpArbitraryFloatSinINTEL:
-  case SPIRV::OpArbitraryFloatSinPiINTEL:
-  case SPIRV::OpArbitraryFloatSqrtINTEL:
-  case SPIRV::OpArbitraryFloatACosINTEL:
-  case SPIRV::OpArbitraryFloatACosPiINTEL:
-  case SPIRV::OpArbitraryFloatAddINTEL:
-  case SPIRV::OpArbitraryFloatASinINTEL:
-  case SPIRV::OpArbitraryFloatASinPiINTEL:
-  case SPIRV::OpArbitraryFloatATan2INTEL:
-  case SPIRV::OpArbitraryFloatATanINTEL:
-  case SPIRV::OpArbitraryFloatATanPiINTEL:
-  case SPIRV::OpArbitraryFloatCastFromIntINTEL:
-  case SPIRV::OpArbitraryFloatCastINTEL:
-  case SPIRV::OpArbitraryFloatCastToIntINTEL:
-  case SPIRV::OpArbitraryFloatDivINTEL:
-  case SPIRV::OpArbitraryFloatMulINTEL:
-  case SPIRV::OpArbitraryFloatPowINTEL:
-  case SPIRV::OpArbitraryFloatPowNINTEL:
-  case SPIRV::OpArbitraryFloatPowRINTEL:
-  case SPIRV::OpArbitraryFloatRSqrtINTEL:
-  case SPIRV::OpArbitraryFloatSubINTEL: {
+  case SPIRV::OpArbitraryFloatEQALTERA:
+  case SPIRV::OpArbitraryFloatGEALTERA:
+  case SPIRV::OpArbitraryFloatGTALTERA:
+  case SPIRV::OpArbitraryFloatLEALTERA:
+  case SPIRV::OpArbitraryFloatLTALTERA:
+  case SPIRV::OpArbitraryFloatCbrtALTERA:
+  case SPIRV::OpArbitraryFloatCosALTERA:
+  case SPIRV::OpArbitraryFloatCosPiALTERA:
+  case SPIRV::OpArbitraryFloatExp10ALTERA:
+  case SPIRV::OpArbitraryFloatExp2ALTERA:
+  case SPIRV::OpArbitraryFloatExpALTERA:
+  case SPIRV::OpArbitraryFloatExpm1ALTERA:
+  case SPIRV::OpArbitraryFloatHypotALTERA:
+  case SPIRV::OpArbitraryFloatLog10ALTERA:
+  case SPIRV::OpArbitraryFloatLog1pALTERA:
+  case SPIRV::OpArbitraryFloatLog2ALTERA:
+  case SPIRV::OpArbitraryFloatLogALTERA:
+  case SPIRV::OpArbitraryFloatRecipALTERA:
+  case SPIRV::OpArbitraryFloatSinCosALTERA:
+  case SPIRV::OpArbitraryFloatSinCosPiALTERA:
+  case SPIRV::OpArbitraryFloatSinALTERA:
+  case SPIRV::OpArbitraryFloatSinPiALTERA:
+  case SPIRV::OpArbitraryFloatSqrtALTERA:
+  case SPIRV::OpArbitraryFloatACosALTERA:
+  case SPIRV::OpArbitraryFloatACosPiALTERA:
+  case SPIRV::OpArbitraryFloatAddALTERA:
+  case SPIRV::OpArbitraryFloatASinALTERA:
+  case SPIRV::OpArbitraryFloatASinPiALTERA:
+  case SPIRV::OpArbitraryFloatATan2ALTERA:
+  case SPIRV::OpArbitraryFloatATanALTERA:
+  case SPIRV::OpArbitraryFloatATanPiALTERA:
+  case SPIRV::OpArbitraryFloatCastFromIntALTERA:
+  case SPIRV::OpArbitraryFloatCastALTERA:
+  case SPIRV::OpArbitraryFloatCastToIntALTERA:
+  case SPIRV::OpArbitraryFloatDivALTERA:
+  case SPIRV::OpArbitraryFloatMulALTERA:
+  case SPIRV::OpArbitraryFloatPowALTERA:
+  case SPIRV::OpArbitraryFloatPowNALTERA:
+  case SPIRV::OpArbitraryFloatPowRALTERA:
+  case SPIRV::OpArbitraryFloatRSqrtALTERA:
+  case SPIRV::OpArbitraryFloatSubALTERA: {
     if (!ST.canUseExtension(
-            SPIRV::Extension::SPV_INTEL_arbitrary_precision_floating_point))
+            SPIRV::Extension::SPV_ALTERA_arbitrary_precision_floating_point))
       report_fatal_error(
           "Floating point instructions can't be translated correctly without "
-          "enabled SPV_INTEL_arbitrary_precision_floating_point extension!",
+          "enabled SPV_ALTERA_arbitrary_precision_floating_point extension!",
           false);
     Reqs.addExtension(
-        SPIRV::Extension::SPV_INTEL_arbitrary_precision_floating_point);
-    Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionFloatingPointINTEL);
+        SPIRV::Extension::SPV_ALTERA_arbitrary_precision_floating_point);
+    Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionFloatingPointALTERA);
     break;
   }
   case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
