@@ -165,15 +165,11 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
                                      all_of(Rep->operands(), isSingleScalar));
   }
   if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe,
-          VPWidenSelectRecipe>(VPV))
+          VPWidenSelectRecipe, VPWidenCastRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return PreservesUniformity(WidenR->getOpcode()) &&
            all_of(WidenR->operands(), isSingleScalar);
-  }
-  if (auto *CastR = dyn_cast<VPWidenCastRecipe>(VPV)) {
-    return PreservesUniformity(CastR->getOpcode()) &&
-           all_of(CastR->operands(), isSingleScalar);
   }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
