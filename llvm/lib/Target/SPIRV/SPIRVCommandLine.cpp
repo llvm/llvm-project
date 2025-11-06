@@ -53,9 +53,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_GOOGLE_user_type},
         {"SPV_INTEL_arbitrary_precision_integers",
          SPIRV::Extension::Extension::SPV_INTEL_arbitrary_precision_integers},
-        {"SPV_INTEL_arbitrary_precision_floating_point",
+        {"SPV_ALTERA_arbitrary_precision_floating_point",
          SPIRV::Extension::Extension::
-             SPV_INTEL_arbitrary_precision_floating_point},
+             SPV_ALTERA_arbitrary_precision_floating_point},
         {"SPV_INTEL_cache_controls",
          SPIRV::Extension::Extension::SPV_INTEL_cache_controls},
         {"SPV_INTEL_float_controls2",
