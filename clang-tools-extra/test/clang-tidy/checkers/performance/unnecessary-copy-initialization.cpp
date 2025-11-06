@@ -938,3 +938,121 @@ template<typename T> bool OperatorWithNoDirectCallee(T t) {
   ExpensiveToCopyType a2 = a1;
   return a1 == t;
 }
+
+bool CopiedFromParmVarField(const Struct &crs, const Struct cs, Struct &rs, Struct s) {
+  const auto m1 = crs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'crs.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = crs.Member;
+  const auto m2 = cs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm2' of the subobject 'cs.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m2 = cs.Member;
+  const auto m3 = rs.Member;
+  const auto m4 = s.Member;
+
+  auto m5 = crs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: local copy 'm5' of the subobject 'crs.Member' of type 'ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m5 = crs.Member;
+
+  auto m6 = cs.Member;
+  // CHECK-NOT-FIXES: const auto& m6 = cs.Member;
+
+  m6 = ExpensiveToCopyType();
+  return m1 == m2 || m3 == m4 || m5 == m6;
+}
+
+const Struct GlobalS;
+bool CopiedFromVarField() {
+  const Struct crs;
+  Struct s;
+  const auto m1 = crs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'crs.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = crs.Member;
+  const auto m2 = s.Member;
+  const auto m3 = GlobalS.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm3' of the subobject 'GlobalS.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m3 = GlobalS.Member;
+  return m1 == m2 || m2 == m3;
+}
+
+struct NestedStruct {
+  Struct s;
+  const Struct& getConstRefS() const { return s; }
+  const Struct getConstS() const { return s; }
+  Struct getS() const { return s; }
+};
+
+bool CopiedFromParmVarNestedField(const NestedStruct &ncrs, const NestedStruct ncs, NestedStruct &nrs, NestedStruct ns) {
+  const auto m1 = ncrs.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'ncrs.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = ncrs.s.Member;
+  const auto m2 = ncs.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm2' of the subobject 'ncs.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m2 = ncs.s.Member;
+  const auto m3 = nrs.s.Member;
+  const auto m4 = ns.s.Member;
+  return m1 == m2 || m3 == m4;
+}
+
+const NestedStruct GlobalNS;
+bool CopiedFromVarNestedField() {
+  const NestedStruct ncrs;
+  NestedStruct ns;
+  const auto m1 = ncrs.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'ncrs.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = ncrs.s.Member;
+  const auto m2 = ns.s.Member;
+  const auto m3 = GlobalNS.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm3' of the subobject 'GlobalNS.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m3 = GlobalNS.s.Member;
+  return m1 == m2 || m2 == m3;
+}
+
+template <typename A, typename B>
+bool negativeTemplateTypesCopiedFromVarField(const A &neg_tcrs, A &neg_trs) {
+  const B m1 = neg_tcrs.Member; // should not warn
+  // CHECK-NOT-FIXES: const auto& m1 = neg_tcrs.Member;
+  const B m2 = neg_trs.Member; // should not warn
+  // CHECK-NOT-FIXES: const auto& m2 = neg_trs.Member;
+  return m1 == m2;
+}
+
+template <typename A>
+bool positiveTemplateTypesCopiedFromVarField(const A &tcrs, A &trs) {
+  const auto m1 = tcrs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'tcrs.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-NOT-FIXES: const auto& m1 = tcrs.Member;
+  const auto m2 = trs.Member;
+  // CHECK-NOT-FIXES: const auto& m2 = trs.Member;
+  return m1 == m2;
+}
+
+template <typename A, typename B>
+bool negativeTemplateTypesCopiedFromVarNestedField(const A &neg_tncrs, A &neg_tnrs) {
+  const B m1 = neg_tncrs.s.Member; // should not warn
+  // CHECK-NOT-FIXES: const auto& m1 = neg_tncrs.s.Member;
+  const B m2 = neg_tnrs.s.Member; // should not warn
+  // CHECK-NOT-FIXES: const auto& m2 = neg_tnrs.s.Member;
+  return m1 == m2;
+}
+
+void callNegativeAllTemplateTypesCopiedFromVarField() {
+  Struct s;
+  negativeTemplateTypesCopiedFromVarField<Struct, ExpensiveToCopyType>(s, s);
+  positiveTemplateTypesCopiedFromVarField(s, s);
+
+  NestedStruct ns;
+  negativeTemplateTypesCopiedFromVarNestedField<NestedStruct, ExpensiveToCopyType>(ns, ns);
+}
+
+bool CopiedFromMethodCall(const NestedStruct &ns) {
+  const auto m1 = ns.getConstRefS().Member;
+  // CHECK-NOT-FIXES: const auto& m1 = ns.getConstRefS().Member;
+
+  const auto m2 = ns.getConstS().Member;
+  // CHECK-NOT-FIXES: const auto& m2 = ns.getConstS().Member;
+
+  const auto m3 = ns.getS().Member;
+  // CHECK-NOT-FIXES: const auto& m3 = ns.getConstS().Member;
+
+  return m1 == m2 || m2 == m3;
+}
