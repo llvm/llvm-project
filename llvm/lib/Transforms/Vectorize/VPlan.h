@@ -3212,9 +3212,8 @@ protected:
         Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive),
         Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
-    assert(isa<VPVectorEndPointerRecipe>(getAddr()) ||
-           !Reverse &&
-               "Reversed acccess without VPVectorEndPointerRecipe address?");
+    assert((isa<VPVectorEndPointerRecipe>(getAddr()) || !Reverse) &&
+           "Reversed acccess without VPVectorEndPointerRecipe address?");
   }
 
 public:
