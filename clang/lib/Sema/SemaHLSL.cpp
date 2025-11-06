@@ -3910,12 +3910,15 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     if (VD->getType()->isHLSLIntangibleType())
       collectResourceBindingsOnVarDecl(VD);
 
-    if (isResourceRecordTypeOrArrayOf(VD) ||
-        VD->hasAttr<HLSLVkConstantIdAttr>()) {
-      // Make the variable for resources static. The global externally visible
-      // storage is accessed through the handle, which is a member. The variable
-      // itself is not externally visible.
+    if (VD->hasAttr<HLSLVkConstantIdAttr>())
       VD->setStorageClass(StorageClass::SC_Static);
+
+    if (isResourceRecordTypeOrArrayOf(VD) &&
+        VD->getStorageClass() != SC_Static) {
+      // Add internal linkage attribute to non-static resource variables. The
+      // global externally visible storage is accessed through the handle, which
+      // is a member. The variable itself is not externally visible.
+      VD->addAttr(InternalLinkageAttr::CreateImplicit(getASTContext()));
     }
 
     // process explicit bindings
