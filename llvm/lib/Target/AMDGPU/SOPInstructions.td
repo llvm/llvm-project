@@ -2012,6 +2012,14 @@ let AddedComplexity = 20 in {
   >;
 }
 
+let SubtargetPredicate = isGFX9Plus in
+foreach I = 1-4 in {
+def : GCNPat <
+  (i32 (UniformBinFrag<add> (shl_oneuse i32:$src0, (i32 I)), i32:$src1)),
+  (!cast<SOP2_Pseudo>("S_LSHL"#I#"_ADD_U32") $src0, $src1)
+>;
+}
+
 // V_ADD_I32_e32/S_ADD_U32 produces carry in VCC/SCC. For the vector
 // case, the sgpr-copies pass will fix this to use the vector version.
 def : GCNPat <
