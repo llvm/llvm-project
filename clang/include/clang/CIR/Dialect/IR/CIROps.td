@@ -1703,6 +1703,47 @@ def CIR_BinOp : CIR_Op<"binop", [
 }
 
 //===----------------------------------------------------------------------===//
+// BinOpOverflow
+//===----------------------------------------------------------------------===//
+
+def CIR_BinOpOverflow : CIR_Op<"binop.overflow", [Pure]> {
+  let summary = "Binary operations with overflow detection";
+  let description = [{
+    cir.binop.overflow performs the binary operation according to
+    the specified opcode kind (add, sub, or mul) and returns both
+    the result and an overflow flag.
+
+    It requires two input operands and returns two results:
+    - The result of the operation (same type as operands)
+    - An overflow flag (boolean type)
+
+    The operation supports both signed and unsigned integer types.
+    For signed types, overflow is detected when the result cannot
+    be represented in the result type. For unsigned types, overflow
+    is detected when the result wraps around.
+
+    ```mlir
+    %result, %overflow = cir.binop.overflow(add, %1, %2) : !s32i -> (!s32i, !bool)
+    %result, %overflow = cir.binop.overflow(sub, %3, %4) : !u32i -> (!u32i, !bool)
+    %result, %overflow = cir.binop.overflow(mul, %5, %6) : !s64i -> (!s64i, !bool)
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_BinOpKind:$kind,
+    CIR_AnyType:$lhs, CIR_AnyType:$rhs
+  );
+
+  let results = (outs CIR_AnyType:$result, CIR_BoolType:$overflow);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs `)` `:` type($lhs) `->` `(` type($result) `,` type($overflow) `)` attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ShiftOp
 //===----------------------------------------------------------------------===//
 
