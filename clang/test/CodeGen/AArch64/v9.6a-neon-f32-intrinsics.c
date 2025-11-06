@@ -12,10 +12,8 @@
 // CHECK-SAME: <4 x float> noundef [[P0:%.*]], <16 x i8> [[P1:%.*]], <16 x i8> [[P2:%.*]], i64 noundef [[P3:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    call void @llvm.aarch64.set.fpmr(i64 [[P3]])
-// CHECK-NEXT:    [[FMMLA_I:%.*]] = bitcast <16 x i8> [[P1]] to <4 x float>
-// CHECK-NEXT:    [[FMMLA1_I:%.*]] = bitcast <16 x i8> [[P2]] to <4 x float>
-// CHECK-NEXT:    [[FMMLA2_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmmla.v4f32.v4f32(<4 x float> [[P0]], <4 x float> [[FMMLA_I]], <4 x float> [[FMMLA1_I]])
-// CHECK-NEXT:    ret <4 x float> [[FMMLA2_I]]
+// CHECK-NEXT:    [[FMMLA_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmmla.v4f32.v16i8(<4 x float> [[P0]], <16 x i8> [[P1]], <16 x i8> [[P2]])
+// CHECK-NEXT:    ret <4 x float> [[FMMLA_I]]
 //
 float32x4_t test_vmmlaq_f32_mf8(float32x4_t p0, mfloat8x16_t p1, mfloat8x16_t p2, fpm_t p3) {
   return vmmlaq_f32_mf8_fpm(p0, p1, p2, p3);

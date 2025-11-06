@@ -9111,6 +9111,26 @@ class SIMDThreeSameVectorMatMul<bit B, bit U, string asm, SDPatternOperator OpNo
   let AsmString = asm # "{\t$Rd.4s, $Rn.16b, $Rm.16b|.4s\t$Rd, $Rn, $Rm}";
 }
 
+multiclass SIMDThreeSameVectorMatMulFP<bit B, bit U, string asm, SDPatternOperator OpNode> {
+  let Predicates = [HasNEON, HasF8F16MM] in {
+    def fp16 : BaseSIMDThreeSameVectorTied<1, U, 0b000, {0b1101, B}, V128, asm, ".8h",
+              [(set (v8f16 V128:$dst), (OpNode (v8f16 V128:$Rd),
+                                               (v16i8 V128:$Rn),
+                                               (v16i8 V128:$Rm)))]> {
+      let AsmString = asm # "{\t$Rd.4h, $Rn.16b, $Rm.16b|.8h\t$Rd, $Rn, $Rm}";
+    }
+  }
+
+  let Predicates = [HasNEON, HasF8F32MM] in {
+    def fp32 : BaseSIMDThreeSameVectorTied<1, U, 0b100, {0b1101, B}, V128, asm, ".4s",
+              [(set (v4f32 V128:$dst), (OpNode (v4f32 V128:$Rd),
+                                               (v16i8 V128:$Rn),
+                                               (v16i8 V128:$Rm)))]> {
+      let AsmString = asm # "{\t$Rd.4s, $Rn.16b, $Rm.16b|.4s\t$Rd, $Rn, $Rm}";
+    }
+  }
+}
+
 //----------------------------------------------------------------------------
 // ARMv8.2-A Dot Product Instructions (Indexed)
 class BaseSIMDThreeSameVectorIndexS<bit Q, bit U, bits<2> size, bits<4> opc, string asm,

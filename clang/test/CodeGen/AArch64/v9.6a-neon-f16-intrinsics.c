@@ -15,10 +15,8 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
 // CHECK-NEXT:    call void @llvm.aarch64.set.fpmr(i64 [[P3]])
 // CHECK-NEXT:    [[FMMLA_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
-// CHECK-NEXT:    [[FMMLA1_I:%.*]] = bitcast <16 x i8> [[P1]] to <8 x half>
-// CHECK-NEXT:    [[FMMLA2_I:%.*]] = bitcast <16 x i8> [[P2]] to <8 x half>
-// CHECK-NEXT:    [[FMMLA3_I:%.*]] = call <8 x half> @llvm.aarch64.neon.fmmla.v8f16.v8f16(<8 x half> [[FMMLA_I]], <8 x half> [[FMMLA1_I]], <8 x half> [[FMMLA2_I]])
-// CHECK-NEXT:    ret <8 x half> [[FMMLA3_I]]
+// CHECK-NEXT:    [[FMMLA1_I:%.*]] = call <8 x half> @llvm.aarch64.neon.fmmla.v8f16.v16i8(<8 x half> [[FMMLA_I]], <16 x i8> [[P1]], <16 x i8> [[P2]])
+// CHECK-NEXT:    ret <8 x half> [[FMMLA1_I]]
 //
 float16x8_t test_vmmlaq_f16_mf8(float16x8_t p0, mfloat8x16_t p1, mfloat8x16_t p2, fpm_t p3) {
   return vmmlaq_f16_mf8_fpm(p0, p1, p2, p3);
