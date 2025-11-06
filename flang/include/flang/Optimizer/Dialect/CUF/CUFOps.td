@@ -21,7 +21,6 @@ include "flang/Optimizer/Dialect/FIRAttr.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 class cuf_Op<string mnemonic, list<Trait> traits>
