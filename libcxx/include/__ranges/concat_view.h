@@ -421,29 +421,22 @@ public:
         !__it_.valueless_by_exception(), "Trying to increment a valueless iterator of concat_view.");
     size_t __active_index = __it_.index();
     if (__n > 0) {
-      __variant_detail::__visitation::__variant::__visit_value(
-          [&](auto& __active_it) {
-            __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(__active_index, [&](auto __index_constant) {
-              constexpr size_t __i  = __index_constant.value;
-              auto& __active_view   = std::get<__i>(__parent_->__views_);
-              difference_type __idx = __active_it - ranges::begin(__active_view);
-              __advance_fwd<__i>(__idx, __n);
-            });
-          },
-          __it_);
+      __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(__active_index, [&](auto __index_constant) {
+        constexpr size_t __i  = __index_constant.value;
+        auto& __active_view   = std::get<__i>(__parent_->__views_);
+        difference_type __idx = std::get<__i>(__it_) - ranges::begin(__active_view);
+        __advance_fwd<__i>(__idx, __n);
+      });
+
     }
 
     else if (__n < 0) {
-      __variant_detail::__visitation::__variant::__visit_value(
-          [&](auto& __active_it) {
-            __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(__active_index, [&](auto __index_constant) {
-              constexpr size_t __i  = __index_constant.value;
-              auto& __active_view   = std::get<__i>(__parent_->__views_);
-              difference_type __idx = __active_it - ranges::begin(__active_view);
-              __advance_bwd<__i>(__idx, -__n);
-            });
-          },
-          __it_);
+      __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(__active_index, [&](auto __index_constant) {
+        constexpr size_t __i  = __index_constant.value;
+        auto& __active_view   = std::get<__i>(__parent_->__views_);
+        difference_type __idx = std::get<__i>(__it_) - ranges::begin(__active_view);
+        __advance_bwd<__i>(__idx, -__n);
+      });
     }
 
     return *this;

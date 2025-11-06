@@ -194,6 +194,32 @@ constexpr bool test() {
     assert(*it == a.back());
   }
 
+  // Different range types
+  {
+    std::span<const int> sa{a};
+    auto sb = std::ranges::subrange{b.begin(), b.end()};
+    std::array<int, 2> c{9, 10};
+
+    auto v = std::views::concat(sa, sb, c);
+
+    auto it = v.begin();
+    std::ranges::advance(it, sa.size());
+    --it;
+    assert(*it == a.back());
+
+    auto it2 = v.begin();
+    std::ranges::advance(it2, sa.size() + sb.size());
+    --it2;
+    assert(*it2 == b.back());
+
+    // const-iterator.
+    const auto& cv = v;
+    auto cit       = cv.begin();
+    std::ranges::advance(cit, sa.size() + sb.size());
+    --cit;
+    assert(*cit == b.back());
+  }
+
   return true;
 }
 
