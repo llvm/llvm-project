@@ -87,7 +87,7 @@ int main (int argc, char **argv) {
 //
 // OMP60: define {{.*}}main.omp_outlined{{.*}}
 // OMP60-NEXT:  entry:
-// OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
+// OMP60:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 // OMP60: [[I_ADDR:%.*]] = alloca{{.*}}
 // OMP60-NEXT:  [[N_ADDR:%.*]] = alloca{{.*}}

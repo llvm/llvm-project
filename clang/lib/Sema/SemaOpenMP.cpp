@@ -1314,19 +1314,28 @@ static std::string getOpenMPClauseNameForDiag(OpenMPClauseKind C) {
   return getOpenMPClauseName(C).str();
 }
 
-bool isAllocatableType(QualType QT) {
+static bool isAllocatableType(QualType QT) {
   if (QT->isPointerType())
     return true;
+
   QT = QT.getCanonicalType().getUnqualifiedType();
-  if (const CXXRecordDecl *RD = QT->getAsCXXRecordDecl()) {
-    if (isa<ClassTemplateSpecializationDecl>(RD)) {
-      std::string QName = RD->getQualifiedNameAsString();
-      return (QName == "std::vector" || QName == "vector" ||
-              QName == "std::unique_ptr" || QName == "unique_ptr" ||
-              QName == "std::shared_ptr" || QName == "shared_ptr" ||
-              QName == "llvm::SmallVector" || QName == "SmallVector");
-    }
-  }
+  if (const auto *RD = QT->getAsCXXRecordDecl())
+    if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+      if (const auto *CTD = Spec->getSpecializedTemplate())
+        if (const auto *NS =
+                dyn_cast_or_null<NamespaceDecl>(CTD->getDeclContext())) {
+          StringRef Name = CTD->getIdentifier()->getName();
+
+          if (NS->isStdNamespace())
+            if (Name == "vector" || Name == "unique_ptr" ||
+                Name == "shared_ptr" || Name == "array")
+              return true;
+
+          if (NS->getIdentifier()->getName() == "llvm")
+            if (Name == "SmallVector")
+              return true;
+        }
+
   return false;
 }
 
