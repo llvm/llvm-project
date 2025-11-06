@@ -6,18 +6,21 @@
 
 include "llvm/Target/Target.td"
 
-// INSTRINFO: #ifdef GET_INSTRINFO_ENUM
+// INSTRINFO:      #ifdef GET_INSTRINFO_ENUM
 // INSTRINFO-NEXT: #undef GET_INSTRINFO_ENUM
+// INSTRINFO-EMPTY:
 // INSTRINFO-NEXT: namespace llvm::MyTarget {
+// INSTRINFO-EMPTY:
 // INSTRINFO-NEXT: enum {
-// INSTRINFO-NEXT: PHI
-// INSTRINFO: };
-// INSTRINFO: enum RegClassByHwModeUses : uint16_t {
+// INSTRINFO-NEXT:   PHI
+// INSTRINFO:      };
+// INSTRINFO:      enum RegClassByHwModeUses : uint16_t {
 // INSTRINFO-NEXT:   MyPtrRC,
 // INSTRINFO-NEXT:   XRegs_EvenIfRequired,
 // INSTRINFO-NEXT:   YRegs_EvenIfRequired,
 // INSTRINFO-NEXT: };
-// INSTRINFO-NEXT: }
+// INSTRINFO-EMPTY:
+// INSTRINFO-NEXT: } // namespace llvm::MyTarget
 
 // INSTRINFO: { MyTarget::XRegsRegClassID, 0, MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { MyTarget::XRegs_EvenRegClassID, 0, MCOI::OPERAND_REGISTER, 0 },

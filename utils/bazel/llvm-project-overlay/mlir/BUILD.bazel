@@ -10247,12 +10247,18 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/OpenACC/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":Analysis",
+        ":ArithDialect",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
+        ":MemRefDialect",
+        ":OpenACCAnalysis",
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
         ":TransformUtils",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )

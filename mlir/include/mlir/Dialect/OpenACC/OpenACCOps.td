@@ -2184,6 +2184,8 @@ def OpenACC_KernelEnvironmentOp : OpenACC_Op<"kernel_environment",
     )
     $region attr-dict
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

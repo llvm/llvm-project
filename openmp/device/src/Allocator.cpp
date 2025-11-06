@@ -18,42 +18,36 @@
 #include "Synchronization.h"
 
 using namespace ompx;
+using namespace allocator;
 
-[[gnu::used, gnu::retain, gnu::weak,
-  gnu::visibility(
-      "protected")]] DeviceMemoryPoolTy __omp_rtl_device_memory_pool;
-[[gnu::used, gnu::retain, gnu::weak,
-  gnu::visibility("protected")]] DeviceMemoryPoolTrackingTy
-    __omp_rtl_device_memory_pool_tracker;
+// Provide a default implementation of malloc / free for AMDGPU platforms built
+// without 'libc' support.
+extern "C" {
+#if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+[[gnu::weak]] void *malloc(size_t Size) { return allocator::alloc(Size); }
+[[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
+#else
+[[gnu::leaf]] void *malloc(size_t Size);
+[[gnu::leaf]] void free(void *Ptr);
+#endif
+}
 
-/// Stateless bump allocator that uses the __omp_rtl_device_memory_pool
-/// directly.
+static constexpr uint64_t MEMORY_SIZE = /* 1 MiB */ 1024 * 1024;
+alignas(ALIGNMENT) static uint8_t Memory[MEMORY_SIZE] = {0};
+
+// Fallback bump pointer interface for platforms without a functioning
+// allocator.
 struct BumpAllocatorTy final {
+  uint64_t Offset = 0;
 
   void *alloc(uint64_t Size) {
     Size = utils::roundUp(Size, uint64_t(allocator::ALIGNMENT));
 
-    if (config::isDebugMode(DeviceDebugKind::AllocationTracker)) {
-      atomic::add(&__omp_rtl_device_memory_pool_tracker.NumAllocations, 1,
-                  atomic::seq_cst);
-      atomic::add(&__omp_rtl_device_memory_pool_tracker.AllocationTotal, Size,
-                  atomic::seq_cst);
-      atomic::min(&__omp_rtl_device_memory_pool_tracker.AllocationMin, Size,
-                  atomic::seq_cst);
-      atomic::max(&__omp_rtl_device_memory_pool_tracker.AllocationMax, Size,
-                  atomic::seq_cst);
-    }
-
-    uint64_t *Data =
-        reinterpret_cast<uint64_t *>(&__omp_rtl_device_memory_pool.Ptr);
-    uint64_t End =
-        reinterpret_cast<uint64_t>(Data) + __omp_rtl_device_memory_pool.Size;
-
-    uint64_t OldData = atomic::add(Data, Size, atomic::seq_cst);
-    if (OldData + Size > End)
+    uint64_t OldData = atomic::add(&Offset, Size, atomic::seq_cst);
+    if (OldData + Size >= MEMORY_SIZE)
       __builtin_trap();
 
-    return reinterpret_cast<void *>(OldData);
+    return &Memory[OldData];
   }
 
   void free(void *) {}
@@ -65,13 +59,20 @@ BumpAllocatorTy BumpAllocator;
 ///
 ///{
 
-void allocator::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment) {
-  // TODO: Check KernelEnvironment for an allocator choice as soon as we have
-  // more than one.
+void *allocator::alloc(uint64_t Size) {
+#if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+  return BumpAllocator.alloc(Size);
+#else
+  return ::malloc(Size);
+#endif
 }
 
-void *allocator::alloc(uint64_t Size) { return BumpAllocator.alloc(Size); }
-
-void allocator::free(void *Ptr) { BumpAllocator.free(Ptr); }
+void allocator::free(void *Ptr) {
+#if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+  BumpAllocator.free(Ptr);
+#else
+  ::free(Ptr);
+#endif
+}
 
 ///}
