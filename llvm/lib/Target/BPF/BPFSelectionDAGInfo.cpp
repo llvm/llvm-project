@@ -39,11 +39,7 @@ SDValue BPFSelectionDAGInfo::EmitTargetCodeForMemcpy(
   if (StoresNumEstimate > getCommonMaxStoresPerMemFunc())
     return SDValue();
 
-  SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
-
-  Dst = DAG.getNode(BPFISD::MEMCPY, dl, VTs, Chain, Dst, Src,
-                    DAG.getConstant(CopyLen, dl, MVT::i64),
-                    DAG.getConstant(Alignment.value(), dl, MVT::i64));
-
-  return Dst.getValue(0);
+  return DAG.getNode(BPFISD::MEMCPY, dl, MVT::Other, Chain, Dst, Src,
+                     DAG.getConstant(CopyLen, dl, MVT::i64),
+                     DAG.getConstant(Alignment.value(), dl, MVT::i64));
 }
