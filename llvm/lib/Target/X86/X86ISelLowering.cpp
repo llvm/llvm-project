@@ -25888,6 +25888,69 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getBitcast(VT, CtSelect);
   }
 
+  // Handle f80 types by splitting into three 32-bit chunks
+  if (VT == MVT::f80) {
+    SDValue Chain = DAG.getEntryNode();
+
+    // Create temporary stack slots for input f80 values
+    SDValue TrueSlot = DAG.CreateStackTemporary(MVT::f80);
+    SDValue FalseSlot = DAG.CreateStackTemporary(MVT::f80);
+
+    // Store f80 values to memory
+    SDValue StoreTrueF80 =
+        DAG.getStore(Chain, DL, TrueOp, TrueSlot, MachinePointerInfo());
+    SDValue StoreFalseF80 =
+        DAG.getStore(Chain, DL, FalseOp, FalseSlot, MachinePointerInfo());
+
+    // Load i32 parts from memory (3 chunks for 96-bit f80 storage)
+    SDValue TruePart0 =
+        DAG.getLoad(MVT::i32, DL, StoreTrueF80, TrueSlot, MachinePointerInfo());
+    SDValue TruePart1Ptr =
+        DAG.getMemBasePlusOffset(TrueSlot, TypeSize::getFixed(4), DL);
+    SDValue TruePart1 = DAG.getLoad(MVT::i32, DL, StoreTrueF80, TruePart1Ptr,
+                                    MachinePointerInfo());
+    SDValue TruePart2Ptr =
+        DAG.getMemBasePlusOffset(TrueSlot, TypeSize::getFixed(8), DL);
+    SDValue TruePart2 = DAG.getLoad(MVT::i32, DL, StoreTrueF80, TruePart2Ptr,
+                                    MachinePointerInfo());
+
+    SDValue FalsePart0 = DAG.getLoad(MVT::i32, DL, StoreFalseF80, FalseSlot,
+                                     MachinePointerInfo());
+    SDValue FalsePart1Ptr =
+        DAG.getMemBasePlusOffset(FalseSlot, TypeSize::getFixed(4), DL);
+    SDValue FalsePart1 = DAG.getLoad(MVT::i32, DL, StoreFalseF80, FalsePart1Ptr,
+                                     MachinePointerInfo());
+    SDValue FalsePart2Ptr =
+        DAG.getMemBasePlusOffset(FalseSlot, TypeSize::getFixed(8), DL);
+    SDValue FalsePart2 = DAG.getLoad(MVT::i32, DL, StoreFalseF80, FalsePart2Ptr,
+                                     MachinePointerInfo());
+
+    // Perform CTSELECT on each 32-bit chunk
+    SDValue Part0Ops[] = {FalsePart0, TruePart0, CC, ProcessedCond};
+    SDValue Part0Select = DAG.getNode(X86ISD::CTSELECT, DL, MVT::i32, Part0Ops);
+    SDValue Part1Ops[] = {FalsePart1, TruePart1, CC, ProcessedCond};
+    SDValue Part1Select = DAG.getNode(X86ISD::CTSELECT, DL, MVT::i32, Part1Ops);
+    SDValue Part2Ops[] = {FalsePart2, TruePart2, CC, ProcessedCond};
+    SDValue Part2Select = DAG.getNode(X86ISD::CTSELECT, DL, MVT::i32, Part2Ops);
+
+    // Create result stack slot and store the selected parts
+    SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f80);
+    SDValue StorePart0 =
+        DAG.getStore(Chain, DL, Part0Select, ResultSlot, MachinePointerInfo());
+    SDValue ResPart1Ptr =
+        DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(4), DL);
+    SDValue StorePart1 = DAG.getStore(StorePart0, DL, Part1Select, ResPart1Ptr,
+                                      MachinePointerInfo());
+    SDValue ResPart2Ptr =
+        DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(8), DL);
+    SDValue StorePart2 = DAG.getStore(StorePart1, DL, Part2Select, ResPart2Ptr,
+                                      MachinePointerInfo());
+
+    // Load complete f80 result from memory
+    return DAG.getLoad(MVT::f80, DL, StorePart2, ResultSlot,
+                       MachinePointerInfo());
+  }
+
   // Create final CTSELECT node
   SDValue Ops[] = {FalseOp, TrueOp, CC, ProcessedCond};
   return DAG.getNode(X86ISD::CTSELECT, DL, Op.getValueType(), Ops,
