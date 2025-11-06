@@ -37,7 +37,7 @@ _LIBCPP_PUSH_MACROS
 // the symbols remain available in the libc++ library, in addition to being
 // defined inline here in this header.
 #  ifdef _LIBCPP_BUILDING_LIBRARY
-#    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE _LIBCPP_EXPORTED_FROM_ABI
+#    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
 #  else
 #    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE _LIBCPP_HIDE_FROM_ABI
 #  endif
@@ -126,7 +126,7 @@ public:
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
 
-#ifndef _LIBCPP_BUILDING_LIBRARY
+#  ifndef _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::exception_ptr(const exception_ptr& __other) _NOEXCEPT
     : __ptr_(__other.__ptr_) {
@@ -150,7 +150,7 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::~exception_ptr() _NOEXCEPT {
     __decrement_refcount(__ptr_);
 }
 
-#endif // _LIBCPP_BUILDING_LIBRARY
+#  endif // _LIBCPP_BUILDING_LIBRARY
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
   std::swap(__x.__ptr_, __y.__ptr_);
