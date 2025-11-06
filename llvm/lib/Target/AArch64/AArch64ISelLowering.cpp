@@ -96,6 +96,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -1052,15 +1053,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Lower READCYCLECOUNTER using an mrs from CNTVCT_EL0.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
 
-  if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
-      getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
-    // Issue __sincos_stret if available.
-    setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
-  } else {
-    setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-  }
+  // Issue __sincos_stret if available.
+  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   // Make floating-point constants legal for the large code model, so they don't
   // become loads from the constant pool.
@@ -5346,35 +5341,6 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
   return SDValue();
 }
 
-SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
-                                            SelectionDAG &DAG) const {
-  // For iOS, we want to call an alternative entry point: __sincos_stret,
-  // which returns the values in two S / D registers.
-  SDLoc DL(Op);
-  SDValue Arg = Op.getOperand(0);
-  EVT ArgVT = Arg.getValueType();
-  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-
-  ArgListTy Args;
-  Args.emplace_back(Arg, ArgTy);
-
-  RTLIB::Libcall LC = ArgVT == MVT::f64 ? RTLIB::SINCOS_STRET_F64
-                                        : RTLIB::SINCOS_STRET_F32;
-  const char *LibcallName = getLibcallName(LC);
-  SDValue Callee =
-      DAG.getExternalSymbol(LibcallName, getPointerTy(DAG.getDataLayout()));
-
-  StructType *RetTy = StructType::get(ArgTy, ArgTy);
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CallingConv::ID CC = getLibcallCallingConv(LC);
-  CLI.setDebugLoc(DL)
-      .setChain(DAG.getEntryNode())
-      .setLibCallee(CC, RetTy, Callee, std::move(Args));
-
-  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
-  return CallResult.first;
-}
-
 static MVT getSVEContainerType(EVT ContentTy);
 
 SDValue
@@ -7723,8 +7689,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return LowerFP_TO_INT_SAT(Op, DAG);
-  case ISD::FSINCOS:
-    return LowerFSINCOS(Op, DAG);
   case ISD::GET_ROUNDING:
     return LowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
@@ -9028,11 +8992,12 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   CallingConv::ID CallerCC = CallerF.getCallingConv();
 
   // SME Streaming functions are not eligible for TCO as they may require
-  // the streaming mode or ZA to be restored after returning from the call.
+  // the streaming mode or ZA/ZT0 to be restored after returning from the call.
   SMECallAttrs CallAttrs =
       getSMECallAttrs(CallerF, getRuntimeLibcallsInfo(), CLI);
   if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
       CallAttrs.requiresPreservingAllZAState() ||
+      CallAttrs.requiresPreservingZT0() ||
       CallAttrs.caller().hasStreamingBody())
     return false;
 
@@ -18025,11 +17990,17 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
                                                   unsigned Factor,
                                                   const APInt &GapMask) const {
 
-  assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
-         "Invalid interleave factor");
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
+
+  if (isProfitableToInterleaveWithGatherScatter() &&
+      Factor > getMaxSupportedInterleaveFactor())
+    return lowerInterleavedStoreWithShuffle(SI, SVI, Factor);
+
+  assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
+         "Invalid interleave factor");
+
   assert(!LaneMask && GapMask.popcount() == Factor &&
          "Unexpected mask on store");
 
@@ -18170,6 +18141,126 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
                                             BaseAddr, LaneLen * Factor);
 
     Ops.push_back(BaseAddr);
+    Builder.CreateCall(StNFunc, Ops);
+  }
+  return true;
+}
+
+/// If the interleaved vector elements are greater than supported MaxFactor,
+/// interleaving the data with additional shuffles can be used to
+/// achieve the same.
+///
+/// Consider the following data with 8 interleaves which are shuffled to store
+/// stN instructions. Data needs to be stored in this order:
+///     [v0, v1, v2, v3, v4, v5, v6, v7]
+///
+///    v0      v4      v2      v6      v1      v5      v3      v7
+///    |       |       |       |       |       |       |       |
+///     \     /         \     /         \     /         \     /
+///   [zip v0,v4]      [zip v2,v6]    [zip v1,v5]      [zip v3,v7] ==> stN = 4
+///        |               |              |                 |
+///         \             /                \               /
+///          \           /                  \             /
+///           \         /                    \           /
+///       [zip [v0,v2,v4,v6]]            [zip [v1,v3,v5,v7]]     ==> stN = 2
+///
+/// For stN = 4, upper half of interleaved data V0, V1, V2, V3 is stored
+/// with one st4 instruction. Lower half, i.e, V4, V5, V6, V7 is stored with
+/// another st4.
+///
+/// For stN = 2, upper half of interleaved data V0, V1 is stored
+/// with one st2 instruction. Second set V2, V3 is stored with another st2.
+/// Total of 4 st2's are required here.
+bool AArch64TargetLowering::lowerInterleavedStoreWithShuffle(
+    StoreInst *SI, ShuffleVectorInst *SVI, unsigned Factor) const {
+  unsigned MaxSupportedFactor = getMaxSupportedInterleaveFactor();
+
+  auto *VecTy = cast<FixedVectorType>(SVI->getType());
+  assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");
+
+  unsigned LaneLen = VecTy->getNumElements() / Factor;
+  Type *EltTy = VecTy->getElementType();
+  auto *SubVecTy = FixedVectorType::get(EltTy, Factor);
+
+  const DataLayout &DL = SI->getModule()->getDataLayout();
+  bool UseScalable;
+
+  // Skip if we do not have NEON and skip illegal vector types. We can
+  // "legalize" wide vector types into multiple interleaved accesses as long as
+  // the vector types are divisible by 128.
+  if (!Subtarget->hasNEON() ||
+      !isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
+    return false;
+
+  if (UseScalable)
+    return false;
+
+  std::deque<Value *> Shuffles;
+  Shuffles.push_back(SVI);
+  unsigned ConcatLevel = Factor;
+  // Getting all the interleaved operands.
+  while (ConcatLevel > 1) {
+    unsigned InterleavedOperands = Shuffles.size();
+    for (unsigned i = 0; i < InterleavedOperands; i++) {
+      ShuffleVectorInst *SFL = dyn_cast<ShuffleVectorInst>(Shuffles.front());
+      if (!SFL)
+        return false;
+      Shuffles.pop_front();
+
+      Value *Op0 = SFL->getOperand(0);
+      Value *Op1 = SFL->getOperand(1);
+
+      Shuffles.push_back(dyn_cast<Value>(Op0));
+      Shuffles.push_back(dyn_cast<Value>(Op1));
+    }
+    ConcatLevel >>= 1;
+  }
+
+  IRBuilder<> Builder(SI);
+  auto Mask = createInterleaveMask(LaneLen, 2);
+  SmallVector<int, 16> UpperHalfMask(LaneLen), LowerHalfMask(LaneLen);
+  for (unsigned i = 0; i < LaneLen; i++) {
+    LowerHalfMask[i] = Mask[i];
+    UpperHalfMask[i] = Mask[i + LaneLen];
+  }
+
+  unsigned InterleaveFactor = Factor >> 1;
+  while (InterleaveFactor >= MaxSupportedFactor) {
+    std::deque<Value *> ShufflesIntermediate;
+    ShufflesIntermediate.resize(Factor);
+    for (unsigned j = 0; j < Factor; j += (InterleaveFactor * 2)) {
+      for (unsigned i = 0; i < InterleaveFactor; i++) {
+        auto *Shuffle = Builder.CreateShuffleVector(
+            Shuffles[i + j], Shuffles[i + j + InterleaveFactor], LowerHalfMask);
+        ShufflesIntermediate[i + j] = Shuffle;
+        Shuffle = Builder.CreateShuffleVector(
+            Shuffles[i + j], Shuffles[i + j + InterleaveFactor], UpperHalfMask);
+        ShufflesIntermediate[i + j + InterleaveFactor] = Shuffle;
+      }
+    }
+    Shuffles = ShufflesIntermediate;
+    InterleaveFactor >>= 1;
+  }
+
+  Type *PtrTy = SI->getPointerOperandType();
+  auto *STVTy = FixedVectorType::get(SubVecTy->getElementType(), LaneLen);
+
+  Value *BaseAddr = SI->getPointerOperand();
+  Function *StNFunc = getStructuredStoreFunction(
+      SI->getModule(), MaxSupportedFactor, UseScalable, STVTy, PtrTy);
+  for (unsigned i = 0; i < (Factor / MaxSupportedFactor); i++) {
+    SmallVector<Value *, 5> Ops;
+    for (unsigned j = 0; j < MaxSupportedFactor; j++)
+      Ops.push_back(Shuffles[i * MaxSupportedFactor + j]);
+
+    if (i > 0) {
+      // We will compute the pointer operand of each store from the original
+      // base address using GEPs. Cast the base address to a pointer to the
+      // scalar  element type.
+      BaseAddr = Builder.CreateConstGEP1_32(
+          SubVecTy->getElementType(), BaseAddr, LaneLen * MaxSupportedFactor);
+    }
+    Ops.push_back(Builder.CreateBitCast(BaseAddr, PtrTy));
     Builder.CreateCall(StNFunc, Ops);
   }
   return true;

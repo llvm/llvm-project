@@ -758,14 +758,12 @@ void TypePrinting::printStructBody(StructType *STy, raw_ostream &OS) {
 
 AbstractSlotTrackerStorage::~AbstractSlotTrackerStorage() = default;
 
-namespace llvm {
-
 //===----------------------------------------------------------------------===//
 // SlotTracker Class: Enumerate slot numbers for unnamed values
 //===----------------------------------------------------------------------===//
 /// This class provides computation of slot numbers for LLVM Assembly writing.
 ///
-class SlotTracker : public AbstractSlotTrackerStorage {
+class llvm::SlotTracker : public AbstractSlotTrackerStorage {
 public:
   /// ValueMap - A mapping of Values to slot numbers.
   using ValueMap = DenseMap<const Value *, unsigned>;
@@ -942,8 +940,6 @@ private:
   /// Add all of the metadata from a DbgRecord.
   void processDbgRecordMetadata(const DbgRecord &DVR);
 };
-
-} // end namespace llvm
 
 ModuleSlotTracker::ModuleSlotTracker(SlotTracker &Machine, const Module *M,
                                      const Function *F)
@@ -2199,6 +2195,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printString("name", N->getName());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
+  Printer.printInt("dataSize", N->getDataSizeInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
   Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());

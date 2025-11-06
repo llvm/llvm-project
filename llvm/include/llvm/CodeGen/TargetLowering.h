@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
@@ -1433,9 +1434,9 @@ public:
   /// \p High as its lowest and highest case values, and expects \p NumCmps
   /// case value comparisons. Check if the number of destinations, comparison
   /// metric, and range are all suitable.
-  bool isSuitableForBitTests(unsigned NumDests, unsigned NumCmps,
-                             const APInt &Low, const APInt &High,
-                             const DataLayout &DL) const {
+  bool isSuitableForBitTests(
+      const DenseMap<const BasicBlock *, unsigned int> &DestCmps,
+      const APInt &Low, const APInt &High, const DataLayout &DL) const {
     // FIXME: I don't think NumCmps is the correct metric: a single case and a
     // range of cases both require only one branch to lower. Just looking at the
     // number of clusters and destinations should be enough to decide whether to
@@ -1444,6 +1445,20 @@ public:
     // To lower a range with bit tests, the range must fit the bitwidth of a
     // machine word.
     if (!rangeFitsInWord(Low, High, DL))
+      return false;
+
+    unsigned NumDests = DestCmps.size();
+    unsigned NumCmps = 0;
+    unsigned int MaxBitTestEntry = 0;
+    for (auto &DestCmp : DestCmps) {
+      NumCmps += DestCmp.second;
+      if (DestCmp.second > MaxBitTestEntry)
+        MaxBitTestEntry = DestCmp.second;
+    }
+
+    // Comparisons might be cheaper for small number of comparisons, which can
+    // be Arch Target specific.
+    if (MaxBitTestEntry < getMinimumBitTestCmps())
       return false;
 
     // Decide whether it's profitable to lower this range with bit tests. Each
@@ -2055,6 +2070,9 @@ public:
 
   virtual bool isJumpTableRelative() const;
 
+  /// Retuen the minimum of largest number of comparisons in BitTest.
+  unsigned getMinimumBitTestCmps() const;
+
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
   Register getStackPointerRegisterToSaveRestore() const {
@@ -2576,6 +2594,9 @@ protected:
   /// Indicate the maximum number of entries in jump tables.
   /// Set to zero to generate unlimited jump tables.
   void setMaximumJumpTableSize(unsigned);
+
+  /// Set the minimum of largest of number of comparisons to generate BitTest.
+  void setMinimumBitTestCmps(unsigned Val);
 
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
@@ -3212,6 +3233,11 @@ public:
   /// Default to be the minimum interleave factor: 2.
   virtual unsigned getMaxSupportedInterleaveFactor() const { return 2; }
 
+  /// Return true if the target interleave with shuffles are cheaper
+  virtual bool isProfitableToInterleaveWithGatherScatter() const {
+    return false;
+  }
+
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///
@@ -3577,7 +3603,7 @@ public:
   }
 
   const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallsInfo() const {
-    return Libcalls;
+    return RuntimeLibcallInfo;
   }
 
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
@@ -3590,9 +3616,9 @@ public:
   }
 
   /// Get the libcall routine name for the specified libcall.
+  // FIXME: This should be removed. Only LibcallImpl should have a name.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    // FIXME: Return StringRef
-    return Libcalls.getLibcallName(Call).data();
+    return Libcalls.getLibcallName(Call);
   }
 
   /// Get the libcall routine name for the specified libcall implementation
@@ -3600,26 +3626,18 @@ public:
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  const char *getMemcpyName() const {
-    // FIXME: Return StringRef
-    return Libcalls.getMemcpyName().data();
-  }
+  RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
 
   /// Check if this is valid libcall for the current module, otherwise
   /// RTLIB::Unsupported.
   RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
-    return Libcalls.getSupportedLibcallImpl(FuncName);
+    return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
   }
 
   /// Get the comparison predicate that's to be used to test the result of the
   /// comparison libcall against zero. This should only be used with
   /// floating-point compare libcalls.
   ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
-
-  /// Set the CallingConv that should be used for the specified libcall.
-  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
-    Libcalls.setLibcallImplCallingConv(Call, CC);
-  }
 
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
@@ -3719,6 +3737,9 @@ private:
   /// backend supports.
   unsigned MinCmpXchgSizeInBits;
 
+  /// The minimum of largest number of comparisons to use bit test for switch.
+  unsigned MinimumBitTestCmps;
+
   /// This indicates if the target supports unaligned atomic operations.
   bool SupportsUnalignedAtomics;
 
@@ -3738,7 +3759,7 @@ private:
   /// register class is the largest legal super-reg register class of the
   /// register class of the specified type. e.g. On x86, i8, i16, and i32's
   /// representative class would be GR32.
-  const TargetRegisterClass *RepRegClassForVT[MVT::VALUETYPE_SIZE] = {0};
+  const TargetRegisterClass *RepRegClassForVT[MVT::VALUETYPE_SIZE] = {nullptr};
 
   /// This indicates the "cost" of the "representative" register class for each
   /// ValueType. The cost is used by the scheduler to approximate register
@@ -3814,8 +3835,11 @@ private:
   std::map<std::pair<unsigned, MVT::SimpleValueType>, MVT::SimpleValueType>
     PromoteToType;
 
+  /// FIXME: This should not live here; it should come from an analysis.
+  const RTLIB::RuntimeLibcallsInfo RuntimeLibcallInfo;
+
   /// The list of libcalls that the target will use.
-  RTLIB::RuntimeLibcallsInfo Libcalls;
+  LibcallLoweringInfo Libcalls;
 
   /// The bits of IndexedModeActions used to store the legalisation actions
   /// We store the data as   | ML | MS |  L |  S | each taking 4 bits.
@@ -5626,17 +5650,35 @@ public:
   /// Get a pointer to vector element \p Idx located in memory for a vector of
   /// type \p VecVT starting at a base address of \p VecPtr. If \p Idx is out of
   /// bounds the returned pointer is unspecified, but will be within the vector
-  /// bounds.
-  SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
-                                  SDValue Index) const;
+  /// bounds. \p PtrArithFlags can be used to mark that arithmetic within the
+  /// vector in memory is known to not wrap or to be inbounds.
+  SDValue getVectorElementPointer(
+      SelectionDAG &DAG, SDValue VecPtr, EVT VecVT, SDValue Index,
+      const SDNodeFlags PtrArithFlags = SDNodeFlags()) const;
+
+  /// Get a pointer to vector element \p Idx located in memory for a vector of
+  /// type \p VecVT starting at a base address of \p VecPtr. If \p Idx is out of
+  /// bounds the returned pointer is unspecified, but will be within the vector
+  /// bounds. \p VecPtr is guaranteed to point to the beginning of a memory
+  /// location large enough for the vector.
+  SDValue getInboundsVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr,
+                                          EVT VecVT, SDValue Index) const {
+    return getVectorElementPointer(DAG, VecPtr, VecVT, Index,
+                                   SDNodeFlags::NoUnsignedWrap |
+                                       SDNodeFlags::InBounds);
+  }
 
   /// Get a pointer to a sub-vector of type \p SubVecVT at index \p Idx located
   /// in memory for a vector of type \p VecVT starting at a base address of
   /// \p VecPtr. If \p Idx plus the size of \p SubVecVT is out of bounds the
   /// returned pointer is unspecified, but the value returned will be such that
-  /// the entire subvector would be within the vector bounds.
-  SDValue getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
-                                 EVT SubVecVT, SDValue Index) const;
+  /// the entire subvector would be within the vector bounds. \p PtrArithFlags
+  /// can be used to mark that arithmetic within the vector in memory is known
+  /// to not wrap or to be inbounds.
+  SDValue
+  getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
+                         EVT SubVecVT, SDValue Index,
+                         const SDNodeFlags PtrArithFlags = SDNodeFlags()) const;
 
   /// Method for building the DAG expansion of ISD::[US][MIN|MAX]. This
   /// method accepts integers as its arguments.

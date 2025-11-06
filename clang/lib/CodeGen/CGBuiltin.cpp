@@ -3992,6 +3992,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_exp10:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::exp10, "elt.exp10"));
+  case Builtin::BI__builtin_elementwise_ldexp: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    Value *Exp = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateLdexp(Src, Exp, {}, "elt.ldexp");
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_elementwise_log:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::log, "elt.log"));
@@ -4504,6 +4510,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           getTargetHooks().performAddrSpaceCast(*this, AI, AAS, Ty));
     }
     return RValue::get(AI);
+  }
+
+  case Builtin::BI__builtin_infer_alloc_token: {
+    llvm::MDNode *MDN = buildAllocToken(E);
+    llvm::Value *MDV = MetadataAsValue::get(getLLVMContext(), MDN);
+    llvm::Function *F =
+        CGM.getIntrinsic(llvm::Intrinsic::alloc_token_id, {IntPtrTy});
+    llvm::CallBase *TokenID = Builder.CreateCall(F, MDV);
+    return RValue::get(TokenID);
   }
 
   case Builtin::BIbzero:

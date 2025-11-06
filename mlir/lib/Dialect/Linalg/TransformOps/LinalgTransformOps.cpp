@@ -1958,7 +1958,7 @@ enum class OuterOrInnerPerm { Outer = 0, Inner = 1 };
 /// Return true if either `op` or `permutation` are empty to allow a simpler
 /// polymorphic implementation.
 template <typename RelayoutOpTy>
-bool isValidPackingPermutation(
+static bool isValidPackingPermutation(
     RelayoutOpTy op, ArrayRef<int64_t> permutation,
     OuterOrInnerPerm outerOrInnerPerm = OuterOrInnerPerm::Outer) {
   static_assert(
@@ -2464,6 +2464,8 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointAfter(targetOp);
     auto maybePadOps = rewriteAsPaddedOp(
         rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
     if (failed(maybePadOps)) {
@@ -4320,9 +4322,10 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
 // InsertSliceToCopyOp
 //===----------------------------------------------------------------------===//
 template <typename OpTy>
-DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
-                                 transform::ApplyToEachResultList &results,
-                                 transform::TransformState &state) {
+static DiagnosedSilenceableFailure
+doit(RewriterBase &rewriter, OpTy target,
+     transform::ApplyToEachResultList &results,
+     transform::TransformState &state) {
   static_assert(llvm::is_one_of<OpTy, tensor::InsertSliceOp,
                                 tensor::ParallelInsertSliceOp>() &&
                 "wrong op type");
@@ -4497,7 +4500,7 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
             maybeTransformed = decomposeWinogradOutputTransformOp(rewriter, op);
             return true;
           })
-          .Default([&](Operation *op) { return false; });
+          .Default(false);
 
   if (!supported) {
     DiagnosedSilenceableFailure diag =
