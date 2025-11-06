@@ -384,7 +384,7 @@ void ValueBoundsConstraintSet::processWorklist() {
     auto maybeDim = dim == kIndexValue ? std::nullopt : std::make_optional(dim);
     if (stopCondition(value, maybeDim, *this)) {
       LDBG() << "Stop condition met for: " << value << " (dim: " << maybeDim
-             << ")\n";
+             << ")";
       continue;
     }
 
