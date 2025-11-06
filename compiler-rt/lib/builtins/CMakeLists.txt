@@ -1028,6 +1028,7 @@ else ()
                               C_STANDARD 11
                               CXX_STANDARD 17
                               PARENT_TARGET builtins)
+      file(WRITE "${CMAKE_BINARY_DIR}/clang_rt.builtins-${arch}.sources.txt" "${${arch}_SOURCES}")
       cmake_pop_check_state()
     endif ()
   endforeach ()
