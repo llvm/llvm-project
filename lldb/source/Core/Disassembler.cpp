@@ -381,7 +381,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
   // Prefer "register-only" output when we have an ABI.
   opts.PrintRegisterOnly = static_cast<bool>(abi_sp);
 
-  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> Current;
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> current_vars;
 
   for (size_t i = 0, e = var_list.GetSize(); i != e; ++i) {
     lldb::VariableSP v = var_list.GetVariableAtIndex(i);
@@ -423,17 +423,17 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
       if (const char *type_str = type->GetName().AsCString())
         type_name = type_str;
 
-    Current.try_emplace(v->GetID(),
+    current_vars.try_emplace(v->GetID(),
                         VariableAnnotation{std::string(name), std::string(loc),
                                            true, entry.expr->GetRegisterKind(),
                                            entry.file_range, decl_file,
                                            decl_line, type_name});
   }
 
-  // Diff m_live_vars → Current.
+  // Diff m_live_vars → current_vars.
 
-  // 1) Starts/changes: iterate Current and compare with m_live_vars.
-  for (const auto &KV : Current) {
+  // 1) Starts/changes: iterate current_vars and compare with m_live_vars.
+  for (const auto &KV : current_vars) {
     auto it = m_live_vars.find(KV.first);
     if (it == m_live_vars.end()) {
       // Newly live.
@@ -449,10 +449,10 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
     }
   }
 
-  // 2) Ends: anything that was live but is not in Current becomes
+  // 2) Ends: anything that was live but is not in current_vars becomes
   // <kUndefLocation>.
   for (const auto &KV : m_live_vars)
-    if (!Current.count(KV.first)) {
+    if (!current_vars.count(KV.first)) {
       auto annotation_entity = KV.second;
       annotation_entity.is_live = false;
       annotation_entity.location_description = kUndefLocation;
@@ -460,7 +460,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
     }
 
   // Commit new state.
-  m_live_vars = std::move(Current);
+  m_live_vars = std::move(current_vars);
   return annotations;
 }
 
