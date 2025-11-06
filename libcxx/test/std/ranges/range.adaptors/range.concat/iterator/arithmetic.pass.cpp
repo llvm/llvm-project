@@ -27,7 +27,9 @@
 #include <array>
 #include <concepts>
 #include <functional>
+#include <list>
 #include <ranges>
+#include <span>
 
 #include "../../range_adaptor_types.h"
 
@@ -131,6 +133,53 @@ constexpr bool test() {
     std::ranges::concat_view v(a, b, InputCommonView{buffer1});
     using Iter = decltype(v.begin());
     static_assert(!std::invocable<std::minus<>, Iter, Iter>);
+  }
+
+  {
+    // random access check
+    std::array<int, 4> a1{1,2,3,4};
+    std::array<int, 2> b1{5,6};
+    std::span<const int> s1{a1};
+    std::span<const int> s2{b1};
+
+     // All random-access & all non-last are common => random access iterator
+    {
+      auto v = std::views::concat(s1, s2); // both spans are RA & common; non-last (s1) is common
+      using Iter = decltype(v.begin());
+      using CIter = decltype(std::as_const(v).begin());
+      static_assert(std::random_access_iterator<Iter>);
+      static_assert(std::random_access_iterator<CIter>);
+    }
+
+    // Others are common and last is  be non-common => still random access
+    {
+      auto last_non_common = std::views::counted(a1.data(), static_cast<std::ptrdiff_t>(a1.size()));
+      auto v = std::views::concat(s2, last_non_common); // s2 is common; last is allowed to be non-common
+      using Iter = decltype(v.begin());
+      using CIter = decltype(std::as_const(v).begin());
+      static_assert(std::random_access_iterator<Iter>);
+      static_assert(std::random_access_iterator<CIter>);
+    }
+
+    // a non-last range is non-common => NOT random access
+    {
+      int buffer[3] = {1, 2, 3};
+      auto v = std::views::concat(SimpleNonCommon{buffer}, s2);
+      using Iter = decltype(v.begin());
+      using CIter = decltype(std::as_const(v).begin());
+      static_assert(!std::random_access_iterator<Iter>);
+      static_assert(!std::random_access_iterator<CIter>);
+    }
+
+    // one underlying range is not random access => NOT random access
+    {
+      std::list<int> ls{1,2,3};
+      auto v = std::views::concat(ls, s2);
+      using Iter = decltype(v.begin());
+      using CIter = decltype(std::as_const(v).begin());
+      static_assert(!std::random_access_iterator<Iter>);
+      static_assert(!std::random_access_iterator<CIter>);
+    }
   }
 
   return true;
