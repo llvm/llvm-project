@@ -283,7 +283,7 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
 
   if (addToWorklist) {
     LDBG() << "Push to worklist: " << value
-           << " (dim: " << dim.value_or(kIndexValue) << ")\n";
+           << " (dim: " << dim.value_or(kIndexValue) << ")";
     worklist.push(pos);
   }
 
