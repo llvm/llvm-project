@@ -244,6 +244,11 @@ New check aliases
   <clang-tidy/checks/modernize/avoid-variadic-functions>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-dcl58-cpp <clang-tidy/checks/cert/dcl58-cpp>` to
+  :doc:`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
   :doc:`bugprone-command-processor
   <clang-tidy/checks/bugprone/command-processor>`
@@ -262,6 +267,11 @@ New check aliases
 - Renamed :doc:`cert-err58-cpp <clang-tidy/checks/cert/err58-cpp>` to
   :doc:`bugprone-throwing-static-initialization
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` to
+  :doc:`bugprone-float-loop-counter
+  <clang-tidy/checks/bugprone/float-loop-counter>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-mem57-cpp <clang-tidy/checks/cert/mem57-cpp>` to

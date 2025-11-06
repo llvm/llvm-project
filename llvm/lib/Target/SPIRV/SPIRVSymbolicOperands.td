@@ -309,7 +309,7 @@ defm SPV_KHR_shader_clock : ExtensionOperand<54, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_unstructured_loop_controls : ExtensionOperand<55, [EnvOpenCL]>;
 defm SPV_EXT_demote_to_helper_invocation : ExtensionOperand<56, [EnvVulkan]>;
 defm SPV_INTEL_fpga_reg : ExtensionOperand<57, [EnvOpenCL]>;
-defm SPV_INTEL_blocking_pipes : ExtensionOperand<58, [EnvOpenCL]>;
+defm SPV_ALTERA_blocking_pipes : ExtensionOperand<58, [EnvOpenCL]>;
 defm SPV_GOOGLE_user_type : ExtensionOperand<59, [EnvVulkan]>;
 defm SPV_KHR_physical_storage_buffer : ExtensionOperand<60, [EnvVulkan]>;
 defm SPV_INTEL_kernel_attributes : ExtensionOperand<61, [EnvOpenCL]>;
@@ -387,6 +387,8 @@ defm SPV_INTEL_tensor_float32_conversion : ExtensionOperand<125, [EnvOpenCL]>;
 defm SPV_KHR_bfloat16 : ExtensionOperand<126, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_predicated_io : ExtensionOperand<127, [EnvOpenCL]>;
 defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
+defm SPV_INTEL_bfloat16_arithmetic
+    : ExtensionOperand<129, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_16bit_atomics : ExtensionOperand<130, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
@@ -573,6 +575,7 @@ defm AtomicBFloat16MinMaxINTEL : CapabilityOperand<6256, 0, 0, [SPV_INTEL_16bit_
 defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variable_length_array], []>;
 defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
+defm BFloat16ArithmeticINTEL : CapabilityOperand<6226, 0, 0, [SPV_INTEL_bfloat16_arithmetic], []>;
 defm BFloat16ConversionINTEL : CapabilityOperand<6115, 0, 0, [SPV_INTEL_bfloat16_conversion], []>;
 defm GlobalVariableHostAccessINTEL : CapabilityOperand<6187, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
 defm HostAccessINTEL : CapabilityOperand<6188, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
@@ -611,6 +614,7 @@ defm TensorFloat32RoundingINTEL : CapabilityOperand<6425, 0, 0, [SPV_INTEL_tenso
 defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
+defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time

@@ -175,6 +175,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
+   * - ``SPV_INTEL_bfloat16_arithmetic``
+     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
@@ -241,6 +243,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds predicated load and store instructions that conditionally read from or write to memory based on a boolean predicate.
    * - ``SPV_KHR_maximal_reconvergence``
      - Adds execution mode and capability to enable maximal reconvergence.
+   * - ``SPV_ALTERA_blocking_pipes``
+     - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
 
 SPIR-V representation in LLVM IR
 ================================

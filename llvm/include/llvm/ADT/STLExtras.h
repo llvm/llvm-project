@@ -2600,16 +2600,6 @@ bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
   return hasNItemsOrLess(adl_begin(C), adl_end(C), N);
 }
 
-/// Returns a raw pointer that represents the same address as the argument.
-///
-/// This implementation can be removed once we move to C++20 where it's defined
-/// as std::to_address().
-///
-/// The std::pointer_traits<>::to_address(p) variations of these overloads has
-/// not been implemented.
-template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
-template <class T> constexpr T *to_address(T *P) { return P; }
-
 // Detect incomplete types, relying on the fact that their size is unknown.
 namespace detail {
 template <typename T> using has_sizeof = decltype(sizeof(T));
