@@ -4922,11 +4922,36 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   if (!VecTy->isScalableTy() && (UseMaskForCond || UseMaskForGaps))
     return InstructionCost::getInvalid();
 
-  if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+  unsigned NumLoadStores = 1;
+  InstructionCost ShuffleCost = 0;
+  bool isInterleaveWithShuffle = false;
+  unsigned MaxSupportedFactor = TLI->getMaxSupportedInterleaveFactor();
+
+  auto *SubVecTy =
+      VectorType::get(VecVTy->getElementType(),
+                      VecVTy->getElementCount().divideCoefficientBy(Factor));
+
+  if (TLI->isProfitableToInterleaveWithGatherScatter() &&
+      Opcode == Instruction::Store && (0 == Factor % MaxSupportedFactor) &&
+      Factor > MaxSupportedFactor) {
+    isInterleaveWithShuffle = true;
+    SmallVector<int, 16> Mask;
+    // preparing interleave Mask.
+    for (unsigned i = 0; i < VecVTy->getElementCount().getKnownMinValue() / 2;
+         i++) {
+      for (unsigned j = 0; j < 2; j++)
+        Mask.push_back(j * Factor + i);
+    }
+
+    NumLoadStores = Factor / MaxSupportedFactor;
+    ShuffleCost =
+        (Factor * getShuffleCost(TargetTransformInfo::SK_Splice, VecVTy, VecVTy,
+                                 Mask, CostKind, 0, SubVecTy));
+  }
+
+  if (!UseMaskForGaps &&
+      (Factor <= MaxSupportedFactor || isInterleaveWithShuffle)) {
     unsigned MinElts = VecVTy->getElementCount().getKnownMinValue();
-    auto *SubVecTy =
-        VectorType::get(VecVTy->getElementType(),
-                        VecVTy->getElementCount().divideCoefficientBy(Factor));
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
@@ -4934,7 +4959,10 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
     bool UseScalable;
     if (MinElts % Factor == 0 &&
         TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
-      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+      return (Factor *
+              TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable) *
+              NumLoadStores) +
+             ShuffleCost;
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
@@ -6207,7 +6235,8 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,
-                                       PredicatedScalarEvolution *PSE) {
+                                       PredicatedScalarEvolution *PSE,
+                                       const DominatorTree &DT) {
   const auto &Strides = DenseMap<Value *, const SCEV *>();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for addresses that are
@@ -6216,8 +6245,8 @@ static bool containsDecreasingPointers(Loop *TheLoop,
       if (isa<LoadInst>(&I) || isa<StoreInst>(&I)) {
         Value *Ptr = getLoadStorePointerOperand(&I);
         Type *AccessTy = getLoadStoreType(&I);
-        if (getPtrStride(*PSE, AccessTy, Ptr, TheLoop, Strides, /*Assume=*/true,
-                         /*ShouldCheckWrap=*/false)
+        if (getPtrStride(*PSE, AccessTy, Ptr, TheLoop, DT, Strides,
+                         /*Assume=*/true, /*ShouldCheckWrap=*/false)
                 .value_or(0) < 0)
           return true;
       }
@@ -6262,7 +6291,8 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   // negative strides. This will require extra work to reverse the loop
   // predicate, which may be expensive.
   if (containsDecreasingPointers(TFI->LVL->getLoop(),
-                                 TFI->LVL->getPredicatedScalarEvolution()))
+                                 TFI->LVL->getPredicatedScalarEvolution(),
+                                 *TFI->LVL->getDominatorTree()))
     Required |= TailFoldingOpts::Reverse;
   if (Required == TailFoldingOpts::Disabled)
     Required |= TailFoldingOpts::Simple;

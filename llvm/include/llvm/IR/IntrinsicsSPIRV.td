@@ -200,4 +200,7 @@ def int_spv_resource_nonuniformindex
   def int_spv_generic_cast_to_ptr_explicit
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [generic_ptr_ty],
        [IntrNoMem, NoUndef<RetIndex>]>;
+
+  def int_spv_unpackhalf2x16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i32_ty], [IntrNoMem]>;
+
 }
