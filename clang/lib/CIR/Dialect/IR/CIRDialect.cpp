@@ -2118,6 +2118,25 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// IsConstantOp Definitions
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::IsConstantOp::fold(FoldAdaptor adaptor) {
+  // If the input value is a constant attribute, return 1 (true)
+  mlir::Attribute value = adaptor.getValue();
+  if (value) {
+    // The value is a compile-time constant, so return 1
+    mlir::Type resultType = getResult().getType();
+    llvm::APInt apInt(32, 1);
+    llvm::APSInt apSInt(apInt, /*isUnsigned=*/false);
+    return cir::IntAttr::get(resultType, apSInt);
+  }
+  
+  // If the input is not a constant, we cannot fold
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp Definitions
 //===----------------------------------------------------------------------===//
 

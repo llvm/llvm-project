@@ -199,6 +199,31 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(
         builder.createBitcast(allocaAddr, builder.getVoidPtrTy()));
   }
+  
+  case Builtin::BI__builtin_constant_p: { 
+    auto loc = getLoc(e->getSourceRange());
+  
+    Expr::EvalResult evalResult;
+    
+    // Try to evaluate at compile time first
+    if (e->getArg(0)->EvaluateAsRValue(evalResult, getContext()) &&
+        !evalResult.hasSideEffects()) {
+      // Expression is a compile-time constant, return 1
+      llvm::APInt apInt(32, 1);
+      llvm::APSInt apSInt(apInt, /*isUnsigned=*/false);
+      return RValue::get(builder.getConstInt(loc, apSInt));
+    }
+    
+    // Expression cannot be evaluated at compile time, emit runtime check
+    mlir::Value argValue = emitScalarExpr(e->getArg(0));
+    mlir::Type resultType = builder.getSInt32Ty();
+    auto isConstantOp = cir::IsConstantOp::create(builder, loc, resultType, argValue);
+    mlir::Value resultValue = isConstantOp.getResult();
+    mlir::Type exprTy = convertType(e->getType());
+    if (exprTy != resultValue.getType())
+      resultValue = builder.createIntCast(resultValue, exprTy);
+    return RValue::get(resultValue);
+  }
 
   case Builtin::BIcos:
   case Builtin::BIcosf:
