@@ -734,7 +734,7 @@ define <1 x i64> @mullu_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    umull x8, w8, w9
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    ret
 entry:

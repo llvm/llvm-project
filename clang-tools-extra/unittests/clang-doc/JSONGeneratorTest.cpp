@@ -16,8 +16,6 @@ static std::unique_ptr<Generator> getJSONGenerator() {
 TEST(JSONGeneratorTest, emitRecordJSON) {
   RecordInfo I;
   I.Name = "Foo";
-  // FIXME: FullName is not emitted correctly.
-  I.FullName = "";
   I.IsTypeDef = false;
   I.Namespace.emplace_back(EmptySID, "GlobalNamespace", InfoType::IT_namespace);
   I.Path = "GlobalNamespace";
@@ -64,7 +62,6 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
     {
       "Access": "public",
       "End": true,
-      "FullName": "",
       "HasPublicFunctions": true,
       "HasPublicMembers": true,
       "InfoType": "record",
@@ -115,7 +112,6 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
       "USR": "0000000000000000000000000000000000000000"
     }
   ],
-  "FullName": "",
   "HasEnums": true,
   "HasPublicFunctions": true,
   "HasRecords": true,
