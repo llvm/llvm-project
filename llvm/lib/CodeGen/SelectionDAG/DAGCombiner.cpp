@@ -10968,6 +10968,28 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     }
   }
 
+  // fold (sra (xor (sra x, c1), -1), c2) -> (sra (xor x, -1), c3)
+  if (N0.getOpcode() == ISD::XOR && N0.hasOneUse() &&
+      isAllOnesConstant(N0.getOperand(1))) {
+    SDValue Inner = N0.getOperand(0);
+    if (Inner.getOpcode() == ISD::SRA && N1C) {
+      if (ConstantSDNode *InnerShiftAmt =
+              isConstOrConstSplat(Inner.getOperand(1))) {
+        APInt c1 = InnerShiftAmt->getAPIntValue();
+        APInt c2 = N1C->getAPIntValue();
+        zeroExtendToMatch(c1, c2, 1 /* Overflow Bit */);
+        APInt Sum = c1 + c2;
+        unsigned ShiftSum =
+            Sum.uge(OpSizeInBits) ? (OpSizeInBits - 1) : Sum.getZExtValue();
+        SDValue NewShift =
+            DAG.getNode(ISD::SRA, DL, VT, Inner.getOperand(0),
+                        DAG.getConstant(ShiftSum, DL, N1.getValueType()));
+        return DAG.getNode(ISD::XOR, DL, VT, NewShift,
+                           DAG.getAllOnesConstant(DL, VT));
+      }
+    }
+  }
+
   // fold (sra (shl X, m), (sub result_size, n))
   // -> (sign_extend (trunc (shl X, (sub (sub result_size, n), m)))) for
   // result_size - n != m.
