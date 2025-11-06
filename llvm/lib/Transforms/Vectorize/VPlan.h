@@ -3206,10 +3206,11 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, bool Reverse, Align Alignment,
+                      bool Consecutive, bool Reverse,
                       const VPIRMetadata &Metadata, DebugLoc DL)
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
-        Alignment(Alignment), Consecutive(Consecutive), Reverse(Reverse) {
+        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive),
+        Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     assert(isa<VPVectorEndPointerRecipe>(getAddr()) ||
            !Reverse &&
@@ -3276,7 +3277,7 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
                     bool Consecutive, bool Reverse,
                     const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
-                            Reverse, Load.getAlign(), Metadata, DL),
+                            Reverse, Metadata, DL),
         VPValue(this, &Load) {
     setMask(Mask);
   }
@@ -3315,8 +3316,8 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
-                            {Addr, &EVL}, L.isConsecutive(), L.isReverse(),
-                            L.getAlign(), L, L.getDebugLoc()),
+                            {Addr, &EVL}, L.isConsecutive(), L.isReverse(), L,
+                            L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -3356,8 +3357,7 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
                      VPValue *Mask, bool Consecutive, bool Reverse,
                      const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
-                            Consecutive, Reverse, Store.getAlign(), Metadata,
-                            DL) {
+                            Consecutive, Reverse, Metadata, DL) {
     setMask(Mask);
   }
 
@@ -3399,7 +3399,7 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
                         VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {Addr, S.getStoredValue(), &EVL}, S.isConsecutive(),
-                            S.isReverse(), S.getAlign(), S, S.getDebugLoc()) {
+                            S.isReverse(), S, S.getDebugLoc()) {
     setMask(Mask);
   }
 
