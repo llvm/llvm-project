@@ -1438,7 +1438,7 @@ int mlir::spirv::getComputeVectorSize(int64_t size) {
 SmallVector<int64_t>
 mlir::spirv::getNativeVectorShapeImpl(vector::ToElementsOp op) {
   VectorType srcVectorType = op.getSourceVectorType();
-  assert(srcVectorType.getRank() == 1); // Guaranteed by semantics
+  assert(srcVectorType.getRank() == 1); // Guaranteed by UnrollToElements.
   int64_t vectorSize =
       mlir::spirv::getComputeVectorSize(srcVectorType.getDimSize(0));
   return {vectorSize};
