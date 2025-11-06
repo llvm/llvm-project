@@ -602,10 +602,9 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
 // acc.kernels {
 //   use %dev
 // }
-static void
-legalizeValuesInRegion(Region &accRegion,
-                       const SmallVector<Value> &newPrivateOperands,
-                       const SmallVector<Value> &newDataClauseOperands) {
+static void legalizeValuesInRegion(Region &accRegion,
+                                   SmallVector<Value> &newPrivateOperands,
+                                   SmallVector<Value> &newDataClauseOperands) {
   for (Value dataClause :
        llvm::concat<Value>(newDataClauseOperands, newPrivateOperands)) {
     Value var = acc::getVar(dataClause.getDefiningOp());
