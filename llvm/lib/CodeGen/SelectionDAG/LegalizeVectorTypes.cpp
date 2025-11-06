@@ -2207,8 +2207,6 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLAT(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::SplitVecRes_ATOMIC_LOAD(AtomicSDNode *LD, SDValue &Lo,
                                                SDValue &Hi) {
-  assert(LD->getExtensionType() == ISD::NON_EXTLOAD &&
-         "Extended load during type legalization!");
   SDLoc dl(LD);
   EVT VT = LD->getValueType(0);
   EVT LoVT, HiVT;
