@@ -881,6 +881,60 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
         << IncludeFilename;
 }
 
+void HeaderSearch::DiagnoseHeaderShadowing(
+    StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
+    SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
+    ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
+    bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt) {
+
+  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc) || isAngled ||
+      DiagnosedShadowing)
+    return;
+
+  DiagnosedShadowing = true;
+
+  // Indicates that file is first found in the includer's directory
+  if (!MainLoopIt) {
+    for (size_t i = IncluderLoopIndex + 1; i < Includers.size(); ++i) {
+      const auto &IncluderAndDir = Includers[i];
+      SmallString<1024> TmpDir = IncluderAndDir.second.getName();
+      llvm::sys::path::append(TmpDir, Filename);
+      if (auto File = getFileMgr().getFileRef(TmpDir, false, false)) {
+        if (&File->getFileEntry() == *FE)
+          continue;
+        Diags.Report(IncludeLoc, diag::warn_header_shadowing)
+            << Filename << (*FE).getDir().getName()
+            << IncluderAndDir.second.getName();
+        return;
+      } else {
+        llvm::errorToErrorCode(File.takeError());
+      }
+    }
+  }
+
+  // Continue searching in the regular search paths
+  ConstSearchDirIterator It =
+      isAngled ? angled_dir_begin() : search_dir_begin();
+  if (MainLoopIt) {
+    It = std::next(MainLoopIt);
+  } else if (FromDir) {
+    It = FromDir;
+  }
+  for (; It != search_dir_end(); ++It) {
+    SmallString<1024> TmpPath = It->getName();
+    llvm::sys::path::append(TmpPath, Filename);
+    if (auto File = getFileMgr().getFileRef(TmpPath, false, false)) {
+      if (&File->getFileEntry() == *FE)
+        continue;
+      Diags.Report(IncludeLoc, diag::warn_header_shadowing)
+          << Filename << (*FE).getDir().getName() << It->getName();
+      return;
+    } else {
+      llvm::errorToErrorCode(File.takeError());
+    }
+  }
+}
+
 /// LookupFile - Given a "foo" or \<foo> reference, look up the indicated file,
 /// return null on failure.  isAngled indicates whether the file reference is
 /// for system \#include's or not (i.e. using <> instead of ""). Includers, if
@@ -930,6 +984,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   // This is the header that MSVC's header search would have found.
   ModuleMap::KnownHeader MSSuggestedModule;
   OptionalFileEntryRef MSFE;
+  bool DiagnosedShadowing = false;
 
   // Check to see if the file is in the #includer's directory. This cannot be
   // based on CurDir, because each includer could be a #include of a
@@ -963,6 +1018,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
+        DiagnoseHeaderShadowing(Filename, FE, DiagnosedShadowing, IncludeLoc,
+                                FromDir, Includers, isAngled,
+                                &IncluderAndDir - Includers.begin(), nullptr);
         if (!Includer) {
           assert(First && "only first includer can have no file");
           return FE;
@@ -1096,6 +1154,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       *IsFrameworkFound |= (IsFrameworkFoundInDir && !CacheLookup.MappedName);
     if (!File)
       continue;
+
+    DiagnoseHeaderShadowing(Filename, File, DiagnosedShadowing, IncludeLoc,
+                            FromDir, Includers, isAngled, -1, It);
 
     CurDir = It;
 
