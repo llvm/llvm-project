@@ -165,7 +165,7 @@ std::string mlir::tblgen::buildErrorStreamingString(
     if (split.second.empty() &&
         errorStreamType == ErrorStreamType::InsideOpError) {
       // To enable having part of string post, this adds a parenthesis before
-      // the last string segment to match the exiting one.
+      // the last string segment to match the existing one.
       os << " << (\"" << split.first;
     } else {
       os << " << \"" << split.first;

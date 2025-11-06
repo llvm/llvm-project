@@ -251,12 +251,12 @@ std::string stringify(T &&t) {
       apply(std::forward<T>(t));
 }
 
-/// Helper to generate a C++ streaming error messages from a given message.
+/// Helper to generate a C++ streaming error message from a given message.
 /// Message can contain '{{...}}' placeholders that are substituted with
 /// C-expressions via tgfmt. It would effectively convert:
-///   "Failed to verify {{foo}}"
+///   "failed to verify {{foo}}"
 /// into:
-///   "Failed to verify " << tgfmt(foo, &ctx)
+///   "failed to verify " << tgfmt(foo, &ctx)
 std::string buildErrorStreamingString(
     StringRef message, const FmtContext &ctx,
     ErrorStreamType errorStreamType = ErrorStreamType::InString);
