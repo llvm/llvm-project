@@ -762,13 +762,15 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     return StackSizeEnvarOrErr.takeError();
   OMPX_TargetStackSize = std::move(*StackSizeEnvarOrErr);
 
-  auto HeapSizeEnvarOrErr = UInt64Envar::create(
-      "LIBOMPTARGET_HEAP_SIZE",
-      [this](uint64_t &V) -> Error { return getDeviceHeapSize(V); },
-      [this](uint64_t V) -> Error { return setDeviceHeapSize(V); });
-  if (!HeapSizeEnvarOrErr)
-    return HeapSizeEnvarOrErr.takeError();
-  OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
+  if (hasDeviceHeapSize()) {
+    auto HeapSizeEnvarOrErr = UInt64Envar::create(
+        "LIBOMPTARGET_HEAP_SIZE",
+        [this](uint64_t &V) -> Error { return getDeviceHeapSize(V); },
+        [this](uint64_t V) -> Error { return setDeviceHeapSize(V); });
+    if (!HeapSizeEnvarOrErr)
+      return HeapSizeEnvarOrErr.takeError();
+    OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
+  }
 
   // Update the maximum number of teams and threads after the device
   // initialization sets the corresponding hardware limit.
@@ -795,19 +797,6 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
   if (auto Err = callGlobalDestructors(Plugin, *Image))
     return Err;
 
-  if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
-    GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
-    DeviceMemoryPoolTrackingTy ImageDeviceMemoryPoolTracking = {0, 0, ~0U, 0};
-    GlobalTy TrackerGlobal("__omp_rtl_device_memory_pool_tracker",
-                           sizeof(DeviceMemoryPoolTrackingTy),
-                           &ImageDeviceMemoryPoolTracking);
-    if (auto Err =
-            GHandler.readGlobalFromDevice(*this, *Image, TrackerGlobal)) {
-      consumeError(std::move(Err));
-    }
-    DeviceMemoryPoolTracking.combine(ImageDeviceMemoryPoolTracking);
-  }
-
   GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
   auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
   if (!ProfOrErr)
@@ -832,22 +821,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (auto Err = unloadBinary(I))
       return Err;
   LoadedImages.clear();
-
-  if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
-    // TODO: Write this by default into a file.
-    printf("\n\n|-----------------------\n"
-           "| Device memory tracker:\n"
-           "|-----------------------\n"
-           "| #Allocations: %lu\n"
-           "| Byes allocated: %lu\n"
-           "| Minimal allocation: %lu\n"
-           "| Maximal allocation: %lu\n"
-           "|-----------------------\n\n\n",
-           DeviceMemoryPoolTracking.NumAllocations,
-           DeviceMemoryPoolTracking.AllocationTotal,
-           DeviceMemoryPoolTracking.AllocationMin,
-           DeviceMemoryPoolTracking.AllocationMax);
-  }
 
   // Delete the memory manager before deinitializing the device. Otherwise,
   // we may delete device allocations after the device is deinitialized.
@@ -901,18 +874,6 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   // Add the image to list.
   LoadedImages.push_back(Image);
 
-  // Setup the global device memory pool if needed.
-  if (!Plugin.getRecordReplay().isReplaying() &&
-      shouldSetupDeviceMemoryPool()) {
-    uint64_t HeapSize;
-    auto SizeOrErr = getDeviceHeapSize(HeapSize);
-    if (SizeOrErr) {
-      REPORT("No global device memory pool due to error: %s\n",
-             toString(std::move(SizeOrErr)).data());
-    } else if (auto Err = setupDeviceMemoryPool(Plugin, *Image, HeapSize))
-      return std::move(Err);
-  }
-
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
 
@@ -934,51 +895,6 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
   // Return the pointer to the table of entries.
   return Image;
-}
-
-Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
-                                             DeviceImageTy &Image,
-                                             uint64_t PoolSize) {
-  // Free the old pool, if any.
-  if (DeviceMemoryPool.Ptr) {
-    if (auto Err = dataDelete(DeviceMemoryPool.Ptr,
-                              TargetAllocTy::TARGET_ALLOC_DEVICE))
-      return Err;
-  }
-
-  DeviceMemoryPool.Size = PoolSize;
-  auto AllocOrErr = dataAlloc(PoolSize, /*HostPtr=*/nullptr,
-                              TargetAllocTy::TARGET_ALLOC_DEVICE);
-  if (AllocOrErr) {
-    DeviceMemoryPool.Ptr = *AllocOrErr;
-  } else {
-    auto Err = AllocOrErr.takeError();
-    REPORT("Failure to allocate device memory for global memory pool: %s\n",
-           toString(std::move(Err)).data());
-    DeviceMemoryPool.Ptr = nullptr;
-    DeviceMemoryPool.Size = 0;
-  }
-
-  // Create the metainfo of the device environment global.
-  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
-  if (!GHandler.isSymbolInImage(*this, Image,
-                                "__omp_rtl_device_memory_pool_tracker")) {
-    DP("Skip the memory pool as there is no tracker symbol in the image.");
-    return Error::success();
-  }
-
-  GlobalTy TrackerGlobal("__omp_rtl_device_memory_pool_tracker",
-                         sizeof(DeviceMemoryPoolTrackingTy),
-                         &DeviceMemoryPoolTracking);
-  if (auto Err = GHandler.writeGlobalToDevice(*this, Image, TrackerGlobal))
-    return Err;
-
-  // Create the metainfo of the device environment global.
-  GlobalTy DevEnvGlobal("__omp_rtl_device_memory_pool",
-                        sizeof(DeviceMemoryPoolTy), &DeviceMemoryPool);
-
-  // Write device environment values to the device.
-  return GHandler.writeGlobalToDevice(*this, Image, DevEnvGlobal);
 }
 
 Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
