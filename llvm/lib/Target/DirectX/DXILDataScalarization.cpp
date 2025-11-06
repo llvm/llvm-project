@@ -335,7 +335,7 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   // correctly zero-indexes the extra dimensions to keep the offset calculation
   // correct.
   // Eg:
-  //  i32, [4 x i32] and [8 x [ 4 x i32]] are sub-types of [8 x [4 x i32]], etc.
+  //  i32, [4 x i32] and [8 x [4 x i32]] are sub-types of [8 x [4 x i32]], etc.
   //
   // So then:
   //   gep [4 x i32] %idx
@@ -345,7 +345,7 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   uint32_t MissingDims = 0;
   Type *SubType = NewGEPType;
 
-  // The new type will be in it's array version so match accordingly
+  // The new type will be in its array version; so match accordingly.
   Type *const GEPArrType = equivalentArrayTypeFromVector(OrigGEPType);
 
   while (SubType != GEPArrType) {
