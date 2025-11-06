@@ -477,8 +477,7 @@ void applyDefaultTimingManagerCLOptions(DefaultTimingManager &tm);
 /// be used in combination with DefaultTimingManager::setOutput() to use
 /// MLIR-provided output format.
 std::unique_ptr<OutputStrategy>
-createDefaultOutputStrategy(DefaultTimingManager::OutputFormat fmt,
-                            raw_ostream &os);
+createOutputStrategy(DefaultTimingManager::OutputFormat fmt, raw_ostream &os);
 
 } // namespace mlir
 

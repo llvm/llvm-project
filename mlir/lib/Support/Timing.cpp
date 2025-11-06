@@ -619,13 +619,12 @@ void mlir::applyDefaultTimingManagerCLOptions(DefaultTimingManager &tm) {
     return;
   tm.setEnabled(options->timing);
   tm.setDisplayMode(options->displayMode);
-  tm.setOutput(
-      createDefaultOutputStrategy(options->outputFormat, llvm::errs()));
+  tm.setOutput(createOutputStrategy(options->outputFormat, llvm::errs()));
 }
 
 std::unique_ptr<OutputStrategy>
-mlir::createDefaultOutputStrategy(DefaultTimingManager::OutputFormat fmt,
-                                  raw_ostream &os) {
+mlir::createOutputStrategy(DefaultTimingManager::OutputFormat fmt,
+                           raw_ostream &os) {
   switch (fmt) {
   case OutputFormat::Text:
     return std::make_unique<OutputTextStrategy>(os);
