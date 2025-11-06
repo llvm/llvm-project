@@ -46,7 +46,8 @@ public:
     eTypeUInt16,
     eTypeUInt32,
     eTypeUInt64,
-    eTypeUIntN, // An integer that has more than 64 bits.
+    eTypeUIntN, /// < This value is used when the (integer) register is larger
+                /// than 64-bits.
     eTypeFloat,
     eTypeDouble,
     eTypeLongDouble,
