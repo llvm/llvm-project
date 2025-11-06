@@ -674,3 +674,46 @@ v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
 v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
+// nv bit in FLAT instructions
+flat_load_ubyte v5, v[2:3] offset:4095 nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+flat_load_ubyte a5, v[2:3] offset:4095 nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+flat_store_dword v[2:3], v5 offset:4095 nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+flat_store_dword v[2:3], a5 offset:4095 nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+flat_atomic_add_f64 v[0:1], v[2:3] offset:4095 nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_load_ubyte v5, v[2:3], off offset:-1 nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_store_byte v[2:3], v5, off offset:-1 nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_atomic_add v[2:3], v5, off nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_atomic_swap a1, v[2:3], a2, off glc nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_atomic_swap_x2 v[2:3], v[4:5], off nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_atomic_swap_x2 v[2:3], a[4:5], off nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+scratch_load_ubyte v5, off, s2 offset:-1 nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+scratch_load_ubyte a5, off, s2 offset:-1 nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+scratch_store_dword v2, v3, off nv
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
