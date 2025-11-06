@@ -589,7 +589,7 @@ struct VariableAnnotation {
 /// per-instruction "events" like `name = RDI` or `name = <undef>`.
 class VariableAnnotator {
   // Live state from the previous instruction, keyed by Variable::GetID().
-  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> Live_;
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> m_live_vars;
 
   static constexpr const char *kUndefLocation = "undef";
 
