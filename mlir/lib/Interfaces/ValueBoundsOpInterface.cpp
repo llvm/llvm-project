@@ -393,7 +393,7 @@ void ValueBoundsConstraintSet::processWorklist() {
     auto valueBoundsOp =
         dyn_cast<ValueBoundsOpInterface>(getOwnerOfValue(value));
     LDBG() << "Query value bounds for: " << value
-           << " (owner: " << getOwnerOfValue(value)->getName() << ")\n";
+           << " (owner: " << getOwnerOfValue(value)->getName() << ")";
     if (valueBoundsOp) {
       if (dim == kIndexValue) {
         valueBoundsOp.populateBoundsForIndexValue(value, *this);
