@@ -16116,13 +16116,16 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   // the related subtrees.
   if (!GatheredLoadsNodes.empty())
     return Cost;
-  // The narrow non-profitable tree? Skip, may cause regressions.
-  constexpr unsigned NumLimit = 4;
+  // The narrow non-profitable tree in loop? Skip, may cause regressions.
+  constexpr unsigned PartLimit = 2;
   const unsigned Sz =
       getVectorElementSize(VectorizableTree.front()->Scalars.front());
   const unsigned MinVF = getMinVF(Sz);
-  if (VectorizableTree.front()->Scalars.size() < NumLimit &&
-      MinVF >= NumLimit && Cost >= -SLPCostThreshold)
+  if (Cost >= -SLPCostThreshold &&
+      VectorizableTree.front()->Scalars.size() * PartLimit <= MinVF &&
+      (!VectorizableTree.front()->hasState() ||
+       (VectorizableTree.front()->getOpcode() != Instruction::Store &&
+        LI->getLoopFor(VectorizableTree.front()->getMainOp()->getParent()))))
     return Cost;
   SmallVector<std::pair<InstructionCost, SmallVector<unsigned>>> SubtreeCosts(
       VectorizableTree.size());
@@ -16152,7 +16155,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     Worklist.emplace(VectorizableTree[Idx].get(), P);
 
   // Narrow store trees with non-profitable immediate values - exit.
-  if (!UserIgnoreList && VectorizableTree.front()->getVectorFactor() < 4 &&
+  if (!UserIgnoreList && VectorizableTree.front()->getVectorFactor() < MinVF &&
       VectorizableTree.front()->hasState() &&
       VectorizableTree.front()->getOpcode() == Instruction::Store &&
       (Worklist.top().first->Idx == 0 || Worklist.top().first->Idx == 1))
@@ -16262,12 +16265,12 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     return SubtreeCosts.front().first;
 
   for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
-    if (DeletedNodes.contains(TE.get()))
-      continue;
-    if (TransformedToGatherNodes.contains(TE.get()) && !TE->UserTreeIndex) {
+    if (!TE->UserTreeIndex && TransformedToGatherNodes.contains(TE.get())) {
       assert(TE->getOpcode() == Instruction::Load && "Expected load only.");
       continue;
     }
+    if (DeletedNodes.contains(TE.get()))
+      continue;
     if (!NodesCosts.contains(TE.get())) {
       InstructionCost C =
           getEntryCost(TE.get(), VectorizedVals, CheckedExtracts);
@@ -16276,15 +16279,20 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   }
 
   LLVM_DEBUG(dbgs() << "SLP: Recalculate costs after tree trimming.\n");
-  Cost = 0;
+  InstructionCost NewCost = 0;
   for (const auto &P : NodesCosts) {
-    Cost += P.second;
+    NewCost += P.second;
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << P.second << " for bundle "
                       << shortBundleName(P.first->Scalars, P.first->Idx)
                       << ".\n"
                       << "SLP: Current total cost = " << Cost << "\n");
   }
-  return Cost;
+  if (NewCost >= Cost) {
+    DeletedNodes.clear();
+    TransformedToGatherNodes.clear();
+    NewCost = Cost;
+  }
+  return NewCost;
 }
 
 namespace {
@@ -21231,6 +21239,27 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   if (isa<PHINode>(S.getMainOp()) ||
       isVectorLikeInstWithConstOps(S.getMainOp()))
     return nullptr;
+  // If the parent node is non-schedulable and the current node is copyable, and
+  // any of parent instructions are used outside several basic blocks or in
+  // bin-op node - cancel scheduling, it may cause wrong def-use deps in
+  // analysis, leading to a crash.
+  // Non-scheduled nodes may not have related ScheduleData model, which may lead
+  // to a skipped dep analysis.
+  if (S.areInstructionsWithCopyableElements() && EI && EI.UserTE->hasState() &&
+      EI.UserTE->doesNotNeedToSchedule() &&
+      EI.UserTE->getOpcode() != Instruction::PHI &&
+      any_of(EI.UserTE->Scalars, [](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        if (!I || I->hasOneUser())
+          return false;
+        for (User *U : I->users()) {
+          auto *UI = cast<Instruction>(U);
+          if (isa<BinaryOperator>(UI))
+            return true;
+        }
+        return false;
+      }))
+    return std::nullopt;
   bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (((!HasCopyables && doesNotNeedToSchedule(VL)) ||
        all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))) {

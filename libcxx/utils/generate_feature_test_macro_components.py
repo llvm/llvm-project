@@ -873,7 +873,8 @@ feature_test_macros = [
                 "c++26": 202306  # P2641R4 Checking if a union alternative is active
             },
             "headers": ["type_traits"],
-            "unimplemented": True,
+            "test_suite_guard": "__has_builtin(__builtin_is_within_lifetime)",
+            "libcxx_guard": "__has_builtin(__builtin_is_within_lifetime)",
         },
         {
             "name": "__cpp_lib_jthread",

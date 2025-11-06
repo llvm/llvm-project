@@ -1334,15 +1334,8 @@ let TargetPrefix = "nvvm" in {
   //
   let IntrProperties = [IntrNoMem] in {
     foreach ftz = ["", "_ftz"] in
-      def int_nvvm_ex2_approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
-
-    def int_nvvm_ex2_approx_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-    def int_nvvm_ex2_approx_f16 :
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty]>;
-    def int_nvvm_ex2_approx_f16x2 :
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty]>;
+      def int_nvvm_ex2_approx # ftz :
+          DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
 
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_lg2_approx # ftz # _f : NVVMBuiltin,

@@ -18,6 +18,9 @@
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Sanitizers.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
@@ -1749,6 +1752,17 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
       allocator->isReservedGlobalPlacementOperator())
     result = Builder.CreateLaunderInvariantGroup(result);
 
+  // Check the default alignment of the type and why. Users may incorrectly
+  // return misaligned memory from a replaced operator new without knowing
+  // about default alignment.
+  TypeCheckKind checkKind = CodeGenFunction::TCK_ConstructorCall;
+  const TargetInfo &TI = getContext().getTargetInfo();
+  unsigned DefaultTargetAlignment = TI.getNewAlign() / TI.getCharWidth();
+  if (SanOpts.has(SanitizerKind::Alignment) &&
+      (DefaultTargetAlignment >
+       CGM.getContext().getTypeAlignInChars(allocType).getQuantity()))
+    checkKind = CodeGenFunction::TCK_ConstructorCallMinimumAlign;
+
   // Emit sanitizer checks for pointer value now, so that in the case of an
   // array it was checked only once and not at each constructor call. We may
   // have already checked that the pointer is non-null.
@@ -1756,10 +1770,9 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // we'll null check the wrong pointer here.
   SanitizerSet SkippedChecks;
   SkippedChecks.set(SanitizerKind::Null, nullCheck);
-  EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall,
-                E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-                result, allocType, result.getAlignment(), SkippedChecks,
-                numElements);
+  EmitTypeCheck(
+      checkKind, E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+      result, allocType, result.getAlignment(), SkippedChecks, numElements);
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
