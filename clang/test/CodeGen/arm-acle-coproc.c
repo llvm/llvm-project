@@ -4,10 +4,10 @@
 // RUN: %clang_cc1 -triple armv5te %s -E -dD -o - | FileCheck --check-prefix=CHECK-V5-TE %s
 // RUN: %clang_cc1 -triple armv5tej %s -E -dD -o - | FileCheck --check-prefix=CHECK-V5-TE %s
 // RUN: %clang_cc1 -triple armv6 %s -E -dD -o - | FileCheck --check-prefix=CHECK-V6 %s
-// RUN: %clang_cc1 -triple armv6m %s -E -dD -o - | FileCheck --check-prefix=CHECK-V6M %s
+// RUN: %clang_cc1 -triple thumbv6m %s -E -dD -o - | FileCheck --check-prefix=CHECK-V6M %s
 // RUN: %clang_cc1 -triple armv7a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V7 %s
 // RUN: %clang_cc1 -triple armv7r %s -E -dD -o - | FileCheck --check-prefix=CHECK-V7 %s
-// RUN: %clang_cc1 -triple armv7m %s -E -dD -o - | FileCheck --check-prefix=CHECK-V7 %s
+// RUN: %clang_cc1 -triple thumbv7m %s -E -dD -o - | FileCheck --check-prefix=CHECK-V7 %s
 // RUN: %clang_cc1 -triple armv8a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
 // RUN: %clang_cc1 -triple armv8r %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
 // RUN: %clang_cc1 -triple armv8.1a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s

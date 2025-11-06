@@ -82,19 +82,14 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ;
 ; AVX512BW-LABEL: var_shift_v64i8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpsllw $4, %zmm0, %zmm2
-; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
-; AVX512BW-NEXT:    vpsllw $5, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
+; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm2
+; AVX512BW-NEXT:    vpsllvw %zmm2, %zmm0, %zmm2
+; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
+; AVX512BW-NEXT:    kmovq %rax, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1}
-; AVX512BW-NEXT:    vpsllw $2, %zmm0, %zmm2
-; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
-; AVX512BW-NEXT:    vpaddb %zmm1, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
-; AVX512BW-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1}
-; AVX512BW-NEXT:    vpaddb %zmm1, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
-; AVX512BW-NEXT:    vpaddb %zmm0, %zmm0, %zmm0 {%k1}
 ; AVX512BW-NEXT:    retq
   %shift = shl <64 x i8> %a, %b
   ret <64 x i8> %shift

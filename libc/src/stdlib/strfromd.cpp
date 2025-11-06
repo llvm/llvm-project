@@ -39,7 +39,8 @@ LLVM_LIBC_FUNCTION(int, strfromd,
   if (n > 0)
     wb.buff[wb.buff_cur] = '\0';
 
-  if (writer.get_chars_written() > cpp::numeric_limits<int>::max()) {
+  if (writer.get_chars_written() >
+      static_cast<size_t>(cpp::numeric_limits<int>::max())) {
     libc_errno =
         printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
     return -1;

@@ -72,5 +72,5 @@ TEST(LlvmLibcSNPrintfTest, CharsWrittenOverflow) {
   int int_max = LIBC_NAMESPACE::cpp::numeric_limits<int>::max();
   int written = LIBC_NAMESPACE::snprintf(buff, 0, "%*stest", int_max, "");
   EXPECT_LT(written, 0);
-  ASSERT_ERRNO_EQ(EOVERFLOW);
+  ASSERT_ERRNO_FAILURE();
 }

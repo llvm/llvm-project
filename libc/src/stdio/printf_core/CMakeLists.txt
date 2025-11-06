@@ -39,7 +39,7 @@ else()
 endif()
 
 set(target_error_mapper libc.src.stdio.printf_core.${LIBC_TARGET_OS}.error_mapper)
-if(NOT TARGET ${target_error_converter})
+if(NOT TARGET ${target_error_mapper})
     set(target_error_mapper libc.src.stdio.printf_core.generic.error_mapper)
 endif()
 

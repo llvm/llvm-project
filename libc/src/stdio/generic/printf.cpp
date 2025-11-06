@@ -40,7 +40,7 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
     libc_errno = printf_core::internal_error_to_errno(ret_val.error());
     return -1;
   }
-  if (ret_val.value() > cpp::numeric_limits<int>::max()) {
+  if (ret_val.value() > static_cast<size_t>(cpp::numeric_limits<int>::max())) {
     libc_errno =
         printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
     return -1;

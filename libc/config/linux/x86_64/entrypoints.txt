@@ -331,6 +331,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # unistd.h entrypoints
     libc.src.unistd.access
     libc.src.unistd.chdir
+    libc.src.unistd.chown
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -349,6 +350,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getppid
     libc.src.unistd.getsid
     libc.src.unistd.gettid
+    libc.src.unistd.getgid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
     libc.src.unistd.link

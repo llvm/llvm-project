@@ -33,22 +33,14 @@ namespace linalg {
 //===----------------------------------------------------------------------===//
 // Utilities for inferring various semantics properties of Linalg ops.
 //===----------------------------------------------------------------------===//
-/// Shell function to compute the Destination Permutation of PackOp
-/// This function uses the helper function `computePackUnPackPerm` to get
-/// the permutation vector. Only major difference between UnPack and Pack is
-/// that packOp uses destination rank whereas unpack Uses source rank.
-SmallVector<int64_t> getPackInverseDestPerm(linalg::PackOp packOp);
 
-/// Shell function to compute the Source Permutation of unPackOp.
-/// This function, like the getPackInverseDestPerm uses the helper function
-/// computePackUnPackPerm` to get the permutation vector.
-/// Only major difference between UnPack and Pack is that packOp uses
-/// destination rank whereas unpack Uses source rank.
-SmallVector<int64_t> getUnPackInverseSrcPerm(linalg::UnPackOp unpackOp);
+/// Compute inverse permutation for the destination tensor (i.e. in the packed
+/// domain).
+SmallVector<int64_t> getPackInverseDestPerm(linalg::PackOp packOp,
+                                            PackingMetadata &metadata);
 
-/// Shell function to compute the Source rank permutation for unpackOp
-/// Unpack requires some packing metadata data information, so created
-/// another function where this value is passed by reference.
+/// Compute inverse permutation for the source tensor (i.e. in the packed
+/// domain).
 SmallVector<int64_t> getUnPackInverseSrcPerm(linalg::UnPackOp,
                                              PackingMetadata &metadata);
 

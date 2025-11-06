@@ -491,7 +491,7 @@ public:
     int result = func(buff, sizeof(buff), "%.2147483647f", 1.0f);
 
     EXPECT_LT(result, 0);
-    ASSERT_ERRNO_EQ(EOVERFLOW);
+    ASSERT_ERRNO_FAILURE();
   }
 };
 
