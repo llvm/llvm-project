@@ -1,5 +1,7 @@
+; Expanding the bitcode marker works only for AMD at the moment
 ; RUN: not llc -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o -
-; RUN: not llc -verify-machineinstrs -mtriple=spirv64-amd-amdhsa %s -o -
+; RUN: llc -verify-machineinstrs -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | spirv-val %}
 ;
 ; Verify that we lower the embedded bitcode
 

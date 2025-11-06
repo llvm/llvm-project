@@ -13,6 +13,8 @@
 
 #include "SPIRV.h"
 
+#include "llvm/IR/Module.h"
+
 using namespace llvm;
 
 namespace {
@@ -28,7 +30,30 @@ struct SPIRVPrepareGlobals : public ModulePass {
   bool runOnModule(Module &M) override;
 };
 
-bool SPIRVPrepareGlobals::runOnModule(Module &M) { return false; }
+bool tryExtendLLVMBitcodeMarker(GlobalVariable &Bitcode) {
+  assert(Bitcode.getName() == "llvm.embedded.module");
+
+  ArrayType *AT = cast<ArrayType>(Bitcode.getValueType());
+  if (AT->getNumElements() != 0)
+    return false;
+
+  ArrayType *AT1 = ArrayType::get(AT->getElementType(), 1);
+  Constant *OneEltInit = Constant::getNullValue(AT1);
+  Bitcode.replaceInitializer(OneEltInit);
+  return true;
+}
+
+bool SPIRVPrepareGlobals::runOnModule(Module &M) {
+  const bool IsAMD = M.getTargetTriple().getVendor() == Triple::AMD;
+  if (!IsAMD)
+    return false;
+
+  bool Changed = false;
+  if (GlobalVariable *Bitcode = M.getNamedGlobal("llvm.embedded.module"))
+    Changed |= tryExtendLLVMBitcodeMarker(*Bitcode);
+
+  return Changed;
+}
 char SPIRVPrepareGlobals::ID = 0;
 
 } // namespace
