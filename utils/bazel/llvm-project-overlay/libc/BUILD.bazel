@@ -6514,12 +6514,34 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "printf_error_mapper",
+    hdrs = [
+        "src/stdio/printf_core/error_mapper.h",
+    ] + select({
+        "@platforms//os:linux": [
+            "src/stdio/printf_core/linux/error_mapper.h",
+        ],
+        "//conditions:default": [
+            "src/stdio/printf_core/generic/error_mapper.h",
+        ],
+    }),
+    deps = [
+        ":hdr_errno_macros",
+        ":printf_core_structs",
+        ":__support_cpp_type_traits",
+        ":__support_error_or",
+        ":__support_macros_properties_architectures",
+    ]
+)
+
+libc_support_library(
     name = "printf_main",
     hdrs = ["src/stdio/printf_core/printf_main.h"],
     deps = [
         ":__support_arg_list",
         ":printf_converter",
         ":printf_core_structs",
+        ":printf_error_mapper",
         ":printf_parser",
         ":printf_writer",
     ],
