@@ -700,7 +700,7 @@ static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
 // csel instruction. If so, return the folded opcode, and the replacement
 // register.
 static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
-                                unsigned *NewReg = nullptr) {
+                                unsigned *NewVReg = nullptr) {
   VReg = removeCopies(MRI, VReg);
   if (!Register::isVirtualRegister(VReg))
     return 0;
@@ -708,37 +708,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
   bool Is64Bit = AArch64::GPR64allRegClass.hasSubClassEq(MRI.getRegClass(VReg));
   const MachineInstr *DefMI = MRI.getVRegDef(VReg);
   unsigned Opc = 0;
-  unsigned SrcReg = 0;
+  unsigned SrcOpNum = 0;
   switch (DefMI->getOpcode()) {
-  case AArch64::SUBREG_TO_REG:
-    // Check for the following way to define an 64-bit immediate:
-    //   %0:gpr32 = MOVi32imm 1
-    //   %1:gpr64 = SUBREG_TO_REG 0, %0:gpr32, %subreg.sub_32
-    if (!DefMI->getOperand(1).isImm() || DefMI->getOperand(1).getImm() != 0)
-      return 0;
-    if (!DefMI->getOperand(2).isReg())
-      return 0;
-    if (!DefMI->getOperand(3).isImm() ||
-        DefMI->getOperand(3).getImm() != AArch64::sub_32)
-      return 0;
-    DefMI = MRI.getVRegDef(DefMI->getOperand(2).getReg());
-    if (DefMI->getOpcode() != AArch64::MOVi32imm)
-      return 0;
-    if (!DefMI->getOperand(1).isImm() || DefMI->getOperand(1).getImm() != 1)
-      return 0;
-    assert(Is64Bit);
-    SrcReg = AArch64::XZR;
-    Opc = AArch64::CSINCXr;
-    break;
-
-  case AArch64::MOVi32imm:
-  case AArch64::MOVi64imm:
-    if (!DefMI->getOperand(1).isImm() || DefMI->getOperand(1).getImm() != 1)
-      return 0;
-    SrcReg = Is64Bit ? AArch64::XZR : AArch64::WZR;
-    Opc = Is64Bit ? AArch64::CSINCXr : AArch64::CSINCWr;
-    break;
-
   case AArch64::ADDSXri:
   case AArch64::ADDSWri:
     // if NZCV is used, do not fold.
@@ -753,7 +724,7 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     if (!DefMI->getOperand(2).isImm() || DefMI->getOperand(2).getImm() != 1 ||
         DefMI->getOperand(3).getImm() != 0)
       return 0;
-    SrcReg = DefMI->getOperand(1).getReg();
+    SrcOpNum = 1;
     Opc = Is64Bit ? AArch64::CSINCXr : AArch64::CSINCWr;
     break;
 
@@ -763,7 +734,7 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     unsigned ZReg = removeCopies(MRI, DefMI->getOperand(1).getReg());
     if (ZReg != AArch64::XZR && ZReg != AArch64::WZR)
       return 0;
-    SrcReg = DefMI->getOperand(2).getReg();
+    SrcOpNum = 2;
     Opc = Is64Bit ? AArch64::CSINVXr : AArch64::CSINVWr;
     break;
   }
@@ -782,17 +753,17 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     unsigned ZReg = removeCopies(MRI, DefMI->getOperand(1).getReg());
     if (ZReg != AArch64::XZR && ZReg != AArch64::WZR)
       return 0;
-    SrcReg = DefMI->getOperand(2).getReg();
+    SrcOpNum = 2;
     Opc = Is64Bit ? AArch64::CSNEGXr : AArch64::CSNEGWr;
     break;
   }
   default:
     return 0;
   }
-  assert(Opc && SrcReg && "Missing parameters");
+  assert(Opc && SrcOpNum && "Missing parameters");
 
-  if (NewReg)
-    *NewReg = SrcReg;
+  if (NewVReg)
+    *NewVReg = DefMI->getOperand(SrcOpNum).getReg();
   return Opc;
 }
 
@@ -993,34 +964,28 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
 
   // Try folding simple instructions into the csel.
   if (TryFold) {
-    unsigned NewReg = 0;
-    unsigned FoldedOpc = canFoldIntoCSel(MRI, TrueReg, &NewReg);
+    unsigned NewVReg = 0;
+    unsigned FoldedOpc = canFoldIntoCSel(MRI, TrueReg, &NewVReg);
     if (FoldedOpc) {
       // The folded opcodes csinc, csinc and csneg apply the operation to
       // FalseReg, so we need to invert the condition.
       CC = AArch64CC::getInvertedCondCode(CC);
       TrueReg = FalseReg;
     } else
-      FoldedOpc = canFoldIntoCSel(MRI, FalseReg, &NewReg);
+      FoldedOpc = canFoldIntoCSel(MRI, FalseReg, &NewVReg);
 
     // Fold the operation. Leave any dead instructions for DCE to clean up.
     if (FoldedOpc) {
-      FalseReg = NewReg;
+      FalseReg = NewVReg;
       Opc = FoldedOpc;
-      // Extend the live range of NewReg.
-      MRI.clearKillFlags(NewReg);
+      // The extends the live range of NewVReg.
+      MRI.clearKillFlags(NewVReg);
     }
   }
 
   // Pull all virtual register into the appropriate class.
   MRI.constrainRegClass(TrueReg, RC);
-  // FalseReg might be WZR or XZR if the folded operand is a literal 1.
-  assert(
-      (FalseReg.isVirtual() || FalseReg == AArch64::WZR ||
-       FalseReg == AArch64::XZR) &&
-      "FalseReg was folded into a non-virtual register other than WZR or XZR");
-  if (FalseReg.isVirtual())
-    MRI.constrainRegClass(FalseReg, RC);
+  MRI.constrainRegClass(FalseReg, RC);
 
   // Insert the csel.
   BuildMI(MBB, I, DL, get(Opc), DstReg)
@@ -2148,15 +2113,46 @@ bool AArch64InstrInfo::removeCmpToZeroOrOne(
   return true;
 }
 
-bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
-      MI.getOpcode() != AArch64::CATCHRET)
-    return false;
+static inline void expandCtSelect(MachineBasicBlock &MBB, MachineInstr &MI,
+                                  DebugLoc &DL, const MCInstrDesc &MCID) {
+  MachineInstrBuilder Builder = BuildMI(MBB, MI, DL, MCID);
+  for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx) {
+    Builder.add(MI.getOperand(Idx));
+  }
+  Builder->setFlag(MachineInstr::NoMerge);
+  MBB.remove_instr(&MI);
+}
 
+bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   auto &Subtarget = MBB.getParent()->getSubtarget<AArch64Subtarget>();
   auto TRI = Subtarget.getRegisterInfo();
   DebugLoc DL = MI.getDebugLoc();
+
+  switch (MI.getOpcode()) {
+  case AArch64::I32CTSELECT:
+    expandCtSelect(MBB, MI, DL, get(AArch64::CSELWr));
+    return true;
+  case AArch64::I64CTSELECT:
+    expandCtSelect(MBB, MI, DL, get(AArch64::CSELXr));
+    return true;
+  case AArch64::BF16CTSELECT:
+    expandCtSelect(MBB, MI, DL, get(AArch64::FCSELHrrr));
+    return true;
+  case AArch64::F16CTSELECT:
+    expandCtSelect(MBB, MI, DL, get(AArch64::FCSELHrrr));
+    return true;
+  case AArch64::F32CTSELECT:
+    expandCtSelect(MBB, MI, DL, get(AArch64::FCSELSrrr));
+    return true;
+  case AArch64::F64CTSELECT:
+    expandCtSelect(MBB, MI, DL, get(AArch64::FCSELDrrr));
+    return true;
+  }
+
+  if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
+      MI.getOpcode() != AArch64::CATCHRET)
+    return false;
 
   if (MI.getOpcode() == AArch64::CATCHRET) {
     // Skip to the first instruction before the epilog.
@@ -5098,7 +5094,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    bool RenamableDest,
                                    bool RenamableSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
-      AArch64::GPR32spRegClass.contains(SrcReg)) {
+      (AArch64::GPR32spRegClass.contains(SrcReg) || SrcReg == AArch64::WZR)) {
     if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP) {
       // If either operand is WSP, expand to ADD #0.
       if (Subtarget.hasZeroCycleRegMoveGPR64() &&
@@ -5123,14 +5119,30 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
             .addImm(0)
             .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
       }
+    } else if (SrcReg == AArch64::WZR && Subtarget.hasZeroCycleZeroingGPR64() &&
+               !Subtarget.hasZeroCycleZeroingGPR32()) {
+      // Use 64-bit zeroing when available but 32-bit zeroing is not
+      MCRegister DestRegX = RI.getMatchingSuperReg(DestReg, AArch64::sub_32,
+                                                   &AArch64::GPR64spRegClass);
+      assert(DestRegX.isValid() && "Destination super-reg not valid");
+      BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestRegX)
+          .addImm(0)
+          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+    } else if (SrcReg == AArch64::WZR && Subtarget.hasZeroCycleZeroingGPR32()) {
+      BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg)
+          .addImm(0)
+          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
     } else if (Subtarget.hasZeroCycleRegMoveGPR64() &&
                !Subtarget.hasZeroCycleRegMoveGPR32()) {
       // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
       MCRegister DestRegX = RI.getMatchingSuperReg(DestReg, AArch64::sub_32,
                                                    &AArch64::GPR64spRegClass);
       assert(DestRegX.isValid() && "Destination super-reg not valid");
-      MCRegister SrcRegX = RI.getMatchingSuperReg(SrcReg, AArch64::sub_32,
-                                                  &AArch64::GPR64spRegClass);
+      MCRegister SrcRegX =
+          SrcReg == AArch64::WZR
+              ? AArch64::XZR
+              : RI.getMatchingSuperReg(SrcReg, AArch64::sub_32,
+                                       &AArch64::GPR64spRegClass);
       assert(SrcRegX.isValid() && "Source super-reg not valid");
       // This instruction is reading and writing X registers.  This may upset
       // the register scavenger and machine verifier, so we need to indicate
@@ -5145,59 +5157,6 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::ORRWrr), DestReg)
           .addReg(AArch64::WZR)
           .addReg(SrcReg, getKillRegState(KillSrc));
-    }
-    return;
-  }
-
-  // GPR32 zeroing
-  if (AArch64::GPR32spRegClass.contains(DestReg) && SrcReg == AArch64::WZR) {
-    if (Subtarget.hasZeroCycleZeroingGPR64() &&
-        !Subtarget.hasZeroCycleZeroingGPR32()) {
-      MCRegister DestRegX = RI.getMatchingSuperReg(DestReg, AArch64::sub_32,
-                                                   &AArch64::GPR64spRegClass);
-      assert(DestRegX.isValid() && "Destination super-reg not valid");
-      BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestRegX)
-          .addImm(0)
-          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
-    } else if (Subtarget.hasZeroCycleZeroingGPR32()) {
-      BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg)
-          .addImm(0)
-          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
-    } else {
-      BuildMI(MBB, I, DL, get(AArch64::ORRWrr), DestReg)
-          .addReg(AArch64::WZR)
-          .addReg(AArch64::WZR);
-    }
-    return;
-  }
-
-  if (AArch64::GPR64spRegClass.contains(DestReg) &&
-      AArch64::GPR64spRegClass.contains(SrcReg)) {
-    if (DestReg == AArch64::SP || SrcReg == AArch64::SP) {
-      // If either operand is SP, expand to ADD #0.
-      BuildMI(MBB, I, DL, get(AArch64::ADDXri), DestReg)
-          .addReg(SrcReg, getKillRegState(KillSrc))
-          .addImm(0)
-          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
-    } else {
-      // Otherwise, expand to ORR XZR.
-      BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestReg)
-          .addReg(AArch64::XZR)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    }
-    return;
-  }
-
-  // GPR64 zeroing
-  if (AArch64::GPR64spRegClass.contains(DestReg) && SrcReg == AArch64::XZR) {
-    if (Subtarget.hasZeroCycleZeroingGPR64()) {
-      BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestReg)
-          .addImm(0)
-          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
-    } else {
-      BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestReg)
-          .addReg(AArch64::XZR)
-          .addReg(AArch64::XZR);
     }
     return;
   }
@@ -5283,6 +5242,27 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                        AArch64::zsub2, AArch64::zsub3};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
                      Indices);
+    return;
+  }
+
+  if (AArch64::GPR64spRegClass.contains(DestReg) &&
+      (AArch64::GPR64spRegClass.contains(SrcReg) || SrcReg == AArch64::XZR)) {
+    if (DestReg == AArch64::SP || SrcReg == AArch64::SP) {
+      // If either operand is SP, expand to ADD #0.
+      BuildMI(MBB, I, DL, get(AArch64::ADDXri), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          .addImm(0)
+          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+    } else if (SrcReg == AArch64::XZR && Subtarget.hasZeroCycleZeroingGPR64()) {
+      BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestReg)
+          .addImm(0)
+          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+    } else {
+      // Otherwise, expand to ORR XZR.
+      BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestReg)
+          .addReg(AArch64::XZR)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+    }
     return;
   }
 
