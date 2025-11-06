@@ -2515,14 +2515,20 @@ collectVersions(Value *V, SmallVectorImpl<Function *> &Versions,
 // we identify the function versions which are associated with an IFUNC symbol.
 // We do that by examining the resolver function of the IFUNC. Once we have
 // collected all the function versions, we sort them in decreasing priority
-// order. This is necessary for identifying the highest priority callee version
-// for a given caller version. We then collect all the callsites to versioned
+// order. This is necessary for determining the most suitable callee version
+// for each caller version. We then collect all the callsites to versioned
 // functions. The static resolution is performed by comparing the feature sets
-// between callers and callees. Versions of the callee may be skipped if they
-// depend on features we already know are unavailable. This information can
-// be deduced on each subsequent iteration of the set of caller versions: prior
-// iterations correspond to higher priority caller versions which would not have
-// been selected in a hypothetical runtime execution.
+// between callers and callees. Specifically:
+// * Start a walk over caller and callee lists simultaneously in order of
+//   decreasing priority.
+// * Statically resolve calls from the current caller to the current callee,
+//   iff the caller feature bits are a superset of the callee feature bits.
+// * For FMV callers, as long as the caller feature bits are a subset of the
+//   callee feature bits, advance to the next callee. This effectively prevents
+//   considering the current callee as a candidate for static resolution by
+//   following callers (explanation: preceding callers would not have been
+//   selected in a hypothetical runtime execution).
+// * Advance to the next caller.
 //
 // Presentation in EuroLLVM2025:
 // https://www.youtube.com/watch?v=k54MFimPz-A&t=867s
@@ -2632,27 +2638,27 @@ static bool OptimizeNonTrivialIFuncs(
     // infer that mops is unavailable. This would allow us to skip callee
     // versions which depend on mops. I tried implementing this but the
     // complexity was cubic :/
-    auto redirectCalls = [&](ArrayRef<Function *> Callers,
-                             ArrayRef<Function *> Callees) {
+    auto staticallyResolveCalls = [&](ArrayRef<Function *> Callers,
+                                      ArrayRef<Function *> Callees,
+                                      bool CallerIsFMV) {
       // Index to the highest callee candidate.
       unsigned I = 0;
 
       for (Function *const &Caller : Callers) {
-        bool CallerIsFMV = GetTTI(*Caller).isMultiversionedFunction(*Caller);
+        if (I == Callees.size())
+          break;
 
         LLVM_DEBUG(dbgs() << "   Examining "
                           << (CallerIsFMV ? "FMV" : "regular") << " caller "
                           << Caller->getName() << "\n");
 
-        if (I == Callees.size())
-          break;
-
         Function *Callee = Callees[I];
         APInt CallerBits = FeatureMask[Caller];
         APInt CalleeBits = FeatureMask[Callee];
 
-        // If the feature set of the caller implies the feature set of the
-        // callee then all the callsites can be statically resolved.
+        // Statically resolve calls from the current caller to the current
+        // callee, iff the caller feature bits are a superset of the callee
+        // feature bits.
         if (CalleeBits.isSubsetOf(CallerBits)) {
           // Not all caller versions are necessarily users of the callee IFUNC.
           if (auto It = CallSites.find(Caller); It != CallSites.end()) {
@@ -2669,14 +2675,12 @@ static bool OptimizeNonTrivialIFuncs(
         if (!CallerIsFMV)
           continue;
 
-        // Subsequent iterations of the outermost loop (set of callers)
-        // will consider the caller of the current iteration unavailable.
-        // Therefore we can skip all those callees which depend on it.
-        while (CallerBits.isSubsetOf(CalleeBits)) {
-          if (++I == Callees.size())
-            break;
-          CalleeBits = FeatureMask[Callees[I]];
-        }
+        // For FMV callers, as long as the caller feature bits are a subset of
+        // the callee feature bits, advance to the next callee. This effectively
+        // prevents considering the current callee as a candidate for static
+        // resolution by following callers.
+        while (CallerBits.isSubsetOf(FeatureMask[Callees[I]]) &&
+               ++I < Callees.size());
       }
     };
 
@@ -2684,12 +2688,12 @@ static bool OptimizeNonTrivialIFuncs(
 
     // Optimize non-FMV calls.
     if (OptimizeNonFMVCallers)
-      redirectCalls(NonFMVCallers, Callees);
+      staticallyResolveCalls(NonFMVCallers, Callees, /*CallerIsFMV=*/false);
 
     // Optimize FMV calls.
     for (GlobalIFunc *CallerIF : CallerIFuncs) {
       auto &Callers = VersionedFuncs[CallerIF];
-      redirectCalls(Callers, Callees);
+      staticallyResolveCalls(Callers, Callees, /*CallerIsFMV=*/true);
     }
 
     if (CalleeIF->use_empty() ||
