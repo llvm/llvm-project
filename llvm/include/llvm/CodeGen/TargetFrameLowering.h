@@ -382,8 +382,8 @@ public:
   /// This method should not be called by any passes outside of PEI, because
   /// it may change state passed in by \p MF and \p RS. The preferred
   /// interface outside PEI is getCalleeSaves.
-  LLVM_DEPRECATED("Use determinePrologCalleeSaves instead",
-                  "determinePrologCalleeSaves")
+  // LLVM_DEPRECATED("Use determinePrologCalleeSaves instead",
+  //                 "determinePrologCalleeSaves")
   virtual void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                                     RegScavenger *RS = nullptr) const;
 
