@@ -111,7 +111,7 @@ constexpr bool test() {
 
   {
     //two ranges with different size type
-    std::ranges::concat_view v(UnsignedSizeView(), IntSizeView());
+    std::ranges::concat_view v(UnsignedSizeView{}, IntSizeView{});
     assert(v.size() == 18);
     // common type between size_t and int should be size_t
     ASSERT_SAME_TYPE(decltype(v.size()), unsigned int);

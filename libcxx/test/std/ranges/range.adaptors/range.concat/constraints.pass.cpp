@@ -35,6 +35,8 @@ private:
   int* end_;
 };
 
+template <typename... Ts>
+concept ConcatViewConstraintsPass = requires(Ts&&... a) { std::views::concat(a...); };
 
 int main(int, char**) {
 
@@ -57,6 +59,29 @@ int main(int, char**) {
   // random access range
   {
     static_assert(WellFormedView<std::vector<int>>);
+  }
+
+  {
+    // LWG 4082
+    std::vector<int> v{1, 2, 3};
+    auto r = std::views::counted(std::back_inserter(v), 3);
+    //auto c = std::views::concat(r);
+    static_assert(!ConcatViewConstraintsPass<decltype(r)>);
+  }
+
+  {
+    // input is a view and has 0 size
+    static_assert(!ConcatViewConstraintsPass<>);
+  }
+
+  {
+    // input is a view and has at least an element
+    static_assert(ConcatViewConstraintsPass<std::vector<int>>);
+  }
+
+  {
+    // inputs are non-concatable
+    static_assert(!ConcatViewConstraintsPass<std::vector<int>, std::vector<std::string>>);
   }
 
   return 0;

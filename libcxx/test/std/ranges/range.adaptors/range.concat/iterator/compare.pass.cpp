@@ -66,12 +66,12 @@ constexpr void test() {
     decltype(auto) it2 = view.begin() + 3;
 
     assert(it1 != it2);
-    assert(*it1 = 0);
-    assert(*it1 = 4);
+    assert(*it1 == 0);
+    assert(*it2 == 4);
     it1++;
     it2++;
-    assert(*it1 = 1);
-    assert(*it1 = 5);
+    assert(*it1 == 1);
+    assert(*it2 == 5);
   }
 
   {
