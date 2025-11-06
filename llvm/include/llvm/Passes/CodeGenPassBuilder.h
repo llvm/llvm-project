@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -637,6 +638,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>(),
               /*Force=*/true);
     addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>(),
+              /*Force=*/true);
+    addIRPass(RequireAnalysisPass<RuntimeLibraryAnalysis, Module>(),
               /*Force=*/true);
     addISelPasses(addIRPass);
   }

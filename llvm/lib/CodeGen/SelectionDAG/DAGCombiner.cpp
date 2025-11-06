@@ -4046,6 +4046,8 @@ static SDValue foldSubCtlzNot(SDNode *N, SelectionDAG &DAG) {
                                     m_ConstInt(AndMask)))) {
     // Type Legalisation Pattern:
     // (sub (ctlz (and (xor Op XorMask) AndMask)) BitWidthDiff)
+    if (BitWidthDiff.getZExtValue() >= BitWidth)
+      return SDValue();
     unsigned AndMaskWidth = BitWidth - BitWidthDiff.getZExtValue();
     if (!(AndMask.isMask(AndMaskWidth) && XorMask.countr_one() >= AndMaskWidth))
       return SDValue();
@@ -9374,7 +9376,7 @@ static unsigned bigEndianByteAt(unsigned BW, unsigned i) {
 // Check if the bytes offsets we are looking at match with either big or
 // little endian value loaded. Return true for big endian, false for little
 // endian, and std::nullopt if match failed.
-static std::optional<bool> isBigEndian(const ArrayRef<int64_t> ByteOffsets,
+static std::optional<bool> isBigEndian(ArrayRef<int64_t> ByteOffsets,
                                        int64_t FirstOffset) {
   // The endian can be decided only when it is 2 bytes at least.
   unsigned Width = ByteOffsets.size();

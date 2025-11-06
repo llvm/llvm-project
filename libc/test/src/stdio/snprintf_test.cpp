@@ -8,7 +8,11 @@
 
 #include "src/stdio/snprintf.h"
 
+#include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+
+using LlvmLibcSNPrintfTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 // The sprintf test cases cover testing the shared printf functionality, so
 // these tests will focus on snprintf exclusive features.
@@ -58,4 +62,15 @@ TEST(LlvmLibcSNPrintfTest, NoCutOff) {
   written = LIBC_NAMESPACE::snprintf(buff, 20, "%s", "1234567890");
   EXPECT_EQ(written, 10);
   ASSERT_STREQ(buff, "1234567890");
+}
+
+TEST(LlvmLibcSNPrintfTest, CharsWrittenOverflow) {
+  char buff[0];
+
+  // Trigger an overflow in the return value of snprintf by writing more than
+  // INT_MAX bytes.
+  int int_max = LIBC_NAMESPACE::cpp::numeric_limits<int>::max();
+  int written = LIBC_NAMESPACE::snprintf(buff, 0, "%*stest", int_max, "");
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
 }

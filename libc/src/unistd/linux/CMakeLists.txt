@@ -26,6 +26,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  chown
+  SRCS
+    chown.cpp
+  HDRS
+    ../chown.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   close
   SRCS
     close.cpp
@@ -274,6 +288,20 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getgid
+  SRCS
+    getgid.cpp
+  HDRS
+    ../getgid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(
