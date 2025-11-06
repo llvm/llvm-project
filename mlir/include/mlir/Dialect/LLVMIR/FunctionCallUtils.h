@@ -55,9 +55,23 @@ lookupOrCreatePrintF64Fn(OpBuilder &b, Operation *moduleOp,
 FailureOr<LLVM::LLVMFuncOp>
 lookupOrCreateApFloatPrintFn(OpBuilder &b, Operation *moduleOp,
                              SymbolTableCollection *symbolTables = nullptr);
-FailureOr<LLVM::LLVMFuncOp>
-lookupOrCreateApFloatAddFFn(OpBuilder &b, Operation *moduleOp,
-                            SymbolTableCollection *symbolTables = nullptr);
+
+#define APFLOAT_BIN_OPS(X)                                                     \
+  X(add)                                                                       \
+  X(subtract)                                                                  \
+  X(multiply)                                                                  \
+  X(divide)                                                                    \
+  X(remainder)                                                                 \
+  X(mod)
+
+#define LOOKUP_OR_CREATE_APFLOAT_FN_DECL(OP)                                   \
+  FailureOr<LLVM::LLVMFuncOp> lookupOrCreateApFloat##OP##Fn(                   \
+      OpBuilder &b, Operation *moduleOp,                                       \
+      SymbolTableCollection *symbolTables = nullptr);
+
+APFLOAT_BIN_OPS(LOOKUP_OR_CREATE_APFLOAT_FN_DECL)
+
+#undef LOOKUP_OR_CREATE_APFLOAT_FN_DECL
 
 /// Declares a function to print a C-string.
 /// If a custom runtime function is defined via `runtimeFunctionName`, it must
