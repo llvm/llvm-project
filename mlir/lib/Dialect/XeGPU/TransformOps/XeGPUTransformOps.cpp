@@ -94,6 +94,8 @@ createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
 static xegpu::CreateNdDescOp
 setDescLayout(transform::TransformRewriter &rewriter,
               xegpu::CreateNdDescOp descOp, xegpu::LayoutAttr layout) {
+  assert(descOp.getMixedOffsets().size() == 0 &&
+         "create desc op with offsets is not supported");
   auto oldTensorDesc = descOp.getType();
   auto descType = xegpu::TensorDescType::get(
       oldTensorDesc.getShape(), oldTensorDesc.getElementType(),
@@ -103,8 +105,6 @@ setDescLayout(transform::TransformRewriter &rewriter,
       /*layout=*/layout);
 
   rewriter.setInsertionPointAfter(descOp);
-  assert(descOp.getMixedOffsets().size() == 0 &&
-         "create desc op with offsets is not supported");
   auto newDescOp = rewriter.replaceOpWithNewOp<xegpu::CreateNdDescOp>(
       descOp, descType, descOp.getSource(), descOp.getMixedSizes(),
       descOp.getMixedStrides());
