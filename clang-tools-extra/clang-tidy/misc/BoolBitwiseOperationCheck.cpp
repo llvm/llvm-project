@@ -17,6 +17,68 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
+static const Stmt* ignoreParenExpr(const Stmt* S) {
+  while (const auto* PE = dyn_cast<ParenExpr>(S)) {
+    S = PE->getSubExpr();
+  }
+  return S;
+}
+
+template<typename R>
+static bool
+containsNodeIgnoringParenExpr(R&& children, const Stmt* Node) {
+  for (const Stmt* Child : children) {
+    if (ignoreParenExpr(Child) == Node) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool isBooleanImplicitCastStmt(const Stmt* S) {
+  const auto* ICE = dyn_cast<ImplicitCastExpr>(S);
+  return ICE && ICE->getType()->isBooleanType();
+}
+
+namespace {
+AST_MATCHER(BinaryOperator, assignsToBoolean) {
+  auto Parents = Finder->getASTContext().getParents(Node);
+  
+  for (const auto& Parent : Parents) {
+    // Check for Decl parents
+    if (const auto* D = Parent.template get<Decl>()) {
+      const Expr* InitExpr = nullptr;
+      
+      if (const auto* VD = dyn_cast<VarDecl>(D)) {
+        InitExpr = VD->getInit();
+      } else if (const auto* FD = dyn_cast<FieldDecl>(D)) {
+        InitExpr = FD->getInClassInitializer();
+      } else if (const auto* NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D)) {
+        if (NTTPD->getType()->isBooleanType()) {
+          return true;
+        }
+      }
+      
+      if (InitExpr && isBooleanImplicitCastStmt(InitExpr)) {
+        return true;
+      }
+    }
+    
+    // Check for Stmt parents
+    if (const auto* S = Parent.template get<Stmt>()) {
+      for (const Stmt* Child : S->children()) {
+        if (isBooleanImplicitCastStmt(Child) && containsNodeIgnoringParenExpr(Child->children(), &Node)) {
+          return true;
+        }
+      }
+    }
+  }
+  
+  return false;
+}
+
+} // namespace
+
 static const NamedDecl *
 getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
   if (BO->isCompoundAssignmentOp()) {
@@ -26,6 +88,8 @@ getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
   }
   return nullptr;
 }
+
+constexpr std::array<llvm::StringRef, 4U> OperatorsNames{"|", "&", "|=", "&="};
 
 constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
     OperatorsTransformation{{{"|", "||"},
@@ -62,8 +126,12 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperator(
           unless(isExpansionInSystemHeader()),
-          hasAnyOperatorName("|", "&", "|=", "&="),
-          hasEitherOperand(expr(hasType(booleanType()))),
+          hasAnyOperatorName(OperatorsNames),
+          anyOf(
+            hasOperands(expr(hasType(booleanType())), expr(hasType(booleanType()))),
+            assignsToBoolean()
+          ),
+          // isBooleanLikeOperands(),
           optionally(hasParent( // to simple implement transformations like
                                 // `a&&b|c` -> `a&&(b||c)`
               binaryOperator().bind("p"))))

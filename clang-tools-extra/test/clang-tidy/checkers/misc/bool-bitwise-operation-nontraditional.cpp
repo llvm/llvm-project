@@ -167,25 +167,26 @@ void bad_with_priors() {
 
 void bad_with_priors2() {
     bool a = false, b = true, c = true;
+    bool r;
     a xor b bitand c;
     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a xor (b and c);
 
     // braces added in the first change
-    a bitor b bitand c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:15: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
-    // CHECK-FIXES: a or (b and c);
+    r = a bitor b bitand c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:19: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: r = a or (b and c);
 
-    b bitand c xor a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
-    // CHECK-FIXES: (b and c) xor a;
+    r = b bitand c xor a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: r = (b and c) xor a;
 
     // braces added in the first change
-    b bitand c bitor a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-FIXES: (b and c) or a;
+    r = b bitand c bitor a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:20: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: r = (b and c) or a;
 }
 
 template<typename T>
@@ -204,13 +205,13 @@ void bad_has_ancestor() {
     // CHECK-FIXES: a xor ident(b and c or a);
 
     a bitor ident(a ? b bitand c : c);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:25: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a bitor ident(a ? b and c : c);
 }
 
 void bad_with_priors_already_braced() {
     bool a = false, b = true, c = true;
+    bool r;
     a and (b bitor c);
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a and (b or c);
@@ -228,19 +229,19 @@ void bad_with_priors_already_braced() {
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a xor (b and c);
 
-    a bitor (b bitand c);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
-    // CHECK-FIXES: a or (b and c);
+    r = a bitor (b bitand c);
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:20: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: r = a or (b and c);
 
     (b bitand c) xor a;
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (b and c) xor a;
 
-    (b bitand c) bitor a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-FIXES: (b and c) or a;
+    r = (b bitand c) bitor a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:22: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: r = (b and c) or a;
 }
 
 void bad_with_priors_compound() {
