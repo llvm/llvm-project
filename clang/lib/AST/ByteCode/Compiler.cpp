@@ -6007,6 +6007,8 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
       CaseLabels[SC] = this->getLabel();
 
       const Expr *Value = CS->getLHS();
+      if (Value->isValueDependent())
+        return false;
       PrimType ValueT = this->classifyPrim(Value->getType());
 
       // Compare the case statement's value to the switch condition.
