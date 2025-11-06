@@ -206,7 +206,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
         int128.x[0] = data2;
         int128.x[1] = data1;
       }
-      SetUInt128(llvm::APInt(128, int128.x));
+      SetUIntN(llvm::APInt(128, int128.x));
     } else {
       std::vector<uint8_t> bytes(src_len, 0);
       for (size_t i = 0; i < src_len; i++)
@@ -229,7 +229,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
 
       llvm::APInt uint = llvm::APInt::getZero(src_len * 8);
       llvm::LoadIntFromMemory(uint, bytes.data(), src_len);
-      SetUInt128(uint);
+      SetUIntN(uint);
     }
     break;
   case eEncodingIEEE754:
@@ -744,7 +744,7 @@ bool RegisterValue::SetUInt(uint64_t uint, uint32_t byte_size) {
   } else if (byte_size <= 8) {
     SetUInt64(uint);
   } else if (byte_size <= 16) {
-    SetUInt128(llvm::APInt(128, uint));
+    SetUIntN(llvm::APInt(128, uint));
   } else
     return false;
   return true;

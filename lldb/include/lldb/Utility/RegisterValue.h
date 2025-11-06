@@ -218,7 +218,7 @@ public:
     m_scalar = uint;
   }
 
-  void SetUInt128(llvm::APInt uint) {
+  void SetUIntN(llvm::APInt uint) {
     m_type = eTypeUIntN;
     m_scalar = std::move(uint);
   }
