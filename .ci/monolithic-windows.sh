@@ -32,8 +32,6 @@ export LD=link
 # see https://github.com/llvm/llvm-project/pull/82393 and
 # https://discourse.llvm.org/t/rfc-future-of-windows-pre-commit-ci/76840/40
 # for further information.
-# We limit the number of parallel compile jobs to 24 control memory
-# consumption and improve build reliability.
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \

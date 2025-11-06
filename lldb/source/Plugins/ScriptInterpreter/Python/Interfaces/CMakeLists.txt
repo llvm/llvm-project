@@ -23,6 +23,7 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces PLUGIN
   OperatingSystemPythonInterface.cpp
   ScriptInterpreterPythonInterfaces.cpp
   ScriptedFramePythonInterface.cpp
+  ScriptedFrameProviderPythonInterface.cpp
   ScriptedPlatformPythonInterface.cpp
   ScriptedProcessPythonInterface.cpp
   ScriptedPythonInterface.cpp

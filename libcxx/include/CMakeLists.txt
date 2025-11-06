@@ -262,6 +262,7 @@ set(files
   __chrono/gps_clock.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/is_clock.h
   __chrono/leap_second.h
   __chrono/literals.h
   __chrono/local_info.h

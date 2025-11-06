@@ -84,8 +84,9 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
   // For now we are just making sure the file exists for a given module
   if (!m_core_module_sp && FileSystem::Instance().Exists(m_core_file)) {
     ModuleSpec core_module_spec(m_core_file, target_sp->GetArchitecture());
+    core_module_spec.SetTarget(target_sp);
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
-                                             nullptr, nullptr, nullptr));
+                                             nullptr, nullptr));
     if (m_core_module_sp) {
       ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
       if (core_objfile && core_objfile->GetType() == ObjectFile::eTypeCoreFile)

@@ -1,4 +1,5 @@
 add_flang_library(FIROpenACCTransforms
+  ACCInitializeFIRAnalyses.cpp
   ACCRecipeBufferization.cpp
 
   DEPENDS
@@ -6,6 +7,8 @@ add_flang_library(FIROpenACCTransforms
 
   LINK_LIBS
   FIRDialect
+  FIROpenACCAnalysis
+  HLFIRDialect
 
   MLIR_LIBS
   MLIRIR

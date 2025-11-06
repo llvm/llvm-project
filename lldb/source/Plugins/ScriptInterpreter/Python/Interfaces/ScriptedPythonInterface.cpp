@@ -243,4 +243,21 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
   return static_cast<lldb::DescriptionLevel>(unsigned_val);
 }
 
+template <>
+lldb::StackFrameListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
+    python::PythonObject &p, Status &error) {
+
+  lldb::SBFrameList *sb_frame_list = reinterpret_cast<lldb::SBFrameList *>(
+      python::LLDBSWIGPython_CastPyObjectToSBFrameList(p.get()));
+
+  if (!sb_frame_list) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBFrameList to lldb::StackFrameListSP.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBFrameList(*sb_frame_list);
+}
+
 #endif

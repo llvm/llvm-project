@@ -444,6 +444,14 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ThreadSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::StackFrameListSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ThreadPlanSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -626,6 +634,11 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 template <>
 lldb::DescriptionLevel
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::StackFrameListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
     python::PythonObject &p, Status &error);
 
 } // namespace lldb_private
