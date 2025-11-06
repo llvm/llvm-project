@@ -24,6 +24,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
 
 //===----------------------------------------------------------------------===//
@@ -65,6 +66,14 @@ static llvm::LogicalResult checkCudaAttr(Op op) {
 }
 
 llvm::LogicalResult cuf::AllocOp::verify() { return checkCudaAttr(*this); }
+
+// Attach value-scoped MemAlloc to the result value.
+void cuf::AllocOp::getEffects(
+    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
+                       mlir::cast<mlir::OpResult>(getPtr()),
+                       mlir::SideEffects::DefaultResource::get());
+}
 
 //===----------------------------------------------------------------------===//
 // FreeOp

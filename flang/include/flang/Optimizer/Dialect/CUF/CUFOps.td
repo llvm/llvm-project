@@ -21,13 +21,14 @@ include "flang/Optimizer/Dialect/FIRAttr.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
 
 def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc]>]> {
+    MemoryEffectsOpInterface]> {
   let summary = "Allocate an object on device";
 
   let description = [{
@@ -61,6 +62,11 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
       CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::ValueRange", "{}">:$shape,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+
+  let extraClassDeclaration = [{
+    void getEffects(
+        llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects);
+  }];
 
   let hasVerifier = 1;
 }
