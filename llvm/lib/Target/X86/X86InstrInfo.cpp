@@ -694,8 +694,7 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
                     .addImm(31));
   } else {
     // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
-    recordInstr(BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR)
-                    .addReg(TmpGPR));
+    recordInstr(BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR).addReg(TmpGPR));
   }
 
   // Broadcast to TmpX (vector mask)
@@ -852,7 +851,8 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
                     .setMIFlags(MachineInstr::MIFlag::NoMerge));
   }
 
-  assert(FirstInstr && LastInstr && "Expected at least one expanded instruction");
+  assert(FirstInstr && LastInstr &&
+         "Expected at least one expanded instruction");
   auto BundleEnd = LastInstr->getIterator();
   finalizeBundle(*MBB, FirstInstr->getIterator(), std::next(BundleEnd));
 
@@ -920,25 +920,28 @@ bool X86InstrInfo::expandCtSelectWithCMOV(MachineInstr &MI) const {
 
 /// Expand i386-specific CT_SELECT pseudo instructions (post-RA, constant-time)
 /// These internal pseudos receive a pre-materialized condition byte from the
-/// custom inserter, avoiding EFLAGS corruption issues during i64 type legalization.
+/// custom inserter, avoiding EFLAGS corruption issues during i64 type
+/// legalization.
 bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
   MachineBasicBlock *MBB = MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
 
   // CT_SELECT_I386_INT_GRxxrr has operands: (outs dst, tmp_byte, tmp_mask),
   // (ins src1, src2, cond_byte)
-  // Note: cond_byte is pre-materialized by custom inserter, not EFLAGS-dependent
+  // Note: cond_byte is pre-materialized by custom inserter, not
+  // EFLAGS-dependent
   Register DstReg = MI.getOperand(0).getReg();
   Register TmpByteReg = MI.getOperand(1).getReg();
   Register TmpMaskReg = MI.getOperand(2).getReg();
   Register Src1Reg = MI.getOperand(3).getReg();
   Register Src2Reg = MI.getOperand(4).getReg();
-  Register CondByteReg = MI.getOperand(5).getReg();  // Pre-materialized condition byte
+  Register CondByteReg =
+      MI.getOperand(5).getReg(); // Pre-materialized condition byte
 
   // Determine instruction opcodes based on register width
   unsigned MovZXOp, NegOp, MovOp, AndOp, NotOp, OrOp;
   if (MI.getOpcode() == X86::CT_SELECT_I386_INT_GR8rr) {
-    MovZXOp = 0;  // No zero-extend needed for GR8
+    MovZXOp = 0; // No zero-extend needed for GR8
     NegOp = X86::NEG8r;
     MovOp = X86::MOV8rr;
     AndOp = X86::AND8rr;
@@ -967,8 +970,8 @@ bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
   // Step 1: Copy pre-materialized condition byte to TmpByteReg
   // This allows the bundle to work with allocated temporaries
   auto I1 = BuildMI(*MBB, MI, DL, get(X86::MOV8rr), TmpByteReg)
-      .addReg(CondByteReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+                .addReg(CondByteReg)
+                .setMIFlag(MachineInstr::MIFlag::NoMerge);
   auto BundleStart = I1->getIterator();
 
   // Step 2: Zero-extend condition byte to register width (0 or 1)
@@ -979,7 +982,9 @@ bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
   }
 
   // Step 3: Convert condition to bitmask (NEG: 1 -> 0xFFFF..., 0 -> 0x0000...)
-  Register MaskReg = (MI.getOpcode() == X86::CT_SELECT_I386_INT_GR8rr) ? TmpByteReg : TmpMaskReg;
+  Register MaskReg = (MI.getOpcode() == X86::CT_SELECT_I386_INT_GR8rr)
+                         ? TmpByteReg
+                         : TmpMaskReg;
   BuildMI(*MBB, MI, DL, get(NegOp), MaskReg)
       .addReg(MaskReg)
       .setMIFlag(MachineInstr::MIFlag::NoMerge);
@@ -1007,9 +1012,9 @@ bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
 
   // Step 8: Final result: (src1 & mask) | (src2 & ~mask)
   auto LI = BuildMI(*MBB, MI, DL, get(OrOp), DstReg)
-      .addReg(DstReg)
-      .addReg(MaskReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+                .addReg(DstReg)
+                .addReg(MaskReg)
+                .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // Bundle all generated instructions for atomic execution before removing MI
   auto BundleEnd = std::next(LI->getIterator());
@@ -1018,11 +1023,12 @@ bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
     finalizeBundle(*MBB, BundleStart, BundleEnd);
   }
 
-  // TODO: Optimization opportunity - The register allocator may choose callee-saved
-  // registers (e.g., %ebx, %esi) for TmpByteReg/TmpMaskReg, causing unnecessary
-  // save/restore overhead. Consider constraining these to caller-saved register
-  // classes (e.g., GR8_AL, GR32_CallSaved) in the TableGen definitions to improve
-  // constant-time performance by eliminating prologue/epilogue instructions.
+  // TODO: Optimization opportunity - The register allocator may choose
+  // callee-saved registers (e.g., %ebx, %esi) for TmpByteReg/TmpMaskReg,
+  // causing unnecessary save/restore overhead. Consider constraining these to
+  // caller-saved register classes (e.g., GR8_AL, GR32_CallSaved) in the
+  // TableGen definitions to improve constant-time performance by eliminating
+  // prologue/epilogue instructions.
 
   // Remove the original pseudo instruction
   MI.eraseFromParent();
@@ -11471,25 +11477,18 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     if (!ST.hasSSE1())
       return;
 
-    // PXOR is safe to use because it doesn't affect flags.
-    BuildMI(MBB, Iter, DL, get(X86::PXORrr), Reg)
-        .addReg(Reg, RegState::Undef)
-        .addReg(Reg, RegState::Undef);
+    BuildMI(MBB, Iter, DL, get(X86::V_SET0), Reg);
   } else if (X86::VR256RegClass.contains(Reg)) {
     // YMM#
     if (!ST.hasAVX())
       return;
 
-    // Clearing the XMM subregister zeroes the full YMM, and V_SET0 expands to
-    // a vector XOR, so this is safe to use because it doesn't affect flags.
     BuildMI(MBB, Iter, DL, get(X86::V_SET0), TRI.getSubReg(Reg, X86::sub_xmm));
   } else if (X86::VR512RegClass.contains(Reg)) {
     // ZMM#
     if (!ST.hasAVX512())
       return;
 
-    // Clearing the XMM subregister zeroes the full ZMM, and AVX512_128_SET0
-    // expands to a vector XOR, so it doesn't affect flags.
     BuildMI(MBB, Iter, DL, get(X86::AVX512_128_SET0),
             TRI.getSubReg(Reg, X86::sub_xmm));
   } else if (X86::VK1RegClass.contains(Reg) || X86::VK2RegClass.contains(Reg) ||
@@ -11498,11 +11497,8 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     if (!ST.hasVLX())
       return;
 
-    // KXOR is safe to use because it doesn't affect flags.
-    unsigned Op = ST.hasBWI() ? X86::KXORQkk : X86::KXORWkk;
-    BuildMI(MBB, Iter, DL, get(Op), Reg)
-        .addReg(Reg, RegState::Undef)
-        .addReg(Reg, RegState::Undef);
+    unsigned Op = ST.hasBWI() ? X86::KSET0Q : X86::KSET0W;
+    BuildMI(MBB, Iter, DL, get(Op), Reg);
   }
 }
 
