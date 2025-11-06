@@ -1,13 +1,13 @@
 // ALL-NOT: unknown argument
 
 // Warning: careful to not grep some directory in the buid
-// RUN: %clang -c %s -### 2>&1 | not grep fbounds-safety
+// RUN: %clang_no_bounds_check_mode_specified -c %s -### 2>&1 | not grep fbounds-safety
 
 // RUN: %clang -fbounds-safety -### %s 2>&1 | FileCheck -check-prefixes ALL,T0 %s
 // T0: -fbounds-safety
 // T0: -enable-constraint-elimination
 
-// RUN: %clang -fbounds-safety -fno-bounds-safety -c %s -### 2>&1 | not grep -e fbounds-safety -e enable-constraint-elimination
+// RUN: %clang_no_bounds_check_mode_specified -fbounds-safety -fno-bounds-safety -c %s -### 2>&1 | not grep -e fbounds-safety -e enable-constraint-elimination
 
 // RUN: %clang -fno-bounds-safety -fbounds-safety -c %s -### 2>&1 | FileCheck -check-prefixes ALL,T4 %s
 // T4: -fbounds-safety

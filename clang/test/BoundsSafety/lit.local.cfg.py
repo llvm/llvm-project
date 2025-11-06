@@ -1,4 +1,4 @@
-import lit
+import lit.formats
 import os
 
 # clang/test uses external shell by default, but all tests in clang/test/BoundsSafety
@@ -7,7 +7,7 @@ config.test_format = lit.formats.ShTest(False)
 
 cc1_substituted = [ False ]
 clang_substituted = [ False ]
-extra_flags = '-fno-bounds-safety-bringup-missing-checks=all'
+extra_flags = '-fbounds-safety-bringup-missing-checks=all'
 
 def get_subst(subst_name):
     subst_re = r'%\b{}\b'.format(subst_name)
@@ -45,18 +45,25 @@ def patch_clang_subst(sub_tuple):
     return (subst_name, subst)
 
 
+force_new_bounds_checks_on = False
+
 # Provide an un-patched substitution
 default_clang_subst = get_subst('clang')
 config.substitutions.append(
     (r'%\bclang_no_bounds_check_mode_specified\b', default_clang_subst)
 )
 
-config.substitutions = list(map(patch_cc1_subst, config.substitutions))
-config.substitutions = list(map(patch_clang_subst, config.substitutions))
+if False:
+    force_new_bounds_checks_on = True
 
-dir_with_patched_sub = os.path.dirname(__file__)
-for subst, patched in [('%clang_cc1', cc1_substituted[0]), ('%clang', clang_substituted[0])]:
-    if not patched:
-        lit_config.fatal(f'Failed to add `{extra_flags}` to {subst} invocations under {dir_with_patched_sub}')
-    else:
-        lit_config.note(f'Implicitly passing `{extra_flags}` to {subst} invocations under {dir_with_patched_sub}')
+if force_new_bounds_checks_on:
+    config.substitutions = list(map(patch_cc1_subst, config.substitutions))
+    config.substitutions = list(map(patch_clang_subst, config.substitutions))
+
+    dir_with_patched_sub = os.path.dirname(__file__)
+    for subst, patched in [('%clang_cc1', cc1_substituted[0]), ('%clang', clang_substituted[0])]:
+        if not patched:
+            lit_config.fatal(f'Failed to add `{extra_flags}` to {subst} invocations under {dir_with_patched_sub}')
+        else:
+            lit_config.note(f'Implicitly passing `{extra_flags}` to {subst} invocations under {dir_with_patched_sub}')
+
