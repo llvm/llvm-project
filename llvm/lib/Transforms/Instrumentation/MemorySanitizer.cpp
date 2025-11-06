@@ -5936,7 +5936,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512bf16_dpbf16ps_128:
     case Intrinsic::x86_avx512bf16_dpbf16ps_256:
     case Intrinsic::x86_avx512bf16_dpbf16ps_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*ZeroPurifies=*/false);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/false);
       break;
 
     case Intrinsic::x86_sse_cmp_ss:
