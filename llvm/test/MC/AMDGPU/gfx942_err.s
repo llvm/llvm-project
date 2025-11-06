@@ -125,3 +125,31 @@ global_load_dword v[2:3], off lds
 
 scratch_load_dword v2, off lds
 // GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+// nv bit in FLAT instructions
+flat_load_ubyte v5, v[2:3] offset:4095 nv
+// GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+flat_store_dword v[2:3], v5 offset:4095 nv
+// GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+flat_atomic_add_f32 v[2:3], v5 nv
+// GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_load_dword v2, v[2:3], off sc0 nv
+// GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_store_dword v[2:3], v5 off sc0 nv
+// GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_atomic_add_f64 v[0:1], v[2:3], off sc1 nv
+// GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+global_atomic_swap v0, v[2:3], v5 off sc0 nv
+// GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+scratch_load_lds_dword v2, off nv
+// GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU
+
+scratch_store_dword v2, v3, off nv
+// GFX942: :[[@LINE-1]]:{{[0-9]+}}: error: nv is not supported on this GPU

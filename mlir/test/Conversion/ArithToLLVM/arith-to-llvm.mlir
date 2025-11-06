@@ -747,3 +747,29 @@ func.func @memref_bitcast(%1: memref<?xi16>) -> memref<?xbf16> {
   %2 = arith.bitcast %1 : memref<?xi16> to memref<?xbf16>
   func.return %2 : memref<?xbf16>
 }
+
+// -----
+
+// CHECK-LABEL: func @unsupported_fp_type
+//       CHECK:   arith.addf {{.*}} : f4E2M1FN
+//       CHECK:   arith.addf {{.*}} : vector<4xf4E2M1FN>
+//       CHECK:   arith.addf {{.*}} : vector<8x4xf4E2M1FN>
+func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: vector<4xf4E2M1FN>, %arg2: vector<8x4xf4E2M1FN>) -> (f4E2M1FN, vector<4xf4E2M1FN>, vector<8x4xf4E2M1FN>) {
+  %0 = arith.addf %arg0, %arg0 : f4E2M1FN
+  %1 = arith.addf %arg1, %arg1 : vector<4xf4E2M1FN>
+  %2 = arith.addf %arg2, %arg2 : vector<8x4xf4E2M1FN>
+  return %0, %1, %2 : f4E2M1FN, vector<4xf4E2M1FN>, vector<8x4xf4E2M1FN>
+}
+
+// -----
+
+//   CHECK-LABEL: func @supported_fp_type
+//         CHECK:   llvm.fadd {{.*}} : f32
+//         CHECK:   llvm.fadd {{.*}} : vector<4xf32>
+// CHECK-COUNT-4:   llvm.fadd {{.*}} : vector<8xf32>
+func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8xf32>) -> (f32, vector<4xf32>, vector<4x8xf32>) {
+  %0 = arith.addf %arg0, %arg0 : f32
+  %1 = arith.addf %arg1, %arg1 : vector<4xf32>
+  %2 = arith.addf %arg2, %arg2 : vector<4x8xf32>
+  return %0, %1, %2 : f32, vector<4xf32>, vector<4x8xf32>
+}
