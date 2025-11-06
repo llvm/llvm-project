@@ -48,6 +48,31 @@ def main(
     pr_number: int,
     return_code: int,
 ):
+    """The main entrypoint for the script.
+
+    This function parses failures from files, requests information from the
+    premerge advisor, and may write a Github comment depending upon the output.
+    There are four different scenarios:
+    1. There has never been a previous failure and the job passes - We do not
+       create a comment. We write out an empty file to the comment path so the
+       issue-write workflow knows not to create anything.
+    2. There has never been a previous failure and the job fails - We create a
+       new comment containing the failure information and any possible premerge
+       advisor findings.
+    3. There has been a previous failure and the job passes - We update the
+       existing comment by passing its ID anda passed message to the
+       issue-write workflow.
+    4. There has been a previous failure and the job fails - We update the
+       existing comment in the same manner as above, but generate the comment
+       as if we have a failure.
+
+    Args:
+      commit_sha: The base commit SHA for this PR run.
+      build_log_files: The list of JUnit XML files and ninja logs.
+      github_token: The token to use to access the Github API.
+      pr_number: The number of the PR associated with this run.
+      return_code: The numerical return code of ninja/CMake.
+    """
     if return_code == 0:
         with open("comment", "w") as comment_file_handle:
             comment = get_comment(
