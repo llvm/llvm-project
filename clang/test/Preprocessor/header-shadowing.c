@@ -19,6 +19,7 @@
 // RUN: %clang_cc1 -fms-compatibility -Wshadow-header -Eonly %t/t.c -I %t -I %t/foo -I %t/foo/bar 2>&1 | FileCheck %s --check-prefix=SHADOWING-MS
 
 // SHADOWING-MS: {{.*}} warning: multiple candidates for header 't3.h' found; directory '{{.*}}foo' chosen, ignoring '{{.*}}' and others [-Wshadow-header]
+// SHADOWING-MS: warning: Found foo/t3.h.
 // SHADOWING-MS-NOT: {{.*}} warning: multiple candidates for header 't3.h' found; directory '{{.*}}foo' chosen, ignoring '{{.*}}' and others [-Wshadow-header]
 
 //--- main.c
