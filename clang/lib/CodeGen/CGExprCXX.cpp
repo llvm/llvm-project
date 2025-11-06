@@ -1762,7 +1762,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   unsigned DefaultTargetAlignment = TI.getNewAlign() / TI.getCharWidth();
   if (SanOpts.has(SanitizerKind::Alignment) &&
       (DefaultTargetAlignment >
-       CGM.getContext().getTypeAlignInChars(allocType).getQuantity())){
+       CGM.getContext().getTypeAlignInChars(allocType).getQuantity()) &&
+      !result.getAlignment().isOne()) {
     checkKind = CodeGenFunction::TCK_ConstructorCallMinimumAlign;
     checkAlignment = CharUnits::fromQuantity(DefaultTargetAlignment);
   }
