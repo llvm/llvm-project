@@ -27,20 +27,17 @@ using namespace mlir;
 
 #define DEBUG_TYPE "fir-alias-analysis"
 
-// Classify 'candidate' as an allocation based on value-scoped Allocate effects
-// attached by its defining operation 'op'. Returns true if classified and fills
-// out 'v', 'defOp' and 'type'.
 static bool classifyAllocateFromEffects(mlir::Operation *op,
                                         mlir::Value candidate, mlir::Value &v,
                                         mlir::Operation *&defOp,
                                         fir::AliasAnalysis::SourceKind &type) {
   if (!op)
     return false;
-  auto iface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
-  if (!iface)
+  auto interface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
+  if (!interface)
     return false;
   llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
-  iface.getEffects(effects);
+  interface.getEffects(effects);
   for (mlir::MemoryEffects::EffectInstance &e : effects) {
     if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
         e.getValue() && e.getValue() == candidate) {
