@@ -20,8 +20,6 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Sanitizers.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
@@ -1763,7 +1761,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   if (SanOpts.has(SanitizerKind::Alignment) &&
       (DefaultTargetAlignment >
        CGM.getContext().getTypeAlignInChars(allocType).getQuantity()) &&
-      !result.getAlignment().isOne()) {
+      !result.getAlignment().isOne() && result.getAlignment().getQuantity() < DefaultTargetAlignment) {
     checkKind = CodeGenFunction::TCK_ConstructorCallMinimumAlign;
     checkAlignment = CharUnits::fromQuantity(DefaultTargetAlignment);
   }
@@ -1775,9 +1773,9 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // we'll null check the wrong pointer here.
   SanitizerSet SkippedChecks;
   SkippedChecks.set(SanitizerKind::Null, nullCheck);
-  EmitTypeCheck(
-      checkKind, E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-      result, allocType, checkAlignment, SkippedChecks, numElements);
+  EmitTypeCheck(checkKind,
+                E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+                result, allocType, checkAlignment, SkippedChecks, numElements);
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
