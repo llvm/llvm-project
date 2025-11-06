@@ -6764,7 +6764,7 @@ bool AMDGPUInstructionSelector::selectSGetBarrierState(
     MachineInstr &I, Intrinsic::ID IntrID) const {
   MachineBasicBlock *MBB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
-  MachineOperand BarOp = I.getOperand(2);
+  const MachineOperand &BarOp = I.getOperand(2);
   std::optional<int64_t> BarValImm =
       getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
 
@@ -6817,8 +6817,8 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
     MachineInstr &I, Intrinsic::ID IntrID) const {
   MachineBasicBlock *MBB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
-  MachineOperand BarOp = I.getOperand(1);
-  MachineOperand CntOp = I.getOperand(2);
+  const MachineOperand &BarOp = I.getOperand(1);
+  const MachineOperand &CntOp = I.getOperand(2);
 
   // BarID = (BarOp >> 4) & 0x3F
   Register TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
