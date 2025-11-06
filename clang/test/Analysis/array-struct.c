@@ -175,12 +175,12 @@ void f17(void) {
     x = 1;
 }
 
-void read(char*);
+void readp(char*);
 
 void f18(void) {
   char *q;
   char *p = (char *) __builtin_alloca(10);
-  read(p);
+  readp(p);
   q = p;
   q++;
   if (*q) { // no-warning
