@@ -67,7 +67,6 @@
 #include <optional>
 #include <system_error>
 #include <unordered_map>
-#define DEBUG_TYPE "bolt-ppc64"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Object/ELF.h"
@@ -4012,7 +4011,7 @@ void RewriteInstance::emitAndLink() {
     BC->renameSection(*TextSection,
                       getOrgSecPrefix() + BC->getMainCodeSectionName());
 
-LLVM_DEBUG({
+DEBUG_WITH_TYPE("bolt-ppc64", {
   const auto Flags = TextSection->getELFFlags();
   dbgs() << "[ppc64] backup section: " << TextSection->getName() << "\n"
          << "  prefix=" << getOrgSecPrefix()
