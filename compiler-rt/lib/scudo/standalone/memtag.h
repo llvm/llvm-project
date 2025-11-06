@@ -66,7 +66,8 @@ inline bool systemSupportsMemoryTagging() {
 #ifndef HWCAP2_MTE
 #define HWCAP2_MTE (1 << 18)
 #endif
-  return getauxval(AT_HWCAP2) & HWCAP2_MTE;
+  static bool SupportsMemoryTagging = getauxval(AT_HWCAP2) & HWCAP2_MTE;
+  return SupportsMemoryTagging;
 }
 
 inline bool systemDetectsMemoryTagFaultsTestOnly() {
@@ -261,9 +262,7 @@ inline uptr loadTag(uptr Ptr) {
 
 #else
 
-inline NORETURN bool systemSupportsMemoryTagging() {
-  UNREACHABLE("memory tagging not supported");
-}
+inline bool systemSupportsMemoryTagging() { return false; }
 
 inline NORETURN bool systemDetectsMemoryTagFaultsTestOnly() {
   UNREACHABLE("memory tagging not supported");

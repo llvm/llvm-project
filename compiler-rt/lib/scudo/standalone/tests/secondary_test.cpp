@@ -27,9 +27,7 @@
 const scudo::uptr PageSize = scudo::getPageSizeCached();
 
 template <typename Config> static scudo::Options getOptionsForConfig() {
-  if (!Config::getMaySupportMemoryTagging() ||
-      !scudo::archSupportsMemoryTagging() ||
-      !scudo::systemSupportsMemoryTagging())
+  if (!scudo::systemSupportsMemoryTagging())
     return {};
   scudo::AtomicOptions AO;
   AO.set(scudo::OptionBit::UseMemoryTagging);
