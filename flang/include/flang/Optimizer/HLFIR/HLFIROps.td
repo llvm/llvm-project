@@ -39,7 +39,8 @@ def hlfir_DeclareOp
     : hlfir_Op<"declare", [AttrSizedOperandSegments,
                            MemoryEffects<[MemAlloc<DebuggingResource>]>,
                            DeclareOpInterfaceMethods<
-                               fir_FortranVariableStorageOpInterface>]> {
+                               fir_FortranVariableStorageOpInterface>,
+                           fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable and produce an SSA value that can be used as a variable in HLFIR operations";
 
   let description = [{
@@ -140,6 +141,10 @@ def hlfir_DeclareOp
     /// Given a FIR memory type, and information about non default lower
     /// bounds, get the related HLFIR variable type.
     static mlir::Type getHLFIRVariableType(mlir::Type type, bool hasLowerBounds);
+
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
   }];
 
   let hasVerifier = 1;
@@ -213,8 +218,11 @@ def fir_AssignOp : hlfir_Op<"assign", [DeclareOpInterfaceMethods<MemoryEffectsOp
   let hasVerifier = 1;
 }
 
-def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>, NoMemoryEffect]> {
+def hlfir_DesignateOp
+    : hlfir_Op<"designate",
+               [AttrSizedOperandSegments,
+                DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>,
+                NoMemoryEffect, fir_FortranObjectViewOpInterface]> {
   let summary = "Designate a Fortran variable";
 
   let description = [{
@@ -278,6 +286,9 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
     void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {
       this->setFortranAttrs(std::optional<fir::FortranVariableFlagsEnum>(flags));
     }
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
   }];
 
   let builders = [
@@ -938,8 +949,9 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", [MemoryEffects<[MemFree]>]>
   let hasVerifier = 1;
 }
 
-def hlfir_AsExprOp : hlfir_Op<"as_expr",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def hlfir_AsExprOp
+    : hlfir_Op<"as_expr", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+                           fir_FortranObjectViewOpInterface]> {
   let summary = "Take the value of an array, character or derived variable";
 
   let description = [{
@@ -961,8 +973,11 @@ def hlfir_AsExprOp : hlfir_Op<"as_expr",
   let results = (outs hlfir_ExprType);
 
   let extraClassDeclaration = [{
-      // Is this a "move" ?
-      bool isMove() { return getMustFree() != mlir::Value{}; }
+    // Is this a "move" ?
+    bool isMove() { return getMustFree() != mlir::Value{}; }
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getVar(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
   }];
 
   let assemblyFormat = [{
