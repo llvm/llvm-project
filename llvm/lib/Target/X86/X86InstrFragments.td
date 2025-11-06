@@ -28,6 +28,10 @@ def SDTX86Cmov    : SDTypeProfile<1, 4,
                                   [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                    SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
 
+def SDTX86CtSelect : SDTypeProfile<1, 4,
+                                  [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
+                                   SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
+
 // Unary and binary operator instructions that set EFLAGS as a side-effect.
 def SDTUnaryArithWithFlags : SDTypeProfile<2, 1,
                                            [SDTCisSameAs<0, 2>,
@@ -151,6 +155,7 @@ def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;
 def X86cload    : SDNode<"X86ISD::CLOAD",   SDTX86Cload, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def X86cstore   : SDNode<"X86ISD::CSTORE",  SDTX86Cstore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+def X86ctselect: SDNode<"X86ISD::CTSELECT", SDTX86CtSelect, [SDNPInGlue]>;
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
 def X86brcond  : SDNode<"X86ISD::BRCOND",   SDTX86BrCond,
                         [SDNPHasChain]>;
