@@ -92,7 +92,7 @@ public:
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
                                                   bool IsConst, bool IsRef);
   BuiltinTypeDeclBuilder &addLoadWithStatusFunction(DeclarationName &Name,
-                                                    bool IsConst, bool IsRef);
+                                                    bool IsConst);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 

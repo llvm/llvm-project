@@ -1140,7 +1140,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
   addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
-  addLoadWithStatusFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
+  addLoadWithStatusFunction(Load, /*IsConst=*/false);
 
   return *this;
 }
@@ -1235,7 +1235,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
-                                                  bool IsConst, bool IsRef) {
+                                                  bool IsConst) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1246,16 +1246,9 @@ BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
   QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
   QualType ReturnTy;
 
-  if (IsRef) {
-    ReturnTy = AddrSpaceElemTy;
-    if (IsConst)
-      ReturnTy.addConst();
-    ReturnTy = AST.getLValueReferenceType(ReturnTy);
-  } else {
-    ReturnTy = ElemTy;
-    if (IsConst)
-      ReturnTy.addConst();
-  }
+  ReturnTy = ElemTy;
+  if (IsConst)
+    ReturnTy.addConst();
 
   QualType StatusRefTy = AST.getLValueReferenceType(AST.UnsignedIntTy);
   return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)

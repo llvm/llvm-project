@@ -370,9 +370,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                ? llvm::Intrinsic::dx_resource_load_rawbuffer
                                : llvm::Intrinsic::dx_resource_load_typedbuffer;
 
-    llvm::Type *DataTy = ConvertType(E->getType());
-    llvm::Type *RetTy = llvm::StructType::get(Builder.getContext(),
-                                              {DataTy, Builder.getInt1Ty()});
+    QualType BuiltinRetTy = E->getType();
+    llvm::Type *DataTy = ConvertType(BuiltinRetTy->getPointeeType());
+
+    llvm::Type *IntrinsicRetTy = llvm::StructType::get(
+        Builder.getContext(), {DataTy, Builder.getInt1Ty()});
 
     SmallVector<Value *, 3> Args;
     Args.push_back(HandleOp);
@@ -384,7 +386,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     // Call the intrinsic (returns a struct)
     Value *ResRet =
-        Builder.CreateIntrinsic(RetTy, IntrID, Args, {}, "ld.struct");
+        Builder.CreateIntrinsic(IntrinsicRetTy, IntrID, Args, {}, "ld.struct");
 
     // Extract the loaded data (first element of the struct)
     Value *LoadedValue = Builder.CreateExtractValue(ResRet, {0}, "ld.value");
