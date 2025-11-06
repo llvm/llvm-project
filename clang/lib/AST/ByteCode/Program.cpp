@@ -36,30 +36,19 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
   const size_t BitWidth = CharWidth * Ctx.getCharBit();
   unsigned StringLength = S->getLength();
 
-  PrimType CharType;
-  switch (CharWidth) {
-  case 1:
-    CharType = PT_Sint8;
-    break;
-  case 2:
-    CharType = PT_Uint16;
-    break;
-  case 4:
-    CharType = PT_Uint32;
-    break;
-  default:
-    llvm_unreachable("unsupported character width");
-  }
+  OptPrimType CharType =
+      Ctx.classify(S->getType()->castAsArrayTypeUnsafe()->getElementType());
+  assert(CharType);
 
   if (!Base)
     Base = S;
 
   // Create a descriptor for the string.
-  Descriptor *Desc =
-      allocateDescriptor(Base, CharType, Descriptor::GlobalMD, StringLength + 1,
-                         /*isConst=*/true,
-                         /*isTemporary=*/false,
-                         /*isMutable=*/false);
+  Descriptor *Desc = allocateDescriptor(Base, *CharType, Descriptor::GlobalMD,
+                                        StringLength + 1,
+                                        /*isConst=*/true,
+                                        /*isTemporary=*/false,
+                                        /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
@@ -79,26 +68,9 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
   } else {
     // Construct the string in storage.
     for (unsigned I = 0; I <= StringLength; ++I) {
-      const uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
-      switch (CharType) {
-      case PT_Sint8: {
-        using T = PrimConv<PT_Sint8>::T;
-        Ptr.elem<T>(I) = T::from(CodePoint, BitWidth);
-        break;
-      }
-      case PT_Uint16: {
-        using T = PrimConv<PT_Uint16>::T;
-        Ptr.elem<T>(I) = T::from(CodePoint, BitWidth);
-        break;
-      }
-      case PT_Uint32: {
-        using T = PrimConv<PT_Uint32>::T;
-        Ptr.elem<T>(I) = T::from(CodePoint, BitWidth);
-        break;
-      }
-      default:
-        llvm_unreachable("unsupported character type");
-      }
+      uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
+      INT_TYPE_SWITCH_NO_BOOL(*CharType,
+                              Ptr.elem<T>(I) = T::from(CodePoint, BitWidth););
     }
   }
   Ptr.initializeAllElements();
