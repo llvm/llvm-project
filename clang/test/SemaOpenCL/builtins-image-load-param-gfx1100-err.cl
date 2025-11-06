@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1100 -S -verify=expected -o - %s
 // REQUIRES: amdgpu-registered-target
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef half half4 __attribute__((ext_vector_type(4)));

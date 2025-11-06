@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx942 -S -verify -o - %s
 // REQUIRES: amdgpu-registered-target
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef half half4 __attribute__((ext_vector_type(4)));
 
