@@ -1592,7 +1592,6 @@ static MCRegister getRVVBaseRegister(const RISCVRegisterInfo &TRI,
 void RISCVFrameLowering::determineUncondPrologCalleeSaves(
     MachineFunction &MF, const MCPhysReg *CSRegs,
     BitVector &UncondPrologCSRs) const {
-  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
 
   StringRef RegString(UserDefinedUncondPrologCSRs);
   SmallVector<llvm::StringRef, 4> RegNames;
