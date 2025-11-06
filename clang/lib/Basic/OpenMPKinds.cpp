@@ -597,8 +597,8 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
     switch (Type) {
     case OMPC_TRANSPARENT_unknown:
       return "unknown";
-#define OPENMP_TRANSPARENT_KIND(Name)                                            \
-  case OMPC_TRANSPARENT_##Name:                                                  \
+#define OPENMP_TRANSPARENT_KIND(Name)                                           \
+  case OMPC_TRANSPARENT_##Name:                                                 \
     return #Name;
 #include "clang/Basic/OpenMPKinds.def"
     }

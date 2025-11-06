@@ -2408,7 +2408,8 @@ void OMPClauseEnqueue::VisitOMPFailClause(const OMPFailClause *) {}
 
 void OMPClauseEnqueue::VisitOMPThreadsetClause(const OMPThreadsetClause *) {}
 
-void OMPClauseEnqueue::VisitOMPTransparentClause(const OMPTransparentClause *) {}
+void OMPClauseEnqueue::VisitOMPTransparentClause(const OMPTransparentClause *) {
+}
 
 void OMPClauseEnqueue::VisitOMPAbsentClause(const OMPAbsentClause *) {}
 

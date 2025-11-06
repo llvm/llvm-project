@@ -548,7 +548,8 @@ void OMPClauseProfiler::VisitOMPDefaultClause(const OMPDefaultClause *C) { }
 
 void OMPClauseProfiler::VisitOMPThreadsetClause(const OMPThreadsetClause *C) {}
 
-void OMPClauseProfiler::VisitOMPTransparentClause(const OMPTransparentClause *C) {}
+void OMPClauseProfiler::VisitOMPTransparentClause(
+    const OMPTransparentClause *C) {}
 
 void OMPClauseProfiler::VisitOMPProcBindClause(const OMPProcBindClause *C) { }
 

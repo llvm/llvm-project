@@ -1548,8 +1548,8 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   OMPTransparentClause(OpenMPTransparentKind A, SourceLocation ALoc,
-                     SourceLocation StartLoc, SourceLocation LParenLoc,
-                     SourceLocation EndLoc)
+                       SourceLocation StartLoc, SourceLocation LParenLoc,
+                       SourceLocation EndLoc)
       : OMPClause(llvm::omp::OMPC_transparent, StartLoc, EndLoc),
         LParenLoc(LParenLoc), Kind(A), KindLoc(ALoc) {}
 
