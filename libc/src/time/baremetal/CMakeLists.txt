@@ -26,9 +26,9 @@ add_entrypoint_object(
     localtime.cpp
   HDRS
     ../localtime.h
-    time_utils.h
+    ../time_utils.h
   DEPENDS
-    .time_utils
+    libc.src.time.time_utils
     libc.hdr.types.struct_tm
     libc.hdr.types.time_t
 )
@@ -39,9 +39,9 @@ add_entrypoint_object(
     localtime_r.cpp
   HDRS
     ../localtime.h
-    time_utils.h
+    ../time_utils.h
   DEPENDS
-    .time_utils
+    libc.src.time.time_utils
     libc.hdr.types.struct_tm
     libc.hdr.types.time_t
 )
