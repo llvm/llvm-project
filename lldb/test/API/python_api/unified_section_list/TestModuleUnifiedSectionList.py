@@ -3,6 +3,7 @@ Test Unified Section List merging.
 """
 
 import os
+import shutil
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -230,3 +231,55 @@ class ModuleUnifiedSectionList(TestBase):
 
         self.assertTrue(error.Success())
         self.assertEqual(comment_content_after_merge, bytes.fromhex("BAADF00DF00DBAAD"))
+
+    def test_unified_section_list_overwrite_equal_size(self):
+        """
+        Test the merging of an ELF file with an ELF file with sections of the same size with different values
+        .text
+        """
+        exe = self.getBuildArtifact("a.out")
+        self.yaml2obj("main.yaml", exe)
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        main_exe_module = target.GetModuleAtIndex(0)
+
+        # First we verify out .text section is the expected BEC0FFEE
+        text_before_merge = main_exe_module.FindSection(".text")
+        self.assertTrue(text_before_merge.IsValid())
+        error = lldb.SBError()
+        section_content = text_before_merge.data.ReadRawData(
+            error, 0, text_before_merge.data.size
+        )
+        self.assertTrue(error.Success())
+        self.assertEqual(section_content, bytes.fromhex("BEC0FFEE"))
+
+        # .comment in main.yaml should be SHT_NOBITS, and size 0
+        comment_before_merge = main_exe_module.FindSection(".comment")
+        self.assertTrue(comment_before_merge.IsValid())
+        self.assertEqual(comment_before_merge.data.size, 0)
+
+        # yamlize the main with the .text reversed from BEC0FFEE
+        # to EEFF0CEB. We should still keep our .text with BEC0FFEE
+        debug_info = self.getBuildArtifact("a.out.debug")
+        self.yaml2obj("main.reversedtext.yaml", debug_info)
+
+        ci = self.dbg.GetCommandInterpreter()
+        res = lldb.SBCommandReturnObject()
+        ci.HandleCommand(f"target symbols add {debug_info}", res)
+        self.assertTrue(res.Succeeded())
+
+        # verify .text did not change
+        main_exe_module_after_merge = target.GetModuleAtIndex(0)
+        text_after_merge = main_exe_module_after_merge.FindSection(".text")
+        self.assertTrue(text_after_merge.IsValid())
+        section_content_after_merge = text_after_merge.data.ReadRawData(
+            error, 0, text_after_merge.data.size
+        )
+        self.assertTrue(error.Success())
+        self.assertEqual(section_content_after_merge, bytes.fromhex("BEC0FFEE"))
+
+        # verify comment did not change
+        comment_afer_merge = main_exe_module_after_merge.FindSection(".comment")
+        self.assertTrue(comment_afer_merge.IsValid())
+        self.assertEqual(comment_afer_merge.data.size, 0)
