@@ -19,14 +19,17 @@
 #include <memory>
 
 constexpr bool test() {
-  const std::indirect<int> i;
+  {
+    const std::indirect<int> i;
 
-  std::same_as<bool> decltype(auto) _ = i.valueless_after_move();
+    std::same_as<bool> decltype(auto) _ = i.valueless_after_move();
 
-  static_assert(noexcept(i.valueless_after_move()));
-
-  struct Incomplete;
-  (void)([](std::indirect<Incomplete>& i) { return i.valueless_after_move(); });
+    static_assert(noexcept(i.valueless_after_move()));
+  }
+  {
+    struct Incomplete;
+    (void)([](std::indirect<Incomplete>& i) { return i.valueless_after_move(); });
+  }
 
   return true;
 }

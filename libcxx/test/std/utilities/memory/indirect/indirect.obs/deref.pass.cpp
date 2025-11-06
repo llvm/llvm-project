@@ -24,25 +24,28 @@
 #include <utility>
 
 constexpr bool test() {
-  std::indirect<int> i;
+  {
+    std::indirect<int> i;
 
-  std::same_as<int&> decltype(auto) _        = *i;
-  std::same_as<int&&> decltype(auto) _       = *std::move(i);
-  std::same_as<const int&> decltype(auto) _  = *std::as_const(i);
-  std::same_as<const int&&> decltype(auto) _ = *std::move(std::as_const(i));
+    std::same_as<int&> decltype(auto) _        = *i;
+    std::same_as<int&&> decltype(auto) _       = *std::move(i);
+    std::same_as<const int&> decltype(auto) _  = *std::as_const(i);
+    std::same_as<const int&&> decltype(auto) _ = *std::move(std::as_const(i));
 
-  static_assert(noexcept(*i));
-  static_assert(noexcept(*std::move(i)));
-  static_assert(noexcept(*std::as_const(i)));
-  static_assert(noexcept(*std::move(std::as_const(i))));
-
-  struct Incomplete;
-  (void)([](std::indirect<Incomplete>& i) {
-    (void)(*i);
-    (void)(*std::move(i));
-    (void)(*std::as_const(i));
-    (void)(*std::move(std::as_const(i)));
-  });
+    static_assert(noexcept(*i));
+    static_assert(noexcept(*std::move(i)));
+    static_assert(noexcept(*std::as_const(i)));
+    static_assert(noexcept(*std::move(std::as_const(i))));
+  }
+  {
+    struct Incomplete;
+    (void)([](std::indirect<Incomplete>& i) {
+      (void)(*i);
+      (void)(*std::move(i));
+      (void)(*std::as_const(i));
+      (void)(*std::move(std::as_const(i)));
+    });
+  }
 
   return true;
 }

@@ -19,14 +19,17 @@
 #include <memory>
 
 constexpr bool test() {
-  const std::indirect<int> i;
+  {
+    const std::indirect<int> i;
 
-  std::same_as<std::allocator<int>> decltype(auto) _ = i.get_allocator();
+    std::same_as<std::allocator<int>> decltype(auto) _ = i.get_allocator();
 
-  static_assert(noexcept(i.get_allocator()));
-
-  struct Incomplete;
-  (void)([](std::indirect<Incomplete>& i) { return i.get_allocator(); });
+    static_assert(noexcept(i.get_allocator()));
+  }
+  {
+    struct Incomplete;
+    (void)([](std::indirect<Incomplete>& i) { return i.get_allocator(); });
+  }
 
   return true;
 }
