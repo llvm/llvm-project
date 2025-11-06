@@ -10628,7 +10628,6 @@ TreeTransform<Derived>::TransformOMPThreadsetClause(OMPThreadsetClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPTransparentClause(OMPTransparentClause *C) {
-  // No need to rebuild this clause, no template-dependent parameters.
   return C;
 }
 
