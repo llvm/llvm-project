@@ -983,7 +983,11 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
     break;
 
   case Type::ObjCInterface:
-    cgm.errorNYI("VTableClassNameForType: ObjCInterface");
+    if (cast<ObjCInterfaceType>(Ty)->getDecl()->getSuperClass()) {
+      return siClassTypeInfo;
+    } else {
+      return classTypeInfo;
+    }
     break;
 
   case Type::ObjCObjectPointer:
