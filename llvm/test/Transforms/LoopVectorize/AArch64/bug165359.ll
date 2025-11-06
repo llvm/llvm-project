@@ -5,7 +5,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define double @reduce_fail(i64 %loop_count, double %d0, ptr noalias %ptr1) #0 {
+define double @reduce_fail(i64 %loop_count, double %d0, ptr %ptr1) #0 {
 entry:
   %d1 = load double, ptr %ptr1
   br label %loop
