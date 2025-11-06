@@ -3106,8 +3106,8 @@ static Op createComputeOp(
       genDataOperandOperationsWithModifier<mlir::acc::CreateOp,
                                            Fortran::parser::AccClause::Copyout>(
           copyoutClause, converter, semanticsContext, stmtCtx,
-          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
-          dataClauseOperands, mlir::acc::DataClause::acc_copyout,
+          Fortran::parser::AccDataModifier::Modifier::Zero, dataClauseOperands,
+          mlir::acc::DataClause::acc_copyout,
           mlir::acc::DataClause::acc_copyout_zero, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes, /*setDeclareAttr=*/false,
           &dataOperandSymbolPairs);
