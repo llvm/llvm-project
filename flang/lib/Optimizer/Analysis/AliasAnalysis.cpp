@@ -29,6 +29,67 @@ using namespace mlir;
 #define DEBUG_TYPE "fir-alias-analysis"
 
 //===----------------------------------------------------------------------===//
+// AliasAnalysis: alias helpers
+//===----------------------------------------------------------------------===//
+
+static bool tryClassifyAllocateFromEffects(mlir::Operation *op,
+    mlir::Value candidate, bool allowValueScoped, bool allowOpScoped,
+    mlir::Value &v, mlir::Operation *&defOp,
+    fir::AliasAnalysis::SourceKind &type) {
+  auto iface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
+  if (!iface)
+    return false;
+
+  llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
+  iface.getEffects(effects);
+
+  if (allowValueScoped) {
+    for (mlir::MemoryEffects::EffectInstance &e : effects) {
+      if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
+          e.getValue() && e.getValue() == candidate) {
+        v = candidate;
+        defOp = op;
+        type = fir::AliasAnalysis::SourceKind::Allocate;
+        return true;
+      }
+    }
+  }
+
+  if (!allowOpScoped)
+    return false;
+
+  bool hasOpScopedAlloc = llvm::any_of(
+      effects, [](const mlir::MemoryEffects::EffectInstance &e) {
+        return !e.getValue() &&
+               mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect());
+      });
+  if (!hasOpScopedAlloc)
+    return false;
+
+  bool opIsViewLike =
+      (bool)mlir::dyn_cast_or_null<mlir::ViewLikeOpInterface>(op);
+  auto isMemoryRefLikeType = [](mlir::Type type) {
+    return fir::isa_ref_type(type) || mlir::isa<mlir::BaseMemRefType>(type) ||
+           mlir::isa<mlir::LLVM::LLVMPointerType>(type);
+  };
+  bool hasMemOperands = llvm::any_of(op->getOperands(), [&](mlir::Value o) {
+    return isMemoryRefLikeType(o.getType());
+  });
+  if (opIsViewLike || hasMemOperands)
+    return false;
+
+  for (mlir::Value res : op->getResults()) {
+    if (res == candidate && isMemoryRefLikeType(res.getType())) {
+      v = candidate;
+      defOp = op;
+      type = fir::AliasAnalysis::SourceKind::Allocate;
+      return true;
+    }
+  }
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
@@ -544,43 +605,22 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       type = SourceKind::Indirect;
     }
   };
+
+  // Helper to detect memory-ref-like types.
+  auto isMemoryRefLikeType = [](mlir::Type t) {
+    return fir::isa_ref_type(t) || mlir::isa<mlir::BaseMemRefType>(t) ||
+           mlir::isa<mlir::LLVM::LLVMPointerType>(t);
+  };
+
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
 
-    // Effect-based detection using op-scoped Allocate with conservative
-    // heuristics (ignore value-scoped signals per request).
-    if (auto memIface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(defOp)) {
-      llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
-      memIface.getEffects(effects);
-      bool sawOpScopedAlloc = false;
-      for (auto &ei : effects) {
-        bool isAlloc = mlir::isa<mlir::MemoryEffects::Allocate>(ei.getEffect());
-        if (!ei.getValue() && isAlloc) {
-          sawOpScopedAlloc = true;
-        }
-      }
-      if (sawOpScopedAlloc) {
-        auto isMemoryRefLikeType = [](mlir::Type t) {
-          return fir::isa_ref_type(t) || mlir::isa<mlir::BaseMemRefType>(t) ||
-                 mlir::isa<mlir::LLVM::LLVMPointerType>(t);
-        };
-        bool opIsViewLike = (bool)mlir::dyn_cast_or_null<mlir::ViewLikeOpInterface>(defOp);
-        bool hasMemOperands = llvm::any_of(defOp->getOperands(), [&](mlir::Value opnd) {
-          return isMemoryRefLikeType(opnd.getType());
-        });
-        if (!opIsViewLike && !hasMemOperands) {
-          for (mlir::Value res : defOp->getResults()) {
-            if (res == v && isMemoryRefLikeType(res.getType())) {
-              type = SourceKind::Allocate;
-              breakFromLoop = true;
-              break;
-            }
-          }
-          if (breakFromLoop)
-            break;
-        }
-      }
-    }
+    // Effect-based detection (op-scoped heuristic only at this level).
+    if (tryClassifyAllocateFromEffects(defOp, v,
+                                       /*allowValueScoped=*/false,
+                                       /*allowOpScoped=*/true,
+                                       v, defOp, type))
+      break;
 
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<hlfir::AsExprOp>([&](auto op) {
@@ -666,61 +706,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             if (global) {
               type = SourceKind::Global;
             } else {
-              auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
+              mlir::Value def = llvm::cast<mlir::Value>(boxSrc.origin.u);
               bool classified = false;
-              if (auto defDefOp = def.getDefiningOp()) {
-                if (auto defIface =
-                        llvm::dyn_cast<mlir::MemoryEffectOpInterface>(defDefOp)) {
-                  llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> eff;
-                  defIface.getEffects(eff);
-                  // Prefer value-scoped Allocate on the underlying storage.
-                  for (auto &e : eff) {
-                    if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
-                        e.getValue() && e.getValue() == def) {
-                      v = def;
-                      defOp = v.getDefiningOp();
-                      type = SourceKind::Allocate;
-                      classified = true;
-                      break;
-                    }
-                  }
-                  // Heuristic for op-scoped Allocate at the underlying defining op.
-                  if (!classified) {
-                    bool sawOpScopedAlloc = llvm::any_of(
-                        eff, [](auto &e) {
-                          return !e.getValue() &&
-                                 mlir::isa<mlir::MemoryEffects::Allocate>(
-                                     e.getEffect());
-                        });
-                    if (sawOpScopedAlloc) {
-                      auto isMemoryRefLikeType = [](mlir::Type t) {
-                        return fir::isa_ref_type(t) ||
-                               mlir::isa<mlir::BaseMemRefType>(t) ||
-                               mlir::isa<mlir::LLVM::LLVMPointerType>(t);
-                      };
-                      bool opIsViewLike = (bool)mlir::dyn_cast_or_null<
-                          mlir::ViewLikeOpInterface>(defDefOp);
-                      bool hasMemOperands = llvm::any_of(
-                          defDefOp->getOperands(), [&](mlir::Value opnd) {
-                            return isMemoryRefLikeType(opnd.getType());
-                          });
-                      if (!opIsViewLike && !hasMemOperands) {
-                        for (mlir::Value res : defDefOp->getResults()) {
-                          if (res == def && isMemoryRefLikeType(res.getType())) {
-                            v = def;
-                            defOp = v.getDefiningOp();
-                            type = SourceKind::Allocate;
-                            classified = true;
-                            break;
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              if (!classified)
-                classifyFallbackFrom(def);
+              if (auto defDefOp = def.getDefiningOp())
+                classified = tryClassifyAllocateFromEffects(
+                    defDefOp, def,
+                    /*allowValueScoped=*/true, /*allowOpScoped=*/true,
+                    v, defOp, type);
+              if (!classified) classifyFallbackFrom(def);
             }
             breakFromLoop = true;
             return;
