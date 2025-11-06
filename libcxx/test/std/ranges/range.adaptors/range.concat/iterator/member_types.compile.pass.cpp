@@ -156,6 +156,20 @@ constexpr bool test() {
     static_assert(std::is_same_v<ConstIter::value_type, double>);
   }
 
+  {
+    // If is_reference_v<concat-reference-t<maybe-const<Const, Views>...>> is false,
+    // then iterator_category denotes input_iterator_tag.
+    auto v1  = std::views::iota(0, 3);
+    auto v2  = std::views::iota(4, 6);
+    auto cat = std::views::concat(v1, v2);
+
+    using Iter      = decltype(cat.begin());
+    using ConstIter = decltype(std::as_const(cat).begin());
+
+    static_assert(std::is_same_v<typename Iter::iterator_category, std::input_iterator_tag>);
+    static_assert(std::is_same_v<typename ConstIter::iterator_category, std::input_iterator_tag>);
+  }
+
   return true;
 }
 
