@@ -10536,18 +10536,9 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
       return SDValue();
     SDValue Extracted = DAG.getBitcast(XLenVT, Vec);
     unsigned ElemWidth = EltVT.getSizeInBits();
-    if (auto *IdxC = dyn_cast<ConstantSDNode>(Idx)) {
-      unsigned Idx = IdxC->getZExtValue();
-      unsigned Shamt = Idx * ElemWidth;
-      if (Shamt > 0)
-        Extracted = DAG.getNode(ISD::SRL, DL, XLenVT,
-                                DAG.getConstant(Shamt, DL, XLenVT));
-    } else {
-      SDValue Shamt = DAG.getNode(ISD::MUL, DL, XLenVT, Idx,
-                                  DAG.getConstant(ElemWidth, DL, XLenVT));
-      Extracted = DAG.getNode(ISD::SRL, DL, XLenVT, Shamt);
-    }
-    return DAG.getNode(ISD::TRUNCATE, DL, EltVT, Extracted);
+    SDValue Shamt = DAG.getNode(ISD::MUL, DL, XLenVT, Idx,
+                                DAG.getConstant(ElemWidth, DL, XLenVT));
+    return DAG.getNode(ISD::SRL, DL, XLenVT, Extracted, Shamt);
   }
 
   // If this is a fixed vector, we need to convert it to a scalable vector.

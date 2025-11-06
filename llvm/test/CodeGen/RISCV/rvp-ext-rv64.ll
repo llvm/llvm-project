@@ -459,6 +459,42 @@ define void @test_pli_w(ptr %ret_ptr) {
   ret void
 }
 
+define void @test_extract_vector_16(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_extract_vector_16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    sh a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, ptr %a_ptr
+  %extracted = extractelement <4 x i16> %a, i32 0
+  store i16 %extracted, ptr %ret_ptr
+  ret void
+}
+
+define void @test_extract_vector_8(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_extract_vector_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    sb a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, ptr %a_ptr
+  %extracted = extractelement <8 x i8> %a, i32 0
+  store i8 %extracted, ptr %ret_ptr
+  ret void
+}
+
+define void @test_extract_vector_32(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_extract_vector_32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %extracted = extractelement <2 x i32> %a, i32 0
+  store i32 %extracted, ptr %ret_ptr
+  ret void
+}
+
 ; Intrinsic declarations
 declare <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16>, <4 x i16>)
 declare <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16>, <4 x i16>)

@@ -1046,8 +1046,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
       Imm = SignExtend64<32>(Imm);
 
-    if (hasAllWUsers(Node) && isApplicableToPLI(Imm) &&
-        Subtarget->enablePExtCodeGen()) {
+    if (Subtarget->enablePExtCodeGen() && isApplicableToPLI(Imm) &&
+        hasAllWUsers(Node)) {
       // If its 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
       // can simply copy lower 32 bits to higher 32 bits to make it able to
       // rematerialize to PLI_B or PLI_H
@@ -2675,12 +2675,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     if (Subtarget->enablePExtCodeGen()) {
-      if (((VT == MVT::v4i16 || VT == MVT::v8i8) && SrcVT == MVT::i64) ||
-          ((SrcVT == MVT::v4i16 || SrcVT == MVT::v8i8) && VT == MVT::i64)) {
+      bool Is32BitCast =
+          (VT == MVT::i32 && (SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16)) ||
+          (SrcVT == MVT::i32 && (VT == MVT::v4i8 || VT == MVT::v2i16));
+      bool Is64BitCast =
+          (VT == MVT::i64 && (SrcVT == MVT::v8i8 || SrcVT == MVT::v4i16 ||
+                              SrcVT == MVT::v2i32)) ||
+          (SrcVT == MVT::i64 &&
+           (VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32));
+      if (Is32BitCast || Is64BitCast) {
         ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
         CurDAG->RemoveDeadNode(Node);
+        return;
       }
-      return;
     }
     break;
   }

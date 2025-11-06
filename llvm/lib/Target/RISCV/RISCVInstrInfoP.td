@@ -1472,11 +1472,7 @@ def SDT_RISCVPASUB : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>]>;
 def riscv_pasub : RVSDNode<"PASUB", SDT_RISCVPASUB>;
-def SDT_RISCVPASUBU : SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                           SDTCisInt<0>,
-                                           SDTCisSameAs<0, 1>,
-                                           SDTCisSameAs<0, 2>]>;
-def riscv_pasubu : RVSDNode<"PASUBU", SDT_RISCVPASUBU>;
+def riscv_pasubu : RVSDNode<"PASUBU", SDT_RISCVPASUB>;
 
 let Predicates = [HasStdExtP] in {
   def : PatGpr<abs, ABS>;
