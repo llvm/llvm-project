@@ -38,6 +38,7 @@
 
     SIZEOF_UNWIND_EXCEPTION = 32
 
+    .att_syntax
     .text
 callback:
     xorl    %eax, %eax
