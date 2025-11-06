@@ -1296,10 +1296,10 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   // SMEM can return out of order, so only omit XCNT wait if we are waiting till
   // zero.
   if (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP)) {
-    if (hasMixedPendingEvents(X_CNT))
-      PendingEvents &= ~(1 << SMEM_GROUP);
-    else
+    if (!hasMixedPendingEvents(X_CNT))
       applyWaitcnt(X_CNT, 0);
+    else
+      PendingEvents &= ~(1 << SMEM_GROUP);
     return;
   }
 
@@ -1308,10 +1308,10 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   // decremented to the same number as LOADCnt.
   if (Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
       !hasPendingEvent(STORE_CNT)) {
-    if (hasMixedPendingEvents(X_CNT))
-      PendingEvents &= ~(1 << VMEM_GROUP);
-    else
+    if (!hasMixedPendingEvents(X_CNT))
       applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
+    else
+      PendingEvents &= ~(1 << VMEM_GROUP);
     return;
   }
 
