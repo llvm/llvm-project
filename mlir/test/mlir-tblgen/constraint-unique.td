@@ -24,7 +24,7 @@ def ASuccessor : Successor<ASuccessorPred, "a successor">;
 def OtherSuccessor : Successor<ASuccessorPred, "another successor">;
 
 def ARegionPred : CPred<"regionPred($_self, $_op)">;
-def ARegion : Region<ARegionPred, "a region">;
+def ARegion : Region<ARegionPred, "a region ({{find(foo)}})">;
 def OtherRegion : Region<ARegionPred, "another region">;
 
 // OpA and OpB have the same type, attribute, successor, and region constraints.
@@ -103,7 +103,7 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:      if (!((regionPred(region, *op)))) {
 // CHECK-NEXT:   return op->emitOpError("region #") << regionIndex
 // CHECK-NEXT:       << (regionName.empty() ? " " : " ('" + regionName + "') ")
-// CHECK-NEXT:       << "failed to verify constraint: a region";
+// CHECK-NEXT:       << "failed to verify constraint: a region (" << find(foo) << ")";
 
 /// Test that duplicate region constraint was not generated.
 // CHECK-NOT:        << "failed to verify constraint: a region";
