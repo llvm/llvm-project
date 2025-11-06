@@ -50,6 +50,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -104,7 +105,6 @@
 #include <vector>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aarch64-lower"
 
@@ -1174,6 +1174,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::SHL);
   setTargetDAGCombine(ISD::VECTOR_DEINTERLEAVE);
+  setTargetDAGCombine(ISD::CTPOP);
 
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
@@ -17555,6 +17556,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     // udot instruction.
     if (SrcWidth * 4 <= DstWidth) {
       if (all_of(I->users(), [&](auto *U) {
+            using namespace llvm::PatternMatch;
             auto *SingleUser = cast<Instruction>(&*U);
             if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
               return true;
@@ -17826,6 +17828,7 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // into shift / and masks. For the moment we do this just for uitofp (not
   // zext) to avoid issues with widening instructions.
   if (Shuffles.size() == 4 && all_of(Shuffles, [](ShuffleVectorInst *SI) {
+        using namespace llvm::PatternMatch;
         return SI->hasOneUse() && match(SI->user_back(), m_UIToFP(m_Value())) &&
                SI->getType()->getScalarSizeInBits() * 4 ==
                    SI->user_back()->getType()->getScalarSizeInBits();
@@ -27842,6 +27845,35 @@ static SDValue performRNDRCombine(SDNode *N, SelectionDAG &DAG) {
       {A, DAG.getZExtOrTrunc(B, DL, MVT::i1), A.getValue(2)}, DL);
 }
 
+static SDValue performCTPOPCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  // ctpop(zext(bitcast(vector_mask))) -> neg(signed_reduce_add(vector_mask))
+  SDValue Mask;
+  if (!sd_match(N->getOperand(0), m_ZExt(m_BitCast(m_Value(Mask)))))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  EVT MaskVT = Mask.getValueType();
+
+  if (VT.isVector() || !MaskVT.isFixedLengthVector() ||
+      MaskVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  EVT ReduceInVT =
+      EVT::getVectorVT(*DAG.getContext(), VT, MaskVT.getVectorElementCount());
+
+  SDLoc DL(N);
+  // Sign extend to best fit ZeroOrNegativeOneBooleanContent.
+  SDValue ExtMask = DAG.getNode(ISD::SIGN_EXTEND, DL, ReduceInVT, Mask);
+  SDValue NegPopCount = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, ExtMask);
+  return DAG.getNegative(NegPopCount, DL, VT);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -28187,6 +28219,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performScalarToVectorCombine(N, DCI, DAG);
   case ISD::SHL:
     return performSHLCombine(N, DCI, DAG);
+  case ISD::CTPOP:
+    return performCTPOPCombine(N, DCI, DAG);
   }
   return SDValue();
 }
