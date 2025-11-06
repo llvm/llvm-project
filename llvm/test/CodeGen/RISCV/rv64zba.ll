@@ -1470,18 +1470,17 @@ define i64 @zext_mul44(i32 signext %a) {
 ;
 ; RV64ZBA-LABEL: zext_mul44:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a1, a0
-; RV64ZBA-NEXT:    sh2add.uw a0, a0, a1
-; RV64ZBA-NEXT:    sh1add a0, a0, a1
-; RV64ZBA-NEXT:    slli a0, a0, 2
+; RV64ZBA-NEXT:    slli.uw a0, a0, 2
+; RV64ZBA-NEXT:    sh2add a1, a0, a0
+; RV64ZBA-NEXT:    sh1add a0, a1, a0
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: zext_mul44:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    nds.bfoz a1, a0, 31, 0
-; RV64XANDESPERF-NEXT:    nds.lea.w.ze a0, a1, a0
-; RV64XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
-; RV64XANDESPERF-NEXT:    slli a0, a0, 2
+; RV64XANDESPERF-NEXT:    slli a0, a0, 32
+; RV64XANDESPERF-NEXT:    srli a0, a0, 30
+; RV64XANDESPERF-NEXT:    nds.lea.w a1, a0, a0
+; RV64XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ret
   %b = zext i32 %a to i64
   %c = mul i64 %b, 44
@@ -1551,18 +1550,17 @@ define i64 @zext_mul100(i32 signext %a) {
 ;
 ; RV64ZBA-LABEL: zext_mul100:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a1, a0
-; RV64ZBA-NEXT:    sh2add.uw a0, a0, a1
+; RV64ZBA-NEXT:    slli.uw a0, a0, 2
 ; RV64ZBA-NEXT:    sh2add a0, a0, a0
-; RV64ZBA-NEXT:    slli a0, a0, 2
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: zext_mul100:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    nds.bfoz a1, a0, 31, 0
-; RV64XANDESPERF-NEXT:    nds.lea.w.ze a0, a1, a0
+; RV64XANDESPERF-NEXT:    slli a0, a0, 32
+; RV64XANDESPERF-NEXT:    srli a0, a0, 30
 ; RV64XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
-; RV64XANDESPERF-NEXT:    slli a0, a0, 2
+; RV64XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
 ; RV64XANDESPERF-NEXT:    ret
   %b = zext i32 %a to i64
   %c = mul i64 %b, 100

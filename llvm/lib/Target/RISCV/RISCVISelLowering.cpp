@@ -16500,6 +16500,12 @@ static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue X = N->getOperand(0);
+  // Put the shift first if we can fold a zext into the shift forming a slli.uw.
+  using namespace SDPatternMatch;
+  if (Shift != 0 && sd_match(X, m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))))) {
+    X = DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(Shift, DL, VT));
+    Shift = 0;
+  }
   SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                                DAG.getTargetConstant(ShY, DL, VT), X);
   SDValue Mul =
@@ -16507,6 +16513,8 @@ static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
                   DAG.getTargetConstant(ShX, DL, VT), AddX ? X : Mul359);
   if (Shift == 0)
     return Mul;
+  // Otherwise, put the shl last so that it can fold with following instructions
+  // (e.g. sext or add).
   return DAG.getNode(ISD::SHL, DL, VT, Mul, DAG.getConstant(Shift, DL, VT));
 }
 
