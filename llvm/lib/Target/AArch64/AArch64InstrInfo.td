@@ -6487,7 +6487,6 @@ def : InstAlias<"faclt $dst, $src1, $src2",
 // Advanced SIMD three scalar instructions (mixed operands).
 //===----------------------------------------------------------------------===//
 defm SQDMULL  : SIMDThreeScalarMixedHS<0, 0b11010, "sqdmull",
-                                       int_aarch64_neon_sqdmulls_scalar,
                                        AArch64sqdmull>;
 defm SQDMLAL  : SIMDThreeScalarMixedTiedHS<0, 0b10010, "sqdmlal">;
 defm SQDMLSL  : SIMDThreeScalarMixedTiedHS<0, 0b10110, "sqdmlsl">;
