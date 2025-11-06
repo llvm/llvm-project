@@ -274,7 +274,7 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
                          : cstr.appendVar(VarKind::SetDim);
   LDBG() << "Inserting constraint set column " << pos << " for: " << value
          << " (dim: " << dim.value_or(kIndexValue)
-         << ", owner: " << getOwnerOfValue(value)->getName() << ")\n";
+         << ", owner: " << getOwnerOfValue(value)->getName() << ")";
   positionToValueDim.insert(positionToValueDim.begin() + pos, valueDim);
   // Update reverse mapping.
   for (int64_t i = pos, e = positionToValueDim.size(); i < e; ++i)
