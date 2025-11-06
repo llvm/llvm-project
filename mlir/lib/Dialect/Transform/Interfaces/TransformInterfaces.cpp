@@ -47,8 +47,6 @@ static bool happensBefore(Operation *a, Operation *b) {
 // TransformState
 //===----------------------------------------------------------------------===//
 
-constexpr const Value transform::TransformState::kTopLevelValue;
-
 transform::TransformState::TransformState(
     Region *region, Operation *payloadRoot,
     const RaggedArray<MappedValue> &extraMappings,
