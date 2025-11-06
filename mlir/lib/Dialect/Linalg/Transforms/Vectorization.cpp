@@ -1867,21 +1867,24 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
     useInBoundsInsteadOfMasking = true;
   }
 
-  // Compute vector type for the _read_ opeartion. The required dims are
-  // determined based on the _write_ vector sizes. This is done in two
-  // steps:
-  //  1) Invert the permutation/transposition that's part of the Pack
-  //  operation.
-  //  2) Collapse the tiled sizes/dims to "return" to the unpacked domain.
+  // Compute pre-transpose-write-vector-type, i.e. the write vector type
+  // _before_ the transposition (i.e. before dimension permutation). This is
+  // done by inverting the permutation/transposition that's part of the Pack
+  // operation. This type is required to:
+  //   1) compute the read vector type for masked-read below, and
+  //   2) generate shape-cast Op below that expands the read vector type.
   PackingMetadata packMetadata;
+  SmallVector<int64_t> preTransposeWriteVecSizses(writeVectorSizes);
   auto destInvPermutation = getPackInverseDestPerm(packOp, packMetadata);
+  applyPermutationToVector(preTransposeWriteVecSizses, destInvPermutation);
+  auto preTransposeWriteVecType = VectorType::get(
+      preTransposeWriteVecSizses, packOp.getType().getElementType());
 
-  SmallVector<int64_t> writeVecSizesUnpermuted(writeVectorSizes);
-  applyPermutationToVector(writeVecSizesUnpermuted, destInvPermutation);
-
+  // Compute vector type for the _read_ opeartion. This is simply
+  // pre-transpose-write-vector-type with the dimensions collapsed
+  // as per the Pack operation.
   VectorType readVecType = getCollapsedVecType(
-      VectorType::get(writeVecSizesUnpermuted,
-                      packOp.getType().getElementType()),
+      preTransposeWriteVecType,
       getSymbolLessAffineMaps(convertReassociationIndicesToExprs(
           rewriter.getContext(), packMetadata.reassociations)));
 
@@ -1892,10 +1895,8 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
       /*inputScalableVecSizes=*/{});
 
   // Create ShapeCastOp.
-  auto expandedVecType = VectorType::get(writeVecSizesUnpermuted,
-                                         packOp.getType().getElementType());
-  auto shapeCastOp =
-      vector::ShapeCastOp::create(rewriter, loc, expandedVecType, maskedRead);
+  auto shapeCastOp = vector::ShapeCastOp::create(
+      rewriter, loc, preTransposeWriteVecType, maskedRead);
 
   // Create TransposeOp.
   auto destPermutation = invertPermutationVector(destInvPermutation);
