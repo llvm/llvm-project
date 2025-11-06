@@ -161,11 +161,13 @@ public:
       return;
     auto &Diags = getDriver().getDiags();
     for (auto *A : Args.filtered(options::OPT_fsanitize_EQ)) {
-      SanitizerMask K =
-          parseSanitizerValue(A->getValue(), /*Allow Groups*/ false);
-      if (K != SanitizerKind::Address)
-        Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
-            << A->getAsString(Args) << getTriple().str();
+      for (const char *Value : A->getValues()) {
+        SanitizerMask K =
+            parseSanitizerValue(Value, /*Allow Groups*/ false);
+        if (K != SanitizerKind::Address)
+          Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
+              << A->getAsString(Args) << getTriple().str();
+      }
     }
   }
 };

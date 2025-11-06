@@ -52,6 +52,18 @@
 // RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ --offload-arch=gfx900:xnack+ -fsanitize=address -fno-gpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,NOGPUSAN,SAN %s
 
+// Catch invalid combination of sanitizers regardless of their order.
+// The address sanitizer enables the device sanitizer pipeline. The fuzzer
+// implicitly turns on LLVMs SanitizerCoverage, which the driver then forwards
+// to the device cc1. SanitizerCoverage is not supported on amdgcn
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address,fuzzer --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=HOSTSANCOMBINATION,INVALIDCOMBINATION1 %s
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=fuzzer,address --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=HOSTSANCOMBINATION,INVALIDCOMBINATION2 %s
+
+// INVALIDCOMBINATION1: warning: ignoring '-fsanitize=address,fuzzer' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+// INVALIDCOMBINATION2: warning: ignoring '-fsanitize=fuzzer,address' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+
 // FAIL-DAG: error: cannot find ROCm device library for ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
 // NOTSUPPORTED-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
 
@@ -59,6 +71,7 @@
 // XNACKNEG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx908:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 
 // HOSTSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address".* "--offload-targets=amdgcn-amd-amdhsa".* "-x" "c".*}}
+// HOSTSANCOMBINATION: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address,fuzzer,fuzzer-no-link".* "--offload-targets=amdgcn-amd-amdhsa".* "-x" "c".*}}
 
 // GPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc".* "-mlink-bitcode-file" "[^"]*asanrtl.bc".* "-mlink-bitcode-file" "[^"]*ockl.bc".* "-target-cpu" "(gfx908|gfx900|gfx1250|gfx1251)".* "-fopenmp".* "-fsanitize=address".* "-x" "c".*}}
 // NOGPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc".* "-target-cpu" "(gfx908|gfx900)".* "-fopenmp".* "-x" "c".*}}

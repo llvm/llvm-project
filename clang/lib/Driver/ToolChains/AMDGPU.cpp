@@ -1089,9 +1089,11 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
   auto &Diags = TC.getDriver().getDiags();
 
   // For simplicity, we only allow -fsanitize=address
-  SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
-  if (K != SanitizerKind::Address)
-    return true;
+  for (const char *Value : A->getValues()) {
+    SanitizerMask K = parseSanitizerValue(Value, /*AllowGroups=*/false);
+    if (K != SanitizerKind::Address)
+      return true;
+  }
 
   // Check 'xnack+' availability by default
   llvm::StringRef Processor =
