@@ -1659,6 +1659,7 @@ module std [system] {
       export std.memory.allocator
       export std.compare.ordering
       export std.utility.in_place
+      export std.functional.hash
     }
     module inout_ptr                          { header "__memory/inout_ptr.h" }
     module is_sufficiently_aligned            { header "__memory/is_sufficiently_aligned.h" }
