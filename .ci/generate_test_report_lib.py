@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Library to parse JUnit XML files and return a markdown report."""
 
-from typing import TypedDict
+from typing import TypedDict, Optional
 import platform
 
 from junitparser import JUnitXml, Failure
@@ -11,10 +11,12 @@ from junitparser import JUnitXml, Failure
 
 # This data structure should match the definition in llvm-zorg in
 # premerge/advisor/advisor_lib.py
+# TODO(boomanaiden154): Drop the Optional here and switch to str | None when
+# we require Python 3.10.
 class FailureExplanation(TypedDict):
     name: str
     explained: bool
-    reason: str | None
+    reason: Optional[str]
 
 
 SEE_BUILD_FILE_STR = "Download the build's log file to see the details."

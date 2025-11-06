@@ -7811,6 +7811,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::reloc_none: {
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(0))->getMetadata();
+    StringRef SymbolName = cast<MDString>(MD)->getString();
+    SDValue Ops[2] = {
+        getRoot(),
+        DAG.getTargetExternalSymbol(
+            SymbolName.data(), TLI.getProgramPointerTy(DAG.getDataLayout()))};
+    DAG.setRoot(DAG.getNode(ISD::RELOC_NONE, sdl, MVT::Other, Ops));
+    return;
+  }
+
   case Intrinsic::eh_exceptionpointer:
   case Intrinsic::eh_exceptioncode: {
     // Get the exception pointer vreg, copy from it, and resize it to fit.

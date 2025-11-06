@@ -1913,6 +1913,9 @@ def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatch
 def int_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                             [], [IntrNoMem]>;
 
+def int_reloc_none : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
+  [IntrNoMem, IntrHasSideEffects]>;
+
 //===---------------- Vector Predication Intrinsics --------------===//
 // Memory Intrinsics
 def int_vp_store : DefaultAttrsIntrinsic<[],

@@ -1537,6 +1537,9 @@ enum NodeType {
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"
 
+  // Issue a no-op relocation against a given symbol at the current location.
+  RELOC_NONE,
+
   // The `llvm.experimental.convergence.*` intrinsics.
   CONVERGENCECTRL_ANCHOR,
   CONVERGENCECTRL_ENTRY,

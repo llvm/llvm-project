@@ -149,7 +149,7 @@ class JSONNodeDumper
   void writeIncludeStack(PresumedLoc Loc, bool JustFirst = false);
 
   // Writes the attributes of a SourceLocation object without.
-  void writeBareSourceLocation(SourceLocation Loc, bool IsSpelling);
+  void writeBareSourceLocation(SourceLocation Loc);
 
   // Writes the attributes of a SourceLocation to JSON based on its presumed
   // spelling location. If the given location represents a macro invocation,
