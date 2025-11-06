@@ -176,4 +176,10 @@ def int_dx_firstbitlow : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, l
 
 def int_dx_group_memory_barrier_with_group_sync
     : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+
+def int_dx_load_input
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
+                             llvm_i32_ty],
+                            [IntrConvergent]>;
 }

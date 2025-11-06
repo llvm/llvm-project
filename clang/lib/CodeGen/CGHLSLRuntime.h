@@ -200,9 +200,25 @@ private:
                                     llvm::GlobalVariable *BufGV);
   void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                    llvm::GlobalVariable *GV);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV,
+                                   HLSLResourceBindingAttr *RBA);
+
+  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         HLSLSemanticAttr *Semantic,
+                                         std::optional<unsigned> Index);
+  llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        HLSLSemanticAttr *Semantic,
+                                        std::optional<unsigned> Index);
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                    const clang::DeclaratorDecl *Decl,
+                                    HLSLSemanticAttr *Semantic,
+                                    std::optional<unsigned> Index);
+
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
+  unsigned SPIRVLastAssignedInputSemanticLocation = 0;
 };
 
 } // namespace CodeGen

@@ -104,6 +104,10 @@
     ret void
   }
 
+  define void @non_li_addi() {
+    ret void
+  }
+
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
   declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, ptr nocapture, i64) #4
@@ -664,3 +668,23 @@ body:             |
   bb.2:
     $x10 = COPY %vl
     PseudoRET implicit killed $x10
+...
+---
+# The two vsetvlis will be coalesced so the ADDI will be made dead and removed.
+# Make sure we shrink the live interval of %0.
+name: non_li_addi
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x10
+    ; CHECK-LABEL: name: non_li_addi
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: dead [[PseudoVSETIVLI:%[0-9]+]]:gprnox0 = PseudoVSETIVLI 1, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    %1:gprnox0 = ADDI %0, 1
+    %2:gprnox0 = PseudoVSETVLI %1, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+    %3:gprnox0 = PseudoVSETIVLI 1, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+    PseudoRET
