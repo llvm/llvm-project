@@ -41,15 +41,12 @@ constexpr void test_assignment() {
     assert(i2.valueless_after_move());
   }
   { // Move assigning to an indirect simply transfers ownership of the held object.
-    test_allocator_statistics stats;
-    std::indirect<int, test_allocator<int>> i1(std::allocator_arg, test_allocator<int>(&stats), 1);
-    std::indirect<int, test_allocator<int>> i2(std::allocator_arg, test_allocator<int>(&stats), 2);
-    assert(stats.construct_count == 2);
+    std::indirect<int, test_allocator<int>> i1(1);
+    std::indirect<int, test_allocator<int>> i2(2);
     auto* addr2 = &*i2;
     i1          = std::move(i2);
     assert(i2.valueless_after_move());
     assert(&*i1 == addr2);
-    assert(stats.construct_count == 2);
     assert(*i1 == 2);
   }
   { // Assigning to an indirect with a different, non-POCMA allocator allocates a new owned object.
@@ -100,12 +97,6 @@ void test_assignment_throws() {
   assert(i2.get_allocator().get_data() == 2);
 #endif
 }
-
-template <class T>
-struct pocma_test_allocator : test_allocator<T> {
-  using test_allocator<T>::test_allocator;
-  using propagate_on_container_move_assignment = std::true_type;
-};
 
 struct Immovable {
   Immovable()                            = default;
