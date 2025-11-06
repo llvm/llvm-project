@@ -2416,6 +2416,7 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
 ; GFX10-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:148
 ; GFX10-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:152
 ; GFX10-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:156
+; GFX10-NEXT:    buffer_store_dword v27, v0, s[0:3], 0 offen offset:104
 ; GFX10-NEXT:    buffer_store_dword v26, v0, s[0:3], 0 offen offset:100
 ; GFX10-NEXT:    buffer_store_dword v25, v0, s[0:3], 0 offen offset:96
 ; GFX10-NEXT:    buffer_store_dword v24, v0, s[0:3], 0 offen offset:92
@@ -2458,7 +2459,7 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
 ; GFX10-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:16
 ; GFX10-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
 ; GFX10-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; GFX10-NEXT:    s_clause 0x7
+; GFX10-NEXT:    s_clause 0x8
 ; GFX10-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:28
 ; GFX10-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:24
 ; GFX10-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:20
@@ -2467,7 +2468,6 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
 ; GFX10-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:8
 ; GFX10-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:4
 ; GFX10-NEXT:    buffer_load_dword v10, off, s[0:3], s32
-; GFX10-NEXT:    buffer_store_dword v27, v0, s[0:3], 0 offen offset:104
 ; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:160
 ; GFX10-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3008,7 +3008,7 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX10-NEXT:    buffer_store_dword v62, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX10-NEXT:    v_writelane_b32 v63, s31, 1
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[36:37]
-; GFX10-NEXT:    s_clause 0x3e
+; GFX10-NEXT:    s_clause 0x28
 ; GFX10-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:636
 ; GFX10-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:640
 ; GFX10-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:644
@@ -3050,29 +3050,7 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX10-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:792
 ; GFX10-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:796
 ; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:516
-; GFX10-NEXT:    buffer_load_dword v10, off, s[0:3], s33 offset:548
-; GFX10-NEXT:    buffer_load_dword v11, off, s[0:3], s33 offset:552
-; GFX10-NEXT:    buffer_load_dword v12, off, s[0:3], s33 offset:556
-; GFX10-NEXT:    buffer_load_dword v13, off, s[0:3], s33 offset:560
-; GFX10-NEXT:    buffer_load_dword v14, off, s[0:3], s33 offset:564
-; GFX10-NEXT:    buffer_load_dword v15, off, s[0:3], s33 offset:568
-; GFX10-NEXT:    buffer_load_dword v16, off, s[0:3], s33 offset:572
-; GFX10-NEXT:    buffer_load_dword v17, off, s[0:3], s33 offset:576
-; GFX10-NEXT:    buffer_load_dword v18, off, s[0:3], s33 offset:580
-; GFX10-NEXT:    buffer_load_dword v19, off, s[0:3], s33 offset:584
-; GFX10-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:588
-; GFX10-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:592
-; GFX10-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:596
-; GFX10-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:600
-; GFX10-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:604
-; GFX10-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:608
-; GFX10-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:612
-; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:616
-; GFX10-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:620
-; GFX10-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:624
-; GFX10-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:628
-; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:632
-; GFX10-NEXT:    s_waitcnt vmcnt(22)
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1536 ; 4-byte Folded Spill
 ; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:520
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3095,6 +3073,29 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:544
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1564 ; 4-byte Folded Spill
+; GFX10-NEXT:    s_clause 0x15
+; GFX10-NEXT:    buffer_load_dword v10, off, s[0:3], s33 offset:548
+; GFX10-NEXT:    buffer_load_dword v11, off, s[0:3], s33 offset:552
+; GFX10-NEXT:    buffer_load_dword v12, off, s[0:3], s33 offset:556
+; GFX10-NEXT:    buffer_load_dword v13, off, s[0:3], s33 offset:560
+; GFX10-NEXT:    buffer_load_dword v14, off, s[0:3], s33 offset:564
+; GFX10-NEXT:    buffer_load_dword v15, off, s[0:3], s33 offset:568
+; GFX10-NEXT:    buffer_load_dword v16, off, s[0:3], s33 offset:572
+; GFX10-NEXT:    buffer_load_dword v17, off, s[0:3], s33 offset:576
+; GFX10-NEXT:    buffer_load_dword v18, off, s[0:3], s33 offset:580
+; GFX10-NEXT:    buffer_load_dword v19, off, s[0:3], s33 offset:584
+; GFX10-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:588
+; GFX10-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:592
+; GFX10-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:596
+; GFX10-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:600
+; GFX10-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:604
+; GFX10-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:608
+; GFX10-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:612
+; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:616
+; GFX10-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:620
+; GFX10-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:624
+; GFX10-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:628
+; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:632
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 24
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:108
 ; GFX10-NEXT:    buffer_store_dword v9, off, s[0:3], s32
