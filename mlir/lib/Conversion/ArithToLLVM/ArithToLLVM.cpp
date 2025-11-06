@@ -595,53 +595,6 @@ void mlir::arith::registerConvertArithToLLVMInterface(
   });
 }
 
-struct FancyAddFLowering : public ConvertOpToLLVMPattern<arith::AddFOp> {
-  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(arith::AddFOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // Get APFloat adder function from runtime library.
-    auto parent = op->getParentOfType<ModuleOp>();
-    if (!parent)
-      return failure();
-    if (!llvm::isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType,
-                   Float8E5M2FNUZType, Float8E4M3FNUZType,
-                   Float8E4M3B11FNUZType, Float8E3M4Type, Float4E2M1FNType,
-                   Float6E2M3FNType, Float6E3M2FNType, Float8E8M0FNUType>(
-            op.getType()))
-      return failure();
-    auto floatTy = cast<FloatType>(op.getType());
-    FailureOr<Operation *> adder =
-        LLVM::lookupOrCreateApFloatAddFFn(rewriter, parent);
-
-    // Cast operands to 64-bit integers.
-    Location loc = op.getLoc();
-    Value lhsBits = LLVM::ZExtOp::create(rewriter, loc, rewriter.getI64Type(),
-                                         adaptor.getLhs());
-    Value rhsBits = LLVM::ZExtOp::create(rewriter, loc, rewriter.getI64Type(),
-                                         adaptor.getRhs());
-
-    // Call software implementation of floating point addition.
-    int32_t sem =
-        llvm::APFloatBase::SemanticsToEnum(floatTy.getFloatSemantics());
-    Value semValue = LLVM::ConstantOp::create(
-        rewriter, loc, rewriter.getI32Type(),
-        rewriter.getIntegerAttr(rewriter.getI32Type(), sem));
-    SmallVector<Value> params = {semValue, lhsBits, rhsBits};
-    auto resultOp =
-        LLVM::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
-                             SymbolRefAttr::get(*adder), params);
-
-    // Truncate result to the original width.
-    Value truncatedBits = LLVM::TruncOp::create(
-        rewriter, loc, rewriter.getIntegerType(floatTy.getWidth()),
-        resultOp->getResult(0));
-    rewriter.replaceOp(op, truncatedBits);
-    return success();
-  }
-};
-
 //===----------------------------------------------------------------------===//
 // Pattern Population
 //===----------------------------------------------------------------------===//
@@ -657,7 +610,6 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
   // clang-format off
   patterns.add<
     AddFOpLowering,
-    FancyAddFLowering,
     AddIOpLowering,
     AndIOpLowering,
     AddUIExtendedOpLowering,

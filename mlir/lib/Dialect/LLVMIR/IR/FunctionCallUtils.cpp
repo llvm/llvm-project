@@ -31,14 +31,6 @@ static constexpr llvm::StringRef kPrintBF16 = "printBF16";
 static constexpr llvm::StringRef kPrintF32 = "printF32";
 static constexpr llvm::StringRef kPrintF64 = "printF64";
 static constexpr llvm::StringRef kPrintApFloat = "printApFloat";
-
-#define APFLOAT_EXTERN_K(OP) kApFloat_##OP
-
-#define APFLOAT_EXTERN_NAME(OP)                                                \
-  static constexpr llvm::StringRef APFLOAT_EXTERN_K(OP) = "APFloat_" #OP;
-
-APFLOAT_BIN_OPS(APFLOAT_EXTERN_NAME)
-
 static constexpr llvm::StringRef kPrintString = "printString";
 static constexpr llvm::StringRef kPrintOpen = "printOpen";
 static constexpr llvm::StringRef kPrintClose = "printClose";
@@ -178,21 +170,6 @@ mlir::LLVM::lookupOrCreateApFloatPrintFn(OpBuilder &b, Operation *moduleOp,
        IntegerType::get(moduleOp->getContext(), 64)},
       LLVM::LLVMVoidType::get(moduleOp->getContext()), symbolTables);
 }
-
-#define LOOKUP_OR_CREATE_APFLOAT_FN_DEFN(OP)                                   \
-  FailureOr<LLVM::LLVMFuncOp> mlir::LLVM::lookupOrCreateApFloat##OP##Fn(       \
-      OpBuilder &b, Operation *moduleOp,                                       \
-      SymbolTableCollection *symbolTables) {                                   \
-    return lookupOrCreateReservedFn(                                           \
-        b, moduleOp, APFLOAT_EXTERN_K(OP),                                     \
-        {IntegerType::get(moduleOp->getContext(), 32),                         \
-         IntegerType::get(moduleOp->getContext(), 64),                         \
-         IntegerType::get(moduleOp->getContext(), 64)},                        \
-        IntegerType::get(moduleOp->getContext(), 64), symbolTables);           \
-  }
-
-APFLOAT_BIN_OPS(LOOKUP_OR_CREATE_APFLOAT_FN_DEFN)
-#undef LOOKUP_OR_CREATE_APFLOAT_FN_DEFN
 
 static LLVM::LLVMPointerType getCharPtr(MLIRContext *context) {
   return LLVM::LLVMPointerType::get(context);

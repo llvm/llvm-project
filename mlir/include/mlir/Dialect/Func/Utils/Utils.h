@@ -60,6 +60,14 @@ mlir::FailureOr<std::pair<mlir::func::FuncOp, mlir::func::CallOp>>
 deduplicateArgsOfFuncOp(mlir::RewriterBase &rewriter, mlir::func::FuncOp funcOp,
                         mlir::ModuleOp moduleOp);
 
+/// Create a FuncOp with signature `resultTypes`(`paramTypes`)` and name `name`.
+/// Return a failure if the FuncOp found has unexpected signature.
+FailureOr<FuncOp>
+lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
+                 ArrayRef<Type> paramTypes = {},
+                 ArrayRef<Type> resultTypes = {}, bool setPrivate = false,
+                 SymbolTableCollection *symbolTables = nullptr);
+
 } // namespace func
 } // namespace mlir
 

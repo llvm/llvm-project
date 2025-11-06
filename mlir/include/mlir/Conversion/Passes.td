@@ -187,6 +187,19 @@ def ArithToLLVMConversionPass : Pass<"convert-arith-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToAPFloat
+//===----------------------------------------------------------------------===//
+
+def ArithToAPFloatConversionPass : Pass<"convert-arith-to-apfloat"> {
+  let summary = "Convert Arith dialect ops on FP8 types to APFloat lib calls";
+  let description = [{
+    This pass converts supported Arith ops which manipulate FP8 typed values to APFloat lib calls.
+  }];
+  let dependentDialects = ["func::FuncDialect"];
+  let options = [];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithToSPIRV
 //===----------------------------------------------------------------------===//
 

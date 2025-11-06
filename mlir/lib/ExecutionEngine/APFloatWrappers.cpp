@@ -7,36 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/Support/Debug.h"
 
 #include <iostream>
-
-#define DEBUG_TYPE "mlir-apfloat-wrapper"
 
 #if (defined(_WIN32) || defined(__CYGWIN__))
 #define MLIR_APFLOAT_WRAPPERS_EXPORTED __declspec(dllexport)
 #else
 #define MLIR_APFLOAT_WRAPPERS_EXPORTED __attribute__((visibility("default")))
 #endif
-
-static std::string_view
-apFloatOpStatusToStr(llvm::APFloatBase::opStatus status) {
-  switch (status) {
-  case llvm::APFloatBase::opOK:
-    return "OK";
-  case llvm::APFloatBase::opInvalidOp:
-    return "InvalidOp";
-  case llvm::APFloatBase::opDivByZero:
-    return "DivByZero";
-  case llvm::APFloatBase::opOverflow:
-    return "Overflow";
-  case llvm::APFloatBase::opUnderflow:
-    return "Underflow";
-  case llvm::APFloatBase::opInexact:
-    return "Inexact";
-  }
-  llvm::report_fatal_error("unhandled llvm::APFloatBase::opStatus variant");
-}
 
 #define APFLOAT_BINARY_OP(OP)                                                  \
   int64_t MLIR_APFLOAT_WRAPPERS_EXPORTED APFloat_##OP(                         \
