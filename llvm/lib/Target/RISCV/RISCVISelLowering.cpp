@@ -16496,30 +16496,34 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
-                               unsigned ShY, bool AddX) {
+                               unsigned ShY, bool AddX, unsigned Shift) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue X = N->getOperand(0);
   SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                                DAG.getTargetConstant(ShY, DL, VT), X);
-  return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                     DAG.getTargetConstant(ShX, DL, VT), AddX ? X : Mul359);
+  SDValue Mul =
+      DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
+                  DAG.getTargetConstant(ShX, DL, VT), AddX ? X : Mul359);
+  if (Shift == 0)
+    return Mul;
+  return DAG.getNode(ISD::SHL, DL, VT, Mul, DAG.getConstant(Shift, DL, VT));
 }
 
 static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
-                                       uint64_t MulAmt) {
+                                       uint64_t MulAmt, unsigned Shift) {
   // 3/5/9 * 3/5/9 -> (shXadd (shYadd X, X), (shYadd X, X))
   switch (MulAmt) {
   case 5 * 3:
-    return getShlAddShlAdd(N, DAG, 2, 1, /*AddX=*/false);
+    return getShlAddShlAdd(N, DAG, 2, 1, /*AddX=*/false, Shift);
   case 9 * 3:
-    return getShlAddShlAdd(N, DAG, 3, 1, /*AddX=*/false);
+    return getShlAddShlAdd(N, DAG, 3, 1, /*AddX=*/false, Shift);
   case 5 * 5:
-    return getShlAddShlAdd(N, DAG, 2, 2, /*AddX=*/false);
+    return getShlAddShlAdd(N, DAG, 2, 2, /*AddX=*/false, Shift);
   case 9 * 5:
-    return getShlAddShlAdd(N, DAG, 3, 2, /*AddX=*/false);
+    return getShlAddShlAdd(N, DAG, 3, 2, /*AddX=*/false, Shift);
   case 9 * 9:
-    return getShlAddShlAdd(N, DAG, 3, 3, /*AddX=*/false);
+    return getShlAddShlAdd(N, DAG, 3, 3, /*AddX=*/false, Shift);
   default:
     break;
   }
@@ -16529,7 +16533,7 @@ static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
   if (int ShY = isShifted359(MulAmt - 1, ShX)) {
     assert(ShX != 0 && "MulAmt=4,6,10 handled before");
     if (ShX <= 3)
-      return getShlAddShlAdd(N, DAG, ShX, ShY, /*AddX=*/true);
+      return getShlAddShlAdd(N, DAG, ShX, ShY, /*AddX=*/true, Shift);
   }
   return SDValue();
 }
@@ -16595,12 +16599,8 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     // of 25 which happen to be quite common.
     // (2/4/8 * 3/5/9 + 1) * 2^N
     Shift = llvm::countr_zero(MulAmt);
-    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt >> Shift)) {
-      if (Shift == 0)
-        return V;
-      SDLoc DL(N);
-      return DAG.getNode(ISD::SHL, DL, VT, V, DAG.getConstant(Shift, DL, VT));
-    }
+    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt >> Shift, Shift))
+      return V;
 
     // If this is a power 2 + 2/4/8, we can use a shift followed by a single
     // shXadd. First check if this a sum of two power of 2s because that's
