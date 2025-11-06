@@ -9,7 +9,7 @@
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringTable.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -19,10 +19,16 @@
 using namespace llvm;
 using namespace RTLIB;
 
+#define GET_RUNTIME_LIBCALLS_INFO
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
 #include "llvm/IR/RuntimeLibcalls.inc"
+
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
+    : RuntimeLibcallsInfo(M.getTargetTriple()) {
+  // TODO: Consider module flags
+}
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
