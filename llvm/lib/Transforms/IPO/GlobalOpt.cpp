@@ -99,6 +99,11 @@ static cl::opt<bool>
                                    "functions from non-versioned callers."),
                           cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned> MaxIFuncVersions(
+    "max-ifunc-versions", cl::Hidden, cl::init(5),
+    cl::desc("Maximum number of caller/callee versions that is allowed for "
+             "using the expensive (cubic) static resolution algorithm."));
+
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
                            cl::desc("Enable stress test of coldcc by adding "
@@ -2629,31 +2634,48 @@ static bool OptimizeNonTrivialIFuncs(
     LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
                       << CalleeIF->getResolverFunction()->getName() << "\n");
 
-    // The complexity of this algorithm is linear: O(NumCallers + NumCallees).
-    // TODO
-    // A limitation it has is that we are not using information about the
-    // current caller to deduce why an earlier caller of higher priority was
-    // skipped. For example let's say the current caller is aes+sve2 and a
-    // previous caller was mops+sve2. Knowing that sve2 is available we could
-    // infer that mops is unavailable. This would allow us to skip callee
-    // versions which depend on mops. I tried implementing this but the
-    // complexity was cubic :/
+    // The complexity of this algorithm is linear: O(NumCallers + NumCallees)
+    // if NumCallers > MaxIFuncVersions || NumCallees > MaxIFuncVersions,
+    // otherwise it is cubic: O((NumCallers ^ 2) x NumCallees).
     auto staticallyResolveCalls = [&](ArrayRef<Function *> Callers,
                                       ArrayRef<Function *> Callees,
                                       bool CallerIsFMV) {
+      bool AllowExpensiveChecks = CallerIsFMV &&
+                                  Callers.size() <= MaxIFuncVersions &&
+                                  Callees.size() <= MaxIFuncVersions;
       // Index to the highest callee candidate.
-      unsigned I = 0;
+      unsigned J = 0;
 
-      for (Function *const &Caller : Callers) {
-        if (I == Callees.size())
+      for (unsigned I = 0, E = Callers.size(); I < E; ++I) {
+        if (J == Callees.size())
           break;
+
+        Function *Caller = Callers[I];
+        APInt CallerBits = FeatureMask[Caller];
+        unsigned BestCandidate = J;
+
+        if (AllowExpensiveChecks) {
+          unsigned K = 0;
+          while (K < I && BestCandidate < Callees.size()) {
+            // Discard feature bits that are known to be available
+            // in the current iteration.
+            APInt KnownBits = FeatureMask[Callers[K]] & ~CallerBits;
+            if (KnownBits.isSubsetOf(FeatureMask[Callees[BestCandidate]])) {
+              ++BestCandidate;
+              // Start over.
+              K = 0;
+            } else
+              ++K;
+          }
+          if (BestCandidate == Callees.size())
+            break;
+        }
 
         LLVM_DEBUG(dbgs() << "   Examining "
                           << (CallerIsFMV ? "FMV" : "regular") << " caller "
                           << Caller->getName() << "\n");
 
-        Function *Callee = Callees[I];
-        APInt CallerBits = FeatureMask[Caller];
+        Function *Callee = Callees[BestCandidate];
         APInt CalleeBits = FeatureMask[Callee];
 
         // Statically resolve calls from the current caller to the current
@@ -2679,8 +2701,8 @@ static bool OptimizeNonTrivialIFuncs(
         // the callee feature bits, advance to the next callee. This effectively
         // prevents considering the current callee as a candidate for static
         // resolution by following callers.
-        while (CallerBits.isSubsetOf(FeatureMask[Callees[I]]) &&
-               ++I < Callees.size())
+        while (CallerBits.isSubsetOf(FeatureMask[Callees[J]]) &&
+               ++J < Callees.size())
           ;
       }
     };
