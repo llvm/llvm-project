@@ -16502,26 +16502,34 @@ static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
   SDValue X = N->getOperand(0);
   // Put the shift first if we can fold a zext into the shift forming a slli.uw.
   using namespace SDPatternMatch;
-  if (Shift != 0 && sd_match(X, m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))))) {
+  if (Shift != 0 &&
+      sd_match(X, m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))))) {
     X = DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(Shift, DL, VT));
     Shift = 0;
   }
-  SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+  SDValue ShlAdd = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                                DAG.getTargetConstant(ShY, DL, VT), X);
-  SDValue Mul =
-      DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                  DAG.getTargetConstant(ShX, DL, VT), AddX ? X : Mul359);
+  if (ShX != 0)
+    ShlAdd = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, ShlAdd,
+                         DAG.getTargetConstant(ShX, DL, VT), AddX ? X : ShlAdd);
   if (Shift == 0)
-    return Mul;
+    return ShlAdd;
   // Otherwise, put the shl last so that it can fold with following instructions
   // (e.g. sext or add).
-  return DAG.getNode(ISD::SHL, DL, VT, Mul, DAG.getConstant(Shift, DL, VT));
+  return DAG.getNode(ISD::SHL, DL, VT, ShlAdd, DAG.getConstant(Shift, DL, VT));
 }
 
 static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
                                        uint64_t MulAmt, unsigned Shift) {
-  // 3/5/9 * 3/5/9 -> (shXadd (shYadd X, X), (shYadd X, X))
   switch (MulAmt) {
+  // 3/5/9 -> (shYadd X, X)
+  case 3:
+    return getShlAddShlAdd(N, DAG, 0, 1, /*AddX=*/false, Shift);
+  case 5:
+    return getShlAddShlAdd(N, DAG, 0, 2, /*AddX=*/false, Shift);
+  case 9:
+    return getShlAddShlAdd(N, DAG, 0, 3, /*AddX=*/false, Shift);
+  // 3/5/9 * 3/5/9 -> (shXadd (shYadd X, X), (shYadd X, X))
   case 5 * 3:
     return getShlAddShlAdd(N, DAG, 2, 1, /*AddX=*/false, Shift);
   case 9 * 3:
@@ -16581,38 +16589,18 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   // real regressions, and no other target properly freezes X in these cases
   // either.
   if (Subtarget.hasShlAdd(3)) {
-    SDValue X = N->getOperand(0);
-    int Shift;
-    if (int ShXAmount = isShifted359(MulAmt, Shift)) {
-      // 3/5/9 * 2^N -> shl (shXadd X, X), N
-      SDLoc DL(N);
-      // Put the shift first if we can fold a zext into the shift forming
-      // a slli.uw.
-      if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
-          X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
-        SDValue Shl =
-            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(Shift, DL, VT));
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
-                           DAG.getTargetConstant(ShXAmount, DL, VT), Shl);
-      }
-      // Otherwise, put the shl second so that it can fold with following
-      // instructions (e.g. sext or add).
-      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                   DAG.getTargetConstant(ShXAmount, DL, VT), X);
-      return DAG.getNode(ISD::SHL, DL, VT, Mul359,
-                         DAG.getConstant(Shift, DL, VT));
-    }
-
+    // 3/5/9 * 2^N -> (shl (shXadd X, X), N)
     // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
     // of 25 which happen to be quite common.
     // (2/4/8 * 3/5/9 + 1) * 2^N
-    Shift = llvm::countr_zero(MulAmt);
+    unsigned Shift = llvm::countr_zero(MulAmt);
     if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt >> Shift, Shift))
       return V;
 
     // If this is a power 2 + 2/4/8, we can use a shift followed by a single
     // shXadd. First check if this a sum of two power of 2s because that's
     // easy. Then count how many zeros are up to the first bit.
+    SDValue X = N->getOperand(0);
     if (Shift >= 1 && Shift <= 3 && isPowerOf2_64(MulAmt & (MulAmt - 1))) {
       unsigned ShiftAmt = llvm::countr_zero((MulAmt & (MulAmt - 1)));
       SDLoc DL(N);
