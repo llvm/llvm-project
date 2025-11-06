@@ -975,3 +975,16 @@ llvm.func @nanosleep() {
   nvvm.nanosleep 4000
   llvm.return
 }
+
+// -----
+
+// CHECK-lABEL: @memorybarrier()
+llvm.func @memorybarrier() {
+  // CHECK: call void @llvm.nvvm.membar.cta()
+  nvvm.membar #nvvm.mem_level<cta>
+  // CHECK: call void @llvm.nvvm.membar.gl()
+  nvvm.membar #nvvm.mem_level<gl>
+  // CHECK: call void @llvm.nvvm.membar.sys()
+  nvvm.membar #nvvm.mem_level<sys>
+  llvm.return
+}

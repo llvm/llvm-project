@@ -291,6 +291,21 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
   llvm_unreachable("Unsupported proxy kinds");
 }
 
+static unsigned getMembarLevelID(NVVM::MemLevelKind level) {
+  switch (level) {
+  case NVVM::MemLevelKind::CTA: {
+    return llvm::Intrinsic::nvvm_membar_cta;
+  }
+  case NVVM::MemLevelKind::GL: {
+    return llvm::Intrinsic::nvvm_membar_gl;
+  }
+  case NVVM::MemLevelKind::SYS: {
+    return llvm::Intrinsic::nvvm_membar_sys;
+  }
+  }
+  llvm_unreachable("Unknown level for memory barrier");
+}
+
 #define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM
 
 static llvm::Intrinsic::ID
