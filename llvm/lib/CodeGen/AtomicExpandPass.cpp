@@ -1301,7 +1301,7 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
   // Atomic RMW expands to a Load-linked / Store-Conditional loop, because it is
   // hard to predict precise branch weigths we mark the branch as "unknown"
   // (50/50) to prevent misleading optimizations.
-  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, *F, DEBUG_TYPE);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return Loaded;
@@ -1686,7 +1686,12 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
 
   Loaded->addIncoming(NewLoaded, LoopBB);
 
-  Builder.CreateCondBr(Success, ExitBB, LoopBB);
+  Instruction *CondBr = Builder.CreateCondBr(Success, ExitBB, LoopBB);
+
+  // Atomic RMW expands to a cmpxchg loop, Since precise branch weights
+  // cannot be easily determined here, we mark the branch as "unknown" (50/50)
+  // to prevent misleading optimizations.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return NewLoaded;
