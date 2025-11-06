@@ -154,6 +154,7 @@ public:
   /// Once all uses of this constructor are migrated to other constructors,
   /// consider marking this overload ""= delete" to prevent calls from being
   /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
+  [[deprecated("Use other constructors of APInt")]]
   LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
 
   /// Construct an APInt from a string representation.
