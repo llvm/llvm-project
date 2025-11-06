@@ -10,7 +10,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @.str.multi = constant [6 x i8] c"%f %d\00"
 @.str.noargs = constant [1 x i8] c"\00"
 
-; No aspects are specified, so no transformation occurs.
+;; No aspects are specified, so no transformation occurs.
 define void @test_basic(i32 %arg) {
 ; CHECK-LABEL: @test_basic(
 ; CHECK-NEXT:    call void (ptr, ...) @basic(ptr nonnull @.str.int, i32 [[ARG:%.*]])
@@ -22,7 +22,7 @@ define void @test_basic(i32 %arg) {
 
 declare void @basic(ptr, ...) #0
 
-; The "float" aspect is present and needed, so no transformation occurs.
+;; The "float" aspect is present and needed, so no transformation occurs.
 define void @test_float_present(double %arg) {
 ; CHECK-LABEL: @test_float_present(
 ; CHECK-NEXT:    call void (ptr, ...) @float_present(ptr nonnull @.str.float, double [[ARG:%.*]])
@@ -34,7 +34,7 @@ define void @test_float_present(double %arg) {
 
 declare void @float_present(ptr, ...) #1
 
-; The "float" aspect is present but not needed, so the call is transformed.
+;; The "float" aspect is present but not needed, so the call is transformed.
 define void @test_float_absent(i32 %arg) {
 ; CHECK-LABEL: @test_float_absent(
 ; CHECK-NEXT:    call void (ptr, ...) @float_present_mod(ptr nonnull @.str.int, i32 [[ARG:%.*]])
@@ -46,7 +46,7 @@ define void @test_float_absent(i32 %arg) {
 
 declare void @float_absent(ptr, ...) #1
 
-; Unknown aspects are always considered needed, so no transformation occurs.
+;; Unknown aspects are always considered needed, so no transformation occurs.
 define void @test_unknown_aspects(i32 %arg) {
 ; CHECK-LABEL: @test_unknown_aspects(
 ; CHECK-NEXT:    call void (ptr, ...) @unknown_aspects(ptr nonnull @.str.int, i32 [[ARG:%.*]])
@@ -58,8 +58,8 @@ define void @test_unknown_aspects(i32 %arg) {
 
 declare void @unknown_aspects(ptr, ...) #2
 
-; The call has no arguments to check, so the "float" aspect is not needed and
-; the call is transformed.
+;; The call has no arguments to check, so the "float" aspect is not needed and
+;; the call is transformed.
 define void @test_no_args_to_check() {
 ; CHECK-LABEL: @test_no_args_to_check(
 ; CHECK-NEXT:    call void (ptr, ...) @float_present_mod(ptr nonnull @.str.noargs)
@@ -71,8 +71,8 @@ define void @test_no_args_to_check() {
 
 declare void @no_args_to_check(ptr, ...) #1
 
-; The first argument index is not 2. The "float" aspect is needed, so no
-; transformation occurs.
+;; The first argument index is not 2. The "float" aspect is needed, so no
+;; transformation occurs.
 define void @test_first_arg_idx(i32 %ignored, double %arg) {
 ; CHECK-LABEL: @test_first_arg_idx(
 ; CHECK-NEXT:    call void (i32, ptr, ...) @first_arg_idx(i32 [[IGNORED:%.*]], ptr nonnull @.str.float, double [[ARG:%.*]])
@@ -84,8 +84,8 @@ define void @test_first_arg_idx(i32 %ignored, double %arg) {
 
 declare void @first_arg_idx(i32, ptr, ...) #3
 
-; One aspect ("unknown") is needed, but one ("float") is not. The call is
-; transformed, and a reference to the needed aspect is emitted.
+;; One aspect ("unknown") is needed, but one ("float") is not. The call is
+;; transformed, and a reference to the needed aspect is emitted.
 define void @test_partial_aspects(i32 %arg) {
 ; CHECK-LABEL: @test_partial_aspects(
 ; CHECK-NEXT:    call void (ptr, ...) @multiple_aspects_mod(ptr nonnull @.str.int, i32 [[ARG:%.*]])
