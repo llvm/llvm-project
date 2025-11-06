@@ -19,23 +19,24 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 
 using namespace mlir;
 
 #define DEBUG_TYPE "fir-alias-analysis"
 
 //===----------------------------------------------------------------------===//
-// AliasAnalysis: alias helpers
+// AliasAnalysis: allocation detection based on MemAlloc effect
 //===----------------------------------------------------------------------===//
 
-static bool tryClassifyAllocateFromEffects(mlir::Operation *op,
-    mlir::Value candidate, bool allowValueScoped, bool allowOpScoped,
-    mlir::Value &v, mlir::Operation *&defOp,
-    fir::AliasAnalysis::SourceKind &type) {
+static bool
+tryClassifyAllocateFromEffects(mlir::Operation *op, mlir::Value candidate,
+                               bool allowValueScoped, bool allowOpScoped,
+                               mlir::Value &v, mlir::Operation *&defOp,
+                               fir::AliasAnalysis::SourceKind &type) {
   auto iface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
   if (!iface)
     return false;
@@ -58,8 +59,8 @@ static bool tryClassifyAllocateFromEffects(mlir::Operation *op,
   if (!allowOpScoped)
     return false;
 
-  bool hasOpScopedAlloc = llvm::any_of(
-      effects, [](const mlir::MemoryEffects::EffectInstance &e) {
+  bool hasOpScopedAlloc =
+      llvm::any_of(effects, [](const mlir::MemoryEffects::EffectInstance &e) {
         return !e.getValue() &&
                mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect());
       });
@@ -618,8 +619,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
     // Effect-based detection (op-scoped heuristic only at this level).
     if (tryClassifyAllocateFromEffects(defOp, v,
                                        /*allowValueScoped=*/false,
-                                       /*allowOpScoped=*/true,
-                                       v, defOp, type))
+                                       /*allowOpScoped=*/true, v, defOp, type))
       break;
 
     llvm::TypeSwitch<Operation *>(defOp)
@@ -711,9 +711,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
               if (auto defDefOp = def.getDefiningOp())
                 classified = tryClassifyAllocateFromEffects(
                     defDefOp, def,
-                    /*allowValueScoped=*/true, /*allowOpScoped=*/true,
-                    v, defOp, type);
-              if (!classified) classifyFallbackFrom(def);
+                    /*allowValueScoped=*/true, /*allowOpScoped=*/true, v, defOp,
+                    type);
+              if (!classified)
+                classifyFallbackFrom(def);
             }
             breakFromLoop = true;
             return;
