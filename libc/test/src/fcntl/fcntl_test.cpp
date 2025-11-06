@@ -172,13 +172,19 @@ public:
     int fd =
         LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
     ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
-    ASSERT_EQ(-1, LIBC_NAMESPACE::fcntl(fd, GETLK_CMD));
+
+    struct flock flk = {};
+    flk.l_type = F_RDLCK;
+    flk.l_start = 0;
+    flk.l_whence = SEEK_SET;
+    flk.l_len = 50;
+    ASSERT_EQ(-1, LIBC_NAMESPACE::fcntl(fd, GETLK_CMD, &flk));
     ASSERT_ERRNO_EQ(EBADF);
   }
 };
 
-#define COMMON_LOCK_TESTS(NAME, GETLK, SETLK)                                  \
-  using NAME = LibcFcntlCommonLockTests<GETLK, SETLK>;                         \
+#define COMMON_LOCK_TESTS(NAME, GETLK_CMD, SETLK_CMD)                          \
+  using NAME = LibcFcntlCommonLockTests<GETLK_CMD, GETLK_CMD>;                 \
   TEST_F(NAME, GetLkRead) { GetLkRead(); }                                     \
   TEST_F(NAME, GetLkWrite) { GetLkWrite(); }                                   \
   TEST_F(NAME, UseAfterClose) { UseAfterClose(); }                             \
@@ -187,6 +193,16 @@ public:
 COMMON_LOCK_TESTS(LlvmLibcFcntlProcessAssociatedLockTest, F_GETLK, F_SETLK);
 COMMON_LOCK_TESTS(LlvmLibcFcntlOpenFileDescriptionLockTest, F_OFD_GETLK,
                   F_OFD_SETLK);
+
+TEST_F(LlvmLibcFcntlTest, UseAfterClose) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  constexpr const char *TEST_FILE_NAME = "testdata/fcntl_use_after_close.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  ASSERT_EQ(-1, LIBC_NAMESPACE::fcntl(fd, F_GETFL));
+  ASSERT_ERRNO_EQ(EBADF);
+}
 
 TEST_F(LlvmLibcFcntlTest, SetGetOwnerTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
