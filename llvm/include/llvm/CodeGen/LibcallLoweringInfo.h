@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
+#define LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
+
 #include "llvm/IR/RuntimeLibcalls.h"
 
 namespace llvm {
@@ -64,3 +67,5 @@ public:
 };
 
 } // end namespace llvm
+
+#endif // LLVM_CODEGEN_LIBCALLLOWERINGINFO_H

@@ -100,7 +100,7 @@ void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
   case omp_const_mem_alloc:
   case omp_high_bw_mem_alloc:
   case omp_low_lat_mem_alloc:
-    return malloc(size);
+    return ompx::allocator::alloc(size);
   default:
     return nullptr;
   }
@@ -113,7 +113,7 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
   case omp_const_mem_alloc:
   case omp_high_bw_mem_alloc:
   case omp_low_lat_mem_alloc:
-    free(ptr);
+    ompx::allocator::free(ptr);
     return;
   case omp_null_allocator:
   default:

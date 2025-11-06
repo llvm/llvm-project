@@ -2,7 +2,7 @@
 ; type as first parameter instead of a sf type without
 ; any conversion instruction of type sf = qf32
 
-; RUN: llc -mtriple=hexagon < %s -o - | FileCheck %s
+; RUN: llc -mtriple=hexagon -mattr=+hvx-length128b,+hvxv75,+v75 < %s -o - | FileCheck %s
 
 ; CHECK: [[V2:v[0-9]+]] = vxor([[V2]],[[V2]])
 ; CHECK: [[V0:v[0-9]+]].qf32 = vmpy([[V0]].sf,[[V2]].sf)
@@ -17,5 +17,3 @@ entry:
   store <64 x half> %conv17.ripple.vectorized, ptr %out_ptr, align 2
   ret void
 }
-
-attributes #0 = { "target-features"="+hvx-length128b,+hvxv75,+v75,-long-calls,-small-data" }
