@@ -704,6 +704,20 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
   }
 }
 
+TEST_F(VPBasicBlockTest, splitAtEnd) {
+  VPlan &Plan = getPlan();
+  VPInstruction *VPI = new VPInstruction(0, {});
+  VPBasicBlock *VPBB = Plan.createVPBasicBlock("VPBB1", VPI);
+  VPBlockUtils::connectBlocks(Plan.getEntry(), VPBB);
+  VPBlockUtils::connectBlocks(VPBB, Plan.getScalarHeader());
+  VPBB->splitAt(VPBB->end());
+  EXPECT_EQ(VPBB->size(), 1u);
+  EXPECT_EQ(&VPBB->front(), VPI);
+  auto *Split = cast<VPBasicBlock>(VPBB->getSingleSuccessor());
+  EXPECT_TRUE(Split->empty());
+  EXPECT_EQ(Split->getSingleSuccessor(), Plan.getScalarHeader());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPBasicBlockTest, print) {
   VPInstruction *TC = new VPInstruction(Instruction::PHI, {});
@@ -1132,8 +1146,7 @@ TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
       new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, false, Load->getAlign(), {},
-                           {});
+  VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, false, {}, {});
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1250,8 +1263,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
         new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
     VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, false, Load->getAlign(),
-                             {}, {});
+    VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, false, {}, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1265,8 +1277,8 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *StoredV = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPWidenStoreRecipe Recipe(*Store, Addr, StoredV, Mask, false, false,
-                              Store->getAlign(), {}, {});
+    VPWidenStoreRecipe Recipe(*Store, Addr, StoredV, Mask, false, false, {},
+                              {});
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());

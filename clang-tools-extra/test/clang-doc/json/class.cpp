@@ -124,8 +124,6 @@ protected:
 // CHECK-NEXT:        }
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// COM:           FIXME: FullName is not emitted correctly.
-// CHECK-NEXT:    "FullName": "",
 // CHECK-NEXT:    "HasEnums": true,
 // CHECK-NEXT:    "HasPublicFunctions": true,
 // CHECK-NEXT:    "HasPublicMembers": true,

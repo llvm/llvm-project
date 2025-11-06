@@ -23,8 +23,8 @@ define void @scalarselect(i1 %cond) {
   %7 = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 %indvars.iv
 
 ; CHECK: cost of 1 for VF 1 {{.*}}  select i1 %cond, i32 %6, i32 0
-; CHECK: Cost of 2 for VF 2: WIDEN-SELECT ir<%sel> = select ir<%cond>, ir<%6>, ir<0> (condition is loop invariant)
-; CHECK: Cost of 2 for VF 4: WIDEN-SELECT ir<%sel> = select ir<%cond>, ir<%6>, ir<0> (condition is loop invariant)
+; CHECK: Cost of 2 for VF 2: WIDEN-SELECT ir<%sel> = select ir<%cond>, ir<%6>, ir<0> (condition is single-scalar)
+; CHECK: Cost of 2 for VF 4: WIDEN-SELECT ir<%sel> = select ir<%cond>, ir<%6>, ir<0> (condition is single-scalar)
 
   %sel = select i1 %cond, i32 %6, i32 zeroinitializer
   store i32 %sel, ptr %7, align 4
