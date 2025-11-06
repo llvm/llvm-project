@@ -1063,7 +1063,7 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       resultNumber, offsets, sizes);
 
   // Cleanup clone.
-  if (dyn_cast<LoopLikeOpInterface>(containingOp))
+  if (isa<LoopLikeOpInterface>(containingOp))
     rewriter.eraseOp(tileableProducer);
 
   return std::make_tuple(tileAndFuseResult->tiledOps, newContainingOp);
