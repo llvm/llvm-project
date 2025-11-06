@@ -70,7 +70,7 @@ public:
     m_scalar = inst;
   }
 
-  explicit RegisterValue(llvm::APInt inst) : m_type(eTypeUInt) {
+  explicit RegisterValue(llvm::APInt inst) : m_type(eTypeUIntN) {
     m_scalar = llvm::APInt(std::move(inst));
   }
 
@@ -179,7 +179,7 @@ public:
   }
 
   void operator=(llvm::APInt uint) {
-    m_type = eTypeUInt;
+    m_type = eTypeUIntN;
     m_scalar = llvm::APInt(std::move(uint));
   }
 
@@ -219,7 +219,7 @@ public:
   }
 
   void SetUInt128(llvm::APInt uint) {
-    m_type = eTypeUInt;
+    m_type = eTypeUIntN;
     m_scalar = std::move(uint);
   }
 
