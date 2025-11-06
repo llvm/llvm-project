@@ -724,8 +724,8 @@ generateDataExitOperations(OpBuilder &builder, Operation *accOp,
 /// s.f1.f2.f3, this will return <s, s.f1, s.f1.f2, s.f1.f2.f3>.
 /// Any intermediate casts/view-like operations are included in the
 /// chain as well.
-static llvm::SmallVector<Value> getBaseRefsChain(Value val) {
-  llvm::SmallVector<Value> baseRefs;
+static SmallVector<Value> getBaseRefsChain(Value val) {
+  SmallVector<Value> baseRefs;
   baseRefs.push_back(val);
   while (true) {
     Value prevVal = val;
@@ -750,7 +750,7 @@ static llvm::SmallVector<Value> getBaseRefsChain(Value val) {
 }
 
 static void
-insertInSortedOrder(llvm::SmallVector<Value> &sortedDataClauseOperands,
+insertInSortedOrder(SmallVector<Value> &sortedDataClauseOperands,
                     Operation *newClause) {
   auto *insertPos =
       std::find_if(sortedDataClauseOperands.begin(),
@@ -840,7 +840,7 @@ void ACCImplicitData::generateImplicitDataOps(
                     newPrivateRecipeSyms);
 
   // 6) Figure out insertion order for the new data clause operands.
-  llvm::SmallVector<Value> sortedDataClauseOperands(
+  SmallVector<Value> sortedDataClauseOperands(
       computeConstructOp.getDataClauseOperands());
   for (auto newClause : newDataClauseOperands)
     insertInSortedOrder(sortedDataClauseOperands, newClause.getDefiningOp());
