@@ -57,8 +57,17 @@ if config.enable_profcheck:
     # so we just exclude llvm-reduce tests from this config altogether. This should
     # be fine though as profcheck config tests are mostly concerned with opt.
     config.excludes.append("llvm-reduce")
+    # Exclude llvm-objcopy tests - not the target of this effort, and some use
+    # cat in ways that conflict with how profcheck uses it.
+    config.excludes.append("llvm-objcopy")
     # (Issue #161235) Temporarily exclude LoopVectorize.
     config.excludes.append("LoopVectorize")
+    # exclude UpdateTestChecks - they fail because of inserted prof annotations
+    config.excludes.append("UpdateTestChecks")
+    # TODO(#166655): Reenable Instrumentation tests
+    config.excludes.append("Instrumentation")
+    # profiling doesn't work quite well on GPU, excluding
+    config.excludes.append("AMDGPU")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -474,7 +483,7 @@ if config.host_ldflags.find("-m32") < 0 and any(
 config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 if config.target_triple:
     if re.match(
-        r"(aarch64_be|arc|armeb|bpfeb|lanai|m68k|mips|mips64|powerpc|powerpc64|sparc|sparcv9|s390x|s390|tce|thumbeb)-.*",
+        r"(aarch64_be|arc|armeb|bpfeb|lanai|m68k|mips|mips64|powerpc|powerpc64|sparc|sparcv9|sparc64|s390x|s390|tce|thumbeb)-.*",
         config.target_triple,
     ):
         config.available_features.add("target-byteorder-big-endian")
@@ -579,7 +588,7 @@ def have_cxx_shared_library():
         print("could not exec llvm-readobj")
         return False
 
-    readobj_out = readobj_cmd.stdout.read().decode("ascii")
+    readobj_out = readobj_cmd.stdout.read().decode("utf-8")
     readobj_cmd.wait()
 
     regex = re.compile(r"(libc\+\+|libstdc\+\+|msvcp).*\.(so|dylib|dll)")
