@@ -515,7 +515,7 @@ G_UAVGFLOOR, G_UAVGCEIL, G_SAVGFLOOR, G_SAVGCEIL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Computes the average of corresponding elements in two vectors (signed and unsigned).
-Resulting vector contains values that are either rounded or truncated. e.g. trunc(shr(ext(a)+ext(b))).
+Resulting vector contains values that are either rounded or truncated. e.g. trunc(shr(add(ext(a),ext(b)),1)).
 
 .. code-block:: none
 
