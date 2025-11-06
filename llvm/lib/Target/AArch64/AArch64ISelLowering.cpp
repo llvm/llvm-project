@@ -11330,9 +11330,10 @@ SDValue AArch64TargetLowering::LowerMinMax(SDValue Op,
     break;
   }
 
+  // Note: This lowering only overrides NEON for v1i64 and v2i64, where we
+  // prefer using SVE if available.
   if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(
-          VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors())) {
+      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true)) {
     switch (Opcode) {
     default:
       llvm_unreachable("Wrong instruction");
