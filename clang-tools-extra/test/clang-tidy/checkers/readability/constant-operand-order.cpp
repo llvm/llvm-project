@@ -11,16 +11,19 @@ void ok_eq(int a) {
 void swap_eq(int a) {
   if (0 == a) {} // CHECK-MESSAGES: warning: constant operand should be on the Right side
                  // CHECK-FIXES: if (a == 0) {} //
+                 // CHECK-LEFT-MESSAGES-NOT: readability-constant-operand-order
 }
 
 void swap_asym(int a) {
   if (0 < a) {}  // CHECK-MESSAGES: warning:
                  // CHECK-FIXES: if (a > 0) {}  //
+                 // CHECK-LEFT-MESSAGES-NOT: readability-constant-operand-order
 }
 
 void null_ptr(int *p) {
   if (nullptr == p) {} // CHECK-MESSAGES: warning:
                        // CHECK-FIXES: if (p == nullptr) {} //
+                       // CHECK-LEFT-MESSAGES-NOT: readability-constant-operand-order
 }
 
 // No-fix when side effects:
@@ -28,6 +31,7 @@ int g();
 void side_effects(int a) {
   if (0 == g()) {} // CHECK-MESSAGES: warning:
                    // CHECK-FIXES-NOT: if (g() == 0)
+                   // CHECK-LEFT-MESSAGES-NOT: readability-constant-operand-order
 }
 
 // Config variant: allow Left and only ==,!=
