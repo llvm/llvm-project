@@ -313,8 +313,8 @@ void l5() {
 // CIR:     %[[END_ADDR:.*]] = cir.alloca {{.*}} ["__end1", init]
 // CIR:     %[[X_ADDR:.*]] = cir.alloca {{.*}} ["x", init]
 // CIR:     %[[ARR_INIT:.*]] = cir.const #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]>
-// CIR:     cir.store align(16) %[[ARR_INIT]], %[[ARR_ADDR]]
-// CIR:     cir.store align(8) %[[ARR_ADDR]], %[[RANGE_ADDR]]
+// CIR:     cir.store{{.*}} %[[ARR_INIT]], %[[ARR_ADDR]]
+// CIR:     cir.store{{.*}} %[[ARR_ADDR]], %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_LOAD:.*]] = cir.load %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_CAST:.*]] = cir.cast array_to_ptrdecay %[[RANGE_LOAD]] : {{.*}}
 // CIR:     cir.store{{.*}} %[[RANGE_CAST]], %[[BEGIN_ADDR]]

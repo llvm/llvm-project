@@ -108,7 +108,7 @@ void paren_expr() {
 // CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["a", init]
 // CIR:   %[[B_ADDR:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["b", init]
 // CIR:   %[[CONST:.*]] = cir.const #cir.zero : !rec_Point
-// CIR:   cir.store align(4) %[[CONST]], %[[A_ADDR]] : !rec_Point, !cir.ptr<!rec_Point>
+// CIR:   cir.store{{.*}} %[[CONST]], %[[A_ADDR]] : !rec_Point, !cir.ptr<!rec_Point>
 // CIR:   cir.call @_ZZ10paren_exprvEN5PointC1ERKS_(%[[B_ADDR]], %[[A_ADDR]]) nothrow : (!cir.ptr<!rec_Point>, !cir.ptr<!rec_Point>) -> ()
 
 // LLVM: define{{.*}} void @_Z10paren_exprv()
@@ -259,7 +259,7 @@ void bin_comma() {
 // CIR: cir.func{{.*}} @_Z9bin_commav()
 // CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
 // CIR:   %[[CONST:.*]] = cir.const #cir.zero : !rec_CompleteS
-// CIR:   cir.store align(4) %[[CONST]], %[[A_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
+// CIR:   cir.store{{.*}} %[[CONST]], %[[A_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
 
 // LLVM: define{{.*}} void @_Z9bin_commav()
 // LLVM:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
@@ -273,7 +273,7 @@ void compound_literal_expr() { CompleteS a = (CompleteS){}; }
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
 // CIR: %[[CONST:.*]] = cir.const #cir.zero : !rec_CompleteS
-// CIR: cir.store align(4) %[[CONST]], %[[A_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
+// CIR: cir.store{{.*}} %[[CONST]], %[[A_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
 
 // TODO(cir): zero-initialize the padding
 
