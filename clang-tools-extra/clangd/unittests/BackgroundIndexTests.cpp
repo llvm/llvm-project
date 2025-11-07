@@ -30,9 +30,9 @@ namespace clangd {
 MATCHER_P(named, N, "") { return arg.Name == N; }
 MATCHER_P(qName, N, "") { return (arg.Scope + arg.Name).str() == N; }
 MATCHER(declared, "") {
-  return !StringRef(arg.CanonicalDeclaration.FileURI).empty();
+  return !StringRef(arg.CanonicalDeclaration.fileURI()).empty();
 }
-MATCHER(defined, "") { return !StringRef(arg.Definition.FileURI).empty(); }
+MATCHER(defined, "") { return !StringRef(arg.Definition.fileURI()).empty(); }
 MATCHER_P(fileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
 ::testing::Matcher<const RefSlab &>
 refsAre(std::vector<::testing::Matcher<Ref>> Matchers) {

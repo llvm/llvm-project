@@ -42,7 +42,7 @@ MATCHER_P(refRange, Range, "") {
 MATCHER_P(fileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
 
 TEST(SymbolLocation, Position) {
-  using Position = SymbolLocation::Position;
+  using Position = SymbolPosition;
   Position Pos;
 
   Pos.setLine(1);
@@ -385,8 +385,8 @@ TEST(MergeTest, Merge) {
   Symbol L, R;
   L.ID = R.ID = SymbolID("hello");
   L.Name = R.Name = "Foo";                           // same in both
-  L.CanonicalDeclaration.FileURI = "file:///left.h"; // differs
-  R.CanonicalDeclaration.FileURI = "file:///right.h";
+  L.CanonicalDeclaration.NameLocation.FileURI = "file:///left.h"; // differs
+  R.CanonicalDeclaration.NameLocation.FileURI = "file:///right.h";
   L.References = 1;
   R.References = 2;
   L.Signature = "()";                   // present in left only
@@ -398,7 +398,7 @@ TEST(MergeTest, Merge) {
 
   Symbol M = mergeSymbol(L, R);
   EXPECT_EQ(M.Name, "Foo");
-  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:///left.h");
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.fileURI()), "file:///left.h");
   EXPECT_EQ(M.References, 3u);
   EXPECT_EQ(M.Signature, "()");
   EXPECT_EQ(M.CompletionSnippetSuffix, "{$1:0}");
@@ -412,20 +412,21 @@ TEST(MergeTest, PreferSymbolWithDefn) {
   Symbol L, R;
 
   L.ID = R.ID = SymbolID("hello");
-  L.CanonicalDeclaration.FileURI = "file:/left.h";
-  R.CanonicalDeclaration.FileURI = "file:/right.h";
+  L.CanonicalDeclaration.NameLocation.FileURI = "file:/left.h";
+  R.CanonicalDeclaration.NameLocation.FileURI = "file:/right.h";
   L.Name = "left";
   R.Name = "right";
 
   Symbol M = mergeSymbol(L, R);
-  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:/left.h");
-  EXPECT_EQ(StringRef(M.Definition.FileURI), "");
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.fileURI()), "file:/left.h");
+  EXPECT_EQ(StringRef(M.Definition.fileURI()), "");
   EXPECT_EQ(M.Name, "left");
 
-  R.Definition.FileURI = "file:/right.cpp"; // Now right will be favored.
+  R.Definition.NameLocation.FileURI =
+      "file:/right.cpp"; // Now right will be favored.
   M = mergeSymbol(L, R);
-  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:/right.h");
-  EXPECT_EQ(StringRef(M.Definition.FileURI), "file:/right.cpp");
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.fileURI()), "file:/right.h");
+  EXPECT_EQ(StringRef(M.Definition.fileURI()), "file:/right.cpp");
   EXPECT_EQ(M.Name, "right");
 }
 
@@ -433,16 +434,16 @@ TEST(MergeTest, PreferSymbolLocationInCodegenFile) {
   Symbol L, R;
 
   L.ID = R.ID = SymbolID("hello");
-  L.CanonicalDeclaration.FileURI = "file:/x.proto.h";
-  R.CanonicalDeclaration.FileURI = "file:/x.proto";
+  L.CanonicalDeclaration.NameLocation.FileURI = "file:/x.proto.h";
+  R.CanonicalDeclaration.NameLocation.FileURI = "file:/x.proto";
 
   Symbol M = mergeSymbol(L, R);
-  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:/x.proto");
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.fileURI()), "file:/x.proto");
 
   // Prefer L if both have codegen suffix.
-  L.CanonicalDeclaration.FileURI = "file:/y.proto";
+  L.CanonicalDeclaration.NameLocation.FileURI = "file:/y.proto";
   M = mergeSymbol(L, R);
-  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:/y.proto");
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.fileURI()), "file:/y.proto");
 }
 
 TEST(MergeIndexTest, Refs) {
@@ -545,7 +546,7 @@ TEST(MergeIndexTest, NonDocumentation) {
   using index::SymbolKind;
   Symbol L, R;
   L.ID = R.ID = SymbolID("x");
-  L.Definition.FileURI = "file:/x.h";
+  L.Definition.NameLocation.FileURI = "file:/x.h";
   R.Documentation = "Forward declarations because x.h is too big to include";
   for (auto ClassLikeKind :
        {SymbolKind::Class, SymbolKind::Struct, SymbolKind::Union}) {
@@ -578,20 +579,20 @@ TEST(MergeTest, MergeIncludesOnDifferentDefinitions) {
                                    IncludeHeaderWithRef("new", 1u)));
 
   // Only merge references of the same includes but do not merge new #includes.
-  L.Definition.FileURI = "file:/left.h";
+  L.Definition.NameLocation.FileURI = "file:/left.h";
   M = mergeSymbol(L, R);
   EXPECT_THAT(M.IncludeHeaders,
               UnorderedElementsAre(IncludeHeaderWithRef("common", 2u)));
 
   // Definitions are the same.
-  R.Definition.FileURI = "file:/right.h";
+  R.Definition.NameLocation.FileURI = "file:/right.h";
   M = mergeSymbol(L, R);
   EXPECT_THAT(M.IncludeHeaders,
               UnorderedElementsAre(IncludeHeaderWithRef("common", 2u),
                                    IncludeHeaderWithRef("new", 1u)));
 
   // Definitions are different.
-  R.Definition.FileURI = "file:/right.h";
+  R.Definition.NameLocation.FileURI = "file:/right.h";
   M = mergeSymbol(L, R);
   EXPECT_THAT(M.IncludeHeaders,
               UnorderedElementsAre(IncludeHeaderWithRef("common", 2u),
@@ -600,7 +601,7 @@ TEST(MergeTest, MergeIncludesOnDifferentDefinitions) {
 
 TEST(MergeIndexTest, IncludeHeadersMerged) {
   auto S = symbol("Z");
-  S.Definition.FileURI = "unittest:///foo.cc";
+  S.Definition.NameLocation.FileURI = "unittest:///foo.cc";
 
   SymbolSlab::Builder DynB;
   S.IncludeHeaders.clear();
@@ -609,7 +610,7 @@ TEST(MergeIndexTest, IncludeHeadersMerged) {
   RefSlab DynRefs;
   auto DynSize = DynSymbols.bytes() + DynRefs.bytes();
   auto DynData = std::make_pair(std::move(DynSymbols), std::move(DynRefs));
-  llvm::StringSet<> DynFiles = {S.Definition.FileURI};
+  llvm::StringSet<> DynFiles = {S.Definition.fileURI()};
   MemIndex DynIndex(std::move(DynData.first), std::move(DynData.second),
                     RelationSlab(), std::move(DynFiles), IndexContents::Symbols,
                     std::move(DynData), DynSize);

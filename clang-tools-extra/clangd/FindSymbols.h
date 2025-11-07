@@ -22,12 +22,14 @@ class ParsedAST;
 class SymbolIndex;
 
 /// Helper function for deriving an LSP Location from an index SymbolLocation.
-llvm::Expected<Location> indexToLSPLocation(const SymbolLocation &Loc,
+llvm::Expected<Location> indexToLSPLocation(const SymbolNameLocation &Loc,
                                             llvm::StringRef TUPath);
+llvm::Expected<std::pair<Location, Range>>
+indexToLSPLocation(const SymbolDeclDefLocation &Loc, llvm::StringRef TUPath);
 
 /// Helper function for deriving an LSP Location for a Symbol.
-llvm::Expected<Location> symbolToLocation(const Symbol &Sym,
-                                          llvm::StringRef TUPath);
+llvm::Expected<std::pair<Location, Range>>
+symbolToLocation(const Symbol &Sym, llvm::StringRef TUPath);
 
 /// Searches for the symbols matching \p Query. The syntax of \p Query can be
 /// the non-qualified name or fully qualified of a symbol. For example,
