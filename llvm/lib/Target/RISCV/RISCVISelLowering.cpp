@@ -17867,6 +17867,7 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
 
   SmallVector<SDNode *> Worklist;
   SmallPtrSet<SDNode *, 8> Inserted;
+  SmallPtrSet<SDNode *, 8> ExtensionsToRemove;
   Worklist.push_back(N);
   Inserted.insert(N);
   SmallVector<CombineResult> CombinesToApply;
@@ -17876,22 +17877,25 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
 
     NodeExtensionHelper LHS(Root, 0, DAG, Subtarget);
     NodeExtensionHelper RHS(Root, 1, DAG, Subtarget);
-    auto AppendUsersIfNeeded = [&Worklist, &Subtarget,
-                                &Inserted](const NodeExtensionHelper &Op) {
-      if (Op.needToPromoteOtherUsers()) {
-        for (SDUse &Use : Op.OrigOperand->uses()) {
-          SDNode *TheUser = Use.getUser();
-          if (!NodeExtensionHelper::isSupportedRoot(TheUser, Subtarget))
-            return false;
-          // We only support the first 2 operands of FMA.
-          if (Use.getOperandNo() >= 2)
-            return false;
-          if (Inserted.insert(TheUser).second)
-            Worklist.push_back(TheUser);
-        }
-      }
-      return true;
-    };
+    auto AppendUsersIfNeeded =
+        [&Worklist, &Subtarget, &Inserted,
+         &ExtensionsToRemove](const NodeExtensionHelper &Op) {
+          if (Op.needToPromoteOtherUsers()) {
+            // Remember that we're supposed to remove this extension.
+            ExtensionsToRemove.insert(Op.OrigOperand.getNode());
+            for (SDUse &Use : Op.OrigOperand->uses()) {
+              SDNode *TheUser = Use.getUser();
+              if (!NodeExtensionHelper::isSupportedRoot(TheUser, Subtarget))
+                return false;
+              // We only support the first 2 operands of FMA.
+              if (Use.getOperandNo() >= 2)
+                return false;
+              if (Inserted.insert(TheUser).second)
+                Worklist.push_back(TheUser);
+            }
+          }
+          return true;
+        };
 
     // Control the compile time by limiting the number of node we look at in
     // total.
@@ -17912,6 +17916,15 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
         std::optional<CombineResult> Res =
             FoldingStrategy(Root, LHS, RHS, DAG, Subtarget);
         if (Res) {
+          // If this strategy wouldn't remove an extension we're supposed to
+          // remove, reject it.
+          if (!Res->LHSExt.has_value() &&
+              ExtensionsToRemove.contains(LHS.OrigOperand.getNode()))
+            continue;
+          if (!Res->RHSExt.has_value() &&
+              ExtensionsToRemove.contains(RHS.OrigOperand.getNode()))
+            continue;
+
           Matched = true;
           CombinesToApply.push_back(*Res);
           // All the inputs that are extended need to be folded, otherwise
