@@ -10968,14 +10968,15 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     }
   }
 
-  // fold (sra (xor (sra x, c1), -1), c2) -> (xor (sra x, c1+c2), -1)
+  // fold (sra (xor (sra x, c1), -1), c2) -> (xor (sra x, c3), -1)
   // This allows merging two arithmetic shifts even when there's a NOT in
   // between.
   SDValue X;
-  APInt C1, C2;
-  if (sd_match(N0, m_OneUse(m_Xor(m_OneUse(m_Sra(m_Value(X), m_ConstInt(C1))),
-                                  m_AllOnes()))) &&
-      sd_match(N1, m_ConstInt(C2))) {
+  APInt C1;
+  if (sd_match(N0,
+               m_OneUse(m_Not(m_OneUse(m_Sra(m_Value(X), m_ConstInt(C1)))))) &&
+      N1C) {
+    APInt C2 = N1C->getAPIntValue();
     zeroExtendToMatch(C1, C2, 1 /* Overflow Bit */);
     APInt Sum = C1 + C2;
     unsigned ShiftSum =
