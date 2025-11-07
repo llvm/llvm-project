@@ -2157,6 +2157,42 @@ amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
   return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o", TranslatedSpirv);
 }
 
+amd_comgr_status_t AMDGPUCompiler::compileSourceToSpirv() {
+  if (auto Status = createTmpDirs()) {
+    return Status;
+  }
+
+  if (ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  if (auto Status = addIncludeFlags()) {
+    return Status;
+  }
+
+  if (auto Status = addCompilationFlags()) {
+    return Status;
+  }
+
+  // Add SPIRV-specific compilation flags
+  Args.push_back("--offload-arch=amdgcnspirv");
+  Args.push_back("--no-gpu-bundle-output");
+  Args.push_back("-c");
+
+
+#if _WIN32
+  Args.push_back("-fshort-wchar");
+#endif
+
+  if (ActionInfo->ShouldLinkDeviceLibs) {
+    if (auto Status = addDeviceLibraries()) {
+      return Status;
+    }
+  }
+
+  return processFiles(AMD_COMGR_DATA_KIND_SPIRV, ".spv");
+}
+
 AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
                                DataSet *OutSet, raw_ostream &LogS)
     : ActionInfo(ActionInfo), InSet(InSet), OutSetT(DataSet::convert(OutSet)),

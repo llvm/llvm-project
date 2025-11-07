@@ -81,6 +81,7 @@ public:
   amd_comgr_status_t compileToExecutable();
   amd_comgr_status_t compileSpirvToRelocatable();
   amd_comgr_status_t translateSpirvToBitcode();
+  amd_comgr_status_t compileSourceToSpirv();
 
   amd_comgr_language_t getLanguage() const { return ActionInfo->Language; }
 };
