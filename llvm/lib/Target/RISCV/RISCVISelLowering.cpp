@@ -16138,9 +16138,9 @@ static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
-  if (!IsEqualCompZero(N0))
+  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
     std::swap(N0, N1);
-  if (!IsEqualCompZero(N0))
+  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
     return SDValue();
 
   KnownBits Known = DAG.computeKnownBits(N1);
