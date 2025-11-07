@@ -30,15 +30,39 @@ ${PROGNAME} [options] <BUILDER>
 
 Environment variables
 CC                  The C compiler to use, this value is used by CMake. This
-                    variable is optional.
+                    variable is mandatory.
 
 CXX                 The C++ compiler to use, this value is used by CMake. This
-                    variable is optional.
+                    variable is mandatory.
 
-CLANG_FORMAT        The clang-format binary to use when generating the format
-                    ignore list.
-
+CCACHE              The ccache binary to use. This variable is optional and is only
+                    used by the bootstrapping build.
 EOF
+}
+
+function step() {
+  endstep
+  set +x
+  if [[ ! -z ${GITHUB_ACTIONS+x} ]]; then
+    echo "::group::$1"
+    export IN_GROUP=1
+  else
+    echo "--- $1"
+  fi
+  set -x
+}
+
+function endstep() {
+  set +x
+  if [[ ! -z ${GITHUB_ACTIONS+x} ]] && [[ ! -z ${IN_GROUP+x} ]]; then
+    echo "::endgroup::"
+    unset IN_GROUP
+  fi
+  set -x
+}
+
+function error() {
+    echo "::error::$1"
 }
 
 if [[ $# == 0 ]]; then
@@ -96,6 +120,23 @@ function error() {
     echo "::error::$1"
 }
 
+if [ -z ${CC+x} ]; then
+    error "Environment variable CC must be defined"
+    exit 1
+fi
+
+if [ -z ${CXX+x} ]; then
+    error "Environment variable CXX must be defined"
+    exit 1
+fi
+
+# Print the version of a few tools to aid diagnostics in some cases
+step "Diagnose tools in use"
+cmake --version
+ninja --version
+${CC} --version
+${CXX} --version
+
 function clean() {
     rm -rf "${BUILD_DIR}"
 }
@@ -127,11 +168,7 @@ function generate-cmake() {
 }
 
 function generate-cmake-libcxx-win() {
-    generate-cmake-base \
-          -DLLVM_ENABLE_RUNTIMES="libcxx" \
-          -DCMAKE_C_COMPILER=clang-cl \
-          -DCMAKE_CXX_COMPILER=clang-cl \
-          "${@}"
+    generate-cmake-base -DLLVM_ENABLE_RUNTIMES="libcxx" "${@}"
 }
 
 function generate-cmake-android() {
@@ -214,12 +251,6 @@ function test-armv7m-picolibc() {
 
     check-runtimes
 }
-
-# Print the version of a few tools to aid diagnostics in some cases
-step "Diagnose tools in use"
-cmake --version
-ninja --version
-if [ ! -z "${CXX}" ]; then ${CXX} --version; fi
 
 case "${BUILDER}" in
 check-generated-output)
@@ -357,12 +388,16 @@ generic-ubsan)
 bootstrapping-build)
     clean
 
+    if [ ! -z ${CCACHE+x} ]; then
+        COMPILER_LAUNCHER="-DCMAKE_CXX_COMPILER_LAUNCHER=${CCACHE}"
+    fi
+
     step "Generating CMake"
     cmake \
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
           -GNinja \
-          -DCMAKE_CXX_COMPILER_LAUNCHER="ccache" \
+          ${COMPILER_LAUNCHER} \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang;lldb" \
@@ -690,14 +725,6 @@ mingw-static)
           -DLIBUNWIND_ENABLE_SHARED=OFF
     check-runtimes
 ;;
-mingw-dll-i686)
-    clean
-    generate-cmake \
-          -DCMAKE_C_COMPILER=i686-w64-mingw32-clang \
-          -DCMAKE_CXX_COMPILER=i686-w64-mingw32-clang++ \
-          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
-    check-runtimes
-;;
 mingw-incomplete-sysroot)
     # When bringing up a new cross compiler from scratch, we build
     # libunwind/libcxx in a setup where the toolchain is incomplete and
@@ -741,10 +768,6 @@ android-ndk-*)
         exit 1
     fi
     ARCH=$(arch_of_emu_img ${ANDROID_EMU_IMG})
-
-    # Use the Android compiler by default.
-    export CC=${CC:-/opt/android/clang/clang-current/bin/clang}
-    export CXX=${CXX:-/opt/android/clang/clang-current/bin/clang++}
 
     # The NDK libc++_shared.so is always built against the oldest supported API
     # level. When tests are run against a device with a newer API level, test

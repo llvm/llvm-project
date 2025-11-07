@@ -37,6 +37,9 @@ steps:
   steps:
   - label: AArch64
     command: libcxx/utils/ci/run-buildbot aarch64
+    env:
+      CC: clang
+      CXX: clang++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: aarch64
@@ -44,6 +47,9 @@ steps:
 
   - label: AArch64 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot aarch64-no-exceptions
+    env:
+      CC: clang
+      CXX: clang++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: aarch64
@@ -51,6 +57,9 @@ steps:
 
   - label: Armv8
     command: libcxx/utils/ci/run-buildbot armv8
+    env:
+      CC: clang
+      CXX: clang++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: armv8l
@@ -58,6 +67,9 @@ steps:
 
   - label: Armv8 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv8-no-exceptions
+    env:
+      CC: clang
+      CXX: clang++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: armv8l
@@ -65,6 +77,9 @@ steps:
 
   - label: Armv7
     command: libcxx/utils/ci/run-buildbot armv7
+    env:
+      CC: clang
+      CXX: clang++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: armv8l
@@ -72,6 +87,9 @@ steps:
 
   - label: Armv7 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv7-no-exceptions
+    env:
+      CC: clang
+      CXX: clang++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: armv8l
@@ -79,6 +97,9 @@ steps:
 
   - label: Armv7-M picolibc
     command: libcxx/utils/ci/run-buildbot armv7m-picolibc
+    env:
+      CC: clang
+      CXX: clang++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: aarch64
@@ -86,6 +107,9 @@ steps:
 
   - label: Armv7-M picolibc -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv7m-picolibc-no-exceptions
+    env:
+      CC: clang
+      CXX: clang++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: aarch64
@@ -131,6 +155,9 @@ steps:
   steps:
   - label: Android 5.0, x86 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-21-def-x86
+    env:
+      CC: /opt/android/clang/clang-current/bin/clang
+      CXX: /opt/android/clang/clang-current/bin/clang++
     agents:
       queue: libcxx-builders
       os: android
@@ -138,6 +165,9 @@ steps:
 
   - label: Android 13, x86_64 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-33-goog-x86_64
+    env:
+      CC: /opt/android/clang/clang-current/bin/clang
+      CXX: /opt/android/clang/clang-current/bin/clang++
     agents:
       queue: libcxx-builders
       os: android

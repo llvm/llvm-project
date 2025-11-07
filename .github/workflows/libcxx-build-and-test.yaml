@@ -223,6 +223,9 @@ jobs:
           source .venv/bin/activate
           python -m pip install psutil
           xcrun bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        env:
+          CC: clang
+          CXX: clang++
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
@@ -241,16 +244,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - { config: clang-cl-dll, mingw: false }
-        - { config: clang-cl-static, mingw: false }
-        - { config: clang-cl-no-vcruntime, mingw: false }
-        - { config: clang-cl-debug, mingw: false }
-        - { config: clang-cl-static-crt, mingw: false }
-        - { config: mingw-dll, mingw: true }
-        - { config: mingw-static, mingw: true }
-        - { config: mingw-dll-i686, mingw: true }
-        - { config: mingw-incomplete-sysroot, mingw: true }
-        - { config: mingw-static, mingw: true, runner: windows-11-arm }
+        - { config: clang-cl-dll,             mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-static,          mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-no-vcruntime,    mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-debug,           mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-static-crt,      mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: mingw-dll,                mingw: true,  cc: clang-cl, cxx: clang-cl }
+        - { config: mingw-dll,                mingw: true,  cc: i686-w64-mingw32-clang, cxx: i686-w64-mingw32-clang++ }
+        - { config: mingw-static,             mingw: true,  cc: clang-cl, cxx: clang-cl }
+        - { config: mingw-incomplete-sysroot, mingw: true,  cc: clang-cl, cxx: clang-cl }
+        - { config: mingw-static,             mingw: true,  cc: clang-cl, cxx: clang-cl, runner: windows-11-arm }
     runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -286,5 +289,7 @@ jobs:
         run: |
           echo "c:\Program Files\LLVM\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build and test
-        run: |
-          bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        run: bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
