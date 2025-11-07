@@ -36,7 +36,6 @@ jobs:
             test-command: 'cd $HOME && clang-format --version | grep version && git-clang-format -h | grep usage && black --version | grep black'
           - container-name: code-lint
             test-command: 'cd $HOME && clang-tidy --version | grep version && clang-tidy-diff.py -h | grep usage'
-
           - container-name: abi-tests
             test-command: 'cd $HOME && abi-compliance-checker --help'
     steps:
