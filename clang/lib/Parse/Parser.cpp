@@ -1343,7 +1343,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
-      FuncRangeEnd = clang::Lexer::getLocForEndOfToken(KWLoc, 0, PP.getSourceManager(), getLangOpts());
+      FuncRangeEnd = clang::Lexer::getLocForEndOfToken(KWLoc, 0, PP.getSourceManager(), getLangOpts()).getLocWithOffset(-1);
 
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
@@ -1351,7 +1351,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                       : diag::ext_defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
-      FuncRangeEnd = clang::Lexer::getLocForEndOfToken(KWLoc, 0, PP.getSourceManager(), getLangOpts());
+      FuncRangeEnd = clang::Lexer::getLocForEndOfToken(KWLoc, 0, PP.getSourceManager(), getLangOpts()).getLocWithOffset(-1);
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
     }
