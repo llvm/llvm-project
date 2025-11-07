@@ -871,9 +871,8 @@ static void yamlToPdb(StringRef Path) {
 
   std::vector<object::coff_section> Sections;
   if (!Dbi.SectionHeaders.empty()) {
-    for (const auto &Hdr : Dbi.SectionHeaders) {
+    for (const auto &Hdr : Dbi.SectionHeaders)
       Sections.emplace_back(Hdr.toCoffSection());
-    }
 
     DbiBuilder.createSectionMap(Sections);
     ExitOnErr(DbiBuilder.addDbgStream(
