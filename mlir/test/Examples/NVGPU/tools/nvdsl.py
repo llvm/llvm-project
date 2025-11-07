@@ -9,7 +9,6 @@ from mlir import runtime as rt
 from tools import nvgpucompiler
 
 MLIR_DYNAMIC = -9223372036854775808
-DUMP_ONLY = os.getenv("MLIR_NVDSL_PRINT_IR") == "1"
 
 
 def const(value: int, ty=None):
@@ -85,7 +84,9 @@ class Mbarriers:
                 self.mbar_group_op, txcount_op, self.id_op, predicate=predicate
             )
         else:
-            nvgpu.mbarrier_arrive(self.mbar_group_op, self.id_op)
+            nvgpu.mbarrier_arrive(
+                ir.Type.parse("!nvgpu.mbarrier.token"), self.mbar_group_op, self.id_op
+            )
 
     def try_wait(self, phase: bool = False, ticks: int = 10000000):
         ticks_op = const(ticks)
@@ -143,9 +144,7 @@ class TMA:
             device_ptr,
         )
         self.tma_descriptor = nvgpu.TmaCreateDescriptorOp(
-            tma_descriptor_ty,
-            device_unranked_memref,
-            list(map(const, self.tma_box_shape)),
+            tma_descriptor_ty, device_unranked_memref, map(const, self.tma_box_shape)
         )
         return self.tma_descriptor.result
 
@@ -157,7 +156,7 @@ class TMA:
             dest,
             mbarrier.mbar_group_op,
             self.tma_descriptor,
-            coordinates=list(map(const, coords)),
+            coordinates=map(const, coords),
             mbarId=mbarrier.id_op,
             predicate=predicate,
         )
@@ -335,11 +334,13 @@ class NVDSL:
 
             def saveIR(module):
                 """Save generated IR"""
-                original_stdout = sys.stdout
-                with open("nvdsl.mlir", "w") as f:
-                    sys.stdout = f
-                    print(module)
-                    sys.stdout = original_stdout
+                if True:  # self.saveIR:
+                    # print(mlir_nvgpu_module)
+                    original_stdout = sys.stdout
+                    with open("nvdsl.mlir", "w") as f:
+                        sys.stdout = f
+                        print(module)
+                        sys.stdout = original_stdout
 
             def _binary_op(lhs, rhs, op: str, predAtt="") -> "ArithValue":
                 """Generate MLIR's Arith dialects binary operations."""
@@ -428,9 +429,6 @@ class NVDSL:
 
                 # Save IR in a file
                 # saveIR(module)
-                if DUMP_ONLY:
-                    print(module)
-                    return 0
 
                 # Verify the module
                 module.operation.verify()
