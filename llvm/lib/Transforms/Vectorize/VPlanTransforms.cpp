@@ -6127,8 +6127,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       VPValue *StrideInBytes = StrideInElement;
       // Scale the stride by the size of the indexed type.
       if (TypeScale != 1) {
-        VPValue *ScaleVPV = Plan.getOrAddLiveIn(ConstantInt::get(
-            TypeInfo.inferScalarType(StrideInElement), TypeScale));
+        VPValue *ScaleVPV = Plan.getConstantInt(
+            TypeInfo.inferScalarType(StrideInElement), TypeScale);
         auto *ScaledStride =
             new VPInstruction(Instruction::Mul, {StrideInElement, ScaleVPV},
                               VPRecipeWithIRFlags::WrapFlagsTy{false, false});
