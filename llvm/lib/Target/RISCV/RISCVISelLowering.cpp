@@ -16121,8 +16121,7 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
 // (and (i1) f, (setcc c, 0, eq)) -> (czero.eqz f, c)
 // (and (setcc c, 0, ne), (i1) g) -> (czero.nez g, c)
 // (and (setcc c, 0, eq), (i1) g) -> (czero.eqz g, c)
-static SDValue combineANDOfSETCCToCZERO(SDNode *N,
-                                        SelectionDAG &DAG,
+static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
                                         const RISCVSubtarget &Subtarget) {
   if (!Subtarget.hasCZEROLike())
     return SDValue();
@@ -16148,8 +16147,10 @@ static SDValue combineANDOfSETCCToCZERO(SDNode *N,
   if (Known.getMaxValue().sgt(1))
     return SDValue();
 
-  unsigned CzeroOpcode = (cast<CondCodeSDNode>(N0.getOperand(2))->get() == ISD::SETNE) ?
-    RISCVISD::CZERO_EQZ : RISCVISD::CZERO_NEZ;
+  unsigned CzeroOpcode =
+      (cast<CondCodeSDNode>(N0.getOperand(2))->get() == ISD::SETNE)
+          ? RISCVISD::CZERO_EQZ
+          : RISCVISD::CZERO_NEZ;
 
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
