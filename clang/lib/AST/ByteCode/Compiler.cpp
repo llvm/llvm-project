@@ -4175,7 +4175,7 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   StmtExprScope<Emitter> SS(this);
 
   const CompoundStmt *CS = E->getSubStmt();
-  const Stmt *Result = CS->getStmtExprResult();
+  const Stmt *Result = CS->body_back();
   for (const Stmt *S : CS->body()) {
     if (S != Result) {
       if (!this->visitStmt(S))
@@ -6007,6 +6007,8 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
       CaseLabels[SC] = this->getLabel();
 
       const Expr *Value = CS->getLHS();
+      if (Value->isValueDependent())
+        return false;
       PrimType ValueT = this->classifyPrim(Value->getType());
 
       // Compare the case statement's value to the switch condition.
