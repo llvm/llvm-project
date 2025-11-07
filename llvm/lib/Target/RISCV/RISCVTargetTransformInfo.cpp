@@ -2140,8 +2140,9 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // Assume memory ops cost scale with the number of vector registers
   // possible accessed by the instruction.  Note that BasicTTI already
   // handles the LT.first term for us.
-  if (LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
-    BaseCost *= TLI->getLMULCost(LT.second);
+  if (TLI->getSubtarget().hasVInstructions())
+    if (LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
+      BaseCost *= TLI->getLMULCost(LT.second);
   return Cost + BaseCost;
 }
 
