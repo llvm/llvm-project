@@ -43,13 +43,13 @@
 ; FORCEDONLY-SAME: loop not vectorized: only vectorizing loops that explicitly request it
 ; FORCEDONLY: LV: Loop hints prevent vectorization
 
-define double @disabled_loop_vectorization(ptr %distmat1){
+define double @disabled_loop_vectorization(ptr %src) {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %inc, %loop ]
-  %RMSD = phi double [ 0.000000e+00, %entry ], [ %add, %loop ]
+  %rdx = phi double [ 0.000000e+00, %entry ], [ %add, %loop ]
   %arrayidx = getelementptr inbounds nuw double, ptr %distmat1, i64 %iv
   %1 = load double, ptr %arrayidx, align 8
   %sub = fsub fast double %1, 1.234e+0
