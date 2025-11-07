@@ -33,7 +33,7 @@ define void @load_store_interleave_group_block_invar_cond(ptr noalias %data, ptr
 ; VF2IC1-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
 ; VF2IC1:       [[PRED_STORE_CONTINUE3]]:
 ; VF2IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[DST_1]], i64 [[INDEX]]
-; VF2IC1-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP2]], align 1
+; VF2IC1-NEXT:    store i8 0, ptr [[TMP2]], align 1
 ; VF2IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2IC1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2IC1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -89,8 +89,8 @@ define void @load_store_interleave_group_block_invar_cond(ptr noalias %data, ptr
 ; VF2IC2:       [[PRED_STORE_CONTINUE11]]:
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST_1]], i64 [[INDEX]]
 ; VF2IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 2
-; VF2IC2-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP5]], align 1
-; VF2IC2-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP6]], align 1
+; VF2IC2-NEXT:    store i8 0, ptr [[TMP5]], align 1
+; VF2IC2-NEXT:    store i8 0, ptr [[TMP6]], align 1
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2IC2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

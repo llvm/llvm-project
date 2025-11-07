@@ -66,13 +66,11 @@ define void @uniform_vector_gep_stored(ptr %a, ptr %b, i64 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[B:%.*]], i64 4
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x ptr> [[DOTSPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x ptr> [[DOTSPLAT]], ptr [[TMP1]], align 8
+; CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

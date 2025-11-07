@@ -12,8 +12,8 @@ define i64 @remove_loop_region_int_iv_used_outside(ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[DST]], i32 8
-; CHECK-NEXT:    store <8 x ptr> zeroinitializer, ptr [[DST]], align 8
-; CHECK-NEXT:    store <8 x ptr> zeroinitializer, ptr [[TMP2]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[DST]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -45,8 +45,8 @@ define i64 @remove_loop_region_int_iv_inc_used_outside(ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[DST]], i32 8
-; CHECK-NEXT:    store <8 x ptr> zeroinitializer, ptr [[DST]], align 8
-; CHECK-NEXT:    store <8 x ptr> zeroinitializer, ptr [[TMP2]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[DST]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -79,8 +79,8 @@ define ptr @remove_loop_region_ptr_iv_used_outside(ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[DST]], i32 8
-; CHECK-NEXT:    store <8 x ptr> zeroinitializer, ptr [[DST]], align 8
-; CHECK-NEXT:    store <8 x ptr> zeroinitializer, ptr [[TMP2]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[DST]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -8
@@ -115,8 +115,8 @@ define ptr @remove_loop_region_ptr_iv_inc_used_outside(ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[DST]], i32 8
-; CHECK-NEXT:    store <8 x ptr> zeroinitializer, ptr [[DST]], align 8
-; CHECK-NEXT:    store <8 x ptr> zeroinitializer, ptr [[TMP2]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[DST]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]

@@ -15,7 +15,7 @@ define i32 @test_icmp_constant_op_zext(ptr %dst) {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 1, [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i16 [[OFFSET_IDX]]
-; CHECK-NEXT:    store <4 x i8> splat (i8 109), ptr [[TMP1]], align 1
+; CHECK-NEXT:    store i8 109, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -128,7 +128,7 @@ define void @ext_cmp(ptr %src.1, ptr %src.2, ptr noalias %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP0]], align 2
+; CHECK-NEXT:    store i16 0, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]

@@ -101,7 +101,7 @@ define void @diff_memcheck_known_false_for_vf_4(ptr %B, ptr %A, ptr %end) {
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP7]], i32 -3
-; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP8]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

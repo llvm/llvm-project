@@ -25,7 +25,7 @@ define void @test(ptr %d) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[INDEX]]
-; CHECK-NEXT:    store <vscale x 2 x i32> splat (i32 100), ptr [[TMP4]], align 8
+; CHECK-NEXT:    store i32 100, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -93,7 +93,7 @@ define void @testloopvariant(ptr %d) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[INDEX]]
-; CHECK-NEXT:    store <vscale x 2 x i32> splat (i32 100), ptr [[TMP4]], align 8
+; CHECK-NEXT:    store i32 100, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

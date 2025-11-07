@@ -17,9 +17,9 @@ define dso_local void @constTC(ptr noalias nocapture %A) optsize {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 4
-; CHECK-NEXT:    store <2 x i32> splat (i32 13), ptr [[TMP3]], align 1
-; CHECK-NEXT:    store <2 x i32> splat (i32 13), ptr [[TMP7]], align 1
-; CHECK-NEXT:    store <2 x i32> splat (i32 13), ptr [[TMP8]], align 1
+; CHECK-NEXT:    store i32 13, ptr [[TMP3]], align 1
+; CHECK-NEXT:    store i32 13, ptr [[TMP7]], align 1
+; CHECK-NEXT:    store i32 13, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1800
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

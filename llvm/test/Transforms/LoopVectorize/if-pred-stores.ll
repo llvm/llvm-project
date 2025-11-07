@@ -550,7 +550,7 @@ define void @minimal_bit_widths_with_aliasing_store(i1 %c, ptr %ptr) {
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 [[INDEX]]
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP2]], align 1
-; VEC-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP2]], align 1
+; VEC-NEXT:    store i8 0, ptr [[TMP2]], align 1
 ; VEC-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if:
 ; VEC-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0

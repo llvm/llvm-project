@@ -22,13 +22,11 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; NONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; NONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], [[TMP3]]
 ; NONE-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
-; NONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
-; NONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; NONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NONE:       vector.body:
 ; NONE-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; NONE-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; NONE-NEXT:    store <vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP5]], align 4
+; NONE-NEXT:    store i32 [[VAL:%.*]], ptr [[TMP5]], align 4
 ; NONE-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], [[TMP3]]
 ; NONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
 ; NONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

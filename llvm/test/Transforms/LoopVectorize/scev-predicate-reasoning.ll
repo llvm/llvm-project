@@ -160,9 +160,9 @@ define void @implied_wrap_predicate(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP17]], align 4
+; CHECK-NEXT:    store i64 0, ptr [[TMP17]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[C]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP18]], align 4
+; CHECK-NEXT:    store i64 0, ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -223,7 +223,7 @@ define void @no_signed_wrap_iv_via_btc(ptr %dst, i32 %N) mustprogress {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SUB4]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP4]]
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP5]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]

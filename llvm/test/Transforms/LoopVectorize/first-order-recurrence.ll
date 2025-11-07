@@ -1916,8 +1916,8 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x i16], ptr [[A]], i64 [[TMP6]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x i16], ptr [[A]], i64 [[TMP7]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i32 4
-; UNROLL-NO-IC-NEXT:    store <4 x i32> splat (i32 7), ptr [[TMP8]], align 4
-; UNROLL-NO-IC-NEXT:    store <4 x i32> splat (i32 7), ptr [[TMP18]], align 4
+; UNROLL-NO-IC-NEXT:    store i32 7, ptr [[TMP8]], align 4
+; UNROLL-NO-IC-NEXT:    store i32 7, ptr [[TMP18]], align 4
 ; UNROLL-NO-IC-NEXT:    [[TMP19:%.*]] = load i16, ptr [[TMP9]], align 2
 ; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = load i16, ptr [[TMP10]], align 2
 ; UNROLL-NO-IC-NEXT:    [[TMP21:%.*]] = load i16, ptr [[TMP11]], align 2
@@ -2055,7 +2055,7 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; SINK-AFTER-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x i16], ptr [[A]], i64 [[TMP1]], i64 1
 ; SINK-AFTER-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x i16], ptr [[A]], i64 [[TMP2]], i64 1
 ; SINK-AFTER-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x i16], ptr [[A]], i64 [[TMP3]], i64 1
-; SINK-AFTER-NEXT:    store <4 x i32> splat (i32 7), ptr [[TMP4]], align 4
+; SINK-AFTER-NEXT:    store i32 7, ptr [[TMP4]], align 4
 ; SINK-AFTER-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP5]], align 2
 ; SINK-AFTER-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP6]], align 2
 ; SINK-AFTER-NEXT:    [[TMP12:%.*]] = load i16, ptr [[TMP7]], align 2
@@ -3219,8 +3219,8 @@ define i32 @sink_after_dead_inst(ptr %A.ptr, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[A_PTR:%.*]], i16 [[OFFSET_IDX]]
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP4]], i32 4
-; UNROLL-NO-IC-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP4]], align 4
-; UNROLL-NO-IC-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP6]], align 4
+; UNROLL-NO-IC-NEXT:    store i32 0, ptr [[TMP4]], align 4
+; UNROLL-NO-IC-NEXT:    store i32 0, ptr [[TMP6]], align 4
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[STEP_ADD]], splat (i16 4)
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
@@ -3268,7 +3268,7 @@ define i32 @sink_after_dead_inst(ptr %A.ptr, i32 %n) {
 ; SINK-AFTER-NEXT:    [[TMP2:%.*]] = or <4 x i16> [[TMP1]], [[TMP1]]
 ; SINK-AFTER-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
 ; SINK-AFTER-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[A_PTR:%.*]], i16 [[OFFSET_IDX]]
-; SINK-AFTER-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP4]], align 4
+; SINK-AFTER-NEXT:    store i32 0, ptr [[TMP4]], align 4
 ; SINK-AFTER-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; SINK-AFTER-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; SINK-AFTER-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16

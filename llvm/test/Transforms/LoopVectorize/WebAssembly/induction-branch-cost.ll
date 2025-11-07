@@ -8,46 +8,15 @@ define void @induction_phi_and_branch_cost(ptr %end, ptr %start.1, ptr %start.2)
 ; CHECK-LABEL: define void @induction_phi_and_branch_cost(
 ; CHECK-SAME: ptr [[END:%.*]], ptr [[START_1:%.*]], ptr [[START_2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i32
-; CHECK-NEXT:    [[START_11:%.*]] = ptrtoint ptr [[START_1]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[START_11]], [[END2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[N_VEC]], -4
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START_1]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[N_VEC]], -4
-; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i8, ptr [[START_2]], i32 [[TMP4]]
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], -4
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_2]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP6]], i32 -3
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[START_1]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[IND_END3]], %[[MIDDLE_BLOCK]] ], [ [[START_2]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START_1]], %[[ENTRY]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[START_2]], %[[ENTRY]] ], [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i32 -4
 ; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr i8, ptr [[PTR_IV_2]], i32 -4
 ; CHECK-NEXT:    store i32 0, ptr [[PTR_IV_2]], align 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV]], [[END]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -68,9 +37,3 @@ exit:
 }
 
 attributes #0 = { "target-features"="+simd128" }
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-;.

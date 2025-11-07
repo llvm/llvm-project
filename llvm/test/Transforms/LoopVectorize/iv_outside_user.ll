@@ -1023,7 +1023,7 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; VEC-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP0]]
-; VEC-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP1]], align 2
+; VEC-NEXT:    store i16 0, ptr [[TMP1]], align 2
 ; VEC-NEXT:    [[TMP5:%.*]] = add i32 [[STEP_2]], [[TMP6]]
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
@@ -1165,7 +1165,7 @@ define i32 @iv_ext_used_outside( ptr %dst) {
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i16 [[OFFSET_IDX]]
-; VEC-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
+; VEC-NEXT:    store i32 0, ptr [[TMP1]], align 4
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
 ; VEC-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
@@ -1250,7 +1250,7 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; VEC-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[DST]], i64 3
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[TMP0]], i32 0
 ; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP1]], i32 -1
-; VEC-NEXT:    store <2 x i16> splat (i16 1), ptr [[TMP2]], align 2
+; VEC-NEXT:    store i16 1, ptr [[TMP2]], align 2
 ; VEC-NEXT:    [[TMP5:%.*]] = add i64 1, -1
 ; VEC-NEXT:    [[IV_1_NEXT_LCSSA1:%.*]] = add i64 [[TMP5]], 1
 ; VEC-NEXT:    br label %[[MIDDLE_BLOCK:.*]]

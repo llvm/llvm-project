@@ -107,14 +107,12 @@ define void @inv_val_store_to_inv_address(ptr %a, i64 %n, ptr %b) {
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX2]], 9223372036854775804
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[NTRUNC]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META12:![0-9]+]]
-; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 4, !alias.scope [[META12]]
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[TMP1]], align 4, !alias.scope [[META12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
@@ -182,8 +180,6 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX2]], 9223372036854775804
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[NTRUNC]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[K:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -192,7 +188,7 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 8, !alias.scope [[META16:![0-9]+]], !noalias [[META19:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT4]]
-; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 4, !alias.scope [[META16]], !noalias [[META19]]
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[TMP1]], align 4, !alias.scope [[META16]], !noalias [[META19]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -201,22 +197,22 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
-; CHECK:       pred.store.if5:
+; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META19]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.continue6:
+; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP2]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
-; CHECK:       pred.store.if7:
+; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META19]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
-; CHECK:       pred.store.continue8:
+; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP2]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10]]
-; CHECK:       pred.store.if9:
+; CHECK:       pred.store.if7:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META19]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE10]]
-; CHECK:       pred.store.continue10:
+; CHECK:       pred.store.continue8:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]

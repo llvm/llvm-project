@@ -351,8 +351,8 @@ define void @test_expand_secv_in_entry_before_gep(ptr %dst) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[OUTER_IV]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[GEP_M]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 2
-; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[TMP3]], align 8
-; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[TMP4]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP3]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]

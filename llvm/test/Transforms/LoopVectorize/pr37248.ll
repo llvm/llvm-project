@@ -58,7 +58,7 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 [[TMP12]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i16, ptr [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[TMP16]], i32 -1
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP17]], align 1
+; CHECK-NEXT:    store i16 0, ptr [[TMP17]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -121,7 +121,7 @@ define void @f2(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[TMP12]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[TMP13]], i32 -1
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP14]], align 1
+; CHECK-NEXT:    store i16 0, ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

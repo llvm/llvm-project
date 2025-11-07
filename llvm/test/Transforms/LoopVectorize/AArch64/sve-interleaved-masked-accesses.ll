@@ -189,18 +189,19 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP3]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = shl nuw nsw <vscale x 16 x i32> [[VEC_IND]], splat (i32 1)
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = zext nneg <vscale x 16 x i32> [[TMP4]] to <vscale x 16 x i64>
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP5]]
-; SCALAR_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 1), <vscale x 16 x ptr> align 1 [[TMP6]], <vscale x 16 x i1> splat (i1 true))
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = or disjoint <vscale x 16 x i32> [[TMP4]], splat (i32 1)
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = zext nneg <vscale x 16 x i32> [[TMP8]] to <vscale x 16 x i64>
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP9]]
-; SCALAR_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 2), <vscale x 16 x ptr> align 1 [[TMP10]], <vscale x 16 x i1> [[TMP7]])
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 16 x i32> [[TMP4]], i64 0
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP6]]
+; SCALAR_TAIL_FOLDING-NEXT:    store i8 1, ptr [[TMP7]], align 1
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = or disjoint <vscale x 16 x i32> [[TMP4]], splat (i32 1)
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = zext nneg <vscale x 16 x i32> [[TMP9]] to <vscale x 16 x i64>
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP10]]
+; SCALAR_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 2), <vscale x 16 x ptr> align 1 [[TMP11]], <vscale x 16 x i1> [[TMP8]])
 ; SCALAR_TAIL_FOLDING-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP2]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SCALAR_TAIL_FOLDING:       middle.block:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]

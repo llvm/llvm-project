@@ -18,7 +18,7 @@ define void @test_epilogue_step_scev_expansion(ptr %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP0]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -37,7 +37,7 @@ define void @test_epilogue_step_scev_expansion(ptr %dst) {
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX3]]
-; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP2]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX3]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT4]], [[N_VEC2]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

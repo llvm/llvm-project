@@ -505,7 +505,7 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[OUT]], i64 [[TMP6]]
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP7]], align 2, !alias.scope [[META36:![0-9]+]], !noalias [[META39:![0-9]+]]
+; CHECK-NEXT:    store i16 0, ptr [[TMP7]], align 2, !alias.scope [[META36:![0-9]+]], !noalias [[META39:![0-9]+]]
 ; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4, !alias.scope [[META39]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

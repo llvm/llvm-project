@@ -117,10 +117,8 @@ define void @ld_div2_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; VF2-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 8
 ; VF2-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP3]], 42
-; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i64 0
-; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
-; VF2-NEXT:    store <2 x i64> [[BROADCAST_SPLAT]], ptr [[TMP5]], align 8
+; VF2-NEXT:    store i64 [[TMP4]], ptr [[TMP5]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; VF2-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]

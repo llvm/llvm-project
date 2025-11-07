@@ -99,8 +99,8 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A_PTR]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP3]], i32 4
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP3]], align 4
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP5]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[TMP3]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[STEP_ADD]], splat (i16 4)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16

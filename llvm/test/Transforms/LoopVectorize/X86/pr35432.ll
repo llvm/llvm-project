@@ -33,65 +33,19 @@ define i32 @main(ptr %ptr) {
 ; CHECK:       for.body8.lr.ph:
 ; CHECK-NEXT:    [[CONV3:%.*]] = trunc i32 [[STOREMERGE_IN9]] to i8
 ; CHECK-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr @a, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[CONV3]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
-; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], [[UMIN1]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 24
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i8 [[CONV3]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP6]])
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP6]], [[UMIN]]
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i8 [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP9]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i32 [[TMP7]], 255
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP10]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[DOTPROMOTED]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], [[TMP7]]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp slt i32 [[TMP15]], [[TMP14]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP13]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP4]], 8
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP4]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[DOTPROMOTED]], [[N_VEC]]
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
-; CHECK-NEXT:    [[IND_END2:%.*]] = sub i8 [[CONV3]], [[DOTCAST]]
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[DOTPROMOTED]], [[INDEX]]
-; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[TMP20]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 4
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP22]], align 4
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP25]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP4]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ], [ [[DOTPROMOTED]], [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ], [ [[CONV3]], [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY8:%.*]]
 ; CHECK:       for.body8:
-; CHECK-NEXT:    [[INC5:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY8]] ]
-; CHECK-NEXT:    [[C_04:%.*]] = phi i8 [ [[BC_RESUME_VAL3]], [[SCALAR_PH]] ], [ [[DEC:%.*]], [[FOR_BODY8]] ]
+; CHECK-NEXT:    [[INC5:%.*]] = phi i32 [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY8]] ]
+; CHECK-NEXT:    [[C_04:%.*]] = phi i8 [ [[CONV3]], [[FOR_BODY8_LR_PH]] ], [ [[DEC:%.*]], [[FOR_BODY8]] ]
 ; CHECK-NEXT:    [[INC]] = add i32 [[INC5]], 1
 ; CHECK-NEXT:    [[DEC]] = add i8 [[C_04]], -1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i32 [[INC]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[DEC]] to i32
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP0]], [[CONV5]]
-; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE:%.*]]
 ; CHECK:       for.cond4.for.inc9_crit_edge:
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY8]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY8]] ]
 ; CHECK-NEXT:    store i32 [[INC_LCSSA]], ptr @a, align 16
 ; CHECK-NEXT:    br label [[FOR_INC9]]
 ; CHECK:       for.inc9:

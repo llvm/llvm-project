@@ -28,7 +28,7 @@ define void @test_versioned_with_sext_use(i32 %offset, ptr %dst) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP3]]
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP4]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -98,7 +98,7 @@ define void @test_versioned_with_zext_use(i32 %offset, ptr %dst) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP3]]
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP4]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -248,7 +248,7 @@ define void @test_versioned_with_different_uses(i32 %offset, ptr noalias %dst.1,
 ; CHECK-NEXT:    store i32 0, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST_2]], i64 [[TMP3]]
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP12]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -342,7 +342,7 @@ define void @test_versioned_with_non_ex_use(i32 %offset, ptr noalias %dst.1, ptr
 ; CHECK-NEXT:    store i32 0, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[TMP18]], align 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[DST_2]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP20]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[TMP20]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
@@ -412,7 +412,7 @@ define void @zext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i16> splat (i16 1), ptr [[TMP4]], align 2
+; CHECK-NEXT:    store i16 1, ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]

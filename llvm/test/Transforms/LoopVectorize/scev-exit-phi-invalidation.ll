@@ -44,7 +44,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX4]] to i8
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i8 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[A]], i8 [[TMP10]]
-; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP11]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP11]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT5]] = add nuw i32 [[INDEX4]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT5]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK6:%.*]], label [[VECTOR_BODY3]], !llvm.loop [[LOOP3:![0-9]+]]

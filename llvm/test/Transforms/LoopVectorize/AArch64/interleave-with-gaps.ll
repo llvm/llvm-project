@@ -31,7 +31,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP8]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <16 x i32> [[TMP7]] to <16 x i64>
 ; CHECK-NEXT:    [[TMP11]] = or <16 x i64> [[VEC_PHI]], [[TMP10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -74,7 +74,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX7]]
-; CHECK-NEXT:    store <vscale x 2 x i8> zeroinitializer, ptr [[TMP32]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP32]], align 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = zext <vscale x 2 x i32> [[TMP31]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP35]] = or <vscale x 2 x i64> [[VEC_PHI8]], [[TMP34]]
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX7]], [[TMP17]]
@@ -162,7 +162,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP26]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP26]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <16 x i32> [[TMP7]] to <16 x i64>
 ; CHECK-NEXT:    [[TMP11]] = or <16 x i64> [[VEC_PHI]], [[TMP10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -205,7 +205,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX7]]
-; CHECK-NEXT:    store <vscale x 2 x i8> zeroinitializer, ptr [[TMP32]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP32]], align 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = zext <vscale x 2 x i32> [[TMP31]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP35]] = or <vscale x 2 x i64> [[VEC_PHI8]], [[TMP34]]
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX7]], [[TMP17]]

@@ -102,7 +102,8 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = sext <vscale x 4 x i32> [[VEC_IND]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], <vscale x 4 x i64> [[TMP15]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8> zeroinitializer, <vscale x 4 x ptr> align 1 [[TMP16]], <vscale x 4 x i1> splat (i1 true)), !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 4 x ptr> [[TMP16]], i32 0
+; CHECK-NEXT:    store i8 0, ptr [[TMP12]], align 1, !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

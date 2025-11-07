@@ -33,8 +33,8 @@ define i32 @iv_live_out_wide(ptr %dst) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw i64 [[TMP12]], 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i64 [[TMP13]]
-; CHECK-NEXT:    store <vscale x 2 x i16> zeroinitializer, ptr [[TMP10]], align 2
-; CHECK-NEXT:    store <vscale x 2 x i16> zeroinitializer, ptr [[TMP14]], align 2
+; CHECK-NEXT:    store i16 0, ptr [[TMP10]], align 2
+; CHECK-NEXT:    store i16 0, ptr [[TMP14]], align 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 2 x i32> [[BROADCAST_SPLAT]], [[STEP_ADD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP6]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[STEP_ADD]], [[BROADCAST_SPLAT2]]

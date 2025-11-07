@@ -317,7 +317,7 @@ define void @f3(ptr noalias %A, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i8> splat (i8 1), ptr [[TMP1]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -335,7 +335,7 @@ define void @f3(ptr noalias %A, i64 %n) {
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX5]]
-; CHECK-NEXT:    store <4 x i8> splat (i8 1), ptr [[TMP5]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX5]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -359,54 +359,15 @@ define void @f3(ptr noalias %A, i64 %n) {
 ;
 ; CHECK-PROFITABLE-BY-DEFAULT-LABEL: define void @f3(
 ; CHECK-PROFITABLE-BY-DEFAULT-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:  [[ITER_CHECK:.*]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
-; CHECK-PROFITABLE-BY-DEFAULT:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 4
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK-PROFITABLE-BY-DEFAULT:       [[VECTOR_PH]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK-PROFITABLE-BY-DEFAULT:       [[VECTOR_BODY]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <4 x i8> splat (i8 1), ptr [[TMP1]], align 1
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK-PROFITABLE-BY-DEFAULT:       [[MIDDLE_BLOCK]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
-; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
-; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_PH]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[N]], 2
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[N_VEC3:%.*]] = sub i64 [[N]], [[N_MOD_VF2]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
-; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX5]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <2 x i8> splat (i8 1), ptr [[TMP5]], align 1
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX5]], 2
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N4]], label %[[FOR_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
-; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:  [[ENTRY:.*]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[FOR_BODY]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store i8 1, ptr [[ARRAYIDX]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END_LOOPEXIT:.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[FOR_END]]:
@@ -555,12 +516,12 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], [[DOTSPLAT2]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 84
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[MIDDLE_BLOCK]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label %[[OUTER_LATCH]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IND_END5:%.*]] = mul i8 84, [[INDUCTION_IV]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_PH]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 84, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -584,7 +545,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX7]], 2
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT16]] = add <2 x i8> [[VEC_IND15]], [[DOTSPLAT14]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT18]], 84
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP13]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP13]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label %[[OUTER_LATCH]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_SCALAR_PH]]:
@@ -599,7 +560,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store i8 [[IV_2]], ptr [[GEP_DST]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[EC:%.*]] = icmp ugt i64 [[IV]], 83
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[EC]], label %[[OUTER_LATCH]], label %[[INNER]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[EC]], label %[[OUTER_LATCH]], label %[[INNER]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[OUTER_LATCH]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDVAR_NEXT]] = add i8 [[INDVAR]], 1
@@ -722,7 +683,7 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[MIDDLE_BLOCK]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
@@ -747,7 +708,7 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT8]] = add <2 x i32> [[VEC_IND7]], splat (i32 2)
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC3]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP10]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP10]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N5]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
@@ -762,7 +723,7 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[EXIT]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    ret void
 ;
@@ -936,7 +897,4 @@ exit:                                        ; preds = %loop
 ; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META1]]}
-; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
-; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
-; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
 ;.

@@ -13,16 +13,17 @@
 define void @f1() {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  bb1:
-; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 0 to i64
+; CHECK:       bb2:
+; CHECK-NEXT:    [[C_1_0:%.*]] = phi i16 [ 0, [[BB1:%.*]] ], [ [[_TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[_TMP1:%.*]] = zext i16 0 to i64
+; CHECK-NEXT:    [[_TMP2:%.*]] = getelementptr [1 x [[REC8:%.*]]], ptr @a, i16 0, i64 [[_TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[C_1_0]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x ptr], ptr @b, i16 0, i64 [[TMP0]]
-; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK-NEXT:    store ptr [[_TMP2]], ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[_TMP9]] = add nsw i16 [[C_1_0]], 1
+; CHECK-NEXT:    [[_TMP11:%.*]] = icmp slt i16 [[_TMP9]], 2
+; CHECK-NEXT:    br i1 [[_TMP11]], label [[VECTOR_BODY]], label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
 ;

@@ -61,40 +61,40 @@ define void @test_large_number_of_group(ptr %dst, i64 %off, i64 %N) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i64 [[INDEX]], -5
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], [[OFF]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[DST:%.*]], i64 [[TMP12]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP14]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP11]], [[OFF_MUL_2]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP15]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP17]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP11]], [[OFF_MUL_3]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP18]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP20]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP20]], align 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[TMP11]], [[OFF_MUL_4]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP21]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP23]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP23]], align 8
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP11]], [[OFF_MUL_5]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP24]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP26]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP11]], [[OFF_MUL_6]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP29]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP29]], align 8
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[TMP11]], [[OFF_MUL_7]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP30]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP32]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP32]], align 8
 ; CHECK-NEXT:    [[TMP33:%.*]] = add i64 [[TMP11]], [[OFF_MUL_8]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP33]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP35]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP35]], align 8
 ; CHECK-NEXT:    [[TMP36:%.*]] = add i64 [[TMP11]], [[OFF_MUL_9]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP36]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP38]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP38]], align 8
 ; CHECK-NEXT:    [[TMP39:%.*]] = add i64 [[TMP11]], [[OFF_MUL_10]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP39]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP41]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP41]], align 8
 ; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[TMP11]], [[OFF_MUL_11]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP42]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP44]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP44]], align 8
 ; CHECK-NEXT:    [[TMP45:%.*]] = add i64 [[TMP11]], [[OFF_MUL_12]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP45]]
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP47]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP47]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP48:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP48]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
