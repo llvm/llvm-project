@@ -1,0 +1,20 @@
+// RUN: not %clang %s -emit-llvm -o /dev/null 2>&1 | FileCheck %s -check-prefix=CIR_INPUT_ERROR
+// CIR_INPUT_ERROR: error: trying to compile CIR module {{.*}} with clang IR disabled; use -fclangir to enable CIR pipeline
+
+// RUN: %clang -fclangir %s -emit-llvm -o /dev/null 2>&1 | FileCheck %s --allow-empty -check-prefix=CIR_INPUT_OK
+// CIR_INPUT_OK-NOT: error: trying to compile CIR module
+
+// REQUIRES: x86-registered-target
+// REQUIRES: cir-support
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.lang = #cir.lang<cxx>, cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @test_function() -> !s32i {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+}
