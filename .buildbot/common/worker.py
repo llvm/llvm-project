@@ -83,14 +83,15 @@ def run_command(cmd, **kwargs):
     util.report_run_cmd(cmd, **kwargs)
 
 
-def run_ninja(args, targets, **kwargs):
+def run_ninja(args, targets, ccache_stats=False, **kwargs):
     cmd = ['ninja', *targets]
     if args.jobs:
         args .append(f'-j{args.jobs}')
-    #env = os.environ.copy()
-    #env['NINJA_STATUS'] = "[%p/%es :: %u->%r->%f (of %t)] "
+    if ccache_stats:
+            util.report_run_cmd(['ccache', '-z'])
     util.report_run_cmd(cmd, **kwargs)
-
+    if ccache_stats:
+            util.report_run_cmd(['ccache', '-sv'])
 
 
 

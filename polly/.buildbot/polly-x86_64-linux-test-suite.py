@@ -54,13 +54,13 @@ with worker.step('configure-llvm', halt_on_fail=True):
     worker.run_command(cmd)
 
 with worker.step('build-llvm', halt_on_fail=True):
-    worker.run_command(['ninja', '-C', llvmbuilddir])
+    worker.run_ninja(args, ['-C', llvmbuilddir], ccache_stats=True)
 
 with worker.step('check-polly'):
-    worker.run_command(['ninja', '-C', llvmbuilddir, 'check-polly'])
+    worker.run_ninja(args, ['-C', llvmbuilddir, 'check-polly'], ccache_stats=True)
 
-with worker. step('install-llvm', halt_on_fail=True):
-    worker.run_command(['ninja', '-C', llvmbuilddir, 'install'])
+with worker.step('install-llvm', halt_on_fail=True):
+    worker.run_ninja(args, ['-C', llvmbuilddir, 'install'], ccache_stats=True)
 
 with worker. step('clone-testsuite', halt_on_fail=True):
     worker.checkout('https://github.com/llvm/llvm-test-suite',testsuitesrcdir)
@@ -84,8 +84,8 @@ with worker.step('configure-testsuite', halt_on_fail=True):
     worker.run_command(cmd)
 
 with worker.step('build-testsuite', halt_on_fail=True):
-    worker. run_ninja(args, ['-C', testsuitebuilddir])
+    worker. run_ninja(args, ['-C', testsuitebuilddir], ccache_stats=True)
 
 with worker.step('check-testsuite'):
-    worker.run_ninja(args, ['-C', testsuitebuilddir, 'check'])
+    worker.run_ninja(args, ['-C', testsuitebuilddir, 'check'], ccache_stats=True)
 
