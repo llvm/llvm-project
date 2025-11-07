@@ -34,7 +34,7 @@ AST_POLYMORPHIC_MATCHER(
     isInAbseilFile, AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc,
                                                     NestedNameSpecifierLoc)) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
-  SourceLocation Loc = SourceManager.getSpellingLoc(Node.getBeginLoc());
+  const SourceLocation Loc = SourceManager.getSpellingLoc(Node.getBeginLoc());
   if (Loc.isInvalid())
     return false;
   OptionalFileEntryRef FileEntry =
@@ -45,7 +45,7 @@ AST_POLYMORPHIC_MATCHER(
   // [absl-library] is AbseilLibraries list entry.
   StringRef Path = FileEntry->getName();
   static constexpr llvm::StringLiteral AbslPrefix("absl/");
-  size_t PrefixPosition = Path.find(AbslPrefix);
+  const size_t PrefixPosition = Path.find(AbslPrefix);
   if (PrefixPosition == StringRef::npos)
     return false;
   Path = Path.drop_front(PrefixPosition + AbslPrefix.size());

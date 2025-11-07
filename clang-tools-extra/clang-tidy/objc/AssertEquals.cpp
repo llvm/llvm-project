@@ -17,7 +17,7 @@ namespace clang::tidy::objc {
 
 // Mapping from `XCTAssert*Equal` to `XCTAssert*EqualObjects` name.
 static const std::map<std::string, std::string> &nameMap() {
-  static std::map<std::string, std::string> Map{
+  static const std::map<std::string, std::string> Map{
       {"XCTAssertEqual", "XCTAssertEqualObjects"},
       {"XCTAssertNotEqual", "XCTAssertNotEqualObjects"},
 
@@ -44,7 +44,7 @@ void AssertEquals::registerMatchers(MatchFinder *Finder) {
 void AssertEquals::check(const ast_matchers::MatchFinder::MatchResult &Result) {
   for (const auto &Pair : nameMap()) {
     if (const auto *Root = Result.Nodes.getNodeAs<BinaryOperator>(Pair.first)) {
-      SourceManager *Sm = Result.SourceManager;
+      const SourceManager *Sm = Result.SourceManager;
       // The macros are nested two levels, so going up twice.
       auto MacroCallsite = Sm->getImmediateMacroCallerLoc(
           Sm->getImmediateMacroCallerLoc(Root->getBeginLoc()));
