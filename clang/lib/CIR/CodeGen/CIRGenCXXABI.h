@@ -187,6 +187,11 @@ public:
   virtual void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
                                   mlir::Value addr) = 0;
 
+  virtual void emitVirtualObjectDelete(CIRGenFunction &cgf,
+                                       const CXXDeleteExpr *de, Address ptr,
+                                       QualType elementType,
+                                       const CXXDestructorDecl *dtor) = 0;
+
   /// Checks if ABI requires extra virtual offset for vtable field.
   virtual bool
   isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,

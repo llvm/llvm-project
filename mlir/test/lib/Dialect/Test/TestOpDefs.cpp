@@ -633,8 +633,9 @@ ParseResult RegionIfOp::parse(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
-OperandRange RegionIfOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()}, point) &&
+OperandRange RegionIfOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()},
+                            successor.getSuccessor()) &&
          "invalid region index");
   return getOperands();
 }
@@ -643,10 +644,11 @@ void RegionIfOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
   if (!point.isParent()) {
-    if (point != getJoinRegion())
+    if (point.getTerminatorPredecessorOrNull()->getParentRegion() !=
+        &getJoinRegion())
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
-      regions.push_back(RegionSuccessor(getResults()));
+      regions.push_back(RegionSuccessor(getOperation(), getResults()));
     return;
   }
 
@@ -673,7 +675,7 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.emplace_back(getResults());
+    regions.emplace_back(getOperation(), getResults());
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -1050,6 +1052,32 @@ LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
 }
 
 //===----------------------------------------------------------------------===//
+// TilingNoDpsOp
+//===----------------------------------------------------------------------===//
+
+SmallVector<Range> TilingNoDpsOp::getIterationDomain(OpBuilder &builder) {
+  return {};
+}
+
+SmallVector<utils::IteratorType> TilingNoDpsOp::getLoopIteratorTypes() {
+  return {};
+}
+
+FailureOr<TilingResult>
+TilingNoDpsOp::getTiledImplementation(OpBuilder &builder,
+                                      ArrayRef<OpFoldResult> offsets,
+                                      ArrayRef<OpFoldResult> sizes) {
+  return failure();
+}
+
+LogicalResult TilingNoDpsOp::getResultTilePosition(
+    OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
+    SmallVector<OpFoldResult> &resultSizes) {
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
 // OpWithShapedTypeInferTypeAdaptorInterfaceOp
 //===----------------------------------------------------------------------===//
 
@@ -1107,11 +1135,11 @@ void LoopBlockOp::getSuccessorRegions(
   if (point.isParent())
     return;
 
-  regions.emplace_back((*this)->getResults());
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
-OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBody());
+OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getBody());
   return MutableOperandRange(getInitMutable());
 }
 
@@ -1120,8 +1148,8 @@ OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 //===----------------------------------------------------------------------===//
 
 MutableOperandRange
-LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionBranchPoint point) {
-  if (point.isParent())
+LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  if (successor.isParent())
     return getExitArgMutable();
   return getNextIterArgMutable();
 }
@@ -1213,7 +1241,7 @@ void TestStoreWithARegion::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody(), getBody().front().getArguments());
   else
-    regions.emplace_back();
+    regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1227,7 +1255,7 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // enter the body.
   regions.emplace_back(
       RegionSuccessor(&getBody(), getBody().front().getArguments()));
-  regions.emplace_back();
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 //===----------------------------------------------------------------------===//

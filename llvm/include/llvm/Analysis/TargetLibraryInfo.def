@@ -1951,6 +1951,36 @@ TLI_DEFINE_ENUM_INTERNAL(nearbyintl)
 TLI_DEFINE_STRING_INTERNAL("nearbyintl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
 
+/// double nextafter(double x, double y);
+TLI_DEFINE_ENUM_INTERNAL(nextafter)
+TLI_DEFINE_STRING_INTERNAL("nextafter")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Dbl)
+
+/// float nextafterf(float x, float y);
+TLI_DEFINE_ENUM_INTERNAL(nextafterf)
+TLI_DEFINE_STRING_INTERNAL("nextafterf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Flt)
+
+/// long double nextafterl(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(nextafterl)
+TLI_DEFINE_STRING_INTERNAL("nextafterl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl)
+
+/// double nexttoward(double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(nexttoward)
+TLI_DEFINE_STRING_INTERNAL("nexttoward")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, LDbl)
+
+/// float nexttowardf(float x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(nexttowardf)
+TLI_DEFINE_STRING_INTERNAL("nexttowardf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, LDbl)
+
+/// long double nexttowardl(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(nexttowardl)
+TLI_DEFINE_STRING_INTERNAL("nexttowardl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl)
+
 /// uint32_t ntohl(uint32_t netlong);
 TLI_DEFINE_ENUM_INTERNAL(ntohl)
 TLI_DEFINE_STRING_INTERNAL("ntohl")
