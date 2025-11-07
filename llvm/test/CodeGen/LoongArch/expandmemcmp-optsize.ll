@@ -8,10 +8,10 @@
 ; RUN: sed 's/iGRLen/i64/g' %s | llc --mtriple=loongarch64 --mattr=-ual \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,LA64,LA64-NUAL
 
-declare i32 @bcmp(ptr, ptr, iGRLen) nounwind readonly
-declare i32 @memcmp(ptr, ptr, iGRLen) nounwind readonly
+declare signext i32 @bcmp(ptr, ptr, iGRLen) nounwind readonly
+declare signext i32 @memcmp(ptr, ptr, iGRLen) nounwind readonly
 
-define i32 @bcmp_size_0(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_0(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_0:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -37,7 +37,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_1(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_1(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_1:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -63,7 +63,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_2(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_2(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_2:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -89,7 +89,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_3(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_3(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_3:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -115,7 +115,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_4(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_4(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_4:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -141,7 +141,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_5(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_5(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_5:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -167,7 +167,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_6(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_6(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_6:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -193,7 +193,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_7(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_7(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_7:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -219,7 +219,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_8(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_8(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_8:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -245,7 +245,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_15:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -271,7 +271,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_16(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_16(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_16:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -297,7 +297,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_31:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -323,7 +323,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -349,7 +349,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_63:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -375,7 +375,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_64(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_64(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_64:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -401,7 +401,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_127:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -427,7 +427,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_128(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @bcmp_size_128(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: bcmp_size_128:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -453,7 +453,7 @@ entry:
   ret i32 %bcmp
 }
 
-define i32 @bcmp_size_runtime(ptr %s1, ptr %s2, iGRLen %len) nounwind optsize {
+define signext i32 @bcmp_size_runtime(ptr %s1, ptr %s2, iGRLen %len) nounwind optsize {
 ; LA32-LABEL: bcmp_size_runtime:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -564,7 +564,7 @@ entry:
   ret i1 %ret
 }
 
-define i32 @memcmp_size_0(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_0(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-LABEL: memcmp_size_0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    move $a0, $zero
@@ -574,7 +574,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_1(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_1(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_1:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -600,7 +600,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_2(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_2(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_2:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -626,7 +626,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_3(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_3(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_3:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -652,7 +652,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_4(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_4(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_4:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -678,7 +678,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_5(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_5(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_5:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -704,7 +704,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_6(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_6(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_6:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -730,7 +730,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_7(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_7(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_7:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -756,7 +756,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_8(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_8(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_8:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -782,7 +782,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_15(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_15(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_15:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -808,7 +808,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_16(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_16(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_16:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -834,7 +834,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_31:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -860,7 +860,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -886,7 +886,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_63(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_63(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_63:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -912,7 +912,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_64(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_64(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_64:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -938,7 +938,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_127(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_127(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_127:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -964,7 +964,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_128(ptr %s1, ptr %s2) nounwind optsize {
+define signext i32 @memcmp_size_128(ptr %s1, ptr %s2) nounwind optsize {
 ; LA32-LABEL: memcmp_size_128:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -990,7 +990,7 @@ entry:
   ret i32 %memcmp
 }
 
-define i32 @memcmp_size_runtime(ptr %s1, ptr %s2, iGRLen %len) nounwind optsize {
+define signext i32 @memcmp_size_runtime(ptr %s1, ptr %s2, iGRLen %len) nounwind optsize {
 ; LA32-LABEL: memcmp_size_runtime:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
