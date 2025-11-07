@@ -3,12 +3,12 @@
 // CHECK-lABEL: @memorybarrier()
 llvm.func @memorybarrier() {
   // CHECK: call void @llvm.nvvm.membar.cta()
-  nvvm.memory_barrier #nvvm.mem_scope<cta>
+  nvvm.memory.barrier #nvvm.mem_scope<cta>
   // CHECK: call void @llvm.nvvm.fence.sc.cluster()
-  nvvm.memory_barrier #nvvm.mem_scope<cluster>
+  nvvm.memory.barrier #nvvm.mem_scope<cluster>
   // CHECK: call void @llvm.nvvm.membar.gl()
-  nvvm.memory_barrier #nvvm.mem_scope<gpu>
+  nvvm.memory.barrier #nvvm.mem_scope<gpu>
   // CHECK: call void @llvm.nvvm.membar.sys()
-  nvvm.memory_barrier #nvvm.mem_scope<sys>
+  nvvm.memory.barrier #nvvm.mem_scope<sys>
   llvm.return
 }

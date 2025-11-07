@@ -1236,7 +1236,7 @@ def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,
   let hasVerifier = 1;
 }
 
-def NVVM_MembarOp : NVVM_Op<"memory_barrier">,
+def NVVM_MembarOp : NVVM_Op<"memory.barrier">,
                     Arguments<(ins MemScopeKindAttr:$scope)> {
   let summary = "Memory barrier operation";
   let description = [{

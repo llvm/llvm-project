@@ -293,20 +293,16 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
 
 static unsigned getMembarIntrinsicID(NVVM::MemScopeKind scope) {
   switch (scope) {
-  case NVVM::MemScopeKind::CTA: {
+  case NVVM::MemScopeKind::CTA:
     return llvm::Intrinsic::nvvm_membar_cta;
-  }
-  case NVVM::MemScopeKind::CLUSTER: {
+  case NVVM::MemScopeKind::CLUSTER:
     return llvm::Intrinsic::nvvm_fence_sc_cluster;
-  }
-  case NVVM::MemScopeKind::GPU: {
+  case NVVM::MemScopeKind::GPU:
     return llvm::Intrinsic::nvvm_membar_gl;
-  }
-  case NVVM::MemScopeKind::SYS: {
+  case NVVM::MemScopeKind::SYS:
     return llvm::Intrinsic::nvvm_membar_sys;
   }
-  }
-  llvm_unreachable("Unknown level for memory barrier");
+  llvm_unreachable("Unknown scope for memory barrier");
 }
 
 #define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM
