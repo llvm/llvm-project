@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_LOWER_MULTI_IMAGE_FORTRAN_H
-#define FORTRAN_LOWER_MULTI_IMAGE_FORTRAN_H
+#ifndef FORTRAN_LOWER_MULTIIMAGEFORTRAN_H
+#define FORTRAN_LOWER_MULTIIMAGEFORTRAN_H
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -87,4 +87,4 @@ private:
 } // namespace lower
 } // namespace Fortran
 
-#endif // FORTRAN_LOWER_MULTI_IMAGE_FORTRAN_H
+#endif // FORTRAN_LOWER_MULTIIMAGEFORTRAN_H
