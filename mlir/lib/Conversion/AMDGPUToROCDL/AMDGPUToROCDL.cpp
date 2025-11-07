@@ -709,7 +709,8 @@ static void wmmaPushInputOperand(
     } else if (elemType.isSignedInteger()) {
       localIsUnsigned = false;
     }
-    attrs.push_back(NamedAttribute(attrName, rewriter.getBoolAttr(!localIsUnsigned)));
+    attrs.push_back(
+        NamedAttribute(attrName, rewriter.getBoolAttr(!localIsUnsigned)));
   }
 
   int64_t numBits =
@@ -1290,7 +1291,6 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   LogicalResult
   matchAndRewrite(WMMAOp op, WMMAOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
     Location loc = op.getLoc();
     auto outType =
         typeConverter->convertType<VectorType>(op.getDestD().getType());
@@ -1329,6 +1329,7 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
           rewriter, loc, destCType.clone(rewriter.getI16Type()), destC);
 
     std::optional<StringRef> maybeIntrinsic = wmmaOpToIntrinsic(op, chipset);
+
     if (!maybeIntrinsic.has_value())
       return op.emitOpError("no intrinsic matching WMMA on the given chipset");
 
@@ -1350,6 +1351,7 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     loweredOp.addOperands(operands);
     loweredOp.addAttributes(attrs);
     Operation *lowered = rewriter.create(loweredOp);
+
     Operation *maybeCastBack = lowered;
     if (rawOutType != outType)
       maybeCastBack = LLVM::BitcastOp::create(rewriter, loc, outType,
