@@ -69,6 +69,16 @@ Potentially Breaking Changes
   call the member ``operator delete`` instead of the expected global
   delete operator. The old behavior is retained under ``-fclang-abi-compat=21``
   flag.
+- Trailing null statements in GNU statement expressions are no longer
+  ignored by Clang; they now result in a void type. Clang previously
+  matched GCC's behavior, which was recently clarified to be incorrect.
+
+  .. code-block:: c++
+
+    // The resulting type is 'void', not 'int'
+    void foo(void) {
+      return ({ 1;; });
+    }
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -562,6 +572,8 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+- More intrinsics for the following AArch64 instructions:
+  FCVTZ[US], FCVTN[US], FCVTM[US], FCVTP[US], FCVTA[US]
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -641,6 +653,7 @@ clang-format
 - Deprecate ``AlwaysBreak`` and ``BlockIndent`` suboptions from the
   ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
   ``bool`` type.
+- Add ``AlignPPAndNotPP`` suboption to ``AlignTrailingComments``.
 
 libclang
 --------

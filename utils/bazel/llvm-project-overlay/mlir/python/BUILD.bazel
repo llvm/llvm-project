@@ -1541,6 +1541,7 @@ filegroup(
         ":TransformSMTExtensionOpsPyGen",
         ":VectorTransformEnumPyGen",
         ":VectorTransformOpsPyGen",
+        ":XeGPUTransformOpsPyGen",
     ],
 )
 

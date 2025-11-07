@@ -446,7 +446,12 @@ struct CollapseT {
   N v;
 };
 
-// V5.2: [15.8.3] `extended-atomic` clauses
+// [6.0:266]
+template <typename T, typename I, typename E> //
+struct CollectorT {
+  using IncompleteTrait = std::true_type;
+};
+
 template <typename T, typename I, typename E> //
 struct CompareT {
   using EmptyTrait = std::true_type;
@@ -734,6 +739,12 @@ struct IndirectT {
   using InvokedByFptr = E;
   using WrapperTrait = std::true_type;
   OPT(InvokedByFptr) v;
+};
+
+// [6.0:265-266]
+template <typename T, typename I, typename E> //
+struct InductorT {
+  using IncompleteTrait = std::true_type;
 };
 
 // V5.2: [14.1.2] `init` clause
@@ -1324,8 +1335,9 @@ using EmptyClausesT = std::variant<
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =
-    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>, GraphIdT<T, I, E>,
-                 GraphResetT<T, I, E>, MatchT<T, I, E>, OtherwiseT<T, I, E>,
+    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>,
+                 CollectorT<T, I, E>, GraphIdT<T, I, E>, GraphResetT<T, I, E>,
+                 InductorT<T, I, E>, MatchT<T, I, E>, OtherwiseT<T, I, E>,
                  ReplayableT<T, I, E>, TransparentT<T, I, E>, WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>

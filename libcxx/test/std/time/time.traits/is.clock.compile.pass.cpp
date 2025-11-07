@@ -8,6 +8,11 @@
 
 // REQUIRES: std-at-least-c++20
 
+// <chrono>
+//
+// template<class T> struct is_clock;
+// template<class T> constexpr bool is_clock_v = is_clock<T>::value;
+
 #include <chrono>
 #include <ratio>
 
