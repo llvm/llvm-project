@@ -46,12 +46,6 @@ __m128 test_mm_cvtph_ps(__m128i a) {
   return _mm_cvtph_ps(a);
 }
 
-__m128i test_mm_cvtps_ph(__m128 a) {
-  // CHECK-LABEL: test_mm_cvtps_ph
-  // CHECK: call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %{{.*}}, i32 0)
-  return _mm_cvtps_ph(a, 0);
-}
-
 // A value exactly halfway between 1.0 and the next representable FP16 number.
 // In binary, its significand ends in ...000, followed by a tie-bit 1.
 #define POS_HALFWAY (1.0f + 0.00048828125f) // 1.0 + 2^-11, a tie-breaking case
@@ -107,6 +101,12 @@ TEST_CONSTEXPR(match_v8hi(
   _mm256_cvtps_ph(_mm256_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f, -2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_ZERO),
   0xC100, 0x3C7D, 0x3C00, 0x0000, 0xC100, 0x3C7D, 0x3C00, 0x0000
 ));
+
+__m128i test_mm_cvtps_ph(__m128 a) {
+  // CHECK-LABEL: test_mm_cvtps_ph
+  // CHECK: call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %{{.*}}, i32 0)
+  return _mm_cvtps_ph(a, 0);
+}
 
 //
 // Tests for Exact Dynamic Rounding
