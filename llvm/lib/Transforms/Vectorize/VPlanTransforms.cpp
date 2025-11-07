@@ -6109,11 +6109,10 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
             determineBaseAndStride(Ptr);
 
       // Skip if the memory access is not a strided access.
-      if (!BasePtr) {
-        assert(!StrideInElement && !ElementTy);
+      if (!BasePtr)
         continue;
-      }
-      assert(StrideInElement && ElementTy);
+      assert(StrideInElement && ElementTy &&
+             "Can not get stride information for a strided access");
 
       // Create a new vector pointer for strided access.
       auto *NewPtr = new VPVectorPointerRecipe(
