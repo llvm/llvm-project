@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONALCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONALCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONAL_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONAL_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::misc {
 class MisleadingBidirectionalCheck : public ClangTidyCheck {
 public:
   MisleadingBidirectionalCheck(StringRef Name, ClangTidyContext *Context);
-  ~MisleadingBidirectionalCheck();
+  ~MisleadingBidirectionalCheck() override;
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
@@ -31,4 +31,4 @@ private:
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONALCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONAL_H

@@ -60,7 +60,7 @@ public:
     uint32_t UnitLength = 0;
     bool IsConstructed = false;
     // A map of DIE offsets in original DWARF section to DIE ID.
-    // Whih is used to access DieInfoVector.
+    // Which is used to access DieInfoVector.
     std::unordered_map<uint64_t, uint32_t> DIEIDMap;
 
     // Some STL implementations don't have a noexcept move constructor for

@@ -134,7 +134,6 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_VectorCall:                                              \
   case ParsedAttr::AT_AArch64VectorPcs:                                        \
   case ParsedAttr::AT_AArch64SVEPcs:                                           \
-  case ParsedAttr::AT_DeviceKernel:                                            \
   case ParsedAttr::AT_MSABI:                                                   \
   case ParsedAttr::AT_SysVABI:                                                 \
   case ParsedAttr::AT_Pcs:                                                     \
@@ -1238,8 +1237,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for typeof?");
     if (!Result->isDependentType())
-      if (const TagType *TT = Result->getAs<TagType>())
-        S.DiagnoseUseOfDecl(TT->getOriginalDecl(), DS.getTypeSpecTypeLoc());
+      if (const auto *TT = Result->getAs<TagType>())
+        S.DiagnoseUseOfDecl(TT->getDecl(), DS.getTypeSpecTypeLoc());
     // TypeQuals handled by caller.
     Result = Context.getTypeOfType(
         Result, DS.getTypeSpecType() == DeclSpec::TST_typeof_unqualType
@@ -2359,6 +2358,11 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
 
+  if (VecSize->isNegative()) {
+    Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+    return QualType();
+  }
+
   if (CurType->isDependentType())
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
                                           VectorKind::Generic);
@@ -2395,7 +2399,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                VectorKind::Generic);
 }
 
-QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
+QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
                                   SourceLocation AttrLoc) {
   // Unlike gcc's vector_size attribute, we do not allow vectors to be defined
   // in conjunction with complex types (pointers, arrays, functions, etc.).
@@ -2418,35 +2422,40 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
       BIT && CheckBitIntElementType(*this, AttrLoc, BIT))
     return QualType();
 
-  if (!ArraySize->isTypeDependent() && !ArraySize->isValueDependent()) {
-    std::optional<llvm::APSInt> vecSize =
-        ArraySize->getIntegerConstantExpr(Context);
-    if (!vecSize) {
+  if (!SizeExpr->isTypeDependent() && !SizeExpr->isValueDependent()) {
+    std::optional<llvm::APSInt> VecSize =
+        SizeExpr->getIntegerConstantExpr(Context);
+    if (!VecSize) {
       Diag(AttrLoc, diag::err_attribute_argument_type)
-        << "ext_vector_type" << AANT_ArgumentIntegerConstant
-        << ArraySize->getSourceRange();
+          << "ext_vector_type" << AANT_ArgumentIntegerConstant
+          << SizeExpr->getSourceRange();
       return QualType();
     }
 
-    if (!vecSize->isIntN(32)) {
+    if (VecSize->isNegative()) {
+      Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+      return QualType();
+    }
+
+    if (!VecSize->isIntN(32)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
-          << ArraySize->getSourceRange() << "vector";
+          << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
     // Unlike gcc's vector_size attribute, the size is specified as the
     // number of elements, not the number of bytes.
-    unsigned vectorSize = static_cast<unsigned>(vecSize->getZExtValue());
+    unsigned VectorSize = static_cast<unsigned>(VecSize->getZExtValue());
 
-    if (vectorSize == 0) {
+    if (VectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
-          << ArraySize->getSourceRange() << "vector";
+          << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
 
-    return Context.getExtVectorType(T, vectorSize);
+    return Context.getExtVectorType(T, VectorSize);
   }
 
-  return Context.getDependentSizedExtVectorType(T, ArraySize, AttrLoc);
+  return Context.getDependentSizedExtVectorType(T, SizeExpr, AttrLoc);
 }
 
 QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
@@ -2517,12 +2526,18 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
     Diag(AttrLoc, diag::err_attribute_zero_size) << "matrix" << ColRange;
     return QualType();
   }
-  if (!ConstantMatrixType::isDimensionValid(MatrixRows)) {
+  if (MatrixRows > Context.getLangOpts().MaxMatrixDimension &&
+      MatrixColumns > Context.getLangOpts().MaxMatrixDimension) {
+    Diag(AttrLoc, diag::err_attribute_size_too_large)
+        << RowRange << ColRange << "matrix row and column";
+    return QualType();
+  }
+  if (MatrixRows > Context.getLangOpts().MaxMatrixDimension) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << RowRange << "matrix row";
     return QualType();
   }
-  if (!ConstantMatrixType::isDimensionValid(MatrixColumns)) {
+  if (MatrixColumns > Context.getLangOpts().MaxMatrixDimension) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << ColRange << "matrix column";
     return QualType();
@@ -2780,13 +2795,14 @@ QualType Sema::GetTypeFromParser(ParsedType Ty, TypeSourceInfo **TInfo) {
     return QualType();
   }
 
-  TypeSourceInfo *DI = nullptr;
+  TypeSourceInfo *TSI = nullptr;
   if (const LocInfoType *LIT = dyn_cast<LocInfoType>(QT)) {
     QT = LIT->getType();
-    DI = LIT->getTypeSourceInfo();
+    TSI = LIT->getTypeSourceInfo();
   }
 
-  if (TInfo) *TInfo = DI;
+  if (TInfo)
+    *TInfo = TSI;
   return QT;
 }
 
@@ -3780,7 +3796,8 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   }
-  for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
+  for (const ParsedAttr &AL : llvm::concat<ParsedAttr>(
+           D.getDeclSpec().getAttributes(), D.getAttributes())) {
     if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
       CC = CC_DeviceKernel;
       break;
@@ -7563,8 +7580,6 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<AArch64SVEPcsAttr>(Ctx, Attr);
   case ParsedAttr::AT_ArmStreaming:
     return createSimpleAttr<ArmStreamingAttr>(Ctx, Attr);
-  case ParsedAttr::AT_DeviceKernel:
-    return createSimpleAttr<DeviceKernelAttr>(Ctx, Attr);
   case ParsedAttr::AT_Pcs: {
     // The attribute may have had a fixit applied where we treated an
     // identifier as a string literal.  The contents of the string are valid,
@@ -8803,16 +8818,6 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
-static bool isMultiSubjectAttrAllowedOnType(const ParsedAttr &Attr) {
-  // The DeviceKernel attribute is shared for many targets, and
-  // it is only allowed to be a type attribute with the AMDGPU
-  // spelling, so skip processing the attr as a type attr
-  // unless it has that spelling.
-  if (Attr.getKind() != ParsedAttr::AT_DeviceKernel)
-    return true;
-  return DeviceKernelAttr::isAMDGPUSpelling(Attr);
-}
-
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs,
@@ -9066,8 +9071,6 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         break;
       [[fallthrough]];
     FUNCTION_TYPE_ATTRS_CASELIST:
-      if (!isMultiSubjectAttrAllowedOnType(attr))
-        break;
 
       attr.setUsedAsTypeAttr();
 
@@ -9699,7 +9702,7 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
   if (!E->isTypeDependent()) {
     QualType T = E->getType();
     if (const TagType *TT = T->getAs<TagType>())
-      DiagnoseUseOfDecl(TT->getOriginalDecl(), E->getExprLoc());
+      DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
   }
   return Context.getTypeOfExprType(E, Kind);
 }
@@ -9865,7 +9868,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
                                       SourceLocation Loc) {
   assert(BaseType->isEnumeralType());
-  EnumDecl *ED = BaseType->castAs<EnumType>()->getOriginalDecl();
+  EnumDecl *ED = BaseType->castAs<EnumType>()->getDecl();
 
   S.DiagnoseUseOfDecl(ED, Loc);
 

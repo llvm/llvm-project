@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGIDENTIFIERCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGIDENTIFIERCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGIDENTIFIER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGIDENTIFIER_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::misc {
 class MisleadingIdentifierCheck : public ClangTidyCheck {
 public:
   MisleadingIdentifierCheck(StringRef Name, ClangTidyContext *Context);
-  ~MisleadingIdentifierCheck();
+  ~MisleadingIdentifierCheck() override;
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -24,4 +24,4 @@ public:
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGIDENTIFIERCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGIDENTIFIER_H

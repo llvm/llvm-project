@@ -73,7 +73,7 @@ static LLVM_THREAD_LOCAL std::vector<ThreadPoolTaskGroup *>
 // WaitingForGroup == nullptr means all tasks regardless of their group.
 void StdThreadPool::processTasks(ThreadPoolTaskGroup *WaitingForGroup) {
   while (true) {
-    std::function<void()> Task;
+    llvm::unique_function<void()> Task;
     ThreadPoolTaskGroup *GroupOfTask;
     {
       std::unique_lock<std::mutex> LockGuard(QueueLock);
@@ -189,7 +189,7 @@ void StdThreadPool::processTasksWithJobserver() {
 
     // While we hold a job slot, process tasks from the internal queue.
     while (true) {
-      std::function<void()> Task;
+      llvm::unique_function<void()> Task;
       ThreadPoolTaskGroup *GroupOfTask = nullptr;
 
       {

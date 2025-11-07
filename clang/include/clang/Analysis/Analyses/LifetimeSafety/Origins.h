@@ -74,6 +74,8 @@ public:
 
   OriginID getOrCreate(const ValueDecl &D);
 
+  unsigned getNumOrigins() const { return NextOriginID.Value; }
+
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
 
 private:

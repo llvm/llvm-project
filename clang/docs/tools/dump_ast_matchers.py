@@ -6,11 +6,8 @@
 import collections
 import re
 import os
+from urllib.request import urlopen
 
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
 
 CLASS_INDEX_PAGE_URL = "https://clang.llvm.org/doxygen/classes.html"
 try:

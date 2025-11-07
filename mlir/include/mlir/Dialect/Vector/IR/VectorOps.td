@@ -19,6 +19,7 @@ include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td"
 include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td"
 include "mlir/Dialect/Vector/IR/Vector.td"
 include "mlir/Dialect/Vector/IR/VectorAttributes.td"
+include "mlir/Interfaces/AlignmentAttrInterface.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/IndexingMapOpInterface.td"
@@ -1653,7 +1654,8 @@ def Vector_TransferWriteOp :
 
 def Vector_LoadOp : Vector_Op<"load", [
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
-    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+    DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]> {
   let summary = "reads an n-D slice of memory into an n-D vector";
   let description = [{
@@ -1770,7 +1772,8 @@ def Vector_LoadOp : Vector_Op<"load", [
 
 def Vector_StoreOp : Vector_Op<"store", [
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
-    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+    DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]> {
   let summary = "writes an n-D vector to an n-D slice of memory";
   let description = [{
@@ -1875,7 +1878,10 @@ def Vector_StoreOp : Vector_Op<"store", [
 }
 
 def Vector_MaskedLoadOp :
-  Vector_Op<"maskedload", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
+  Vector_Op<"maskedload", [
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+      DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
+    ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
@@ -1967,7 +1973,10 @@ def Vector_MaskedLoadOp :
 }
 
 def Vector_MaskedStoreOp :
-  Vector_Op<"maskedstore", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
+  Vector_Op<"maskedstore", [
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+      DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
+    ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
@@ -2048,7 +2057,8 @@ def Vector_GatherOp :
   Vector_Op<"gather", [
     DeclareOpInterfaceMethods<MaskableOpInterface>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]>,
     Arguments<(ins Arg<TensorOrMemRef<[AnyType]>, "", [MemRead]>:$base,
                Variadic<Index>:$offsets,
@@ -2151,7 +2161,10 @@ def Vector_GatherOp :
 }
 
 def Vector_ScatterOp :
-  Vector_Op<"scatter", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
+  Vector_Op<"scatter", [
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+      DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
+    ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$offsets,
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
@@ -2236,7 +2249,10 @@ def Vector_ScatterOp :
 }
 
 def Vector_ExpandLoadOp :
-  Vector_Op<"expandload", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
+  Vector_Op<"expandload", [
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+      DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
+    ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
@@ -2324,7 +2340,10 @@ def Vector_ExpandLoadOp :
 }
 
 def Vector_CompressStoreOp :
-  Vector_Op<"compressstore", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
+  Vector_Op<"compressstore", [
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+      DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
+    ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
@@ -2999,6 +3018,7 @@ def Vector_StepOp : Vector_Op<"step", [
   }];
   let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
   let assemblyFormat = "attr-dict `:` type($result)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_YieldOp : Vector_Op<"yield", [

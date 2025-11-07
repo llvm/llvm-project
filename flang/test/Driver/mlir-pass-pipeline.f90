@@ -142,6 +142,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 ! O2-NEXT:  'func.func' Pipeline
 ! O2-NEXT:    SetRuntimeCallAttributes
+! ALL-NEXT: MIFOpConversion
 ! ALL-NEXT: BoxedProcedurePass
 ! O2-NEXT:  AddAliasTags
 
@@ -151,10 +152,10 @@ end program
 ! ALL-NEXT:  'func.func' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'gpu.module' Pipeline
-! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func'] 
-! ALL-NEXT:   'func.func' Pipeline 
+! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func']
+! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:   AbstractResultOpt
-! ALL-NEXT:   'gpu.func' Pipeline 
+! ALL-NEXT:   'gpu.func' Pipeline
 ! ALL-NEXT:   AbstractResultOpt
 ! ALL-NEXT:  'omp.declare_reduction' Pipeline
 ! ALL-NEXT:    AbstractResultOpt

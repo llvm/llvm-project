@@ -26,7 +26,7 @@ namespace bolt {
 
 /// Objects of this class implement various basic block clustering algorithms.
 /// Basic block clusters are chains of basic blocks that should be laid out
-/// in this order to maximize performace. These algorithms group basic blocks
+/// in this order to maximize performance. These algorithms group basic blocks
 /// into clusters using execution profile data and various heuristics.
 class ClusterAlgorithm {
 public:
