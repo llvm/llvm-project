@@ -196,8 +196,6 @@ public:
   bool run();
 };
 
-constexpr Align SafeStack::StackAlignment;
-
 uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
   uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
   if (AI->isArrayAllocation()) {

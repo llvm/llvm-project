@@ -209,9 +209,13 @@ C23 Feature Support
   `WG14 N2710 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2710.htm>`_.
 - Fixed accepting as compatible unnamed tag types with the same fields within
   the same translation unit but from different types.
+- ``-MG`` now silences the "file not found" errors with ``#embed`` when
+  scanning for dependencies and encountering an unknown file. #GH165632
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__builtin_elementwise_ldexp``.
+
 - Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.
 
 - ``__builtin_elementwise_abs`` can now be used in constant expression.
@@ -442,6 +446,8 @@ Bug Fixes in This Version
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
 - Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
+- Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
+- Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -508,6 +514,7 @@ Bug Fixes to C++ Support
 - Fixed a template depth issue when parsing lambdas inside a type constraint. (#GH162092)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
+- Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

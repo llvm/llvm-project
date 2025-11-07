@@ -1308,7 +1308,7 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare float @llvm.cos.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
 // CHECK-DAG: declare { float, float } @llvm.sincos.f32(float)
-// CHECK-DAG: declare { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float>) #0
+// CHECK-DAG: declare { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.copysign.f32(float, float)
 // CHECK-DAG: declare float @llvm.rint.f32(float)
 // CHECK-DAG: declare double @llvm.rint.f64(double)
