@@ -221,7 +221,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
       }
 
       llvm::APInt uint = llvm::APInt::getZero(src_len * 8);
-      llvm::LoadIntFromMemory(uint, bytes.data(), src_len);
+      llvm::LoadIntFromMemory(uint, bytes.data(), bytes.size());
       SetUIntN(uint);
     }
     break;
