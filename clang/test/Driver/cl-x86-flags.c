@@ -151,9 +151,6 @@
 // RUN: %clang_cl -m32 -arch:SSE2 -vlen=256 --target=i386-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=sse2vlen256 %s
 // sse2vlen256: invalid argument '/vlen=256' not allowed with '/arch:SSE2'
 
-// RUN: %clang_cl -m64 -arch:AVX -vlen256 --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=avxvlen256 %s
-// avxvlen256: unknown argument ignored in clang-cl: '/vlen256'
-
 void f(void) {
 }
 

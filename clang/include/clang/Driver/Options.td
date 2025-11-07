@@ -9218,10 +9218,12 @@ def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
 
 def _SLASH_arch : CLCompileJoined<"arch:">,
   HelpText<"Set architecture for code generation">;
-def _SLASH_vlen : CLCompileJoined<"vlen">,
-  HelpText<"Set vector length for autovectorization and other optimizations">;
-def _SLASH_vlen_default : CLFlag<"vlen">,
+def _SLASH_vlen : CLFlag<"vlen">,
   HelpText<"Set default vector length for autovectorization and other optimizations">;
+def _SLASH_vlen_EQ_256 : CLFlag<"vlen=256">,
+  HelpText<"Set vector length of 256 bits for autovectorization and other optimizations">;
+def _SLASH_vlen_EQ_512 : CLFlag<"vlen=512">,
+  HelpText<"Set vector length of 512 bits for autovectorization and other optimizations">;
 
 def _SLASH_M_Group : OptionGroup<"</M group>">, Group<cl_compile_Group>;
 def _SLASH_volatile_Group : OptionGroup<"</volatile group>">,
