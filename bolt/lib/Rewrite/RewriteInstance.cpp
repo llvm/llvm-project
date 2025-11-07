@@ -4021,10 +4021,55 @@ if (TextSection) {
   });
 }
 
+// Guard logging BEFORE rename
+DEBUG_WITH_TYPE("bolt-flags", {
+  dbgs() << "[decide-rename] HasRelocations=" << (BC->HasRelocations ? "true" : "false")
+         << " TextSection=" << (TextSection ? "non-null" : "null");
+  if (TextSection)
+    dbgs() << " name=" << TextSection->getName();
+  dbgs() << "\n";
+});
 
-  if (BC->HasRelocations && TextSection)
-    BC->renameSection(*TextSection,
-                      getOrgSecPrefix() + BC->getMainCodeSectionName());
+
+if (BC->HasRelocations && TextSection) {
+  const std::string NewName = (getOrgSecPrefix() + BC->getMainCodeSectionName()).str();
+  DEBUG_WITH_TYPE("bolt-flags", {
+    dbgs() << "[decide-rename] renaming " << TextSection->getName()
+           << " -> " << NewName << "\n";
+  });
+
+  BC->renameSection(*TextSection, NewName);
+
+auto OldU = BC->getUniqueSectionByName(BC->getMainCodeSectionName());
+auto NewU = BC->getUniqueSectionByName(NewName);
+
+BinarySection *ByOld = OldU ? &*OldU : nullptr;
+BinarySection *ByNew = NewU ? &*NewU : nullptr;
+
+DEBUG_WITH_TYPE("bolt-flags", {
+  dbgs() << "[decide-rename] lookup old="
+         << BC->getMainCodeSectionName()
+         << " -> " << (ByOld ? "FOUND" : "NULL")
+         << " | new=" << NewName
+         << " -> " << (ByNew ? "FOUND" : "NULL") << "\n";
+});
+
+assert(!ByOld && "old name still visible after rename");
+assert( ByNew && "new name not visible after rename");
+  }
+
+  // Log flags after rename
+  DEBUG_WITH_TYPE("bolt-flags", {
+    const unsigned F = TextSection->getELFFlags();
+    dbgs() << "[post-rename] " << TextSection->getName()
+           << " flags=0x" << format_hex(F, 8)
+           << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes" : "no")
+           << ", EXEC="  << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
+           << ", EXCL="  << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no")
+           << ")\n";
+  });
+
+
 // AFTER: same section object, new name. log immediately to catch bad flags
 if (TextSection) {
   DEBUG_WITH_TYPE("bolt-ppc64", {
