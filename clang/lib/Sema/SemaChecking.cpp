@@ -29,6 +29,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/IgnoreExpr.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/OperationKinds.h"
@@ -9849,21 +9850,36 @@ void Sema::CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
                                       Call->getSourceRange().getBegin()))
     return;
 
-  // Check that the calling function:
+  std::unique_ptr<MangleContext> MC(Context.createMangleContext());
+
+  // Check that the calling function or lambda:
   //  - Does not have any attributes preventing TSan checking
   //  - Is not in the ignore list
-  if (const NamedDecl *Caller = getCurFunctionOrMethodDecl()) {
-    if (Caller->hasAttr<DisableSanitizerInstrumentationAttr>())
-      return;
+  auto IsNotSanitized = [&](NamedDecl *Decl) {
+    const auto SpecificAttrs = Decl->specific_attrs<NoSanitizeAttr>();
+    const auto IsNoSanitizeThreadAttr = [](NoSanitizeAttr *Attr) {
+      return static_cast<bool>(Attr->getMask() & SanitizerKind::Thread);
+    };
 
-    for (const auto *Attr : Caller->specific_attrs<NoSanitizeAttr>())
-      if (Attr->getMask() & SanitizerKind::Thread)
-        return;
+    // Get mangled name for ignorelist lookup
+    std::string MangledName;
+    if (MC->shouldMangleDeclName(Decl)) {
+      llvm::raw_string_ostream S = llvm::raw_string_ostream(MangledName);
+      MC->mangleName(Decl, S);
+    } else {
+      MangledName = Decl->getName();
+    }
 
-    if (NoSanitizeList.containsFunction(EnabledTSanMask,
-                                        Caller->getQualifiedNameAsString()))
-      return;
-  }
+    return Decl &&
+           (Decl->hasAttr<DisableSanitizerInstrumentationAttr>() ||
+            std::any_of(SpecificAttrs.begin(), SpecificAttrs.end(),
+                        IsNoSanitizeThreadAttr) ||
+            NoSanitizeList.containsFunction(EnabledTSanMask, MangledName));
+  };
+  if (IsNotSanitized(getCurFunctionOrMethodDecl()))
+    return;
+  if (IsNotSanitized(getCurFunctionDecl(/*AllowLambdas*/ true)))
+    return;
 
   Diag(Call->getExprLoc(), diag::warn_atomic_thread_fence_with_tsan);
 }

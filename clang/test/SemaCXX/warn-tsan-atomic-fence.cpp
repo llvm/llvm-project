@@ -7,8 +7,8 @@
 // No warnings if `-Wno-tsan` is passed
 // RUN: %clang_cc1 -verify=no-tsan -fsanitize=thread -Wno-tsan %s
 
-// Ignoring function
-// RUN: echo "fun:main" > %t
+// Ignoring func1
+// RUN: echo "fun:*func1*" > %t
 // RUN: %clang_cc1 -verify=no-tsan -fsanitize=thread -fsanitize-ignorelist=%t %s
 
 // Ignoring source file
@@ -29,16 +29,26 @@ namespace std {
   void atomic_thread_fence(memory_order) {}
 };
 
+void func1() { // extern "C" to stop name mangling
+  std::atomic_thread_fence(std::memory_order_relaxed); // with-tsan-warning {{'std::atomic_thread_fence' is not supported with '-fsanitize=thread'}}
+
+  auto lam = []() __attribute__((no_sanitize("thread"))) {
+    std::atomic_thread_fence(std::memory_order_relaxed);
+  };
+}
+
 __attribute__((no_sanitize("thread")))
-void ignore_1() {
+void func2() {
   std::atomic_thread_fence(std::memory_order_relaxed);
+
+  auto lam = []() {
+    std::atomic_thread_fence(std::memory_order_relaxed);
+  };
 }
 
 __attribute__((no_sanitize_thread))
-void ignore_2() {
+void func3() {
   std::atomic_thread_fence(std::memory_order_relaxed);
 }
 
-int main() {
-  std::atomic_thread_fence(std::memory_order_relaxed); // with-tsan-warning {{'std::atomic_thread_fence' is not supported with '-fsanitize=thread'}}
-}
+int main() {}
