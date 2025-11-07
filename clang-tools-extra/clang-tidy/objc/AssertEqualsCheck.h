@@ -14,7 +14,7 @@
 
 namespace clang::tidy::objc {
 
-/// Warn if XCTAssertEqual() or XCTAssertNotEqual() is used with at least one
+/// Warns if XCTAssertEqual() or XCTAssertNotEqual() is used with at least one
 /// operands of type NSString*.
 ///
 /// For the user-facing documentation see:
