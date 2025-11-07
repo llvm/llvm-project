@@ -17,7 +17,7 @@ define void @nsw_under_loop_guard0(ptr %a) {
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - none!
 ;
 entry:
   br label %loop.i.header
@@ -28,7 +28,7 @@ loop.i.header:
 
 loop.j.pr:
   %guard.j = icmp slt i64 %i, 1000
-  br i1 %guard.j, label %loop.j, label %exit
+  br i1 %guard.j, label %loop.j, label %loop.i.latch
 
 loop.j:
   %j = phi i64 [ 0, %loop.j.pr ], [ %j.next, %loop.j ]
