@@ -387,7 +387,7 @@ bool ClangExpressionSourceCode::GetText(
                       *sc.comp_unit, modules_for_macros))
                 LLDB_LOG_ERROR(
                     GetLog(LLDBLog::Expressions), std::move(err),
-                    "Error while loading hand-imported modules: {0}");
+                    "Error while loading hand-imported modules:\n{0}");
             }
           }
         }
