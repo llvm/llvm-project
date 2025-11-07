@@ -1154,10 +1154,9 @@ bool AArch64RegisterInfo::getRegAllocationHints(
 
   // For predicated SVE instructions where the inactive lanes are undef,
   // pick a destination register that is not unique to avoid introducing
-  // a movprfx to copy a unique register to the destination operand.
+  // a movprfx.
   const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
-  if (ST.isSVEorStreamingSVEAvailable() &&
-      AArch64::ZPRRegClass.hasSubClassEq(RegRC)) {
+  if (AArch64::ZPRRegClass.hasSubClassEq(RegRC)) {
     for (const MachineOperand &DefOp : MRI.def_operands(VirtReg)) {
       const MachineInstr &Def = *DefOp.getParent();
       if (DefOp.isImplicit() ||
@@ -1165,14 +1164,19 @@ bool AArch64RegisterInfo::getRegAllocationHints(
               AArch64::FalseLanesUndef)
         continue;
 
+      unsigned InstFlags =
+          TII->get(AArch64::getSVEPseudoMap(Def.getOpcode())).TSFlags;
+
       for (MCPhysReg R : Order) {
         auto AddHintIfSuitable = [&](MCPhysReg R, const MachineOperand &MO) {
+          // R is a suitable register hint if there exists an operand for the
+          // instruction that is not yet allocated a register or if R matches
+          // one of the other source operands.
           if (!VRM->hasPhys(MO.getReg()) || VRM->getPhys(MO.getReg()) == R)
             Hints.push_back(R);
         };
 
-        unsigned Opcode = AArch64::getSVEPseudoMap(Def.getOpcode());
-        switch (TII->get(Opcode).TSFlags & AArch64::DestructiveInstTypeMask) {
+        switch (InstFlags & AArch64::DestructiveInstTypeMask) {
         default:
           break;
         case AArch64::DestructiveTernaryCommWithRev:
@@ -1187,8 +1191,6 @@ bool AArch64RegisterInfo::getRegAllocationHints(
           break;
         case AArch64::DestructiveBinary:
         case AArch64::DestructiveBinaryImm:
-        case AArch64::DestructiveUnaryPassthru:
-        case AArch64::Destructive2xRegImmUnpred:
           AddHintIfSuitable(R, Def.getOperand(2));
           break;
         }
