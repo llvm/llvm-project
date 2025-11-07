@@ -115,7 +115,7 @@ Objective-C provides syntax for importing a module via an *@import declaration*,
 
   @import std;
 
-The ``@import`` declaration above imports the entire contents of the ``std`` module (which would contain, e.g., the entire C or C++ standard library) and make its API available within the current translation unit. To import only part of a module, one may use dot syntax to specific a particular submodule, e.g.,
+The ``@import`` declaration above imports the entire contents of the ``std`` module (which would contain, e.g., the entire C or C++ standard library) and make its API available within the current translation unit. To import only part of a module, one may use dot syntax to specify a particular submodule, e.g.,
 
 .. parsed-literal::
 

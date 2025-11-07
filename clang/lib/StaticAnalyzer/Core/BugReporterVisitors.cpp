@@ -3254,9 +3254,6 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
   return true;
 }
 
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericTrueMessage;
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericFalseMessage;
-
 bool ConditionBRVisitor::isPieceMessageGeneric(
     const PathDiagnosticPiece *Piece) {
   return Piece->getString() == GenericTrueMessage ||

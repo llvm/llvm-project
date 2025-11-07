@@ -16,6 +16,7 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,6 +24,9 @@
 #include <cstdint>
 
 namespace clang::lifetimes::internal {
+
+using FactID = utils::ID<struct FactTag>;
+
 /// An abstract base class for a single, atomic lifetime-relevant event.
 class Fact {
 
@@ -48,6 +52,7 @@ public:
 
 private:
   Kind K;
+  FactID ID;
 
 protected:
   Fact(Kind K) : K(K) {}
@@ -55,6 +60,9 @@ protected:
 public:
   virtual ~Fact() = default;
   Kind getKind() const { return K; }
+
+  void setID(FactID ID) { this->ID = ID; }
+  FactID getID() const { return ID; }
 
   template <typename T> const T *getAs() const {
     if (T::classof(this))
@@ -144,6 +152,7 @@ public:
 
 class UseFact : public Fact {
   const Expr *UseExpr;
+  OriginID OID;
   // True if this use is a write operation (e.g., left-hand side of assignment).
   // Write operations are exempted from use-after-free checks.
   bool IsWritten = false;
@@ -151,12 +160,10 @@ class UseFact : public Fact {
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
-  UseFact(const Expr *UseExpr) : Fact(Kind::Use), UseExpr(UseExpr) {}
+  UseFact(const Expr *UseExpr, OriginManager &OM)
+      : Fact(Kind::Use), UseExpr(UseExpr), OID(OM.get(*UseExpr)) {}
 
-  OriginID getUsedOrigin(const OriginManager &OM) const {
-    // TODO: Remove const cast and make OriginManager::get as const.
-    return const_cast<OriginManager &>(OM).get(*UseExpr);
-  }
+  OriginID getUsedOrigin() const { return OID; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }
@@ -184,22 +191,26 @@ public:
 
 class FactManager {
 public:
+  void init(const CFG &Cfg) {
+    assert(BlockToFacts.empty() && "FactManager already initialized");
+    BlockToFacts.resize(Cfg.getNumBlockIDs());
+  }
+
   llvm::ArrayRef<const Fact *> getFacts(const CFGBlock *B) const {
-    auto It = BlockToFactsMap.find(B);
-    if (It != BlockToFactsMap.end())
-      return It->second;
-    return {};
+    return BlockToFacts[B->getBlockID()];
   }
 
   void addBlockFacts(const CFGBlock *B, llvm::ArrayRef<Fact *> NewFacts) {
     if (!NewFacts.empty())
-      BlockToFactsMap[B].assign(NewFacts.begin(), NewFacts.end());
+      BlockToFacts[B->getBlockID()].assign(NewFacts.begin(), NewFacts.end());
   }
 
   template <typename FactType, typename... Args>
   FactType *createFact(Args &&...args) {
     void *Mem = FactAllocator.Allocate<FactType>();
-    return new (Mem) FactType(std::forward<Args>(args)...);
+    FactType *Res = new (Mem) FactType(std::forward<Args>(args)...);
+    Res->setID(NextFactID++);
+    return Res;
   }
 
   void dump(const CFG &Cfg, AnalysisDeclContext &AC) const;
@@ -215,16 +226,19 @@ public:
   /// \note This is intended for testing only.
   llvm::StringMap<ProgramPoint> getTestPoints() const;
 
+  unsigned getNumFacts() const { return NextFactID.Value; }
+
   LoanManager &getLoanMgr() { return LoanMgr; }
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
   const OriginManager &getOriginMgr() const { return OriginMgr; }
 
 private:
+  FactID NextFactID{0};
   LoanManager LoanMgr;
   OriginManager OriginMgr;
-  llvm::DenseMap<const clang::CFGBlock *, llvm::SmallVector<const Fact *>>
-      BlockToFactsMap;
+  /// Facts for each CFG block, indexed by block ID.
+  llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
 };
 } // namespace clang::lifetimes::internal

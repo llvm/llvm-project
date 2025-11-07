@@ -269,6 +269,11 @@ New check aliases
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` to
+  :doc:`bugprone-float-loop-counter
+  <clang-tidy/checks/bugprone/float-loop-counter>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-mem57-cpp <clang-tidy/checks/cert/mem57-cpp>` to
   :doc:`bugprone-default-operator-new-on-overaligned-type
   <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
@@ -474,6 +479,10 @@ Changes in existing checks
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
+
+- Improved :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check to
+  generate correct fix-its for forms without a space after the directive.
 
 Removed checks
 ^^^^^^^^^^^^^^
