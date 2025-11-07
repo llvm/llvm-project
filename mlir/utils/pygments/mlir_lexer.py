@@ -59,7 +59,7 @@ class MlirLexer(RegexLexer):
                 r"^(\s*)(![_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
                 bygroups(Text, Keyword.Type, Text, Operator),
             ),
-            # SSA values (results, uses)
+            # SSA values (uses)
             (r"%[_A-Za-z0-9\.\$\-:#]+", Name.Variable),
             # attribute refs, constants and named attributes
             (r"#[_A-Za-z0-9\$\-\.]+\b", Name.Constant),
@@ -69,6 +69,7 @@ class MlirLexer(RegexLexer):
             (r"\^[A-Za-z0-9_\$\.\-]+", Name.Label),
             # types by exclamation or builtin names
             (r"![_A-Za-z0-9\$\-\.]+\b", Keyword.Type),
+            # NOTE: please sync changes to corresponding builtin type rule in "angled-type"
             (r"\b(bf16|f16|f32|f64|f80|f128|index|none|(u|s)?i[0-9]+)\b", Keyword.Type),
             # container-like dialect types (tensor<...>, memref<...>, vector<...>)
             (
@@ -100,7 +101,7 @@ class MlirLexer(RegexLexer):
             (r'[^"\\]+', String.Double),
             (r'"', String.Double, "#pop"),
         ],
-        # angled-type content (simple nested handling)
+        # angled-type content
         "angled-type": [
             # match nested '<' and '>'
             (r"<", Punctuation, "#push"),
@@ -115,6 +116,7 @@ class MlirLexer(RegexLexer):
             # the 'x' dimension separator (treat as punctuation)
             (r"x", Punctuation),
             # element / builtin types inside angle brackets (no word-boundary)
+            # NOTE: please sync changes to corresponding builtin type rule in "root"
             (
                 r"(?:bf16|f16|f32|f64|f80|f128|index|none|(?:[us]?i[0-9]+))",
                 Keyword.Type,
