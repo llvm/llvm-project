@@ -580,6 +580,8 @@ RISC-V Support
 - Add `-march=unset` to clear any previous `-march=` value. This ISA string will
   be computed from `-mcpu` or the platform default.
 
+- `__GCC_CONSTRUCTIVE_SIZE` and `__GCC_DESTRUCTIVE_SIZE` are changed to 64.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
