@@ -12,7 +12,7 @@
 ;;     return;
 ;; }
 
-; CHECK-SPIRV: OpConvertPtrToU
+; CHECK-SPIRV: OpSpecConstantOp %[[#]] ConvertPtrToU
 ; CHECK-SPIRV: OpConvertPtrToU
 ; CHECK-SPIRV: OpINotEqual
 ; CHECK-SPIRV: OpConvertPtrToU
