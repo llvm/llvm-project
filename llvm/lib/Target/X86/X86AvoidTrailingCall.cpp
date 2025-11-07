@@ -67,7 +67,8 @@ FunctionPass *llvm::createX86AvoidTrailingCallLegacyPass() {
   return new X86AvoidTrailingCallLegacyPass();
 }
 
-INITIALIZE_PASS(X86AvoidTrailingCallLegacyPass, AVOIDCALL_NAME, AVOIDCALL_DESC, false, false)
+INITIALIZE_PASS(X86AvoidTrailingCallLegacyPass, AVOIDCALL_NAME, AVOIDCALL_DESC,
+                false, false)
 
 // A real instruction is a non-meta, non-pseudo instruction.  Some pseudos
 // expand to nothing, and some expand to code. This logic conservatively assumes
@@ -141,8 +142,9 @@ bool X86AvoidTrailingCallLegacyPass::runOnMachineFunction(MachineFunction &MF) {
   return UpdatedOnX86AvoidTrailingCallPass(MF);
 }
 
-PreservedAnalyses X86AvoidTrailingCallPass::run(
-    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+PreservedAnalyses
+X86AvoidTrailingCallPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
   bool Changed = UpdatedOnX86AvoidTrailingCallPass(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -151,4 +153,3 @@ PreservedAnalyses X86AvoidTrailingCallPass::run(
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
-

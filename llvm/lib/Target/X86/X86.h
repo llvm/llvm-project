@@ -105,13 +105,15 @@ FunctionPass *createX86LowerTileCopyPass();
 /// CALL instruction. The pass does the same for each funclet as well. This
 /// ensures that the open interval of function start and end PCs contains all
 /// return addresses for the benefit of the Windows x64 unwinder.
-class X86AvoidTrailingCallPass : public PassInfoMixin<X86AvoidTrailingCallPass> {
- private:
+class X86AvoidTrailingCallPass
+    : public PassInfoMixin<X86AvoidTrailingCallPass> {
+private:
   const TargetMachine *TM;
 
- public:
+public:
   X86AvoidTrailingCallPass(const TargetMachine *TM) : TM(TM) {}
-  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 
