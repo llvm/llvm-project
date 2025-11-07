@@ -3478,11 +3478,10 @@ def err_format_attribute_result_not : Error<"function does not return %0">;
 def err_format_attribute_implicit_this_format_string : Error<
   "format attribute cannot specify the implicit this argument as the format "
   "string">;
-def warn_missing_format_attribute
-    : Warning<"diagnostic behavior may be improved by adding the '%0' format "
-              "attribute to the declaration of %1">,
-      InGroup<DiagGroup<"missing-format-attribute">>,
-      DefaultIgnore;
+def warn_missing_format_attribute : Warning<
+  "diagnostic behavior may be improved by adding the '%0' format "
+  "attribute to the declaration of %1">,
+  InGroup<DiagGroup<"missing-format-attribute">>, DefaultIgnore;
 def err_callback_attribute_no_callee : Error<
   "'callback' attribute specifies no callback callee">;
 def err_callback_attribute_invalid_callee : Error<

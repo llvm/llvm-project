@@ -6636,11 +6636,10 @@ tryAgain:
             if (InitList->isStringLiteralInit())
               Init = InitList->getInit(0)->IgnoreParenImpCasts();
           }
-          return checkFormatStringExpr(S, ReferenceFormatString, Init, Args,
-                                       APK, format_idx, firstDataArg, Type,
-                                       CallType,
-                                       /*InFunctionCall*/ false, CheckedVarArgs,
-                                       UncoveredArg, Offset, CallerParamIdx);
+          return checkFormatStringExpr(
+              S, ReferenceFormatString, Init, Args, APK, format_idx,
+              firstDataArg, Type, CallType, /*InFunctionCall=*/false,
+              CheckedVarArgs, UncoveredArg, Offset, CallerParamIdx);
         }
       }
 
@@ -7065,13 +7064,21 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
   // Emit the diagnostic and fixit.
   unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
   StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
+  StringRef AttrPrefix, AttrSuffix;
+  if (S->getLangOpts().C23 || S->getLangOpts().CPlusPlus11) {
+    AttrPrefix = "[[gnu::format(";
+    AttrSuffix = ")]] ";
+  } else {
+    AttrPrefix = "__attribute__((format(";
+    AttrSuffix = "))) ";
+  }
   S->Diag(Loc, diag::warn_missing_format_attribute)
       << FormatTypeName << Caller
-      << FixItHint::CreateInsertion(Caller->getFirstDecl()->getLocation(),
-                                    (llvm::Twine("__attribute__((format(") +
-                                     FormatTypeName + ", " +
+      << FixItHint::CreateInsertion(Caller->getFirstDecl()->getBeginLoc(),
+                                    (AttrPrefix + FormatTypeName + ", " +
                                      llvm::Twine(FormatStringIndex) + ", " +
-                                     llvm::Twine(FirstArgumentIndex) + ")))")
+                                     llvm::Twine(FirstArgumentIndex) +
+                                     AttrSuffix)
                                         .str());
   S->Diag(Caller->getFirstDecl()->getLocation(), diag::note_callee_decl)
       << Caller;
@@ -7133,7 +7140,8 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
       SourceMgr.isInSystemMacro(FormatLoc))
     return false;
 
-  if (CallerParamIdx)
+  const LangOptions &LO = getLangOpts();
+  if (CallerParamIdx && (LO.GNUMode || LO.C23 || LO.CPlusPlus11))
     CheckMissingFormatAttributes(this, Type, format_idx, firstDataArg, Args,
                                  APK, *CallerParamIdx, Loc);
 
