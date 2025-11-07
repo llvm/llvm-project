@@ -188,6 +188,7 @@ class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
 class ScriptedFrameInterface;
+class ScriptedFrameProviderInterface;
 class ScriptedMetadata;
 class ScriptedBreakpointInterface;
 class ScriptedPlatformInterface;
@@ -412,6 +413,8 @@ typedef std::shared_ptr<lldb_private::ScriptSummaryFormat>
 typedef std::shared_ptr<lldb_private::ScriptInterpreter> ScriptInterpreterSP;
 typedef std::shared_ptr<lldb_private::ScriptedFrameInterface>
     ScriptedFrameInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedFrameProviderInterface>
+    ScriptedFrameProviderInterfaceSP;
 typedef std::shared_ptr<lldb_private::SyntheticFrameProvider>
     SyntheticFrameProviderSP;
 typedef std::shared_ptr<lldb_private::ScriptedMetadata> ScriptedMetadataSP;
