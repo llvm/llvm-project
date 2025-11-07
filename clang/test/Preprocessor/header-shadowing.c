@@ -3,7 +3,7 @@
 
 /// Check that:
 /// - Quoted includes ("...") trigger the diagnostic.
-/// - Angled includes (<...>) are ignored.
+/// - System headers are ignored.
 /// - #include_next does not cause a duplicate warning.
 // RUN: %clang_cc1 -Wshadow-header -Eonly %t/main.c -I %t/include1 -I %t/include2 \
 // RUN: -isystem %t/system1 -isystem %t/system2 2>&1 | FileCheck %s --check-prefix=SHADOWING
@@ -16,11 +16,11 @@
 // SHADOWING: warning: system1/stdio.h included!
 
 /// Check that the diagnostic is only performed once in MSVC compatibility mode.
-// RUN: %clang_cc1 -fms-compatibility -Wshadow-header -Eonly %t/t.c -I %t -I %t/foo -I %t/foo/bar 2>&1 | FileCheck %s --check-prefix=SHADOWING-MS
+// RUN: %clang_cc1 -fms-compatibility -Wshadow-header -Eonly %t/t.c 2>&1 | FileCheck %s --check-prefix=SHADOWING-MS
 
 // SHADOWING-MS: {{.*}} warning: multiple candidates for header 't3.h' found; directory '{{.*}}foo' chosen, ignoring '{{.*}}' and others [-Wshadow-header]
+// SHADOWING-MS-NOT: {{.*}} warning: multiple candidates for header 't3.h' found; directory '{{.*}}' chosen, ignoring '{{.*}}foo' and others [-Wshadow-header]
 // SHADOWING-MS: warning: Found foo/t3.h.
-// SHADOWING-MS-NOT: {{.*}} warning: multiple candidates for header 't3.h' found; directory '{{.*}}foo' chosen, ignoring '{{.*}}' and others [-Wshadow-header]
 
 //--- main.c
 #include "header.h"

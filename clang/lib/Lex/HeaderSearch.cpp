@@ -887,9 +887,11 @@ void HeaderSearch::DiagnoseHeaderShadowing(
     ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
     bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt) {
 
-  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc) || isAngled ||
-      DiagnosedShadowing)
+  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc) ||
+      DiagnosedShadowing || (getFileInfo(*FE).DirInfo != SrcMgr::C_User)) {
+    DiagnosedShadowing = true;
     return;
+  }
 
   DiagnosedShadowing = true;
 
