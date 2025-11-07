@@ -225,7 +225,7 @@ bool ChainedASTReaderListener::ReadPreprocessorOptions(
 }
 
 void ChainedASTReaderListener::ReadCounter(const serialization::ModuleFile &M,
-                                           unsigned Value) {
+                                           uint32_t Value) {
   First->ReadCounter(M, Value);
   Second->ReadCounter(M, Value);
 }
@@ -973,7 +973,7 @@ bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
       PP.getPreprocessorOpts());
 }
 
-void PCHValidator::ReadCounter(const ModuleFile &M, unsigned Value) {
+void PCHValidator::ReadCounter(const ModuleFile &M, uint32_t Value) {
   PP.setCounterValue(Value);
 }
 
@@ -11255,6 +11255,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_mergeable:
     C = new (Context) OMPMergeableClause();
     break;
+  case llvm::omp::OMPC_threadset:
+    C = new (Context) OMPThreadsetClause();
+    break;
   case llvm::omp::OMPC_read:
     C = new (Context) OMPReadClause();
     break;
@@ -11541,6 +11544,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_ompx_dyn_cgroup_mem:
     C = new (Context) OMPXDynCGroupMemClause();
     break;
+  case llvm::omp::OMPC_dyn_groupprivate:
+    C = new (Context) OMPDynGroupprivateClause();
+    break;
   case llvm::omp::OMPC_doacross: {
     unsigned NumVars = Record.readInt();
     unsigned NumLoops = Record.readInt();
@@ -11656,6 +11662,17 @@ void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
   C->setDefaultVariableCategory(
       Record.readEnum<OpenMPDefaultClauseVariableCategory>());
   C->setDefaultVariableCategoryLocation(Record.readSourceLocation());
+}
+
+// Read the parameter of threadset clause. This will have been saved when
+// OMPClauseWriter is called.
+void OMPClauseReader::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  SourceLocation ThreadsetKindLoc = Record.readSourceLocation();
+  C->setThreadsetKindLoc(ThreadsetKindLoc);
+  OpenMPThreadsetKind TKind =
+      static_cast<OpenMPThreadsetKind>(Record.readInt());
+  C->setThreadsetKind(TKind);
 }
 
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {
@@ -12720,6 +12737,19 @@ void OMPClauseReader::VisitOMPXDynCGroupMemClause(OMPXDynCGroupMemClause *C) {
   VisitOMPClauseWithPreInit(C);
   C->setSize(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  C->setDynGroupprivateModifier(
+      Record.readEnum<OpenMPDynGroupprivateClauseModifier>());
+  C->setDynGroupprivateFallbackModifier(
+      Record.readEnum<OpenMPDynGroupprivateClauseFallbackModifier>());
+  C->setSize(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setDynGroupprivateModifierLoc(Record.readSourceLocation());
+  C->setDynGroupprivateFallbackModifierLoc(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPDoacrossClause(OMPDoacrossClause *C) {

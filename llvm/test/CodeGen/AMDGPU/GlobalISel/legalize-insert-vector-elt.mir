@@ -122,9 +122,8 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<16 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64), [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64), [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64), [[UV8:%[0-9]+]]:_(s64), [[UV9:%[0-9]+]]:_(s64), [[UV10:%[0-9]+]]:_(s64), [[UV11:%[0-9]+]]:_(s64), [[UV12:%[0-9]+]]:_(s64), [[UV13:%[0-9]+]]:_(s64), [[UV14:%[0-9]+]]:_(s64), [[UV15:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[DEF]](<16 x s64>)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[UV1]](s64), [[UV2]](s64), [[UV3]](s64), [[UV4]](s64), [[UV5]](s64), [[UV6]](s64), [[UV7]](s64), [[UV8]](s64), [[UV9]](s64), [[UV10]](s64), [[UV11]](s64), [[UV12]](s64), [[UV13]](s64), [[UV14]](s64), [[UV15]](s64)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<16 x s64>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(<16 x s64>) = G_IMPLICIT_DEF
@@ -144,9 +143,8 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[UV1]](s32)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[DEF]](s32)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s8) = G_TRUNC %0
@@ -190,90 +188,86 @@ body: |
     ; CHECK-LABEL: name: insert_vector_elt_64_65_v64s32
     ; CHECK: liveins: $sgpr0_sgpr1, $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<32 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>), [[UV2:%[0-9]+]]:_(<4 x s32>), [[UV3:%[0-9]+]]:_(<4 x s32>), [[UV4:%[0-9]+]]:_(<4 x s32>), [[UV5:%[0-9]+]]:_(<4 x s32>), [[UV6:%[0-9]+]]:_(<4 x s32>), [[UV7:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[DEF]](<32 x s32>)
-    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(<4 x s32>), [[UV9:%[0-9]+]]:_(<4 x s32>), [[UV10:%[0-9]+]]:_(<4 x s32>), [[UV11:%[0-9]+]]:_(<4 x s32>), [[UV12:%[0-9]+]]:_(<4 x s32>), [[UV13:%[0-9]+]]:_(<4 x s32>), [[UV14:%[0-9]+]]:_(<4 x s32>), [[UV15:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[DEF]](<32 x s32>)
-    ; CHECK-NEXT: G_STORE [[UV]](<4 x s32>), [[COPY]](p1) :: (store (<4 x s32>), align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[COPY]](p1) :: (store (<4 x s32>), align 4, addrspace 1)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: G_STORE [[UV1]](<4 x s32>), [[PTR_ADD]](p1) :: (store (<4 x s32>) into unknown-address + 16, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD]](p1) :: (store (<4 x s32>) into unknown-address + 16, align 4, addrspace 1)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK-NEXT: G_STORE [[UV2]](<4 x s32>), [[PTR_ADD1]](p1) :: (store (<4 x s32>) into unknown-address + 32, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD1]](p1) :: (store (<4 x s32>) into unknown-address + 32, align 4, addrspace 1)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
     ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK-NEXT: G_STORE [[UV3]](<4 x s32>), [[PTR_ADD2]](p1) :: (store (<4 x s32>) into unknown-address + 48, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD2]](p1) :: (store (<4 x s32>) into unknown-address + 48, align 4, addrspace 1)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK-NEXT: G_STORE [[UV4]](<4 x s32>), [[PTR_ADD3]](p1) :: (store (<4 x s32>) into unknown-address + 64, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD3]](p1) :: (store (<4 x s32>) into unknown-address + 64, align 4, addrspace 1)
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 80
     ; CHECK-NEXT: [[PTR_ADD4:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C4]](s64)
-    ; CHECK-NEXT: G_STORE [[UV5]](<4 x s32>), [[PTR_ADD4]](p1) :: (store (<4 x s32>) into unknown-address + 80, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD4]](p1) :: (store (<4 x s32>) into unknown-address + 80, align 4, addrspace 1)
     ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 96
     ; CHECK-NEXT: [[PTR_ADD5:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C5]](s64)
-    ; CHECK-NEXT: G_STORE [[UV6]](<4 x s32>), [[PTR_ADD5]](p1) :: (store (<4 x s32>) into unknown-address + 96, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD5]](p1) :: (store (<4 x s32>) into unknown-address + 96, align 4, addrspace 1)
     ; CHECK-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 112
     ; CHECK-NEXT: [[PTR_ADD6:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C6]](s64)
-    ; CHECK-NEXT: G_STORE [[UV7]](<4 x s32>), [[PTR_ADD6]](p1) :: (store (<4 x s32>) into unknown-address + 112, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD6]](p1) :: (store (<4 x s32>) into unknown-address + 112, align 4, addrspace 1)
     ; CHECK-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
     ; CHECK-NEXT: [[PTR_ADD7:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C7]](s64)
-    ; CHECK-NEXT: G_STORE [[UV8]](<4 x s32>), [[PTR_ADD7]](p1) :: (store (<4 x s32>) into unknown-address + 128, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD7]](p1) :: (store (<4 x s32>) into unknown-address + 128, align 4, addrspace 1)
     ; CHECK-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 144
     ; CHECK-NEXT: [[PTR_ADD8:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C8]](s64)
-    ; CHECK-NEXT: G_STORE [[UV9]](<4 x s32>), [[PTR_ADD8]](p1) :: (store (<4 x s32>) into unknown-address + 144, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD8]](p1) :: (store (<4 x s32>) into unknown-address + 144, align 4, addrspace 1)
     ; CHECK-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 160
     ; CHECK-NEXT: [[PTR_ADD9:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C9]](s64)
-    ; CHECK-NEXT: G_STORE [[UV10]](<4 x s32>), [[PTR_ADD9]](p1) :: (store (<4 x s32>) into unknown-address + 160, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD9]](p1) :: (store (<4 x s32>) into unknown-address + 160, align 4, addrspace 1)
     ; CHECK-NEXT: [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 176
     ; CHECK-NEXT: [[PTR_ADD10:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C10]](s64)
-    ; CHECK-NEXT: G_STORE [[UV11]](<4 x s32>), [[PTR_ADD10]](p1) :: (store (<4 x s32>) into unknown-address + 176, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD10]](p1) :: (store (<4 x s32>) into unknown-address + 176, align 4, addrspace 1)
     ; CHECK-NEXT: [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 192
     ; CHECK-NEXT: [[PTR_ADD11:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C11]](s64)
-    ; CHECK-NEXT: G_STORE [[UV12]](<4 x s32>), [[PTR_ADD11]](p1) :: (store (<4 x s32>) into unknown-address + 192, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD11]](p1) :: (store (<4 x s32>) into unknown-address + 192, align 4, addrspace 1)
     ; CHECK-NEXT: [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 208
     ; CHECK-NEXT: [[PTR_ADD12:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C12]](s64)
-    ; CHECK-NEXT: G_STORE [[UV13]](<4 x s32>), [[PTR_ADD12]](p1) :: (store (<4 x s32>) into unknown-address + 208, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD12]](p1) :: (store (<4 x s32>) into unknown-address + 208, align 4, addrspace 1)
     ; CHECK-NEXT: [[C13:%[0-9]+]]:_(s64) = G_CONSTANT i64 224
     ; CHECK-NEXT: [[PTR_ADD13:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C13]](s64)
-    ; CHECK-NEXT: G_STORE [[UV14]](<4 x s32>), [[PTR_ADD13]](p1) :: (store (<4 x s32>) into unknown-address + 224, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD13]](p1) :: (store (<4 x s32>) into unknown-address + 224, align 4, addrspace 1)
     ; CHECK-NEXT: [[C14:%[0-9]+]]:_(s64) = G_CONSTANT i64 240
     ; CHECK-NEXT: [[PTR_ADD14:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C14]](s64)
-    ; CHECK-NEXT: G_STORE [[UV15]](<4 x s32>), [[PTR_ADD14]](p1) :: (store (<4 x s32>) into unknown-address + 240, align 4, addrspace 1)
-    ; CHECK-NEXT: [[UV16:%[0-9]+]]:_(<4 x s32>), [[UV17:%[0-9]+]]:_(<4 x s32>), [[UV18:%[0-9]+]]:_(<4 x s32>), [[UV19:%[0-9]+]]:_(<4 x s32>), [[UV20:%[0-9]+]]:_(<4 x s32>), [[UV21:%[0-9]+]]:_(<4 x s32>), [[UV22:%[0-9]+]]:_(<4 x s32>), [[UV23:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[DEF]](<32 x s32>)
-    ; CHECK-NEXT: [[UV24:%[0-9]+]]:_(<4 x s32>), [[UV25:%[0-9]+]]:_(<4 x s32>), [[UV26:%[0-9]+]]:_(<4 x s32>), [[UV27:%[0-9]+]]:_(<4 x s32>), [[UV28:%[0-9]+]]:_(<4 x s32>), [[UV29:%[0-9]+]]:_(<4 x s32>), [[UV30:%[0-9]+]]:_(<4 x s32>), [[UV31:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[DEF]](<32 x s32>)
-    ; CHECK-NEXT: G_STORE [[UV16]](<4 x s32>), [[COPY1]](p1) :: (store (<4 x s32>), align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD14]](p1) :: (store (<4 x s32>) into unknown-address + 240, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[COPY1]](p1) :: (store (<4 x s32>), align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD15:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK-NEXT: G_STORE [[UV17]](<4 x s32>), [[PTR_ADD15]](p1) :: (store (<4 x s32>) into unknown-address + 16, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD15]](p1) :: (store (<4 x s32>) into unknown-address + 16, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD16:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK-NEXT: G_STORE [[UV18]](<4 x s32>), [[PTR_ADD16]](p1) :: (store (<4 x s32>) into unknown-address + 32, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD16]](p1) :: (store (<4 x s32>) into unknown-address + 32, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD17:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; CHECK-NEXT: G_STORE [[UV19]](<4 x s32>), [[PTR_ADD17]](p1) :: (store (<4 x s32>) into unknown-address + 48, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD17]](p1) :: (store (<4 x s32>) into unknown-address + 48, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD18:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C3]](s64)
-    ; CHECK-NEXT: G_STORE [[UV20]](<4 x s32>), [[PTR_ADD18]](p1) :: (store (<4 x s32>) into unknown-address + 64, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD18]](p1) :: (store (<4 x s32>) into unknown-address + 64, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD19:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C4]](s64)
-    ; CHECK-NEXT: G_STORE [[UV21]](<4 x s32>), [[PTR_ADD19]](p1) :: (store (<4 x s32>) into unknown-address + 80, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD19]](p1) :: (store (<4 x s32>) into unknown-address + 80, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD20:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C5]](s64)
-    ; CHECK-NEXT: G_STORE [[UV22]](<4 x s32>), [[PTR_ADD20]](p1) :: (store (<4 x s32>) into unknown-address + 96, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD20]](p1) :: (store (<4 x s32>) into unknown-address + 96, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD21:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C6]](s64)
-    ; CHECK-NEXT: G_STORE [[UV23]](<4 x s32>), [[PTR_ADD21]](p1) :: (store (<4 x s32>) into unknown-address + 112, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD21]](p1) :: (store (<4 x s32>) into unknown-address + 112, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD22:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C7]](s64)
-    ; CHECK-NEXT: G_STORE [[UV24]](<4 x s32>), [[PTR_ADD22]](p1) :: (store (<4 x s32>) into unknown-address + 128, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD22]](p1) :: (store (<4 x s32>) into unknown-address + 128, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD23:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C8]](s64)
-    ; CHECK-NEXT: G_STORE [[UV25]](<4 x s32>), [[PTR_ADD23]](p1) :: (store (<4 x s32>) into unknown-address + 144, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD23]](p1) :: (store (<4 x s32>) into unknown-address + 144, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD24:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C9]](s64)
-    ; CHECK-NEXT: G_STORE [[UV26]](<4 x s32>), [[PTR_ADD24]](p1) :: (store (<4 x s32>) into unknown-address + 160, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD24]](p1) :: (store (<4 x s32>) into unknown-address + 160, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD25:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C10]](s64)
-    ; CHECK-NEXT: G_STORE [[UV27]](<4 x s32>), [[PTR_ADD25]](p1) :: (store (<4 x s32>) into unknown-address + 176, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD25]](p1) :: (store (<4 x s32>) into unknown-address + 176, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD26:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C11]](s64)
-    ; CHECK-NEXT: G_STORE [[UV28]](<4 x s32>), [[PTR_ADD26]](p1) :: (store (<4 x s32>) into unknown-address + 192, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD26]](p1) :: (store (<4 x s32>) into unknown-address + 192, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD27:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C12]](s64)
-    ; CHECK-NEXT: G_STORE [[UV29]](<4 x s32>), [[PTR_ADD27]](p1) :: (store (<4 x s32>) into unknown-address + 208, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD27]](p1) :: (store (<4 x s32>) into unknown-address + 208, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD28:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C13]](s64)
-    ; CHECK-NEXT: G_STORE [[UV30]](<4 x s32>), [[PTR_ADD28]](p1) :: (store (<4 x s32>) into unknown-address + 224, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD28]](p1) :: (store (<4 x s32>) into unknown-address + 224, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD29:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C14]](s64)
-    ; CHECK-NEXT: G_STORE [[UV31]](<4 x s32>), [[PTR_ADD29]](p1) :: (store (<4 x s32>) into unknown-address + 240, align 4, addrspace 1)
+    ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD29]](p1) :: (store (<4 x s32>) into unknown-address + 240, align 4, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_CONSTANT i32 64
     %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)

@@ -640,8 +640,6 @@ SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
 // Code for LLVM::GEPOp.
 //===----------------------------------------------------------------------===//
 
-constexpr int32_t GEPOp::kDynamicIndex;
-
 GEPIndicesAdaptor<ValueRange> GEPOp::getIndices() {
   return GEPIndicesAdaptor<ValueRange>(getRawConstantIndicesAttr(),
                                        getDynamicIndices());
@@ -698,7 +696,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
                        return structType.getBody()[memberIndex];
                      return nullptr;
                    })
-                   .Default(Type(nullptr));
+                   .Default(nullptr);
   }
 }
 

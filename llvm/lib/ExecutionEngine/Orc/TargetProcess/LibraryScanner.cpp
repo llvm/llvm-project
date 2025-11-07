@@ -50,7 +50,7 @@ void handleError(Error Err, StringRef context = "") {
 }
 
 bool ObjectFileLoader::isArchitectureCompatible(const object::ObjectFile &Obj) {
-  Triple HostTriple(sys::getDefaultTargetTriple());
+  Triple HostTriple(sys::getProcessTriple());
   Triple ObjTriple = Obj.makeTriple();
 
   LLVM_DEBUG({
@@ -644,7 +644,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef Path,
     }
   }
 #else
-  sys::fs::real_path(Path, Resolved); // Windows fallback
+  EC = sys::fs::real_path(Path, Resolved); // Windows fallback
 #endif
 
   std::string Canonical = Resolved.str().str();

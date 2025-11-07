@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -82,7 +82,7 @@ protected:
   /// \param Mode The required mode char.
   /// \param ArgPos The 0-based position of the flag argument.
   void insertStringFlag(const ast_matchers::MatchFinder::MatchResult &Result,
-                        const char Mode, const int ArgPos);
+                        char Mode, int ArgPos);
 
   /// Helper function to get the spelling of a particular argument.
   StringRef getSpellingArg(const ast_matchers::MatchFinder::MatchResult &Result,
@@ -97,4 +97,4 @@ protected:
 
 } // namespace clang::tidy::android
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCHECK_H

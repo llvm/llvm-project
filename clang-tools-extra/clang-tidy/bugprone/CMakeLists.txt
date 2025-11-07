@@ -18,13 +18,16 @@ add_clang_library(clangTidyBugproneModule STATIC
   CommandProcessorCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
   CopyConstructorInitCheck.cpp
+  CopyConstructorMutatesArgumentCheck.cpp
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
+  DefaultOperatorNewOnOveralignedTypeCheck.cpp
   DerivedMethodShadowingBaseMethodCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
   EmptyCatchCheck.cpp
   ExceptionEscapeCheck.cpp
+  FloatLoopCounterCheck.cpp
   FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp
   ForwardingReferenceOverloadCheck.cpp
@@ -62,6 +65,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   ParentVirtualCallCheck.cpp
   PointerArithmeticOnPolymorphicObjectCheck.cpp
   PosixReturnCheck.cpp
+  RawMemoryCallOnNonTrivialTypeCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
@@ -73,6 +77,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   SmartPtrArrayMismatchCheck.cpp
   SpuriouslyWakeUpFunctionsCheck.cpp
   StandaloneEmptyCheck.cpp
+  StdNamespaceModificationCheck.cpp
   StringConstructorCheck.cpp
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp

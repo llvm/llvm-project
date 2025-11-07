@@ -50,21 +50,19 @@ public:
 
     std::string getFullPath() const { return FilePath; }
 
-    bool setFilter(BloomFilter F) {
+    void setFilter(BloomFilter F) {
       std::lock_guard<std::shared_mutex> Lock(Mtx);
       if (Filter)
-        return false;
+        return;
       Filter.emplace(std::move(F));
-      return true;
     }
 
-    bool ensureFilterBuilt(const BloomFilterBuilder &FB,
+    void ensureFilterBuilt(const BloomFilterBuilder &FB,
                            ArrayRef<StringRef> Symbols) {
       std::lock_guard<std::shared_mutex> Lock(Mtx);
       if (Filter)
-        return false;
+        return;
       Filter.emplace(FB.build(Symbols));
-      return true;
     }
 
     bool mayContain(StringRef Symbol) const {
@@ -102,7 +100,7 @@ public:
   class FilteredView {
   public:
     using Map = StringMap<std::shared_ptr<LibraryInfo>>;
-    using Iterator = typename Map::const_iterator;
+    using Iterator = Map::const_iterator;
     class FilterIterator {
     public:
       FilterIterator(Iterator it_, Iterator end_, LibState S, PathType K)
@@ -181,13 +179,12 @@ public:
     return false;
   }
 
-  bool removeLibrary(StringRef Path) {
+  void removeLibrary(StringRef Path) {
     std::unique_lock<std::shared_mutex> Lock(Mtx);
     auto I = Libraries.find(Path);
     if (I == Libraries.end())
-      return false;
+      return;
     Libraries.erase(I);
-    return true;
   }
 
   void markLoaded(StringRef Path) {
@@ -214,6 +211,21 @@ public:
     return FilteredView(Libraries.begin(), Libraries.end(), S, K);
   }
 
+  using LibraryFilterFn = std::function<bool(const LibraryInfo &)>;
+  void getLibraries(LibState S, PathType K,
+                    std::vector<std::shared_ptr<LibraryInfo>> &Outs,
+                    LibraryFilterFn Filter = nullptr) const {
+    std::shared_lock<std::shared_mutex> Lock(Mtx);
+    for (const auto &[_, Entry] : Libraries) {
+      const auto &Info = *Entry;
+      if (Info.getKind() != K || Info.getState() != S)
+        continue;
+      if (Filter && !Filter(Info))
+        continue;
+      Outs.push_back(Entry);
+    }
+  }
+
   void forEachLibrary(const LibraryVisitor &visitor) const {
     std::unique_lock<std::shared_mutex> Lock(Mtx);
     for (const auto &[_, entry] : Libraries) {
@@ -223,14 +235,14 @@ public:
   }
 
   bool isLoaded(StringRef Path) const {
-    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    std::shared_lock<std::shared_mutex> Lock(Mtx);
     if (auto It = Libraries.find(Path.str()); It != Libraries.end())
       return It->second->getState() == LibState::Loaded;
     return false;
   }
 
   bool isQueried(StringRef Path) const {
-    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    std::shared_lock<std::shared_mutex> Lock(Mtx);
     if (auto It = Libraries.find(Path.str()); It != Libraries.end())
       return It->second->getState() == LibState::Queried;
     return false;

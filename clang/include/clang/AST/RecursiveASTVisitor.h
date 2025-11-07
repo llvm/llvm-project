@@ -3524,6 +3524,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDefaultClause(OMPDefaultClause *) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPThreadsetClause(
+    OMPThreadsetClause *) {
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPProcBindClause(OMPProcBindClause *) {
   return true;
 }
@@ -4154,6 +4160,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPBindClause(OMPBindClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPXDynCGroupMemClause(
     OMPXDynCGroupMemClause *C) {
+  TRY_TO(VisitOMPClauseWithPreInit(C));
+  TRY_TO(TraverseStmt(C->getSize()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getSize()));
   return true;
