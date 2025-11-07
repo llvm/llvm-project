@@ -625,4 +625,22 @@ llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
   return result;
 }
 
+bool fromJSON(const json::Value &Params, ExceptionInfoArguments &Args,
+              json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
+}
+
+json::Value toJSON(const ExceptionInfoResponseBody &ERB) {
+  json::Object result{{"exceptionId", ERB.exceptionId},
+                      {"breakMode", ERB.breakMode}};
+
+  if (!ERB.description.empty())
+    result.insert({"description", ERB.description});
+  if (ERB.details.has_value())
+    result.insert({"details", *ERB.details});
+
+  return result;
+}
+
 } // namespace lldb_dap::protocol
