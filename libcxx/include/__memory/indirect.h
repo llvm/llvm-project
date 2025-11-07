@@ -85,12 +85,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr indirect(indirect&& __other) noexcept
       : __alloc_(std::move(__other.__alloc_)), __ptr_(std::exchange(__other.__ptr_, nullptr)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr indirect(allocator_arg_t, const _Allocator& __a, indirect&& __other) noexcept
-    requires allocator_traits<_Allocator>::is_always_equal::value
-      : __alloc_(__a), __ptr_(std::exchange(__other.__ptr_, nullptr)) {}
-
-  _LIBCPP_HIDE_FROM_ABI constexpr indirect(allocator_arg_t, const _Allocator& __a, indirect&& __other) : __alloc_(__a) {
-    if (__other.valueless_after_move()) {
+  _LIBCPP_HIDE_FROM_ABI constexpr indirect(allocator_arg_t, const _Allocator& __a, indirect&& __other) noexcept(
+      allocator_traits<_Allocator>::is_always_equal::value)
+      : __alloc_(__a) {
+    if constexpr (allocator_traits<_Allocator>::is_always_equal::value) {
+      __ptr_ = std::exchange(__other.__ptr_, nullptr);
+    } else if (__other.valueless_after_move()) {
       __ptr_ = nullptr;
     } else if (__alloc_ == __other.__alloc_) {
       __ptr_ = std::exchange(__other.__ptr_, nullptr);
