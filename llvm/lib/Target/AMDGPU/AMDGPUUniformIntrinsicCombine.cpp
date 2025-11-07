@@ -60,7 +60,6 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 
   switch (IID) {
   case Intrinsic::amdgcn_permlane64:
-  case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
     if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
@@ -124,7 +123,6 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
 
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_permlane64:
-    case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:
     case Intrinsic::amdgcn_ballot:
       break;
