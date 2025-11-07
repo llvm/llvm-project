@@ -8,7 +8,7 @@ Introduction
 This document contains information describing how to create a Windows Itanium toolchain.
 
 Windows Itanium allows you to deploy Itanium C++ ABI applications on top of the MS VS CRT.
-This environment can use the Windows SDK headers directly and does not required additional
+This environment can use the Windows SDK headers directly and does not require additional
 headers or additional runtime machinery (such as is used by mingw).
 
 Windows Itanium Stack:

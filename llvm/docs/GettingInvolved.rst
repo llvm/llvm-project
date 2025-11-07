@@ -562,7 +562,7 @@ An example invite looks as follows
 .. code-block:: none
 
   This event is a meetup for all developers of LLDB. Meeting agendas are posted
-  on discourse before the event.
+  on Discourse before the event.
 
   Attendees must adhere to the LLVM Code of Conduct
   (https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,
