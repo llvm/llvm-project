@@ -4420,7 +4420,7 @@ MachineInstr *
 AArch64InstructionSelector::emitCMP(MachineOperand &LHS, MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
   MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
-  bool Is32Bit = (MRI.getType(LHS.getReg()).getSizeInBits() == 32);
+  bool Is32Bit = MRI.getType(LHS.getReg()).getSizeInBits() == 32;
   auto RC = Is32Bit ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass;
   return emitSUBS(MRI.createVirtualRegister(RC), LHS, RHS, MIRBuilder);
 }
