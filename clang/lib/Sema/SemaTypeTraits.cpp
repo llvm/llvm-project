@@ -2400,29 +2400,31 @@ static void DiagnoseNonConstructibleReason(
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
-static void DiagnoseNonDestructibleReason(
-    Sema &SemaRef, SourceLocation Loc,
-    QualType T) {
+static void DiagnoseNonDestructibleReason(Sema &SemaRef, SourceLocation Loc,
+                                          QualType T) {
 
   QualType CoreT = T.getCanonicalType();
   if (const ArrayType *AT = SemaRef.Context.getAsArrayType(CoreT))
     CoreT = AT->getElementType();
 
-  SemaRef.Diag(Loc, diag::note_unsatisfied_trait) << CoreT << diag::TraitName::Destructible;
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << CoreT << diag::TraitName::Destructible;
 
-
-  if (CoreT->isFunctionType()){
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason) << diag::TraitNotSatisfiedReason::FunctionType;
+  if (CoreT->isFunctionType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
     return;
   }
-    
-  if(CoreT->isVoidType()){
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason) << diag::TraitNotSatisfiedReason::CVVoidType;
+
+  if (CoreT->isVoidType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
     return;
   }
 
   if (CoreT->isIncompleteType()) {
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason) << diag::TraitNotSatisfiedReason::IncompleteType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::IncompleteType;
     return;
   }
 
@@ -2433,7 +2435,7 @@ static void DiagnoseNonDestructibleReason(
   const CXXRecordDecl *Def = RD->getDefinition();
   if (!Def) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-      << diag::TraitNotSatisfiedReason::IncompleteType;
+        << diag::TraitNotSatisfiedReason::IncompleteType;
     return;
   }
 
