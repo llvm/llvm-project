@@ -379,6 +379,9 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
   if (!err)
     return;
 
+  // Module load errors aren't fatal to the expression evaluator. Printing
+  // them as diagnostics to the console would be too noisy and misleading
+  // Hence just print them to the expression log.
   llvm::handleAllErrors(
       std::move(err), [](const llvm::StringError &e) {
         LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", e.getMessage());
