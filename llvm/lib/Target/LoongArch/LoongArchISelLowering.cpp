@@ -375,6 +375,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FFLOOR, VT, Legal);
       setOperationAction(ISD::FTRUNC, VT, Legal);
       setOperationAction(ISD::FROUNDEVEN, VT, Legal);
+      setOperationAction(ISD::FMINNUM, VT, Legal);
+      setOperationAction(ISD::FMAXNUM, VT, Legal);
     }
     setOperationAction(ISD::CTPOP, GRLenVT, Legal);
     setOperationAction(ISD::FCEIL, {MVT::f32, MVT::f64}, Legal);
@@ -461,6 +463,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FFLOOR, VT, Legal);
       setOperationAction(ISD::FTRUNC, VT, Legal);
       setOperationAction(ISD::FROUNDEVEN, VT, Legal);
+      setOperationAction(ISD::FMINNUM, VT, Legal);
+      setOperationAction(ISD::FMAXNUM, VT, Legal);
     }
   }
 
@@ -6626,6 +6630,11 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(LoongArchISD::VANY_NONZERO, DL, N->getValueType(0),
                          N->getOperand(1));
     break;
+  case Intrinsic::loongarch_lasx_concat_128_s:
+  case Intrinsic::loongarch_lasx_concat_128_d:
+  case Intrinsic::loongarch_lasx_concat_128:
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
   }
   return SDValue();
 }

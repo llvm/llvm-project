@@ -295,7 +295,6 @@ BringInRemoteFile(Platform *platform,
 
 lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-    const lldb_private::FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
 
   Log *log = GetLog(LLDBLog::Platform);
@@ -329,8 +328,7 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
       ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
                                    image_info.data_sp);
       err = ModuleList::GetSharedModule(shared_cache_spec, module_sp,
-                                        module_search_paths_ptr, old_modules,
-                                        did_create_ptr);
+                                        old_modules, did_create_ptr);
       if (module_sp) {
         LLDB_LOGF(log, "[%s] module %s was found in the in-memory shared cache",
                   (IsHost() ? "host" : "remote"),
@@ -348,8 +346,7 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     FileSystem::Instance().Resolve(device_support_spec);
     if (FileSystem::Instance().Exists(device_support_spec)) {
       ModuleSpec local_spec(device_support_spec, module_spec.GetUUID());
-      err = ModuleList::GetSharedModule(local_spec, module_sp,
-                                        module_search_paths_ptr, old_modules,
+      err = ModuleList::GetSharedModule(local_spec, module_sp, old_modules,
                                         did_create_ptr);
       if (module_sp) {
         LLDB_LOGF(log,
@@ -363,8 +360,7 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     }
   }
 
-  err = ModuleList::GetSharedModule(module_spec, module_sp,
-                                    module_search_paths_ptr, old_modules,
+  err = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
                                     did_create_ptr);
   if (module_sp)
     return err;
