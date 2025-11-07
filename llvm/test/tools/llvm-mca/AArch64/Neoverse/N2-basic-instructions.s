@@ -2086,9 +2086,9 @@ drps
 # CHECK-NEXT:  1      3     0.50                        fcvtas	x27, d28
 # CHECK-NEXT:  1      3     0.50                        fcvtau	w29, d30
 # CHECK-NEXT:  1      3     0.50                        fcvtau	xzr, d0
-# CHECK-NEXT:  1      3     3.00                        fmov	w3, s9
+# CHECK-NEXT:  1      2     0.50                        fmov	w3, s9
 # CHECK-NEXT:  1      3     3.00                        fmov	s9, w3
-# CHECK-NEXT:  1      3     3.00                        fmov	x20, d31
+# CHECK-NEXT:  1      2     0.50                        fmov	x20, d31
 # CHECK-NEXT:  1      3     3.00                        fmov	d1, x15
 # CHECK-NEXT:  1      2     0.50                        fmov	x3, v12.d[1]
 # CHECK-NEXT:  2      5     1.00                        fmov	v1.d[1], x19
@@ -2557,7 +2557,7 @@ drps
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT: 11.00  11.00  33.00  33.00  87.33  151.33 151.33 515.75 249.75 161.25 161.25 215.50 85.50
+# CHECK-NEXT: 11.00  11.00  33.00  33.00  87.33  151.33 151.33 509.75 249.75 161.25 161.25 216.50 86.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -3270,9 +3270,9 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	x27, d28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	w29, d30
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	xzr, d0
-# CHECK-NEXT:  -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	w3, s9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	w3, s9
 # CHECK-NEXT:  -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	s9, w3
-# CHECK-NEXT:  -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	x20, d31
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	x20, d31
 # CHECK-NEXT:  -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	d1, x15
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	x3, v12.d[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   fmov	v1.d[1], x19

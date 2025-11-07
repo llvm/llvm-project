@@ -906,8 +906,7 @@ def : SchedAlias<WriteFImm, N2Write_2c_1V>;
 def : InstRW<[N2Write_2c_1V], (instrs FMOVHr, FMOVSr, FMOVDr)>;
 
 // FP transfer, from gen to low half of vec reg
-def : InstRW<[N2Write_0or3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr,
-                                        FMOVHWr, FMOVHXr, FMOVSWr, FMOVDXr)>;
+def : InstRW<[N2Write_0or3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 
 // FP transfer, from gen to high half of vec reg
 def : InstRW<[N2Write_5c_1M0_1V], (instrs FMOVXDHighr)>;
