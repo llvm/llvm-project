@@ -6,7 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
 int f19(void) {
-  return ({ 3;;4;; });
+  return ({ 3;;4; });
 }
 
 // CIR: cir.func dso_local @f19() -> !s32i
