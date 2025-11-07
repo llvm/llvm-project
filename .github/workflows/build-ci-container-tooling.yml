@@ -33,8 +33,10 @@ jobs:
       matrix:
         include:
           - container-name: format
+            target: code-format
             test-command: 'cd $HOME && clang-format --version | grep version && git-clang-format -h | grep usage && black --version | grep black'
           - container-name: lint
+            target: code-lint
             test-command: 'cd $HOME && clang-tidy --version | grep version && clang-tidy-diff.py -h | grep usage'
     steps:
       - name: Checkout LLVM
