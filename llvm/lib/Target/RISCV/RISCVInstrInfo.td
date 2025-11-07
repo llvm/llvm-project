@@ -2363,9 +2363,6 @@ include "RISCVInstrInfoZclsd.td"
 // Control Flow Integriy, this requires Zimop/Zcmop
 include "RISCVInstrInfoZicfiss.td"
 
-// Short Forward Branch
-include "RISCVInstrInfoSFB.td"
-
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
@@ -2388,3 +2385,6 @@ include "RISCVInstrInfoXSpacemiT.td"
 //===----------------------------------------------------------------------===//
 
 include "RISCVInstrGISel.td"
+
+// Short Forward Branch
+include "RISCVInstrInfoSFB.td"
