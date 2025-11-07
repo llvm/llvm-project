@@ -5,11 +5,7 @@ define i64 @test_dereferenceable_assume(ptr %p, ptr %q, i1 %c.0) {
 ; CHECK-LABEL: define i64 @test_dereferenceable_assume(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C_0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 [[C_0]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[Q_INT:%.*]] = ptrtoint ptr [[Q]] to i64
-; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[Q_INT]], [[P_INT]]
 ; CHECK-NEXT:    ret i64 [[DIFF]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i64 0

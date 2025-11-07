@@ -5413,6 +5413,18 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
         return false;
   }
 
+  // Do not sink if there are dereferenceable assumes that would be removed.
+  for (User *User : I->users()) {
+    auto *CI = dyn_cast<CallInst>(User);
+    if (!CI || CI->getParent() == DestBlock)
+      continue;
+
+    if (CI->getIntrinsicID() == Intrinsic::assume &&
+        CI->getOperandBundle("dereferenceable")) {
+      return false;
+    }
+  }
+
   I->dropDroppableUses([&](const Use *U) {
     auto *I = dyn_cast<Instruction>(U->getUser());
     if (I && I->getParent() != DestBlock) {
