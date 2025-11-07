@@ -23,32 +23,32 @@ define half @caller_half(half %x) nounwind {
 ;
 ; ZFINX32-LABEL: caller_half:
 ; ZFINX32:       # %bb.0: # %entry
-; ZFINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX32-NEXT:    lui a1, 1048560
+; ZFINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX32-NEXT:    or a0, a0, a1
 ; ZFINX32-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZFINX32-NEXT:    tail h
 ;
 ; ZFINX64-LABEL: caller_half:
 ; ZFINX64:       # %bb.0: # %entry
-; ZFINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX64-NEXT:    lui a1, 1048560
+; ZFINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX64-NEXT:    or a0, a0, a1
 ; ZFINX64-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZFINX64-NEXT:    tail h
 ;
 ; ZDINX32-LABEL: caller_half:
 ; ZDINX32:       # %bb.0: # %entry
-; ZDINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX32-NEXT:    lui a1, 1048560
+; ZDINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX32-NEXT:    or a0, a0, a1
 ; ZDINX32-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZDINX32-NEXT:    tail h
 ;
 ; ZDINX64-LABEL: caller_half:
 ; ZDINX64:       # %bb.0: # %entry
-; ZDINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX64-NEXT:    lui a1, 1048560
+; ZDINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX64-NEXT:    or a0, a0, a1
 ; ZDINX64-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZDINX64-NEXT:    tail h
@@ -68,32 +68,32 @@ define internal fastcc half @h(half %x) nounwind {
 ;
 ; ZFINX32-LABEL: h:
 ; ZFINX32:       # %bb.0:
-; ZFINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX32-NEXT:    lui a1, 1048560
+; ZFINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX32-NEXT:    or a0, a0, a1
 ; ZFINX32-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZFINX32-NEXT:    ret
 ;
 ; ZFINX64-LABEL: h:
 ; ZFINX64:       # %bb.0:
-; ZFINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX64-NEXT:    lui a1, 1048560
+; ZFINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX64-NEXT:    or a0, a0, a1
 ; ZFINX64-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZFINX64-NEXT:    ret
 ;
 ; ZDINX32-LABEL: h:
 ; ZDINX32:       # %bb.0:
-; ZDINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX32-NEXT:    lui a1, 1048560
+; ZDINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX32-NEXT:    or a0, a0, a1
 ; ZDINX32-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZDINX32-NEXT:    ret
 ;
 ; ZDINX64-LABEL: h:
 ; ZDINX64:       # %bb.0:
-; ZDINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX64-NEXT:    lui a1, 1048560
+; ZDINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX64-NEXT:    or a0, a0, a1
 ; ZDINX64-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZDINX64-NEXT:    ret
@@ -524,8 +524,8 @@ define half @caller_half_32(<32 x half> %A) nounwind {
 ; ZFINX32-NEXT:    lw a2, 96(sp) # 4-byte Folded Reload
 ; ZFINX32-NEXT:    lw a3, 92(sp) # 4-byte Folded Reload
 ; ZFINX32-NEXT:    call callee_half_32
-; ZFINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX32-NEXT:    lui a1, 1048560
+; ZFINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX32-NEXT:    or a0, a0, a1
 ; ZFINX32-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZFINX32-NEXT:    lw ra, 156(sp) # 4-byte Folded Reload
@@ -622,8 +622,8 @@ define half @caller_half_32(<32 x half> %A) nounwind {
 ; ZFINX64-NEXT:    ld a2, 176(sp) # 8-byte Folded Reload
 ; ZFINX64-NEXT:    ld a3, 168(sp) # 8-byte Folded Reload
 ; ZFINX64-NEXT:    call callee_half_32
-; ZFINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX64-NEXT:    lui a1, 1048560
+; ZFINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZFINX64-NEXT:    or a0, a0, a1
 ; ZFINX64-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZFINX64-NEXT:    ld ra, 296(sp) # 8-byte Folded Reload
@@ -720,8 +720,8 @@ define half @caller_half_32(<32 x half> %A) nounwind {
 ; ZDINX32-NEXT:    lw a2, 96(sp) # 4-byte Folded Reload
 ; ZDINX32-NEXT:    lw a3, 92(sp) # 4-byte Folded Reload
 ; ZDINX32-NEXT:    call callee_half_32
-; ZDINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX32-NEXT:    lui a1, 1048560
+; ZDINX32-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX32-NEXT:    or a0, a0, a1
 ; ZDINX32-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZDINX32-NEXT:    lw ra, 156(sp) # 4-byte Folded Reload
@@ -818,8 +818,8 @@ define half @caller_half_32(<32 x half> %A) nounwind {
 ; ZDINX64-NEXT:    ld a2, 176(sp) # 8-byte Folded Reload
 ; ZDINX64-NEXT:    ld a3, 168(sp) # 8-byte Folded Reload
 ; ZDINX64-NEXT:    call callee_half_32
-; ZDINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX64-NEXT:    lui a1, 1048560
+; ZDINX64-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; ZDINX64-NEXT:    or a0, a0, a1
 ; ZDINX64-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZDINX64-NEXT:    ld ra, 296(sp) # 8-byte Folded Reload

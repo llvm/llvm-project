@@ -93,15 +93,15 @@ declare half @llvm.vp.reduce.fadd.nxv64f16(half, <vscale x 64 x half>, <vscale x
 define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_nxv64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a1, a2, 1
-; CHECK-NEXT:    slli a2, a2, 2
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    sub a3, a0, a2
+; CHECK-NEXT:    sltu a4, a0, a3
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    vsetvli a5, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v24, v0, a1
-; CHECK-NEXT:    sub a1, a0, a2
-; CHECK-NEXT:    sltu a3, a0, a1
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a1, a3, a1
+; CHECK-NEXT:    and a1, a4, a3
 ; CHECK-NEXT:    bltu a0, a2, .LBB6_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
@@ -122,15 +122,15 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_ord_fadd_nxv64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a1, a2, 1
-; CHECK-NEXT:    slli a2, a2, 2
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    sub a3, a0, a2
+; CHECK-NEXT:    sltu a4, a0, a3
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    vsetvli a5, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v24, v0, a1
-; CHECK-NEXT:    sub a1, a0, a2
-; CHECK-NEXT:    sltu a3, a0, a1
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a1, a3, a1
+; CHECK-NEXT:    and a1, a4, a3
 ; CHECK-NEXT:    bltu a0, a2, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
@@ -347,9 +347,9 @@ define double @vpreduce_ord_fadd_nxv4f64(double %s, <vscale x 4 x double> %v, <v
 define float @vpreduce_fminimum_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fminimum_nxv4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vmfne.vv v10, v8, v8, v0.t
-; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vcpop.m a2, v10, v0.t
 ; CHECK-NEXT:    xori a1, a1, 1
 ; CHECK-NEXT:    or a1, a2, a1
@@ -372,9 +372,9 @@ define float @vpreduce_fminimum_nxv4f32(float %start, <vscale x 4 x float> %val,
 define float @vpreduce_fmaximum_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fmaximum_nxv4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vmfne.vv v10, v8, v8, v0.t
-; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vcpop.m a2, v10, v0.t
 ; CHECK-NEXT:    xori a1, a1, 1
 ; CHECK-NEXT:    or a1, a2, a1

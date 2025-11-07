@@ -100,12 +100,12 @@ define i64 @masked_merge3(i64 %a0, i64 %a1, i64 %a2) {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    not a6, a0
 ; RV32ZBB-NEXT:    not a7, a1
+; RV32ZBB-NEXT:    andn a5, a7, a5
+; RV32ZBB-NEXT:    andn a4, a6, a4
 ; RV32ZBB-NEXT:    andn a1, a1, a3
 ; RV32ZBB-NEXT:    andn a0, a0, a2
-; RV32ZBB-NEXT:    andn a2, a7, a5
-; RV32ZBB-NEXT:    andn a3, a6, a4
-; RV32ZBB-NEXT:    or a0, a3, a0
-; RV32ZBB-NEXT:    or a1, a2, a1
+; RV32ZBB-NEXT:    or a0, a4, a0
+; RV32ZBB-NEXT:    or a1, a5, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: masked_merge3:
@@ -127,18 +127,18 @@ define i64 @masked_merge3(i64 %a0, i64 %a1, i64 %a2) {
 define i32 @not_a_masked_merge0(i32 %a0, i32 %a1, i32 %a2) {
 ; RV32-LABEL: not_a_masked_merge0:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    and a1, a0, a1
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    and a0, a0, a2
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    neg a3, a0
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    and a2, a3, a2
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: not_a_masked_merge0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    and a1, a0, a1
-; RV64-NEXT:    negw a0, a0
-; RV64-NEXT:    and a0, a0, a2
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    negw a3, a0
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    and a2, a3, a2
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    ret
   %and0 = and i32 %a0, %a1
   %not_a_not = sub i32 0, %a0
@@ -150,10 +150,10 @@ define i32 @not_a_masked_merge0(i32 %a0, i32 %a1, i32 %a2) {
 define i32 @not_a_masked_merge1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-I-LABEL: not_a_masked_merge1:
 ; CHECK-I:       # %bb.0:
+; CHECK-I-NEXT:    not a3, a3
 ; CHECK-I-NEXT:    and a0, a0, a1
-; CHECK-I-NEXT:    not a1, a3
-; CHECK-I-NEXT:    and a1, a1, a2
-; CHECK-I-NEXT:    or a0, a0, a1
+; CHECK-I-NEXT:    and a2, a3, a2
+; CHECK-I-NEXT:    or a0, a0, a2
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: not_a_masked_merge1:
@@ -172,10 +172,10 @@ define i32 @not_a_masked_merge1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i32 @not_a_masked_merge2(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-I-LABEL: not_a_masked_merge2:
 ; CHECK-I:       # %bb.0:
-; CHECK-I-NEXT:    or a1, a0, a1
-; CHECK-I-NEXT:    not a0, a0
-; CHECK-I-NEXT:    and a0, a0, a2
-; CHECK-I-NEXT:    or a0, a1, a0
+; CHECK-I-NEXT:    not a3, a0
+; CHECK-I-NEXT:    or a0, a0, a1
+; CHECK-I-NEXT:    and a2, a3, a2
+; CHECK-I-NEXT:    or a0, a0, a2
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: not_a_masked_merge2:
@@ -194,10 +194,10 @@ define i32 @not_a_masked_merge2(i32 %a0, i32 %a1, i32 %a2) {
 define i32 @not_a_masked_merge3(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-I-LABEL: not_a_masked_merge3:
 ; CHECK-I:       # %bb.0:
-; CHECK-I-NEXT:    and a1, a0, a1
-; CHECK-I-NEXT:    xor a0, a0, a2
-; CHECK-I-NEXT:    not a0, a0
-; CHECK-I-NEXT:    or a0, a1, a0
+; CHECK-I-NEXT:    xor a2, a0, a2
+; CHECK-I-NEXT:    and a0, a0, a1
+; CHECK-I-NEXT:    not a1, a2
+; CHECK-I-NEXT:    or a0, a0, a1
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: not_a_masked_merge3:
@@ -228,9 +228,9 @@ define i32 @not_a_masked_merge4(i32 %a0, i32 %a1, i32 %a2) {
 define i32 @masked_merge_no_transform0(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 ; CHECK-I-LABEL: masked_merge_no_transform0:
 ; CHECK-I:       # %bb.0:
+; CHECK-I-NEXT:    not a4, a0
 ; CHECK-I-NEXT:    and a1, a0, a1
-; CHECK-I-NEXT:    not a0, a0
-; CHECK-I-NEXT:    and a0, a0, a2
+; CHECK-I-NEXT:    and a0, a4, a2
 ; CHECK-I-NEXT:    or a0, a1, a0
 ; CHECK-I-NEXT:    sw a1, 0(a3)
 ; CHECK-I-NEXT:    ret
@@ -253,19 +253,19 @@ define i32 @masked_merge_no_transform0(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 define i32 @masked_merge_no_transform1(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 ; CHECK-I-LABEL: masked_merge_no_transform1:
 ; CHECK-I:       # %bb.0:
-; CHECK-I-NEXT:    and a1, a0, a1
 ; CHECK-I-NEXT:    not a4, a0
-; CHECK-I-NEXT:    and a0, a4, a2
-; CHECK-I-NEXT:    or a0, a1, a0
+; CHECK-I-NEXT:    and a0, a0, a1
+; CHECK-I-NEXT:    and a2, a4, a2
+; CHECK-I-NEXT:    or a0, a0, a2
 ; CHECK-I-NEXT:    sw a4, 0(a3)
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: masked_merge_no_transform1:
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    and a1, a0, a1
+; CHECK-ZBB-NEXT:    andn a2, a2, a0
 ; CHECK-ZBB-NEXT:    not a4, a0
-; CHECK-ZBB-NEXT:    andn a0, a2, a0
-; CHECK-ZBB-NEXT:    or a0, a1, a0
+; CHECK-ZBB-NEXT:    or a0, a1, a2
 ; CHECK-ZBB-NEXT:    sw a4, 0(a3)
 ; CHECK-ZBB-NEXT:    ret
   %and0 = and i32 %a0, %a1
@@ -279,10 +279,10 @@ define i32 @masked_merge_no_transform1(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 define i32 @masked_merge_no_transform2(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 ; CHECK-I-LABEL: masked_merge_no_transform2:
 ; CHECK-I:       # %bb.0:
-; CHECK-I-NEXT:    and a1, a0, a1
-; CHECK-I-NEXT:    not a0, a0
-; CHECK-I-NEXT:    and a2, a0, a2
-; CHECK-I-NEXT:    or a0, a1, a2
+; CHECK-I-NEXT:    not a4, a0
+; CHECK-I-NEXT:    and a0, a0, a1
+; CHECK-I-NEXT:    and a2, a4, a2
+; CHECK-I-NEXT:    or a0, a0, a2
 ; CHECK-I-NEXT:    sw a2, 0(a3)
 ; CHECK-I-NEXT:    ret
 ;

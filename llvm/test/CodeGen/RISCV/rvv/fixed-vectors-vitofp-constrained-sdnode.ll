@@ -772,10 +772,9 @@ declare <32 x half> @llvm.experimental.constrained.sitofp.v32f16.v32i8(<32 x i8>
 define <32 x half> @vsitofp_v32i8_v32f16(<32 x i8> %va) strictfp {
 ; CHECK-LABEL: vsitofp_v32i8_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vfwcvt.f.x.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <32 x half> @llvm.experimental.constrained.sitofp.v32f16.v32i8(<32 x i8> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -786,10 +785,9 @@ declare <32 x half> @llvm.experimental.constrained.uitofp.v32f16.v32i8(<32 x i8>
 define <32 x half> @vuitofp_v32i8_v32f16(<32 x i8> %va) strictfp {
 ; CHECK-LABEL: vuitofp_v32i8_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vfwcvt.f.xu.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <32 x half> @llvm.experimental.constrained.uitofp.v32f16.v32i8(<32 x i8> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")

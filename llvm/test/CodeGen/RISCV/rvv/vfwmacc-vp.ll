@@ -94,12 +94,12 @@ define <vscale x 1 x float> @vfmacc_vv_nxv1f32_masked__tu(<vscale x 1 x half> %a
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v8, v0.t
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v9, v0.t
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfmadd.vv v8, v11, v10, v0.t
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
-; ZVFHMIN-NEXT:    vmerge.vvm v10, v10, v8, v0
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v9, v0.t
 ; ZVFHMIN-NEXT:    vmv1r.v v8, v10
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfmadd.vv v12, v11, v10, v0.t
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
+; ZVFHMIN-NEXT:    vmerge.vvm v8, v10, v12, v0
 ; ZVFHMIN-NEXT:    ret
   %aext = call <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half> %a, <vscale x 1 x i1> %m, i32 %evl)
   %bext = call <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half> %b, <vscale x 1 x i1> %m, i32 %evl)
@@ -414,8 +414,8 @@ define <vscale x 4 x float> @vfmacc_vv_nxv4f32(<vscale x 4 x half> %a, <vscale x
 ; ZVFHMIN-LABEL: vfmacc_vv_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vmv1r.v v12, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v14, v8, v0.t
+; ZVFHMIN-NEXT:    vmv1r.v v12, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v12, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfmadd.vv v8, v14, v10, v0.t
@@ -518,8 +518,8 @@ define <vscale x 8 x float> @vfmacc_vv_nxv8f32(<vscale x 8 x half> %a, <vscale x
 ; ZVFHMIN-LABEL: vfmacc_vv_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vmv2r.v v16, v10
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v20, v8, v0.t
+; ZVFHMIN-NEXT:    vmv2r.v v16, v10
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v16, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfmadd.vv v8, v20, v12, v0.t
@@ -622,8 +622,8 @@ define <vscale x 16 x float> @vfmacc_vv_nxv16f32(<vscale x 16 x half> %a, <vscal
 ; ZVFHMIN-LABEL: vfmacc_vv_nxv16f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vmv4r.v v4, v12
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8, v0.t
+; ZVFHMIN-NEXT:    vmv4r.v v4, v12
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v4, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmadd.vv v8, v24, v16, v0.t

@@ -13,8 +13,8 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    vmv.v.x v10, a1
+; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    vmerge.vxm v10, v10, a0, v0
 ; CHECK-NEXT:    vsll.vv v11, v8, v9
 ; CHECK-NEXT:    vsra.vv v9, v11, v9
@@ -91,8 +91,8 @@ define <vscale x 2 x i64> @vec_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64>
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    vmv.v.x v12, a1
+; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    vmerge.vxm v12, v12, a0, v0
 ; CHECK-NEXT:    vsll.vv v14, v8, v10
 ; CHECK-NEXT:    vsra.vv v10, v14, v10

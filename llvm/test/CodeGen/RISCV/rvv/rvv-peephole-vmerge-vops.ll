@@ -893,15 +893,15 @@ define void @test_dag_loop() {
 ; CHECK-LABEL: test_dag_loop:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
-; CHECK-NEXT:    vssubu.vx v12, v8, zero, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmseq.vv v0, v12, v8
+; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vmv4r.v v20, v16
+; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
+; CHECK-NEXT:    vssubu.vx v20, v16, zero, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
+; CHECK-NEXT:    vmseq.vv v0, v20, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m8, tu, mu
 ; CHECK-NEXT:    vle16.v v8, (zero), v0.t
 ; CHECK-NEXT:    vse16.v v8, (zero)
@@ -964,12 +964,12 @@ declare <vscale x 2 x float> @llvm.riscv.vfredusum.nxv2f32.nxv2f32(
 define <vscale x 2 x float> @vfredusum(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: vfredusum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfredusum.vs v11, v9, v10
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x float> @llvm.riscv.vfredusum.nxv2f32.nxv2f32(
     <vscale x 2 x float> %passthru,

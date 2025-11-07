@@ -4,8 +4,8 @@
 define i64 @fold_binop_into_select_0(i1 %c, i64 %x) {
 ; CHECK-LABEL: fold_binop_into_select_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a1, a1, -2
 ; CHECK-NEXT:    slli a0, a0, 63
+; CHECK-NEXT:    addi a1, a1, -2
 ; CHECK-NEXT:    srai a0, a0, 63
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret

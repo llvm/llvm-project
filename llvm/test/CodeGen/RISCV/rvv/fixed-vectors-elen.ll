@@ -28,24 +28,24 @@ define void @add_v2i64(ptr %x, ptr %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw a2, 0(a0)
 ; RV32-NEXT:    lw a3, 4(a0)
-; RV32-NEXT:    lw a4, 8(a0)
-; RV32-NEXT:    lw a5, 12(a0)
-; RV32-NEXT:    lw a6, 4(a1)
-; RV32-NEXT:    lw a7, 0(a1)
-; RV32-NEXT:    lw t0, 12(a1)
-; RV32-NEXT:    lw a1, 8(a1)
-; RV32-NEXT:    add a3, a3, a6
-; RV32-NEXT:    add a7, a2, a7
-; RV32-NEXT:    add a5, a5, t0
-; RV32-NEXT:    add a1, a4, a1
-; RV32-NEXT:    sltu a2, a7, a2
-; RV32-NEXT:    sltu a4, a1, a4
+; RV32-NEXT:    lw a4, 0(a1)
+; RV32-NEXT:    lw a5, 4(a1)
+; RV32-NEXT:    lw a6, 8(a1)
+; RV32-NEXT:    lw a7, 8(a0)
+; RV32-NEXT:    lw t0, 12(a0)
+; RV32-NEXT:    lw a1, 12(a1)
+; RV32-NEXT:    add a3, a3, a5
+; RV32-NEXT:    add a4, a2, a4
+; RV32-NEXT:    add a6, a7, a6
+; RV32-NEXT:    sltu a2, a4, a2
+; RV32-NEXT:    add a1, t0, a1
+; RV32-NEXT:    sltu a5, a6, a7
 ; RV32-NEXT:    add a2, a3, a2
-; RV32-NEXT:    add a4, a5, a4
-; RV32-NEXT:    sw a7, 0(a0)
+; RV32-NEXT:    add a1, a1, a5
+; RV32-NEXT:    sw a4, 0(a0)
 ; RV32-NEXT:    sw a2, 4(a0)
-; RV32-NEXT:    sw a1, 8(a0)
-; RV32-NEXT:    sw a4, 12(a0)
+; RV32-NEXT:    sw a6, 8(a0)
+; RV32-NEXT:    sw a1, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: add_v2i64:
@@ -87,16 +87,16 @@ define void @add_v2i32(ptr %x, ptr %y) {
 define void @add_v1i64(ptr %x, ptr %y) {
 ; RV32-LABEL: add_v1i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a2, 0(a0)
-; RV32-NEXT:    lw a3, 4(a0)
-; RV32-NEXT:    lw a4, 4(a1)
-; RV32-NEXT:    lw a1, 0(a1)
-; RV32-NEXT:    add a3, a3, a4
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    sltu a2, a1, a2
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lw a3, 0(a0)
+; RV32-NEXT:    lw a4, 4(a0)
+; RV32-NEXT:    lw a1, 4(a1)
 ; RV32-NEXT:    add a2, a3, a2
-; RV32-NEXT:    sw a1, 0(a0)
-; RV32-NEXT:    sw a2, 4(a0)
+; RV32-NEXT:    add a1, a4, a1
+; RV32-NEXT:    sltu a3, a2, a3
+; RV32-NEXT:    add a1, a1, a3
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: add_v1i64:
@@ -134,12 +134,12 @@ define void @fadd_v4f32(ptr %x, ptr %y) {
 define void @fadd_v2f64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fadd_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld fa5, 0(a0)
-; CHECK-NEXT:    fld fa4, 8(a0)
-; CHECK-NEXT:    fld fa3, 0(a1)
+; CHECK-NEXT:    fld fa5, 0(a1)
+; CHECK-NEXT:    fld fa4, 0(a0)
+; CHECK-NEXT:    fld fa3, 8(a0)
 ; CHECK-NEXT:    fld fa2, 8(a1)
-; CHECK-NEXT:    fadd.d fa5, fa5, fa3
-; CHECK-NEXT:    fadd.d fa4, fa4, fa2
+; CHECK-NEXT:    fadd.d fa5, fa4, fa5
+; CHECK-NEXT:    fadd.d fa4, fa3, fa2
 ; CHECK-NEXT:    fsd fa5, 0(a0)
 ; CHECK-NEXT:    fsd fa4, 8(a0)
 ; CHECK-NEXT:    ret

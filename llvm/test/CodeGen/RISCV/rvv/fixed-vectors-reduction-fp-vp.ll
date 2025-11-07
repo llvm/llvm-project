@@ -261,9 +261,9 @@ define double @vpreduce_ord_fadd_v4f64(double %s, <4 x double> %v, <4 x i1> %m, 
 define float @vpreduce_fminimum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fminimum_v4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmfne.vv v9, v8, v8, v0.t
-; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vcpop.m a2, v9, v0.t
 ; CHECK-NEXT:    xori a1, a1, 1
 ; CHECK-NEXT:    or a1, a2, a1
@@ -286,9 +286,9 @@ define float @vpreduce_fminimum_v4f32(float %start, <4 x float> %val, <4 x i1> %
 define float @vpreduce_fmaximum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fmaximum_v4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmfne.vv v9, v8, v8, v0.t
-; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vcpop.m a2, v9, v0.t
 ; CHECK-NEXT:    xori a1, a1, 1
 ; CHECK-NEXT:    or a1, a2, a1

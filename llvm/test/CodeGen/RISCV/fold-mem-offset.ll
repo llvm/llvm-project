@@ -11,13 +11,13 @@ define i64 @test_sh3add(ptr %p, iXLen %x, iXLen %y) {
 ; RV32I-NEXT:    slli a2, a2, 3
 ; RV32I-NEXT:    add a1, a1, a0
 ; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    lw a2, 480(a1)
+; RV32I-NEXT:    lw a2, 400(a0)
+; RV32I-NEXT:    lw a3, 480(a1)
 ; RV32I-NEXT:    lw a1, 484(a1)
-; RV32I-NEXT:    lw a3, 404(a0)
-; RV32I-NEXT:    lw a4, 400(a0)
-; RV32I-NEXT:    add a1, a3, a1
-; RV32I-NEXT:    add a0, a4, a2
-; RV32I-NEXT:    sltu a2, a0, a4
+; RV32I-NEXT:    lw a4, 404(a0)
+; RV32I-NEXT:    add a0, a2, a3
+; RV32I-NEXT:    add a1, a4, a1
+; RV32I-NEXT:    sltu a2, a0, a2
 ; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
 ;
@@ -36,13 +36,13 @@ define i64 @test_sh3add(ptr %p, iXLen %x, iXLen %y) {
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    sh3add a1, a1, a0
 ; RV32ZBA-NEXT:    sh3add a0, a2, a0
-; RV32ZBA-NEXT:    lw a2, 480(a1)
+; RV32ZBA-NEXT:    lw a2, 400(a0)
+; RV32ZBA-NEXT:    lw a3, 480(a1)
 ; RV32ZBA-NEXT:    lw a1, 484(a1)
-; RV32ZBA-NEXT:    lw a3, 404(a0)
-; RV32ZBA-NEXT:    lw a4, 400(a0)
-; RV32ZBA-NEXT:    add a1, a3, a1
-; RV32ZBA-NEXT:    add a0, a4, a2
-; RV32ZBA-NEXT:    sltu a2, a0, a4
+; RV32ZBA-NEXT:    lw a4, 404(a0)
+; RV32ZBA-NEXT:    add a0, a2, a3
+; RV32ZBA-NEXT:    add a1, a4, a1
+; RV32ZBA-NEXT:    sltu a2, a0, a2
 ; RV32ZBA-NEXT:    add a1, a1, a2
 ; RV32ZBA-NEXT:    ret
 ;
@@ -214,12 +214,12 @@ define i64 @test_sh3add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV32I-NEXT:    add a1, a0, a1
 ; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    lw a2, 400(a1)
+; RV32I-NEXT:    lw a3, 400(a0)
 ; RV32I-NEXT:    lw a1, 404(a1)
-; RV32I-NEXT:    lw a3, 404(a0)
-; RV32I-NEXT:    lw a4, 400(a0)
-; RV32I-NEXT:    add a1, a3, a1
-; RV32I-NEXT:    add a0, a4, a2
-; RV32I-NEXT:    sltu a2, a0, a4
+; RV32I-NEXT:    lw a4, 404(a0)
+; RV32I-NEXT:    add a0, a3, a2
+; RV32I-NEXT:    add a1, a4, a1
+; RV32I-NEXT:    sltu a2, a0, a3
 ; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
 ;
@@ -241,12 +241,12 @@ define i64 @test_sh3add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV32ZBA-NEXT:    sh3add a1, a1, a0
 ; RV32ZBA-NEXT:    sh3add a0, a2, a0
 ; RV32ZBA-NEXT:    lw a2, 400(a1)
+; RV32ZBA-NEXT:    lw a3, 400(a0)
 ; RV32ZBA-NEXT:    lw a1, 404(a1)
-; RV32ZBA-NEXT:    lw a3, 404(a0)
-; RV32ZBA-NEXT:    lw a4, 400(a0)
-; RV32ZBA-NEXT:    add a1, a3, a1
-; RV32ZBA-NEXT:    add a0, a4, a2
-; RV32ZBA-NEXT:    sltu a2, a0, a4
+; RV32ZBA-NEXT:    lw a4, 404(a0)
+; RV32ZBA-NEXT:    add a0, a3, a2
+; RV32ZBA-NEXT:    add a1, a4, a1
+; RV32ZBA-NEXT:    sltu a2, a0, a3
 ; RV32ZBA-NEXT:    add a1, a1, a2
 ; RV32ZBA-NEXT:    ret
 ;
@@ -340,12 +340,12 @@ define signext i16 @test_sh1add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ;
 ; RV64I-LABEL: test_sh1add_uw:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    addi a2, a2, 10
-; RV64I-NEXT:    srli a1, a1, 31
+; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    slli a2, a2, 32
-; RV64I-NEXT:    add a1, a0, a1
+; RV64I-NEXT:    srli a1, a1, 31
 ; RV64I-NEXT:    srli a2, a2, 31
+; RV64I-NEXT:    add a1, a0, a1
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    lh a1, 1600(a1)
 ; RV64I-NEXT:    lh a0, 1600(a0)
@@ -367,8 +367,8 @@ define signext i16 @test_sh1add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ;
 ; RV64ZBA-LABEL: test_sh1add_uw:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    sh1add.uw a1, a1, a0
 ; RV64ZBA-NEXT:    addi a2, a2, 10
+; RV64ZBA-NEXT:    sh1add.uw a1, a1, a0
 ; RV64ZBA-NEXT:    sh1add.uw a0, a2, a0
 ; RV64ZBA-NEXT:    lh a1, 1600(a1)
 ; RV64ZBA-NEXT:    lh a0, 1600(a0)
@@ -560,9 +560,9 @@ define signext i32 @test_large_offset(ptr %p, iXLen %x, iXLen %y) {
 ; RV32I-LABEL: test_large_offset:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a3, 2
+; RV32I-NEXT:    add a0, a0, a3
 ; RV32I-NEXT:    slli a1, a1, 2
 ; RV32I-NEXT:    slli a2, a2, 2
-; RV32I-NEXT:    add a0, a0, a3
 ; RV32I-NEXT:    add a1, a0, a1
 ; RV32I-NEXT:    add a0, a2, a0
 ; RV32I-NEXT:    lw a1, -1392(a1)
@@ -573,9 +573,9 @@ define signext i32 @test_large_offset(ptr %p, iXLen %x, iXLen %y) {
 ; RV64I-LABEL: test_large_offset:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a3, 2
+; RV64I-NEXT:    add a0, a0, a3
 ; RV64I-NEXT:    slli a1, a1, 2
 ; RV64I-NEXT:    slli a2, a2, 2
-; RV64I-NEXT:    add a0, a0, a3
 ; RV64I-NEXT:    add a1, a0, a1
 ; RV64I-NEXT:    add a0, a2, a0
 ; RV64I-NEXT:    lw a1, -1392(a1)
@@ -621,38 +621,38 @@ define signext i32 @test_cse(ptr %p, iXLen %x) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a1, a1, 2
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    lw a1, 1200(a0)
-; RV32I-NEXT:    addi a0, a0, 2047
-; RV32I-NEXT:    lw a0, 753(a0)
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    addi a1, a0, 2047
+; RV32I-NEXT:    lw a0, 1200(a0)
+; RV32I-NEXT:    lw a1, 753(a1)
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_cse:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    slli a1, a1, 2
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    lw a1, 1200(a0)
-; RV64I-NEXT:    addi a0, a0, 2047
-; RV64I-NEXT:    lw a0, 753(a0)
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    addi a1, a0, 2047
+; RV64I-NEXT:    lw a0, 1200(a0)
+; RV64I-NEXT:    lw a1, 753(a1)
+; RV64I-NEXT:    addw a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: test_cse:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    sh2add a0, a1, a0
-; RV32ZBA-NEXT:    lw a1, 1200(a0)
-; RV32ZBA-NEXT:    addi a0, a0, 2047
-; RV32ZBA-NEXT:    lw a0, 753(a0)
-; RV32ZBA-NEXT:    add a0, a0, a1
+; RV32ZBA-NEXT:    addi a1, a0, 2047
+; RV32ZBA-NEXT:    lw a0, 1200(a0)
+; RV32ZBA-NEXT:    lw a1, 753(a1)
+; RV32ZBA-NEXT:    add a0, a1, a0
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: test_cse:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    sh2add a0, a1, a0
-; RV64ZBA-NEXT:    lw a1, 1200(a0)
-; RV64ZBA-NEXT:    addi a0, a0, 2047
-; RV64ZBA-NEXT:    lw a0, 753(a0)
-; RV64ZBA-NEXT:    addw a0, a0, a1
+; RV64ZBA-NEXT:    addi a1, a0, 2047
+; RV64ZBA-NEXT:    lw a0, 1200(a0)
+; RV64ZBA-NEXT:    lw a1, 753(a1)
+; RV64ZBA-NEXT:    addw a0, a1, a0
 ; RV64ZBA-NEXT:    ret
 entry:
   %c = getelementptr inbounds nuw i8, ptr %p, i64 1200

@@ -248,29 +248,18 @@ define <16 x i64> @vwsubu_v16i64(ptr %x, ptr %y) {
 define <128 x i16> @vwsubu_v128i16(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: vwsubu_v128i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v16, (a0)
-; CHECK-NEXT:    vle8.v v24, (a1)
 ; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v16, a0
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vslidedown.vx v0, v24, a0
+; CHECK-NEXT:    vle8.v v24, (a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vwsubu.vv v8, v16, v24
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vwsubu.vv v16, v24, v0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v16, a0
+; CHECK-NEXT:    vslidedown.vx v24, v24, a0
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vwsubu.vv v16, v0, v24
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = load <128 x i8>, ptr %y
@@ -283,29 +272,18 @@ define <128 x i16> @vwsubu_v128i16(ptr %x, ptr %y) nounwind {
 define <64 x i32> @vwsubu_v64i32(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: vwsubu_v64i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    vle16.v v24, (a1)
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v16, a0
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vslidedown.vx v0, v24, a0
+; CHECK-NEXT:    vle16.v v24, (a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vwsubu.vv v8, v16, v24
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vwsubu.vv v16, v24, v0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v16, a0
+; CHECK-NEXT:    vslidedown.vx v24, v24, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vwsubu.vv v16, v0, v24
 ; CHECK-NEXT:    ret
   %a = load <64 x i16>, ptr %x
   %b = load <64 x i16>, ptr %y
@@ -318,27 +296,17 @@ define <64 x i32> @vwsubu_v64i32(ptr %x, ptr %y) nounwind {
 define <32 x i64> @vwsubu_v32i64(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: vwsubu_v32i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v16, (a0)
 ; CHECK-NEXT:    vle32.v v24, (a1)
-; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v16, 16
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vslidedown.vi v0, v24, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vwsubu.vv v8, v16, v24
-; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vwsubu.vv v16, v24, v0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v16, 16
+; CHECK-NEXT:    vslidedown.vi v24, v24, 16
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vwsubu.vv v16, v0, v24
 ; CHECK-NEXT:    ret
   %a = load <32 x i32>, ptr %x
   %b = load <32 x i32>, ptr %y
@@ -371,9 +339,9 @@ define <4 x i32> @vwsubu_v4i32_v4i8_v4i16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vwsubu.vv v8, v10, v9
+; CHECK-NEXT:    vzext.vf2 v9, v8
+; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vwsubu.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, ptr %x
   %b = load <4 x i16>, ptr %y
@@ -388,9 +356,9 @@ define <4 x i64> @vwsubu_v4i64_v4i32_v4i8(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    vle32.v v10, (a0)
-; CHECK-NEXT:    vzext.vf4 v11, v8
-; CHECK-NEXT:    vwsubu.vv v8, v10, v11
+; CHECK-NEXT:    vzext.vf4 v10, v8
+; CHECK-NEXT:    vle32.v v11, (a0)
+; CHECK-NEXT:    vwsubu.vv v8, v11, v10
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
   %b = load <4 x i8>, ptr %y
@@ -648,9 +616,9 @@ define <8 x i16> @vwsubu_vx_v8i16_i8(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lbu a1, 0(a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsubu.vv v8, v10, v9
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vwsubu.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
   %b = load i8, ptr %y
@@ -667,8 +635,8 @@ define <8 x i16> @vwsubu_vx_v8i16_i16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lh a1, 0(a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vwsubu.wv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -686,9 +654,9 @@ define <4 x i32> @vwsubu_vx_v4i32_i8(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lbu a1, 0(a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsubu.vv v8, v10, v9
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vle16.v v10, (a0)
+; CHECK-NEXT:    vwsubu.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b = load i8, ptr %y
@@ -705,9 +673,9 @@ define <4 x i32> @vwsubu_vx_v4i32_i16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lhu a1, 0(a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsubu.vv v8, v10, v9
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vle16.v v10, (a0)
+; CHECK-NEXT:    vwsubu.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b = load i16, ptr %y
@@ -724,8 +692,8 @@ define <4 x i32> @vwsubu_vx_v4i32_i32(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lw a1, 0(a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vwsubu.wv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -757,9 +725,9 @@ define <2 x i64> @vwsubu_vx_v2i64_i8(ptr %x, ptr %y) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lbu a1, 0(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    vmv.v.x v10, a1
-; RV64-NEXT:    vwsubu.vv v8, v10, v9
+; RV64-NEXT:    vmv.v.x v9, a1
+; RV64-NEXT:    vle32.v v10, (a0)
+; RV64-NEXT:    vwsubu.vv v8, v9, v10
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i8, ptr %y
@@ -790,9 +758,9 @@ define <2 x i64> @vwsubu_vx_v2i64_i16(ptr %x, ptr %y) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lhu a1, 0(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    vmv.v.x v10, a1
-; RV64-NEXT:    vwsubu.vv v8, v10, v9
+; RV64-NEXT:    vmv.v.x v9, a1
+; RV64-NEXT:    vle32.v v10, (a0)
+; RV64-NEXT:    vwsubu.vv v8, v9, v10
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i16, ptr %y
@@ -823,9 +791,9 @@ define <2 x i64> @vwsubu_vx_v2i64_i32(ptr %x, ptr %y) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lw a1, 0(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    vmv.v.x v10, a1
-; RV64-NEXT:    vwsubu.vv v8, v10, v9
+; RV64-NEXT:    vmv.v.x v9, a1
+; RV64-NEXT:    vle32.v v10, (a0)
+; RV64-NEXT:    vwsubu.vv v8, v9, v10
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i32, ptr %y
@@ -857,8 +825,8 @@ define <2 x i64> @vwsubu_vx_v2i64_i64(ptr %x, ptr %y) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ld a1, 0(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
 ; RV64-NEXT:    vmv.v.x v8, a1
+; RV64-NEXT:    vle32.v v9, (a0)
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vwsubu.wv v8, v8, v9
 ; RV64-NEXT:    ret

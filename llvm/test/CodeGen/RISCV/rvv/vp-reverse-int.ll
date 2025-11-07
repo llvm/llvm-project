@@ -626,10 +626,9 @@ define <vscale x 64 x i8> @test_vp_reverse_nxv64i8_masked(<vscale x 64 x i8> %sr
 ; CHECK-LABEL: test_vp_reverse_nxv64i8_masked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v16
 ; CHECK-NEXT:    addi a2, a1, -1
-; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vid.v v16
 ; CHECK-NEXT:    vrsub.vx v24, v16, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v23, v8, v24
@@ -639,6 +638,7 @@ define <vscale x 64 x i8> @test_vp_reverse_nxv64i8_masked(<vscale x 64 x i8> %sr
 ; CHECK-NEXT:    vrgatherei16.vv v19, v12, v24
 ; CHECK-NEXT:    vrgatherei16.vv v18, v13, v24
 ; CHECK-NEXT:    vrgatherei16.vv v17, v14, v24
+; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    vrgatherei16.vv v16, v15, v24
 ; CHECK-NEXT:    sub a1, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
@@ -652,10 +652,9 @@ define <vscale x 64 x i8> @test_vp_reverse_nxv64i8(<vscale x 64 x i8> %src, i32 
 ; CHECK-LABEL: test_vp_reverse_nxv64i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v16
 ; CHECK-NEXT:    addi a2, a1, -1
-; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vid.v v16
 ; CHECK-NEXT:    vrsub.vx v24, v16, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v23, v8, v24
@@ -665,6 +664,7 @@ define <vscale x 64 x i8> @test_vp_reverse_nxv64i8(<vscale x 64 x i8> %src, i32 
 ; CHECK-NEXT:    vrgatherei16.vv v19, v12, v24
 ; CHECK-NEXT:    vrgatherei16.vv v18, v13, v24
 ; CHECK-NEXT:    vrgatherei16.vv v17, v14, v24
+; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    vrgatherei16.vv v16, v15, v24
 ; CHECK-NEXT:    sub a1, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
@@ -678,12 +678,12 @@ define <vscale x 64 x i8> @test_vp_reverse_nxv64i8(<vscale x 64 x i8> %src, i32 
 define <vscale x 128 x i8> @test_vp_reverse_nxv128i8(<vscale x 128 x i8> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    bltu a0, a2, .LBB44_2
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    bltu a0, a1, .LBB44_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB44_2:
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
@@ -699,20 +699,20 @@ define <vscale x 128 x i8> @test_vp_reverse_nxv128i8(<vscale x 128 x i8> %src, i
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi a3, sp, 64
 ; CHECK-NEXT:    li a4, -1
-; CHECK-NEXT:    sub a5, a0, a2
+; CHECK-NEXT:    sub a5, a0, a1
 ; CHECK-NEXT:    add a6, a0, a3
 ; CHECK-NEXT:    sltu a0, a0, a5
-; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    addi a6, a6, -1
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vsse8.v v8, (a6), a4
-; CHECK-NEXT:    sub a6, a6, a1
+; CHECK-NEXT:    sub a6, a6, a2
 ; CHECK-NEXT:    and a0, a0, a5
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vsse8.v v16, (a6), a4
-; CHECK-NEXT:    vle8.v v16, (a2)
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    add a1, a3, a1
+; CHECK-NEXT:    vle8.v v16, (a1)
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a3)
 ; CHECK-NEXT:    addi sp, s0, -80
 ; CHECK-NEXT:    .cfi_def_cfa sp, 80

@@ -7,26 +7,25 @@
 define <8 x i16> @gsm_encode(ptr %p) {
 ; CHECK-LABEL: gsm_encode:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, -1
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 19, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vslidedown.vi v9, v8, 12
-; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    vle16.v v10, (a0)
+; CHECK-NEXT:    vslidedown.vi v11, v10, 12
+; CHECK-NEXT:    vmv.x.s a0, v11
+; CHECK-NEXT:    vslidedown.vi v10, v10, 9
+; CHECK-NEXT:    vmv.x.s a1, v10
 ; CHECK-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, -1
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 9
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vslide1down.vx v8, v8, zero
 ; CHECK-NEXT:    vslide1down.vx v9, v9, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vand.vv v8, v8, v9
+; CHECK-NEXT:    vslide1down.vx v9, v9, zero
+; CHECK-NEXT:    vslide1down.vx v9, v9, zero
+; CHECK-NEXT:    vslide1down.vx v9, v9, zero
+; CHECK-NEXT:    vslide1down.vx v9, v9, a1
+; CHECK-NEXT:    vslide1down.vx v9, v9, a0
+; CHECK-NEXT:    vslidedown.vi v9, v9, 1
+; CHECK-NEXT:    vand.vv v8, v9, v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <19 x i16>, ptr %p, align 2

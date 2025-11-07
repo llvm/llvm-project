@@ -98,37 +98,37 @@ define signext i32 @sad_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stridea
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vminu.vv v10, v8, v9
+; CHECK-NEXT:    vmaxu.vv v8, v8, v9
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    vle8.v v10, (a0)
-; CHECK-NEXT:    vle8.v v11, (a1)
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v10, (a1)
+; CHECK-NEXT:    vminu.vv v11, v9, v10
+; CHECK-NEXT:    vmaxu.vv v9, v9, v10
+; CHECK-NEXT:    vsub.vv v9, v9, v11
+; CHECK-NEXT:    vwaddu.vv v12, v9, v8
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vminu.vv v10, v8, v9
+; CHECK-NEXT:    vmaxu.vv v8, v8, v9
+; CHECK-NEXT:    vsub.vv v8, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v14, v8
+; CHECK-NEXT:    vwaddu.vv v8, v14, v12
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    vle8.v v12, (a0)
 ; CHECK-NEXT:    vle8.v v13, (a1)
-; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    vminu.vv v14, v8, v9
-; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vsub.vv v8, v8, v14
-; CHECK-NEXT:    vminu.vv v14, v10, v11
-; CHECK-NEXT:    vmaxu.vv v10, v10, v11
-; CHECK-NEXT:    vle8.v v11, (a1)
-; CHECK-NEXT:    vsub.vv v10, v10, v14
-; CHECK-NEXT:    vminu.vv v14, v12, v13
-; CHECK-NEXT:    vmaxu.vv v15, v12, v13
-; CHECK-NEXT:    vwaddu.vv v12, v10, v8
-; CHECK-NEXT:    vsub.vv v8, v15, v14
-; CHECK-NEXT:    vminu.vv v10, v9, v11
-; CHECK-NEXT:    vmaxu.vv v9, v9, v11
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v14, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vsub.vv v16, v9, v10
+; CHECK-NEXT:    vminu.vv v14, v12, v13
+; CHECK-NEXT:    vmaxu.vv v12, v12, v13
+; CHECK-NEXT:    vsub.vv v14, v12, v14
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vwaddu.vv v8, v14, v12
-; CHECK-NEXT:    vzext.vf2 v12, v16
+; CHECK-NEXT:    vzext.vf2 v12, v14
 ; CHECK-NEXT:    vwaddu.wv v8, v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero

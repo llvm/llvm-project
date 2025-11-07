@@ -153,18 +153,19 @@ define <64 x i32> @select_addsub_v64i32(<64 x i1> %cc, <64 x i32> %a, <64 x i32>
 ; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle32.v v24, (a0)
-; CHECK-NEXT:    vrsub.vi v8, v8, 0, v0.t
+; CHECK-NEXT:    vrsub.vi v24, v24, 0, v0.t
+; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
-; CHECK-NEXT:    vadd.vv v8, v16, v8
-; CHECK-NEXT:    vrsub.vi v24, v24, 0, v0.t
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vrsub.vi v8, v8, 0, v0.t
+; CHECK-NEXT:    vadd.vv v24, v16, v24
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vadd.vv v16, v16, v24
+; CHECK-NEXT:    vadd.vv v16, v16, v8
+; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0

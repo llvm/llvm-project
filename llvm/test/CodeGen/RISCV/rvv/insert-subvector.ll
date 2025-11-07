@@ -435,9 +435,9 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_0(<vscale x 4 x i1> %v, <vscale x
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v9, v8
@@ -453,15 +453,15 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
@@ -476,9 +476,9 @@ declare <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x 
 define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64> %sv1, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vs8r.v v16, (a0)
 ; CHECK-NEXT:    ret
@@ -630,11 +630,10 @@ define <vscale x 8 x i32> @insert_splat_to_splat() {
 define <vscale x 8 x i32> @insert_splat_to_splat2() {
 ; CHECK-LABEL: insert_splat_to_splat2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 1
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> splat (i32 0), <vscale x 4 x i32> splat (i32 1), i64 0)
   ret <vscale x 8 x i32> %v

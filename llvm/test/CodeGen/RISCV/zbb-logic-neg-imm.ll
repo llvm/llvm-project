@@ -298,9 +298,9 @@ define i64 @orimm64srli(i64 %x) {
 ; RV32-LABEL: orimm64srli:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a2, 1040384
+; RV32-NEXT:    lui a3, 917504
 ; RV32-NEXT:    orn a0, a0, a2
-; RV32-NEXT:    lui a2, 917504
-; RV32-NEXT:    or a1, a1, a2
+; RV32-NEXT:    or a1, a1, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: orimm64srli:
@@ -393,13 +393,13 @@ define i64 @and_or_or(i64 %x, i64 %y) {
 ; NOZBS64-LABEL: and_or_or:
 ; NOZBS64:       # %bb.0:
 ; NOZBS64-NEXT:    li a2, -1
+; NOZBS64-NEXT:    li a3, 1
 ; NOZBS64-NEXT:    slli a2, a2, 33
+; NOZBS64-NEXT:    slli a3, a3, 33
 ; NOZBS64-NEXT:    addi a2, a2, 1
+; NOZBS64-NEXT:    addi a3, a3, -2
 ; NOZBS64-NEXT:    or a0, a0, a2
-; NOZBS64-NEXT:    li a2, 1
-; NOZBS64-NEXT:    slli a2, a2, 33
-; NOZBS64-NEXT:    addi a2, a2, -2
-; NOZBS64-NEXT:    or a1, a1, a2
+; NOZBS64-NEXT:    or a1, a1, a3
 ; NOZBS64-NEXT:    and a0, a0, a1
 ; NOZBS64-NEXT:    ret
 ;

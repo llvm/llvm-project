@@ -153,15 +153,15 @@ define <vscale x 32 x i32> @vsext_nxv32i8_nxv32i32(<vscale x 32 x i8> %a, <vscal
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v12, v0
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a1, a2, 1
+; CHECK-NEXT:    sub a3, a0, a1
+; CHECK-NEXT:    sltu a4, a0, a3
+; CHECK-NEXT:    srli a2, a2, 2
+; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; CHECK-NEXT:    vsext.vf4 v16, v10, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB12_2
 ; CHECK-NEXT:  # %bb.1:

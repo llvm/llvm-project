@@ -15,12 +15,12 @@
 define <vscale x 1 x bfloat> @nearbyint_nxv1bf16(<vscale x 1 x bfloat> %x) {
 ; CHECK-LABEL: nearbyint_nxv1bf16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfabs.v v8, v9
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v8, v9, v0.t
@@ -38,12 +38,12 @@ define <vscale x 1 x bfloat> @nearbyint_nxv1bf16(<vscale x 1 x bfloat> %x) {
 define <vscale x 2 x bfloat> @nearbyint_nxv2bf16(<vscale x 2 x bfloat> %x) {
 ; CHECK-LABEL: nearbyint_nxv2bf16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfabs.v v8, v9
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v8, v9, v0.t
@@ -61,12 +61,12 @@ define <vscale x 2 x bfloat> @nearbyint_nxv2bf16(<vscale x 2 x bfloat> %x) {
 define <vscale x 4 x bfloat> @nearbyint_nxv4bf16(<vscale x 4 x bfloat> %x) {
 ; CHECK-LABEL: nearbyint_nxv4bf16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v8, v10
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v8, v10, v0.t
@@ -84,12 +84,12 @@ define <vscale x 4 x bfloat> @nearbyint_nxv4bf16(<vscale x 4 x bfloat> %x) {
 define <vscale x 8 x bfloat> @nearbyint_nxv8bf16(<vscale x 8 x bfloat> %x) {
 ; CHECK-LABEL: nearbyint_nxv8bf16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v12, v8
-; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfabs.v v8, v12
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v8, v12, v0.t
@@ -107,12 +107,12 @@ define <vscale x 8 x bfloat> @nearbyint_nxv8bf16(<vscale x 8 x bfloat> %x) {
 define <vscale x 16 x bfloat> @nearbyint_nxv16bf16(<vscale x 16 x bfloat> %x) {
 ; CHECK-LABEL: nearbyint_nxv16bf16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
-; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v8, v16
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v8, v16, v0.t
@@ -130,12 +130,12 @@ define <vscale x 16 x bfloat> @nearbyint_nxv16bf16(<vscale x 16 x bfloat> %x) {
 define <vscale x 32 x bfloat> @nearbyint_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ; CHECK-LABEL: nearbyint_nxv32bf16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
-; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v24, v16
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v24, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v24, v16, v0.t
@@ -148,9 +148,9 @@ define <vscale x 32 x bfloat> @nearbyint_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ; CHECK-NEXT:    vfabs.v v8, v24
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa5
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
+; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v16, v24, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -167,11 +167,11 @@ define <vscale x 32 x bfloat> @nearbyint_nxv32bf16(<vscale x 32 x bfloat> %x) {
 define <vscale x 1 x half> @nearbyint_nxv1f16(<vscale x 1 x half> %x) {
 ; ZVFH-LABEL: nearbyint_nxv1f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    frflags a0
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -183,12 +183,12 @@ define <vscale x 1 x half> @nearbyint_nxv1f16(<vscale x 1 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: nearbyint_nxv1f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    frflags a0
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v9, v0.t
@@ -207,11 +207,11 @@ declare <vscale x 1 x half> @llvm.nearbyint.nxv1f16(<vscale x 1 x half>)
 define <vscale x 2 x half> @nearbyint_nxv2f16(<vscale x 2 x half> %x) {
 ; ZVFH-LABEL: nearbyint_nxv2f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    frflags a0
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -223,12 +223,12 @@ define <vscale x 2 x half> @nearbyint_nxv2f16(<vscale x 2 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: nearbyint_nxv2f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    frflags a0
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v9, v0.t
@@ -247,11 +247,11 @@ declare <vscale x 2 x half> @llvm.nearbyint.nxv2f16(<vscale x 2 x half>)
 define <vscale x 4 x half> @nearbyint_nxv4f16(<vscale x 4 x half> %x) {
 ; ZVFH-LABEL: nearbyint_nxv4f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    frflags a0
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -263,12 +263,12 @@ define <vscale x 4 x half> @nearbyint_nxv4f16(<vscale x 4 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: nearbyint_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v10
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    frflags a0
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v10, v0.t
@@ -287,11 +287,11 @@ declare <vscale x 4 x half> @llvm.nearbyint.nxv4f16(<vscale x 4 x half>)
 define <vscale x 8 x half> @nearbyint_nxv8f16(<vscale x 8 x half> %x) {
 ; ZVFH-LABEL: nearbyint_nxv8f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFH-NEXT:    vfabs.v v10, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVFH-NEXT:    vfabs.v v10, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v10, fa5
 ; ZVFH-NEXT:    frflags a0
 ; ZVFH-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -303,12 +303,12 @@ define <vscale x 8 x half> @nearbyint_nxv8f16(<vscale x 8 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: nearbyint_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v12
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    frflags a0
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v12, v0.t
@@ -327,11 +327,11 @@ declare <vscale x 8 x half> @llvm.nearbyint.nxv8f16(<vscale x 8 x half>)
 define <vscale x 16 x half> @nearbyint_nxv16f16(<vscale x 16 x half> %x) {
 ; ZVFH-LABEL: nearbyint_nxv16f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFH-NEXT:    vfabs.v v12, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; ZVFH-NEXT:    vfabs.v v12, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFH-NEXT:    frflags a0
 ; ZVFH-NEXT:    vfcvt.x.f.v v12, v8, v0.t
@@ -343,12 +343,12 @@ define <vscale x 16 x half> @nearbyint_nxv16f16(<vscale x 16 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: nearbyint_nxv16f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v16
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    frflags a0
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v16, v0.t
@@ -367,11 +367,11 @@ declare <vscale x 16 x half> @llvm.nearbyint.nxv16f16(<vscale x 16 x half>)
 define <vscale x 32 x half> @nearbyint_nxv32f16(<vscale x 32 x half> %x) {
 ; ZVFH-LABEL: nearbyint_nxv32f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
-; ZVFH-NEXT:    vfabs.v v16, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; ZVFH-NEXT:    vfabs.v v16, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v16, fa5
 ; ZVFH-NEXT:    frflags a0
 ; ZVFH-NEXT:    vfcvt.x.f.v v16, v8, v0.t
@@ -383,12 +383,12 @@ define <vscale x 32 x half> @nearbyint_nxv32f16(<vscale x 32 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: nearbyint_nxv32f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v24, v16
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v24, fa5
 ; ZVFHMIN-NEXT:    frflags a0
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v24, v16, v0.t
@@ -401,9 +401,9 @@ define <vscale x 32 x half> @nearbyint_nxv32f16(<vscale x 32 x half> %x) {
 ; ZVFHMIN-NEXT:    vfabs.v v8, v24
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    fsflags a0
-; ZVFHMIN-NEXT:    frflags a0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
+; ZVFHMIN-NEXT:    frflags a0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v16, v24, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -421,10 +421,10 @@ declare <vscale x 32 x half> @llvm.nearbyint.nxv32f16(<vscale x 32 x half>)
 define <vscale x 1 x float> @nearbyint_nxv1f32(<vscale x 1 x float> %x) {
 ; CHECK-LABEL: nearbyint_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -441,10 +441,10 @@ declare <vscale x 1 x float> @llvm.nearbyint.nxv1f32(<vscale x 1 x float>)
 define <vscale x 2 x float> @nearbyint_nxv2f32(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: nearbyint_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -461,10 +461,10 @@ declare <vscale x 2 x float> @llvm.nearbyint.nxv2f32(<vscale x 2 x float>)
 define <vscale x 4 x float> @nearbyint_nxv4f32(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: nearbyint_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -481,10 +481,10 @@ declare <vscale x 4 x float> @llvm.nearbyint.nxv4f32(<vscale x 4 x float>)
 define <vscale x 8 x float> @nearbyint_nxv8f32(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: nearbyint_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vfabs.v v12, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfabs.v v12, v8
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
@@ -501,10 +501,10 @@ declare <vscale x 8 x float> @llvm.nearbyint.nxv8f32(<vscale x 8 x float>)
 define <vscale x 16 x float> @nearbyint_nxv16f32(<vscale x 16 x float> %x) {
 ; CHECK-LABEL: nearbyint_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfabs.v v16, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfabs.v v16, v8
 ; CHECK-NEXT:    vmflt.vf v0, v16, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v16, v8, v0.t
@@ -536,11 +536,11 @@ define <vscale x 1 x double> @nearbyint_nxv1f64(<vscale x 1 x double> %x) {
 ;
 ; RV64ZVFH-LABEL: nearbyint_nxv1f64:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFH-NEXT:    frflags a0
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -567,11 +567,11 @@ define <vscale x 1 x double> @nearbyint_nxv1f64(<vscale x 1 x double> %x) {
 ;
 ; RV64ZVFHMIN-LABEL: nearbyint_nxv1f64:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFHMIN-NEXT:    frflags a0
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -603,11 +603,11 @@ define <vscale x 2 x double> @nearbyint_nxv2f64(<vscale x 2 x double> %x) {
 ;
 ; RV64ZVFH-LABEL: nearbyint_nxv2f64:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v10, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v10, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64ZVFH-NEXT:    frflags a0
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -634,11 +634,11 @@ define <vscale x 2 x double> @nearbyint_nxv2f64(<vscale x 2 x double> %x) {
 ;
 ; RV64ZVFHMIN-LABEL: nearbyint_nxv2f64:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64ZVFHMIN-NEXT:    frflags a0
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -670,11 +670,11 @@ define <vscale x 4 x double> @nearbyint_nxv4f64(<vscale x 4 x double> %x) {
 ;
 ; RV64ZVFH-LABEL: nearbyint_nxv4f64:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v12, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v12, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64ZVFH-NEXT:    frflags a0
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v12, v8, v0.t
@@ -701,11 +701,11 @@ define <vscale x 4 x double> @nearbyint_nxv4f64(<vscale x 4 x double> %x) {
 ;
 ; RV64ZVFHMIN-LABEL: nearbyint_nxv4f64:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v12, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v12, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64ZVFHMIN-NEXT:    frflags a0
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v12, v8, v0.t
@@ -737,11 +737,11 @@ define <vscale x 8 x double> @nearbyint_nxv8f64(<vscale x 8 x double> %x) {
 ;
 ; RV64ZVFH-LABEL: nearbyint_nxv8f64:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v16, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v16, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v16, fa5
 ; RV64ZVFH-NEXT:    frflags a0
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v16, v8, v0.t
@@ -768,11 +768,11 @@ define <vscale x 8 x double> @nearbyint_nxv8f64(<vscale x 8 x double> %x) {
 ;
 ; RV64ZVFHMIN-LABEL: nearbyint_nxv8f64:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v16, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v16, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v16, fa5
 ; RV64ZVFHMIN-NEXT:    frflags a0
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v16, v8, v0.t

@@ -9,14 +9,15 @@
 define {<vscale x 16 x i1>, <vscale x 16 x i1>} @vector_deinterleave_load_nxv16i1_nxv32i1(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_nxv16i1_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vlm.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, a0
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
+; CHECK-NEXT:    vlm.v v8, (a0)
+; CHECK-NEXT:    srli a1, a1, 2
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v8, a1
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v10, v12, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
@@ -164,16 +165,16 @@ define {<vscale x 8 x i64>, <vscale x 8 x i64>} @vector_deinterleave_load_nxv8i6
 ; CHECK-NEXT:    li a1, 85
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v16, a1
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vl8re64.v v24, (a0)
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    li a1, 170
-; CHECK-NEXT:    vl8re64.v v0, (a0)
 ; CHECK-NEXT:    vmv.v.x v17, a1
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    vl8re64.v v24, (a0)
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vcompress.vm v8, v24, v16
 ; CHECK-NEXT:    vmv1r.v v12, v16
+; CHECK-NEXT:    vl8re64.v v0, (a0)
 ; CHECK-NEXT:    vmv1r.v v13, v17
 ; CHECK-NEXT:    vcompress.vm v16, v24, v13
 ; CHECK-NEXT:    vcompress.vm v24, v0, v12
@@ -589,33 +590,33 @@ define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
+; CHECK-NEXT:    vmv.v.v v13, v12
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
-; CHECK-NEXT:    add a3, a1, a2
-; CHECK-NEXT:    vmv.v.v v13, v12
-; CHECK-NEXT:    srli a4, a2, 2
 ; CHECK-NEXT:    vmv.v.v v14, v12
-; CHECK-NEXT:    srli a5, a2, 3
+; CHECK-NEXT:    add a3, a1, a2
 ; CHECK-NEXT:    vmv.v.v v15, v12
 ; CHECK-NEXT:    vsseg4e8.v v12, (a1)
-; CHECK-NEXT:    vl1r.v v12, (a1)
-; CHECK-NEXT:    add a1, a4, a5
-; CHECK-NEXT:    vl1r.v v13, (a3)
+; CHECK-NEXT:    vl1r.v v12, (a3)
+; CHECK-NEXT:    vmsne.vi v12, v12, 0
+; CHECK-NEXT:    vl1r.v v13, (a1)
+; CHECK-NEXT:    vmsne.vi v0, v13, 0
 ; CHECK-NEXT:    add a3, a3, a2
-; CHECK-NEXT:    add a2, a3, a2
-; CHECK-NEXT:    vl1r.v v14, (a3)
-; CHECK-NEXT:    vl1r.v v15, (a2)
+; CHECK-NEXT:    vl1r.v v13, (a3)
 ; CHECK-NEXT:    vmsne.vi v13, v13, 0
-; CHECK-NEXT:    vmsne.vi v0, v12, 0
-; CHECK-NEXT:    vmsne.vi v12, v14, 0
-; CHECK-NEXT:    vmsne.vi v14, v15, 0
-; CHECK-NEXT:    vsetvli zero, a4, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vx v0, v13, a5
+; CHECK-NEXT:    add a3, a3, a2
+; CHECK-NEXT:    vl1r.v v14, (a3)
+; CHECK-NEXT:    vmsne.vi v14, v14, 0
+; CHECK-NEXT:    srli a1, a2, 2
+; CHECK-NEXT:    srli a2, a2, 3
+; CHECK-NEXT:    add a3, a1, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vx v0, v12, a4
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v0, v14, a1
+; CHECK-NEXT:    vslideup.vx v0, v12, a2
+; CHECK-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vx v0, v13, a1
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vx v0, v14, a3
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vlenb

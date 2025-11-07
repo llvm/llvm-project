@@ -120,8 +120,8 @@ return:
 define void @func_02(i32 %rm) {
 ; RV32IF-LABEL: func_02:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    slli a0, a0, 2
 ; RV32IF-NEXT:    lui a1, 66
+; RV32IF-NEXT:    slli a0, a0, 2
 ; RV32IF-NEXT:    addi a1, a1, 769
 ; RV32IF-NEXT:    srl a0, a1, a0
 ; RV32IF-NEXT:    andi a0, a0, 7

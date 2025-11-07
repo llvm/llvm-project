@@ -269,16 +269,16 @@ define <256 x i8> @vmax_vx_v258i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zero
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    li a3, 128
-; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v0, (a1)
-; CHECK-NEXT:    addi a1, a2, -128
-; CHECK-NEXT:    sltu a4, a2, a1
+; CHECK-NEXT:    addi a3, a2, -128
+; CHECK-NEXT:    sltu a4, a2, a3
+; CHECK-NEXT:    li a5, 128
 ; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a1, a4, a1
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a5, e8, m8, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a1)
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v16, v16, a0, v0.t
-; CHECK-NEXT:    bltu a2, a3, .LBB22_2
+; CHECK-NEXT:    bltu a2, a5, .LBB22_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB22_2:
@@ -321,13 +321,11 @@ define <256 x i8> @vmax_vx_v258i8_unmasked(<256 x i8> %va, i8 %b, i32 zeroext %e
 define <256 x i8> @vmax_vx_v258i8_evl129(<256 x i8> %va, i8 %b, <256 x i1> %m) {
 ; CHECK-LABEL: vmax_vx_v258i8_evl129:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v24, (a1)
-; CHECK-NEXT:    li a1, 128
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    li a2, 128
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vmax.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0

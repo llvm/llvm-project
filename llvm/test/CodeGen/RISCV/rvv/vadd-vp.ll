@@ -567,18 +567,18 @@ define <vscale x 128 x i8> @vadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    sub a3, a1, a2
+; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    vlm.v v0, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    sub a2, a1, a0
-; CHECK-NEXT:    sltu a3, a1, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
-; CHECK-NEXT:    bltu a1, a0, .LBB50_2
+; CHECK-NEXT:    bltu a1, a2, .LBB50_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB50_2:
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
@@ -1345,15 +1345,15 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a1, a2, 1
+; CHECK-NEXT:    sub a3, a0, a1
+; CHECK-NEXT:    sltu a4, a0, a3
+; CHECK-NEXT:    srli a2, a2, 2
+; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB118_2
 ; CHECK-NEXT:  # %bb.1:
@@ -1397,17 +1397,17 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <v
 ; RV32-LABEL: vadd_vi_nxv32i32_evl_nx8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    srli a1, a0, 2
 ; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; RV32-NEXT:    vadd.vi v8, v8, -1, v0.t
-; RV32-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vslidedown.vx v0, v0, a1
 ; RV32-NEXT:    slli a1, a0, 1
 ; RV32-NEXT:    sub a1, a0, a1
-; RV32-NEXT:    sltu a0, a0, a1
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    and a0, a0, a1
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; RV32-NEXT:    sltu a2, a0, a1
+; RV32-NEXT:    srli a0, a0, 2
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vslidedown.vx v0, v0, a0
+; RV32-NEXT:    and a1, a2, a1
+; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32-NEXT:    vadd.vi v16, v16, -1, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -1416,12 +1416,12 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <v
 ; RV64-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmv1r.v v24, v0
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    srli a2, a0, 2
 ; RV64-NEXT:    slli a1, a0, 1
-; RV64-NEXT:    vslidedown.vx v0, v0, a2
 ; RV64-NEXT:    sub a2, a0, a1
 ; RV64-NEXT:    sltu a3, a0, a2
+; RV64-NEXT:    srli a4, a0, 2
 ; RV64-NEXT:    addi a3, a3, -1
+; RV64-NEXT:    vslidedown.vx v0, v0, a4
 ; RV64-NEXT:    and a2, a3, a2
 ; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV64-NEXT:    vadd.vi v16, v16, -1, v0.t

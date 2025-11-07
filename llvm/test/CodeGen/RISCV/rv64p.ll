@@ -118,9 +118,9 @@ define signext i32 @findFirstSet_i32(i32 signext %a) nounwind {
 ; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    not a2, a0
 ; CHECK-NEXT:    and a1, a2, a1
+; CHECK-NEXT:    clzw a1, a1
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    snez a0, a0
-; CHECK-NEXT:    clzw a1, a1
 ; CHECK-NEXT:    sub a2, a2, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    or a0, a0, a2
@@ -137,9 +137,9 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    not a2, a0
 ; CHECK-NEXT:    and a1, a2, a1
+; CHECK-NEXT:    clzw a1, a1
 ; CHECK-NEXT:    li a2, 33
 ; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    clzw a1, a1
 ; CHECK-NEXT:    sub a2, a2, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a2
@@ -401,10 +401,10 @@ entry:
 define i8 @sub_if_uge_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: sub_if_uge_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.b a2, a0
-; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    sub a1, a0, a1
 ; CHECK-NEXT:    zext.b a0, a0
-; CHECK-NEXT:    minu a0, a2, a0
+; CHECK-NEXT:    zext.b a1, a1
+; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i8 %x, %y
   %select = select i1 %cmp, i8 0, i8 %y
@@ -416,8 +416,8 @@ define i16 @sub_if_uge_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: sub_if_uge_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a2, 16
-; CHECK-NEXT:    sub a1, a0, a1
 ; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    sub a1, a0, a1
 ; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    and a1, a1, a2
 ; CHECK-NEXT:    minu a0, a0, a1
@@ -595,14 +595,14 @@ define i64 @sub_if_uge_C_i64(i64 %x) {
 define i32 @sub_if_uge_C_multiuse_cmp_i32(i32 signext %x, ptr %z) {
 ; CHECK-LABEL: sub_if_uge_C_multiuse_cmp_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 16
-; CHECK-NEXT:    lui a3, 1048560
-; CHECK-NEXT:    addi a2, a2, -16
-; CHECK-NEXT:    addi a3, a3, 15
-; CHECK-NEXT:    sltu a2, a2, a0
-; CHECK-NEXT:    addw a3, a0, a3
-; CHECK-NEXT:    minu a0, a3, a0
-; CHECK-NEXT:    sw a2, 0(a1)
+; CHECK-NEXT:    lui a2, 1048560
+; CHECK-NEXT:    lui a3, 16
+; CHECK-NEXT:    addi a2, a2, 15
+; CHECK-NEXT:    addi a3, a3, -16
+; CHECK-NEXT:    addw a2, a0, a2
+; CHECK-NEXT:    sltu a3, a3, a0
+; CHECK-NEXT:    minu a0, a2, a0
+; CHECK-NEXT:    sw a3, 0(a1)
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt i32 %x, 65520
   %conv = zext i1 %cmp to i32
@@ -646,10 +646,10 @@ define i7 @sub_if_uge_C_nsw_i7(i7 %a) {
 ; CHECK-LABEL: sub_if_uge_C_nsw_i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ori a0, a0, 51
-; CHECK-NEXT:    andi a1, a0, 127
-; CHECK-NEXT:    addi a0, a0, 17
-; CHECK-NEXT:    andi a0, a0, 92
-; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    addi a1, a0, 17
+; CHECK-NEXT:    andi a0, a0, 127
+; CHECK-NEXT:    andi a1, a1, 92
+; CHECK-NEXT:    minu a0, a1, a0
 ; CHECK-NEXT:    ret
   %x = or i7 %a, 51
   %c = icmp ugt i7 %x, -18
@@ -662,10 +662,10 @@ define i7 @sub_if_uge_C_swapped_nsw_i7(i7 %a) {
 ; CHECK-LABEL: sub_if_uge_C_swapped_nsw_i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ori a0, a0, 51
-; CHECK-NEXT:    andi a1, a0, 127
-; CHECK-NEXT:    addi a0, a0, 17
-; CHECK-NEXT:    andi a0, a0, 92
-; CHECK-NEXT:    minu a0, a1, a0
+; CHECK-NEXT:    addi a1, a0, 17
+; CHECK-NEXT:    andi a0, a0, 127
+; CHECK-NEXT:    andi a1, a1, 92
+; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    ret
   %x = or i7 %a, 51
   %c = icmp ult i7 %x, -17

@@ -77,11 +77,11 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    vs1r.v v10, (a1) # vscale x 8-byte Folded Spill
 ; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    vaadd.vv v8, v8, v9
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
 ; RV32-NEXT:    call foo
 ; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    addi a0, sp, 16
@@ -103,11 +103,11 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    addi a1, sp, 16
-; RV64-NEXT:    vs1r.v v10, (a1) # vscale x 8-byte Folded Spill
 ; RV64-NEXT:    csrwi vxrm, 0
 ; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    vaadd.vv v8, v8, v9
+; RV64-NEXT:    addi a0, sp, 16
+; RV64-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
 ; RV64-NEXT:    call foo
 ; RV64-NEXT:    csrwi vxrm, 0
 ; RV64-NEXT:    addi a0, sp, 16
@@ -169,10 +169,10 @@ entry:
 define <vscale x 1 x i8> @test5(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3, i1 %cond) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
+; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    beqz a1, .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %condblock
 ; CHECK-NEXT:    vaadd.vv v8, v8, v10
@@ -244,10 +244,10 @@ mergeblock:
 define <vscale x 1 x i8> @test7(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3, i1 %cond) nounwind {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
+; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    beqz a1, .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %trueblock
 ; CHECK-NEXT:    vaadd.vv v8, v8, v10
@@ -475,10 +475,10 @@ for.end:
 define <vscale x 1 x i8> @test12(i1 %c1, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %vl) {
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v9, v8, v9
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    beqz a0, .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %block1
 ; CHECK-NEXT:    csrwi vxrm, 1
@@ -508,10 +508,10 @@ block2:
 define <vscale x 1 x i8> @test13(i1 %c1, i1 %c2, i1 %c3, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %vl) {
 ; CHECK-LABEL: test13:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli zero, a3, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v10, v8, v9
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    beqz a0, .LBB12_2
 ; CHECK-NEXT:  # %bb.1: # %block1
 ; CHECK-NEXT:    csrwi vxrm, 1

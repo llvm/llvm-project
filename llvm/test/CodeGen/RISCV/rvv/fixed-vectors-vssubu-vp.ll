@@ -381,17 +381,17 @@ define <256 x i8> @vssubu_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    li a2, 128
-; CHECK-NEXT:    addi a3, a1, -128
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v0, (a0)
-; CHECK-NEXT:    sltu a0, a1, a3
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a3, a0, a3
-; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    addi a2, a1, -128
+; CHECK-NEXT:    li a3, 128
+; CHECK-NEXT:    sltu a4, a1, a2
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a2, a4, a2
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vssubu.vx v16, v16, a0, v0.t
-; CHECK-NEXT:    bltu a1, a2, .LBB32_2
+; CHECK-NEXT:    bltu a1, a3, .LBB32_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:  .LBB32_2:
@@ -431,15 +431,13 @@ define <256 x i8> @vssubu_vi_v258i8_unmasked(<256 x i8> %va, i32 zeroext %evl) {
 define <256 x i8> @vssubu_vi_v258i8_evl129(<256 x i8> %va, <256 x i1> %m) {
 ; CHECK-LABEL: vssubu_vi_v258i8_evl129:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 128
+; CHECK-NEXT:    li a2, -1
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vssubu.vx v8, v8, a2, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v24, (a0)
-; CHECK-NEXT:    li a0, 128
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vssubu.vx v8, v8, a1, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
-; CHECK-NEXT:    vssubu.vx v16, v16, a1, v0.t
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    vssubu.vx v16, v16, a2, v0.t
 ; CHECK-NEXT:    ret
   %v = call <256 x i8> @llvm.vp.usub.sat.v258i8(<256 x i8> %va, <256 x i8> splat (i8 -1), <256 x i1> %m, i32 129)
   ret <256 x i8> %v
@@ -1460,12 +1458,11 @@ define <32 x i64> @vssubu_vx_v32i64_evl12(<32 x i64> %va, <32 x i1> %m) {
 define <32 x i64> @vssubu_vx_v32i64_evl27(<32 x i64> %va, <32 x i1> %m) {
 ; CHECK-LABEL: vssubu_vx_v32i64_evl27:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v0, 2
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    vsetivli zero, 11, e64, m8, ta, ma
 ; CHECK-NEXT:    vssubu.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    ret

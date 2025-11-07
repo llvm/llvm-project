@@ -26,18 +26,18 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    li a0, 55
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    li s0, 36
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vloxseg2ei32.v v16, (a1), v8
+; CHECK-NEXT:    vloxseg2ei32.v v24, (a1), v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    li s0, 36
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwadd.vv v16, v8, v12, v0.t
+; CHECK-NEXT:    vfwadd.vv v8, v16, v20, v0.t
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    call func
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -78,18 +78,18 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    li a0, 55
 ; SUBREGLIVENESS-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
 ; SUBREGLIVENESS-NEXT:    vmclr.m v0
+; SUBREGLIVENESS-NEXT:    li s0, 36
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; SUBREGLIVENESS-NEXT:    vloxseg2ei32.v v16, (a1), v8
+; SUBREGLIVENESS-NEXT:    vloxseg2ei32.v v24, (a1), v8
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 3
 ; SUBREGLIVENESS-NEXT:    add a0, sp, a0
 ; SUBREGLIVENESS-NEXT:    addi a0, a0, 16
-; SUBREGLIVENESS-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; SUBREGLIVENESS-NEXT:    li s0, 36
+; SUBREGLIVENESS-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
-; SUBREGLIVENESS-NEXT:    vfwadd.vv v16, v8, v12, v0.t
+; SUBREGLIVENESS-NEXT:    vfwadd.vv v8, v16, v20, v0.t
 ; SUBREGLIVENESS-NEXT:    addi a0, sp, 16
-; SUBREGLIVENESS-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; SUBREGLIVENESS-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; SUBREGLIVENESS-NEXT:    call func
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 3

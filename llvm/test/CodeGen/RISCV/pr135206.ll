@@ -35,22 +35,22 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    sub sp, sp, t1
 ; CHECK-NEXT:    li a0, 86
-; CHECK-NEXT:    addi s0, sp, 48
-; CHECK-NEXT:    addi s1, sp, 32
-; CHECK-NEXT:    addi s2, sp, 16
-; CHECK-NEXT:    lui a1, 353637
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    lui a0, 8
 ; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    addi a0, a1, 1622
+; CHECK-NEXT:    addi s0, sp, 48
+; CHECK-NEXT:    addi s1, sp, 32
+; CHECK-NEXT:    lui a0, 353637
+; CHECK-NEXT:    addi s2, sp, 16
+; CHECK-NEXT:    addi a0, a0, 1622
+; CHECK-NEXT:    slli a1, a0, 32
 ; CHECK-NEXT:    vse8.v v8, (s0)
+; CHECK-NEXT:    add s3, a0, a1
 ; CHECK-NEXT:    vse8.v v8, (s1)
 ; CHECK-NEXT:    vse8.v v8, (s2)
-; CHECK-NEXT:    slli a1, a0, 32
-; CHECK-NEXT:    add s3, a0, a1
 ; CHECK-NEXT:    sd s3, 64(sp)
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    lui a0, 8
@@ -60,8 +60,8 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    vse8.v v8, (s1)
-; CHECK-NEXT:    vse8.v v8, (s2)
 ; CHECK-NEXT:    sd s3, 64(sp)
+; CHECK-NEXT:    vse8.v v8, (s2)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add sp, sp, a1

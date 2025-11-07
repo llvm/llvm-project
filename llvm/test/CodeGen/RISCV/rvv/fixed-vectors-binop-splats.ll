@@ -6,11 +6,11 @@ define <1 x i1> @v1i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: v1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmv.s.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    vmv.s.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
 ; CHECK-NEXT:    vmxor.mm v0, v8, v9
 ; CHECK-NEXT:    ret
@@ -26,15 +26,15 @@ define <2 x i1> @v2i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmxor.mm v0, v8, v9
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
@@ -50,15 +50,15 @@ define <4 x i1> @v4i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmxor.mm v0, v8, v9
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
@@ -74,15 +74,15 @@ define <8 x i1> @v8i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmxor.mm v0, v8, v9
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
@@ -98,15 +98,15 @@ define <16 x i1> @v16i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: v16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmxor.mm v0, v8, v9
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
@@ -123,14 +123,14 @@ define <32 x i1> @v32i1(i1 %x, i1 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vmsne.vi v10, v8, 0
+; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vmsne.vi v11, v8, 0
-; CHECK-NEXT:    vmxor.mm v0, v10, v11
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmxor.mm v0, v10, v11
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
@@ -148,14 +148,14 @@ define <64 x i1> @v64i1(i1 %x, i1 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmsne.vi v12, v8, 0
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vmsne.vi v13, v8, 0
-; CHECK-NEXT:    vmxor.mm v0, v12, v13
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    vmv.v.x v12, a1
+; CHECK-NEXT:    vmsne.vi v16, v8, 0
+; CHECK-NEXT:    vmsne.vi v17, v12, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmxor.mm v0, v16, v17
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vrgather.vi v12, v8, 0
 ; CHECK-NEXT:    vmsne.vi v0, v12, 0

@@ -233,13 +233,13 @@ define i32 @caller_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g
 ; CHECK-LARGE-ZICFILP-NEXT:    lw t1, 36(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    lw t3, 40(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    lw t4, 44(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    lw t2, 48(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    lw t5, 52(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    sw t2, 16(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    sw t5, 20(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    lw t5, 48(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    lw t6, 52(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi8:
 ; CHECK-LARGE-ZICFILP-NEXT:    auipc t2, %pcrel_hi(.LCPI6_0)
 ; CHECK-LARGE-ZICFILP-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi8)(t2)
+; CHECK-LARGE-ZICFILP-NEXT:    sw t5, 16(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw t6, 20(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    sw t0, 0(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    sw t1, 4(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    sw t3, 8(sp)
@@ -276,10 +276,10 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-LARGE-ZICFILP-NEXT:    lpad 0
 ; CHECK-LARGE-ZICFILP-NEXT:    addi sp, sp, -32
 ; CHECK-LARGE-ZICFILP-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-LARGE-ZICFILP-NEXT:    lui a1, 262128
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi9:
 ; CHECK-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI7_0)
 ; CHECK-LARGE-ZICFILP-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi9)(a0)
+; CHECK-LARGE-ZICFILP-NEXT:    lui a1, 262128
 ; CHECK-LARGE-ZICFILP-NEXT:    mv a0, sp
 ; CHECK-LARGE-ZICFILP-NEXT:    sw zero, 0(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    sw zero, 4(sp)

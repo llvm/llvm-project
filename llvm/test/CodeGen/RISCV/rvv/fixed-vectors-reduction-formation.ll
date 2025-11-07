@@ -122,9 +122,9 @@ define i32 @reduce_sum_16xi32_prefix3(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredsum.vs v8, v8, v9
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vredsum.vs v8, v9, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %v = load <16 x i32>, ptr %p, align 256
@@ -140,9 +140,9 @@ define i32 @reduce_sum_16xi32_prefix4(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredsum.vs v8, v8, v9
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vredsum.vs v8, v9, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %v = load <16 x i32>, ptr %p, align 256
@@ -160,8 +160,8 @@ define i32 @reduce_sum_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -182,8 +182,8 @@ define i32 @reduce_sum_16xi32_prefix6(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix6:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -206,8 +206,8 @@ define i32 @reduce_sum_16xi32_prefix7(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -232,8 +232,8 @@ define i32 @reduce_sum_16xi32_prefix8(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -437,8 +437,8 @@ define i32 @reduce_sum_4xi32_reduce_order(<4 x i32> %v) {
 ; RV32-NEXT:    vslidedown.vi v9, v8, 1
 ; RV32-NEXT:    vmv.x.s a1, v9
 ; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV32-NEXT:    vmv.x.s a2, v9
+; RV32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV32-NEXT:    vmv.x.s a3, v8
 ; RV32-NEXT:    add a1, a1, a2
 ; RV32-NEXT:    add a0, a0, a3
@@ -452,8 +452,8 @@ define i32 @reduce_sum_4xi32_reduce_order(<4 x i32> %v) {
 ; RV64-NEXT:    vslidedown.vi v9, v8, 1
 ; RV64-NEXT:    vmv.x.s a1, v9
 ; RV64-NEXT:    vslidedown.vi v9, v8, 2
-; RV64-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-NEXT:    vmv.x.s a2, v9
+; RV64-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-NEXT:    vmv.x.s a3, v8
 ; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    add a0, a0, a3
@@ -492,8 +492,8 @@ define i32 @reduce_xor_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_xor_16xi32_prefix5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vredxor.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -528,11 +528,10 @@ define i32 @reduce_and_16xi32_prefix2(ptr %p) {
 define i32 @reduce_and_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_and_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, -1
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vredand.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -568,8 +567,8 @@ define i32 @reduce_or_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_or_16xi32_prefix5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vredor.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -609,10 +608,10 @@ define i32 @reduce_smax_16xi32_prefix2(ptr %p) {
 define i32 @reduce_smax_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_smax_16xi32_prefix5:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vredmax.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -647,11 +646,11 @@ define i32 @reduce_smin_16xi32_prefix2(ptr %p) {
 define i32 @reduce_smin_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_smin_16xi32_prefix5:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vredmin.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -687,8 +686,8 @@ define i32 @reduce_umax_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_umax_16xi32_prefix5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vredmaxu.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -723,21 +722,20 @@ define i32 @reduce_umin_16xi32_prefix2(ptr %p) {
 define i32 @reduce_umin_16xi32_prefix5(ptr %p) {
 ; RV32-LABEL: reduce_umin_16xi32_prefix5:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v10, -1
 ; RV32-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
+; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    vredminu.vs v8, v8, v10
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: reduce_umin_16xi32_prefix5:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
+; RV64-NEXT:    vmv.s.x v10, a1
 ; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    li a0, -1
-; RV64-NEXT:    vmv.s.x v10, a0
 ; RV64-NEXT:    vredminu.vs v8, v8, v10
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -758,9 +756,9 @@ define float @reduce_fadd_16xf32_prefix2(ptr %p) {
 ; CHECK-LABEL: reduce_fadd_16xf32_prefix2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vfredusum.vs v8, v9, v8
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %v = load <16 x float>, ptr %p, align 256
@@ -773,10 +771,10 @@ define float @reduce_fadd_16xf32_prefix2(ptr %p) {
 define float @reduce_fadd_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_fadd_16xi32_prefix5:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v10
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -817,10 +815,10 @@ define float @reduce_fadd_2xf32_non_associative(ptr %p) {
 define float @reduce_fadd_2xf32_reassoc_only(ptr %p) {
 ; CHECK-LABEL: reduce_fadd_2xf32_reassoc_only:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vmv.s.x v9, a1
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -854,10 +852,10 @@ define float @reduce_fadd_2xf32_ninf_only(ptr %p) {
 define float @reduce_fadd_4xi32_non_associative(ptr %p) {
 ; CHECK-LABEL: reduce_fadd_4xi32_non_associative:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vmv.s.x v9, a1
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v9, v8, v9
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
@@ -887,11 +885,11 @@ define float @reduce_fadd_4xi32_non_associative2(ptr %p) {
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
 ; CHECK-NEXT:    vfmv.f.s fa4, v9
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vslidedown.vi v8, v8, 3
 ; CHECK-NEXT:    vfmv.f.s fa3, v9
-; CHECK-NEXT:    vfmv.f.s fa2, v8
+; CHECK-NEXT:    vslidedown.vi v8, v8, 3
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fadd.s fa4, fa3, fa2
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fadd.s fa4, fa3, fa4
 ; CHECK-NEXT:    fadd.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %p, align 256

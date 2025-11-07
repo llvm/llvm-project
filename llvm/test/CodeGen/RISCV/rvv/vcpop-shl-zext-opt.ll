@@ -10,12 +10,12 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV32-NEXT:    li a4, 8
 ; RV32-NEXT:    bltu a3, a4, .LBB0_7
 ; RV32-NEXT:  # %bb.2: # %for.body.preheader
-; RV32-NEXT:    sub a4, a0, a1
-; RV32-NEXT:    sltu a5, a0, a1
-; RV32-NEXT:    neg a5, a5
-; RV32-NEXT:    sltiu a4, a4, 32
-; RV32-NEXT:    seqz a5, a5
-; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    sltu a4, a0, a1
+; RV32-NEXT:    sub a5, a0, a1
+; RV32-NEXT:    neg a4, a4
+; RV32-NEXT:    sltiu a5, a5, 32
+; RV32-NEXT:    seqz a4, a4
+; RV32-NEXT:    and a4, a4, a5
 ; RV32-NEXT:    bnez a4, .LBB0_7
 ; RV32-NEXT:  # %bb.3: # %vector.ph
 ; RV32-NEXT:    lui a5, 524288
@@ -26,23 +26,23 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV32-NEXT:  .LBB0_4: # %vector.body
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    slli t0, a7, 2
-; RV32-NEXT:    addi t1, a7, 8
 ; RV32-NEXT:    add t0, a1, t0
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (t0)
-; RV32-NEXT:    sltu a7, t1, a7
-; RV32-NEXT:    xor t0, t1, a5
-; RV32-NEXT:    add a6, a6, a7
 ; RV32-NEXT:    vmslt.vx v12, v8, a2
+; RV32-NEXT:    addi t0, a7, 8
 ; RV32-NEXT:    vcompress.vm v10, v8, v12
-; RV32-NEXT:    vcpop.m a7, v12
-; RV32-NEXT:    vsetvli zero, a7, e32, m2, ta, ma
+; RV32-NEXT:    sltu a7, t0, a7
+; RV32-NEXT:    vcpop.m t1, v12
+; RV32-NEXT:    add a6, a6, a7
+; RV32-NEXT:    xor a7, t0, a5
+; RV32-NEXT:    slli t2, t1, 2
+; RV32-NEXT:    or t3, a7, a6
+; RV32-NEXT:    vsetvli zero, t1, e32, m2, ta, ma
 ; RV32-NEXT:    vse32.v v10, (a0)
-; RV32-NEXT:    slli a7, a7, 2
-; RV32-NEXT:    or t0, t0, a6
-; RV32-NEXT:    add a0, a0, a7
-; RV32-NEXT:    mv a7, t1
-; RV32-NEXT:    bnez t0, .LBB0_4
+; RV32-NEXT:    add a0, a0, t2
+; RV32-NEXT:    mv a7, t0
+; RV32-NEXT:    bnez t3, .LBB0_4
 ; RV32-NEXT:  # %bb.5: # %middle.block
 ; RV32-NEXT:    bne a5, a3, .LBB0_9
 ; RV32-NEXT:  .LBB0_6: # %for.cond.cleanup
@@ -96,12 +96,12 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV64-NEXT:    vle32.v v8, (a6)
 ; RV64-NEXT:    addi a6, a6, 32
 ; RV64-NEXT:    vmslt.vx v12, v8, a2
-; RV64-NEXT:    vcompress.vm v10, v8, v12
 ; RV64-NEXT:    vcpop.m a7, v12
+; RV64-NEXT:    vcompress.vm v10, v8, v12
+; RV64-NEXT:    slli t0, a7, 2
 ; RV64-NEXT:    vsetvli zero, a7, e32, m2, ta, ma
 ; RV64-NEXT:    vse32.v v10, (a0)
-; RV64-NEXT:    slli a7, a7, 2
-; RV64-NEXT:    add a0, a0, a7
+; RV64-NEXT:    add a0, a0, t0
 ; RV64-NEXT:    bne a6, a5, .LBB0_4
 ; RV64-NEXT:  # %bb.5: # %middle.block
 ; RV64-NEXT:    bne a4, a3, .LBB0_7

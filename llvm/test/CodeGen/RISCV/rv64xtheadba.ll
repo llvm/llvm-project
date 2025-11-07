@@ -1249,8 +1249,8 @@ entry:
 define i64 @sh6_sh3_add2(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
 ; RV64I-LABEL: sh6_sh3_add2:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    ret
@@ -1302,8 +1302,8 @@ define i64 @sh6_sh3_add4(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
 ;
 ; RV64XTHEADBA-LABEL: sh6_sh3_add4:
 ; RV64XTHEADBA:       # %bb.0: # %entry
-; RV64XTHEADBA-NEXT:    slli a1, a1, 6
 ; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a2, 3
+; RV64XTHEADBA-NEXT:    slli a1, a1, 6
 ; RV64XTHEADBA-NEXT:    add a0, a0, a1
 ; RV64XTHEADBA-NEXT:    ret
 entry:

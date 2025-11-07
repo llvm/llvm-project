@@ -109,9 +109,9 @@ define void @test6(ptr nocapture readonly %A, ptr nocapture %B, i64 %n) {
 ; CHECK-NEXT:  .LBB5_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    slli a4, a3, 2
+; CHECK-NEXT:    add a3, a3, a2
 ; CHECK-NEXT:    add a5, a0, a4
 ; CHECK-NEXT:    vle32.v v8, (a5)
-; CHECK-NEXT:    add a3, a3, a2
 ; CHECK-NEXT:    vmsle.vi v9, v8, -3
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 2
 ; CHECK-NEXT:    vmor.mm v0, v9, v10
@@ -725,7 +725,7 @@ define i64 @avl_undef2() {
 define i64 @vsetvli_vleff(ptr %s, i64 %evl) {
 ; CHECK-LABEL: vsetvli_vleff:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB37_1: # %while.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

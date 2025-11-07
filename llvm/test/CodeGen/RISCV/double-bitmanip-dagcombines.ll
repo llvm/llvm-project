@@ -143,17 +143,17 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    srli a1, a1, 63
+; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcopysign_fneg:
 ; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    not a1, a1
 ; RV64IFD-NEXT:    fmv.d.x fa5, a0
-; RV64IFD-NEXT:    not a0, a1
-; RV64IFD-NEXT:    fmv.d.x fa4, a0
+; RV64IFD-NEXT:    fmv.d.x fa4, a1
 ; RV64IFD-NEXT:    fsgnj.d fa5, fa5, fa4
 ; RV64IFD-NEXT:    fmv.x.d a0, fa5
 ; RV64IFD-NEXT:    ret

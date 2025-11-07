@@ -1681,13 +1681,13 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ; CHECK32-D-NEXT:    .cfi_offset ra, -4
 ; CHECK32-D-NEXT:    .cfi_offset s0, -8
 ; CHECK32-D-NEXT:    .cfi_offset s1, -12
-; CHECK32-D-NEXT:    mv s0, a1
-; CHECK32-D-NEXT:    addi s1, a0, 1
-; CHECK32-D-NEXT:    fcvt.s.w fa0, s1
+; CHECK32-D-NEXT:    addi s0, a0, 1
+; CHECK32-D-NEXT:    fcvt.s.w fa0, s0
+; CHECK32-D-NEXT:    mv s1, a1
 ; CHECK32-D-NEXT:    call __truncsfhf2
 ; CHECK32-D-NEXT:    fmv.x.w a0, fa0
-; CHECK32-D-NEXT:    sh a0, 0(s0)
-; CHECK32-D-NEXT:    mv a0, s1
+; CHECK32-D-NEXT:    sh a0, 0(s1)
+; CHECK32-D-NEXT:    mv a0, s0
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1775,13 +1775,13 @@ define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ; CHECK32-D-NEXT:    .cfi_offset ra, -4
 ; CHECK32-D-NEXT:    .cfi_offset s0, -8
 ; CHECK32-D-NEXT:    .cfi_offset s1, -12
-; CHECK32-D-NEXT:    mv s0, a1
-; CHECK32-D-NEXT:    addi s1, a0, 1
-; CHECK32-D-NEXT:    fcvt.s.wu fa0, s1
+; CHECK32-D-NEXT:    addi s0, a0, 1
+; CHECK32-D-NEXT:    fcvt.s.wu fa0, s0
+; CHECK32-D-NEXT:    mv s1, a1
 ; CHECK32-D-NEXT:    call __truncsfhf2
 ; CHECK32-D-NEXT:    fmv.x.w a0, fa0
-; CHECK32-D-NEXT:    sh a0, 0(s0)
-; CHECK32-D-NEXT:    mv a0, s1
+; CHECK32-D-NEXT:    sh a0, 0(s1)
+; CHECK32-D-NEXT:    mv a0, s0
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1937,8 +1937,8 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZFH-NEXT:    addi sp, sp, -32
 ; CHECK32-IZFH-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-IZFH-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK32-IZFH-NEXT:    mv s0, a0
 ; CHECK32-IZFH-NEXT:    fcvt.s.h fa0, fa0
+; CHECK32-IZFH-NEXT:    mv s0, a0
 ; CHECK32-IZFH-NEXT:    addi a0, sp, 8
 ; CHECK32-IZFH-NEXT:    call __extendsftf2
 ; CHECK32-IZFH-NEXT:    lw a0, 8(sp)
@@ -1969,8 +1969,8 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZHINX-NEXT:    addi sp, sp, -32
 ; CHECK32-IZHINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-IZHINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK32-IZHINX-NEXT:    mv s0, a0
 ; CHECK32-IZHINX-NEXT:    fcvt.s.h a1, a1
+; CHECK32-IZHINX-NEXT:    mv s0, a0
 ; CHECK32-IZHINX-NEXT:    addi a0, sp, 8
 ; CHECK32-IZHINX-NEXT:    call __extendsftf2
 ; CHECK32-IZHINX-NEXT:    lw a0, 8(sp)
@@ -2001,8 +2001,8 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZFHMIN-NEXT:    addi sp, sp, -32
 ; CHECK32-IZFHMIN-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-IZFHMIN-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK32-IZFHMIN-NEXT:    mv s0, a0
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
+; CHECK32-IZFHMIN-NEXT:    mv s0, a0
 ; CHECK32-IZFHMIN-NEXT:    addi a0, sp, 8
 ; CHECK32-IZFHMIN-NEXT:    call __extendsftf2
 ; CHECK32-IZFHMIN-NEXT:    lw a0, 8(sp)
@@ -2033,8 +2033,8 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZHINXMIN-NEXT:    addi sp, sp, -32
 ; CHECK32-IZHINXMIN-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-IZHINXMIN-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK32-IZHINXMIN-NEXT:    mv s0, a0
 ; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK32-IZHINXMIN-NEXT:    mv s0, a0
 ; CHECK32-IZHINXMIN-NEXT:    addi a0, sp, 8
 ; CHECK32-IZHINXMIN-NEXT:    call __extendsftf2
 ; CHECK32-IZHINXMIN-NEXT:    lw a0, 8(sp)
@@ -2065,11 +2065,11 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, -32
 ; CHECK32-D-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-D-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; CHECK32-D-NEXT:    fmv.x.w a1, fa0
+; CHECK32-D-NEXT:    slli a1, a1, 16
+; CHECK32-D-NEXT:    srli a1, a1, 16
+; CHECK32-D-NEXT:    fmv.w.x fa0, a1
 ; CHECK32-D-NEXT:    mv s0, a0
-; CHECK32-D-NEXT:    fmv.x.w a0, fa0
-; CHECK32-D-NEXT:    slli a0, a0, 16
-; CHECK32-D-NEXT:    srli a0, a0, 16
-; CHECK32-D-NEXT:    fmv.w.x fa0, a0
 ; CHECK32-D-NEXT:    call __extendhfsf2
 ; CHECK32-D-NEXT:    addi a0, sp, 8
 ; CHECK32-D-NEXT:    call __extendsftf2

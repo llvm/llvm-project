@@ -54,8 +54,8 @@ define double @fold_promote_d_s(double %a, float %b) nounwind {
 ; RV64I-LABEL: fold_promote_d_s:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 524288
-; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
@@ -147,8 +147,8 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV32I-LABEL: fold_promote_d_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a3, 8
-; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    and a2, a2, a3
+; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    or a1, a1, a2
@@ -157,8 +157,8 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV64I-LABEL: fold_promote_d_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 8
-; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
@@ -168,8 +168,8 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    fmv.x.w a2, fa0
 ; RV32IF-NEXT:    lui a3, 8
-; RV32IF-NEXT:    slli a1, a1, 1
 ; RV32IF-NEXT:    and a2, a2, a3
+; RV32IF-NEXT:    slli a1, a1, 1
 ; RV32IF-NEXT:    slli a2, a2, 16
 ; RV32IF-NEXT:    srli a1, a1, 1
 ; RV32IF-NEXT:    or a1, a1, a2
@@ -209,8 +209,8 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV32IFZFH:       # %bb.0:
 ; RV32IFZFH-NEXT:    fmv.x.h a2, fa0
 ; RV32IFZFH-NEXT:    lui a3, 8
-; RV32IFZFH-NEXT:    slli a1, a1, 1
 ; RV32IFZFH-NEXT:    and a2, a2, a3
+; RV32IFZFH-NEXT:    slli a1, a1, 1
 ; RV32IFZFH-NEXT:    slli a2, a2, 16
 ; RV32IFZFH-NEXT:    srli a1, a1, 1
 ; RV32IFZFH-NEXT:    or a1, a1, a2
@@ -232,8 +232,8 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV32IFZFHMIN:       # %bb.0:
 ; RV32IFZFHMIN-NEXT:    fmv.x.h a2, fa0
 ; RV32IFZFHMIN-NEXT:    lui a3, 8
-; RV32IFZFHMIN-NEXT:    slli a1, a1, 1
 ; RV32IFZFHMIN-NEXT:    and a2, a2, a3
+; RV32IFZFHMIN-NEXT:    slli a1, a1, 1
 ; RV32IFZFHMIN-NEXT:    slli a2, a2, 16
 ; RV32IFZFHMIN-NEXT:    srli a1, a1, 1
 ; RV32IFZFHMIN-NEXT:    or a1, a1, a2
@@ -292,8 +292,8 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV32I-LABEL: fold_promote_f_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 8
-; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    slli a1, a1, 16
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
@@ -302,8 +302,8 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV64I-LABEL: fold_promote_f_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 8
-; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    slliw a1, a1, 16
 ; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    or a0, a0, a1
@@ -431,10 +431,10 @@ define float @fold_demote_s_d(float %a, double %b) nounwind {
 ;
 ; RV64I-LABEL: fold_demote_s_d:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    srli a0, a0, 33
+; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    slli a1, a1, 63
+; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -515,8 +515,8 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV32I-LABEL: fold_demote_h_s:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    slli a0, a0, 17
 ; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    slli a0, a0, 17
 ; RV32I-NEXT:    srli a1, a1, 16
 ; RV32I-NEXT:    srli a0, a0, 17
 ; RV32I-NEXT:    or a0, a0, a1
@@ -637,8 +637,8 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV32IZDINX-NEXT:    lui a2, 524288
 ; RV32IZDINX-NEXT:    slli a0, a0, 17
 ; RV32IZDINX-NEXT:    and a1, a1, a2
-; RV32IZDINX-NEXT:    lui a2, 1048560
 ; RV32IZDINX-NEXT:    srli a0, a0, 17
+; RV32IZDINX-NEXT:    lui a2, 1048560
 ; RV32IZDINX-NEXT:    srli a1, a1, 16
 ; RV32IZDINX-NEXT:    or a0, a0, a2
 ; RV32IZDINX-NEXT:    or a0, a0, a1
@@ -652,8 +652,8 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV64IZDINX-NEXT:    lui a2, 524288
 ; RV64IZDINX-NEXT:    slli a0, a0, 49
 ; RV64IZDINX-NEXT:    and a1, a1, a2
-; RV64IZDINX-NEXT:    lui a2, 1048560
 ; RV64IZDINX-NEXT:    srli a0, a0, 49
+; RV64IZDINX-NEXT:    lui a2, 1048560
 ; RV64IZDINX-NEXT:    srli a1, a1, 16
 ; RV64IZDINX-NEXT:    or a0, a0, a2
 ; RV64IZDINX-NEXT:    or a0, a0, a1
@@ -668,8 +668,8 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV32I-LABEL: fold_demote_h_d:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    slli a0, a0, 17
 ; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    slli a0, a0, 17
 ; RV32I-NEXT:    srli a1, a1, 16
 ; RV32I-NEXT:    srli a0, a0, 17
 ; RV32I-NEXT:    or a0, a0, a1
@@ -677,10 +677,10 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ;
 ; RV64I-LABEL: fold_demote_h_d:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 49
 ; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    srli a0, a0, 49
+; RV64I-NEXT:    slli a0, a0, 49
 ; RV64I-NEXT:    slli a1, a1, 63
+; RV64I-NEXT:    srli a0, a0, 49
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -690,11 +690,11 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV32IF-NEXT:    fmv.x.w a0, fa0
 ; RV32IF-NEXT:    lui a2, 524288
 ; RV32IF-NEXT:    and a1, a1, a2
-; RV32IF-NEXT:    slli a0, a0, 17
 ; RV32IF-NEXT:    srli a1, a1, 16
+; RV32IF-NEXT:    slli a0, a0, 17
+; RV32IF-NEXT:    lui a2, 1048560
 ; RV32IF-NEXT:    srli a0, a0, 17
-; RV32IF-NEXT:    or a0, a0, a1
-; RV32IF-NEXT:    lui a1, 1048560
+; RV32IF-NEXT:    or a1, a1, a2
 ; RV32IF-NEXT:    or a0, a0, a1
 ; RV32IF-NEXT:    fmv.w.x fa0, a0
 ; RV32IF-NEXT:    ret
@@ -703,32 +703,32 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    fsd fa1, 8(sp)
-; RV32IFD-NEXT:    lw a0, 12(sp)
-; RV32IFD-NEXT:    fmv.x.w a1, fa0
+; RV32IFD-NEXT:    fmv.x.w a0, fa0
+; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    lui a2, 524288
-; RV32IFD-NEXT:    and a0, a0, a2
+; RV32IFD-NEXT:    and a1, a1, a2
+; RV32IFD-NEXT:    srli a1, a1, 16
+; RV32IFD-NEXT:    slli a0, a0, 17
 ; RV32IFD-NEXT:    lui a2, 1048560
-; RV32IFD-NEXT:    slli a1, a1, 17
-; RV32IFD-NEXT:    srli a1, a1, 17
-; RV32IFD-NEXT:    srli a0, a0, 16
+; RV32IFD-NEXT:    srli a0, a0, 17
 ; RV32IFD-NEXT:    or a1, a1, a2
-; RV32IFD-NEXT:    or a0, a1, a0
+; RV32IFD-NEXT:    or a0, a0, a1
 ; RV32IFD-NEXT:    fmv.w.x fa0, a0
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fold_demote_h_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.x.d a0, fa1
-; RV64IFD-NEXT:    fmv.x.w a1, fa0
+; RV64IFD-NEXT:    fmv.x.w a0, fa0
+; RV64IFD-NEXT:    fmv.x.d a1, fa1
+; RV64IFD-NEXT:    srli a1, a1, 63
+; RV64IFD-NEXT:    slli a1, a1, 63
+; RV64IFD-NEXT:    slli a0, a0, 49
+; RV64IFD-NEXT:    srli a1, a1, 48
 ; RV64IFD-NEXT:    lui a2, 1048560
-; RV64IFD-NEXT:    slli a1, a1, 49
-; RV64IFD-NEXT:    srli a0, a0, 63
-; RV64IFD-NEXT:    srli a1, a1, 49
-; RV64IFD-NEXT:    slli a0, a0, 63
-; RV64IFD-NEXT:    srli a0, a0, 48
+; RV64IFD-NEXT:    srli a0, a0, 49
 ; RV64IFD-NEXT:    or a1, a1, a2
-; RV64IFD-NEXT:    or a0, a1, a0
+; RV64IFD-NEXT:    or a0, a0, a1
 ; RV64IFD-NEXT:    fmv.w.x fa0, a0
 ; RV64IFD-NEXT:    ret
 ;
@@ -753,10 +753,10 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ;
 ; RV32IFZFHMIN-LABEL: fold_demote_h_d:
 ; RV32IFZFHMIN:       # %bb.0:
-; RV32IFZFHMIN-NEXT:    srli a1, a1, 31
 ; RV32IFZFHMIN-NEXT:    fmv.x.h a0, fa0
-; RV32IFZFHMIN-NEXT:    slli a1, a1, 15
+; RV32IFZFHMIN-NEXT:    srli a1, a1, 31
 ; RV32IFZFHMIN-NEXT:    slli a0, a0, 17
+; RV32IFZFHMIN-NEXT:    slli a1, a1, 15
 ; RV32IFZFHMIN-NEXT:    srli a0, a0, 17
 ; RV32IFZFHMIN-NEXT:    or a0, a0, a1
 ; RV32IFZFHMIN-NEXT:    fmv.h.x fa0, a0
@@ -765,27 +765,27 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV32IFDZFHMIN-LABEL: fold_demote_h_d:
 ; RV32IFDZFHMIN:       # %bb.0:
 ; RV32IFDZFHMIN-NEXT:    addi sp, sp, -16
+; RV32IFDZFHMIN-NEXT:    fmv.x.h a0, fa0
 ; RV32IFDZFHMIN-NEXT:    fsd fa1, 8(sp)
-; RV32IFDZFHMIN-NEXT:    lw a0, 12(sp)
-; RV32IFDZFHMIN-NEXT:    fmv.x.h a1, fa0
-; RV32IFDZFHMIN-NEXT:    slli a1, a1, 17
-; RV32IFDZFHMIN-NEXT:    srli a0, a0, 31
-; RV32IFDZFHMIN-NEXT:    slli a0, a0, 15
-; RV32IFDZFHMIN-NEXT:    srli a1, a1, 17
-; RV32IFDZFHMIN-NEXT:    or a0, a1, a0
+; RV32IFDZFHMIN-NEXT:    lw a1, 12(sp)
+; RV32IFDZFHMIN-NEXT:    srli a1, a1, 31
+; RV32IFDZFHMIN-NEXT:    slli a0, a0, 17
+; RV32IFDZFHMIN-NEXT:    slli a1, a1, 15
+; RV32IFDZFHMIN-NEXT:    srli a0, a0, 17
+; RV32IFDZFHMIN-NEXT:    or a0, a0, a1
 ; RV32IFDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IFDZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IFDZFHMIN-NEXT:    ret
 ;
 ; RV64IFDZFHMIN-LABEL: fold_demote_h_d:
 ; RV64IFDZFHMIN:       # %bb.0:
-; RV64IFDZFHMIN-NEXT:    fmv.x.d a0, fa1
-; RV64IFDZFHMIN-NEXT:    fmv.x.h a1, fa0
-; RV64IFDZFHMIN-NEXT:    srli a0, a0, 63
-; RV64IFDZFHMIN-NEXT:    slli a1, a1, 49
-; RV64IFDZFHMIN-NEXT:    slli a0, a0, 15
-; RV64IFDZFHMIN-NEXT:    srli a1, a1, 49
-; RV64IFDZFHMIN-NEXT:    or a0, a1, a0
+; RV64IFDZFHMIN-NEXT:    fmv.x.h a0, fa0
+; RV64IFDZFHMIN-NEXT:    fmv.x.d a1, fa1
+; RV64IFDZFHMIN-NEXT:    srli a1, a1, 63
+; RV64IFDZFHMIN-NEXT:    slli a0, a0, 49
+; RV64IFDZFHMIN-NEXT:    slli a1, a1, 15
+; RV64IFDZFHMIN-NEXT:    srli a0, a0, 49
+; RV64IFDZFHMIN-NEXT:    or a0, a0, a1
 ; RV64IFDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IFDZFHMIN-NEXT:    ret
 ;
@@ -795,8 +795,8 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV32IZDINX-NEXT:    lui a1, 524288
 ; RV32IZDINX-NEXT:    slli a0, a0, 17
 ; RV32IZDINX-NEXT:    and a1, a2, a1
-; RV32IZDINX-NEXT:    lui a2, 1048560
 ; RV32IZDINX-NEXT:    srli a0, a0, 17
+; RV32IZDINX-NEXT:    lui a2, 1048560
 ; RV32IZDINX-NEXT:    srli a1, a1, 16
 ; RV32IZDINX-NEXT:    or a0, a0, a2
 ; RV32IZDINX-NEXT:    or a0, a0, a1
@@ -808,9 +808,9 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV64IZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; RV64IZDINX-NEXT:    slli a0, a0, 49
 ; RV64IZDINX-NEXT:    srli a1, a1, 63
-; RV64IZDINX-NEXT:    lui a2, 1048560
 ; RV64IZDINX-NEXT:    srli a0, a0, 49
 ; RV64IZDINX-NEXT:    slli a1, a1, 63
+; RV64IZDINX-NEXT:    lui a2, 1048560
 ; RV64IZDINX-NEXT:    srli a1, a1, 48
 ; RV64IZDINX-NEXT:    or a0, a0, a2
 ; RV64IZDINX-NEXT:    or a0, a0, a1

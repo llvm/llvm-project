@@ -191,11 +191,14 @@ define <vscale x 16 x i64> @llround_nxv16f16(<vscale x 16 x half> %x) {
 ; CHECK-LABEL: llround_nxv16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v16, v8
+; CHECK-NEXT:    vmv4r.v v16, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v20, v16
 ; CHECK-NEXT:    fsrmi a0, 4
-; CHECK-NEXT:    vfwcvt.f.f.v v24, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vfwcvt.x.f.v v8, v16
+; CHECK-NEXT:    vfwcvt.x.f.v v8, v20
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v24, v18
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v16, v24
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
@@ -268,11 +271,14 @@ define <vscale x 16 x i64> @llround_nxv16bf16(<vscale x 16 x bfloat> %x) {
 ; CHECK-LABEL: llround_nxv16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; CHECK-NEXT:    vmv4r.v v16, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v20, v16
 ; CHECK-NEXT:    fsrmi a0, 4
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vfwcvt.x.f.v v8, v16
+; CHECK-NEXT:    vfwcvt.x.f.v v8, v20
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v18
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v16, v24
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret

@@ -97,8 +97,8 @@ define <64 x float> @vfwadd_v64f16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    vle16.v v24, (a1)
 ; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vle16.v v24, (a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v16, a0
 ; CHECK-NEXT:    addi a1, sp, 16

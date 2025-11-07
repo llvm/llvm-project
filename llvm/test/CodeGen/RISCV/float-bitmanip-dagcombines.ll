@@ -115,9 +115,9 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ;
 ; RV32IF-LABEL: fcopysign_fneg:
 ; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    not a1, a1
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
-; RV32IF-NEXT:    not a0, a1
-; RV32IF-NEXT:    fmv.w.x fa4, a0
+; RV32IF-NEXT:    fmv.w.x fa4, a1
 ; RV32IF-NEXT:    fsgnj.s fa5, fa5, fa4
 ; RV32IF-NEXT:    fmv.x.w a0, fa5
 ; RV32IF-NEXT:    ret

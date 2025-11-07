@@ -28,8 +28,8 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub a5, a4, a2
 ; CHECK-NEXT:    add a6, a0, a2
-; CHECK-NEXT:    add a7, a1, a2
 ; CHECK-NEXT:    vsetvli a5, a5, e8, m2, ta, ma
+; CHECK-NEXT:    add a7, a1, a2
 ; CHECK-NEXT:    vle8.v v8, (a6)
 ; CHECK-NEXT:    vle8.v v10, (a7)
 ; CHECK-NEXT:    vmsne.vv v12, v8, v10

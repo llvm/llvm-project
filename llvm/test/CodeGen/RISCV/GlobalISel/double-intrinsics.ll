@@ -1036,12 +1036,12 @@ define i1 @isnan_d_fpclass(double %x) {
 ;
 ; RV32I-LABEL: isnan_d_fpclass:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 524032
-; RV32I-NEXT:    slli a1, a1, 1
-; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    beq a1, a2, .LBB25_2
+; RV32I-NEXT:    slli a2, a1, 1
+; RV32I-NEXT:    lui a1, 524032
+; RV32I-NEXT:    srli a2, a2, 1
+; RV32I-NEXT:    beq a2, a1, .LBB25_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sltu a0, a2, a1
+; RV32I-NEXT:    sltu a0, a1, a2
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB25_2:
 ; RV32I-NEXT:    snez a0, a0

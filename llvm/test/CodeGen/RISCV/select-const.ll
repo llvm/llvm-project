@@ -644,8 +644,8 @@ define i32 @select_nonnegative_lui_addi(i32 signext %x) {
 ;
 ; RV32ZICOND-LABEL: select_nonnegative_lui_addi:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    lui a1, 4
+; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    addi a1, a1, -25
 ; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
 ; RV32ZICOND-NEXT:    addi a0, a0, 25
@@ -681,8 +681,8 @@ define i32 @select_nonnegative_lui_addi(i32 signext %x) {
 ;
 ; RV64ZICOND-LABEL: select_nonnegative_lui_addi:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    lui a1, 4
+; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    addi a1, a1, -25
 ; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
 ; RV64ZICOND-NEXT:    addi a0, a0, 25
@@ -715,8 +715,8 @@ define i32 @select_nonnegative_lui_addi_swapped(i32 signext %x) {
 ;
 ; RV32ZICOND-LABEL: select_nonnegative_lui_addi_swapped:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    lui a1, 4
+; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    addi a1, a1, -25
 ; RV32ZICOND-NEXT:    czero.eqz a0, a1, a0
 ; RV32ZICOND-NEXT:    addi a0, a0, 25
@@ -752,8 +752,8 @@ define i32 @select_nonnegative_lui_addi_swapped(i32 signext %x) {
 ;
 ; RV64ZICOND-LABEL: select_nonnegative_lui_addi_swapped:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    lui a1, 4
+; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    addi a1, a1, -25
 ; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
 ; RV64ZICOND-NEXT:    addi a0, a0, 25
@@ -996,18 +996,18 @@ define i32 @zext_or_constant(i32 signext %x) {
 ;
 ; RV32ZICOND-LABEL: zext_or_constant:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    lui a1, 140
-; RV32ZICOND-NEXT:    xori a2, a0, 1
+; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    addi a1, a1, 417
+; RV32ZICOND-NEXT:    xori a2, a0, 1
 ; RV32ZICOND-NEXT:    czero.eqz a0, a1, a0
 ; RV32ZICOND-NEXT:    or a0, a2, a0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: zext_or_constant:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    srli a2, a0, 31
 ; RV32IXQCI-NEXT:    lui a1, 140
+; RV32IXQCI-NEXT:    srli a2, a0, 31
 ; RV32IXQCI-NEXT:    addi a1, a1, 417
 ; RV32IXQCI-NEXT:    bltz a0, .LBB27_2
 ; RV32IXQCI-NEXT:  # %bb.1:
@@ -1042,10 +1042,10 @@ define i32 @zext_or_constant(i32 signext %x) {
 ;
 ; RV64ZICOND-LABEL: zext_or_constant:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    lui a1, 140
-; RV64ZICOND-NEXT:    xori a2, a0, 1
+; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    addi a1, a1, 417
+; RV64ZICOND-NEXT:    xori a2, a0, 1
 ; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
 ; RV64ZICOND-NEXT:    or a0, a2, a0
 ; RV64ZICOND-NEXT:    ret
@@ -1093,8 +1093,8 @@ define i32 @zext_or_constant2(i32 signext %x) {
 ;
 ; RV32IXQCI-LABEL: zext_or_constant2:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    srli a2, a0, 31
 ; RV32IXQCI-NEXT:    lui a1, 140
+; RV32IXQCI-NEXT:    srli a2, a0, 31
 ; RV32IXQCI-NEXT:    addi a1, a1, 417
 ; RV32IXQCI-NEXT:    bgez a0, .LBB28_2
 ; RV32IXQCI-NEXT:  # %bb.1:
@@ -1181,8 +1181,8 @@ define i32 @sext_or_constant(i32 signext %x) {
 ;
 ; RV32IXQCI-LABEL: sext_or_constant:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    srli a2, a0, 31
 ; RV32IXQCI-NEXT:    lui a1, 140
+; RV32IXQCI-NEXT:    srli a2, a0, 31
 ; RV32IXQCI-NEXT:    addi a1, a1, 417
 ; RV32IXQCI-NEXT:    bltz a0, .LBB29_2
 ; RV32IXQCI-NEXT:  # %bb.1:
@@ -1269,8 +1269,8 @@ define i32 @sext_or_constant2(i32 signext %x) {
 ;
 ; RV32IXQCI-LABEL: sext_or_constant2:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    srli a2, a0, 31
 ; RV32IXQCI-NEXT:    lui a1, 140
+; RV32IXQCI-NEXT:    srli a2, a0, 31
 ; RV32IXQCI-NEXT:    addi a1, a1, 417
 ; RV32IXQCI-NEXT:    bgez a0, .LBB30_2
 ; RV32IXQCI-NEXT:  # %bb.1:

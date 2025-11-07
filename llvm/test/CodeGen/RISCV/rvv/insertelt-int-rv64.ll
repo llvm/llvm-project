@@ -638,10 +638,10 @@ define <vscale x 1 x i64> @insertelt_nxv1i64_imm(<vscale x 1 x i64> %v, i64 %elt
 define <vscale x 1 x i64> @insertelt_nxv1i64_idx(<vscale x 1 x i64> %v, i64 %elt, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv1i64_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    slli a1, a1, 32
 ; CHECK-NEXT:    srli a1, a1, 32
+; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a1
@@ -674,9 +674,9 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_imm(<vscale x 2 x i64> %v, i64 %elt
 define <vscale x 2 x i64> @insertelt_nxv2i64_idx(<vscale x 2 x i64> %v, i64 %elt, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv2i64_idx:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 32
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    slli a1, a1, 32
 ; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
@@ -763,10 +763,10 @@ define <vscale x 4 x i32> @insertelt_nxv4i32_zeroinitializer_0(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
   %v = insertelement <vscale x 4 x i32> zeroinitializer, i32 %x, i64 0
@@ -778,11 +778,11 @@ define <vscale x 4 x i32> @insertelt_imm_nxv4i32_zeroinitializer_0(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    li a0, 42
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    li a0, 42
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
   %v = insertelement <vscale x 4 x i32> zeroinitializer, i32 42, i64 0

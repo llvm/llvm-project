@@ -396,18 +396,19 @@ define <32 x double> @vfmin_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a1, a0, 128
+; CHECK-NEXT:    li a3, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v16, (a1)
-; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v7, v0, 2
-; CHECK-NEXT:    bltu a2, a1, .LBB26_2
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
+; CHECK-NEXT:    bltu a2, a3, .LBB26_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a0, 16
+; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:  .LBB26_2:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v24, v0.t
 ; CHECK-NEXT:    addi a0, a2, -16
 ; CHECK-NEXT:    sltu a1, a2, a0
@@ -435,20 +436,20 @@ define <32 x double> @vfmin_vv_v32f64_unmasked(<32 x double> %va, <32 x double> 
 ; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a1)
-; CHECK-NEXT:    vle64.v v0, (a0)
 ; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vle64.v v0, (a0)
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    bltu a2, a1, .LBB27_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:  .LBB27_2:
+; CHECK-NEXT:    addi a1, a2, -16
+; CHECK-NEXT:    sltu a2, a2, a1
+; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v0
-; CHECK-NEXT:    addi a0, a2, -16
-; CHECK-NEXT:    sltu a1, a2, a0
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    and a1, a2, a1
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v16, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.minnum.v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> splat (i1 true), i32 %evl)

@@ -211,11 +211,11 @@ define ptr @neg_offset_not_simm32() {
 ;
 ; RV64-LABEL: neg_offset_not_simm32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, %hi(bar)
-; RV64-NEXT:    addi a0, a0, %lo(bar)
-; RV64-NEXT:    lui a1, 524288
-; RV64-NEXT:    addi a1, a1, -1365
-; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    lui a0, 524288
+; RV64-NEXT:    lui a1, %hi(bar)
+; RV64-NEXT:    addi a1, a1, %lo(bar)
+; RV64-NEXT:    addi a0, a0, -1365
+; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    ret
     ret ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 -2147485013)
 }

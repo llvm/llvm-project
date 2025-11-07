@@ -192,12 +192,12 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; RV32-NEXT:    andi a1, a1, 63
 ; RV32-NEXT:    mv a2, sp
 ; RV32-NEXT:    addi a3, sp, 128
-; RV32-NEXT:    li a4, 32
 ; RV32-NEXT:    slli a1, a1, 2
+; RV32-NEXT:    li a4, 32
+; RV32-NEXT:    add a1, a2, a1
 ; RV32-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; RV32-NEXT:    vse32.v v16, (a3)
 ; RV32-NEXT:    vse32.v v8, (a2)
-; RV32-NEXT:    add a1, a2, a1
 ; RV32-NEXT:    sw a0, 0(a1)
 ; RV32-NEXT:    vle32.v v8, (a2)
 ; RV32-NEXT:    vle32.v v16, (a3)
@@ -225,12 +225,12 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; RV64-NEXT:    andi a1, a1, 63
 ; RV64-NEXT:    mv a2, sp
 ; RV64-NEXT:    addi a3, sp, 128
-; RV64-NEXT:    li a4, 32
 ; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    li a4, 32
+; RV64-NEXT:    add a1, a2, a1
 ; RV64-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; RV64-NEXT:    vse32.v v16, (a3)
 ; RV64-NEXT:    vse32.v v8, (a2)
-; RV64-NEXT:    add a1, a2, a1
 ; RV64-NEXT:    sw a0, 0(a1)
 ; RV64-NEXT:    vle32.v v8, (a2)
 ; RV64-NEXT:    vle32.v v16, (a3)
@@ -258,12 +258,12 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; VISNI-NEXT:    andi a1, a1, 63
 ; VISNI-NEXT:    mv a2, sp
 ; VISNI-NEXT:    addi a3, sp, 128
-; VISNI-NEXT:    li a4, 32
 ; VISNI-NEXT:    slli a1, a1, 2
+; VISNI-NEXT:    li a4, 32
+; VISNI-NEXT:    add a1, a2, a1
 ; VISNI-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; VISNI-NEXT:    vse32.v v16, (a3)
 ; VISNI-NEXT:    vse32.v v8, (a2)
-; VISNI-NEXT:    add a1, a2, a1
 ; VISNI-NEXT:    sw a0, 0(a1)
 ; VISNI-NEXT:    vle32.v v8, (a2)
 ; VISNI-NEXT:    vle32.v v16, (a3)
@@ -338,19 +338,20 @@ define void @insertelt_v4i64_store(ptr %x, i64 %y) {
 define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ; RV32-LABEL: insertelt_v3i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vmv.x.s a2, v8
+; RV32-NEXT:    vmv.v.x v10, a2
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v9, v8, 3
-; RV32-NEXT:    vslidedown.vi v10, v8, 2
-; RV32-NEXT:    vmv.x.s a2, v8
-; RV32-NEXT:    vslidedown.vi v8, v8, 1
+; RV32-NEXT:    vmv.x.s a2, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 2
 ; RV32-NEXT:    vmv.x.s a3, v9
-; RV32-NEXT:    vmv.x.s a4, v10
-; RV32-NEXT:    vmv.x.s a5, v8
+; RV32-NEXT:    vslidedown.vi v8, v8, 1
+; RV32-NEXT:    vmv.x.s a4, v8
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.x v8, a2
-; RV32-NEXT:    vslide1down.vx v8, v8, a5
-; RV32-NEXT:    vslide1down.vx v8, v8, a4
+; RV32-NEXT:    vslide1down.vx v8, v10, a4
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslidedown.vi v8, v8, 2
@@ -358,25 +359,27 @@ define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ;
 ; RV64-LABEL: insertelt_v3i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v9, v8, 1
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    vmv.x.s a2, v9
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a1
-; RV64-NEXT:    vslide1down.vx v8, v8, a2
+; RV64-NEXT:    vmv.x.s a1, v8
+; RV64-NEXT:    vmv.v.x v10, a1
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v8, v8, 1
+; RV64-NEXT:    vmv.x.s a1, v8
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vslide1down.vx v8, v10, a1
 ; RV64-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-NEXT:    ret
 ;
 ; VISNI-LABEL: insertelt_v3i64:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; VISNI-NEXT:    ri.vextract.x.v a1, v8, 1
-; VISNI-NEXT:    vmv.x.s a2, v8
 ; VISNI-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; VISNI-NEXT:    vmv.v.x v8, a2
-; VISNI-NEXT:    vslide1down.vx v8, v8, a1
+; VISNI-NEXT:    vmv.x.s a1, v8
+; VISNI-NEXT:    vmv.v.x v10, a1
+; VISNI-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; VISNI-NEXT:    ri.vextract.x.v a1, v8, 1
+; VISNI-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; VISNI-NEXT:    vslide1down.vx v8, v10, a1
 ; VISNI-NEXT:    vslide1down.vx v8, v8, a0
 ; VISNI-NEXT:    vslidedown.vi v8, v8, 1
 ; VISNI-NEXT:    ret
@@ -453,9 +456,9 @@ define <32 x i16> @insertelt_v32i16(<32 x i16> %a, i16 %y, i32 %idx) {
 ; RV64-LABEL: insertelt_v32i16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a2, 32
-; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v12, a0
+; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    addi a0, a1, 1
 ; RV64-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
@@ -465,9 +468,9 @@ define <32 x i16> @insertelt_v32i16(<32 x i16> %a, i16 %y, i32 %idx) {
 ; VISNI-LABEL: insertelt_v32i16:
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    li a2, 32
-; VISNI-NEXT:    slli a1, a1, 32
 ; VISNI-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; VISNI-NEXT:    vmv.s.x v12, a0
+; VISNI-NEXT:    slli a1, a1, 32
 ; VISNI-NEXT:    srli a1, a1, 32
 ; VISNI-NEXT:    addi a0, a1, 1
 ; VISNI-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
@@ -511,9 +514,9 @@ define <8 x float> @insertelt_v8f32(<8 x float> %a, float %y, i32 %idx) {
 ;
 ; RV64-LABEL: insertelt_v8f32:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; RV64-NEXT:    vfmv.s.f v10, fa0
-; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    addi a1, a0, 1
 ; RV64-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
@@ -522,9 +525,9 @@ define <8 x float> @insertelt_v8f32(<8 x float> %a, float %y, i32 %idx) {
 ;
 ; VISNI-LABEL: insertelt_v8f32:
 ; VISNI:       # %bb.0:
+; VISNI-NEXT:    slli a0, a0, 32
 ; VISNI-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; VISNI-NEXT:    vfmv.s.f v10, fa0
-; VISNI-NEXT:    slli a0, a0, 32
 ; VISNI-NEXT:    srli a0, a0, 32
 ; VISNI-NEXT:    addi a1, a0, 1
 ; VISNI-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
@@ -787,11 +790,11 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vle64.v v12, (a1)
-; CHECK-NEXT:    li a1, 6
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vle64.v v12, (a1)
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -800,11 +803,11 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; VISNI-NEXT:    vle64.v v8, (a0)
-; VISNI-NEXT:    vle64.v v12, (a1)
-; VISNI-NEXT:    li a1, 6
+; VISNI-NEXT:    li a2, 6
 ; VISNI-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
-; VISNI-NEXT:    vmv.s.x v8, a1
+; VISNI-NEXT:    vmv.s.x v8, a2
 ; VISNI-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VISNI-NEXT:    vle64.v v12, (a1)
 ; VISNI-NEXT:    vadd.vv v8, v8, v12
 ; VISNI-NEXT:    vse64.v v8, (a0)
 ; VISNI-NEXT:    ret
@@ -1042,21 +1045,21 @@ define <4 x bfloat> @insertelt_v4bf16_3(<4 x bfloat> %a, bfloat %y) {
 define <4 x bfloat> @insertelt_v4bf16_idx(<4 x bfloat> %a, bfloat %y, i32 zeroext %idx) {
 ; CHECK-LABEL: insertelt_v4bf16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, 1
-; CHECK-NEXT:    fmv.x.h a2, fa0
+; CHECK-NEXT:    fmv.x.h a1, fa0
+; CHECK-NEXT:    addi a2, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a2
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
+; CHECK-NEXT:    vmv.s.x v9, a1
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0
 ; CHECK-NEXT:    ret
 ;
 ; VISNI-LABEL: insertelt_v4bf16_idx:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    addi a1, a0, 1
-; VISNI-NEXT:    fmv.x.h a2, fa0
+; VISNI-NEXT:    fmv.x.h a1, fa0
+; VISNI-NEXT:    addi a2, a0, 1
 ; VISNI-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
-; VISNI-NEXT:    vmv.s.x v9, a2
-; VISNI-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
+; VISNI-NEXT:    vmv.s.x v9, a1
+; VISNI-NEXT:    vsetvli zero, a2, e16, mf2, tu, ma
 ; VISNI-NEXT:    vslideup.vx v8, v9, a0
 ; VISNI-NEXT:    ret
   %b = insertelement <4 x bfloat> %a, bfloat %y, i32 %idx
@@ -1124,11 +1127,11 @@ define <4 x half> @insertelt_v4f16_idx(<4 x half> %a, half %y, i32 zeroext %idx)
 ;
 ; ZVFHMIN-LABEL: insertelt_v4f16_idx:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    addi a1, a0, 1
-; ZVFHMIN-NEXT:    fmv.x.h a2, fa0
+; ZVFHMIN-NEXT:    fmv.x.h a1, fa0
+; ZVFHMIN-NEXT:    addi a2, a0, 1
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vmv.s.x v9, a2
-; ZVFHMIN-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
+; ZVFHMIN-NEXT:    vmv.s.x v9, a1
+; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, mf2, tu, ma
 ; ZVFHMIN-NEXT:    vslideup.vx v8, v9, a0
 ; ZVFHMIN-NEXT:    ret
 ;

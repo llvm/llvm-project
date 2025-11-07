@@ -285,14 +285,14 @@ define void @insert_v8i32_v2i32_0(ptr %vp, ptr %svp) {
 define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 ; VLA-LABEL: insert_v8i32_v2i32_2:
 ; VLA:       # %bb.0:
-; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vle32.v v8, (a0)
 ; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLA-NEXT:    vle32.v v10, (a1)
-; VLA-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
-; VLA-NEXT:    vslideup.vi v8, v10, 2
+; VLA-NEXT:    vle32.v v8, (a1)
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vse32.v v8, (a0)
+; VLA-NEXT:    vle32.v v10, (a0)
+; VLA-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; VLA-NEXT:    vslideup.vi v10, v8, 2
+; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; VLA-NEXT:    vse32.v v10, (a0)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v8i32_v2i32_2:
@@ -314,13 +314,12 @@ define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 define void @insert_v8i32_v2i32_6(ptr %vp, ptr %svp) {
 ; VLA-LABEL: insert_v8i32_v2i32_6:
 ; VLA:       # %bb.0:
-; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vle32.v v8, (a0)
 ; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLA-NEXT:    vle32.v v10, (a1)
+; VLA-NEXT:    vle32.v v8, (a1)
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vslideup.vi v8, v10, 6
-; VLA-NEXT:    vse32.v v8, (a0)
+; VLA-NEXT:    vle32.v v10, (a0)
+; VLA-NEXT:    vslideup.vi v10, v8, 6
+; VLA-NEXT:    vse32.v v10, (a0)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v8i32_v2i32_6:
@@ -468,20 +467,17 @@ define void @insert_v8i1_v4i1_0(ptr %vp, ptr %svp) {
 ; CHECK-LABEL: insert_v8i1_v4i1_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vlm.v v8, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; CHECK-NEXT:    vmv.v.v v9, v8
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v9, 0
+; CHECK-NEXT:    vmsne.vi v8, v8, 0
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, ptr %vp
@@ -495,19 +491,16 @@ define void @insert_v8i1_v4i1_4(ptr %vp, ptr %svp) {
 ; CHECK-LABEL: insert_v8i1_v4i1_4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vlm.v v8, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 4
-; CHECK-NEXT:    vmsne.vi v8, v9, 0
+; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    vmsne.vi v8, v8, 0
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, ptr %vp
@@ -546,31 +539,28 @@ define <vscale x 2 x i16> @insert_nxv2i16_v2i16_2(<vscale x 2 x i16> %v, ptr %sv
 define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, ptr %svp) {
 ; VLA-LABEL: insert_nxv2i1_v4i1_0:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; VLA-NEXT:    vmv.v.i v8, 0
+; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLA-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; VLA-NEXT:    vlm.v v8, (a0)
-; VLA-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; VLA-NEXT:    vmv.v.i v9, 0
-; VLA-NEXT:    vmerge.vim v9, v9, 1, v0
-; VLA-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; VLA-NEXT:    vmv.v.i v10, 0
-; VLA-NEXT:    vmv1r.v v0, v8
+; VLA-NEXT:    vlm.v v0, (a0)
 ; VLA-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
-; VLA-NEXT:    vmerge.vim v9, v10, 1, v0
+; VLA-NEXT:    vmerge.vim v8, v9, 1, v0
 ; VLA-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; VLA-NEXT:    vmsne.vi v0, v9, 0
+; VLA-NEXT:    vmsne.vi v0, v8, 0
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_nxv2i1_v4i1_0:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; VLS-NEXT:    vlm.v v8, (a0)
-; VLS-NEXT:    vmv.v.i v9, 0
-; VLS-NEXT:    vmerge.vim v10, v9, 1, v0
-; VLS-NEXT:    vmv1r.v v0, v8
+; VLS-NEXT:    vmv.v.i v8, 0
+; VLS-NEXT:    vmerge.vim v9, v8, 1, v0
+; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
-; VLS-NEXT:    vmerge.vim v10, v9, 1, v0
+; VLS-NEXT:    vmerge.vim v9, v8, 1, v0
 ; VLS-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; VLS-NEXT:    vmsne.vi v0, v10, 0
+; VLS-NEXT:    vmsne.vi v0, v9, 0
 ; VLS-NEXT:    ret
   %sv = load <4 x i1>, ptr %svp
   %c = call <vscale x 2 x i1> @llvm.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1> %v, <4 x i1> %sv, i64 0)
@@ -609,11 +599,11 @@ define void @insert_v2i64_nxv16i64(ptr %psv0, ptr %psv1, ptr %out) {
 ; VLA-LABEL: insert_v2i64_nxv16i64:
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; VLA-NEXT:    vle64.v v8, (a0)
-; VLA-NEXT:    vle64.v v16, (a1)
+; VLA-NEXT:    vle64.v v8, (a1)
+; VLA-NEXT:    vle64.v v16, (a0)
 ; VLA-NEXT:    vsetivli zero, 6, e64, m8, tu, ma
-; VLA-NEXT:    vslideup.vi v8, v16, 4
-; VLA-NEXT:    vs8r.v v8, (a2)
+; VLA-NEXT:    vslideup.vi v16, v8, 4
+; VLA-NEXT:    vs8r.v v16, (a2)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v2i64_nxv16i64:
@@ -757,8 +747,8 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32VLA-NEXT:    vle64.v v8, (a0)
 ; RV32VLA-NEXT:    addi a0, sp, 128
 ; RV32VLA-NEXT:    csrr a2, vlenb
-; RV32VLA-NEXT:    addi a3, sp, 64
 ; RV32VLA-NEXT:    slli a2, a2, 3
+; RV32VLA-NEXT:    addi a3, sp, 64
 ; RV32VLA-NEXT:    vse64.v v8, (a0)
 ; RV32VLA-NEXT:    add a0, a3, a2
 ; RV32VLA-NEXT:    vl8re64.v v8, (a0)
@@ -794,8 +784,8 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLA-NEXT:    vle64.v v8, (a0)
 ; RV64VLA-NEXT:    addi a0, sp, 128
 ; RV64VLA-NEXT:    csrr a2, vlenb
-; RV64VLA-NEXT:    addi a3, sp, 64
 ; RV64VLA-NEXT:    slli a2, a2, 3
+; RV64VLA-NEXT:    addi a3, sp, 64
 ; RV64VLA-NEXT:    vse64.v v8, (a0)
 ; RV64VLA-NEXT:    add a0, a3, a2
 ; RV64VLA-NEXT:    vl8re64.v v8, (a0)
@@ -828,13 +818,13 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32VLS-NEXT:    vl1re64.v v8, (a0)
 ; RV32VLS-NEXT:    addi a0, sp, 128
 ; RV32VLS-NEXT:    vs1r.v v8, (a0)
-; RV32VLS-NEXT:    addi a0, sp, 192
-; RV32VLS-NEXT:    vl8re64.v v8, (a0)
 ; RV32VLS-NEXT:    addi a0, sp, 64
+; RV32VLS-NEXT:    vl8re64.v v8, (a0)
+; RV32VLS-NEXT:    addi a0, sp, 192
 ; RV32VLS-NEXT:    vl8re64.v v16, (a0)
 ; RV32VLS-NEXT:    addi a0, a1, 128
-; RV32VLS-NEXT:    vs8r.v v8, (a0)
-; RV32VLS-NEXT:    vs8r.v v16, (a1)
+; RV32VLS-NEXT:    vs8r.v v16, (a0)
+; RV32VLS-NEXT:    vs8r.v v8, (a1)
 ; RV32VLS-NEXT:    addi sp, s0, -80
 ; RV32VLS-NEXT:    .cfi_def_cfa sp, 80
 ; RV32VLS-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
@@ -860,13 +850,13 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLS-NEXT:    vl1re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 128
 ; RV64VLS-NEXT:    vs1r.v v8, (a0)
-; RV64VLS-NEXT:    addi a0, sp, 192
-; RV64VLS-NEXT:    vl8re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 64
+; RV64VLS-NEXT:    vl8re64.v v8, (a0)
+; RV64VLS-NEXT:    addi a0, sp, 192
 ; RV64VLS-NEXT:    vl8re64.v v16, (a0)
 ; RV64VLS-NEXT:    addi a0, a1, 128
-; RV64VLS-NEXT:    vs8r.v v8, (a0)
-; RV64VLS-NEXT:    vs8r.v v16, (a1)
+; RV64VLS-NEXT:    vs8r.v v16, (a0)
+; RV64VLS-NEXT:    vs8r.v v8, (a1)
 ; RV64VLS-NEXT:    addi sp, s0, -80
 ; RV64VLS-NEXT:    .cfi_def_cfa sp, 80
 ; RV64VLS-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload

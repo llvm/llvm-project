@@ -21,19 +21,20 @@ define i32 @signed(i32 %0, ptr %1) {
 define i32 @unsigned(i32 %0, ptr %1) {
 ; CHECK-LABEL: unsigned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a2, a0, 32
-; CHECK-NEXT:    lui a3, 699051
-; CHECK-NEXT:    addi a3, a3, -1365
-; CHECK-NEXT:    slli a4, a3, 32
-; CHECK-NEXT:    mulhu a2, a2, a4
-; CHECK-NEXT:    srli a2, a2, 36
-; CHECK-NEXT:    slli a4, a2, 5
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    sub a2, a2, a4
+; CHECK-NEXT:    lui a2, 699051
+; CHECK-NEXT:    addi a2, a2, -1365
+; CHECK-NEXT:    slli a3, a0, 32
+; CHECK-NEXT:    slli a4, a2, 32
+; CHECK-NEXT:    mulhu a3, a3, a4
 ; CHECK-NEXT:    srliw a4, a0, 3
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    mulw a0, a4, a3
-; CHECK-NEXT:    sw a2, 0(a1)
+; CHECK-NEXT:    srli a3, a3, 36
+; CHECK-NEXT:    mulw a2, a4, a2
+; CHECK-NEXT:    slli a4, a3, 5
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    sub a3, a3, a4
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    sw a0, 0(a1)
+; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
   %rem = urem i32 %0, 24
   store i32 %rem, ptr %1, align 4
@@ -46,9 +47,9 @@ define i32 @signed_div_first(i32 %0, ptr %1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sraiw a2, a0, 31
 ; CHECK-NEXT:    srliw a2, a2, 24
-; CHECK-NEXT:    add a3, a0, a2
-; CHECK-NEXT:    sraiw a2, a3, 8
-; CHECK-NEXT:    andi a3, a3, -256
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    andi a3, a2, -256
+; CHECK-NEXT:    sraiw a2, a2, 8
 ; CHECK-NEXT:    sub a0, a0, a3
 ; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    mv a0, a2
@@ -62,11 +63,11 @@ define i32 @signed_div_first(i32 %0, ptr %1) {
 define i32 @unsigned_div_first(i32 %0, ptr %1) {
 ; CHECK-LABEL: unsigned_div_first:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a2, a0, 32
-; CHECK-NEXT:    lui a3, 699051
-; CHECK-NEXT:    addi a3, a3, -1365
-; CHECK-NEXT:    slli a3, a3, 32
-; CHECK-NEXT:    mulhu a2, a2, a3
+; CHECK-NEXT:    lui a2, 699051
+; CHECK-NEXT:    addi a2, a2, -1365
+; CHECK-NEXT:    slli a3, a0, 32
+; CHECK-NEXT:    slli a2, a2, 32
+; CHECK-NEXT:    mulhu a2, a3, a2
 ; CHECK-NEXT:    srli a2, a2, 36
 ; CHECK-NEXT:    slli a3, a2, 5
 ; CHECK-NEXT:    slli a4, a2, 3

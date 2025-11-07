@@ -25,9 +25,9 @@ define dso_local void @_Z3fooPKcz(ptr noundef %0, ...) "frame-pointer"="all" {
 ; RV64V-NEXT:    sd a2, 16(s0)
 ; RV64V-NEXT:    sd a3, 24(s0)
 ; RV64V-NEXT:    sd a4, 32(s0)
+; RV64V-NEXT:    addi a1, s0, 8
 ; RV64V-NEXT:    sd a0, -32(s0)
-; RV64V-NEXT:    addi a0, s0, 8
-; RV64V-NEXT:    sd a0, -40(s0)
+; RV64V-NEXT:    sd a1, -40(s0)
 ; RV64V-NEXT:    addi sp, s0, -432
 ; RV64V-NEXT:    .cfi_def_cfa sp, 496
 ; RV64V-NEXT:    ld ra, 424(sp) # 8-byte Folded Reload

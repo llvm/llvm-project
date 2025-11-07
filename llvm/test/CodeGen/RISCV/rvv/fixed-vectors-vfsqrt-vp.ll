@@ -387,12 +387,12 @@ define <32 x double> @vfsqrt_vv_v32f64(<32 x double> %va, <32 x i1> %m, i32 zero
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:  .LBB26_2:
+; CHECK-NEXT:    addi a2, a0, -16
+; CHECK-NEXT:    sltu a0, a0, a2
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v16, v16, v0.t
@@ -410,12 +410,12 @@ define <32 x double> @vfsqrt_vv_v32f64_unmasked(<32 x double> %va, i32 zeroext %
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:  .LBB27_2:
+; CHECK-NEXT:    addi a2, a0, -16
+; CHECK-NEXT:    sltu a0, a0, a2
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v16, v16
 ; CHECK-NEXT:    ret

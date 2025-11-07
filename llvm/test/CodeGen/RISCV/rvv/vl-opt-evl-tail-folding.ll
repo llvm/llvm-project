@@ -20,9 +20,9 @@ define void @evl_tail_folded(ptr %p, ptr %q) {
 ; CHECK-NEXT:    vsetvli a6, a6, e64, m2, ta, ma
 ; CHECK-NEXT:    add t0, a0, a7
 ; CHECK-NEXT:    vle64.v v8, (t0)
-; CHECK-NEXT:    sub a4, a4, a3
-; CHECK-NEXT:    add a7, a1, a7
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    add a7, a1, a7
+; CHECK-NEXT:    sub a4, a4, a3
 ; CHECK-NEXT:    vse64.v v8, (a7)
 ; CHECK-NEXT:    add a2, a2, a6
 ; CHECK-NEXT:    bnez a4, .LBB0_1

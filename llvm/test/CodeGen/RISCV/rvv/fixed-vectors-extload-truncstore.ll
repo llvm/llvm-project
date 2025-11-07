@@ -6,8 +6,8 @@ define <2 x i16> @sextload_v2i1_v2i16(ptr %x) {
 ; CHECK-LABEL: sextload_v2i1_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
   %y = load <2 x i1>, ptr %x

@@ -10,13 +10,13 @@ define fastcc void @search_tx_type() #0 {
 ; CHECK:       # %bb.0: # %._crit_edge.i
 ; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    lbu a1, 0(zero)
-; CHECK-NEXT:    lw a0, 0(zero)
 ; CHECK-NEXT:    lh a2, 0(zero)
+; CHECK-NEXT:    lw a0, 0(zero)
 ; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    srai a3, a0, 63
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a1, a1, a2
 ; CHECK-NEXT:    andi a2, a1, 1
+; CHECK-NEXT:    srai a3, a0, 63
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    or a3, a3, a0
 ; CHECK-NEXT:    or a2, a2, a3

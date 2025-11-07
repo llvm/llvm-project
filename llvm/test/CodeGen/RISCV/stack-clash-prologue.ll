@@ -635,15 +635,15 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV64I-NEXT:    slli sp, a2, 15
 ; RV64I-NEXT:    mv s1, sp
 ; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    lui a2, 8
 ; RV64I-NEXT:    add a2, s1, a2
-; RV64I-NEXT:    add a1, a2, a1
-; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    sw a2, 0(a1)
+; RV64I-NEXT:    add a1, a2, a1
 ; RV64I-NEXT:    addi a0, a0, 15
+; RV64I-NEXT:    li a2, 1
 ; RV64I-NEXT:    andi a0, a0, -16
+; RV64I-NEXT:    sw a2, 0(a1)
 ; RV64I-NEXT:    sub a0, sp, a0
 ; RV64I-NEXT:    andi a0, a0, -2048
 ; RV64I-NEXT:    lui a1, 1
@@ -696,9 +696,9 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV32I-NEXT:    slli a1, a1, 2
 ; RV32I-NEXT:    lui a2, 8
 ; RV32I-NEXT:    add a2, s1, a2
+; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    add a1, a2, a1
 ; RV32I-NEXT:    li a2, 1
-; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sw a2, 0(a1)
 ; RV32I-NEXT:    sub a0, sp, a0

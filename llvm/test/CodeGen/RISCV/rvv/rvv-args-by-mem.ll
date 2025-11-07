@@ -5,12 +5,12 @@ define <vscale x 16 x i32> @bar(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, 
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld a0, 0(sp)
-; CHECK-NEXT:    ld a1, 8(sp)
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
-; CHECK-NEXT:    vl8re32.v v0, (a1)
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    ld a0, 8(sp)
+; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v24
-; CHECK-NEXT:    vadd.vv v16, v16, v0
+; CHECK-NEXT:    vl8re32.v v24, (a0)
+; CHECK-NEXT:    vadd.vv v16, v16, v24
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %s0 = add <vscale x 16 x i32> %w, %y

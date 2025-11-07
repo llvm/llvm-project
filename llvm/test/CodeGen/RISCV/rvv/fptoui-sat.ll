@@ -154,13 +154,14 @@ define <vscale x 8 x i32> @test_signed_v8f64_v8i32(<vscale x 8 x double> %f) {
 define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 ; CHECK-LABEL: test_signed_v4f64_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmfne.vv v0, v8, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnclipu.wi v8, v12, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
+; CHECK-NEXT:    vnclipu.wi v14, v12, 0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vmfne.vv v0, v8, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v14, 0, v0
 ; CHECK-NEXT:    ret
     %x = call <vscale x 4 x i16> @llvm.fptoui.sat.nxv4f64.nxv4i16(<vscale x 4 x double> %f)
     ret <vscale x 4 x i16> %x
@@ -169,13 +170,14 @@ define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK-LABEL: test_signed_v8f64_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vmfne.vv v0, v8, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.xu.f.w v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vnclipu.wi v8, v16, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
+; CHECK-NEXT:    vnclipu.wi v20, v16, 0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmfne.vv v0, v8, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v20, 0, v0
 ; CHECK-NEXT:    ret
     %x = call <vscale x 8 x i16> @llvm.fptoui.sat.nxv8f64.nxv8i16(<vscale x 8 x double> %f)
     ret <vscale x 8 x i16> %x

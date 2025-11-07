@@ -249,9 +249,9 @@ define void @setge_vx_v8i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-LABEL: setge_vx_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmsle.vv v8, v9, v8
+; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vmsle.vv v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
@@ -317,9 +317,9 @@ define void @setuge_vx_v128i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v16, a1
-; CHECK-NEXT:    vmsleu.vv v24, v16, v8
+; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    vmsleu.vv v24, v8, v16
 ; CHECK-NEXT:    vsm.v v24, (a2)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
@@ -433,9 +433,9 @@ define void @setle_xv_v16i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-LABEL: setle_xv_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmsle.vv v8, v9, v8
+; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vmsle.vv v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a2)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
@@ -501,9 +501,9 @@ define void @setule_xv_v8i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-LABEL: setule_xv_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmsleu.vv v8, v9, v8
+; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vmsleu.vv v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x

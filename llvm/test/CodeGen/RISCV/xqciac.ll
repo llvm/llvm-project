@@ -305,10 +305,10 @@ define dso_local i64 @shladd64(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; RV32IMXQCIAC-LABEL: shladd64:
 ; RV32IMXQCIAC:       # %bb.0: # %entry
 ; RV32IMXQCIAC-NEXT:    srli a4, a2, 1
-; RV32IMXQCIAC-NEXT:    qc.shladd a0, a2, a0, 31
-; RV32IMXQCIAC-NEXT:    slli a2, a2, 31
 ; RV32IMXQCIAC-NEXT:    qc.shladd a3, a3, a4, 31
-; RV32IMXQCIAC-NEXT:    sltu a2, a0, a2
+; RV32IMXQCIAC-NEXT:    slli a4, a2, 31
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a2, a0, 31
+; RV32IMXQCIAC-NEXT:    sltu a2, a0, a4
 ; RV32IMXQCIAC-NEXT:    add a1, a1, a3
 ; RV32IMXQCIAC-NEXT:    add a1, a1, a2
 ; RV32IMXQCIAC-NEXT:    ret
@@ -316,10 +316,10 @@ define dso_local i64 @shladd64(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; RV32IZBAMXQCIAC-LABEL: shladd64:
 ; RV32IZBAMXQCIAC:       # %bb.0: # %entry
 ; RV32IZBAMXQCIAC-NEXT:    srli a4, a2, 1
-; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a2, a0, 31
-; RV32IZBAMXQCIAC-NEXT:    slli a2, a2, 31
 ; RV32IZBAMXQCIAC-NEXT:    qc.shladd a3, a3, a4, 31
-; RV32IZBAMXQCIAC-NEXT:    sltu a2, a0, a2
+; RV32IZBAMXQCIAC-NEXT:    slli a4, a2, 31
+; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a2, a0, 31
+; RV32IZBAMXQCIAC-NEXT:    sltu a2, a0, a4
 ; RV32IZBAMXQCIAC-NEXT:    add a1, a1, a3
 ; RV32IZBAMXQCIAC-NEXT:    add a1, a1, a2
 ; RV32IZBAMXQCIAC-NEXT:    ret
@@ -406,12 +406,12 @@ entry:
 define dso_local i64 @shladdc1c264(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; RV32IM-LABEL: shladdc1c264:
 ; RV32IM:       # %bb.0: # %entry
-; RV32IM-NEXT:    slli a1, a0, 23
-; RV32IM-NEXT:    srli a0, a2, 12
+; RV32IM-NEXT:    srli a1, a2, 12
 ; RV32IM-NEXT:    slli a3, a3, 20
-; RV32IM-NEXT:    or a3, a3, a0
+; RV32IM-NEXT:    slli a4, a0, 23
+; RV32IM-NEXT:    or a1, a3, a1
 ; RV32IM-NEXT:    slli a0, a2, 20
-; RV32IM-NEXT:    add a1, a1, a3
+; RV32IM-NEXT:    add a1, a4, a1
 ; RV32IM-NEXT:    ret
 ;
 ; RV32IMXQCIAC-LABEL: shladdc1c264:
@@ -494,10 +494,10 @@ define i32 @testmuliaddnegimm(i32 %a) {
 define i32 @add_shl_OneUse_1(i32 %x) {
 ; RV32IM-LABEL: add_shl_OneUse_1:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    ori a1, a0, 1
-; RV32IM-NEXT:    slli a0, a0, 4
-; RV32IM-NEXT:    ori a0, a0, 16
-; RV32IM-NEXT:    add a0, a0, a1
+; RV32IM-NEXT:    slli a1, a0, 4
+; RV32IM-NEXT:    ori a0, a0, 1
+; RV32IM-NEXT:    ori a1, a1, 16
+; RV32IM-NEXT:    add a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
 ; RV32IMXQCIAC-LABEL: add_shl_OneUse_1:
@@ -520,10 +520,10 @@ define i32 @add_shl_OneUse_1(i32 %x) {
 define i32 @add_shl_OneUse_2(i32 %x) {
 ; RV32IM-LABEL: add_shl_OneUse_2:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    ori a1, a0, 1
-; RV32IM-NEXT:    slli a0, a0, 10
-; RV32IM-NEXT:    ori a0, a0, 1024
-; RV32IM-NEXT:    add a0, a0, a1
+; RV32IM-NEXT:    slli a1, a0, 10
+; RV32IM-NEXT:    ori a0, a0, 1
+; RV32IM-NEXT:    ori a1, a1, 1024
+; RV32IM-NEXT:    add a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
 ; RV32IMXQCIAC-LABEL: add_shl_OneUse_2:

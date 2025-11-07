@@ -236,16 +236,16 @@ define signext i32 @test13(i32 signext %x) nounwind {
 define signext i32 @test14(i32 signext %x) nounwind {
 ; RV32-LABEL: test14:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 10
 ; RV32-NEXT:    lui a1, 8
+; RV32-NEXT:    slli a0, a0, 10
 ; RV32-NEXT:    addi a1, a1, -1027
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test14:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slliw a0, a0, 10
 ; RV64-NEXT:    lui a1, 8
+; RV64-NEXT:    slliw a0, a0, 10
 ; RV64-NEXT:    addi a1, a1, -1027
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
@@ -259,16 +259,16 @@ define signext i32 @test14(i32 signext %x) nounwind {
 define signext i32 @test15(i32 signext %x) nounwind {
 ; RV32-LABEL: test15:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 10
 ; RV32-NEXT:    lui a1, 8
+; RV32-NEXT:    slli a0, a0, 10
 ; RV32-NEXT:    addi a1, a1, -515
 ; RV32-NEXT:    xor a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test15:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slliw a0, a0, 10
 ; RV64-NEXT:    lui a1, 8
+; RV64-NEXT:    slliw a0, a0, 10
 ; RV64-NEXT:    addi a1, a1, -515
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    ret

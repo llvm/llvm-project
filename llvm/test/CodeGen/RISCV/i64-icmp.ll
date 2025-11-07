@@ -720,8 +720,8 @@ define i64 @icmp_eq_zext_inreg_small_constant(i64 %a) nounwind {
 define i64 @icmp_eq_zext_inreg_large_constant(i64 %a) nounwind {
 ; RV64I-LABEL: icmp_eq_zext_inreg_large_constant:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    lui a1, 563901
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    addi a1, a1, -529
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    seqz a0, a0

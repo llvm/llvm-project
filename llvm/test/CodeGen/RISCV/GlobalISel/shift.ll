@@ -57,8 +57,8 @@ define i16 @test_lshr_i48_2(i48 %x, i48 %y) {
 ;
 ; RV64-LABEL: test_lshr_i48_2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a1, a1, 15
 ; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    andi a1, a1, 15
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    srl a0, a0, a1
 ; RV64-NEXT:    ret
@@ -110,8 +110,8 @@ define i32 @test_fshl_i32(i32 %x, i32 %_, i32 %y) {
 ; RV32-LABEL: test_fshl_i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    not a3, a2
-; RV32-NEXT:    sll a0, a0, a2
 ; RV32-NEXT:    srli a1, a1, 1
+; RV32-NEXT:    sll a0, a0, a2
 ; RV32-NEXT:    srl a1, a1, a3
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
@@ -119,8 +119,8 @@ define i32 @test_fshl_i32(i32 %x, i32 %_, i32 %y) {
 ; RV64-LABEL: test_fshl_i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    not a3, a2
-; RV64-NEXT:    sllw a0, a0, a2
 ; RV64-NEXT:    srliw a1, a1, 1
+; RV64-NEXT:    sllw a0, a0, a2
 ; RV64-NEXT:    srlw a1, a1, a3
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
