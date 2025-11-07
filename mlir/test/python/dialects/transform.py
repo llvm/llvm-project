@@ -78,6 +78,7 @@ def testSequenceOp(module: Module):
     # CHECK:   yield %[[ARG0]] : !transform.any_op
     # CHECK: }
 
+
 @run
 def testNestedSequenceOp(module: Module):
     sequence = transform.SequenceOp(
@@ -134,53 +135,54 @@ def testSequenceOpWithExtras(module: Module):
     # CHECK: transform.sequence failures(propagate)
     # CHECK: ^{{.*}}(%{{.*}}: !transform.any_op, %{{.*}}: !transform.any_op, %{{.*}}: !transform.op<"foo.bar">):
 
+
 @run
 def testNestedSequenceOpWithExtras(module: Module):
-  sequence = transform.SequenceOp(
+    sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
         transform.AnyOpType.get(),
         [transform.AnyOpType.get(), transform.OperationType.get("foo.bar")],
     )
-  with InsertionPoint(sequence.body):
-    nested = transform.SequenceOp(
+    with InsertionPoint(sequence.body):
+        nested = transform.SequenceOp(
             transform.FailurePropagationMode.Propagate,
             [],
             sequence.bodyTarget,
             sequence.bodyExtraArgs,
         )
-    with InsertionPoint(nested.body):
-      transform.YieldOp()
-    transform.YieldOp()
-  # CHECK-LABEL: TEST: testNestedSequenceOpWithExtras
-  # CHECK: transform.sequence failures(propagate)
-  # CHECK: ^{{.*}}(%[[ARG0:.*]]: !transform.any_op, %[[ARG1:.*]]: !transform.any_op, %[[ARG2:.*]]: !transform.op<"foo.bar">):
-  # CHECK:   sequence %[[ARG0]], %[[ARG1]], %[[ARG2]] : (!transform.any_op, !transform.any_op, !transform.op<"foo.bar">)
+        with InsertionPoint(nested.body):
+            transform.YieldOp()
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testNestedSequenceOpWithExtras
+    # CHECK: transform.sequence failures(propagate)
+    # CHECK: ^{{.*}}(%[[ARG0:.*]]: !transform.any_op, %[[ARG1:.*]]: !transform.any_op, %[[ARG2:.*]]: !transform.op<"foo.bar">):
+    # CHECK:   sequence %[[ARG0]], %[[ARG1]], %[[ARG2]] : (!transform.any_op, !transform.any_op, !transform.op<"foo.bar">)
 
 
 @run
 def testTransformPDLOps(module: Module):
-  withPdl = transform_pdl.WithPDLPatternsOp(transform.AnyOpType.get())
-  with InsertionPoint(withPdl.body):
-    sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.Propagate,
-        [transform.AnyOpType.get()],
-        withPdl.bodyTarget,
-    )
-    with InsertionPoint(sequence.body):
-      match = transform_pdl.PDLMatchOp(
-          transform.AnyOpType.get(), sequence.bodyTarget, "pdl_matcher"
-      )
-      transform.YieldOp(match)
-  # CHECK-LABEL: TEST: testTransformPDLOps
-  # CHECK: transform.with_pdl_patterns {
-  # CHECK: ^{{.*}}(%[[ARG0:.+]]: !transform.any_op):
-  # CHECK:   = sequence %[[ARG0]] : !transform.any_op -> !transform.any_op failures(propagate) {
-  # CHECK:   ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
-  # CHECK:     %[[RES:.+]] = pdl_match @pdl_matcher in %[[ARG1]]
-  # CHECK:     yield %[[RES]] : !transform.any_op
-  # CHECK:   }
-  # CHECK: }
+    withPdl = transform_pdl.WithPDLPatternsOp(transform.AnyOpType.get())
+    with InsertionPoint(withPdl.body):
+        sequence = transform.SequenceOp(
+            transform.FailurePropagationMode.Propagate,
+            [transform.AnyOpType.get()],
+            withPdl.bodyTarget,
+        )
+        with InsertionPoint(sequence.body):
+            match = transform_pdl.PDLMatchOp(
+                transform.AnyOpType.get(), sequence.bodyTarget, "pdl_matcher"
+            )
+            transform.YieldOp(match)
+    # CHECK-LABEL: TEST: testTransformPDLOps
+    # CHECK: transform.with_pdl_patterns {
+    # CHECK: ^{{.*}}(%[[ARG0:.+]]: !transform.any_op):
+    # CHECK:   = sequence %[[ARG0]] : !transform.any_op -> !transform.any_op failures(propagate) {
+    # CHECK:   ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
+    # CHECK:     %[[RES:.+]] = pdl_match @pdl_matcher in %[[ARG1]]
+    # CHECK:     yield %[[RES]] : !transform.any_op
+    # CHECK:   }
+    # CHECK: }
 
 
 @run
@@ -190,7 +192,8 @@ def testNamedSequenceOp(module: Module):
         "__transform_main",
         [transform.AnyOpType.get()],
         [transform.AnyOpType.get()],
-        arg_attrs = [{"transform.consumed": UnitAttr.get()}])
+        arg_attrs=[{"transform.consumed": UnitAttr.get()}],
+    )
     with InsertionPoint(named_sequence.body):
         transform.YieldOp([named_sequence.bodyTarget])
     # CHECK-LABEL: TEST: testNamedSequenceOp
@@ -201,7 +204,8 @@ def testNamedSequenceOp(module: Module):
         "other_seq",
         [transform.AnyOpType.get()],
         [transform.AnyOpType.get()],
-        arg_attrs = [{"transform.consumed": UnitAttr.get()}])
+        arg_attrs=[{"transform.consumed": UnitAttr.get()}],
+    )
     with InsertionPoint(named_sequence.body):
         transform.yield_([named_sequence.bodyTarget])
     # CHECK:   transform.named_sequence @other_seq(%[[ARG1:.+]]: !transform.any_op {transform.consumed}) -> !transform.any_op {
@@ -210,31 +214,31 @@ def testNamedSequenceOp(module: Module):
 
 @run
 def testGetParentOp(module: Module):
-  sequence = transform.SequenceOp(
-      transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
-  )
-  with InsertionPoint(sequence.body):
-    transform.GetParentOp(
-        transform.AnyOpType.get(),
-        sequence.bodyTarget,
-        isolated_from_above=True,
-        nth_parent=2,
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
-    transform.get_parent_op(
-        transform.AnyOpType.get(),
-        sequence.bodyTarget,
-        isolated_from_above=True,
-        nth_parent=2,
-        allow_empty_results=True,
-        op_name="func.func",
-        deduplicate=True,
-    )
-    transform.YieldOp()
-  # CHECK-LABEL: TEST: testGetParentOp
-  # CHECK: transform.sequence
-  # CHECK: ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
-  # CHECK:   = get_parent_op %[[ARG1]] {isolated_from_above, nth_parent = 2 : i64}
-  # CHECK:   = get_parent_op %[[ARG1]] {allow_empty_results, deduplicate, isolated_from_above, nth_parent = 2 : i64, op_name = "func.func"}
+    with InsertionPoint(sequence.body):
+        transform.GetParentOp(
+            transform.AnyOpType.get(),
+            sequence.bodyTarget,
+            isolated_from_above=True,
+            nth_parent=2,
+        )
+        transform.get_parent_op(
+            transform.AnyOpType.get(),
+            sequence.bodyTarget,
+            isolated_from_above=True,
+            nth_parent=2,
+            allow_empty_results=True,
+            op_name="func.func",
+            deduplicate=True,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testGetParentOp
+    # CHECK: transform.sequence
+    # CHECK: ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
+    # CHECK:   = get_parent_op %[[ARG1]] {isolated_from_above, nth_parent = 2 : i64}
+    # CHECK:   = get_parent_op %[[ARG1]] {allow_empty_results, deduplicate, isolated_from_above, nth_parent = 2 : i64, op_name = "func.func"}
 
 
 @run
@@ -255,38 +259,46 @@ def testMergeHandlesOp(module: Module):
 
 @run
 def testApplyPatternsOpCompact(module: Module):
-  sequence = transform.SequenceOp(
-      transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
-  )
-  with InsertionPoint(sequence.body):
-    with InsertionPoint(transform.ApplyPatternsOp(sequence.bodyTarget).patterns):
-      transform.ApplyCanonicalizationPatternsOp()
-    with InsertionPoint(transform.apply_patterns(sequence.bodyTarget, apply_cse=True, max_iterations=3, max_num_rewrites=5).patterns):
-      transform.ApplyCanonicalizationPatternsOp()
-    transform.YieldOp()
-    # CHECK-LABEL: TEST: testApplyPatternsOpCompact
-    # CHECK: apply_patterns to
-    # CHECK: transform.apply_patterns.canonicalization
-    # CHECK: } : !transform.any_op
-    # CHECK: apply_patterns to
-    # CHECK: transform.apply_patterns.canonicalization
-    # CHECK: } {apply_cse, max_iterations = 3 : i64, max_num_rewrites = 5 : i64} : !transform.any_op
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        with InsertionPoint(transform.ApplyPatternsOp(sequence.bodyTarget).patterns):
+            transform.ApplyCanonicalizationPatternsOp()
+        with InsertionPoint(
+            transform.apply_patterns(
+                sequence.bodyTarget,
+                apply_cse=True,
+                max_iterations=3,
+                max_num_rewrites=5,
+            ).patterns
+        ):
+            transform.ApplyCanonicalizationPatternsOp()
+        transform.YieldOp()
+        # CHECK-LABEL: TEST: testApplyPatternsOpCompact
+        # CHECK: apply_patterns to
+        # CHECK: transform.apply_patterns.canonicalization
+        # CHECK: } : !transform.any_op
+        # CHECK: apply_patterns to
+        # CHECK: transform.apply_patterns.canonicalization
+        # CHECK: } {apply_cse, max_iterations = 3 : i64, max_num_rewrites = 5 : i64} : !transform.any_op
 
 
 @run
 def testApplyPatternsOpWithType(module: Module):
-  sequence = transform.SequenceOp(
-      transform.FailurePropagationMode.Propagate, [],
-      transform.OperationType.get('test.dummy')
-  )
-  with InsertionPoint(sequence.body):
-    with InsertionPoint(transform.ApplyPatternsOp(sequence.bodyTarget).patterns):
-      transform.ApplyCanonicalizationPatternsOp()
-    transform.YieldOp()
-    # CHECK-LABEL: TEST: testApplyPatternsOp
-    # CHECK: apply_patterns to
-    # CHECK: transform.apply_patterns.canonicalization
-    # CHECK: !transform.op<"test.dummy">
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("test.dummy"),
+    )
+    with InsertionPoint(sequence.body):
+        with InsertionPoint(transform.ApplyPatternsOp(sequence.bodyTarget).patterns):
+            transform.ApplyCanonicalizationPatternsOp()
+        transform.YieldOp()
+        # CHECK-LABEL: TEST: testApplyPatternsOp
+        # CHECK: apply_patterns to
+        # CHECK: transform.apply_patterns.canonicalization
+        # CHECK: !transform.op<"test.dummy">
 
 
 @run
