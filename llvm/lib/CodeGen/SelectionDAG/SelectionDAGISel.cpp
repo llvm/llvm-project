@@ -2448,7 +2448,7 @@ bool SelectionDAGISel::IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
   // a cycle in the scheduling graph.
 
   // If the node has glue, walk down the graph to the "lowest" node in the
-  // glueged set.
+  // glued set.
   EVT VT = Root->getValueType(Root->getNumValues()-1);
   while (VT == MVT::Glue) {
     SDNode *GU = Root->getGluedUser();
