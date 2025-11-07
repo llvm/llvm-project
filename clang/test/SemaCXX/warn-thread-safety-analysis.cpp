@@ -3590,14 +3590,10 @@ void requireDecl(RelockableScope &scope) {
 struct foo
 {
   Mutex mu;
-  // expected-note@+1{{see attribute on parameter here}}
   void require(RelockableScope &scope EXCLUSIVE_LOCKS_REQUIRED(mu));
   void callRequire(){
     RelockableScope scope(&mu);
-    // TODO: False positive due to incorrect parsing of parameter attribute arguments.
     require(scope);
-    // expected-warning@-1{{calling function 'require' requires holding mutex 'mu' exclusively}}
-    // expected-warning@-2{{mutex managed by 'scope' is 'mu' instead of 'mu'}}
   }
 };
 
