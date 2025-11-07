@@ -60,7 +60,7 @@ def main(
        new comment containing the failure information and any possible premerge
        advisor findings.
     3. There has been a previous failure and the job passes - We update the
-       existing comment by passing its ID anda passed message to the
+       existing comment by passing its ID and a passed message to the
        issue-write workflow.
     4. There has been a previous failure and the job fails - We update the
        existing comment in the same manner as above, but generate the comment
