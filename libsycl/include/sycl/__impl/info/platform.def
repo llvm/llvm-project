@@ -1,0 +1,8 @@
+#ifndef __SYCL_PARAM_TRAITS_SPEC
+static_assert(false, "__SYCL_PARAM_TRAITS_SPEC is required but not defined");
+#endif
+
+// 4.6.2.4. Information descriptors
+__SYCL_PARAM_TRAITS_SPEC(platform, version, std::string, OL_PLATFORM_INFO_VERSION)
+__SYCL_PARAM_TRAITS_SPEC(platform, name, std::string, OL_PLATFORM_INFO_NAME)
+__SYCL_PARAM_TRAITS_SPEC(platform, vendor, std::string, OL_PLATFORM_INFO_VENDOR_NAME)

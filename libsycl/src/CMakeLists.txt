@@ -2,10 +2,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes/cmake/
 include(WarningFlags)
 
 function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
-  if (NOT LLVM_ENABLE_PIC)
-    message( FATAL_ERROR "Position-Independent Code generation is required for libsycl shared library" )
-  endif()
-
   cmake_parse_arguments(ARG "" "" "COMPILE_OPTIONS;SOURCES" ${ARGN})
 
   add_library(${LIB_OBJ_NAME} OBJECT ${ARG_SOURCES})
@@ -20,6 +16,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
       ${LIBSYCL_BUILD_INCLUDE_DIR}
+      ${CMAKE_CURRENT_BINARY_DIR}/../../offload/liboffload/API
   )
 
   add_library(${LIB_TARGET_NAME} SHARED
@@ -27,6 +24,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
 
   add_dependencies(${LIB_OBJ_NAME}
     sycl-headers
+    LLVMOffload
   )
 
   set_target_properties(${LIB_TARGET_NAME} PROPERTIES LINKER_LANGUAGE CXX)
@@ -49,7 +47,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
     target_compile_options(${LIB_OBJ_NAME} PUBLIC /EHsc)
   else()
     target_compile_options(${LIB_OBJ_NAME} PUBLIC
-                           -fvisibility=hidden -fvisibility-inlines-hidden)
+                           -fvisibility=hidden -fvisibility-inlines-hidden -fPIC)
 
     if (UNIX AND NOT APPLE)
       set(linker_script "${CMAKE_CURRENT_SOURCE_DIR}/ld-version-script.txt")
@@ -65,6 +63,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
     PRIVATE
       ${CMAKE_DL_LIBS}
       ${CMAKE_THREAD_LIBS_INIT}
+      LLVMOffload
   )
 
   set_target_properties(${LIB_TARGET_NAME} PROPERTIES
@@ -74,22 +73,16 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
 endfunction(add_sycl_rt_library)
 
 set(LIBSYCL_SOURCES
+    "exception.cpp"
+    "exception_list.cpp"
     "platform.cpp"
+    "detail/global_objects.cpp"
+    "detail/platform_impl.cpp"
+    "detail/offload/offload_utils.cpp"
+    "detail/offload/offload_topology.cpp"
 )
 
-set(LIB_NAME "sycl")
-set(LIB_OUTPUT_NAME "${LIB_NAME}")
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  if (CMAKE_MSVC_RUNTIME_LIBRARY AND (NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$"))
-      message(FATAL_ERROR "libsycl requires a DLL version of the MSVC CRT.")
-  endif()
-  if ((NOT CMAKE_MSVC_RUNTIME_LIBRARY AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-      OR (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL"))
-    set(LIB_OUTPUT_NAME "${LIB_OUTPUT_NAME}d")
-  endif()
-endif()
-
-add_sycl_rt_library(${LIB_NAME} sycl_object ${LIB_OUTPUT_NAME}
+add_sycl_rt_library(${LIBSYCL_LIB_NAME} sycl_object ${LIBSYCL_SHARED_OUTPUT_NAME}
                     SOURCES ${LIBSYCL_SOURCES})
 
 install(TARGETS ${LIBSYCL_RT_LIBS}
