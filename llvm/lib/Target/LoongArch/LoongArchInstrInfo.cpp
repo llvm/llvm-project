@@ -378,12 +378,9 @@ bool LoongArchInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   }
 }
 
-bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
-                                              const MachineBasicBlock *MBB,
-                                              const MachineFunction &MF) const {
-  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
-    return true;
-
+bool LoongArchInstrInfo::isSafeToMove(const MachineInstr &MI,
+                                      const MachineBasicBlock *MBB,
+                                      const MachineFunction &MF) const {
   auto MII = MI.getIterator();
   auto MIE = MBB->end();
 
@@ -429,25 +426,25 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     auto MO2 = Lu32I->getOperand(2).getTargetFlags();
     if (MO0 == LoongArchII::MO_PCREL_HI && MO1 == LoongArchII::MO_PCREL_LO &&
         MO2 == LoongArchII::MO_PCREL64_LO)
-      return true;
+      return false;
     if ((MO0 == LoongArchII::MO_GOT_PC_HI || MO0 == LoongArchII::MO_LD_PC_HI ||
          MO0 == LoongArchII::MO_GD_PC_HI) &&
         MO1 == LoongArchII::MO_GOT_PC_LO && MO2 == LoongArchII::MO_GOT_PC64_LO)
-      return true;
+      return false;
     if (MO0 == LoongArchII::MO_IE_PC_HI && MO1 == LoongArchII::MO_IE_PC_LO &&
         MO2 == LoongArchII::MO_IE_PC64_LO)
-      return true;
+      return false;
     if (MO0 == LoongArchII::MO_DESC_PC_HI &&
         MO1 == LoongArchII::MO_DESC_PC_LO &&
         MO2 == LoongArchII::MO_DESC64_PC_LO)
-      return true;
+      return false;
     break;
   }
   case LoongArch::LU52I_D: {
     auto MO = MI.getOperand(2).getTargetFlags();
     if (MO == LoongArchII::MO_PCREL64_HI || MO == LoongArchII::MO_GOT_PC64_HI ||
         MO == LoongArchII::MO_IE_PC64_HI || MO == LoongArchII::MO_DESC64_PC_HI)
-      return true;
+      return false;
     break;
   }
   default:
@@ -487,7 +484,7 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
         auto MO1 = LoongArchII::getDirectFlags(SecondOp->getOperand(2));
         auto MO2 = LoongArchII::getDirectFlags(Ld->getOperand(2));
         if (MO1 == LoongArchII::MO_DESC_PC_LO && MO2 == LoongArchII::MO_DESC_LD)
-          return true;
+          return false;
         break;
       }
       if (SecondOp == MIE ||
@@ -496,40 +493,52 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       auto MO1 = LoongArchII::getDirectFlags(SecondOp->getOperand(2));
       if (MO0 == LoongArchII::MO_PCREL_HI && SecondOp->getOpcode() == AddiOp &&
           MO1 == LoongArchII::MO_PCREL_LO)
-        return true;
+        return false;
       if (MO0 == LoongArchII::MO_GOT_PC_HI && SecondOp->getOpcode() == LdOp &&
           MO1 == LoongArchII::MO_GOT_PC_LO)
-        return true;
+        return false;
       if ((MO0 == LoongArchII::MO_LD_PC_HI ||
            MO0 == LoongArchII::MO_GD_PC_HI) &&
           SecondOp->getOpcode() == AddiOp && MO1 == LoongArchII::MO_GOT_PC_LO)
-        return true;
+        return false;
       break;
     }
     case LoongArch::ADDI_W:
     case LoongArch::ADDI_D: {
       auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
       if (MO == LoongArchII::MO_PCREL_LO || MO == LoongArchII::MO_GOT_PC_LO)
-        return true;
+        return false;
       break;
     }
     case LoongArch::LD_W:
     case LoongArch::LD_D: {
       auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
       if (MO == LoongArchII::MO_GOT_PC_LO)
-        return true;
+        return false;
       break;
     }
     case LoongArch::PseudoDESC_CALL: {
       auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
       if (MO == LoongArchII::MO_DESC_CALL)
-        return true;
+        return false;
       break;
     }
     default:
       break;
     }
   }
+
+  return true;
+}
+
+bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                              const MachineBasicBlock *MBB,
+                                              const MachineFunction &MF) const {
+  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
+    return true;
+
+  if (!isSafeToMove(MI, MBB, MF))
+    return true;
 
   return false;
 }
