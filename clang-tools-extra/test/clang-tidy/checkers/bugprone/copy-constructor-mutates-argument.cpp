@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cert-oop58-cpp %t
+// RUN: %check_clang_tidy %s bugprone-copy-constructor-mutates-argument %t
 
 // Example test cases from CERT rule
 // https://wiki.sei.cmu.edu/confluence/display/cplusplus/OOP58-CPP.+Copy+operations+must+not+mutate+the+source+object

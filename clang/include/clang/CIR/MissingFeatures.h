@@ -189,7 +189,6 @@ struct MissingFeatures {
 
   // Misc
   static bool abiArgInfo() { return false; }
-  static bool addAutoInitAnnotation() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
   static bool aggEmitFinalDestCopyRValue() { return false; }
   static bool aggValueSlot() { return false; }
@@ -199,7 +198,6 @@ struct MissingFeatures {
   static bool aggValueSlotMayOverlap() { return false; }
   static bool aggValueSlotVolatile() { return false; }
   static bool alignCXXRecordDecl() { return false; }
-  static bool appleKext() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
   static bool asmGoto() { return false; }
   static bool asmInputOperands() { return false; }
@@ -246,7 +244,6 @@ struct MissingFeatures {
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
-  static bool dtorCleanups() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupHasPrebranchedFallthrough() { return false; }
   static bool ehCleanupScope() { return false; }
@@ -292,7 +289,6 @@ struct MissingFeatures {
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
   static bool hlsl() { return false; }
-  static bool msvcBuiltins() { return false; }
   static bool openCL() { return false; }
   static bool openMP() { return false; }
   static bool opTBAA() { return false; }
@@ -307,10 +303,6 @@ struct MissingFeatures {
   static bool setNonGC() { return false; }
   static bool setObjCGCLValueClass() { return false; }
   static bool setTargetAttributes() { return false; }
-  static bool shouldCreateMemCpyFromGlobal() { return false; }
-  static bool shouldSplitConstantStore() { return false; }
-  static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
-  static bool shouldUseMemSetToInitialize() { return false; }
   static bool simplifyCleanupEntry() { return false; }
   static bool sourceLanguageCases() { return false; }
   static bool stackBase() { return false; }
@@ -322,14 +314,16 @@ struct MissingFeatures {
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool typeChecks() { return false; }
-  static bool vaArgABILowering() { return false; }
-  static bool vectorConstants() { return false; }
-  static bool vlas() { return false; }
+  static bool weakRefReference() { return false; }
+  static bool writebacks() { return false; }
+  static bool appleKext() { return false; }
+  static bool dtorCleanups() { return false; }
   static bool vtableInitialization() { return false; }
   static bool vtableEmitMetadata() { return false; }
   static bool vtableRelativeLayout() { return false; }
-  static bool weakRefReference() { return false; }
-  static bool writebacks() { return false; }
+  static bool msvcBuiltins() { return false; }
+  static bool vaArgABILowering() { return false; }
+  static bool vlas() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MutatingCopyCheck.h"
+#include "CopyConstructorMutatesArgumentCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
 static constexpr llvm::StringLiteral SourceDeclName = "ChangedPVD";
 static constexpr llvm::StringLiteral MutatingOperatorName = "MutatingOp";
 static constexpr llvm::StringLiteral MutatingCallName = "MutatingCall";
 
-void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
+void CopyConstructorMutatesArgumentCheck::registerMatchers(
+    MatchFinder *Finder) {
   const auto MemberExprOrSourceObject = anyOf(
       memberExpr(),
       declRefExpr(to(decl(equalsBoundNode(std::string(SourceDeclName))))));
@@ -60,7 +61,8 @@ void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-void MutatingCopyCheck::check(const MatchFinder::MatchResult &Result) {
+void CopyConstructorMutatesArgumentCheck::check(
+    const MatchFinder::MatchResult &Result) {
   if (const auto *MemberCall =
           Result.Nodes.getNodeAs<CXXMemberCallExpr>(MutatingCallName))
     diag(MemberCall->getBeginLoc(), "call mutates copied object");
@@ -69,4 +71,4 @@ void MutatingCopyCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Assignment->getBeginLoc(), "mutating copied object");
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone

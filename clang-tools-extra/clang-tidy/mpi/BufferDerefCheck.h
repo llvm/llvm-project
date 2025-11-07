@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFER_DEREF_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFER_DEREF_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFERDEREFCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFERDEREFCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
@@ -48,4 +48,4 @@ private:
 
 } // namespace clang::tidy::mpi
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFER_DEREF_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFERDEREFCHECK_H

@@ -14,8 +14,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TOOL_CLANGTIDYMAIN_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TOOL_CLANGTIDYMAIN_H
+
 namespace clang::tidy {
 
 int clangTidyMain(int argc, const char **argv);
 
 } // namespace clang::tidy
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TOOL_CLANGTIDYMAIN_H

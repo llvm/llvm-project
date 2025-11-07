@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_ABSEILMATCHER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_ABSEILMATCHER_H
+
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <algorithm>
@@ -57,3 +60,5 @@ AST_POLYMORPHIC_MATCHER(
 }
 
 } // namespace clang::ast_matchers
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_ABSEILMATCHER_H

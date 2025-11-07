@@ -9,8 +9,8 @@
 // RUN: FileCheck %s --check-prefix=CHECK-ERROR < %t-dir/asan.log.verbose-log-path_test-binary.*
 
 // FIXME: only FreeBSD, NetBSD and Linux have verbose log paths now.
-// XFAIL: target={{.*windows-msvc.*}},android
-// UNSUPPORTED: ios
+// XFAIL: target={{.*windows-msvc.*}}
+// UNSUPPORTED: ios, android
 
 #include <stdlib.h>
 #include <string.h>
