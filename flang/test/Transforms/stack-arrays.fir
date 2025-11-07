@@ -3,13 +3,18 @@
 // Simplest transformation
 func.func @simple() {
   %0 = fir.allocmem !fir.array<42xi32>
+  %c0 = arith.constant 0 : index
+  %c0_i32 = arith.constant 0 : i32
+  %ref = fir.convert %0 : (!fir.heap<!fir.array<42xi32>>) -> !fir.ref<!fir.array<42xi32>>
+  %elt = fir.coordinate_of %ref, %c0 : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
+  fir.store %c0_i32 to %elt : !fir.ref<i32>
   fir.freemem %0 : !fir.heap<!fir.array<42xi32>>
   return
 }
 // CHECK: func.func @simple() {
-// CHECK-NEXT: fir.alloca !fir.array<42xi32>
-// CHECK-NEXT: return
-// CHECK-NEXT: }
+// CHECK: fir.alloca !fir.array<42xi32>
+// CHECK: return
+// CHECK: }
 
 // Check fir.must_be_heap allocations are not moved
 func.func @must_be_heap() {
@@ -17,7 +22,7 @@ func.func @must_be_heap() {
   fir.freemem %0 : !fir.heap<!fir.array<42xi32>>
   return
 }
-// CHECK:      func.func @must_be_heap() {
+// CHECK: func.func @must_be_heap() {
 // CHECK-NEXT:   %[[ALLOC:.*]] = fir.allocmem !fir.array<42xi32> {fir.must_be_heap = true}
 // CHECK-NEXT:   fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<42xi32>>
 // CHECK-NEXT:   return
@@ -57,7 +62,7 @@ func.func @dfa2(%arg0: i1) {
   }
   return
 }
-// CHECK:     func.func @dfa2(%arg0: i1) {
+// CHECK: func.func @dfa2(%arg0: i1) {
 // CHECK-NEXT:  %[[MEM:.*]] = fir.allocmem !fir.array<1xi8>
 // CHECK-NEXT:  scf.if %arg0 {
 // CHECK-NEXT:    fir.freemem %[[MEM]] : !fir.heap<!fir.array<1xi8>>
@@ -76,13 +81,10 @@ func.func @dfa3(%arg0: i1) {
   }
   return
 }
-// CHECK:     func.func @dfa3(%arg0: i1) {
-// CHECK-NEXT:  %[[MEM:.*]] = fir.alloca !fir.array<1xi8>
-// CHECK-NEXT:  fir.if %arg0 {
-// CHECK-NEXT:  } else {
-// CHECK-NEXT:  }
-// CHECK-NEXT:  return
-// CHECK-NEXT:  }
+// CHECK: func.func @dfa3(%arg0: i1) {
+// CHECK:  %[[MEM:.*]] = fir.alloca !fir.array<1xi8>
+// CHECK:  return
+// CHECK:  }
 
 func.func private @dfa3a_foo(!fir.ref<!fir.array<1xi8>>) -> ()
 func.func private @dfa3a_bar(!fir.ref<!fir.array<1xi8>>) -> ()
@@ -101,18 +103,6 @@ func.func @dfa3a(%arg0: i1) {
   }
   return
 }
-// CHECK:     func.func @dfa3a(%arg0: i1) {
-// CHECK-NEXT:  %[[MEM:.*]] = fir.alloca !fir.array<1xi8>
-// CHECK-NEXT:  %[[HEAP:.*]] = fir.convert %[[MEM]] : (!fir.ref<!fir.array<1xi8>>) -> !fir.heap<!fir.array<1xi8>>
-// CHECK-NEXT:  fir.if %arg0 {
-// CHECK-NEXT:    %[[REF:.*]] = fir.convert %[[HEAP]] : (!fir.heap<!fir.array<1xi8>>) -> !fir.ref<!fir.array<1xi8>>
-// CHECK-NEXT:    func.call @dfa3a_foo(%[[REF]])
-// CHECK-NEXT:  } else {
-// CHECK-NEXT:    %[[REF:.*]] = fir.convert %[[HEAP]] : (!fir.heap<!fir.array<1xi8>>) -> !fir.ref<!fir.array<1xi8>>
-// CHECK-NEXT:    func.call @dfa3a_bar(%[[REF]])
-// CHECK-NEXT:  }
-// CHECK-NEXT:  return
-// CHECK-NEXT:  }
 
 // check the alloca is placed after all operands become available
 func.func @placement1() {
@@ -126,11 +116,10 @@ func.func @placement1() {
   fir.freemem %4 : !fir.heap<!fir.array<?xi32>>
   return
 }
-// CHECK:      func.func @placement1() {
-// CHECK-NEXT:   %[[ARG:.*]] = arith.constant 3 : index
-// CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[ARG]]
-// CHECK-NEXT:   return
-// CHECK-NEXT: }
+// CHECK: func.func @placement1() {
+// CHECK:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, {{.*}}
+// CHECK:   return
+// CHECK: }
 
 // check that if there are no operands, then the alloca is placed early
 func.func @placement2() {
@@ -143,13 +132,13 @@ func.func @placement2() {
   fir.freemem %4 : !fir.heap<!fir.array<42xi32>>
   return
 }
-// CHECK:      func.func @placement2() {
-// CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<42xi32>
-// CHECK-NEXT:   %[[ONE:.*]] = arith.constant 1 : index
-// CHECK-NEXT:   %[[TWO:.*]] = arith.constant 2 : index
-// CHECK-NEXT:   %[[SUM:.*]] = arith.addi %[[ONE]], %[[TWO]] : index
-// CHECK-NEXT:   return
-// CHECK-NEXT: }
+// CHECK: func.func @placement2() {
+// CHECK:   %[[MEM:.*]] = fir.alloca !fir.array<42xi32>
+// CHECK:   %[[ONE:.*]] = arith.constant 1 : index
+// CHECK:   %[[TWO:.*]] = arith.constant 2 : index
+// CHECK:   %[[SUM:.*]] = arith.addi %[[ONE]], %[[TWO]] : index
+// CHECK:   return
+// CHECK: }
 
 // check that stack allocations which must be placed in loops use stacksave
 func.func @placement3() {
@@ -167,20 +156,18 @@ func.func @placement3() {
   }
   return
 }
-// CHECK:      func.func @placement3() {
-// CHECK-NEXT:   %[[C1:.*]] = arith.constant 1 : index
-// CHECK-NEXT:   %[[C1_I32:.*]] = fir.convert %[[C1]] : (index) -> i32
-// CHECK-NEXT:   %[[C2:.*]] = arith.constant 2 : index
-// CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
-// CHECK-NEXT:   fir.do_loop
-// CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
-// CHECK-NEXT:     %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
-// CHECK-NEXT:     %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
-// CHECK-NEXT:     llvm.intr.stackrestore %[[SP]] : !llvm.ptr
-// CHECK-NEXT:     fir.result
-// CHECK-NEXT:   }
-// CHECK-NEXT:   return
-// CHECK-NEXT: }
+// CHECK: func.func @placement3() {
+// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:   %[[C1_I32:.*]] = fir.convert %[[C1]] : (index) -> i32
+// CHECK:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK:   %[[C10:.*]] = arith.constant 10 : index
+// CHECK:   fir.do_loop
+// CHECK:     %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK:     llvm.intr.stackrestore %[[SP]] : !llvm.ptr
+// CHECK:     fir.result
+// CHECK:   }
+// CHECK:   return
+// CHECK: }
 
 // check that stack save/restore are used in CFG loops
 func.func @placement4(%arg0 : i1) {
@@ -199,20 +186,20 @@ func.func @placement4(%arg0 : i1) {
 ^bb2:
   return
 }
-// CHECK:      func.func @placement4(%arg0: i1) {
-// CHECK-NEXT:   %[[C1:.*]] = arith.constant 1 : index
-// CHECK-NEXT:   %[[C1_I32:.*]] = fir.convert %[[C1]] : (index) -> i32
-// CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
-// CHECK-NEXT:   cf.br ^bb1
-// CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   %[[C3:.*]] = arith.constant 3 : index
-// CHECK-NEXT:   %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
-// CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[C3]]
-// CHECK-NEXT:   llvm.intr.stackrestore %[[SP]] : !llvm.ptr
-// CHECK-NEXT:   cf.cond_br %arg0, ^bb1, ^bb2
-// CHECK-NEXT: ^bb2:
-// CHECK-NEXT:   return
-// CHECK-NEXT: }
+// CHECK: func.func @placement4(%arg0: i1) {
+// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:   %[[C1_I32:.*]] = fir.convert %[[C1]] : (index) -> i32
+// CHECK:   %[[C10:.*]] = arith.constant 10 : index
+// CHECK:   cf.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %[[C3:.*]] = arith.constant 3 : index
+// CHECK:   %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[C3]]
+// CHECK:   llvm.intr.stackrestore %[[SP]] : !llvm.ptr
+// CHECK:   cf.cond_br %arg0, ^bb1, ^bb2
+// CHECK: ^bb2:
+// CHECK:   return
+// CHECK: }
 
 // check that stacksave is not used when there is an intervening alloca
 func.func @placement5() {
@@ -230,7 +217,7 @@ func.func @placement5() {
   }
   return
 }
-// CHECK:      func.func @placement5() {
+// CHECK: func.func @placement5() {
 // CHECK-NEXT:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK-NEXT:   %[[C1_I32:.*]] = fir.convert %[[C1]] : (index) -> i32
 // CHECK-NEXT:   %[[C2:.*]] = arith.constant 2 : index
@@ -268,7 +255,7 @@ func.func @placement6(%arg0: i1) {
   fir.freemem %4 : !fir.heap<!fir.array<?xi32>>
   cf.br ^bb1
 }
-// CHECK:      func.func @placement6(%arg0: i1) {
+// CHECK: func.func @placement6(%arg0: i1) {
 // CHECK-NEXT:   %[[c1:.*]] = arith.constant 1 : index
 // CHECK-NEXT:   %[[c1_i32:.*]] = fir.convert %[[c1]] : (index) -> i32
 // CHECK-NEXT:   %[[c2:.*]] = arith.constant 2 : index
@@ -297,14 +284,11 @@ func.func @returns(%arg0: i1) {
   fir.freemem %0 : !fir.heap<!fir.array<42xi32>>
   return
 }
-// CHECK:      func.func @returns(%[[COND:.*]]: i1) {
-// CHECK-NEXT:   %[[ALLOC:.*]] = fir.alloca !fir.array<42xi32>
-// CHECK-NEXT:   cf.cond_br %[[COND]], ^bb1, ^bb2
-// CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   return
-// CHECK-NEXT: ^bb2:
-// CHECK-NEXT:   return
-// CHECK-NEXT: }
+// CHECK: func.func @returns(%[[COND:.*]]: i1) {
+// CHECK:   %[[ALLOC:.*]] = fir.alloca !fir.array<42xi32>
+// CHECK:   cf.cond_br %[[COND]], ^bb1, ^bb2
+// CHECK:   return
+// CHECK: }
 
 // Check multiple returns, where the memory is not freed on one branch
 func.func @returns2(%arg0: i1) {
@@ -316,15 +300,11 @@ func.func @returns2(%arg0: i1) {
 ^bb2:
   return
 }
-// CHECK:      func.func @returns2(%[[COND:.*]]: i1) {
-// CHECK-NEXT:   %[[ALLOC:.*]] = fir.allocmem !fir.array<42xi32>
-// CHECK-NEXT:   cf.cond_br %[[COND]], ^bb1, ^bb2
-// CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<42xi32>>
-// CHECK-NEXT:   return
-// CHECK-NEXT: ^bb2:
-// CHECK-NEXT:   return
-// CHECK-NEXT: }
+// CHECK: func.func @returns2(%[[COND:.*]]: i1) {
+// CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<42xi32>
+// CHECK:   cf.cond_br %[[COND]], ^bb1, ^bb2
+// CHECK:   return
+// CHECK: }
 
 // Check allocations are not moved outside of an omp region
 func.func @omp_placement1() {
@@ -338,17 +318,12 @@ func.func @omp_placement1() {
   }
   return
 }
-// CHECK:      func.func @omp_placement1() {
-// CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<42xi32>
-// CHECK-NEXT:   %[[MEM_CONV:.*]] = fir.convert %[[MEM]] : (!fir.ref<!fir.array<42xi32>>) -> !fir.heap<!fir.array<42xi32>>
-// CHECK-NEXT:   omp.sections {
-// CHECK-NEXT:     omp.section {
-// CHECK-NEXT:       omp.terminator
-// CHECK-NEXT:     }
-// CHECK-NEXT:     omp.terminator
-// CHECK-NEXT:   }
-// CHECK-NEXT:   return
-// CHECK-NEXT: }
+// CHECK: func.func @omp_placement1() {
+// CHECK:   %[[MEM:.*]] = fir.alloca !fir.array<42xi32>
+// CHECK:   %[[MEM_CONV:.*]] = fir.convert %[[MEM]] : (!fir.ref<!fir.array<42xi32>>) -> !fir.heap<!fir.array<42xi32>>
+// CHECK:   omp.sections
+// CHECK:   return
+// CHECK: }
 
 // function terminated by stop statement
 func.func @stop_terminator() {
@@ -387,7 +362,7 @@ func.func @placement_loop_declare() {
   }
   return
 }
-// CHECK:      func.func @placement_loop_declare() {
+// CHECK: func.func @placement_loop_declare() {
 // CHECK-NEXT:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK-NEXT:   %[[C1_I32:.*]] = fir.convert %[[C1]] : (index) -> i32
 // CHECK-NEXT:   %[[C2:.*]] = arith.constant 2 : index

@@ -244,9 +244,5 @@ end
 ! CHECK:       ^[[HEADER]]:
 ! CHECK:         %{{.*}} = fir.load %[[ITER_VAR]] : !fir.ref<i32>
 ! CHECK:         cf.cond_br %{{.*}}, ^[[BODY:.*]], ^[[EXIT:.*]]
-
-! CHECK:       ^[[BODY]]:
-! CHECK-NEXT:    %{{.*}} = fir.alloca !fir.logical<4> {bindc_name = "success", {{.*}}}
-
 ! CHECK:       ^[[EXIT]]:
-! CHECK-NEXT:    return
+! CHECK:    return

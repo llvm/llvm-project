@@ -80,10 +80,7 @@ def AnyRefOfConstantSizeAggregateType : TypeConstraint<
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
-def fir_AllocaOp
-    : fir_Op<"alloca",
-             [AttrSizedOperandSegments,
-              MemoryEffects<[MemAlloc<AutomaticAllocationScopeResource>]>]> {
+def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments]> {
   let summary = "allocate storage for a temporary on the stack given a type";
   let description = [{
     This primitive operation is used to allocate an object on the stack.  A
@@ -216,9 +213,7 @@ def fir_AllocaOp
   }];
 }
 
-def fir_AllocMemOp
-    : fir_Op<"allocmem", [AttrSizedOperandSegments,
-                          MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+def fir_AllocMemOp : fir_Op<"allocmem", [AttrSizedOperandSegments]> {
   let summary = "allocate storage on the heap for an object of a given type";
 
   let description = [{

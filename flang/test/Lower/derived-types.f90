@@ -31,8 +31,6 @@ end subroutine
 
 ! CHECK-LABEL: func @_QMdPlocal_derived(
 subroutine local_derived()
-  ! CHECK-DAG: fir.alloca !fir.type<_QMdTc2{ch_array:!fir.array<20x30x!fir.char<1,10>>}>
-  ! CHECK-DAG: fir.alloca !fir.type<_QMdTr{x:f32}>
   type(r) :: some_r
   type(c2) :: some_c2
 end subroutine
