@@ -1217,6 +1217,22 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
 }
 
 Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
+  {
+    Value *TruncSrc = nullptr;
+    if (match(&Zext, m_ZExt(m_Sub(m_Zero(), m_Trunc(m_Value(TruncSrc)))))) {
+      IRBuilder<> Builder(&Zext);
+      Type *Ty = TruncSrc->getType();
+      unsigned BitWidth = Ty->getScalarSizeInBits();
+      unsigned MaskVal = BitWidth - 1;
+
+      Value *Zero = ConstantInt::get(Ty, 0);
+      Value *Neg = Builder.CreateSub(Zero, TruncSrc);
+      Value *Mask = ConstantInt::get(Ty, MaskVal);
+      Value *Masked = Builder.CreateAnd(Neg, Mask);
+      return replaceInstUsesWith(Zext, Masked);
+    }
+  }
+
   // If this zero extend is only used by a truncate, let the truncate be
   // eliminated before we try to optimize this zext.
   if (Zext.hasOneUse() && isa<TruncInst>(Zext.user_back()) &&
