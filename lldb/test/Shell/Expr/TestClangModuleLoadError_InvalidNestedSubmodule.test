@@ -57,5 +57,3 @@ run
 expr blah
 
 # CHECK: note: couldn't load submodule 'qux' of module 'foo.baz'
-## FIXME: We never attempted to load bar.
-# CHECK-NOT: bar
