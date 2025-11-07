@@ -321,20 +321,11 @@ entry:
 }
 
 define <2 x double> @fpext_v2f16_v2f64(<2 x half> %a) {
-; CHECK-SD-LABEL: fpext_v2f16_v2f64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-SD-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fpext_v2f16_v2f64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    fcvt d0, h0
-; CHECK-GI-NEXT:    fcvt d1, h1
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fpext_v2f16_v2f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    ret
 entry:
   %c = fpext <2 x half> %a to <2 x double>
   ret <2 x double> %c
