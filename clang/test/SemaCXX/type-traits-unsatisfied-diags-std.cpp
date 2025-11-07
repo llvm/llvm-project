@@ -73,6 +73,15 @@ struct is_abstract {
 template <typename T>
 constexpr bool is_abstract_v = __is_abstract(T);
 
+template <typename T>
+struct is_destructible {
+    static constexpr bool value = __is_destructible(T);
+};
+
+template <typename T>
+constexpr bool is_destructible_v = __is_destructible(T);
+
+
 #endif
 
 #ifdef STD2
@@ -167,6 +176,17 @@ using is_abstract = __details_is_abstract<T>;
 template <typename T>
 constexpr bool is_abstract_v = __is_abstract(T);
 
+template <typename T>
+struct __details_is_destructible {
+    static constexpr bool value = __is_destructible(T);
+};
+
+template <typename T>
+using is_destructible = __details_is_destructible<T>;
+
+template <typename T>
+constexpr bool is_destructible_v = __is_destructible(T);
+
 #endif
 
 
@@ -251,6 +271,15 @@ template <typename T>
 using is_abstract = __details_is_abstract<T>;
 template <typename T>
 constexpr bool is_abstract_v = is_abstract<T>::value;
+
+template <typename T>
+struct __details_is_destructible : bool_constant<__is_destructible(T)> {};
+
+template <typename T>
+using is_destructible = __details_is_destructible<T>;
+
+template <typename T>
+constexpr bool is_destructible_v = is_destructible<T>::value;
 
 #endif
 }
@@ -374,6 +403,18 @@ static_assert(std::is_abstract_v<int&>);
 // expected-note@-1 {{because it is a reference type}} \
 // expected-note@-1 {{because it is not a struct or class type}}
 
+static_assert(std::is_destructible<int>::value);
+
+static_assert(std::is_destructible<void>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_destructible<void>::value'}} \
+// expected-note@-1 {{'void' is not destructible}} \
+// expected-note@-1 {{because it is a cv void type}}
+
+static_assert(std::is_destructible_v<void>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_destructible_v<void>'}} \
+// expected-note@-1 {{'void' is not destructible}} \
+// expected-note@-1 {{because it is a cv void type}}
+
 
 namespace test_namespace {
     using namespace std;
@@ -473,6 +514,17 @@ namespace test_namespace {
     // expected-note@-1 {{'int &' is not abstract}} \
     // expected-note@-1 {{because it is a reference type}} \
     // expected-note@-1 {{because it is not a struct or class type}}
+
+    static_assert(is_destructible<void>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_destructible<void>::value'}} \
+    // expected-note@-1 {{'void' is not destructible}} \
+    // expected-note@-1 {{because it is a cv void type}}
+
+    static_assert(is_destructible_v<void>);
+    // expected-error@-1 {{static assertion failed due to requirement 'is_destructible_v<void>'}} \
+    // expected-note@-1 {{'void' is not destructible}} \
+    // expected-note@-1 {{because it is a cv void type}}
+
 }
 
 
@@ -517,6 +569,15 @@ template <typename T>
 concept C5 = std::is_aggregate_v<T>; // #concept10
 
 template <C5 T> void g5();  // #cand10
+
+template <typename T>
+requires std::is_destructible<T>::value void f6();  // #cand11
+
+template <typename T>
+concept C6 = std::is_destructible_v<T>; // #concept11
+
+template <C6 T> void g6();  // #cand12
+
 
 void test() {
     f<int&>();
@@ -589,6 +650,21 @@ void test() {
     // expected-note@#concept10 {{because 'std::is_aggregate_v<void>' evaluated to false}} \
     // expected-note@#concept10 {{'void' is not aggregate}} \
     // expected-note@#concept10 {{because it is a cv void type}}
+
+    f6<void>();
+    // expected-error@-1 {{no matching function for call to 'f6'}} \
+    // expected-note@#cand11 {{candidate template ignored: constraints not satisfied [with T = void]}} \
+    // expected-note-re@#cand11 {{because '{{.*}}is_destructible<void>::value' evaluated to false}} \
+    // expected-note@#cand11 {{'void' is not destructible}} \
+    // expected-note@#cand11 {{because it is a cv void type}}
+
+    g6<void>();
+    // expected-error@-1 {{no matching function for call to 'g6'}} \
+    // expected-note@#cand12 {{candidate template ignored: constraints not satisfied [with T = void]}} \
+    // expected-note@#cand12 {{because 'void' does not satisfy 'C6'}} \
+    // expected-note@#concept11 {{because 'std::is_destructible_v<void>' evaluated to false}} \
+    // expected-note@#concept11 {{'void' is not destructible}} \
+    // expected-note@#concept11 {{because it is a cv void type}}
 }
 }
 
