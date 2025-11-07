@@ -1921,6 +1921,14 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "f
   def VFMLSL_LANEQ_HIGH : SOpInst<"vfmlsl_laneq_high", "(F>)(F>)F(FQ)I", "hQh", OP_FMLSL_LN_Hi>;
 }
 
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f16mm,neon" in {
+  def VMMLA_F16_MF8 : VInst<"vmmla_f16_mf8_fpm", "(>F)(>F)..V", "Qm">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f32mm,neon" in {
+  def VMMLA_F32_MF8 : VInst<"vmmla_f32_mf8_fpm", "(>>F)(>>F)..V", "Qm">;
+}
+
 let TargetGuard = "i8mm,neon" in {
   def VMMLA   : SInst<"vmmla", "..(<<)(<<)", "QUiQi">;
   def VUSMMLA : SInst<"vusmmla", "..(<<U)(<<)", "Qi">;
