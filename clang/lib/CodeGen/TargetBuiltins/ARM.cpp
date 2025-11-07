@@ -590,6 +590,7 @@ struct ARMVectorIntrinsicInfo {
       Intrinsic::LLVMIntrinsic, Intrinsic::AltLLVMIntrinsic, \
       TypeModifier }
 
+// clang-format off
 static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(__a32_vcvt_bf16_f32, arm_neon_vcvtfp2bf, 0),
   NEONMAP0(splat_lane_v),
@@ -1217,35 +1218,55 @@ static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vcales_f32, aarch64_neon_facge, AddRetType | Add1ArgType),
   NEONMAP1(vcaltd_f64, aarch64_neon_facgt, AddRetType | Add1ArgType),
   NEONMAP1(vcalts_f32, aarch64_neon_facgt, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtad_s32_f64, aarch64_neon_fcvtas, AddRetType | Add1ArgType),
   NEONMAP1(vcvtad_s64_f64, aarch64_neon_fcvtas, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtad_u32_f64, aarch64_neon_fcvtau, AddRetType | Add1ArgType),
   NEONMAP1(vcvtad_u64_f64, aarch64_neon_fcvtau, AddRetType | Add1ArgType),
   NEONMAP1(vcvtas_s32_f32, aarch64_neon_fcvtas, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtas_s64_f32, aarch64_neon_fcvtas, AddRetType | Add1ArgType),
   NEONMAP1(vcvtas_u32_f32, aarch64_neon_fcvtau, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtas_u64_f32, aarch64_neon_fcvtau, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_n_f64_s64, aarch64_neon_vcvtfxs2fp, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_n_f64_u64, aarch64_neon_vcvtfxu2fp, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_n_s64_f64, aarch64_neon_vcvtfp2fxs, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_n_u64_f64, aarch64_neon_vcvtfp2fxu, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtd_s32_f64, aarch64_neon_fcvtzs, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_s64_f64, aarch64_neon_fcvtzs, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtd_u32_f64, aarch64_neon_fcvtzu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_u64_f64, aarch64_neon_fcvtzu, AddRetType | Add1ArgType),
   NEONMAP0(vcvth_bf16_f32),
+  NEONMAP1(vcvtmd_s32_f64, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
   NEONMAP1(vcvtmd_s64_f64, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtmd_u32_f64, aarch64_neon_fcvtmu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtmd_u64_f64, aarch64_neon_fcvtmu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtms_s32_f32, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtms_s64_f32, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
   NEONMAP1(vcvtms_u32_f32, aarch64_neon_fcvtmu, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtms_u64_f32, aarch64_neon_fcvtmu, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtnd_s32_f64, aarch64_neon_fcvtns, AddRetType | Add1ArgType),
   NEONMAP1(vcvtnd_s64_f64, aarch64_neon_fcvtns, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtnd_u32_f64, aarch64_neon_fcvtnu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtnd_u64_f64, aarch64_neon_fcvtnu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtns_s32_f32, aarch64_neon_fcvtns, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtns_s64_f32, aarch64_neon_fcvtns, AddRetType | Add1ArgType),
   NEONMAP1(vcvtns_u32_f32, aarch64_neon_fcvtnu, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtns_u64_f32, aarch64_neon_fcvtnu, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtpd_s32_f64, aarch64_neon_fcvtps, AddRetType | Add1ArgType),
   NEONMAP1(vcvtpd_s64_f64, aarch64_neon_fcvtps, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtpd_u32_f64, aarch64_neon_fcvtpu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtpd_u64_f64, aarch64_neon_fcvtpu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtps_s32_f32, aarch64_neon_fcvtps, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtps_s64_f32, aarch64_neon_fcvtps, AddRetType | Add1ArgType),
   NEONMAP1(vcvtps_u32_f32, aarch64_neon_fcvtpu, AddRetType | Add1ArgType),
+  NEONMAP1(vcvtps_u64_f32, aarch64_neon_fcvtpu, AddRetType | Add1ArgType),
   NEONMAP1(vcvts_n_f32_s32, aarch64_neon_vcvtfxs2fp, AddRetType | Add1ArgType),
   NEONMAP1(vcvts_n_f32_u32, aarch64_neon_vcvtfxu2fp, AddRetType | Add1ArgType),
   NEONMAP1(vcvts_n_s32_f32, aarch64_neon_vcvtfp2fxs, AddRetType | Add1ArgType),
   NEONMAP1(vcvts_n_u32_f32, aarch64_neon_vcvtfp2fxu, AddRetType | Add1ArgType),
   NEONMAP1(vcvts_s32_f32, aarch64_neon_fcvtzs, AddRetType | Add1ArgType),
+  NEONMAP1(vcvts_s64_f32, aarch64_neon_fcvtzs, AddRetType | Add1ArgType),
   NEONMAP1(vcvts_u32_f32, aarch64_neon_fcvtzu, AddRetType | Add1ArgType),
+  NEONMAP1(vcvts_u64_f32, aarch64_neon_fcvtzu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtxd_f32_f64, aarch64_sisd_fcvtxn, 0),
   NEONMAP1(vmaxnmv_f32, aarch64_neon_fmaxnmv, AddRetType | Add1ArgType),
   NEONMAP1(vmaxnmvq_f32, aarch64_neon_fmaxnmv, AddRetType | Add1ArgType),
@@ -1446,6 +1467,7 @@ static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vrsqrteh_f16, aarch64_neon_frsqrte, Add1ArgType),
   NEONMAP1(vrsqrtsh_f16, aarch64_neon_frsqrts, Add1ArgType),
 };
+// clang-format on
 
 // Some intrinsics are equivalent for codegen.
 static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
@@ -7624,6 +7646,16 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Int = Intrinsic::aarch64_neon_vluti4q_laneq_x2;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vluti4q_laneq_x2");
   }
+  case NEON::BI__builtin_neon_vmmlaq_f16_mf8_fpm:
+    return EmitFP8NeonCall(Intrinsic::aarch64_neon_fmmla,
+                           {llvm::FixedVectorType::get(HalfTy, 8),
+                            llvm::FixedVectorType::get(Int8Ty, 16)},
+                           Ops, E, "fmmla");
+  case NEON::BI__builtin_neon_vmmlaq_f32_mf8_fpm:
+    return EmitFP8NeonCall(Intrinsic::aarch64_neon_fmmla,
+                           {llvm::FixedVectorType::get(FloatTy, 4),
+                            llvm::FixedVectorType::get(Int8Ty, 16)},
+                           Ops, E, "fmmla");
   case NEON::BI__builtin_neon_vcvt1_low_bf16_mf8_fpm:
     ExtractLow = true;
     [[fallthrough]];
