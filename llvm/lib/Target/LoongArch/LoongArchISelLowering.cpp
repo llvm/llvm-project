@@ -74,6 +74,13 @@ static cl::opt<bool> ZeroDivCheck("loongarch-check-zero-division", cl::Hidden,
                                   cl::desc("Trap on integer division by zero."),
                                   cl::init(false));
 
+static cl::opt<int> TrapBreakCode("loongarch-trap-break-code", cl::init(-1),
+                                  cl::desc("Use 'break CODE' for traps "
+                                           "supposed to be unrecoverable, "
+                                           "or an 'amswap.w' instruction "
+                                           "leading to INE if CODE is out "
+                                           "of range."));
+
 LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                                                  const LoongArchSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -125,7 +132,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
 
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
-  setOperationAction(ISD::TRAP, MVT::Other, Legal);
+  setOperationAction(ISD::TRAP, MVT::Other, Custom);
 
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -610,8 +617,23 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
+  case ISD::TRAP:
+    return lowerTrap(Op, DAG);
   }
   return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerTrap(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+
+  if (isUInt<15>(TrapBreakCode))
+    return DAG.getNode(
+        LoongArchISD::BREAK, DL, MVT::Other, Chain,
+        DAG.getConstant(TrapBreakCode, DL, Subtarget.getGRLenVT()));
+
+  return DAG.getNode(LoongArchISD::UNIMP, DL, MVT::Other, Chain);
 }
 
 SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
@@ -7500,6 +7522,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(TAIL)
     NODE_NAME_CASE(TAIL_MEDIUM)
     NODE_NAME_CASE(TAIL_LARGE)
+    NODE_NAME_CASE(UNIMP)
     NODE_NAME_CASE(SELECT_CC)
     NODE_NAME_CASE(BR_CC)
     NODE_NAME_CASE(BRCOND)

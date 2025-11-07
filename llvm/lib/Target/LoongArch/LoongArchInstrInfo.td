@@ -97,6 +97,8 @@ def loongarch_call_large : SDNode<"LoongArchISD::CALL_LARGE", SDT_LoongArchCall,
 def loongarch_tail_large : SDNode<"LoongArchISD::TAIL_LARGE", SDT_LoongArchCall,
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
+def loongarch_unimp : SDNode<"LoongArchISD::UNIMP", SDTypeProfile<0, 0, []>,
+                             [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_selectcc : SDNode<"LoongArchISD::SELECT_CC", SDT_LoongArchSelectCC>;
 def loongarch_brcc : SDNode<"LoongArchISD::BR_CC", SDT_LoongArchBrCC,
                             [SDNPHasChain]>;
@@ -1373,11 +1375,18 @@ def : Pat<(and GPR:$rj, BstrinsImm:$imm),
 
 /// Traps
 
-// We lower `trap` to `amswap.w rd:$r0, rk:$r1, rj:$r0`, as this is guaranteed
-// to trap with an INE (non-existent on LA32, explicitly documented to INE on
-// LA64). And the resulting signal is different from `debugtrap` like on some
-// other existing ports so programs/porters might have an easier time.
-def PseudoUNIMP : Pseudo<(outs), (ins), [(trap)]>,
+// ISD::TRAP is lowered to either LoongArchISD::UNIMP or LoongArchISD::BREAK
+// depending on the --loongarch-trap-break-code=<N> option (default: -1).
+// - If N is a valid 15-bit unsigned integer (0 <= N <= 32767), it expands to
+//   LoongArchISD::BREAK N, producing a BREAK instruction with the specified
+//   code.
+// - Otherwise, it expands to LoongArchISD::UNIMP.
+
+// We lower `loongarch_unimp` to `amswap.w rd:$r0, rk:$r1, rj:$r0`, as this is
+// guaranteed to trap with an INE (non-existent on LA32, explicitly documented
+// to INE on LA64). And the resulting signal is different from `debugtrap` like
+// on some other existing ports so programs/porters might have an easier time.
+def PseudoUNIMP : Pseudo<(outs), (ins), [(loongarch_unimp)]>,
                   PseudoInstExpansion<(AMSWAP_W R0, R1, R0)>;
 
 // We lower `debugtrap` to `break 0`, as this is guaranteed to exist and work,
