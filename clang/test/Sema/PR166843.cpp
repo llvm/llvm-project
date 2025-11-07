@@ -2,6 +2,6 @@
 namespace a {
 template <class b>
 void c() {
-  ((::c::)); // expected-error {{expected unqualified-id}}
+  ((::c::x)); // expected-error {{'c' is not a class, namespace, or enumeration}}
 }
 }
