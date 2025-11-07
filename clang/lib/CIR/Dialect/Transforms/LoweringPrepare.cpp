@@ -23,6 +23,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_LOWERINGPREPARE
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 static SmallString<128> getTransformedFileName(mlir::ModuleOp mlirModule) {
   SmallString<128> fileName;
 
@@ -53,7 +58,8 @@ static cir::FuncOp getCalledFunction(cir::CallOp callOp) {
 }
 
 namespace {
-struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
+struct LoweringPreparePass
+    : public impl::LoweringPrepareBase<LoweringPreparePass> {
   LoweringPreparePass() = default;
   void runOnOperation() override;
 
