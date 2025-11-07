@@ -12,6 +12,10 @@ define float @sinf(float %x) {
 
 ; CHECK: declare void @_Unwind_Resume(...)
 
+; CHECK: declare void @__memcpy_chk(...)
+; CHECK: declare void @__memmove_chk(...)
+; CHECK: declare void @__memset_chk(...)
+
 ; CHECK: declare void @__umodti3(...)
 
 ; CHECK: declare void @acosf(...)

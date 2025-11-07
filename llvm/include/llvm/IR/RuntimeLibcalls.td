@@ -35,6 +35,9 @@ def isNotOSLinuxAndNotOSOpenBSD : RuntimeLibcallPredicate<
 def isNotOSAIXAndNotOSOpenBSD : RuntimeLibcallPredicate<
   [{!TT.isOSAIX() && !TT.isOSOpenBSD()}]>;
 
+def isNotPS : RuntimeLibcallPredicate<
+  [{!TT.isPS()}]>;
+
 // OpenBSD uses __guard_local. AIX uses __ssp_canary_word, MSVC/Windows
 // Itanium uses __security_cookie
 def hasStackChkFail : RuntimeLibcallPredicate<
@@ -374,8 +377,11 @@ foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
 // Memory
 def MEMCMP : RuntimeLibcall;
 def MEMCPY : RuntimeLibcall;
+def MEMCPY_CHK : RuntimeLibcall;
 def MEMMOVE : RuntimeLibcall;
+def MEMMOVE_CHK : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
+def MEMSET_CHK : RuntimeLibcall;
 def CALLOC : RuntimeLibcall;
 def BZERO : RuntimeLibcall;
 def STRLEN : RuntimeLibcall;
@@ -1090,6 +1096,10 @@ def fesetmode : RuntimeLibcallImpl<FESETMODE>;
 def memcpy : RuntimeLibcallImpl<MEMCPY>;
 def memmove : RuntimeLibcallImpl<MEMMOVE>;
 def memset : RuntimeLibcallImpl<MEMSET>;
+
+def __memcpy_chk : RuntimeLibcallImpl<MEMCPY_CHK>;
+def __memmove_chk : RuntimeLibcallImpl<MEMMOVE_CHK>;
+def __memset_chk : RuntimeLibcallImpl<MEMSET_CHK>;
 
 // DSEPass can emit calloc if it finds a pair of malloc/memset
 def calloc : RuntimeLibcallImpl<CALLOC>;
@@ -2624,8 +2634,10 @@ defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLib
 
 defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>;
 
+defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
+
 defvar X86CommonLibcalls =
-  (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides),
+  (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides, MemChkLibcalls),
        DarwinSinCosStret, DarwinExp10,
        X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
@@ -2641,7 +2653,8 @@ defvar X86CommonLibcalls =
        // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
        // hack for one test relying on it.
        __powitf2_f128,
-       DefaultStackProtector
+       DefaultStackProtector,
+       LibcallImpls<(add MemChkLibcalls), isNotPS>
      );
 
 defvar Windows32DivRemMulCalls =
