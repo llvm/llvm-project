@@ -318,6 +318,20 @@ bool vector::isLinearizableVector(VectorType type) {
 
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      Value source,
+                                     ArrayRef<int64_t> inputVectorSizes,
+                                     std::optional<Value> padValue,
+                                     bool useInBoundsInsteadOfMasking,
+                                     ArrayRef<bool> inputScalableVecDims) {
+  VectorType vecToReadTy = VectorType::get(
+      inputVectorSizes, cast<ShapedType>(source.getType()).getElementType(),
+      inputScalableVecDims);
+
+  return createReadOrMaskedRead(builder, loc, source, vecToReadTy, padValue,
+                                useInBoundsInsteadOfMasking);
+}
+
+Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
+                                     Value source,
                                      const VectorType &vecToReadTy,
                                      std::optional<Value> padValue,
                                      bool useInBoundsInsteadOfMasking) {

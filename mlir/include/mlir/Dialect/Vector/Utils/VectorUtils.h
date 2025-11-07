@@ -230,6 +230,12 @@ Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              std::optional<Value> padValue = std::nullopt,
                              bool useInBoundsInsteadOfMasking = false);
 
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             ArrayRef<int64_t> inputVectorSizes,
+                             std::optional<Value> padValue = std::nullopt,
+                             bool useInBoundsInsteadOfMasking = false,
+                             ArrayRef<bool> inputScalableVecDims = {});
+
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:
 ///   1. The numbers of elements in both array are equal.
