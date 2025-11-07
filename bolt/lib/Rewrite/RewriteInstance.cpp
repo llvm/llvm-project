@@ -4007,19 +4007,44 @@ void RewriteInstance::emitAndLink() {
 
   ErrorOr<BinarySection &> TextSection =
       BC->getUniqueSectionByName(BC->getMainCodeSectionName());
+
+// If present, show flags BEFORE renaming (this captures the "original .text" state)
+if (TextSection) {
+  DEBUG_WITH_TYPE("bolt-ppc64", {
+    const unsigned F = TextSection->getELFFlags();
+    dbgs() << "[ppc64] pre-rename: " << TextSection->getName() << "\n"
+           << "  flags=0x" << llvm::format_hex(F, 8)
+           << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes" : "no")
+           << ", EXEC="  << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
+           << ", EXCL="  << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no")
+           << ")\n";
+  });
+}
+
+
   if (BC->HasRelocations && TextSection)
     BC->renameSection(*TextSection,
                       getOrgSecPrefix() + BC->getMainCodeSectionName());
-
-DEBUG_WITH_TYPE("bolt-ppc64", {
-  const auto Flags = TextSection->getELFFlags();
-  dbgs() << "[ppc64] backup section: " << TextSection->getName() << "\n"
-         << "  prefix=" << getOrgSecPrefix()
-         << "  flags=0x" << llvm::format_hex(Flags, 8)
-         << " (ALLOC=" << ((Flags & ELF::SHF_ALLOC) ? "yes" : "no")
-         << ", EXEC="  << ((Flags & ELF::SHF_EXECINSTR) ? "yes" : "no")
-         << ")\n";
-});
+// AFTER: same section object, new name. log immediately to catch bad flags
+if (TextSection) {
+  DEBUG_WITH_TYPE("bolt-ppc64", {
+    const unsigned F = TextSection->getELFFlags();
+    dbgs() << "[ppc64] post-rename: " << TextSection->getName() << "\n"
+           << "  flags=0x" << llvm::format_hex(F, 8)
+           << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes" : "no")
+           << ", EXEC="  << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
+           << ", EXCL="  << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no")
+           << ")\n";
+if (TextSection->getName().starts_with(getOrgSecPrefix()) &&
+        ((F & ELF::SHF_ALLOC) || (F & ELF::SHF_EXECINSTR))) {
+      dbgs() << "[ppc64][WARN] backup is RX right after rename\n";
+    }
+  });
+} else {
+  DEBUG_WITH_TYPE("bolt-ppc64", {
+    dbgs() << "[ppc64] pre/post-rename skipped: .text section not found\n";
+  });
+}
 
   //////////////////////////////////////////////////////////////////////////////
   // Assign addresses to new sections.
