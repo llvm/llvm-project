@@ -111,7 +111,7 @@ public:
   /// dominates this program point. A write operation kills the liveness of
   /// the origin since it overwrites the value.
   Lattice transfer(Lattice In, const UseFact &UF) {
-    OriginID OID = UF.getUsedOrigin(FactMgr.getOriginMgr());
+    OriginID OID = UF.getUsedOrigin();
     // Write kills liveness.
     if (UF.isWritten())
       return Lattice(Factory.remove(In.LiveOrigins, OID));

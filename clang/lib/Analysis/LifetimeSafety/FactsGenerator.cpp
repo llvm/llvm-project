@@ -333,7 +333,7 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
 // (e.g. on the left-hand side of an assignment).
 void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
   if (isPointerType(DRE->getType())) {
-    UseFact *UF = FactMgr.createFact<UseFact>(DRE);
+    UseFact *UF = FactMgr.createFact<UseFact>(DRE, FactMgr.getOriginMgr());
     CurrentBlockFacts.push_back(UF);
     assert(!UseFacts.contains(DRE));
     UseFacts[DRE] = UF;

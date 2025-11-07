@@ -1626,6 +1626,9 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
   m_editor_status = EditorStatus::Editing;
   m_revert_cursor_index = -1;
 
+  lldbassert(m_output_stream_sp);
+  fprintf(m_locked_output->GetFile().GetStream(), "\r" ANSI_CLEAR_RIGHT);
+
   int count;
   auto input = el_wgets(m_editline, &count);
 

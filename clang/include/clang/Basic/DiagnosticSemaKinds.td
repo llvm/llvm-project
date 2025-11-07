@@ -8116,6 +8116,17 @@ def ext_gnu_ptr_func_arith : Extension<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to%select{ the|}2 function "
   "type%select{|s}2 %1%select{| and %3}2 is a GNU extension">,
   InGroup<GNUPointerArith>;
+def ext_gnu_counted_by_void_ptr
+    : Extension<
+          "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' "
+          "on a pointer to void is a GNU extension, treated as "
+          "'%select{sized_by|sized_by|sized_by_or_null|sized_by_or_null}0'">,
+      InGroup<GNUPointerArith>;
+def note_gnu_counted_by_void_ptr_use_sized_by
+    : Note<"use "
+           "'%select{__sized_by|__sized_by|__sized_by_or_null|__sized_by_or_"
+           "null}0' "
+           "to suppress this warning">;
 def err_readonly_message_assignment : Error<
   "assigning to 'readonly' return result of an Objective-C message not allowed">;
 def ext_c2y_increment_complex : Extension<

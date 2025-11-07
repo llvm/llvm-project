@@ -12746,6 +12746,10 @@ void SelectionDAG::getTopologicallyOrderedNodes(
   for (unsigned i = 0U; i < SortedNodes.size(); ++i) {
     const SDNode *N = SortedNodes[i];
     for (const SDNode *U : N->users()) {
+      // HandleSDNode is never part of a DAG and therefore has no entry in
+      // RemainingOperands.
+      if (U->getOpcode() == ISD::HANDLENODE)
+        continue;
       unsigned &NumRemOperands = RemainingOperands[U];
       assert(NumRemOperands && "Invalid number of remaining operands");
       --NumRemOperands;
@@ -12759,8 +12763,6 @@ void SelectionDAG::getTopologicallyOrderedNodes(
          "First node in topological sort is not the entry token");
   assert(SortedNodes.front()->getNumOperands() == 0 &&
          "First node in topological sort has operands");
-  assert(SortedNodes.back()->use_empty() &&
-         "Last node in topologic sort has users");
 }
 
 /// AddDbgValue - Add a dbg_value SDNode. If SD is non-null that means the

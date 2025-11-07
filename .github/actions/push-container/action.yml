@@ -24,9 +24,9 @@ runs:
           latest_name=$(echo $image_name | sed 's/:[a-f0-9]\+$/:latest/g')
           podman tag $image_name $latest_name
           echo "Pushing $image_name ..."
-          podman push $image_name
+          podman push --compression-format=zstd $image_name
           echo "Pushing $latest_name ..."
-          podman push $latest_name
+          podman push --compression-format=zstd $latest_name
         }
 
         podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
