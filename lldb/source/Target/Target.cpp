@@ -3207,6 +3207,11 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   bool should_stop = false;
   bool requested_continue = false;
 
+  // A stop hook might get deleted while running stop hooks.
+  // We have to decide what that means.  We will follow the rule that deleting
+  // a stop hook while processing these stop hooks will delete it for FUTURE
+  // stops but not this stop.  Fortunately, copying the m_stop_hooks to the
+  // active_hooks list before iterating over the hooks has this effect.
   for (auto cur_hook_sp : active_hooks) {
     bool any_thread_matched = false;
     for (auto exc_ctx : exc_ctx_with_reasons) {
