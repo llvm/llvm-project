@@ -7012,7 +7012,7 @@ static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI, SDNode *N,
   EVT CmpVT = Src0.getValueType();
   SDLoc SL(N);
 
-  if (CmpVT == MVT::f16 && !TLI.isTypeLegal(CmpVT)) {
+  if ((CmpVT == MVT::f16 && !TLI.isTypeLegal(CmpVT)) || CmpVT == MVT::bf16) {
     Src0 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src0);
     Src1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src1);
   }
