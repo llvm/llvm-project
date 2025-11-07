@@ -43,4 +43,4 @@ expr blah
 
 # CHECK: note: failed to parse and load modulemap file in {{.*}}sources
 ## FIXME: We never attempted to load bar.
-# CHECK-NOT: bar
+# CHECK-NOT: failed to parse and load modulemap

@@ -39,4 +39,4 @@ expr blah
 
 # CHECK: note: couldn't find modulemap file in {{.*}}sources
 ## FIXME: We never attempted to load bar.
-# CHECK-NOT: bar
+# CHECK-NOT: couldn't find modulemap

@@ -48,6 +48,4 @@ run
 ## Make sure expression fails so the 'note' diagnostics get printed.
 expr blah
 
-# CHECK: note: couldn't load submodule 'baz' of module 'foo' (top-level module: foo)
-## FIXME: We never attempted to load bar.
-# CHECK-NOT: bar
+# CHECK: note: couldn't load submodule 'baz' of module 'foo'

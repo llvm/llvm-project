@@ -8,6 +8,7 @@
 # RUN:             -fmodule-map-file=%t/sources/module.modulemap \
 # RUN:             -fmodules-cache-path=%t/ModuleCache -o %t.out
 # RUN: sed -i '' -e 's/foo\.h/baz\.h/' %t/sources/module.modulemap
+# RUN: sed -i '' -e 's/bar\.h/qux\.h/' %t/sources/module.modulemap
 #
 # RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
 # RUN:       -s %t/sources/commands.input %t.out -o exit 2>&1 | FileCheck %s
