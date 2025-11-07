@@ -27,6 +27,7 @@
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
+; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmp              - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
 ; CHECK-NEXT:   experimental-xqcia               - 'Xqcia' (Qualcomm uC Arithmetic Extension).
@@ -154,7 +155,6 @@
 ; CHECK-NEXT:   smepmp                           - 'Smepmp' (Enhanced Physical Memory Protection).
 ; CHECK-NEXT:   smmpm                            - 'Smmpm' (Machine-level Pointer Masking for M-mode).
 ; CHECK-NEXT:   smnpm                            - 'Smnpm' (Machine-level Pointer Masking for next lower privilege mode).
-; CHECK-NEXT:   smpmpmt                          - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   smrnmi                           - 'Smrnmi' (Resumable Non-Maskable Interrupts).
 ; CHECK-NEXT:   smstateen                        - 'Smstateen' (Machine-mode view of the state-enable extension).
 ; CHECK-NEXT:   ssaia                            - 'Ssaia' (Advanced Interrupt Architecture Supervisor Level).

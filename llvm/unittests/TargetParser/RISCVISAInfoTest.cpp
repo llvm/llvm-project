@@ -1110,7 +1110,6 @@ R"(All available -march extensions for RISC-V
     smepmp               1.0
     smmpm                1.0
     smnpm                1.0
-    smpmpmt              0.6
     smrnmi               1.0
     smstateen            1.0
     ssaia                1.0
@@ -1205,6 +1204,7 @@ Experimental extensions
     zvfofp8min           0.2
     zvkgs                0.7
     zvqdotq              0.0
+    smpmpmt              0.6
     svukte               0.3
     xqccmp               0.3
     xqcia                0.7
