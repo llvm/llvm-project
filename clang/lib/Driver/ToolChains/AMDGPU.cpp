@@ -1108,7 +1108,7 @@ std::optional<std::string> AMDGPUToolChain::filterSanitizeOption(
                       ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
                       : llvm::AMDGPU::getArchAttrR600(ProcKind);
   if (Features & llvm::AMDGPU::FEATURE_XNACK_ALWAYS)
-    return false;
+    return std::nullopt;
 
   // Look for the xnack feature in TargetID
   llvm::StringMap<bool> FeatureMap;
