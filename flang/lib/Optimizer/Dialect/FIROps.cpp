@@ -285,21 +285,6 @@ llvm::LogicalResult fir::AllocaOp::verify() {
   return mlir::success();
 }
 
-void fir::AllocaOp::getEffects(
-    llvm::SmallVectorImpl<
-        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
-        &effects) {
-  // Value-scoped Allocate for AA.
-  effects.emplace_back(
-      mlir::MemoryEffects::Allocate::get(),
-      mlir::cast<mlir::OpResult>(getOperation()->getResult(0)),
-      mlir::SideEffects::AutomaticAllocationScopeResource::get());
-  // Preserve previous behavior: op-scoped Allocate for passes relying on it.
-  effects.emplace_back(
-      mlir::MemoryEffects::Allocate::get(),
-      mlir::SideEffects::AutomaticAllocationScopeResource::get());
-}
-
 bool fir::AllocaOp::ownsNestedAlloca(mlir::Operation *op) {
   return op->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>() ||
          op->hasTrait<mlir::OpTrait::AutomaticAllocationScope>() ||
@@ -397,19 +382,6 @@ llvm::LogicalResult fir::AllocMemOp::verify() {
   if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
     return emitOpError("cannot allocate !fir.box of unknown rank or type");
   return mlir::success();
-}
-
-void fir::AllocMemOp::getEffects(
-    llvm::SmallVectorImpl<
-        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
-        &effects) {
-  // Value-scoped Allocate for AA.
-  effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
-                       mlir::cast<mlir::OpResult>(getOperation()->getResult(0)),
-                       mlir::SideEffects::DefaultResource::get());
-  // Preserve previous behavior: op-scoped Allocate for passes relying on it.
-  effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
-                       mlir::SideEffects::DefaultResource::get());
 }
 
 //===----------------------------------------------------------------------===//

@@ -80,8 +80,10 @@ def AnyRefOfConstantSizeAggregateType : TypeConstraint<
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
-def fir_AllocaOp : fir_Op<"alloca",
-    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def fir_AllocaOp
+    : fir_Op<"alloca",
+             [AttrSizedOperandSegments,
+              MemoryEffects<[MemAlloc<AutomaticAllocationScopeResource>]>]> {
   let summary = "allocate storage for a temporary on the stack given a type";
   let description = [{
     This primitive operation is used to allocate an object on the stack.  A
@@ -162,7 +164,9 @@ def fir_AllocaOp : fir_Op<"alloca",
     Variadic<AnyIntegerType>:$shape
   );
 
-  let results = (outs fir_ReferenceType);
+  let results =
+      (outs Res<fir_ReferenceType,
+                "", [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -212,8 +216,9 @@ def fir_AllocaOp : fir_Op<"alloca",
   }];
 }
 
-def fir_AllocMemOp : fir_Op<"allocmem",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, AttrSizedOperandSegments]> {
+def fir_AllocMemOp
+    : fir_Op<"allocmem", [AttrSizedOperandSegments,
+                          MemoryEffects<[MemAlloc<DefaultResource>]>]> {
   let summary = "allocate storage on the heap for an object of a given type";
 
   let description = [{
@@ -235,7 +240,7 @@ def fir_AllocMemOp : fir_Op<"allocmem",
     Variadic<AnyIntegerType>:$typeparams,
     Variadic<AnyIntegerType>:$shape
   );
-  let results = (outs fir_HeapType);
+  let results = (outs Res<fir_HeapType, "", [MemAlloc<DefaultResource>]>:$res);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
