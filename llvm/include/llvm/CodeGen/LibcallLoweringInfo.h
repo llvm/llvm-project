@@ -15,9 +15,9 @@ namespace llvm {
 
 class LibcallLoweringInfo {
 private:
-  LLVM_ABI const RTLIB::RuntimeLibcallsInfo &RTLCI;
+  const RTLIB::RuntimeLibcallsInfo &RTLCI;
   /// Stores the implementation choice for each each libcall.
-  LLVM_ABI RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
+  RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
       RTLIB::Unsupported};
 
 public:
