@@ -2846,14 +2846,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_exp10f:
     case Builtin::BI__builtin_exp10f16:
     case Builtin::BI__builtin_exp10l:
-    case Builtin::BI__builtin_exp10f128: {
+    case Builtin::BI__builtin_exp10f128:
     case Builtin::BI__builtin_elementwise_exp10:
       // TODO: strictfp support
-      if (Builder.getIsFPConstrained())
-        break;
       return RValue::get(
           emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::exp10));
-    }
     case Builtin::BIfabs:
     case Builtin::BIfabsf:
     case Builtin::BIfabsl:
@@ -2951,7 +2948,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
       Value *Arg1 = EmitScalarExpr(E->getArg(0));
       Value *Arg2 = EmitScalarExpr(E->getArg(1));
-      return RValue::get(Builder.CreateFRem(Arg1, Arg2, "fmod"));
+      if (Builder.getIsFPConstrained()) {
+        Function *F = CGM.getIntrinsic(Intrinsic::experimental_constrained_frem,
+                                       Arg1->getType());
+        return RValue::get(Builder.CreateConstrainedFPCall(F, {Arg1, Arg2}));
+      } else {
+        return RValue::get(Builder.CreateFRem(Arg1, Arg2, "fmod"));
+      }
     }
 
     case Builtin::BIlog:
@@ -3202,11 +3205,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_ldexpf:
     case Builtin::BI__builtin_ldexpl:
     case Builtin::BI__builtin_ldexpf16:
-    case Builtin::BI__builtin_ldexpf128: {
+    case Builtin::BI__builtin_ldexpf128:
+    case Builtin::BI__builtin_elementwise_ldexp:
       return RValue::get(emitBinaryExpMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::ldexp,
           Intrinsic::experimental_constrained_ldexp));
-    }
     default:
       break;
     }
