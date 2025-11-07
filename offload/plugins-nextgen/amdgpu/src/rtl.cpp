@@ -3150,6 +3150,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       OMPX_XTeamReductionOccupancyBasedOpt =
           EnvarConfig.OMPX_XTeamReductionOccupancyBasedOpt;
     }
+    // Print potential GPU envars.
+    DP("Loaded per GPU envars:\n"
+       "  OMPX_UseMultipleSdmaEngines=%d\n"
+       "  OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=%d\n"
+       "  OMPX_XteamBlockSize=%d\n"
+       "  OMPX_XTeamReductionOccupancyBasedOpt=%d\n",
+       EnvarConfig.OMPX_UseMultipleSdmaEngines,
+       EnvarConfig.OMPX_AdjustNumTeamsForXteamRedSmallBlockSize,
+       EnvarConfig.OMPX_XteamBlockSize,
+       EnvarConfig.OMPX_XTeamReductionOccupancyBasedOpt);
   }
 
   ~AMDGPUDeviceTy() {}
