@@ -43,7 +43,7 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
                                        PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   Value x = op.getLhs();
-  auto fmf = op.getFastmathAttr().getValue();
+  arith::FastMathFlags fmf = op.getFastmathAttr().getValue();
 
   FloatAttr scalarExponent;
   DenseFPElementsAttr vectorExponent;
