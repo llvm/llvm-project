@@ -3596,7 +3596,6 @@ let Predicates = [HasSVE_or_SME] in {
   // Extracts of ``unsigned'' i8 or i16 elements lead to the zero-extend being
   // transformed to an AND mask. The mask is redundant since UMOV already zeroes
   // the high bits of the destination register.
-  // We do something similar in the Neon versions of these patterns.
   def : Pat<(i32 (and (vector_extract nxv16i8:$vec, VectorIndexB:$index), 0xff)),
             (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
   def : Pat<(i32 (and (vector_extract nxv8i16:$vec, VectorIndexH:$index), 0xffff)),
