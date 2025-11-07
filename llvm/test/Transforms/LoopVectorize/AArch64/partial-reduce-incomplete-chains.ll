@@ -70,3 +70,28 @@ loop:
 exit:
   ret i32 %red.next
 }
+
+define i16 @test_incomplete_chain_without_mul(ptr noalias %dst, ptr %A, ptr %B) #0 {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i16 [ 0, %entry ], [ %red.next, %loop ]
+  %l.a = load i8, ptr %A, align 1
+  %a.ext = zext i8 %l.a to i16
+  store i16 %a.ext, ptr %dst, align 2
+  %l.b = load i8, ptr %B, align 1
+  %b.ext = zext i8 %l.b to i16
+  %add = add i16 %red, %b.ext
+  %add.1 = add i16 %add, %a.ext
+  %red.next = add i16 %add.1, %b.ext
+  %iv.next = add i64 %iv, 1
+  %ec = icmp ult i64 %iv, 1024
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret i16 %red.next
+}
+
+attributes #0 = { "target-cpu"="grace" }
