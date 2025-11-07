@@ -1237,8 +1237,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // This should be limited to non-member-of entries because for member-of,
       // their ref-count should go down only once as part of the parent.
       StateInfo->SkippedFromEntries[HstPtrBegin] = DataSize;
-      DP("Skipping FROM map transfer for HstPtr=" DPxMOD ", Size=%" PRId64
-         "\n",
+      DP("Skipping FROM map transfer for HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
          DPxPTR(HstPtrBegin), DataSize);
     }
 

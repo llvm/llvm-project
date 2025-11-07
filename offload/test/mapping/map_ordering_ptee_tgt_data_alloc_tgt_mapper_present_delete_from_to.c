@@ -17,7 +17,9 @@ typedef struct {
   int *p;
   int *q;
 } S;
-#pragma omp declare mapper(my_mapper: S s) map(alloc: s.p) map(alloc, present: s.p[0:10]) map(delete: s.q[:]) map(from: s.p[0:10]) map(to: s.p[0:10]) map(alloc: s.p[0:10])
+#pragma omp declare mapper(my_mapper : S s) map(alloc : s.p)                   \
+    map(alloc, present : s.p[0 : 10]) map(delete : s.q[ : ])                   \
+    map(from : s.p[0 : 10]) map(to : s.p[0 : 10]) map(alloc : s.p[0 : 10])
 
 S s1;
 int main() {
@@ -25,9 +27,9 @@ int main() {
   x[1] = 111;
   s1.q = s1.p = &x[0];
 
-  #pragma omp target data map(alloc: x) // (1)
+#pragma omp target data map(alloc : x) // (1)
   {
-    #pragma omp target map(mapper(my_mapper), tofrom: s1) // (2)
+#pragma omp target map(mapper(my_mapper), tofrom : s1) // (2)
     {
       printf("%d\n", s1.p[1]); // CHECK-NOT: 111
       s1.p[1] = 222;
