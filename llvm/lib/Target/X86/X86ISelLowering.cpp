@@ -3454,6 +3454,12 @@ bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,
       isTypeLegal(LoadVT) && isTypeLegal(BitcastVT))
     return true;
 
+  // If we have a large vector type (even if illegal), don't bitcast to large
+  // (illegal) scalar types. Better to load fewer vectors and extract.
+  if (LoadVT.isVector() && !BitcastVT.isVector() && LoadVT.isInteger() &&
+      BitcastVT.isInteger() && (LoadVT.getSizeInBits() % 128) == 0)
+    return false;
+
   return TargetLowering::isLoadBitCastBeneficial(LoadVT, BitcastVT, DAG, MMO);
 }
 
