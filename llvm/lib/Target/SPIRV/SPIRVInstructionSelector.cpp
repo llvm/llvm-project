@@ -3146,6 +3146,13 @@ bool SPIRVInstructionSelector::selectDpdCoarse(Register ResVReg,
                                                const SPIRVType *ResType,
                                                MachineInstr &I,
                                                const unsigned DPdOpCode) const {
+  if (!STI.isShader()) {
+    std::string DiagMsg;
+    raw_string_ostream OS(DiagMsg);
+    I.print(OS, true, false, false, false);
+    DiagMsg += " is only supported in shaders.\n";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
   // If the arg/result types are half then we need to wrap the instr in
   // conversions to float
   // This case occurs because a half arg/result is legal in HLSL but not spirv.
