@@ -1,8 +1,8 @@
-!! UNSUPPORTED: system-windows
+!! UNSUPPORTED: system-windows, system-aix
 
 !! Test that --gcc-triple option is working as expected.
 
-! RUN: %flang -v --sysroot=%S/Inputs/fedora_39_tree 2>&1 | FileCheck %s --dump-input=always --check-prefix=DEFAULT_TRIPLE
+! RUN: %flang --target=x86_64-linux-gnu -v --sysroot=%S/Inputs/fedora_39_tree 2>&1 | FileCheck %s --dump-input=always --check-prefix=DEFAULT_TRIPLE
 ! DEFAULT_TRIPLE: {{^}}Found candidate GCC installation:
 ! DEFAULT_TRIPLE: fedora_39_tree/usr/lib/gcc/x86_64-linux-gnu/13
 ! DEFAULT_TRIPLE: {{^}}Found candidate GCC installation:
