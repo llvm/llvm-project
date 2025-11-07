@@ -65,6 +65,7 @@
 #include "UseAnyOfAllOfCheck.h"
 #include "UseConcisePreprocessorDirectivesCheck.h"
 #include "UseStdMinMaxCheck.h"
+#include "ConditionalToIfCheck.h"
 
 namespace clang::tidy {
 namespace readability {
@@ -184,6 +185,8 @@ public:
         "readability-use-concise-preprocessor-directives");
     CheckFactories.registerCheck<UseStdMinMaxCheck>(
         "readability-use-std-min-max");
+    CheckFactories.registerCheck<ConditionalToIfCheck>(
+        "readability-conditional-to-if");
   }
 };
 
