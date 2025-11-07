@@ -170,6 +170,16 @@ public:
   }
 
   Register getOneVReg(unsigned PhysReg) const;
+
+  /// Verify that all LiveInterval pointers in the matrix are valid.
+  /// This checks that each LiveInterval referenced in LiveIntervalUnion
+  /// actually exists in LiveIntervals and is not a dangling pointer.
+  /// Returns true if the matrix is valid, false if dangling pointers are found.
+  /// This is primarily useful for debugging heap-use-after-free issues.
+  /// This method uses a lazy approach - it builds a set of valid LiveInterval
+  /// pointers on-demand and has zero runtime/memory overhead during normal
+  /// register allocation.
+  bool isValid() const;
 };
 
 class LiveRegMatrixWrapperLegacy : public MachineFunctionPass {
