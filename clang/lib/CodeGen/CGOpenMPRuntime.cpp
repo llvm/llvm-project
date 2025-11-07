@@ -3747,9 +3747,9 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     if (Kind == OMPC_THREADSET_omp_pool)
       Flags = Flags | FreeAgentFlag;
   }
-  if (const auto *Clause = D.getSingleClause<OMPTransparentClause>()) {
+  if (D.getSingleClause<OMPTransparentClause>())
     Flags |= TransparentFlag;
-  }
+
   if (Data.Priority.getInt())
     Flags = Flags | PriorityFlag;
   if (D.hasClausesOfKind<OMPDetachClause>())

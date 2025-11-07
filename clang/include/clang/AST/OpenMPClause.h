@@ -1537,6 +1537,9 @@ class OMPTransparentClause final : public OMPClause {
   /// \param KLoc Argument location.
   void setTransparentKindLoc(SourceLocation KLoc) { KindLoc = KLoc; }
 
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
 public:
   /// Build 'transparent' clause with argument \a A ('omp_not_impex',
   /// 'omp_import', 'omp_export' or 'omp_impex')
@@ -1557,9 +1560,6 @@ public:
   OMPTransparentClause()
       : OMPClause(llvm::omp::OMPC_transparent, SourceLocation(),
                   SourceLocation()) {}
-
-  /// Sets the location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
 
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
