@@ -321,21 +321,8 @@ llvm.func @taskgroup_task_reduction(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @taskloop(%lb : i32, %ub : i32, %step : i32) {
-  // expected-error@below {{not yet implemented: omp.taskloop}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @taskloop_untied(%lb : i32, %ub : i32, %step : i32) {
-  // expected-error@below {{not yet implemented: omp.taskloop}}
+  // expected-error@below {{not yet implemented: Unhandled clause untied in omp.taskloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
   omp.taskloop untied {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
