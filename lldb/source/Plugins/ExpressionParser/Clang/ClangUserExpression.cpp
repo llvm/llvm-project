@@ -371,26 +371,18 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
 
   if (!sc.comp_unit)
     return;
-  StreamString error_stream;
-
   ClangModulesDeclVendor::ModuleVector modules_for_macros =
       persistent_state->GetHandLoadedClangModules();
-  if (decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros,
-                                            error_stream))
+
+  auto err =
+      decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros);
+  if (!err)
     return;
 
-  // Failed to load some modules, so emit the error stream as a diagnostic.
-  if (!error_stream.Empty()) {
-    // The error stream already contains several Clang diagnostics that might
-    // be either errors or warnings, so just print them all as one remark
-    // diagnostic to prevent that the message starts with "error: error:".
-    diagnostic_manager.PutString(lldb::eSeverityInfo, error_stream.GetString());
-    return;
-  }
-
-  diagnostic_manager.PutString(lldb::eSeverityError,
-                               "Unknown error while loading modules needed for "
-                               "current compilation unit.");
+  // FIXME: should we be dumping these to the error log instead of as
+  // diagnostics? They are non-fatal and are usually quite noisy.
+  diagnostic_manager.PutString(lldb::eSeverityInfo,
+                               llvm::toString(std::move(err)));
 }
 
 ClangExpressionSourceCode::WrapKind ClangUserExpression::GetWrapKind() const {

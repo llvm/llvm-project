@@ -1,0 +1,51 @@
+## Tests the case where we fail to load a submodule. We force this by removing
+## the submodule 'module baz' from the modulemap.
+#
+# REQUIRES: system-darwin
+#
+# RUN: split-file %s %t/sources
+# RUN: %clang_host -g %t/sources/main.m -fmodules -fcxx-modules \
+# RUN:             -fmodule-map-file=%t/sources/module.modulemap \
+# RUN:             -fmodules-cache-path=%t/ModuleCache -o %t.out
+# RUN: sed -i '' -e 's/module baz/module qux/' %t/sources/module.modulemap
+#
+# RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/sources/commands.input %t.out -o exit 2>&1 | FileCheck %s
+
+#--- main.m
+@import foo.baz;
+@import bar;
+
+int main() { __builtin_debugtrap(); }
+
+#--- foo.h
+struct foo {};
+
+#--- bar.h
+struct bar {};
+
+#--- baz.h
+struct baz {};
+
+#--- module.modulemap
+module foo {
+    header "foo.h"
+    export *
+
+    module baz {
+        header "baz.h"
+        export *
+    }
+}
+
+module bar {
+    header "bar.h"
+    export *
+}
+
+#--- commands.input
+run
+## Make sure expression fails so the 'note' diagnostics get printed.
+expr blah
+
+# CHECK: note: couldn't load submodule 'baz' of module 'foo'
