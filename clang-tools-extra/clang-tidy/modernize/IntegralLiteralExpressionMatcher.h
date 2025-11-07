@@ -73,4 +73,4 @@ private:
 
 } // namespace clang::tidy::modernize
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_INTEGRALLITERALEXPRESSIONMATCHER_H
