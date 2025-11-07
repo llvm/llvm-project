@@ -3113,6 +3113,39 @@ LogicalResult SubViewOp::verify() {
   ArrayRef<int64_t> staticSizes = getStaticSizes();
   ArrayRef<int64_t> staticStrides = getStaticStrides();
 
+  // Check number of static offsets, sizes and strides match source rank.
+  int64_t baseRank = baseType.getRank();
+  size_t numStaticOffsets = staticOffsets.size();
+  if (static_cast<int64_t>(numStaticOffsets) != baseRank)
+    return emitError("number of static offsets (")
+           << numStaticOffsets << ") does not match source rank (" << baseRank
+           << ")";
+  size_t numStaticSizes = staticSizes.size();
+  if (static_cast<int64_t>(numStaticSizes) != baseRank)
+    return emitError("number of static sizes (")
+           << numStaticSizes << ") does not match source rank (" << baseRank
+           << ")";
+  size_t numStaticStrides = staticStrides.size();
+  if (static_cast<int64_t>(numStaticStrides) != baseRank)
+    return emitError("number of static strides (")
+           << numStaticStrides << ") does not match source rank (" << baseRank
+           << ")";
+
+  // Check number of dynamic offsets, sizes and strides is less of equal to the
+  // source rank.
+  size_t numOffsets = getOffsets().size();
+  if (static_cast<int64_t>(numOffsets) > baseRank)
+    return emitError("number of dynamic offsets (")
+           << numOffsets << ") bigger than rank (" << baseRank << ")";
+  size_t numSizes = getSizes().size();
+  if (static_cast<int64_t>(numSizes) > baseRank)
+    return emitError("number of dynamic sizes (")
+           << numSizes << ") bigger than rank (" << baseRank << ")";
+  size_t numStrides = getStrides().size();
+  if (static_cast<int64_t>(numStrides) > baseRank)
+    return emitError("number of dynamic strides (")
+           << numStrides << ") bigger than rank (" << baseRank << ")";
+
   // The base memref and the view memref should be in the same memory space.
   if (baseType.getMemorySpace() != subViewType.getMemorySpace())
     return emitError("different memory spaces specified for base memref "
