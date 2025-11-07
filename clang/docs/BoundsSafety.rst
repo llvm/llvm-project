@@ -58,7 +58,7 @@ adopt, offering these properties that make it widely adoptable in practice:
 * It has a relatively low adoption cost.
 
 This document discusses the key designs of ``-fbounds-safety``. The document is
-subject to being actively updated with a more detailed specification.
+subject to active updates with a more detailed specification.
 
 Programming Model
 =================
