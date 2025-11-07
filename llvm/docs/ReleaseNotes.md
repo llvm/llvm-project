@@ -138,6 +138,7 @@ Changes to the RISC-V Backend
 * Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
 * Add support for Zvfofp8min (OFP8 conversion extension)
 * Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
+* `-mtune=generic` now uses the scheduling model from SpacemitX60 instead of an empty scheduling model.
 
 Changes to the WebAssembly Backend
 ----------------------------------
