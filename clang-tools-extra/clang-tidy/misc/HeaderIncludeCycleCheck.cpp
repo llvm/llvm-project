@@ -107,7 +107,7 @@ public:
       Check.diag(Loc, "direct self-inclusion of header file '%0'") << FileName;
       return;
     }
-
+    
     Check.diag(Loc, "circular header file dependency detected while including "
                     "'%0', please check the include path")
         << FileName;
