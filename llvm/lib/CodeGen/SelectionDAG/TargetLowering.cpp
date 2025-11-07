@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -9482,6 +9483,13 @@ SDValue TargetLowering::expandVPCTLZ(SDNode *Node, SelectionDAG &DAG) const {
 
 
 SDValue TargetLowering::expandCTLZWithFP(SDNode *Node, SelectionDAG &DAG) const {
+  // pseudocode :
+  // if(x==0) return 32;
+  // float f = (float) x;
+  // int i = bitcast<int>(f);
+  // int ilog2 = (i >> 23) - 127;
+  // return 31 - ilog2;
+
   SDLoc dl(Node);
   SDValue Op = Node->getOperand(0);
   EVT VT = Op.getValueType();
@@ -9495,9 +9503,11 @@ SDValue TargetLowering::expandCTLZWithFP(SDNode *Node, SelectionDAG &DAG) const 
   // Converting to float type
   if (EltVT == MVT::i32) {
     FloatVT = VT.changeVectorElementType(MVT::f32);
-    BitWidth = 32;
-    MantissaBits = 23;
-    ExponentBias = 127;
+    const fltSemantics &Sem = FloatVT.getVectorElementType().getFltSemantics();
+    BitWidth = EltVT.getSizeInBits();
+    MantissaBits = APFloat::semanticsPrecision(Sem) - 1;
+    ExponentBias =
+        static_cast<unsigned>(-APFloat::semanticsMinExponent(Sem) + 1);
   } 
   else {
     return SDValue();
@@ -9518,13 +9528,6 @@ SDValue TargetLowering::expandCTLZWithFP(SDNode *Node, SelectionDAG &DAG) const 
 
   //Returns the respective DAG Node based on the input being zero or non-zero
   return DAG.getNode(ISD::VSELECT, dl, VT, IsZero, ZeroRes, NonZeroRes);
-
-  // pseudocode : 
-  // if(x==0) return 32;
-  // float f = (float) x;
-  // int i = bitcast<int>(f);
-  // int ilog2 = (i >> 23) - 127;
-  // return 31 - ilog2;
 }
 
 SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
