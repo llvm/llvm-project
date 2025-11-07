@@ -66,6 +66,7 @@ void BPFSubtarget::initializeEnvironment() {
   HasGotol = false;
   HasStoreImm = false;
   HasLoadAcqStoreRel = false;
+  AllowsMisalignedMemAccess = false;
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
