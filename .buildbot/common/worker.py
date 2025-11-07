@@ -38,6 +38,8 @@ def common_init(jobs=None):
 
 @contextmanager
 def step(step_name, halt_on_fail=False):
+    sys.stderr.flush()
+    sys.stdout.flush()
     util.report('@@@BUILD_STEP {}@@@'.format(step_name))
     if halt_on_fail:
         util.report('@@@HALT_ON_FAILURE@@@')
@@ -55,8 +57,7 @@ def step(step_name, halt_on_fail=False):
         util.report('@@@STEP_FAILURE@@@')
         if halt_on_fail:
             exit(1)
-    finally:
-        sys.stdout.flush()
+
 
 
 def get_steps(makefile):
