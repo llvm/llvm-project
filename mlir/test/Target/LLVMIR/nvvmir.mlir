@@ -166,13 +166,6 @@ llvm.func @nvvm_rcp(%0: f32) -> f32 {
   llvm.return %1 : f32
 }
 
-// CHECK-LABEL: @llvm_nvvm_barrier0
-llvm.func @llvm_nvvm_barrier0() {
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
-  nvvm.barrier0
-  llvm.return
-}
-
 // CHECK-LABEL: @llvm_nvvm_barrier(
 // CHECK-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
 llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {

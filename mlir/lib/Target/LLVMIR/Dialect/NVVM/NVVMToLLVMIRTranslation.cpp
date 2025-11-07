@@ -291,6 +291,20 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
   llvm_unreachable("Unsupported proxy kinds");
 }
 
+static unsigned getBarrier0IntrinsicID(std::optional<NVVM::Barrier0Pred> pred) {
+  if (!pred)
+    return llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
+  switch (*pred) {
+  case NVVM::Barrier0Pred::AND:
+    return llvm::Intrinsic::nvvm_barrier0_and;
+  case NVVM::Barrier0Pred::OR:
+    return llvm::Intrinsic::nvvm_barrier0_or;
+  case NVVM::Barrier0Pred::POPC:
+    return llvm::Intrinsic::nvvm_barrier0_popc;
+  }
+  llvm_unreachable("Unknown predicate for barrier0");
+}
+
 static unsigned getMembarIntrinsicID(NVVM::MemScopeKind scope) {
   switch (scope) {
   case NVVM::MemScopeKind::CTA:
