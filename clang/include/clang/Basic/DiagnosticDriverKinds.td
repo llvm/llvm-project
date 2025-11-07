@@ -133,6 +133,9 @@ def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
 def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_option_part_for_target : Warning<
+  "ignoring '%0' in '%1' option as it is not currently supported for target '%2'">,
+  InGroup<OptionIgnored>;
 def warn_drv_invalid_argument_for_flang : Warning<
   "'%0' is not valid for Fortran">,
   InGroup<OptionIgnored>;
