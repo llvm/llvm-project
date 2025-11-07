@@ -3480,56 +3480,55 @@ static bool isConstValidTrue(const TargetLowering &TLI, unsigned ScalarSizeBits,
 bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
                                               MachineRegisterInfo &MRI,
                                               Register &UnmergeSrc) const {
-  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  auto &BV = cast<GBuildVector>(MI);
 
-  unsigned BuildUseCount = MI.getNumOperands() - 1;
-
+  unsigned BuildUseCount = BV.getNumSources();
   if (BuildUseCount % 2 != 0)
     return false;
 
   unsigned NumUnmerge = BuildUseCount / 2;
 
-  // Check the first operand is an unmerge
-  auto *MaybeUnmerge = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
-  if (MaybeUnmerge->getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
+  auto *Unmerge = getOpcodeDef<GUnmerge>(BV.getSourceReg(0), MRI);
+
+  // Check the first operand is an unmerge and has the correct number of
+  // operands
+  if (!Unmerge || Unmerge->getNumOperands() != NumUnmerge + 1)
     return false;
 
+  UnmergeSrc = Unmerge->getSourceReg();
+
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-  LLT UnmergeSrcTy = MRI.getType(
-      MaybeUnmerge->getOperand(MaybeUnmerge->getNumOperands() - 1).getReg());
+  LLT UnmergeSrcTy = MRI.getType(UnmergeSrc);
 
   // Ensure we only generate legal instructions post-legalizer
-  if (!IsPreLegalize && !isLegal({TargetOpcode::G_CONCAT_VECTORS,
-                                  {DstTy, UnmergeSrcTy, UnmergeSrcTy}}))
+  if (!IsPreLegalize &&
+      !isLegal({TargetOpcode::G_CONCAT_VECTORS, {DstTy, UnmergeSrcTy}}))
     return false;
 
   // Check that all of the operands before the midpoint come from the same
   // unmerge and are in the same order as they are used in the build_vector
   for (unsigned I = 0; I < NumUnmerge; ++I) {
-    auto MaybeUnmergeReg = MI.getOperand(I + 1).getReg();
-    auto *Unmerge = getDefIgnoringCopies(MaybeUnmergeReg, MRI);
+    auto MaybeUnmergeReg = BV.getSourceReg(I);
+    auto *LoopUnmerge = getOpcodeDef<GUnmerge>(MaybeUnmergeReg, MRI);
 
-    if (Unmerge != MaybeUnmerge)
+    if (!LoopUnmerge || LoopUnmerge != Unmerge)
       return false;
 
-    if (Unmerge->getOperand(I).getReg() != MaybeUnmergeReg)
+    if (LoopUnmerge->getOperand(I).getReg() != MaybeUnmergeReg)
       return false;
   }
 
   // Check that all of the unmerged values are used
-  if (MaybeUnmerge->getNumDefs() != NumUnmerge)
+  if (Unmerge->getNumDefs() != NumUnmerge)
     return false;
 
   // Check that all of the operands after the mid point are undefs.
   for (unsigned I = NumUnmerge; I < BuildUseCount; ++I) {
-    auto *Undef = getDefIgnoringCopies(MI.getOperand(I + 1).getReg(), MRI);
+    auto *Undef = getDefIgnoringCopies(BV.getSourceReg(I), MRI);
 
     if (Undef->getOpcode() != TargetOpcode::G_IMPLICIT_DEF)
       return false;
   }
-
-  UnmergeSrc =
-      MaybeUnmerge->getOperand(MaybeUnmerge->getNumOperands() - 1).getReg();
 
   return true;
 }
