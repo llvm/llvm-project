@@ -11,6 +11,7 @@
 #define _LIBCPP___ITERATOR_DISTANCE_H
 
 #include <__algorithm/for_each_segment.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
@@ -41,35 +42,29 @@ template <class _Iter>
 using __iter_distance_t _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::difference_type;
 #endif
 
-template <class _InputIter, class _Sent>
-inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_InputIter> __distance(_InputIter __first, _Sent __last) {
-  __iter_distance_t<_InputIter> __r(0);
-  for (; __first != __last; ++__first)
-    ++__r;
-  return __r;
-}
-
 template <class _RandIter, __enable_if_t<__has_random_access_iterator_category<_RandIter>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_RandIter>
 __distance(_RandIter __first, _RandIter __last) {
   return __last - __first;
 }
 
+template <class _InputIter, class _Sent>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_InputIter>
+__distance(_InputIter __first, _Sent __last) {
+  __iter_distance_t<_InputIter> __r(0);
 #if _LIBCPP_STD_VER >= 20
-template <class _SegmentedIter,
-          __enable_if_t<!__has_random_access_iterator_category<_SegmentedIter>::value &&
-                            __is_segmented_iterator_v<_SegmentedIter>,
-                        int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_SegmentedIter>
-__distance(_SegmentedIter __first, _SegmentedIter __last) {
-  __iter_distance_t<_SegmentedIter> __r(0);
-  std::__for_each_segment(__first, __last, [&__r](auto __lfirst, auto __llast) {
-    __r += std::__distance(__lfirst, __llast);
-  });
+  if constexpr (same_as<_InputIter, _Sent> && __is_segmented_iterator_v<_InputIter>) {
+    std::__for_each_segment(__first, __last, [&__r](auto __lfirst, auto __llast) {
+      __r += std::__distance(__lfirst, __llast);
+    });
+  } else
+#endif
+  {
+    for (; __first != __last; ++__first)
+      ++__r;
+  }
   return __r;
 }
-#endif // _LIBCPP_STD_VER >= 20
 
 template <class _InputIter>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 typename iterator_traits<_InputIter>::difference_type
