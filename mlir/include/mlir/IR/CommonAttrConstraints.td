@@ -334,6 +334,7 @@ class FloatAttrBase<F attrValType, string descr> :
   let returnType = [{ ::llvm::APFloat }];
 }
 
+def F16Attr : FloatAttrBase<F16, "16-bit float attribute">;
 def F32Attr : FloatAttrBase<F32, "32-bit float attribute">;
 def F64Attr : FloatAttrBase<F64, "64-bit float attribute">;
 

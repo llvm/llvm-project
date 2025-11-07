@@ -1014,6 +1014,8 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+// Attribute spirv::Deserializer::getConstant(uint32_t id) {}
+
 IntegerAttr spirv::Deserializer::getConstantInt(uint32_t id) {
   auto constInfo = getConstant(id);
   if (!constInfo) {
