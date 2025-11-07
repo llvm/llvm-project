@@ -45,17 +45,12 @@ public:
   ///     If non-NULL, a pointer to a vector to populate with the ID of every
   ///     module that is re-exported by the specified module.
   ///
-  /// \param[out] error_stream
-  ///     A stream to populate with the output of the Clang parser when
-  ///     it tries to load the module.
-  ///
   /// \return
   ///     True if the module could be loaded; false if not.  If the
   ///     compiler encountered a fatal error during a previous module
   ///     load, then this will always return false for this ModuleImporter.
-  virtual bool AddModule(const SourceModule &module,
-                         ModuleVector *exported_modules,
-                         Stream &error_stream) = 0;
+  virtual llvm::Error AddModule(const SourceModule &module,
+                                ModuleVector *exported_modules) = 0;
 
   /// Add all modules referred to in a given compilation unit to the list
   /// of modules to search.
@@ -67,18 +62,13 @@ public:
   ///     A vector to populate with the ID of each module loaded (directly
   ///     and via re-exports) in this way.
   ///
-  /// \param[out] error_stream
-  ///     A stream to populate with the output of the Clang parser when
-  ///     it tries to load the modules.
-  ///
   /// \return
   ///     True if all modules referred to by the compilation unit could be
   ///     loaded; false if one could not be loaded.  If the compiler
   ///     encountered a fatal error during a previous module
   ///     load, then this will always return false for this ModuleImporter.
-  virtual bool AddModulesForCompileUnit(CompileUnit &cu,
-                                        ModuleVector &exported_modules,
-                                        Stream &error_stream) = 0;
+  virtual llvm::Error
+  AddModulesForCompileUnit(CompileUnit &cu, ModuleVector &exported_modules) = 0;
 
   /// Enumerate all the macros that are defined by a given set of modules
   /// that are already imported.
