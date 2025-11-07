@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from pygments.lexer import RegexLexer, bygroups, include, combined
+from pygments.lexer import RegexLexer, bygroups, include, using
 from pygments.token import *
 import re
 
@@ -27,22 +27,40 @@ class MlirLexer(RegexLexer):
 
     flags = re.MULTILINE
 
+    class VariableList(RegexLexer):
+        """Lexer for lists of SSA variables separated by commas."""
+
+        tokens = {
+            "root": [
+                (r"\s+", Text),
+                (r",", Punctuation),
+                (r"%[_A-Za-z0-9\.\$\-:#]+", Name.Variable),
+            ]
+        }
+
     tokens = {
         "root": [
             # Comments
             (r"//.*?$", Comment.Single),
+            # operation name with assignment: %... = op.name
+            (
+                r"^(\s*)(%[\%_A-Za-z0-9\:#\,\s]+)(=)(\s*)([A-Za-z0-9_\.\$\-]+)\b",
+                bygroups(Text, using(VariableList), Operator, Text, Name.Builtin),
+            ),
+            # operation name without result
+            (r"^(\s*)([A-Za-z0-9_\.\$\-]+)\b(?=[^<:])", bygroups(Text, Name.Builtin)),
             # Attribute alias definition:  #name =
             (
-                r"^\s*(#[_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
-                bygroups(Name.Constant, Text, Operator),
+                r"^(\s*)(#[_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
+                bygroups(Text, Name.Constant, Text, Operator),
             ),
             # Type alias definition: !name =
             (
-                r"^\s*(![_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
-                bygroups(Keyword.Type, Text, Operator),
+                r"^(\s*)(![_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
+                bygroups(Text, Keyword.Type, Text, Operator),
             ),
-            # SSA values (results, uses) - allow many characters MLIR uses
-            (r"%[%_A-Za-z0-9\.\$:\-]+", Name.Variable),
+            # SSA values (results, uses)
+            (r"%[_A-Za-z0-9\.\$\-:#]+", Name.Variable),
             # attribute refs, constants and named attributes
             (r"#[_A-Za-z0-9\$\-\.]+\b", Name.Constant),
             # symbol refs / function-like names
@@ -61,14 +79,7 @@ class MlirLexer(RegexLexer):
             # affine constructs
             (r"\b(affine_map|affine_set)\b", Keyword.Reserved),
             # common builtin operators / functions inside affine_map
-            (r"\b(ceildiv|floordiv|mod|symbol)\b", Name.Builtin),
-            # operation definitions with assignment: %... = op.name
-            (
-                r"^(\s*)(%[\%_A-Za-z0-9\:\,\s]+)(\s*=\s*)([A-Za-z0-9_\.\$\-]+)\b",
-                bygroups(Text, Name.Variable, Operator, Name.Function),
-            ),
-            # operation name without result
-            (r"^(\s*)([A-Za-z0-9_\.\$\-]+)\b(?=[^<:])", bygroups(Text, Name.Function)),
+            (r"\b(ceildiv|floordiv|mod|symbol)\b", Name.Other),
             # identifiers / bare words
             (r"\b[_A-Za-z][_A-Za-z0-9\.-]*\b", Name.Other),
             # numbers: hex, float (with exponent), integer
@@ -96,13 +107,13 @@ class MlirLexer(RegexLexer):
             (r">", Punctuation, "#pop"),
             # dimensions like 3x or 3x3x... and standalone numbers:
             # - match numbers that are followed by an 'x' (dimension separator)
-            (r"([0-9]+)(?=(?:[xX]))", Number.Integer),
+            (r"([0-9]+)(?=(?:x))", Number.Integer),
             # - match bare numbers (sizes)
             (r"[0-9]+", Number.Integer),
             # dynamic dimension '?'
-            (r"\?", Name.Constant),
+            (r"\?", Name.Integer),
             # the 'x' dimension separator (treat as punctuation)
-            (r"[xX]", Punctuation),
+            (r"x", Punctuation),
             # element / builtin types inside angle brackets (no word-boundary)
             (
                 r"(?:bf16|f16|f32|f64|f80|f128|index|none|(?:[us]?i[0-9]+))",
