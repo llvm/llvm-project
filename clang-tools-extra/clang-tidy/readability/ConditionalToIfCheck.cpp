@@ -1,5 +1,4 @@
-//===--- ConditionalToIfCheck.cpp - clang-tidy -------------------*- C++
-//-*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -63,7 +62,7 @@ void ConditionalToIfCheck::check(const MatchFinder::MatchResult &Result) {
            "replace ternary operator with if/else statement for readability");
 
   // Extract source text for condition, true and false expressions
-  std::string CondStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
+  const std::string CondStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
                                                  Cond->getSourceRange()),
                                              SM, Result.Context->getLangOpts())
                             .str();
