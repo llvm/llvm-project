@@ -529,7 +529,7 @@ TEST_F(LifetimeAnalysisTest, PointersInACycle) {
         MyObj* temp = p1;
         p1 = p2;
         p2 = p3;
-        p3 = temp;B
+        p3 = temp;
         POINT(in_loop);
       }
       POINT(after_loop);
