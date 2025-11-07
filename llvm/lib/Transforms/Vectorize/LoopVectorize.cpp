@@ -1027,6 +1027,7 @@ public:
     CM_Widen_Reverse, // For consecutive accesses with stride -1.
     CM_Interleave,
     CM_GatherScatter,
+    CM_Compressed,
     CM_Scalarize,
     CM_VectorCall,
     CM_IntrinsicCall
@@ -3109,9 +3110,9 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (IsUniformMemOpUse(I))
       return true;
 
-    return (WideningDecision == CM_Widen ||
-            WideningDecision == CM_Widen_Reverse ||
-            WideningDecision == CM_Interleave);
+    return (
+        WideningDecision == CM_Widen || WideningDecision == CM_Widen_Reverse ||
+        WideningDecision == CM_Interleave || WideningDecision == CM_Compressed);
   };
 
   // Returns true if Ptr is the pointer operand of a memory access instruction
@@ -5192,11 +5193,16 @@ InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
     Instruction *I, ElementCount VF, InstWidening Decision) {
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
+  const Align Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
+
+  if (Decision == CM_Compressed)
+    return TTI.getExpandCompressMemoryOpCost(I->getOpcode(), VectorTy,
+                                             /*VariableMask*/ true, Alignment,
+                                             CostKind, I);
 
   assert((Decision == CM_Widen || Decision == CM_Widen_Reverse) &&
          "Expected widen decision.");
-  const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
   if (Legal->isMaskRequired(I)) {
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
@@ -6300,6 +6306,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       switch (getWideningDecision(I, VF)) {
       case LoopVectorizationCostModel::CM_GatherScatter:
         return TTI::CastContextHint::GatherScatter;
+      case LoopVectorizationCostModel::CM_Compressed:
+        return TTI::CastContextHint::Compressed;
       case LoopVectorizationCostModel::CM_Interleave:
         return TTI::CastContextHint::Interleave;
       case LoopVectorizationCostModel::CM_Scalarize:
@@ -7515,8 +7523,9 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
+  bool Compressed = Decision == LoopVectorizationCostModel::CM_Compressed;
   bool Consecutive =
-      Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
+      Reverse || Compressed || Decision == LoopVectorizationCostModel::CM_Widen;
 
   VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
   if (Consecutive) {
@@ -7546,11 +7555,12 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                 VPIRMetadata(*Load, LVer), I->getDebugLoc());
+                                 Compressed, VPIRMetadata(*Load, LVer),
+                                 I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, VPIRMetadata(*Store, LVer),
+                                Reverse, Compressed, VPIRMetadata(*Store, LVer),
                                 I->getDebugLoc());
 }
 

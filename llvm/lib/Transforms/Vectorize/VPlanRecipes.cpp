@@ -3565,8 +3565,12 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
   InstructionCost Cost = 0;
   if (IsMasked) {
-    Cost +=
-        Ctx.TTI.getMaskedMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind);
+    Cost += Compressed
+                ? Ctx.TTI.getExpandCompressMemoryOpCost(Opcode, Ty,
+                                                        /*VariableMask*/ true,
+                                                        Alignment, Ctx.CostKind)
+                : Ctx.TTI.getMaskedMemoryOpCost(Opcode, Ty, Alignment, AS,
+                                                Ctx.CostKind);
   } else {
     TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
         isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this) ? getOperand(0)
@@ -3603,9 +3607,13 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
     NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
                                        "wide.masked.gather");
   } else if (Mask) {
-    NewLI =
-        Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
-                                 PoisonValue::get(DataTy), "wide.masked.load");
+    NewLI = Compressed
+                ? Builder.CreateMaskedExpandLoad(DataTy, Addr, Alignment, Mask,
+                                                 PoisonValue::get(DataTy),
+                                                 "wide.masked.expand.load")
+                : Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
+                                           PoisonValue::get(DataTy),
+                                           "wide.masked.load");
   } else {
     NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
   }
@@ -3732,7 +3740,10 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   if (CreateScatter)
     NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
   else if (Mask)
-    NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
+    NewSI = Compressed
+                ? Builder.CreateMaskedCompressStore(StoredVal, Addr, Alignment,
+                                                    Mask)
+                : Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
   else
     NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
   applyMetadata(*NewSI);
