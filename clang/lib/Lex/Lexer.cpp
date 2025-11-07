@@ -2181,7 +2181,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
 
     if (!IsUDSuffix) {
       if (!isLexingRawMode())
-        Diag(CurPtr, LangOpts.MSVCCompat
+        Diag(CurPtr, LangOpts.MSVCPreprocessor
                          ? diag::ext_ms_reserved_user_defined_literal
                          : diag::ext_reserved_user_defined_literal)
             << FixItHint::CreateInsertion(getSourceLocation(CurPtr), " ");
@@ -4217,7 +4217,7 @@ LexStart:
         Kind = tok::hashhash;                          // '%:%:' -> '##'
         CurPtr = ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
                              SizeTmp2, Result);
-      } else if (Char == '@' && LangOpts.MicrosoftExt) {// %:@ -> #@ -> Charize
+      } else if (Char == '@' && LangOpts.wantsMSVCPreprocessorExtensions()) {// %:@ -> #@ -> Charize
         CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
         if (!isLexingRawMode())
           Diag(BufferPtr, diag::ext_charize_microsoft);
@@ -4405,7 +4405,7 @@ LexStart:
     if (Char == '#') {
       Kind = tok::hashhash;
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
-    } else if (Char == '@' && LangOpts.MicrosoftExt) {  // #@ -> Charize
+    } else if (Char == '@' && LangOpts.wantsMSVCPreprocessorExtensions()) {  // #@ -> Charize
       Kind = tok::hashat;
       if (!isLexingRawMode())
         Diag(BufferPtr, diag::ext_charize_microsoft);

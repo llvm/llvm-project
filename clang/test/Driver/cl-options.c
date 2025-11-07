@@ -375,6 +375,12 @@
 // RUN: %clang_cl -c -### /std:clatest -- %s 2>&1 | FileCheck -check-prefix CHECK-CLATEST %s
 // CHECK-CLATEST: -std=c23
 
+// RUN: %clang_cl -c -### /Zc:preprocessor- -- %s 2>&1 | FileCheck -check-prefix CHECK-ZC-PREPROCESSOR-NO %s
+// CHECK-ZC-PREPROCESSOR-NO: -fms-preprocessor-compat
+
+// RUN: %clang_cl -c -### /Zc:preprocessor -- %s 2>&1 | FileCheck -check-prefix CHECK-ZC-PREPROCESSOR %s
+// CHECK-ZC-PREPROCESSOR-NOT: -fms-preprocessor-compat
+
 // For some warning ids, we can map from MSVC warning to Clang warning.
 // RUN: %clang_cl -wd4005 -wd4100 -wd4910 -wd4996 -wd12345678 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
 // Wno: "-cc1"

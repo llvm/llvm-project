@@ -627,6 +627,26 @@ public:
     return MSCompatibilityVersion >= MajorVersion * 100000U;
   }
 
+  /// Returns true if we want to enable lightweight Microsoft preprocessor
+  /// extensions.
+  /// Historically, MicrosoftExt and MSVCCompat enabled different extensions
+  /// to the preprocessor, but we want to disable a majority of them when
+  /// MSVCPreprocessor is set to false.
+  bool wantsMSVCPreprocessorExtensions() const {
+    // If we want full compatibility then we need the extensions
+    if (MSVCPreprocessor)
+      return true;
+    // If MS extensions are turned off, we don't want the extensions
+    if (!MicrosoftExt)
+      return false;
+    // If we're in full MSVC compat mode, we know MSVCPreprocessor is false,
+    // thus, we don't want the extensions
+    if (MSVCCompat)
+      return false;
+    // We just want lightweight extensions
+    return true;
+  }
+
   bool isOverflowPatternExcluded(OverflowPatternExclusionKind Kind) const {
     if (OverflowPatternExclusionMask & OverflowPatternExclusionKind::None)
       return false;
