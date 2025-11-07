@@ -97,7 +97,7 @@ struct DenseMapInfo<
     assert(Val != getEmptyKey() && "Cannot hash the empty key!");
     assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
 
-    std::hash<ClassDefId::second_type> SecondHash;
+    const std::hash<ClassDefId::second_type> SecondHash;
     return Val.first.getHashValue() + SecondHash(Val.second);
   }
 
