@@ -19,14 +19,14 @@ define i8 @phis_of_switch(i8 noundef %arg, i1 %cond) {
 ; CHECK:       [[UNREACHABLE]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CASE1]]:
-; CHECK-NEXT:    br label %[[CASE0]]
+; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[CASE2]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[CASE0]], label %[[END]]
 ; CHECK:       [[CASE0]]:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 1, %[[START]] ], [ 2, %[[CASE1]] ], [ 3, %[[CASE2]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 1, %[[START]] ], [ 3, %[[CASE2]] ]
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[PHI1]], %[[CASE0]] ], [ 3, %[[START]] ], [ 4, %[[CASE2]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 3, %[[START]] ], [ 4, %[[CASE2]] ], [ 2, %[[CASE1]] ], [ [[PHI1]], %[[CASE0]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 start:
@@ -60,7 +60,7 @@ define i8 @phis_of_if(i8 noundef %arg, i1 %cond) {
 ; CHECK-LABEL: define i8 @phis_of_if(
 ; CHECK-SAME: i8 noundef [[ARG:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[START:.*]]:
-; CHECK-NEXT:    br i1 [[COND]], label %[[BRANCH:.*]], label %[[SINK:.*]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[BRANCH:.*]], label %[[END:.*]]
 ; CHECK:       [[BRANCH]]:
 ; CHECK-NEXT:    [[COND0:%.*]] = icmp sgt i8 [[ARG]], 0
 ; CHECK-NEXT:    call void @use(i8 1)
@@ -68,16 +68,16 @@ define i8 @phis_of_if(i8 noundef %arg, i1 %cond) {
 ; CHECK:       [[CASE0]]:
 ; CHECK-NEXT:    call void @use(i8 1)
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i8 [[ARG]], 1
-; CHECK-NEXT:    br i1 [[COND1]], label %[[SINK]], label %[[END:.*]]
+; CHECK-NEXT:    br i1 [[COND1]], label %[[SINK:.*]], label %[[END]]
 ; CHECK:       [[CASE1]]:
 ; CHECK-NEXT:    call void @use(i8 1)
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i8 [[ARG]], -1
 ; CHECK-NEXT:    br i1 [[COND2]], label %[[SINK]], label %[[END]]
 ; CHECK:       [[SINK]]:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 0, %[[START]] ], [ 1, %[[CASE0]] ], [ 2, %[[CASE1]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 1, %[[CASE0]] ], [ 2, %[[CASE1]] ]
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 3, %[[CASE0]] ], [ 4, %[[CASE1]] ], [ [[PHI1]], %[[SINK]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 3, %[[CASE0]] ], [ 4, %[[CASE1]] ], [ 0, %[[START]] ], [ [[PHI1]], %[[SINK]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 start:
@@ -121,12 +121,12 @@ define i64 @from_jump_threading(i64 %0, i1 %1, i64 %num) {
 ; CHECK:       [[CASE1]]:
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SUCC]], label %[[FOO_THREAD]]
 ; CHECK:       [[CASE2]]:
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[COMMON_RET]], label %[[FOO_THREAD]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[COMMON_RET]], label %[[SUCC]]
 ; CHECK:       [[FOO_THREAD]]:
-; CHECK-NEXT:    [[PHI1_PH:%.*]] = phi i64 [ 1, %[[CASE2]] ], [ 0, %[[CASE1]] ], [ 0, %[[CASE0]] ]
+; CHECK-NEXT:    [[PHI1_PH:%.*]] = phi i64 [ 0, %[[CASE1]] ], [ 0, %[[CASE0]] ]
 ; CHECK-NEXT:    br label %[[SUCC]]
 ; CHECK:       [[SUCC]]:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[NUM]], %[[CASE1]] ], [ [[NUM]], %[[CASE0]] ], [ [[PHI1_PH]], %[[FOO_THREAD]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[NUM]], %[[CASE1]] ], [ [[NUM]], %[[CASE0]] ], [ 1, %[[CASE2]] ], [ [[PHI1_PH]], %[[FOO_THREAD]] ]
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[PHI2]], 0
 ; CHECK-NEXT:    br i1 [[COND2]], label %[[EXIT:.*]], label %[[COMMON_RET]]
 ; CHECK:       [[COMMON_RET]]:
@@ -172,20 +172,10 @@ exit2:                                            ; preds = %succ, %case2, %2
 define i8 @multicase_dest(i8 noundef %arg) {
 ; CHECK-LABEL: define i8 @multicase_dest(
 ; CHECK-SAME: i8 noundef [[ARG:%.*]]) {
-; CHECK-NEXT:  [[START:.*]]:
-; CHECK-NEXT:    switch i8 [[ARG]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i8 0, label %[[BLOCK:.*]]
-; CHECK-NEXT:      i8 1, label %[[BLOCK]]
-; CHECK-NEXT:      i8 2, label %[[SUCC:.*]]
-; CHECK-NEXT:      i8 3, label %[[SUCC]]
-; CHECK-NEXT:    ]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    br label %[[BLOCK]]
-; CHECK:       [[BLOCK]]:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 1, %[[START]] ], [ 1, %[[START]] ], [ 3, %[[DEFAULT]] ]
-; CHECK-NEXT:    br label %[[SUCC]]
-; CHECK:       [[SUCC]]:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[PHI1]], %[[BLOCK]] ], [ 3, %[[START]] ], [ 3, %[[START]] ]
+; CHECK-NEXT:  [[START:.*:]]
+; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i8 [[ARG]], -2
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i8 [[SWITCH_AND]], 0
+; CHECK-NEXT:    [[PHI2:%.*]] = select i1 [[SWITCH_SELECTCMP]], i8 1, i8 3
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 start:
@@ -212,22 +202,18 @@ define i8 @multicase_dest2(i8 noundef %arg, i1 %cond) {
 ; CHECK-LABEL: define i8 @multicase_dest2(
 ; CHECK-SAME: i8 noundef [[ARG:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[START:.*]]:
-; CHECK-NEXT:    switch i8 [[ARG]], label %[[DEFAULT:.*]] [
+; CHECK-NEXT:    switch i8 [[ARG]], label %[[SUCC:.*]] [
 ; CHECK-NEXT:      i8 0, label %[[BLOCK:.*]]
 ; CHECK-NEXT:      i8 1, label %[[BLOCK]]
-; CHECK-NEXT:      i8 2, label %[[SUCC:.*]]
-; CHECK-NEXT:      i8 3, label %[[SUCC]]
 ; CHECK-NEXT:      i8 4, label %[[CASE:.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    br label %[[BLOCK]]
 ; CHECK:       [[CASE]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BLOCK]], label %[[SUCC]]
 ; CHECK:       [[BLOCK]]:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 1, %[[START]] ], [ 1, %[[START]] ], [ 3, %[[DEFAULT]] ], [ 4, %[[CASE]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 1, %[[START]] ], [ 1, %[[START]] ], [ 4, %[[CASE]] ]
 ; CHECK-NEXT:    br label %[[SUCC]]
 ; CHECK:       [[SUCC]]:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[PHI1]], %[[BLOCK]] ], [ 3, %[[START]] ], [ 3, %[[START]] ], [ 4, %[[CASE]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 4, %[[CASE]] ], [ [[PHI1]], %[[BLOCK]] ], [ 3, %[[START]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 start:

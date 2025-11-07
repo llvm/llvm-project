@@ -17,17 +17,15 @@ define i64 @bar(i64 %0, i1 %1, i64 %num) {
 ; CHECK:       case1:
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[SUCC]], label [[FOO_THREAD]]
 ; CHECK:       case2:
-; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT2]], label [[FOO_THREAD]]
-; CHECK:       foo.thread:
-; CHECK-NEXT:    [[PHI1_PH:%.*]] = phi i64 [ 1, [[CASE2]] ], [ 0, [[CASE1]] ], [ 0, [[CASE0]] ]
-; CHECK-NEXT:    br label [[SUCC]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT2]], label [[EXIT2]]
 ; CHECK:       succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[NUM:%.*]], [[CASE1]] ], [ [[NUM]], [[CASE0]] ], [ [[PHI1_PH]], [[FOO_THREAD]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[NUM:%.*]], [[CASE1]] ], [ [[NUM]], [[CASE0]] ]
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[PHI2]], 0
-; CHECK-NEXT:    br i1 [[COND2]], label [[EXIT:%.*]], label [[EXIT2]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[FOO_THREAD]], label [[EXIT2]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[PHI25:%.*]] = phi i64 [ [[PHI2]], [[SUCC]] ], [ 0, [[CASE1]] ], [ 0, [[CASE0]] ]
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    ret i64 [[PHI2]]
+; CHECK-NEXT:    ret i64 [[PHI25]]
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i64 0
 ;
@@ -73,18 +71,14 @@ define i64 @multicase(i64 %0, i1 %1, i64 %num) {
 ; CHECK-NEXT:      i64 2, label [[SUCC:%.*]]
 ; CHECK-NEXT:      i64 3, label [[SUCC]]
 ; CHECK-NEXT:    ]
-; CHECK:       default:
-; CHECK-NEXT:    br label [[FOO]]
-; CHECK:       foo:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[ENTRY]] ], [ 1, [[DEFAULT]] ]
-; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[NUM:%.*]], [[ENTRY]] ], [ [[NUM]], [[ENTRY]] ], [ [[PHI1]], [[FOO]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[NUM:%.*]], [[ENTRY:%.*]] ], [ [[NUM]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[PHI2]], 0
-; CHECK-NEXT:    br i1 [[COND2]], label [[EXIT:%.*]], label [[EXIT2:%.*]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[FOO]], label [[DEFAULT]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[PHI23:%.*]] = phi i64 [ [[PHI2]], [[SUCC]] ], [ 0, [[ENTRY]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    ret i64 [[PHI2]]
+; CHECK-NEXT:    ret i64 [[PHI23]]
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i64 0
 ;
