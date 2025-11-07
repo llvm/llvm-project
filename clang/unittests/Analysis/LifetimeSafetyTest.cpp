@@ -529,7 +529,8 @@ TEST_F(LifetimeAnalysisTest, PointersInACycle) {
         MyObj* temp = p1;
         p1 = p2;
         p2 = p3;
-        p3 = temp;
+        p3 = temp;B
+        POINT(in_loop);
       }
       POINT(after_loop);
     }
@@ -543,7 +544,11 @@ TEST_F(LifetimeAnalysisTest, PointersInACycle) {
   EXPECT_THAT(Origin("p1"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
   EXPECT_THAT(Origin("p2"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
   EXPECT_THAT(Origin("p3"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
-  EXPECT_THAT(Origin("temp"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
+
+  EXPECT_THAT(Origin("temp"), HasLoansTo({"v1", "v2", "v3"}, "in_loop"));
+  // 'temp' is a block-local origin and it's loans are not tracked outside the
+  // block.
+  EXPECT_THAT(Origin("temp"), HasLoansTo({}, "after_loop"));
 }
 
 TEST_F(LifetimeAnalysisTest, PointersAndExpirationInACycle) {
