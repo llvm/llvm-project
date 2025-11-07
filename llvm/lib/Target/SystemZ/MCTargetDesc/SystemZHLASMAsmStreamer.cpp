@@ -299,6 +299,12 @@ bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_Data:
     Symbol->setCodeData(GOFF::ESDExecutable::ESD_EXE_DATA);
     break;
+  case MCSA_OSLinkage:
+    Symbol->setLinkage(GOFF::ESDLinkageType::ESD_LT_OS);
+    break;
+  case MCSA_XPLinkage:
+    Symbol->setLinkage(GOFF::ESDLinkageType::ESD_LT_XPLink);
+    break;
   case MCSA_Global:
     Symbol->setExternal(true);
     break;

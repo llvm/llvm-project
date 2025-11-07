@@ -776,6 +776,8 @@ bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
     // Non-AIX assemblers currently do not support exported visibility.
   case MCSA_Code:
   case MCSA_Data:
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
     // Only for HLASM.
     return false;
   case MCSA_Memtag:
