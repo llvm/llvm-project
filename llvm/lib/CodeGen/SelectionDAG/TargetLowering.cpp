@@ -9480,6 +9480,53 @@ SDValue TargetLowering::expandVPCTLZ(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::VP_CTPOP, dl, VT, Op, Mask, VL);
 }
 
+
+SDValue TargetLowering::expandCTLZWithFP(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  SDValue Op = Node->getOperand(0);
+  EVT VT = Op.getValueType();
+
+  assert(VT.isVector() && "This expansion is intended for vectors");
+
+  EVT EltVT = VT.getVectorElementType();
+  EVT FloatVT, CmpVT;
+  unsigned BitWidth, MantissaBits, ExponentBias;
+
+  // Converting to float type
+  if (EltVT == MVT::i32) {
+    FloatVT = VT.changeVectorElementType(MVT::f32);
+    BitWidth = 32;
+    MantissaBits = 23;
+    ExponentBias = 127;
+  } 
+  else {
+    return SDValue();
+  }
+
+  // Handling the case for when Op == 0 which is stored in ZeroRes
+  CmpVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue Zero = DAG.getConstant(0, dl, VT);
+  SDValue IsZero = DAG.getSetCC(dl, CmpVT, Op, Zero, ISD::SETEQ);
+  SDValue ZeroRes = DAG.getConstant(BitWidth, dl, VT);
+
+  // Handling the case for Non-zero inputs using the algorithm mentioned below
+  SDValue Float = DAG.getNode(ISD::UINT_TO_FP, dl, FloatVT, Op);
+  SDValue FloatBits = DAG.getNode(ISD::BITCAST, dl, VT, Float);
+  SDValue Exp = DAG.getNode(ISD::SRL, dl, VT, FloatBits, DAG.getConstant(MantissaBits, dl, VT));
+  SDValue MSBIndex = DAG.getNode(ISD::SUB, dl, VT, Exp, DAG.getConstant(ExponentBias, dl, VT));
+  SDValue NonZeroRes = DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(BitWidth - 1, dl, VT), MSBIndex);
+
+  //Returns the respective DAG Node based on the input being zero or non-zero
+  return DAG.getNode(ISD::VSELECT, dl, VT, IsZero, ZeroRes, NonZeroRes);
+
+  // pseudocode : 
+  // if(x==0) return 32;
+  // float f = (float) x;
+  // int i = bitcast<int>(f);
+  // int ilog2 = (i >> 23) - 127;
+  // return 31 - ilog2;
+}
+
 SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
                                         const SDLoc &DL, EVT VT, SDValue Op,
                                         unsigned BitWidth) const {
