@@ -21,7 +21,6 @@ add_subdirectory(clang-apply-replacements)
 add_subdirectory(clang-reorder-fields)
 add_subdirectory(modularize)
 add_subdirectory(clang-tidy)
-add_subdirectory(clang-convert-ternary-if)
 
 add_subdirectory(clang-change-namespace)
 add_subdirectory(clang-doc)
