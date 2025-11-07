@@ -437,6 +437,10 @@ Changes in existing checks
   when the format string is converted to a different type by an implicit
   constructor call.
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check by removing many incorrect
+  fix-its and providing fix-its where before there was only a warning.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
   the type of the diagnosed variable.

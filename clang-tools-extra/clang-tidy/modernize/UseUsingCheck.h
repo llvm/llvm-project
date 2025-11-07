@@ -18,15 +18,11 @@ namespace clang::tidy::modernize {
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-using.html
 class UseUsingCheck : public ClangTidyCheck {
-
   const bool IgnoreMacros;
   const bool IgnoreExternC;
-  SourceLocation LastReplacementEnd;
-  llvm::DenseMap<const Decl *, SourceRange> LastTagDeclRanges;
-
-  std::string FirstTypedefType;
-  std::string FirstTypedefName;
-  SourceLocation MainTypeEndLoc;
+  bool NextTypedefStartsANewSequence = true;
+  StringRef FirstTypedefName;
+  SourceLocation LastCommaOrSemi;
 
 public:
   UseUsingCheck(StringRef Name, ClangTidyContext *Context);

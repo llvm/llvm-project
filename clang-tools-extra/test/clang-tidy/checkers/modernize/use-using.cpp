@@ -1,9 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -isystem %S/Inputs/use-using/
 
-typedef int Type;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
-// CHECK-FIXES: using Type = int;
-
 typedef long LL;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using LL = long;
@@ -15,6 +11,18 @@ typedef int Bla;
 typedef Bla Bla2;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using Bla2 = Bla;
+
+typedef const int ConstInt;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using ConstInt = const int;
+
+typedef const int *const ConstPtrToConstInt;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using ConstPtrToConstInt = const int *const;
+
+typedef struct foo_s {} * foo_t;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using foo_t = struct foo_s {} *;
 
 typedef void (*type)(int, int);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -87,8 +95,26 @@ typedef int bla1, bla2, bla3;
 // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-3]]:23: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using bla1 = int;
-// CHECK-FIXES-NEXT: using bla2 = int;
-// CHECK-FIXES-NEXT: using bla3 = int;
+// CHECK-FIXES-NEXT: using bla2 = bla1;
+// CHECK-FIXES-NEXT: using bla3 = bla1;
+
+typedef int I, &LVal, &&RVal, *Ptr, *const ConstPtr, Vec3[3], Fn(), (*FnPtr)();
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-2]]:14: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-3]]:21: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-4]]:29: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-5]]:35: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-6]]:52: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-7]]:61: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-8]]:67: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using I = int;
+// CHECK-FIXES-NEXT: using LVal = I &;
+// CHECK-FIXES-NEXT: using RVal = I &&;
+// CHECK-FIXES-NEXT: using Ptr = I *;
+// CHECK-FIXES-NEXT: using ConstPtr = I *const;
+// CHECK-FIXES-NEXT: using Vec3 = I[3];
+// CHECK-FIXES-NEXT: using Fn = I();
+// CHECK-FIXES-NEXT: using FnPtr = I (*)();
 
 #define CODE typedef int INT
 
@@ -97,11 +123,6 @@ CODE;
 // CHECK-FIXES: CODE;
 
 struct Foo;
-#define Bar Baz
-typedef Foo Bar;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: #define Bar Baz
-// CHECK-FIXES: using Baz = Foo;
 
 #define TYPEDEF typedef
 TYPEDEF Foo Bak;
@@ -120,11 +141,11 @@ typedef struct Foo Bap;
 
 struct Foo typedef Bap2;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Bap2 = struct Foo;
+// CHECK-FIXES: using Bap2 =struct Foo ;
 
 Foo typedef Bap3;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Bap3 = Foo;
+// CHECK-FIXES: using Bap3 =Foo ;
 
 typedef struct Unknown Baq;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -132,11 +153,11 @@ typedef struct Unknown Baq;
 
 struct Unknown2 typedef Baw;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Baw = struct Unknown2;
+// CHECK-FIXES: using Baw =struct Unknown2 ;
 
 int typedef Bax;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Bax = int;
+// CHECK-FIXES: using Bax =int ;
 
 typedef struct Q1 { int a; } S1;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -146,10 +167,10 @@ typedef struct { int b; } S2;
 // CHECK-FIXES: using S2 = struct { int b; };
 struct Q2 { int c; } typedef S3;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using S3 = struct Q2 { int c; };
+// CHECK-FIXES: using S3 =struct Q2 { int c; } ;
 struct { int d; } typedef S4;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using S4 = struct { int d; };
+// CHECK-FIXES: using S4 =struct { int d; } ;
 
 namespace my_space {
   class my_cclass {};
@@ -158,14 +179,18 @@ namespace my_space {
 // CHECK-FIXES: using FuncType = my_cclass;
 }
 
+typedef int UnknownExtent[];
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using UnknownExtent = int[];
+
+typedef double Matrix3x3[3][3];
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Matrix3x3 = double[3][3];
+
 #define lol 4
 typedef unsigned Map[lol];
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: typedef unsigned Map[lol];
-
-typedef void (*fun_type)();
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using fun_type = void (*)();
+// CHECK-FIXES: using Map = unsigned[lol];
 
 namespace template_instantiations {
 template <typename T>
@@ -202,13 +227,13 @@ typedef S<(0 > 0), int> S_t, *S_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:28: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using S_t = S<(0 > 0), int>;
-// CHECK-FIXES-NEXT: using S_p = S_t*;
+// CHECK-FIXES-NEXT: using S_p = S_t *;
 
 typedef S<(0 < 0), int> S2_t, *S2_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:29: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using S2_t = S<(0 < 0), int>;
-// CHECK-FIXES-NEXT: using S2_p = S2_t*;
+// CHECK-FIXES-NEXT: using S2_p = S2_t *;
 
 typedef S<(0 > 0 && (3 > 1) && (1 < 1)), int> S3_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -223,7 +248,7 @@ typedef Q<b[0 < 0]> Q_t, *Q_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:24: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using Q_t = Q<b[0 < 0]>;
-// CHECK-FIXES-NEXT: using Q_p = Q_t*;
+// CHECK-FIXES-NEXT: using Q_p = Q_t *;
 
 typedef Q<b[0 < 0]> Q2_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -239,7 +264,7 @@ typedef Q<T{0 < 0}.b> Q3_t, *Q3_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using Q3_t = Q<T{0 < 0}.b>;
-// CHECK-FIXES-NEXT: using Q3_p = Q3_t*;
+// CHECK-FIXES-NEXT: using Q3_p = Q3_t *;
 
 typedef Q<T{0 < 0}.b> Q3_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -271,13 +296,13 @@ typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:103: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >;
-// CHECK-FIXES-NEXT: using Variadic_p = Variadic_t*;
+// CHECK-FIXES-NEXT: using Variadic_p = Variadic_t *;
 
 typedef struct { int a; } R_t, *R_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:30: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using R_t = struct { int a; };
-// CHECK-FIXES-NEXT: using R_p = R_t*;
+// CHECK-FIXES-NEXT: using R_p = R_t *;
 
 typedef enum { ea1, eb1 } EnumT1;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -350,7 +375,6 @@ namespace ISSUE_72179
     typedef int a;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'using' instead of 'typedef' [modernize-use-using]
     // CHECK-FIXES: using a = int;
-
   }
 
   void foo2()
@@ -384,12 +408,18 @@ namespace ISSUE_72179
   // CHECK-FIXES: const auto foo4 = [](int a){using d = int;};
 }
 
-
-typedef int* int_ptr, *int_ptr_ptr;
+typedef int* IntPtr, *AlsoIntPtr;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
-// CHECK-MESSAGES: :[[@LINE-2]]:21: warning: use 'using' instead of 'typedef' [modernize-use-using]
-// CHECK-FIXES: using int_ptr = int*;
-// CHECK-FIXES-NEXT: using int_ptr_ptr = int_ptr*;
+// CHECK-MESSAGES: :[[@LINE-2]]:20: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using IntPtr = int*;
+// CHECK-FIXES-NEXT: using AlsoIntPtr = IntPtr *;
+// FIXME: the second fix-it is wrong. This is issue #150276.
+
+typedef int (FnWithRedundantParens)();
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using FnWithRedundantParens = int ()();
+// FIXME: that fix-it makes the code ill-formed. The redundant parentheses need to be removed,
+// i.e., it should be 'using FnWithRedundantParens = int ()'. It's not a pressing issue though.
 
 #ifndef SpecialMode
 #define SomeMacro(x) x
@@ -401,7 +431,7 @@ class SomeMacro(GH33760) { };
 
 typedef void(SomeMacro(GH33760)::* FunctionType)(float, int);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
-// CHECK-FIXES: using FunctionType = void(SomeMacro(GH33760)::* )(float, int);
+// CHECK-FIXES: using FunctionType = void(SomeMacro(GH33760)::*)(float, int);
 
 #define CDECL __attribute((cdecl))
 
@@ -433,6 +463,7 @@ typedef GH95716 foo;
 namespace GH97009 {
   typedef double PointType[3];
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using PointType = double[3];
   typedef bool (*Function)(PointType, PointType);
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
 // CHECK-FIXES: using Function = bool (*)(PointType, PointType);
