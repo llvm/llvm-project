@@ -22,6 +22,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 #include <system_error>
 
@@ -1136,9 +1137,21 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
   if (K != SanitizerKind::Address)
     return true;
 
+  // Check 'xnack+' availability by default
+  llvm::StringRef Processor =
+      getProcessorFromTargetID(TC.getTriple(), TargetID);
+  auto ProcKind = TC.getTriple().isAMDGCN()
+                      ? llvm::AMDGPU::parseArchAMDGCN(Processor)
+                      : llvm::AMDGPU::parseArchR600(Processor);
+  auto Features = TC.getTriple().isAMDGCN()
+                      ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
+                      : llvm::AMDGPU::getArchAttrR600(ProcKind);
+  if (Features & llvm::AMDGPU::FEATURE_XNACK_ALWAYS)
+    return false;
+
+  // Look for the xnack feature in TargetID
   llvm::StringMap<bool> FeatureMap;
   auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
-
   assert(OptionalGpuArch && "Invalid Target ID");
   (void)OptionalGpuArch;
   auto Loc = FeatureMap.find("xnack");
