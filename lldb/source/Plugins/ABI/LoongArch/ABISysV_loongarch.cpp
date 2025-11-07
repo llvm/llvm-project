@@ -510,11 +510,10 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectSimple(
                                           value, ConstString(""));
   }
   if (type_flags & eTypeIsFloat) {
-    uint32_t float_count = 0;
     bool is_complex = false;
 
-    if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
-        float_count == 1 && !is_complex) {
+    if (compiler_type.IsFloatingPointType(is_complex) &&
+        !(type_flags & eTypeIsVector) && !is_complex) {
       return_valobj_sp =
           GetValObjFromFPRegs(thread, reg_ctx, machine, type_flags, byte_size);
       return return_valobj_sp;

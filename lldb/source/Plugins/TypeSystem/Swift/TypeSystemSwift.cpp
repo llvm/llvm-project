@@ -120,11 +120,9 @@ void TypeSystemSwift::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
 }
 
 bool TypeSystemSwift::IsFloatingPointType(opaque_compiler_type_t type,
-                                          uint32_t &count, bool &is_complex) {
-  count = 0;
+                                          bool &is_complex) {
   is_complex = false;
   if (GetTypeInfo(type, nullptr) & eTypeIsFloat) {
-    count = 1;
     return true;
   }
   return false;

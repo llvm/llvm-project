@@ -154,7 +154,7 @@ public:
   bool IsBoundsSafetyBidiIndexable() const;
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
-  bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
+  bool IsFloatingPointType(bool &is_complex) const;
 
   bool IsFunctionType() const;
 
