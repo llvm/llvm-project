@@ -2540,22 +2540,46 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
 
     StringRef Prefix;
     StringRef Postfix;
+
     // FIXME: Handle whitespace between '_T', '(', '"..."', and ')'.
     // FIXME: Store Prefix and Suffix (or PrefixLength and SuffixLength to
     // reduce the overhead) for each FormatToken, which is a string, so that we
     // don't run multiple checks here on the hot path.
-    if ((Text.ends_with(Postfix = "\"") &&
-         (Text.starts_with(Prefix = "@\"") || Text.starts_with(Prefix = "\"") ||
-          Text.starts_with(Prefix = "u\"") ||
-          Text.starts_with(Prefix = "U\"") ||
-          Text.starts_with(Prefix = "u8\"") ||
-          Text.starts_with(Prefix = "L\""))) ||
-        (Text.starts_with(Prefix = "_T(\"") &&
-         Text.ends_with(Postfix = "\")"))) {
+    if (Text.starts_with(Prefix = "_T(\"") && Text.ends_with(Postfix = "\")")) {
+      // We need to put `_T("` and `")` on each line because it is a macro
+      llvm::StringRef ContinuationPrefix = Prefix;
+      llvm::StringRef ContinuationPostfix = Postfix;
+
       return std::make_unique<BreakableStringLiteral>(
-          Current, StartColumn, Prefix, Postfix, UnbreakableTailLength,
-          State.Line->InPPDirective, Encoding, Style);
+          Current, StartColumn, Prefix, Postfix, ContinuationPrefix,
+          ContinuationPostfix, UnbreakableTailLength, State.Line->InPPDirective,
+          Encoding, Style);
     }
+
+    static const auto PostfixRegex =
+        llvm::Regex(R"("(_[a-zA-Z_][a-zA-Z0-9_]*)?$)");
+    llvm::SmallVector<llvm::StringRef, 1> Matches;
+
+    if (PostfixRegex.match(Text, &Matches)) {
+      Postfix = Matches.front();
+
+      if ((Text.starts_with(Prefix = "@\"") ||
+           Text.starts_with(Prefix = "\"") ||
+           Text.starts_with(Prefix = "u\"") ||
+           Text.starts_with(Prefix = "U\"") ||
+           Text.starts_with(Prefix = "u8\"") ||
+           Text.starts_with(Prefix = "L\""))) {
+
+        // Use quotes when breaking the string
+        llvm::StringRef ContinuationPrefix = "\"";
+        llvm::StringRef ContinuationPostfix = "\"";
+        return std::make_unique<BreakableStringLiteral>(
+            Current, StartColumn, Prefix, Postfix, ContinuationPrefix,
+            ContinuationPostfix, UnbreakableTailLength,
+            State.Line->InPPDirective, Encoding, Style);
+      }
+    }
+
   } else if (Current.is(TT_BlockComment)) {
     if (Style.ReflowComments == FormatStyle::RCS_Never ||
         // If a comment token switches formatting, like

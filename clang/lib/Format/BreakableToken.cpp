@@ -253,10 +253,13 @@ unsigned BreakableStringLiteral::getContentStartColumn(unsigned LineIndex,
 
 BreakableStringLiteral::BreakableStringLiteral(
     const FormatToken &Tok, unsigned StartColumn, StringRef Prefix,
-    StringRef Postfix, unsigned UnbreakableTailLength, bool InPPDirective,
-    encoding::Encoding Encoding, const FormatStyle &Style)
+    StringRef Postfix, StringRef ContinuationPrefix,
+    StringRef ContinuationPostfix, unsigned UnbreakableTailLength,
+    bool InPPDirective, encoding::Encoding Encoding, const FormatStyle &Style)
     : BreakableToken(Tok, InPPDirective, Encoding, Style),
       StartColumn(StartColumn), Prefix(Prefix), Postfix(Postfix),
+      ContinuationPrefix(ContinuationPrefix),
+      ContinuationPostfix(ContinuationPostfix),
       UnbreakableTailLength(UnbreakableTailLength) {
   assert(Tok.TokenText.starts_with(Prefix) && Tok.TokenText.ends_with(Postfix));
   Line = Tok.TokenText.substr(
@@ -274,9 +277,15 @@ void BreakableStringLiteral::insertBreak(unsigned LineIndex,
                                          unsigned TailOffset, Split Split,
                                          unsigned ContentIndent,
                                          WhitespaceManager &Whitespaces) const {
+
+  const unsigned SplitEnd = TailOffset + Split.first + Split.second;
+  const bool IsLastFragment = SplitEnd >= Line.size() - UnbreakableTailLength;
+
+  StringRef LocalPostfix = (IsLastFragment) ? Postfix : ContinuationPostfix;
+
   Whitespaces.replaceWhitespaceInToken(
-      Tok, Prefix.size() + TailOffset + Split.first, Split.second, Postfix,
-      Prefix, InPPDirective, 1, StartColumn);
+      Tok, ContinuationPrefix.size() + TailOffset + Split.first, Split.second,
+      LocalPostfix, ContinuationPrefix, InPPDirective, 1, StartColumn);
 }
 
 BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
@@ -288,6 +297,10 @@ BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
                             : QuoteStyle == AtDoubleQuotes        ? "@\""
                                                                   : "\"",
           /*Postfix=*/QuoteStyle == SingleQuotes ? "'" : "\"",
+          /*ContinuationPrefix=*/QuoteStyle == SingleQuotes ? "'"
+                               : QuoteStyle == AtDoubleQuotes                    ? "@\""
+                                                            : "\"",
+          /*ContinuationPostfix=*/QuoteStyle == SingleQuotes ? "'" : "\"",
           UnbreakableTailLength, InPPDirective, Encoding, Style),
       BracesNeeded(Tok.isNot(TT_StringInConcatenation)),
       QuoteStyle(QuoteStyle) {
