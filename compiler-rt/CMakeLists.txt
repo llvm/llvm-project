@@ -605,6 +605,10 @@ string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
 list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
 
+# Add assembler flags for execute-only code generation. C and C++ flags should have already
+# been added to CMAKE_C_FLAGS and CMAKE_CXX_FLAGS.
+append_string_if(RUNTIMES_EXECUTE_ONLY_CODE -DCOMPILER_RT_EXECUTE_ONLY_CODE CMAKE_ASM_FLAGS)
+
 # TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
 # move some of the common flags to COMPILER_RT_UNITTEST_CFLAGS.
 
