@@ -64,6 +64,9 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 
+  bool isSafeToMove(const MachineInstr &MI, const MachineBasicBlock *MBB,
+                    const MachineFunction &MF) const override;
+
   bool isSchedulingBoundary(const MachineInstr &MI,
                             const MachineBasicBlock *MBB,
                             const MachineFunction &MF) const override;
