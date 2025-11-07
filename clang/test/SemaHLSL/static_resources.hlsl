@@ -1,0 +1,86 @@
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -emit-llvm -disable-llvm-passes -o - %s | llvm-cxxfilt | FileCheck %s
+
+// CHECK: [[ONE_STR:@.*]] = private unnamed_addr constant [4 x i8] c"One\00"
+// CHECK: [[ARRAY_STR:@.*]] = private unnamed_addr constant [6 x i8] c"Array\00"
+// CHECK-NOT: private unnamed_addr constant [{{[0-9]+}} x i8] c"Static
+
+RWBuffer<float> One : register(u1, space5);
+RWBuffer<float> Array[4][2] : register(u10, space6);
+
+// Check that the non-static resource One is initialized from binding on
+// startup (register 1, space 5).
+// CHECK: define internal void @__cxx_global_var_init{{.*}}
+// CHECK-NEXT: entry:
+// CHECK-NEXT: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+// CHECK-SAME: (ptr {{.*}} @One, i32 noundef 1, i32 noundef 5, i32 noundef 1, i32 noundef 0, ptr noundef [[ONE_STR]])
+
+// Note that non-static resource arrays are not initialized on startup.
+// The individual resources from the array are initialized on access.
+
+static RWBuffer<float> StaticOne;
+static RWBuffer<float> StaticArray[2];
+
+// Check that StaticOne resource is initialized on startup with the default
+// constructor and not from binding. It will initalize the handle to poison.
+// CHECK: define internal void @__cxx_global_var_init{{.*}}
+// CHECK-NEXT: entry:
+// CHECK-NEXT: call void @hlsl::RWBuffer<float>::RWBuffer()(ptr {{.*}} @StaticOne)
+
+// Check that StaticArray elements are initialized on startup with the default
+// constructor and not from binding. The initializer will loop over the array
+// elements and call the default constructor for each one, setting the handle to poison.
+// CHECK: define internal void @__cxx_global_var_init{{.*}}
+// CHECK-NEXT: entry:
+// CHECK-NEXT: br label %arrayctor.loop
+// CHECK: arrayctor.loop:                                   ; preds = %arrayctor.loop, %entry
+// CHECK-NEXT:   %arrayctor.cur = phi ptr [ @StaticArray, %entry ], [ %arrayctor.next, %arrayctor.loop ]
+// CHECK-NEXT: call void @hlsl::RWBuffer<float>::RWBuffer()(ptr {{.*}} %arrayctor.cur)
+// CHECK-NEXT: %arrayctor.next = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %arrayctor.cur, i32 1
+// CHECK-NEXT: %arrayctor.done = icmp eq ptr %arrayctor.next, getelementptr inbounds (%"class.hlsl::RWBuffer", ptr @StaticArray, i32 2)
+// CHECK-NEXT: br i1 %arrayctor.done, label %arrayctor.cont, label %arrayctor.loop
+// CHECK: arrayctor.cont:                                   ; preds = %arrayctor.loop
+// CHECK-NEXT: ret void
+
+// No other global initialization routines should be present.
+// CHECK-NOT: define internal void @__cxx_global_var_init{{.*}}
+
+[numthreads(4,1,1)]
+void main() {
+// CHECK: define internal void @main()()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %[[TMP0:.*]] = alloca %"class.hlsl::RWBuffer"
+
+  static RWBuffer<float> StaticLocal;
+// Check that StaticLocal is initialized to by default constructor to poison and not from binding
+// call void @hlsl::RWBuffer<float>::RWBuffer()(ptr {{.*}} @main()::StaticLocal)
+
+  StaticLocal = Array[2][0];
+// A[2][0] is accessed here, so it should be initialized from binding (register 10, space 6, index 4),
+// and then assigned to StaticLocal using = operator.
+// CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+// CHECK-SAME: (ptr {{.*}} %[[TMP0]], i32 noundef 10, i32 noundef 6, i32 noundef 8, i32 noundef 4, ptr noundef [[ARRAY_STR]])
+// CHECK-NEXT: call {{.*}} ptr @hlsl::RWBuffer<float>::operator=({{.*}})(ptr {{.*}} @main()::StaticLocal, ptr {{.*}} %[[TMP0]])
+
+  StaticOne = One;
+// CHECK-NEXT: call {{.*}} ptr @hlsl::RWBuffer<float>::operator=({{.*}})(ptr {{.*}} @StaticOne, ptr {{.*}} @One)
+
+  StaticArray[1] = One;
+// CHECK-NEXT: call {{.*}} ptr @hlsl::RWBuffer<float>::operator=(hlsl::RWBuffer<float> const&)
+// CHECK-SAME: (ptr {{.*}} getelementptr inbounds ([2 x %"class.hlsl::RWBuffer"], ptr @StaticArray, i32 0, i32 1), ptr {{.*}} @One)
+
+  StaticLocal[0] = 123;
+// CHECK-NEXT: %[[PTR0:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @main()::StaticLocal, i32 noundef 0)
+// CHECK-NEXT: store float 1.230000e+02, ptr %[[PTR0]]
+
+  StaticOne[1] = 456;
+// CHECK-NEXT: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}}) @StaticOne, i32 noundef 1)
+// CHECK-NEXT: store float 4.560000e+02, ptr %[[PTR1]], align 4
+
+  StaticArray[1][2] = 789;
+// CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)
+// CHECK-SAME: (ptr {{.*}} getelementptr inbounds ([2 x %"class.hlsl::RWBuffer"], ptr @StaticArray, i32 0, i32 1), i32 noundef 2)
+// CHECK-NEXT: store float 7.890000e+02, ptr %[[PTR2]], align 4
+}
+
+// No other binding initialization calls should be present.
+// CHECK-NOT: call void @hlsl::RWBuffer<float>::__createFrom{{.*}}Binding{{.*}}
