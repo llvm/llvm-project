@@ -54,6 +54,9 @@
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Object/ELF.h"
 
 namespace llvm {
 class MCDisassembler;
@@ -1158,6 +1161,19 @@ public:
                               uint64_t Size = 0, unsigned Alignment = 1,
                               bool IsReadOnly = true,
                               unsigned ELFType = ELF::SHT_PROGBITS) {
+  unsigned NoteFlags = BinarySection::getFlags(IsReadOnly);
+  NoteFlags &= ~(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR);
+  NoteFlags |= llvm::ELF::SHF_EXCLUDE;
+
+  DEBUG_WITH_TYPE("bolt-flags", {
+    dbgs() << "[flags] registerOrUpdateNoteSection name=" << Name << "\n"
+           << "        ELFType=0x" << llvm::format_hex(ELFType, 8)
+           << " flags=0x" << llvm::format_hex(NoteFlags, 8)
+           << " (ALLOC=" << ((NoteFlags & llvm::ELF::SHF_ALLOC) ? "yes":"no")
+           << ", EXEC="  << ((NoteFlags & llvm::ELF::SHF_EXECINSTR) ? "yes":"no")
+           << ", EXCL="  << ((NoteFlags & llvm::ELF::SHF_EXCLUDE) ? "yes":"no")
+           << ")\n";
+  });
     return registerOrUpdateSection(Name, ELFType,
                                    BinarySection::getFlags(IsReadOnly), Data,
                                    Size, Alignment);
