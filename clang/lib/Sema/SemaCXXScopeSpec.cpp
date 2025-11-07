@@ -779,25 +779,26 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
   }
 
   if (!Found.empty()) {
-    const auto *ND = Found.getAsSingle<NamedDecl>();
-    if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
-                                    IdInfo.CCLoc)) {
-      const Type *T = SS.getScopeRep().getAsType();
-      Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
-          << QualType(T, 0) << getLangOpts().CPlusPlus;
-      // Recover with this type if it would be a valid nested name specifier.
-      return !T->getAsCanonical<TagType>();
-    }
-    if (isa<TemplateDecl>(ND)) {
-      ParsedType SuggestedType;
-      DiagnoseUnknownTypeName(IdInfo.Identifier, IdInfo.IdentifierLoc, S, &SS,
-                              SuggestedType);
-    } else {
-      Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
-          << IdInfo.Identifier << getLangOpts().CPlusPlus;
-      if (NamedDecl *ND = Found.getAsSingle<NamedDecl>())
-        Diag(ND->getLocation(), diag::note_entity_declared_at)
-            << IdInfo.Identifier;
+    if (const auto *ND = Found.getAsSingle<NamedDecl>()) {
+      if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
+                                      IdInfo.CCLoc)) {
+        const Type *T = SS.getScopeRep().getAsType();
+        Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
+            << QualType(T, 0) << getLangOpts().CPlusPlus;
+        // Recover with this type if it would be a valid nested name specifier.
+        return !T->getAsCanonical<TagType>();
+      }
+      if (isa<TemplateDecl>(ND)) {
+        ParsedType SuggestedType;
+        DiagnoseUnknownTypeName(IdInfo.Identifier, IdInfo.IdentifierLoc, S, &SS,
+                                SuggestedType);
+      } else {
+        Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
+            << IdInfo.Identifier << getLangOpts().CPlusPlus;
+        if (NamedDecl *ND = Found.getAsSingle<NamedDecl>())
+          Diag(ND->getLocation(), diag::note_entity_declared_at)
+              << IdInfo.Identifier;
+      }
     }
   } else if (SS.isSet())
     Diag(IdInfo.IdentifierLoc, diag::err_no_member) << IdInfo.Identifier
