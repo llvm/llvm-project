@@ -693,6 +693,38 @@ def ROCDL_GlobalLoadLDSOp :
 }
 
 //===---------------------------------------------------------------------===//
+// Async load to LDS intrinsic (available in GFX1250)
+//===---------------------------------------------------------------------===//
+
+foreach bitsVal = [8, 32, 64, 128] in {
+  defvar bitsStr = "b" # !cast<string>(bitsVal);
+  def ROCDL_GlobalLoadAsyncToLDS # !toupper(bitsStr) # Op :
+    ROCDL_IntrOp<"global.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3], ["offset", "aux"]> {
+    dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
+                   Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                   I32Attr:$offset,
+                   I32Attr:$aux);
+    let arguments = !con(args, baseArgs);
+    let assemblyFormat = [{
+      $globalPtr `,`  $ldsPtr `,` $offset `,` $aux
+      attr-dict `:` type($globalPtr) `,` type($ldsPtr)
+    }];
+    let description = [{
+      Asynchronously loads }] # !cast<string>(bitsVal) # [{ bits of data from a global memory pointer
+      to a Local Data Share (LDS) pointer.
+
+      Available on gfx1250+.
+    }];
+
+    let extraClassDefinition = [{
+      ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+        return {getGlobalPtr(), getLdsPtr()};
+      }
+    }];
+  }
+}
+
+//===---------------------------------------------------------------------===//
 // Tensor load/store intrinsics (available in GFX1250)
 //===---------------------------------------------------------------------===//
 

@@ -356,12 +356,6 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (hasFastFMA())
     Builder.defineMacro("FP_FAST_FMA");
 
-  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE__", Twine(WavefrontSize),
-                      "compile-time-constant access to the wavefront size will "
-                      "be removed in a future release");
-  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE", Twine(WavefrontSize),
-                      "compile-time-constant access to the wavefront size will "
-                      "be removed in a future release");
   Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 }
 

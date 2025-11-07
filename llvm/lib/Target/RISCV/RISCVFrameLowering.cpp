@@ -789,6 +789,8 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
 
   // Unroll the probe loop depending on the number of iterations.
   if (Offset < ProbeSize * 5) {
+    uint64_t CFAAdjust = RealStackSize - Offset;
+
     uint64_t CurrentOffset = 0;
     while (CurrentOffset + ProbeSize <= Offset) {
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
@@ -802,7 +804,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
 
       CurrentOffset += ProbeSize;
       if (EmitCFI)
-        CFIBuilder.buildDefCFAOffset(CurrentOffset);
+        CFIBuilder.buildDefCFAOffset(CurrentOffset + CFAAdjust);
     }
 
     uint64_t Residual = Offset - CurrentOffset;
@@ -810,7 +812,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
                     StackOffset::getFixed(-Residual), Flag, getStackAlign());
       if (EmitCFI)
-        CFIBuilder.buildDefCFAOffset(Offset);
+        CFIBuilder.buildDefCFAOffset(RealStackSize);
 
       if (DynAllocation) {
         // s[d|w] zero, 0(sp)

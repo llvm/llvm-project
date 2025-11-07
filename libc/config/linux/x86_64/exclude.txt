@@ -19,3 +19,12 @@ if(NOT has_sys_random)
     )
   endif()
 endif()
+
+include(CheckSymbolExists)
+check_symbol_exists(SYS_faccessat2 "sys/syscall.h" HAVE_SYS_FACCESSAT2)
+if(NOT HAVE_SYS_FACCESSAT2)
+  message(VERBOSE "unistd.faccessat excluded from build, faccessat2 syscall is not available on the system")
+  list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS
+    libc.src.unistd.faccessat
+  )
+endif()

@@ -36,9 +36,6 @@ using mlir::LLVM::detail::createIntrinsicCall;
 static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
                                                NVVM::ReduxKind kind,
                                                bool hasAbs, bool hasNaN) {
-  if (!(resultType->isIntegerTy(32) || resultType->isFloatTy()))
-    llvm_unreachable("unsupported data type for redux");
-
   switch (kind) {
   case NVVM::ReduxKind::ADD:
     return llvm::Intrinsic::nvvm_redux_sync_add;

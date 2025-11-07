@@ -4753,6 +4753,19 @@ bool HexagonInstrInfo::getBundleNoShuf(const MachineInstr &MIB) const {
   return (Operand.isImm() && (Operand.getImm() & memShufDisabledMask) != 0);
 }
 
+bool HexagonInstrInfo::isQFPMul(const MachineInstr *MI) const {
+  return (MI->getOpcode() == Hexagon::V6_vmpy_qf16_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf16_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_sf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf16_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf16 ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_qf16 ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32);
+}
+
 // Addressing mode relations.
 short HexagonInstrInfo::changeAddrMode_abs_io(short Opc) const {
   return Opc >= 0 ? Hexagon::changeAddrMode_abs_io(Opc) : Opc;

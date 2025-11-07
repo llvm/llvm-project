@@ -697,9 +697,11 @@ ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
-    : TM(tm), Libcalls(TM.getTargetTriple(), TM.Options.ExceptionModel,
-                       TM.Options.FloatABIType, TM.Options.EABIVersion,
-                       TM.Options.MCOptions.getABIName()) {
+    : TM(tm),
+      RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
+                         TM.Options.FloatABIType, TM.Options.EABIVersion,
+                         TM.Options.MCOptions.getABIName()),
+      Libcalls(RuntimeLibcallInfo) {
   initActions();
 
   // Perform these initializations only once.

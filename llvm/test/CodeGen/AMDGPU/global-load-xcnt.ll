@@ -255,11 +255,11 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-SDAG-NEXT:    global_load_b128 v[26:29], v[0:1], off offset:16
 ; GCN-SDAG-NEXT:    global_load_b128 v[30:33], v[0:1], off
 ; GCN-SDAG-NEXT:    global_load_b128 v[34:37], v[0:1], off offset:64
-; GCN-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x70
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[48:49], 48
-; GCN-SDAG-NEXT:    v_mov_b64_e32 v[38:39], 0x60
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[50:51], 32
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x70
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[64:65], 16
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[38:39], 0x60
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[66:67], 0
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[52:53], 0x50
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[54:55], 64

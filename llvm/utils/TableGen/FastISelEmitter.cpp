@@ -85,7 +85,7 @@ struct OperandsSignature {
     char Repr = OK_Invalid;
 
   public:
-    OpKind() {}
+    OpKind() = default;
 
     bool operator<(OpKind RHS) const { return Repr < RHS.Repr; }
     bool operator==(OpKind RHS) const { return Repr == RHS.Repr; }

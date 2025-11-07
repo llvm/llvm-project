@@ -202,7 +202,7 @@ if(TARGET clang)
     else()
       # We require libcxx for the test suite, so if we aren't building it,
       # provide a helpful error about how to resolve the situation.
-      if(NOT LLDB_HAS_LIBCXX)
+      if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS AND NOT LLDB_HAS_LIBCXX)
         message(SEND_ERROR
           "LLDB test suite requires libc++, but it is currently disabled. "
           "Please add `libcxx` to `LLVM_ENABLE_RUNTIMES` or disable tests via "

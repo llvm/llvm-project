@@ -1066,3 +1066,5 @@ if config.compiler_id == "GNU":
 # llvm.
 config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
 config.substitutions.append(("%llvm_src", config.llvm_src_root))
+
+config.substitutions.append(("%python", '"%s"' % (sys.executable)))

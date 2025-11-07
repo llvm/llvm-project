@@ -346,7 +346,7 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
 const char *Solaris::getDefaultLinker() const {
   // FIXME: Only handle Solaris ld and GNU ld here.
   return llvm::StringSwitch<const char *>(getDriver().getPreferredLinker())
-      .Cases("bfd", "gld", "/usr/gnu/bin/ld")
+      .Cases({"bfd", "gld"}, "/usr/gnu/bin/ld")
       .Default("/usr/bin/ld");
 }
 

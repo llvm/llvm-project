@@ -311,10 +311,10 @@ This section describes how to triage bug reports:
    to backport.  You should also review the bug yourself to ensure that it
    meets the requirements for committing to the release branch.
 
-#. Once a bug has been reviewed, add the release:reviewed label and update the
-   issue's status to "Needs Merge".  Check the pull request associated with the
-   issue.  If all the tests pass, then the pull request can be merged.  If not,
-   then add a comment on the issue asking someone to take a look at the failures.
+#. Once a bug has been reviewed, update the status to "Needs Merge". Check the
+   pull request associated with the issue. If all the tests pass, then the pull
+   request can be merged. If not, then add a comment on the issue asking
+   someone to take a look at the failures.
 
 
 Release Patch Rules

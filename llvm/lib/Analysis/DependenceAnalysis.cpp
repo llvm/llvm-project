@@ -1587,6 +1587,15 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
   return nullptr;
 }
 
+/// Returns \p A * \p B if it guaranteed not to signed wrap. Otherwise returns
+/// nullptr. \p A and \p B must have the same integer type.
+static const SCEV *mulSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
+                                           ScalarEvolution &SE) {
+  if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, A, B))
+    return SE.getMulExpr(A, B);
+  return nullptr;
+}
+
 /// Returns the absolute value of \p A. In the context of dependence analysis,
 /// we need an absolute value in a mathematical sense. If \p A is the signed
 /// minimum value, we cannot represent it unless extending the original type.
@@ -1686,7 +1695,11 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
 
-  const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
+  if (!Delta) {
+    Result.Consistent = false;
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta);
   LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
 
@@ -1702,7 +1715,9 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     const SCEV *AbsCoeff = absSCEVNoSignedOverflow(Coeff, *SE);
     if (!AbsDelta || !AbsCoeff)
       return false;
-    const SCEV *Product = SE->getMulExpr(UpperBound, AbsCoeff);
+    const SCEV *Product = mulSCEVNoSignedOverflow(UpperBound, AbsCoeff, *SE);
+    if (!Product)
+      return false;
     return isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product);
   }();
   if (IsDeltaLarge) {
@@ -2854,14 +2869,18 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
          banerjeeMIVtest(Src, Dst, Loops, Result);
 }
 
-// Given a product, e.g., 10*X*Y, returns the first constant operand,
-// in this case 10. If there is no constant part, returns std::nullopt.
-static std::optional<APInt> getConstantPart(const SCEV *Expr) {
+/// Given a SCEVMulExpr, returns its first operand if its first operand is a
+/// constant and the product doesn't overflow in a signed sense. Otherwise,
+/// returns std::nullopt. For example, given (10 * X * Y)<nsw>, it returns 10.
+/// Notably, if it doesn't have nsw, the multiplication may overflow, and if
+/// so, it may not a multiple of 10.
+static std::optional<APInt> getConstanCoefficient(const SCEV *Expr) {
   if (const auto *Constant = dyn_cast<SCEVConstant>(Expr))
     return Constant->getAPInt();
   if (const auto *Product = dyn_cast<SCEVMulExpr>(Expr))
     if (const auto *Constant = dyn_cast<SCEVConstant>(Product->getOperand(0)))
-      return Constant->getAPInt();
+      if (Product->hasNoSignedWrap())
+        return Constant->getAPInt();
   return std::nullopt;
 }
 
@@ -2887,7 +2906,7 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
   if (AddRec->getLoop() == CurLoop) {
     CurLoopCoeff = Step;
   } else {
-    std::optional<APInt> ConstCoeff = getConstantPart(Step);
+    std::optional<APInt> ConstCoeff = getConstanCoefficient(Step);
 
     // If the coefficient is the product of a constant and other stuff, we can
     // use the constant in the GCD computation.
@@ -2940,7 +2959,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantPart(Coeff);
+    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2958,7 +2977,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantPart(Coeff);
+    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2979,7 +2998,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
       } else if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Operand)) {
         // Search for constant operand to participate in GCD;
         // If none found; return false.
-        std::optional<APInt> ConstOp = getConstantPart(Product);
+        std::optional<APInt> ConstOp = getConstanCoefficient(Product);
         if (!ConstOp)
           return false;
         ExtraGCD = APIntOps::GreatestCommonDivisor(ExtraGCD, ConstOp->abs());
@@ -3032,7 +3051,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantPart(Delta);
+    std::optional<APInt> ConstCoeff = getConstanCoefficient(Delta);
     if (!ConstCoeff)
       // The difference of the two coefficients might not be a product
       // or constant, in which case we give up on this direction.

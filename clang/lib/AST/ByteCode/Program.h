@@ -205,7 +205,6 @@ private:
     const Block *block() const { return &B; }
 
   private:
-    /// Required metadata - does not actually track pointers.
     Block B;
   };
 

@@ -309,6 +309,7 @@ int main(int argc, const char **argv) {
   clang::Interpreter::JITConfig Config;
   Config.IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
   Config.OOPExecutor = OOPExecutor;
+  Config.OrcRuntimePath = OrcRuntimePath;
   auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
   if (!SizeOrErr) {
     llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");

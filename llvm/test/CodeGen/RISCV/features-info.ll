@@ -136,6 +136,8 @@
 ; CHECK-NEXT:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
 ; CHECK-NEXT:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   shlcofideleg                     - 'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode).
+; CHECK-NEXT:   short-forward-branch-i-minmax    - Enable short forward branch optimization for min,max instructions in Zbb.
+; CHECK-NEXT:   short-forward-branch-i-mul       - Enable short forward branch optimization for mul instruction.
 ; CHECK-NEXT:   short-forward-branch-opt         - Enable short forward branch optimization.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).

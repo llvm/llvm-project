@@ -2657,4 +2657,31 @@ TEST_F(PatternMatchTest, ShiftOrSelf) {
   EXPECT_EQ(ShAmtC, 0U);
 }
 
+TEST_F(PatternMatchTest, CommutativeDeferredIntrinsicMatch) {
+  Value *X = ConstantFP::get(IRB.getDoubleTy(), 1.0);
+  Value *Y = ConstantFP::get(IRB.getDoubleTy(), 2.0);
+
+  auto CheckMatch = [X, Y](Value *Pattern) {
+    Value *tX = nullptr, *tY = nullptr;
+    EXPECT_TRUE(
+        match(Pattern, m_c_Intrinsic<Intrinsic::minimum>(
+                           m_Value(tX), m_c_Intrinsic<Intrinsic::minimum>(
+                                            m_Deferred(tX), m_Value(tY)))));
+    EXPECT_EQ(tX, X);
+    EXPECT_EQ(tY, Y);
+  };
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, X,
+      IRB.CreateBinaryIntrinsic(Intrinsic::minimum, X, Y)));
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, X,
+      IRB.CreateBinaryIntrinsic(Intrinsic::minimum, Y, X)));
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, IRB.CreateBinaryIntrinsic(Intrinsic::minimum, X, Y),
+      X));
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, IRB.CreateBinaryIntrinsic(Intrinsic::minimum, Y, X),
+      X));
+}
+
 } // anonymous namespace.

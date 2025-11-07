@@ -15,7 +15,7 @@ using namespace llvm;
 
 namespace {
 
-typedef DAGDeltaAlgorithm::edge_ty edge_ty;
+using edge_ty = DAGDeltaAlgorithm::edge_ty;
 
 class FixedDAGDeltaAlgorithm : public DAGDeltaAlgorithm {
   changeset_ty FailingSet;

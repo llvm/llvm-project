@@ -3599,6 +3599,21 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
                                  m_Not(m_Specific(SelCond->getTrueValue())));
       if (MayNeedFreeze)
         C = Builder.CreateFreeze(C);
+      if (!ProfcheckDisableMetadataFixes) {
+        Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+        if (match(CondVal, m_LogicalAnd(m_Specific(C), m_Value(A2))) &&
+            SelCond) {
+          return SelectInst::Create(C, A, B, "", nullptr, SelCond);
+        } else if (match(FalseVal,
+                         m_LogicalAnd(m_Not(m_Value(C2)), m_Value(B2))) &&
+                   SelFVal) {
+          SelectInst *NewSI = SelectInst::Create(C, A, B, "", nullptr, SelFVal);
+          NewSI->swapProfMetadata();
+          return NewSI;
+        } else {
+          return createSelectInstWithUnknownProfile(C, A, B);
+        }
+      }
       return SelectInst::Create(C, A, B);
     }
 
@@ -3615,6 +3630,20 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
                                  m_Not(m_Specific(SelFVal->getTrueValue())));
       if (MayNeedFreeze)
         C = Builder.CreateFreeze(C);
+      if (!ProfcheckDisableMetadataFixes) {
+        Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+        if (match(CondVal, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(A2))) &&
+            SelCond) {
+          SelectInst *NewSI = SelectInst::Create(C, B, A, "", nullptr, SelCond);
+          NewSI->swapProfMetadata();
+          return NewSI;
+        } else if (match(FalseVal, m_LogicalAnd(m_Specific(C), m_Value(B2))) &&
+                   SelFVal) {
+          return SelectInst::Create(C, B, A, "", nullptr, SelFVal);
+        } else {
+          return createSelectInstWithUnknownProfile(C, B, A);
+        }
+      }
       return SelectInst::Create(C, B, A);
     }
   }

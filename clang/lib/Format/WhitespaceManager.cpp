@@ -591,7 +591,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
       CurrentChangeWidthRight = CurrentChange.TokenLength;
     const FormatToken *MatchingParenToEncounter = nullptr;
     for (unsigned J = I + 1;
-         J != E && (Changes[J].NewlinesBefore == 0 || MatchingParenToEncounter);
+         J != E && (Changes[J].NewlinesBefore == 0 ||
+                    MatchingParenToEncounter || Changes[J].IsAligned);
          ++J) {
       const auto &Change = Changes[J];
       const auto *Tok = Change.Tok;

@@ -797,7 +797,7 @@ DiagnosedSilenceableFailure mlir::test::TestProduceInvalidIR::applyToOne(
   // Provide some IR that does not verify.
   rewriter.setInsertionPointToStart(&target->getRegion(0).front());
   TestDummyPayloadOp::create(rewriter, target->getLoc(), TypeRange(),
-                             ValueRange(), /*failToVerify=*/true);
+                             ValueRange(), /*fail_to_verify=*/true);
   return DiagnosedSilenceableFailure::success();
 }
 

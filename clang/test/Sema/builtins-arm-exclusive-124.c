@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple armv7m -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple armv8m.main -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple thumbv7m -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple thumbv8m.main -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple armv8.1m.main -fsyntax-only -verify %s
 
 // All these architecture versions provide 1-, 2- or 4-byte exclusive accesses,
