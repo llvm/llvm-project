@@ -125,6 +125,9 @@ void bad_side_effects() {
 void bad_side_effects_volatile() {
     bool a = true;
     volatile bool b = false;
+    bool c = true;
+    bool r;
+
     a | b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
@@ -138,6 +141,16 @@ void bad_side_effects_volatile() {
     a &= b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    r = (a | c) | b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: r = (a || c) | b;
+
+    r = a | c | b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:15: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: r = a || c | b;
 }
 
 void bad_with_priors() {

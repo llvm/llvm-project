@@ -17,67 +17,45 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
-static const Stmt* ignoreParenExpr(const Stmt* S) {
-  while (const auto* PE = dyn_cast<ParenExpr>(S)) {
-    S = PE->getSubExpr();
-  }
-  return S;
-}
-
-template<typename R>
-static bool
-containsNodeIgnoringParenExpr(R&& children, const Stmt* Node) {
-  for (const Stmt* Child : children) {
-    if (ignoreParenExpr(Child) == Node) {
-      return true;
+static const DynTypedNode *ignoreParensTowardsTheRoot(const DynTypedNode *N,
+                                                      ASTContext *AC) {
+  if (const auto *S = N->get<Stmt>()) {
+    if (isa<ParenExpr>(S)) {
+      auto Parents = AC->getParents(*S);
+      for (const auto &Parent : Parents) {
+        return ignoreParensTowardsTheRoot(&Parent, AC);
+      }
     }
   }
-  return false;
+  return N;
 }
 
-static bool isBooleanImplicitCastStmt(const Stmt* S) {
-  const auto* ICE = dyn_cast<ImplicitCastExpr>(S);
-  return ICE && ICE->getType()->isBooleanType();
-}
+static bool assignsToBoolean(const BinaryOperator *BinOp, ASTContext *AC) {
+  TraversalKindScope RAII(*AC, TK_AsIs);
+  auto Parents = AC->getParents(*BinOp);
 
-namespace {
-AST_MATCHER(BinaryOperator, assignsToBoolean) {
-  auto Parents = Finder->getASTContext().getParents(Node);
-  
-  for (const auto& Parent : Parents) {
-    // Check for Decl parents
-    if (const auto* D = Parent.template get<Decl>()) {
-      const Expr* InitExpr = nullptr;
-      
-      if (const auto* VD = dyn_cast<VarDecl>(D)) {
-        InitExpr = VD->getInit();
-      } else if (const auto* FD = dyn_cast<FieldDecl>(D)) {
-        InitExpr = FD->getInClassInitializer();
-      } else if (const auto* NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D)) {
+  for (const auto &Parent : Parents) {
+    const auto *ParentNoParen = ignoreParensTowardsTheRoot(&Parent, AC);
+    // Special handling for `template<bool bb=true|1>` cases
+    if (const auto *D = ParentNoParen->get<Decl>()) {
+      if (const auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D)) {
         if (NTTPD->getType()->isBooleanType()) {
           return true;
         }
       }
-      
-      if (InitExpr && isBooleanImplicitCastStmt(InitExpr)) {
-        return true;
-      }
     }
-    
-    // Check for Stmt parents
-    if (const auto* S = Parent.template get<Stmt>()) {
-      for (const Stmt* Child : S->children()) {
-        if (isBooleanImplicitCastStmt(Child) && containsNodeIgnoringParenExpr(Child->children(), &Node)) {
+
+    if (const auto *S = ParentNoParen->get<Stmt>()) {
+      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(S)) {
+        if (ICE->getType()->isBooleanType()) {
           return true;
         }
       }
     }
   }
-  
+
   return false;
 }
-
-} // namespace
 
 static const NamedDecl *
 getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
@@ -88,8 +66,6 @@ getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
   }
   return nullptr;
 }
-
-constexpr std::array<llvm::StringRef, 4U> OperatorsNames{"|", "&", "|=", "&="};
 
 constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
     OperatorsTransformation{{{"|", "||"},
@@ -103,11 +79,30 @@ constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
 
 static llvm::StringRef translate(llvm::StringRef Value) {
   for (const auto &[Bitwise, Logical] : OperatorsTransformation) {
-    if (Value == Bitwise)
+    if (Value == Bitwise) {
       return Logical;
+    }
   }
 
   return {};
+}
+
+static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC) {
+  for (const auto &[Bitwise, _] : OperatorsTransformation) {
+    if (BinOp->getOpcodeStr() == Bitwise) {
+      const bool hasBooleanOperands = llvm::all_of(
+          std::array{BinOp->getLHS(), BinOp->getRHS()}, [](const Expr *E) {
+            return E->IgnoreImpCasts()->getType().getTypePtr()->isBooleanType();
+          });
+      if (hasBooleanOperands) {
+        return true;
+      }
+      if (assignsToBoolean(BinOp, AC)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
@@ -124,52 +119,43 @@ void BoolBitwiseOperationCheck::storeOptions(
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      binaryOperator(
-          unless(isExpansionInSystemHeader()),
-          hasAnyOperatorName(OperatorsNames),
-          anyOf(
-            hasOperands(expr(hasType(booleanType())), expr(hasType(booleanType()))),
-            assignsToBoolean()
-          ),
-          // isBooleanLikeOperands(),
-          optionally(hasParent( // to simple implement transformations like
-                                // `a&&b|c` -> `a&&(b||c)`
-              binaryOperator().bind("p"))))
-          .bind("op"),
+      binaryOperator(unless(isExpansionInSystemHeader()),
+                     unless(hasParent(binaryOperator())) // ignoring parenExpr
+                     )
+          .bind("binOpRoot"),
       this);
 }
 
-void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("op");
-
-  auto DiagEmitter = [MatchedExpr, this] {
-    const NamedDecl *ND = getLHSNamedDeclIfCompoundAssign(MatchedExpr);
-    return diag(MatchedExpr->getOperatorLoc(),
+void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
+    const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
+    const clang::SourceManager &SM, clang::ASTContext &Ctx) {
+  auto DiagEmitter = [BinOp, this] {
+    const NamedDecl *ND = getLHSNamedDeclIfCompoundAssign(BinOp);
+    return diag(BinOp->getOperatorLoc(),
                 "use logical operator '%0' for boolean %select{variable "
                 "%2|values}1 instead of bitwise operator '%3'")
-           << translate(MatchedExpr->getOpcodeStr()) << (ND == nullptr) << ND
-           << MatchedExpr->getOpcodeStr();
+           << translate(BinOp->getOpcodeStr()) << (ND == nullptr) << ND
+           << BinOp->getOpcodeStr();
   };
 
   const bool HasVolatileOperand = llvm::any_of(
-      std::array{MatchedExpr->getLHS(), MatchedExpr->getRHS()},
-      [](const Expr *E) {
+      std::array{BinOp->getLHS(), BinOp->getRHS()}, [](const Expr *E) {
         return E->IgnoreImpCasts()->getType().isVolatileQualified();
       });
   if (HasVolatileOperand)
     return static_cast<void>(DiagEmitter());
 
-  const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(
-      *Result.Context, /*IncludePossibleEffects=*/!StrictMode);
+  const bool HasSideEffects = BinOp->getRHS()->HasSideEffects(
+      Ctx, /*IncludePossibleEffects=*/!StrictMode);
   if (HasSideEffects)
     return static_cast<void>(DiagEmitter());
 
-  SourceLocation Loc = MatchedExpr->getOperatorLoc();
+  SourceLocation Loc = BinOp->getOperatorLoc();
 
   if (Loc.isInvalid() || Loc.isMacroID())
     return static_cast<void>(IgnoreMacros || DiagEmitter());
 
-  Loc = Result.SourceManager->getSpellingLoc(Loc);
+  Loc = SM.getSpellingLoc(Loc);
   if (Loc.isInvalid() || Loc.isMacroID())
     return static_cast<void>(IgnoreMacros || DiagEmitter());
 
@@ -177,23 +163,23 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (TokenRange.isInvalid())
     return static_cast<void>(IgnoreMacros || DiagEmitter());
 
-  const StringRef FixSpelling = translate(Lexer::getSourceText(
-      TokenRange, *Result.SourceManager, Result.Context->getLangOpts()));
+  const StringRef FixSpelling =
+      translate(Lexer::getSourceText(TokenRange, SM, Ctx.getLangOpts()));
 
   if (FixSpelling.empty())
     return static_cast<void>(DiagEmitter());
 
   FixItHint InsertEqual;
-  if (MatchedExpr->isCompoundAssignmentOp()) {
+  if (BinOp->isCompoundAssignmentOp()) {
     const auto *DeclRefLHS =
-        dyn_cast<DeclRefExpr>(MatchedExpr->getLHS()->IgnoreImpCasts());
+        dyn_cast<DeclRefExpr>(BinOp->getLHS()->IgnoreImpCasts());
     if (!DeclRefLHS)
       return static_cast<void>(DiagEmitter());
     const SourceLocation LocLHS = DeclRefLHS->getEndLoc();
     if (LocLHS.isInvalid() || LocLHS.isMacroID())
       return static_cast<void>(IgnoreMacros || DiagEmitter());
-    const SourceLocation InsertLoc = clang::Lexer::getLocForEndOfToken(
-        LocLHS, 0, *Result.SourceManager, Result.Context->getLangOpts());
+    const SourceLocation InsertLoc =
+        clang::Lexer::getLocForEndOfToken(LocLHS, 0, SM, Ctx.getLangOpts());
     if (InsertLoc.isInvalid() || InsertLoc.isMacroID())
       return static_cast<void>(IgnoreMacros || DiagEmitter());
     InsertEqual = FixItHint::CreateInsertion(
@@ -202,27 +188,25 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
-  const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
   std::optional<BinaryOperatorKind> ParentOpcode;
-  if (Parent)
-    ParentOpcode = Parent->getOpcode();
+  if (ParentBinOp)
+    ParentOpcode = ParentBinOp->getOpcode();
 
-  const auto *RHS =
-      dyn_cast<BinaryOperator>(MatchedExpr->getRHS()->IgnoreImpCasts());
+  const auto *RHS = dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts());
   std::optional<BinaryOperatorKind> RHSOpcode;
   if (RHS)
     RHSOpcode = RHS->getOpcode();
 
   const Expr *SurroundedExpr = nullptr;
-  if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode == BO_LAnd) ||
-      (MatchedExpr->getOpcode() == BO_And &&
+  if ((BinOp->getOpcode() == BO_Or && ParentOpcode == BO_LAnd) ||
+      (BinOp->getOpcode() == BO_And &&
        llvm::is_contained({BO_Xor, BO_Or}, ParentOpcode))) {
-    const Expr *Side = Parent->getLHS()->IgnoreParenImpCasts() == MatchedExpr
-                           ? Parent->getLHS()
-                           : Parent->getRHS();
+    const Expr *Side = ParentBinOp->getLHS()->IgnoreParenImpCasts() == BinOp
+                           ? ParentBinOp->getLHS()
+                           : ParentBinOp->getRHS();
     SurroundedExpr = Side->IgnoreImpCasts();
-    assert(SurroundedExpr->IgnoreParens() == MatchedExpr);
-  } else if (MatchedExpr->getOpcode() == BO_AndAssign && RHSOpcode == BO_LOr)
+    assert(SurroundedExpr->IgnoreParens() == BinOp);
+  } else if (BinOp->getOpcode() == BO_AndAssign && RHSOpcode == BO_LOr)
     SurroundedExpr = RHS;
 
   if (SurroundedExpr && isa<ParenExpr>(SurroundedExpr))
@@ -233,8 +217,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (SurroundedExpr) {
     const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc();
     const SourceLocation InsertSecondLoc = clang::Lexer::getLocForEndOfToken(
-        SurroundedExpr->getEndLoc(), 0, *Result.SourceManager,
-        Result.Context->getLangOpts());
+        SurroundedExpr->getEndLoc(), 0, SM, Ctx.getLangOpts());
     if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() ||
         InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID())
       return static_cast<void>(IgnoreMacros || DiagEmitter());
@@ -244,6 +227,32 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   DiagEmitter() << InsertEqual << ReplaceOperator << InsertBrace1
                 << InsertBrace2;
+}
+
+void BoolBitwiseOperationCheck::visitBinaryTreesNode(
+    const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
+    const clang::SourceManager &SM, clang::ASTContext &Ctx) {
+  if (!BinOp) {
+    return;
+  }
+
+  if (isBooleanBitwise(BinOp, &Ctx)) {
+    emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM, Ctx);
+  }
+
+  visitBinaryTreesNode(
+      dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()), BinOp,
+      SM, Ctx);
+  visitBinaryTreesNode(
+      dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()), BinOp,
+      SM, Ctx);
+}
+
+void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *binOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
+  const SourceManager &SM = *Result.SourceManager;
+  ASTContext &Ctx = *Result.Context;
+  visitBinaryTreesNode(binOpRoot, nullptr, SM, Ctx);
 }
 
 } // namespace clang::tidy::misc

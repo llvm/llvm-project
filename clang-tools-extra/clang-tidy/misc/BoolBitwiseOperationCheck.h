@@ -33,6 +33,15 @@ public:
   }
 
 private:
+  void emitWarningAndChangeOperatorsIfPossible(
+      const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
+      const clang::SourceManager &SM, clang::ASTContext &Ctx);
+  void visitBinaryTreesNode(const BinaryOperator *BinOp,
+                            const BinaryOperator *ParentBinOp,
+                            const clang::SourceManager &SM,
+                            clang::ASTContext &Ctx);
+
+private:
   bool StrictMode;
   bool IgnoreMacros;
 };
