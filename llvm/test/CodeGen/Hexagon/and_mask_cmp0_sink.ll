@@ -9,11 +9,8 @@ define i32 @and_sink1(i32 %a) {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = and(r0,##2048)
+; CHECK-NEXT:     p0 = !tstbit(r0,#11)
 ; CHECK-NEXT:     r0 = ##A
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = cmp.eq(r1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: // %bb0
