@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1703,6 +1704,7 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::MAXU:  return RISCV::PseudoCCMAXU;
   case RISCV::MIN:   return RISCV::PseudoCCMIN;
   case RISCV::MINU:  return RISCV::PseudoCCMINU;
+  case RISCV::MUL:   return RISCV::PseudoCCMUL;
 
   case RISCV::ADDI:  return RISCV::PseudoCCADDI;
   case RISCV::SLLI:  return RISCV::PseudoCCSLLI;
@@ -1752,6 +1754,9 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   if (!STI.hasShortForwardBranchIMinMax() &&
       (MI->getOpcode() == RISCV::MAX || MI->getOpcode() == RISCV::MIN ||
        MI->getOpcode() == RISCV::MINU || MI->getOpcode() == RISCV::MAXU))
+    return nullptr;
+
+  if (!STI.hasShortForwardBranchIMul() && MI->getOpcode() == RISCV::MUL)
     return nullptr;
 
   // Check if MI can be predicated and folded into the CCMOV.
@@ -3522,6 +3527,27 @@ RISCVInstrInfo::getOutliningCandidateInfo(
       Candidate.getMF()->getSubtarget<RISCVSubtarget>().hasStdExtZca() ? 2 : 4;
   unsigned CallOverhead = 0, FrameOverhead = 0;
 
+  // Count the number of CFI instructions in the candidate, if present.
+  unsigned CFICount = 0;
+  for (auto &I : Candidate) {
+    if (I.isCFIInstruction())
+      CFICount++;
+  }
+
+  // Ensure CFI coverage matches: comparing the number of CFIs in the candidate
+  // with the total number of CFIs in the parent function for each candidate.
+  // Outlining only a subset of a function’s CFIs would split the unwind state
+  // across two code regions and lead to incorrect address offsets between the
+  // outlined body and the remaining code. To preserve correct unwind info, we
+  // only outline when all CFIs in the function can be outlined together.
+  for (outliner::Candidate &C : RepeatedSequenceLocs) {
+    std::vector<MCCFIInstruction> CFIInstructions =
+        C.getMF()->getFrameInstructions();
+
+    if (CFICount > 0 && CFICount != CFIInstructions.size())
+      return std::nullopt;
+  }
+
   MachineOutlinerConstructionID MOCI = MachineOutlinerDefault;
   if (Candidate.back().isReturn()) {
     MOCI = MachineOutlinerTailCall;
@@ -3536,6 +3562,11 @@ RISCVInstrInfo::getOutliningCandidateInfo(
     // jr t0 = 4 bytes, 2 bytes if compressed instructions are enabled.
     FrameOverhead = InstrSizeCExt;
   }
+
+  // If we have CFI instructions, we can only outline if the outlined section
+  // can be a tail call.
+  if (MOCI != MachineOutlinerTailCall && CFICount > 0)
+    return std::nullopt;
 
   for (auto &C : RepeatedSequenceLocs)
     C.setCallInfo(MOCI, CallOverhead);
@@ -3558,13 +3589,11 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
       MBB->getParent()->getSubtarget().getRegisterInfo();
   const auto &F = MI.getMF()->getFunction();
 
-  // We can manually strip out CFI instructions later.
+  // We can only outline CFI instructions if we will tail call the outlined
+  // function, or fix up the CFI offsets. Currently, CFI instructions are
+  // outlined only if in a tail call.
   if (MI.isCFIInstruction())
-    // If current function has exception handling code, we can't outline &
-    // strip these CFI instructions since it may break .eh_frame section
-    // needed in unwinding.
-    return F.needsUnwindTableEntry() ? outliner::InstrType::Illegal
-                                     : outliner::InstrType::Invisible;
+    return outliner::InstrType::Legal;
 
   if (cannotInsertTailCall(*MBB) &&
       (MI.isReturn() || isMIModifiesReg(MI, TRI, RISCV::X5)))
@@ -3590,21 +3619,6 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
 void RISCVInstrInfo::buildOutlinedFrame(
     MachineBasicBlock &MBB, MachineFunction &MF,
     const outliner::OutlinedFunction &OF) const {
-
-  // Strip out any CFI instructions
-  bool Changed = true;
-  while (Changed) {
-    Changed = false;
-    auto I = MBB.begin();
-    auto E = MBB.end();
-    for (; I != E; ++I) {
-      if (I->isCFIInstruction()) {
-        I->removeFromParent();
-        Changed = true;
-        break;
-      }
-    }
-  }
 
   if (OF.FrameConstructionID == MachineOutlinerTailCall)
     return;

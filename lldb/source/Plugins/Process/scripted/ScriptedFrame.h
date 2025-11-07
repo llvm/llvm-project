@@ -9,7 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTED_FRAME_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTED_FRAME_H
 
-#include "Plugins/Process/Utility/RegisterContextMemory.h"
 #include "ScriptedThread.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
