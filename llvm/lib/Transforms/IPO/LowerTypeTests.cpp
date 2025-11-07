@@ -25,6 +25,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -54,6 +55,7 @@
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -95,6 +97,7 @@ STATISTIC(NumByteArraysCreated, "Number of byte arrays created");
 STATISTIC(NumTypeTestCallsLowered, "Number of type test calls lowered");
 STATISTIC(NumTypeIdDisjointSets, "Number of disjoint sets of type identifiers");
 
+namespace llvm {
 static cl::opt<bool> AvoidReuse(
     "lowertypetests-avoid-reuse",
     cl::desc("Try to avoid reuse of byte array addresses using aliases"),
@@ -130,6 +133,9 @@ static cl::opt<DropTestKind>
                                clEnumValN(DropTestKind::All, "all",
                                           "Drop all type test sequences")),
                     cl::Hidden, cl::init(DropTestKind::None));
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -423,8 +429,10 @@ struct ScopedSaveAliaseesAndUsed {
 class LowerTypeTestsModule {
   Module &M;
 
-  ModuleSummaryIndex *ExportSummary;
-  const ModuleSummaryIndex *ImportSummary;
+  FunctionAnalysisManager &FAM;
+
+  ModuleSummaryIndex *const ExportSummary;
+  const ModuleSummaryIndex *const ImportSummary;
   // Set when the client has invoked this to simply drop all type test assume
   // sequences.
   DropTestKind DropTypeTests;
@@ -507,9 +515,10 @@ class LowerTypeTestsModule {
   void allocateByteArrays();
   Value *createBitSetTest(IRBuilder<> &B, const TypeIdLowering &TIL,
                           Value *BitOffset);
-  void lowerTypeTestCalls(
-      ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
-      const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout);
+  void
+  lowerTypeTestCalls(ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
+                     const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout,
+                     uint64_t *TotalCallCount = nullptr);
   Value *lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
                            const TypeIdLowering &TIL);
 
@@ -803,6 +812,8 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
       }
 
   IRBuilder<> ThenB(SplitBlockAndInsertIfThen(OffsetInRange, CI, false));
+  setExplicitlyUnknownBranchWeightsIfProfiled(*InitialBB->getTerminator(),
+                                              DEBUG_TYPE);
 
   // Now that we know that the offset is in range and aligned, load the
   // appropriate bit from the bitset.
@@ -1181,7 +1192,8 @@ buildBitSets(ArrayRef<Metadata *> TypeIds,
 
 void LowerTypeTestsModule::lowerTypeTestCalls(
     ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
-    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
+    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout,
+    uint64_t *TotalCallCount) {
   // For each type identifier in this disjoint set...
   for (const auto &[TypeId, BSI] : buildBitSets(TypeIds, GlobalLayout)) {
     ByteArrayInfo *BAI = nullptr;
@@ -1227,6 +1239,18 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
       ++NumTypeTestCallsLowered;
       Value *Lowered = lowerTypeTestCall(TypeId, CI, TIL);
       if (Lowered) {
+        if (TotalCallCount) {
+          auto *CIF = CI->getFunction();
+          if (auto EC = CIF->getEntryCount())
+            if (EC->getCount()) {
+              auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*CIF);
+              *TotalCallCount +=
+                  EC->getCount() *
+                  static_cast<double>(
+                      BFI.getBlockFreq(CI->getParent()).getFrequency()) /
+                  BFI.getEntryFreq().getFrequency();
+            }
+        }
         CI->replaceAllUsesWith(Lowered);
         CI->eraseFromParent();
       }
@@ -1702,10 +1726,13 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
   ArrayType *JumpTableEntryType = ArrayType::get(Int8Ty, EntrySize);
   ArrayType *JumpTableType =
       ArrayType::get(JumpTableEntryType, Functions.size());
-  auto JumpTable = ConstantExpr::getPointerCast(
+  auto *JumpTable = ConstantExpr::getPointerCast(
       JumpTableFn, PointerType::getUnqual(M.getContext()));
 
-  lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
+  uint64_t Count = 0;
+  lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout, &Count);
+  if (!ProfcheckDisableMetadataFixes && Count)
+    JumpTableFn->setEntryCount(Count);
 
   // Build aliases pointing to offsets into the jump table, and replace
   // references to the original functions with references to the aliases.
@@ -1870,7 +1897,9 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 LowerTypeTestsModule::LowerTypeTestsModule(
     Module &M, ModuleAnalysisManager &AM, ModuleSummaryIndex *ExportSummary,
     const ModuleSummaryIndex *ImportSummary, DropTestKind DropTypeTests)
-    : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary),
+    : M(M),
+      FAM(AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
+      ExportSummary(ExportSummary), ImportSummary(ImportSummary),
       DropTypeTests(ClDropTypeTests > DropTypeTests ? ClDropTypeTests
                                                     : DropTypeTests) {
   assert(!(ExportSummary && ImportSummary));
@@ -1879,8 +1908,6 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   if (Arch == Triple::arm)
     CanUseArmJumpTable = true;
   if (Arch == Triple::arm || Arch == Triple::thumb) {
-    auto &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     for (Function &F : M) {
       // Skip declarations since we should not query the TTI for them.
       if (F.isDeclaration())

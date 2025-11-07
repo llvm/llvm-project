@@ -44,6 +44,7 @@
 ; CHECK-PRE-LINK: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-THINLTO: Running pass: LowerTypeTestsPass
+; CHECK-THINLTO: Running analysis: InnerAnalysisManagerProxy<FunctionAnalysisManager, Module> on [module]
 ; CHECK-THINLTO-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-THINLTO-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-THINLTO-NEXT: Running pass: GlobalDCEPass
