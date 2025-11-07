@@ -209,14 +209,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
       SetUIntN(llvm::APInt(128, int128.x));
     } else {
       std::vector<uint8_t> bytes(src_len, 0);
-      for (size_t i = 0; i < src_len; i++)
-        bytes[i] = src.GetU8(&src_offset);
-
-      if (src.GetByteOrder() == eByteOrderBig)
-        // Transform the big-endian input to little-endian
-        // because that is what the "llvm::LoadIntFromMemory" function
-        // we call below expects.
-        std::reverse(bytes.begin(), bytes.end());
+      src.ExtractBytes(src_offset, src_len, eByteOrderLittle, bytes.data());
 
       if (llvm::sys::IsBigEndianHost) {
         // If LLDB runs on a big-endian architecture,
