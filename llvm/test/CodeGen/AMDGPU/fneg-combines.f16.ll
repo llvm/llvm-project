@@ -1470,7 +1470,7 @@ define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_min_f16_e32 v0, INV2PI, v0
 ; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1479,7 +1479,7 @@ define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
+; GFX11-NEXT:    v_min_f16_e32 v0, INV2PI, v0
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-SAFE-TRUE16-LABEL: v_fneg_inv2pi_minnum_f16:
@@ -1487,7 +1487,7 @@ define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
 ; GFX11-SAFE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SAFE-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-TRUE16-NEXT:    v_min_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-SAFE-TRUE16-NEXT:    v_min_f16_e32 v0.l, INV2PI, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NSZ-TRUE16-LABEL: v_fneg_inv2pi_minnum_f16:
@@ -1495,7 +1495,7 @@ define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
 ; GFX11-NSZ-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NSZ-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
 ; GFX11-NSZ-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NSZ-TRUE16-NEXT:    v_min_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-NSZ-TRUE16-NEXT:    v_min_f16_e32 v0.l, INV2PI, v0.l
 ; GFX11-NSZ-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
 ; GFX11-NSZ-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half 0xH3118, half %a)
@@ -1516,7 +1516,7 @@ define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_min_f16_e32 v0, INV2PI, v0
 ; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1525,7 +1525,7 @@ define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
+; GFX11-NEXT:    v_min_f16_e32 v0, INV2PI, v0
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-SAFE-TRUE16-LABEL: v_fneg_neg_inv2pi_minnum_f16:
@@ -1533,7 +1533,7 @@ define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
 ; GFX11-SAFE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SAFE-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-TRUE16-NEXT:    v_min_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-SAFE-TRUE16-NEXT:    v_min_f16_e32 v0.l, INV2PI, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NSZ-TRUE16-LABEL: v_fneg_neg_inv2pi_minnum_f16:
@@ -1541,7 +1541,7 @@ define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
 ; GFX11-NSZ-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NSZ-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
 ; GFX11-NSZ-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NSZ-TRUE16-NEXT:    v_min_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-NSZ-TRUE16-NEXT:    v_min_f16_e32 v0.l, INV2PI, v0.l
 ; GFX11-NSZ-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
 ; GFX11-NSZ-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half 0xH3118, half %a)
@@ -1650,7 +1650,7 @@ define half @v_fneg_inv2pi_minnum_foldable_use_f16(half %a, half %b) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_min_f16_e32 v0, INV2PI, v0
 ; VI-NEXT:    v_mul_f16_e64 v0, -v0, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1659,7 +1659,7 @@ define half @v_fneg_inv2pi_minnum_foldable_use_f16(half %a, half %b) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
+; GFX11-NEXT:    v_min_f16_e32 v0, INV2PI, v0
 ; GFX11-NEXT:    v_mul_f16_e64 v0, -v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-SAFE-TRUE16-LABEL: v_fneg_inv2pi_minnum_foldable_use_f16:
@@ -1667,7 +1667,7 @@ define half @v_fneg_inv2pi_minnum_foldable_use_f16(half %a, half %b) #0 {
 ; GFX11-SAFE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SAFE-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-TRUE16-NEXT:    v_min_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-SAFE-TRUE16-NEXT:    v_min_f16_e32 v0.l, INV2PI, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    v_mul_f16_e64 v0.l, -v0.l, v1.l
 ; GFX11-SAFE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NSZ-TRUE16-LABEL: v_fneg_inv2pi_minnum_foldable_use_f16:
@@ -1675,7 +1675,7 @@ define half @v_fneg_inv2pi_minnum_foldable_use_f16(half %a, half %b) #0 {
 ; GFX11-NSZ-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NSZ-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
 ; GFX11-NSZ-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NSZ-TRUE16-NEXT:    v_min_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-NSZ-TRUE16-NEXT:    v_min_f16_e32 v0.l, INV2PI, v0.l
 ; GFX11-NSZ-TRUE16-NEXT:    v_mul_f16_e64 v0.l, -v0.l, v1.l
 ; GFX11-NSZ-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half 0xH3118, half %a)

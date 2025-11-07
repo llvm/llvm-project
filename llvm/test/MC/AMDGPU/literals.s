@@ -957,16 +957,16 @@ v_trunc_f32_e32 v0, 0x3fc45f306dc9c882
 // NOGCN: :[[@LINE-1]]:21: error: invalid operand for instruction
 
 v_fract_f64_e32 v[0:1], 0x3fc45f306dc9c882
-// GFX11: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x7c,0x00,0x7e]
-// GFX12XX: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x7c,0x00,0x7e]
-// GFX89: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x64,0x00,0x7e]
+// GFX11: v_fract_f64_e32 v[0:1], INV2PI ; encoding: [0xf8,0x7c,0x00,0x7e]
+// GFX12XX: v_fract_f64_e32 v[0:1], INV2PI ; encoding: [0xf8,0x7c,0x00,0x7e]
+// GFX89: v_fract_f64_e32 v[0:1], INV2PI ; encoding: [0xf8,0x64,0x00,0x7e]
 // NOSICI: :[[@LINE-4]]:25: error: invalid operand for instruction
 // NOSICIVI: :[[@LINE-2]]:25: error: invalid operand for instruction
 
 v_trunc_f32_e32 v0, 0x3e22f983
-// GFX11: v_trunc_f32_e32 v0, 0.15915494          ; encoding: [0xf8,0x42,0x00,0x7e]
-// GFX12XX: v_trunc_f32_e32 v0, 0.15915494          ; encoding: [0xf8,0x42,0x00,0x7e]
-// GFX89: v_trunc_f32_e32 v0, 0.15915494          ; encoding: [0xf8,0x38,0x00,0x7e]
+// GFX11: v_trunc_f32_e32 v0, INV2PI          ; encoding: [0xf8,0x42,0x00,0x7e]
+// GFX12XX: v_trunc_f32_e32 v0, INV2PI          ; encoding: [0xf8,0x42,0x00,0x7e]
+// GFX89: v_trunc_f32_e32 v0, INV2PI          ; encoding: [0xf8,0x38,0x00,0x7e]
 // SICI: v_trunc_f32_e32 v0, 0x3e22f983          ; encoding: [0xff,0x42,0x00,0x7e,0x83,0xf9,0x22,0x3e]
 
 v_fract_f64_e32 v[0:1], 0x3e22f983
@@ -979,16 +979,16 @@ v_trunc_f32_e64 v0, 0x3fc45f306dc9c882
 // NOGCN: :[[@LINE-1]]:21: error: invalid operand for instruction
 
 v_fract_f64_e64 v[0:1], 0x3fc45f306dc9c882
-// GFX11: v_fract_f64_e64 v[0:1], 0.15915494309189532 ; encoding: [0x00,0x00,0xbe,0xd5,0xf8,0x00,0x00,0x00]
-// GFX12XX: v_fract_f64_e64 v[0:1], 0.15915494309189532 ; encoding: [0x00,0x00,0xbe,0xd5,0xf8,0x00,0x00,0x00]
-// GFX89: v_fract_f64_e64 v[0:1], 0.15915494309189532 ; encoding: [0x00,0x00,0x72,0xd1,0xf8,0x00,0x00,0x00]
+// GFX11: v_fract_f64_e64 v[0:1], INV2PI ; encoding: [0x00,0x00,0xbe,0xd5,0xf8,0x00,0x00,0x00]
+// GFX12XX: v_fract_f64_e64 v[0:1], INV2PI ; encoding: [0x00,0x00,0xbe,0xd5,0xf8,0x00,0x00,0x00]
+// GFX89: v_fract_f64_e64 v[0:1], INV2PI ; encoding: [0x00,0x00,0x72,0xd1,0xf8,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-4]]:25: error: invalid operand for instruction
 // NOSICIVI: :[[@LINE-2]]:25: error: invalid operand for instruction
 
 v_trunc_f32_e64 v0, 0x3e22f983
-// GFX11: v_trunc_f32_e64 v0, 0.15915494          ; encoding: [0x00,0x00,0xa1,0xd5,0xf8,0x00,0x00,0x00]
-// GFX12XX: v_trunc_f32_e64 v0, 0.15915494          ; encoding: [0x00,0x00,0xa1,0xd5,0xf8,0x00,0x00,0x00]
-// GFX89: v_trunc_f32_e64 v0, 0.15915494          ; encoding: [0x00,0x00,0x5c,0xd1,0xf8,0x00,0x00,0x00]
+// GFX11: v_trunc_f32_e64 v0, INV2PI          ; encoding: [0x00,0x00,0xa1,0xd5,0xf8,0x00,0x00,0x00]
+// GFX12XX: v_trunc_f32_e64 v0, INV2PI          ; encoding: [0x00,0x00,0xa1,0xd5,0xf8,0x00,0x00,0x00]
+// GFX89: v_trunc_f32_e64 v0, INV2PI          ; encoding: [0x00,0x00,0x5c,0xd1,0xf8,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-4]]:21: error: literal operands are not supported
 // NOSICIVI: :[[@LINE-2]]:21: error: literal operands are not supported
 
@@ -1000,35 +1000,35 @@ v_fract_f64_e64 v[0:1], 0x3e22f983
 // NOSICIVI: :[[@LINE-1]]:25: error: literal operands are not supported
 
 s_mov_b64_e32 s[0:1], 0.159154943091895317852646485335
-// GFX8PLUS: s_mov_b64 s[0:1], 0.15915494309189532   ; encoding: [0xf8,0x01,0x80,0xbe]
+// GFX8PLUS: s_mov_b64 s[0:1], INV2PI   ; encoding: [0xf8,0x01,0x80,0xbe]
 // NOSICI: :[[@LINE-2]]:23: error: invalid operand for instruction
 // NOSICIVI: :[[@LINE-2]]:23: error: invalid operand for instruction
 
 v_and_b32_e32 v0, 0.159154943091895317852646485335, v1
-// GFX11: v_and_b32_e32 v0, 0.15915494, v1        ; encoding: [0xf8,0x02,0x00,0x36]
-// GFX12XX: v_and_b32_e32 v0, 0.15915494, v1        ; encoding: [0xf8,0x02,0x00,0x36]
-// GFX89: v_and_b32_e32 v0, 0.15915494, v1        ; encoding: [0xf8,0x02,0x00,0x26]
+// GFX11: v_and_b32_e32 v0, INV2PI, v1        ; encoding: [0xf8,0x02,0x00,0x36]
+// GFX12XX: v_and_b32_e32 v0, INV2PI, v1        ; encoding: [0xf8,0x02,0x00,0x36]
+// GFX89: v_and_b32_e32 v0, INV2PI, v1        ; encoding: [0xf8,0x02,0x00,0x26]
 // SICI: v_and_b32_e32 v0, 0x3e22f983, v1        ; encoding: [0xff,0x02,0x00,0x36,0x83,0xf9,0x22,0x3e]
 
 v_and_b32_e64 v0, 0.159154943091895317852646485335, v1
-// GFX11: v_and_b32_e64 v0, 0.15915494, v1        ; encoding: [0x00,0x00,0x1b,0xd5,0xf8,0x02,0x02,0x00]
-// GFX12XX: v_and_b32_e64 v0, 0.15915494, v1        ; encoding: [0x00,0x00,0x1b,0xd5,0xf8,0x02,0x02,0x00]
-// GFX89: v_and_b32_e64 v0, 0.15915494, v1        ; encoding: [0x00,0x00,0x13,0xd1,0xf8,0x02,0x02,0x00]
+// GFX11: v_and_b32_e64 v0, INV2PI, v1        ; encoding: [0x00,0x00,0x1b,0xd5,0xf8,0x02,0x02,0x00]
+// GFX12XX: v_and_b32_e64 v0, INV2PI, v1        ; encoding: [0x00,0x00,0x1b,0xd5,0xf8,0x02,0x02,0x00]
+// GFX89: v_and_b32_e64 v0, INV2PI, v1        ; encoding: [0x00,0x00,0x13,0xd1,0xf8,0x02,0x02,0x00]
 // NOSICI: :[[@LINE-4]]:19: error: literal operands are not supported
 // NOSICIVI: :[[@LINE-2]]:19: error: literal operands are not supported
 
 v_fract_f64 v[0:1], 0.159154943091895317852646485335
-// GFX11: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x7c,0x00,0x7e]
-// GFX12XX: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x7c,0x00,0x7e]
-// GFX89: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x64,0x00,0x7e]
+// GFX11: v_fract_f64_e32 v[0:1], INV2PI ; encoding: [0xf8,0x7c,0x00,0x7e]
+// GFX12XX: v_fract_f64_e32 v[0:1], INV2PI ; encoding: [0xf8,0x7c,0x00,0x7e]
+// GFX89: v_fract_f64_e32 v[0:1], INV2PI ; encoding: [0xf8,0x64,0x00,0x7e]
 // NOSICI: :[[@LINE-4]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // SICI: v_fract_f64_e32 v[0:1], 0x3fc45f30      ; encoding: [0xff,0x7c,0x00,0x7e,0x30,0x5f,0xc4,0x3f]
 // NOSICIVI: :[[@LINE-3]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 
 v_trunc_f32 v0, 0.159154943091895317852646485335
-// GFX11: v_trunc_f32_e32 v0, 0.15915494          ; encoding: [0xf8,0x42,0x00,0x7e]
-// GFX12XX: v_trunc_f32_e32 v0, 0.15915494          ; encoding: [0xf8,0x42,0x00,0x7e]
-// GFX89: v_trunc_f32_e32 v0, 0.15915494          ; encoding: [0xf8,0x38,0x00,0x7e]
+// GFX11: v_trunc_f32_e32 v0, INV2PI          ; encoding: [0xf8,0x42,0x00,0x7e]
+// GFX12XX: v_trunc_f32_e32 v0, INV2PI          ; encoding: [0xf8,0x42,0x00,0x7e]
+// GFX89: v_trunc_f32_e32 v0, INV2PI          ; encoding: [0xf8,0x38,0x00,0x7e]
 // SICI: v_trunc_f32_e32 v0, 0x3e22f983          ; encoding: [0xff,0x42,0x00,0x7e,0x83,0xf9,0x22,0x3e]
 
 v_trunc_f32 v0, lit(0.159154943091895317852646485335)
@@ -1038,7 +1038,7 @@ v_trunc_f32 v0, lit(0.159154943091895317852646485335)
 // SICI: v_trunc_f32_e32 v0, lit(0x3e22f983)     ; encoding: [0xff,0x42,0x00,0x7e,0x83,0xf9,0x22,0x3e]
 
 // SICI: v_trunc_f32_e32 v0, 0x3e22f983 ; encoding: [0xff,0x42,0x00,0x7e,0x83,0xf9,0x22,0x3e]
-// GFX89: v_trunc_f32_e32 v0, 0.15915494 ; encoding: [0xf8,0x38,0x00,0x7e]
+// GFX89: v_trunc_f32_e32 v0, INV2PI ; encoding: [0xf8,0x38,0x00,0x7e]
 v_trunc_f32 v0, INV2PI
 
 //---------------------------------------------------------------------------//

@@ -230,13 +230,13 @@ v_mov_b64 v[0:1], 0x12345678
 
 // 1.0 / (2.0 * pi)
 v_ceil_f64 v[254:255], 0x3fc45f306dc9c882
-// GFX1250: v_ceil_f64_e32 v[254:255], 0.15915494309189532 ; encoding: [0xf8,0x30,0xfc,0x7f]
+// GFX1250: v_ceil_f64_e32 v[254:255], INV2PI ; encoding: [0xf8,0x30,0xfc,0x7f]
 
 v_ceil_f64 v[254:255], 0.15915494309189532
-// GFX1250: v_ceil_f64_e32 v[254:255], 0.15915494309189532 ; encoding: [0xf8,0x30,0xfc,0x7f]
+// GFX1250: v_ceil_f64_e32 v[254:255], INV2PI ; encoding: [0xf8,0x30,0xfc,0x7f]
 
 v_ceil_f64 v[254:255], INV2PI
-// GFX1250: v_ceil_f64_e32 v[254:255], 0.15915494309189532 ; encoding: [0xf8,0x30,0xfc,0x7f]
+// GFX1250: v_ceil_f64_e32 v[254:255], INV2PI ; encoding: [0xf8,0x30,0xfc,0x7f]
 
 v_ceil_f64 v[254:255], -4.0
 // GFX1250: v_ceil_f64_e32 v[254:255], -4.0         ; encoding: [0xf7,0x30,0xfc,0x7f]

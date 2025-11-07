@@ -4415,7 +4415,7 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_FP_literal_
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    v_mov_b32_e32 v31, 1.0
-; SDAG-NEXT:    v_mov_b32_e32 v32, 0.15915494
+; SDAG-NEXT:    v_mov_b32_e32 v32, INV2PI
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
 ; SDAG-NEXT:    v_accvgpr_write_b32 a2, v18
@@ -4458,7 +4458,7 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_FP_literal_
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    scratch_load_dword a15, off, s32
-; GISEL-NEXT:    v_mov_b32_e32 v31, 0.15915494
+; GISEL-NEXT:    v_mov_b32_e32 v31, INV2PI
 ; GISEL-NEXT:    v_mov_b32_e32 v32, 1.0
 ; GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
 ; GISEL-NEXT:    v_accvgpr_write_b32 a1, v17

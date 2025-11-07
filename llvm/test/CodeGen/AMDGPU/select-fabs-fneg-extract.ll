@@ -392,7 +392,7 @@ define amdgpu_kernel void @add_select_fneg_inv2pi_f32(i32 %c) #0 {
 ; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e22f983
 
 ; SI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[K]], [[X]], vcc
-; VI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 0.15915494, [[X]], vcc
+; VI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], INV2PI, [[X]], vcc
 
 ; GCN: v_sub_f32_e32 v{{[0-9]+}},  [[Y]], [[SELECT]]
 define amdgpu_kernel void @add_select_fneg_neginv2pi_f32(i32 %c) #0 {
@@ -828,7 +828,7 @@ define amdgpu_kernel void @select_fneg_posk_src_rcp_f32(i32 %c) #0 {
 ; SI: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[K]], -|[[X]]|, [[VCC]]
 ; SI: v_mul_f32_e32 v{{[0-9]+}}, [[SELECT]], [[Y]]
 
-; VI: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], 0.15915494, -|[[X]]|, [[VCC]]
+; VI: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], INV2PI, -|[[X]]|, [[VCC]]
 ; VI: v_mul_f32_e32 v{{[0-9]+}}, [[SELECT]], [[Y]]
 define amdgpu_kernel void @mul_select_negfabs_posk_inv2pi_f32(i32 %c) #0 {
   %x = load volatile float, ptr addrspace(1) poison
@@ -855,7 +855,7 @@ define amdgpu_kernel void @mul_select_negfabs_posk_inv2pi_f32(i32 %c) #0 {
 ; SI: v_mul_f32_e32 v{{[0-9]+}}, [[SELECT]], [[Y]]
 
 
-; VI: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], 0.15915494, -|[[X]]|, [[VCC]]
+; VI: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], INV2PI, -|[[X]]|, [[VCC]]
 ; VI: v_mul_f32_e32 v{{[0-9]+}}, [[SELECT]], [[Y]]
 define amdgpu_kernel void @mul_select_posk_inv2pi_negfabs_f32(i32 %c) #0 {
   %x = load volatile float, ptr addrspace(1) poison

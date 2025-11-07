@@ -508,7 +508,7 @@ define amdgpu_kernel void @store_inline_imm_inv_2pi_f32(ptr addrspace(1) %out) {
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_mov_b32_e32 v0, 0.15915494
+; VI-NEXT:    v_mov_b32_e32 v0, INV2PI
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
@@ -518,7 +518,7 @@ define amdgpu_kernel void @store_inline_imm_inv_2pi_f32(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0.15915494
+; GFX942-NEXT:    v_mov_b32_e32 v0, INV2PI
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -1756,7 +1756,7 @@ define amdgpu_kernel void @add_inline_imm_inv_2pi_f64(ptr addrspace(1) %out, [8 
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_add_f64 v[0:1], s[0:1], 0.15915494309189532
+; VI-NEXT:    v_add_f64 v[0:1], s[0:1], INV2PI
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
@@ -1769,7 +1769,7 @@ define amdgpu_kernel void @add_inline_imm_inv_2pi_f64(ptr addrspace(1) %out, [8 
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_add_f64 v[0:1], s[6:7], 0.15915494309189532
+; GFX942-NEXT:    v_add_f64 v[0:1], s[6:7], INV2PI
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
   %y = fadd double %x, 0x3fc45f306dc9c882

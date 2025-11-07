@@ -364,7 +364,7 @@ define void @materialize_not_neg4.0_i32(ptr addrspace(1) %out) {
 
 ; GCN-LABEL: {{^}}materialize_not_inv2pi_i32:
 ; SI: v_mov_b32_e32 v{{[0-9]+}}, 0xc1dd067c
-; VI: v_not_b32_e32 v{{[0-9]+}}, 0.15915494
+; VI: v_not_b32_e32 v{{[0-9]+}}, INV2PI
 define void @materialize_not_inv2pi_i32(ptr addrspace(1) %out) {
   store i32 -1042479492, ptr addrspace(1) %out
   ret void
