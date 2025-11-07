@@ -64,7 +64,7 @@ class TestCase(TestBase):
         valobj = self.expect_var_path("sp_user", type="std::shared_ptr<User>")
         self.assertRegex(
             valobj.summary,
-            f"{"User" if self.getDebugInfo() == "pdb" else "element_type"} @ 0x0*[1-9a-f][0-9a-f]+( strong=1)? weak=0",
+            f"{'User' if self.getDebugInfo() == 'pdb' else 'element_type'} @ 0x0*[1-9a-f][0-9a-f]+( strong=1)? weak=0",
         )
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
