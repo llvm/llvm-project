@@ -233,6 +233,7 @@ tools.extend(
         "llvm-addr2line",
         "llvm-bcanalyzer",
         "llvm-bitcode-strip",
+        "llvm-cas",
         "llvm-cgdata",
         "llvm-config",
         "llvm-cov",
@@ -795,6 +796,9 @@ if config.have_opt_viewer_modules:
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
+
+if config.have_ondisk_cas:
+    config.available_features.add("ondisk_cas")
 
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
