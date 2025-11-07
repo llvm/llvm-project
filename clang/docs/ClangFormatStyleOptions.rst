@@ -1673,6 +1673,16 @@ the configuration (without a prefix: ``Auto``).
 
       int abcdef; // but this isn't
 
+  * ``bool AlignPPAndNotPP`` If comments following preprocessor directive should be aligned with
+    comments that don't.
+
+    .. code-block:: c++
+
+      true:                               false:
+      #define A  // Comment   vs.         #define A  // Comment
+      #define AB // Aligned               #define AB // Aligned
+      int i;     // Aligned               int i; // Not aligned
+
 
 .. _AllowAllArgumentsOnNextLine:
 
