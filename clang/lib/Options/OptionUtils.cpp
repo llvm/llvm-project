@@ -9,8 +9,12 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/Version.h"
+#include "clang/Config/config.h"
 #include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang;
 using namespace llvm::opt;
@@ -202,6 +206,45 @@ StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
   }
 
   return Out;
+}
+
+std::string GetResourcesPath(StringRef BinaryPath) {
+  // Since the resource directory is embedded in the module hash, it's important
+  // that all places that need it call this function, so that they get the
+  // exact same string ("a/../b/" and "b/" get different hashes, for example).
+
+  // Dir is bin/ or lib/, depending on where BinaryPath is.
+  StringRef Dir = llvm::sys::path::parent_path(BinaryPath);
+  SmallString<128> P(Dir);
+
+  StringRef ConfiguredResourceDir(CLANG_RESOURCE_DIR);
+  if (!ConfiguredResourceDir.empty()) {
+    // FIXME: We should fix the behavior of llvm::sys::path::append so we don't
+    // need to check for absolute paths here.
+    if (llvm::sys::path::is_absolute(ConfiguredResourceDir))
+      P = ConfiguredResourceDir;
+    else
+      llvm::sys::path::append(P, ConfiguredResourceDir);
+  } else {
+    // On Windows, libclang.dll is in bin/.
+    // On non-Windows, libclang.so/.dylib is in lib/.
+    // With a static-library build of libclang, LibClangPath will contain the
+    // path of the embedding binary, which for LLVM binaries will be in bin/.
+    // ../lib gets us to lib/ in both cases.
+    P = llvm::sys::path::parent_path(Dir);
+    // This search path is also created in the COFF driver of lld, so any
+    // changes here also needs to happen in lld/COFF/Driver.cpp
+    llvm::sys::path::append(P, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
+                            CLANG_VERSION_MAJOR_STRING);
+  }
+
+  return std::string(P);
+}
+
+std::string GetResourcesPath(const char *Argv0, void *MainAddr) {
+  const std::string ClangExecutable =
+      llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
+  return GetResourcesPath(ClangExecutable);
 }
 
 } // namespace clang
