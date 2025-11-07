@@ -207,17 +207,17 @@ static bool deduceAndAssignSpirvType(MachineInstr *I, MachineFunction &MF,
     ResType = deduceTypeFromUses(ResVReg, MF, GR, MIB);
   }
 
-  if (ResType) {
-    LLVM_DEBUG(dbgs() << "Assigned type to " << *I << ": " << *ResType);
-    GR->assignSPIRVTypeToVReg(ResType, ResVReg, MF);
+  if (!ResType)
+    return false;
 
-    if (!MRI.getRegClassOrNull(ResVReg)) {
-      LLVM_DEBUG(dbgs() << "Updating the register class.\n");
-      setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
-    }
-    return true;
+  LLVM_DEBUG(dbgs() << "Assigned type to " << *I << ": " << *ResType);
+  GR->assignSPIRVTypeToVReg(ResType, ResVReg, MF);
+
+  if (!MRI.getRegClassOrNull(ResVReg)) {
+    LLVM_DEBUG(dbgs() << "Updating the register class.\n");
+    setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
   }
-  return false;
+  return true;
 }
 
 static bool requiresSpirvType(MachineInstr &I, SPIRVGlobalRegistry *GR,
@@ -268,8 +268,8 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
   LLVM_DEBUG(dbgs() << "Initial worklist:\n";
              for (auto *I : Worklist) { I->dump(); });
 
-  bool Changed = true;
-  while (Changed) {
+  bool Changed;
+  do {
     Changed = false;
     SmallVector<MachineInstr *, 8> NextWorklist;
 
@@ -283,7 +283,7 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
     }
     Worklist = NextWorklist;
     LLVM_DEBUG(dbgs() << "Worklist size: " << Worklist.size() << "\n");
-  }
+  } while (Changed);
 
   if (!Worklist.empty()) {
     LLVM_DEBUG(dbgs() << "Remaining worklist:\n";
@@ -348,30 +348,6 @@ static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
   }
 }
 
-static void lowerExtractVectorElements(MachineFunction &MF) {
-  SmallVector<MachineInstr *, 8> ExtractInstrs;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
-        ExtractInstrs.push_back(&MI);
-      }
-    }
-  }
-
-  for (MachineInstr *MI : ExtractInstrs) {
-    MachineIRBuilder MIB(*MI);
-    Register Dst = MI->getOperand(0).getReg();
-    Register Vec = MI->getOperand(1).getReg();
-    Register Idx = MI->getOperand(2).getReg();
-
-    auto Intr = MIB.buildIntrinsic(Intrinsic::spv_extractelt, Dst, true, false);
-    Intr.addUse(Vec);
-    Intr.addUse(Idx);
-
-    MI->eraseFromParent();
-  }
-}
-
 // Do a preorder traversal of the CFG starting from the BB |Start|.
 // point. Calls |op| on each basic block encountered during the traversal.
 void visit(MachineFunction &MF, MachineBasicBlock &Start,
@@ -409,8 +385,6 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   GR->setCurrentFunc(MF);
   registerSpirvTypeForNewInstructions(MF, GR);
   ensureAssignTypeForTypeFolding(MF, GR);
-  lowerExtractVectorElements(MF);
-
   return true;
 }
 
