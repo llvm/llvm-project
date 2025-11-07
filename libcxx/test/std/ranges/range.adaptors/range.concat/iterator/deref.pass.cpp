@@ -89,6 +89,50 @@ constexpr bool tests() {
     assert(*it2 == 3);
   }
 
+  {
+    // test concat-reference-t
+    {
+      //  const std::string&  +  std::string_view  +  const std::string&
+      const std::array<std::string, 2> left  = {"L0", "L1"};
+      std::array<std::string_view, 1> mid    = {std::string_view{"M0"}};
+      const std::array<std::string, 1> right = {"R0"};
+
+      auto v   = std::views::concat(left, mid, right);
+      auto it  = v.begin();
+      auto cit = std::as_const(v).begin();
+
+      //  Common reference of {const std::string&, std::string_view&, const std::string&}  ==>  std::string_view
+      static_assert(std::is_same_v<decltype(*it), std::string_view>);
+      static_assert(std::is_same_v<decltype(*cit), std::string_view>);
+
+      assert(*it == "L0");
+      assert(*std::next(it, 1) == "L1");
+      assert(*std::next(it, 2) == "M0");
+      assert(*std::next(it, 3) == "R0");
+    }
+
+    {
+      // std::string&  +  std::string (prvalue)  +  const std::string&
+      std::array<std::string, 1> left        = {"L"};
+      std::vector<std::string> mid           = {"M"};
+      const std::array<std::string, 1> right = {"R"};
+
+      auto mid_prvalue = mid | std::views::transform([](const std::string& s) { return s; });
+
+      auto v   = std::views::concat(left, mid_prvalue, right);
+      auto it  = v.begin();
+      auto cit = std::as_const(v).begin();
+
+      // Common reference of {std::string&, std::string (prvalue), const std::string&}  ==>  const std::string
+      static_assert(std::is_same_v<decltype(*it), const std::string>);
+      static_assert(std::is_same_v<decltype(*cit), const std::string>);
+
+      assert(*it == "L");
+      assert(*std::next(it, 1) == "M");
+      assert(*std::next(it, 2) == "R");
+    }
+  }
+
   return true;
 }
 

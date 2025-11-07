@@ -10,6 +10,7 @@
 
 #include <array>
 #include <forward_list>
+#include <list>
 #include <ranges>
 #include <tuple>
 
