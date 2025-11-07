@@ -55,13 +55,13 @@ public:
 
   bool ParseArgs(const CompilerInstance &,
                  const std::vector<std::string> &Args) override {
-    ClangTidyGlobalOptions GlobalOptions;
-    ClangTidyOptions DefaultOptions;
+    const ClangTidyGlobalOptions GlobalOptions;
+    const ClangTidyOptions DefaultOptions;
     ClangTidyOptions OverrideOptions;
 
     // Parse the extra command line args.
     // FIXME: This is very limited at the moment.
-    for (StringRef Arg : Args)
+    for (const StringRef Arg : Args)
       if (Arg.starts_with("-checks="))
         OverrideOptions.Checks = std::string(Arg.substr(strlen("-checks=")));
 
