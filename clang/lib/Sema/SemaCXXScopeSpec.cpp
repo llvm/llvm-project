@@ -780,7 +780,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
 
   if (!Found.empty()) {
     const auto *ND = Found.getAsSingle<NamedDecl>();
-    if(!ND)
+    if (!ND)
       return true;
     if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
                                     IdInfo.CCLoc)) {
