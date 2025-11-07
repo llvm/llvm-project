@@ -1312,8 +1312,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   }
 
-  setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-  setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
+  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   // FP-ARMv8 implements a lot of rounding-like FP operations.
   if (Subtarget->hasFPARMv8Base()) {
@@ -9855,41 +9855,6 @@ static SDValue LowerUADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Result, Carry);
 }
 
-SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
-  // For iOS, we want to call an alternative entry point: __sincos_stret,
-  // return values are passed via sret.
-  SDLoc dl(Op);
-  SDValue Arg = Op.getOperand(0);
-  EVT ArgVT = Arg.getValueType();
-  RTLIB::Libcall LC = RTLIB::getSINCOS_STRET(ArgVT);
-  RTLIB::LibcallImpl SincosStret = getLibcallImpl(LC);
-  if (SincosStret == RTLIB::Unsupported)
-    return SDValue();
-
-  assert(Subtarget->isTargetDarwin());
-
-  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-
-  // Pair of floats / doubles used to pass the result.
-  Type *RetTy = StructType::get(ArgTy, ArgTy);
-  auto &DL = DAG.getDataLayout();
-
-  ArgListTy Args;
-  Args.emplace_back(Arg, ArgTy);
-
-  StringRef LibcallName = getLibcallImplName(SincosStret);
-  CallingConv::ID CC = getLibcallImplCallingConv(SincosStret);
-  SDValue Callee = DAG.getExternalSymbol(LibcallName.data(), getPointerTy(DL));
-
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl)
-      .setChain(DAG.getEntryNode())
-      .setCallee(CC, RetTy, Callee, std::move(Args));
-  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
-
-  return CallResult.first;
-}
-
 SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
                                                   bool Signed,
                                                   SDValue &Chain) const {
@@ -10691,8 +10656,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_SMAX:
     return LowerVecReduceMinMax(Op, DAG, Subtarget);
   case ISD::ATOMIC_LOAD:
-  case ISD::ATOMIC_STORE:  return LowerAtomicLoadStore(Op, DAG);
-  case ISD::FSINCOS:       return LowerFSINCOS(Op, DAG);
+  case ISD::ATOMIC_STORE:
+    return LowerAtomicLoadStore(Op, DAG);
   case ISD::SDIVREM:
   case ISD::UDIVREM:       return LowerDivRem(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:

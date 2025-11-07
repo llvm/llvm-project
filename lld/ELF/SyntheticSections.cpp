@@ -54,8 +54,6 @@ using llvm::support::endian::read32le;
 using llvm::support::endian::write32le;
 using llvm::support::endian::write64le;
 
-constexpr size_t MergeNoTailSection::numShards;
-
 static uint64_t readUint(Ctx &ctx, uint8_t *buf) {
   return ctx.arg.is64 ? read64(ctx, buf) : read32(ctx, buf);
 }

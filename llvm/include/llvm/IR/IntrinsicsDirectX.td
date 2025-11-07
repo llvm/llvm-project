@@ -140,6 +140,9 @@ def int_dx_isinf : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1
 def int_dx_isnan : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
     [llvm_anyfloat_ty], [IntrNoMem]>;
 
+def int_dx_legacyf16tof32 : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_float_ty>],
+    [llvm_anyint_ty], [IntrNoMem]>;
+
 def int_dx_lerp : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>,LLVMMatchType<0>],
     [IntrNoMem]>;
 
@@ -173,4 +176,10 @@ def int_dx_firstbitlow : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, l
 
 def int_dx_group_memory_barrier_with_group_sync
     : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+
+def int_dx_load_input
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
+                             llvm_i32_ty],
+                            [IntrConvergent]>;
 }

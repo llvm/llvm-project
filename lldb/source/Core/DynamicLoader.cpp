@@ -227,6 +227,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     }
   }
   ModuleSpec module_spec;
+  module_spec.SetTarget(target.shared_from_this());
   module_spec.GetUUID() = uuid;
   FileSpec name_filespec(name);
   if (FileSystem::Instance().Exists(name_filespec))
@@ -238,8 +239,8 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     // Has lldb already seen a module with this UUID?
     // Or have external lookup enabled in DebugSymbols on macOS.
     if (!module_sp)
-      error = ModuleList::GetSharedModule(module_spec, module_sp, nullptr,
-                                          nullptr, nullptr);
+      error =
+          ModuleList::GetSharedModule(module_spec, module_sp, nullptr, nullptr);
 
     // Can lldb's symbol/executable location schemes
     // find an executable and symbol file.
