@@ -63,10 +63,7 @@ body:             |
     ; EARLYCSR-NEXT: {{  $}}
     ; EARLYCSR-NEXT: $x2 = frame-setup ADDI $x2, -16
     ; EARLYCSR-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
-    ; EARLYCSR-NEXT: BUNDLE implicit-def $x18 {
-    ; EARLYCSR-NEXT:   $x18 = LD %stack.0, 0 :: (load (s64))
-    ; EARLYCSR-NEXT:   CFI_INSTRUCTION register $x18, $x18
-    ; EARLYCSR-NEXT: }
+    ; EARLYCSR-NEXT: $x18 = LD $x2, 12 :: (load (s64))
     ; EARLYCSR-NEXT: $x2 = frame-destroy ADDI $x2, 16
     ; EARLYCSR-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; EARLYCSR-NEXT: PseudoRET
@@ -78,10 +75,7 @@ body:             |
     ; EARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
     ; EARLYCSR_UNCONDX19-NEXT: frame-setup SD killed $x19, $x2, 8 :: (store (s64) into %stack.1)
     ; EARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -8
-    ; EARLYCSR_UNCONDX19-NEXT: BUNDLE implicit-def $x18 {
-    ; EARLYCSR_UNCONDX19-NEXT:   $x18 = LD %stack.0, 0 :: (load (s64))
-    ; EARLYCSR_UNCONDX19-NEXT:   CFI_INSTRUCTION register $x18, $x18
-    ; EARLYCSR_UNCONDX19-NEXT: }
+    ; EARLYCSR_UNCONDX19-NEXT: $x18 = LD $x2, 4 :: (load (s64))
     ; EARLYCSR_UNCONDX19-NEXT: $x19 = frame-destroy LD $x2, 8 :: (load (s64) from %stack.1)
     ; EARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
     ; EARLYCSR_UNCONDX19-NEXT: $x2 = frame-destroy ADDI $x2, 16

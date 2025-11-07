@@ -102,7 +102,7 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
 }
 
 const MCPhysReg *
-TargetFrameLowering::getMustPreserveRegisters(MachineFunction &MF) const {
+TargetFrameLowering::getMustPreserveRegisters(const MachineFunction &MF) const {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   // In Naked functions we aren't going to save any registers.
   if (MF.getFunction().hasFnAttribute(Attribute::Naked))
@@ -146,11 +146,11 @@ void TargetFrameLowering::determineUncondPrologCalleeSaves(
 
 void TargetFrameLowering::determineEarlyCalleeSaves(
     MachineFunction &MF, BitVector &EarlyCSRs) const {
-  const auto &ST = MF.getSubtarget();
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
   if (!ST.savesCSRsEarly())
     return;
 
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  const TargetRegisterInfo &TRI = *ST.getRegisterInfo();
   // Get the callee saved register list...
   const MCPhysReg *CSRegs = getMustPreserveRegisters(MF);
   // Early exit if there are no callee saved registers.
