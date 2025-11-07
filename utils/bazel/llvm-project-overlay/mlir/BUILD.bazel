@@ -3844,6 +3844,17 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "XeGPUTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "XeGPUTransformOpsIncGen",
     tbl_outs = {
@@ -3854,6 +3865,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.td",
     deps = [
         ":TransformDialectTdFiles",
+        ":XeGPUTransformOpsTdFiles",
     ],
 )
 
