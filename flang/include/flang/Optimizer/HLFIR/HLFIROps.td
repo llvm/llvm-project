@@ -103,13 +103,14 @@ def hlfir_DeclareOp
       Builtin_StringAttr:$uniq_name,
       OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
       OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
-      OptionalAttr<UnitAttr>:$skip_rebox);
+      OptionalAttr<UnitAttr>:$skip_rebox,
+      OptionalAttr<UI32Attr>:$dummy_arg_no);
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
-    (`dummy_scope` $dummy_scope^)?
+    (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
     (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
     (`skip_rebox` $skip_rebox^)?
     attr-dict `:` functional-type(operands, results)
@@ -122,7 +123,8 @@ def hlfir_DeclareOp
       CArg<"mlir::Value", "{}">:$storage,
       CArg<"std::uint64_t", "0">:$storage_offset,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
-      CArg<"cuf::DataAttributeAttr", "{}">:$data_attr)>];
+      CArg<"cuf::DataAttributeAttr", "{}">:$data_attr,
+      CArg<"unsigned", "0">:$dummy_arg_no)>];
 
   let extraClassDeclaration = [{
     /// Get the variable original base (same as input). It lacks

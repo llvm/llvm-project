@@ -268,7 +268,8 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              mlir::Value dummy_scope, mlir::Value storage,
                              std::uint64_t storage_offset,
                              fir::FortranVariableFlagsAttr fortran_attrs,
-                             cuf::DataAttributeAttr data_attr) {
+                             cuf::DataAttributeAttr data_attr,
+                             unsigned dummy_arg_no) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
@@ -279,9 +280,12 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   }
   auto [hlfirVariableType, firVarType] =
       getDeclareOutputTypes(inputType, hasExplicitLbs);
+  mlir::IntegerAttr argNoAttr;
+  if (dummy_arg_no > 0)
+    argNoAttr = builder.getUI32IntegerAttr(dummy_arg_no);
   build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
         typeparams, dummy_scope, storage, storage_offset, nameAttr,
-        fortran_attrs, data_attr, /*skip_rebox=*/mlir::UnitAttr{});
+        fortran_attrs, data_attr, /*skip_rebox=*/mlir::UnitAttr{}, argNoAttr);
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {

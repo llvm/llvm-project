@@ -1129,6 +1129,12 @@ public:
     return registeredDummySymbols.contains(sym);
   }
 
+  unsigned getDummyArgPosition(
+      const Fortran::semantics::Symbol &sym) const override final {
+    auto it = dummyArgPositions.find(&sym);
+    return (it != dummyArgPositions.end()) ? it->second : 0;
+  }
+
   const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const override final {
     return currentFunctionUnit;
@@ -1413,11 +1419,13 @@ private:
   /// definitive mapping. The specification expression have not been lowered
   /// yet. The final mapping will be done using this pre-mapping in
   /// Fortran::lower::mapSymbolAttributes.
+  /// \param argNo The 1-based source position of this argument (0 if unknown/result)
   bool mapBlockArgToDummyOrResult(const Fortran::semantics::SymbolRef sym,
-                                  mlir::Value val, bool isResult) {
+                                  mlir::Value val, bool isResult,
+                                  unsigned argNo = 0) {
     localSymbols.addSymbol(sym, val);
     if (!isResult)
-      registerDummySymbol(sym);
+      registerDummySymbol(sym, argNo);
 
     return true;
   }
@@ -5962,7 +5970,16 @@ private:
                             const Fortran::lower::CalleeInterface &callee) {
     assert(builder && "require a builder object at this point");
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
+
+    // Track the source-level argument position (1-based)
+    unsigned argPosition = 0;
+
     auto mapPassedEntity = [&](const auto arg, bool isResult = false) {
+      // Count only actual source-level dummy arguments (not results or
+      // host assoc tuples)
+      if (!isResult && arg.entity.has_value())
+        argPosition++;
+
       if (arg.passBy == PassBy::AddressAndLength) {
         if (callee.characterize().IsBindC())
           return;
@@ -5973,11 +5990,12 @@ private:
         mlir::Value casted =
             builder->createVolatileCast(loc, false, arg.firArgument);
         mlir::Value box = charHelp.createEmboxChar(casted, arg.firLength);
-        mapBlockArgToDummyOrResult(arg.entity->get(), box, isResult);
+        mapBlockArgToDummyOrResult(arg.entity->get(), box, isResult,
+                                   isResult ? 0 : argPosition);
       } else {
         if (arg.entity.has_value()) {
           mapBlockArgToDummyOrResult(arg.entity->get(), arg.firArgument,
-                                     isResult);
+                                     isResult, isResult ? 0 : argPosition);
         } else {
           assert(funit.parentHasTupleHostAssoc() && "expect tuple argument");
         }
@@ -6835,13 +6853,21 @@ private:
   }
 
   /// Record the given symbol as a dummy argument of this function.
-  void registerDummySymbol(Fortran::semantics::SymbolRef symRef) {
+  /// \param symRef The symbol representing the dummy argument
+  /// \param argNo The 1-based position of this argument in the source (0 = unknown)
+  void registerDummySymbol(Fortran::semantics::SymbolRef symRef,
+                           unsigned argNo = 0) {
     auto *sym = &*symRef;
     registeredDummySymbols.insert(sym);
+    if (argNo > 0)
+      dummyArgPositions[sym] = argNo;
   }
 
   /// Reset all registered dummy symbols.
-  void resetRegisteredDummySymbols() { registeredDummySymbols.clear(); }
+  void resetRegisteredDummySymbols() {
+    registeredDummySymbols.clear();
+    dummyArgPositions.clear();
+  }
 
   void setCurrentFunctionUnit(Fortran::lower::pft::FunctionLikeUnit *unit) {
     currentFunctionUnit = unit;
@@ -6882,6 +6908,11 @@ private:
   /// of variables for this function.
   llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 16>
       registeredDummySymbols;
+
+  /// Map from dummy symbols to their 1-based argument positions.
+  /// Used to generate debug info with correct argument numbers.
+  llvm::DenseMap<const Fortran::semantics::Symbol *, unsigned>
+      dummyArgPositions;
 
   /// A map of unique names for constant expressions.
   /// The names are used for representing the constant expressions
