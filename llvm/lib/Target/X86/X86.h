@@ -107,11 +107,8 @@ FunctionPass *createX86LowerTileCopyPass();
 /// return addresses for the benefit of the Windows x64 unwinder.
 class X86AvoidTrailingCallPass
     : public PassInfoMixin<X86AvoidTrailingCallPass> {
-private:
-  const X86TargetMachine *TM;
-
 public:
-  X86AvoidTrailingCallPass(const X86TargetMachine *TM) : TM(TM) {}
+  X86AvoidTrailingCallPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }

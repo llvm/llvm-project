@@ -29,7 +29,7 @@ DUMMY_FUNCTION_PASS("x86-winehstate", WinEHStatePass())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
-MACHINE_FUNCTION_PASS("x86-avoid-trailing-call", X86AvoidTrailingCallPass(this))
+MACHINE_FUNCTION_PASS("x86-avoid-trailing-call", X86AvoidTrailingCallPass())
 MACHINE_FUNCTION_PASS("x86-isel", X86ISelDAGToDAGPass(*this))
 #undef MACHINE_FUNCTION_PASS
 
