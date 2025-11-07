@@ -1,3 +1,2 @@
 junitparser==3.2.0
 google-cloud-storage==3.3.0
-PyGithub==2.8.1

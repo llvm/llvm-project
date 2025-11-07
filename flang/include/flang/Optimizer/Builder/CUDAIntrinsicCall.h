@@ -63,9 +63,8 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   mlir::Value genThisGrid(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisThreadBlock(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisWarp(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  template <mlir::NVVM::MemScopeKind scope>
   void genThreadFence(llvm::ArrayRef<fir::ExtendedValue>);
-  void genThreadFenceBlock(llvm::ArrayRef<fir::ExtendedValue>);
-  void genThreadFenceSystem(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkCommitGroup(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkG2S(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkLoadC4(llvm::ArrayRef<fir::ExtendedValue>);
