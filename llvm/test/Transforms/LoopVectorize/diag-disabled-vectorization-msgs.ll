@@ -9,7 +9,6 @@
 ; RUN:     < %s 2>&1 | FileCheck --check-prefix=METADATA %s
 ; METADATA-NOT: LV: We can vectorize this loop
 ; METADATA-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
-; METADATA-NOT: LV: Not vectorizing: disabled for an unknown reason
 ; METADATA-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
 ; METADATA-NOT: LV: Not vectorizing: Disabled/already vectorized
 ; METADATA-NOT: LV: Not vectorizing: Cannot prove legality
@@ -33,7 +32,6 @@
 ; RUN:   2>&1 | FileCheck --check-prefix=FORCEDONLY %s
 ; FORCEDONLY-NOT: LV: We can vectorize this loop
 ; FORCEDONLY-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
-; FORCEDONLY-NOT: LV: Not vectorizing: disabled for an unknown reason
 ; FORCEDONLY-NOT: LV: Not vectorizing: #pragma vectorize disable
 ; FORCEDONLY-NOT: LV: Not vectorizing: Disabled/already vectorized
 ; FORCEDONLY-NOT: LV: Not vectorizing: Cannot prove legality
