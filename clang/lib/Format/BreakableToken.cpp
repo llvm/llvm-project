@@ -298,7 +298,7 @@ BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
                                                                   : "\"",
           /*Postfix=*/QuoteStyle == SingleQuotes ? "'" : "\"",
           /*ContinuationPrefix=*/QuoteStyle == SingleQuotes ? "'"
-                               : QuoteStyle == AtDoubleQuotes                    ? "@\""
+          : QuoteStyle == AtDoubleQuotes                    ? "@\""
                                                             : "\"",
           /*ContinuationPostfix=*/QuoteStyle == SingleQuotes ? "'" : "\"",
           UnbreakableTailLength, InPPDirective, Encoding, Style),

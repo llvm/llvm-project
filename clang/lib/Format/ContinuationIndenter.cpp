@@ -2570,8 +2570,8 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
            Text.starts_with(Prefix = "u8\"") ||
            Text.starts_with(Prefix = "L\""))) {
 
-        // Use quotes when breaking the string
-        llvm::StringRef ContinuationPrefix = "\"";
+        // Repeat the prefix on every line but don't repeat the suffix
+        llvm::StringRef ContinuationPrefix = Prefix;
         llvm::StringRef ContinuationPostfix = "\"";
         return std::make_unique<BreakableStringLiteral>(
             Current, StartColumn, Prefix, Postfix, ContinuationPrefix,
