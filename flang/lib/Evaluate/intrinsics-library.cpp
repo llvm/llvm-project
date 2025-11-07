@@ -1052,7 +1052,7 @@ std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
                 .value());
       }
       auto restorer{context.SetRealFlagWarningContext(
-          " after folding a call to '"s + name + "'"s)};
+          "compilation-time evaluation of a call to '"s + name + "'"s)};
       return Fold(context,
           ConvertToType(
               resultType, hostFolderWithChecks(context, std::move(args)))
