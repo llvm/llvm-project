@@ -1222,8 +1222,7 @@ Named barriers do not have an underlying byte representation.
 It is undefined behavior to use a pointer to any part of a named barrier object
 as the pointer operand of a regular memory access instruction or intrinsic.
 Pointers to named barrier objects are intended to be used with dedicated
-intrinsics.
-
+intrinsics. Reading from or writing to such pointers is undefined behavior.
 
 LLVM IR Intrinsics
 ------------------
