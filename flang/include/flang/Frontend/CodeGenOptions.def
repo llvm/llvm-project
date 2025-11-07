@@ -20,6 +20,8 @@ CODEGENOPT(Name, Bits, Default)
 #endif
 
 CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
+/// The -Os (==1) or -Oz (==2) option is specified.
+CODEGENOPT(OptimizeSize, 2, 0) 
 
 CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
