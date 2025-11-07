@@ -264,9 +264,7 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
   return namedOp;
 }
 
-// Converts linalg.generic to named linalg.*conv/pooling* where possible. To
-// improve the search speed, the convolution ops have been segregated based on
-// the rank of iterator types array.
+// Converts linalg.generic to named linalg.*conv/pooling* where possible.
 static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
                                                         GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;

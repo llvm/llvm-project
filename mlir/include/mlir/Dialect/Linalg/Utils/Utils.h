@@ -114,6 +114,9 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 // Convolution matcher utility
 //===----------------------------------------------------------------------===//
 
+/// Given a linalg `op` this function returns true if it is a convolution op of
+/// type `ConvOpTy` and populate the optional `dilations` and `strides`
+/// arguments, if present.
 template <typename ConvOpTy>
 bool isaConvolutionOpOfType(LinalgOp op,
                             SmallVector<int64_t> *dilations = nullptr,
