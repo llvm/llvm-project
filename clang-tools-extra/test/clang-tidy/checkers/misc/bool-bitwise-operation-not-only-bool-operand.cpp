@@ -10,6 +10,7 @@ void general(unsigned flags, bool value) {
 }
 
 // TODO: compound operators
+// TODO: make sure parens dont spoil prior for compound operators
 
 void take(bool value) {}
 
