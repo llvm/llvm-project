@@ -1459,6 +1459,34 @@ define i64 @mul288(i64 %a) {
   ret i64 %c
 }
 
+define i64 @zext_mul44(i32 signext %a) {
+; RV64I-LABEL: zext_mul44:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 11
+; RV64I-NEXT:    slli a1, a1, 34
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: zext_mul44:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli.uw a0, a0, 2
+; RV64ZBA-NEXT:    sh2add a1, a0, a0
+; RV64ZBA-NEXT:    sh1add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: zext_mul44:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    slli a0, a0, 32
+; RV64XANDESPERF-NEXT:    srli a0, a0, 30
+; RV64XANDESPERF-NEXT:    nds.lea.w a1, a0, a0
+; RV64XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
+  %b = zext i32 %a to i64
+  %c = mul i64 %b, 44
+  ret i64 %c
+}
+
 define i64 @zext_mul68(i32 signext %a) {
 ; RV64I-LABEL: zext_mul68:
 ; RV64I:       # %bb.0:
@@ -1508,6 +1536,34 @@ define i64 @zext_mul96(i32 signext %a) {
 ; RV64XANDESPERF-NEXT:    ret
   %b = zext i32 %a to i64
   %c = mul i64 %b, 96
+  ret i64 %c
+}
+
+define i64 @zext_mul100(i32 signext %a) {
+; RV64I-LABEL: zext_mul100:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 25
+; RV64I-NEXT:    slli a1, a1, 34
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: zext_mul100:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli.uw a0, a0, 2
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: zext_mul100:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    slli a0, a0, 32
+; RV64XANDESPERF-NEXT:    srli a0, a0, 30
+; RV64XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
+; RV64XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
+; RV64XANDESPERF-NEXT:    ret
+  %b = zext i32 %a to i64
+  %c = mul i64 %b, 100
   ret i64 %c
 }
 
