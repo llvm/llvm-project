@@ -1,3 +1,5 @@
+// REQUIRES: x86-registered-target, amdgpu-registered-target, nvptx-registered-target
+
 // RUN:   %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a --sysroot=%S/Inputs/basic_gpu_tree \
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-HEADERS-AMDGPU
 // RUN:   %clang -### --target=nvptx64-nvidia-cuda -march=sm_89 --sysroot=%S/Inputs/basic_gpu_tree \
