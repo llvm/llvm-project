@@ -787,6 +787,8 @@ class HLSLSemanticAttr<bit Indexable> : HLSLAnnotationAttr {
   let Spellings = [];
   let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
+  let Args = [DeclArgument<Named, "Target">, IntArgument<"SemanticIndex">,
+              BoolArgument<"SemanticExplicitIndex">];
 }
 
 /// A target-specific attribute.  This class is meant to be used as a mixin
@@ -1572,6 +1574,23 @@ def HIPManaged : InheritableAttr {
   let Documentation = [HIPManagedAttrDocs];
 }
 
+def CUDAClusterDims : InheritableAttr {
+  let Spellings = [GNU<"cluster_dims">];
+  let Args = [ExprArgument<"X">, ExprArgument<"Y", /*opt=*/1>, ExprArgument<"Z", /*opt=*/1>];
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
+  let LangOpts = [CUDA];
+  let Documentation = [CUDAClusterDimsAttrDoc];
+}
+
+def CUDANoCluster : InheritableAttr {
+  let Spellings = [GNU<"no_cluster">];
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
+  let LangOpts = [CUDA];
+  let Documentation = [CUDANoClusterAttrDoc];
+}
+
+def : MutualExclusions<[CUDAClusterDims, CUDANoCluster]>;
+
 def CUDAInvalidTarget : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Function]>;
@@ -1606,7 +1625,7 @@ def SYCLKernel : InheritableAttr {
   let Documentation = [SYCLKernelDocs];
 }
 
-def DeviceKernel : DeclOrTypeAttr {
+def DeviceKernel : InheritableAttr {
   let Spellings = [Clang<"device_kernel">,
                    Clang<"nvptx_kernel">, Clang<"amdgpu_kernel">,
                    CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
@@ -4995,6 +5014,10 @@ def HLSLUnparsedSemantic : HLSLAnnotationAttr {
               DefaultBoolArgument<"ExplicitIndex", 0>];
   let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLUserSemantic : HLSLSemanticAttr</* Indexable= */ 1> {
   let Documentation = [InternalOnly];
 }
 

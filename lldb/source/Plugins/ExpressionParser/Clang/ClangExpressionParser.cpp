@@ -754,7 +754,6 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->setVirtualFileSystem(
       FileSystem::Instance().GetVirtualFileSystem());
-  m_compiler->createFileManager();
 
   // 2. Configure the compiler with a set of default options that are
   // appropriate for most situations.
@@ -1503,7 +1502,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
     LLDB_LOGF(log, "%s - Current expression language is %s\n", __FUNCTION__,
               lang.GetDescription().data());
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
-    if (process_sp && lang != lldb::eLanguageTypeUnknown) {
+    if (process_sp && lang) {
       auto runtime = process_sp->GetLanguageRuntime(lang.AsLanguageType());
       if (runtime)
         runtime->GetIRPasses(custom_passes);

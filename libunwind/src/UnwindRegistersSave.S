@@ -18,6 +18,8 @@
 
 #if defined(_AIX)
     .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+    .section .text,"axy",@progbits,unique,0
 #else
     .text
 #endif
@@ -25,6 +27,7 @@
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
+.att_syntax
 
 #
 # extern int __unw_getcontext(unw_context_t* thread_state)
@@ -109,6 +112,7 @@ DEFINE_LIBUNWIND_FUNCTION("#__unw_getcontext")
   .text
 
 #elif defined(__x86_64__)
+.att_syntax
 
 #
 # extern int __unw_getcontext(unw_context_t* thread_state)
@@ -761,6 +765,10 @@ LnoR2Fix:
 
 #elif defined(__aarch64__)
 
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
+
 //
 // extern int __unw_getcontext(unw_context_t* thread_state)
 //
@@ -769,6 +777,11 @@ LnoR2Fix:
 //
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+
+#if __has_feature(ptrauth_calls)
+  pacibsp
+#endif
+
   stp    x0, x1,  [x0, #0x000]
   stp    x2, x3,  [x0, #0x010]
   stp    x4, x5,  [x0, #0x020]
@@ -809,7 +822,12 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    d31,     [x0, #0x208]
 #endif
   mov    x0, #0                   // return UNW_ESUCCESS
+
+#if __has_feature(ptrauth_calls)
+  retab
+#else
   ret
+#endif
 
 #elif defined(__arm__) && !defined(__APPLE__)
 

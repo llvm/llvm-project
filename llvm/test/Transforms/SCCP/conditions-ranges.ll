@@ -1547,3 +1547,28 @@ bb2:
   call void @use(i1 %c4)
   ret void
 }
+
+define i1 @and_predicate_dominating_phi(i32 %x) {
+; CHECK-LABEL: @and_predicate_dominating_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[XGE1:%.*]] = icmp uge i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[XLT2:%.*]] = icmp ult i32 [[X]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[XGE1]], [[XLT2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[PHI:%.*]], label [[NOPE:%.*]]
+; CHECK:       nope:
+; CHECK-NEXT:    br label [[PHI]]
+; CHECK:       phi:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %xge1 = icmp uge i32 %x, 1
+  %xlt2 = icmp ult i32 %x, 2
+  %and = and i1 %xge1, %xlt2
+  br i1 %and, label %phi, label %nope
+nope:
+  br label %phi
+phi:
+  %res = phi i32 [ %x, %entry ], [ 1, %nope ]
+  %ret = icmp uge i32 %res, 1
+  ret i1 %ret
+}

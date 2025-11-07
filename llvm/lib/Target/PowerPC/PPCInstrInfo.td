@@ -4321,7 +4321,22 @@ def TLBLI : XForm_16b<31, 1010, (outs), (ins gprc:$RB),
                           "tlbli $RB", IIC_LdStLoad, []>, Requires<[IsPPC6xx]>;
 
 def TLBIE : XForm_26<31, 306, (outs), (ins gprc:$RST, gprc:$RB),
-                          "tlbie $RB,$RST", IIC_SprTLBIE, []>;
+                     "tlbie $RB, $RST", IIC_SprTLBIE, []>,
+            Requires<[IsNotISA3_0]>;
+
+let Predicates = [IsISA3_0] in {
+  def TLBIEP9 : XForm_RSB5_UIMM2_2UIMM1<31, 306, (outs),
+                                        (ins gprc:$RB, gprc:$RS, u2imm:$RIC,
+                                            u1imm:$PRS, u1imm:$R),
+                                        "tlbie $RB, $RS, $RIC, $PRS, $R", []>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def TLBIE8P9
+        : XForm_RSB5_UIMM2_2UIMM1<31, 306, (outs),
+                                  (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC,
+                                      u1imm:$PRS, u1imm:$R),
+                                  "tlbie $RB, $RS, $RIC, $PRS, $R", []>;
+  }
+}
 
 def TLBSX : XForm_tlb<914, (outs), (ins gprc:$RA, gprc:$RB), "tlbsx $RA, $RB",
                 IIC_LdStLoad>, Requires<[IsBookE]>;
@@ -4578,6 +4593,8 @@ def : InstAlias<"mfamr $Rx", (MFSPR gprc:$Rx, 29)>;
 
 def : InstAlias<"mtpid $Rx", (MTSPR 48, gprc:$Rx)>, Requires<[IsBookE]>;
 def : InstAlias<"mfpid $Rx", (MFSPR gprc:$Rx, 48)>, Requires<[IsBookE]>;
+def : InstAlias<"mtpidr $Rx", (MTSPR 48, gprc:$Rx)>, Requires<[IsISA3_0]>;
+def : InstAlias<"mfpidr $Rx", (MFSPR gprc:$Rx, 48)>, Requires<[IsISA3_0]>;
 
 foreach SPRG = 4-7 in {
   def : InstAlias<"mfsprg $RT, "#SPRG, (MFSPR gprc:$RT, !add(SPRG, 256))>,
@@ -4667,7 +4684,11 @@ def : InstAlias<"mficcr $Rx", (MFSPR gprc:$Rx, 1019)>, Requires<[IsPPC4xx]>;
 
 }
 
-def : InstAlias<"tlbie $RB", (TLBIE R0, gprc:$RB)>;
+def : InstAlias<"tlbie $RB", (TLBIE R0, gprc:$RB)>,  Requires<[IsNotISA3_0]>;
+let Predicates = [IsISA3_0] in {
+  def : InstAlias<"tlbie $RB", (TLBIEP9 R0, gprc:$RB, 0, 0, 0)>;
+  def : InstAlias<"tlbie $RB, $RS", (TLBIEP9 gprc:$RB, gprc:$RS, 0, 0, 0)>;
+}
 
 def : InstAlias<"tlbrehi $RS, $A", (TLBRE2 gprc:$RS, gprc:$A, 0)>,
                 Requires<[IsPPC4xx]>;

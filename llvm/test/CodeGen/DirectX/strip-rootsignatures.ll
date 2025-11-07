@@ -1,6 +1,6 @@
-; RUN: opt -S -dxil-prepare < %s | FileCheck %s
+; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s
 
-; Ensures that dxil-prepare will remove the dx.rootsignatures metadata
+; Ensures that dxil-translate-metadata  will remove the dx.rootsignatures metadata
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
@@ -10,7 +10,6 @@ entry:
 }
 
 ; CHECK-NOT: !dx.rootsignatures
-; CHECK-NOT: {{^!}}
 
 !dx.rootsignatures = !{!2} ; list of function/root signature pairs
 !2 = !{ ptr @main, !3, i32 2 } ; function, root signature

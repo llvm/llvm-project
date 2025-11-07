@@ -3450,9 +3450,9 @@ Mac, and BSD. This attribute has no effect on other targets.
 def MSABIDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On non-Windows x86_64 targets, this attribute changes the calling convention of
-a function to match the default convention used on Windows x86_64. This
-attribute has no effect on Windows targets or non-x86_64 targets.
+On non-Windows x86_64 and aarch64 targets, this attribute changes the calling convention of
+a function to match the default convention used on Windows. This
+attribute has no effect on Windows targets or non-x86_64, non-aarch64 targets.
   }];
 }
 
@@ -7542,6 +7542,45 @@ A managed variable is emitted as an undefined global symbol in the device binary
 registered by ``__hipRegisterManagedVariable`` in init functions. The HIP runtime allocates
 managed memory and uses it to define the symbol when loading the device binary.
 A managed variable can be accessed in both device and host code.
+  }];
+}
+
+def CUDAClusterDimsAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, the ``cluster_dims`` attribute, conventionally exposed as the
+``__cluster_dims__`` macro, can be applied to a kernel function to set the dimensions of a
+thread block cluster, which is an optional level of hierarchy and made up of thread blocks.
+``__cluster_dims__`` defines the cluster size as ``(X, Y, Z)``, where each value is the number
+of thread blocks in that dimension. The ``cluster_dims`` and `no_cluster`` attributes are
+mutually exclusive.
+
+.. code::
+
+  __global__ __cluster_dims__(2, 1, 1) void kernel(...) {
+    ...
+  }
+
+  }];
+}
+
+def CUDANoClusterAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, a kernel function can still be launched with the cluster feature enabled
+at runtime, even without being annotated with ``__cluster_dims__``. The LLVM/Clang-exclusive
+``no_cluster`` attribute, conventionally exposed as the ``__no_cluster__`` macro, can be applied to
+a kernel function to explicitly indicate that the cluster feature will not be enabled either at
+compile time or at kernel launch time. This allows the compiler to apply certain optimizations
+without assuming that clustering could be enabled at runtime. It is undefined behavior to launch a
+kernel annotated with ``__no_cluster__`` if the cluster feature is enabled at runtime.
+The ``cluster_dims`` and ``no_cluster`` attributes are mutually exclusive.
+
+.. code::
+
+  __global__ __no_cluster__ void kernel(...) {
+    ...
+  }
   }];
 }
 
