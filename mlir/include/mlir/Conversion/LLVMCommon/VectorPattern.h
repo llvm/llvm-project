@@ -86,7 +86,8 @@ private:
 /// ArrayRef<NamedAttribute>.
 template <typename SourceOp, typename TargetOp,
           template <typename, typename> typename AttrConvert =
-              AttrConvertPassThrough>
+              AttrConvertPassThrough,
+          bool FailOnUnsupportedFP = false>
 class VectorConvertToLLVMPattern : public ConvertOpToLLVMPattern<SourceOp> {
 public:
   using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
@@ -123,11 +124,13 @@ public:
                                            "unsupported floating point type");
       return success();
     };
-    for (Value operand : op->getOperands())
-      if (failed(checkType(operand)))
+    if (FailOnUnsupportedFP) {
+      for (Value operand : op->getOperands())
+        if (failed(checkType(operand)))
+          return failure();
+      if (failed(checkType(op->getResult(0))))
         return failure();
-    if (failed(checkType(op->getResult(0))))
-      return failure();
+    }
 
     // Determine attributes for the target op
     AttrConvert<SourceOp, TargetOp> attrConvert(op);
