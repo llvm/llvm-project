@@ -5279,6 +5279,12 @@ struct AAAlignImpl : AAAlign {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
+    // For make.buffer.rsrc, the alignment strictly equals to the base's
+    // alignment
+    if (Instruction *I = dyn_cast<Instruction>(&getAssociatedValue()))
+      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+        if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+          return;
     SmallVector<Attribute, 4> Attrs;
     A.getAttrs(getIRPosition(), {Attribute::Alignment}, Attrs);
     for (const Attribute &Attr : Attrs)
@@ -5300,10 +5306,19 @@ struct AAAlignImpl : AAAlign {
     if (isa<ConstantData>(AssociatedValue))
       return ChangeStatus::UNCHANGED;
 
+    // For use of amdgcn.make.buffer.rsrc, the alignment equals to
+    // min(base, load/store)
+    bool IsMakeBufferRsrc = false;
+    if (Instruction *I = dyn_cast<Instruction>(&getAssociatedValue()))
+      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+        if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+          IsMakeBufferRsrc = true;
     for (const Use &U : AssociatedValue.uses()) {
       if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
         if (SI->getPointerOperand() == &AssociatedValue)
-          if (SI->getAlign() < getAssumedAlign()) {
+          if (IsMakeBufferRsrc) {
+            SI->setAlignment(std::min(SI->getAlign(), getAssumedAlign()));
+          } else if (SI->getAlign() < getAssumedAlign()) {
             STATS_DECLTRACK(AAAlign, Store,
                             "Number of times alignment added to a store");
             SI->setAlignment(getAssumedAlign());
@@ -5311,14 +5326,18 @@ struct AAAlignImpl : AAAlign {
           }
       } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
         if (LI->getPointerOperand() == &AssociatedValue)
-          if (LI->getAlign() < getAssumedAlign()) {
+          if (IsMakeBufferRsrc) {
+            LI->setAlignment(std::min(LI->getAlign(), getAssumedAlign()));
+          } else if (LI->getAlign() < getAssumedAlign()) {
             LI->setAlignment(getAssumedAlign());
             STATS_DECLTRACK(AAAlign, Load,
                             "Number of times alignment added to a load");
             InstrChanged = ChangeStatus::CHANGED;
           }
       } else if (auto *RMW = dyn_cast<AtomicRMWInst>(U.getUser())) {
-        if (RMW->getPointerOperand() == &AssociatedValue) {
+        if (IsMakeBufferRsrc) {
+          RMW->setAlignment(std::min(RMW->getAlign(), getAssumedAlign()));
+        } else if (RMW->getPointerOperand() == &AssociatedValue) {
           if (RMW->getAlign() < getAssumedAlign()) {
             STATS_DECLTRACK(AAAlign, AtomicRMW,
                             "Number of times alignment added to atomicrmw");
@@ -5328,7 +5347,9 @@ struct AAAlignImpl : AAAlign {
           }
         }
       } else if (auto *CAS = dyn_cast<AtomicCmpXchgInst>(U.getUser())) {
-        if (CAS->getPointerOperand() == &AssociatedValue) {
+        if (IsMakeBufferRsrc) {
+          CAS->setAlignment(std::min(CAS->getAlign(), getAssumedAlign()));
+        } else if (CAS->getPointerOperand() == &AssociatedValue) {
           if (CAS->getAlign() < getAssumedAlign()) {
             STATS_DECLTRACK(AAAlign, AtomicCmpXchg,
                             "Number of times alignment added to cmpxchg");
@@ -5552,6 +5573,15 @@ struct AAAlignCallSiteReturned final
           return clampStateAndIndicateChange<StateType>(
               this->getState(),
               std::min(this->getAssumedAlign(), Alignment).value());
+        break;
+      }
+      case Intrinsic::amdgcn_make_buffer_rsrc: {
+        const auto *AlignAA =
+            A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
+                                DepClassTy::REQUIRED);
+        if (AlignAA && AlignAA->isValidState())
+          return clampStateAndIndicateChange<StateType>(
+              this->getState(), AlignAA->getAssumedAlign().value());
         break;
       }
       default:
