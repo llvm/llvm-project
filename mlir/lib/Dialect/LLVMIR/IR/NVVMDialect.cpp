@@ -920,15 +920,40 @@ LogicalResult MmaOp::verify() {
 }
 
 LogicalResult ShflOp::verify() {
-  if (!(*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid"))
-    return success();
-  auto type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
-  auto elementType = (type && type.getBody().size() == 2)
-                         ? llvm::dyn_cast<IntegerType>(type.getBody()[1])
-                         : nullptr;
-  if (!elementType || elementType.getWidth() != 1)
-    return emitError("expected return type to be a two-element struct with "
-                     "i1 as the second element");
+  auto returnStructType = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
+
+  auto verifyTypeError = [&](Twine desc, Type expectedType,
+                             Type actualType) -> LogicalResult {
+    return emitOpError("expected " + desc + " to be of type ")
+           << expectedType << " but got " << actualType << " instead";
+  };
+
+  if (returnStructType) {
+    if (!getReturnValueAndIsValid())
+      return emitOpError("\"return_value_and_is_valid\" attribute must be "
+                         "specified when the return type is a struct type");
+
+    if (returnStructType.getBody().size() != 2)
+      return emitOpError("expected return type to be a two-element struct");
+
+    llvm::ArrayRef<Type> returnStruct = returnStructType.getBody();
+    auto resultType = returnStruct[0];
+    if (resultType != getVal().getType())
+      return verifyTypeError("first element in the returned struct",
+                             getVal().getType(), resultType);
+
+    auto predicateType = returnStruct[1];
+    if (!predicateType.isInteger(1))
+      return verifyTypeError("second element in the returned struct",
+                             mlir::IntegerType::get(getContext(), 1),
+                             predicateType);
+  } else {
+    if (getReturnValueAndIsValid())
+      return emitOpError("expected return type to be a two-element struct");
+
+    if (getType() != getVal().getType())
+      return verifyTypeError("return type", getVal().getType(), getType());
+  }
   return success();
 }
 
@@ -1630,6 +1655,43 @@ LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::ReduxOp::verify() {
+  mlir::Type reduxType = getType();
+
+  if (!reduxType.isF32()) {
+    if (getAbs())
+      return emitOpError("abs attribute is supported only for f32 type");
+    if (getNan())
+      return emitOpError("nan attribute is supported only for f32 type");
+  }
+
+  NVVM::ReduxKind kind = getKind();
+  switch (kind) {
+  case NVVM::ReduxKind::ADD:
+  case NVVM::ReduxKind::AND:
+  case NVVM::ReduxKind::OR:
+  case NVVM::ReduxKind::XOR:
+  case NVVM::ReduxKind::MAX:
+  case NVVM::ReduxKind::MIN:
+  case NVVM::ReduxKind::UMAX:
+  case NVVM::ReduxKind::UMIN:
+    if (!reduxType.isInteger(32))
+      return emitOpError("'")
+             << stringifyEnum(kind) << "' redux kind unsupported with "
+             << reduxType << " type. Only supported type is 'i32'.";
+    break;
+  case NVVM::ReduxKind::FMIN:
+  case NVVM::ReduxKind::FMAX:
+    if (!reduxType.isF32())
+      return emitOpError("'")
+             << stringifyEnum(kind) << "' redux kind unsupported with "
+             << reduxType << " type. Only supported type is 'f32'.";
+    break;
+  }
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -1690,15 +1752,21 @@ std::string NVVM::MBarrierInitOp::getPtx() {
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
 
+static bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
+  auto ptrTy = llvm::cast<LLVM::LLVMPointerType>(ptr.getType());
+  return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
+}
+
+static bool isPtrInSharedCTASpace(mlir::Value ptr) {
+  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
+}
+
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierInitOp>(op);
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(thisOp.getAddr().getType())
-          .getAddressSpace();
-  llvm::Intrinsic::ID id = (addressSpace == NVVMMemorySpace::Shared)
-                               ? llvm::Intrinsic::nvvm_mbarrier_init_shared
-                               : llvm::Intrinsic::nvvm_mbarrier_init;
+  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
+  llvm::Intrinsic::ID id = isShared ? llvm::Intrinsic::nvvm_mbarrier_init_shared
+                                    : llvm::Intrinsic::nvvm_mbarrier_init;
 
   // Fill the Intrinsic Args
   llvm::SmallVector<llvm::Value *> args;
@@ -1711,12 +1779,68 @@ mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
 mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierInvalOp>(op);
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(thisOp.getAddr().getType())
-          .getAddressSpace();
-  llvm::Intrinsic::ID id = (addressSpace == NVVMMemorySpace::Shared)
+  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
+  llvm::Intrinsic::ID id = isShared
                                ? llvm::Intrinsic::nvvm_mbarrier_inval_shared
                                : llvm::Intrinsic::nvvm_mbarrier_inval;
+
+  return {id, {mt.lookupValue(thisOp.getAddr())}};
+}
+
+mlir::NVVM::IDArgPair MBarrierArriveOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierArriveOp>(op);
+  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
+  llvm::Intrinsic::ID id = isShared
+                               ? llvm::Intrinsic::nvvm_mbarrier_arrive_shared
+                               : llvm::Intrinsic::nvvm_mbarrier_arrive;
+
+  return {id, {mt.lookupValue(thisOp.getAddr())}};
+}
+
+mlir::NVVM::IDArgPair MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierArriveNocompleteOp>(op);
+  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
+  llvm::Intrinsic::ID id =
+      isShared ? llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete_shared
+               : llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete;
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getCount()));
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair MBarrierTestWaitOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierTestWaitOp>(op);
+  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
+  llvm::Intrinsic::ID id = isShared
+                               ? llvm::Intrinsic::nvvm_mbarrier_test_wait_shared
+                               : llvm::Intrinsic::nvvm_mbarrier_test_wait;
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getState()));
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair CpAsyncMBarrierArriveOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncMBarrierArriveOp>(op);
+  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
+
+  llvm::Intrinsic::ID id;
+  if (thisOp.getNoinc()) {
+    id = isShared ? llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc_shared
+                  : llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc;
+  } else {
+    id = isShared ? llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_shared
+                  : llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive;
+  }
 
   return {id, {mt.lookupValue(thisOp.getAddr())}};
 }
@@ -2639,6 +2763,9 @@ LogicalResult Tcgen05LdOp::verify() {
   LogicalResult result = success();
   if (getShape() == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && !getOffset())
     result = emitError("shape 16x32bx2 requires offset argument");
+
+  if (getShape() != NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && getOffset())
+    result = emitError("offset argument is only supported for shape 16x32bx2");
 
   auto resTy = getRes().getType();
   unsigned resLen = isa<VectorType>(resTy)

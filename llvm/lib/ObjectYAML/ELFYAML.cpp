@@ -37,8 +37,6 @@ unsigned Object::getMachine() const {
     return *Header.Machine;
   return llvm::ELF::EM_NONE;
 }
-
-constexpr StringRef SectionHeaderTable::TypeStr;
 } // namespace ELFYAML
 
 namespace yaml {

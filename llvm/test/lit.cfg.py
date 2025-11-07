@@ -64,6 +64,10 @@ if config.enable_profcheck:
     config.excludes.append("LoopVectorize")
     # exclude UpdateTestChecks - they fail because of inserted prof annotations
     config.excludes.append("UpdateTestChecks")
+    # TODO(#166655): Reenable Instrumentation tests
+    config.excludes.append("Instrumentation")
+    # profiling doesn't work quite well on GPU, excluding
+    config.excludes.append("AMDGPU")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -584,7 +588,7 @@ def have_cxx_shared_library():
         print("could not exec llvm-readobj")
         return False
 
-    readobj_out = readobj_cmd.stdout.read().decode("ascii")
+    readobj_out = readobj_cmd.stdout.read().decode("utf-8")
     readobj_cmd.wait()
 
     regex = re.compile(r"(libc\+\+|libstdc\+\+|msvcp).*\.(so|dylib|dll)")
