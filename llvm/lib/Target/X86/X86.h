@@ -108,10 +108,10 @@ FunctionPass *createX86LowerTileCopyPass();
 class X86AvoidTrailingCallPass
     : public PassInfoMixin<X86AvoidTrailingCallPass> {
 private:
-  const TargetMachine *TM;
+  const X86TargetMachine *TM;
 
 public:
-  X86AvoidTrailingCallPass(const TargetMachine *TM) : TM(TM) {}
+  X86AvoidTrailingCallPass(const X86TargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
