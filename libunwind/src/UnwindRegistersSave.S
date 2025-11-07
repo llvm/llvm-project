@@ -18,6 +18,8 @@
 
 #if defined(_AIX)
     .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+    .section .text,"axy",@progbits,unique,0
 #else
     .text
 #endif
