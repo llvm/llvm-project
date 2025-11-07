@@ -16739,8 +16739,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   // fold (conv (freeze (load x))) -> (freeze (load (conv*)x))
   // If the resultant load doesn't need a higher alignment than the original!
   auto CastLoad = [this, &VT](SDValue N0, const SDLoc &DL) {
-    auto *LN0 = dyn_cast<LoadSDNode>(N0);
-    if (!LN0 || !ISD::isNormalLoad(LN0) || !N0.hasOneUse())
+    if (!ISD::isNormalLoad(N0.getNode()) || !N0.hasOneUse())
       return SDValue();
 
     // Do not remove the cast if the types differ in endian layout.
@@ -16753,6 +16752,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
     // memory accesses. We don't care if the original type was legal or not
     // as we assume software couldn't rely on the number of accesses of an
     // illegal type.
+    auto *LN0 = cast<LoadSDNode>(N0);
     if ((LegalOperations || !LN0->isSimple()) &&
         !TLI.isOperationLegal(ISD::LOAD, VT))
       return SDValue();
