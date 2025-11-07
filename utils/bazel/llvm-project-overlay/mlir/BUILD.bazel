@@ -4905,6 +4905,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AlignmentAttrInterface",
         ":Analysis",
         ":ArithDialect",
         ":ArithUtils",
@@ -6979,6 +6980,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterface",
         ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":CommonFolders",
