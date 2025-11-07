@@ -10,7 +10,7 @@
 
 // <memory>
 
-// Test the libc++ extension that std::indirect<T>::operator* is marked as [[nodiscard]].
+// Test the libc++ extension that std::indirect's observers are marked as [[nodiscard]].
 
 #include <memory>
 #include <utility>
@@ -21,5 +21,7 @@ void test(std::indirect<int>& i) {
   *std::move(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   *std::as_const(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   *std::move(std::as_const(i)); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  i.valueless_after_move(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  i.get_allocator(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   // clang-format on
 }
