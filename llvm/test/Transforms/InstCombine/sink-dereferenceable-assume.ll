@@ -5,6 +5,11 @@ define i64 @test_dereferenceable_assume(ptr %p, ptr %q, i1 %c.0) {
 ; CHECK-LABEL: define i64 @test_dereferenceable_assume(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C_0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[Q_INT:%.*]] = ptrtoint ptr [[Q]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[Q_INT]], [[P_INT]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 [[DIFF]]) ]
+; CHECK-NEXT:    br i1 [[C_0]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    ret i64 [[DIFF]]
 ; CHECK:       [[ELSE]]:
@@ -56,13 +61,14 @@ define i64 @test_sink_with_multiple_users_dominated_by_deref(ptr %p, ptr %q, i1 
 ; CHECK-LABEL: define i64 @test_sink_with_multiple_users_dominated_by_deref(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C_0:%.*]], i1 [[C_1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[Q_INT:%.*]] = ptrtoint ptr [[Q]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[Q_INT]], [[P_INT]]
 ; CHECK-NEXT:    br i1 [[C_0]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 [[DIFF]]) ]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[THEN_2:.*]], label %[[ELSE]]
 ; CHECK:       [[THEN_2]]:
-; CHECK-NEXT:    [[Q_INT:%.*]] = ptrtoint ptr [[Q]] to i64
-; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[Q_INT]], [[P_INT]]
 ; CHECK-NEXT:    [[DOUBLED:%.*]] = shl i64 [[DIFF]], 1
 ; CHECK-NEXT:    ret i64 [[DOUBLED]]
 ; CHECK:       [[ELSE]]:
@@ -90,13 +96,14 @@ define i64 @test_deref_user_does_not_dominate_other_user(ptr %p, ptr %q, i1 %c.0
 ; CHECK-LABEL: define i64 @test_deref_user_does_not_dominate_other_user(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C_0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[Q_INT:%.*]] = ptrtoint ptr [[Q]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[Q_INT]], [[P_INT]]
 ; CHECK-NEXT:    br i1 [[C_0]], label %[[MIDDLE:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[MIDDLE]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 [[DIFF]]) ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[Q_INT:%.*]] = ptrtoint ptr [[Q]] to i64
-; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[Q_INT]], [[P_INT]]
 ; CHECK-NEXT:    ret i64 [[DIFF]]
 ;
 entry:
