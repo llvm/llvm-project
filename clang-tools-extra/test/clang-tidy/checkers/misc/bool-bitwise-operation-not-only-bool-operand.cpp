@@ -5,11 +5,13 @@
 void general(unsigned flags, bool value) {
     (flags << 1) | value;
     flags = (flags << 1) | value;
+    flags = (flags << 1) | (flags << 2) | value;
+    flags = (flags << 1) | (flags << 2) | (flags << 4) | value;
 }
 
-void take(bool value) {}
+// TODO: compound operators
 
-// TODO: (flags << 1) | (flags << 2) | value
+void take(bool value) {}
 
 template<bool bb = true | 1>
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
@@ -39,6 +41,15 @@ void assign_to_boolean(unsigned flags, bool value) {
     take((flags << 1) | value);
     // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: take((flags << 1) || value);
+    result = (flags << 1) | (flags << 2) | value;
+    // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:42: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = (flags << 1) || (flags << 2) || value;
+    result = (flags << 1) | (flags << 2) | (flags << 4) | value;
+    // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:42: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:57: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = (flags << 1) || (flags << 2) || (flags << 4) || value;
 }
 
 template<bool bb = (true | 1)>
@@ -69,6 +80,15 @@ void assign_to_boolean_parens(unsigned flags, bool value) {
     take(((flags << 1) | value));
     // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: take(((flags << 1) || value));
+    result = ((flags << 1) | (flags << 2) | value);
+    // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:43: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = ((flags << 1) || (flags << 2) || value);
+    result = ((flags << 1) | (flags << 2) | (flags << 4) | value);
+    // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:43: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:58: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = ((flags << 1) || (flags << 2) || (flags << 4) || value);
 }
 
 template<bool bb = ((true | 1))>
@@ -99,6 +119,15 @@ void assign_to_boolean_parens2(unsigned flags, bool value) {
     take((((flags << 1) | value)));
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: take((((flags << 1) || value)));
+    result = (((flags << 1) | (flags << 2) | value));
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:44: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = (((flags << 1) || (flags << 2) || value));
+    result = (((flags << 1) | (flags << 2) | (flags << 4) | value));
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:44: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:59: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = (((flags << 1) || (flags << 2) || (flags << 4) || value));
 }
 
 // functional cast
@@ -130,6 +159,15 @@ void assign_to_boolean_fcast(unsigned flags, bool value) {
     take(bool((flags << 1) | value));
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: take(bool((flags << 1) || value));
+    result = bool((flags << 1) | (flags << 2) | value);
+    // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:47: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = bool((flags << 1) || (flags << 2) || value);
+    result = bool((flags << 1) | (flags << 2) | (flags << 4) | value);
+    // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:47: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:62: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = bool((flags << 1) || (flags << 2) || (flags << 4) || value);
 }
 
 // C-style cast
@@ -161,6 +199,15 @@ void assign_to_boolean_ccast(unsigned flags, bool value) {
     take(bool((flags << 1) | value));
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: take(bool((flags << 1) || value));
+    result = (bool)((flags << 1) | (flags << 2) | value);
+    // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:49: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = (bool)((flags << 1) || (flags << 2) || value);
+    result = (bool)((flags << 1) | (flags << 2) | (flags << 4) | value);
+    // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:49: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:64: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = (bool)((flags << 1) || (flags << 2) || (flags << 4) || value);
 }
 
 // static_cast
@@ -192,6 +239,15 @@ void assign_to_boolean_scast(unsigned flags, bool value) {
     take(static_cast<bool>((flags << 1) | value));
     // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: take(static_cast<bool>((flags << 1) || value));
+    result = static_cast<bool>((flags << 1) | (flags << 2) | value);
+    // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:60: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = static_cast<bool>((flags << 1) || (flags << 2) || value);
+    result = static_cast<bool>((flags << 1) | (flags << 2) | (flags << 4) | value);
+    // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:60: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:75: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: result = static_cast<bool>((flags << 1) || (flags << 2) || (flags << 4) || value);
 }
 
 

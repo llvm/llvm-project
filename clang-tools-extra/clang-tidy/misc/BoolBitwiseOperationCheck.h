@@ -39,7 +39,8 @@ private:
   void visitBinaryTreesNode(const BinaryOperator *BinOp,
                             const BinaryOperator *ParentBinOp,
                             const clang::SourceManager &SM,
-                            clang::ASTContext &Ctx);
+                            clang::ASTContext &Ctx,
+                            std::optional<bool>& rootAssignsToBoolean);
 
 private:
   bool StrictMode;

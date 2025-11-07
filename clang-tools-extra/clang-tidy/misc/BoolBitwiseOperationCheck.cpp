@@ -87,7 +87,7 @@ static llvm::StringRef translate(llvm::StringRef Value) {
   return {};
 }
 
-static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC) {
+static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC, std::optional<bool>& rootAssignsToBoolean) {
   for (const auto &[Bitwise, _] : OperatorsTransformation) {
     if (BinOp->getOpcodeStr() == Bitwise) {
       const bool hasBooleanOperands = llvm::all_of(
@@ -95,9 +95,11 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC) {
             return E->IgnoreImpCasts()->getType().getTypePtr()->isBooleanType();
           });
       if (hasBooleanOperands) {
+        rootAssignsToBoolean = rootAssignsToBoolean.value_or(false);
         return true;
       }
-      if (assignsToBoolean(BinOp, AC)) {
+      if (assignsToBoolean(BinOp, AC) || rootAssignsToBoolean.value_or(false)) {
+        rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
         return true;
       }
     }
@@ -231,28 +233,30 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 
 void BoolBitwiseOperationCheck::visitBinaryTreesNode(
     const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
-    const clang::SourceManager &SM, clang::ASTContext &Ctx) {
+    const clang::SourceManager &SM, clang::ASTContext &Ctx,
+    std::optional<bool>& rootAssignsToBoolean) {
   if (!BinOp) {
     return;
   }
 
-  if (isBooleanBitwise(BinOp, &Ctx)) {
+  if (isBooleanBitwise(BinOp, &Ctx, rootAssignsToBoolean)) {
     emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM, Ctx);
   }
 
   visitBinaryTreesNode(
       dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()), BinOp,
-      SM, Ctx);
+      SM, Ctx, rootAssignsToBoolean);
   visitBinaryTreesNode(
       dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()), BinOp,
-      SM, Ctx);
+      SM, Ctx, rootAssignsToBoolean);
 }
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *binOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
-  visitBinaryTreesNode(binOpRoot, nullptr, SM, Ctx);
+  std::optional<bool> rootAssignsToBoolean = std::nullopt;
+  visitBinaryTreesNode(binOpRoot, nullptr, SM, Ctx, rootAssignsToBoolean);
 }
 
 } // namespace clang::tidy::misc
