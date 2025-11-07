@@ -1327,9 +1327,6 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
   assert(cast<MemRefType>(oldMemRef.getType()).getElementType() ==
          cast<MemRefType>(newMemRef.getType()).getElementType());
 
-  std::unique_ptr<DominanceInfo> domInfo;
-  std::unique_ptr<PostDominanceInfo> postDomInfo;
-
   // Walk all uses of old memref; collect ops to perform replacement. We use a
   // DenseSet since an operation could potentially have multiple uses of a
   // memref (although rare), and the replacement later is going to erase ops.
