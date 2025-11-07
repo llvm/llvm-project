@@ -25,8 +25,8 @@ CharSourceRange tokenRange(const SourceRange &R,
 
 std::string getTokenText(const SourceRange &R,
                          const MatchFinder::MatchResult &Res) {
-  return Lexer::getSourceText(tokenRange(R, Res),
-                              *Res.SourceManager, Res.Context->getLangOpts())
+  return Lexer::getSourceText(tokenRange(R, Res), *Res.SourceManager,
+                              Res.Context->getLangOpts())
       .str();
 }
 
@@ -34,17 +34,19 @@ const Expr *strip(const Expr *E) { return E ? E->IgnoreParenImpCasts() : E; }
 
 // Find the statement that directly contains E (best-effort).
 const Stmt *enclosingStmt(const Expr *E, const MatchFinder::MatchResult &Res) {
-  if (!E) return nullptr;
+  if (!E)
+    return nullptr;
   const Stmt *Cur = E;
   while (true) {
     auto Parents = Res.Context->getParents(*Cur);
-    if (Parents.empty()) return Cur;
+    if (Parents.empty())
+      return Cur;
     if (const Stmt *S = Parents[0].get<Stmt>()) {
       Cur = S;
       // Stop when Cur itself is a statement that could be replaced wholesale.
       if (isa<ExprWithCleanups>(Cur) || isa<ReturnStmt>(Cur) ||
-          isa<CompoundStmt>(Cur) || isa<IfStmt>(Cur) ||
-          isa<DeclStmt>(Cur) || isa<Expr>(Cur))
+          isa<CompoundStmt>(Cur) || isa<IfStmt>(Cur) || isa<DeclStmt>(Cur) ||
+          isa<Expr>(Cur))
         continue;
       return Cur;
     } else {
@@ -85,8 +87,7 @@ void ConditionalToIfCheck::registerMatchers(MatchFinder *Finder) {
 
     // 2) return cond ? a : b;
     Finder->addMatcher(
-        returnStmt(InMain,
-                   hasReturnValue(conditionalOperator().bind("retop")))
+        returnStmt(InMain, hasReturnValue(conditionalOperator().bind("retop")))
             .bind("ret"),
         this);
   } else {
@@ -95,45 +96,42 @@ void ConditionalToIfCheck::registerMatchers(MatchFinder *Finder) {
     // 3a) if (cond) x = A; else x = B;
     // (Match a simple assignment in each branch; allow it to be wrapped in
     // an ExprWithCleanups/ExprStmt or a single-statement compound.)
-    auto AssignThen =
-        binaryOperator(isAssignmentOperator())
-            .bind("thenA");
-    auto AssignElse =
-        binaryOperator(isAssignmentOperator())
-            .bind("elseA");
+    auto AssignThen = binaryOperator(isAssignmentOperator()).bind("thenA");
+    auto AssignElse = binaryOperator(isAssignmentOperator()).bind("elseA");
 
     Finder->addMatcher(
         ifStmt(InMain,
-               hasThen(anyOf(
-                   hasDescendant(AssignThen),
-                   compoundStmt(statementCountIs(1),
-                                hasAnySubstatement(hasDescendant(AssignThen))))),
-               hasElse(anyOf(
-                   hasDescendant(AssignElse),
-                   compoundStmt(statementCountIs(1),
-                                hasAnySubstatement(hasDescendant(AssignElse))))))
+               hasThen(anyOf(hasDescendant(AssignThen),
+                             compoundStmt(statementCountIs(1),
+                                          hasAnySubstatement(
+                                              hasDescendant(AssignThen))))),
+               hasElse(anyOf(hasDescendant(AssignElse),
+                             compoundStmt(statementCountIs(1),
+                                          hasAnySubstatement(
+                                              hasDescendant(AssignElse))))))
             .bind("ifAssign"),
         this);
 
     // 3b) if (cond) return A; else return B;
-    auto RetThen = returnStmt(hasReturnValue(expr().bind("thenR"))).bind("thenRet");
-    auto RetElse = returnStmt(hasReturnValue(expr().bind("elseR"))).bind("elseRet");
+    auto RetThen =
+        returnStmt(hasReturnValue(expr().bind("thenR"))).bind("thenRet");
+    auto RetElse =
+        returnStmt(hasReturnValue(expr().bind("elseR"))).bind("elseRet");
 
     Finder->addMatcher(
-        ifStmt(InMain,
-               hasThen(anyOf(RetThen,
-                             compoundStmt(statementCountIs(1),
-                                          hasAnySubstatement(RetThen)))),
-               hasElse(anyOf(RetElse,
-                             compoundStmt(statementCountIs(1),
-                                          hasAnySubstatement(RetElse)))))
+        ifStmt(
+            InMain,
+            hasThen(anyOf(RetThen, compoundStmt(statementCountIs(1),
+                                                hasAnySubstatement(RetThen)))),
+            hasElse(anyOf(RetElse, compoundStmt(statementCountIs(1),
+                                                hasAnySubstatement(RetElse)))))
             .bind("ifReturn"),
         this);
   }
 }
 
-bool ConditionalToIfCheck::locationsAreOK(
-    const SourceRange &R, const MatchFinder::MatchResult &Rst) {
+bool ConditionalToIfCheck::locationsAreOK(const SourceRange &R,
+                                          const MatchFinder::MatchResult &Rst) {
   if (R.isInvalid())
     return false;
   if (isInMacro(R, Rst))
@@ -143,8 +141,8 @@ bool ConditionalToIfCheck::locationsAreOK(
   return true;
 }
 
-std::string ConditionalToIfCheck::getText(
-    const SourceRange &R, const MatchFinder::MatchResult &Rst) {
+std::string ConditionalToIfCheck::getText(const SourceRange &R,
+                                          const MatchFinder::MatchResult &Rst) {
   return getTokenText(R, Rst);
 }
 
@@ -159,7 +157,8 @@ bool ConditionalToIfCheck::hasObviousSideEffects(const Expr *E,
     return true;
 
   // Additional heuristics for common side-effect nodes.
-  if (isa<CallExpr>(E) || isa<CXXConstructExpr>(E) || isa<CXXOperatorCallExpr>(E))
+  if (isa<CallExpr>(E) || isa<CXXConstructExpr>(E) ||
+      isa<CXXOperatorCallExpr>(E))
     return true;
 
   if (const auto *U = dyn_cast<UnaryOperator>(E)) {
@@ -181,7 +180,8 @@ void ConditionalToIfCheck::check(const MatchFinder::MatchResult &Res) {
     // Handle: return cond ? a : b;
     if (const auto *Ret = Res.Nodes.getNodeAs<ReturnStmt>("ret")) {
       const auto *CO = Res.Nodes.getNodeAs<ConditionalOperator>("retop");
-      if (!CO) return;
+      if (!CO)
+        return;
 
       const Expr *Cond = strip(CO->getCond());
       const Expr *TrueE = strip(CO->getTrueExpr());
@@ -202,8 +202,7 @@ void ConditionalToIfCheck::check(const MatchFinder::MatchResult &Res) {
 
       std::string Replacement = "if (" + CondS + ") {\n  return " + TS +
                                 ";\n} else {\n  return " + FS + ";\n}";
-      diag(Ret->getBeginLoc(),
-           "replace simple conditional return with if/else")
+      diag(Ret->getBeginLoc(), "replace simple conditional return with if/else")
           << FixItHint::CreateReplacement(CharSourceRange::getCharRange(SR),
                                           Replacement);
       return;
@@ -213,7 +212,8 @@ void ConditionalToIfCheck::check(const MatchFinder::MatchResult &Res) {
     if (const auto *Assign = Res.Nodes.getNodeAs<BinaryOperator>("assign")) {
       const auto *CO = Res.Nodes.getNodeAs<ConditionalOperator>("condop");
       const auto *LHS = Res.Nodes.getNodeAs<Expr>("assignLHS");
-      if (!CO || !LHS) return;
+      if (!CO || !LHS)
+        return;
 
       const Expr *Cond = strip(CO->getCond());
       const Expr *TrueE = strip(CO->getTrueExpr());
@@ -221,8 +221,7 @@ void ConditionalToIfCheck::check(const MatchFinder::MatchResult &Res) {
 
       if (hasObviousSideEffects(Cond, Ctx) ||
           hasObviousSideEffects(TrueE, Ctx) ||
-          hasObviousSideEffects(FalseE, Ctx) ||
-          hasObviousSideEffects(LHS, Ctx))
+          hasObviousSideEffects(FalseE, Ctx) || hasObviousSideEffects(LHS, Ctx))
         return;
 
       const Stmt *Carrier = enclosingStmt(Assign, Res);
@@ -239,8 +238,7 @@ void ConditionalToIfCheck::check(const MatchFinder::MatchResult &Res) {
       std::string FS = getText(FalseE->getSourceRange(), Res);
 
       std::string Replacement = "if (" + CondS + ") {\n  " + LHSS + " = " + TS +
-                                ";\n} else {\n  " + LHSS + " = " + FS +
-                                ";\n}";
+                                ";\n} else {\n  " + LHSS + " = " + FS + ";\n}";
       diag(Carrier->getBeginLoc(),
            "replace simple conditional assignment with if/else")
           << FixItHint::CreateReplacement(CharSourceRange::getCharRange(SR),
@@ -257,10 +255,10 @@ void ConditionalToIfCheck::check(const MatchFinder::MatchResult &Res) {
     const Expr *Cond = strip(IfR->getCond());
     const Expr *ThenR = strip(Res.Nodes.getNodeAs<Expr>("thenR"));
     const Expr *ElseR = strip(Res.Nodes.getNodeAs<Expr>("elseR"));
-    if (!Cond || !ThenR || !ElseR) return;
+    if (!Cond || !ThenR || !ElseR)
+      return;
 
-    if (hasObviousSideEffects(Cond, Ctx) ||
-        hasObviousSideEffects(ThenR, Ctx) ||
+    if (hasObviousSideEffects(Cond, Ctx) || hasObviousSideEffects(ThenR, Ctx) ||
         hasObviousSideEffects(ElseR, Ctx))
       return;
 
@@ -301,10 +299,8 @@ void ConditionalToIfCheck::check(const MatchFinder::MatchResult &Res) {
     if (LThen != LElse)
       return;
 
-    if (hasObviousSideEffects(Cond, Ctx) ||
-        hasObviousSideEffects(ThenR, Ctx) ||
-        hasObviousSideEffects(ElseR, Ctx) ||
-        hasObviousSideEffects(ThenL, Ctx))
+    if (hasObviousSideEffects(Cond, Ctx) || hasObviousSideEffects(ThenR, Ctx) ||
+        hasObviousSideEffects(ElseR, Ctx) || hasObviousSideEffects(ThenL, Ctx))
       return;
 
     SourceRange SR = IfA->getSourceRange();

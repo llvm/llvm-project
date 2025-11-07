@@ -14,6 +14,7 @@
 #include "AvoidSetjmpLongjmpCheck.h"
 #include "AvoidVariadicFunctionsCheck.h"
 #include "ConcatNestedNamespacesCheck.h"
+#include "ConditionalToIfCheck.h"
 #include "DeprecatedHeadersCheck.h"
 #include "DeprecatedIosBaseAliasesCheck.h"
 #include "LoopConvertCheck.h"
@@ -54,7 +55,6 @@
 #include "UseTransparentFunctorsCheck.h"
 #include "UseUncaughtExceptionsCheck.h"
 #include "UseUsingCheck.h"
-#include "ConditionalToIfCheck.h" 
 
 using namespace clang::ast_matchers;
 
@@ -135,7 +135,8 @@ public:
     CheckFactories.registerCheck<UseUncaughtExceptionsCheck>(
         "modernize-use-uncaught-exceptions");
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
-    CheckFactories.registerCheck<ConditionalToIfCheck>("modernize-conditional-to-if");
+    CheckFactories.registerCheck<ConditionalToIfCheck>(
+        "modernize-conditional-to-if");
   }
 };
 
