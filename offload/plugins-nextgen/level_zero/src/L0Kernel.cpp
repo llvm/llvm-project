@@ -343,7 +343,8 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
 }
 
 Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
-                                  uint32_t NumThreads[3], uint32_t NumBlocks[3]) const {
+                                  uint32_t NumThreads[3],
+                                  uint32_t NumBlocks[3]) const {
 
   if (KernelEnvironment.Configuration.ExecMode != OMP_TGT_EXEC_MODE_BARE) {
     // For non-bare mode, the groups are already set in the launch

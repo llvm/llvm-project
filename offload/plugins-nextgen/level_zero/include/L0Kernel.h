@@ -82,7 +82,7 @@ struct KernelPropertiesTy {
 struct L0LaunchEnvTy {
   bool IsAsync;
   AsyncQueueTy *AsyncQueue;
-  ze_group_count_t GroupCounts={0, 0, 0};
+  ze_group_count_t GroupCounts = {0, 0, 0};
   KernelPropertiesTy &KernelPR;
   bool HalfNumThreads = false;
   bool IsTeamsNDRange = false;
