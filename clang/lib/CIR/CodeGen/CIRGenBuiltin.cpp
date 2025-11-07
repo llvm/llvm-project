@@ -201,28 +201,40 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   
   case Builtin::BI__builtin_constant_p: { 
-    auto loc = getLoc(e->getSourceRange());
-  
-    Expr::EvalResult evalResult;
-    
-    // Try to evaluate at compile time first
-    if (e->getArg(0)->EvaluateAsRValue(evalResult, getContext()) &&
-        !evalResult.hasSideEffects()) {
-      // Expression is a compile-time constant, return 1
-      llvm::APInt apInt(32, 1);
-      llvm::APSInt apSInt(apInt, /*isUnsigned=*/false);
-      return RValue::get(builder.getConstInt(loc, apSInt));
-    }
-    
-    // Expression cannot be evaluated at compile time, emit runtime check
-    mlir::Value argValue = emitScalarExpr(e->getArg(0));
-    mlir::Type resultType = builder.getSInt32Ty();
-    auto isConstantOp = cir::IsConstantOp::create(builder, loc, resultType, argValue);
-    mlir::Value resultValue = isConstantOp.getResult();
-    mlir::Type exprTy = convertType(e->getType());
-    if (exprTy != resultValue.getType())
-      resultValue = builder.createIntCast(resultValue, exprTy);
-    return RValue::get(resultValue);
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Type ResultType = convertType(e->getType());
+
+    const Expr *Arg = e->getArg(0);
+    QualType ArgType = Arg->getType();
+    // FIXME: The allowance for Obj-C pointers and block pointers is historical
+    // and likely a mistake.
+    if (!ArgType->isIntegralOrEnumerationType() && !ArgType->isFloatingType() &&
+        !ArgType->isObjCObjectPointerType() && !ArgType->isBlockPointerType())
+      // Per the GCC documentation, only numeric constants are recognized after
+      // inlining.
+      return RValue::get(
+          builder.getConstInt(getLoc(e->getSourceRange()),
+                              mlir::cast<cir::IntType>(ResultType), 0));
+
+    if (Arg->HasSideEffects(getContext()))
+      // The argument is unevaluated, so be conservative if it might have
+      // side-effects.
+      return RValue::get(
+          builder.getConstInt(getLoc(e->getSourceRange()),
+                              mlir::cast<cir::IntType>(ResultType), 0));
+
+    mlir::Value ArgValue = emitScalarExpr(Arg);
+    if (ArgType->isObjCObjectPointerType())
+      // Convert Objective-C objects to id because we cannot distinguish between
+      // LLVM types for Obj-C classes as they are opaque.
+      ArgType = cgm.getASTContext().getObjCIdType();
+    ArgValue = builder.createBitcast(ArgValue, convertType(ArgType));
+
+    mlir::Value Result = cir::IsConstantOp::create(
+        builder, getLoc(e->getSourceRange()), ArgValue);
+    if (Result.getType() != ResultType)
+      Result = builder.createBoolToInt(Result, ResultType);
+    return RValue::get(Result);
   }
 
   case Builtin::BIcos:
