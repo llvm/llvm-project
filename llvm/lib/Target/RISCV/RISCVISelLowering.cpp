@@ -16144,7 +16144,7 @@ static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   KnownBits Known = DAG.computeKnownBits(N1);
-  if (Known.getMaxValue().sgt(1))
+  if (Known.getMaxValue().ugt(1))
     return SDValue();
 
   unsigned CzeroOpcode =
