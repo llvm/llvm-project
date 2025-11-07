@@ -2587,7 +2587,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
   // Verify earlyClobber def operand
   if (MCID.getOperandConstraint(MONum, MCOI::EARLY_CLOBBER) != -1) {
     if (!MO->isReg())
-      report("Early clobber must be a register", MO, MONum);
+      report("Early clobber must be a register", MI);
     if (!MO->isEarlyClobber())
       report("Missing earlyClobber flag", MI);
   }
