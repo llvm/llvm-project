@@ -11,6 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_BRACESAROUNDSTATEMENT_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_BRACESAROUNDSTATEMENT_H
+
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
@@ -73,3 +76,5 @@ getBraceInsertionsHints(const Stmt *S, const LangOptions &LangOpts,
                         SourceLocation EndLocHint = SourceLocation());
 
 } // namespace clang::tidy::utils
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_BRACESAROUNDSTATEMENT_H

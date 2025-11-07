@@ -239,7 +239,8 @@ define protected amdgpu_kernel void @trivial_uniform_waterfall(ptr addrspace(1) 
 ; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 [[BALLOT]], 0
 ; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[IF:.*]]
 ; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 0, 0
+; PASS-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 0)
+; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 0, [[FIRST_ACTIVE_ID]]
 ; PASS-CHECK-NEXT:    br i1 [[IS_FIRST_ACTIVE_ID]], label %[[WORK:.*]], label %[[TAIL]]
 ; PASS-CHECK:       [[WORK]]:
 ; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
@@ -308,7 +309,8 @@ define protected amdgpu_kernel void @uniform_waterfall(ptr addrspace(1) %out, i3
 ; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 [[BALLOT]], 0
 ; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[IF:.*]]
 ; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 [[MYMASK]], [[MYMASK]]
+; PASS-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 [[MYMASK]])
+; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 [[MYMASK]], [[FIRST_ACTIVE_ID]]
 ; PASS-CHECK-NEXT:    br i1 [[IS_FIRST_ACTIVE_ID]], label %[[WORK:.*]], label %[[TAIL]]
 ; PASS-CHECK:       [[WORK]]:
 ; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
