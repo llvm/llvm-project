@@ -15,9 +15,9 @@
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
-#define SVE_ACLE_FUNC(A1,A2_UNUSED,A3,A4_UNUSED) A1##A3
+#define SVE_ACLE_FUNC(A1,A2_UNUSED) A1
 #else
-#define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
+#define SVE_ACLE_FUNC(A1,A2) A1##A2
 #endif
 
 #ifdef __ARM_FEATURE_SME
@@ -38,7 +38,7 @@
 //
 svuint8x2_t test_svaesd_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesd_laneq,_u8_x2,,)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesd_laneq,_u8_x2)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesdimc_u8_x2(
@@ -53,7 +53,7 @@ svuint8x2_t test_svaesd_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 //
 svuint8x2_t test_svaesdimc_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesdimc_laneq,_u8_x2,,)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesdimc_laneq,_u8_x2)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaese_u8_x2(
@@ -68,7 +68,7 @@ svuint8x2_t test_svaesdimc_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 //
 svuint8x2_t test_svaese_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaese_laneq,_u8_x2,,)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaese_laneq,_u8_x2)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesemc_u8_x2(
@@ -83,7 +83,7 @@ svuint8x2_t test_svaese_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 //
 svuint8x2_t test_svaesemc_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesemc_laneq,_u8_x2,,)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesemc_laneq,_u8_x2)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesd_u8_x4(
@@ -98,7 +98,7 @@ svuint8x2_t test_svaesemc_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 //
 svuint8x4_t test_svaesd_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesd_laneq,_u8_x4,,)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesd_laneq,_u8_x4)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesdimc_u8_x4(
@@ -113,7 +113,7 @@ svuint8x4_t test_svaesd_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 //
 svuint8x4_t test_svaesdimc_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesdimc_laneq,_u8_x4,,)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesdimc_laneq,_u8_x4)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaese_u8_x4(
@@ -128,7 +128,7 @@ svuint8x4_t test_svaesdimc_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 //
 svuint8x4_t test_svaese_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaese_laneq,_u8_x4,,)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaese_laneq,_u8_x4)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesemc_u8_x4(
@@ -143,73 +143,73 @@ svuint8x4_t test_svaese_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 //
 svuint8x4_t test_svaesemc_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesemc_laneq,_u8_x4,,)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesemc_laneq,_u8_x4)(op1, op2, 0);
 }
 
-// CHECK-LABEL: @test_svpmull_u64(
+// CHECK-LABEL: @test_svpmull_u64_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svpmull_u64u12__SVUint64_tS_(
+// CPP-CHECK-LABEL: @_Z19test_svpmull_u64_x2u12__SVUint64_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
-svuint64x2_t test_svpmull_u64(svuint64_t op1, svuint64_t op2) STREAMING
+svuint64x2_t test_svpmull_u64_x2(svuint64_t op1, svuint64_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svpmull,_u64,,)(op1, op2);
+  return SVE_ACLE_FUNC(svpmull,_u64_x2)(op1, op2);
 }
 
-// CHECK-LABEL: @test_svpmull_n_u64(
+// CHECK-LABEL: @test_svpmull_n_u64_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP2:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z18test_svpmull_n_u64u12__SVUint64_tm(
+// CPP-CHECK-LABEL: @_Z21test_svpmull_n_u64_x2u12__SVUint64_tm(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP2:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
-svuint64x2_t test_svpmull_n_u64(svuint64_t op1, uint64_t op2) STREAMING
+svuint64x2_t test_svpmull_n_u64_x2(svuint64_t op1, uint64_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svpmull,_n_u64,,)(op1, op2);
+  return SVE_ACLE_FUNC(svpmull,_n_u64_x2)(op1, op2);
 }
 
-// CHECK-LABEL: @test_svpmlal_u64(
+// CHECK-LABEL: @test_svpmlal_u64_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svpmlal_u6412svuint64x2_tu12__SVUint64_tS0_(
+// CPP-CHECK-LABEL: @_Z19test_svpmlal_u64_x212svuint64x2_tu12__SVUint64_tS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
-svuint64x2_t test_svpmlal_u64(svuint64x2_t op1, svuint64_t op2, svuint64_t op3) STREAMING
+svuint64x2_t test_svpmlal_u64_x2(svuint64x2_t op1, svuint64_t op2, svuint64_t op3) STREAMING
 {
-  return SVE_ACLE_FUNC(svpmlal,_u64,,)(op1, op2, op3);
+  return SVE_ACLE_FUNC(svpmlal,_u64_x2)(op1, op2, op3);
 }
 
-// CHECK-LABEL: @test_svpmlal_n_u64(
+// CHECK-LABEL: @test_svpmlal_n_u64_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP3:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z18test_svpmlal_n_u6412svuint64x2_tu12__SVUint64_tm(
+// CPP-CHECK-LABEL: @_Z21test_svpmlal_n_u64_x212svuint64x2_tu12__SVUint64_tm(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP3:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
-svuint64x2_t test_svpmlal_n_u64(svuint64x2_t op1, svuint64_t op2, uint64_t op3) STREAMING
+svuint64x2_t test_svpmlal_n_u64_x2(svuint64x2_t op1, svuint64_t op2, uint64_t op3) STREAMING
 {
-  return SVE_ACLE_FUNC(svpmlal,_n_u64,,)(op1, op2, op3);
+  return SVE_ACLE_FUNC(svpmlal,_n_u64_x2)(op1, op2, op3);
 }
