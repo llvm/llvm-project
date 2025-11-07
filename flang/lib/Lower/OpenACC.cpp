@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -1159,18 +1160,6 @@ bool isConstantBound(mlir::acc::DataBoundsOp &op) {
   return false;
 }
 
-/// Return true iff all the bounds are expressed with constant values.
-bool areAllBoundConstant(const llvm::SmallVector<mlir::Value> &bounds) {
-  for (auto bound : bounds) {
-    auto dataBound =
-        mlir::dyn_cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
-    assert(dataBound && "Must be DataBoundOp operation");
-    if (!isConstantBound(dataBound))
-      return false;
-  }
-  return true;
-}
-
 static llvm::SmallVector<mlir::Value>
 genConstantBounds(fir::FirOpBuilder &builder, mlir::Location loc,
                   mlir::acc::DataBoundsOp &dataBound) {
@@ -1324,7 +1313,7 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
   mlir::OpBuilder::InsertionGuard guard(builder);
   auto recipe = genRecipeOp<mlir::acc::FirstprivateRecipeOp>(
       builder, mod, recipeName, loc, ty);
-  bool allConstantBound = areAllBoundConstant(bounds);
+  bool allConstantBound = fir::acc::areAllBoundsConstant(bounds);
   auto [source, destination] = genRecipeCombinerOrCopyRegion(
       builder, loc, ty, recipe.getCopyRegion(), bounds, allConstantBound);
 
@@ -1356,33 +1345,6 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
                           /*temporary_lhs=*/true);
   mlir::acc::TerminatorOp::create(builder, loc);
   return recipe;
-}
-
-/// Get a string representation of the bounds.
-std::string getBoundsString(llvm::SmallVector<mlir::Value> &bounds) {
-  std::stringstream boundStr;
-  if (!bounds.empty())
-    boundStr << "_section_";
-  llvm::interleave(
-      bounds,
-      [&](mlir::Value bound) {
-        auto boundsOp =
-            mlir::cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
-        if (boundsOp.getLowerbound() &&
-            fir::getIntIfConstant(boundsOp.getLowerbound()) &&
-            boundsOp.getUpperbound() &&
-            fir::getIntIfConstant(boundsOp.getUpperbound())) {
-          boundStr << "lb" << *fir::getIntIfConstant(boundsOp.getLowerbound())
-                   << ".ub" << *fir::getIntIfConstant(boundsOp.getUpperbound());
-        } else if (boundsOp.getExtent() &&
-                   fir::getIntIfConstant(boundsOp.getExtent())) {
-          boundStr << "ext" << *fir::getIntIfConstant(boundsOp.getExtent());
-        } else {
-          boundStr << "?";
-        }
-      },
-      [&] { boundStr << "x"; });
-  return boundStr.str();
 }
 
 /// Rebuild the array type from the acc.bounds operation with constant
@@ -1458,9 +1420,8 @@ static void genPrivatizationRecipes(
     RecipeOp recipe;
     mlir::Type retTy = getTypeFromBounds(bounds, info.addr.getType());
     if constexpr (std::is_same_v<RecipeOp, mlir::acc::PrivateRecipeOp>) {
-      std::string recipeName =
-          fir::getTypeAsString(retTy, converter.getKindMap(),
-                               Fortran::lower::privatizationRecipePrefix);
+      std::string recipeName = fir::acc::getRecipeName(
+          mlir::acc::RecipeKind::private_recipe, retTy, info.addr, bounds);
       recipe = Fortran::lower::createOrGetPrivateRecipe(builder, recipeName,
                                                         operandLocation, retTy);
       auto op = createDataEntryOp<mlir::acc::PrivateOp>(
@@ -1474,10 +1435,8 @@ static void genPrivatizationRecipes(
         symbolPairs->emplace_back(op.getAccVar(),
                                   Fortran::semantics::SymbolRef(symbol));
     } else {
-      std::string suffix =
-          areAllBoundConstant(bounds) ? getBoundsString(bounds) : "";
-      std::string recipeName = fir::getTypeAsString(
-          retTy, converter.getKindMap(), "firstprivatization" + suffix);
+      std::string recipeName = fir::acc::getRecipeName(
+          mlir::acc::RecipeKind::firstprivate_recipe, retTy, info.addr, bounds);
       recipe = Fortran::lower::createOrGetFirstprivateRecipe(
           builder, recipeName, operandLocation, retTy, bounds);
       auto op = createDataEntryOp<mlir::acc::FirstprivateOp>(
@@ -1623,7 +1582,7 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   mlir::OpBuilder::InsertionGuard guard(builder);
   auto recipe = genRecipeOp<mlir::acc::ReductionRecipeOp>(
       builder, mod, recipeName, loc, ty, op);
-  bool allConstantBound = areAllBoundConstant(bounds);
+  bool allConstantBound = fir::acc::areAllBoundsConstant(bounds);
 
   auto [dest, src] = genRecipeCombinerOrCopyRegion(
       builder, loc, ty, recipe.getCombinerRegion(), bounds, allConstantBound);
@@ -1708,15 +1667,12 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
         mlir::acc::DataClause::acc_reduction, info.addr.getType(), async,
         asyncDeviceTypes, asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true);
     mlir::Type ty = op.getAccVar().getType();
-    if (!areAllBoundConstant(bounds) ||
+    if (!fir::acc::areAllBoundsConstant(bounds) ||
         fir::isAssumedShape(info.addr.getType()) ||
         fir::isAllocatableOrPointerArray(info.addr.getType()))
       ty = info.addr.getType();
-    std::string suffix =
-        areAllBoundConstant(bounds) ? getBoundsString(bounds) : "";
-    std::string recipeName = fir::getTypeAsString(
-        ty, converter.getKindMap(),
-        ("reduction_" + stringifyReductionOperator(mlirOp)).str() + suffix);
+    std::string recipeName = fir::acc::getRecipeName(
+        mlir::acc::RecipeKind::reduction_recipe, ty, info.addr, bounds, mlirOp);
 
     mlir::acc::ReductionRecipeOp recipe =
         Fortran::lower::createOrGetReductionRecipe(
@@ -1961,9 +1917,8 @@ static void privatizeIv(
   }
 
   if (privateOp == nullptr) {
-    std::string recipeName =
-        fir::getTypeAsString(ivValue.getType(), converter.getKindMap(),
-                             Fortran::lower::privatizationRecipePrefix);
+    std::string recipeName = fir::acc::getRecipeName(
+        mlir::acc::RecipeKind::private_recipe, ivValue.getType(), ivValue, {});
     auto recipe = Fortran::lower::createOrGetPrivateRecipe(
         builder, recipeName, loc, ivValue.getType());
 

@@ -5936,6 +5936,20 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
   return nullptr;
 }
 
+bool ObjectFileMachO::IsGOTSection(const lldb_private::Section &section) const {
+  assert(section.GetObjectFile() == this && "Wrong object file!");
+  SectionSP segment = section.GetParent();
+  if (!segment)
+    return false;
+
+  const bool is_data_const_got =
+      segment->GetName() == "__DATA_CONST" && section.GetName() == "__got";
+  const bool is_auth_const_ptr =
+      segment->GetName() == "__AUTH_CONST" &&
+      (section.GetName() == "__auth_got" || section.GetName() == "__auth_ptr");
+  return is_data_const_got || is_auth_const_ptr;
+}
+
 bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
   if (!section)
     return false;
