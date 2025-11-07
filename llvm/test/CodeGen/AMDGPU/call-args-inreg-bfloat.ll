@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
 
+; We've separated this file from call-args-inreg.ll since GlobalISel does not support the bfloat type.
+; Ideally, we should merge the two files once that support lands.
+
 declare hidden void @external_void_func_bf16_inreg(bfloat inreg) #0
 declare hidden void @external_void_func_v2bf16_inreg(<2 x bfloat> inreg) #0
 
