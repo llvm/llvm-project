@@ -279,8 +279,7 @@ void BreakableStringLiteral::insertBreak(unsigned LineIndex,
                                          WhitespaceManager &Whitespaces) const {
 
   const unsigned SplitEnd = TailOffset + Split.first + Split.second;
-  const bool IsLastFragment = SplitEnd >= Line.size() - UnbreakableTailLength;
-
+  const bool IsLastFragment = SplitEnd > Line.size() - UnbreakableTailLength;
   StringRef LocalPostfix = (IsLastFragment) ? Postfix : ContinuationPostfix;
 
   Whitespaces.replaceWhitespaceInToken(
