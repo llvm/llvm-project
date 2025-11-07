@@ -609,7 +609,7 @@ RISC-V is highly configurable, meaning its scheduling models could be highly div
 
 Though details of this generic scheduling model might evolve over time, we always have some _expectations_ on the kind of processors it is used for.
 
-For example, the ``generic`` tuning processor is expected to target in-order application processors designed for general-purpose computing. It is usually (but not required to be) RVA22U64- or RVA23U64-capable. The ``generic-ooo`` has a similar set of expectations, except it is targeting out-of-order application processors.
+For example, the ``generic`` tuning processor is expected to target in-order, superscalar application processors designed for general-purpose computing. It is usually RVA22U64- or RVA23U64-capable intended to run Linux. The ``generic-ooo`` has a similar set of expectations, except it is targeting out-of-order application processors.
 
 Right now, we simply assign a scheduling model that is widely used by the community to ``generic``. But in the future, we can create a standalone scheduling model for ``generic``, or even create a generic model for each of the individual sectors. For example, a ``generic-embedded`` for embedded processors and a ``generic-server`` for server workloads.
 
