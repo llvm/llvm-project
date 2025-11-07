@@ -175,9 +175,10 @@ bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
   }
   if (edit.IsListDirected()) {
     int total{std::max(leadingSpaces, 1) + subTotal};
-    if (io.GetConnectionState().NeedAdvance(static_cast<std::size_t>(total)) &&
-        !io.AdvanceRecord()) {
-      return false;
+    if (io.GetConnectionState().NeedAdvance(static_cast<std::size_t>(total))) {
+      if (!io.AdvanceRecord()) {
+        return false;
+      }
     }
     leadingSpaces = 1;
   } else if (!edit.width) {

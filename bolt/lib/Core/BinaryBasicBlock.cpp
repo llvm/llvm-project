@@ -22,8 +22,6 @@
 namespace llvm {
 namespace bolt {
 
-constexpr uint32_t BinaryBasicBlock::INVALID_OFFSET;
-
 bool operator<(const BinaryBasicBlock &LHS, const BinaryBasicBlock &RHS) {
   return LHS.Index < RHS.Index;
 }

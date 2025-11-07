@@ -8,6 +8,18 @@
 
 // REQUIRES: std-at-least-c++20
 
+// <chrono>
+//
+// template<class T> struct is_clock;
+// template<class T> constexpr bool is_clock_v = is_clock<T>::value;
+
+// [time.traits.is.clock]/3:
+//  The behavior of a program that adds specializations for is_clock is undefined.
+
+// [namespace.std]/3:
+//   The behavior of a C++ program is undefined if it declares an explicit or partial specialization of any standard
+//   library variable template, except where explicitly permitted by the specification of that variable template.
+
 #include <chrono>
 #include <ratio>
 
