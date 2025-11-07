@@ -180,6 +180,8 @@ struct MissingFeatures {
   static bool atomicSyncScopeID() { return false; }
   static bool atomicTypes() { return false; }
   static bool atomicUseLibCall() { return false; }
+  static bool atomicMicrosoftVolatile() { return false; }
+  static bool atomicOpenMP() { return false; }
 
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
@@ -213,6 +215,7 @@ struct MissingFeatures {
   static bool builtinCallMathErrno() { return false; }
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
+  static bool countedBySize() { return false; }
   static bool cgFPOptionsRAII() { return false; }
   static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
