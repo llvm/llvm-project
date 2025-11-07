@@ -44,6 +44,9 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
   Location loc = op.getLoc();
   Value x = op.getLhs();
   arith::FastMathFlags fmf = op.getFastmathAttr().getValue();
+  arith::FastMathFlags intermediateFmf = arith::bitEnumClear(
+      fmf, arith::FastMathFlags::reassoc | arith::FastMathFlags::contract |
+               arith::FastMathFlags::arcp);
 
   FloatAttr scalarExponent;
   DenseFPElementsAttr vectorExponent;
@@ -85,7 +88,7 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 
   // Replace `pow(x, 3.0)` with `x * x * x`.
   if (isExponentValue(3.0)) {
-    Value square = arith::MulFOp::create(rewriter, loc, x, x, fmf);
+    Value square = arith::MulFOp::create(rewriter, loc, x, x, intermediateFmf);
     rewriter.replaceOpWithNewOp<arith::MulFOp>(op, x, square, fmf);
     return success();
   }
@@ -113,8 +116,9 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 
   // Replace `pow(x, 0.75)` with `sqrt(sqrt(x)) * sqrt(x)`.
   if (isExponentValue(0.75)) {
-    Value powHalf = math::SqrtOp::create(rewriter, loc, x, fmf);
-    Value powQuarter = math::SqrtOp::create(rewriter, loc, powHalf, fmf);
+    Value powHalf = math::SqrtOp::create(rewriter, loc, x, intermediateFmf);
+    Value powQuarter =
+        math::SqrtOp::create(rewriter, loc, powHalf, intermediateFmf);
     rewriter.replaceOpWithNewOp<arith::MulFOp>(op, powHalf, powQuarter, fmf);
     return success();
   }
