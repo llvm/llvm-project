@@ -7905,21 +7905,19 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     MachineOperand &Dest = Inst.getOperand(0);
     MachineOperand &Src0 = Inst.getOperand(1);
     MachineOperand &Src1 = Inst.getOperand(2);
+    unsigned ShiftAmt = (Opcode == AMDGPU::S_LSHL1_ADD_U32   ? 1
+                         : Opcode == AMDGPU::S_LSHL2_ADD_U32 ? 2
+                         : Opcode == AMDGPU::S_LSHL3_ADD_U32 ? 3
+                                                             : 4);
 
-    dbgs() << "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG\n";
-    Inst.dump();
-    unsigned ShiftAmt = (Opcode == AMDGPU::S_LSHL1_ADD_U32 ? 1 :
-			 Opcode == AMDGPU::S_LSHL2_ADD_U32 ? 2 :
-			 Opcode == AMDGPU::S_LSHL3_ADD_U32 ? 3 : 4);
-    
     const TargetRegisterClass *NewRC =
         RI.getEquivalentVGPRClass(MRI.getRegClass(Dest.getReg()));
     Register DestReg = MRI.createVirtualRegister(NewRC);
-    MachineInstr *NewInstr = BuildMI(*MBB, &Inst, DL, get(AMDGPU::V_LSHL_ADD_U32_e64), DestReg)
-                                 .add(Src0)
-                                 .addImm(ShiftAmt)
-                                 .add(Src1);
-
+    MachineInstr *NewInstr =
+        BuildMI(*MBB, &Inst, DL, get(AMDGPU::V_LSHL_ADD_U32_e64), DestReg)
+            .add(Src0)
+            .addImm(ShiftAmt)
+            .add(Src1);
 
     legalizeOperands(*NewInstr, MDT);
     MRI.replaceRegWith(Dest.getReg(), DestReg);
