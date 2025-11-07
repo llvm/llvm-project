@@ -200,11 +200,6 @@ bool LoopVectorizeHints::allowVectorization(
                                     "MissedTransformsDisabled",
                                     "loop transformations are disabled", L);
     } else {
-      // This should be unreachable unless there is a bug.
-      reportDisallowedVectorization(
-          "disabled for an unknown reason", "MissedUnknown",
-          "unknown reason, please file a bug report on the LLVM issue tracker",
-          L);
       llvm_unreachable("loop vect disabled for an unknown reason");
     }
     return false;
