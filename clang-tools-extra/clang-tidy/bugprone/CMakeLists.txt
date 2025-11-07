@@ -26,6 +26,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   EasilySwappableParametersCheck.cpp
   EmptyCatchCheck.cpp
   ExceptionEscapeCheck.cpp
+  FloatLoopCounterCheck.cpp
   FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp
   ForwardingReferenceOverloadCheck.cpp
@@ -75,6 +76,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   SmartPtrArrayMismatchCheck.cpp
   SpuriouslyWakeUpFunctionsCheck.cpp
   StandaloneEmptyCheck.cpp
+  StdNamespaceModificationCheck.cpp
   StringConstructorCheck.cpp
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp

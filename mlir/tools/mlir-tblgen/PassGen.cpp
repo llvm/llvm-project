@@ -57,19 +57,23 @@ const char *const passRegistrationCode = R"(
 //===----------------------------------------------------------------------===//
 // {0} Registration
 //===----------------------------------------------------------------------===//
+#ifdef {1}
 
 inline void register{0}() {{
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {{
-    return {1};
+    return {2};
   });
 }
 
 // Old registration code, kept for temporary backwards compatibility.
 inline void register{0}Pass() {{
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {{
-    return {1};
+    return {2};
   });
 }
+
+#undef {1}
+#endif // {1}
 )";
 
 /// The code snippet used to generate a function to register all passes in a
@@ -116,6 +120,10 @@ static std::string getPassDeclVarName(const Pass &pass) {
   return "GEN_PASS_DECL_" + pass.getDef()->getName().upper();
 }
 
+static std::string getPassRegistrationVarName(const Pass &pass) {
+  return "GEN_PASS_REGISTRATION_" + pass.getDef()->getName().upper();
+}
+
 /// Emit the code to be included in the public header of the pass.
 static void emitPassDecls(const Pass &pass, raw_ostream &os) {
   StringRef passName = pass.getDef()->getName();
@@ -143,18 +151,25 @@ static void emitPassDecls(const Pass &pass, raw_ostream &os) {
 /// PassRegistry.
 static void emitRegistrations(llvm::ArrayRef<Pass> passes, raw_ostream &os) {
   os << "#ifdef GEN_PASS_REGISTRATION\n";
+  os << "// Generate registrations for all passes.\n";
+  for (const Pass &pass : passes)
+    os << "#define " << getPassRegistrationVarName(pass) << "\n";
+  os << "#endif // GEN_PASS_REGISTRATION\n";
 
   for (const Pass &pass : passes) {
+    std::string passName = pass.getDef()->getName().str();
+    std::string passEnableVarName = getPassRegistrationVarName(pass);
+
     std::string constructorCall;
     if (StringRef constructor = pass.getConstructor(); !constructor.empty())
       constructorCall = constructor.str();
     else
-      constructorCall = formatv("create{0}()", pass.getDef()->getName()).str();
-
-    os << formatv(passRegistrationCode, pass.getDef()->getName(),
+      constructorCall = formatv("create{0}()", passName).str();
+    os << formatv(passRegistrationCode, passName, passEnableVarName,
                   constructorCall);
   }
 
+  os << "#ifdef GEN_PASS_REGISTRATION\n";
   os << formatv(passGroupRegistrationCode, groupName);
 
   for (const Pass &pass : passes)
