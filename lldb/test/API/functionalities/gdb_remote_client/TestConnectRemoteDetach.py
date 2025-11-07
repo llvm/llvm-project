@@ -37,8 +37,12 @@ class TestConnectRemoteDetach(GDBRemoteTestBase):
             return "T05thread:1;"
 
         def D(self):
-            # Detach packet - this is what we want to verify gets called
+            # Detach packet: this is what we want to verify gets called.
             return "OK"
+
+        def k(self):
+            # Kill packet: this is what we want to verify doesn't get called.
+            raise RuntimeError("should not receive k(ill) packet")
 
     def test_connect_remote_sets_detach(self):
         """Test that ConnectRemote to a stopped process sets ShouldDetach."""
@@ -59,6 +63,5 @@ class TestConnectRemoteDetach(GDBRemoteTestBase):
         # rather than a 'k' (kill) packet when the process is destroyed.
         process.Destroy()
 
-        # Verify that the detach packet was sent
-        # The 'D' packet is the detach command in GDB remote protocol
+        # Verify that the (D)etach packet was sent.
         self.assertPacketLogReceived(["D"])
