@@ -118,8 +118,6 @@ LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   if (!ST->hasUAL())
     return Options;
 
-  // TODO: Set same as the default value of MaxLoadsPerMemcmp or
-  // MaxLoadsPerMemcmpOptSize. May need more consideration?
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
   Options.AllowOverlappingLoads = true;
