@@ -791,6 +791,15 @@ def : GCNPat<
   (SI_CALL_ISEL $src0, (i64 0))
 >;
 
+// Handle fshr with uniform inputs to map to scalar instructions
+def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
+>;
+
+def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:$src2)),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), $src2), sub0))
+>;
+
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
 // the called function after regalloc.
 def SI_CALL : SPseudoInstSI <
@@ -2694,7 +2703,7 @@ def : GCNPat<pat,
                                   $src1, /* clamp */ 0, /* op_sel */ 0)
 >;
 
-def : GCNPat<(DivergentTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
+def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
         (V_ALIGNBIT_B32_opsel_e64 /* src0_modifiers */ 0, $src0,
                                   /* src1_modifiers */ 0, $src1,
                                   /* src2_modifiers */ 0,
@@ -2723,7 +2732,7 @@ def : GCNPat<(i32 (DivergentUnaryFrag<trunc> (srl i64:$src0, (i32 ShiftAmt32Imm:
                           (i16 (EXTRACT_SUBREG VGPR_32:$src1, lo16)),
                           /* clamp */ 0, /* op_sel */ 0)>;
 
-def : GCNPat<(DivergentTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
+def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
           (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
                           /* src1_modifiers */ 0, $src1,
                           /* src2_modifiers */ 0,
@@ -2759,7 +2768,7 @@ def : GCNPat<(i32 (DivergentUnaryFrag<trunc> (srl i64:$src0, (i32 ShiftAmt32Imm:
                                 $src1, /* clamp */ 0, /* op_sel */ 0)
 >;
 
-def : GCNPat<(DivergentTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
+def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
      (V_ALIGNBIT_B32_fake16_e64 /* src0_modifiers */ 0, $src0,
                                 /* src1_modifiers */ 0, $src1,
                                 /* src2_modifiers */ 0,
@@ -3854,15 +3863,8 @@ class PackB32Pat<Instruction inst> : GCNPat <
   (inst $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
 >;
 }
-let SubtargetPredicate = isGFX9Plus in {
-  def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
-      (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
-  >;
 
-  def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:$src2)),
-      (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), $src2), sub0))
-  >;
-  
+let SubtargetPredicate = isGFX9Plus in {  
 let True16Predicate = NotHasTrue16BitInsts in
   def : PackB32Pat<V_PACK_B32_F16_e64>;
 
