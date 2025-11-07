@@ -27,7 +27,6 @@ LLVM_LIBC_FUNCTION(size_t, strftime,
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
     wb.buff[wb.buff_cur] = '\0';
   return (!ret.has_value() || ret.value() >= buffsz) ? 0 : ret.value();
-  ;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
