@@ -144,6 +144,7 @@ public:
 
 class UseFact : public Fact {
   const Expr *UseExpr;
+  OriginID OID;
   // True if this use is a write operation (e.g., left-hand side of assignment).
   // Write operations are exempted from use-after-free checks.
   bool IsWritten = false;
@@ -151,12 +152,10 @@ class UseFact : public Fact {
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
-  UseFact(const Expr *UseExpr) : Fact(Kind::Use), UseExpr(UseExpr) {}
+  UseFact(const Expr *UseExpr, OriginManager &OM)
+      : Fact(Kind::Use), UseExpr(UseExpr), OID(OM.get(*UseExpr)) {}
 
-  OriginID getUsedOrigin(const OriginManager &OM) const {
-    // TODO: Remove const cast and make OriginManager::get as const.
-    return const_cast<OriginManager &>(OM).get(*UseExpr);
-  }
+  OriginID getUsedOrigin() const { return OID; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }

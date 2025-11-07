@@ -20,7 +20,9 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
@@ -259,9 +261,11 @@ private:
   HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic,
                                    DeclaratorDecl *TargetDecl);
   bool determineActiveSemanticOnScalar(FunctionDecl *FD, DeclaratorDecl *D,
-                                       SemanticInfo &ActiveSemantic);
+                                       SemanticInfo &ActiveSemantic,
+                                       llvm::StringSet<> &ActiveInputSemantics);
   bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
-                               SemanticInfo &ActiveSemantic);
+                               SemanticInfo &ActiveSemantic,
+                               llvm::StringSet<> &ActiveInputSemantics);
 
   void processExplicitBindingsOnDecl(VarDecl *D);
 
