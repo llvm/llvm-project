@@ -2763,50 +2763,6 @@ bool RISCVTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
          (VT.isFixedLengthVector() && VT.getVectorElementType() == MVT::i1);
 }
 
-// Can the given operation be interchanged with a Zicond::CZERO operation
-// Must be:
-// - a SETCC instruction
-// - Must compare a value for [in]equality against 0
-static bool isCzeroCompatible(const SDValue Op) {
-  if (Op.getValueType() == MVT::i1 && Op.getOpcode() == ISD::SETCC &&
-      isNullConstant(Op.getOperand(1))) {
-    ISD::CondCode CondCode = cast<CondCodeSDNode>(Op.getOperand(2))->get();
-    return CondCode == ISD::SETNE || CondCode == ISD::SETEQ;
-  }
-  return false;
-}
-
-// Disable normalizing for most cases
-// select(N0&N1, X, Y) => select(N0, select(N1, X, Y), Y) and
-// select(N0|N1, X, Y) => select(N0, Y, select(N1, X, Y))
-// For select(N0, select(N1, X, Y), Y), if Y=0 and N0=setcc(eqz || nez):
-// %N1 = setcc [any_cond] %A, %B
-// %CZ = czero.eqz %N1, X
-// %Res = czero.eqz %N0, %CZ
-// ...
-// But for select(N0&N1, X, Y):
-// %N0 = setcc [eq/ne] %C, 0
-// %N1 = setcc [any_cond] %A, %B
-// %And = and %N0, %N1
-// %Res = czero.eqz %And, %X
-bool RISCVTargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT VT,
-                                                          SDNode *N) const {
-  if (Subtarget.hasCZEROLike()) {
-    assert(
-        N->getOpcode() == ISD::SELECT &&
-        "shouldNormalizeToSelectSequence() called with non-SELECT operation");
-    const SDValue CondV = N->getOperand(0);
-    const SDValue FalseV = N->getOperand(2);
-    if (CondV.hasOneUse() && isCzeroCompatible(CondV) && isNullConstant(FalseV))
-      return true;
-  }
-  return false;
-}
-
-bool RISCVTargetLowering::hasConditionalZero() const {
-  return Subtarget.hasCZEROLike();
-}
-
 bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
   if (!ScalarTy.isSimple())
     return false;
@@ -16161,25 +16117,6 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
 }
 
-static SDValue combineANDOfSetCCToCZERO(SDNode *N, SelectionDAG &DAG,
-                                        const RISCVSubtarget &Subtarget) {
-  if (Subtarget.hasCZEROLike()) {
-    // (and (i1) f, (setcc c, 0, ne)) -> (select c, f, 0) -> (czero.nez f, c)
-    // (and (i1) f, (setcc c, 0, eq)) -> (select c, 0, f) -> (czero.eqz f, c)
-    // (and (setcc c, 0, ne), (i1) g) -> (select c, g, 0) -> (czero.nez g, c)
-    // (and (setcc c, 0, eq), (i1) g) -> (select c, 0, g) -> (czero.eqz g, c)
-    const bool CzeroOp1 = isCzeroCompatible(N->getOperand(1));
-    if (CzeroOp1 || isCzeroCompatible(N->getOperand(0))) {
-      const SDValue I1Op = CzeroOp1 ? N->getOperand(0) : N->getOperand(1);
-      const SDValue SetCCOp = CzeroOp1 ? N->getOperand(1) : N->getOperand(0);
-      SDLoc DL(N);
-      return DAG.getNode(ISD::SELECT, DL, MVT::i1, SetCCOp, I1Op,
-                         DAG.getConstant(0, DL, MVT::i1));
-    }
-  }
-  return SDValue();
-}
-
 static SDValue reduceANDOfAtomicLoad(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -16243,8 +16180,7 @@ static SDValue performANDCombine(SDNode *N,
 
   if (SDValue V = reverseZExtICmpCombine(N, DAG, Subtarget))
     return V;
-  if (SDValue V = combineANDOfSetCCToCZERO(N, DAG, Subtarget))
-    return V;
+
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))

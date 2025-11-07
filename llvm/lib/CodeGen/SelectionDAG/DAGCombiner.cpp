@@ -12202,9 +12202,7 @@ static SDValue foldBoolSelectToLogic(SDNode *N, const SDLoc &DL,
 
   // select Cond, T, Cond --> and Cond, freeze(T)
   // select Cond, T, 0    --> and Cond, freeze(T)
-  // select Cond, T, 0 is a conditional zero
-  if (Cond == F || (!TLI.hasConditionalZero() &&
-                    isNullOrNullSplat(F, /* AllowUndefs */ true)))
+  if (Cond == F || isNullOrNullSplat(F, /* AllowUndefs */ true))
     return matcher.getNode(ISD::AND, DL, VT, Cond, DAG.getFreeze(T));
 
   // select Cond, T, 1 --> or (not Cond), freeze(T)
@@ -12215,9 +12213,7 @@ static SDValue foldBoolSelectToLogic(SDNode *N, const SDLoc &DL,
   }
 
   // select Cond, 0, F --> and (not Cond), freeze(F)
-  // select Cond, 0, F is a conditional zero
-  if (!TLI.hasConditionalZero() &&
-      isNullOrNullSplat(T, /* AllowUndefs */ true)) {
+  if (isNullOrNullSplat(T, /* AllowUndefs */ true)) {
     SDValue NotCond =
         matcher.getNode(ISD::XOR, DL, VT, Cond, DAG.getAllOnesConstant(DL, VT));
     return matcher.getNode(ISD::AND, DL, VT, NotCond, DAG.getFreeze(F));
@@ -12391,7 +12387,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // and we always transform to the left side if we know that we can further
     // optimize the combination of the conditions.
     bool normalizeToSequence =
-        TLI.shouldNormalizeToSelectSequence(*DAG.getContext(), VT, N);
+        TLI.shouldNormalizeToSelectSequence(*DAG.getContext(), VT);
     // select (and Cond0, Cond1), X, Y
     //   -> select Cond0, (select Cond1, X, Y), Y
     if (N0->getOpcode() == ISD::AND && N0->hasOneUse()) {
