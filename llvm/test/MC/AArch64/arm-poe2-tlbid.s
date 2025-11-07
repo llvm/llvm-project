@@ -14,18 +14,6 @@
 
 // FEAT_TLBID and POE2 combined
 
-plbi alle3is, x0
-// CHECK-INST: plbi alle3is, x0
-// CHECK-ENCODING: encoding: [0x00,0xa3,0x0e,0xd5]
-// CHECK-ERROR: error: specified plbi op does not use a register
-// CHECK-UNKNOWN: d50ea300 sys #6, c10, c3, #0, x0
-
-plbi alle3os, x0
-// CHECK-INST: plbi alle3os, x0
-// CHECK-ENCODING: encoding: [0x00,0xa1,0x0e,0xd5]
-// CHECK-ERROR: error: specified plbi op does not use a register
-// CHECK-UNKNOWN: d50ea100 sys #6, c10, c1, #0, x0
-
 plbi alle2is, x0
 // CHECK-INST: plbi alle2is, x0
 // CHECK-ENCODING: encoding: [0x00,0xa3,0x0c,0xd5]
@@ -62,18 +50,6 @@ plbi vmalle1os, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 // CHECK-UNKNOWN: d508a100 sys #0, c10, c1, #0, x0
 
-plbi alle3isnxs, x0
-// CHECK-INST: plbi alle3isnxs, x0
-// CHECK-ENCODING: encoding: [0x00,0xab,0x0e,0xd5]
-// CHECK-ERROR: error: specified plbi op does not use a register
-// CHECK-UNKNOWN: d50eab00 sys #6, c10, c11, #0, x0
-
-plbi alle3osnxs, x0
-// CHECK-INST: plbi alle3osnxs, x0
-// CHECK-ENCODING: encoding: [0x00,0xa9,0x0e,0xd5]
-// CHECK-ERROR: error: specified plbi op does not use a register
-// CHECK-UNKNOWN: d50ea900 sys #6, c10, c9, #0, x0
-
 plbi alle2isnxs, x0
 // CHECK-INST: plbi alle2isnxs, x0
 // CHECK-ENCODING: encoding: [0x00,0xab,0x0c,0xd5]
@@ -109,9 +85,3 @@ plbi vmalle1osnxs, x0
 // CHECK-ENCODING: encoding: [0x00,0xa9,0x08,0xd5]
 // CHECK-ERROR: error: specified plbi op does not use a register
 // CHECK-UNKNOWN: d508a900 sys #0, c10, c9, #0, x0
-
-plbi alle3is, x0
-// CHECK-INST: plbi alle3is, x0
-// CHECK-ENCODING: encoding: [0x00,0xa3,0x0e,0xd5]
-// CHECK-ERROR: error: specified plbi op does not use a register
-// CHECK-UNKNOWN: d50ea300 sys #6, c10, c3, #0, x0

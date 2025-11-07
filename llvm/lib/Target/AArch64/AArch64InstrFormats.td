@@ -13422,8 +13422,7 @@ class TENTERInst<string asm> : I<
     asm, "\t$imm, $nb", "", []>, Sched<[]> {
   bits<7> imm;
   bits<1> nb;
-  let Inst{31-20} = 0b110101001110;
-  let Inst{19-18} = 0b00;
+  let Inst{31-18} = 0b11010100111000;
   let Inst{17}    = nb;
   let Inst{16-12} = 0b00000;
   let Inst{11-5}  = imm;
@@ -13435,8 +13434,7 @@ class TEXITInst<string asm> : I<
     (ins TIndexhint_op:$nb),
     asm, "\t$nb", "", []>, Sched<[]> {
   bits<1> nb;
-  let Inst{31-13} = 0b1101011011111111000;
-  let Inst{12-11} = 0b00;
+  let Inst{31-11} = 0b110101101111111100000;
   let Inst{10}    = nb;
   let Inst{9-0}   = 0b1111100000;
 }
@@ -13450,8 +13448,8 @@ multiclass TCHANGEReg<string asm , bit isB> {
 
 multiclass TCHANGEImm<string asm, bit isB> {
   def NAME : TCHANGEImmInst<asm, isB>;
-  def      : InstAlias<asm # "\t$Xd, $Xn",
-                      (!cast<Instruction>(NAME) GPR64:$Xd, imm0_127:$Xn, 0), 1>;
+  def      : InstAlias<asm # "\t$Xd, $imm",
+                      (!cast<Instruction>(NAME) GPR64:$Xd, imm0_127:$imm, 0), 1>;
 }
 
 multiclass TENTER<string asm> {

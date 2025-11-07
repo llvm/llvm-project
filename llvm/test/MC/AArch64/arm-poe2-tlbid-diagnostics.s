@@ -5,12 +5,6 @@
 
 // Test without using +tlbid - no optional register operand allowed
 
-plbi alle3is, x0
-// CHECK-ERROR: error: specified plbi op does not use a register
-
-plbi alle3os, x0
-// CHECK-ERROR: error: specified plbi op does not use a register
-
 plbi alle2is, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 
@@ -27,12 +21,6 @@ plbi vmalle1is, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 
 plbi vmalle1os, x0
-// CHECK-ERROR: error: specified plbi op does not use a register
-
-plbi alle3isnxs, x0
-// CHECK-ERROR: error: specified plbi op does not use a register
-
-plbi alle3osnxs, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 
 plbi alle2isnxs, x0
@@ -54,10 +42,6 @@ plbi vmalle1osnxs, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 
 // Tests where no optional register operand allowed
-plbi alle3, x0
-// CHECK-ERROR: error: specified plbi op does not use a register
-// CHECK-NO-REGISTER: error: specified plbi op does not use a register
-
 plbi alle2, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 // CHECK-NO-REGISTER: error: specified plbi op does not use a register
@@ -67,10 +51,6 @@ plbi alle1, x0
 // CHECK-NO-REGISTER: error: specified plbi op does not use a register
 
 plbi vmalle1, x0
-// CHECK-ERROR: error: specified plbi op does not use a register
-// CHECK-NO-REGISTER: error: specified plbi op does not use a register
-
-plbi alle3nxs, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 // CHECK-NO-REGISTER: error: specified plbi op does not use a register
 

@@ -2938,22 +2938,22 @@ tchangeb x1, #9, nB
 // CHECK-ERROR: error: instruction requires: poe2
 
 
-PLBI ALLE3
-// CHECK-INST:    plbi alle3
-// CHECK-ENCODING: [0x1f,0xa7,0x0e,0xd5]
-// CHECK-UNKNOWN: d50ea71f sys  #6, c10, c7, #0
+PLBI ALLE3, x3
+// CHECK-INST:    plbi alle3, x3
+// CHECK-ENCODING: [0x03,0xa7,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ea703 sys  #6, c10, c7, #0, x3
 // CHECK-ERROR: error: PLBI ALLE3 requires: poe2
 
-PLBI ALLE3IS
-// CHECK-INST:    plbi alle3is
-// CHECK-ENCODING: [0x1f,0xa3,0x0e,0xd5]
-// CHECK-UNKNOWN: d50ea31f sys  #6, c10, c3, #0
+PLBI ALLE3IS, x3
+// CHECK-INST:    plbi alle3is, x3
+// CHECK-ENCODING: [0x03,0xa3,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ea303 sys  #6, c10, c3, #0, x3
 // CHECK-ERROR: error: PLBI ALLE3IS requires: poe2
 
-PLBI ALLE3OS
-// CHECK-INST:    plbi alle3os
-// CHECK-ENCODING: [0x1f,0xa1,0x0e,0xd5]
-// CHECK-UNKNOWN: d50ea11f sys  #6, c10, c1, #0
+PLBI ALLE3OS, x3
+// CHECK-INST:    plbi alle3os, x3
+// CHECK-ENCODING: [0x03,0xa1,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ea103 sys  #6, c10, c1, #0, x3
 // CHECK-ERROR: error: PLBI ALLE3OS requires: poe2
 
 PLBI ALLE2
@@ -3082,22 +3082,22 @@ PLBI PERME1OS, X3
 // CHECK-UNKNOWN: d508a123 sys  #0, c10, c1, #1, x3
 // CHECK-ERROR: error: PLBI PERME1OS requires: poe2
 
-PLBI ALLE3NXS
-// CHECK-INST:    plbi alle3nxs
-// CHECK-ENCODING: [0x1f,0xaf,0x0e,0xd5]
-// CHECK-UNKNOWN: d50eaf1f sys  #6, c10, c15, #0
+PLBI ALLE3NXS, X3
+// CHECK-INST:    plbi alle3nxs, x3
+// CHECK-ENCODING: [0x03,0xaf,0x0e,0xd5]
+// CHECK-UNKNOWN: d50eaf03 sys  #6, c10, c15, #0, x3
 // CHECK-ERROR: error: PLBI ALLE3NXS requires: poe2
 
-PLBI ALLE3ISNXS
-// CHECK-INST:    plbi alle3isnxs
-// CHECK-ENCODING: [0x1f,0xab,0x0e,0xd5]
-// CHECK-UNKNOWN: d50eab1f sys  #6, c10, c11, #0
+PLBI ALLE3ISNXS, X3
+// CHECK-INST:    plbi alle3isnxs, x3
+// CHECK-ENCODING: [0x03,0xab,0x0e,0xd5]
+// CHECK-UNKNOWN: d50eab03 sys  #6, c10, c11, #0, x3
 // CHECK-ERROR: error: PLBI ALLE3ISNXS requires: poe2
 
-PLBI ALLE3OSNXS
-// CHECK-INST:    plbi alle3osnxs
-// CHECK-ENCODING: [0x1f,0xa9,0x0e,0xd5]
-// CHECK-UNKNOWN: d50ea91f sys  #6, c10, c9, #0
+PLBI ALLE3OSNXS, X3
+// CHECK-INST:    plbi alle3osnxs, x3
+// CHECK-ENCODING: [0x03,0xa9,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ea903 sys  #6, c10, c9, #0, x3
 // CHECK-ERROR: error: PLBI ALLE3OSNXS requires: poe2
 
 PLBI ALLE2NXS

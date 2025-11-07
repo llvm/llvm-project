@@ -819,7 +819,6 @@ def : BTI<"c",  0b010>;
 def : BTI<"j",  0b100>;
 def : BTI<"jc", 0b110>;
 
-
 //===----------------------------------------------------------------------===//
 // CMHPriority instruction options.
 //===----------------------------------------------------------------------===//
@@ -2862,7 +2861,7 @@ multiclass PLBI<string name, bits<3> op1, bits<4> crn, bits<3> op2,
 
 // CRm defines above six variants of each instruction. It is omitted here.
 //                     Op1    CRn     Op2    needsreg
-defm : PLBI<"ALLE3",   0b110, 0b1010, 0b000, 0>;
+defm : PLBI<"ALLE3",   0b110, 0b1010, 0b000, 1>;
 defm : PLBI<"ALLE2",   0b100, 0b1010, 0b000, 0>;
 defm : PLBI<"ALLE1",   0b100, 0b1010, 0b100, 0>;
 defm : PLBI<"VMALLE1", 0b000, 0b1010, 0b000, 0>;
