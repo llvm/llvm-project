@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MisleadingIdentifier.h"
+#include "MisleadingIdentifierCheck.h"
 
 #include "llvm/Support/ConvertUTF.h"
 

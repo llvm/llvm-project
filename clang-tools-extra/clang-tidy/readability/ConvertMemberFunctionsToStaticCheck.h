@@ -6,30 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef THIRD_PARTY_LLVM_LLVM_PROJECT_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_OBJCASSERTEQUALS_H_
-#define THIRD_PARTY_LLVM_LLVM_PROJECT_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_OBJCASSERTEQUALS_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMFUNCTOSTATICCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMFUNCTOSTATICCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 
-namespace clang::tidy::objc {
+namespace clang::tidy::readability {
 
-/// Warn if XCTAssertEqual() or XCTAssertNotEqual() is used with at least one
-/// operands of type NSString*.
+/// This check finds C++ class methods than can be made static
+/// because they don't use the 'this' pointer.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/objc/assert-equals.html
-class AssertEquals final : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/
+/// readability/convert-member-functions-to-static.html
+class ConvertMemberFunctionsToStaticCheck : public ClangTidyCheck {
 public:
-  AssertEquals(StringRef Name, ClangTidyContext *Context)
+  ConvertMemberFunctionsToStaticCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.ObjC;
+    return LangOpts.CPlusPlus;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace clang::tidy::objc
+} // namespace clang::tidy::readability
 
-#endif // THIRD_PARTY_LLVM_LLVM_PROJECT_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_OBJCASSERTEQUALS_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMFUNCTOSTATICCHECK_H

@@ -13,6 +13,12 @@
 
 namespace clang::tidy::misc {
 
+/// Finds identifiers that contain Unicode characters with right-to-left
+/// direction, which can be confusing as they may change the understanding of a
+/// whole statement line.
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/misleading-identifier.html
 class MisleadingIdentifierCheck : public ClangTidyCheck {
 public:
   MisleadingIdentifierCheck(StringRef Name, ClangTidyContext *Context);

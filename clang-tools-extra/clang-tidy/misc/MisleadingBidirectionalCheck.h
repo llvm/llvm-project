@@ -13,6 +13,10 @@
 
 namespace clang::tidy::misc {
 
+/// Warn about unterminated bidirectional unicode sequence.
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/misleading-bidirectional.html
 class MisleadingBidirectionalCheck : public ClangTidyCheck {
 public:
   MisleadingBidirectionalCheck(StringRef Name, ClangTidyContext *Context);

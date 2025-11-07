@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AssertEquals.h"
+#include "AssertEqualsCheck.h"
 
 #include <map>
 #include <string>
@@ -25,7 +25,7 @@ static const std::map<std::string, std::string> &nameMap() {
   return Map;
 }
 
-void AssertEquals::registerMatchers(MatchFinder *Finder) {
+void AssertEqualsCheck::registerMatchers(MatchFinder *Finder) {
   for (const auto &Pair : nameMap()) {
     Finder->addMatcher(
         binaryOperator(anyOf(hasOperatorName("!="), hasOperatorName("==")),
@@ -41,7 +41,8 @@ void AssertEquals::registerMatchers(MatchFinder *Finder) {
   }
 }
 
-void AssertEquals::check(const ast_matchers::MatchFinder::MatchResult &Result) {
+void AssertEqualsCheck::check(
+    const ast_matchers::MatchFinder::MatchResult &Result) {
   for (const auto &Pair : nameMap()) {
     if (const auto *Root = Result.Nodes.getNodeAs<BinaryOperator>(Pair.first)) {
       SourceManager *Sm = Result.SourceManager;
