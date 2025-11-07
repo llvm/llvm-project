@@ -2563,12 +2563,11 @@ public:
                     FuncImportedEntityT &&FuncIE, FuncUnknownT &&FuncUnknown) {
     if (const auto *LV = dyn_cast<DILocalVariable>(N))
       return FuncLV(LV);
-    else if (const auto *L = dyn_cast<DILabel>(N))
+    if (const auto *L = dyn_cast<DILabel>(N))
       return FuncLabel(L);
-    else if (const auto *IE = dyn_cast<DIImportedEntity>(N))
+    if (const auto *IE = dyn_cast<DIImportedEntity>(N))
       return FuncIE(IE);
-    else
-      return FuncUnknown(N);
+    return FuncUnknown(N);
   }
 
   /// Returns the scope of subprogram's retainedNodes.
