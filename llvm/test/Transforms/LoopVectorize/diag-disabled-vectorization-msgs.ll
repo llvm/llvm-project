@@ -41,7 +41,7 @@
 ; FORCEDONLY-SAME: loop not vectorized: only vectorizing loops that explicitly request it
 ; FORCEDONLY: LV: Loop hints prevent vectorization
 
-define double @disabled_loop_vectorization(ptr %src) {
+define i64 @disabled_loop_vectorization(ptr %src) {
 entry:
   br label %loop
 
