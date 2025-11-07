@@ -632,6 +632,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
     return Builder.CreateNot(A, Name);
   }
+  case Instruction::ExtractValue: {
+    assert(getNumOperands() == 2 && "expected single level extractvalue");
+    Value *Op = State.get(getOperand(0));
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    return Builder.CreateExtractValue(Op, CI->getZExtValue());
+  }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
     if (getOperand(1)->isLiveIn()) {
@@ -1204,6 +1210,7 @@ bool VPInstruction::isVectorToScalar() const {
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
   case Instruction::PHI:
+  case Instruction::ExtractValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::VScale:
@@ -1750,7 +1757,16 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1, State.TTI))
+  if (ResultTy->isStructTy()) {
+    auto *StructTy = cast<StructType>(ResultTy);
+    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; ++I) {
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID, I,
+                                                           State.TTI))
+        TysForDecl.push_back(
+            toVectorizedTy(StructTy->getStructElementType(I), State.VF));
+    }
+  } else if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
+                                                    State.TTI))
     TysForDecl.push_back(VectorType::get(getResultType(), State.VF));
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
@@ -1814,8 +1830,19 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
     Arguments.push_back(V);
   }
 
-  Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
-  Type *RetTy = VF.isVector() ? toVectorizedTy(ScalarRetTy, VF) : ScalarRetTy;
+  Type *RetTy = Ctx.Types.inferScalarType(&R);
+  if (RetTy->isStructTy()) {
+    auto *StructTy = cast<StructType>(RetTy);
+    SmallVector<Type *> Tys;
+    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; ++I) {
+      Type *ElementTy = StructTy->getStructElementType(I);
+      if (!isVectorIntrinsicWithStructReturnScalarAtField(ID, I))
+        ElementTy = toVectorizedTy(ElementTy, VF);
+      Tys.push_back(ElementTy);
+    }
+    RetTy = StructType::get(StructTy->getContext(), Tys);
+  } else if (VF.isVector())
+    RetTy = toVectorizedTy(RetTy, VF);
   SmallVector<Type *> ParamTys;
   for (const VPValue *Op : Operands) {
     ParamTys.push_back(VF.isVector()

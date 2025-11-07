@@ -175,6 +175,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return (ScalarOpdIdx == 2);
   case Intrinsic::experimental_vp_splice:
     return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
+  case Intrinsic::vp_load_ff:
+    return ScalarOpdIdx == 0 || ScalarOpdIdx == 2;
   default:
     return false;
   }
@@ -212,8 +214,20 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::powi:
   case Intrinsic::ldexp:
     return OpdIdx == -1 || OpdIdx == 1;
+  case Intrinsic::vp_load_ff:
+    return OpdIdx == 0;
   default:
     return OpdIdx == -1;
+  }
+}
+
+bool llvm::isVectorIntrinsicWithStructReturnScalarAtField(Intrinsic::ID ID,
+                                                          int RetIdx) {
+  switch (ID) {
+  case Intrinsic::vp_load_ff:
+    return RetIdx == 1;
+  default:
+    return false;
   }
 }
 
@@ -224,6 +238,10 @@ bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
     return TTI->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
 
   switch (ID) {
+  case Intrinsic::modf:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
+    return false;
   case Intrinsic::frexp:
     return RetIdx == 0 || RetIdx == 1;
   default:

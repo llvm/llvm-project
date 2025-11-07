@@ -24955,6 +24955,27 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
     return false;
 
   // Only support fixed vectors if we know the minimum vector size.
+  if (DataType.isFixedLengthVector() &&
+      !Subtarget.useRVVForFixedLengthVectors())
+    return false;
+
+  EVT ScalarType = DataType.getScalarType();
+  if (!isLegalElementTypeForRVV(ScalarType))
+    return false;
+
+  if (!Subtarget.enableUnalignedVectorMem() &&
+      Alignment < ScalarType.getStoreSize())
+    return false;
+
+  return true;
+}
+
+bool RISCVTargetLowering::isLegalFirstFaultLoad(EVT DataType,
+                                                Align Alignment) const {
+  if (!Subtarget.hasVInstructions())
+    return false;
+
+  // Only support fixed vectors if we know the minimum vector size.
   if (DataType.isFixedLengthVector() && !Subtarget.useRVVForFixedLengthVectors())
     return false;
 
