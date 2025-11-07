@@ -17,15 +17,17 @@ define i64 @bar(i64 %0, i1 %1, i64 %num) {
 ; CHECK:       case1:
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[SUCC]], label [[FOO_THREAD]]
 ; CHECK:       case2:
-; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT2]], label [[EXIT2]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT2]], label [[FOO_THREAD]]
+; CHECK:       foo.thread:
+; CHECK-NEXT:    [[PHI1_PH:%.*]] = phi i64 [ 1, [[CASE2]] ], [ 0, [[CASE1]] ], [ 0, [[CASE0]] ]
+; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[NUM:%.*]], [[CASE1]] ], [ [[NUM]], [[CASE0]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[NUM:%.*]], [[CASE1]] ], [ [[NUM]], [[CASE0]] ], [ [[PHI1_PH]], [[FOO_THREAD]] ]
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[PHI2]], 0
-; CHECK-NEXT:    br i1 [[COND2]], label [[FOO_THREAD]], label [[EXIT2]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[EXIT:%.*]], label [[EXIT2]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI25:%.*]] = phi i64 [ [[PHI2]], [[SUCC]] ], [ 0, [[CASE1]] ], [ 0, [[CASE0]] ]
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    ret i64 [[PHI25]]
+; CHECK-NEXT:    ret i64 [[PHI2]]
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i64 0
 ;
@@ -61,5 +63,59 @@ exit:
 exit2:
   ret i64 0
 }
+
+define i64 @multicase(i64 %0, i1 %1, i64 %num) {
+; CHECK-LABEL: @multicase(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i64 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i64 0, label [[FOO:%.*]]
+; CHECK-NEXT:      i64 1, label [[FOO]]
+; CHECK-NEXT:      i64 2, label [[SUCC:%.*]]
+; CHECK-NEXT:      i64 3, label [[SUCC]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[FOO]]
+; CHECK:       foo:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[ENTRY]] ], [ 1, [[DEFAULT]] ]
+; CHECK-NEXT:    br label [[SUCC]]
+; CHECK:       succ:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[NUM:%.*]], [[ENTRY]] ], [ [[NUM]], [[ENTRY]] ], [ [[PHI1]], [[FOO]] ]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[PHI2]], 0
+; CHECK-NEXT:    br i1 [[COND2]], label [[EXIT:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    ret i64 [[PHI2]]
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  switch i64 %0, label %default [
+  i64 0, label %foo
+  i64 1, label %foo
+  i64 2, label %succ
+  i64 3, label %succ
+  ]
+
+default:                                          ; preds = %entry
+  br label %foo
+
+foo:                                              ; preds = %default, %entry, %entry
+  %phi1 = phi i64 [ 0, %entry ], [ 0, %entry ], [ 1, %default ]
+  %cond1 = icmp ult i64 %phi1, 2
+  br i1 %cond1, label %succ, label %exit2
+
+succ:                                             ; preds = %foo, %entry, %entry
+  %phi2 = phi i64 [ %num, %entry ], [ %num, %entry ], [ %phi1, %foo ]
+  %cond2 = icmp eq i64 %phi2, 0
+  br i1 %cond2, label %exit, label %exit2
+
+exit:                                             ; preds = %succ
+  call void @foo()
+  ret i64 %phi2
+
+exit2:                                            ; preds = %succ, %foo
+  ret i64 0
+}
+
 
 declare void @foo()
