@@ -179,10 +179,11 @@ private:
       m_preserved_bps;
 
 public:
-  typedef llvm::iterator_range<collection::const_iterator>
+  typedef LockingAdaptedIterable<std::mutex, collection>
       BreakpointLocationCollectionIterable;
   BreakpointLocationCollectionIterable BreakpointLocations() {
-    return BreakpointLocationCollectionIterable(m_break_loc_collection);
+    return BreakpointLocationCollectionIterable(m_break_loc_collection,
+                                                m_collection_mutex);
   }
 };
 } // namespace lldb_private
