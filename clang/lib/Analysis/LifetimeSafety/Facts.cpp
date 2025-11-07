@@ -64,8 +64,8 @@ void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
 
 llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {
   llvm::StringMap<ProgramPoint> AnnotationToPointMap;
-  for (const CFGBlock *Block : BlockToFactsMap.keys()) {
-    for (const Fact *F : getFacts(Block)) {
+  for (const auto &BlockFacts : BlockToFacts) {
+    for (const Fact *F : BlockFacts) {
       if (const auto *TPF = F->getAs<TestPointFact>()) {
         StringRef PointName = TPF->getAnnotation();
         assert(AnnotationToPointMap.find(PointName) ==
@@ -88,12 +88,9 @@ void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC) const {
   // Print blocks in the order as they appear in code for a stable ordering.
   for (const CFGBlock *B : *AC.getAnalysis<PostOrderCFGView>()) {
     llvm::dbgs() << "  Block B" << B->getBlockID() << ":\n";
-    auto It = BlockToFactsMap.find(B);
-    if (It != BlockToFactsMap.end()) {
-      for (const Fact *F : It->second) {
-        llvm::dbgs() << "    ";
-        F->dump(llvm::dbgs(), LoanMgr, OriginMgr);
-      }
+    for (const Fact *F : getFacts(B)) {
+      llvm::dbgs() << "    ";
+      F->dump(llvm::dbgs(), LoanMgr, OriginMgr);
     }
     llvm::dbgs() << "  End of Block\n";
   }
