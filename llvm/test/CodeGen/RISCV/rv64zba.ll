@@ -945,11 +945,25 @@ define i64 @addmul146(i64 %a, i64 %b) {
 }
 
 define i64 @mul49(i64 %a) {
-; CHECK-LABEL: mul49:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 49
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul49:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 49
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul49:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 4
+; RV64ZBA-NEXT:    sh1add a1, a1, a1
+; RV64ZBA-NEXT:    add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: mul49:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    slli a1, a0, 4
+; RV64XANDESPERF-NEXT:    nds.lea.h a1, a1, a1
+; RV64XANDESPERF-NEXT:    add a0, a1, a0
+; RV64XANDESPERF-NEXT:    ret
   %c = mul i64 %a, 49
   ret i64 %c
 }
@@ -965,17 +979,17 @@ define i64 @zext_mul49(i32 signext %a) {
 ;
 ; RV64ZBA-LABEL: zext_mul49:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a0, a0
-; RV64ZBA-NEXT:    li a1, 49
-; RV64ZBA-NEXT:    mul a0, a0, a1
+; RV64ZBA-NEXT:    slli.uw a1, a0, 4
+; RV64ZBA-NEXT:    sh1add a1, a1, a1
+; RV64ZBA-NEXT:    add.uw a0, a0, a1
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: zext_mul49:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    li a1, 49
-; RV64XANDESPERF-NEXT:    slli a1, a1, 32
-; RV64XANDESPERF-NEXT:    slli a0, a0, 32
-; RV64XANDESPERF-NEXT:    mulhu a0, a0, a1
+; RV64XANDESPERF-NEXT:    slli a1, a0, 32
+; RV64XANDESPERF-NEXT:    srli a1, a1, 28
+; RV64XANDESPERF-NEXT:    nds.lea.h a1, a1, a1
+; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a1, a0
 ; RV64XANDESPERF-NEXT:    ret
   %b = zext i32 %a to i64
   %c = mul i64 %b, 49
@@ -1083,21 +1097,49 @@ define i64 @addmul100(i64 %a, i64 %b) {
 }
 
 define i64 @mul145(i64 %a) {
-; CHECK-LABEL: mul145:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 145
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul145:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 145
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul145:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 4
+; RV64ZBA-NEXT:    sh3add a1, a1, a1
+; RV64ZBA-NEXT:    add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: mul145:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    slli a1, a0, 4
+; RV64XANDESPERF-NEXT:    nds.lea.d a1, a1, a1
+; RV64XANDESPERF-NEXT:    add a0, a1, a0
+; RV64XANDESPERF-NEXT:    ret
   %c = mul i64 %a, 145
   ret i64 %c
 }
 
 define i64 @mul161(i64 %a) {
-; CHECK-LABEL: mul161:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 161
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul161:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 161
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul161:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 5
+; RV64ZBA-NEXT:    sh2add a1, a1, a1
+; RV64ZBA-NEXT:    add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: mul161:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    slli a1, a0, 5
+; RV64XANDESPERF-NEXT:    nds.lea.w a1, a1, a1
+; RV64XANDESPERF-NEXT:    add a0, a1, a0
+; RV64XANDESPERF-NEXT:    ret
   %c = mul i64 %a, 161
   ret i64 %c
 }
