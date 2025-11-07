@@ -1001,8 +1001,9 @@ static void replaceUndefValuesInPhi(PHINode *PN,
   }
 }
 
-// Only when there exists other incoming blocks besides the common predecessors
-// of BB and Succ, return true.
+// The function gets all the common predecessors of BB and Succ, and returns
+// true only if 1) all the common predecessors are the same, or 2) there
+// exists other incoming blocks besides the common predecessors.
 // Only handles cases when BB can't be merged while its predecessors can be
 // redirected.
 static bool
