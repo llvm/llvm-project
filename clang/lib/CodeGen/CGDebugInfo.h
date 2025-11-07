@@ -831,7 +831,6 @@ private:
                          unsigned LineNo, StringRef LinkageName,
                          llvm::GlobalVariable *Var, llvm::DIScope *DContext);
 
-
   /// Get the printing policy for producing names for debug info.
   PrintingPolicy getPrintingPolicy() const;
 
