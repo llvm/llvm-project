@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Generate skeletal functions with a variety .cfi_ directives.
 The purpose is to produce object-file test inputs to lld with a

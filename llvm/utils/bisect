@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # The way you use this is you create a script that takes in as its first
 # argument a count. The script passes into LLVM the count via a command

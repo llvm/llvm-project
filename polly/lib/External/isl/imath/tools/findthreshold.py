@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##
 ## Name:     findthreshold.py
 ## Purpose:  Find a good threshold for recursive multiplication.

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 desc = """
 A script to extract ConstraintElimination's reproducer remarks. The extracted

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This script extracts the VPlan digraphs from the vectoriser debug messages
 # and saves them in individual dot files (one for each plan). Optionally, and
