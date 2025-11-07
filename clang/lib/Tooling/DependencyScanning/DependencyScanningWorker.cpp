@@ -43,6 +43,9 @@ DependencyScanningWorker::DependencyScanningWorker(
   }
 }
 
+DependencyScanningWorker::~DependencyScanningWorker() = default;
+DependencyActionController::~DependencyActionController() = default;
+
 llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
@@ -53,21 +56,6 @@ llvm::Error DependencyScanningWorker::computeDependencies(
 
   if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
                           DiagPrinterWithOS.DiagPrinter, TUBuffer))
-    return llvm::Error::success();
-  return llvm::make_error<llvm::StringError>(
-      DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
-}
-
-llvm::Error DependencyScanningWorker::computeDependencies(
-    StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
-    DependencyConsumer &Consumer, DependencyActionController &Controller,
-    StringRef ModuleName) {
-  // Capture the emitted diagnostics and report them to the client
-  // in the case of a failure.
-  TextDiagnosticsPrinterWithOutput DiagPrinterWithOS(CommandLine);
-
-  if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                          DiagPrinterWithOS.DiagPrinter, ModuleName))
     return llvm::Error::success();
   return llvm::make_error<llvm::StringError>(
       DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
@@ -113,11 +101,11 @@ static bool createAndRunToolInvocation(
 bool DependencyScanningWorker::scanDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
-    DiagnosticConsumer &DC, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-    std::optional<StringRef> ModuleName) {
+    DiagnosticConsumer &DC,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
   DignosticsEngineWithDiagOpts DiagEngineWithCmdAndOpts(CommandLine, FS, DC);
   DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
-                                  Controller, DepFS, ModuleName);
+                                  Controller, DepFS);
 
   bool Success = false;
   if (CommandLine[1] == "-cc1") {
@@ -172,24 +160,51 @@ bool DependencyScanningWorker::computeDependencies(
     auto [FinalFS, FinalCommandLine] = initVFSForTUBuferScanning(
         BaseFS, CommandLine, WorkingDirectory, *TUBuffer);
     return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
-                            Controller, DC, FinalFS,
-                            /*ModuleName=*/std::nullopt);
+                            Controller, DC, FinalFS);
   } else {
     BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
     return scanDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                            DC, BaseFS, /*ModuleName=*/std::nullopt);
+                            DC, BaseFS);
   }
 }
 
-bool DependencyScanningWorker::computeDependencies(
-    StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
-    DependencyConsumer &Consumer, DependencyActionController &Controller,
-    DiagnosticConsumer &DC, StringRef ModuleName) {
-  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
-      BaseFS, CommandLine, WorkingDirectory, ModuleName);
-
-  return scanDependencies(WorkingDirectory, ModifiedCommandLine, Consumer,
-                          Controller, DC, OverlayFS, ModuleName);
+llvm::Error
+DependencyScanningWorker::initializeCompilerInstanceWithContextOrError(
+    StringRef CWD, const std::vector<std::string> &CommandLine) {
+  bool Success = initializeCompilerInstanceWithContext(CWD, CommandLine);
+  return CIWithContext->handleReturnStatus(Success);
 }
 
-DependencyActionController::~DependencyActionController() {}
+llvm::Error
+DependencyScanningWorker::computeDependenciesByNameWithContextOrError(
+    StringRef ModuleName, DependencyConsumer &Consumer,
+    DependencyActionController &Controller) {
+  bool Success =
+      computeDependenciesByNameWithContext(ModuleName, Consumer, Controller);
+  return CIWithContext->handleReturnStatus(Success);
+}
+
+llvm::Error
+DependencyScanningWorker::finalizeCompilerInstanceWithContextOrError() {
+  bool Success = finalizeCompilerInstance();
+  return CIWithContext->handleReturnStatus(Success);
+}
+
+bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
+    StringRef CWD, const std::vector<std::string> &CommandLine,
+    DiagnosticConsumer *DC) {
+  CIWithContext =
+      std::make_unique<CompilerInstanceWithContext>(*this, CWD, CommandLine);
+  return CIWithContext->initialize(DC);
+}
+
+bool DependencyScanningWorker::computeDependenciesByNameWithContext(
+    StringRef ModuleName, DependencyConsumer &Consumer,
+    DependencyActionController &Controller) {
+  assert(CIWithContext && "CompilerInstance with context required!");
+  return CIWithContext->computeDependencies(ModuleName, Consumer, Controller);
+}
+
+bool DependencyScanningWorker::finalizeCompilerInstance() {
+  return CIWithContext->finalize();
+}
