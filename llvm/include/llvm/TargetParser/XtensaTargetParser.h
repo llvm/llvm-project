@@ -15,7 +15,6 @@
 #define LLVM_TARGETPARSER_XTENSATARGETPARSER_H
 
 #include "llvm/TargetParser/Triple.h"
-#include <vector>
 
 namespace llvm {
 class StringRef;

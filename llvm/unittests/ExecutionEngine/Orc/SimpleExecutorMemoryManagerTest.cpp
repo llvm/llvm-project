@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 
 #include <limits>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::orc;
