@@ -2,7 +2,6 @@
 
 import os
 import sys
-import argparse
 import pathlib
 
 # Adapt to location in source tree
@@ -12,26 +11,13 @@ sys.path.insert(0, os.path.join(llvmsrcroot, '.buildbot/common'))
 import worker
 
 
-# For information
-for k,v in os.environ.items():
-    print(f"{k}={v}")
 
-def relative_if_possible(path, relative_to):
-    path = os.path.normpath(path)
-    try:
-        result = os.path.relpath(path, start=relative_to)
-        return result if result else path
-    except Exception:
-        return  path
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--cachefile', default=relative_if_possible(pathlib.Path(__file__).with_suffix('.cmake'), llvmsrcroot), help='CMake cache seed')
-parser.add_argument('--jobs', '-j', help='Override the number fo default jobs')
-parser.add_argument('--clean', type=bool, default=os.environ.get('BUILDBOT_CLEAN'), help='Whether to delete source-, install-, and build-dirs before running')
-parser.add_argument('--clobber', type=bool, default=os.environ.get('BUILDBOT_CLOBBER'), help='Whether to delete install- and build-dirs before running')
+parser = worker.common_init()
+parser.add_argument('--cachefile', default=worker.relative_if_possible(pathlib.Path(__file__).with_suffix('.cmake'), llvmsrcroot), help='CMake cache seed')
 args, _ = parser.parse_known_args()
 
+if args.workdir:
+ os.chdir(args.workdir)
 
 cwd = os.getcwd()
 
@@ -88,11 +74,13 @@ with worker.step('configure-testsuite', halt_on_fail=True):
         '-DCMAKE_BUILD_TYPE=Release',
         f'-DCMAKE_C_COMPILER={os.path.abspath(llvminstalldir)}/bin/clang',
         f'-DCMAKE_CXX_COMPILER={os.path.abspath(llvminstalldir)}/bin/clang++',
-        f'-DCMAKE_C_FLAGS=-mllvm -polly',
-        f'-DCMAKE_CXX_FLAGS=-mllvm -polly',
+        f'-DTEST_SUITE_LIT={os.path.abspath(llvmbuilddir)}/bin/llvm-lit',
+        f'-DTEST_SUITE_LLVM_SIZE={os.path.abspath(llvmbuilddir)}/bin/llvm-size',
+        "-DTEST_SUITE_EXTRA_C_FLAGS=-Wno-unused-command-line-argument -mllvm -polly",
+        "-DTEST_SUITE_EXTRA_CXX_FLAGS=-Wno-unused-command-line-argument -mllvm -polly",
     ]
     if args.jobs:
-        cmd.append(f'-DLLVM_LIT_ARGS=-svj{args.jobs}')
+        cmd.append(f'-DLLVM_LIT_ARGS=-svj{args.jobs};-o;report.json')
     worker.run_command(cmd)
 
 with worker.step('build-testsuite', halt_on_fail=True):
