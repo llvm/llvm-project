@@ -354,8 +354,8 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
     return Plugin::success();
   }
 
-  int32_t NumTeams = NumThreads[0];
-  int32_t ThreadLimit = NumBlocks[0];
+  int32_t NumTeams = NumBlocks[0];
+  int32_t ThreadLimit = NumThreads[0];
   if (NumTeams < 0)
     NumTeams = 0;
   if (ThreadLimit < 0)
