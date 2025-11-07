@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c23 -fdefer-ts -fsyntax-only -verify %s
 
+#define defer _Defer
+
 void a();
 
 void f1() {

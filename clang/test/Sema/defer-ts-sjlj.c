@@ -14,7 +14,7 @@ void siglongjmp(sigjmp_buf env, int val);
 jmp_buf x;
 sigjmp_buf y;
 void f() {
-    defer {
+    _Defer {
         __builtin_setjmp(x); // expected-error {{cannot use '__builtin_setjmp' inside a defer statement}}
         __builtin_longjmp(x, 1); // expected-error {{cannot use '__builtin_longjmp' inside a defer statement}}
         setjmp(x); // expected-error {{cannot use 'setjmp' inside a defer statement}}
@@ -36,7 +36,7 @@ void f() {
             _longjmp(x, 0);
             siglongjmp(y, 0);
 
-            defer {
+            _Defer {
                 __builtin_setjmp(x); // expected-error {{cannot use '__builtin_setjmp' inside a defer statement}}
                 __builtin_longjmp(x, 1); // expected-error {{cannot use '__builtin_longjmp' inside a defer statement}}
                 setjmp(x); // expected-error {{cannot use 'setjmp' inside a defer statement}}

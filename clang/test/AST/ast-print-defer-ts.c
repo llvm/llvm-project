@@ -4,30 +4,30 @@ void g();
 
 // CHECK: void f
 void f() {
-    // CHECK-NEXT: defer
+    // CHECK-NEXT: _Defer
     // CHECK-NEXT:     g();
-    // CHECK-NEXT: defer
-    // CHECK-NEXT:     defer
+    // CHECK-NEXT: _Defer
+    // CHECK-NEXT:     _Defer
     // CHECK-NEXT:         g();
-    // CHECK-NEXT: defer {
+    // CHECK-NEXT: _Defer {
     // CHECK-NEXT: }
-    // CHECK-NEXT: defer {
+    // CHECK-NEXT: _Defer {
     // CHECK-NEXT:     int x;
     // CHECK-NEXT: }
-    // CHECK-NEXT: defer
+    // CHECK-NEXT: _Defer
     // CHECK-NEXT:     if (1) {
     // CHECK-NEXT:     }
-    defer
+    _Defer
         g();
-    defer
-        defer
+    _Defer
+        _Defer
             g();
-    defer {
+    _Defer {
     }
-    defer {
+    _Defer {
         int x;
     }
-    defer
+    _Defer
         if (1) {
         }
 }

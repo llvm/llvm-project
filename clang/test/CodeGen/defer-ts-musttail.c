@@ -2,6 +2,6 @@
 
 int bar() { return 12; }
 int foo() {
-  defer {};
+  _Defer {};
   [[clang::musttail]] return bar(); // expected-error {{cannot compile this tail call skipping over cleanups yet}}
 }

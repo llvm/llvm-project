@@ -5,7 +5,7 @@ void h();
 
 void f() {
   __try {
-    defer h();
+    _Defer h();
     g();
   } __finally {
 

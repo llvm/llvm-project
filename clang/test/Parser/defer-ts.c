@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=c11 -fsyntax-only -fdefer-ts -verify %s
 // RUN: %clang_cc1 -std=c23 -fsyntax-only -fdefer-ts -verify %s
 
+#define defer _Defer
+
 int g(void);
 int h(int x);
 
@@ -27,8 +29,8 @@ void f1(void) {
   defer
     ;
 
-  defer a: g(); // expected-error {{substatement of 'defer' must not be a label}}
-  defer b: {} // expected-error {{substatement of 'defer' must not be a label}}
+  defer a: g(); // expected-error {{substatement of defer must not be a label}}
+  defer b: {} // expected-error {{substatement of defer must not be a label}}
   defer { c: g(); }
 
   if (g()) defer g();

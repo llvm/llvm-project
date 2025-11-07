@@ -313,7 +313,7 @@ Retry:
     Res = ParseReturnStatement();
     SemiError = "co_return";
     break;
-  case tok::kw_defer: // C defer TS: defer-statement
+  case tok::kw__Defer: // C defer TS: defer-statement
     return ParseDeferStatement(TrailingElseLoc);
 
   case tok::kw_asm: {
@@ -2380,7 +2380,7 @@ StmtResult Parser::ParseReturnStatement() {
 }
 
 StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
-  assert(Tok.is(tok::kw_defer));
+  assert(Tok.is(tok::kw__Defer));
   SourceLocation DeferLoc = ConsumeToken();
   Actions.ActOnStartOfDeferStmt(DeferLoc, getCurScope());
   auto OnError = llvm::make_scope_exit(

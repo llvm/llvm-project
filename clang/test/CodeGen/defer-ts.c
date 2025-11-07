@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c23 -fdefer-ts -emit-llvm %s -o - | FileCheck %s
 
+#define defer _Defer
+
 void a();
 void b();
 void c();

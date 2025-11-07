@@ -492,7 +492,7 @@ void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
 }
 
 void StmtPrinter::VisitDeferStmt(DeferStmt *Node) {
-  Indent() << "defer";
+  Indent() << "_Defer";
   PrintControlledStmt(Node->getBody());
 }
 

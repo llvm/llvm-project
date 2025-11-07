@@ -348,7 +348,7 @@ def err_address_of_label_outside_fn : Error<
 def err_asm_operand_wide_string_literal : Error<
   "cannot use %select{unicode|wide}0 string literal in 'asm'">;
 def err_defer_ts_labeled_stmt : Error<
-  "substatement of 'defer' must not be a label">;
+  "substatement of defer must not be a label">;
 
 def err_asm_expected_string : Error<
   "expected string literal %select{or parenthesized constant expression |}0in 'asm'">;

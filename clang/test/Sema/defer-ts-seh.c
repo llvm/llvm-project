@@ -2,13 +2,13 @@
 
 void f() {
   __try {
-    defer {
+    _Defer {
       __leave; // expected-error {{cannot __leave a defer statement}}
     }
   } __finally {}
 
   __try {
-    defer {
+    _Defer {
       __try {
         __leave;
       } __finally {}
