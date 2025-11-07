@@ -962,11 +962,10 @@ def NVVM_Barrier0PredOp : NVVM_Op<"barrier0.pred">,
   }];
 
   let assemblyFormat =
-      " ($value^ `:` type($value))? ($pred^)? attr-dict `->` type($res)";
+      "$value `:` type($value) $pred attr-dict `->` type($res)";
   string llvmBuilder = [{
       createIntrinsicCall(
-          builder, getBarrier0IntrinsicID($pred),
-          {$value ? $value : builder.getInt32(0)});
+          builder, getBarrier0IntrinsicID($pred), {$value});
   }];
 }
 
