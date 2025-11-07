@@ -87,6 +87,16 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+  lldb::SBTarget GetTarget();
+
+  /// Set the target to be used when resolving a module.
+  ///
+  /// A target can help locate a module specified by a SBModuleSpec. The
+  /// target settings, like the executable and debug info search paths, can
+  /// be essential. The target's platform can also be used to locate or download
+  /// the specified module.
+  void SetTarget(lldb::SBTarget target);
+
 private:
   friend class SBModuleSpecList;
   friend class SBModule;

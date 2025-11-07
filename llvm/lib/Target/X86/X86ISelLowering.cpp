@@ -53360,6 +53360,7 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 // i32 sub value.
 static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                               SelectionDAG &DAG,
+                              TargetLowering::DAGCombinerInfo &DCI,
                               const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
   SDValue StoredVal = St->getValue();
@@ -53448,7 +53449,8 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
   }
 
   SDValue NewStore =
-      DAG.getStore(St->getChain(), DL, Res, NewPtr, St->getPointerInfo(),
+      DAG.getStore(St->getChain(), DL, Res, NewPtr,
+                   MachinePointerInfo(St->getPointerInfo().getAddrSpace()),
                    Align(), St->getMemOperand()->getFlags());
 
   // If there are other uses of StoredVal, replace with a new load of the
@@ -53456,6 +53458,8 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
   if (!StoredVal.hasOneUse()) {
     SDValue NewLoad =
         DAG.getLoad(VT, DL, NewStore, Ld->getBasePtr(), Ld->getMemOperand());
+    for (SDNode *User : StoredVal->users())
+      DCI.AddToWorklist(User);
     DAG.ReplaceAllUsesWith(StoredVal, NewLoad);
   }
   return NewStore;
@@ -53687,7 +53691,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue R = narrowBitOpRMW(St, dl, DAG, Subtarget))
+  if (SDValue R = narrowBitOpRMW(St, dl, DAG, DCI, Subtarget))
     return R;
 
   // Convert store(cmov(load(p), x, CC), p) to cstore(x, p, CC)
@@ -54645,7 +54649,8 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
         SDValue NewPtr = DAG.getMemBasePlusOffset(
             Ld->getBasePtr(), PtrByteOfs, DL, SDNodeFlags::NoUnsignedWrap);
         SDValue NewLoad =
-            DAG.getLoad(VT, DL, Ld->getChain(), NewPtr, Ld->getPointerInfo(),
+            DAG.getLoad(VT, DL, Ld->getChain(), NewPtr,
+                        MachinePointerInfo(Ld->getPointerInfo().getAddrSpace()),
                         Align(), Ld->getMemOperand()->getFlags());
         DAG.makeEquivalentMemoryOrdering(Ld, NewLoad);
         return NewLoad;
