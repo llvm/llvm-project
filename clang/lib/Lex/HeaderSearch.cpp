@@ -921,6 +921,9 @@ void HeaderSearch::DiagnoseHeaderShadowing(
     It = FromDir;
   }
   for (; It != search_dir_end(); ++It) {
+    // Suppress check for system headers, as duplicates are often intentional.
+    if (It->getDirCharacteristic() != SrcMgr::C_User)
+      continue;
     SmallString<1024> TmpPath = It->getName();
     llvm::sys::path::append(TmpPath, Filename);
     if (auto File = getFileMgr().getFileRef(TmpPath, false, false)) {
