@@ -275,6 +275,7 @@ public:
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
+    BehavAttrs.setAmode(Attr.Amode);
     BehavAttrs.setBindingScope(Attr.BindingScope);
   }
 };
