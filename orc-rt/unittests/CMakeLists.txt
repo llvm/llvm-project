@@ -15,6 +15,7 @@ add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
   CallableTraitsHelperTest.cpp
+  EndianTest.cpp
   ErrorTest.cpp
   ExecutorAddressTest.cpp
   IntervalMapTest.cpp
