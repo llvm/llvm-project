@@ -1856,20 +1856,20 @@ bool VectorCombine::scalarizeLoad(Instruction &I) {
 
   auto *LI = cast<LoadInst>(&I);
   auto *VecTy = cast<VectorType>(LI->getType());
-  if (!VecTy || LI->isVolatile() ||
-      !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
+  if (LI->isVolatile() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
-  // Check what type of users we have and ensure no memory modifications betwwen
-  // the load and its users.
   bool AllExtracts = true;
   bool AllBitcasts = true;
   Instruction *LastCheckedInst = LI;
   unsigned NumInstChecked = 0;
 
+  // Check what type of users we have (must either all be extracts or
+  // bitcasts) and ensure no memory modifications between the load and
+  // its users.
   for (User *U : LI->users()) {
     auto *UI = dyn_cast<Instruction>(U);
-    if (!UI || UI->getParent() != LI->getParent() || UI->use_empty())
+    if (!UI || UI->getParent() != LI->getParent())
       return false;
 
     // If any user is waiting to be erased, then bail out as this will
@@ -1909,17 +1909,17 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
   if (!TTI.allowVectorElementIndexingUsingGEP())
     return false;
 
-  InstructionCost OriginalCost =
-      TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
-                          LI->getPointerAddressSpace(), CostKind);
-  InstructionCost ScalarizedCost = 0;
-
   DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
   auto FailureGuard = make_scope_exit([&]() {
     // If the transform is aborted, discard the ScalarizationResults.
     for (auto &Pair : NeedFreeze)
       Pair.second.discard();
   });
+
+  InstructionCost OriginalCost =
+      TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
+                          LI->getPointerAddressSpace(), CostKind);
+  InstructionCost ScalarizedCost = 0;
 
   for (User *U : LI->users()) {
     auto *UI = cast<ExtractElementInst>(U);
@@ -2011,7 +2011,7 @@ bool VectorCombine::scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy,
     if (DestBitWidth != VecBitWidth)
       return false;
 
-    // All bitcasts should target the same scalar type.
+    // All bitcasts must target the same scalar type.
     if (!TargetScalarType)
       TargetScalarType = DestTy;
     else if (TargetScalarType != DestTy)
@@ -2024,6 +2024,7 @@ bool VectorCombine::scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy,
 
   if (!TargetScalarType)
     return false;
+
   assert(!LI->user_empty() && "Unexpected load without bitcast users");
   InstructionCost ScalarizedCost =
       TTI.getMemoryOpCost(Instruction::Load, TargetScalarType, LI->getAlign(),
