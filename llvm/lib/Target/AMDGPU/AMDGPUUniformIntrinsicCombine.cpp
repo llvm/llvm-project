@@ -57,6 +57,9 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
                                      const UniformityInfo &UI,
                                      ValueMap<const Value *, bool> &Tracker) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
+  /// We deliberately do not simplify readfirstlane with a uniform argument, so
+  /// that frontends can use it to force a copy to SGPR and thereby prevent the
+  /// backend from generating unwanted waterfall loops.
   switch (IID) {
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readlane: {
