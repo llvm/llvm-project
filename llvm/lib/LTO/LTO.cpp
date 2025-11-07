@@ -2324,43 +2324,39 @@ public:
         "Run ThinLTO backend thread (out-of-process)", J.ModuleID);
 
     if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
-                           J.SummaryIndexPath, J.ImportsFiles)) {
-      std::unique_lock<std::mutex> L(ErrMu);
-      if (Err)
-        Err = joinErrors(std::move(*Err), std::move(E));
-      else
-        Err = std::move(E);
-    }
+                           J.SummaryIndexPath, J.ImportsFiles))
+      return E;
 
-    if (Cache.isValid() && CombinedIndex.modulePaths().count(J.ModuleID) &&
+    if (!Cache.isValid() || !CombinedIndex.modulePaths().count(J.ModuleID) ||
         all_of(CombinedIndex.getModuleHash(J.ModuleID),
-               [](uint32_t V) { return V != 0; })) {
-      const GVSummaryMapTy &DefinedGlobals =
-          ModuleToDefinedGVSummaries.find(J.ModuleID)->second;
+               [](uint32_t V) { return V == 0; }))
+      // Cache disabled or no entry for this module in the combined index or
+      // no module hash.
+      return Error::success();
 
-      // The module may be cached, this helps handling it.
-      J.CacheKey = computeLTOCacheKey(
-          Conf, CombinedIndex, J.ModuleID, ImportList, ExportList, ResolvedODR,
-          DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+    const GVSummaryMapTy &DefinedGlobals =
+        ModuleToDefinedGVSummaries.find(J.ModuleID)->second;
 
-      // The module may be cached, this helps handling it.
-      auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
-      if (Error E = CacheAddStreamExp.takeError()) {
-        Err = joinErrors(std::move(*Err), std::move(E));
-      } else {
-        AddStreamFn &CacheAddStream = *CacheAddStreamExp;
-        // If CacheAddStream is null, we have a cache hit and at this point
-        // object file is already passed back to the linker.
-        if (!CacheAddStream) {
-          J.Cached = true; // Cache hit, mark the job as cached.
-          CachedJobs.fetch_add(1);
-        } else {
-          // If CacheAddStream is not null, we have a cache miss and we need to
-          // run the backend for codegen. Save cache 'add stream'
-          // function for a later use.
-          J.CacheAddStream = std::move(CacheAddStream);
-        }
-      }
+    // The module may be cached, this helps handling it.
+    J.CacheKey = computeLTOCacheKey(Conf, CombinedIndex, J.ModuleID, ImportList,
+                                    ExportList, ResolvedODR, DefinedGlobals,
+                                    CfiFunctionDefs, CfiFunctionDecls);
+
+    // The module may be cached, this helps handling it.
+    auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
+    if (Error Err = CacheAddStreamExp.takeError())
+      return Err;
+    AddStreamFn &CacheAddStream = *CacheAddStreamExp;
+    // If CacheAddStream is null, we have a cache hit and at this point
+    // object file is already passed back to the linker.
+    if (!CacheAddStream) {
+      J.Cached = true; // Cache hit, mark the job as cached.
+      CachedJobs.fetch_add(1);
+    } else {
+      // If CacheAddStream is not null, we have a cache miss and we need to
+      // run the backend for codegen. Save cache 'add stream'
+      // function for a later use.
+      J.CacheAddStream = std::move(CacheAddStream);
     }
     return Error::success();
   }
@@ -2399,6 +2395,13 @@ public:
                 &ResolvedODR) {
           Error E =
               runThinLTOBackendThread(J, ImportList, ExportList, ResolvedODR);
+          if (E) {
+            std::unique_lock<std::mutex> L(ErrMu);
+            if (Err)
+              Err = joinErrors(std::move(*Err), std::move(E));
+            else
+              Err = std::move(E);
+          }
         },
         std::ref(J), std::ref(ImportList), std::ref(ExportList),
         std::ref(ResolvedODR));
@@ -2490,9 +2493,10 @@ public:
       JOS.attributeArray("jobs", [&]() {
         for (const auto &J : Jobs) {
           assert(J.Task != 0);
-
-          if (J.Cached)
+          if (J.Cached) {
+            assert(!Cache.getCacheDirectoryPath().empty());
             continue;
+          }
 
           SmallVector<StringRef, 2> Inputs;
           SmallVector<StringRef, 1> Outputs;
@@ -2583,8 +2587,10 @@ public:
     }
 
     for (auto &Job : Jobs) {
-      if (!Job.CacheKey.empty() && (Job.Cached))
+      if (!Job.CacheKey.empty() && Job.Cached) {
+        assert(Cache.isValid());
         continue;
+      }
       // Load the native object from a file into a memory buffer
       // and store its contents in the output buffer.
       auto ObjFileMbOrErr =
@@ -2597,7 +2603,10 @@ public:
             inconvertibleErrorCode());
 
       MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
-      if (Cache.isValid() && Job.CacheAddStream) {
+      if (Cache.isValid()) {
+        // Cache hits are takes care of earlier. At this point, we could only
+        // have cache misses.
+        assert(Job.CacheAddStream);
         // Obtain a file stream for a storing a cache entry.
         auto CachedFileStreamOrErr = Job.CacheAddStream(Job.Task, Job.ModuleID);
         if (!CachedFileStreamOrErr)
