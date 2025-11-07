@@ -16,7 +16,7 @@ int main() {
     {
 #pragma omp target map(present, alloc : x)
       {
-        printf("%d\n", x); // CHECK-NOT: 111
+        printf("In tgt: %d\n", x); // CHECK-NOT: In tgt: 111
         x = 222;
       }
     }

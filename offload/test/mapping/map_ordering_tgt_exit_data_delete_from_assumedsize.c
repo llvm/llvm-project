@@ -23,11 +23,11 @@ int main() {
     {
 #pragma omp target map(present, alloc : x)
       {
-        printf("%d\n", x[0]); // CHECK-NOT: 111
+        printf("In tgt: %d\n", x[0]); // CHECK-NOT: In tgt: 111
         x[0] = 222;
       }
     }
-// DEBUG: omptarget --> Found previously deferred FROM transfer
+// DEBUG: omptarget --> Found previously skipped FROM transfer
 // DEBUG-SAME:          for HstPtr=0x[[#%x,HOST_ADDR:]], with size [[#%u,SIZE:]]
 // DEBUG: omptarget --> Moving [[#SIZE]] bytes
 // DEBUG-SAME:          (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
