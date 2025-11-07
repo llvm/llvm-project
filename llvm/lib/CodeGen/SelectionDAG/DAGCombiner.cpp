@@ -16736,38 +16736,51 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   }
 
   // fold (conv (load x)) -> (load (conv*)x)
+  // fold (conv (freeze (load x))) -> (freeze (load (conv*)x))
   // If the resultant load doesn't need a higher alignment than the original!
-  if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse() &&
-      // Do not remove the cast if the types differ in endian layout.
-      TLI.hasBigEndianPartOrdering(N0.getValueType(), DAG.getDataLayout()) ==
-          TLI.hasBigEndianPartOrdering(VT, DAG.getDataLayout()) &&
-      // If the load is volatile, we only want to change the load type if the
-      // resulting load is legal. Otherwise we might increase the number of
-      // memory accesses. We don't care if the original type was legal or not
-      // as we assume software couldn't rely on the number of accesses of an
-      // illegal type.
-      ((!LegalOperations && cast<LoadSDNode>(N0)->isSimple()) ||
-       TLI.isOperationLegal(ISD::LOAD, VT))) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
+  auto CastLoad = [this, &VT](SDValue N0, const SDLoc &DL) {
+    if (!ISD::isNormalLoad(N0.getNode()) || !N0.hasOneUse())
+      return SDValue();
 
-    if (TLI.isLoadBitCastBeneficial(N0.getValueType(), VT, DAG,
-                                    *LN0->getMemOperand())) {
-      // If the range metadata type does not match the new memory
-      // operation type, remove the range metadata.
-      if (const MDNode *MD = LN0->getRanges()) {
-        ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
-        if (Lower->getBitWidth() != VT.getScalarSizeInBits() ||
-            !VT.isInteger()) {
-          LN0->getMemOperand()->clearRanges();
-        }
+    // Do not remove the cast if the types differ in endian layout.
+    if (TLI.hasBigEndianPartOrdering(N0.getValueType(), DAG.getDataLayout()) !=
+        TLI.hasBigEndianPartOrdering(VT, DAG.getDataLayout()))
+      return SDValue();
+
+    // If the load is volatile, we only want to change the load type if the
+    // resulting load is legal. Otherwise we might increase the number of
+    // memory accesses. We don't care if the original type was legal or not
+    // as we assume software couldn't rely on the number of accesses of an
+    // illegal type.
+    auto *LN0 = cast<LoadSDNode>(N0);
+    if ((LegalOperations || !LN0->isSimple()) &&
+        !TLI.isOperationLegal(ISD::LOAD, VT))
+      return SDValue();
+
+    if (!TLI.isLoadBitCastBeneficial(N0.getValueType(), VT, DAG,
+                                     *LN0->getMemOperand()))
+      return SDValue();
+
+    // If the range metadata type does not match the new memory
+    // operation type, remove the range metadata.
+    if (const MDNode *MD = LN0->getRanges()) {
+      ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
+      if (Lower->getBitWidth() != VT.getScalarSizeInBits() || !VT.isInteger()) {
+        LN0->getMemOperand()->clearRanges();
       }
-      SDValue Load =
-          DAG.getLoad(VT, SDLoc(N), LN0->getChain(), LN0->getBasePtr(),
-                      LN0->getMemOperand());
-      DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
-      return Load;
     }
-  }
+    SDValue Load = DAG.getLoad(VT, DL, LN0->getChain(), LN0->getBasePtr(),
+                               LN0->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
+    return Load;
+  };
+
+  if (SDValue NewLd = CastLoad(N0, SDLoc(N)))
+    return NewLd;
+
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse())
+    if (SDValue NewLd = CastLoad(N0.getOperand(0), SDLoc(N)))
+      return DAG.getFreeze(NewLd);
 
   if (SDValue V = foldBitcastedFPLogic(N, DAG, TLI))
     return V;

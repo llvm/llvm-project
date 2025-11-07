@@ -3167,31 +3167,31 @@ let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kordi : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def kortestcqi : X86Builtin<"int(unsigned char, unsigned char)">;
   def kortestzqi : X86Builtin<"int(unsigned char, unsigned char)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr] in {
   def kortestchi : X86Builtin<"int(unsigned short, unsigned short)">;
   def kortestzhi : X86Builtin<"int(unsigned short, unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kortestcsi : X86Builtin<"int(unsigned int, unsigned int)">;
   def kortestzsi : X86Builtin<"int(unsigned int, unsigned int)">;
   def kortestcdi : X86Builtin<"int(unsigned long long int, unsigned long long int)">;
   def kortestzdi : X86Builtin<"int(unsigned long long int, unsigned long long int)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def ktestcqi : X86Builtin<"int(unsigned char, unsigned char)">;
   def ktestzqi : X86Builtin<"int(unsigned char, unsigned char)">;
   def ktestchi : X86Builtin<"int(unsigned short, unsigned short)">;
   def ktestzhi : X86Builtin<"int(unsigned short, unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def ktestcsi : X86Builtin<"int(unsigned int, unsigned int)">;
   def ktestzsi : X86Builtin<"int(unsigned int, unsigned int)">;
   def ktestcdi : X86Builtin<"int(unsigned long long int, unsigned long long int)">;
