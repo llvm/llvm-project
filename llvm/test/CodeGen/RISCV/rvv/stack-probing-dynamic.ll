@@ -361,7 +361,7 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; If a function has variable-sized stack objects, then any function calls which
 ; need to pass arguments on the stack must allocate the stack space for them
 ; dynamically, to ensure they are at the bottom of the frame.
-define void @no_reserved_call_frame(i64 %n, i32 %dummy) #0 {
+define void @no_reserved_call_frame(i64 %n) #0 {
 ; RV64I-LABEL: no_reserved_call_frame:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -377,15 +377,20 @@ define void @no_reserved_call_frame(i64 %n, i32 %dummy) #0 {
 ; RV64I-NEXT:    addi a0, a0, 15
 ; RV64I-NEXT:    andi a0, a0, -16
 ; RV64I-NEXT:    sub a0, sp, a0
-; RV64I-NEXT:    lui a2, 1
+; RV64I-NEXT:    lui a1, 1
 ; RV64I-NEXT:  .LBB4_1: # %entry
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, a2
+; RV64I-NEXT:    sub sp, sp, a1
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    blt a0, sp, .LBB4_1
 ; RV64I-NEXT:  # %bb.2: # %entry
 ; RV64I-NEXT:    mv sp, a0
+; RV64I-NEXT:    lui a1, 1
+; RV64I-NEXT:    sub sp, sp, a1
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    call callee_stack_args
+; RV64I-NEXT:    lui a0, 1
+; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    addi sp, s0, -16
 ; RV64I-NEXT:    .cfi_def_cfa sp, 16
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -407,20 +412,27 @@ define void @no_reserved_call_frame(i64 %n, i32 %dummy) #0 {
 ; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
-; RV32I-NEXT:    mv a1, a2
 ; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sub a0, sp, a0
-; RV32I-NEXT:    lui a2, 1
+; RV32I-NEXT:    lui a1, 1
 ; RV32I-NEXT:  .LBB4_1: # %entry
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, a2
+; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    blt a0, sp, .LBB4_1
 ; RV32I-NEXT:  # %bb.2: # %entry
 ; RV32I-NEXT:    mv sp, a0
+; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    sub sp, sp, a1
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    call callee_stack_args
+; RV32I-NEXT:    lui a0, 1
+; RV32I-NEXT:    addi a0, a0, 32
+; RV32I-NEXT:    add sp, sp, a0
 ; RV32I-NEXT:    addi sp, s0, -16
 ; RV32I-NEXT:    .cfi_def_cfa sp, 16
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -432,48 +444,70 @@ define void @no_reserved_call_frame(i64 %n, i32 %dummy) #0 {
 ; RV32I-NEXT:    ret
 entry:
   %v = alloca i32, i64 %n
-  call void @callee_stack_args(ptr %v, i32 %dummy)
+  call void @callee_stack_args(ptr %v, [518 x i64] poison)
   ret void
 }
 
 ; Same as above but without a variable-sized allocation, so the reserved call
 ; frame can be folded into the fixed-size allocation in the prologue.
-define void @reserved_call_frame(i64 %n, i32 %dummy) #0 {
+define void @reserved_call_frame(i64 %n) #0 {
 ; RV64I-LABEL: reserved_call_frame:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    addi sp, sp, -416
-; RV64I-NEXT:    .cfi_def_cfa_offset 416
-; RV64I-NEXT:    sd ra, 408(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    addi sp, sp, -2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 2032
+; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    addi a0, sp, 8
+; RV64I-NEXT:    lui a0, 1
+; RV64I-NEXT:    sub sp, sp, a0
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    .cfi_def_cfa_offset 6128
+; RV64I-NEXT:    addi sp, sp, -48
+; RV64I-NEXT:    .cfi_def_cfa_offset 6176
+; RV64I-NEXT:    lui a0, 1
+; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    call callee_stack_args
-; RV64I-NEXT:    ld ra, 408(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    lui a0, 1
+; RV64I-NEXT:    addi a0, a0, 48
+; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    .cfi_def_cfa_offset 2032
+; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    .cfi_restore ra
-; RV64I-NEXT:    addi sp, sp, 416
+; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV32I-LABEL: reserved_call_frame:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi sp, sp, -416
-; RV32I-NEXT:    .cfi_def_cfa_offset 416
-; RV32I-NEXT:    sw ra, 412(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    addi sp, sp, -2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    .cfi_offset ra, -4
-; RV32I-NEXT:    mv a1, a2
-; RV32I-NEXT:    addi a0, sp, 12
+; RV32I-NEXT:    lui a0, 1
+; RV32I-NEXT:    sub sp, sp, a0
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    .cfi_def_cfa_offset 6128
+; RV32I-NEXT:    addi sp, sp, -80
+; RV32I-NEXT:    .cfi_def_cfa_offset 6208
+; RV32I-NEXT:    lui a0, 1
+; RV32I-NEXT:    addi a0, a0, 36
+; RV32I-NEXT:    add a0, sp, a0
 ; RV32I-NEXT:    call callee_stack_args
-; RV32I-NEXT:    lw ra, 412(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lui a0, 1
+; RV32I-NEXT:    addi a0, a0, 80
+; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    .cfi_restore ra
-; RV32I-NEXT:    addi sp, sp, 416
+; RV32I-NEXT:    addi sp, sp, 2032
 ; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 entry:
-  %v = alloca i32, i64 100
-  call void @callee_stack_args(ptr %v, i32 %dummy)
+  %v = alloca i32, i64 518
+  call void @callee_stack_args(ptr %v, [518 x i64] poison)
   ret void
 }
 
-declare void @callee_stack_args(ptr, i32)
+declare void @callee_stack_args(ptr, [518 x i64])
 
 ; Dynamic allocation of vectors
 define void @dynamic_vector(i64 %size, ptr %out) #0 {

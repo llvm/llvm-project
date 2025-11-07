@@ -12,7 +12,7 @@
 #define __CLC_FUNCTION __clc_isnormal
 #define __CLC_BODY <clc/relational/unary_decl.inc>
 
-#include <clc/relational/floatn.inc>
+#include <clc/math/gentype.inc>
 
 #undef __CLC_FUNCTION
 

@@ -388,6 +388,10 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
         TLI.setAvailableWithName(LibFunc_logbf, "_logbf");
       else
         TLI.setUnavailable(LibFunc_logbf);
+      TLI.setUnavailable(LibFunc_nextafter);
+      TLI.setUnavailable(LibFunc_nextafterf);
+      TLI.setUnavailable(LibFunc_nexttoward);
+      TLI.setUnavailable(LibFunc_nexttowardf);
       TLI.setUnavailable(LibFunc_rint);
       TLI.setUnavailable(LibFunc_rintf);
       TLI.setUnavailable(LibFunc_round);
@@ -418,6 +422,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_logbl);
     TLI.setUnavailable(LibFunc_ilogbl);
     TLI.setUnavailable(LibFunc_nearbyintl);
+    TLI.setUnavailable(LibFunc_nextafterl);
+    TLI.setUnavailable(LibFunc_nexttowardl);
     TLI.setUnavailable(LibFunc_rintl);
     TLI.setUnavailable(LibFunc_roundl);
     TLI.setUnavailable(LibFunc_scalblnl);
@@ -740,11 +746,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_fgets_unlocked);
   }
 
-  if (T.isAndroid() && T.isAndroidVersionLT(21)) {
-    TLI.setUnavailable(LibFunc_stpcpy);
-    TLI.setUnavailable(LibFunc_stpncpy);
-  }
-
   if (T.isPS()) {
     // PS4/PS5 do have memalign.
     TLI.setAvailable(LibFunc_memalign);
@@ -814,6 +815,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_pclose);
     TLI.setUnavailable(LibFunc_popen);
     TLI.setUnavailable(LibFunc_pread);
+    TLI.setUnavailable(LibFunc_pvalloc);
     TLI.setUnavailable(LibFunc_pwrite);
     TLI.setUnavailable(LibFunc_read);
     TLI.setUnavailable(LibFunc_readlink);
@@ -874,6 +876,34 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_toascii);
   }
 
+  if (T.isOSFreeBSD()) {
+    TLI.setAvailable(LibFunc_dunder_strtok_r);
+    TLI.setAvailable(LibFunc_memalign);
+    TLI.setAvailable(LibFunc_fputc_unlocked);
+    TLI.setAvailable(LibFunc_fputs_unlocked);
+    TLI.setAvailable(LibFunc_fread_unlocked);
+    TLI.setAvailable(LibFunc_fwrite_unlocked);
+    TLI.setAvailable(LibFunc_getc_unlocked);
+    TLI.setAvailable(LibFunc_getchar_unlocked);
+    TLI.setAvailable(LibFunc_putc_unlocked);
+    TLI.setAvailable(LibFunc_putchar_unlocked);
+
+    TLI.setUnavailable(LibFunc___kmpc_alloc_shared);
+    TLI.setUnavailable(LibFunc___kmpc_free_shared);
+    TLI.setUnavailable(LibFunc_dunder_strndup);
+    TLI.setUnavailable(LibFunc_memccpy_chk);
+    TLI.setUnavailable(LibFunc_strlen_chk);
+    TLI.setUnavailable(LibFunc_fmaximum_num);
+    TLI.setUnavailable(LibFunc_fmaximum_numf);
+    TLI.setUnavailable(LibFunc_fmaximum_numl);
+    TLI.setUnavailable(LibFunc_fminimum_num);
+    TLI.setUnavailable(LibFunc_fminimum_numf);
+    TLI.setUnavailable(LibFunc_fminimum_numl);
+    TLI.setUnavailable(LibFunc_roundeven);
+    TLI.setUnavailable(LibFunc_roundevenf);
+    TLI.setUnavailable(LibFunc_roundevenl);
+  }
+
   // As currently implemented in clang, NVPTX code has no standard library to
   // speak of.  Headers provide a standard-ish library implementation, but many
   // of the signatures are wrong -- for example, many libm functions are not
@@ -926,12 +956,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
                        ArrayRef<StringLiteral> StandardNames) {
   initializeBase(TLI, T);
   initializeLibCalls(TLI, T, StandardNames);
-}
-
-TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
-  // Default to nothing being available.
-  memset(AvailableArray, 0, sizeof(AvailableArray));
-  initializeBase(*this, Triple());
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
@@ -1127,7 +1151,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_cabsf:
   case LibFunc_cabsl: {
     Type *RetTy = FTy.getReturnType();
-    if (!RetTy->isFloatingPointTy())
+    if (!RetTy->isFloatingPointTy() || NumParams == 0)
       return false;
 
     Type *ParamTy = FTy.getParamType(0);
@@ -1299,6 +1323,14 @@ static const VecDesc VecFuncs_LIBMVEC_X86[] = {
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 };
 
+static const VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
+#define TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
+};
+
 static const VecDesc VecFuncs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
@@ -1375,6 +1407,10 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+      addVectorizableFunctions(VecFuncs_LIBMVEC_AARCH64);
       break;
     }
     break;
@@ -1486,7 +1522,7 @@ unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
-    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl()) {}
+    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(Triple())) {}
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(const Triple &T)
     : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(T)) {}

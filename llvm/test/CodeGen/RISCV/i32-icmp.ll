@@ -366,16 +366,33 @@ define i32 @icmp_ugt_constant_zero(i32 %a) nounwind {
 define i32 @icmp_ugt_constant_2047(i32 %a) nounwind {
 ; RV32I-LABEL: icmp_ugt_constant_2047:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 2047
-; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    srli a0, a0, 11
+; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32XQCILIA-LABEL: icmp_ugt_constant_2047:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    li a1, 2047
-; RV32XQCILIA-NEXT:    sltu a0, a1, a0
+; RV32XQCILIA-NEXT:    srli a0, a0, 11
+; RV32XQCILIA-NEXT:    snez a0, a0
 ; RV32XQCILIA-NEXT:    ret
   %1 = icmp ugt i32 %a, 2047
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
+
+define i32 @icmp_ugt_constant_4095(i32 %a) nounwind {
+; RV32I-LABEL: icmp_ugt_constant_4095:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 12
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCILIA-LABEL: icmp_ugt_constant_4095:
+; RV32XQCILIA:       # %bb.0:
+; RV32XQCILIA-NEXT:    srli a0, a0, 12
+; RV32XQCILIA-NEXT:    snez a0, a0
+; RV32XQCILIA-NEXT:    ret
+  %1 = icmp ugt i32 %a, 4095
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
@@ -487,14 +504,14 @@ define i32 @icmp_uge_constant_2047(i32 %a) nounwind {
 define i32 @icmp_uge_constant_2048(i32 %a) nounwind {
 ; RV32I-LABEL: icmp_uge_constant_2048:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 2047
-; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    srli a0, a0, 11
+; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32XQCILIA-LABEL: icmp_uge_constant_2048:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    li a1, 2047
-; RV32XQCILIA-NEXT:    sltu a0, a1, a0
+; RV32XQCILIA-NEXT:    srli a0, a0, 11
+; RV32XQCILIA-NEXT:    snez a0, a0
 ; RV32XQCILIA-NEXT:    ret
   %1 = icmp uge i32 %a, 2048
   %2 = zext i1 %1 to i32
@@ -1135,4 +1152,58 @@ define i32 @icmp_sle_constant_neg_2050(i32 %a) nounwind {
   %1 = icmp sle i32 %a, -2050
   %2 = zext i1 %1 to i32
   ret i32 %2
+}
+
+define i32 @mask_test_eq(i32 %x) nounwind {
+; RV32I-LABEL: mask_test_eq:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 12
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCILIA-LABEL: mask_test_eq:
+; RV32XQCILIA:       # %bb.0:
+; RV32XQCILIA-NEXT:    slli a0, a0, 12
+; RV32XQCILIA-NEXT:    seqz a0, a0
+; RV32XQCILIA-NEXT:    ret
+  %y = and i32 %x, 1048575
+  %cmp = icmp eq i32 %y, 0
+  %ext = zext i1 %cmp to i32
+  ret i32 %ext
+}
+
+define i32 @mask_test_ne(i32 %x) nounwind {
+; RV32I-LABEL: mask_test_ne:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 12
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCILIA-LABEL: mask_test_ne:
+; RV32XQCILIA:       # %bb.0:
+; RV32XQCILIA-NEXT:    slli a0, a0, 12
+; RV32XQCILIA-NEXT:    snez a0, a0
+; RV32XQCILIA-NEXT:    ret
+  %y = and i32 %x, 1048575
+  %cmp = icmp ne i32 %y, 0
+  %ext = zext i1 %cmp to i32
+  ret i32 %ext
+}
+
+define i32 @mask_test_eq_simm12(i32 %x) nounwind {
+; RV32I-LABEL: mask_test_eq_simm12:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 3
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCILIA-LABEL: mask_test_eq_simm12:
+; RV32XQCILIA:       # %bb.0:
+; RV32XQCILIA-NEXT:    andi a0, a0, 3
+; RV32XQCILIA-NEXT:    seqz a0, a0
+; RV32XQCILIA-NEXT:    ret
+  %y = and i32 %x, 3
+  %cmp = icmp eq i32 %y, 0
+  %ext = zext i1 %cmp to i32
+  ret i32 %ext
 }

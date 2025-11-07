@@ -35,10 +35,8 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
-using namespace PatternMatch;
 
 #define DEBUG_TYPE "wasm-fastisel"
 
@@ -48,7 +46,7 @@ class WebAssemblyFastISel final : public FastISel {
   // All possible address modes.
   class Address {
   public:
-    using BaseKind = enum { RegBase, FrameIndexBase };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;
@@ -914,6 +912,8 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   if (!IsVoid)
     updateValueMap(Call, ResultReg);
+
+  diagnoseDontCall(*Call);
   return true;
 }
 

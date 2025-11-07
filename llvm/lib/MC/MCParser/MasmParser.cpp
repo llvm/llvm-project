@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -33,16 +32,14 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/AsmCond.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -486,11 +483,9 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
-  bool Warning(SMLoc L, const Twine &Msg,
-               SMRange Range = std::nullopt) override;
-  bool printError(SMLoc L, const Twine &Msg,
-                  SMRange Range = std::nullopt) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool printError(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
 
   enum ExpandKind { ExpandMacros, DoNotExpandMacros };
   const AsmToken &Lex(ExpandKind ExpandNextToken);
@@ -595,7 +590,7 @@ private:
   bool expandStatement(SMLoc Loc);
 
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = std::nullopt) const {
+                    SMRange Range = {}) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -1483,18 +1478,18 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       auto VarIt = Variables.find(SymbolName.lower());
       if (VarIt != Variables.end())
         SymbolName = VarIt->second.Name;
-      Sym = getContext().getOrCreateSymbol(SymbolName);
+      Sym = getContext().parseSymbol(SymbolName);
     }
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
     if (Sym->isVariable()) {
-      auto V = Sym->getVariableValue(/*SetUsed=*/false);
+      auto V = Sym->getVariableValue();
       bool DoInline = isa<MCConstantExpr>(V);
       if (auto TV = dyn_cast<MCTargetExpr>(V))
         DoInline = TV->inlineAssignedExpr();
       if (DoInline) {
-        Res = Sym->getVariableValue(/*SetUsed=*/false);
+        Res = Sym->getVariableValue();
         return false;
       }
     }
@@ -1968,7 +1963,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     if (IDVal == "@@") {
       Sym = Ctx.createDirectionalLocalSymbol(0);
     } else {
-      Sym = getContext().getOrCreateSymbol(IDVal);
+      Sym = getContext().parseSymbol(IDVal);
     }
 
     // End of Labels should be treated as end of line for lexing
@@ -2320,7 +2315,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     for (unsigned i = 0; i != Info.ParsedOperands.size(); ++i) {
       if (i != 0)
         OS << ", ";
-      Info.ParsedOperands[i]->print(OS);
+      Info.ParsedOperands[i]->print(OS, MAI);
     }
     OS << "]";
 
@@ -2906,7 +2901,7 @@ bool MasmParser::parseIdentifier(StringRef &Res,
   if (Position == StartOfStatement &&
       StringSwitch<bool>(Res)
           .CaseLower("echo", true)
-          .CasesLower("ifdef", "ifndef", "elseifdef", "elseifndef", true)
+          .CasesLower({"ifdef", "ifndef", "elseifdef", "elseifndef"}, true)
           .Default(false)) {
     ExpandNextToken = DoNotExpandMacros;
   }
@@ -3012,12 +3007,11 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
     return false;
   }
 
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
-
+  auto *Sym = static_cast<MCSymbolCOFF *>(getContext().parseSymbol(Var.Name));
   const MCConstantExpr *PrevValue =
-      Sym->isVariable() ? dyn_cast_or_null<MCConstantExpr>(
-                              Sym->getVariableValue(/*SetUsed=*/false))
-                        : nullptr;
+      Sym->isVariable()
+          ? dyn_cast_or_null<MCConstantExpr>(Sym->getVariableValue())
+          : nullptr;
   if (Var.IsText || !PrevValue || PrevValue->getValue() != Value) {
     switch (Var.Redefinable) {
     case Variable::NOT_REDEFINABLE:
@@ -3321,7 +3315,7 @@ bool MasmParser::parseDirectiveNamedValue(StringRef TypeName, unsigned Size,
                                           StringRef Name, SMLoc NameLoc) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
     getStreamer().emitLabel(Sym);
     unsigned Count;
     if (emitIntegralValues(Size, &Count))
@@ -3512,7 +3506,7 @@ bool MasmParser::parseDirectiveNamedRealValue(StringRef TypeName,
                                               SMLoc NameLoc) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
     getStreamer().emitLabel(Sym);
     unsigned Count;
     if (emitRealValues(Semantics, &Count))
@@ -4006,7 +4000,7 @@ bool MasmParser::parseDirectiveNamedStructValue(const StructInfo &Structure,
                                                 SMLoc DirLoc, StringRef Name) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
     getStreamer().emitLabel(Sym);
     unsigned Count;
     if (emitStructValues(Structure, &Count))
@@ -4231,8 +4225,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     // Check whether we should use optimal code alignment for this align
     // directive.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
-    assert(Section && "must have section to emit alignment");
-    if (Section->useCodeAlign()) {
+    if (MAI.useCodeAlign(*Section)) {
       getStreamer().emitCodeAlignment(Align(Alignment),
                                       &getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);
@@ -4507,9 +4500,9 @@ bool MasmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
 bool MasmParser::parseDirectiveExtern() {
   // .extern is the default - but we still need to take any provided type info.
   auto parseOp = [&]() -> bool {
-    StringRef Name;
+    MCSymbol *Sym;
     SMLoc NameLoc = getTok().getLoc();
-    if (parseIdentifier(Name))
+    if (parseSymbol(Sym))
       return Error(NameLoc, "expected name");
     if (parseToken(AsmToken::Colon))
       return true;
@@ -4522,11 +4515,10 @@ bool MasmParser::parseDirectiveExtern() {
       AsmTypeInfo Type;
       if (lookUpType(TypeName, Type))
         return Error(TypeLoc, "unrecognized type");
-      KnownType[Name.lower()] = Type;
+      KnownType[Sym->getName().lower()] = Type;
     }
 
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-    Sym->setExternal(true);
+    static_cast<MCSymbolCOFF *>(Sym)->setExternal(true);
     getStreamer().emitSymbolAttribute(Sym, MCSA_Extern);
 
     return false;
@@ -4541,11 +4533,10 @@ bool MasmParser::parseDirectiveExtern() {
 ///  ::= { ".globl", ".weak", ... } [ identifier ( , identifier )* ]
 bool MasmParser::parseDirectiveSymbolAttribute(MCSymbolAttr Attr) {
   auto parseOp = [&]() -> bool {
-    StringRef Name;
     SMLoc Loc = getTok().getLoc();
-    if (parseIdentifier(Name))
+    MCSymbol *Sym;
+    if (parseSymbol(Sym))
       return Error(Loc, "expected identifier");
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
     // Assembler local symbols don't make any sense here. Complain loudly.
     if (Sym->isTemporary())
@@ -4568,12 +4559,9 @@ bool MasmParser::parseDirectiveComm(bool IsLocal) {
     return true;
 
   SMLoc IDLoc = getLexer().getLoc();
-  StringRef Name;
-  if (parseIdentifier(Name))
+  MCSymbol *Sym;
+  if (parseSymbol(Sym))
     return TokError("expected identifier in directive");
-
-  // Handle the identifier as the key symbol.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("unexpected token in directive");
@@ -5335,10 +5323,10 @@ void MasmParser::initializeDirectiveKindMap() {
 bool MasmParser::isMacroLikeDirective() {
   if (getLexer().is(AsmToken::Identifier)) {
     bool IsMacroLike = StringSwitch<bool>(getTok().getIdentifier())
-                           .CasesLower("repeat", "rept", true)
+                           .CasesLower({"repeat", "rept"}, true)
                            .CaseLower("while", true)
-                           .CasesLower("for", "irp", true)
-                           .CasesLower("forc", "irpc", true)
+                           .CasesLower({"for", "irp"}, true)
+                           .CasesLower({"forc", "irpc"}, true)
                            .Default(false);
     if (IsMacroLike)
       return true;
@@ -5854,11 +5842,11 @@ bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
 
 bool MasmParser::lookUpType(StringRef Name, AsmTypeInfo &Info) const {
   unsigned Size = StringSwitch<unsigned>(Name)
-                      .CasesLower("byte", "db", "sbyte", 1)
-                      .CasesLower("word", "dw", "sword", 2)
-                      .CasesLower("dword", "dd", "sdword", 4)
-                      .CasesLower("fword", "df", 6)
-                      .CasesLower("qword", "dq", "sqword", 8)
+                      .CasesLower({"byte", "db", "sbyte"}, 1)
+                      .CasesLower({"word", "dw", "sword"}, 2)
+                      .CasesLower({"dword", "dd", "sdword"}, 4)
+                      .CasesLower({"fword", "df"}, 6)
+                      .CasesLower({"qword", "dq", "sqword"}, 8)
                       .CaseLower("real4", 4)
                       .CaseLower("real8", 8)
                       .CaseLower("real10", 10)

@@ -9,6 +9,9 @@
 // UNSUPPORTED: no-exceptions
 // UNSUPPORTED: sanitizer-new-delete
 
+// GCC warns about allocating numeric_limits<size_t>::max() being too large (which we test here)
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-alloc-size-larger-than
+
 #include <new>
 #include <cassert>
 #include <limits>

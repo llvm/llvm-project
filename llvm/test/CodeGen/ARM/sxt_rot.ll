@@ -22,7 +22,6 @@ define signext i8 @test1(i32 %A) {
 ; CHECK-V7:       @ %bb.0:
 ; CHECK-V7-NEXT:    sbfx r0, r0, #8, #8
 ; CHECK-V7-NEXT:    bx lr
-; CHECk-V7: sbfx r0, r0, #8, #8
   %B = lshr i32 %A, 8
   %C = shl i32 %A, 24
   %D = or i32 %B, %C

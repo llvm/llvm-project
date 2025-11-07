@@ -34,13 +34,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct atomic : public __atomic_base<_Tp> {
-  using __base          = __atomic_base<_Tp>;
-  using value_type      = _Tp;
-  using difference_type = value_type;
+  using __base = __atomic_base<_Tp>;
 
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR atomic(_Tp __d) _NOEXCEPT : __base(__d) {}
+  _LIBCPP_HIDE_FROM_ABI atomic(_Tp __d) _NOEXCEPT : __base(__d) {}
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) volatile _NOEXCEPT {
     __base::store(__d);
@@ -59,13 +57,13 @@ struct atomic : public __atomic_base<_Tp> {
 
 template <class _Tp>
 struct atomic<_Tp*> : public __atomic_base<_Tp*> {
-  using __base          = __atomic_base<_Tp*>;
-  using value_type      = _Tp*;
+  using __base = __atomic_base<_Tp*>;
+
   using difference_type = ptrdiff_t;
 
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR atomic(_Tp* __d) _NOEXCEPT : __base(__d) {}
+  _LIBCPP_HIDE_FROM_ABI atomic(_Tp* __d) _NOEXCEPT : __base(__d) {}
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __d) volatile _NOEXCEPT {
     __base::store(__d);
@@ -132,14 +130,12 @@ _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const atomic<_Tp>* __o) _NOEXCEPT
 // atomic_init
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void
-atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
   std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void
-atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
   std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
 }
 

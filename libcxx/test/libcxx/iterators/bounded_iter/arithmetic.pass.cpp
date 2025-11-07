@@ -11,8 +11,6 @@
 //
 // Arithmetic operators
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__iterator/bounded_iter.h>
 #include <cstddef>
 

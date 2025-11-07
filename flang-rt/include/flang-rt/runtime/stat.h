@@ -24,7 +24,7 @@ class Terminator;
 enum Stat {
   StatOk = 0, // required to be zero by Fortran
 
-  // Interoperable STAT= codes
+  // Interoperable STAT= codes (>= 11)
   StatBaseNull = CFI_ERROR_BASE_ADDR_NULL,
   StatBaseNotNull = CFI_ERROR_BASE_ADDR_NOT_NULL,
   StatInvalidElemLen = CFI_INVALID_ELEM_LEN,
@@ -36,7 +36,7 @@ enum Stat {
   StatMemAllocation = CFI_ERROR_MEM_ALLOCATION,
   StatOutOfBounds = CFI_ERROR_OUT_OF_BOUNDS,
 
-  // Standard STAT= values
+  // Standard STAT= values (>= 101)
   StatFailedImage = FORTRAN_RUNTIME_STAT_FAILED_IMAGE,
   StatLocked = FORTRAN_RUNTIME_STAT_LOCKED,
   StatLockedOtherImage = FORTRAN_RUNTIME_STAT_LOCKED_OTHER_IMAGE,
@@ -49,10 +49,14 @@ enum Stat {
   // Additional "processor-defined" STAT= values
   StatInvalidArgumentNumber = FORTRAN_RUNTIME_STAT_INVALID_ARG_NUMBER,
   StatMissingArgument = FORTRAN_RUNTIME_STAT_MISSING_ARG,
-  StatValueTooShort = FORTRAN_RUNTIME_STAT_VALUE_TOO_SHORT,
+  StatValueTooShort = FORTRAN_RUNTIME_STAT_VALUE_TOO_SHORT, // -1
   StatMoveAllocSameAllocatable =
       FORTRAN_RUNTIME_STAT_MOVE_ALLOC_SAME_ALLOCATABLE,
   StatBadPointerDeallocation = FORTRAN_RUNTIME_STAT_BAD_POINTER_DEALLOCATION,
+
+  // Dummy status for work queue continuation, declared here to perhaps
+  // avoid collisions
+  StatContinue = 201
 };
 
 RT_API_ATTRS const char *StatErrorString(int);

@@ -69,6 +69,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBFileSpecList.cpp
   SBFormat.cpp
   SBFrame.cpp
+  SBFrameList.cpp
   SBFunction.cpp
   SBHostOS.cpp
   SBInstruction.cpp
@@ -125,9 +126,13 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/API
   DEPENDS
     lldb-sbapi-dwarf-enums
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -142,8 +147,6 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbValueObject
     lldbVersion
     ${LLDB_ALL_PLUGINS}
-  LINK_COMPONENTS
-    Support
 
   ${option_install_prefix}
 )
@@ -289,6 +292,71 @@ else()
     )
   endif()
 endif()
+
+# Stage all headers in the include directory in the build dir.
+file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h)
+set(lldb_header_staging_dir ${CMAKE_BINARY_DIR}/include/lldb)
+set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/API/SBLanguages.h)
+file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
+file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
+list(REMOVE_ITEM root_public_headers ${root_private_headers})
+# Skip the initial copy of lldb-defines.h. The fixed version is generated at build time.
+list(REMOVE_ITEM root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h)
+
+find_program(unifdef_EXECUTABLE unifdef)
+
+add_custom_target(liblldb-header-staging)
+
+if (LLDB_BUILD_FRAMEWORK)
+  add_custom_target(lldb-framework-fixup-all-headers)
+  add_dependencies(lldb-framework-fixup-all-headers liblldb-header-staging)
+  add_dependencies(liblldb lldb-framework-fixup-all-headers)
+endif()
+
+foreach(header
+    ${public_headers}
+    ${generated_public_headers}
+    ${root_public_headers})
+  get_filename_component(basename ${header} NAME)
+  set(staged_header ${lldb_header_staging_dir}/${basename})
+
+  if(unifdef_EXECUTABLE)
+    # unifdef returns 0 when the file is unchanged and 1 if something was changed.
+    # That means if we successfully remove SWIG code, the build system believes
+    # that the command has failed and stops. This is undesirable.
+    set(copy_command ${unifdef_EXECUTABLE} -USWIG ${header} > ${staged_header} || (exit 0))
+  else()
+    set(copy_command ${CMAKE_COMMAND} -E copy ${header} ${staged_header})
+  endif()
+
+  add_custom_target(liblldb-stage-header-${basename} DEPENDS ${staged_header})
+  add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums)
+  add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
+  add_custom_command(
+    DEPENDS ${header} OUTPUT ${staged_header}
+    COMMAND ${copy_command}
+    COMMENT "LLDB headers: stage LLDB headers in include directory")
+
+  list(APPEND lldb_staged_headers ${staged_header})
+
+  if (LLDB_BUILD_FRAMEWORK)
+    set(output_header $<TARGET_FILE_DIR:liblldb>/Headers/${basename})
+
+    add_custom_target(lldb-framework-fixup-header-${basename} DEPENDS ${staged_header})
+    add_dependencies(lldb-framework-fixup-header-${basename} liblldb-stage-header-${basename})
+    add_dependencies(lldb-framework-fixup-all-headers lldb-framework-fixup-header-${basename})
+
+    add_custom_command(TARGET lldb-framework-fixup-header-${basename} POST_BUILD
+      COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.py -f lldb_main -i ${staged_header} -o ${output_header}
+      COMMENT "LLDB.framework: Fix up and copy framework headers"
+    )
+  endif()
+endforeach()
+
+add_custom_command(TARGET liblldb-header-staging POST_BUILD
+  COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py -i ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h -o ${lldb_header_staging_dir}/lldb-defines.h -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH}
+)
+add_dependencies(liblldb liblldb-header-staging)
 
 if(LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)

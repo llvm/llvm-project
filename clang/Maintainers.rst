@@ -46,7 +46,7 @@ Clang LLVM IR generation
 | rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
 
 | Eli Friedman
-| efriedma\@quicinc.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
+| efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
 | Anton Korobeynikov
 | anton\@korobeynikov.info (email), asl (Phabricator), asl (GitHub)
@@ -59,6 +59,8 @@ Clang MLIR generation
 | Bruno Cardoso Lopes
 | bruno.cardoso\@gmail.com (email), sonicsprawl (Discord), bcardosolopes (GitHub)
 
+| Henrich Lauko
+| henrich.lau\@gmail.com  (email), henrich.lauko (Discord), xlauko (GitHub)
 
 Analysis & CFG
 ~~~~~~~~~~~~~~

@@ -1,7 +1,8 @@
-// RUN: %clang_cc1 %s -fopenacc -verify
+// RUN: %clang_cc1 %s -fopenacc -verify -Wopenacc-extension
 
 int *Global;
 int GlobalArray[5];
+int GlobalArray2[5];
 // expected-error@+1{{no valid clauses specified in OpenACC 'declare' directive}}
 #pragma acc declare
 namespace NS {
@@ -265,8 +266,8 @@ void use() {
 
 // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
 #pragma acc declare create(GlobalArray[0])
-// expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
-#pragma acc declare create(GlobalArray[0: 1])
+// expected-warning@+1{{sub-array as a variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare create(GlobalArray[0: 1]) // #GLOBALARRAYREF
 
 struct S { int I; };
 // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
@@ -288,8 +289,12 @@ void ExternVar() {
 #pragma acc declare copy(I) copyin(I2), copyout(I3), create(I4), present(I5), deviceptr(I6), device_resident(I7), link(I8)
 }
 
+// expected-error@+2{{variable referenced in 'link' clause of OpenACC 'declare' directive was already referenced}}
+// expected-note@#GLOBALARRAYREF{{previous reference is here}}
+#pragma acc declare link(GlobalArray)
+
 // Link can only have global, namespace, or extern vars.
-#pragma acc declare link(Global, GlobalArray)
+#pragma acc declare link(Global, GlobalArray2)
 
 struct Struct2 {
   static const int StaticMem = 5;
@@ -307,8 +312,8 @@ struct Struct2 {
 };
 
 void ModList() {
-  int V1, V2, V3, V4, V5, V6, V7, V8, V9, V10,
-      V11, V12, V13, V14, V15, V16, V17, V18;
+  int V1, V2, V3, V4, V4B, V5, V6, V7, V7B, V8, V9, V10,
+      V11, V11B, V12, V13, V14, V15, V16, V17, V18, V19;
   // expected-error@+2{{OpenACC 'readonly' modifier not valid on 'copy' clause}}
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copy' clause}}
 #pragma acc declare copy(always, alwaysin, alwaysout, zero, readonly: V1)
@@ -316,7 +321,8 @@ void ModList() {
 #pragma acc declare copy(readonly: V2)
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copy' clause}}
 #pragma acc declare copy(zero: V3)
-#pragma acc declare copy(always, alwaysin, alwaysout: V4)
+#pragma acc declare copy(capture: V4)
+#pragma acc declare copy(always, alwaysin, alwaysout, capture: V4B)
 
   // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
@@ -325,22 +331,30 @@ void ModList() {
 #pragma acc declare copyin(alwaysout: V6)
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
 #pragma acc declare copyin(zero: V7)
-#pragma acc declare copyin(always, alwaysin, readonly: V8)
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyin' clause}}
+#pragma acc declare copyin(capture: V7B)
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyin' clause}}
+#pragma acc declare copyin(always, alwaysin, readonly, capture: V8)
 
-  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+2{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc declare copyout(always, alwaysin, alwaysout, zero, readonly: V9)
-  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
-#pragma acc declare copyout(alwaysout: V10)
+  // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
+#pragma acc declare copyout(alwaysin: V10)
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc declare copyout(readonly: V11)
-#pragma acc declare copyout(always, alwaysin, zero: V12)
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyout' clause}}
+#pragma acc declare copyout(capture: V11B)
+  // expected-error@+2{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyout' clause}}
+#pragma acc declare copyout(always, alwaysin, alwaysout, zero, capture: V12)
 
-  // expected-error@+4{{OpenACC 'always' modifier not valid on 'create' clause}}
-  // expected-error@+3{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
-  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
-  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
-#pragma acc declare create(always, alwaysin, alwaysout, zero, readonly: V13)
+  // expected-error@+5{{OpenACC 'always' modifier not valid on 'create' clause}}
+  // expected-error@+4{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+  // expected-error@+3{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+  // expected-error@+2{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'create' clause}}
+#pragma acc declare create(always, alwaysin, alwaysout, zero, readonly, capture: V13)
   // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
 #pragma acc declare create(always: V14)
   // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
@@ -349,5 +363,8 @@ void ModList() {
 #pragma acc declare create(alwaysout: V16)
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
 #pragma acc declare create(readonly: V17)
+
 #pragma acc declare create(zero: V18)
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'create' clause}}
+#pragma acc declare create(capture: V19)
 }

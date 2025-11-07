@@ -16,6 +16,7 @@ add_flang_library(FIRTransforms
   CUFComputeSharedMemoryOffsetsAndSize.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
+  FIRToSCF.cpp
   MemoryUtils.cpp
   MemoryAllocation.cpp
   StackArrays.cpp
@@ -33,6 +34,9 @@ add_flang_library(FIRTransforms
   SetRuntimeCallAttributes.cpp
   GenRuntimeCallsForTest.cpp
   SimplifyFIROperations.cpp
+  OptimizeArrayRepacking.cpp
+  ConvertComplexPow.cpp
+  MIFOpConversion.cpp
 
   DEPENDS
   CUFAttrs
@@ -40,6 +44,7 @@ add_flang_library(FIRTransforms
   FIRDialect
   FIROptTransformsPassIncGen
   HLFIROpsIncGen
+  MIFDialect
 
   LINK_LIBS
   CUFAttrs
@@ -53,6 +58,7 @@ add_flang_library(FIRTransforms
   FIRSupport
   FortranSupport
   HLFIRDialect
+  MIFDialect
 
   MLIR_LIBS
   MLIRAffineUtils

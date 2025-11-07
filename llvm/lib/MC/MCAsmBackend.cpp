@@ -8,9 +8,9 @@
 
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -24,10 +24,9 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind)
-    : Endian(Endian), RelaxFixupKind(RelaxFixupKind) {}
-
 MCAsmBackend::~MCAsmBackend() = default;
+
+MCContext &MCAsmBackend::getContext() const { return Asm->getContext(); }
 
 std::unique_ptr<MCObjectWriter>
 MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
@@ -88,6 +87,7 @@ std::optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
 }
 
 MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // clang-format off
   static const MCFixupKindInfo Builtins[] = {
       {"FK_NONE", 0, 0, 0},
       {"FK_Data_1", 0, 8, 0},
@@ -95,27 +95,18 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_Data_4", 0, 32, 0},
       {"FK_Data_8", 0, 64, 0},
       {"FK_Data_leb128", 0, 0, 0},
-      {"FK_PCRel_1", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_PCRel_2", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_PCRel_4", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_PCRel_8", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_SecRel_1", 0, 8, 0},
       {"FK_SecRel_2", 0, 16, 0},
       {"FK_SecRel_4", 0, 32, 0},
       {"FK_SecRel_8", 0, 64, 0},
   };
+  // clang-format on
 
   assert(size_t(Kind - FK_NONE) < std::size(Builtins) && "Unknown fixup kind");
   return Builtins[Kind - FK_NONE];
 }
 
-bool MCAsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                                         const MCValue &Target,
-                                         const MCSubtargetInfo *) {
-  return Target.getSpecifier();
-}
-
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
                                                 const MCFixup &Fixup,
                                                 const MCValue &, uint64_t Value,
                                                 bool Resolved) const {
@@ -124,18 +115,30 @@ bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
   return fixupNeedsRelaxation(Fixup, Value);
 }
 
+void MCAsmBackend::maybeAddReloc(const MCFragment &F, const MCFixup &Fixup,
+                                 const MCValue &Target, uint64_t &Value,
+                                 bool IsResolved) {
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
+}
+
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
+  assert(getContext().isMachO());
   // Consider a NULL personality (ie., no personality encoding) to be canonical
   // because it's always at 0.
   if (!Sym)
     return true;
-
-  if (!Sym->isMachO())
-    llvm_unreachable("Expected MachO symbols only");
 
   StringRef name = Sym->getName();
   // XXX: We intentionally leave out "___gcc_personality_v0" because, despite
   // being system-defined like these two, it is not very commonly-used.
   // Reserving an empty slot for it seems silly.
   return name == "___gxx_personality_v0" || name == "___objc_personality_v0";
+}
+
+const MCSubtargetInfo *MCAsmBackend::getSubtargetInfo(const MCFragment &F) {
+  const MCSubtargetInfo *STI = nullptr;
+  STI = F.getSubtargetInfo();
+  assert(!F.hasInstructions() || STI != nullptr);
+  return STI;
 }

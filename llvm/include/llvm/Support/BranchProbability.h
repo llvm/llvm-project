@@ -77,7 +77,9 @@ public:
 
   LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 
-  LLVM_ABI void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Scale a large integer.
   ///
@@ -94,6 +96,9 @@ public:
   ///
   /// \return \c Num divided by \c this.
   LLVM_ABI uint64_t scaleByInverse(uint64_t Num) const;
+
+  /// Compute pow(Probability, N).
+  BranchProbability pow(unsigned N) const;
 
   BranchProbability &operator+=(BranchProbability RHS) {
     assert(N != UnknownN && RHS.N != UnknownN &&

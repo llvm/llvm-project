@@ -41,6 +41,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/Triple.h"
@@ -145,6 +146,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_QSetWorkingDir,
       &GDBRemoteCommunicationServerLLGS::Handle_QSetWorkingDir);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qStructuredDataPlugins,
+      &GDBRemoteCommunicationServerLLGS::Handle_qStructuredDataPlugins);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qsThreadInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qsThreadInfo);
@@ -536,14 +540,54 @@ static llvm::StringRef GetEncodingNameOrEmpty(const RegisterInfo &reg_info) {
 
 static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
   switch (reg_info.format) {
+  case eFormatDefault:
+    return "";
+  case eFormatBoolean:
+    return "boolean";
   case eFormatBinary:
     return "binary";
+  case eFormatBytes:
+    return "bytes";
+  case eFormatBytesWithASCII:
+    return "bytes-with-ascii";
+  case eFormatChar:
+    return "char";
+  case eFormatCharPrintable:
+    return "char-printable";
+  case eFormatComplex:
+    return "complex";
+  case eFormatCString:
+    return "cstring";
   case eFormatDecimal:
     return "decimal";
+  case eFormatEnum:
+    return "enum";
   case eFormatHex:
     return "hex";
+  case eFormatHexUppercase:
+    return "hex-uppercase";
   case eFormatFloat:
     return "float";
+  case eFormatOctal:
+    return "octal";
+  case eFormatOSType:
+    return "ostype";
+  case eFormatUnicode16:
+    return "unicode16";
+  case eFormatUnicode32:
+    return "unicode32";
+  case eFormatUnsigned:
+    return "unsigned";
+  case eFormatPointer:
+    return "pointer";
+  case eFormatVectorOfChar:
+    return "vector-char";
+  case eFormatVectorOfSInt64:
+    return "vector-sint64";
+  case eFormatVectorOfFloat16:
+    return "vector-float16";
+  case eFormatVectorOfFloat64:
+    return "vector-float64";
   case eFormatVectorOfSInt8:
     return "vector-sint8";
   case eFormatVectorOfUInt8:
@@ -562,8 +606,24 @@ static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
     return "vector-uint64";
   case eFormatVectorOfUInt128:
     return "vector-uint128";
+  case eFormatComplexInteger:
+    return "complex-integer";
+  case eFormatCharArray:
+    return "char-array";
+  case eFormatAddressInfo:
+    return "address-info";
+  case eFormatHexFloat:
+    return "hex-float";
+  case eFormatInstruction:
+    return "instruction";
+  case eFormatVoid:
+    return "void";
+  case eFormatUnicode8:
+    return "unicode8";
+  case eFormatFloat128:
+    return "float128";
   default:
-    return "";
+    llvm_unreachable("Unknown register format");
   };
 }
 
@@ -1189,6 +1249,19 @@ Status GDBRemoteCommunicationServerLLGS::InitializeConnection(
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::SendStructuredDataPacket(
+    const llvm::json::Value &value) {
+  std::string json_string;
+  raw_string_ostream os(json_string);
+  os << value;
+
+  StreamGDBRemote escaped_response;
+  escaped_response.PutCString("JSON-async:");
+  escaped_response.PutEscapedBytes(json_string.c_str(), json_string.size());
+  return SendPacketNoLock(escaped_response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::SendONotification(const char *buffer,
                                                     uint32_t len) {
   if ((buffer == nullptr) || (len == 0)) {
@@ -1377,6 +1450,21 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetBinaryData(
     return SendPacketNoLock(response.GetString());
   } else
     return SendErrorResponse(bytes.takeError());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qStructuredDataPlugins(
+    StringExtractorGDBRemote &packet) {
+  // Fail if we don't have a current process.
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  std::vector<std::string> structured_data_plugins =
+      m_current_process->GetStructuredDataPlugins();
+
+  return SendJSONResponse(
+      llvm::json::Value(llvm::json::Array(structured_data_plugins)));
 }
 
 GDBRemoteCommunication::PacketResult

@@ -20,6 +20,7 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
 
 class RemoteNXMapTable;
 
@@ -420,6 +421,10 @@ private:
   ObjCISA GetPointerISA(ObjCISA isa);
 
   lldb::addr_t GetISAHashTablePointer();
+
+  using ValueObjectSet = llvm::SmallPtrSet<ValueObject *, 8>;
+  ClassDescriptorSP GetClassDescriptorImpl(ValueObject &valobj,
+                                           ValueObjectSet &seen);
 
   /// Update the generation count of realized classes. This is not an exact
   /// count but rather a value that is incremented when new classes are realized

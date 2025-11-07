@@ -15,8 +15,8 @@
 
 #include "M68kMachineFunction.h"
 #include "M68kRegisterInfo.h"
+#include "M68kSelectionDAGInfo.h"
 #include "M68kTargetMachine.h"
-
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"

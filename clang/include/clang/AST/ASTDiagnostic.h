@@ -38,6 +38,9 @@ namespace clang {
   /// is initialized before passing it in.
   QualType desugarForDiagnostic(ASTContext &Context, QualType QT,
                                 bool &ShouldAKA);
+
+  std::string FormatUTFCodeUnitAsCodepoint(unsigned Value, QualType T);
+
 }  // end namespace clang
 
 #endif

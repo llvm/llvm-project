@@ -1,0 +1,5 @@
+# RUN: mkdir %t
+# RUN: cp %S/1.in %t/my-file.expected
+# RUN: cp %S/2.in %t/my-file.txt
+# RUN: diff %t/my-file.expected %t/my-file.txt
+

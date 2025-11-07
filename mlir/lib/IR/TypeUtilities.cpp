@@ -62,7 +62,7 @@ LogicalResult mlir::verifyCompatibleShape(ArrayRef<int64_t> shape1,
   for (auto dims : llvm::zip(shape1, shape2)) {
     int64_t dim1 = std::get<0>(dims);
     int64_t dim2 = std::get<1>(dims);
-    if (!ShapedType::isDynamic(dim1) && !ShapedType::isDynamic(dim2) &&
+    if (ShapedType::isStatic(dim1) && ShapedType::isStatic(dim2) &&
         dim1 != dim2)
       return failure();
   }
@@ -104,8 +104,8 @@ LogicalResult mlir::verifyCompatibleShapes(TypeRange types1, TypeRange types2) {
 LogicalResult mlir::verifyCompatibleDims(ArrayRef<int64_t> dims) {
   if (dims.empty())
     return success();
-  auto staticDim = std::accumulate(
-      dims.begin(), dims.end(), dims.front(), [](auto fold, auto dim) {
+  auto staticDim =
+      llvm::accumulate(dims, dims.front(), [](auto fold, auto dim) {
         return ShapedType::isDynamic(dim) ? fold : dim;
       });
   return success(llvm::all_of(dims, [&](auto dim) {

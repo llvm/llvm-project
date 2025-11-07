@@ -1,0 +1,10 @@
+header: wctype.h
+types:
+  - type_name: wint_t
+functions:
+  - name: iswalpha
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t

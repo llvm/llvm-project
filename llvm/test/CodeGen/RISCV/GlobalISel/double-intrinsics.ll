@@ -1420,3 +1420,61 @@ define double @tanh_f64(double %a) nounwind {
   %1 = call double @llvm.tanh.f64(double %a)
   ret double %1
 }
+
+define { double, double } @test_modf_f64(double %a) nounwind {
+; RV32IFD-LABEL: test_modf_f64:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    mv a0, sp
+; RV32IFD-NEXT:    call modf
+; RV32IFD-NEXT:    fld fa1, 0(sp)
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: test_modf_f64:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    addi sp, sp, -16
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    mv a0, sp
+; RV64IFD-NEXT:    call modf
+; RV64IFD-NEXT:    fld fa1, 0(sp)
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: test_modf_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    mv a1, a2
+; RV32I-NEXT:    mv a2, sp
+; RV32I-NEXT:    call modf
+; RV32I-NEXT:    lw a2, 0(sp)
+; RV32I-NEXT:    lw a3, 4(sp)
+; RV32I-NEXT:    sw a0, 0(s0)
+; RV32I-NEXT:    sw a1, 4(s0)
+; RV32I-NEXT:    sw a2, 8(s0)
+; RV32I-NEXT:    sw a3, 12(s0)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test_modf_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv a1, sp
+; RV64I-NEXT:    call modf
+; RV64I-NEXT:    ld a1, 0(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %result = call { double, double } @llvm.modf.f64(double %a)
+  ret { double, double } %result
+}

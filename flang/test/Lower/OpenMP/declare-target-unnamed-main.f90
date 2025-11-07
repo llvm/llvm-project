@@ -7,7 +7,7 @@
 ! appropriately mark the function as declare target, even when
 ! unused within the target region.
 
-!CHECK: func.func @_QPfoo(%{{.*}}: !fir.ref<f32>{{.*}}) -> f32 attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>{{.*}}}
+!CHECK: func.func @_QPfoo(%{{.*}}: !fir.ref<f32>{{.*}}) -> f32 attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to), automap = false>{{.*}}}
 
 interface
 real function foo (x)

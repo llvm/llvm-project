@@ -8,10 +8,12 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   EmulateWideInt.cpp
   EmulateNarrowType.cpp
   ExtractAddressComputations.cpp
+  FlattenMemRefs.cpp
   FoldMemRefAliasOps.cpp
   IndependenceTransforms.cpp
   MultiBuffer.cpp
   NormalizeMemRefs.cpp
+  ReifyResultShapes.cpp
   ResolveShapedTypeResultDims.cpp
   RuntimeOpVerification.cpp
 

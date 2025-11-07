@@ -60,6 +60,20 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
                ", filled slots:",
                SymbolTableOffset, (uint64_t)SymbolTable.size())
      << '\n';
+
+  const auto FindCuVectorId = [&](uint32_t VecOffset) {
+    // Entries in ConstantPoolVectors are sorted by their offset in constant
+    // pool, see how ConstantPoolVectors is populated in parseImpl.
+    const auto *It =
+        llvm::lower_bound(ConstantPoolVectors, VecOffset,
+                          [](const auto &ConstantPoolEntry, uint32_t Offset) {
+                            return ConstantPoolEntry.first < Offset;
+                          });
+    assert(It != ConstantPoolVectors.end() && It->first == VecOffset &&
+           "Invalid symbol table");
+    return It - ConstantPoolVectors.begin();
+  };
+
   uint32_t I = -1;
   for (const SymTableEntry &E : SymbolTable) {
     ++I;
@@ -72,13 +86,7 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
     StringRef Name = ConstantPoolStrings.substr(
         ConstantPoolOffset - StringPoolOffset + E.NameOffset);
 
-    auto CuVector = llvm::find_if(
-        ConstantPoolVectors,
-        [&](const std::pair<uint32_t, SmallVector<uint32_t, 0>> &V) {
-          return V.first == E.VecOffset;
-        });
-    assert(CuVector != ConstantPoolVectors.end() && "Invalid symbol table");
-    uint32_t CuVectorId = CuVector - ConstantPoolVectors.begin();
+    const uint32_t CuVectorId = FindCuVectorId(E.VecOffset);
     OS << format("      String name: %s, CU vector index: %d\n", Name.data(),
                  CuVectorId);
   }

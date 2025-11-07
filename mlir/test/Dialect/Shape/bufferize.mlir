@@ -6,7 +6,7 @@
 // CHECK:           %[[WTRUE:.*]] = shape.const_witness true
 // CHECK:           %[[MEMREF:.*]] = shape.assuming %[[WTRUE]] -> (memref<2xf16>) {
 // CHECK:             %[[TENSOR_VAL:.*]] = "test.source"() : () -> tensor<2xf16>
-// CHECK:             %[[YIELDED_MEMREF:.*]] = bufferization.to_memref %[[TENSOR_VAL]] : tensor<2xf16> to memref<2xf16>
+// CHECK:             %[[YIELDED_MEMREF:.*]] = bufferization.to_buffer %[[TENSOR_VAL]] : tensor<2xf16> to memref<2xf16>
 // CHECK:             shape.assuming_yield %[[YIELDED_MEMREF]] : memref<2xf16>
 // CHECK:           }
 // CHECK:           %[[TENSOR:.*]] = bufferization.to_tensor %[[MEMREF:.*]] : memref<2xf16>

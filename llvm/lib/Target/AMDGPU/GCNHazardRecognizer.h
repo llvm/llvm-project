@@ -104,10 +104,16 @@ private:
   bool fixLdsDirectVMEMHazard(MachineInstr *MI);
   bool fixVALUPartialForwardingHazard(MachineInstr *MI);
   bool fixVALUTransUseHazard(MachineInstr *MI);
+  bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
+  bool fixWMMACoexecutionHazards(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
+  bool fixGetRegWaitIdle(MachineInstr *MI);
+  bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
+  bool fixScratchBaseForwardingHazard(MachineInstr *MI);
+  bool fixSetRegMode(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);

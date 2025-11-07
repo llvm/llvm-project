@@ -6,6 +6,7 @@ typedef half half2 __attribute__((ext_vector_type(2)));
 typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef short int si8 __attribute__((ext_vector_type(8)));
+typedef int int4 __attribute__((ext_vector_type(4)));
 typedef unsigned int u4 __attribute__((ext_vector_type(4)));
 typedef double double2 __attribute__((ext_vector_type(2)));
 typedef double double3 __attribute__((ext_vector_type(3)));
@@ -66,7 +67,7 @@ void test_builtin_elementwise_abs(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i32 @llvm.abs.i32(i32 [[IA1]], i1 false)
   b = __builtin_elementwise_abs(int_as_one);
 
-  // CHECK:   call i32 @llvm.abs.i32(i32 -10, i1 false)
+  // CHECK:   store i32 %elt.abs11, ptr @b, align 4
   b = __builtin_elementwise_abs(-10);
 
   // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr, align 2
@@ -418,7 +419,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i32 @llvm.smax.i32(i32 [[IAS1]], i32 [[B]])
   int_as_one = __builtin_elementwise_max(int_as_one, b);
 
-  // CHECK: call i32 @llvm.smax.i32(i32 1, i32 97)
+  // CHECK: store i64 97, ptr [[I1:%.+]], align 8
   i1 = __builtin_elementwise_max(1, 'a');
 }
 
@@ -508,6 +509,9 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: [[B:%.+]] = load i32, ptr @b, align 4
   // CHECK-NEXT: call i32 @llvm.smin.i32(i32 [[IAS1]], i32 [[B]])
   int_as_one = __builtin_elementwise_min(int_as_one, b);
+
+  // CHECK: store i64 2, ptr [[I1:%.+]], align 8
+  i1 = __builtin_elementwise_min(2, 'b');
 }
 
 void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
@@ -724,6 +728,36 @@ void test_builtin_elementwise_exp10(float f1, float f2, double d1, double d2,
   // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
   // CHECK-NEXT: call <4 x float> @llvm.exp10.v4f32(<4 x float> [[VF1]])
   vf2 = __builtin_elementwise_exp10(vf1);
+}
+
+void test_builtin_elementwise_ldexp(float f1, float f2, double d1, double d2,
+                                    float4 vf1, float4 vf2, int i1, int4 vi1, short s1, long l1) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_ldexp(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK:      [[I1:%.+]] = load i32, ptr %i1.addr, align 4
+  // CHECK-NEXT: call float @llvm.ldexp.f32.i32(float [[F1]], i32 [[I1]])
+  f2 = __builtin_elementwise_ldexp(f1, i1);
+
+  // CHECK:      [[F2:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK:      [[S1:%.+]] = load i16, ptr %s1.addr, align 2
+  // CHECK:      [[Ext1:%.+]] = sext i16 [[S1]] to i32
+  // CHECK-NEXT: call float @llvm.ldexp.f32.i32(float [[F2]], i32 [[Ext1]])
+  f2 = __builtin_elementwise_ldexp(f1, s1);
+
+  // CHECK:      [[F3:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK:      [[L1:%.+]] = load i64, ptr %l1.addr, align 8
+  // CHECK-NEXT: call float @llvm.ldexp.f32.i64(float [[F3]], i64 [[L1]])
+  f2 = __builtin_elementwise_ldexp(f1, l1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK:      [[I2:%.+]] = load i32, ptr %i1.addr, align 4
+  // CHECK-NEXT: call double @llvm.ldexp.f64.i32(double [[D1]], i32 [[I2]])
+  d2 = __builtin_elementwise_ldexp(d1, i1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK:      [[VI1:%.+]] = load <4 x i32>, ptr %vi1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> [[VF1]], <4 x i32> [[VI1]])
+  vf2 = __builtin_elementwise_ldexp(vf1, vi1);
 }
 
 void test_builtin_elementwise_floor(float f1, float f2, double d1, double d2,
@@ -1175,4 +1209,186 @@ void test_builtin_elementwise_fma(float f32, double f64,
   // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> splat (half 0xH4400))
   half2 tmp2_v2f16 = __builtin_elementwise_fma(v2f16, v2f16, (half2)4.0);
 
+}
+
+void test_builtin_elementwise_fshl(long long int i1, long long int i2,
+				   long long int i3, unsigned short us1,
+                                   unsigned short us2, unsigned short us3,
+                                   char c1, char c2, char c3,
+                                   unsigned char uc1, unsigned char uc2,
+                                   unsigned char uc3,  si8 vi1, si8 vi2,
+                                   si8 vi3, u4 vu1, u4 vu2, u4 vu3) {
+  // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr
+  // CHECK-NEXT: [[I2:%.+]] = load i64, ptr %i2.addr
+  // CHECK-NEXT: [[I3:%.+]] = load i64, ptr %i3.addr
+  // CHECK-NEXT: [[I4:%.+]] = call i64 @llvm.fshl.i64(i64 [[I1]], i64 [[I2]], i64 [[I3]])
+  // CHECK-NEXT:              store i64 [[I4]], ptr %tmp_lli_l
+  // CHECK-NEXT: [[I5:%.+]] = load i64, ptr %i1.addr
+  // CHECK-NEXT: [[I6:%.+]] = load i64, ptr %i2.addr
+  // CHECK-NEXT: [[I7:%.+]] = load i64, ptr %i3.addr
+  // CHECK-NEXT: [[I8:%.+]] = call i64 @llvm.fshr.i64(i64 [[I5]], i64 [[I6]], i64 [[I7]])
+  // CHECK-NEXT:              store i64 [[I8]], ptr %tmp_lli_r
+  long long int tmp_lli_l = __builtin_elementwise_fshl(i1, i2, i3);
+  long long int tmp_lli_r = __builtin_elementwise_fshr(i1, i2, i3);
+
+  // CHECK:      [[US1:%.+]] = load i16, ptr %us1.addr
+  // CHECK-NEXT: [[US2:%.+]] = load i16, ptr %us2.addr
+  // CHECK-NEXT: [[US3:%.+]] = load i16, ptr %us3.addr
+  // CHECK-NEXT: [[US4:%.+]] = call i16 @llvm.fshl.i16(i16 [[US1]], i16 [[US2]], i16 [[US3]])
+  // CHECK-NEXT:               store i16 [[US4]], ptr %tmp_usi_l
+  // CHECK-NEXT: [[US5:%.+]] = load i16, ptr %us1.addr
+  // CHECK-NEXT: [[US6:%.+]] = load i16, ptr %us2.addr
+  // CHECK-NEXT: [[US7:%.+]] = load i16, ptr %us3.addr
+  // CHECK-NEXT: [[US8:%.+]] = call i16 @llvm.fshr.i16(i16 [[US5]], i16 [[US6]], i16 [[US7]])
+  // CHECK-NEXT:               store i16 [[US8]], ptr %tmp_usi_r
+  unsigned short tmp_usi_l = __builtin_elementwise_fshl(us1, us2, us3);
+  unsigned short tmp_usi_r = __builtin_elementwise_fshr(us1, us2, us3);
+
+  // CHECK:      [[C1:%.+]] = load i8, ptr %c1.addr
+  // CHECK-NEXT: [[C2:%.+]] = load i8, ptr %c2.addr
+  // CHECK-NEXT: [[C3:%.+]] = load i8, ptr %c3.addr
+  // CHECK-NEXT: [[C4:%.+]] = call i8 @llvm.fshl.i8(i8 [[C1]], i8 [[C2]], i8 [[C3]])
+  // CHECK-NEXT:              store i8 [[C4]], ptr %tmp_c_l
+  // CHECK-NEXT: [[C5:%.+]] = load i8, ptr %c1.addr
+  // CHECK-NEXT: [[C6:%.+]] = load i8, ptr %c2.addr
+  // CHECK-NEXT: [[C7:%.+]] = load i8, ptr %c3.addr
+  // CHECK-NEXT: [[C8:%.+]] = call i8 @llvm.fshr.i8(i8 [[C5]], i8 [[C6]], i8 [[C7]])
+  // CHECK-NEXT:              store i8 [[C8]], ptr %tmp_c_r
+  char tmp_c_l = __builtin_elementwise_fshl(c1, c2, c3);
+  char tmp_c_r = __builtin_elementwise_fshr(c1, c2, c3);
+
+  // CHECK:      [[UC1:%.+]] = load i8, ptr %uc1.addr
+  // CHECK-NEXT: [[UC2:%.+]] = load i8, ptr %uc2.addr
+  // CHECK-NEXT: [[UC3:%.+]] = load i8, ptr %uc3.addr
+  // CHECK-NEXT: [[UC4:%.+]] = call i8 @llvm.fshl.i8(i8 [[UC1]], i8 [[UC2]], i8 [[UC3]])
+  // CHECK-NEXT:               store i8 [[UC4]], ptr %tmp_uc_l
+  // CHECK-NEXT: [[UC5:%.+]] = load i8, ptr %uc1.addr
+  // CHECK-NEXT: [[UC6:%.+]] = load i8, ptr %uc2.addr
+  // CHECK-NEXT: [[UC7:%.+]] = load i8, ptr %uc3.addr
+  // CHECK-NEXT: [[UC8:%.+]] = call i8 @llvm.fshr.i8(i8 [[UC5]], i8 [[UC6]], i8 [[UC7]])
+  // CHECK-NEXT:               store i8 [[UC8]], ptr %tmp_uc_r
+  unsigned char tmp_uc_l = __builtin_elementwise_fshl(uc1, uc2, uc3);
+  unsigned char tmp_uc_r = __builtin_elementwise_fshr(uc1, uc2, uc3);
+
+  // CHECK:      [[VI1:%.+]] = load <8 x i16>, ptr %vi1.addr
+  // CHECK-NEXT: [[VI2:%.+]] = load <8 x i16>, ptr %vi2.addr
+  // CHECK-NEXT: [[VI3:%.+]] = load <8 x i16>, ptr %vi3.addr
+  // CHECK-NEXT: [[VI4:%.+]] = call <8 x i16> @llvm.fshl.v8i16(<8 x i16> [[VI1]], <8 x i16> [[VI2]], <8 x i16> [[VI3]])
+  // CHECK-NEXT:               store <8 x i16> [[VI4]], ptr %tmp_vi_l
+  // CHECK-NEXT: [[VI5:%.+]] = load <8 x i16>, ptr %vi1.addr
+  // CHECK-NEXT: [[VI6:%.+]] = load <8 x i16>, ptr %vi2.addr
+  // CHECK-NEXT: [[VI7:%.+]] = load <8 x i16>, ptr %vi3.addr
+  // CHECK-NEXT: [[VI8:%.+]] = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> [[VI5]], <8 x i16> [[VI6]], <8 x i16> [[VI7]])
+  // CHECK-NEXT:               store <8 x i16> [[VI8]], ptr %tmp_vi_r
+  si8 tmp_vi_l = __builtin_elementwise_fshl(vi1, vi2, vi3);
+  si8 tmp_vi_r = __builtin_elementwise_fshr(vi1, vi2, vi3);
+
+  // CHECK:      [[VU1:%.+]] = load <4 x i32>, ptr %vu1.addr
+  // CHECK-NEXT: [[VU2:%.+]] = load <4 x i32>, ptr %vu2.addr
+  // CHECK-NEXT: [[VU3:%.+]] = load <4 x i32>, ptr %vu3.addr
+  // CHECK-NEXT: [[VU4:%.+]] = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]], <4 x i32> [[VU3]])
+  // CHECK-NEXT:               store <4 x i32> [[VU4]], ptr %tmp_vu_l
+  // CHECK-NEXT: [[VU5:%.+]] = load <4 x i32>, ptr %vu1.addr
+  // CHECK-NEXT: [[VU6:%.+]] = load <4 x i32>, ptr %vu2.addr
+  // CHECK-NEXT: [[VU7:%.+]] = load <4 x i32>, ptr %vu3.addr
+  // CHECK-NEXT: [[VU8:%.+]] = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> [[VU5]], <4 x i32> [[VU6]], <4 x i32> [[VU7]])
+  // CHECK-NEXT:               store <4 x i32> [[VU8]], ptr %tmp_vu_r
+  u4 tmp_vu_l = __builtin_elementwise_fshl(vu1, vu2, vu3);
+  u4 tmp_vu_r = __builtin_elementwise_fshr(vu1, vu2, vu3);
+}
+
+void test_builtin_elementwise_clzg(si8 vs1, si8 vs2, u4 vu1,
+                                   long long int lli, short si,
+                                   _BitInt(31) bi, int i,
+                                   char ci) {
+  // CHECK:      [[V8S1:%.+]] = load <8 x i16>, ptr %vs1.addr
+  // CHECK-NEXT: call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[V8S1]], i1 true)
+  vs1 = __builtin_elementwise_clzg(vs1);
+
+  // CHECK:      [[V8S1:%.+]] = load <8 x i16>, ptr %vs1.addr
+  // CHECK-NEXT: [[CLZ:%.+]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[V8S1]], i1 true)
+  // CHECK-NEXT: [[ISZERO:%.+]] = icmp eq <8 x i16> [[V8S1]], zeroinitializer
+  // CHECK-NEXT: [[V8S2:%.+]] = load <8 x i16>, ptr %vs2.addr
+  // select <8 x i1> [[ISZERO]], <8 x i16> [[CLZ]], <8 x i16> [[V8S2]]
+  vs1 = __builtin_elementwise_clzg(vs1, vs2);
+
+  // CHECK:      [[V4U1:%.+]] = load <4 x i32>, ptr %vu1.addr
+  // CHECK-NEXT: call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[V4U1]], i1 true)
+  vu1 = __builtin_elementwise_clzg(vu1);
+
+  // CHECK:      [[LLI:%.+]] = load i64, ptr %lli.addr
+  // CHECK-NEXT: call i64 @llvm.ctlz.i64(i64 [[LLI]], i1 true)
+  lli = __builtin_elementwise_clzg(lli);
+
+  // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr
+  // CHECK-NEXT: call i16 @llvm.ctlz.i16(i16 [[SI]], i1 true)
+  si = __builtin_elementwise_clzg(si);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi.addr
+  // CHECK-NEXT: [[BI2:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: call i31 @llvm.ctlz.i31(i31 [[BI2]], i1 true)
+  bi = __builtin_elementwise_clzg(bi);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi.addr
+  // CHECK-NEXT: [[BI2:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[CLZ:%.+]] = call i31 @llvm.ctlz.i31(i31 [[BI2]], i1 true)
+  // CHECK-NEXT: [[ISZERO:%.+]] = icmp eq i31 [[BI2]], 0
+  // CHECK-NEXT: select i1 [[ISZERO]], i31 1, i31 [[CLZ]]
+  bi = __builtin_elementwise_clzg(bi, (_BitInt(31))1);
+
+  // CHECK:      [[I:%.+]] = load i32, ptr %i.addr
+  // CHECK-NEXT: call i32 @llvm.ctlz.i32(i32 [[I]], i1 true)
+  i = __builtin_elementwise_clzg(i);
+
+  // CHECK:      [[CI:%.+]] = load i8, ptr %ci.addr
+  // CHECK-NEXT: call i8 @llvm.ctlz.i8(i8 [[CI]], i1 true)
+  ci = __builtin_elementwise_clzg(ci);
+}
+
+void test_builtin_elementwise_ctzg(si8 vs1, si8 vs2, u4 vu1,
+                                   long long int lli, short si,
+                                   _BitInt(31) bi, int i,
+                                   char ci) {
+  // CHECK:      [[V8S1:%.+]] = load <8 x i16>, ptr %vs1.addr
+  // CHECK-NEXT: call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[V8S1]], i1 true)
+  vs1 = __builtin_elementwise_ctzg(vs1);
+
+  // CHECK:      [[V8S1:%.+]] = load <8 x i16>, ptr %vs1.addr
+  // CHECK-NEXT: [[ctz:%.+]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[V8S1]], i1 true)
+  // CHECK-NEXT: [[ISZERO:%.+]] = icmp eq <8 x i16> [[V8S1]], zeroinitializer
+  // CHECK-NEXT: [[V8S2:%.+]] = load <8 x i16>, ptr %vs2.addr
+  // select <8 x i1> [[ISZERO]], <8 x i16> [[ctz]], <8 x i16> [[V8S2]]
+  vs1 = __builtin_elementwise_ctzg(vs1, vs2);
+
+  // CHECK:      [[V4U1:%.+]] = load <4 x i32>, ptr %vu1.addr
+  // CHECK-NEXT: call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[V4U1]], i1 true)
+  vu1 = __builtin_elementwise_ctzg(vu1);
+
+  // CHECK:      [[LLI:%.+]] = load i64, ptr %lli.addr
+  // CHECK-NEXT: call i64 @llvm.cttz.i64(i64 [[LLI]], i1 true)
+  lli = __builtin_elementwise_ctzg(lli);
+
+  // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr
+  // CHECK-NEXT: call i16 @llvm.cttz.i16(i16 [[SI]], i1 true)
+  si = __builtin_elementwise_ctzg(si);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi.addr
+  // CHECK-NEXT: [[BI2:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: call i31 @llvm.cttz.i31(i31 [[BI2]], i1 true)
+  bi = __builtin_elementwise_ctzg(bi);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi.addr
+  // CHECK-NEXT: [[BI2:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[ctz:%.+]] = call i31 @llvm.cttz.i31(i31 [[BI2]], i1 true)
+  // CHECK-NEXT: [[ISZERO:%.+]] = icmp eq i31 [[BI2]], 0
+  // CHECK-NEXT: select i1 [[ISZERO]], i31 1, i31 [[ctz]]
+  bi = __builtin_elementwise_ctzg(bi, (_BitInt(31))1);
+
+  // CHECK:      [[I:%.+]] = load i32, ptr %i.addr
+  // CHECK-NEXT: call i32 @llvm.cttz.i32(i32 [[I]], i1 true)
+  i = __builtin_elementwise_ctzg(i);
+
+  // CHECK:      [[CI:%.+]] = load i8, ptr %ci.addr
+  // CHECK-NEXT: call i8 @llvm.cttz.i8(i8 [[CI]], i1 true)
+  ci = __builtin_elementwise_ctzg(ci);
 }

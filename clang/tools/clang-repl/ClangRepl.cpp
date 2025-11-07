@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/Version.h"
+#include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Interpreter/CodeCompletion.h"
@@ -18,13 +20,26 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
+
+#include <string>
+#include <vector>
+
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 
 // Disable LSan for this test.
 // FIXME: Re-enable once we can assume GCC 13.2 or higher.
@@ -34,18 +49,119 @@
 LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return 1; }
 #endif
 
+#define DEBUG_TYPE "clang-repl"
+
 static llvm::cl::opt<bool> CudaEnabled("cuda", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> OffloadArch("offload-arch", llvm::cl::Hidden);
-
+static llvm::cl::OptionCategory OOPCategory("Out-of-process Execution Options");
+static llvm::cl::opt<std::string> SlabAllocateSizeString(
+    "slab-allocate",
+    llvm::cl::desc("Allocate from a slab of the given size "
+                   "(allowable suffixes: Kb, Mb, Gb. default = "
+                   "Kb)"),
+    llvm::cl::init(""), llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<std::string>
+    OOPExecutor("oop-executor",
+                llvm::cl::desc("Launch an out-of-process executor to run code"),
+                llvm::cl::init(""), llvm::cl::ValueOptional,
+                llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<std::string> OOPExecutorConnect(
+    "oop-executor-connect",
+    llvm::cl::desc(
+        "Connect to an out-of-process executor through a TCP socket"),
+    llvm::cl::value_desc("<hostname>:<port>"));
+static llvm::cl::opt<std::string>
+    OrcRuntimePath("orc-runtime", llvm::cl::desc("Path to the ORC runtime"),
+                   llvm::cl::init(""), llvm::cl::ValueOptional,
+                   llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<bool> UseSharedMemory(
+    "use-shared-memory",
+    llvm::cl::desc("Use shared memory to transfer generated code and data"),
+    llvm::cl::init(false), llvm::cl::cat(OOPCategory));
 static llvm::cl::list<std::string>
     ClangArgs("Xcc",
               llvm::cl::desc("Argument to pass to the CompilerInvocation"),
               llvm::cl::CommaSeparated);
 static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
+static llvm::cl::opt<bool> OptHostJitTriple("host-jit-triple",
+                                            llvm::cl::Hidden);
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
+
+static llvm::Error sanitizeOopArguments(const char *ArgV0) {
+  // Only one of -oop-executor and -oop-executor-connect can be used.
+  if (!!OOPExecutor.getNumOccurrences() &&
+      !!OOPExecutorConnect.getNumOccurrences())
+    return llvm::make_error<llvm::StringError>(
+        "Only one of -" + OOPExecutor.ArgStr + " and -" +
+            OOPExecutorConnect.ArgStr + " can be specified",
+        llvm::inconvertibleErrorCode());
+
+  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
+  // TODO: Remove once out-of-process execution support is implemented for
+  // non-Unix platforms.
+  if ((!SystemTriple.isOSBinFormatELF() &&
+       !SystemTriple.isOSBinFormatMachO()) &&
+      (OOPExecutor.getNumOccurrences() ||
+       OOPExecutorConnect.getNumOccurrences()))
+    return llvm::make_error<llvm::StringError>(
+        "Out-of-process execution is only supported on Unix platforms",
+        llvm::inconvertibleErrorCode());
+
+  // If -slab-allocate is passed, check that we're not trying to use it in
+  // -oop-executor or -oop-executor-connect mode.
+  //
+  // FIXME: Remove once we enable remote slab allocation.
+  if (SlabAllocateSizeString != "") {
+    if (OOPExecutor.getNumOccurrences() ||
+        OOPExecutorConnect.getNumOccurrences())
+      return llvm::make_error<llvm::StringError>(
+          "-slab-allocate cannot be used with -oop-executor or "
+          "-oop-executor-connect",
+          llvm::inconvertibleErrorCode());
+  }
+
+  // Out-of-process executors require the ORC runtime. ORC Runtime Path
+  // resolution is done in Interpreter.cpp.
+
+  // If -oop-executor was used but no value was specified then use a sensible
+  // default.
+  if (!!OOPExecutor.getNumOccurrences() && OOPExecutor.empty()) {
+    llvm::SmallString<256> OOPExecutorPath(llvm::sys::fs::getMainExecutable(
+        ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
+    llvm::sys::path::remove_filename(OOPExecutorPath);
+    llvm::sys::path::append(OOPExecutorPath, "llvm-jitlink-executor");
+    OOPExecutor = OOPExecutorPath.str().str();
+  }
+
+  return llvm::Error::success();
+}
+
+static llvm::Expected<unsigned> getSlabAllocSize(llvm::StringRef SizeString) {
+  SizeString = SizeString.trim();
+
+  uint64_t Units = 1024;
+
+  if (SizeString.ends_with_insensitive("kb"))
+    SizeString = SizeString.drop_back(2).rtrim();
+  else if (SizeString.ends_with_insensitive("mb")) {
+    Units = 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  } else if (SizeString.ends_with_insensitive("gb")) {
+    Units = 1024 * 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  } else if (SizeString.empty())
+    return 0;
+
+  uint64_t SlabSize = 0;
+  if (SizeString.getAsInteger(10, SlabSize))
+    return llvm::make_error<llvm::StringError>(
+        "Invalid numeric format for slab size", llvm::inconvertibleErrorCode());
+
+  return SlabSize * Units;
+}
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
@@ -86,7 +202,7 @@ struct ReplListCompleter {
   clang::Interpreter &MainInterp;
   ReplListCompleter(clang::IncrementalCompilerBuilder &CB,
                     clang::Interpreter &Interp)
-      : CB(CB), MainInterp(Interp){};
+      : CB(CB), MainInterp(Interp) {};
 
   std::vector<llvm::LineEditor::Completion> operator()(llvm::StringRef Buffer,
                                                        size_t Pos) const;
@@ -165,6 +281,11 @@ int main(int argc, const char **argv) {
       llvm::outs() << "false\n";
     }
     return 0;
+  } else if (OptHostJitTriple) {
+    auto J = ExitOnErr(llvm::orc::LLJITBuilder().create());
+    auto T = J->getTargetTriple();
+    llvm::outs() << T.normalize() << '\n';
+    return 0;
   }
 
   clang::IncrementalCompilerBuilder CB;
@@ -182,6 +303,20 @@ int main(int argc, const char **argv) {
 
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
+
+  ExitOnErr(sanitizeOopArguments(argv[0]));
+
+  clang::Interpreter::JITConfig Config;
+  Config.IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
+  Config.OOPExecutor = OOPExecutor;
+  Config.OrcRuntimePath = OrcRuntimePath;
+  auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
+  if (!SizeOrErr) {
+    llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");
+    return EXIT_FAILURE;
+  }
+  Config.SlabAllocateSize = *SizeOrErr;
+  Config.UseSharedMemory = UseSharedMemory;
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
@@ -214,8 +349,9 @@ int main(int argc, const char **argv) {
       auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
       ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
-  } else
-    Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
+  } else {
+    Interp = ExitOnErr(clang::Interpreter::create(std::move(CI), Config));
+  }
 
   bool HasError = false;
 
@@ -243,15 +379,34 @@ int main(int argc, const char **argv) {
       }
 
       Input += L;
+      // If we add more % commands, there should be better architecture than
+      // this.
       if (Input == R"(%quit)") {
         break;
       }
       if (Input == R"(%undo)") {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      } else if (Input == R"(%help)") {
+        llvm::outs() << "%help\t\tlist clang-repl %commands\n"
+                     << "%undo\t\tundo the previous input\n"
+                     << "%lib\t<path>\tlink a dynamic library\n"
+                     << "%quit\t\texit clang-repl\n";
+      } else if (Input == R"(%lib)") {
+        auto Err = llvm::make_error<llvm::StringError>(
+            "%lib expects 1 argument: the path to a dynamic library\n",
+            std::error_code());
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input.rfind("%lib ", 0) == 0) {
         if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      } else if (Input[0] == '%') {
+        auto Err = llvm::make_error<llvm::StringError>(
+            llvm::formatv(
+                "Invalid % command \"{0}\", use \"%help\" to list commands\n",
+                Input),
+            std::error_code());
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       }

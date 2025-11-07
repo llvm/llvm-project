@@ -1,4 +1,4 @@
-//===--- UseTransparentFunctorsCheck.cpp - clang-tidy----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseTransparentFunctorsCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -38,15 +37,13 @@ void UseTransparentFunctorsCheck::registerMatchers(MatchFinder *Finder) {
 
   // Non-transparent functor mentioned as a template parameter. FIXIT.
   Finder->addMatcher(
-      loc(qualType(
-              unless(elaboratedType()),
-              hasDeclaration(classTemplateSpecializationDecl(
-                  unless(hasAnyTemplateArgument(templateArgument(refersToType(
-                      qualType(pointsTo(qualType(isAnyCharacter()))))))),
-                  hasAnyTemplateArgument(
-                      templateArgument(refersToType(qualType(hasDeclaration(
-                                           TransparentFunctors))))
-                          .bind("Functor"))))))
+      loc(qualType(hasDeclaration(classTemplateSpecializationDecl(
+              unless(hasAnyTemplateArgument(templateArgument(refersToType(
+                  qualType(pointsTo(qualType(isAnyCharacter()))))))),
+              hasAnyTemplateArgument(
+                  templateArgument(refersToType(qualType(
+                                       hasDeclaration(TransparentFunctors))))
+                      .bind("Functor"))))))
           .bind("FunctorParentLoc"),
       this);
 

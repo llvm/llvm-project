@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library", "objc_library")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
 load(":plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
 
@@ -79,6 +80,7 @@ cc_library(
     hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
+        "//clang:codegen",
         "//lldb:CoreHeaders",
         "//lldb:Headers",
         "//lldb:SymbolHeaders",
@@ -151,6 +153,7 @@ cc_library(
         "//clang:lex",
         "//clang:sema",
         "//lldb:CoreHeaders",
+        "//lldb:ExpressionHeaders",
         "//lldb:Host",
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
@@ -334,6 +337,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
         "//llvm:BinaryFormat",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
@@ -417,6 +421,18 @@ cc_library(
     deps = ["//lldb:Core"],
 )
 
+gentbl_cc_library(
+    name = "SymbolFilePDBProperties",
+    strip_include_prefix = "SymbolFile/PDB",
+    tbl_outs = {
+        "SymbolFile/PDB/SymbolFilePDBProperties.inc": ["-gen-lldb-property-defs"],
+        "SymbolFile/PDB/SymbolFilePDBPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "SymbolFile/PDB/SymbolFilePDBProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
 cc_library(
     name = "PluginSymbolFilePDB",
     srcs = glob(["SymbolFile/PDB/*.cpp"]),
@@ -427,6 +443,7 @@ cc_library(
         ":PluginSymbolFileNativePDBHeaders",
         ":PluginSymbolFilePDBHeaders",
         ":PluginTypeSystemClangHeaders",
+        ":SymbolFilePDBProperties",
         "//clang:ast",
         "//clang:lex",
         "//lldb:Core",
@@ -476,6 +493,22 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:config",
         "@llvm_zlib//:zlib",
+    ],
+)
+
+cc_library(
+    name = "PluginProcessWasm",
+    srcs = glob(["Process/wasm/*.cpp"]),
+    hdrs = glob(["Process/wasm/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessGDBRemote",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
+        "//llvm:Support",
     ],
 )
 
@@ -644,6 +677,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginPlatformPOSIX",
+        ":PluginProcessUtility",
         ":PluginTypeSystemClangHeaders",
         "//lldb:Breakpoint",
         "//lldb:Core",
@@ -838,7 +872,6 @@ gentbl_cc_library(
     deps = ["//lldb:CoreTdFiles"],
 )
 
-
 cc_library(
     name = "PluginCPlusPlusLanguageHeaders",
     hdrs = glob(["Language/CPlusPlus/*.h"]),
@@ -866,8 +899,8 @@ cc_library(
         "//lldb:Core",
         "//lldb:DataFormatters",
         "//lldb:Headers",
-        "//lldb:InterpreterHeaders",
         "//lldb:Host",
+        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
@@ -1302,9 +1335,11 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
     ],
 )
 
@@ -1887,6 +1922,8 @@ cc_library(
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2127,6 +2164,7 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",

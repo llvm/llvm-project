@@ -13,11 +13,13 @@ body:             |
     liveins: $q0, $q1
 
     ; CHECK-LABEL: name: aesmc_aese
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
-    ; CHECK: [[T0:%[0-9]+]]:fpr128 = AESErr [[COPY]], [[COPY1]]
-    ; CHECK: [[T1:%[0-9]+]]:fpr128 = AESMCrrTied [[T0]]
-    ; CHECK: $q0 = COPY [[T1]]
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK-NEXT: [[AESErr:%[0-9]+]]:fpr128 = AESErr [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[AESMCrrTied:%[0-9]+]]:fpr128 = AESMCrrTied [[AESErr]]
+    ; CHECK-NEXT: $q0 = COPY [[AESMCrrTied]]
     %0:fpr(<16 x s8>) = COPY $q0
     %1:fpr(<16 x s8>) = COPY $q1
     %2:fpr(<16 x s8>) = G_INTRINSIC intrinsic(@llvm.aarch64.crypto.aese), %0, %1

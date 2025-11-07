@@ -41,6 +41,12 @@
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
 
+#if defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
+#include <OS.h>
+#include <signal.h>
+#define _LIBUNWIND_CHECK_HAIKU_SIGRETURN 1
+#endif
+
 #include "AddressSpace.hpp"
 #include "CompactUnwinder.hpp"
 #include "config.h"
@@ -167,7 +173,8 @@ bool DwarfFDECache<A>::_registeredForDyldUnloads = false;
 #endif
 
 template <typename A>
-typename A::pint_t DwarfFDECache<A>::findFDE(pint_t mh, pint_t pc) {
+typename DwarfFDECache<A>::pint_t DwarfFDECache<A>::findFDE(pint_t mh,
+                                                            pint_t pc) {
   pint_t result = 0;
   _LIBUNWIND_LOG_IF_FALSE(_lock.lock_shared());
   for (entry *p = _buffer; p < _bufferUsed; ++p) {
@@ -1031,7 +1038,7 @@ private:
   template <typename Registers> int stepThroughSigReturn(Registers &) {
     return UNW_STEP_END;
   }
-#elif defined(_LIBUNWIND_TARGET_HAIKU)
+#elif defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool setInfoForSigReturn();
   int stepThroughSigReturn();
 #endif
@@ -1040,18 +1047,26 @@ private:
   bool getInfoFromFdeCie(const typename CFI_Parser<A>::FDE_Info &fdeInfo,
                          const typename CFI_Parser<A>::CIE_Info &cieInfo,
                          pint_t pc, uintptr_t dso_base);
-  bool getInfoFromDwarfSection(pint_t pc, const UnwindInfoSections &sects,
-                                            uint32_t fdeSectionOffsetHint=0);
+  bool getInfoFromDwarfSection(const typename R::link_reg_t &pc,
+                               const UnwindInfoSections &sects,
+                               uint32_t fdeSectionOffsetHint = 0);
   int stepWithDwarfFDE(bool stage2) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+    typename R::link_reg_t pc;
+    _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+    typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+#endif
     return DwarfInstructions<A, R>::stepWithDwarf(
-        _addressSpace, (pint_t)this->getReg(UNW_REG_IP),
-        (pint_t)_info.unwind_info, _registers, _isSignalFrame, stage2);
+        _addressSpace, pc, (pint_t)_info.unwind_info, _registers,
+        _isSignalFrame, stage2);
   }
 #endif
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
-  bool getInfoFromCompactEncodingSection(pint_t pc,
-                                            const UnwindInfoSections &sects);
+  bool getInfoFromCompactEncodingSection(const typename R::link_reg_t &pc,
+                                         const UnwindInfoSections &sects);
   int stepWithCompactEncoding(bool stage2 = false) {
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
     if ( compactSaysUseDwarf() )
@@ -1352,13 +1367,13 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
                 "UnwindCursor<> does not fit in unw_cursor_t");
   static_assert((alignof(UnwindCursor<A, R>) <= alignof(unw_cursor_t)),
                 "UnwindCursor<> requires more alignment than unw_cursor_t");
-  memset(&_info, 0, sizeof(_info));
+  memset(static_cast<void *>(&_info), 0, sizeof(_info));
 }
 
 template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(A &as, void *)
     : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false) {
-  memset(&_info, 0, sizeof(_info));
+  memset(static_cast<void *>(&_info), 0, sizeof(_info));
   // FIXME
   // fill in _registers from thread arg
 }
@@ -1676,9 +1691,9 @@ bool UnwindCursor<A, R>::getInfoFromFdeCie(
 }
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
-                                                const UnwindInfoSections &sects,
-                                                uint32_t fdeSectionOffsetHint) {
+bool UnwindCursor<A, R>::getInfoFromDwarfSection(
+    const typename R::link_reg_t &pc, const UnwindInfoSections &sects,
+    uint32_t fdeSectionOffsetHint) {
   typename CFI_Parser<A>::FDE_Info fdeInfo;
   typename CFI_Parser<A>::CIE_Info cieInfo;
   bool foundFDE = false;
@@ -1736,8 +1751,8 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
-                                              const UnwindInfoSections &sects) {
+bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
+    const typename R::link_reg_t &pc, const UnwindInfoSections &sects) {
   const bool log = false;
   if (log)
     fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX, mh=0x%llX)\n",
@@ -1968,6 +1983,16 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
         personalityIndex * sizeof(uint32_t));
     pint_t personalityPointer = sects.dso_base + (pint_t)personalityDelta;
     personality = _addressSpace.getP(personalityPointer);
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    // The GOT for the personality function was signed address authenticated.
+    // Resign it as a regular function pointer.
+    const auto discriminator = ptrauth_blend_discriminator(
+        &_info.handler, __ptrauth_unwind_upi_handler_disc);
+    void *signedPtr = ptrauth_auth_and_resign(
+        (void *)personality, ptrauth_key_function_pointer, personalityPointer,
+        ptrauth_key_function_pointer, discriminator);
+    personality = (__typeof(personality))signedPtr;
+#endif
     if (log)
       fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX), "
                       "personalityDelta=0x%08X, personality=0x%08llX\n",
@@ -1981,7 +2006,11 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
   _info.start_ip = funcStart;
   _info.end_ip = funcEnd;
   _info.lsda = lsda;
-  _info.handler = personality;
+  // We use memmove to copy the personality function as we have already manually
+  // re-signed the pointer, and assigning directly will attempt to incorrectly
+  // sign the already signed value.
+  memmove(reinterpret_cast<void *>(&_info.handler),
+          reinterpret_cast<void *>(&personality), sizeof(personality));
   _info.gp = 0;
   _info.flags = 0;
   _info.format = encoding;
@@ -2630,15 +2659,23 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   _isSigReturn = false;
 #endif
 
-  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+
 #if defined(_LIBUNWIND_ARM_EHABI)
   // Remove the thumb bit so the IP represents the actual instruction address.
   // This matches the behaviour of _Unwind_GetIP on arm.
-  pc &= (pint_t)~0x1;
+  rawPC &= (pint_t)~0x1;
+#endif
+
+  typename R::link_reg_t pc;
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+  pc = rawPC;
 #endif
 
   // Exit early if at the top of the stack.
@@ -2755,7 +2792,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #endif // #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (setInfoForSigReturn())
     return;
 #endif
@@ -2829,63 +2866,6 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
   _registers.setSP(_addressSpace.get64(sigctx + kOffsetSp));
   _registers.setIP(_addressSpace.get64(sigctx + kOffsetPc));
   _isSignalFrame = true;
-  return UNW_STEP_SUCCESS;
-}
-
-#elif defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
-#include <commpage_defs.h>
-#include <signal.h>
-
-extern "C" {
-extern void *__gCommPageAddress;
-}
-
-template <typename A, typename R>
-bool UnwindCursor<A, R>::setInfoForSigReturn() {
-#if defined(_LIBUNWIND_TARGET_X86_64)
-  addr_t signal_handler =
-      (((addr_t *)__gCommPageAddress)[COMMPAGE_ENTRY_X86_SIGNAL_HANDLER] +
-       (addr_t)__gCommPageAddress);
-  addr_t signal_handler_ret = signal_handler + 45;
-#endif
-  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
-  if (pc == signal_handler_ret) {
-    _info = {};
-    _info.start_ip = signal_handler;
-    _info.end_ip = signal_handler_ret;
-    _isSigReturn = true;
-    return true;
-  }
-  return false;
-}
-
-template <typename A, typename R>
-int UnwindCursor<A, R>::stepThroughSigReturn() {
-  _isSignalFrame = true;
-  pint_t sp = _registers.getSP();
-#if defined(_LIBUNWIND_TARGET_X86_64)
-  vregs *regs = (vregs *)(sp + 0x70);
-
-  _registers.setRegister(UNW_REG_IP, regs->rip);
-  _registers.setRegister(UNW_REG_SP, regs->rsp);
-  _registers.setRegister(UNW_X86_64_RAX, regs->rax);
-  _registers.setRegister(UNW_X86_64_RDX, regs->rdx);
-  _registers.setRegister(UNW_X86_64_RCX, regs->rcx);
-  _registers.setRegister(UNW_X86_64_RBX, regs->rbx);
-  _registers.setRegister(UNW_X86_64_RSI, regs->rsi);
-  _registers.setRegister(UNW_X86_64_RDI, regs->rdi);
-  _registers.setRegister(UNW_X86_64_RBP, regs->rbp);
-  _registers.setRegister(UNW_X86_64_R8, regs->r8);
-  _registers.setRegister(UNW_X86_64_R9, regs->r9);
-  _registers.setRegister(UNW_X86_64_R10, regs->r10);
-  _registers.setRegister(UNW_X86_64_R11, regs->r11);
-  _registers.setRegister(UNW_X86_64_R12, regs->r12);
-  _registers.setRegister(UNW_X86_64_R13, regs->r13);
-  _registers.setRegister(UNW_X86_64_R14, regs->r14);
-  _registers.setRegister(UNW_X86_64_R15, regs->r15);
-  // TODO: XMM
-#endif
-
   return UNW_STEP_SUCCESS;
 }
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
@@ -3103,6 +3083,96 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_S390X)
 
+#if defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn() {
+  Dl_info dlinfo;
+  const auto isSignalHandler = [&](pint_t addr) {
+    if (!dladdr(reinterpret_cast<void *>(addr), &dlinfo))
+      return false;
+    if (strcmp(dlinfo.dli_fname, "commpage"))
+      return false;
+    if (dlinfo.dli_sname == NULL ||
+        strcmp(dlinfo.dli_sname, "commpage_signal_handler"))
+      return false;
+    return true;
+  };
+
+  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  if (!isSignalHandler(pc))
+    return false;
+
+  pint_t start = reinterpret_cast<pint_t>(dlinfo.dli_saddr);
+
+  static size_t signalHandlerSize = 0;
+  if (signalHandlerSize == 0) {
+    size_t boundLow = 0;
+    size_t boundHigh = static_cast<size_t>(-1);
+
+    area_info areaInfo;
+    if (get_area_info(area_for(dlinfo.dli_saddr), &areaInfo) == B_OK)
+      boundHigh = areaInfo.size;
+
+    while (boundLow < boundHigh) {
+      size_t boundMid = boundLow + ((boundHigh - boundLow) / 2);
+      pint_t test = start + boundMid;
+      if (test >= start && isSignalHandler(test))
+        boundLow = boundMid + 1;
+      else
+        boundHigh = boundMid;
+    }
+
+    signalHandlerSize = boundHigh;
+  }
+
+  _info = {};
+  _info.start_ip = start;
+  _info.end_ip = start + signalHandlerSize;
+  _isSigReturn = true;
+
+  return true;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn() {
+  _isSignalFrame = true;
+
+#if defined(_LIBUNWIND_TARGET_X86_64)
+  // Layout of the stack before function call:
+  // - signal_frame_data
+  //   + siginfo_t    (public struct, fairly stable)
+  //   + ucontext_t   (public struct, fairly stable)
+  //     - mcontext_t -> Offset 0x70, this is what we want.
+  // - frame->ip (8 bytes)
+  // - frame->bp (8 bytes). Not written by the kernel,
+  //   but the signal handler has a "push %rbp" instruction.
+  pint_t bp = this->getReg(UNW_X86_64_RBP);
+  vregs *regs = (vregs *)(bp + 0x70);
+
+  _registers.setRegister(UNW_REG_IP, regs->rip);
+  _registers.setRegister(UNW_REG_SP, regs->rsp);
+  _registers.setRegister(UNW_X86_64_RAX, regs->rax);
+  _registers.setRegister(UNW_X86_64_RDX, regs->rdx);
+  _registers.setRegister(UNW_X86_64_RCX, regs->rcx);
+  _registers.setRegister(UNW_X86_64_RBX, regs->rbx);
+  _registers.setRegister(UNW_X86_64_RSI, regs->rsi);
+  _registers.setRegister(UNW_X86_64_RDI, regs->rdi);
+  _registers.setRegister(UNW_X86_64_RBP, regs->rbp);
+  _registers.setRegister(UNW_X86_64_R8, regs->r8);
+  _registers.setRegister(UNW_X86_64_R9, regs->r9);
+  _registers.setRegister(UNW_X86_64_R10, regs->r10);
+  _registers.setRegister(UNW_X86_64_R11, regs->r11);
+  _registers.setRegister(UNW_X86_64_R12, regs->r12);
+  _registers.setRegister(UNW_X86_64_R13, regs->r13);
+  _registers.setRegister(UNW_X86_64_R14, regs->r14);
+  _registers.setRegister(UNW_X86_64_R15, regs->r15);
+  // TODO: XMM
+#endif // defined(_LIBUNWIND_TARGET_X86_64)
+
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
+
 template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   (void)stage2;
   // Bottom of stack is defined is when unwind info cannot be found.
@@ -3112,7 +3182,7 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   // Use unwinding info to modify register set as if function returned.
   int result;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (_isSigReturn) {
     result = this->stepThroughSigReturn();
   } else
@@ -3149,16 +3219,22 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
 template <typename A, typename R>
 void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
   if (_unwindInfoMissing)
-    memset(info, 0, sizeof(*info));
+    memset(static_cast<void *>(info), 0, sizeof(*info));
   else
     *info = _info;
 }
 
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
-                                                           unw_word_t *offset) {
-  return _addressSpace.findFunctionName((pint_t)this->getReg(UNW_REG_IP),
-                                         buf, bufLen, offset);
+                                         unw_word_t *offset) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+  typename R::link_reg_t pc;
+  _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+  typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+#endif
+  return _addressSpace.findFunctionName(pc, buf, bufLen, offset);
 }
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)

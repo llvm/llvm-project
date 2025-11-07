@@ -46,8 +46,9 @@ class SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
+  const RTLIB::RuntimeLibcallsInfo *RuntimeLibCallInfo;
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
-  SwiftErrorValueTracking *SwiftError;
+  std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;
   MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;
@@ -435,9 +436,9 @@ public:
   /// It runs node predicate number PredNo and returns true if it succeeds or
   /// false if it fails.  The number is a private implementation detail to the
   /// code tblgen produces.
-  virtual bool CheckNodePredicateWithOperands(
-      SDValue Op, unsigned PredNo,
-      const SmallVectorImpl<SDValue> &Operands) const {
+  virtual bool
+  CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo,
+                                 ArrayRef<SDValue> Operands) const {
     llvm_unreachable("Tblgen should generate the implementation of this!");
   }
 
@@ -473,6 +474,7 @@ private:
   void Select_WRITE_REGISTER(SDNode *Op);
   void Select_UNDEF(SDNode *N);
   void Select_FAKE_USE(SDNode *N);
+  void Select_RELOC_NONE(SDNode *N);
   void CannotYetSelect(SDNode *N);
 
   void Select_FREEZE(SDNode *N);

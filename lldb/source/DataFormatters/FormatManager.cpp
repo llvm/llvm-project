@@ -72,6 +72,7 @@ static constexpr FormatInfo g_format_infos[] = {
     {eFormatInstruction, 'i', "instruction"},
     {eFormatVoid, 'v', "void"},
     {eFormatUnicode8, 'u', "unicode8"},
+    {eFormatFloat128, '\0', "float128"},
 };
 
 static_assert((sizeof(g_format_infos) / sizeof(g_format_infos[0])) ==
@@ -174,7 +175,8 @@ void FormatManager::DisableAllCategories() {
 void FormatManager::GetPossibleMatches(
     ValueObject &valobj, CompilerType compiler_type,
     lldb::DynamicValueType use_dynamic, FormattersMatchVector &entries,
-    FormattersMatchCandidate::Flags current_flags, bool root_level) {
+    FormattersMatchCandidate::Flags current_flags, bool root_level,
+    uint32_t ptr_stripped_depth) {
   compiler_type = compiler_type.GetTypeForFormatters();
   ConstString type_name(compiler_type.GetTypeName());
   // A ValueObject that couldn't be made correctly won't necessarily have a
@@ -190,46 +192,51 @@ void FormatManager::GetPossibleMatches(
     sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());
     ConstString bitfieldname(sstring.GetString());
     entries.push_back({bitfieldname, script_interpreter,
-                       TypeImpl(compiler_type), current_flags});
+                       TypeImpl(compiler_type), current_flags,
+                       ptr_stripped_depth});
   }
 
   if (!compiler_type.IsMeaninglessWithoutDynamicResolution()) {
     entries.push_back({type_name, script_interpreter, TypeImpl(compiler_type),
-                       current_flags});
+                       current_flags, ptr_stripped_depth});
 
     ConstString display_type_name(compiler_type.GetTypeName());
     if (display_type_name != type_name)
       entries.push_back({display_type_name, script_interpreter,
-                         TypeImpl(compiler_type), current_flags});
+                         TypeImpl(compiler_type), current_flags,
+                         ptr_stripped_depth});
   }
 
   for (bool is_rvalue_ref = true, j = true;
        j && compiler_type.IsReferenceType(nullptr, &is_rvalue_ref); j = false) {
     CompilerType non_ref_type = compiler_type.GetNonReferenceType();
     GetPossibleMatches(valobj, non_ref_type, use_dynamic, entries,
-                       current_flags.WithStrippedReference());
+                       current_flags.WithStrippedReference(), root_level,
+                       ptr_stripped_depth);
     if (non_ref_type.IsTypedefType()) {
       CompilerType deffed_referenced_type = non_ref_type.GetTypedefedType();
       deffed_referenced_type =
           is_rvalue_ref ? deffed_referenced_type.GetRValueReferenceType()
                         : deffed_referenced_type.GetLValueReferenceType();
       // this is not exactly the usual meaning of stripping typedefs
-      GetPossibleMatches(
-          valobj, deffed_referenced_type,
-          use_dynamic, entries, current_flags.WithStrippedTypedef());
+      GetPossibleMatches(valobj, deffed_referenced_type, use_dynamic, entries,
+                         current_flags.WithStrippedTypedef(), root_level,
+                         ptr_stripped_depth);
     }
   }
 
   if (compiler_type.IsPointerType()) {
     CompilerType non_ptr_type = compiler_type.GetPointeeType();
     GetPossibleMatches(valobj, non_ptr_type, use_dynamic, entries,
-                       current_flags.WithStrippedPointer());
+                       current_flags.WithStrippedPointer(), root_level,
+                       ptr_stripped_depth + 1);
     if (non_ptr_type.IsTypedefType()) {
       CompilerType deffed_pointed_type =
           non_ptr_type.GetTypedefedType().GetPointerType();
       // this is not exactly the usual meaning of stripping typedefs
       GetPossibleMatches(valobj, deffed_pointed_type, use_dynamic, entries,
-                         current_flags.WithStrippedTypedef());
+                         current_flags.WithStrippedTypedef(), root_level,
+                         ptr_stripped_depth + 1);
     }
   }
 
@@ -246,9 +253,9 @@ void FormatManager::GetPossibleMatches(
       CompilerType deffed_array_type =
           element_type.GetTypedefedType().GetArrayType(array_size);
       // this is not exactly the usual meaning of stripping typedefs
-      GetPossibleMatches(
-          valobj, deffed_array_type,
-          use_dynamic, entries, current_flags.WithStrippedTypedef());
+      GetPossibleMatches(valobj, deffed_array_type, use_dynamic, entries,
+                         current_flags.WithStrippedTypedef(), root_level,
+                         ptr_stripped_depth);
     }
   }
 
@@ -266,7 +273,8 @@ void FormatManager::GetPossibleMatches(
   if (compiler_type.IsTypedefType()) {
     CompilerType deffed_type = compiler_type.GetTypedefedType();
     GetPossibleMatches(valobj, deffed_type, use_dynamic, entries,
-                       current_flags.WithStrippedTypedef());
+                       current_flags.WithStrippedTypedef(), root_level,
+                       ptr_stripped_depth);
   }
 
   if (root_level) {
@@ -281,7 +289,8 @@ void FormatManager::GetPossibleMatches(
       if (unqual_compiler_ast_type.GetOpaqueQualType() !=
           compiler_type.GetOpaqueQualType())
         GetPossibleMatches(valobj, unqual_compiler_ast_type, use_dynamic,
-                           entries, current_flags);
+                           entries, current_flags, root_level,
+                           ptr_stripped_depth);
     } while (false);
 
     // if all else fails, go to static type
@@ -290,7 +299,7 @@ void FormatManager::GetPossibleMatches(
       if (static_value_sp)
         GetPossibleMatches(*static_value_sp.get(),
                            static_value_sp->GetCompilerType(), use_dynamic,
-                           entries, current_flags, true);
+                           entries, current_flags, true, ptr_stripped_depth);
     }
   }
 }
@@ -414,9 +423,8 @@ FormatManager::GetCategory(ConstString category_name, bool can_create) {
   if (!can_create)
     return lldb::TypeCategoryImplSP();
 
-  m_categories_map.Add(
-      category_name,
-      lldb::TypeCategoryImplSP(new TypeCategoryImpl(this, category_name)));
+  m_categories_map.Add(category_name,
+                       std::make_shared<TypeCategoryImpl>(this, category_name));
   return GetCategory(category_name);
 }
 

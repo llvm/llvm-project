@@ -409,6 +409,7 @@ class MVE_p<dag oops, dag iops, InstrItinClass itin, string iname,
            !strconcat(iname, "${vp}",
                       !if(!eq(suffix, ""), "", !strconcat(".", suffix))),
            ops, !strconcat(cstr, vpred.vpred_constraint), vecsize, pattern> {
+  bits<0> vp;
   let Inst{31-29} = 0b111;
   let Inst{27-26} = 0b11;
 }
@@ -3527,7 +3528,7 @@ multiclass MVE_VRINT_m<MVEVectorVTInfo VTI, string suffix, bits<3> opcode,
 }
 
 multiclass MVE_VRINT_ops<MVEVectorVTInfo VTI> {
-  defm N : MVE_VRINT_m<VTI, "n", 0b000, int_arm_mve_vrintn>;
+  defm N : MVE_VRINT_m<VTI, "n", 0b000, froundeven>;
   defm X : MVE_VRINT_m<VTI, "x", 0b001, frint>;
   defm A : MVE_VRINT_m<VTI, "a", 0b010, fround>;
   defm Z : MVE_VRINT_m<VTI, "z", 0b011, ftrunc>;

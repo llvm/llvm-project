@@ -53,6 +53,12 @@ public:
   /// The paths to the pass plugins that were registered using -fpass-plugin.
   std::vector<std::string> LLVMPassPlugins;
 
+  /// The prefered vector width, if requested by -mprefer-vector-width.
+  std::string PreferVectorWidth;
+
+  /// List of reciprocal estimate sub-options.
+  std::string Reciprocals;
+
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.
   std::vector<std::string> OffloadObjects;
@@ -147,6 +153,76 @@ public:
   /// Optionally map `do concurrent` loops to OpenMP. This is only valid of
   /// OpenMP is enabled.
   using DoConcurrentMappingKind = flangomp::DoConcurrentMappingKind;
+
+  /// Name of the profile file to use as output for -fprofile-instr-generate,
+  /// -fprofile-generate, and -fcs-profile-generate.
+  std::string InstrProfileOutput;
+
+  /// Name of the profile file to use as input for -fmemory-profile-use.
+  std::string MemoryProfileUsePath;
+
+  /// Name of the profile file to use as input for -fprofile-instr-use
+  std::string ProfileInstrumentUsePath;
+
+  /// Name of the profile remapping file to apply to the profile data supplied
+  /// by -fprofile-sample-use or -fprofile-instr-use.
+  std::string ProfileRemappingFile;
+
+  /// The name for the split debug info file used for the DW_AT_[GNU_]dwo_name
+  /// attribute in the skeleton CU.
+  std::string SplitDwarfFile;
+
+  /// Output filename for the split debug info, not used in the skeleton CU.
+  std::string SplitDwarfOutput;
+
+  /// Check if Clang profile instrumenation is on.
+  bool hasProfileClangInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileClangInstr;
+  }
+
+  /// Check if IR level profile instrumentation is on.
+  bool hasProfileIRInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileIRInstr;
+  }
+
+  /// Check if CS IR level profile instrumentation is on.
+  bool hasProfileCSIRInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileCSIRInstr;
+  }
+  /// Check if IR level profile use is on.
+  bool hasProfileIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileIRInstr ||
+           getProfileUse() == llvm::driver::ProfileCSIRInstr;
+  }
+  /// Check if CSIR profile use is on.
+  bool hasProfileCSIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileCSIRInstr;
+  }
+
+  /// Controls the various implementations for complex division.
+  enum ComplexRangeKind {
+    /// Implementation of complex division using a call to runtime library
+    /// functions. Overflow and non-finite values are handled by the library
+    /// implementation. This is the default value.
+    CX_Full,
+
+    /// Implementation of complex division offering an improved handling
+    /// for overflow in intermediate calculations. Overflow and non-finite
+    /// values are handled by MLIR's implementation of "complex.div", but this
+    /// may change in the future.
+    CX_Improved,
+
+    /// Implementation of complex division using algebraic formulas at source
+    /// precision. No special handling to avoid overflow. NaN and infinite
+    /// values are not handled.
+    CX_Basic,
+
+    /// No range rule is enabled.
+    CX_None
+
+    /// TODO: Implemention of other values as needed. In Clang, "CX_Promoted"
+    /// is implemented. (See clang/Basic/LangOptions.h)
+  };
 
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)

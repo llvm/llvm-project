@@ -33,14 +33,14 @@ def CIRSimplify : Pass<"cir-simplify"> {
   let summary = "Performs CIR simplification and code optimization";
   let description = [{
     The pass performs semantics-preserving code simplifications and optimizations
-    on CIR while maintaining strict program correctness. 
-    
+    on CIR while maintaining strict program correctness.
+
     Unlike the `cir-canonicalize` pass, these transformations may reduce the IR's
     structural similarity to the original source code as a trade-off for improved
     code quality. This can affect debugging fidelity by altering intermediate
-    representations of folded expressions, hoisted operations, and other 
+    representations of folded expressions, hoisted operations, and other
     optimized constructs.
-    
+
     Example transformations include ternary expression folding and code hoisting
     while preserving program semantics.
   }];
@@ -69,6 +69,27 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
     ScopeOp and etc. and produces a flat CIR.
   }];
   let constructor = "mlir::createCIRFlattenCFGPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
+def GotoSolver : Pass<"cir-goto-solver"> {
+  let summary = "Replaces goto operations with branches";
+  let description = [{
+    This pass transforms CIR and replaces goto-s with branch
+    operations to the proper blocks.
+  }];
+  let constructor = "mlir::createGotoSolverPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
+def LoweringPrepare : Pass<"cir-lowering-prepare"> {
+  let summary = "Lower to more fine-grained CIR operations before lowering to "
+    "other dialects";
+  let description = [{
+    This pass does preparation work for lowering to other dialects. For example,
+    it may expand the global variable initialziation in a more ABI-friendly form.
+  }];
+  let constructor = "mlir::createLoweringPreparePass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 

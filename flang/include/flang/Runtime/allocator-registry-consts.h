@@ -9,6 +9,8 @@
 #ifndef FORTRAN_RUNTIME_ALLOCATOR_REGISTRY_CONSTS_H_
 #define FORTRAN_RUNTIME_ALLOCATOR_REGISTRY_CONSTS_H_
 
+RT_OFFLOAD_VAR_GROUP_BEGIN
+
 static constexpr unsigned kDefaultAllocator = 0;
 
 // Allocator used for CUF
@@ -16,5 +18,7 @@ static constexpr unsigned kPinnedAllocatorPos = 1;
 static constexpr unsigned kDeviceAllocatorPos = 2;
 static constexpr unsigned kManagedAllocatorPos = 3;
 static constexpr unsigned kUnifiedAllocatorPos = 4;
+
+RT_OFFLOAD_VAR_GROUP_END
 
 #endif /* FORTRAN_RUNTIME_ALLOCATOR_REGISTRY_CONSTS_H_ */

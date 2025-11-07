@@ -71,8 +71,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cosh(__CLC_GENTYPE x) {
       0.500000000000000005911074e0f);
   cdy = __clc_mad(cdy, dy2, 1.0f);
 
-  __CLC_GENTYPE sinhcoshh = USE_TABLE(sinhcosh_tbl_head, ind);
-  __CLC_GENTYPE sinhcosht = USE_TABLE(sinhcosh_tbl_tail, ind);
+  __CLC_GENTYPE sinhcoshh = __CLC_USE_TABLE(sinhcosh_tbl_head, ind);
+  __CLC_GENTYPE sinhcosht = __CLC_USE_TABLE(sinhcosh_tbl_tail, ind);
   __CLC_GENTYPE z = __clc_mad(sinhcoshh, sdy, sinhcosht * cdy);
 
   // When exp(-x) is insignificant compared to exp(x), return exp(x)/2
@@ -162,10 +162,10 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cosh(__CLC_GENTYPE x) {
 
   // At this point sinh(dy) is approximated by dy + sdy,
   // and cosh(dy) is approximated by 1 + cdy.
-  __CLC_GENTYPE cl = USE_TABLE(cosh_tbl_head, ind);
-  __CLC_GENTYPE ct = USE_TABLE(cosh_tbl_tail, ind);
-  __CLC_GENTYPE sl = USE_TABLE(sinh_tbl_head, ind);
-  __CLC_GENTYPE st = USE_TABLE(sinh_tbl_tail, ind);
+  __CLC_GENTYPE cl = __CLC_USE_TABLE(cosh_tbl_head, ind);
+  __CLC_GENTYPE ct = __CLC_USE_TABLE(cosh_tbl_tail, ind);
+  __CLC_GENTYPE sl = __CLC_USE_TABLE(sinh_tbl_head, ind);
+  __CLC_GENTYPE st = __CLC_USE_TABLE(sinh_tbl_tail, ind);
 
   __CLC_GENTYPE z =
       __clc_fma(

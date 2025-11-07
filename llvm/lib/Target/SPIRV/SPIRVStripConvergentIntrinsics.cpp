@@ -13,13 +13,9 @@
 
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 
@@ -32,7 +28,7 @@ public:
 
   SPIRVStripConvergentIntrinsics() : FunctionPass(ID) {}
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     DenseSet<Instruction *> ToRemove;
 
     // Is the instruction is a convergent intrinsic, add it to kill-list and

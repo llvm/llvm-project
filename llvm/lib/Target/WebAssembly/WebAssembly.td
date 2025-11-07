@@ -49,6 +49,8 @@ def FeatureFP16 :
       SubtargetFeature<"fp16", "HasFP16", "true",
                        "Enable FP16 instructions">;
 
+def FeatureGC : SubtargetFeature<"gc", "HasGC", "true", "Enable wasm gc">;
+
 def FeatureMultiMemory :
       SubtargetFeature<"multimemory", "HasMultiMemory", "true",
                        "Enable multiple memories">;
@@ -136,13 +138,13 @@ def : ProcessorModel<"lime1", NoSchedModel,
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
-                      [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,
-                       FeatureCallIndirectOverlong, FeatureExceptionHandling,
-                       FeatureExtendedConst, FeatureFP16, FeatureMultiMemory,
-                       FeatureMultivalue, FeatureMutableGlobals,
-                       FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
-                       FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,
-                       FeatureTailCall]>;
+                     [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,
+                      FeatureCallIndirectOverlong, FeatureExceptionHandling,
+                      FeatureExtendedConst, FeatureFP16, FeatureGC,
+                      FeatureMultiMemory, FeatureMultivalue, FeatureMutableGlobals,
+                      FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
+                      FeatureReferenceTypes, FeatureSIMD128,
+                      FeatureSignExt, FeatureTailCall]>;
 
 //===----------------------------------------------------------------------===//
 // Target Declaration

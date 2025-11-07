@@ -97,7 +97,6 @@
 #define DEBUG_TYPE "bpf-abstract-member-access"
 
 namespace llvm {
-constexpr StringRef BPFCoreSharedInfo::AmaAttr;
 uint32_t BPFCoreSharedInfo::SeqNum;
 
 Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
@@ -414,9 +413,7 @@ static void replaceWithGEP(CallInst *Call, uint32_t DimensionIndex,
 
   Constant *Zero =
       ConstantInt::get(Type::getInt32Ty(Call->getParent()->getContext()), 0);
-  SmallVector<Value *, 4> IdxList;
-  for (unsigned I = 0; I < Dimension; ++I)
-    IdxList.push_back(Zero);
+  SmallVector<Value *, 4> IdxList(Dimension, Zero);
   IdxList.push_back(Call->getArgOperand(GEPIndex));
 
   auto *GEP = GetElementPtrInst::CreateInBounds(getBaseElementType(Call),

@@ -235,51 +235,32 @@ public:
 };
 
 class RetainCountChecker
-  : public Checker< check::Bind,
-                    check::DeadSymbols,
-                    check::BeginFunction,
-                    check::EndFunction,
-                    check::PostStmt<BlockExpr>,
-                    check::PostStmt<CastExpr>,
-                    check::PostStmt<ObjCArrayLiteral>,
-                    check::PostStmt<ObjCDictionaryLiteral>,
-                    check::PostStmt<ObjCBoxedExpr>,
-                    check::PostStmt<ObjCIvarRefExpr>,
-                    check::PostCall,
-                    check::RegionChanges,
-                    eval::Assume,
-                    eval::Call > {
+    : public CheckerFamily<
+          check::Bind, check::DeadSymbols, check::BeginFunction,
+          check::EndFunction, check::PostStmt<BlockExpr>,
+          check::PostStmt<CastExpr>, check::PostStmt<ObjCArrayLiteral>,
+          check::PostStmt<ObjCDictionaryLiteral>,
+          check::PostStmt<ObjCBoxedExpr>, check::PostStmt<ObjCIvarRefExpr>,
+          check::PostCall, check::RegionChanges, eval::Assume, eval::Call> {
 
 public:
-  std::unique_ptr<RefCountBug> UseAfterRelease;
-  std::unique_ptr<RefCountBug> ReleaseNotOwned;
-  std::unique_ptr<RefCountBug> DeallocNotOwned;
-  std::unique_ptr<RefCountBug> FreeNotOwned;
-  std::unique_ptr<RefCountBug> OverAutorelease;
-  std::unique_ptr<RefCountBug> ReturnNotOwnedForOwned;
-  std::unique_ptr<RefCountBug> LeakWithinFunction;
-  std::unique_ptr<RefCountBug> LeakAtReturn;
+  RefCountFrontend RetainCount;
+  RefCountFrontend OSObjectRetainCount;
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
 
-  static std::unique_ptr<CheckerProgramPointTag> DeallocSentTag;
-  static std::unique_ptr<CheckerProgramPointTag> CastFailTag;
-
-  /// Track Objective-C and CoreFoundation objects.
-  bool TrackObjCAndCFObjects = false;
-
-  /// Track sublcasses of OSObject.
-  bool TrackOSObjects = false;
+  static std::unique_ptr<SimpleProgramPointTag> DeallocSentTag;
+  static std::unique_ptr<SimpleProgramPointTag> CastFailTag;
 
   /// Track initial parameters (for the entry point) for NS/CF objects.
   bool TrackNSCFStartParam = false;
 
-  RetainCountChecker() {};
+  StringRef getDebugTag() const override { return "RetainCountChecker"; }
 
   RetainSummaryManager &getSummaryManager(ASTContext &Ctx) const {
     if (!Summaries)
-      Summaries.reset(
-          new RetainSummaryManager(Ctx, TrackObjCAndCFObjects, TrackOSObjects));
+      Summaries = std::make_unique<RetainSummaryManager>(
+          Ctx, RetainCount.isEnabled(), OSObjectRetainCount.isEnabled());
     return *Summaries;
   }
 
@@ -287,10 +268,20 @@ public:
     return getSummaryManager(C.getASTContext());
   }
 
+  const RefCountFrontend &getPreferredFrontend() const {
+    // FIXME: The two frontends of this checker family are in an unusual
+    // relationship: if they are both enabled, then all bug reports are
+    // reported by RetainCount (i.e. `osx.cocoa.RetainCount`), even the bugs
+    // that "belong to" OSObjectRetainCount (i.e. `osx.OSObjectRetainCount`).
+    // This is counter-intuitive and should be fixed to avoid confusion.
+    return RetainCount.isEnabled() ? RetainCount : OSObjectRetainCount;
+  }
+
   void printState(raw_ostream &Out, ProgramStateRef State,
                   const char *NL, const char *Sep) const override;
 
-  void checkBind(SVal loc, SVal val, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal loc, SVal val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
   void checkPostStmt(const CastExpr *CE, CheckerContext &C) const;
 
@@ -337,6 +328,8 @@ public:
   const RefCountBug &errorKindToBugKind(RefVal::Kind ErrorKind,
                                         SymbolRef Sym) const;
 
+  bool isReleaseUnownedError(RefVal::Kind ErrorKind) const;
+
   void processNonLeakError(ProgramStateRef St, SourceRange ErrorRange,
                            RefVal::Kind ErrorKind, SymbolRef Sym,
                            CheckerContext &C) const;
@@ -347,23 +340,22 @@ public:
                                     SymbolRef sid, RefVal V,
                                     SmallVectorImpl<SymbolRef> &Leaked) const;
 
-  ProgramStateRef
-  handleAutoreleaseCounts(ProgramStateRef state, ExplodedNode *Pred,
-                          const ProgramPointTag *Tag, CheckerContext &Ctx,
-                          SymbolRef Sym,
-                          RefVal V,
-                          const ReturnStmt *S=nullptr) const;
+  ProgramStateRef handleAutoreleaseCounts(ProgramStateRef state,
+                                          ExplodedNode *Pred,
+                                          CheckerContext &Ctx, SymbolRef Sym,
+                                          RefVal V,
+                                          const ReturnStmt *S = nullptr) const;
 
   ExplodedNode *processLeaks(ProgramStateRef state,
                              SmallVectorImpl<SymbolRef> &Leaked,
                              CheckerContext &Ctx,
                              ExplodedNode *Pred = nullptr) const;
 
-  static const CheckerProgramPointTag &getDeallocSentTag() {
+  static const SimpleProgramPointTag &getDeallocSentTag() {
     return *DeallocSentTag;
   }
 
-  static const CheckerProgramPointTag &getCastFailTag() { return *CastFailTag; }
+  static const SimpleProgramPointTag &getCastFailTag() { return *CastFailTag; }
 
 private:
   /// Perform the necessary checks and state adjustments at the end of the

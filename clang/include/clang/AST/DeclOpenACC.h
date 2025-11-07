@@ -73,11 +73,8 @@ class OpenACCDeclareDecl final
 
   OpenACCDeclareDecl(unsigned NumClauses)
       : OpenACCConstructDecl(OpenACCDeclare) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCDeclareDecl(DeclContext *DC, SourceLocation StartLoc,
@@ -86,11 +83,9 @@ class OpenACCDeclareDecl final
       : OpenACCConstructDecl(OpenACCDeclare, DC, OpenACCDirectiveKind::Declare,
                              StartLoc, DirLoc, EndLoc) {
     // Initialize the trailing storage.
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
 
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  Clauses.size()));
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
 public:
@@ -119,11 +114,8 @@ class OpenACCRoutineDecl final
 
   OpenACCRoutineDecl(unsigned NumClauses)
       : OpenACCConstructDecl(OpenACCRoutine) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCRoutineDecl(DeclContext *DC, SourceLocation StartLoc,
@@ -137,10 +129,8 @@ class OpenACCRoutineDecl final
     assert(LParenLoc.isValid() &&
            "Cannot represent implicit name with this declaration");
     // Initialize the trailing storage.
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
 public:

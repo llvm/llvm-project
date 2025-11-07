@@ -94,6 +94,13 @@ public:
     One.setAllBits();
   }
 
+  /// Make all bits known to be both zero and one. Useful before a loop that
+  /// calls intersectWith.
+  void setAllConflict() {
+    Zero.setAllBits();
+    One.setAllBits();
+  }
+
   /// Returns true if this value is known to be negative.
   bool isNegative() const { return One.isSignBitSet(); }
 
@@ -487,6 +494,20 @@ public:
   /// Update known bits based on XORing with RHS.
   LLVM_ABI KnownBits &operator^=(const KnownBits &RHS);
 
+  /// Shift known bits left by ShAmt. Shift in bits are unknown.
+  KnownBits &operator<<=(unsigned ShAmt) {
+    Zero <<= ShAmt;
+    One <<= ShAmt;
+    return *this;
+  }
+
+  /// Shift known bits right by ShAmt. Shifted in bits are unknown.
+  KnownBits &operator>>=(unsigned ShAmt) {
+    Zero.lshrInPlace(ShAmt);
+    One.lshrInPlace(ShAmt);
+    return *this;
+  }
+
   /// Compute known bits for the absolute value.
   LLVM_ABI KnownBits abs(bool IntMinIsPoison = false) const;
 
@@ -513,7 +534,10 @@ public:
   bool operator!=(const KnownBits &Other) const { return !(*this == Other); }
 
   LLVM_ABI void print(raw_ostream &OS) const;
-  LLVM_ABI void dump() const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
 private:
   // Internal helper for getting the initial KnownBits for an `srem` or `urem`

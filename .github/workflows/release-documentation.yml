@@ -25,6 +25,10 @@ on:
         description: 'Upload documentation'
         required: false
         type: boolean
+    secrets:
+      WWW_RELEASES_TOKEN:
+        description: "Secret used to create a PR with the documentation changes."
+        required: false
 
 jobs:
   release-documentation:
@@ -34,10 +38,10 @@ jobs:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Setup Python env
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -59,14 +63,14 @@ jobs:
           ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
 
       - name: Create Release Notes Artifact
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
         with:
           name: release-notes
           path: docs-build/html-export/
 
       - name: Clone www-releases
         if: env.upload
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           repository: ${{ github.repository_owner }}/www-releases
           ref: main

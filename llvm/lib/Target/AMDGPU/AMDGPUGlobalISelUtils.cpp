@@ -117,45 +117,72 @@ static LLT getReadAnyLaneSplitTy(LLT Ty) {
   return LLT::scalar(32);
 }
 
-static Register buildReadAnyLane(MachineIRBuilder &B, Register VgprSrc,
-                                 const RegisterBankInfo &RBI);
+template <typename ReadLaneFnTy>
+static Register buildReadLane(MachineIRBuilder &, Register,
+                              const RegisterBankInfo &, ReadLaneFnTy);
 
-static void unmergeReadAnyLane(MachineIRBuilder &B,
-                               SmallVectorImpl<Register> &SgprDstParts,
-                               LLT UnmergeTy, Register VgprSrc,
-                               const RegisterBankInfo &RBI) {
+template <typename ReadLaneFnTy>
+static void
+unmergeReadAnyLane(MachineIRBuilder &B, SmallVectorImpl<Register> &SgprDstParts,
+                   LLT UnmergeTy, Register VgprSrc, const RegisterBankInfo &RBI,
+                   ReadLaneFnTy BuildRL) {
   const RegisterBank *VgprRB = &RBI.getRegBank(AMDGPU::VGPRRegBankID);
   auto Unmerge = B.buildUnmerge({VgprRB, UnmergeTy}, VgprSrc);
   for (unsigned i = 0; i < Unmerge->getNumOperands() - 1; ++i) {
-    SgprDstParts.push_back(buildReadAnyLane(B, Unmerge.getReg(i), RBI));
+    SgprDstParts.push_back(buildReadLane(B, Unmerge.getReg(i), RBI, BuildRL));
   }
 }
 
-static Register buildReadAnyLane(MachineIRBuilder &B, Register VgprSrc,
-                                 const RegisterBankInfo &RBI) {
+template <typename ReadLaneFnTy>
+static Register buildReadLane(MachineIRBuilder &B, Register VgprSrc,
+                              const RegisterBankInfo &RBI,
+                              ReadLaneFnTy BuildRL) {
   LLT Ty = B.getMRI()->getType(VgprSrc);
   const RegisterBank *SgprRB = &RBI.getRegBank(AMDGPU::SGPRRegBankID);
   if (Ty.getSizeInBits() == 32) {
-    return B.buildInstr(AMDGPU::G_AMDGPU_READANYLANE, {{SgprRB, Ty}}, {VgprSrc})
-        .getReg(0);
+    Register SgprDst = B.getMRI()->createVirtualRegister({SgprRB, Ty});
+    return BuildRL(B, SgprDst, VgprSrc).getReg(0);
   }
 
   SmallVector<Register, 8> SgprDstParts;
-  unmergeReadAnyLane(B, SgprDstParts, getReadAnyLaneSplitTy(Ty), VgprSrc, RBI);
+  unmergeReadAnyLane(B, SgprDstParts, getReadAnyLaneSplitTy(Ty), VgprSrc, RBI,
+                     BuildRL);
 
   return B.buildMergeLikeInstr({SgprRB, Ty}, SgprDstParts).getReg(0);
 }
 
-void AMDGPU::buildReadAnyLane(MachineIRBuilder &B, Register SgprDst,
-                              Register VgprSrc, const RegisterBankInfo &RBI) {
+template <typename ReadLaneFnTy>
+static void buildReadLane(MachineIRBuilder &B, Register SgprDst,
+                          Register VgprSrc, const RegisterBankInfo &RBI,
+                          ReadLaneFnTy BuildReadLane) {
   LLT Ty = B.getMRI()->getType(VgprSrc);
   if (Ty.getSizeInBits() == 32) {
-    B.buildInstr(AMDGPU::G_AMDGPU_READANYLANE, {SgprDst}, {VgprSrc});
+    BuildReadLane(B, SgprDst, VgprSrc);
     return;
   }
 
   SmallVector<Register, 8> SgprDstParts;
-  unmergeReadAnyLane(B, SgprDstParts, getReadAnyLaneSplitTy(Ty), VgprSrc, RBI);
+  unmergeReadAnyLane(B, SgprDstParts, getReadAnyLaneSplitTy(Ty), VgprSrc, RBI,
+                     BuildReadLane);
 
   B.buildMergeLikeInstr(SgprDst, SgprDstParts).getReg(0);
+}
+
+void AMDGPU::buildReadAnyLane(MachineIRBuilder &B, Register SgprDst,
+                              Register VgprSrc, const RegisterBankInfo &RBI) {
+  return buildReadLane(
+      B, SgprDst, VgprSrc, RBI,
+      [](MachineIRBuilder &B, Register SgprDst, Register VgprSrc) {
+        return B.buildInstr(AMDGPU::G_AMDGPU_READANYLANE, {SgprDst}, {VgprSrc});
+      });
+}
+
+void AMDGPU::buildReadFirstLane(MachineIRBuilder &B, Register SgprDst,
+                                Register VgprSrc, const RegisterBankInfo &RBI) {
+  return buildReadLane(
+      B, SgprDst, VgprSrc, RBI,
+      [](MachineIRBuilder &B, Register SgprDst, Register VgprSrc) {
+        return B.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, SgprDst)
+            .addReg(VgprSrc);
+      });
 }

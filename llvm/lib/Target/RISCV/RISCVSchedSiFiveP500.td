@@ -348,6 +348,7 @@ def : ReadAdvance<ReadSHXADD32, 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
+defm : UnsupportedSchedQ;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZbc;
@@ -357,5 +358,5 @@ defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedZvk;
-defm : UnsupportedSchedXsfvcp;
+defm : UnsupportedSchedXsf;
 }

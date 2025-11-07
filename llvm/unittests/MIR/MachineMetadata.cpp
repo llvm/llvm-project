@@ -33,7 +33,7 @@ using namespace llvm;
 
 class MachineMetadataTest : public testing::Test {
 public:
-  MachineMetadataTest() {}
+  MachineMetadataTest() = default;
 
 protected:
   LLVMContext Context;
@@ -564,8 +564,7 @@ body:             |
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_TRUE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_TRUE(Properties.hasTiedOpsRewritten());
 }
 
 TEST_F(MachineMetadataTest, NoTiedOpsRewritten) {
@@ -595,6 +594,5 @@ body:             |
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_FALSE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_FALSE(Properties.hasTiedOpsRewritten());
 }

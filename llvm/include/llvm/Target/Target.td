@@ -20,15 +20,20 @@ class Predicate; // Forward def
 // Register file description - These classes are used to fill in the target
 // description classes.
 
-class HwMode<string FS, list<Predicate> Ps> {
-  // A string representing subtarget features that turn on this HW mode.
-  // For example, "+feat1,-feat2" will indicate that the mode is active
-  // when "feat1" is enabled and "feat2" is disabled at the same time.
-  // Any other features are not checked.
-  // When multiple modes are used, they should be mutually exclusive,
-  // otherwise the results are unpredictable.
-  string Features = FS;
+// Code that will be inserted at the start of the generated
+// `*GenSubtargetInfo::getHwModeSet()` method. It is expected to define
+// variables used in Predicate::CondString. If this class is never instantiated,
+// the default
+//
+//   [[maybe_unused]] const auto *Subtarget =
+//        static_cast<const <TargetName>Subtarget *>(this);
+//
+// will be inserted, where <TargetName> is the name of the Target record.
+class HwModePredicateProlog<code c> {
+  code Code = c;
+}
 
+class HwMode<list<Predicate> Ps> {
   // A list of predicates that turn on this HW mode.
   list<Predicate> Predicates = Ps;
 }
@@ -36,7 +41,7 @@ class HwMode<string FS, list<Predicate> Ps> {
 // A special mode recognized by tablegen. This mode is considered active
 // when no other mode is active. For targets that do not use specific hw
 // modes, this is the only mode.
-def DefaultMode : HwMode<"", []>;
+def DefaultMode : HwMode<[]>;
 
 // A class used to associate objects with HW modes. It is only intended to
 // be used as a base class, where the derived class should contain a member
@@ -250,7 +255,14 @@ class RegisterWithSubRegs<string n, list<Register> subregs> : Register<n> {
 class DAGOperand {
   string OperandNamespace = "MCOI";
   string DecoderMethod = "";
+  bit hasCompleteDecoder = true;
 }
+
+/// Abstract base class common to RegisterClass and
+/// RegClassByHwMode. This permits using RegClassByHwMode in
+/// RegisterOperand contexts without creating an artificial
+/// RegisterClass.
+class RegisterClassLike : DAGOperand;
 
 // RegisterClass - Now that all of the registers are defined, and aliases
 // between registers are defined, specify which registers belong to which
@@ -259,7 +271,7 @@ class DAGOperand {
 //
 class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
                     dag regList, RegAltNameIndex idx = NoRegAltName>
-  : DAGOperand {
+  : RegisterClassLike {
   string Namespace = namespace;
 
   // The register size/alignment information, parameterized by a HW mode.
@@ -314,7 +326,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // to use in a given machine function. The code will be inserted in a
   // function like this:
   //
-  //   static inline unsigned f(const MachineFunction &MF) { ... }
+  //   static inline unsigned f(const MachineFunction &MF, bool Rev) { ... }
   //
   // The function should return 0 to select the default order defined by
   // MemberList, 1 to select the first AltOrders entry and so on.
@@ -538,11 +550,11 @@ include "llvm/Target/TargetInstrPredicate.td"
 include "llvm/Target/TargetSchedule.td"
 
 class InstructionEncoding {
-  // Size of encoded instruction.
+  // Size of encoded instruction in bytes.
   int Size;
 
-  // The "namespace" in which this instruction exists, on targets like ARM
-  // which multiple ISA namespaces exist.
+  // The "namespace" in which this instruction exists (on targets like ARM
+  // where multiple ISA namespaces exist).
   string DecoderNamespace = "";
 
   // List of predicates which will be turned into isel matching code.
@@ -734,10 +746,6 @@ class Instruction : InstructionEncoding {
   ///   discussion of inline assembly constraint strings.
   string Constraints = "";
 
-  /// DisableEncoding - List of operand names (e.g. "$op1,$op2") that should not
-  /// be encoded into the output machineinstr.
-  string DisableEncoding = "";
-
   string PostEncoderMethod = "";
 
   /// Target-specific flags. This becomes the TSFlags field in TargetInstrDesc.
@@ -914,15 +922,30 @@ def decoder;
 /// derived from this. TableGen treats the register class as having a symbolic
 /// type that it doesn't know, and resolves the actual regclass to use by using
 /// the TargetRegisterInfo::getPointerRegClass() hook at codegen time.
+///
+/// This is deprecated in favor of RegClassByHwMode.
 class PointerLikeRegClass<int Kind> {
   int RegClassKind = Kind;
 }
 
+/// RegClassByHwMode - Operands that change the register class based
+/// on the subtarget are derived from this. TableGen
+/// treats the register class as having a symbolic kind that it
+/// doesn't know, and resolves the actual regclass to use by using the
+/// a mapping in TargetInstrInfo at codegen time. This can be used to
+/// define operands which swap the register class with the pointer
+/// type.
+class RegClassByHwMode<list<HwMode> Modes,
+                       list<RegisterClass> RegClasses>
+  : HwModeSelect<Modes, !size(RegClasses)>, RegisterClassLike {
+  list<RegisterClass> Objects = RegClasses;
+}
 
 /// ptr_rc definition - Mark this operand as being a pointer value whose
 /// register class is resolved dynamically via a callback to TargetInstrInfo.
 /// FIXME: We should probably change this to a class which contain a list of
 /// flags. But currently we have but one flag.
+// Deprecated, use RegClassByHwMode instead.
 def ptr_rc : PointerLikeRegClass<0>;
 
 /// unknown definition - Mark this operand as being of unknown type, causing
@@ -1003,7 +1026,6 @@ class Operand<ValueType ty> : DAGOperand {
   ValueType Type = ty;
   string PrintMethod = "printOperand";
   string EncoderMethod = "";
-  bit hasCompleteDecoder = true;
   string OperandType = "OPERAND_UNKNOWN";
   dag MIOperandInfo = (ops);
 
@@ -1023,10 +1045,10 @@ class Operand<ValueType ty> : DAGOperand {
   AsmOperandClass ParserMatchClass = ImmAsmOperand;
 }
 
-class RegisterOperand<RegisterClass regclass, string pm = "printOperand">
+class RegisterOperand<RegisterClassLike regclass, string pm = "printOperand">
   : DAGOperand {
   // RegClass - The register class of the operand.
-  RegisterClass RegClass = regclass;
+  RegisterClassLike RegClass = regclass;
   // PrintMethod - The target method to call to print register operands of
   // this type. The method normally will just use an alt-name index to look
   // up the name to print. Default to the generic printOperand().
@@ -1414,9 +1436,9 @@ def PREALLOCATED_ARG : StandardPseudoInstruction {
 def LOCAL_ESCAPE : StandardPseudoInstruction {
   // This instruction is really just a label. It has to be part of the chain so
   // that it doesn't get dropped from the DAG, but it produces nothing and has
-  // no side effects.
+  // no side effects. Symbol operand is expected to be a label.
   let OutOperandList = (outs);
-  let InOperandList = (ins ptr_rc:$symbol, i32imm:$id);
+  let InOperandList = (ins unknown:$symbol, i32imm:$id);
   let hasSideEffects = false;
   let hasCtrlDep = true;
 }
@@ -1531,6 +1553,11 @@ def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
   let hasSideEffects = false;
   let Size = 0;
   let isMeta = true;
+}
+def RELOC_NONE : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$symbol);
+  let hasSideEffects = true;
 }
 
 let hasSideEffects = false, isMeta = true, isConvergent = true in {

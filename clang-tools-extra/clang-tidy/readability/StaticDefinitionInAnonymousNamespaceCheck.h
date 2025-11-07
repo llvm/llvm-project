@@ -1,4 +1,4 @@
-//===--- StaticDefinitionInAnonymousNamespaceCheck.h - clang-tidy*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::readability {
 /// Finds static function and variable definitions in anonymous namespace.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/static-definition-in-anonymous-namespace.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/static-definition-in-anonymous-namespace.html
 class StaticDefinitionInAnonymousNamespaceCheck : public ClangTidyCheck {
 public:
   StaticDefinitionInAnonymousNamespaceCheck(StringRef Name,
