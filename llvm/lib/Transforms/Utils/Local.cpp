@@ -1029,8 +1029,9 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
         return BBPreds.count(SuccPred);
       }));
   // If all the preds of BB are also common preds of Succ, we can't redirect
-  // them to Succ.
-  return CommonPreds.size() < BBPreds.size();
+  // them to Succ, useless they are the same block (e.g., multi-case dest in
+  // switch)
+  return CommonPreds.size() < BBPreds.size() || CommonPreds.size() == 1;
 }
 
 /// Check whether removing \p BB will make the phis in its \p Succ have too
