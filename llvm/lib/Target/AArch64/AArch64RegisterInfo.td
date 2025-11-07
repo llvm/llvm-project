@@ -237,7 +237,6 @@ def GPR64sp0 : RegisterOperand<GPR64sp> {
 }
 
 // GPR32/GPR64 but with zero-register substitution enabled.
-// TODO: Roll this out to GPR32/GPR64/GPR32all/GPR64all.
 def GPR32z : RegisterOperand<GPR32> {
   let GIZeroRegister = WZR;
 }
