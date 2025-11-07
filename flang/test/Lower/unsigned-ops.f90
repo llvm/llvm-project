@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -funsigned -emit-mlir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -funsigned -emit-fir %s -o - | FileCheck %s
 
 unsigned function f01(u, v)
   unsigned, intent(in) :: u, v
