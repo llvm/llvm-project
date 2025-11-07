@@ -390,7 +390,7 @@ public:
   /// Return the list of registers which must be preserved by the function: the
   /// value on exit must be the same as the value on entry. A register from this
   /// list does not need to be saved / reloaded if the function did not use it.
-  const MCPhysReg *getMustPreserveRegisters(MachineFunction &MF) const;
+  const MCPhysReg *getMustPreserveRegisters(const MachineFunction &MF) const;
 
   /// This method determines which of the registers reported by
   /// getMustPreserveRegisters() must be saved in prolog and reloaded in epilog
