@@ -968,14 +968,14 @@ define <64 x bfloat> @v_load_global_v64bf16(ptr addrspace(1) %ptr) {
 ; GFX8-NEXT:    v_addc_u32_e32 v25, vcc, 0, v29, vcc
 ; GFX8-NEXT:    s_movk_i32 s4, 0x70
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[28:29]
-; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
 ; GFX8-NEXT:    v_add_u32_e32 v28, vcc, s4, v28
 ; GFX8-NEXT:    v_addc_u32_e32 v29, vcc, 0, v29, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
+; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
+; GFX8-NEXT:    flat_load_dwordx4 v[24:27], v[24:25]
 ; GFX8-NEXT:    flat_load_dwordx4 v[16:19], v[16:17]
 ; GFX8-NEXT:    flat_load_dwordx4 v[20:23], v[20:21]
-; GFX8-NEXT:    flat_load_dwordx4 v[24:27], v[24:25]
 ; GFX8-NEXT:    flat_load_dwordx4 v[28:31], v[28:29]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]

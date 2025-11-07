@@ -74,7 +74,7 @@ def OpWithPredicates : NS_Op<"op_with_predicates"> {
 // Note: comprehensive emission of verifiers is tested in verifyINvariantsImpl() below
 // CHECK: int64_t tblgen_scalar = this->getScalar();
 // CHECK: if (!((tblgen_scalar >= 0)))
-// CHECK: return emitError(loc, "'test.op_with_predicates' op ""property 'scalar' failed to satisfy constraint: non-negative int64_t");
+// CHECK: return emitError(loc, "'test.op_with_predicates' op property 'scalar' failed to satisfy constraint: non-negative int64_t");
 
 // CHECK-LABEL: OpWithPredicates::verifyInvariantsImpl()
 // Note: for test readability, we capture [[maybe_unused]] into the variable maybe_unused
