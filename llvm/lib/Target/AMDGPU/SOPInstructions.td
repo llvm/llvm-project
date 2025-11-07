@@ -206,6 +206,8 @@ class DivergentBinFrag<SDPatternOperator Op> : PatFrag <
   // trivially true predicate to eliminate the check.
   let GISelPredicateCode = [{return true;}];
 }
+
+
 let isMoveImm = 1 in {
   let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
     def S_MOV_B32 : SOP1_32 <"s_mov_b32">;
