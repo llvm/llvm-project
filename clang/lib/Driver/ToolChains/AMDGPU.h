@@ -101,11 +101,13 @@ public:
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
-  /// Should skip sanitize options.
-  bool shouldSkipSanitizeOption(const ToolChain &TC,
-                                const llvm::opt::ArgList &DriverArgs,
-                                StringRef TargetID,
-                                const llvm::opt::Arg *A) const;
+  /// Filter supported sanitizers from the sanitize option and return them. If
+  /// there should be no filtering and Arg should be kept as-is, return
+  /// std::nullopt. If no sanitizers are supported, return an empty string.
+  std::optional<std::string>
+  filterSanitizeOption(const ToolChain &TC,
+                       const llvm::opt::ArgList &DriverArgs, StringRef TargetID,
+                       const llvm::opt::Arg *A) const;
 
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
@@ -164,8 +166,8 @@ public:
       for (const char *Value : A->getValues()) {
         SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ false);
         if (K != SanitizerKind::Address)
-          Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
-              << A->getAsString(Args) << getTriple().str();
+          Diags.Report(clang::diag::warn_drv_unsupported_option_part_for_target)
+              << Value << A->getAsString(Args) << getTriple().str();
       }
     }
   }

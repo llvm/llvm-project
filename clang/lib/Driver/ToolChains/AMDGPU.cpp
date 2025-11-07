@@ -1071,29 +1071,32 @@ ROCMToolChain::getCommonDeviceLibNames(
       getSanitizerArgs(DriverArgs).needsAsanRt());
 }
 
-bool AMDGPUToolChain::shouldSkipSanitizeOption(
+std::optional<std::string> AMDGPUToolChain::filterSanitizeOption(
     const ToolChain &TC, const llvm::opt::ArgList &DriverArgs,
     StringRef TargetID, const llvm::opt::Arg *A) const {
   // For actions without targetID, do nothing.
   if (TargetID.empty())
-    return false;
+    return std::nullopt;
   Option O = A->getOption();
 
   if (!O.matches(options::OPT_fsanitize_EQ))
-    return false;
+    return std::nullopt;
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
                           options::OPT_fno_gpu_sanitize, true))
-    return true;
+    return "";
 
   auto &Diags = TC.getDriver().getDiags();
 
-  // For simplicity, we only allow -fsanitize=address
+  // We only allow the address sanitizer and ignore all other sanitizers.
+  SmallVector<std::string, 4> SupportedSanitizers;
   for (const char *Value : A->getValues()) {
     SanitizerMask K = parseSanitizerValue(Value, /*AllowGroups=*/false);
-    if (K != SanitizerKind::Address)
-      return true;
+    if (K == SanitizerKind::Address)
+      SupportedSanitizers.push_back(std::string(Value));
   }
+  if (SupportedSanitizers.empty())
+    return "";
 
   // Check 'xnack+' availability by default
   llvm::StringRef Processor =
@@ -1117,7 +1120,8 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
     Diags.Report(
         clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
         << A->getAsString(DriverArgs) << TargetID << "xnack+";
-    return true;
+    return "";
   }
-  return false;
+
+  return llvm::join(SupportedSanitizers, ",");
 }

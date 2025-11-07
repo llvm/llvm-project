@@ -291,9 +291,19 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   const OptTable &Opts = getDriver().getOpts();
 
+  // Skip sanitize options passed from the HostTC. Remove them early.
+  // The decision to sanitize device code is computed only by
+  // 'shouldSkipSanitizeOption'.
+  if (DAL->hasArg(options::OPT_fsanitize_EQ))
+    DAL->eraseArg(options::OPT_fsanitize_EQ);
+
   for (Arg *A : Args) {
-    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A))
+    std::optional<std::string> SupportedSanitizers =
+        filterSanitizeOption(*this, Args, BoundArch, A);
+    if (!SupportedSanitizers)
       DAL->append(A);
+    else if (!SupportedSanitizers->empty())
+      DAL->AddJoinedArg(A, A->getOption(), *SupportedSanitizers);
   }
 
   if (!BoundArch.empty()) {

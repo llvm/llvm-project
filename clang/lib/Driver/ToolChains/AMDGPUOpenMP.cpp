@@ -66,16 +66,20 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   const OptTable &Opts = getDriver().getOpts();
 
-  // Skip sanitize options passed from the HostTC. Claim them early.
+  // Skip sanitize options passed from the HostTC. Remove them early.
   // The decision to sanitize device code is computed only by
   // 'shouldSkipSanitizeOption'.
   if (DAL->hasArg(options::OPT_fsanitize_EQ))
-    DAL->claimAllArgs(options::OPT_fsanitize_EQ);
+    DAL->eraseArg(options::OPT_fsanitize_EQ);
 
-  for (Arg *A : Args)
-    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
-        !llvm::is_contained(*DAL, A))
+  for (Arg *A : Args) {
+    std::optional<std::string> SupportedSanitizers =
+        filterSanitizeOption(*this, Args, BoundArch, A);
+    if (!SupportedSanitizers)
       DAL->append(A);
+    else if (!SupportedSanitizers->empty())
+      DAL->AddJoinedArg(A, A->getOption(), *SupportedSanitizers);
+  }
 
   if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_march_EQ);
