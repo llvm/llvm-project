@@ -1211,14 +1211,10 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
         getContext().getTypeSizeInChars(ElementTy->getPointeeType());
 
     if (ElementSize.isZero()) {
-      // This might be a __sized_by on a 'void *', which counts bytes, not
-      // elements.
-      auto *CAT = ElementTy->getAs<CountAttributedType>();
-      if (!CAT || (CAT->getKind() != CountAttributedType::SizedBy &&
-                   CAT->getKind() != CountAttributedType::SizedByOrNull))
-        // Okay, not sure what it is now.
-        // FIXME: Should this be an assert?
-        return std::optional<CharUnits>();
+      // This might be a __sized_by (or __counted_by) on a
+      // 'void *', which counts bytes, not elements.
+      [[maybe_unused]] auto *CAT = ElementTy->getAs<CountAttributedType>();
+      assert(CAT && "must have an CountAttributedType");
 
       ElementSize = CharUnits::One();
     }

@@ -1082,14 +1082,24 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
   case AArch64::LDPXi: {
     Register Reg0 = MBBI->getOperand(0).getReg();
     Register Reg1 = MBBI->getOperand(1).getReg();
+
+    int SEHReg0 = RegInfo->getSEHRegNum(Reg0);
+    int SEHReg1 = RegInfo->getSEHRegNum(Reg1);
+
     if (Reg0 == AArch64::FP && Reg1 == AArch64::LR)
       MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveFPLR))
                 .addImm(Imm * 8)
                 .setMIFlag(Flag);
-    else
+    else if (SEHReg0 >= 19 && SEHReg1 >= 19)
       MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveRegP))
-                .addImm(RegInfo->getSEHRegNum(Reg0))
-                .addImm(RegInfo->getSEHRegNum(Reg1))
+                .addImm(SEHReg0)
+                .addImm(SEHReg1)
+                .addImm(Imm * 8)
+                .setMIFlag(Flag);
+    else
+      MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegIP))
+                .addImm(SEHReg0)
+                .addImm(SEHReg1)
                 .addImm(Imm * 8)
                 .setMIFlag(Flag);
     break;
@@ -1097,10 +1107,16 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
   case AArch64::STRXui:
   case AArch64::LDRXui: {
     int Reg = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
-    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveReg))
-              .addImm(Reg)
-              .addImm(Imm * 8)
-              .setMIFlag(Flag);
+    if (Reg >= 19)
+      MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveReg))
+                .addImm(Reg)
+                .addImm(Imm * 8)
+                .setMIFlag(Flag);
+    else
+      MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegI))
+                .addImm(Reg)
+                .addImm(Imm * 8)
+                .setMIFlag(Flag);
     break;
   }
   case AArch64::STRDui:
