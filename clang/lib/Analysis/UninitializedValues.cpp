@@ -61,8 +61,8 @@ static bool isTrackedVar(const VarDecl *vd, const DeclContext *dc) {
       vd->getDeclContext() == dc) {
     QualType ty = vd->getType();
     if (const auto *RD = ty->getAsRecordDecl())
-      return recordIsNotEmpty(RD);
-    return ty->isScalarType() || ty->isVectorType() || ty->isRVVSizelessBuiltinType();
+      return recordIsNotEmpty(RD);    
+    return ty->isScalarType() || ty->isVectorType() || ty->isRVVSizelessBuiltinType() || ty->isArrayType();
   }
   return false;
 }
@@ -291,6 +291,7 @@ private:
 public:
   ClassifyRefs(AnalysisDeclContext &AC) : DC(cast<DeclContext>(AC.getDecl())) {}
 
+  void VisitArraySubscriptExpr(ArraySubscriptExpr *ASE);
   void VisitDeclStmt(DeclStmt *DS);
   void VisitUnaryOperator(UnaryOperator *UO);
   void VisitBinaryOperator(BinaryOperator *BO);
@@ -309,6 +310,10 @@ public:
     const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
     if (!VD || !isTrackedVar(VD))
       return Ignore;
+
+    // Default to Use instead of Init for arrays - CRITICAL FIX
+    if (VD->getType()->isArrayType())
+      return Use;
 
     return Init;
   }
@@ -331,6 +336,26 @@ static const DeclRefExpr *getSelfInitExpr(VarDecl *VD) {
 void ClassifyRefs::classify(const Expr *E, Class C) {
   // The result of a ?: could also be an lvalue.
   E = E->IgnoreParens();
+  
+  // Handle array subscripts - THE KEY FIX
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+    // For ANY array subscript expression, the base array is being USED
+    // This is the critical fix - don't check C, just mark as Use
+    FindVarResult Var = findVar(ASE->getBase(), DC);
+    if (const VarDecl *VD = Var.getDecl()) {
+      if (VD->getType()->isArrayType()) {
+        // Directly mark the array DeclRefExpr as Use
+        if (const DeclRefExpr *DRE = Var.getDeclRefExpr())
+          Classification[DRE] = Use;
+      }
+    }
+    
+    // Process base and index normally
+    classify(ASE->getBase(), C);
+    Visit(const_cast<Expr*>(ASE->getIdx()));
+    return;
+  }
+  
   if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
     classify(CO->getTrueExpr(), C);
     classify(CO->getFalseExpr(), C);
@@ -376,6 +401,13 @@ void ClassifyRefs::classify(const Expr *E, Class C) {
   }
 }
 
+void ClassifyRefs::VisitArraySubscriptExpr(ArraySubscriptExpr *ASE) {
+  // For array subscript expressions, classify the base as a use
+  classify(ASE->getBase(), Use);
+  // Also visit the index expression
+  Visit(ASE->getIdx());
+}
+
 void ClassifyRefs::VisitDeclStmt(DeclStmt *DS) {
   for (auto *DI : DS->decls()) {
     auto *VD = dyn_cast<VarDecl>(DI);
@@ -393,9 +425,26 @@ void ClassifyRefs::VisitBinaryOperator(BinaryOperator *BO) {
   // use.
   if (BO->isCompoundAssignmentOp())
     classify(BO->getLHS(), Use);
-  else if (BO->getOpcode() == BO_Assign || BO->getOpcode() == BO_Comma)
-    classify(BO->getLHS(), Ignore);
+  else if (BO->getOpcode() == BO_Assign || BO->getOpcode() == BO_Comma) {
+    // For array subscript expressions on LHS of assignment, don't classify as use
+    if (isa<ArraySubscriptExpr>(BO->getLHS())) {
+      // Don't classify array base as use when it's being assigned to
+      // But we still need to visit the index expression
+      if (auto *ASE = dyn_cast<ArraySubscriptExpr>(BO->getLHS())) {
+        Visit(ASE->getIdx());
+      }
+    } else {
+      classify(BO->getLHS(), Ignore);
+    }
+    // ALWAYS visit the right-hand side - this is crucial for array subscripts
+    Visit(BO->getRHS());
+  } else {
+    // For all other binary operators, visit both operands normally
+    Visit(BO->getLHS());
+    Visit(BO->getRHS());
+  }
 }
+
 
 void ClassifyRefs::VisitUnaryOperator(UnaryOperator *UO) {
   // Increment and decrement are uses despite there being no lvalue-to-rvalue
@@ -491,6 +540,7 @@ public:
   void reportConstRefUse(const Expr *ex, const VarDecl *vd);
   void reportConstPtrUse(const Expr *ex, const VarDecl *vd);
 
+  void VisitArraySubscriptExpr(ArraySubscriptExpr *ASE);
   void VisitBinaryOperator(BinaryOperator *bo);
   void VisitBlockExpr(BlockExpr *be);
   void VisitCallExpr(CallExpr *ce);
@@ -661,8 +711,23 @@ public:
 
 } // namespace
 
-void TransferFunctions::reportUse(const Expr *ex, const VarDecl *vd) {
+void TransferFunctions::VisitArraySubscriptExpr(ArraySubscriptExpr *ASE) {  
+  // Handle array subscript expressions like arr[i]
+  // Check if the base array variable is uninitialized
+  FindVarResult Var = findVar(ASE->getBase());
+  
+  if (const VarDecl *VD = Var.getDecl()) {
+    if (VD->getType()->isArrayType())
+      reportUse(ASE, VD);
+  }
+  
+  // Also visit index expression
+  Visit(ASE->getIdx());
+}
+
+void TransferFunctions::reportUse(const Expr *ex, const VarDecl *vd) {  
   Value v = vals[vd];
+  
   if (isUninitialized(v))
     handler.handleUseOfUninitVariable(vd, getUninitUse(ex, vd, v));
 }

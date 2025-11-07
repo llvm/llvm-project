@@ -414,6 +414,13 @@ Improvements to Clang's diagnostics
 - Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
   attributes are used with a negative size (#GH165463).
 
+- Fixed: ``-Wuninitialized`` now emits a warning for uninitialized fixed-size local arrays. For example:
+
+  .. code-block:: c
+
+     int arr[4];
+     int x = arr[2]; // warning: variable 'arr' is uninitialized when used here (#GH165239)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
