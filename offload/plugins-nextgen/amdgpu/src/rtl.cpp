@@ -3142,6 +3142,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       OMPX_AdjustNumTeamsForXteamRedSmallBlockSize =
           EnvarConfig.OMPX_AdjustNumTeamsForXteamRedSmallBlockSize;
     }
+    if (!OMPX_XteamBlockSize.isPresent()) {
+      OMPX_XteamBlockSize =
+          EnvarConfig.OMPX_XteamBlockSize;
+    }
+    if (!OMPX_XTeamReductionOccupancyBasedOpt.isPresent()) {
+      OMPX_XTeamReductionOccupancyBasedOpt =
+          EnvarConfig.OMPX_XTeamReductionOccupancyBasedOpt;
+    }
   }
 
   ~AMDGPUDeviceTy() {}
@@ -4887,6 +4895,8 @@ private:
   /// done.
   UInt32Envar OMPX_AdjustNumTeamsForSmallBlockSize;
 
+  BoolEnvar OMPX_XTeamReductionOccupancyBasedOpt;
+
   /// Envar to allow scaling up the number of teams for Xteam-Reduction,
   /// whenever the blocksize has been reduced from the max. The value 0
   /// indicates that this functionality is disabled. The default value is 1,
@@ -5083,24 +5093,42 @@ private:
         OMPX_UseMultipleSdmaEngines; // LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES
     bool
         OMPX_AdjustNumTeamsForXteamRedSmallBlockSize;
+    int
+        OMPX_XteamBlockSize;
+    bool
+        OMPX_XTeamReductionOccupancyBasedOpt;
   };
 
   static inline const std::unordered_map<std::string, DeviceEnvarConfigTy>
       EnvarConfigs = {{"MI210", {.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_XteamBlockSize = 256,
+                                 .OMPX_XTeamReductionOccupancyBasedOpt = true,
                                  .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=0}},
                       {"MI250X",{.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_XteamBlockSize = 256,
+                                 .OMPX_XTeamReductionOccupancyBasedOpt = true,
                                  .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=0}},
                       {"MI250X/MI250",{
                                  .OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_XteamBlockSize = 256,
+                                 .OMPX_XTeamReductionOccupancyBasedOpt = true,
                                  .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=0}},
                       {"MI300A", {.OMPX_UseMultipleSdmaEngines = false,
+                                 .OMPX_XteamBlockSize = 512,
+                                 .OMPX_XTeamReductionOccupancyBasedOpt = false,
                                  .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}},
                       {"MI300X", {.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_XteamBlockSize = 512,
+                                 .OMPX_XTeamReductionOccupancyBasedOpt = false,
                                  .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}},
                       {"MI355X", {.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_XteamBlockSize = 512,
+                                 .OMPX_XTeamReductionOccupancyBasedOpt = false,
                                  .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}},
                       // Default config for unknown devices.
                       {"DEFAULT", {.OMPX_UseMultipleSdmaEngines = true,
+                                 .OMPX_XteamBlockSize = 512,
+                                 .OMPX_XTeamReductionOccupancyBasedOpt = false,
                                  .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}}};
 
   const DeviceEnvarConfigTy &getEnvarConfig() const {
