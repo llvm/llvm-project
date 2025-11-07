@@ -334,12 +334,6 @@ def FeatureFlatSegmentOffsetBug : SubtargetFeature<"flat-segment-offset-bug",
   "GFX10 bug where inst_offset is ignored when flat instructions access global memory"
 >;
 
-def FeatureNegativeScratchOffsetBug : SubtargetFeature<"negative-scratch-offset-bug",
-  "NegativeScratchOffsetBug",
-  "true",
-  "Negative immediate offsets in scratch instructions with an SGPR offset page fault on GFX9"
->;
-
 def FeatureNegativeUnalignedScratchOffsetBug : SubtargetFeature<"negative-unaligned-scratch-offset-bug",
   "NegativeUnalignedScratchOffsetBug",
   "true",
@@ -1588,8 +1582,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
-   FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
-   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad,
+   FeatureUnalignedDSAccess, FeatureGWS, FeatureDefaultComponentZero,
+   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad,
    FeatureCubeInsts, FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, 
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts, 
    FeatureCvtPkNormVOP3Insts
