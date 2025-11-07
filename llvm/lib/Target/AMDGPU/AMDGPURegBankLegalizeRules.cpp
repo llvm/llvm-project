@@ -202,7 +202,7 @@ bool PredicateMapping::match(const MachineInstr &MI,
   return true;
 }
 
-SetOfRulesForOpcode::SetOfRulesForOpcode() {}
+SetOfRulesForOpcode::SetOfRulesForOpcode() = default;
 
 SetOfRulesForOpcode::SetOfRulesForOpcode(FastRulesTypes FastTypes)
     : FastTypes(FastTypes) {}
@@ -912,6 +912,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS128}, {{Vgpr128}, {VgprPtr128}}});
 
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
+
+  addRulesForGOpcs({G_FENCE}).Any({{{}}, {{}, {}}});
 
   addRulesForGOpcs({G_READSTEADYCOUNTER, G_READCYCLECOUNTER}, Standard)
       .Uni(S64, {{Sgpr64}, {}});
