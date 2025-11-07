@@ -4240,6 +4240,19 @@ struct FormatStyle {
   /// \version 3.8
   ReflowCommentsStyle ReflowComments;
 
+  /// If reflow comments is enabled, dont include * in the formatted block comment.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///    // information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///     information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///     information and a misaligned second line */
+    /// \endcode
+
+  /// \version 22
+  bool ReflowCommentsNoStar;
+
   /// Remove optional braces of control statements (``if``, ``else``, ``for``,
   /// and ``while``) in C++ according to the LLVM coding style.
   /// \warning

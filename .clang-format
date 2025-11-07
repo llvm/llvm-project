@@ -1,2 +1,5 @@
 BasedOnStyle: LLVM
 LineEnding: LF
+ColumnLimit: 80
+ReflowComments: true
+ReflowCommentsNoStar: true
