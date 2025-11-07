@@ -76,7 +76,7 @@ int main (int argc, char **argv) {
 // OMP60-LABEL: define {{.*}}main.omp_outlined{{.*}}
 // OMP60-NEXT:  entry:
 // OMP60: %x.addr = alloca{{.*}}
-// OMP60: %xPtr = alloca
+// OMP60: %xPtr = alloca{{.*}}
 // OMP60: store ptr null, ptr %xPtr{{.*}}
 // OMP60: store ptr %xPtr{{.*}}
 // OMP60: store ptr %x.addr{{.*}}
@@ -86,15 +86,15 @@ int main (int argc, char **argv) {
 // OMP60: define {{.*}}main.omp_outlined{{.*}}
 // OMP60-NEXT:  entry:
 // OMP60: %i.addr = alloca{{.*}}
-// OMP60-NEXT:  [[N_ADDR:%.*]] = alloca{{.*}}
-// OMP60-NEXT:  [[AGGREGATE_ADDR:%.*]] = alloca{{.*}}
-// OMP60-NEXT:  [[X_ADDR:%.*]] = alloca{{.*}}
-// OMP60-NEXT:  [[ARR_ADDR:%.*]] = alloca{{.*}}
-// OMP60: [[TMP0:%.*]] = load{{.*}}%i.addr
-// OMP60-NEXT:  [[TMP1:%.*]] = load{{.*}}[[N_ADDR]]
-// OMP60-NEXT:  [[TMP2:%.*]] = load{{.*}}[[AGGREGATE_ADDR]]
-// OMP60-NEXT:  [[TMP3:%.*]] = load{{.*}}[[X_ADDR]]
-// OMP60-NEXT:  [[TMP4:%.*]] = load{{.*}}[[ARR_ADDR]]
+// OMP60-NEXT:  %n.addr = alloca{{.*}}
+// OMP60-NEXT:  %aggregate.addr = alloca{{.*}}
+// OMP60-NEXT:  %x.addr = alloca{{.*}}
+// OMP60-NEXT:  %arr.addr = alloca{{.*}}
+// OMP60: [[TMP0:%.*]] = load{{.*}}%i.addr{{.*}}
+// OMP60-NEXT:  [[TMP1:%.*]] = load{{.*}}%n.addr{{.*}}
+// OMP60-NEXT:  [[TMP2:%.*]] = load{{.*}}%aggregate.addr{{.*}}
+// OMP60-NEXT:  [[TMP3:%.*]] = load{{.*}}%x.addr{{.*}}
+// OMP60-NEXT:  [[TMP4:%.*]] = load{{.*}}%arr.addr{{.*}}
 // OMP60: store ptr [[TMP2]]{{.*}}
 // OMP60-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
 // OMP60: store ptr [[TMP2]]{{.*}}
