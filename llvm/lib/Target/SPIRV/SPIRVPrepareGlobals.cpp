@@ -13,6 +13,7 @@
 
 #include "SPIRV.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Module.h"
 
 using namespace llvm;
@@ -43,6 +44,29 @@ bool tryExtendLLVMBitcodeMarker(GlobalVariable &Bitcode) {
   return true;
 }
 
+bool tryExtendDynamicLDSGlobal(GlobalVariable &GV) {
+  constexpr unsigned WorkgroupAS = 3;
+  const bool IsWorkgroupExternal =
+      GV.hasExternalLinkage() && GV.getAddressSpace() == WorkgroupAS;
+  if (!IsWorkgroupExternal)
+    return false;
+
+  const ArrayType *AT = dyn_cast<ArrayType>(GV.getValueType());
+  if (!AT || AT->getNumElements() != 0)
+    return false;
+
+  constexpr auto Magic = std::numeric_limits<uint32_t>::max();
+  ArrayType *NewAT = ArrayType::get(AT->getElementType(), Magic);
+  GlobalVariable *NewGV = new GlobalVariable(
+      *GV.getParent(), NewAT, GV.isConstant(), GV.getLinkage(), nullptr, "",
+      &GV, GV.getThreadLocalMode(), WorkgroupAS, GV.isExternallyInitialized());
+  NewGV->takeName(&GV);
+  GV.replaceAllUsesWith(NewGV);
+  GV.eraseFromParent();
+
+  return true;
+}
+
 bool SPIRVPrepareGlobals::runOnModule(Module &M) {
   const bool IsAMD = M.getTargetTriple().getVendor() == Triple::AMD;
   if (!IsAMD)
@@ -51,6 +75,9 @@ bool SPIRVPrepareGlobals::runOnModule(Module &M) {
   bool Changed = false;
   if (GlobalVariable *Bitcode = M.getNamedGlobal("llvm.embedded.module"))
     Changed |= tryExtendLLVMBitcodeMarker(*Bitcode);
+
+  for (GlobalVariable &GV : make_early_inc_range(M.globals()))
+    Changed |= tryExtendDynamicLDSGlobal(GV);
 
   return Changed;
 }
