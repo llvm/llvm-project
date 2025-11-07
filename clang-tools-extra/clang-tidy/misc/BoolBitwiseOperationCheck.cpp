@@ -39,17 +39,15 @@ static bool assignsToBoolean(const BinaryOperator *BinOp, ASTContext *AC) {
     // Special handling for `template<bool bb=true|1>` cases
     if (const auto *D = ParentNoParen->get<Decl>()) {
       if (const auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D)) {
-        if (NTTPD->getType()->isBooleanType()) {
+        if (NTTPD->getType()->isBooleanType())
           return true;
-        }
       }
     }
 
     if (const auto *S = ParentNoParen->get<Stmt>()) {
       if (const auto *ICE = dyn_cast<ImplicitCastExpr>(S)) {
-        if (ICE->getType()->isBooleanType()) {
+        if (ICE->getType()->isBooleanType())
           return true;
-        }
       }
     }
   }
@@ -79,9 +77,8 @@ constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
 
 static llvm::StringRef translate(llvm::StringRef Value) {
   for (const auto &[Bitwise, Logical] : OperatorsTransformation) {
-    if (Value == Bitwise) {
+    if (Value == Bitwise)
       return Logical;
-    }
   }
 
   return {};
@@ -235,13 +232,11 @@ void BoolBitwiseOperationCheck::visitBinaryTreesNode(
     const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
     const clang::SourceManager &SM, clang::ASTContext &Ctx,
     std::optional<bool>& rootAssignsToBoolean) {
-  if (!BinOp) {
+  if (!BinOp)
     return;
-  }
 
-  if (isBooleanBitwise(BinOp, &Ctx, rootAssignsToBoolean)) {
+  if (isBooleanBitwise(BinOp, &Ctx, rootAssignsToBoolean))
     emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM, Ctx);
-  }
 
   visitBinaryTreesNode(
       dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()), BinOp,
