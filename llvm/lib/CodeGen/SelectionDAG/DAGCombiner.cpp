@@ -10973,18 +10973,16 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   // between.
   SDValue X;
   APInt C1;
-  if (sd_match(N0,
-               m_OneUse(m_Not(m_OneUse(m_Sra(m_Value(X), m_ConstInt(C1)))))) &&
-      N1C) {
+  if (N1C && sd_match(N0, m_OneUse(m_Not(
+                              m_OneUse(m_Sra(m_Value(X), m_ConstInt(C1))))))) {
     APInt C2 = N1C->getAPIntValue();
-    zeroExtendToMatch(C1, C2, 1 /* Overflow Bit */);
+    zeroExtendToMatch(C1, C2, /*OverflowBit=*/1);
     APInt Sum = C1 + C2;
     unsigned ShiftSum =
         Sum.uge(OpSizeInBits) ? (OpSizeInBits - 1) : Sum.getZExtValue();
     SDValue NewShift = DAG.getNode(
         ISD::SRA, DL, VT, X, DAG.getConstant(ShiftSum, DL, N1.getValueType()));
-    return DAG.getNode(ISD::XOR, DL, VT, NewShift,
-                       DAG.getAllOnesConstant(DL, VT));
+    return DAG.getNOT(DL, NewShift, VT);
   }
 
   // fold (sra (shl X, m), (sub result_size, n))
