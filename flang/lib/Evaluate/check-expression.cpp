@@ -1480,6 +1480,9 @@ public:
 
   // Returns true if dummy arg needs to be contiguous
   bool DummyNeedsContiguity() const {
+    if (dummyObj_.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
+      return false;
+    }
     bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
     bool dummyIsExplicitShape{dummyObj_.type.IsExplicitShape()};
     bool dummyIsAssumedSize{dummyObj_.type.attrs().test(
@@ -1582,7 +1585,7 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // Expressions are copy-in, but not copy-out.
     return forCopyIn;
   }
-  bool isContiguousActual{IsSimplyContiguous(*actual, fc)};
+  auto maybeContigActual{IsContiguous(*actual, fc)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {
@@ -1605,16 +1608,18 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     if (!check.HaveArrayOrAssumedRankArgs()) {
       return false;
     }
-    bool actualTreatAsContiguous{isContiguousActual ||
-        dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous)};
-    if ((!actualTreatAsContiguous || check.HavePolymorphicDifferences()) &&
-        check.DummyNeedsContiguity()) {
-      return true;
+    if (maybeContigActual) {
+      bool isContiguousActual{maybeContigActual.value()};
+      if ((!isContiguousActual || check.HavePolymorphicDifferences()) &&
+          check.DummyNeedsContiguity()) {
+        return true;
+      }
     }
   } else { // Implicit interface
-    if (isContiguousActual) {
-      // Known contiguous, don't copy in/out
-      return false;
+    if (maybeContigActual) {
+      // If known contiguous, don't copy in/out.
+      // If known non-contiguous, copy in/out.
+      return !(maybeContigActual.value());
     }
   }
   return unknown;
