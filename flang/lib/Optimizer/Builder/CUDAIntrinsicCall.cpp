@@ -1309,34 +1309,22 @@ CUDAIntrinsicLibrary::genThisWarp(mlir::Type resultType,
 // THREADFENCE
 void CUDAIntrinsicLibrary::genThreadFence(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.gl";
-  mlir::FunctionType funcType =
-      mlir::FunctionType::get(builder.getContext(), {}, {});
-  auto funcOp = builder.createFunction(loc, funcName, funcType);
-  llvm::SmallVector<mlir::Value> noArgs;
-  fir::CallOp::create(builder, loc, funcOp, noArgs);
+  assert(args.size() == 0);
+  mlir::NVVM::MembarOp::create(builder, loc, mlir::NVVM::MemScopeKind::GPU);
 }
 
 // THREADFENCE_BLOCK
 void CUDAIntrinsicLibrary::genThreadFenceBlock(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.cta";
-  mlir::FunctionType funcType =
-      mlir::FunctionType::get(builder.getContext(), {}, {});
-  auto funcOp = builder.createFunction(loc, funcName, funcType);
-  llvm::SmallVector<mlir::Value> noArgs;
-  fir::CallOp::create(builder, loc, funcOp, noArgs);
+  assert(args.size() == 0);
+  mlir::NVVM::MembarOp::create(builder, loc, mlir::NVVM::MemScopeKind::CTA);
 }
 
 // THREADFENCE_SYSTEM
 void CUDAIntrinsicLibrary::genThreadFenceSystem(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.sys";
-  mlir::FunctionType funcType =
-      mlir::FunctionType::get(builder.getContext(), {}, {});
-  auto funcOp = builder.createFunction(loc, funcName, funcType);
-  llvm::SmallVector<mlir::Value> noArgs;
-  fir::CallOp::create(builder, loc, funcOp, noArgs);
+  assert(args.size() == 0);
+  mlir::NVVM::MembarOp::create(builder, loc, mlir::NVVM::MemScopeKind::SYS);
 }
 
 // TMA_BULK_COMMIT_GROUP

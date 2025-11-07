@@ -878,18 +878,18 @@ inline constexpr detail::IsaAndPresentCheckPredicate<Types...>
     IsaAndPresentPred{};
 
 /// Function objects corresponding to the Cast types defined above.
-template <typename From>
-inline constexpr detail::StaticCastFunc<From> StaticCastTo{};
+template <typename To>
+inline constexpr detail::StaticCastFunc<To> StaticCastTo{};
 
-template <typename From> inline constexpr detail::CastFunc<From> CastTo{};
+template <typename To> inline constexpr detail::CastFunc<To> CastTo{};
 
-template <typename From>
-inline constexpr detail::CastIfPresentFunc<From> CastIfPresentTo{};
+template <typename To>
+inline constexpr detail::CastIfPresentFunc<To> CastIfPresentTo{};
 
-template <typename From>
-inline constexpr detail::DynCastIfPresentFunc<From> DynCastIfPresentTo{};
+template <typename To>
+inline constexpr detail::DynCastIfPresentFunc<To> DynCastIfPresentTo{};
 
-template <typename From> inline constexpr detail::DynCastFunc<From> DynCastTo{};
+template <typename To> inline constexpr detail::DynCastFunc<To> DynCastTo{};
 
 } // end namespace llvm
 
