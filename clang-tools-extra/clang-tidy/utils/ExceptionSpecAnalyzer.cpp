@@ -20,7 +20,7 @@ ExceptionSpecAnalyzer::analyze(const FunctionDecl *FuncDecl) {
   const auto [CacheEntry, NotFound] =
       FunctionCache.try_emplace(FuncDecl, State::NotThrowing);
   if (NotFound) {
-    ExceptionSpecAnalyzer::State State = analyzeImpl(FuncDecl);
+    const ExceptionSpecAnalyzer::State State = analyzeImpl(FuncDecl);
     // Update result with calculated value
     FunctionCache[FuncDecl] = State;
     return State;
@@ -87,20 +87,20 @@ ExceptionSpecAnalyzer::analyzeRecord(const CXXRecordDecl *RecordDecl,
         return analyze(MethodDecl);
 
   for (const auto &BaseSpec : RecordDecl->bases()) {
-    State Result = analyzeBase(BaseSpec, Kind);
+    const State Result = analyzeBase(BaseSpec, Kind);
     if (Result == State::Throwing || Result == State::Unknown)
       return Result;
   }
 
   for (const auto &BaseSpec : RecordDecl->vbases()) {
-    State Result = analyzeBase(BaseSpec, Kind);
+    const State Result = analyzeBase(BaseSpec, Kind);
     if (Result == State::Throwing || Result == State::Unknown)
       return Result;
   }
 
   for (const auto *FDecl : RecordDecl->fields())
     if (!FDecl->isInvalidDecl() && !FDecl->isUnnamedBitField()) {
-      State Result = analyzeFieldDecl(FDecl, Kind);
+      const State Result = analyzeFieldDecl(FDecl, Kind);
       if (Result == State::Throwing || Result == State::Unknown)
         return Result;
     }
