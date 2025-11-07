@@ -553,9 +553,8 @@ define i8 @addv_zero_lanes_negative_v8i8(ptr %arr)  {
 define i8 @addv_zero_lanes_v16i8(ptr %arr)  {
 ; CHECK-SD-LABEL: addv_zero_lanes_v16i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
-; CHECK-SD-NEXT:    mov v0.d[0], x8
+; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    addv b0, v0.16b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -578,9 +577,8 @@ define i8 @addv_zero_lanes_v16i8(ptr %arr)  {
 define i16 @addv_zero_lanes_v8i16(ptr %arr)  {
 ; CHECK-SD-LABEL: addv_zero_lanes_v8i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    ldrh w8, [x0]
-; CHECK-SD-NEXT:    mov v0.d[0], x8
+; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    addv h0, v0.8h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -603,9 +601,8 @@ define i16 @addv_zero_lanes_v8i16(ptr %arr)  {
 define i32 @addv_zero_lanes_v4i32(ptr %arr)  {
 ; CHECK-SD-LABEL: addv_zero_lanes_v4i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    mov v0.d[0], x8
+; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    addv s0, v0.4s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret

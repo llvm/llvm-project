@@ -15654,6 +15654,54 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
   }
 
+  // 128-bit NEON integer vectors:
+  // If BUILD_VECTOR has low half == splat(lane 0) and high half == zero,
+  // build the low half and return SUBREG_TO_REG(0, Lo, dsub).
+  // This avoids INSERT_VECTOR_ELT chains and lets later passes assume the
+  // other lanes are zero.
+  if (VT.isFixedLengthVector() && VT.getSizeInBits() == 128) {
+    EVT LaneVT = VT.getVectorElementType();
+    if (LaneVT.isInteger()) {
+      const unsigned HalfElts = NumElts >> 1;
+      SDValue FirstVal = Op.getOperand(0);
+
+      auto IsZero = [&](SDValue V) { return isNullConstant(V); };
+
+      bool IsLoSplatHiZero = true;
+      for (unsigned i = 0; i < NumElts; ++i) {
+        SDValue Vi = Op.getOperand(i);
+        bool violates = (i < HalfElts) ? (Vi != FirstVal)
+                                      : !IsZero(Vi);
+        if (violates) { IsLoSplatHiZero = false; break; }
+      }
+
+      if (IsLoSplatHiZero) {
+        EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+        unsigned LaneBits = LaneVT.getSizeInBits();
+
+        auto buildSubregToReg = [&](SDValue LoHalf) -> SDValue {
+          SDValue ZeroImm = DAG.getTargetConstant(0, DL, MVT::i32);
+          SDValue SubIdx  = DAG.getTargetConstant(AArch64::dsub, DL, MVT::i32);
+          SDNode *N = DAG.getMachineNode(TargetOpcode::SUBREG_TO_REG, DL, VT,
+                                        {ZeroImm, LoHalf, SubIdx});
+          return SDValue(N, 0);
+        };
+
+        if (LaneBits == 64) {
+          // v2i64
+          SDValue First64 = DAG.getZExtOrTrunc(FirstVal, DL, MVT::i64);
+          SDValue Lo      = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, HalfVT, First64);
+          return buildSubregToReg(Lo);
+        } else {
+          // v4i32/v8i16/v16i8
+          SDValue FirstW = DAG.getZExtOrTrunc(FirstVal, DL, MVT::i32);
+          SDValue DupLo  = DAG.getNode(AArch64ISD::DUP, DL, HalfVT, FirstW);
+          return buildSubregToReg(DupLo);
+        }
+      }
+    }
+  }
+
   // Use DUP for non-constant splats. For f32 constant splats, reduce to
   // i32 and try again.
   if (usesOnlyOneValue) {
