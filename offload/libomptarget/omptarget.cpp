@@ -1137,18 +1137,18 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const bool IsMemberOf = ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF;
     int64_t TransferSize = DataSize; // Size for FROM data-transfer.
 
-    // Lambda to check if there was a previously deferred FROM for this pointer
+    // Lambda to check if there was a previously skipped FROM for this pointer
     // due to its ref-count not being zero. Updates TransferSize if found.
-    auto HasDeferredMapFrom = [&]() -> bool {
-      auto It = StateInfo->DeferredFromEntries.find(HstPtrBegin);
-      if (It == StateInfo->DeferredFromEntries.end())
+    auto HasSkippedMapFrom = [&]() -> bool {
+      auto It = StateInfo->SkippedFromEntries.find(HstPtrBegin);
+      if (It == StateInfo->SkippedFromEntries.end())
         return false;
-      DP("Found previously deferred FROM transfer for HstPtr=" DPxMOD
+      DP("Found previously skipped FROM transfer for HstPtr=" DPxMOD
          ", with size "
          "%" PRId64 "\n",
          DPxPTR(HstPtrBegin), It->second);
       TransferSize = It->second;
-      StateInfo->DeferredFromEntries.erase(It);
+      StateInfo->SkippedFromEntries.erase(It);
       return true;
     };
 
@@ -1181,9 +1181,9 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         ((IsMapFromOnNonHostNonZeroData &&
           IsLastOrHasAlwaysOrWasForceDeleted()) ||
          // Even if we're not looking at an entry with FROM map-type, if there
-         // were any previously deferred FROM transfers for this pointer, we
+         // were any previously skipped FROM transfers for this pointer, we
          // should do them when the ref-count goes down to zero.
-         (TPR.Flags.IsLast && HasDeferredMapFrom()))) {
+         (TPR.Flags.IsLast && HasSkippedMapFrom()))) {
       // Track that we're doing a FROM transfer for this pointer
       // NOTE: If we don't care about the case of multiple different maps with
       // from, always, or multiple map(from)s seen after a map(delete), e.g.
@@ -1236,8 +1236,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       //
       // This should be limited to non-member-of entries because for member-of,
       // their ref-count should go down only once as part of the parent.
-      StateInfo->DeferredFromEntries[HstPtrBegin] = DataSize;
-      DP("Deferring FROM map transfer for HstPtr=" DPxMOD ", Size=%" PRId64
+      StateInfo->SkippedFromEntries[HstPtrBegin] = DataSize;
+      DP("Skipping FROM map transfer for HstPtr=" DPxMOD ", Size=%" PRId64
          "\n",
          DPxPTR(HstPtrBegin), DataSize);
     }

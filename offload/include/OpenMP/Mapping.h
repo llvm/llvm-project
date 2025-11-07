@@ -484,9 +484,9 @@ struct AttachMapInfo {
         MapType(Type), Pointername(Name) {}
 };
 
-/// Structure to track new allocations, ATTACH entries and deferred data
-/// transfer information for a given construct, across recursive calls (for
-/// handling mappers) to targetDataBegin/targetDataEnd.
+/// Structure to track new allocations, ATTACH entries, DELETE entries and
+/// skipped FROM data transfer information for a given construct, across
+/// recursive calls (for handling mappers) to targetDataBegin/targetDataEnd.
 struct StateInfoTy {
   /// ATTACH map entries for deferred processing until all other maps are done.
   llvm::SmallVector<AttachMapInfo> AttachEntries;
@@ -495,10 +495,10 @@ struct StateInfoTy {
   /// Key: host pointer, Value: allocation size.
   llvm::DenseMap<void *, int64_t> NewAllocations;
 
-  /// Host pointers that had a FROM entry, but for which a data transfer didn't
-  /// occur due to the ref-count not being zero.
+  /// Host pointers that had a FROM entry, but for which a data transfer was
+  /// skipped due to the ref-count not being zero.
   /// Key: host pointer, Value: data size.
-  llvm::DenseMap<void *, int64_t> DeferredFromEntries;
+  llvm::DenseMap<void *, int64_t> SkippedFromEntries;
 
   /// Host pointers for which we have attempted a FROM transfer at some point
   /// during targetDataEnd. Used to avoid duplicate transfers.
