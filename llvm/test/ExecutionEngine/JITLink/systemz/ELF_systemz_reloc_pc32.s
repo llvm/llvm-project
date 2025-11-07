@@ -14,6 +14,7 @@
 # RUN:   FileCheck -check-prefix=CHECK-ERROR %s
 #
 # jitlink-check: *{4}test_pc32 = OFFSET
+# jitlink-check: *{4}test_pc32dbl = OFFSET
 
 # CHECK-ERROR:  {{.*}} is out of range of Delta32 fixup
 

@@ -203,63 +203,6 @@ enum EdgeKind_systemz : Edge::Kind {
   ///     an out-of-range error will be returned.
   NegDelta32,
 
-  /// A GOT entry getter/constructor, transformed to Delta64FromGOT pointing
-  /// at the GOT entry for the original target.
-  ///
-  /// Indicates that this edge should be transformed into a Delta64FromGOT
-  /// targeting the GOT entry for the edge's current target, maintaining the
-  /// same addend. A GOT entry for the target should be created if one does
-  /// not already exist.
-  ///
-  /// Edges of this kind are usually handled by a GOT builder pass inserted by
-  /// default.
-  ///
-  /// Fixup expression:
-  ///   NONE
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
-  ///
-  RequestGOTAndTransformToDelta64FromGOT,
-
-  /// A GOT entry getter/constructor, transformed to Delta32FromGOT pointing
-  /// at the GOT entry for the original target.
-  ///
-  /// Indicates that this edge should be transformed into a Delta32FromGOT
-  /// targeting the GOT entry for the edge's current target, maintaining the
-  /// same addend. A GOT entry for the target should be created if one does
-  /// not already exist.
-  ///
-  /// Edges of this kind are usually handled by a GOT builder pass inserted by
-  /// default.
-  ///
-  /// Fixup expression:
-  ///   NONE
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
-  ///
-  RequestGOTAndTransformToDelta32FromGOT,
-
-  /// A GOT entry getter/constructor, transformed to Delta16FromGOT pointing
-  /// at the GOT entry for the original target.
-  ///
-  /// Indicates that this edge should be transformed into a Delta16FromGOT
-  /// targeting the GOT entry for the edge's current target, maintaining the
-  /// same addend. A GOT entry for the target should be created if one does
-  /// not already exist.
-  ///
-  /// Edges of this kind are usually handled by a GOT builder pass inserted by
-  /// default.
-  ///
-  /// Fixup expression:
-  ///   NONE
-  ///
-  /// Errors:
-  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
-  ///
-  RequestGOTAndTransformToDelta16FromGOT,
-
   /// A 32-bit Delta shifted by 1.
   ///
   /// Delta from the fixup to the PLT slot for the target. This will lead to
@@ -448,6 +391,44 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   Delta12FromGOT,
 
+  /// A GOT entry getter/constructor, transformed to Delta64FromGOT pointing
+  /// at the GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta64FromGOT
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does
+  /// not already exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///
+  RequestGOTAndTransformToDelta64FromGOT,
+
+  /// A GOT entry getter/constructor, transformed to Delta32FromGOT pointing
+  /// at the GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32FromGOT
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does
+  /// not already exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///
+  RequestGOTAndTransformToDelta32FromGOT,
+
   /// A GOT entry getter/constructor, transformed to Delta20FromGOT pointing
   /// at the GOT entry for the original target.
   ///
@@ -466,6 +447,25 @@ enum EdgeKind_systemz : Edge::Kind {
   ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
   ///
   RequestGOTAndTransformToDelta20FromGOT,
+
+  /// A GOT entry getter/constructor, transformed to Delta16FromGOT pointing
+  /// at the GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta16FromGOT
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does
+  /// not already exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///
+  RequestGOTAndTransformToDelta16FromGOT,
 
   /// A GOT entry getter/constructor, transformed to Delta12FromGOT pointing
   /// at the GOT entry for the original target.
@@ -638,7 +638,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   }
   case Delta32dbl:
   case DeltaPLT32dbl: {
-    int64_t Value = (S + A - P);
+    int64_t Value = S + A - P;
     if (!LLVM_UNLIKELY(isInt<33>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
     if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
@@ -648,7 +648,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   }
   case Delta24dbl:
   case DeltaPLT24dbl: {
-    int64_t Value = (S + A - P);
+    int64_t Value = S + A - P;
     if (!LLVM_UNLIKELY(isInt<25>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
     if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
@@ -660,7 +660,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   }
   case Delta16dbl:
   case DeltaPLT16dbl: {
-    int64_t Value = (S + A - P);
+    int64_t Value = S + A - P;
     if (!LLVM_UNLIKELY(isInt<17>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
     if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
@@ -670,7 +670,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   }
   case Delta12dbl:
   case DeltaPLT12dbl: {
-    int64_t Value = (S + A - P);
+    int64_t Value = S + A - P;
     if (!LLVM_UNLIKELY(isInt<13>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
     if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
@@ -700,14 +700,14 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case Delta64PLTFromGOT:
   case Delta64FromGOT: {
     assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = (S + A - GOTBase);
+    int64_t Value = S + A - GOTBase;
     write64be(FixupPtr, Value);
     break;
   }
   case Delta32PLTFromGOT:
   case Delta32FromGOT: {
     assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = (S + A - GOTBase);
+    int64_t Value = S + A - GOTBase;
     if (!LLVM_UNLIKELY(isInt<32>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
     write32be(FixupPtr, Value);
@@ -716,7 +716,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case Delta16PLTFromGOT:
   case Delta16FromGOT: {
     assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = (S + A - GOTBase);
+    int64_t Value = S + A - GOTBase;
     if (!LLVM_UNLIKELY(isInt<16>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
     write16be(FixupPtr, Value);

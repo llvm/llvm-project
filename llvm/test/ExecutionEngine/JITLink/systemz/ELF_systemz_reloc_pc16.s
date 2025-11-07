@@ -14,6 +14,7 @@
 # RUN:   FileCheck -check-prefix=CHECK-ERROR %s
 #
 # jitlink-check: *{2}test_pc16 = OFFSET
+# jitlink-check: *{2}test_pc16dbl = OFFSET
 
 # CHECK-ERROR:  {{.*}} is out of range of Delta16 fixup
 

@@ -26,9 +26,9 @@ named_func:
 	br    %r14
         .size   named_func, .-named_func
 
-# Check R_390_PLT32DBL handling with a call to a local function in the text
-# section. This produces a Branch32 edge that is resolved like a regular
-# BranchPCRelPLT32dbl(no PLT entry created).
+# Check R_390_PC32DBL handling with a call to a local function in the text
+# section. This produces a Delta32dbl edge that is resolved like a regular
+# direct relative branches(no PLT entry created).
 #
 # jitlink-check: decode_operand(test_call_local, 1) = \
 # jitlink-check:   named_func - test_call_local
@@ -40,8 +40,8 @@ test_call_local:
 
         .size   test_call_local, .-test_call_local
 
-# Check R_390_PLT32dbl(BranchPCRelPLT32dbl)  handling with a call to an 
-# external via PLT. This produces a Branch32ToStub edge, because externals are 
+# Check R_390_PLT32dbl(DeltaPLT32dbl)  handling with a call to an 
+# external via PLT. This produces a Delta32dbl edge, because externals are 
 # not defined locally. As the target is out-of-range from the callsite, 
 # the edge keeps using its PLT entry.
 #
@@ -58,8 +58,8 @@ test_call_extern_plt:
 
         .size   test_call_extern_plt, .-test_call_extern_plt
 
-# Check R_390_PLT32(BranchPCRelPLT32dbl) handling with a call to an external. 
-# This produces a Branch32ToStub edge, because externals are not defined 
+# Check R_390_PLT32(DeltaPLT32dbl) handling with a call to an external. 
+# This produces a Delta32dbl edge, because externals are not defined 
 # locally. During resolution, the target turns out to be in-range from the 
 # callsite.
 ### TODO: edge can be relaxed in post-allocation optimization, it will then

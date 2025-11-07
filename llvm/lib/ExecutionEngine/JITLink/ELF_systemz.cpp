@@ -277,15 +277,15 @@ private:
     }
     // Relocations targeting the actual symbol (just relative to the GOT).
     case ELF::R_390_GOTOFF64: {
-      Kind = systemz::RequestGOTAndTransformToDelta64FromGOT;
+      Kind = systemz::Delta64FromGOT;
       break;
     }
     case ELF::R_390_GOTOFF: {
-      Kind = systemz::RequestGOTAndTransformToDelta32FromGOT;
+      Kind = systemz::Delta32FromGOT;
       break;
     }
     case ELF::R_390_GOTOFF16: {
-      Kind = systemz::RequestGOTAndTransformToDelta16FromGOT;
+      Kind = systemz::Delta16FromGOT;
       break;
     }
     // Relocations targeting the GOT entry associated with the symbol.
