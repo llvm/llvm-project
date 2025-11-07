@@ -290,6 +290,9 @@ option(SANITIZER_USE_STATIC_TEST_CXX
   "Use static libc++ for tests." ${DEFAULT_SANITIZER_USE_STATIC_TEST_CXX})
 pythonize_bool(SANITIZER_USE_STATIC_TEST_CXX)
 
+option(SANITIZER_AARCH64_39BIT_VA
+  "Configure sanitizers for 39-bit VA kernel." OFF)
+
 set(COMPILER_RT_SUPPORTED_CXX_LIBRARIES none default libcxx)
 set(COMPILER_RT_CXX_LIBRARY "default" CACHE STRING "Specify C++ library to use. Supported values are ${COMPILER_RT_SUPPORTED_CXX_LIBRARIES}.")
 if (NOT "${COMPILER_RT_CXX_LIBRARY}" IN_LIST COMPILER_RT_SUPPORTED_CXX_LIBRARIES)
@@ -841,6 +844,10 @@ mark_as_advanced(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
 
 if (SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
   add_compile_definitions(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+endif()
+
+if (SANITIZER_AARCH64_39BIT_VA)
+  add_compile_definitions(SANITIZER_AARCH64_39BIT_VA)
 endif()
 
 add_subdirectory(lib)
