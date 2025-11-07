@@ -1421,19 +1421,23 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (!vputils::isSingleScalar(RepOrWidenR) ||
           !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
             if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U)) {
-              // The assert must hold as we checked the RepOrWidenR operand
-              // against vputils::isSingleScalar.
+              // VPWidenStore doesn't have users, and stores are always
+              // profitable to widen: hence, permitting single-scalar stored
+              // values is an important leaf condition. The assert must hold as
+              // we checked the RepOrWidenR operand against
+              // vputils::isSingleScalar.
               assert(RepOrWidenR == Store->getAddr() ||
                      vputils::isSingleScalar(Store->getStoredValue()));
               return true;
             }
 
-            if (auto *VPI = dyn_cast<VPInstruction>(U))
-              if (VPI->isSingleScalar() ||
-                  VPI->getOpcode() == VPInstruction::ExtractLastElement ||
-                  VPI->getOpcode() == VPInstruction::ExtractLastLanePerPart ||
-                  VPI->getOpcode() == VPInstruction::ExtractPenultimateElement)
+            if (auto *VPI = dyn_cast<VPInstruction>(U)) {
+              unsigned Opcode = VPI->getOpcode();
+              if (Opcode == VPInstruction::ExtractLastElement ||
+                  Opcode == VPInstruction::ExtractLastLanePerPart ||
+                  Opcode == VPInstruction::ExtractPenultimateElement)
                 return true;
+            }
 
             return U->usesScalars(RepOrWidenR);
           }))
