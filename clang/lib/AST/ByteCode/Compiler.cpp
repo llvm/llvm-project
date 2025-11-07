@@ -209,6 +209,19 @@ private:
 } // namespace clang
 
 template <class Emitter>
+bool Compiler<Emitter>::isValidBitCast(const CastExpr *E) {
+  QualType FromTy = E->getSubExpr()->getType()->getPointeeType();
+  QualType ToTy = E->getType()->getPointeeType();
+
+  if (classify(FromTy) == classify(ToTy))
+    return true;
+
+  if (FromTy->isVoidType() || ToTy->isVoidType())
+    return true;
+  return false;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   const Expr *SubExpr = CE->getSubExpr();
 
@@ -476,8 +489,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
+    QualType CETy = CE->getType();
     // Reject bitcasts to atomic types.
-    if (CE->getType()->isAtomicType()) {
+    if (CETy->isAtomicType()) {
       if (!this->discard(SubExpr))
         return false;
       return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, CE);
@@ -490,6 +504,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     OptPrimType ToT = classify(CE->getType());
     if (!FromT || !ToT)
+      return false;
+
+    if (!this->isValidBitCast(CE) &&
+        !this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/false, CE))
       return false;
 
     assert(isPtrType(*FromT));
@@ -3273,34 +3291,43 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   }
 
   if (T->isArrayType()) {
-    const ConstantArrayType *CAT =
-        Ctx.getASTContext().getAsConstantArrayType(E->getType());
-    if (!CAT)
-      return false;
-
-    size_t NumElems = CAT->getZExtSize();
     const Function *Func = getFunction(E->getConstructor());
     if (!Func)
       return false;
 
-    // FIXME(perf): We're calling the constructor once per array element here,
-    //   in the old intepreter we had a special-case for trivial constructors.
-    for (size_t I = 0; I != NumElems; ++I) {
-      if (!this->emitConstUint64(I, E))
-        return false;
-      if (!this->emitArrayElemPtrUint64(E))
-        return false;
+    if (!this->emitDupPtr(E))
+      return false;
 
-      // Constructor arguments.
-      for (const auto *Arg : E->arguments()) {
-        if (!this->visit(Arg))
-          return false;
+    std::function<bool(QualType)> initArrayDimension;
+    initArrayDimension = [&](QualType T) -> bool {
+      if (!T->isArrayType()) {
+        // Constructor arguments.
+        for (const auto *Arg : E->arguments()) {
+          if (!this->visit(Arg))
+            return false;
+        }
+
+        return this->emitCall(Func, 0, E);
       }
 
-      if (!this->emitCall(Func, 0, E))
+      const ConstantArrayType *CAT =
+          Ctx.getASTContext().getAsConstantArrayType(T);
+      if (!CAT)
         return false;
-    }
-    return true;
+      QualType ElemTy = CAT->getElementType();
+      unsigned NumElems = CAT->getZExtSize();
+      for (size_t I = 0; I != NumElems; ++I) {
+        if (!this->emitConstUint64(I, E))
+          return false;
+        if (!this->emitArrayElemPtrUint64(E))
+          return false;
+        if (!initArrayDimension(ElemTy))
+          return false;
+      }
+      return this->emitPopPtr(E);
+    };
+
+    return initArrayDimension(E->getType());
   }
 
   return false;
@@ -3599,8 +3626,6 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
     if (PlacementDest) {
       if (!this->visit(PlacementDest))
         return false;
-      if (!this->emitStartLifetime(E))
-        return false;
       if (!this->emitGetLocal(SizeT, ArrayLen, E))
         return false;
       if (!this->emitCheckNewTypeMismatchArray(SizeT, E, E))
@@ -3740,10 +3765,9 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
     if (PlacementDest) {
       if (!this->visit(PlacementDest))
         return false;
-      if (!this->emitStartLifetime(E))
-        return false;
       if (!this->emitCheckNewTypeMismatch(E, E))
         return false;
+
     } else {
       // Allocate just one element.
       if (!this->emitAlloc(Desc, E))
@@ -3942,6 +3966,8 @@ bool Compiler<Emitter>::VisitRecoveryExpr(const RecoveryExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   assert(E->getType()->isVoidPointerType());
+  if (DiscardResult)
+    return true;
 
   return this->emitDummyPtr(E, E);
 }
@@ -5981,6 +6007,8 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
       CaseLabels[SC] = this->getLabel();
 
       const Expr *Value = CS->getLHS();
+      if (Value->isValueDependent())
+        return false;
       PrimType ValueT = this->classifyPrim(Value->getType());
 
       // Compare the case statement's value to the switch condition.

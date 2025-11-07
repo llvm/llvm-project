@@ -8,7 +8,7 @@
 
 #include "BitsFxTest.h"
 
-#include "llvm-libc-types/stdfix-types.h" // uint_ulr_t
+#include "llvm-libc-types/uint_ulr_t.h" // uint_ulr_t
 #include "src/stdfix/bitsulr.h"
 
 LIST_BITSFX_TESTS(ulr, unsigned long fract, uint_ulr_t,

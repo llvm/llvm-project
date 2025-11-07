@@ -3908,7 +3908,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         continue;
 
       VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
-                            *CM.PSE.getSE());
+                            *CM.PSE.getSE(), OrigLoop);
       precomputeCosts(*Plan, VF, CostCtx);
       auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -4166,7 +4166,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       // Add on other costs that are modelled in VPlan, but not in the legacy
       // cost model.
       VPCostContext CostCtx(CM.TTI, *CM.TLI, *P, CM, CM.CostKind,
-                            *CM.PSE.getSE());
+                            *CM.PSE.getSE(), OrigLoop);
       VPRegionBlock *VectorRegion = P->getVectorLoopRegion();
       assert(VectorRegion && "Expected to have a vector region!");
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -4378,8 +4378,21 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   const SCEV *TC =
       vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
-  RemainingIterations =
-      SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+  const SCEV *KnownMinTC;
+  bool ScalableTC = match(TC, m_scev_c_Mul(m_SCEV(KnownMinTC), m_SCEVVScale()));
+  // Use versions of TC and VF in which both are either scalable or fixed.
+  if (ScalableTC == MainLoopVF.isScalable())
+    RemainingIterations =
+        SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+  else if (ScalableTC) {
+    const SCEV *EstimatedTC = SE.getMulExpr(
+        KnownMinTC,
+        SE.getConstant(TCType, CM.getVScaleForTuning().value_or(1)));
+    RemainingIterations = SE.getURemExpr(
+        EstimatedTC, SE.getElementCount(TCType, MainLoopVF * IC));
+  } else
+    RemainingIterations =
+        SE.getURemExpr(TC, SE.getElementCount(TCType, EstimatedRuntimeVF * IC));
 
   // No iterations left to process in the epilogue.
   if (RemainingIterations->isZero())
@@ -5737,13 +5750,18 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
              getMemoryInstructionCost(I, ElementCount::getFixed(1))));
         UpdateMemOpUserCost(cast<LoadInst>(I));
       } else if (const auto *Group = getInterleavedAccessGroup(I)) {
-        // Scalarize an interleave group of address loads.
-        for (unsigned I = 0; I < Group->getFactor(); ++I) {
-          if (Instruction *Member = Group->getMember(I)) {
-            setWideningDecision(
-                Member, VF, CM_Scalarize,
-                (VF.getKnownMinValue() *
-                 getMemoryInstructionCost(Member, ElementCount::getFixed(1))));
+        // Scalarize all members of this interleaved group when any member
+        // is used as an address. The address-used load skips scalarization
+        // overhead, other members include it.
+        for (unsigned Idx = 0; Idx < Group->getFactor(); ++Idx) {
+          if (Instruction *Member = Group->getMember(Idx)) {
+            InstructionCost Cost =
+                AddrDefs.contains(Member)
+                    ? (VF.getKnownMinValue() *
+                       getMemoryInstructionCost(Member,
+                                                ElementCount::getFixed(1)))
+                    : getMemInstScalarizationCost(Member, VF);
+            setWideningDecision(Member, VF, CM_Scalarize, Cost);
             UpdateMemOpUserCost(cast<LoadInst>(Member));
           }
         }
@@ -6858,7 +6876,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
 InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
                                                ElementCount VF) const {
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind, *PSE.getSE());
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind, *PSE.getSE(),
+                        OrigLoop);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
@@ -7092,12 +7111,13 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // case, don't trigger the assertion, as the extra simplifications may cause a
   // different VF to be picked by the VPlan-based cost model.
   VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind,
-                        *CM.PSE.getSE());
+                        *CM.PSE.getSE(), OrigLoop);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   // Verify that the VPlan-based and legacy cost models agree, except for VPlans
   // with early exits and plans with additional VPlan simplifications. The
   // legacy cost model doesn't properly model costs for such loops.
   assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
+          !Legal->getLAI()->getSymbolicStrides().empty() ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop,
                                                 BestFactor.Width) ||
@@ -7731,8 +7751,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     if (CM.isPredicatedInst(I)) {
       SmallVector<VPValue *> Ops(Operands);
       VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
-      VPValue *One =
-          Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
+      VPValue *One = Plan.getConstantInt(I->getType(), 1u);
       auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
       Ops[1] = SafeRHS;
       return new VPWidenRecipe(*I, Ops);
@@ -7785,11 +7804,10 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   }
   case Instruction::ExtractValue: {
     SmallVector<VPValue *> NewOps(Operands);
-    Type *I32Ty = IntegerType::getInt32Ty(I->getContext());
     auto *EVI = cast<ExtractValueInst>(I);
     assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
     unsigned Idx = EVI->getIndices()[0];
-    NewOps.push_back(Plan.getOrAddLiveIn(ConstantInt::get(I32Ty, Idx, false)));
+    NewOps.push_back(Plan.getConstantInt(32, Idx));
     return new VPWidenRecipe(*I, NewOps);
   }
   };
@@ -7914,6 +7932,26 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
     if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
         (!Chain.ExtendB || ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
       ScaledReductionMap.try_emplace(Chain.Reduction, Pair.second);
+  }
+
+  // Check that all partial reductions in a chain are only used by other
+  // partial reductions with the same scale factor. Otherwise we end up creating
+  // users of scaled reductions where the types of the other operands don't
+  // match.
+  for (const auto &[Chain, Scale] : PartialReductionChains) {
+    auto AllUsersPartialRdx = [ScaleVal = Scale, this](const User *U) {
+      auto *UI = cast<Instruction>(U);
+      if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader()) {
+        return all_of(UI->users(), [ScaleVal, this](const User *U) {
+          auto *UI = cast<Instruction>(U);
+          return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal;
+        });
+      }
+      return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
+             !OrigLoop->contains(UI->getParent());
+    };
+    if (!all_of(Chain.Reduction->users(), AllUsersPartialRdx))
+      ScaledReductionMap.erase(Chain.Reduction);
   }
 }
 
@@ -8098,11 +8136,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
-  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr)) {
-    if (auto PartialRed =
-            tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value()))
-      return PartialRed;
-  }
+  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
+    return tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value());
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -8136,9 +8171,9 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
 
-  if (ScaleFactor !=
-      vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()))
-    return nullptr;
+  assert(ScaleFactor ==
+             vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
+         "all accumulators in chain must have same scale factor");
 
   unsigned ReductionOpcode = Reduction->getOpcode();
   if (ReductionOpcode == Instruction::Sub) {
@@ -8158,8 +8193,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
            "Expected an ADD or SUB operation for predicated partial "
            "reductions (because the neutral element in the mask is zero)!");
     Cond = getBlockInMask(Builder.getInsertBlock());
-    VPValue *Zero =
-        Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
+    VPValue *Zero = Plan.getConstantInt(Reduction->getType(), 0);
     BinOp = Builder.createSelect(Cond, BinOp, Zero, Reduction->getDebugLoc());
   }
   return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
@@ -8321,11 +8355,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
               &R) ||
           (isa<VPInstruction>(&R) && !UnderlyingValue))
         continue;
-
-      // FIXME: VPlan0, which models a copy of the original scalar loop, should
-      // not use VPWidenPHIRecipe to model the phis.
-      assert((isa<VPWidenPHIRecipe>(&R) || isa<VPInstruction>(&R)) &&
-             UnderlyingValue && "unsupported recipe");
+      assert(isa<VPInstruction>(&R) && UnderlyingValue && "unsupported recipe");
 
       // TODO: Gradually replace uses of underlying instruction by analyses on
       // VPlan.
@@ -8426,7 +8456,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
     VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
-                          *CM.PSE.getSE());
+                          *CM.PSE.getSE(), OrigLoop);
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
                              CostCtx, Range);
   }
@@ -8626,7 +8656,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       } else if (PhiR->isInLoop() && Kind == RecurKind::AddChainWithSubs &&
                  CurrentLinkI->getOpcode() == Instruction::Sub) {
         Type *PhiTy = PhiR->getUnderlyingValue()->getType();
-        auto *Zero = Plan->getOrAddLiveIn(ConstantInt::get(PhiTy, 0));
+        auto *Zero = Plan->getConstantInt(PhiTy, 0);
         VPWidenRecipe *Sub = new VPWidenRecipe(
             Instruction::Sub, {Zero, CurrentLink->getOperand(1)}, {},
             VPIRMetadata(), CurrentLinkI->getDebugLoc());
@@ -8840,8 +8870,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       ToDelete.push_back(Select);
 
       // Convert the reduction phi to operate on bools.
-      PhiR->setOperand(0, Plan->getOrAddLiveIn(ConstantInt::getFalse(
-                              OrigLoop->getHeader()->getContext())));
+      PhiR->setOperand(0, Plan->getFalse());
       continue;
     }
 
@@ -8863,9 +8892,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       unsigned ScaleFactor =
           RecipeBuilder.getScalingForReduction(RdxDesc.getLoopExitInstr())
               .value_or(1);
-      Type *I32Ty = IntegerType::getInt32Ty(PhiTy->getContext());
-      auto *ScaleFactorVPV =
-          Plan->getOrAddLiveIn(ConstantInt::get(I32Ty, ScaleFactor));
+      auto *ScaleFactorVPV = Plan->getConstantInt(32, ScaleFactor);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
           {PhiR->getStartValue(), Iden, ScaleFactorVPV},
@@ -9896,7 +9923,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     VPCostContext CostCtx(CM.TTI, *CM.TLI, LVP.getPlanFor(VF.Width), CM,
-                          CM.CostKind, *CM.PSE.getSE());
+                          CM.CostKind, *CM.PSE.getSE(), L);
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx,
                                      LVP.getPlanFor(VF.Width), SEL,

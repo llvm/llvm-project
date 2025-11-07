@@ -350,6 +350,7 @@ module std_core [system] {
       header "__type_traits/is_volatile.h"
       export std_core.type_traits.integral_constant
     }
+    module is_within_lifetime                         { header "__type_traits/is_within_lifetime.h" }
     module lazy                                       { header "__type_traits/lazy.h" }
     module make_32_64_or_128_bit                      { header "__type_traits/make_32_64_or_128_bit.h" }
     module make_const_lvalue_ref                      { header "__type_traits/make_const_lvalue_ref.h" }
@@ -972,6 +973,10 @@ module std [system] {
       header "__chrono/high_resolution_clock.h"
       export *
     }
+    module is_clock {
+      header "__chrono/is_clock.h"
+      export std_core.type_traits.integral_constant
+    }
     module leap_second {
       header "__chrono/leap_second.h"
     }
@@ -1587,6 +1592,7 @@ module std [system] {
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
+      textual header "__locale_dir/support/netbsd.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"

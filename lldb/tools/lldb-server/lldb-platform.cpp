@@ -21,9 +21,6 @@
 #include <fstream>
 #include <optional>
 
-#include "llvm/Option/ArgList.h"
-#include "llvm/Option/OptTable.h"
-#include "llvm/Option/Option.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/WithColor.h"
@@ -59,69 +56,22 @@ using namespace llvm;
 // of target CPUs. For now, let's just use 100.
 static const int backlog = 100;
 static const int socket_error = -1;
+static int g_debug = 0;
+static int g_verbose = 0;
+static int g_server = 0;
 
-namespace {
-using namespace llvm::opt;
-
-enum ID {
-  OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
-#include "PlatformOptions.inc"
-#undef OPTION
-};
-
-#define OPTTABLE_STR_TABLE_CODE
-#include "PlatformOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "PlatformOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "PlatformOptions.inc"
-#undef OPTION
-};
-
-class PlatformOptTable : public opt::GenericOptTable {
-public:
-  PlatformOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
-
-  void PrintHelp(llvm::StringRef Name) {
-    std::string Usage =
-        (Name + " [options] --listen <[host]:port> [[--] program args...]")
-            .str();
-
-    std::string Title = "lldb-server platform";
-
-    OptTable::printHelp(llvm::outs(), Usage.c_str(), Title.c_str());
-
-    llvm::outs() << R"(
-DESCRIPTION
-  Acts as a platform server for remote debugging. When LLDB clients connect,
-  the platform server handles platform operations (file transfers, process
-  launching) and spawns debug server instances (lldb-server gdbserver) to
-  handle actual debugging sessions.
-
-  By default, the server exits after handling one connection. Use --server
-  to keep running and accept multiple connections sequentially.
-
-EXAMPLES
-  # Listen on port 1234, exit after first connection
-  lldb-server platform --listen tcp://0.0.0.0:1234
-
-  # Listen on port 5555, accept multiple connections
-  lldb-server platform --server --listen tcp://localhost:5555
-
-  # Listen on Unix domain socket
-  lldb-server platform --listen unix:///tmp/lldb-server.sock
-
-)";
-  }
-};
-} // namespace
+// option descriptors for getopt_long_only()
+static struct option g_long_options[] = {
+    {"debug", no_argument, &g_debug, 1},
+    {"verbose", no_argument, &g_verbose, 1},
+    {"log-file", required_argument, nullptr, 'l'},
+    {"log-channels", required_argument, nullptr, 'c'},
+    {"listen", required_argument, nullptr, 'L'},
+    {"gdbserver-port", required_argument, nullptr, 'P'},
+    {"socket-file", required_argument, nullptr, 'f'},
+    {"server", no_argument, &g_server, 1},
+    {"child-platform-fd", required_argument, nullptr, 2},
+    {nullptr, 0, nullptr, 0}};
 
 #if defined(__APPLE__)
 #define LOW_PORT (IPPORT_RESERVED)
@@ -147,11 +97,12 @@ static void signal_handler(int signo) {
 }
 #endif
 
-static void display_usage(PlatformOptTable &Opts, const char *progname,
-                          const char *subcommand) {
-  std::string Name =
-      (llvm::sys::path::filename(progname) + " " + subcommand).str();
-  Opts.PrintHelp(Name);
+static void display_usage(const char *progname, const char *subcommand) {
+  fprintf(stderr, "Usage:\n  %s %s [--log-file log-file-name] [--log-channels "
+                  "log-channel-list] [--port-file port-file-path] --server "
+                  "--listen port\n",
+          progname, subcommand);
+  exit(0);
 }
 
 static Status parse_listen_host_port(Socket::SocketProtocol &protocol,
@@ -310,8 +261,7 @@ static Status spawn_process(const char *progname, const FileSpec &prog,
                             const Socket *conn_socket, uint16_t gdb_port,
                             const lldb_private::Args &args,
                             const std::string &log_file,
-                            const StringRef log_channels, MainLoop &main_loop,
-                            bool multi_client) {
+                            const StringRef log_channels, MainLoop &main_loop) {
   Status error;
   SharedSocket shared_socket(conn_socket, error);
   if (error.Fail())
@@ -347,12 +297,9 @@ static Status spawn_process(const char *progname, const FileSpec &prog,
 
   launch_info.SetLaunchInSeparateProcessGroup(false);
 
-  // Set up process monitor callback based on whether we're in server mode.
-  if (multi_client)
-    // In server mode: empty callback (don't terminate when child exits).
+  if (g_server)
     launch_info.SetMonitorProcessCallback([](lldb::pid_t, int, int) {});
   else
-    // In single-client mode: terminate main loop when child exits.
     launch_info.SetMonitorProcessCallback([&main_loop](lldb::pid_t, int, int) {
       main_loop.AddPendingCallback(
           [](MainLoopBase &loop) { loop.RequestTermination(); });
@@ -424,101 +371,107 @@ int main_platform(int argc, char *argv[]) {
   signal(SIGPIPE, SIG_IGN);
   signal(SIGHUP, signal_handler);
 #endif
-
-  // Special handling for 'help' as first argument.
-  if (argc > 0 && strcmp(argv[0], "help") == 0) {
-    PlatformOptTable Opts;
-    display_usage(Opts, progname, subcommand);
-    return EXIT_SUCCESS;
-  }
-
+  int long_option_index = 0;
   Status error;
+  std::string listen_host_port;
+  int ch;
+
+  std::string log_file;
+  StringRef
+      log_channels; // e.g. "lldb process threads:gdb-remote default:linux all"
+
   shared_fd_t fd = SharedSocket::kInvalidFD;
+
   uint16_t gdbserver_port = 0;
+
   FileSpec socket_file;
+  bool show_usage = false;
+  int option_error = 0;
 
-  PlatformOptTable Opts;
-  BumpPtrAllocator Alloc;
-  StringSaver Saver(Alloc);
-  bool HasError = false;
+  std::string short_options(OptionParser::GetShortOptionString(g_long_options));
 
-  opt::InputArgList Args =
-      Opts.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](llvm::StringRef Msg) {
-        WithColor::error() << Msg << "\n";
-        HasError = true;
-      });
+#if __GLIBC__
+  optind = 0;
+#else
+  optreset = 1;
+  optind = 1;
+#endif
 
-  std::string Name =
-      (llvm::sys::path::filename(progname) + " " + subcommand).str();
-  std::string HelpText =
-      "Use '" + Name + " --help' for a complete list of options.\n";
+  while ((ch = getopt_long_only(argc, argv, short_options.c_str(),
+                                g_long_options, &long_option_index)) != -1) {
+    switch (ch) {
+    case 0: // Any optional that auto set themselves will return 0
+      break;
 
-  if (HasError) {
-    llvm::errs() << HelpText;
-    return EXIT_FAILURE;
-  }
+    case 'L':
+      listen_host_port.append(optarg);
+      break;
 
-  if (Args.hasArg(OPT_help)) {
-    display_usage(Opts, progname, subcommand);
-    return EXIT_SUCCESS;
-  }
+    case 'l': // Set Log File
+      if (optarg && optarg[0])
+        log_file.assign(optarg);
+      break;
 
-  // Parse arguments.
-  std::string listen_host_port = Args.getLastArgValue(OPT_listen).str();
-  std::string log_file = Args.getLastArgValue(OPT_log_file).str();
-  StringRef log_channels = Args.getLastArgValue(OPT_log_channels);
-  bool multi_client = Args.hasArg(OPT_server);
-  [[maybe_unused]] bool debug = Args.hasArg(OPT_debug);
-  [[maybe_unused]] bool verbose = Args.hasArg(OPT_verbose);
+    case 'c': // Log Channels
+      if (optarg && optarg[0])
+        log_channels = StringRef(optarg);
+      break;
 
-  if (Args.hasArg(OPT_socket_file)) {
-    socket_file.SetFile(Args.getLastArgValue(OPT_socket_file),
-                        FileSpec::Style::native);
-  }
+    case 'f': // Socket file
+      if (optarg && optarg[0])
+        socket_file.SetFile(optarg, FileSpec::Style::native);
+      break;
 
-  if (Args.hasArg(OPT_gdbserver_port)) {
-    if (!llvm::to_integer(Args.getLastArgValue(OPT_gdbserver_port),
-                          gdbserver_port)) {
-      WithColor::error() << "invalid --gdbserver-port value\n";
-      return EXIT_FAILURE;
+    case 'P':
+    case 'm':
+    case 'M': {
+      uint16_t portnum;
+      if (!llvm::to_integer(optarg, portnum)) {
+        WithColor::error() << "invalid port number string " << optarg << "\n";
+        option_error = 2;
+        break;
+      }
+      // Note the condition gdbserver_port > HIGH_PORT is valid in case of using
+      // --child-platform-fd. Check gdbserver_port later.
+      if (ch == 'P')
+        gdbserver_port = portnum;
+      else if (gdbserver_port == 0)
+        gdbserver_port = portnum;
+    } break;
+
+    case 2: {
+      uint64_t _fd;
+      if (!llvm::to_integer(optarg, _fd)) {
+        WithColor::error() << "invalid fd " << optarg << "\n";
+        option_error = 6;
+      } else
+        fd = (shared_fd_t)_fd;
+    } break;
+
+    case 'h': /* fall-through is intentional */
+    case '?':
+      show_usage = true;
+      break;
     }
-  }
-
-  if (Args.hasArg(OPT_child_platform_fd)) {
-    uint64_t _fd;
-    if (!llvm::to_integer(Args.getLastArgValue(OPT_child_platform_fd), _fd)) {
-      WithColor::error() << "invalid --child-platform-fd value\n";
-      return EXIT_FAILURE;
-    }
-    fd = (shared_fd_t)_fd;
   }
 
   if (!LLDBServerUtilities::SetupLogging(log_file, log_channels, 0))
     return -1;
 
   // Print usage and exit if no listening port is specified.
-  if (listen_host_port.empty() && fd == SharedSocket::kInvalidFD) {
-    WithColor::error() << "either --listen or --child-platform-fd is required\n"
-                       << HelpText;
-    return EXIT_FAILURE;
+  if (listen_host_port.empty() && fd == SharedSocket::kInvalidFD)
+    show_usage = true;
+
+  if (show_usage || option_error) {
+    display_usage(progname, subcommand);
+    exit(option_error);
   }
 
-  // Get remaining arguments for inferior.
-  std::vector<llvm::StringRef> Inputs;
-  for (opt::Arg *Arg : Args.filtered(OPT_INPUT))
-    Inputs.push_back(Arg->getValue());
-  if (opt::Arg *Arg = Args.getLastArg(OPT_REM)) {
-    for (const char *Val : Arg->getValues())
-      Inputs.push_back(Val);
-  }
-
+  // Skip any options we consumed with getopt_long_only.
+  argc -= optind;
+  argv += optind;
   lldb_private::Args inferior_arguments;
-  if (!Inputs.empty()) {
-    std::vector<const char *> args_ptrs;
-    for (const auto &Input : Inputs)
-      args_ptrs.push_back(Input.data());
-    inferior_arguments.SetArguments(args_ptrs.size(), args_ptrs.data());
-  }
+  inferior_arguments.SetArguments(argc, const_cast<const char **>(argv));
 
   FileSpec debugserver_path = GetDebugserverPath();
   if (!debugserver_path) {
@@ -561,7 +514,7 @@ int main_platform(int argc, char *argv[]) {
     platform.SetConnection(
         std::make_unique<ConnectionFileDescriptor>(std::move(socket)));
     client_handle(platform, inferior_arguments);
-    return EXIT_SUCCESS;
+    return 0;
   }
 
   if (gdbserver_port != 0 &&
@@ -569,7 +522,7 @@ int main_platform(int argc, char *argv[]) {
     WithColor::error() << llvm::formatv("Port number {0} is not in the "
                                         "valid user port range of {1} - {2}\n",
                                         gdbserver_port, LOW_PORT, HIGH_PORT);
-    return EXIT_FAILURE;
+    return 1;
   }
 
   Socket::SocketProtocol protocol = Socket::ProtocolUnixDomain;
@@ -606,7 +559,7 @@ int main_platform(int argc, char *argv[]) {
     if (error.Fail()) {
       fprintf(stderr, "failed to write socket id to %s: %s\n",
               socket_file.GetPath().c_str(), error.AsCString());
-      return EXIT_FAILURE;
+      return 1;
     }
   }
 
@@ -624,22 +577,22 @@ int main_platform(int argc, char *argv[]) {
     llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> platform_handles =
         platform_sock->Accept(
             main_loop, [progname, gdbserver_port, &inferior_arguments, log_file,
-                        log_channels, &main_loop, multi_client,
+                        log_channels, &main_loop,
                         &platform_handles](std::unique_ptr<Socket> sock_up) {
               printf("Connection established.\n");
               Status error = spawn_process(
                   progname, HostInfo::GetProgramFileSpec(), sock_up.get(),
                   gdbserver_port, inferior_arguments, log_file, log_channels,
-                  main_loop, multi_client);
+                  main_loop);
               if (error.Fail()) {
                 Log *log = GetLog(LLDBLog::Platform);
                 LLDB_LOGF(log, "spawn_process failed: %s", error.AsCString());
                 WithColor::error()
                     << "spawn_process failed: " << error.AsCString() << "\n";
-                if (!multi_client)
+                if (!g_server)
                   main_loop.RequestTermination();
               }
-              if (!multi_client)
+              if (!g_server)
                 platform_handles->clear();
             });
     if (!platform_handles) {
@@ -663,5 +616,5 @@ int main_platform(int argc, char *argv[]) {
 
   fprintf(stderr, "lldb-server exiting...\n");
 
-  return EXIT_SUCCESS;
+  return 0;
 }
