@@ -1318,7 +1318,7 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
   } else {
     llvm::Value *ResVal =
         CGF.EmitComplexToScalarConversion(Result, OpInfo.Ty, LHSTy, Loc);
-    CGF.EmitStoreOfScalar(ResVal, LHS, /*isInit*/ false);
+    CGF.EmitStoreThroughLValue(RValue::get(ResVal), LHS, /*isInit*/ false);
     Val = RValue::get(ResVal);
   }
 
