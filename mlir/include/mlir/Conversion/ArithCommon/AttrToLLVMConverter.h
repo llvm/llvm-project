@@ -97,11 +97,10 @@ public:
       Builder b(ctx);
       auto llvmFlagAttr = IntegerOverflowFlagsAttr::get(ctx, llvmFlag);
       StringRef llvmAttrName = TargetOp::getOverflowFlagsAttrName();
-      SmallVector<NamedAttribute> attrs;
-      attrs.push_back(b.getNamedAttr(llvmAttrName, llvmFlagAttr));
+      NamedAttribute attr{llvmAttrName, llvmFlagAttr};
       // Set the properties attribute of the operation state so that the
       // property can be updated when the operation is created.
-      propertiesAttr = b.getDictionaryAttr(attrs);
+      propertiesAttr = b.getDictionaryAttr(ArrayRef(attr));
     }
   }
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }

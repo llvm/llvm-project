@@ -856,7 +856,7 @@ def Arith_ShRUIOp : Arith_IntBinaryOpWithExactFlag<"shrui", [Pure]> {
     filled with zeros. If the value of the second operand is greater or equal than the
     bitwidth of the first operand, then the operation returns poison.
 
-    If the `exact` keyword is present, the result value of shrui is a poison
+    If the `exact` attribute is present, the result value of shrui is a poison
     value if any of the bits shifted out are non-zero.
 
     Example:
@@ -887,7 +887,7 @@ def Arith_ShRSIOp : Arith_IntBinaryOpWithExactFlag<"shrsi", [Pure]> {
     operand is greater or equal than bitwidth of the first operand, then the operation
     returns poison.
 
-    If the `exact` keyword is present, the result value of shrsi is a poison
+    If the `exact` attribute is present, the result value of shrsi is a poison
     value if any of the bits shifted out are non-zero.
 
     Example:
