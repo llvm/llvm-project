@@ -101,6 +101,12 @@ static cl::opt<unsigned int> MaxLoopNestDepth(
     "loop-interchange-max-loop-nest-depth", cl::init(10), cl::Hidden,
     cl::desc("Maximum depth of loop nest considered for the transform"));
 
+// This is mainly for testing purposes, and certain tests that rely on
+// behaviour that is more difficult to trigger otherwise.
+static cl::opt<bool> SkipLoopsWithZeroBTC(
+    "loop-interchange-skip-zero-btc", cl::init(true), cl::Hidden,
+    cl::desc("Do not consider loops with a backedge taken count of 0"));
+
 // We prefer cache cost to vectorization by default.
 static cl::list<RuleTy> Profitabilities(
     "loop-interchange-profitabilities", cl::ZeroOrMore,
@@ -426,6 +432,13 @@ static bool isComputableLoopNest(ScalarEvolution *SE,
     const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
     if (isa<SCEVCouldNotCompute>(ExitCountOuter)) {
       LLVM_DEBUG(dbgs() << "Couldn't compute backedge count\n");
+      return false;
+    }
+    // A loop with a backedge that isn't taken, e.g. an unconditional branch
+    // true, isn't really a loop and we don't want to consider it as a
+    // candidate.
+    if (ExitCountOuter && SkipLoopsWithZeroBTC && ExitCountOuter->isZero()) {
+      LLVM_DEBUG(dbgs() << "Single iteration loop\n");
       return false;
     }
     if (L->getNumBackEdges() != 1) {
