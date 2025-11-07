@@ -119,7 +119,7 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
       yamlize(IO, NOpts->Options, true, Ctx);
     } else if (isa<MappingNode>(I.getCurrentNode())) {
       IO.beginMapping();
-      for (StringRef Key : IO.keys()) {
+      for (const StringRef Key : IO.keys()) {
         // Requires 'llvm::yaml::IO' to accept 'StringRef'
         // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         IO.mapRequired(Key.data(), Val[Key].Value);
@@ -392,7 +392,7 @@ llvm::ErrorOr<llvm::SmallString<128>>
 FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
   assert(FS && "FS must be set.");
   llvm::SmallString<128> NormalizedAbsolutePath = {Path};
-  std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
+  const std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
   if (Err)
     return Err;
   llvm::sys::path::remove_dots(NormalizedAbsolutePath, /*remove_dot_dot=*/true);
@@ -463,7 +463,7 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
                           << "...\n");
 
-  llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+  const llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
       getNormalizedAbsolutePath(FileName);
   if (!AbsoluteFilePath)
     return {};
@@ -471,8 +471,8 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> RawOptions =
       DefaultOptionsProvider::getRawOptions(AbsoluteFilePath->str());
   addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
-  OptionsSource CommandLineOptions(OverrideOptions,
-                                   OptionsSourceTypeCheckCommandLineOption);
+  const OptionsSource CommandLineOptions(
+      OverrideOptions, OptionsSourceTypeCheckCommandLineOption);
 
   RawOptions.push_back(CommandLineOptions);
   return RawOptions;
@@ -502,7 +502,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
 
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
         FS->getBufferForFile(ConfigFile);
-    if (std::error_code EC = Text.getError()) {
+    if (const std::error_code EC = Text.getError()) {
       llvm::errs() << "Can't read " << ConfigFile << ": " << EC.message()
                    << "\n";
       continue;
