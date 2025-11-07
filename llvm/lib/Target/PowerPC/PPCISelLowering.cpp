@@ -138,6 +138,11 @@ static cl::opt<unsigned> PPCMinimumJumpTableEntries(
     "ppc-min-jump-table-entries", cl::init(64), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on PPC"));
 
+static cl::opt<unsigned> PPCMinimumBitTestCmps(
+    "ppc-min-bit-test-cmps", cl::init(3), cl::Hidden,
+    cl::desc("Set minimum of largest number of comparisons to use bit test for "
+             "switch on PPC."));
+
 static cl::opt<unsigned> PPCGatherAllAliasesMaxDepth(
     "ppc-gather-alias-max-depth", cl::init(18), cl::Hidden,
     cl::desc("max depth when checking alias info in GatherAllAliases()"));
@@ -651,6 +656,17 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, MVT::i64, Custom);
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
+
+  if (Subtarget.isISA3_0() && isPPC64) {
+    setOperationAction(ISD::VP_STORE, MVT::v16i1, Custom);
+    setOperationAction(ISD::VP_STORE, MVT::v8i1, Custom);
+    setOperationAction(ISD::VP_STORE, MVT::v4i1, Custom);
+    setOperationAction(ISD::VP_STORE, MVT::v2i1, Custom);
+    setOperationAction(ISD::VP_LOAD, MVT::v16i1, Custom);
+    setOperationAction(ISD::VP_LOAD, MVT::v8i1, Custom);
+    setOperationAction(ISD::VP_LOAD, MVT::v4i1, Custom);
+    setOperationAction(ISD::VP_LOAD, MVT::v2i1, Custom);
+  }
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -1435,6 +1451,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // branch instruction mtctr to the jump table may lead to bad branch predict.
   // Re-evaluate this value on future HWs that can do better with mtctr.
   setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
+
+  // The default minimum of largest number in a BitTest cluster is 3.
+  setMinimumBitTestCmps(PPCMinimumBitTestCmps);
 
   setMinFunctionAlignment(Align(4));
   setMinCmpXchgSizeInBits(Subtarget.hasPartwordAtomics() ? 8 : 32);
@@ -11909,6 +11928,62 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
 }
 
+// Adjust the length value for a load/store with length to account for the
+// instructions requiring a left justified length, and for non-byte element
+// types requiring scaling by element size.
+static SDValue AdjustLength(SDValue Val, unsigned Bits, bool Left,
+                            SelectionDAG &DAG) {
+  SDLoc dl(Val);
+  EVT VT = Val->getValueType(0);
+  unsigned LeftAdj = Left ? VT.getSizeInBits() - 8 : 0;
+  unsigned TypeAdj = llvm::countr_zero<uint32_t>(Bits / 8);
+  SDValue SHLAmt = DAG.getConstant(LeftAdj + TypeAdj, dl, VT);
+  return DAG.getNode(ISD::SHL, dl, VT, Val, SHLAmt);
+}
+
+SDValue PPCTargetLowering::LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const {
+  auto VPLD = cast<VPLoadSDNode>(Op);
+  bool Future = Subtarget.isISAFuture();
+  SDLoc dl(Op);
+  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(3).getNode(), true) &&
+         "Mask predication not supported");
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue Len = DAG.getNode(ISD::ANY_EXTEND, dl, PtrVT, VPLD->getOperand(4));
+  unsigned IID = Future ? Intrinsic::ppc_vsx_lxvrl : Intrinsic::ppc_vsx_lxvl;
+  unsigned EltBits = Op->getValueType(0).getScalarType().getSizeInBits();
+  Len = AdjustLength(Len, EltBits, !Future, DAG);
+  SDValue Ops[] = {VPLD->getChain(), DAG.getConstant(IID, dl, MVT::i32),
+                   VPLD->getOperand(1), Len};
+  SDVTList Tys = DAG.getVTList(Op->getValueType(0), MVT::Other);
+  SDValue VPL =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, dl, Tys, Ops,
+                              VPLD->getMemoryVT(), VPLD->getMemOperand());
+  return VPL;
+}
+
+SDValue PPCTargetLowering::LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const {
+  auto VPST = cast<VPStoreSDNode>(Op);
+  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(4).getNode(), true) &&
+         "Mask predication not supported");
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDLoc dl(Op);
+  SDValue Len = DAG.getNode(ISD::ANY_EXTEND, dl, PtrVT, VPST->getOperand(5));
+  unsigned EltBits =
+      Op->getOperand(1).getValueType().getScalarType().getSizeInBits();
+  bool Future = Subtarget.isISAFuture();
+  unsigned IID = Future ? Intrinsic::ppc_vsx_stxvrl : Intrinsic::ppc_vsx_stxvl;
+  Len = AdjustLength(Len, EltBits, !Future, DAG);
+  SDValue Ops[] = {
+      VPST->getChain(), DAG.getConstant(IID, dl, MVT::i32),
+      DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, VPST->getOperand(1)),
+      VPST->getOperand(2), Len};
+  SDVTList Tys = DAG.getVTList(MVT::Other);
+  SDValue VPS =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, dl, Tys, Ops,
+                              VPST->getMemoryVT(), VPST->getMemOperand());
+  return VPS;
+}
+
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -12763,6 +12838,10 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     if (Op->getFlags().hasNoFPExcept())
       return Op;
     return SDValue();
+  case ISD::VP_LOAD:
+    return LowerVP_LOAD(Op, DAG);
+  case ISD::VP_STORE:
+    return LowerVP_STORE(Op, DAG);
   }
 }
 

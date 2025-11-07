@@ -9,9 +9,7 @@ namespace MyNamespace {
 // CHECK:       <ul class="class-container">
 // CHECK-NEXT:    <li id="{{[0-9A-F]*}}" style="max-height: 40px;">
 // CHECK-NEXT:        <a href="_ZTVN11MyNamespace3FooE.html">
-// CHECK-NEXT:            <pre>
-// CHECK-NEXT:                <code class="language-cpp code-clang-doc">class Foo</code>
-// CHECK-NEXT:            </pre>
+// CHECK-NEXT:            <pre><code class="language-cpp code-clang-doc">class Foo</code></pre>
 // CHECK-NEXT:        </a>
 // CHECK-NEXT:    </li>
 // CHECK-NEXT: </ul>

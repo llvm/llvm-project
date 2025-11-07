@@ -226,6 +226,7 @@ static const Align kMinOriginAlignment = Align(4);
 static const Align kShadowTLSAlignment = Align(8);
 
 // These constants must be kept in sync with the ones in msan.h.
+// TODO: increase size to match SVE/SVE2/SME/SME2 limits
 static const unsigned kParamTLSSize = 800;
 static const unsigned kRetvalTLSSize = 800;
 
@@ -1544,6 +1545,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
+  static bool isAArch64SVCount(Type *Ty) {
+    if (TargetExtType *TTy = dyn_cast<TargetExtType>(Ty))
+      return TTy->getName() == "aarch64.svcount";
+    return false;
+  }
+
+  // This is intended to match the "AArch64 Predicate-as-Counter Type" (aka
+  // 'target("aarch64.svcount")', but not e.g., <vscale x 4 x i32>.
+  static bool isScalableNonVectorType(Type *Ty) {
+    if (!isAArch64SVCount(Ty))
+      LLVM_DEBUG(dbgs() << "isScalableNonVectorType: Unexpected type " << *Ty
+                        << "\n");
+
+    return Ty->isScalableTy() && !isa<VectorType>(Ty);
+  }
+
   void materializeChecks() {
 #ifndef NDEBUG
     // For assert below.
@@ -1672,6 +1689,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       LLVM_DEBUG(dbgs() << "getShadowTy: " << *ST << " ===> " << *Res << "\n");
       return Res;
     }
+    if (isScalableNonVectorType(OrigTy)) {
+      LLVM_DEBUG(dbgs() << "getShadowTy: Scalable non-vector type: " << *OrigTy
+                        << "\n");
+      return OrigTy;
+    }
+
     uint32_t TypeSize = DL.getTypeSizeInBits(OrigTy);
     return IntegerType::get(*MS.C, TypeSize);
   }
@@ -2185,8 +2208,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                         << *OrigIns << "\n");
       return;
     }
-#ifndef NDEBUG
+
     Type *ShadowTy = Shadow->getType();
+    if (isScalableNonVectorType(ShadowTy)) {
+      LLVM_DEBUG(dbgs() << "Skipping check of scalable non-vector " << *Shadow
+                        << " before " << *OrigIns << "\n");
+      return;
+    }
+#ifndef NDEBUG
     assert((isa<IntegerType>(ShadowTy) || isa<VectorType>(ShadowTy) ||
             isa<StructType>(ShadowTy) || isa<ArrayType>(ShadowTy)) &&
            "Can only insert checks for integer, vector, and aggregate shadow "
@@ -3107,7 +3136,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// If we don't instrument it and it gets inlined,
   /// our interceptor will not kick in and we will lose the memmove.
   /// If we instrument the call here, but it does not get inlined,
-  /// we will memove the shadow twice: which is bad in case
+  /// we will memmove the shadow twice: which is bad in case
   /// of overlapping regions. So, we simply lower the intrinsic to a call.
   ///
   /// Similar situation exists for memcpy and memset.
@@ -3874,7 +3903,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //          adding/"accumulating" %s. "Accumulation" stores the result in one
   //          of the source registers, but this accumulate vs. add distinction
   //          is lost when dealing with LLVM intrinsics.)
+  //
+  // ZeroPurifies means that multiplying a known-zero with an uninitialized
+  // value results in an initialized value. This is applicable for integer
+  // multiplication, but not floating-point (counter-example: NaN).
   void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
+                                  bool ZeroPurifies,
                                   unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
 
@@ -3916,7 +3950,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(AccumulatorType == ReturnType);
     }
 
-    FixedVectorType *ImplicitReturnType = ReturnType;
+    FixedVectorType *ImplicitReturnType =
+        cast<FixedVectorType>(getShadowTy(ReturnType));
     // Step 1: instrument multiplication of corresponding vector elements
     if (EltSizeInBits) {
       ImplicitReturnType = cast<FixedVectorType>(
@@ -3935,30 +3970,40 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
              ReturnType->getNumElements() * ReductionFactor);
     }
 
-    // Multiplying an *initialized* zero by an uninitialized element results in
-    // an initialized zero element.
-    //
-    // This is analogous to bitwise AND, where "AND" of 0 and a poisoned value
-    // results in an unpoisoned value. We can therefore adapt the visitAnd()
-    // instrumentation:
-    //   OutShadow =   (SaNonZero & SbNonZero)
-    //               | (VaNonZero & SbNonZero)
-    //               | (SaNonZero & VbNonZero)
-    //   where non-zero is checked on a per-element basis (not per bit).
-    Value *SZero = Constant::getNullValue(Va->getType());
-    Value *VZero = Constant::getNullValue(Sa->getType());
-    Value *SaNonZero = IRB.CreateICmpNE(Sa, SZero);
-    Value *SbNonZero = IRB.CreateICmpNE(Sb, SZero);
-    Value *VaNonZero = IRB.CreateICmpNE(Va, VZero);
-    Value *VbNonZero = IRB.CreateICmpNE(Vb, VZero);
-
-    Value *SaAndSbNonZero = IRB.CreateAnd(SaNonZero, SbNonZero);
-    Value *VaAndSbNonZero = IRB.CreateAnd(VaNonZero, SbNonZero);
-    Value *SaAndVbNonZero = IRB.CreateAnd(SaNonZero, VbNonZero);
-
     // Each element of the vector is represented by a single bit (poisoned or
     // not) e.g., <8 x i1>.
-    Value *And = IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
+    Value *SaNonZero = IRB.CreateIsNotNull(Sa);
+    Value *SbNonZero = IRB.CreateIsNotNull(Sb);
+    Value *And;
+    if (ZeroPurifies) {
+      // Multiplying an *initialized* zero by an uninitialized element results
+      // in an initialized zero element.
+      //
+      // This is analogous to bitwise AND, where "AND" of 0 and a poisoned value
+      // results in an unpoisoned value. We can therefore adapt the visitAnd()
+      // instrumentation:
+      //   OutShadow =   (SaNonZero & SbNonZero)
+      //               | (VaNonZero & SbNonZero)
+      //               | (SaNonZero & VbNonZero)
+      //   where non-zero is checked on a per-element basis (not per bit).
+      Value *VaInt = Va;
+      Value *VbInt = Vb;
+      if (!Va->getType()->isIntegerTy()) {
+        VaInt = CreateAppToShadowCast(IRB, Va);
+        VbInt = CreateAppToShadowCast(IRB, Vb);
+      }
+
+      Value *VaNonZero = IRB.CreateIsNotNull(VaInt);
+      Value *VbNonZero = IRB.CreateIsNotNull(VbInt);
+
+      Value *SaAndSbNonZero = IRB.CreateAnd(SaNonZero, SbNonZero);
+      Value *VaAndSbNonZero = IRB.CreateAnd(VaNonZero, SbNonZero);
+      Value *SaAndVbNonZero = IRB.CreateAnd(SaNonZero, VbNonZero);
+
+      And = IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
+    } else {
+      And = IRB.CreateOr({SaNonZero, SbNonZero});
+    }
 
     // Extend <8 x i1> to <8 x i16>.
     // (The real pmadd intrinsic would have computed intermediate values of
@@ -4746,7 +4791,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // _mm_round_ps / _mm_round_ps.
   // Similar to maybeHandleSimpleNomemIntrinsic except
-  // the second argument is guranteed to be a constant integer.
+  // the second argument is guaranteed to be a constant integer.
   void handleRoundPdPsIntrinsic(IntrinsicInst &I) {
     assert(I.getArgOperand(0)->getType() == I.getType());
     assert(I.arg_size() == 2);
@@ -5723,17 +5768,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/true);
       break;
 
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/8);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/8);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/16);
       break;
 
     // AVX Vector Neural Network Instructions: bytes
@@ -5819,7 +5867,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpbuuds_128:
     case Intrinsic::x86_avx2_vpdpbuuds_256:
     case Intrinsic::x86_avx10_vpdpbuuds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4, /*EltSize=*/8);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4,
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/8);
       break;
 
     // AVX Vector Neural Network Instructions: words
@@ -5872,7 +5921,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_vpdpwssds_128:
     case Intrinsic::x86_avx512_vpdpwssds_256:
     case Intrinsic::x86_avx512_vpdpwssds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/16);
       break;
 
       // TODO: Dot Product of BF16 Pairs Accumulated Into Packed Single
@@ -6972,6 +7022,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // an extra "select". This results in much more compact IR.
       // Sa = select Sb, poisoned, (select b, Sc, Sd)
       Sa1 = getPoisonedShadow(getShadowTy(I.getType()));
+    } else if (isScalableNonVectorType(I.getType())) {
+      // This is intended to handle target("aarch64.svcount"), which can't be
+      // handled in the else branch because of incompatibility with CreateXor
+      // ("The supported LLVM operations on this type are limited to load,
+      // store, phi, select and alloca instructions").
+
+      // TODO: this currently underapproximates. Use Arm SVE EOR in the else
+      //       branch as needed instead.
+      Sa1 = getCleanShadow(getShadowTy(I.getType()));
     } else {
       // Sa = select Sb, [ (c^d) | Sc | Sd ], [ b ? Sc : Sd ]
       // If Sb (condition is poisoned), look for bits in c and d that are equal

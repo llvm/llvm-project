@@ -108,21 +108,21 @@ template <typename Ty> struct ilist_traits<const Ty> {};
 /// list.
 template <class IntrusiveListT, class TraitsT>
 class iplist_impl : public TraitsT, IntrusiveListT {
-  typedef IntrusiveListT base_list_type;
+  using base_list_type = IntrusiveListT;
 
 public:
-  typedef typename base_list_type::pointer pointer;
-  typedef typename base_list_type::const_pointer const_pointer;
-  typedef typename base_list_type::reference reference;
-  typedef typename base_list_type::const_reference const_reference;
-  typedef typename base_list_type::value_type value_type;
-  typedef typename base_list_type::size_type size_type;
-  typedef typename base_list_type::difference_type difference_type;
-  typedef typename base_list_type::iterator iterator;
-  typedef typename base_list_type::const_iterator const_iterator;
-  typedef typename base_list_type::reverse_iterator reverse_iterator;
-  typedef
-      typename base_list_type::const_reverse_iterator const_reverse_iterator;
+  using pointer = typename base_list_type::pointer;
+  using const_pointer = typename base_list_type::const_pointer;
+  using reference = typename base_list_type::reference;
+  using const_reference = typename base_list_type::const_reference;
+  using value_type = typename base_list_type::value_type;
+  using size_type = typename base_list_type::size_type;
+  using difference_type = typename base_list_type::difference_type;
+  using iterator = typename base_list_type::iterator;
+  using const_iterator = typename base_list_type::const_iterator;
+  using reverse_iterator = typename base_list_type::reverse_iterator;
+  using const_reverse_iterator =
+      typename base_list_type::const_reverse_iterator;
 
 private:
   static bool op_less(const_reference L, const_reference R) { return L < R; }

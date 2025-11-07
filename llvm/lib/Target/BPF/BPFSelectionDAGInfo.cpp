@@ -10,11 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BPFSelectionDAGInfo.h"
 #include "BPFTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+
+#define GET_SDNODE_DESC
+#include "BPFGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "bpf-selectiondag-info"
+
+BPFSelectionDAGInfo::BPFSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(BPFGenSDNodeInfo) {}
 
 SDValue BPFSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
@@ -31,11 +39,7 @@ SDValue BPFSelectionDAGInfo::EmitTargetCodeForMemcpy(
   if (StoresNumEstimate > getCommonMaxStoresPerMemFunc())
     return SDValue();
 
-  SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
-
-  Dst = DAG.getNode(BPFISD::MEMCPY, dl, VTs, Chain, Dst, Src,
-                    DAG.getConstant(CopyLen, dl, MVT::i64),
-                    DAG.getConstant(Alignment.value(), dl, MVT::i64));
-
-  return Dst.getValue(0);
+  return DAG.getNode(BPFISD::MEMCPY, dl, MVT::Other, Chain, Dst, Src,
+                     DAG.getConstant(CopyLen, dl, MVT::i64),
+                     DAG.getConstant(Alignment.value(), dl, MVT::i64));
 }

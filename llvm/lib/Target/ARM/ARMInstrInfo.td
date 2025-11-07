@@ -473,15 +473,15 @@ def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs)>;
 
 // An 'fmul' node with a single use.
 let HasOneUse = 1 in
-def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (fmul node:$lhs, node:$rhs)>;
+def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (any_fmul node:$lhs, node:$rhs)>;
 
 // An 'fadd' node which checks for single non-hazardous use.
-def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
+def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fadd node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
 
 // An 'fsub' node which checks for single non-hazardous use.
-def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
+def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
 
@@ -6546,23 +6546,25 @@ def KCFI_CHECK_ARM
     : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
       Sched<[]>,
       Requires<[IsARM]> {
-  let Size = 28; // 7 instructions (bic, ldr, 4x eor, beq, udf)
+  let Size = 40; // worst-case 10 instructions @ 4 bytes each
+                 // (push, bic, ldr, 4x eor, pop, beq, udf)
 }
 
 def KCFI_CHECK_Thumb2
     : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
       Sched<[]>,
       Requires<[IsThumb2]> {
-  let Size =
-      32; // worst-case 9 instructions (push, bic, ldr, 4x eor, pop, beq.w, udf)
+  let Size = 34; // worst-case (push.w[2], bic[4], ldr[4], 4x eor[16], pop.w[2],
+                 // beq.w[4], udf[2])
 }
 
 def KCFI_CHECK_Thumb1
     : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
       Sched<[]>,
       Requires<[IsThumb1Only]> {
-  let Size = 50; // worst-case 25 instructions (pushes, bic helper, type
-                 // building, cmp, pops)
+  let Size = 38; // worst-case 19 instructions @ 2 bytes each
+                 // (2x push, 3x bic-helper, subs+ldr, 13x type-building, cmp,
+                 // 2x pop, beq, bkpt)
 }
 
 //===----------------------------------------------------------------------===//

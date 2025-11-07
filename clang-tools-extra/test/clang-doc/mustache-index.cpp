@@ -70,9 +70,7 @@ class Foo;
 // CHECK-NEXT:      <ul class="class-container">
 // CHECK-NEXT:          <li id="{{[0-9A-F]*}}" style="max-height: 40px;">
 // CHECK-NEXT:              <a href="_ZTV3Foo.html">
-// CHECK-NEXT:                  <pre>
-// CHECK-NEXT:                      <code class="language-cpp code-clang-doc">class Foo</code>
-// CHECK-NEXT:                  </pre>
+// CHECK-NEXT:                  <pre><code class="language-cpp code-clang-doc">class Foo</code></pre>
 // CHECK-NEXT:              </a>
 // CHECK-NEXT:          </li>
 // CHECK-NEXT:      </ul>

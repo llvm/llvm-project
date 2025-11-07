@@ -802,6 +802,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
 
+  /// Get the unique identifier of the device.
+  const char *getDeviceUid() const { return DeviceUid.c_str(); }
+
   /// Get the total shared memory per block that can be used in any kernel.
   uint32_t getMaxBlockSharedMemSize() const { return MaxBlockSharedMemSize; }
 
@@ -832,10 +835,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);
   virtual Error unloadBinaryImpl(DeviceImageTy *Image) = 0;
-
-  /// Setup the global device memory pool, if the plugin requires one.
-  Error setupDeviceMemoryPool(GenericPluginTy &Plugin, DeviceImageTy &Image,
-                              uint64_t PoolSize);
 
   // Setup the RPC server for this device if needed. This may not run on some
   // plugins like the CPU targets. By default, it will not be executed so it is
@@ -1006,9 +1005,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error syncEvent(void *EventPtr);
   virtual Error syncEventImpl(void *EventPtr) = 0;
 
+  /// Obtain information about the device.
+  Expected<InfoTreeNode> obtainInfo();
+  virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
+
   /// Print information about the device.
   Error printInfo();
-  virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
 
   /// Return true if the device has work that is either queued or currently
   /// running
@@ -1077,6 +1079,16 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
 
   virtual Error getDeviceStackSize(uint64_t &V) = 0;
+
+  virtual bool hasDeviceHeapSize() { return false; }
+  virtual Error getDeviceHeapSize(uint64_t &V) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
+  }
+  virtual Error setDeviceHeapSize(uint64_t V) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
+  }
 
   /// Returns true if current plugin architecture is an APU
   /// and unified_shared_memory was not requested by the program.
@@ -1170,12 +1182,6 @@ private:
   /// plugin can implement the setters as no-op and setting the output
   /// value to zero for the getters.
   virtual Error setDeviceStackSize(uint64_t V) = 0;
-  virtual Error getDeviceHeapSize(uint64_t &V) = 0;
-  virtual Error setDeviceHeapSize(uint64_t V) = 0;
-
-  /// Indicate whether the device should setup the global device memory pool. If
-  /// false is return the value on the device will be uninitialized.
-  virtual bool shouldSetupDeviceMemoryPool() const { return true; }
 
   /// Indicate whether or not the device should setup the RPC server. This is
   /// only necessary for unhosted targets like the GPU.
@@ -1221,6 +1227,14 @@ protected:
   /// global device id and is not the device id visible to the OpenMP user.
   const int32_t DeviceId;
 
+  /// The unique identifier of the device.
+  /// Per default, the unique identifier of the device is set to the device id,
+  /// combined with the plugin name, since the offload device id may overlap
+  /// between different plugins.
+  std::string DeviceUid;
+  /// Construct the device UID from the vendor (U)UID.
+  void setDeviceUidFromVendorUid(StringRef VendorUid);
+
   /// The default grid values used for this device.
   llvm::omp::GV GridValues;
 
@@ -1260,10 +1274,6 @@ protected:
 
   /// Whether the device has native block shared memory.
   bool HasNativeBlockSharedMem = false;
-
-private:
-  DeviceMemoryPoolTy DeviceMemoryPool = {nullptr, 0};
-  DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
@@ -1312,6 +1322,9 @@ struct GenericPluginTy {
     assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
     return UserDeviceIds.at(DeviceId);
   }
+
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;

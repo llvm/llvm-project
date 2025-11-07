@@ -367,11 +367,16 @@ private:
   using AdjustActuals =
       std::optional<std::function<bool(const Symbol &, ActualArguments &)>>;
   const Symbol *ResolveForward(const Symbol &);
-  std::pair<const Symbol *, bool /* failure due ambiguity */> ResolveGeneric(
-      const Symbol &, const ActualArguments &, const AdjustActuals &,
-      bool isSubroutine, bool mightBeStructureConstructor = false);
-  void EmitGenericResolutionError(
-      const Symbol &, bool dueToNullActuals, bool isSubroutine);
+  struct GenericResolution {
+    const Symbol *specific{nullptr};
+    bool failedDueToAmbiguity{false};
+    SymbolVector tried{};
+  };
+  GenericResolution ResolveGeneric(const Symbol &, const ActualArguments &,
+      const AdjustActuals &, bool isSubroutine, SymbolVector &&tried,
+      bool mightBeStructureConstructor = false);
+  void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
+      bool isSubroutine, ActualArguments &, const SymbolVector &);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
   std::optional<CalleeAndArguments> GetCalleeAndArguments(const parser::Name &,

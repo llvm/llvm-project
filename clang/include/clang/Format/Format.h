@@ -62,49 +62,28 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
-  /// Different styles for aligning after open brackets.
-  enum BracketAlignmentStyle : int8_t {
-    /// Align parameters on the open bracket, e.g.:
-    /// \code
-    ///   someLongFunction(argument1,
-    ///                    argument2);
-    /// \endcode
-    BAS_Align,
-    /// Don't align, instead use ``ContinuationIndentWidth``, e.g.:
-    /// \code
-    ///   someLongFunction(argument1,
-    ///       argument2);
-    /// \endcode
-    BAS_DontAlign,
-    /// Always break after an open bracket, if the parameters don't fit
-    /// on a single line, e.g.:
-    /// \code
-    ///   someLongFunction(
-    ///       argument1, argument2);
-    /// \endcode
-    BAS_AlwaysBreak,
-    /// Always break after an open bracket, if the parameters don't fit
-    /// on a single line. Closing brackets will be placed on a new line.
-    /// E.g.:
-    /// \code
-    ///   someLongFunction(
-    ///       argument1, argument2
-    ///   )
-    /// \endcode
-    ///
-    /// \note
-    ///  This currently only applies to braced initializer lists (when
-    ///  ``Cpp11BracedListStyle`` is not ``Block``) and parentheses.
-    /// \endnote
-    BAS_BlockIndent,
-  };
-
   /// If ``true``, horizontally aligns arguments after an open bracket.
+  ///
+  /// \code
+  ///   true:                         vs.   false
+  ///   someLongFunction(argument1,         someLongFunction(argument1,
+  ///                    argument2);            argument2);
+  /// \endcode
+  ///
+  /// \note
+  ///   As of clang-format 22 this option is a bool with the previous
+  ///   option of ``Align`` replaced with ``true``, ``DontAlign`` replaced
+  ///   with ``false``, and the options of ``AlwaysBreak`` and ``BlockIndent``
+  ///   replaced with ``true`` and with setting of new style options using
+  ///   ``BreakAfterOpenBracketBracedList``, ``BreakAfterOpenBracketFunction``,
+  ///   ``BreakAfterOpenBracketIf``, ``BreakBeforeCloseBracketBracedList``,
+  ///   ``BreakBeforeCloseBracketFunction``, and ``BreakBeforeCloseBracketIf``.
+  /// \endnote
   ///
   /// This applies to round brackets (parentheses), angle brackets and square
   /// brackets.
   /// \version 3.8
-  BracketAlignmentStyle AlignAfterOpenBracket;
+  bool AlignAfterOpenBracket;
 
   /// Different style for aligning array initializers.
   enum ArrayInitializerAlignmentStyle : int8_t {
@@ -622,9 +601,19 @@ struct FormatStyle {
     ///   int abcdef; // but this isn't
     /// \endcode
     unsigned OverEmptyLines;
+    /// If comments following preprocessor directive should be aligned with
+    /// comments that don't.
+    /// \code
+    ///   true:                               false:
+    ///   #define A  // Comment   vs.         #define A  // Comment
+    ///   #define AB // Aligned               #define AB // Aligned
+    ///   int i;     // Aligned               int i; // Not aligned
+    /// \endcode
+    bool AlignPPAndNotPP;
 
     bool operator==(const TrailingCommentsAlignmentStyle &R) const {
-      return Kind == R.Kind && OverEmptyLines == R.OverEmptyLines;
+      return Kind == R.Kind && OverEmptyLines == R.OverEmptyLines &&
+             AlignPPAndNotPP == R.AlignPPAndNotPP;
     }
     bool operator!=(const TrailingCommentsAlignmentStyle &R) const {
       return !(*this == R);
@@ -1708,6 +1697,57 @@ struct FormatStyle {
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
 
+  /// Force break after the left bracket of a braced initializer list (when
+  /// ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  /// limit.
+  /// \code
+  ///   true:                             false:
+  ///   vector<int> x {         vs.       vector<int> x {1,
+  ///      1, 2, 3}                            2, 3}
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketBracedList;
+
+  /// Force break after the left parenthesis of a function (declaration,
+  /// definition, call) when the parameters exceed the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   foo (                   vs.       foo (a,
+  ///      a , b)                              b)
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketFunction;
+
+  /// Force break after the left parenthesis of an if control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   if constexpr (          vs.       if constexpr (a ||
+  ///      a || b)                                      b)
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketIf;
+
+  /// Force break after the left parenthesis of a loop control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   while (                  vs.      while (a &&
+  ///      a && b) {                             b) {
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketLoop;
+
+  /// Force break after the left parenthesis of a switch control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   switch (                 vs.      switch (a +
+  ///      a + b) {                               b) {
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketSwitch;
+
   /// The function declaration return type breaking style to use.
   /// \version 19
   ReturnTypeBreakingStyle BreakAfterReturnType;
@@ -2220,6 +2260,69 @@ struct FormatStyle {
   /// The brace breaking style to use.
   /// \version 3.7
   BraceBreakingStyle BreakBeforeBraces;
+
+  /// Force break before the right bracket of a braced initializer list (when
+  /// ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  /// limit. The break before the right bracket is only made if there is a
+  /// break after the opening bracket.
+  /// \code
+  ///   true:                             false:
+  ///   vector<int> x {         vs.       vector<int> x {
+  ///      1, 2, 3                           1, 2, 3}
+  ///   }
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketBracedList;
+
+  /// Force break before the right parenthesis of a function (declaration,
+  /// definition, call) when the parameters exceed the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   foo (                   vs.       foo (
+  ///      a , b                             a , b)
+  ///   )
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketFunction;
+
+  /// Force break before the right parenthesis of an if control statement
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
+  /// \code
+  ///   true:                             false:
+  ///   if constexpr (          vs.       if constexpr (
+  ///      a || b                            a || b )
+  ///   )
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketIf;
+
+  /// Force break before the right parenthesis of a loop control statement
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
+  /// \code
+  ///   true:                             false:
+  ///   while (                  vs.      while (
+  ///      a && b                            a && b) {
+  ///   ) {
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketLoop;
+
+  /// Force break before the right parenthesis of a switch control statement
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
+  /// \code
+  ///   true:                             false:
+  ///   switch (                 vs.      switch (
+  ///      a + b                             a + b) {
+  ///   ) {
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketSwitch;
 
   /// Different ways to break before concept declarations.
   enum BreakBeforeConceptDeclarationsStyle : int8_t {
@@ -5530,10 +5633,23 @@ struct FormatStyle {
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakAfterOpenBracketBracedList ==
+               R.BreakAfterOpenBracketBracedList &&
+           BreakAfterOpenBracketFunction == R.BreakAfterOpenBracketFunction &&
+           BreakAfterOpenBracketIf == R.BreakAfterOpenBracketIf &&
+           BreakAfterOpenBracketLoop == R.BreakAfterOpenBracketLoop &&
+           BreakAfterOpenBracketSwitch == R.BreakAfterOpenBracketSwitch &&
            BreakAfterReturnType == R.BreakAfterReturnType &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
+           BreakBeforeCloseBracketBracedList ==
+               R.BreakBeforeCloseBracketBracedList &&
+           BreakBeforeCloseBracketFunction ==
+               R.BreakBeforeCloseBracketFunction &&
+           BreakBeforeCloseBracketIf == R.BreakBeforeCloseBracketIf &&
+           BreakBeforeCloseBracketLoop == R.BreakBeforeCloseBracketLoop &&
+           BreakBeforeCloseBracketSwitch == R.BreakBeforeCloseBracketSwitch &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&

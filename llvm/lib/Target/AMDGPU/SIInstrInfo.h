@@ -172,7 +172,7 @@ private:
   void addUsersToMoveToVALUWorklist(Register Reg, MachineRegisterInfo &MRI,
                                     SIInstrWorklist &Worklist) const;
 
-  void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
+  void addSCCDefUsersToVALUWorklist(const MachineOperand &Op,
                                     MachineInstr &SCCDefInst,
                                     SIInstrWorklist &Worklist,
                                     Register NewCond = Register()) const;
@@ -1640,7 +1640,7 @@ public:
                            unsigned *PredCost = nullptr) const override;
 
   InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const override final;
+  getInstructionUniformity(const MachineInstr &MI) const final;
 
   InstructionUniformity
   getGenericInstructionUniformity(const MachineInstr &MI) const;
@@ -1687,7 +1687,7 @@ TargetInstrInfo::RegSubRegPair getRegSequenceSubReg(MachineInstr &MI,
 /// skipping copy like instructions and subreg-manipulation pseudos.
 /// Following another subreg of a reg:subreg isn't supported.
 MachineInstr *getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
-                               MachineRegisterInfo &MRI);
+                               const MachineRegisterInfo &MRI);
 
 /// \brief Return false if EXEC is not changed between the def of \p VReg at \p
 /// DefMI and the use at \p UseMI. Should be run on SSA. Currently does not
