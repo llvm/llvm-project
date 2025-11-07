@@ -41,6 +41,7 @@ inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
   synchronize::init(IsSPMD);
   mapping::init(IsSPMD);
   state::init(IsSPMD, KernelEnvironment, KernelLaunchEnvironment);
+  allocator::init(IsSPMD, KernelEnvironment);
   workshare::init(IsSPMD);
 }
 

@@ -1238,6 +1238,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Info;
   }
 
+  virtual bool shouldSetupDeviceMemoryPool() const override {
+    /// We use the CUDA malloc for now.
+    return false;
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_STACK_SIZE, Value);
@@ -1245,14 +1250,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return setCtxLimit(CU_LIMIT_STACK_SIZE, Value);
   }
-  bool hasDeviceHeapSize() { return true; }
-  Error getDeviceHeapSize(uint64_t &Value) {
+  Error getDeviceHeapSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
   }
-  Error setDeviceHeapSize(uint64_t Value) {
+  Error setDeviceHeapSize(uint64_t Value) override {
     return setCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
   }
-  Error getDeviceMemorySize(uint64_t &Value) {
+  Error getDeviceMemorySize(uint64_t &Value) override {
     CUresult Res = cuDeviceTotalMem(&Value, Device);
     return Plugin::check(Res, "error in getDeviceMemorySize %s");
   }

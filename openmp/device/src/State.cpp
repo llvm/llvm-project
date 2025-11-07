@@ -55,7 +55,6 @@ using namespace ompx;
 
 namespace {
 
-<<<<<<< HEAD
 /// Malloc/Free API implementation
 /// AMDGCN does not expose a malloc/free API, while
 /// NVPTX does. FOr this reason, the order of the following malloc/free
@@ -140,8 +139,6 @@ void internal_free(void *Ptr) { free(Ptr); }
 }
 #endif
 
-=======
->>>>>>> 670c453aeb19
 /// A "smart" stack in shared memory.
 ///
 /// The stack exposes a malloc/free interface but works like a stack internally.
@@ -249,13 +246,13 @@ void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
 }
 
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
-  void *Ptr = allocator::alloc(Bytes);
+  void *Ptr = malloc(Bytes);
   if (config::isDebugMode(DeviceDebugKind::CommonIssues) && Ptr == nullptr)
     printf("nullptr returned by malloc!\n");
   return Ptr;
 }
 
-void memory::freeGlobal(void *Ptr, const char *Reason) { allocator::free(Ptr); }
+void memory::freeGlobal(void *Ptr, const char *Reason) { free(Ptr); }
 
 ///}
 
