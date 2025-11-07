@@ -337,14 +337,15 @@ static void generateFusedElementwiseOpRegion(
          "Ill-formed GenericOp region");
 }
 
+template <typename LinagOpTy>
 FailureOr<mlir::linalg::ElementwiseOpFusionResult>
-mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
-                                 OpOperand *fusedOperand) {
-  assert(areElementwiseOpsFusable(fusedOperand) &&
-         "expected elementwise operation pre-conditions to pass");
+mlir::linalg::fuseElementwiseLinalgOpsImpl(RewriterBase &rewriter,
+                                           OpOperand *fusedOperand) {
+  if (!areElementwiseOpsFusable(fusedOperand))
+    return failure();
   auto producerResult = cast<OpResult>(fusedOperand->get());
-  auto producer = cast<LinalgOp>(producerResult.getOwner());
-  auto consumer = cast<LinalgOp>(fusedOperand->getOwner());
+  auto producer = cast<LinagOpTy>(producerResult.getOwner());
+  auto consumer = cast<LinagOpTy>(fusedOperand->getOwner());
   // TODO: allow fusing the producer of an output operand.
   assert(consumer.isDpsInput(fusedOperand) &&
          "expected producer of input operand");
@@ -419,6 +420,8 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   }
 
   // Generate the fused op.
+  // TODO: When possible, generate named ops when the producer-consumer ops are
+  // named, e.g. `linalg.map` + `linalg.map` -> `linalg.map`.
   auto fusedOp = GenericOp::create(
       rewriter, consumer.getLoc(), fusedResultTypes, fusedInputOperands,
       fusedOutputOperands, fusedIndexMaps, consumer.getIteratorTypesArray());
@@ -458,6 +461,20 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   return result;
 }
 
+FailureOr<ElementwiseOpFusionResult>
+mlir::linalg::fuseElementwiseGenericOps(RewriterBase &rewriter,
+                                        OpOperand *fusedOperand) {
+  return mlir::linalg::fuseElementwiseLinalgOpsImpl<GenericOp>(rewriter,
+                                                               fusedOperand);
+}
+
+FailureOr<ElementwiseOpFusionResult>
+mlir::linalg::fuseElementwiseLinalgOps(RewriterBase &rewriter,
+                                       OpOperand *fusedOperand) {
+  return mlir::linalg::fuseElementwiseLinalgOpsImpl<LinalgOp>(rewriter,
+                                                              fusedOperand);
+}
+
 namespace {
 /// Patterns to fuse a linalg op, with the producer of its operands.
 class FuseElementwiseOps : public OpInterfaceRewritePattern<LinalgOp> {
@@ -480,7 +497,7 @@ public:
 
       // Find the producer of the operand.
       FailureOr<ElementwiseOpFusionResult> fusionResult =
-          fuseElementwiseOps(rewriter, &opOperand);
+          fuseElementwiseLinalgOps(rewriter, &opOperand);
       if (failed(fusionResult))
         return rewriter.notifyMatchFailure(linalgOp, "fusion failed");
 

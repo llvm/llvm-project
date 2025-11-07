@@ -554,17 +554,34 @@ FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
                                            GenericOp genericOp,
                                            const ControlDropUnitDims &options);
 
+/// Base implementation for fusion of two linalg operations.
 /// Fuse two linalg operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
 /// that `areElementwiseOpsFusable` returns true for the given `fusedOperand`.
 /// The resulting fused operation is always a `linalg.generic`.
-/// TODO: Support fusing to named ops when possible.
+/// TODO: Support fusing to named ops when possible.  For many cases,
+/// `linalg.generic` is the only op that is capable of representing the fused
+/// operation. An example exception is fusing two `linalg.map` ops.  The fused
+/// result can also be represented by `linalg.map`.
 struct ElementwiseOpFusionResult {
   Operation *fusedOp;
   llvm::DenseMap<Value, Value> replacements;
 };
+template <typename LinagOpTy>
 FailureOr<ElementwiseOpFusionResult>
-fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
+fuseElementwiseLinalgOpsImpl(RewriterBase &rewriter, OpOperand *fusedOperand);
+
+/// Specialization of `fuseElementwiseLinalgOpsImpl` for a producer-consumer of
+/// `fusedOperand` that are any `LinalgOp`.
+FailureOr<ElementwiseOpFusionResult>
+fuseElementwiseLinalgOps(RewriterBase &rewriter, OpOperand *fusedOperand);
+
+/// Specialization `fuseElementwiseLinalgOpsImpl` restricted to
+/// only`linalg.generic` producer-consumer. This is for legacy purposes and
+/// should be deprecated in favor of the more general
+/// `fuseElementwiseLinalgOps`.
+FailureOr<ElementwiseOpFusionResult>
+fuseElementwiseGenericOps(RewriterBase &rewriter, OpOperand *fusedOperand);
 
 /// Returns a set of indices of the producer's results which would
 /// be preserved after the fusion.

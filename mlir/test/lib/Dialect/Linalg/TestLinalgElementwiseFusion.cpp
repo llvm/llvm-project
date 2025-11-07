@@ -69,9 +69,9 @@ struct TestMultiUseProducerFusion : public OpRewritePattern<linalg::GenericOp> {
     if (!fusableOperand) {
       return rewriter.notifyMatchFailure(genericOp, "no fusable operand found");
     }
-    std::optional<linalg::ElementwiseOpFusionResult> fusionResult =
-        linalg::fuseElementwiseOps(rewriter, fusableOperand);
-    if (!fusionResult)
+    FailureOr<linalg::ElementwiseOpFusionResult> fusionResult =
+        linalg::fuseElementwiseLinalgOps(rewriter, fusableOperand);
+    if (failed(fusionResult))
       return rewriter.notifyMatchFailure(genericOp, "fusion failed");
     for (auto [origValue, replacement] : fusionResult->replacements) {
       rewriter.replaceUsesWithIf(origValue, replacement, [&](OpOperand &use) {
