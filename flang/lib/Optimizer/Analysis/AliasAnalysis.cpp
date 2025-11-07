@@ -27,27 +27,24 @@ using namespace mlir;
 
 #define DEBUG_TYPE "fir-alias-analysis"
 
-static bool classifyAllocateFromEffects(mlir::Operation *op,
-                                        mlir::Value candidate, mlir::Value &v,
-                                        mlir::Operation *&defOp,
-                                        fir::AliasAnalysis::SourceKind &type) {
+// Inspect for value-scoped Allocate effects and determine whether
+// 'candidate' is a new allocation. Returns SourceKind::Allocate if a
+// MemAlloc effect is attached
+static fir::AliasAnalysis::SourceKind
+classifyAllocateFromEffects(mlir::Operation *op, mlir::Value candidate) {
   if (!op)
-    return false;
+    return fir::AliasAnalysis::SourceKind::Unknown;
   auto interface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
   if (!interface)
-    return false;
+    return fir::AliasAnalysis::SourceKind::Unknown;
   llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
   interface.getEffects(effects);
   for (mlir::MemoryEffects::EffectInstance &e : effects) {
     if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
-        e.getValue() && e.getValue() == candidate) {
-      v = candidate;
-      defOp = op;
-      type = fir::AliasAnalysis::SourceKind::Allocate;
-      return true;
-    }
+        e.getValue() && e.getValue() == candidate)
+      return fir::AliasAnalysis::SourceKind::Allocate;
   }
-  return false;
+  return fir::AliasAnalysis::SourceKind::Unknown;
 }
 
 //===----------------------------------------------------------------------===//
@@ -559,8 +556,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
     // Value-scoped allocation detection via effects.
-    if (classifyAllocateFromEffects(defOp, v, v, defOp, type))
+    if (classifyAllocateFromEffects(defOp, v) == SourceKind::Allocate) {
+      type = SourceKind::Allocate;
       break;
+    }
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<hlfir::AsExprOp>([&](auto op) {
           v = op.getVar();
@@ -650,9 +649,15 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else {
               auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
               bool classified = false;
-              if (auto defDefOp = def.getDefiningOp())
-                classified =
-                    classifyAllocateFromEffects(defDefOp, def, v, defOp, type);
+              if (auto defDefOp = def.getDefiningOp()) {
+                if (classifyAllocateFromEffects(defDefOp, def) ==
+                    SourceKind::Allocate) {
+                  v = def;
+                  defOp = defDefOp;
+                  type = SourceKind::Allocate;
+                  classified = true;
+                }
+              }
               if (!classified) {
                 if (isDummyArgument(def)) {
                   defOp = nullptr;
