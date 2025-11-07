@@ -120,11 +120,18 @@ static SPIRVType *deduceTypeFromOperandRange(MachineInstr *I,
                                              MachineIRBuilder &MIB,
                                              SPIRVGlobalRegistry *GR,
                                              unsigned StartOp, unsigned EndOp) {
+  SPIRVType *ResType = nullptr;
   for (unsigned i = StartOp; i < EndOp; ++i) {
-    if (SPIRVType *Type = deduceTypeFromSingleOperand(I, MIB, GR, i))
+    if (SPIRVType *Type = deduceTypeFromSingleOperand(I, MIB, GR, i)) {
+#ifdef EXPENSIVE_CHECKS
+      assert(!ResType || Type == ResType && "Conflicting type from operands.");
+      ResType = Type;
+#else
       return Type;
+#endif
+    }
   }
-  return nullptr;
+  return ResType;
 }
 
 static SPIRVType *deduceTypeForResultRegister(MachineInstr *Use,
@@ -281,28 +288,29 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
         NextWorklist.push_back(I);
       }
     }
-    Worklist = NextWorklist;
+    Worklist = std::move(NextWorklist);
     LLVM_DEBUG(dbgs() << "Worklist size: " << Worklist.size() << "\n");
   } while (Changed);
 
-  if (!Worklist.empty()) {
-    LLVM_DEBUG(dbgs() << "Remaining worklist:\n";
-               for (auto *I : Worklist) { I->dump(); });
-    for (auto *I : Worklist) {
-      MachineIRBuilder MIB(*I);
-      Register ResVReg = I->getOperand(0).getReg();
-      const LLT &ResLLT = MRI.getType(ResVReg);
-      SPIRVType *ResType = nullptr;
-      if (ResLLT.isVector()) {
-        SPIRVType *CompType = GR->getOrCreateSPIRVIntegerType(
-            ResLLT.getElementType().getSizeInBits(), MIB);
-        ResType = GR->getOrCreateSPIRVVectorType(
-            CompType, ResLLT.getNumElements(), MIB, false);
-      } else {
-        ResType = GR->getOrCreateSPIRVIntegerType(ResLLT.getSizeInBits(), MIB);
-      }
-      setRegClassType(ResVReg, ResType, GR, &MRI, MF, true);
+  if (Worklist.empty())
+    return;
+
+  for (auto *I : Worklist) {
+    MachineIRBuilder MIB(*I);
+    Register ResVReg = I->getOperand(0).getReg();
+    const LLT &ResLLT = MRI.getType(ResVReg);
+    SPIRVType *ResType = nullptr;
+    if (ResLLT.isVector()) {
+      SPIRVType *CompType = GR->getOrCreateSPIRVIntegerType(
+          ResLLT.getElementType().getSizeInBits(), MIB);
+      ResType = GR->getOrCreateSPIRVVectorType(
+          CompType, ResLLT.getNumElements(), MIB, false);
+    } else {
+      ResType = GR->getOrCreateSPIRVIntegerType(ResLLT.getSizeInBits(), MIB);
     }
+    LLVM_DEBUG(dbgs() << "Could not determine type for " << *I
+                      << ", defaulting to " << *ResType << "\n");
+    setRegClassType(ResVReg, ResType, GR, &MRI, MF, true);
   }
 }
 
