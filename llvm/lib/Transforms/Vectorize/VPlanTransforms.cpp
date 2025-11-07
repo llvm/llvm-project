@@ -6017,7 +6017,7 @@ static std::pair<VPValue *, VPValue *> matchStridedStart(VPValue *CurIndex) {
 
 /// Checks if the given VPWidenGEPRecipe \p WidenGEP represents a strided
 /// access. If so, it creates recipes representing the base pointer and stride
-/// in element type, and returns a tuple of {base pointer, stride, element
+/// in element units, and returns a tuple of {base pointer, stride, element
 /// type}. Otherwise, returns a tuple where all elements are nullptr.
 static std::tuple<VPValue *, VPValue *, Type *>
 determineBaseAndStride(VPWidenGEPRecipe *WidenGEP) {
