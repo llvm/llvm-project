@@ -39,14 +39,14 @@
 #include <functional>
 #include <iterator>
 #include <unordered_set>
-#define DEBUG_TYPE "bolt-sections"
+#define DEBUG_TYPE "bolt"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Object/ELF.h"
 
 using namespace llvm;
 
-#undef  DEBUG_TYPE
-#define DEBUG_TYPE "bolt"
+
 
 namespace opts {
 
@@ -2154,6 +2154,14 @@ BinarySection &BinaryContext::registerSection(BinarySection *Section) {
                     << " type=0x"  << format_hex(Section->getELFType(), 6)
                     << (Section->isAllocatable() ? " alloc" : " !alloc")
                     << "\n");
+
+                    DEBUG_WITH_TYPE("bolt-flags", {
+  dbgs() << "[flags] create " << Section->getName()
+         << " flags=0x" << llvm::format_hex(Section->getELFFlags(), 8)
+         << " type=0x"  << llvm::format_hex(Section->getELFType(), 8)
+         << (Section->isAllocatable() ? " alloc" : " !alloc")
+         << "\n";
+});
   auto Res = Sections.insert(Section);
   (void)Res;
   assert(Res.second && "can't register the same section twice.");
@@ -2187,6 +2195,14 @@ BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
                                        unsigned ELFFlags, uint8_t *Data,
                                        uint64_t Size, unsigned Alignment) {
   auto NamedSections = getSectionByName(Name);
+  DEBUG_WITH_TYPE("bolt-flags", {
+    dbgs() << "[flags] enter registerOrUpdateSection name=" << Name << "\n"
+           << "        initial Flags=0x" << llvm::format_hex(ELFFlags, 8)
+           << " (ALLOC=" << ((ELFFlags & ELF::SHF_ALLOC) ? "yes" : "no")
+           << ", EXEC="  << ((ELFFlags & ELF::SHF_EXECINSTR) ? "yes" : "no")
+           << ", EXCL="  << ((ELFFlags & ELF::SHF_EXCLUDE) ? "yes" : "no")
+           << ")\n";
+  });
 
   if (NamedSections.begin() != NamedSections.end()) {
     // 1) Detect true duplicates (more than one object for the same name)
@@ -2214,6 +2230,17 @@ BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
     const bool WasAlloc = Section->isAllocatable();
     Section->update(Data, Size, Alignment, ELFType, ELFFlags);
     LLVM_DEBUG(dbgs() << *Section << "\n");
+
+DEBUG_WITH_TYPE("bolt-flags", {
+  const unsigned NewFlags = Section->getELFFlags();
+  dbgs() << "[flags] after update: " << Section->getName() << "\n"
+         << "        final Flags=0x" << llvm::format_hex(NewFlags, 8)
+         << " (ALLOC=" << ((NewFlags & ELF::SHF_ALLOC) ? "yes" : "no")
+         << ", EXEC="  << ((NewFlags & ELF::SHF_EXECINSTR) ? "yes" : "no")
+         << ", EXCL="  << ((NewFlags & ELF::SHF_EXCLUDE) ? "yes" : "no")
+         << ")\n";
+});
+
 
     if (isELF())
       assert(WasAlloc == Section->isAllocatable() &&
@@ -2284,6 +2311,16 @@ bool BinaryContext::deregisterSection(BinarySection &Section) {
 
 void BinaryContext::renameSection(BinarySection &Section,
                                   const Twine &NewName) {
+DEBUG_WITH_TYPE("bolt-flags", {
+  unsigned F = Section.getELFFlags();
+  dbgs() << "[flags] renameSection " << Section.getName()
+         << " -> " << NewName << "\n"
+         << "        before Flags=0x" << llvm::format_hex(F, 8)
+         << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes":"no")
+         << ", EXEC="  << ((F & ELF::SHF_EXECINSTR) ? "yes":"no")
+         << ", EXCL="  << ((F & ELF::SHF_EXCLUDE) ? "yes":"no")
+         << ")\n";
+});
   auto Itr = Sections.find(&Section);
   assert(Itr != Sections.end() && "Section must exist to be renamed.");
   Sections.erase(Itr);
@@ -2297,6 +2334,16 @@ void BinaryContext::renameSection(BinarySection &Section,
 
   // Reinsert with the new name.
   Sections.insert(&Section);
+
+DEBUG_WITH_TYPE("bolt-flags", {
+  unsigned F2 = Section.getELFFlags();
+  dbgs() << "[flags] renameSection done for " << NewName << "\n"
+         << "        after Flags=0x" << llvm::format_hex(F2, 8)
+         << " (ALLOC=" << ((F2 & ELF::SHF_ALLOC) ? "yes":"no")
+         << ", EXEC="  << ((F2 & ELF::SHF_EXECINSTR) ? "yes":"no")
+         << ", EXCL="  << ((F2 & ELF::SHF_EXCLUDE) ? "yes":"no")
+         << ")\n";
+});
 }
 
 void BinaryContext::printSections(raw_ostream &OS) const {

@@ -4384,6 +4384,10 @@ void RewriteInstance::mapCodeSectionsInPlace(
     const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/true,
                                                    /*IsText=*/true,
                                                    /*IsAllocatable=*/true);
+  StringRef NewName = getBOLTTextSectionName();
+  LLVM_DEBUG(dbgs() << "[reg] creating section name=" << NewName
+                    << " flags=" << llvm::format_hex(Flags, 8) << "\n");
+
     BinarySection &Section =
       BC->registerOrUpdateSection(getBOLTTextSectionName(),
                                   ELF::SHT_PROGBITS,
