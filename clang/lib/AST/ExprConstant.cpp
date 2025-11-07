@@ -17078,7 +17078,24 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for integral value");
 
-  case CK_BitCast:
+  case CK_BitCast:{
+  APValue Sub;
+  if (!Evaluate(Sub, Info, E->getSubExpr()))
+    return false;
+
+  QualType SrcTy = E->getSubExpr()->getType();
+  QualType DstTy = E->getType();
+
+  // Allow reinterpretation if bit widths match
+  if (Info.Ctx.getTypeSize(SrcTy) == Info.Ctx.getTypeSize(DstTy)) {
+    // Use APValue::BitCast if available, else just copy value bits
+    Result = Sub;
+    return true;
+  }
+
+  return Error(E);
+}
+
   case CK_Dependent:
   case CK_LValueBitCast:
   case CK_ARCProduceObject:
