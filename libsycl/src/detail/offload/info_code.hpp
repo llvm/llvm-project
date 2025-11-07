@@ -6,31 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <sycl/__impl/platform.hpp>
-
-#include <detail/platform_impl.hpp>
-
-#include <stdexcept>
+#ifndef _LIBSYCL_INFO_CODE
+#define _LIBSYCL_INFO_CODE
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-backend platform::get_backend() const noexcept { return impl.getBackend(); }
+#include <OffloadAPI.h>
 
-std::vector<platform> platform::get_platforms() {
-  return detail::platform_impl::getPlatforms();
-}
-
-template <typename Param>
-typename detail::is_platform_info_desc<Param>::return_type
-platform::get_info_impl() const {
-  return impl.template get_info<Param>();
-}
+namespace detail {
+template <typename T> struct OffloadInfoCode;
 
 #define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT, OffloadCode)         \
-  template _LIBSYCL_EXPORT ReturnT                                             \
-  platform::get_info_impl<info::platform::Desc>() const;
-
+  template <> struct OffloadInfoCode<info::DescType::Desc> {                   \
+    static constexpr auto value = OffloadCode;                                 \
+  };
 #include <sycl/__impl/info/platform.def>
 #undef __SYCL_PARAM_TRAITS_SPEC
 
+} // namespace detail
+
 _LIBSYCL_END_NAMESPACE_SYCL
+
+#endif // _LIBSYCL_INFO_CODE
