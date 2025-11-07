@@ -6,6 +6,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=GCN,GFX7 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,GFX89 %s
 
+; Ideally, we would also like to test GlobalISel with gfx11 but we are currently blocked on llvm-project#166501.
+
 declare void @external_void_func_void() #0
 
 declare i1 @external_i1_func_void() #0
