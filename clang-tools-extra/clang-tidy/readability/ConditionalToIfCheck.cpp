@@ -67,18 +67,18 @@ void ConditionalToIfCheck::check(const MatchFinder::MatchResult &Result) {
                                              SM, Result.Context->getLangOpts())
                             .str();
 
-  std::string TrueStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
+  const std::string TrueStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
                                                  TrueExpr->getSourceRange()),
                                              SM, Result.Context->getLangOpts())
                             .str();
 
-  std::string FalseStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
+  const std::string FalseStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
                                                   FalseExpr->getSourceRange()),
                                               SM, Result.Context->getLangOpts())
                              .str();
 
   // Construct the replacement code
-  std::string Replacement =
+  const std::string Replacement =
       "{ if (" + CondStr + ") " + TrueStr + "; else " + FalseStr + "; }";
 
   Diag << FixItHint::CreateReplacement(Ternary->getSourceRange(), Replacement);
