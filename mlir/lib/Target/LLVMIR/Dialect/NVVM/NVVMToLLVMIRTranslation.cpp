@@ -291,10 +291,8 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
   llvm_unreachable("Unsupported proxy kinds");
 }
 
-static unsigned getBarrier0IntrinsicID(std::optional<NVVM::Barrier0Pred> pred) {
-  if (!pred)
-    return llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
-  switch (*pred) {
+static unsigned getBarrier0IntrinsicID(NVVM::Barrier0Pred pred) {
+  switch (pred) {
   case NVVM::Barrier0Pred::AND:
     return llvm::Intrinsic::nvvm_barrier0_and;
   case NVVM::Barrier0Pred::OR:
