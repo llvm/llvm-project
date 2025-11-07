@@ -57,7 +57,6 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
                                      const UniformityInfo &UI,
                                      ValueMap<const Value *, bool> &Tracker) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
-
   switch (IID) {
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readlane: {
@@ -106,7 +105,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
     return Changed;
   }
   default:
-    llvm_unreachable("Unexpected intrinsic ID in optimizeUniformIntrinsic");
+    return false;
   }
   return false;
 }
@@ -120,15 +119,6 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
     auto *II = dyn_cast<IntrinsicInst>(&I);
     if (!II)
       continue;
-
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::amdgcn_permlane64:
-    case Intrinsic::amdgcn_readlane:
-    case Intrinsic::amdgcn_ballot:
-      break;
-    default:
-      continue;
-    }
     IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
   }
   return IsChanged;
