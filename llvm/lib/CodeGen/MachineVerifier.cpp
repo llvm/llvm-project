@@ -2589,7 +2589,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     if (!MO->isReg())
       report("Early clobber must be a register", MO, MONum);
     if (!MO->isEarlyClobber())
-      report("Missing earlyClobber flag", MO, MONum);
+      report("Missing earlyClobber flag", MI);
   }
 
   switch (MO->getType()) {
