@@ -6064,31 +6064,31 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
+      auto *LoadR = dyn_cast<VPWidenLoadRecipe>(&R);
       // TODO: Support strided store.
       // TODO: Transform reverse access into strided access with -1 stride.
       // TODO: Transform gather/scatter with uniform address into strided access
       // with 0 stride.
       // TODO: Transform interleave access into multiple strided accesses.
-      if (!MemR || !isa<VPWidenLoadRecipe>(MemR) || MemR->isConsecutive())
+      if (!LoadR || LoadR->isConsecutive())
         continue;
 
-      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(MemR->getAddr());
+      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(LoadR->getAddr());
       if (!Ptr)
         continue;
 
-      Instruction &Ingredient = MemR->getIngredient();
+      Instruction &Ingredient = LoadR->getIngredient();
       auto IsProfitable = [&](ElementCount VF) -> bool {
         Type *DataTy = toVectorTy(getLoadStoreType(&Ingredient), VF);
         const Align Alignment = getLoadStoreAlignment(&Ingredient);
         if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
           return false;
-        const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
+        const InstructionCost CurrentCost = LoadR->computeCost(VF, Ctx);
         const InstructionCost StridedLoadStoreCost =
             Ctx.TTI.getMemIntrinsicInstrCost(
                 MemIntrinsicCostAttributes(
                     Intrinsic::experimental_vp_strided_load, DataTy,
-                    Ptr->getUnderlyingValue(), MemR->isMasked(), Alignment,
+                    Ptr->getUnderlyingValue(), LoadR->isMasked(), Alignment,
                     &Ingredient),
                 Ctx.CostKind);
         return StridedLoadStoreCost < CurrentCost;
@@ -6119,7 +6119,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       auto *NewPtr = new VPVectorPointerRecipe(
           BasePtr, ElementTy, StrideInElement, Ptr->getGEPNoWrapFlags(),
           Ptr->getDebugLoc());
-      NewPtr->insertBefore(MemR);
+      NewPtr->insertBefore(LoadR);
 
       const DataLayout &DL = Ingredient.getDataLayout();
       TypeSize TS = DL.getTypeAllocSize(ElementTy);
@@ -6132,11 +6132,10 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
         auto *ScaledStride =
             new VPInstruction(Instruction::Mul, {StrideInElement, ScaleVPV},
                               VPRecipeWithIRFlags::WrapFlagsTy{false, false});
-        ScaledStride->insertBefore(MemR);
+        ScaledStride->insertBefore(LoadR);
         StrideInBytes = ScaledStride;
       }
 
-      auto *LoadR = cast<VPWidenLoadRecipe>(MemR);
       auto *StridedLoad = new VPWidenStridedLoadRecipe(
           *cast<LoadInst>(&Ingredient), NewPtr, StrideInBytes, &Plan.getVF(),
           LoadR->getMask(), *LoadR, LoadR->getDebugLoc());
