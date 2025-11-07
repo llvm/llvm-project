@@ -640,7 +640,8 @@ public:
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx,
-                          ELF::R_AARCH64_ADD_ABS_LO12_NC);
+                          isLDRXl(LDRInst) ? ELF::R_AARCH64_LDST64_ABS_LO12_NC
+                                           : ELF::R_AARCH64_LDST32_ABS_LO12_NC);
     return Insts;
   }
 
@@ -2804,7 +2805,7 @@ public:
     BitVector WrittenRegs(RegInfo->getNumRegs());
     const BitVector &SizeRegAliases = getAliases(SizeReg);
 
-    for (auto InstIt = BB.begin(); InstIt != CallInst; ++InstIt) {
+    for (auto InstIt = CallInst; InstIt != BB.begin(); --InstIt) {
       const MCInst &Inst = *InstIt;
       WrittenRegs.reset();
       getWrittenRegs(Inst, WrittenRegs);

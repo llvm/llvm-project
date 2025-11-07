@@ -27,6 +27,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   EmptyCatchCheck.cpp
   ExceptionCopyConstructorThrowsCheck.cpp
   ExceptionEscapeCheck.cpp
+  FloatLoopCounterCheck.cpp
   FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp
   ForwardingReferenceOverloadCheck.cpp
@@ -76,6 +77,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   SmartPtrArrayMismatchCheck.cpp
   SpuriouslyWakeUpFunctionsCheck.cpp
   StandaloneEmptyCheck.cpp
+  StdNamespaceModificationCheck.cpp
   StringConstructorCheck.cpp
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp

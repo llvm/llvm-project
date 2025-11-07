@@ -90,7 +90,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
-  initializeX86AvoidTrailingCallPassPass(PR);
+  initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
   initializeX86FlagsCopyLoweringPassPass(PR);
@@ -589,7 +589,7 @@ void X86PassConfig::addPreEmitPass2() {
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
   if (TT.isOSWindows() && TT.isX86_64())
-    addPass(createX86AvoidTrailingCallPass());
+    addPass(createX86AvoidTrailingCallLegacyPass());
 
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
