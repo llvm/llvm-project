@@ -1173,12 +1173,13 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         StateInfo->TransferredFromPtrs.contains(HstPtrBegin);
     bool IsMapFromOnNonHostNonZeroData =
         HasFrom && !TPR.Flags.IsHostPointer && DataSize != 0;
-    bool IsLastOrHasAlwaysOrWasForceDeleted =
-        TPR.Flags.IsLast || HasAlways || WasPreviouslyMarkedForDeletion();
+    auto IsLastOrHasAlwaysOrWasForceDeleted = [&]() {
+      return TPR.Flags.IsLast || HasAlways || WasPreviouslyMarkedForDeletion();
+    };
 
     if (!FromCopyBackAlreadyDone &&
         ((IsMapFromOnNonHostNonZeroData &&
-          IsLastOrHasAlwaysOrWasForceDeleted) ||
+          IsLastOrHasAlwaysOrWasForceDeleted()) ||
          // Even if we're not looking at an entry with FROM map-type, if there
          // were any previously deferred FROM transfers for this pointer, we
          // should do them when the ref-count goes down to zero.
@@ -1221,7 +1222,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
           return OFFLOAD_FAIL;
       }
     } else if (!FromCopyBackAlreadyDone && IsMapFromOnNonHostNonZeroData &&
-               !IsLastOrHasAlwaysOrWasForceDeleted && !IsMemberOf) {
+               !IsLastOrHasAlwaysOrWasForceDeleted() && !IsMemberOf) {
       // We can have cases like the following:
       //  ... map(storage: p1[0:1]) map(from: p1[0:1])
       //
