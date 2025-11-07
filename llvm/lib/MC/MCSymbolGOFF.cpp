@@ -32,16 +32,15 @@ void MCSymbolGOFF::initAttributes() {
   if (isDefined()) {
     MCSectionGOFF &Section = static_cast<MCSectionGOFF &>(getSection());
     if (Section.isED()) {
-      setLDAttributes(GOFF::LDAttr{false, CodeData, BindingStrength,
-                                   GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_64,
-                                   BindingScope});
+      setLDAttributes(GOFF::LDAttr{false, CodeData, BindingStrength, Linkage,
+                                   GOFF::ESD_AMODE_64, BindingScope});
     } else if (Section.isPR()) {
       // For data symbols, the attributes are already determind in TLOFI.
       // TODO Does it make sense to it to here?
     } else
       llvm_unreachable("Unexpected section type for label");
   } else {
-    setERAttributes(GOFF::ERAttr{CodeData, BindingStrength, GOFF::ESD_LT_XPLink,
+    setERAttributes(GOFF::ERAttr{CodeData, BindingStrength, Linkage,
                                  GOFF::ESD_AMODE_64, BindingScope});
   }
 }

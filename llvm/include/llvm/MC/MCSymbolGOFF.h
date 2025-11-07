@@ -34,6 +34,7 @@ class MCSymbolGOFF : public MCSymbol {
   GOFF::ERAttr ERAttributes;
 
   GOFF::ESDExecutable CodeData = GOFF::ESDExecutable::ESD_EXE_Unspecified;
+  GOFF::ESDLinkageType Linkage = GOFF::ESDLinkageType::ESD_LT_XPLink;
 
   enum SymbolFlags : uint16_t {
     SF_LD = 0x01,     // LD attributes are set.
@@ -85,6 +86,9 @@ public:
 
   void setCodeData(GOFF::ESDExecutable Value) { CodeData = Value; }
   GOFF::ESDExecutable getCodeData() const { return CodeData; }
+
+  void setLinkage(GOFF::ESDLinkageType Value) { Linkage = Value; }
+  GOFF::ESDLinkageType getLinkage() const { return Linkage; }
 
   void initAttributes();
 };

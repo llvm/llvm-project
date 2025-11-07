@@ -1615,7 +1615,7 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   const char *StartSymbolName = "CELQSTRT";
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Code);
-  // TODO Mark as OS linkage.
+  OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_OSLinkage);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Global);
 
   // Create symbol and assign to class field for use in PPA1.
