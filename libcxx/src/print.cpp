@@ -20,11 +20,16 @@
 #  define NOMINMAX
 #  include <io.h>
 #  include <windows.h>
-#elif __has_include(<unistd.h>) && __has_include(<stdio.h>) && \
-      defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 1
-#  include <stdio.h>
+#elif __has_include(<unistd.h>)
 #  include <unistd.h>
-#  define HAS_FILENO_AND_ISATTY
+#  if defined(_NEWLIB_VERSION)
+#    if defined(__POSIX_VISIBLE) && __POSIX_VISIBLE && __has_include(<stdio.h>)
+#      include <stdio.h>
+#      define HAS_FILENO_AND_ISATTY
+#    endif
+#  else
+#    define HAS_FILENO_AND_ISATTY
+#  endif
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
