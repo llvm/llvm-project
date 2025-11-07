@@ -39,6 +39,32 @@ void KernelPropertiesTy::cacheGroupParams(const int32_t NumTeamsIn,
   GroupCounts = KEnv.GroupCounts;
 }
 
+Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
+  const auto &l0Device = L0DeviceTy::makeL0Device(Program.getDevice());
+  auto &KernelPR = getProperties();
+  ze_kernel_properties_t KP = {};
+  KP.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
+  KP.pNext = nullptr;
+  ze_kernel_preferred_group_size_properties_t KPrefGRPSize = {};
+  KPrefGRPSize.stype = ZE_STRUCTURE_TYPE_KERNEL_PREFERRED_GROUP_SIZE_PROPERTIES;
+  KPrefGRPSize.pNext = nullptr;
+  if (l0Device.getDriverAPIVersion() >= ZE_API_VERSION_1_2)
+    KP.pNext = &KPrefGRPSize;
+
+  CALL_ZE_RET_ERROR(zeKernelGetProperties, zeKernel, &KP);
+  KernelPR.SIMDWidth = KP.maxSubgroupSize;
+  KernelPR.Width = KP.maxSubgroupSize;
+
+  if (KP.pNext)
+    KernelPR.Width = KPrefGRPSize.preferredMultiple;
+
+  if (!l0Device.isDeviceArch(DeviceArchTy::DeviceArch_Gen)) {
+    KernelPR.Width = (std::max)(KernelPR.Width, 2 * KernelPR.SIMDWidth);
+  }
+  KernelPR.MaxThreadGroupSize = KP.maxSubgroupSize * KP.maxNumSubgroups;
+  return Plugin::success();
+}
+
 Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   const auto *KernelName = getName();
 
@@ -46,6 +72,9 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   ze_kernel_desc_t KernelDesc = {ZE_STRUCTURE_TYPE_KERNEL_DESC, nullptr, 0,
                                  KernelName};
   CALL_ZE_RET_ERROR(zeKernelCreate, Module, &KernelDesc, &zeKernel);
+  if (auto Err = readKernelProperties(Program))
+    return Err;
+
   return Plugin::success();
 }
 
@@ -314,7 +343,23 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
 }
 
 Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
-                                  int32_t NumTeams, int32_t ThreadLimit) const {
+                                  uint32_t NumThreads[3], uint32_t NumBlocks[3]) const {
+
+  if (KernelEnvironment.Configuration.ExecMode != OMP_TGT_EXEC_MODE_BARE) {
+    // For non-bare mode, the groups are already set in the launch
+    KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
+    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), NumThreads[0],
+                      NumThreads[1], NumThreads[2]);
+    return Plugin::success();
+  }
+
+  int32_t NumTeams = NumThreads[0];
+  int32_t ThreadLimit = NumBlocks[0];
+  if (NumTeams < 0)
+    NumTeams = 0;
+  if (ThreadLimit < 0)
+    ThreadLimit = 0;
+
   uint32_t GroupSizes[3];
   auto DeviceId = l0Device.getDeviceId();
   auto &KernelPR = KEnv.KernelPR;
@@ -374,12 +419,6 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   auto zeKernel = getZeKernel();
   auto DeviceId = l0Device.getDeviceId();
   int32_t NumArgs = KernelArgs.NumArgs;
-  int32_t NumTeams = NumThreads[0];
-  int32_t ThreadLimit = NumBlocks[0];
-  if (NumTeams < 0)
-    NumTeams = 0;
-  if (ThreadLimit < 0)
-    ThreadLimit = 0;
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId, "Launching kernel " DPxMOD "...\n",
        DPxPTR(zeKernel));
 
@@ -404,7 +443,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // Protect from kernel preparation to submission as kernels are shared.
   KernelPR.Mtx.lock();
 
-  if (auto Err = setKernelGroups(l0Device, KEnv, NumTeams, ThreadLimit))
+  if (auto Err = setKernelGroups(l0Device, KEnv, NumThreads, NumBlocks))
     return Err;
 
   // Set kernel arguments

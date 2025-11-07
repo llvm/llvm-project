@@ -82,7 +82,7 @@ struct KernelPropertiesTy {
 struct L0LaunchEnvTy {
   bool IsAsync;
   AsyncQueueTy *AsyncQueue;
-  ze_group_count_t GroupCounts;
+  ze_group_count_t GroupCounts={0, 0, 0};
   KernelPropertiesTy &KernelPR;
   bool HalfNumThreads = false;
   bool IsTeamsNDRange = false;
@@ -104,9 +104,10 @@ class L0KernelTy : public GenericKernelTy {
                                   L0LaunchEnvTy &KEnv) const;
 
   Error buildKernel(L0ProgramTy &Program);
+  Error readKernelProperties(L0ProgramTy &Program);
 
   Error setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
-                        int32_t NumTeams, int32_t ThreadLimit) const;
+                        uint32_t NumThreads[3], uint32_t NumBlocks[3]) const;
   Error setIndirectFlags(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv) const;
 
 public:
