@@ -11,6 +11,22 @@
 
 include "mlir/Pass/PassBase.td"
 
+def ACCInitializeFIRAnalyses
+    : Pass<"acc-initialize-fir-analyses", "mlir::ModuleOp"> {
+  let summary = "Initialize FIR analyses for OpenACC passes";
+  let description = [{
+    This pass initializes analyses that can be used by subsequent OpenACC passes
+    in the pipeline. It creates and caches the OpenACCSupport analysis with a
+    FIR-specific implementation that can handle FIR types and operations.
+    It also initializes FIR's AliasAnalysis for use in OpenACC passes.
+    This pass needs to rerun if any analyses were invalidated by MLIR's framework.
+  }];
+  // In addition to pre-registering the needed analyses, this pass also
+  // pre-registers the dialects that various OpenACC passes may generate.
+  let dependentDialects = ["fir::FIROpsDialect", "hlfir::hlfirDialect",
+      "mlir::acc::OpenACCDialect"];
+}
+
 def ACCRecipeBufferization
     : Pass<"fir-acc-recipe-bufferization", "mlir::ModuleOp"> {
   let summary = "Rewrite acc.*.recipe box values to ref<box> and update uses";

@@ -207,6 +207,9 @@ def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
   "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
 def err_drv_argument_not_allowed_with : Error<
   "invalid argument '%0' not allowed with '%1'">;
+def warn_drv_argument_not_allowed_with : Warning<
+  "invalid argument '%0' not allowed with '%1'">,
+  InGroup<OptionIgnored>;
 def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
@@ -312,6 +315,8 @@ def warn_drv_yc_multiple_inputs_clang_cl : Warning<
 def warn_drv_potentially_misspelled_joined_argument : Warning<
   "joined argument treated as '%0'; did you mean '%1'?">, InGroup<UnknownArgument>;
 
+def err_drv_too_many_actions: Error<
+    "only one action option is allowed. Got %0">;
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
 def err_drv_invalid_value_with_suggestion : Error<

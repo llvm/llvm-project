@@ -2277,3 +2277,181 @@ body:             |
     S_ENDPGM 0
 
 ...
+
+---
+name:            s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000
+body:             |
+  ; GCN-LABEL: name: s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
+  ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
+  ; GCN-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B64_]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B64_]].sub1
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    %0:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %0
+    S_CMP_LG_U32 %2, 0, implicit-def $scc
+    %31:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
+    %40:sreg_32_xm0_xexec = COPY %31.sub0:sreg_64_xexec
+    %41:sreg_32_xm0_xexec = COPY %31.sub1:sreg_64_xexec
+    %sgpr4:sreg_32 = S_OR_B32 %40:sreg_32_xm0_xexec, %41:sreg_32_xm0_xexec, implicit-def $scc
+    S_CMP_LG_U32 %sgpr4, 0, implicit-def $scc
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+# Do not delete s_or_b32 because of intervening def of scc
+name:            s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000_cant_optimize_intervening
+body:             |
+  ; GCN-LABEL: name: s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000_cant_optimize_intervening
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
+  ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
+  ; GCN-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
+  ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B64_]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B64_]].sub1
+  ; GCN-NEXT:   %sgpr4:sreg_32 = S_OR_B32 [[COPY1]], [[COPY2]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    %0:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %0
+    S_CMP_LG_U32 %2, 0, implicit-def $scc
+    %31:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
+    S_CMP_LG_U32 %2, 0, implicit-def $scc
+    %40:sreg_32_xm0_xexec = COPY %31.sub0:sreg_64_xexec
+    %41:sreg_32_xm0_xexec = COPY %31.sub1:sreg_64_xexec
+    %sgpr4:sreg_32 = S_OR_B32 %40:sreg_32_xm0_xexec, %41:sreg_32_xm0_xexec, implicit-def $scc
+    S_CMP_LG_U32 %sgpr4, 0, implicit-def $scc
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+
+---
+# Do not delete s_or_b32 since both operands are sub1.
+name:            s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000_cant_optimize
+body:             |
+  ; GCN-LABEL: name: s_cselect_b64_s_or_b32_s_cmp_lg_u32_0x00000000_cant_optimize
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
+  ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
+  ; GCN-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 1, 0, implicit $scc
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B64_]].sub1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B64_]].sub1
+  ; GCN-NEXT:   %sgpr4:sreg_32 = S_OR_B32 [[COPY1]], [[COPY2]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    %0:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %0
+    S_CMP_LG_U32 %2, 0, implicit-def $scc
+    %31:sreg_64_xexec = S_CSELECT_B64 1, 0, implicit $scc
+    %40:sreg_32_xm0_xexec = COPY %31.sub1:sreg_64_xexec
+    %41:sreg_32 = COPY %31.sub1:sreg_64_xexec
+    %sgpr4:sreg_32 = S_OR_B32 %40:sreg_32_xm0_xexec, %41:sreg_32, implicit-def $scc
+    S_CMP_LG_U32 %sgpr4, 0, implicit-def $scc
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+
+---
+name:            s_cselect_b64_undef_s_or_b32_s_cmp_lg_u32_0x00000000
+body:             |
+  ; GCN-LABEL: name: s_cselect_b64_undef_s_or_b32_s_cmp_lg_u32_0x00000000
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]]
+  ; GCN-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
+  ; GCN-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
+  ; GCN-NEXT:   %sgpr4:sreg_32 = S_OR_B32 undef %4:sreg_32_xm0_xexec, undef %5:sreg_32_xm0_xexec, implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    %0:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %0
+    S_CMP_LG_U32 %2, 0, implicit-def $scc
+    %31:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
+    %sgpr4:sreg_32 = S_OR_B32 undef %40:sreg_32_xm0_xexec, undef %41:sreg_32_xm0_xexec, implicit-def $scc
+    S_CMP_LG_U32 %sgpr4, 0, implicit-def $scc
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+  bb.2:
+    S_ENDPGM 0
+
+...

@@ -29,13 +29,13 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
                                                    ASTContext *Context) {
   SmallVector<const Stmt *, 1> Result;
 
-  TraversalKindScope RAII(*Context, TK_AsIs);
+  const TraversalKindScope RAII(*Context, TK_AsIs);
   DynTypedNodeList Parents = Context->getParents(*S);
 
   SmallVector<DynTypedNode, 1> NodesToProcess(Parents.begin(), Parents.end());
 
   while (!NodesToProcess.empty()) {
-    DynTypedNode Node = NodesToProcess.back();
+    const DynTypedNode Node = NodesToProcess.back();
     NodesToProcess.pop_back();
 
     if (const auto *S = Node.get<Stmt>()) {
@@ -95,7 +95,8 @@ bool ExprSequence::inSequence(const Stmt *Before, const Stmt *After) const {
       return true;
   }
 
-  SmallVector<const Stmt *, 1> BeforeParents = getParentStmts(Before, Context);
+  const SmallVector<const Stmt *, 1> BeforeParents =
+      getParentStmts(Before, Context);
 
   // Since C++17, the callee of a call expression is guaranteed to be sequenced
   // before all of the arguments.

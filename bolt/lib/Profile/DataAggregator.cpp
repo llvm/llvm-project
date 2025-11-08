@@ -159,8 +159,6 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
 }
 }
 
-constexpr uint64_t DataAggregator::KernelBaseAddr;
-
 DataAggregator::~DataAggregator() { deleteTempFiles(); }
 
 namespace {

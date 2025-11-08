@@ -681,6 +681,10 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
         return false;
       MI->setDesc(TII->get(NewMFMAOpc));
       MI->untieRegOperand(0);
+      const MCInstrDesc &MCID = MI->getDesc();
+      for (unsigned I = 0; I < MI->getNumDefs(); ++I)
+        if (MCID.getOperandConstraint(I, MCOI::EARLY_CLOBBER) != -1)
+          MI->getOperand(I).setIsEarlyClobber(true);
     }
 
     // TODO: Should we try to avoid adding this to the candidate list?

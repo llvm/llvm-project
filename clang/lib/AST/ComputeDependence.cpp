@@ -178,7 +178,7 @@ ExprDependence clang::computeDependence(StmtExpr *E, unsigned TemplateDepth) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
   // Propagate dependence of the result.
   if (const auto *CompoundExprResult =
-          dyn_cast_or_null<ValueStmt>(E->getSubStmt()->getStmtExprResult()))
+          dyn_cast_or_null<ValueStmt>(E->getSubStmt()->body_back()))
     if (const Expr *ResultExpr = CompoundExprResult->getExprStmt())
       D |= ResultExpr->getDependence();
   // Note: we treat a statement-expression in a dependent context as always

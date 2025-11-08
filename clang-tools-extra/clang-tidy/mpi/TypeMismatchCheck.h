@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPE_MISMATCH_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPE_MISMATCH_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPEMISMATCHCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPEMISMATCHCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -49,4 +49,4 @@ private:
 
 } // namespace clang::tidy::mpi
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPE_MISMATCH_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPEMISMATCHCHECK_H

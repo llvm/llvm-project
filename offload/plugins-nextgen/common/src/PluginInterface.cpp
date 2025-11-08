@@ -762,13 +762,15 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     return StackSizeEnvarOrErr.takeError();
   OMPX_TargetStackSize = std::move(*StackSizeEnvarOrErr);
 
-  auto HeapSizeEnvarOrErr = UInt64Envar::create(
-      "LIBOMPTARGET_HEAP_SIZE",
-      [this](uint64_t &V) -> Error { return getDeviceHeapSize(V); },
-      [this](uint64_t V) -> Error { return setDeviceHeapSize(V); });
-  if (!HeapSizeEnvarOrErr)
-    return HeapSizeEnvarOrErr.takeError();
-  OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
+  if (hasDeviceHeapSize()) {
+    auto HeapSizeEnvarOrErr = UInt64Envar::create(
+        "LIBOMPTARGET_HEAP_SIZE",
+        [this](uint64_t &V) -> Error { return getDeviceHeapSize(V); },
+        [this](uint64_t V) -> Error { return setDeviceHeapSize(V); });
+    if (!HeapSizeEnvarOrErr)
+      return HeapSizeEnvarOrErr.takeError();
+    OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
+  }
 
   // Update the maximum number of teams and threads after the device
   // initialization sets the corresponding hardware limit.
