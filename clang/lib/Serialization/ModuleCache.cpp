@@ -118,9 +118,6 @@ public:
 
   std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) override {
-    // This is a compiler-internal input/output, let's bypass the sandbox.
-    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-
     return std::make_unique<llvm::LockFileManager>(ModuleFilename);
   }
 
