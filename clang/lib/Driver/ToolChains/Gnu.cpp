@@ -1750,11 +1750,11 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
   for (auto Element : RISCVMultilibSet) {
     addMultilibFlag(MArch == Element.march,
-                    Twine("-march=", Element.march).str().c_str(), Flags);
+                    Twine("-march=", Element.march).str(), Flags);
     if (!Added_ABIs.count(Element.mabi)) {
       Added_ABIs.insert(Element.mabi);
       addMultilibFlag(ABIName == Element.mabi,
-                      Twine("-mabi=", Element.mabi).str().c_str(), Flags);
+                      Twine("-mabi=", Element.mabi).str(), Flags);
     }
   }
 

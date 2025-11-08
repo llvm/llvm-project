@@ -158,7 +158,7 @@ public:
 
   StringSwitch &EndsWithLower(StringLiteral S, T Value) {
     if (!Result && Str.ends_with_insensitive(S))
-      Result = Value;
+      Result = std::move(Value);
 
     return *this;
   }
