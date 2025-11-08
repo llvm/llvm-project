@@ -10981,7 +10981,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     unsigned ShiftSum =
         Sum.uge(OpSizeInBits) ? (OpSizeInBits - 1) : Sum.getZExtValue();
     SDValue NewShift = DAG.getNode(
-        ISD::SRA, DL, VT, X, DAG.getConstant(ShiftSum, DL, N1.getValueType()));
+        ISD::SRA, DL, VT, X, DAG.getShiftAmountConstant(ShiftSum, VT, DL));
     return DAG.getNOT(DL, NewShift, VT);
   }
 
