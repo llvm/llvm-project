@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-NumericLimitMaxCheck %t
 
-// Defines a typedef, which the check should respect and use in its fix.
+
 typedef unsigned long long my_uint_t;
 
 void test_arg(unsigned int);

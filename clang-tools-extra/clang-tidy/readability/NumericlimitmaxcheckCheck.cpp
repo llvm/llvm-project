@@ -38,8 +38,6 @@ void NumericlimitmaxcheckCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
- // ... inside registerMatchers() ...
-
   auto NegOneLiteral = integerLiteral(equals(-1));
   auto ZeroLiteral = integerLiteral(equals(0));
   
@@ -73,21 +71,16 @@ void NumericlimitmaxcheckCheck::registerMatchers(MatchFinder *Finder) {
   auto UnsignedLiteralNegOne =
       integerLiteral(equals(-1), hasType(isUnsignedInteger()));
 
-  // *** ADD THIS NEW MATCHER ***
-  // Matches -1 or ~0 when they are a branch of a ternary operator
-  // that is itself being implicitly cast to unsigned.
+  // To handle ternary branch case
   auto TernaryBranch =
       expr(anyOf(NegOneExpr, BitNotZero),
-           hasAncestor( // <-- Use hasAncestor to look up the tree
-               conditionalOperator(
-                   // Check that the conditional operator itself has an ancestor
-                   // which is the implicit cast to unsigned
-                   hasAncestor(implicitCastExpr(hasType(isUnsignedInteger()))
+           hasAncestor(conditionalOperator(
+            hasAncestor(implicitCastExpr(hasType(isUnsignedInteger()
+          ))
                                    .bind("outerCast")))))
           .bind("unsignedMaxExpr");
 
-  // *** MODIFY THIS PART ***
-  auto OldCombined =
+  auto Combined =
       expr(anyOf(
           ExplicitCastOfNegOrBitnot,
           ImplicitNegOneToUnsigned,
@@ -95,26 +88,26 @@ void NumericlimitmaxcheckCheck::registerMatchers(MatchFinder *Finder) {
           UnsignedLiteralNegOne
       )).bind("unsignedMaxExpr");
 
-  Finder->addMatcher(OldCombined, this);
-  Finder->addMatcher(TernaryBranch, this); // Add the new matcher
+  Finder->addMatcher(Combined, this);
+  Finder->addMatcher(TernaryBranch, this);
 }
 
 
 void NumericlimitmaxcheckCheck::check(const MatchFinder::MatchResult &Result) {
-const auto *E = Result.Nodes.getNodeAs<Expr>("unsignedMaxExpr");
-  const auto *OuterCast = Result.Nodes.getNodeAs<CastExpr>("outerCast"); // Get the cast
+  const auto *E = Result.Nodes.getNodeAs<Expr>("unsignedMaxExpr");
+  const auto *OuterCast = Result.Nodes.getNodeAs<CastExpr>("outerCast"); 
 
   if (!E)
     return;
 
-  ASTContext &Ctx = *Result.Context; // Get context *before* first use
+  ASTContext &Ctx = *Result.Context; // Get context before first use
 
   QualType QT;
   if (OuterCast) {
-    // This is our new ternary matcher. Get type from the *cast*.
+    // This is ternary matcher. Get type from the cast.
     QT = OuterCast->getType();
   } else {
-    // This is the old logic. Get type from the bound expression.
+    // Get type from the bound expression.
     QT = E->getType();
   }
 
@@ -123,19 +116,14 @@ const auto *E = Result.Nodes.getNodeAs<Expr>("unsignedMaxExpr");
 
   const SourceManager &SM = Ctx.getSourceManager();
 
-  // *** ADD THIS LOGIC BLOCK ***
-  // This logic prevents double-reporting for the *old* matchers.
-  // We skip it for the new ternary matcher (when OuterCast is not null)
-  // because the ternary matcher binds the *inner* expression, and we
-  // *do* want to report it.
   if (!OuterCast) {
-    auto Parents = Ctx.getParents(*E); // This fixes the [-Wunused] warning
+    auto Parents = Ctx.getParents(*E);
     if (!Parents.empty()) {
       for (const auto &Parent : Parents) {
         // Check if parent is an explicit cast to unsigned
         if (const auto *ParentCast = Parent.get<ExplicitCastExpr>()) {
           if (ParentCast->getType()->isUnsignedIntegerType()) {
-            // Skip this match - the cast itself will be (or was) reported
+            // Skip this match, avoids double reporting
             return;
           }
         }
@@ -153,14 +141,10 @@ const auto *E = Result.Nodes.getNodeAs<Expr>("unsignedMaxExpr");
       }
     }
   }
-  // ... (rest of parent checking logic) ...
-  // ...
-  // Determine the unsigned destination type
-  // QualType QT = E->getType(); // This line is moved up and modified
+
   if (QT.isNull() || !QT->isUnsignedIntegerType())
     return;
 
-  // Get a printable type string
   std::string TypeStr = QT.getUnqualifiedType().getAsString();
   if (const auto *Typedef = QT->getAs<TypedefType>()) {
     TypeStr = Typedef->getDecl()->getName().str();
@@ -171,18 +155,18 @@ const auto *E = Result.Nodes.getNodeAs<Expr>("unsignedMaxExpr");
       Lexer::getSourceText(CharSourceRange::getTokenRange(E->getSourceRange()), 
                           SM, getLangOpts());
 
-  // Build replacement text
+  // Suggestion to the user regarding the usage of unsigned ~0 or -1
   std::string Replacement = "std::numeric_limits<" + TypeStr + ">::max()";
 
-  // Create diagnostic
+  //gives warning message if unsigned ~0 or -1 are used instead of numeric_limit::max() 
   auto Diag = diag(E->getBeginLoc(),
                    "use 'std::numeric_limits<%0>::max()' instead of '%1'")
               << TypeStr << OriginalText;
 
-  // Add fix-it hints
+  //suggest hint for fixing it
   Diag << FixItHint::CreateReplacement(E->getSourceRange(), Replacement);
 
-  // Add include for <limits>
+  //includes the <limits> which contains the numeric_limits::max() 
   FileID FID = SM.getFileID(E->getBeginLoc());
   if (auto IncludeHint = Inserter.createIncludeInsertion(FID, "<limits>")) {
     Diag << *IncludeHint;
