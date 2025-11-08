@@ -60,10 +60,43 @@ private:
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
 
+  /// A jump destination is an abstract label, branching to which may
+  /// require a jump out through normal cleanups.
+  struct JumpDest {
+    JumpDest() = default;
+    JumpDest(mlir::Block *block, EHScopeStack::stable_iterator depth = {},
+             unsigned index = 0)
+        : block(block) {}
+
+    bool isValid() const { return block != nullptr; }
+    mlir::Block *getBlock() const { return block; }
+    EHScopeStack::stable_iterator getScopeDepth() const { return scopeDepth; }
+    unsigned getDestIndex() const { return index; }
+
+    // This should be used cautiously.
+    void setScopeDepth(EHScopeStack::stable_iterator depth) {
+      scopeDepth = depth;
+    }
+
+  private:
+    mlir::Block *block = nullptr;
+    EHScopeStack::stable_iterator scopeDepth;
+    unsigned index;
+  };
+
 public:
   /// The GlobalDecl for the current function being compiled or the global
   /// variable currently being initialized.
   clang::GlobalDecl curGD;
+
+  /// Unified return block.
+  /// In CIR this is a function because each scope might have
+  /// its associated return block.
+  JumpDest returnBlock(mlir::Block *retBlock) {
+    return getJumpDestInCurrentScope(retBlock);
+  }
+
+  unsigned nextCleanupDestIndex = 1;
 
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
@@ -86,6 +119,8 @@ public:
 
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
+
+  GlobalDecl curSEHParent;
 
   llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
       lambdaCaptureFields;
@@ -149,6 +184,10 @@ public:
   using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
   SymTableTy symbolTable;
 
+  /// Whether a cir.stacksave operation has been added. Used to avoid
+  /// inserting cir.stacksave for multiple VLAs in the same scope.
+  bool didCallStackSave = false;
+
   /// Whether or not a Microsoft-style asm block has been processed within
   /// this fuction. These can potentially set the return value.
   bool sawAsmBlock = false;
@@ -187,6 +226,14 @@ public:
   /// Keeps track of the current set of opaque value expressions.
   llvm::DenseMap<const OpaqueValueExpr *, LValue> opaqueLValues;
   llvm::DenseMap<const OpaqueValueExpr *, RValue> opaqueRValues;
+
+  // This keeps track of the associated size for each VLA type.
+  // We track this by the size expression rather than the type itself because
+  // in certain situations, like a const qualifier applied to an VLA typedef,
+  // multiple VLA types can share the same size expression.
+  // FIXME: Maybe this could be a stack of maps that is pushed/popped as we
+  // enter/leave scopes.
+  llvm::DenseMap<const Expr *, mlir::Value> vlaSizeMap;
 
 public:
   /// A non-RAII class containing all the information about a bound
@@ -436,6 +483,20 @@ public:
     }
   };
 
+  struct VlaSizePair {
+    mlir::Value numElts;
+    QualType type;
+
+    VlaSizePair(mlir::Value num, QualType ty) : numElts(num), type(ty) {}
+  };
+
+  /// Returns an MLIR::Value+QualType pair that corresponds to the size,
+  /// in non-variably-sized elements, of a variable length array type,
+  /// plus that largest non-variably-sized element type.  Assumes that
+  /// the type has already been emitted with emitVariablyModifiedType.
+  VlaSizePair getVLASize(const VariableArrayType *type);
+  VlaSizePair getVLASize(QualType type);
+
   void finishFunction(SourceLocation endLoc);
 
   /// Determine whether the given initializer is trivial in the sense
@@ -548,6 +609,16 @@ public:
     }
   };
 
+  /// The given basic block lies in the current EH scope, but may be a
+  /// target of a potentially scope-crossing jump; get a stable handle
+  /// to which we can perform this jump later.
+  /// CIRGen: this mostly tracks state for figuring out the proper scope
+  /// information, no actual branches are emitted.
+  JumpDest getJumpDestInCurrentScope(mlir::Block *target) {
+    return JumpDest(target, ehStack.getInnermostNormalCleanup(),
+                    nextCleanupDestIndex++);
+  }
+
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
@@ -583,6 +654,8 @@ public:
     return needsEHCleanup(kind) ? NormalAndEHCleanup : NormalCleanup;
   }
 
+  void pushStackRestore(CleanupKind kind, Address spMem);
+
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
     assert(!localDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
@@ -592,6 +665,12 @@ public:
     if (symbolTable.count(vd))
       return;
     symbolTable.insert(vd, addr.getPointer());
+  }
+
+  // Replaces the address of the local variable, if it exists.  Else does the
+  // same thing as setAddrOfLocalVar.
+  void replaceAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
+    localDeclMap.insert_or_assign(vd, addr);
   }
 
   // A class to allow reverting changes to a var-decl's registration to the
@@ -703,6 +782,11 @@ public:
     mlir::Value oldCXXThisValue;
     clang::CharUnits oldCXXThisAlignment;
     SourceLocExprScopeGuard sourceLocScope;
+  };
+
+  struct CXXDefaultArgExprScope : SourceLocExprScopeGuard {
+    CXXDefaultArgExprScope(CIRGenFunction &cfg, const CXXDefaultArgExpr *e)
+        : SourceLocExprScopeGuard(e, cfg.curSourceLocExprScope) {}
   };
 
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
@@ -825,6 +909,13 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// returns true if aggregate type has a volatile member.
+  bool hasVolatileMember(QualType t) {
+    if (const auto *rd = t->getAsRecordDecl())
+      return rd->hasVolatileMember();
+    return false;
+  }
+
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
@@ -854,6 +945,7 @@ public:
 
   protected:
     bool performCleanup;
+    bool oldDidCallStackSave;
 
   private:
     RunCleanupsScope(const RunCleanupsScope &) = delete;
@@ -867,6 +959,8 @@ public:
     explicit RunCleanupsScope(CIRGenFunction &cgf)
         : performCleanup(true), cgf(cgf) {
       cleanupStackDepth = cgf.ehStack.stable_begin();
+      oldDidCallStackSave = cgf.didCallStackSave;
+      cgf.didCallStackSave = false;
       oldCleanupStackDepth = cgf.currentCleanupStackDepth;
       cgf.currentCleanupStackDepth = cleanupStackDepth;
     }
@@ -883,6 +977,7 @@ public:
       assert(performCleanup && "Already forced cleanup");
       {
         mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
+        cgf.didCallStackSave = oldDidCallStackSave;
         cgf.popCleanupBlocks(cleanupStackDepth);
         performCleanup = false;
         cgf.currentCleanupStackDepth = oldCleanupStackDepth;
@@ -909,6 +1004,9 @@ public:
     mlir::Block *entryBlock;
 
     LexicalScope *parentScope = nullptr;
+
+    // Holds the actual value for ScopeKind::Try
+    cir::TryOp tryOp = nullptr;
 
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
@@ -969,6 +1067,10 @@ public:
     void setAsGlobalInit() { scopeKind = Kind::GlobalInit; }
     void setAsSwitch() { scopeKind = Kind::Switch; }
     void setAsTernary() { scopeKind = Kind::Ternary; }
+    void setAsTry(cir::TryOp op) {
+      scopeKind = Kind::Try;
+      tryOp = op;
+    }
 
     // Lazy create cleanup block or return what's available.
     mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
@@ -976,6 +1078,11 @@ public:
         return cleanupBlock;
       cleanupBlock = createCleanupBlock(builder);
       return cleanupBlock;
+    }
+
+    cir::TryOp getTry() {
+      assert(isTry());
+      return tryOp;
     }
 
     mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
@@ -996,44 +1103,69 @@ public:
     // ---
 
   private:
-    // `returnBlock`, `returnLoc`, and all the functions that deal with them
-    // will change and become more complicated when `switch` statements are
-    // upstreamed.  `case` statements within the `switch` are in the same scope
-    // but have their own regions.  Therefore the LexicalScope will need to
-    // keep track of multiple return blocks.
-    mlir::Block *returnBlock = nullptr;
-    std::optional<mlir::Location> returnLoc;
+    // On switches we need one return block per region, since cases don't
+    // have their own scopes but are distinct regions nonetheless.
 
-    // See the comment on `getOrCreateRetBlock`.
+    // TODO: This implementation should change once we have support for early
+    //       exits in MLIR structured control flow (llvm-project#161575)
+    llvm::SmallVector<mlir::Block *> retBlocks;
+    llvm::DenseMap<mlir::Block *, mlir::Location> retLocs;
+    llvm::DenseMap<cir::CaseOp, unsigned> retBlockInCaseIndex;
+    std::optional<unsigned> normalRetBlockIndex;
+
+    // There's usually only one ret block per scope, but this needs to be
+    // get or create because of potential unreachable return statements, note
+    // that for those, all source location maps to the first one found.
     mlir::Block *createRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
-      assert(returnBlock == nullptr && "only one return block per scope");
-      // Create the cleanup block but don't hook it up just yet.
+      assert((isa_and_nonnull<cir::CaseOp>(
+                  cgf.builder.getBlock()->getParentOp()) ||
+              retBlocks.size() == 0) &&
+             "only switches can hold more than one ret block");
+
+      // Create the return block but don't hook it up just yet.
       mlir::OpBuilder::InsertionGuard guard(cgf.builder);
-      returnBlock =
-          cgf.builder.createBlock(cgf.builder.getBlock()->getParent());
-      updateRetLoc(returnBlock, loc);
-      return returnBlock;
+      auto *b = cgf.builder.createBlock(cgf.builder.getBlock()->getParent());
+      retBlocks.push_back(b);
+      updateRetLoc(b, loc);
+      return b;
     }
 
     cir::ReturnOp emitReturn(mlir::Location loc);
     void emitImplicitReturn();
 
   public:
-    mlir::Block *getRetBlock() { return returnBlock; }
-    mlir::Location getRetLoc(mlir::Block *b) { return *returnLoc; }
-    void updateRetLoc(mlir::Block *b, mlir::Location loc) { returnLoc = loc; }
+    llvm::ArrayRef<mlir::Block *> getRetBlocks() { return retBlocks; }
+    mlir::Location getRetLoc(mlir::Block *b) { return retLocs.at(b); }
+    void updateRetLoc(mlir::Block *b, mlir::Location loc) {
+      retLocs.insert_or_assign(b, loc);
+    }
 
-    // Create the return block for this scope, or return the existing one.
-    // This get-or-create logic is necessary to handle multiple return
-    // statements within the same scope, which can happen if some of them are
-    // dead code or if there is a `goto` into the middle of the scope.
     mlir::Block *getOrCreateRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
-      if (returnBlock == nullptr) {
-        returnBlock = createRetBlock(cgf, loc);
-        return returnBlock;
+      // Check if we're inside a case region
+      if (auto caseOp = mlir::dyn_cast_if_present<cir::CaseOp>(
+              cgf.builder.getBlock()->getParentOp())) {
+        auto iter = retBlockInCaseIndex.find(caseOp);
+        if (iter != retBlockInCaseIndex.end()) {
+          // Reuse existing return block
+          mlir::Block *ret = retBlocks[iter->second];
+          updateRetLoc(ret, loc);
+          return ret;
+        }
+        // Create new return block
+        mlir::Block *ret = createRetBlock(cgf, loc);
+        retBlockInCaseIndex[caseOp] = retBlocks.size() - 1;
+        return ret;
       }
-      updateRetLoc(returnBlock, loc);
-      return returnBlock;
+
+      if (normalRetBlockIndex) {
+        mlir::Block *ret = retBlocks[*normalRetBlockIndex];
+        updateRetLoc(ret, loc);
+        return ret;
+      }
+
+      mlir::Block *ret = createRetBlock(cgf, loc);
+      normalRetBlockIndex = retBlocks.size() - 1;
+      return ret;
     }
 
     mlir::Block *getEntryBlock() { return entryBlock; }
@@ -1044,6 +1176,9 @@ public:
   typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
   static Destroyer destroyCXXObject;
+
+  void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
+                   QualType type);
 
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer);
@@ -1099,14 +1234,16 @@ public:
   ///        occupied by some other object. More efficient code can often be
   ///        generated if not.
   void emitAggregateCopy(LValue dest, LValue src, QualType eltTy,
-                         AggValueSlot::Overlap_t mayOverlap);
+                         AggValueSlot::Overlap_t mayOverlap,
+                         bool isVolatile = false);
 
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e,
-                     AggValueSlot aggSlot = AggValueSlot::ignored());
+                     AggValueSlot aggSlot = AggValueSlot::ignored(),
+                     bool ignoreResult = false);
 
   /// Emits the code necessary to evaluate an arbitrary expression into the
   /// given memory location.
@@ -1134,6 +1271,9 @@ public:
 
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
+  void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
+  void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
+                       bool isVolatile, bool isInit);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
@@ -1160,10 +1300,34 @@ public:
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
+  cir::BrOp emitBranchThroughCleanup(mlir::Location loc, JumpDest dest);
+
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
   RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
                          const clang::CallExpr *e, ReturnValueSlot returnValue);
+
+  /// Returns a Value corresponding to the size of the given expression by
+  /// emitting a `cir.objsize` operation.
+  ///
+  /// \param e The expression whose object size to compute
+  /// \param type Determines the semantics of the object size computation.
+  ///   The type parameter is a 2-bit value where:
+  ///     bit 0 (type & 1): 0 = whole object, 1 = closest subobject
+  ///     bit 1 (type & 2): 0 = maximum size, 2 = minimum size
+  /// \param resType The result type for the size value
+  /// \param emittedE Optional pre-emitted pointer value. If non-null, we'll
+  ///   call `cir.objsize` on this value rather than emitting e.
+  /// \param isDynamic If true, allows runtime evaluation via dynamic mode
+  mlir::Value emitBuiltinObjectSize(const clang::Expr *e, unsigned type,
+                                    cir::IntType resType, mlir::Value emittedE,
+                                    bool isDynamic);
+
+  mlir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
+                                              unsigned type,
+                                              cir::IntType resType,
+                                              mlir::Value emittedE,
+                                              bool isDynamic);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1220,6 +1384,9 @@ public:
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
   cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
   cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+  cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
+  cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
+                                       mlir::Value coroframeAddr);
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 
@@ -1281,10 +1448,10 @@ public:
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
-  void emitNewArrayInitializer(const CXXNewExpr *E, QualType ElementType,
-                               mlir::Type ElementTy, Address BeginPtr,
-                               mlir::Value NumElements,
-                               mlir::Value AllocSizeWithoutCookie);
+  void emitNewArrayInitializer(const CXXNewExpr *e, QualType elementType,
+                               mlir::Type elementTy, Address beginPtr,
+                               mlir::Value numElements,
+                               mlir::Value allocSizeWithoutCookie);
 
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
@@ -1298,6 +1465,13 @@ public:
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
+
+  mlir::LogicalResult emitCXXTryStmtUnderScope(const clang::CXXTryStmt &s);
+
+  void enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
+                       bool isFnTryBlock = false);
+
+  void exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock = false);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
@@ -1348,8 +1522,12 @@ public:
 
   void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
 
+  mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
+                              llvm::ArrayRef<mlir::Value> args = {});
+
   /// Emit the computation of the specified expression of scalar type.
-  mlir::Value emitScalarExpr(const clang::Expr *e);
+  mlir::Value emitScalarExpr(const clang::Expr *e,
+                             bool ignoreResultAssign = false);
 
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
                                       cir::UnaryOpKind kind, bool isPre);
@@ -1486,6 +1664,10 @@ public:
 
   LValue emitMemberExpr(const MemberExpr *e);
 
+  LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
+
+  LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
+
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.
   ///
@@ -1523,8 +1705,8 @@ public:
                           bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
-                         clang::QualType ty, bool isInit = false,
-                         bool isNontemporal = false);
+                         clang::QualType ty, LValueBaseInfo baseInfo,
+                         bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   /// Store the specified rvalue into the specified
@@ -1541,6 +1723,10 @@ public:
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
                                      bool buildingTopLevelCase);
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
+
+  mlir::Value emitTargetBuiltinExpr(unsigned builtinID,
+                                    const clang::CallExpr *e,
+                                    ReturnValueSlot &returnValue);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
@@ -1579,6 +1765,8 @@ public:
   void emitVariablyModifiedType(QualType ty);
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+
+  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *e);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
   /// nonnull, if 1\p LHS is marked _Nonnull.

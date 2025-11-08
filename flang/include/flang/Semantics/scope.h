@@ -86,6 +86,13 @@ public:
     CHECK(parent_ != this);
     return *parent_;
   }
+
+  mapType &commonBlocks() { return commonBlocks_; }
+  const mapType &commonBlocks() const { return commonBlocks_; }
+
+  mapType &commonBlockUses() { return commonBlockUses_; }
+  const mapType &commonBlockUses() const { return commonBlockUses_; }
+
   Kind kind() const { return kind_; }
   bool IsGlobal() const { return kind_ == Kind::Global; }
   bool IsIntrinsicModules() const { return kind_ == Kind::IntrinsicModules; }
@@ -186,10 +193,19 @@ public:
   // Cray pointers are saved as map of pointee name -> pointer symbol
   const mapType &crayPointers() const { return crayPointers_; }
   void add_crayPointer(const SourceName &, Symbol &);
-  mapType &commonBlocks() { return commonBlocks_; }
-  const mapType &commonBlocks() const { return commonBlocks_; }
   Symbol &MakeCommonBlock(SourceName, SourceName location);
-  Symbol *FindCommonBlock(const SourceName &) const;
+  bool AddCommonBlockUse(
+      const SourceName &name, Attrs attrs, Symbol &cbUltimate);
+
+  // Find COMMON block that is declared in the current scope
+  Symbol *FindCommonBlock(const SourceName &name) const;
+
+  // Find USE-associated COMMON block in the current scope
+  Symbol *FindCommonBlockUse(const SourceName &name) const;
+
+  // Find COMMON block in current and surrounding scopes, follow USE
+  // associations
+  Symbol *FindCommonBlockInVisibleScopes(const SourceName &) const;
 
   /// Make a Symbol but don't add it to the scope.
   template <typename D>
@@ -283,6 +299,7 @@ private:
   std::list<Scope> children_;
   mapType symbols_;
   mapType commonBlocks_;
+  mapType commonBlockUses_; // USE-assocated COMMON blocks
   std::list<EquivalenceSet> equivalenceSets_;
   mapType crayPointers_;
   std::map<SourceName, common::Reference<Scope>> submodules_;

@@ -378,12 +378,9 @@ bool LoongArchInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   }
 }
 
-bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
-                                              const MachineBasicBlock *MBB,
-                                              const MachineFunction &MF) const {
-  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
-    return true;
-
+bool LoongArchInstrInfo::isSafeToMove(const MachineInstr &MI,
+                                      const MachineBasicBlock *MBB,
+                                      const MachineFunction &MF) const {
   auto MII = MI.getIterator();
   auto MIE = MBB->end();
 
@@ -429,25 +426,25 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     auto MO2 = Lu32I->getOperand(2).getTargetFlags();
     if (MO0 == LoongArchII::MO_PCREL_HI && MO1 == LoongArchII::MO_PCREL_LO &&
         MO2 == LoongArchII::MO_PCREL64_LO)
-      return true;
+      return false;
     if ((MO0 == LoongArchII::MO_GOT_PC_HI || MO0 == LoongArchII::MO_LD_PC_HI ||
          MO0 == LoongArchII::MO_GD_PC_HI) &&
         MO1 == LoongArchII::MO_GOT_PC_LO && MO2 == LoongArchII::MO_GOT_PC64_LO)
-      return true;
+      return false;
     if (MO0 == LoongArchII::MO_IE_PC_HI && MO1 == LoongArchII::MO_IE_PC_LO &&
         MO2 == LoongArchII::MO_IE_PC64_LO)
-      return true;
+      return false;
     if (MO0 == LoongArchII::MO_DESC_PC_HI &&
         MO1 == LoongArchII::MO_DESC_PC_LO &&
         MO2 == LoongArchII::MO_DESC64_PC_LO)
-      return true;
+      return false;
     break;
   }
   case LoongArch::LU52I_D: {
     auto MO = MI.getOperand(2).getTargetFlags();
     if (MO == LoongArchII::MO_PCREL64_HI || MO == LoongArchII::MO_GOT_PC64_HI ||
         MO == LoongArchII::MO_IE_PC64_HI || MO == LoongArchII::MO_DESC64_PC_HI)
-      return true;
+      return false;
     break;
   }
   default:
@@ -487,7 +484,7 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
         auto MO1 = LoongArchII::getDirectFlags(SecondOp->getOperand(2));
         auto MO2 = LoongArchII::getDirectFlags(Ld->getOperand(2));
         if (MO1 == LoongArchII::MO_DESC_PC_LO && MO2 == LoongArchII::MO_DESC_LD)
-          return true;
+          return false;
         break;
       }
       if (SecondOp == MIE ||
@@ -496,40 +493,52 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       auto MO1 = LoongArchII::getDirectFlags(SecondOp->getOperand(2));
       if (MO0 == LoongArchII::MO_PCREL_HI && SecondOp->getOpcode() == AddiOp &&
           MO1 == LoongArchII::MO_PCREL_LO)
-        return true;
+        return false;
       if (MO0 == LoongArchII::MO_GOT_PC_HI && SecondOp->getOpcode() == LdOp &&
           MO1 == LoongArchII::MO_GOT_PC_LO)
-        return true;
+        return false;
       if ((MO0 == LoongArchII::MO_LD_PC_HI ||
            MO0 == LoongArchII::MO_GD_PC_HI) &&
           SecondOp->getOpcode() == AddiOp && MO1 == LoongArchII::MO_GOT_PC_LO)
-        return true;
+        return false;
       break;
     }
     case LoongArch::ADDI_W:
     case LoongArch::ADDI_D: {
       auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
       if (MO == LoongArchII::MO_PCREL_LO || MO == LoongArchII::MO_GOT_PC_LO)
-        return true;
+        return false;
       break;
     }
     case LoongArch::LD_W:
     case LoongArch::LD_D: {
       auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
       if (MO == LoongArchII::MO_GOT_PC_LO)
-        return true;
+        return false;
       break;
     }
     case LoongArch::PseudoDESC_CALL: {
       auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
       if (MO == LoongArchII::MO_DESC_CALL)
-        return true;
+        return false;
       break;
     }
     default:
       break;
     }
   }
+
+  return true;
+}
+
+bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                              const MachineBasicBlock *MBB,
+                                              const MachineFunction &MF) const {
+  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
+    return true;
+
+  if (!isSafeToMove(MI, MBB, MF))
+    return true;
 
   return false;
 }
@@ -754,6 +763,155 @@ LoongArchInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_RELAX, "loongarch-relax"}};
   return ArrayRef(TargetFlags);
+}
+
+bool LoongArchInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
+                                             Register Reg,
+                                             const MachineInstr &AddrI,
+                                             ExtAddrMode &AM) const {
+  enum MemIOffsetType {
+    Imm14Shift2,
+    Imm12,
+    Imm11Shift1,
+    Imm10Shift2,
+    Imm9Shift3,
+    Imm8,
+    Imm8Shift1,
+    Imm8Shift2,
+    Imm8Shift3
+  };
+
+  MemIOffsetType OT;
+  switch (MemI.getOpcode()) {
+  default:
+    return false;
+  case LoongArch::LDPTR_W:
+  case LoongArch::LDPTR_D:
+  case LoongArch::STPTR_W:
+  case LoongArch::STPTR_D:
+    OT = Imm14Shift2;
+    break;
+  case LoongArch::LD_B:
+  case LoongArch::LD_H:
+  case LoongArch::LD_W:
+  case LoongArch::LD_D:
+  case LoongArch::LD_BU:
+  case LoongArch::LD_HU:
+  case LoongArch::LD_WU:
+  case LoongArch::ST_B:
+  case LoongArch::ST_H:
+  case LoongArch::ST_W:
+  case LoongArch::ST_D:
+  case LoongArch::FLD_S:
+  case LoongArch::FLD_D:
+  case LoongArch::FST_S:
+  case LoongArch::FST_D:
+  case LoongArch::VLD:
+  case LoongArch::VST:
+  case LoongArch::XVLD:
+  case LoongArch::XVST:
+  case LoongArch::VLDREPL_B:
+  case LoongArch::XVLDREPL_B:
+    OT = Imm12;
+    break;
+  case LoongArch::VLDREPL_H:
+  case LoongArch::XVLDREPL_H:
+    OT = Imm11Shift1;
+    break;
+  case LoongArch::VLDREPL_W:
+  case LoongArch::XVLDREPL_W:
+    OT = Imm10Shift2;
+    break;
+  case LoongArch::VLDREPL_D:
+  case LoongArch::XVLDREPL_D:
+    OT = Imm9Shift3;
+    break;
+  case LoongArch::VSTELM_B:
+  case LoongArch::XVSTELM_B:
+    OT = Imm8;
+    break;
+  case LoongArch::VSTELM_H:
+  case LoongArch::XVSTELM_H:
+    OT = Imm8Shift1;
+    break;
+  case LoongArch::VSTELM_W:
+  case LoongArch::XVSTELM_W:
+    OT = Imm8Shift2;
+    break;
+  case LoongArch::VSTELM_D:
+  case LoongArch::XVSTELM_D:
+    OT = Imm8Shift3;
+    break;
+  }
+
+  if (MemI.getOperand(0).getReg() == Reg)
+    return false;
+
+  if ((AddrI.getOpcode() != LoongArch::ADDI_W &&
+       AddrI.getOpcode() != LoongArch::ADDI_D) ||
+      !AddrI.getOperand(1).isReg() || !AddrI.getOperand(2).isImm())
+    return false;
+
+  int64_t OldOffset = MemI.getOperand(2).getImm();
+  int64_t Disp = AddrI.getOperand(2).getImm();
+  int64_t NewOffset = OldOffset + Disp;
+  if (!STI.is64Bit())
+    NewOffset = SignExtend64<32>(NewOffset);
+
+  if (!(OT == Imm14Shift2 && isShiftedInt<14, 2>(NewOffset) && STI.hasUAL()) &&
+      !(OT == Imm12 && isInt<12>(NewOffset)) &&
+      !(OT == Imm11Shift1 && isShiftedInt<11, 1>(NewOffset)) &&
+      !(OT == Imm10Shift2 && isShiftedInt<10, 2>(NewOffset)) &&
+      !(OT == Imm9Shift3 && isShiftedInt<9, 3>(NewOffset)) &&
+      !(OT == Imm8 && isInt<8>(NewOffset)) &&
+      !(OT == Imm8Shift1 && isShiftedInt<8, 1>(NewOffset)) &&
+      !(OT == Imm8Shift2 && isShiftedInt<8, 2>(NewOffset)) &&
+      !(OT == Imm8Shift3 && isShiftedInt<8, 3>(NewOffset)))
+    return false;
+
+  AM.BaseReg = AddrI.getOperand(1).getReg();
+  AM.ScaledReg = 0;
+  AM.Scale = 0;
+  AM.Displacement = NewOffset;
+  AM.Form = ExtAddrMode::Formula::Basic;
+  return true;
+}
+
+MachineInstr *
+LoongArchInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
+                                     const ExtAddrMode &AM) const {
+  const DebugLoc &DL = MemI.getDebugLoc();
+  MachineBasicBlock &MBB = *MemI.getParent();
+
+  assert(AM.ScaledReg == 0 && AM.Scale == 0 &&
+         "Addressing mode not supported for folding");
+
+  unsigned MemIOp = MemI.getOpcode();
+  switch (MemIOp) {
+  default:
+    return BuildMI(MBB, MemI, DL, get(MemIOp))
+        .addReg(MemI.getOperand(0).getReg(),
+                MemI.mayLoad() ? RegState::Define : 0)
+        .addReg(AM.BaseReg)
+        .addImm(AM.Displacement)
+        .setMemRefs(MemI.memoperands())
+        .setMIFlags(MemI.getFlags());
+  case LoongArch::VSTELM_B:
+  case LoongArch::VSTELM_H:
+  case LoongArch::VSTELM_W:
+  case LoongArch::VSTELM_D:
+  case LoongArch::XVSTELM_B:
+  case LoongArch::XVSTELM_H:
+  case LoongArch::XVSTELM_W:
+  case LoongArch::XVSTELM_D:
+    return BuildMI(MBB, MemI, DL, get(MemIOp))
+        .addReg(MemI.getOperand(0).getReg(), 0)
+        .addReg(AM.BaseReg)
+        .addImm(AM.Displacement)
+        .addImm(MemI.getOperand(3).getImm())
+        .setMemRefs(MemI.memoperands())
+        .setMIFlags(MemI.getFlags());
+  }
 }
 
 // Returns true if this is the sext.w pattern, addi.w rd, rs, 0.

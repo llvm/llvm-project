@@ -135,6 +135,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
@@ -143,26 +144,24 @@ public:
 protected:
   CodeGenModule &CGM;
 
-  void collectInputSemantic(llvm::IRBuilder<> &B, const DeclaratorDecl *D,
-                            llvm::Type *Type,
-                            SmallVectorImpl<llvm::Value *> &Inputs);
-
-  struct SemanticInfo {
-    clang::HLSLSemanticAttr *Semantic;
-    uint32_t Index;
-  };
-
   llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
-                                      SemanticInfo &ActiveSemantic);
+                                      Attr *Semantic,
+                                      std::optional<unsigned> Index);
 
-  llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl,
-                                        SemanticInfo &ActiveSemantic);
+  llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
+                                        const FunctionDecl *FD,
+                                        llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl);
 
-  llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                  const clang::DeclaratorDecl *Decl,
-                                  SemanticInfo &ActiveSemantic);
+  llvm::Value *handleStructSemanticLoad(llvm::IRBuilder<> &B,
+                                        const FunctionDecl *FD,
+                                        llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl);
+
+  llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                                  llvm::Type *Type,
+                                  const clang::DeclaratorDecl *Decl);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
@@ -201,9 +200,25 @@ private:
                                     llvm::GlobalVariable *BufGV);
   void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                    llvm::GlobalVariable *GV);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV,
+                                   HLSLResourceBindingAttr *RBA);
+
+  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         HLSLSemanticAttr *Semantic,
+                                         std::optional<unsigned> Index);
+  llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        HLSLSemanticAttr *Semantic,
+                                        std::optional<unsigned> Index);
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                    const clang::DeclaratorDecl *Decl,
+                                    HLSLSemanticAttr *Semantic,
+                                    std::optional<unsigned> Index);
+
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
+  unsigned SPIRVLastAssignedInputSemanticLocation = 0;
 };
 
 } // namespace CodeGen

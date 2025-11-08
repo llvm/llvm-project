@@ -34,26 +34,26 @@ struct S s;
 // CHECK-LABEL: define dso_local void @f(
 // CHECK-SAME: <1 x i8> [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    store <1 x i8> [[X]], ptr @s, align 1, !tbaa [[__MFP8_TBAA2:![0-9]+]]
+// CHECK-NEXT:    store <1 x i8> [[X]], ptr @s, align 1, !tbaa [[__MFP8_TBAA6:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z1fu6__mfp8(
 // CHECK-CXX-SAME: <1 x i8> [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
-// CHECK-CXX-NEXT:    store <1 x i8> [[X]], ptr @s, align 1, !tbaa [[__MFP8_TBAA2:![0-9]+]]
+// CHECK-CXX-NEXT:    store <1 x i8> [[X]], ptr @s, align 1, !tbaa [[__MFP8_TBAA6:![0-9]+]]
 // CHECK-CXX-NEXT:    ret void
 //
 void f(__mfp8 x) {
     s = (struct S){x};
 }
 //.
-// CHECK: [[__MFP8_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"__mfp8", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[__MFP8_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK: [[META7]] = !{!"__mfp8", [[META4]], i64 0}
 //.
-// CHECK-CXX: [[__MFP8_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-CXX: [[META3]] = !{!"__mfp8", [[META4:![0-9]+]], i64 0}
-// CHECK-CXX: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK-CXX: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-CXX: [[META5]] = !{!"Simple C++ TBAA"}
+// CHECK-CXX: [[__MFP8_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK-CXX: [[META7]] = !{!"__mfp8", [[META4]], i64 0}
 //.

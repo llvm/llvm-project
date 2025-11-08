@@ -4,7 +4,7 @@
 # RUN: %lldb %t.out -b -s %s 2>&1 | FileCheck %s
 
 list
-# CHECK: note: No source available 
+# CHECK: note: No source available
 
 b main
 # CHECK: Breakpoint 1:
@@ -18,7 +18,7 @@ list
 list -
 # CHECK: int main()
 
-list -10
+list -13
 # CHECK: #include <assert.h>
 
 list -

@@ -1,4 +1,4 @@
-//===- DependencyScanner.h - Performs module dependency scanning *- C++ -*-===//
+//===- DependencyScannerImpl.h - Implements dependency scanning *- C++ -*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,6 +23,8 @@ class DiagnosticConsumer;
 namespace tooling {
 namespace dependencies {
 class DependencyScanningService;
+class DependencyScanningWorker;
+
 class DependencyConsumer;
 class DependencyActionController;
 class DependencyScanningWorkerFilesystem;
@@ -35,8 +37,7 @@ public:
       IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       std::optional<StringRef> ModuleName = std::nullopt)
       : Service(Service), WorkingDirectory(WorkingDirectory),
-        Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)),
-        ModuleName(ModuleName) {}
+        Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)) {}
   bool runInvocation(std::unique_ptr<CompilerInvocation> Invocation,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
@@ -66,7 +67,6 @@ private:
   DependencyConsumer &Consumer;
   DependencyActionController &Controller;
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  std::optional<StringRef> ModuleName;
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
   std::vector<std::string> LastCC1Arguments;
@@ -105,7 +105,8 @@ struct TextDiagnosticsPrinterWithOutput {
 
 std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
 buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
-                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                 llvm::BumpPtrAllocator &Alloc);
 
 std::unique_ptr<CompilerInvocation>
 createCompilerInvocation(ArrayRef<std::string> CommandLine,
@@ -117,7 +118,8 @@ initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                           StringRef WorkingDirectory,
                           llvm::MemoryBufferRef TUBuffer);
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
 initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                          ArrayRef<std::string> CommandLine,
                          StringRef WorkingDirectory, StringRef ModuleName);
@@ -136,7 +138,7 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
                              SmallVector<StringRef> &StableDirs);
 
 std::unique_ptr<DependencyOutputOptions>
-takeDependencyOutputOptionsFrom(CompilerInstance &ScanInstance);
+takeAndUpdateDependencyOutputOptionsFrom(CompilerInstance &ScanInstance);
 
 /// Create the dependency collector that will collect the produced
 /// dependencies. May return the created ModuleDepCollector depending
@@ -149,6 +151,60 @@ std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
     DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
     llvm::SmallVector<StringRef> &StableDirs);
+
+class CompilerInstanceWithContext {
+  // Context
+  DependencyScanningWorker &Worker;
+  llvm::StringRef CWD;
+  std::vector<std::string> CommandLine;
+
+  // Context - file systems
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
+
+  // Context - Diagnostics engine.
+  std::unique_ptr<TextDiagnosticsPrinterWithOutput> DiagPrinterWithOS;
+  // DiagConsumer may points to DiagPrinterWithOS->DiagPrinter, or a custom
+  // DiagnosticConsumer passed in from initialize.
+  DiagnosticConsumer *DiagConsumer = nullptr;
+  std::unique_ptr<DignosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
+
+  // Context - compiler invocation
+  // Compilation's command's arguments may be owned by Alloc when expanded from
+  // response files, so we need to keep Alloc alive in the context.
+  llvm::BumpPtrAllocator Alloc;
+  std::unique_ptr<clang::driver::Driver> Driver;
+  std::unique_ptr<clang::driver::Compilation> Compilation;
+  std::unique_ptr<CompilerInvocation> OriginalInvocation;
+
+  // Context - output options
+  std::unique_ptr<DependencyOutputOptions> OutputOpts;
+
+  // Context - stable directory handling
+  llvm::SmallVector<StringRef> StableDirs;
+  PrebuiltModulesAttrsMap PrebuiltModuleASTMap;
+
+  // Compiler Instance
+  std::unique_ptr<CompilerInstance> CIPtr;
+
+  // Source location offset.
+  int32_t SrcLocOffset = 0;
+
+public:
+  CompilerInstanceWithContext(DependencyScanningWorker &Worker, StringRef CWD,
+                              const std::vector<std::string> &CMD)
+      : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
+
+  // The three methods below returns false when they fail, with the detail
+  // accumulated in DiagConsumer.
+  bool initialize(DiagnosticConsumer *DC);
+  bool computeDependencies(StringRef ModuleName, DependencyConsumer &Consumer,
+                           DependencyActionController &Controller);
+  bool finalize();
+
+  // The method below turns the return status from the above methods
+  // into an llvm::Error using a default DiagnosticConsumer.
+  llvm::Error handleReturnStatus(bool Success);
+};
 } // namespace dependencies
 } // namespace tooling
 } // namespace clang

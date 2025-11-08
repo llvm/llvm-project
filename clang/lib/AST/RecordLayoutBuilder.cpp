@@ -2009,7 +2009,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     } else if (const BuiltinType *BTy = BaseTy->getAs<BuiltinType>()) {
       performBuiltinTypeAlignmentUpgrade(BTy);
     } else if (const RecordType *RT = BaseTy->getAsCanonical<RecordType>()) {
-      const RecordDecl *RD = RT->getOriginalDecl();
+      const RecordDecl *RD = RT->getDecl();
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
       PreferredAlign = FieldRecord.getPreferredAlignment();
     }
@@ -2710,7 +2710,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
     if (const auto *RT = FD->getType()
                              ->getBaseElementTypeUnsafe()
                              ->getAsCanonical<RecordType>()) {
-      auto const &Layout = Context.getASTRecordLayout(RT->getOriginalDecl());
+      auto const &Layout = Context.getASTRecordLayout(RT->getDecl());
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldRequiredAlignment = std::max(FieldRequiredAlignment,
                                         Layout.getRequiredAlignment());

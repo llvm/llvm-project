@@ -70,6 +70,32 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   }
 }
 
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const WithOmpDeclarative &x) {
+  if (x.has_ompRequires() || x.has_ompAtomicDefaultMemOrder()) {
+    os << " OmpRequirements:(";
+    if (const common::OmpMemoryOrderType *admo{x.ompAtomicDefaultMemOrder()}) {
+      os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(
+                llvm::omp::Clause::OMPC_atomic_default_mem_order))
+         << '(' << parser::ToLowerCaseLetters(EnumToString(*admo)) << ')';
+      if (x.has_ompRequires()) {
+        os << ',';
+      }
+    }
+    if (const WithOmpDeclarative::RequiresClauses *reqs{x.ompRequires()}) {
+      size_t num{0}, size{reqs->count()};
+      reqs->IterateOverMembers([&](llvm::omp::Clause f) {
+        os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
+        if (++num < size) {
+          os << ',';
+        }
+      });
+    }
+    os << ')';
+  }
+  return os;
+}
+
 void SubprogramDetails::set_moduleInterface(Symbol &symbol) {
   CHECK(!moduleInterface_);
   moduleInterface_ = &symbol;
@@ -150,6 +176,7 @@ llvm::raw_ostream &operator<<(
       os << x;
     }
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -580,7 +607,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
   common::visit( //
       common::visitors{
           [&](const UnknownDetails &) {},
-          [&](const MainProgramDetails &) {},
+          [&](const MainProgramDetails &x) {
+            os << static_cast<const WithOmpDeclarative &>(x);
+          },
           [&](const ModuleDetails &x) {
             if (x.isSubmodule()) {
               os << " (";
@@ -599,6 +628,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             if (x.isDefaultPrivate()) {
               os << " isDefaultPrivate";
             }
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const SubprogramNameDetails &x) {
             os << ' ' << EnumToString(x.kind());

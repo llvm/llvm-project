@@ -1833,10 +1833,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
        serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
     GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
 
-  if (Opts.AllocTokenMax)
-    GenerateArg(Consumer, OPT_falloc_token_max_EQ,
-                std::to_string(*Opts.AllocTokenMax));
-
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
 
@@ -2348,15 +2344,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     } else {
       Opts.AllowRuntimeCheckSkipHotCutoff = A;
     }
-  }
-
-  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_max_EQ)) {
-    StringRef S = Arg->getValue();
-    uint64_t Value = 0;
-    if (S.getAsInteger(0, Value))
-      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
-    else
-      Opts.AllocTokenMax = Value;
   }
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
@@ -3227,7 +3214,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       DashX = llvm::StringSwitch<InputKind>(XValue)
                   .Case("cpp-output", InputKind(Language::C).getPreprocessed())
                   .Case("assembler-with-cpp", Language::Asm)
-                  .Cases("ast", "pcm", "precompiled-header",
+                  .Cases({"ast", "pcm", "precompiled-header"},
                          InputKind(Language::Unknown, InputKind::Precompiled))
                   .Case("ir", Language::LLVM_IR)
                   .Case("cir", Language::CIR)
@@ -3966,6 +3953,29 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   if (!Opts.RandstructSeed.empty())
     GenerateArg(Consumer, OPT_frandomize_layout_seed_EQ, Opts.RandstructSeed);
+
+  if (Opts.AllocTokenMax)
+    GenerateArg(Consumer, OPT_falloc_token_max_EQ,
+                std::to_string(*Opts.AllocTokenMax));
+
+  if (Opts.AllocTokenMode) {
+    StringRef S;
+    switch (*Opts.AllocTokenMode) {
+    case llvm::AllocTokenMode::Increment:
+      S = "increment";
+      break;
+    case llvm::AllocTokenMode::Random:
+      S = "random";
+      break;
+    case llvm::AllocTokenMode::TypeHash:
+      S = "typehash";
+      break;
+    case llvm::AllocTokenMode::TypeHashPointerSplit:
+      S = "typehashpointersplit";
+      break;
+    }
+    GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
+  }
 }
 
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
@@ -4012,13 +4022,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           auto Diag = Diags.Report(diag::note_drv_use_standard);
           Diag << Std.getName() << Std.getDescription();
           unsigned NumAliases = 0;
-#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD(id, name, lang, desc, features, version)
 #define LANGSTANDARD_ALIAS(id, alias) \
           if (KindValue == LangStandard::lang_##id) ++NumAliases;
 #define LANGSTANDARD_ALIAS_DEPR(id, alias)
 #include "clang/Basic/LangStandards.def"
           Diag << NumAliases;
-#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD(id, name, lang, desc, features, version)
 #define LANGSTANDARD_ALIAS(id, alias) \
           if (KindValue == LangStandard::lang_##id) Diag << alias;
 #define LANGSTANDARD_ALIAS_DEPR(id, alias)
@@ -4039,18 +4049,18 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // -cl-std only applies for OpenCL language standards.
   // Override the -std option in this case.
   if (const Arg *A = Args.getLastArg(OPT_cl_std_EQ)) {
-    LangStandard::Kind OpenCLLangStd
-      = llvm::StringSwitch<LangStandard::Kind>(A->getValue())
-        .Cases("cl", "CL", LangStandard::lang_opencl10)
-        .Cases("cl1.0", "CL1.0", LangStandard::lang_opencl10)
-        .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
-        .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
-        .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
-        .Cases("cl3.0", "CL3.0", LangStandard::lang_opencl30)
-        .Cases("clc++", "CLC++", LangStandard::lang_openclcpp10)
-        .Cases("clc++1.0", "CLC++1.0", LangStandard::lang_openclcpp10)
-        .Cases("clc++2021", "CLC++2021", LangStandard::lang_openclcpp2021)
-        .Default(LangStandard::lang_unspecified);
+    LangStandard::Kind OpenCLLangStd =
+        llvm::StringSwitch<LangStandard::Kind>(A->getValue())
+            .Cases({"cl", "CL"}, LangStandard::lang_opencl10)
+            .Cases({"cl1.0", "CL1.0"}, LangStandard::lang_opencl10)
+            .Cases({"cl1.1", "CL1.1"}, LangStandard::lang_opencl11)
+            .Cases({"cl1.2", "CL1.2"}, LangStandard::lang_opencl12)
+            .Cases({"cl2.0", "CL2.0"}, LangStandard::lang_opencl20)
+            .Cases({"cl3.0", "CL3.0"}, LangStandard::lang_opencl30)
+            .Cases({"clc++", "CLC++"}, LangStandard::lang_openclcpp10)
+            .Cases({"clc++1.0", "CLC++1.0"}, LangStandard::lang_openclcpp10)
+            .Cases({"clc++2021", "CLC++2021"}, LangStandard::lang_openclcpp2021)
+            .Default(LangStandard::lang_unspecified);
 
     if (OpenCLLangStd == LangStandard::lang_unspecified) {
       Diags.Report(diag::err_drv_invalid_value)
@@ -4544,6 +4554,23 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   if (const Arg *A = Args.getLastArg(OPT_frandomize_layout_seed_EQ))
     Opts.RandstructSeed = A->getValue(0);
 
+  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_max_EQ)) {
+    StringRef S = Arg->getValue();
+    uint64_t Value = 0;
+    if (S.getAsInteger(0, Value))
+      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+    else
+      Opts.AllocTokenMax = Value;
+  }
+
+  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_mode_EQ)) {
+    StringRef S = Arg->getValue();
+    if (auto Mode = getAllocTokenModeFromString(S))
+      Opts.AllocTokenMode = Mode;
+    else
+      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+  }
+
   // Validate options for HLSL
   if (Opts.HLSL) {
     // TODO: Revisit restricting SPIR-V to logical once we've figured out how to
@@ -4573,7 +4600,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         // Validate that if fnative-half-type is given, that
         // the language standard is at least hlsl2018, and that
         // the target shader model is at least 6.2.
-        if (Args.getLastArg(OPT_fnative_half_type)) {
+        if (Args.getLastArg(OPT_fnative_half_type) ||
+            Args.getLastArg(OPT_fnative_int16_type)) {
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018 &&
@@ -4587,12 +4615,16 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << VulkanEnv << T.getOSName() << T.str();
         }
-        if (Args.getLastArg(OPT_fnative_half_type)) {
+        if (Args.getLastArg(OPT_fnative_half_type) ||
+            Args.getLastArg(OPT_fnative_int16_type)) {
+          const char *Str = Args.getLastArg(OPT_fnative_half_type)
+                                ? "-fnative-half-type"
+                                : "-fnative-int16-type";
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018))
             Diags.Report(diag::err_drv_hlsl_16bit_types_unsupported)
-                << "-fnative-half-type" << false << Std.getName();
+                << Str << false << Std.getName();
         }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");

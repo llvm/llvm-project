@@ -363,7 +363,7 @@ void TailDuplicator::processPHI(
   Register SrcReg = MI->getOperand(SrcOpIdx).getReg();
   unsigned SrcSubReg = MI->getOperand(SrcOpIdx).getSubReg();
   const TargetRegisterClass *RC = MRI->getRegClass(DefReg);
-  LocalVRMap.insert(std::make_pair(DefReg, RegSubRegPair(SrcReg, SrcSubReg)));
+  LocalVRMap.try_emplace(DefReg, SrcReg, SrcSubReg);
 
   // Insert a copy from source to the end of the block. The def register is the
   // available value liveout of the block.
@@ -411,7 +411,7 @@ void TailDuplicator::duplicateInstruction(
       const TargetRegisterClass *RC = MRI->getRegClass(Reg);
       Register NewReg = MRI->createVirtualRegister(RC);
       MO.setReg(NewReg);
-      LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
+      LocalVRMap.try_emplace(Reg, NewReg, 0);
       if (isDefLiveOut(Reg, TailBB, MRI) || UsedByPhi.count(Reg))
         addSSAUpdateEntry(Reg, NewReg, PredBB);
       continue;
@@ -463,7 +463,7 @@ void TailDuplicator::duplicateInstruction(
               NewReg)
           .addReg(VI->second.Reg, 0, VI->second.SubReg);
       LocalVRMap.erase(VI);
-      LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
+      LocalVRMap.try_emplace(Reg, NewReg, 0);
       MO.setReg(NewReg);
       // The composed VI.Reg:VI.SubReg is replaced with NewReg, which
       // is equivalent to the whole register Reg. Hence, Reg:subreg
