@@ -140,7 +140,7 @@ changePointer(const VarDecl &Var, Qualifiers::TQ Qualifier, const Type *Pointee,
     // the `*` token and placing the `const` left of it.
     // (`int const* p = nullptr;`)
     if (QualPolicy == QualifierPolicy::Right) {
-      SourceLocation BeforeStar = lexer::findPreviousTokenKind(
+      const SourceLocation BeforeStar = lexer::findPreviousTokenKind(
           Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
           tok::star);
       if (locDangerous(BeforeStar))
@@ -161,7 +161,7 @@ changePointer(const VarDecl &Var, Qualifiers::TQ Qualifier, const Type *Pointee,
     // is the same as 'QualPolicy == Right && isValueType(Pointee)'.
     // The `const` must be left of the last `*` token.
     // (`int * const* p = nullptr;`)
-    SourceLocation BeforeStar = lexer::findPreviousTokenKind(
+    const SourceLocation BeforeStar = lexer::findPreviousTokenKind(
         Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
         tok::star);
     return fixIfNotDangerous(BeforeStar, buildQualifier(Qualifier, true));
@@ -178,7 +178,7 @@ changeReferencee(const VarDecl &Var, Qualifiers::TQ Qualifier, QualType Pointee,
     return fixIfNotDangerous(Var.getTypeSpecStartLoc(),
                              buildQualifier(Qualifier));
 
-  SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
+  const SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
       Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
       tok::amp, tok::ampamp);
   std::optional<SourceLocation> IgnoredParens =
@@ -201,7 +201,7 @@ std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
           QualTarget == QualifierTarget::Value) &&
          "Unexpected Target");
 
-  QualType ParenStrippedType = Var.getType().IgnoreParens();
+  const QualType ParenStrippedType = Var.getType().IgnoreParens();
   if (isValueType(ParenStrippedType))
     return changeValue(Var, Qualifier, QualTarget, QualPolicy, Context);
 

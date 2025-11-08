@@ -76,7 +76,7 @@ void IdDependentBackwardBranchCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-IdDependentBackwardBranchCheck::IdDependencyRecord *
+const IdDependentBackwardBranchCheck::IdDependencyRecord *
 IdDependentBackwardBranchCheck::hasIdDepVar(const Expr *Expression) {
   if (!Expression)
     return nullptr;
@@ -94,12 +94,12 @@ IdDependentBackwardBranchCheck::hasIdDepVar(const Expr *Expression) {
   }
   for (const auto *Child : Expression->children())
     if (const auto *ChildExpression = dyn_cast_if_present<Expr>(Child))
-      if (IdDependencyRecord *Result = hasIdDepVar(ChildExpression))
+      if (const IdDependencyRecord *Result = hasIdDepVar(ChildExpression))
         return Result;
   return nullptr;
 }
 
-IdDependentBackwardBranchCheck::IdDependencyRecord *
+const IdDependentBackwardBranchCheck::IdDependencyRecord *
 IdDependentBackwardBranchCheck::hasIdDepField(const Expr *Expression) {
   if (!Expression)
     return nullptr;
@@ -116,7 +116,7 @@ IdDependentBackwardBranchCheck::hasIdDepField(const Expr *Expression) {
   }
   for (const auto *Child : Expression->children())
     if (const auto *ChildExpression = dyn_cast_if_present<Expr>(Child))
-      if (IdDependencyRecord *Result = hasIdDepField(ChildExpression))
+      if (const IdDependencyRecord *Result = hasIdDepField(ChildExpression))
         return Result;
   return nullptr;
 }
@@ -239,7 +239,7 @@ void IdDependentBackwardBranchCheck::check(
   const auto *Loop = Result.Nodes.getNodeAs<Stmt>("backward_branch");
   if (!Loop)
     return;
-  LoopType Type = getLoopType(Loop);
+  const LoopType Type = getLoopType(Loop);
   if (CondExpr) {
     if (IDCall) { // Conditional expression calls an ID function directly.
       diag(CondExpr->getBeginLoc(),
@@ -249,8 +249,8 @@ void IdDependentBackwardBranchCheck::check(
       return;
     }
     // Conditional expression has DeclRefExpr(s), check ID-dependency.
-    IdDependencyRecord *IdDepVar = hasIdDepVar(CondExpr);
-    IdDependencyRecord *IdDepField = hasIdDepField(CondExpr);
+    const IdDependencyRecord *IdDepVar = hasIdDepVar(CondExpr);
+    const IdDependencyRecord *IdDepField = hasIdDepField(CondExpr);
     if (IdDepVar) {
       diag(CondExpr->getBeginLoc(),
            "backward branch (%select{do|while|for}0 loop) is ID-dependent due "

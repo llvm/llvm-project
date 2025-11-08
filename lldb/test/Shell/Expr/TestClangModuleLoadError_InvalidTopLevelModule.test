@@ -44,5 +44,6 @@ expr blah
 # CHECK: note: couldn't load top-level module foo
 ## FIXME: clang error diagnostic shouldn't be dumped to the console.
 # CHECK: error:
-## FIXME: We never attempted to load bar.
-# CHECK-NOT: bar
+# CHECK: note: couldn't load top-level module bar
+## FIXME: clang error diagnostic shouldn't be dumped to the console.
+# CHECK: error:

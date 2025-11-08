@@ -43,5 +43,4 @@ run
 expr blah
 
 # CHECK: note: couldn't find module search path directory {{.*}}sources
-## FIXME: We never attempted to load bar.
-# CHECK-NOT: couldn't find module search path
+# CHECK: note: couldn't find module search path directory {{.*}}sources

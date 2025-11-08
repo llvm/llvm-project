@@ -381,8 +381,10 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
 
   // FIXME: should we be dumping these to the error log instead of as
   // diagnostics? They are non-fatal and are usually quite noisy.
-  diagnostic_manager.PutString(lldb::eSeverityInfo,
-                               llvm::toString(std::move(err)));
+  llvm::handleAllErrors(
+      std::move(err), [&diagnostic_manager](const llvm::StringError &e) {
+        diagnostic_manager.PutString(lldb::eSeverityInfo, e.getMessage());
+      });
 }
 
 ClangExpressionSourceCode::WrapKind ClangUserExpression::GetWrapKind() const {

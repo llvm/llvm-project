@@ -30,7 +30,8 @@ static std::string buildFixMsgForStringFlag(const Expr *Arg,
             " \"" + Twine(Mode) + "\"")
         .str();
 
-  StringRef SR = cast<StringLiteral>(Arg->IgnoreParenCasts())->getString();
+  const StringRef SR =
+      cast<StringLiteral>(Arg->IgnoreParenCasts())->getString();
   return ("\"" + SR + Twine(Mode) + "\"").str();
 }
 
@@ -49,14 +50,14 @@ void CloexecCheck::insertMacroFlag(const MatchFinder::MatchResult &Result,
   const auto *MatchedCall = Result.Nodes.getNodeAs<CallExpr>(FuncBindingStr);
   const auto *FlagArg = MatchedCall->getArg(ArgPos);
   const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>(FuncDeclBindingStr);
-  SourceManager &SM = *Result.SourceManager;
+  const SourceManager &SM = *Result.SourceManager;
 
   if (utils::exprHasBitFlagWithSpelling(FlagArg->IgnoreParenCasts(), SM,
                                         Result.Context->getLangOpts(),
                                         MacroFlag))
     return;
 
-  SourceLocation EndLoc =
+  const SourceLocation EndLoc =
       Lexer::getLocForEndOfToken(SM.getFileLoc(FlagArg->getEndLoc()), 0, SM,
                                  Result.Context->getLangOpts());
 
@@ -84,7 +85,7 @@ void CloexecCheck::insertStringFlag(
   if (!ModeStr || ModeStr->getString().contains(Mode))
     return;
 
-  std::string ReplacementText = buildFixMsgForStringFlag(
+  const std::string ReplacementText = buildFixMsgForStringFlag(
       ModeArg, *Result.SourceManager, Result.Context->getLangOpts(), Mode);
 
   diag(ModeArg->getBeginLoc(), "use %0 mode '%1' to set O_CLOEXEC")

@@ -43,5 +43,4 @@ run
 expr blah
 
 # CHECK: note: header search couldn't locate module 'foo'
-## FIXME: We never attempted to load bar.
-# CHECK-NOT: bar
+# CHECK: note: header search couldn't locate module 'bar'

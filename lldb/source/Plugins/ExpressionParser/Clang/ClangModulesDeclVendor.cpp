@@ -436,13 +436,13 @@ llvm::Error ClangModulesDeclVendorImpl::AddModulesForCompileUnit(
   if (!LanguageSupportsClangModules(cu.GetLanguage()))
     return llvm::Error::success();
 
-  for (auto &imported_module : cu.GetImportedModules())
-    // TODO: don't short-circuit. Continue loading modules even if one of them
-    // fails. Concatenate all the errors.
-    if (auto err = AddModule(imported_module, &exported_modules))
-      return err;
+  llvm::Error errors = llvm::Error::success();
 
-  return llvm::Error::success();
+  for (auto &imported_module : cu.GetImportedModules())
+    if (auto err = AddModule(imported_module, &exported_modules))
+      errors = llvm::joinErrors(std::move(errors), std::move(err));
+
+  return errors;
 }
 
 // ClangImporter::lookupValue

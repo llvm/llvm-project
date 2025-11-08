@@ -33,7 +33,7 @@ parseQuery(const ClangTidyOptions::CustomCheckValue &V,
   clang::query::QuerySession QS({});
   llvm::StringRef QueryStringRef{V.Query};
   while (!QueryStringRef.empty()) {
-    query::QueryRef Q = query::QueryParser::parse(QueryStringRef, QS);
+    const query::QueryRef Q = query::QueryParser::parse(QueryStringRef, QS);
     switch (Q->Kind) {
     case query::QK_Match: {
       const auto &MatchQuery = llvm::cast<query::MatchQuery>(*Q);
@@ -126,11 +126,11 @@ void QueryCheck::registerMatchers(MatchFinder *Finder) {
 void QueryCheck::check(const MatchFinder::MatchResult &Result) {
   auto Emit = [this](const DiagMaps &DiagMaps, const std::string &BindName,
                      const DynTypedNode &Node, DiagnosticIDs::Level Level) {
-    DiagMaps::const_iterator DiagMapIt = DiagMaps.find(Level);
+    const DiagMaps::const_iterator DiagMapIt = DiagMaps.find(Level);
     if (DiagMapIt == DiagMaps.end())
       return;
     const BindNameMapToDiagMessage &BindNameMap = DiagMapIt->second;
-    BindNameMapToDiagMessage::const_iterator BindNameMapIt =
+    const BindNameMapToDiagMessage::const_iterator BindNameMapIt =
         BindNameMap.find(BindName);
     if (BindNameMapIt == BindNameMap.end())
       return;
