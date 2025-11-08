@@ -10,7 +10,10 @@
 # RUN: sed -i '' -e 's/module qux/module quz/' %t/sources/module.modulemap
 #
 # RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
-# RUN:       -s %t/sources/commands.input %t.out -o exit 2>&1 | FileCheck %s
+# RUN:       -s %t/sources/commands.input %t.out -o exit 2>&1 | FileCheck %s --check-prefix=NO_LOG
+#
+# RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/sources/commands-with-log.input %t.out -o exit 2>&1 | FileCheck %s --check-prefix=LOG
 
 #--- main.m
 @import foo.baz.qux;
@@ -56,4 +59,12 @@ run
 ## Make sure expression fails so the 'note' diagnostics get printed.
 expr blah
 
-# CHECK: note: couldn't load submodule 'qux' of module 'foo.baz'
+# NO_LOG-NOT: couldn't load submodule 'qux' of module 'foo.baz'
+
+#--- commands-with-log.input
+log enable lldb expr
+run
+## Make sure expression fails so the 'note' diagnostics get printed.
+expr blah
+
+# LOG: couldn't load submodule 'qux' of module 'foo.baz'

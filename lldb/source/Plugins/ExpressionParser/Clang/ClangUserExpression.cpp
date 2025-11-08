@@ -379,12 +379,12 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
   if (!err)
     return;
 
-  // FIXME: should we be dumping these to the error log instead of as
-  // diagnostics? They are non-fatal and are usually quite noisy.
-  llvm::handleAllErrors(
-      std::move(err), [&diagnostic_manager](const llvm::StringError &e) {
-        diagnostic_manager.PutString(lldb::eSeverityInfo, e.getMessage());
-      });
+  // Module load errors aren't fatal to the expression evaluator. Printing
+  // them as diagnostics to the console would be too noisy and misleading
+  // Hence just print them to the expression log.
+  llvm::handleAllErrors(std::move(err), [](const llvm::StringError &e) {
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", e.getMessage());
+  });
 }
 
 ClangExpressionSourceCode::WrapKind ClangUserExpression::GetWrapKind() const {
