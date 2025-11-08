@@ -2402,8 +2402,11 @@ void InitListChecker::CheckStructUnionTypes(
         CheckEmptyInitializable(
             InitializedEntity::InitializeMember(*Field, &Entity),
             IList->getEndLoc());
-        if (StructuredList)
+        if (StructuredList) {
           StructuredList->setInitializedFieldInUnion(*Field);
+          StructuredList->resizeInits(SemaRef.Context,
+                                      StructuredList->getNumInits() + 1);
+        }
         break;
       }
     }
