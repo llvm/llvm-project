@@ -3457,6 +3457,7 @@ def SystemZZOSSystemLibrary
 def emscripten_return_address : RuntimeLibcallImpl<RETURN_ADDRESS>;
 
 def isWasm : RuntimeLibcallPredicate<"TT.isWasm()">;
+def isOSEmscripten : RuntimeLibcallPredicate<[{TT.isOSEmscripten()}]>;
 
 // Define the emscripten name for return address helper.
 // TODO: when implementing other Wasm backends, make this generic or only do
@@ -3468,6 +3469,9 @@ def WasmSystemLibrary
            exp10f, exp10,
            _Unwind_CallPersonality,
            emscripten_return_address,
+           LibcallImpls<(add __small_printf,
+                             __small_sprintf,
+                             __small_fprintf), isOSEmscripten>,
            __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
