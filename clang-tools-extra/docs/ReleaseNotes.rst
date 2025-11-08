@@ -480,6 +480,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
 
+- Improved :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability/duplicate-include>` check by introducing the
+  ``AllowedDuplicateIncludes`` option, which exempts specified headers from
+  duplicate include warnings.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

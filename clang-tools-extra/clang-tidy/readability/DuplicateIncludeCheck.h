@@ -10,8 +10,8 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DUPLICATE_INCLUDE_CHECK_H
 
 #include "../ClangTidyCheck.h"
-#include <vector>
 #include <string>
+#include <vector>
 namespace clang::tidy::readability {
 
 /// \brief Find and remove duplicate #include directives.
@@ -24,8 +24,9 @@ public:
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
-  
+
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
 private:
   std::vector<std::string> AllowedDuplicateIncludes;
 };

@@ -10,7 +10,7 @@ then the list of included files is cleared.
 Examples:
 
 .. code-block:: c++
-
+  
   #include <memory>
   #include <vector>
   #include <memory>
@@ -33,3 +33,21 @@ Because of the intervening macro definitions, this code remains unchanged:
   #define NDEBUG
   #include "assertion.h"
   // ...code with assertions disabled
+
+Option: ``AllowedDuplicateIncludes``
+------------------------------------
+
+Headers listed in this option are exempt from warnings. For example:
+
+.. code-block:: c++
+
+  -config='{CheckOptions: [{key: readability-duplicate-include.AllowedDuplicateIncludes, value: "pack_begin.h,pack_end.h"}]}'
+
+This allows regex matches with ``pack_begin.h`` and ``pack_end.h`` to be included multiple times
+without triggering diagnostics.
+
+Notes
+-----
+
+- Only direct includes in the current translation unit are checked.
+- Useful for removing redundant includes and improving compile times in large codebases.
