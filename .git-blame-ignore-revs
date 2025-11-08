@@ -8,6 +8,9 @@
 #
 # $ git config blame.ignoreRevsFile .git-blame-ignore-revs
 
+# [clang-tidy][NFC] Remove trailing whitespaces in documentation
+8f2b167de4a1268160c06512d08863a9e8f43290
+
 # r365730: [Coding style change][lld] Rename variables for non-ELF ports
 136d27ab4de0c1d5dedfecc32a9857be78fa0648
 
