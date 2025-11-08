@@ -38,8 +38,8 @@ steps:
   - label: AArch64
     command: libcxx/utils/ci/run-buildbot aarch64
     env:
-      CC: clang
-      CXX: clang++
+      CC: cc
+      CXX: c++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: aarch64
@@ -48,8 +48,8 @@ steps:
   - label: AArch64 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot aarch64-no-exceptions
     env:
-      CC: clang
-      CXX: clang++
+      CC: cc
+      CXX: c++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: aarch64
@@ -58,8 +58,8 @@ steps:
   - label: Armv8
     command: libcxx/utils/ci/run-buildbot armv8
     env:
-      CC: clang
-      CXX: clang++
+      CC: cc
+      CXX: c++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: armv8l
@@ -68,8 +68,8 @@ steps:
   - label: Armv8 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv8-no-exceptions
     env:
-      CC: clang
-      CXX: clang++
+      CC: cc
+      CXX: c++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: armv8l
@@ -78,8 +78,8 @@ steps:
   - label: Armv7
     command: libcxx/utils/ci/run-buildbot armv7
     env:
-      CC: clang
-      CXX: clang++
+      CC: cc
+      CXX: c++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: armv8l
@@ -88,8 +88,8 @@ steps:
   - label: Armv7 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv7-no-exceptions
     env:
-      CC: clang
-      CXX: clang++
+      CC: cc
+      CXX: c++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: armv8l
@@ -98,8 +98,8 @@ steps:
   - label: Armv7-M picolibc
     command: libcxx/utils/ci/run-buildbot armv7m-picolibc
     env:
-      CC: clang
-      CXX: clang++
+      CC: cc
+      CXX: c++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: aarch64
@@ -108,8 +108,8 @@ steps:
   - label: Armv7-M picolibc -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv7m-picolibc-no-exceptions
     env:
-      CC: clang
-      CXX: clang++
+      CC: cc
+      CXX: c++
     agents:
       queue: libcxx-builders-linaro-arm
       arch: aarch64
