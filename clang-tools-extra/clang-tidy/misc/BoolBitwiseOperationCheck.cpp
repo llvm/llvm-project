@@ -75,6 +75,24 @@ static llvm::StringRef translate(llvm::StringRef Value) {
 }
 
 static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
+                             std::optional<bool> &RootAssignsToBoolean);
+
+static bool recheckIsBooleanDeeply(const BinaryOperator *BinOp, ASTContext *AC,
+                                   bool &IsBooleanLHS, bool &IsBooleanRHS) {
+  std::optional<bool> DummyFlag = false;
+  IsBooleanLHS = IsBooleanLHS ||
+                 isBooleanBitwise(dyn_cast<BinaryOperator>(
+                                      BinOp->getLHS()->IgnoreParenImpCasts()),
+                                  AC, DummyFlag);
+  IsBooleanRHS = IsBooleanRHS ||
+                 isBooleanBitwise(dyn_cast<BinaryOperator>(
+                                      BinOp->getRHS()->IgnoreParenImpCasts()),
+                                  AC, DummyFlag);
+  return true; // just a formal bool for possibility to be invoked from
+               // expression
+}
+
+static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
                              std::optional<bool> &RootAssignsToBoolean) {
   if (!BinOp)
     return false;
@@ -91,7 +109,9 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
                               ->getType()
                               .getDesugaredType(*AC)
                               ->isBooleanType();
-      for (int i = 0; i < 2; ++i) {
+      for (int i = 0; i < 2;
+           !i++ &&
+           recheckIsBooleanDeeply(BinOp, AC, IsBooleanLHS, IsBooleanRHS)) {
         if (IsBooleanLHS && IsBooleanRHS) {
           RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
           return true;
@@ -105,24 +125,13 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
           RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
           return true;
         }
-        std::optional<bool> DummyFlag = false;
-        IsBooleanLHS =
-            IsBooleanLHS ||
-            isBooleanBitwise(dyn_cast<BinaryOperator>(
-                                 BinOp->getLHS()->IgnoreParenImpCasts()),
-                             AC, DummyFlag);
-        IsBooleanRHS =
-            IsBooleanRHS ||
-            isBooleanBitwise(dyn_cast<BinaryOperator>(
-                                 BinOp->getRHS()->IgnoreParenImpCasts()),
-                             AC, DummyFlag);
       }
     }
   }
   return false;
 }
 
-static const Expr *getValidCompoundsLHS(const BinaryOperator *BinOp) {
+static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
   assert(BinOp->isCompoundAssignmentOp());
 
   if (const auto *DeclRefLHS =
@@ -202,7 +211,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 
   FixItHint InsertEqual;
   if (BinOp->isCompoundAssignmentOp()) {
-    const auto *LHS = getValidCompoundsLHS(BinOp);
+    const auto *LHS = getAcceptableCompoundsLHS(BinOp);
     if (!LHS)
       return static_cast<void>(DiagEmitter());
     const SourceLocation LocLHS = LHS->getEndLoc();
