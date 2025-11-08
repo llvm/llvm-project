@@ -58,6 +58,14 @@
 #include "RWMutex.hpp"
 #include "Unwind-EHABI.h"
 
+#if defined(__AARCH64EB__)
+#define MOVZ_X8_8B 0x681180d2
+#define SVC_0 0x010000d4
+#else
+#define MOVZ_X8_8B 0xd2801168
+#define SVC_0 0xd4000001
+#endif
+
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
 // Provide a definition for the DISPATCHER_CONTEXT struct for old (Win7 and
 // earlier) SDKs.
@@ -2827,7 +2835,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
     return false;
   auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
-  if (instructions[0] != 0xd2801168 || instructions[1] != 0xd4000001)
+  if (instructions[0] != MOVZ_X8_8B || instructions[1] != SVC_0)
     return false;
 
   _info = {};
