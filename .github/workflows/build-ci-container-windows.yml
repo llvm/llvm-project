@@ -72,6 +72,5 @@ jobs:
           skopeo copy ${{ needs.build-ci-container-windows.outputs.container-filename }} \
             --additional-tag=latest \
             --dest-compress-format zstd \
-            --dest-force-compress-format \
             oci:/tmp/blah.tar
             #docker://${{ needs.build-ci-container-windows.outputs.container-name-tag }}
