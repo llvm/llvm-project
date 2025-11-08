@@ -15838,6 +15838,10 @@ TEST_F(FormatTest, BreaksWideAndNSStringLiterals) {
                "@\"NSString literal\";", getGoogleStyleWithColumns(19));
   verifyFormat(R"(NSString *s = @"那那那那";)", getLLVMStyleWithColumns(26));
 
+  EXPECT_EQ("L\"suffixed \"\n"
+            "L\"string\"_s;",
+            format("L\"suffixed string\"_s;", getLLVMStyleWithColumns(19)));
+
   // This input makes clang-format try to split the incomplete unicode escape
   // sequence, which used to lead to a crasher.
   verifyNoCrash(
