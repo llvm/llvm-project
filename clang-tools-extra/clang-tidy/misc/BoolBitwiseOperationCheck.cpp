@@ -75,24 +75,6 @@ static llvm::StringRef translate(llvm::StringRef Value) {
 }
 
 static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
-                             std::optional<bool> &RootAssignsToBoolean);
-
-static bool recheckIsBooleanDeeply(const BinaryOperator *BinOp, ASTContext *AC,
-                                   bool &IsBooleanLHS, bool &IsBooleanRHS) {
-  std::optional<bool> DummyFlag = false;
-  IsBooleanLHS = IsBooleanLHS ||
-                 isBooleanBitwise(dyn_cast<BinaryOperator>(
-                                      BinOp->getLHS()->IgnoreParenImpCasts()),
-                                  AC, DummyFlag);
-  IsBooleanRHS = IsBooleanRHS ||
-                 isBooleanBitwise(dyn_cast<BinaryOperator>(
-                                      BinOp->getRHS()->IgnoreParenImpCasts()),
-                                  AC, DummyFlag);
-  return true; // just a formal bool for possibility to be invoked from
-               // expression
-}
-
-static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
                              std::optional<bool> &RootAssignsToBoolean) {
   if (!BinOp)
     return false;
@@ -109,22 +91,35 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
                               ->getType()
                               .getDesugaredType(*AC)
                               ->isBooleanType();
-      for (int i = 0; i < 2;
-           !i++ &&
-           recheckIsBooleanDeeply(BinOp, AC, IsBooleanLHS, IsBooleanRHS)) {
-        if (IsBooleanLHS && IsBooleanRHS) {
-          RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
-          return true;
-        }
-        if (assignsToBoolean(BinOp, AC) ||
-            RootAssignsToBoolean.value_or(false)) {
-          RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
-          return true;
-        }
-        if (BinOp->isCompoundAssignmentOp() && IsBooleanLHS) {
-          RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
-          return true;
-        }
+      if (IsBooleanLHS && IsBooleanRHS) {
+        RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
+        return true;
+      }
+      if (((IsBooleanLHS || IsBooleanRHS) && assignsToBoolean(BinOp, AC)) ||
+          RootAssignsToBoolean.value_or(false)) {
+        RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
+        return true;
+      }
+      if (BinOp->isCompoundAssignmentOp() && IsBooleanLHS) {
+        RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
+        return true;
+      }
+
+      std::optional<bool> DummyFlag = false;
+      IsBooleanLHS =
+          IsBooleanLHS ||
+          isBooleanBitwise(
+              dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()),
+              AC, DummyFlag);
+      IsBooleanRHS =
+          IsBooleanRHS ||
+          isBooleanBitwise(
+              dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()),
+              AC, DummyFlag);
+
+      if (IsBooleanLHS && IsBooleanRHS) {
+        RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
+        return true;
       }
     }
   }
