@@ -176,12 +176,8 @@ void applyAfterOpeningBlockCommentSpacing(const FormatStyle &Style,
       countLeadingHorizontalWhitespaceAfterOpening(Tok);
 
   switch (Mode) {
-  case CommentSpaceMode::Never:
-    if (LeadingSpaces > 0) {
-      replaceCommentWhitespace(Tok, OpeningOffset, LeadingSpaces, "",
-                               /*Newlines=*/0, Whitespaces, InPPDirective);
-    }
-    return;
+  case CommentSpaceMode::Leave:
+    break;
   case CommentSpaceMode::Always:
     if (OnlyWhitespace && !Interior.empty()) {
       const unsigned ReplaceChars = Interior.size();
@@ -204,8 +200,12 @@ void applyAfterOpeningBlockCommentSpacing(const FormatStyle &Style,
                                /*Newlines=*/0, Whitespaces, InPPDirective);
     }
     return;
-  case CommentSpaceMode::Leave:
-    break;
+  case CommentSpaceMode::Never:
+    if (LeadingSpaces > 0) {
+      replaceCommentWhitespace(Tok, OpeningOffset, LeadingSpaces, "",
+                               /*Newlines=*/0, Whitespaces, InPPDirective);
+    }
+    return;
   }
   llvm_unreachable("Unhandled CommentSpaceMode");
 }
@@ -230,20 +230,20 @@ void applyBeforeClosingBlockCommentSpacing(const FormatStyle &Style,
       Text.size() - BlockCommentCloserLength - TrailingSpaces;
 
   switch (Mode) {
-  case CommentSpaceMode::Never:
-    if (TrailingSpaces > 0) {
-      replaceCommentWhitespace(Tok, ReplaceOffset, TrailingSpaces, "",
-                               /*Newlines=*/0, Whitespaces, InPPDirective);
-    }
-    return;
+  case CommentSpaceMode::Leave:
+    break;
   case CommentSpaceMode::Always:
     if (TrailingSpaces != 1) {
       replaceCommentWhitespace(Tok, ReplaceOffset, TrailingSpaces, " ",
                                /*Newlines=*/0, Whitespaces, InPPDirective);
     }
     return;
-  case CommentSpaceMode::Leave:
-    break;
+  case CommentSpaceMode::Never:
+    if (TrailingSpaces > 0) {
+      replaceCommentWhitespace(Tok, ReplaceOffset, TrailingSpaces, "",
+                               /*Newlines=*/0, Whitespaces, InPPDirective);
+    }
+    return;
   }
   llvm_unreachable("Unhandled CommentSpaceMode");
 }
@@ -1184,24 +1184,25 @@ bool BreakableBlockComment::isWhitespaceOnlySingleLineBlockComment() const {
 int BreakableBlockComment::calculateTerminatorIndent(
     unsigned LineIndex, StringRef Prefix, FormatStyle::CommentSpaceMode Mode,
     int BaseSpaces) const {
-  if (Mode == FormatStyle::CommentSpaceMode::Leave)
+  switch (Mode) {
+  case FormatStyle::CommentSpaceMode::Leave:
     return BaseSpaces;
-  if (Mode == FormatStyle::CommentSpaceMode::Never)
+  case FormatStyle::CommentSpaceMode::Always: {
+    if (!Tok.NeedsSpaceBeforeClosingBlockComment)
+      return allPreviousLinesEmpty(LineIndex) ? 0 : BaseSpaces;
+
+    if (BaseSpaces <= 0)
+      return allPreviousLinesEmpty(LineIndex) ? 0 : 1;
+
+    const int TrailingSpacesInPrefix = countTrailingSpaces(Prefix);
+    return TrailingSpacesInPrefix == 0
+               ? BaseSpaces
+               : std::max(0, BaseSpaces - TrailingSpacesInPrefix);
+  }
+  case FormatStyle::CommentSpaceMode::Never:
     return 0;
-
-  assert(Mode == FormatStyle::CommentSpaceMode::Always &&
-         "Unexpected CommentSpaceMode");
-
-  if (!Tok.NeedsSpaceBeforeClosingBlockComment)
-    return allPreviousLinesEmpty(LineIndex) ? 0 : BaseSpaces;
-
-  if (BaseSpaces <= 0)
-    return allPreviousLinesEmpty(LineIndex) ? 0 : 1;
-
-  const int TrailingSpacesInPrefix = countTrailingSpaces(Prefix);
-  return TrailingSpacesInPrefix == 0
-             ? BaseSpaces
-             : std::max(0, BaseSpaces - TrailingSpacesInPrefix);
+  }
+  llvm_unreachable("Unhandled CommentSpaceMode");
 }
 
 BreakableToken::Split
