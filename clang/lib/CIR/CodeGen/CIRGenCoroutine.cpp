@@ -48,7 +48,7 @@ public:
     expr = e;
   }
   void VisitStmt(Stmt *s) {
-    for (auto *c : s->children()) {
+    for (Stmt *c : s->children()) {
       if (c)
         Visit(c);
     }
@@ -65,12 +65,12 @@ struct ParamReferenceReplacerRAII {
   ParamReferenceReplacerRAII(CIRGenFunction::DeclMapTy &localDeclMap)
       : localDeclMap(localDeclMap) {}
 
-  void addCopy(DeclStmt const *pm) {
+  void addCopy(const DeclStmt *pm) {
     // Figure out what param it refers to.
 
     assert(pm->isSingleDecl());
-    VarDecl const *vd = static_cast<VarDecl const *>(pm->getSingleDecl());
-    Expr const *initExpr = vd->getInit();
+    const VarDecl *vd = static_cast<const VarDecl *>(pm->getSingleDecl());
+    const Expr *initExpr = vd->getInit();
     GetParamRef visitor;
     visitor.Visit(const_cast<Expr *>(initExpr));
     assert(visitor.expr);
@@ -224,6 +224,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
     // Create parameter copies. We do it before creating a promise, since an
     // evolution of coroutine TS may allow promise constructor to observe
     // parameter copies.
+    assert(!cir::MissingFeatures::coroOutsideFrameMD());
     for (auto *pm : paramMoves) {
       if (emitStmt(pm, /*useCurrentScope=*/true).failed())
         return mlir::failure();
