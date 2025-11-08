@@ -279,6 +279,16 @@ New check aliases
   <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-msc32-c <clang-tidy/checks/cert/msc32-c>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc51-cpp <clang-tidy/checks/cert/msc51-cpp>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
   :doc:`bugprone-raw-memory-call-on-non-trivial-type
   <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`

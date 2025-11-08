@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ProperlySeededRandomGeneratorCheck.h"
+#include "RandomGeneratorSeedCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
-ProperlySeededRandomGeneratorCheck::ProperlySeededRandomGeneratorCheck(
+RandomGeneratorSeedCheck::RandomGeneratorSeedCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawDisallowedSeedTypes(
@@ -23,12 +23,12 @@ ProperlySeededRandomGeneratorCheck::ProperlySeededRandomGeneratorCheck(
   RawDisallowedSeedTypes.split(DisallowedSeedTypes, ',');
 }
 
-void ProperlySeededRandomGeneratorCheck::storeOptions(
+void RandomGeneratorSeedCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "DisallowedSeedTypes", RawDisallowedSeedTypes);
 }
 
-void ProperlySeededRandomGeneratorCheck::registerMatchers(MatchFinder *Finder) {
+void RandomGeneratorSeedCheck::registerMatchers(MatchFinder *Finder) {
   auto RandomGeneratorEngineDecl = cxxRecordDecl(hasAnyName(
       "::std::linear_congruential_engine", "::std::mersenne_twister_engine",
       "::std::subtract_with_carry_engine", "::std::discard_block_engine",
@@ -75,7 +75,7 @@ void ProperlySeededRandomGeneratorCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void ProperlySeededRandomGeneratorCheck::check(
+void RandomGeneratorSeedCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
   if (Ctor)
@@ -91,7 +91,7 @@ void ProperlySeededRandomGeneratorCheck::check(
 }
 
 template <class T>
-void ProperlySeededRandomGeneratorCheck::checkSeed(
+void RandomGeneratorSeedCheck::checkSeed(
     const MatchFinder::MatchResult &Result, const T *Func) {
   if (Func->getNumArgs() == 0 || Func->getArg(0)->isDefaultArgument()) {
     diag(Func->getExprLoc(),
@@ -118,4 +118,4 @@ void ProperlySeededRandomGeneratorCheck::checkSeed(
   }
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone

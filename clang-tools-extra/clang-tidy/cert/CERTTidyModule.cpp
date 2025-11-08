@@ -15,7 +15,7 @@
 #include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
 #include "../bugprone/FloatLoopCounterCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
-#include "../bugprone/ProperlySeededRandomGeneratorCheck.h"
+#include "../bugprone/RandomGeneratorSeedCheck.h"
 #include "../bugprone/RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
@@ -41,8 +41,6 @@
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
 #include "LimitedRandomnessCheck.h"
-#include "ProperlySeededRandomGeneratorCheck.h"
-#include "MutatingCopyCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 
 namespace {
@@ -273,7 +271,7 @@ public:
             "cert-mem57-cpp");
     // MSC
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
-    CheckFactories.registerCheck<bugprone::ProperlySeededRandomGeneratorCheck>(
+    CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc51-cpp");
     CheckFactories.registerCheck<bugprone::SignalHandlerCheck>(
         "cert-msc54-cpp");
@@ -326,7 +324,7 @@ public:
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
         "cert-msc24-c");
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
-    CheckFactories.registerCheck<bugprone::ProperlySeededRandomGeneratorCheck>(
+    CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc32-c");
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
         "cert-msc33-c");

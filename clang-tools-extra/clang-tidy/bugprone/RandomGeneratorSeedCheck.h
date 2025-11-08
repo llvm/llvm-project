@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_PROPERLY_SEEDED_RANDOM_GENERATOR_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_PROPERLY_SEEDED_RANDOM_GENERATOR_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_RANDOMGENERATORSEEDCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_RANDOMGENERATORSEEDCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include <string>
@@ -21,9 +21,9 @@ namespace clang::tidy::bugprone {
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/random-generator-seed.html
-class ProperlySeededRandomGeneratorCheck : public ClangTidyCheck {
+class RandomGeneratorSeedCheck : public ClangTidyCheck {
 public:
-  ProperlySeededRandomGeneratorCheck(StringRef Name, ClangTidyContext *Context);
+  RandomGeneratorSeedCheck(StringRef Name, ClangTidyContext *Context);
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -39,4 +39,4 @@ private:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_PROPERLY_SEEDED_RANDOM_GENERATOR_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_RANDOMGENERATORSEEDCHECK_H

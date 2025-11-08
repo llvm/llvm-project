@@ -3,16 +3,11 @@
 bugprone-random-generator-seed
 ==============================
 
-This check flags all pseudo-random number engines, engine adaptor
+Flags all pseudo-random number engines, engine adaptor
 instantiations and ``srand()`` when initialized or seeded with default argument,
 constant expression or any user-configurable type. Pseudo-random number
 engines seeded with a predictable value may cause vulnerabilities e.g. in
 security protocols.
-This is a CERT security rule, see
-`MSC51-CPP. Ensure your random number generator is properly seeded
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC51-CPP.+Ensure+your+random+number+generator+is+properly+seeded>`_ and
-`MSC32-C. Properly seed pseudorandom number generators
-<https://wiki.sei.cmu.edu/confluence/display/c/MSC32-C.+Properly+seed+pseudorandom+number+generators>`_.
 
 Examples:
 
@@ -38,3 +33,12 @@ Options
 
    A comma-separated list of the type names which are disallowed.
    Default value is `time_t,std::time_t`.
+
+References
+----------
+
+This is a CERT security rule, see
+`MSC51-CPP. Ensure your random number generator is properly seeded
+<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC51-CPP.+Ensure+your+random+number+generator+is+properly+seeded>`_ and
+`MSC32-C. Properly seed pseudorandom number generators
+<https://wiki.sei.cmu.edu/confluence/display/c/MSC32-C.+Properly+seed+pseudorandom+number+generators>`_.

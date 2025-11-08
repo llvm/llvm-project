@@ -65,7 +65,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   ParentVirtualCallCheck.cpp
   PointerArithmeticOnPolymorphicObjectCheck.cpp
   PosixReturnCheck.cpp
-  ProperlySeededRandomGeneratorCheck.cpp
+  RandomGeneratorSeedCheck.cpp
   RawMemoryCallOnNonTrivialTypeCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
