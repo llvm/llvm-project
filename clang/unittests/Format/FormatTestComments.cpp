@@ -477,6 +477,22 @@ TEST_F(FormatTestComments, AfterOpeningParamCommentOverrides) {
   verifyFormat("call(/*Arg=*/value);", "call(/* Arg=*/value);", Style);
 }
 
+TEST_F(FormatTestComments, AfterOpeningCommentLeaveParamComment) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Always;
+
+  verifyFormat("call(/*Arg=*/value);", "call(/*Arg=*/value);", Style);
+}
+
+TEST_F(FormatTestComments, BeforeClosingCommentLeaveParamComment) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Never;
+
+  verifyFormat("call(/*arg= */value);", "call(/*arg= */value);", Style);
+}
+
 TEST_F(FormatTestComments, InsertsSpaceBeforeClosingBlockComment) {
   FormatStyle Style = getLLVMStyle();
   Style.SpaceInComments.BeforeClosingComment =

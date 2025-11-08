@@ -44,10 +44,8 @@ resolveCommentSpaceMode(const FormatStyle &Style, const FormatToken &Tok,
                         FormatStyle::CommentSpaceMode GeneralMode,
                         FormatStyle::CommentSpaceMode ParamOverrideMode,
                         const bool ForceDocstringLeave) {
-  if (Tok.getBlockCommentKind() == CommentKind::Parameter) {
-    if (ParamOverrideMode != FormatStyle::CommentSpaceMode::Leave)
-      return ParamOverrideMode;
-  }
+  if (Tok.getBlockCommentKind() == CommentKind::Parameter)
+    return ParamOverrideMode;
   // Docstrings intentionally keep their leading whitespace when we tidy up
   // the opening delimiter. Callers that pass ForceDocstringLeave are operating
   // on that opening boundary and must not disturb the docstring layout.
