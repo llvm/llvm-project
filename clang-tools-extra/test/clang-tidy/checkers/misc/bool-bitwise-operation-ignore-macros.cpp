@@ -16,13 +16,13 @@ void bad_in_macro() {
 
     // change operator - GOOD
     IDENT(a) | b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: IDENT(a) || b;
     a & IDENT(b);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && IDENT(b);
     IDENT(a) & IDENT(b);
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: IDENT(a) && IDENT(b);
 
     // insert `)` - BAD
@@ -31,7 +31,7 @@ void bad_in_macro() {
 
     // insert `)` - GOOD
     a && b | c IDENT(&& e);
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && (b || c) IDENT(&& e);
 
     // insert `(` - BAD
@@ -39,7 +39,7 @@ void bad_in_macro() {
 
     // insert `(` - GOOD
     IDENT(a &&) b | c && e;
-    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: IDENT(a &&) (b || c) && e;
 
     bool ab = false;

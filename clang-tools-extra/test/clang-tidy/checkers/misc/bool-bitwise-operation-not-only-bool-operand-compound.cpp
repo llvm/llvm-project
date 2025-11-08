@@ -15,6 +15,6 @@ void assign_to_boolean(unsigned flags, bool value) {
     // CHECK-FIXES: value = value || flags << 1;
     value |= (flags << 1) | (flags << 2);
     // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator '||' for boolean variable 'value' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: value = value || (flags << 1) || (flags << 2);
 }

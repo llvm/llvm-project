@@ -15,10 +15,10 @@ bool& normal() {
 bool bad() noexcept __attribute__((pure)) {
     bool a = true, b = false;
     a | b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a || b;
     a & b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && b;
     a |= b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
@@ -31,10 +31,10 @@ bool bad() noexcept __attribute__((pure)) {
 }
 
 bool global_1 = bad() | bad();
-// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
 // CHECK-FIXES: bool global_1 = bad() || bad();
 bool global_2 = bad() & bad();
-// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
 // CHECK-FIXES: bool global_2 = bad() && bad();
 
 using Boolean = bool;
@@ -42,10 +42,10 @@ using Boolean = bool;
 bool bad_typedef() {
     Boolean a = true, b = false;
     a | b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a || b;
     a & b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && b;
     a |= b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
@@ -62,19 +62,19 @@ void bad_side_effects() {
     bool a = true, b = false;
 
     a | function_with_possible_side_effects();
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     a & function_with_possible_side_effects();
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     function_with_possible_side_effects() | a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: function_with_possible_side_effects() || a;
 
     function_with_possible_side_effects() & a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: function_with_possible_side_effects() && a;
     a |= function_with_possible_side_effects();
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
@@ -88,19 +88,19 @@ void bad_side_effects() {
     bool c = true;
 
     a || function_with_possible_side_effects() | c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a || function_with_possible_side_effects() || c;
 
     function_with_possible_side_effects() || b | c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: function_with_possible_side_effects() || b || c;
 
     a && function_with_possible_side_effects() & c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && function_with_possible_side_effects() && c;
 
     function_with_possible_side_effects() && b & c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: function_with_possible_side_effects() && b && c;
 
     // but here the count of evaluation migh be changed - no fix must be provided
@@ -128,10 +128,10 @@ void bad_side_effects_volatile() {
     bool c = true;
 
     a | b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a & b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     a |= b;
@@ -142,60 +142,60 @@ void bad_side_effects_volatile() {
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     (a | c) | b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:13: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:13: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (a || c) | b;
 
     a | c | b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a || c | b;
 }
 
 void bad_with_priors() {
     bool a = false, b = true, c = true;
     a && b | c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && (b || c);
     a && b & c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && b && c;
     a || b & c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a || b && c;
     a || b | c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a || b || c;
     b | c && a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (b || c) && a;
 
     bool q = (true && false | true) && (false | true && (false && true | false));
-    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:47: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-3]]:72: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:47: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:72: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: bool q = (true && (false || true)) && ((false || true) && (false && (true || false)));
 }
 
 void bad_with_priors2() {
     bool a = false, b = true, c = true;
     a ^ b & c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a ^ (b && c);
     // braces added in the first change
     a | b & c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a || (b && c);
 
     b & c ^ a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (b && c) ^ a;
 
     // braces added in the first change
     b & c | a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (b && c) || a;
 }
 
@@ -207,49 +207,49 @@ void bad_has_ancestor() {
     bool a = false, b = true, c = true;
     bool d = false;
     d ^ (a && b & c);
-    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: d ^ (a && b && c);
 
     a ^ ident(b & c || a);
-    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a ^ ident(b && c || a);
 
     a | ident(a ? b & c : c);
-    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a | ident(a ? b && c : c);
 }
 
 void bad_with_priors_already_braced() {
     bool a = false, b = true, c = true;
     a && (b | c);
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && (b || c);
     (b | c) && a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (b || c) && a;
 
     bool q = (true && (false | true)) && ((false | true) && (false && (true | false)));
-    // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:50: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-3]]:77: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:50: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:77: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: bool q = (true && (false || true)) && ((false || true) && (false && (true || false)));
 
     a ^ (b & c);
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a ^ (b && c);
 
     a | (b & c);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a || (b && c);
 
     (b & c) ^ a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (b && c) ^ a;
 
     (b & c) | a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:13: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:13: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (b && c) || a;
 }
 
@@ -279,10 +279,10 @@ void bad_with_priors_compound_already_braced() {
 void bad_no_fixit() {
     bool b = false;
     normal() |= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean values instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     normal() &= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean values instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 }
 
@@ -300,10 +300,10 @@ void bad_in_macro() {
 
     // change operator - BAD
     IDENT(a |) b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a IDENT(& b);
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     IDENT(a |=) b;
     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
@@ -314,34 +314,34 @@ void bad_in_macro() {
 
     // change operator - GOOD
     IDENT(a) | b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: IDENT(a) || b;
     a & IDENT(b);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && IDENT(b);
     IDENT(a) & IDENT(b);
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: IDENT(a) && IDENT(b);
 
     // insert `)` - BAD
     bool c = true, e = false;
     a && b | IDENT(c &&) e;
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     // insert `)` - GOOD
     a && b | c IDENT(&& e);
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && (b || c) IDENT(&& e);
 
     // insert `(` - BAD
     a IDENT(&& b) | c && e;
-    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     // insert `(` - GOOD
     IDENT(a &&) b | c && e;
-    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: IDENT(a &&) (b || c) && e;
 
     bool ab = false;
@@ -362,9 +362,9 @@ void bad_in_macro_fixit() {
     // FIXME: implement fixit for all of these cases
     
     a MY_OR b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     a MY_AND b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     a MY_OR_ASSIGN b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     a MY_AND_ASSIGN b;

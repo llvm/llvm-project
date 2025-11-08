@@ -13,8 +13,6 @@
 #include <optional>
 #include <utility>
 
-// TODO: change warning message
-
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
@@ -86,37 +84,48 @@ static llvm::StringRef translate(llvm::StringRef Value) {
   return {};
 }
 
-static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC, std::optional<bool>& rootAssignsToBoolean) {
+static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
+                             std::optional<bool> &rootAssignsToBoolean) {
   if (!BinOp)
     return false;
 
   for (const auto &[Bitwise, _] : OperatorsTransformation) {
     if (BinOp->getOpcodeStr() == Bitwise) {
-      const bool lhsBoolean = BinOp->getLHS()
-                                  ->IgnoreImpCasts()
-                                  ->getType()
-                                  .getDesugaredType(*AC)
-                                  ->isBooleanType();
-      const bool rhsBoolean = BinOp->getRHS()
-                                  ->IgnoreImpCasts()
-                                  ->getType()
-                                  .getDesugaredType(*AC)
-                                  ->isBooleanType();
-      if (lhsBoolean && rhsBoolean) {
-        rootAssignsToBoolean = rootAssignsToBoolean.value_or(false);
-        return true;
-      }
-      if (assignsToBoolean(BinOp, AC) || rootAssignsToBoolean.value_or(false)) {
-        rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
-        return true;
-      }
-      if (BinOp->isCompoundAssignmentOp() && lhsBoolean) {
-        rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
-        return true;
-      }
-      if (std::optional<bool> DummyFlag = false; (lhsBoolean || isBooleanBitwise(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()), AC, DummyFlag)) && (rhsBoolean  || isBooleanBitwise(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()), AC, DummyFlag))) {
-        rootAssignsToBoolean = rootAssignsToBoolean.value_or(false);
-        return true;
+      bool lhsBoolean = BinOp->getLHS()
+                            ->IgnoreImpCasts()
+                            ->getType()
+                            .getDesugaredType(*AC)
+                            ->isBooleanType();
+      bool rhsBoolean = BinOp->getRHS()
+                            ->IgnoreImpCasts()
+                            ->getType()
+                            .getDesugaredType(*AC)
+                            ->isBooleanType();
+      for (int i = 0; i < 2; ++i) {
+        if (lhsBoolean && rhsBoolean) {
+          rootAssignsToBoolean = rootAssignsToBoolean.value_or(false);
+          return true;
+        }
+        if (assignsToBoolean(BinOp, AC) ||
+            rootAssignsToBoolean.value_or(false)) {
+          rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
+          return true;
+        }
+        if (BinOp->isCompoundAssignmentOp() && lhsBoolean) {
+          rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
+          return true;
+        }
+        std::optional<bool> DummyFlag = false;
+        lhsBoolean =
+            lhsBoolean ||
+            isBooleanBitwise(dyn_cast<BinaryOperator>(
+                                 BinOp->getLHS()->IgnoreParenImpCasts()),
+                             AC, DummyFlag);
+        rhsBoolean =
+            rhsBoolean ||
+            isBooleanBitwise(dyn_cast<BinaryOperator>(
+                                 BinOp->getRHS()->IgnoreParenImpCasts()),
+                             AC, DummyFlag);
       }
     }
   }
@@ -151,14 +160,17 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const NamedDecl *ND = getLHSNamedDeclIfCompoundAssign(BinOp);
     return diag(BinOp->getOperatorLoc(),
                 "use logical operator '%0' for boolean %select{variable "
-                "%2|values}1 instead of bitwise operator '%3'")
+                "%2|semantics}1 instead of bitwise operator '%3'")
            << translate(BinOp->getOpcodeStr()) << (ND == nullptr) << ND
            << BinOp->getOpcodeStr();
   };
 
   const bool HasVolatileOperand = llvm::any_of(
       std::array{BinOp->getLHS(), BinOp->getRHS()}, [&](const Expr *E) {
-        return E->IgnoreImpCasts()->getType().getDesugaredType(Ctx).isVolatileQualified();
+        return E->IgnoreImpCasts()
+            ->getType()
+            .getDesugaredType(Ctx)
+            .isVolatileQualified();
       });
   if (HasVolatileOperand)
     return static_cast<void>(DiagEmitter());
@@ -250,8 +262,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 void BoolBitwiseOperationCheck::visitBinaryTreesNode(
     const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
     const clang::SourceManager &SM, clang::ASTContext &Ctx,
-    std::optional<bool>& rootAssignsToBoolean) {
-  //llvm::outs() << "ENTER " << rootAssignsToBoolean << "\n";
+    std::optional<bool> &rootAssignsToBoolean) {
   if (!BinOp)
     return;
 
@@ -264,8 +275,6 @@ void BoolBitwiseOperationCheck::visitBinaryTreesNode(
   visitBinaryTreesNode(
       dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()), BinOp,
       SM, Ctx, rootAssignsToBoolean);
-
-  //llvm::outs() << "LEAVE\n";
 }
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
