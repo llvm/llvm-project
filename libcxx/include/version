@@ -141,7 +141,7 @@ __cpp_lib_incomplete_container_elements                 201505L <forward_list> <
 __cpp_lib_inplace_vector                                202406L <inplace_vector>
 __cpp_lib_int_pow2                                      202002L <bit>
 __cpp_lib_integer_comparison_functions                  202002L <utility>
-__cpp_lib_integer_sequence                              201304L <utility>
+__cpp_lib_integer_sequence                              202511L <utility>
 __cpp_lib_integral_constant_callable                    201304L <type_traits>
 __cpp_lib_interpolate                                   201902L <cmath> <numeric>
 __cpp_lib_invoke                                        201411L <functional>
@@ -583,6 +583,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_generate_random                      202403L
 // # define __cpp_lib_hazard_pointer                       202306L
 // # define __cpp_lib_inplace_vector                       202406L
+# undef __cpp_lib_integer_sequence
+# define __cpp_lib_integer_sequence                     202511L
 # define __cpp_lib_is_sufficiently_aligned              202411L
 # if __has_builtin(__builtin_is_virtual_base_of)
 #   define __cpp_lib_is_virtual_base_of                 202406L

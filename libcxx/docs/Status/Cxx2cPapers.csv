@@ -169,7 +169,7 @@
 "`P3819R0 <https://wg21.link/P3819R0>`__","Remove ``evaluation_exception()`` from contract-violation handling for C++26","2025-11 (Kona)","","","`#171280 <https://github.com/llvm/llvm-project/issues/171280>`__",""
 "`P3612R1 <https://wg21.link/P3612R1>`__","Harmonize proxy-reference operations (LWG 3638 and 4187)","2025-11 (Kona)","","","`#171281 <https://github.com/llvm/llvm-project/issues/171281>`__",""
 "`P3778R0 <https://wg21.link/P3778R0>`__","Fix for ``type_order`` template definition","2025-11 (Kona)","","","`#171284 <https://github.com/llvm/llvm-project/issues/171284>`__",""
-"`P1789R3 <https://wg21.link/P1789R3>`__","Library Support for Expansion Statements","2025-11 (Kona)","","","`#167268 <https://github.com/llvm/llvm-project/issues/167268>`__",""
+"`P1789R3 <https://wg21.link/P1789R3>`__","Library Support for Expansion Statements","2025-11 (Kona)","|Complete|","22","`#167268 <https://github.com/llvm/llvm-project/issues/167268>`__",""
 "`P3922R1 <https://wg21.link/P3922R1>`__","Missing deduction guide from ``simd::mask`` to ``simd::vec``","2025-11 (Kona)","","","`#171285 <https://github.com/llvm/llvm-project/issues/171285>`__",""
 "`P3878R1 <https://wg21.link/P3878R1>`__","Standard library hardening should not use the 'observe' semantic","2025-11 (Kona)","","","`#171286 <https://github.com/llvm/llvm-project/issues/171286>`__",""
 "`P3887R1 <https://wg21.link/P3887R1>`__","Make ``when_all`` a Ronseal Algorithm","2025-11 (Kona)","","","`#171289 <https://github.com/llvm/llvm-project/issues/171289>`__",""
