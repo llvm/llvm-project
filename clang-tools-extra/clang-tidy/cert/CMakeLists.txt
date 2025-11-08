@@ -7,6 +7,7 @@ add_clang_library(clangTidyCERTModule STATIC
   CERTTidyModule.cpp
   LimitedRandomnessCheck.cpp
   ProperlySeededRandomGeneratorCheck.cpp
+  MutatingCopyCheck.cpp
   ThrownExceptionTypeCheck.cpp
 
   LINK_LIBS

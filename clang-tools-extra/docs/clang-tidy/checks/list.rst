@@ -132,6 +132,7 @@ Clang-Tidy Checks
    :doc:`bugprone-parent-virtual-call <bugprone/parent-virtual-call>`, "Yes"
    :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
+   :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`, "Yes"
    :doc:`bugprone-raw-memory-call-on-non-trivial-type <bugprone/raw-memory-call-on-non-trivial-type>`,
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
@@ -181,7 +182,6 @@ Clang-Tidy Checks
    :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
    :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
-   :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
    :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
@@ -458,7 +458,7 @@ Check aliases
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`, :doc:`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>`,
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
-   :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
+   :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`cert-msc33-c <cert/msc33-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`cert-msc54-cpp <cert/msc54-cpp>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`cert-oop11-cpp <cert/oop11-cpp>`, :doc:`performance-move-constructor-init <performance/move-constructor-init>`,

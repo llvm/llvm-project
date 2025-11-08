@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLYSEEDEDRANDOMGENERATORCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLYSEEDEDRANDOMGENERATORCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_PROPERLY_SEEDED_RANDOM_GENERATOR_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_PROPERLY_SEEDED_RANDOM_GENERATOR_H
 
 #include "../ClangTidyCheck.h"
 #include <string>
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
 /// Random number generator must be seeded properly.
 ///
@@ -20,7 +20,7 @@ namespace clang::tidy::cert {
 /// constant expression is a security vulnerability.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/cert/msc51-cpp.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/random-generator-seed.html
 class ProperlySeededRandomGeneratorCheck : public ClangTidyCheck {
 public:
   ProperlySeededRandomGeneratorCheck(StringRef Name, ClangTidyContext *Context);
@@ -37,6 +37,6 @@ private:
   SmallVector<StringRef, 5> DisallowedSeedTypes;
 };
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLYSEEDEDRANDOMGENERATORCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_PROPERLY_SEEDED_RANDOM_GENERATOR_H
