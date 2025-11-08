@@ -34,8 +34,7 @@ void test(InputIterator f, InputIterator l, const Allocator& a) {
   assert(d.size() == static_cast<std::size_t>(std::distance(f, l)));
   assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
-  for (const_iterator i = d.begin(), e = d.end(); i != e; ++i, (void)++f)
-    assert(*i == *f);
+  assert(std::equal(d.begin(), d.end(), f));
 }
 
 void basic_test() {

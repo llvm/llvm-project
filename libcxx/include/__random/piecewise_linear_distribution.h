@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___RANDOM_PIECEWISE_LINEAR_DISTRIBUTION_H
 #define _LIBCPP___RANDOM_PIECEWISE_LINEAR_DISTRIBUTION_H
 
+#include <__algorithm/copy_n.h>
 #include <__algorithm/upper_bound.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
