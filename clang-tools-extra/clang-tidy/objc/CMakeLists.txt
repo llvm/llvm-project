@@ -4,7 +4,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyObjCModule STATIC
-  AssertEquals.cpp
+  AssertEqualsCheck.cpp
   AvoidNSErrorInitCheck.cpp
   DeallocInCategoryCheck.cpp
   ForbiddenSubclassingCheck.cpp

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NonCopyableObjects.h"
+#include "NonCopyableObjectsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
