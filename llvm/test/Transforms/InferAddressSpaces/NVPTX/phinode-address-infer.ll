@@ -7,10 +7,10 @@
 target triple = "nvptx64-nvidia-cuda"
 
 declare void @llvm.assume(i1 noundef)
-declare i1 @llvm.nvvm.isspacep.shared(ptr) readnone noinline
-declare i1 @llvm.nvvm.isspacep.global(ptr) readnone noinline
+declare i1 @llvm.nvvm.isspacep.shared(ptr)
+declare i1 @llvm.nvvm.isspacep.global(ptr)
 
-define ptr @phinode_instr() {
+define void @phinode_instr() {
 ; CHECK-LABEL: @phinode_instr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR_1:%.*]] = load ptr, ptr null, align 8
@@ -20,8 +20,8 @@ define ptr @phinode_instr() {
 ; CHECK-NEXT:    br label [[IF_SINK_SPLIT:%.*]]
 ; CHECK:       if.sink.split:
 ; CHECK-NEXT:    [[PTR_SINK:%.*]] = phi ptr addrspace(3) [ [[TMP0]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(3) [[PTR_SINK]] to ptr
-; CHECK-NEXT:    ret ptr [[TMP1]]
+; CHECK-NEXT:    store i32 1, ptr addrspace(3) [[PTR_SINK]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %ptr.1 = load ptr, ptr null, align 8
@@ -31,10 +31,11 @@ entry:
 
 if.sink.split:                                    ; preds = %entry
   %ptr.sink = phi ptr [ %ptr.1, %entry ]
-  ret ptr %ptr.sink
+  store i32 1, ptr %ptr.sink, align 4
+  ret void
 }
 
-define ptr @phinode_argument(ptr %lhs_ptr) {
+define void @phinode_argument(ptr %lhs_ptr) {
 ; CHECK-LABEL: @phinode_argument(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[LHS_PTR:%.*]] to ptr addrspace(1)
@@ -43,8 +44,8 @@ define ptr @phinode_argument(ptr %lhs_ptr) {
 ; CHECK-NEXT:    br label [[IF_SINK_SPLIT:%.*]]
 ; CHECK:       if.sink.split:
 ; CHECK-NEXT:    [[PTR_SINK:%.*]] = phi ptr addrspace(1) [ [[TMP0]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[PTR_SINK]] to ptr
-; CHECK-NEXT:    ret ptr [[TMP1]]
+; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[PTR_SINK]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %bool.1 = tail call i1 @llvm.nvvm.isspacep.global(ptr %lhs_ptr)
@@ -53,5 +54,6 @@ entry:
 
 if.sink.split:                                    ; preds = %entry
   %ptr.sink = phi ptr [ %lhs_ptr, %entry ]
-  ret ptr %ptr.sink
+  store i32 1, ptr %ptr.sink, align 4
+  ret void
 }
