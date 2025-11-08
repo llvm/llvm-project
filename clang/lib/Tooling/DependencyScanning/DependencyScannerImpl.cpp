@@ -714,11 +714,11 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
     DiagConsumer = &DiagPrinterWithOS->DiagPrinter;
   }
 
-  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
-      CommandLine, OverlayFS, *DiagConsumer);
-
   std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
       Worker.BaseFS, CommandLine, CWD, "ScanningByName");
+
+  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
+      CommandLine, OverlayFS, *DiagConsumer);
 
   std::tie(Driver, Compilation) = buildCompilation(
       CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS, Alloc);
