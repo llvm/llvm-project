@@ -305,11 +305,11 @@ Notes:
   behavior; the ``observe`` semantic is meant to make adopting hardening easier
   but should not be used outside of the adoption period;
 - C++26 wording for Library Hardening precludes a conforming Hardened
-  implementation from using the Contracts ``ignore`` semantic when evaluating
-  hardened preconditions in the Library. Libc++ allows using this semantic for
-  hardened preconditions, but please be aware that using ``ignore`` does not
-  produce a conforming "Hardened" implementation, unlike the other semantics
-  above.
+  implementation from using a Contracts' non-terminating semantic (i.e.,
+  ``ignore`` or ``observe``) when evaluating hardened preconditions in the
+  Library. Libc++ allows using these semantics for hardened preconditions, but
+  please be aware that using ``ignore`` or ``observe`` does not produce
+  a conforming "Hardened" implementation, unlike the terminating semantics above.
 
 The default assertion semantics are as follows:
 
