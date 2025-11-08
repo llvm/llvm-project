@@ -92,7 +92,7 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FindFun = Result.Nodes.getNodeAs<CXXMethodDecl>("findfun");
   assert(FindFun != nullptr);
 
-  bool Rev = FindFun->getName().contains("rfind");
+  const bool Rev = FindFun->getName().contains("rfind");
 
   if (ComparisonExpr->getBeginLoc().isMacroID())
     return;
@@ -107,7 +107,7 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
       Context.getLangOpts());
 
   // Create the StartsWith string, negating if comparison was "!=".
-  bool Neg = ComparisonExpr->getOpcode() == BO_NE;
+  const bool Neg = ComparisonExpr->getOpcode() == BO_NE;
 
   // Create the warning message and a FixIt hint replacing the original expr.
   auto Diagnostic =
