@@ -234,11 +234,11 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     const std::string ReplStr = [&] {
-      const llvm::StringRef PtrConst =
+      const StringRef PtrConst =
           isPointerConst(Var->getType()) ? "const " : "";
-      const llvm::StringRef LocalConst = IsLocalConst ? "const " : "";
-      const llvm::StringRef LocalVol = IsLocalVolatile ? "volatile " : "";
-      const llvm::StringRef LocalRestrict =
+      const StringRef LocalConst = IsLocalConst ? "const " : "";
+      const StringRef LocalVol = IsLocalVolatile ? "volatile " : "";
+      const StringRef LocalRestrict =
           IsLocalRestrict ? "__restrict " : "";
       return (PtrConst + "auto *" + LocalConst + LocalVol + LocalRestrict)
           .str();
