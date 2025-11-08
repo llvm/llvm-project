@@ -86,7 +86,7 @@ checked. The format is the following, without newlines:
 .. code::
 
    bugprone-unsafe-functions.CustomFunctions="
-     functionRegex1[, replacement1[, reason1]]; 
+     functionRegex1[, replacement1[, reason1]];
      functionRegex2[, replacement2[, reason2]];
      ...
    "
@@ -104,7 +104,7 @@ As an example, the configuration `^original$, replacement, is deprecated;`
 will produce the following diagnostic message.
 
 .. code:: c
-  
+
    original(); // warning: function 'original' is deprecated; 'replacement' should be used instead.
    ::std::original(); // no-warning
    original_function(); // no-warning

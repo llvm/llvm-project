@@ -54,7 +54,7 @@ Options
   Default: `false`.
 
   .. code-block:: c++
-  
+
     void bar(Base b[], Derived d[]) {
       b += 1; // warning, as Base declares a virtual destructor
       d += 1; // warning only if IgnoreVirtualDeclarationsOnly is set to false
