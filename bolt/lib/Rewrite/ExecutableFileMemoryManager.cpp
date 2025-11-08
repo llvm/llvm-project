@@ -182,13 +182,27 @@ void ExecutableFileMemoryManager::updateSection(
            << Contents << ", ID = " << SectionID << "\n";
   });
 
-  static constexpr char kOrgPrefix[] = ".bolt.org";
-  if (Section->getName().starts_with(kOrgPrefix)) {
-    LLVM_DEBUG(dbgs()
-               << "[sect] skip setSectionID for backup section "
-               << Section->getName() << "\n");
-    return; // backups already had valid IDs from .text, skip reassign
-  }
+
+LLVM_DEBUG({
+  dbgs() << "[sect] updateSection:"
+         << " JL=" << JLSection.getName()
+         << " Name=" << SectionName
+         << " BS=" << Section->getName()
+         << " IsCode=" << (IsCode ? "Y":"N")
+         << " IsRO="   << (IsReadOnly ? "Y":"N")
+         << "\n";
+});
+
+static constexpr char kOrgPrefix[] = ".bolt.org";
+const bool IsOrgByJL   = JLSection.getName().starts_with(kOrgPrefix);
+const bool IsOrgByName = SectionName.starts_with(OrgSecPrefix);
+
+if (IsOrgByJL || IsOrgByName) {
+  LLVM_DEBUG(dbgs() << "[sect] skip setSectionID for backup section  JL='"
+                    << JLSection.getName() << "'  Name='" << SectionName << "'  BS='"
+                    << Section->getName() << "'\n");
+  return;   // never assign a code SectionID to backups
+}
 
   Section->setSectionID(SectionID);
 }
