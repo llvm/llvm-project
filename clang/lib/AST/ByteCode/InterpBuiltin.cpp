@@ -3411,7 +3411,7 @@ static bool interp__builtin_x86_byteshift(
 
 static bool interp__builtin_ia32_shuffle_generic(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned, unsigned)>
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
         GetSourceIndex) {
 
   assert(Call->getNumArgs() == 3);
@@ -3455,7 +3455,7 @@ static bool interp__builtin_ia32_shuffle_generic(
         ShuffleMask = static_cast<unsigned>(MaskVector.elem<T>(DstIdx));
       });
     }
-    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask, NumElems);
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
 
     if (SrcIdx < 0) {
       // Zero out this element
@@ -4409,8 +4409,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_shufps256:
   case X86::BI__builtin_ia32_shufps512:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call,
-        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           unsigned NumElemPerLane = 4;
           unsigned NumSelectableElems = NumElemPerLane / 2;
           unsigned BitsPerElem = 2;
@@ -4429,8 +4428,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_shufpd256:
   case X86::BI__builtin_ia32_shufpd512:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call,
-        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           unsigned NumElemPerLane = 2;
           unsigned NumSelectableElems = NumElemPerLane / 2;
           unsigned BitsPerElem = 1;
@@ -4447,7 +4445,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   case X86::BI__builtin_ia32_insertps128:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call, [](unsigned DstIdx, unsigned Mask, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned Mask) {
           // Bits [3:0]: zero mask - if bit is set, zero this element
           if ((Mask & (1 << DstIdx)) != 0) {
             return std::pair<unsigned, int>{0, -1};
@@ -4467,8 +4465,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpermi2varq128:
   case X86::BI__builtin_ia32_vpermi2varpd128:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call,
-        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x1;
           unsigned SrcIdx = (ShuffleMask >> 1) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
@@ -4478,8 +4475,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpermi2varq256:
   case X86::BI__builtin_ia32_vpermi2varpd256:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call,
-        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x3;
           unsigned SrcIdx = (ShuffleMask >> 2) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
@@ -4490,8 +4486,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpermi2varq512:
   case X86::BI__builtin_ia32_vpermi2varpd512:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call,
-        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x7;
           unsigned SrcIdx = (ShuffleMask >> 3) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
@@ -4501,8 +4496,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpermi2vard512:
   case X86::BI__builtin_ia32_vpermi2varps512:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call,
-        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0xF;
           unsigned SrcIdx = (ShuffleMask >> 4) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
@@ -4510,16 +4504,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpermi2varqi256:
   case X86::BI__builtin_ia32_vpermi2varhi512:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call,
-        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x1F;
           unsigned SrcIdx = (ShuffleMask >> 5) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
         });
   case X86::BI__builtin_ia32_vpermi2varqi512:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call,
-        [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x3F;
           unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
@@ -4730,19 +4722,23 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call, [](unsigned DstIdx, unsigned Shift, unsigned NumElems) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned Shift) {
           // Default to -1 → zero-fill this destination element
-          unsigned VecIdx = 0;
+          unsigned VecIdx = 1;
           int ElemIdx = -1;
 
+          int Lane = DstIdx / 16;
+          int Offset = DstIdx % 16;
+
           // Elements come from VecB first, then VecA after the shift boundary
-          unsigned ShiftedIdx = DstIdx + Shift;
-          if (ShiftedIdx < NumElems) { // from VecB
-            VecIdx = 1;
-            ElemIdx = DstIdx + Shift;
-          } else if (ShiftedIdx < 2 * NumElems) { // from VecA
-            ElemIdx = DstIdx + Shift - NumElems;
+          unsigned ShiftedIdx = Offset + Shift;
+          if (ShiftedIdx < 16) { // from VecB
+            ElemIdx = ShiftedIdx + Lane * 16;
+          } else if (ShiftedIdx < 32) { // from VecA
+            VecIdx = 0;
+            ElemIdx = ShiftedIdx - 16 + Lane * 16;
           }
+
           return std::pair<unsigned, int>{VecIdx, ElemIdx};
         });
 

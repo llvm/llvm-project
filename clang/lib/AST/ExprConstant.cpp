@@ -11621,7 +11621,7 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
 
 static bool evalShuffleGeneric(
     EvalInfo &Info, const CallExpr *Call, APValue &Out,
-    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned, unsigned)>
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
         GetSourceIndex) {
 
   const auto *VT = Call->getType()->getAs<VectorType>();
@@ -11660,7 +11660,7 @@ static bool evalShuffleGeneric(
       ShuffleMask = static_cast<unsigned>(
           MaskVector.getVectorElt(DstIdx).getInt().getZExtValue());
     }
-    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask, NumElts);
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
 
     if (SrcIdx < 0) {
       // Zero out this element
@@ -12474,8 +12474,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APValue R;
     if (!evalShuffleGeneric(
             Info, E, R,
-            [](unsigned DstIdx, unsigned ShuffleMask,
-               unsigned NumElts) -> std::pair<unsigned, int> {
+            [](unsigned DstIdx,
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
               constexpr unsigned LaneBits = 128u;
               unsigned NumElemPerLane = LaneBits / 32;
               unsigned NumSelectableElems = NumElemPerLane / 2;
@@ -12499,8 +12499,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APValue R;
     if (!evalShuffleGeneric(
             Info, E, R,
-            [](unsigned DstIdx, unsigned ShuffleMask,
-               unsigned NumElts) -> std::pair<unsigned, int> {
+            [](unsigned DstIdx,
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
               constexpr unsigned LaneBits = 128u;
               unsigned NumElemPerLane = LaneBits / 64;
               unsigned NumSelectableElems = NumElemPerLane / 2;
@@ -12520,28 +12520,25 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   }
   case X86::BI__builtin_ia32_insertps128: {
     APValue R;
-    if (!evalShuffleGeneric(Info, E, R,
-                            [](unsigned DstIdx, unsigned Mask,
-                               unsigned NumElts) -> std::pair<unsigned, int> {
-                              // Bits [3:0]: zero mask - if bit is set, zero
-                              // this element
-                              if ((Mask & (1 << DstIdx)) != 0) {
-                                return {0, -1};
-                              }
-                              // Bits [7:6]: select element from source vector Y
-                              // (0-3) Bits [5:4]: select destination position
-                              // (0-3)
-                              unsigned SrcElem = (Mask >> 6) & 0x3;
-                              unsigned DstElem = (Mask >> 4) & 0x3;
-                              if (DstIdx == DstElem) {
-                                // Insert element from source vector (B) at this
-                                // position
-                                return {1, static_cast<int>(SrcElem)};
-                              } else {
-                                // Copy from destination vector (A)
-                                return {0, static_cast<int>(DstIdx)};
-                              }
-                            }))
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              // Bits [3:0]: zero mask - if bit is set, zero this element
+              if ((Mask & (1 << DstIdx)) != 0) {
+                return {0, -1};
+              }
+              // Bits [7:6]: select element from source vector Y (0-3)
+              // Bits [5:4]: select destination position (0-3)
+              unsigned SrcElem = (Mask >> 6) & 0x3;
+              unsigned DstElem = (Mask >> 4) & 0x3;
+              if (DstIdx == DstElem) {
+                // Insert element from source vector (B) at this position
+                return {1, static_cast<int>(SrcElem)};
+              } else {
+                // Copy from destination vector (A)
+                return {0, static_cast<int>(DstIdx)};
+              }
+            }))
       return false;
     return Success(R, E);
   }
@@ -13117,36 +13114,37 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512: {
     APValue R;
-    if (!evalShuffleGeneric(
-            Info, E, R, [](unsigned DstIdx, unsigned Shift, unsigned NumElts) {
-              unsigned SrcVecIdx = 0;
-              int ElemIdx = -1;
+    if (!evalShuffleGeneric(Info, E, R, [](unsigned DstIdx, unsigned Shift) {
+          // Default to -1 → zero-fill this destination element
+          unsigned VecIdx = 1;
+          int ElemIdx = -1;
 
-              // Elements come from VecB first, then VecA after
-              // the shift boundary
-              unsigned ShiftedIdx = DstIdx + Shift;
-              if (ShiftedIdx < NumElts) { // from VecB
-                SrcVecIdx = 1;
-                ElemIdx = ShiftedIdx;
-              } else if (ShiftedIdx < 2 * NumElts) { // from VecA
-                ElemIdx = ShiftedIdx - NumElts;
-              }
+          int Lane = DstIdx / 16;
+          int Offset = DstIdx % 16;
 
-              return std::pair<unsigned, int>{SrcVecIdx, ElemIdx};
-            }))
+          // Elements come from VecB first, then VecA after the shift boundary
+          unsigned ShiftedIdx = Offset + Shift;
+          if (ShiftedIdx < 16) { // from VecB
+            ElemIdx = ShiftedIdx + Lane * 16;
+          } else if (ShiftedIdx < 32) { // from VecA
+            VecIdx = 0;
+            ElemIdx = ShiftedIdx - 16 + Lane * 16;
+          }
+
+          return std::pair<unsigned, int>{VecIdx, ElemIdx};
+        }))
       return false;
     return Success(R, E);
   }
   case X86::BI__builtin_ia32_vpermi2varq128:
   case X86::BI__builtin_ia32_vpermi2varpd128: {
     APValue R;
-    if (!evalShuffleGeneric(
-            Info, E, R,
-            [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElts) {
-              int Offset = ShuffleMask & 0x1;
-              unsigned SrcIdx = (ShuffleMask >> 1) & 0x1;
-              return std::pair<unsigned, int>{SrcIdx, Offset};
-            }))
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1;
+                              unsigned SrcIdx = (ShuffleMask >> 1) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
       return false;
     return Success(R, E);
   }
@@ -13155,13 +13153,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_vpermi2varq256:
   case X86::BI__builtin_ia32_vpermi2varpd256: {
     APValue R;
-    if (!evalShuffleGeneric(
-            Info, E, R,
-            [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElts) {
-              int Offset = ShuffleMask & 0x3;
-              unsigned SrcIdx = (ShuffleMask >> 2) & 0x1;
-              return std::pair<unsigned, int>{SrcIdx, Offset};
-            }))
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3;
+                              unsigned SrcIdx = (ShuffleMask >> 2) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
       return false;
     return Success(R, E);
   }
@@ -13171,13 +13168,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_vpermi2varq512:
   case X86::BI__builtin_ia32_vpermi2varpd512: {
     APValue R;
-    if (!evalShuffleGeneric(
-            Info, E, R,
-            [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElts) {
-              int Offset = ShuffleMask & 0x7;
-              unsigned SrcIdx = (ShuffleMask >> 3) & 0x1;
-              return std::pair<unsigned, int>{SrcIdx, Offset};
-            }))
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x7;
+                              unsigned SrcIdx = (ShuffleMask >> 3) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
       return false;
     return Success(R, E);
   }
@@ -13186,38 +13182,35 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_vpermi2vard512:
   case X86::BI__builtin_ia32_vpermi2varps512: {
     APValue R;
-    if (!evalShuffleGeneric(
-            Info, E, R,
-            [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElts) {
-              int Offset = ShuffleMask & 0xF;
-              unsigned SrcIdx = (ShuffleMask >> 4) & 0x1;
-              return std::pair<unsigned, int>{SrcIdx, Offset};
-            }))
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0xF;
+                              unsigned SrcIdx = (ShuffleMask >> 4) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
       return false;
     return Success(R, E);
   }
   case X86::BI__builtin_ia32_vpermi2varqi256:
   case X86::BI__builtin_ia32_vpermi2varhi512: {
     APValue R;
-    if (!evalShuffleGeneric(
-            Info, E, R,
-            [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElts) {
-              int Offset = ShuffleMask & 0x1F;
-              unsigned SrcIdx = (ShuffleMask >> 5) & 0x1;
-              return std::pair<unsigned, int>{SrcIdx, Offset};
-            }))
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1F;
+                              unsigned SrcIdx = (ShuffleMask >> 5) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
       return false;
     return Success(R, E);
   }
   case X86::BI__builtin_ia32_vpermi2varqi512: {
     APValue R;
-    if (!evalShuffleGeneric(
-            Info, E, R,
-            [](unsigned DstIdx, unsigned ShuffleMask, unsigned NumElts) {
-              int Offset = ShuffleMask & 0x3F;
-              unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
-              return std::pair<unsigned, int>{SrcIdx, Offset};
-            }))
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3F;
+                              unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
       return false;
     return Success(R, E);
   }
