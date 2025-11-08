@@ -2194,6 +2194,22 @@ BinarySection &
 BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
                                        unsigned ELFFlags, uint8_t *Data,
                                        uint64_t Size, unsigned Alignment) {
+ // --- Common locals
+ std::string NameStorage = Name.str();
+ llvm::StringRef NameRef(NameStorage);
+ static constexpr char kOrgPrefix[] = ".bolt.org";
+
+ // --- EARLY SANITIZATION for backups ("org") ---
+ // Ensure .bolt.org.* is non-alloc, non-exec, data-like, and excluded.
+ if (NameRef.starts_with(kOrgPrefix)) {
+   ELFFlags &= ~(ELF::SHF_ALLOC | ELF::SHF_EXECINSTR);
+   ELFFlags |=  (ELF::SHF_EXCLUDE);
+   ELFType    =  ELF::SHT_PROGBITS;
+   LLVM_DEBUG(llvm::dbgs()
+     << "[reg] ORG-SANITIZE name=" << NameRef
+     << " flags(out)=0x" << llvm::format_hex(ELFFlags, 8) << "\n");
+ }
+
   auto NamedSections = getSectionByName(Name);
   DEBUG_WITH_TYPE("bolt-flags", {
     dbgs() << "[flags] enter registerOrUpdateSection name=" << Name << "\n"
