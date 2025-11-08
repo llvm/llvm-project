@@ -495,6 +495,8 @@ def err_vaopt_paste_at_start : Error<
 def err_vaopt_paste_at_end
     : Error<"'##' cannot appear at end of __VA_OPT__ argument">;
 
+def warn_trailing_space_in_include : Warning< "trailing space in #include file name" >,
+InGroup<G_TrailingSpaceInInclude>;
 def ext_pp_macro_redef : ExtWarn<"%0 macro redefined">, InGroup<MacroRedefined>;
 def ext_variadic_macro : Extension<"variadic macros are a C99 feature">,
   InGroup<VariadicMacros>;
