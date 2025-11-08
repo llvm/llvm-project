@@ -89,8 +89,6 @@ public:
         "readability-const-return-type");
     CheckFactories.registerCheck<ConstantOperandOrderCheck>(
         "readability-constant-operand-order");
-    CheckFactories.registerCheck<ConstantOperandOrderCheck>(
-        "readability-constant-operand-order");
     CheckFactories.registerCheck<ContainerContainsCheck>(
         "readability-container-contains");
     CheckFactories.registerCheck<ContainerDataPointerCheck>(
