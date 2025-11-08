@@ -4465,6 +4465,9 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
         KnownMinRemIter,
         SE.getConstant(TCType, CM.getVScaleForTuning().value_or(1)));
 
+  auto SkipVF = [&](const SCEV *VF, const SCEV *RemIter) -> bool {
+    return SE.isKnownPredicate(CmpInst::ICMP_UGT, VF, RemIter);
+  };
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
     if (!hasPlanWithVF(NextVF.Width))
@@ -4483,9 +4486,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     // If NextVF is greater than the number of remaining iterations, the
     // epilogue loop would be dead. Skip such factors.
     if (ScalableRemIter == NextVF.Width.isScalable()) {
-      if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
-                              SE.getElementCount(TCType, NextVF.Width),
-                              RemainingIterations))
+      if (SkipVF(SE.getElementCount(TCType, NextVF.Width), RemainingIterations))
         continue;
     }
     // Handle the case where NextVF and RemainingIterations are in different
@@ -4493,17 +4494,12 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     else if (NextVF.Width.isScalable()) {
       ElementCount EstimatedRuntimeNextVF = ElementCount::getFixed(
           estimateElementCount(NextVF.Width, CM.getVScaleForTuning()));
-      if (SE.isKnownPredicate(
-              CmpInst::ICMP_UGT,
-              SE.getElementCount(TCType, EstimatedRuntimeNextVF),
-              RemainingIterations))
+      if (SkipVF(SE.getElementCount(TCType, EstimatedRuntimeNextVF),
+                 RemainingIterations))
         continue;
-    } else {
-      if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
-                              SE.getElementCount(TCType, NextVF.Width),
-                              EstimatedRemIter))
-        continue;
-    }
+    } else if (SkipVF(SE.getElementCount(TCType, NextVF.Width),
+                      EstimatedRemIter))
+      continue;
 
     if (Result.Width.isScalar() ||
         isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking(),
