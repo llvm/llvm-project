@@ -144,7 +144,7 @@ class TestingConfig(object):
         try:
             exec(compile(data, path, "exec"), cfg_globals, None)
             if litConfig.debug:
-                litConfig.note("... loaded config %r" % path)
+                litConfig.dbg("... loaded config %r" % path)
         except SystemExit:
             e = sys.exc_info()[1]
             # We allow normal system exit inside a config file to just

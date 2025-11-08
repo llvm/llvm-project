@@ -22,6 +22,7 @@ def _appendToSubstitution(substitutions, key, value):
 
 def configure(parameters, features, config, lit_config):
     note = lambda s: lit_config.note("({}) {}".format(config.name, s))
+    debug = lambda s: lit_config.dbg("({}) {}".format(config.name, s))
     config.environment = dict(os.environ)
 
     # Apply the actions supplied by parameters to the configuration first, since
@@ -32,7 +33,7 @@ def configure(parameters, features, config, lit_config):
         for action in actions:
             action.applyTo(config)
             if lit_config.debug:
-                note(
+                debug(
                     "Applied '{}' as a result of parameter '{}'".format(
                         action.pretty(config, lit_config.params),
                         param.pretty(config, lit_config.params),
@@ -45,7 +46,7 @@ def configure(parameters, features, config, lit_config):
         for action in actions:
             action.applyTo(config)
             if lit_config.debug:
-                note(
+                debug(
                     "Applied '{}' as a result of implicitly detected feature '{}'".format(
                         action.pretty(config, lit_config.params), feature.pretty(config)
                     )

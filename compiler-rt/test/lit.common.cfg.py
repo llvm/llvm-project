@@ -196,12 +196,12 @@ test_cc_resource_dir, _ = get_path_from_clang(
 if test_cc_resource_dir is not None:
     test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
 if lit_config.debug:
-    lit_config.note(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
+    lit_config.dbg(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
 local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
 if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
     if config.compiler_id == "Clang":
         if lit_config.debug:
-            lit_config.note(
+            lit_config.dbg(
                 f"Overriding test compiler resource dir to use "
                 f'libraries in "{config.compiler_rt_libdir}"'
             )
