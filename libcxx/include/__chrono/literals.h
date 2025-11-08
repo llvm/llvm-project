@@ -24,6 +24,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 inline namespace literals {
 inline namespace chrono_literals {
+
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wuser-defined-literals")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wliteral-suffix")
+
 _LIBCPP_HIDE_FROM_ABI constexpr chrono::day operator""d(unsigned long long __d) noexcept {
   return chrono::day(static_cast<unsigned>(__d));
 }
@@ -31,6 +36,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr chrono::day operator""d(unsigned long long __d) 
 _LIBCPP_HIDE_FROM_ABI constexpr chrono::year operator""y(unsigned long long __y) noexcept {
   return chrono::year(static_cast<int>(__y));
 }
+
+_LIBCPP_DIAGNOSTIC_POP
+
 } // namespace chrono_literals
 } // namespace literals
 

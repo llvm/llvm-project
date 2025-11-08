@@ -1443,6 +1443,11 @@ _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&& __z) noexce
 // Literal suffix for complex number literals [complex.literals]
 inline namespace literals {
 inline namespace complex_literals {
+
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wuser-defined-literals")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wliteral-suffix")
+
 _LIBCPP_HIDE_FROM_ABI inline constexpr complex<long double> operator""il(long double __im) { return {0.0l, __im}; }
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr complex<long double> operator""il(unsigned long long __im) {
@@ -1464,6 +1469,9 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr complex<float> operator""if(long double _
 _LIBCPP_HIDE_FROM_ABI inline constexpr complex<float> operator""if(unsigned long long __im) {
   return {0.0f, static_cast<float>(__im)};
 }
+
+_LIBCPP_DIAGNOSTIC_POP
+
 } // namespace complex_literals
 } // namespace literals
 #  endif

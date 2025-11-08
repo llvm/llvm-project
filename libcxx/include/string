@@ -3946,6 +3946,11 @@ erase_if(basic_string<_CharT, _Traits, _Allocator>& __str, _Predicate __pred) {
 // Literal suffixes for basic_string [basic.string.literals]
 inline namespace literals {
 inline namespace string_literals {
+
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wuser-defined-literals")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wliteral-suffix")
+
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char>
 operator""s(const char* __str, size_t __len) {
   return basic_string<char>(__str, __len);
@@ -3973,6 +3978,9 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char32_t
 operator""s(const char32_t* __str, size_t __len) {
   return basic_string<char32_t>(__str, __len);
 }
+
+_LIBCPP_DIAGNOSTIC_POP
+
 } // namespace string_literals
 } // namespace literals
 
