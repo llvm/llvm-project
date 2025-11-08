@@ -486,8 +486,6 @@ def hook_main():
         if fmt.has_tool():
             if not fmt.run(args.changed_files, args):
                 failed_fmts.append(fmt.name)
-            if fmt.comment:
-                comments.append(fmt.comment)
         else:
             print(f"Couldn't find {fmt.name}, can't check " + fmt.friendly_name.lower())
 
@@ -508,7 +506,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--token", type=str, required=True, help="GitHub authentiation token"
+        "--token", type=str, required=True, help="GitHub authentication token"
     )
     parser.add_argument(
         "--repo",

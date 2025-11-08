@@ -37,7 +37,7 @@ inline bool operator<(UnicodeCharRange Range, uint32_t Value) {
 /// array.
 class UnicodeCharSet {
 public:
-  typedef ArrayRef<UnicodeCharRange> CharRanges;
+  using CharRanges = ArrayRef<UnicodeCharRange>;
 
   /// Constructs a UnicodeCharSet instance from an array of
   /// UnicodeCharRanges.

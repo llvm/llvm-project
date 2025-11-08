@@ -18,6 +18,8 @@
 
 #if defined(_AIX)
   .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+  .section .text,"axy",@progbits,unique,0
 #else
   .text
 #endif
@@ -25,6 +27,8 @@
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
+.att_syntax
+
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
 #
 # extern "C" void __libunwind_Registers_x86_jumpto(Registers_x86 *);
@@ -69,6 +73,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip gs
 
 #elif defined(__x86_64__) && !defined(__arm64ec__)
+.att_syntax
 
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 #
@@ -630,6 +635,10 @@ Lnovec:
   bctr
 
 #elif defined(__aarch64__)
+
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
 
 #if defined(__ARM_FEATURE_GCS_DEFAULT)
 .arch_extension gcs

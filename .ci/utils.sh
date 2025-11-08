@@ -40,13 +40,17 @@ function at-exit {
   fi
 
   if [[ "$retcode" != "0" ]]; then
-    python "${MONOREPO_ROOT}"/.ci/premerge_advisor_upload.py \
-      $(git rev-parse HEAD~1) $GITHUB_RUN_NUMBER \
-      "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log
     if [[ "$GITHUB_ACTIONS" != "" ]]; then
       python "${MONOREPO_ROOT}"/.ci/premerge_advisor_explain.py \
         $(git rev-parse HEAD~1) "${BUILD_DIR}"/test-results.*.xml \
         "${MONOREPO_ROOT}"/ninja*.log
+      python "${MONOREPO_ROOT}"/.ci/premerge_advisor_upload.py \
+        $(git rev-parse HEAD~1) $GITHUB_RUN_NUMBER \
+        "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log
+    else
+      python "${MONOREPO_ROOT}"/.ci/premerge_advisor_upload.py \
+        $(git rev-parse HEAD) $BUILDBOT_BUILDNUMBER \
+        "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log
     fi
   fi
 }

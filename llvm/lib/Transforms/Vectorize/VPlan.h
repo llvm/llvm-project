@@ -398,7 +398,7 @@ public:
                DebugLoc DL = DebugLoc::getUnknown())
       : VPDef(SC), VPUser(Operands), DL(DL) {}
 
-  virtual ~VPRecipeBase() = default;
+  ~VPRecipeBase() override = default;
 
   /// Clone the current recipe.
   virtual VPRecipeBase *clone() = 0;
@@ -576,7 +576,7 @@ public:
     return R && classof(R);
   }
 
-  virtual VPSingleDefRecipe *clone() override = 0;
+  VPSingleDefRecipe *clone() override = 0;
 
   /// Returns the underlying instruction.
   Instruction *getUnderlyingInstr() {
@@ -907,7 +907,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
     return R && classof(R);
   }
 
-  virtual VPRecipeWithIRFlags *clone() override = 0;
+  VPRecipeWithIRFlags *clone() override = 0;
 
   static inline bool classof(const VPSingleDefRecipe *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
@@ -939,7 +939,7 @@ class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
 public:
-  VPIRMetadata() {}
+  VPIRMetadata() = default;
 
   /// Adds metatadata that can be preserved from the original instruction
   /// \p I.
@@ -950,12 +950,9 @@ public:
   VPIRMetadata(Instruction &I, LoopVersioning *LVer);
 
   /// Copy constructor for cloning.
-  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
+  VPIRMetadata(const VPIRMetadata &Other) = default;
 
-  VPIRMetadata &operator=(const VPIRMetadata &Other) {
-    Metadata = Other.Metadata;
-    return *this;
-  }
+  VPIRMetadata &operator=(const VPIRMetadata &Other) = default;
 
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
@@ -1107,14 +1104,14 @@ public:
         VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, DebugLoc DL = DebugLoc::getUnknown(),
-                const Twine &Name = "");
+                const VPIRFlags &Flags, const VPIRMetadata &MD = {},
+                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPInstruction *clone() override {
-    SmallVector<VPValue *, 2> Operands(operands());
-    auto *New = new VPInstruction(Opcode, Operands, *this, getDebugLoc(), Name);
+    auto *New = new VPInstruction(Opcode, operands(), *this, *this,
+                                  getDebugLoc(), Name);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
@@ -1166,10 +1163,10 @@ public:
   bool opcodeMayReadOrWriteFromMemory() const;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override;
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override;
+  bool usesFirstPartOnly(const VPValue *Op) const override;
 
   /// Returns true if this VPInstruction produces a scalar value from a vector,
   /// e.g. by performing a reduction or extracting a lane.
@@ -1196,7 +1193,14 @@ public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, const VPIRFlags &Flags, DebugLoc DL,
                         const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, DL, Name), ResultTy(ResultTy) {}
+      : VPInstruction(Opcode, Operands, Flags, {}, DL, Name),
+        ResultTy(ResultTy) {}
+
+  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Type *ResultTy, DebugLoc DL, const VPIRFlags &Flags,
+                        const VPIRMetadata &Metadata, const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name),
+        ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
@@ -1221,10 +1225,9 @@ public:
   }
 
   VPInstruction *clone() override {
-    SmallVector<VPValue *, 2> Operands(operands());
     auto *New =
-        new VPInstructionWithType(getOpcode(), Operands, getResultType(), *this,
-                                  getDebugLoc(), getName());
+        new VPInstructionWithType(getOpcode(), operands(), getResultType(),
+                                  *this, getDebugLoc(), getName());
     New->setUnderlyingValue(getUnderlyingValue());
     return New;
   }
@@ -1390,13 +1393,13 @@ public:
     return true;
   }
 
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
+  bool usesFirstPartOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
   }
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -1625,7 +1628,7 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override;
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 };
 
 /// A recipe for widening Call instructions using library calls.
@@ -1722,7 +1725,9 @@ public:
 #endif
 };
 
-/// A recipe for widening select instructions.
+/// A recipe for widening select instructions. Supports both wide vector and
+/// single-scalar conditions, matching the behavior of LLVM IR's select
+/// instruction.
 struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
                                                public VPIRMetadata {
   VPWidenSelectRecipe(SelectInst &I, ArrayRef<VPValue *> Operands)
@@ -1757,15 +1762,11 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
     return getOperand(0);
   }
 
-  bool isInvariantCond() const {
-    return getCond()->isDefinedOutsideLoopRegions();
-  }
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getCond() && isInvariantCond();
+    return Op == getCond() && Op->isDefinedOutsideLoopRegions();
   }
 };
 
@@ -1828,7 +1829,7 @@ public:
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     if (Op == getOperand(0))
@@ -1865,7 +1866,7 @@ public:
 
   void execute(VPTransformState &State) override;
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -1879,7 +1880,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
+  bool usesFirstPartOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     assert(getNumOperands() <= 2 && "must have at most two operands");
@@ -1917,14 +1918,14 @@ public:
 
   Type *getSourceElementType() const { return SourceElementTy; }
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
+  bool usesFirstPartOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     assert(getNumOperands() <= 2 && "must have at most two operands");
@@ -2068,7 +2069,7 @@ public:
     return classof(static_cast<const VPRecipeBase *>(R));
   }
 
-  virtual void execute(VPTransformState &State) override = 0;
+  void execute(VPTransformState &State) override = 0;
 
   /// Returns the step value of the induction.
   VPValue *getStepValue() { return getOperand(1); }
@@ -2105,7 +2106,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // The recipe creates its own wide start value, so it only requests the
@@ -2320,7 +2321,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getStartValue();
@@ -2394,7 +2395,7 @@ public:
   bool isInLoop() const { return IsInLoop; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return isOrdered() || isInLoop();
@@ -2463,13 +2464,13 @@ public:
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // Recursing through Blend recipes only, must terminate at header phi's the
     // latest.
     return all_of(users(),
-                  [this](VPUser *U) { return U->onlyFirstLaneUsed(this); });
+                  [this](VPUser *U) { return U->usesFirstLaneOnly(this); });
   }
 };
 
@@ -2557,7 +2558,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
+  bool usesFirstLaneOnly(const VPValue *Op) const override = 0;
 
   /// Returns the number of stored operands of this interleave group. Returns 0
   /// for load interleave groups.
@@ -2603,7 +2604,7 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getAddr() && !llvm::is_contained(getStoredValues(), Op);
@@ -2651,7 +2652,7 @@ public:
 #endif
 
   /// The recipe only uses the first lane of the address, and EVL operand.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return (Op == getAddr() && !llvm::is_contained(getStoredValues(), Op)) ||
@@ -2712,7 +2713,8 @@ public:
 
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC;
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
+           R->getVPDefID() == VPRecipeBase::VPPartialReductionSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2783,7 +2785,10 @@ public:
         Opcode(Opcode), VFScaleFactor(ScaleFactor) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getChainOp()->getDefiningRecipe();
-    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
+    // When cloning as part of a VPExpressionRecipe the chain op could have
+    // replaced by a temporary VPValue, so it doesn't have a defining recipe.
+    assert((!AccumulatorRecipe ||
+            isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
             isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
            "Unexpected operand order for partial reduction recipe");
   }
@@ -2853,7 +2858,7 @@ public:
   VPValue *getEVL() const { return getOperand(2); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getEVL();
@@ -2915,7 +2920,7 @@ public:
   bool isPredicated() const { return IsPredicated; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return isSingleScalar();
@@ -3093,6 +3098,11 @@ public:
   /// removed before codegen.
   void decompose();
 
+  unsigned getVFScaleFactor() const {
+    auto *PR = dyn_cast<VPPartialReductionRecipe>(ExpressionRecipes.back());
+    return PR ? PR->getVFScaleFactor() : 1;
+  }
+
   /// Method for generating code, must not be called as this recipe is abstract.
   void execute(VPTransformState &State) override {
     llvm_unreachable("recipe must be removed before execute");
@@ -3170,6 +3180,9 @@ class LLVM_ABI_FOR_TEST VPWidenMemoryRecipe : public VPRecipeBase,
 protected:
   Instruction &Ingredient;
 
+  /// Alignment information for this memory access.
+  Align Alignment;
+
   /// Whether the accessed addresses are consecutive.
   bool Consecutive;
 
@@ -3192,8 +3205,11 @@ protected:
                       bool Consecutive, bool Reverse,
                       const VPIRMetadata &Metadata, DebugLoc DL)
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
-        Consecutive(Consecutive), Reverse(Reverse) {
+        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive),
+        Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
+    assert((isa<VPVectorEndPointerRecipe>(getAddr()) || !Reverse) &&
+           "Reversed acccess without VPVectorEndPointerRecipe address?");
   }
 
 public:
@@ -3232,6 +3248,9 @@ public:
     // Mask is optional and therefore the last operand.
     return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
   }
+
+  /// Returns the alignment of the memory access.
+  Align getAlign() const { return Alignment; }
 
   /// Generate the wide load/store.
   void execute(VPTransformState &State) override {
@@ -3276,7 +3295,7 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // Widened, consecutive loads operations only demand the first lane of
@@ -3317,7 +3336,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // Widened loads only demand the first lane of EVL and consecutive loads
@@ -3358,7 +3377,7 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     // Widened, consecutive stores only demand the first lane of their address,
@@ -3401,7 +3420,7 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     if (Op == getEVL()) {
@@ -3485,14 +3504,14 @@ public:
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
+  bool usesFirstPartOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -3567,7 +3586,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -3677,7 +3696,7 @@ public:
   VPValue *getStepValue() const { return getOperand(2); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -3742,7 +3761,7 @@ public:
   VPValue *getStepValue() const { return getOperand(1); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -3962,7 +3981,7 @@ class VPIRBasicBlock : public VPBasicBlock {
         IRBB(IRBB) {}
 
 public:
-  ~VPIRBasicBlock() override {}
+  ~VPIRBasicBlock() override = default;
 
   static inline bool classof(const VPBlockBase *V) {
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
@@ -4014,7 +4033,7 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
         IsReplicator(IsReplicator) {}
 
 public:
-  ~VPRegionBlock() override {}
+  ~VPRegionBlock() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -4094,6 +4113,12 @@ public:
   const VPCanonicalIVPHIRecipe *getCanonicalIV() const {
     return const_cast<VPRegionBlock *>(this)->getCanonicalIV();
   }
+
+  /// Return the type of the canonical IV for loop regions.
+  Type *getCanonicalIVType() { return getCanonicalIV()->getScalarType(); }
+  const Type *getCanonicalIVType() const {
+    return getCanonicalIV()->getScalarType();
+  }
 };
 
 inline VPRegionBlock *VPRecipeBase::getRegion() {
@@ -4152,9 +4177,6 @@ class VPlan {
   /// Represents the vectorization factor of the loop.
   VPValue VF;
 
-  /// Represents the symbolic unroll factor of the loop.
-  VPValue UF;
-
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
 
@@ -4165,11 +4187,6 @@ class VPlan {
   /// Contains all the external definitions created for this VPlan. External
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveIns;
-
-  /// Mapping from SCEVs to the VPValues representing their expansions.
-  /// NOTE: This mapping is temporary and will be removed once all users have
-  /// been modeled in VPlan directly.
-  DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
   /// VPlan is destroyed.
@@ -4308,9 +4325,6 @@ public:
   VPValue &getVF() { return VF; };
   const VPValue &getVF() const { return VF; };
 
-  /// Returns the symbolic UF of the vector loop region.
-  VPValue &getSymbolicUF() { return UF; };
-
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
@@ -4319,12 +4333,6 @@ public:
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
-
-  /// Remove \p VF from the plan.
-  void removeVF(ElementCount VF) {
-    assert(hasVF(VF) && "tried to remove VF not present in plan");
-    VFs.remove(VF);
-  }
 
   void setVF(ElementCount VF) {
     assert(hasVF(VF) && "Cannot set VF not already in plan");
@@ -4389,15 +4397,25 @@ public:
   }
 
   /// Return a VPValue wrapping i1 true.
-  VPValue *getTrue() {
-    LLVMContext &Ctx = getContext();
-    return getOrAddLiveIn(ConstantInt::getTrue(Ctx));
-  }
+  VPValue *getTrue() { return getConstantInt(1, 1); }
 
   /// Return a VPValue wrapping i1 false.
-  VPValue *getFalse() {
-    LLVMContext &Ctx = getContext();
-    return getOrAddLiveIn(ConstantInt::getFalse(Ctx));
+  VPValue *getFalse() { return getConstantInt(1, 0); }
+
+  /// Return a VPValue wrapping a ConstantInt with the given type and value.
+  VPValue *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {
+    return getOrAddLiveIn(ConstantInt::get(Ty, Val, IsSigned));
+  }
+
+  /// Return a VPValue wrapping a ConstantInt with the given bitwidth and value.
+  VPValue *getConstantInt(unsigned BitWidth, uint64_t Val,
+                          bool IsSigned = false) {
+    return getConstantInt(APInt(BitWidth, Val, IsSigned));
+  }
+
+  /// Return a VPValue wrapping a ConstantInt with the given APInt value.
+  VPValue *getConstantInt(const APInt &Val) {
+    return getOrAddLiveIn(ConstantInt::get(getContext(), Val));
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
@@ -4427,15 +4445,6 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  VPValue *getSCEVExpansion(const SCEV *S) const {
-    return SCEVToExpansion.lookup(S);
-  }
-
-  void addSCEVExpansion(const SCEV *S, VPValue *V) {
-    assert(!SCEVToExpansion.contains(S) && "SCEV already expanded");
-    SCEVToExpansion[S] = V;
-  }
-
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
   VPlan *duplicate();
@@ -4450,22 +4459,24 @@ public:
     return VPB;
   }
 
-  /// Create a new VPRegionBlock with \p Entry, \p Exiting and \p Name. If \p
-  /// IsReplicator is true, the region is a replicate region. The returned block
-  /// is owned by the VPlan and deleted once the VPlan is destroyed.
-  VPRegionBlock *createVPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
-                                     const std::string &Name = "",
-                                     bool IsReplicator = false) {
-    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, IsReplicator);
+  /// Create a new loop region with \p Name and entry and exiting blocks set
+  /// to \p Entry and \p Exiting respectively, if set. The returned block is
+  /// owned by the VPlan and deleted once the VPlan is destroyed.
+  VPRegionBlock *createLoopRegion(const std::string &Name = "",
+                                  VPBlockBase *Entry = nullptr,
+                                  VPBlockBase *Exiting = nullptr) {
+    auto *VPB = Entry ? new VPRegionBlock(Entry, Exiting, Name)
+                      : new VPRegionBlock(Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
 
-  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks set
-  /// to nullptr. The returned block is owned by the VPlan and deleted once the
-  /// VPlan is destroyed.
-  VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
-    auto *VPB = new VPRegionBlock(Name);
+  /// Create a new replicate region with \p Entry, \p Exiting and \p Name. The
+  /// returned block is owned by the VPlan and deleted once the VPlan is
+  /// destroyed.
+  VPRegionBlock *createReplicateRegion(VPBlockBase *Entry, VPBlockBase *Exiting,
+                                       const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, true);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

@@ -536,10 +536,3 @@ def VK8Pair : RegisterOperand<VK8PAIR, "printVKPair"> {
 def VK16Pair : RegisterOperand<VK16PAIR, "printVKPair"> {
   let ParserMatchClass = VK16PairAsmOperand;
 }
-
-let RenderMethod = "addTILEPairOperands" in
-  def TILEPairAsmOperand : AsmOperandClass { let Name = "TILEPair"; }
-
-def TILEPair : RegisterOperand<TILEPAIR, "printTILEPair"> {
-  let ParserMatchClass = TILEPairAsmOperand;
-}
