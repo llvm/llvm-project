@@ -41,14 +41,14 @@ static bool assignsToBoolean(const BinaryOperator *BinOp, ASTContext *AC) {
     // Special handling for `template<bool bb=true|1>` cases
     if (const auto *D = ParentNoParen->get<Decl>()) {
       if (const auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D)) {
-        if (NTTPD->getType()->isBooleanType())
+        if (NTTPD->getType().getDesugaredType(*AC)->isBooleanType())
           return true;
       }
     }
 
     if (const auto *S = ParentNoParen->get<Stmt>()) {
       if (const auto *ICE = dyn_cast<ImplicitCastExpr>(S)) {
-        if (ICE->getType()->isBooleanType())
+        if (ICE->getType().getDesugaredType(*AC)->isBooleanType())
           return true;
       }
     }
@@ -90,8 +90,8 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC, std::o
   for (const auto &[Bitwise, _] : OperatorsTransformation) {
     if (BinOp->getOpcodeStr() == Bitwise) {
       const bool hasBooleanOperands = llvm::all_of(
-          std::array{BinOp->getLHS(), BinOp->getRHS()}, [](const Expr *E) {
-            return E->IgnoreImpCasts()->getType().getTypePtr()->isBooleanType();
+          std::array{BinOp->getLHS(), BinOp->getRHS()}, [&](const Expr *E) {
+            return E->IgnoreImpCasts()->getType().getDesugaredType(*AC)->isBooleanType();
           });
       if (hasBooleanOperands) {
         rootAssignsToBoolean = rootAssignsToBoolean.value_or(false);
@@ -101,7 +101,7 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC, std::o
         rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
         return true;
       }
-      if (BinOp->isCompoundAssignmentOp() && BinOp->getLHS()->IgnoreImpCasts()->getType().getTypePtr()->isBooleanType()) {
+      if (BinOp->isCompoundAssignmentOp() && BinOp->getLHS()->IgnoreImpCasts()->getType().getDesugaredType(*AC)->isBooleanType()) {
         rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
         return true;
       }
@@ -144,8 +144,8 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   };
 
   const bool HasVolatileOperand = llvm::any_of(
-      std::array{BinOp->getLHS(), BinOp->getRHS()}, [](const Expr *E) {
-        return E->IgnoreImpCasts()->getType().isVolatileQualified();
+      std::array{BinOp->getLHS(), BinOp->getRHS()}, [&](const Expr *E) {
+        return E->IgnoreImpCasts()->getType().getDesugaredType(Ctx).isVolatileQualified();
       });
   if (HasVolatileOperand)
     return static_cast<void>(DiagEmitter());
