@@ -38,9 +38,9 @@ void DurationComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   // if nothing needs to be done.
   if (isInMacro(Result, Binop->getLHS()) || isInMacro(Result, Binop->getRHS()))
     return;
-  std::string LhsReplacement =
+  const std::string LhsReplacement =
       rewriteExprFromNumberToDuration(Result, *Scale, Binop->getLHS());
-  std::string RhsReplacement =
+  const std::string RhsReplacement =
       rewriteExprFromNumberToDuration(Result, *Scale, Binop->getRHS());
 
   diag(Binop->getBeginLoc(), "perform comparison in the duration domain")

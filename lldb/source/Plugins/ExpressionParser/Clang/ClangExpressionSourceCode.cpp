@@ -383,10 +383,11 @@ bool ClangExpressionSourceCode::GetText(
             block->CalculateSymbolContext(&sc);
 
             if (sc.comp_unit) {
-              StreamString error_stream;
-
-              decl_vendor->AddModulesForCompileUnit(
-                  *sc.comp_unit, modules_for_macros, error_stream);
+              if (auto err = decl_vendor->AddModulesForCompileUnit(
+                      *sc.comp_unit, modules_for_macros))
+                LLDB_LOG_ERROR(
+                    GetLog(LLDBLog::Expressions), std::move(err),
+                    "Error while loading hand-imported modules:\n{0}");
             }
           }
         }
