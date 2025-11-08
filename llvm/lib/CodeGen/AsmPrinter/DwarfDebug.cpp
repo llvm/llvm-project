@@ -2199,12 +2199,16 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   if (DL.getLine() == 0 && LastAsmLine == 0)
     return;
   if (MI == PrologEndLoc) {
-    Flags |= DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT;
+    Flags |= DWARF2_FLAG_PROLOGUE_END;
+    // Don't set is_stmt for line 0
+    if (DL.getLine() != 0)
+      Flags |= DWARF2_FLAG_IS_STMT;
     PrologEndLoc = nullptr;
   }
 
   if (ScopeUsesKeyInstructions) {
-    if (IsKey)
+    // Don't set is_stmt for line 0
+    if (IsKey && DL.getLine() != 0)
       Flags |= DWARF2_FLAG_IS_STMT;
   } else {
     // If the line changed, we call that a new statement; unless we went to
@@ -2400,8 +2404,11 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   (void)getOrCreateDwarfCompileUnit(SP->getUnit());
   // We'd like to list the prologue as "not statements" but GDB behaves
   // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
-  ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
-                     CUID, getDwarfVersion(), getUnits());
+  // However, we should not set is_stmt for line 0.
+  unsigned ScopeLine = SP->getScopeLine();
+  unsigned Flags = (ScopeLine != 0) ? DWARF2_FLAG_IS_STMT : 0;
+  ::recordSourceLine(*Asm, ScopeLine, 0, SP, Flags, CUID, getDwarfVersion(),
+                     getUnits());
   return PrologEndLoc;
 }
 
