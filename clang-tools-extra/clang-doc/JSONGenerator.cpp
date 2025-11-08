@@ -14,6 +14,7 @@ namespace doc {
 class JSONGenerator : public Generator {
 public:
   static const char *Format;
+  bool Markdown = false;
 
   Error generateDocumentation(StringRef RootDir,
                               llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
@@ -353,7 +354,8 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
                           const std::optional<StringRef> RepositoryUrl,
                           const std::optional<StringRef> RepositoryLinePrefix) {
   insertNonEmpty("Name", I.Name, Obj);
-  Obj["USR"] = toHex(toStringRef(I.USR));
+  if (!(I.USR == GlobalNamespaceID))
+    Obj["USR"] = toHex(toStringRef(I.USR));
   Obj["InfoType"] = infoTypeToString(I.IT);
   // Conditionally insert fields.
   // Empty properties are omitted because Mustache templates use existence
@@ -414,12 +416,25 @@ static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
   }
 }
 
+static void serializeMDReference(const Reference &Ref, Object &ReferenceObj,
+                                 StringRef BasePath) {
+  serializeReference(Ref, ReferenceObj);
+  SmallString<64> Path = Ref.getRelativeFilePath(BasePath);
+  sys::path::native(Path, sys::path::Style::posix);
+  sys::path::append(Path, sys::path::Style::posix,
+                    Ref.getFileBaseName() + ".md");
+  ReferenceObj["BasePath"] = Path;
+}
+
+typedef std::function<void(const Reference &, Object &)> ReferenceFunc;
+
 // Although namespaces and records both have ScopeChildren, they serialize them
 // differently. Only enums, records, and typedefs are handled here.
-static void
-serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
-                        const std::optional<StringRef> RepositoryUrl,
-                        const std::optional<StringRef> RepositoryLinePrefix) {
+static void serializeCommonChildren(
+    const ScopeChildren &Children, json::Object &Obj,
+    const std::optional<StringRef> RepositoryUrl,
+    const std::optional<StringRef> RepositoryLinePrefix,
+    std::optional<ReferenceFunc> MDReferenceLambda = std::nullopt) {
   static auto SerializeInfo =
       [RepositoryUrl, RepositoryLinePrefix](const auto &Info, Object &Object) {
         serializeInfo(Info, Object, RepositoryUrl, RepositoryLinePrefix);
@@ -436,7 +451,12 @@ serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
   }
 
   if (!Children.Records.empty()) {
-    serializeArray(Children.Records, Obj, "Records", SerializeReferenceLambda);
+    if (MDReferenceLambda)
+      serializeArray(Children.Records, Obj, "Records",
+                     MDReferenceLambda.value());
+    else
+      serializeArray(Children.Records, Obj, "Records",
+                     SerializeReferenceLambda);
     Obj["HasRecords"] = true;
   }
 }
@@ -656,6 +676,7 @@ serializeInfo(const RecordInfo &I, json::Object &Obj,
   }
 
   if (!I.Members.empty()) {
+    Obj["HasMembers"] = true;
     json::Value PublicMembersArray = Array();
     json::Array &PubMembersArrayRef = *PublicMembersArray.getAsArray();
     json::Value ProtectedMembersArray = Array();
@@ -729,16 +750,11 @@ serializeInfo(const VarInfo &I, json::Object &Obj,
 
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
                           const std::optional<StringRef> RepositoryUrl,
-                          const std::optional<StringRef> RepositoryLinePrefix) {
+                          const std::optional<StringRef> RepositoryLinePrefix,
+                          bool Markdown) {
   serializeCommonAttributes(I, Obj, RepositoryUrl, RepositoryLinePrefix);
   if (I.USR == GlobalNamespaceID)
     Obj["Name"] = "Global Namespace";
-
-  if (!I.Children.Namespaces.empty()) {
-    serializeArray(I.Children.Namespaces, Obj, "Namespaces",
-                   SerializeReferenceLambda);
-    Obj["HasNamespaces"] = true;
-  }
 
   static auto SerializeInfo =
       [RepositoryUrl, RepositoryLinePrefix](const auto &Info, Object &Object) {
@@ -760,7 +776,31 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     Obj["HasVariables"] = true;
   }
 
-  serializeCommonChildren(I.Children, Obj, RepositoryUrl, RepositoryLinePrefix);
+  if (Markdown) {
+    SmallString<64> BasePath = I.getRelativeFilePath("");
+    // serializeCommonChildren doesn't accept Infos, so this lambda needs to be
+    // created here. To avoid making serializeCommonChildren a template, this
+    // lambda is an std::function
+    static ReferenceFunc SerializeMDReferenceLambda =
+        [BasePath](const Reference &Ref, Object &Object) {
+          serializeMDReference(Ref, Object, BasePath);
+        };
+    serializeCommonChildren(I.Children, Obj, RepositoryUrl,
+                            RepositoryLinePrefix, SerializeMDReferenceLambda);
+    if (!I.Children.Namespaces.empty()) {
+      serializeArray(I.Children.Namespaces, Obj, "Namespaces",
+                     SerializeMDReferenceLambda);
+      Obj["HasNamespaces"] = true;
+    }
+  } else {
+    serializeCommonChildren(I.Children, Obj, RepositoryUrl,
+                            RepositoryLinePrefix);
+    if (!I.Children.Namespaces.empty()) {
+      serializeArray(I.Children.Namespaces, Obj, "Namespaces",
+                     SerializeReferenceLambda);
+      Obj["HasNamespaces"] = true;
+    }
+  }
 }
 
 static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
@@ -776,10 +816,44 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   return FileName;
 }
 
+/// \param CDCtxIndex Passed by copy since clang-doc's context is passed to the
+/// generator as `const`
+static std::vector<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
+  CDCtxIndex.sort();
+  std::vector<Index> Processed = CDCtxIndex.Children;
+  for (auto &Entry : Processed) {
+    auto NewPath = Entry.getRelativeFilePath("");
+    sys::path::native(NewPath, sys::path::Style::posix);
+    sys::path::append(NewPath, sys::path::Style::posix,
+                      Entry.getFileBaseName() + ".md");
+    Entry.Path = NewPath;
+  }
+
+  return Processed;
+}
+
+/// Serialize ClangDocContext's Index for Markdown output
+static Error serializeAllFiles(const ClangDocContext &CDCtx,
+                               StringRef RootDir) {
+  json::Value ObjVal = Object();
+  Object &Obj = *ObjVal.getAsObject();
+  std::vector<Index> IndexCopy = preprocessCDCtxIndex(CDCtx.Idx);
+  serializeArray(IndexCopy, Obj, "Index", SerializeReferenceLambda);
+  SmallString<128> Path;
+  sys::path::append(Path, RootDir.str(), "json", "all_files.json");
+  std::error_code FileErr;
+  raw_fd_ostream RootOS(Path, FileErr, sys::fs::OF_Text);
+  if (FileErr)
+    return createFileError("cannot open file " + Path, FileErr);
+  RootOS << llvm::formatv("{0:2}", ObjVal);
+  return Error::success();
+}
+
 // Creates a JSON file above the global namespace directory.
 // An index can be used to create the top-level HTML index page or the Markdown
 // index file.
-static Error serializeIndex(const ClangDocContext &CDCtx, StringRef RootDir) {
+static Error serializeIndex(const ClangDocContext &CDCtx, StringRef RootDir,
+                            bool Markdown) {
   if (CDCtx.Idx.Children.empty())
     return Error::success();
 
@@ -803,9 +877,12 @@ static Error serializeIndex(const ClangDocContext &CDCtx, StringRef RootDir) {
   for (auto &Idx : IndexCopy.Children) {
     if (Idx.Children.empty())
       continue;
-    std::string TypeStr = infoTypeToString(Idx.RefType);
     json::Value IdxVal = Object();
     auto &IdxObj = *IdxVal.getAsObject();
+    auto TypeStr = infoTypeToString(Idx.RefType);
+    if (Markdown)
+      TypeStr.at(0) = toUppercase(TypeStr.at(0));
+    IdxObj["Type"] = TypeStr;
     serializeReference(Idx, IdxObj);
     IndexArrayRef.push_back(IdxVal);
   }
@@ -871,6 +948,12 @@ Error JSONGenerator::generateDocumentation(
     Info->DocumentationFileName = FileName;
   }
 
+  if (CDCtx.Format == "md_mustache") {
+    Markdown = true;
+    if (auto Err = serializeAllFiles(CDCtx, RootDir))
+      return Err;
+  }
+
   for (const auto &Group : FileToInfos) {
     std::error_code FileErr;
     raw_fd_ostream InfoOS(Group.getKey(), FileErr, sys::fs::OF_Text);
@@ -885,7 +968,7 @@ Error JSONGenerator::generateDocumentation(
     }
   }
 
-  return serializeIndex(CDCtx, RootDir);
+  return serializeIndex(CDCtx, RootDir, Markdown);
 }
 
 Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
@@ -895,7 +978,7 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   switch (I->IT) {
   case InfoType::IT_namespace:
     serializeInfo(*static_cast<NamespaceInfo *>(I), Obj, CDCtx.RepositoryUrl,
-                  CDCtx.RepositoryLinePrefix);
+                  CDCtx.RepositoryLinePrefix, Markdown);
     break;
   case InfoType::IT_record:
     serializeInfo(*static_cast<RecordInfo *>(I), Obj, CDCtx.RepositoryUrl,
