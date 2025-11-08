@@ -5726,37 +5726,6 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue PerformREMCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOptLevel OptLevel) {
-  assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
-
-  // Don't do anything at less than -O2.
-  if (OptLevel < CodeGenOptLevel::Default)
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  bool IsSigned = N->getOpcode() == ISD::SREM;
-  unsigned DivOpc = IsSigned ? ISD::SDIV : ISD::UDIV;
-
-  const SDValue &Num = N->getOperand(0);
-  const SDValue &Den = N->getOperand(1);
-
-  for (const SDNode *U : Num->users()) {
-    if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
-        U->getOperand(1) == Den) {
-      // Num % Den -> Num - (Num / Den) * Den
-      return DAG.getNode(ISD::SUB, DL, VT, Num,
-                         DAG.getNode(ISD::MUL, DL, VT,
-                                     DAG.getNode(DivOpc, DL, VT, Num, Den),
-                                     Den));
-    }
-  }
-  return SDValue();
-}
-
 // (sign_extend|zero_extend (mul|shl) x, y) -> (mul.wide x, y)
 static SDValue combineMulWide(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                               CodeGenOptLevel OptLevel) {
@@ -6428,9 +6397,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformSETCCCombine(N, DCI, STI.getSmVersion());
   case ISD::SHL:
     return PerformSHLCombine(N, DCI, OptLevel);
-  case ISD::SREM:
-  case ISD::UREM:
-    return PerformREMCombine(N, DCI, OptLevel);
   case ISD::STORE:
   case NVPTXISD::StoreV2:
   case NVPTXISD::StoreV4:
