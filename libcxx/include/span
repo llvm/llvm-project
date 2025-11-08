@@ -362,7 +362,7 @@ public:
   }
 
 #    if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __index) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __index) const {
     if (__index >= size())
       std::__throw_out_of_range("span");
     return __data_[__index];
@@ -527,7 +527,7 @@ public:
   }
 
 #    if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __index) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __index) const {
     if (__index >= size())
       std::__throw_out_of_range("span");
     return __data_[__index];
