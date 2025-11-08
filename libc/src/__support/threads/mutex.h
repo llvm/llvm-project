@@ -42,7 +42,9 @@
 
 #if defined(__linux__)
 #include "src/__support/threads/linux/mutex.h"
-#endif // __linux__
+#elif defined(__APPLE__)
+#include "src/__support/threads/darwin/mutex.h"
+#endif
 
 #elif LIBC_THREAD_MODE == LIBC_THREAD_MODE_SINGLE
 

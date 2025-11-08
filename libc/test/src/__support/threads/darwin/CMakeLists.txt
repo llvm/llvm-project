@@ -1,0 +1,9 @@
+add_libc_test(
+  mutex_test
+  SUITE
+    libc-support-threads-tests
+  SRCS
+    mutex_test.cpp
+  DEPENDS
+    libc.src.__support.threads.darwin.mutex
+)
