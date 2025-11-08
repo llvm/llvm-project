@@ -87,13 +87,22 @@ static llvm::StringRef translate(llvm::StringRef Value) {
 }
 
 static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC, std::optional<bool>& rootAssignsToBoolean) {
+  if (!BinOp)
+    return false;
+
   for (const auto &[Bitwise, _] : OperatorsTransformation) {
     if (BinOp->getOpcodeStr() == Bitwise) {
-      const bool hasBooleanOperands = llvm::all_of(
-          std::array{BinOp->getLHS(), BinOp->getRHS()}, [&](const Expr *E) {
-            return E->IgnoreImpCasts()->getType().getDesugaredType(*AC)->isBooleanType();
-          });
-      if (hasBooleanOperands) {
+      const bool lhsBoolean = BinOp->getLHS()
+                                  ->IgnoreImpCasts()
+                                  ->getType()
+                                  .getDesugaredType(*AC)
+                                  ->isBooleanType();
+      const bool rhsBoolean = BinOp->getRHS()
+                                  ->IgnoreImpCasts()
+                                  ->getType()
+                                  .getDesugaredType(*AC)
+                                  ->isBooleanType();
+      if (lhsBoolean && rhsBoolean) {
         rootAssignsToBoolean = rootAssignsToBoolean.value_or(false);
         return true;
       }
@@ -101,8 +110,12 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC, std::o
         rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
         return true;
       }
-      if (BinOp->isCompoundAssignmentOp() && BinOp->getLHS()->IgnoreImpCasts()->getType().getDesugaredType(*AC)->isBooleanType()) {
+      if (BinOp->isCompoundAssignmentOp() && lhsBoolean) {
         rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
+        return true;
+      }
+      if (std::optional<bool> DummyFlag = false; (lhsBoolean || isBooleanBitwise(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()), AC, DummyFlag)) && (rhsBoolean  || isBooleanBitwise(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()), AC, DummyFlag))) {
+        rootAssignsToBoolean = rootAssignsToBoolean.value_or(false);
         return true;
       }
     }

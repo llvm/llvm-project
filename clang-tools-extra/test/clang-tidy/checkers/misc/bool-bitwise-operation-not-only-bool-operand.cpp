@@ -9,9 +9,6 @@ void general(unsigned flags, bool value) {
     flags = (flags << 1) | (flags << 2) | (flags << 4) | value;
 }
 
-// TODO: make sure parens dont spoil prior for compound operators
-// TODO: r = value |= flags << 1; (when r boolean, value unsigned)
-
 void take(bool value) {}
 
 template<bool bb = true | 1>
