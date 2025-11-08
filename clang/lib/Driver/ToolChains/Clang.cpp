@@ -8266,6 +8266,30 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
                                                      << "/kernel";
  }
 
+  if (const Arg *A = Args.getLastArg(options::OPT__SLASH_vlen,
+                                     options::OPT__SLASH_vlen_EQ_256,
+                                     options::OPT__SLASH_vlen_EQ_512)) {
+    llvm::Triple::ArchType AT = getToolChain().getArch();
+    StringRef Default = AT == llvm::Triple::x86 ? "IA32" : "SSE2";
+    StringRef Arch = Args.getLastArgValue(options::OPT__SLASH_arch, Default);
+
+    if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_512)) {
+      if (Arch == "AVX512F" || Arch == "AVX512")
+        CmdArgs.push_back("-mprefer-vector-width=512");
+      else
+        D.Diag(diag::warn_drv_argument_not_allowed_with)
+            << "/vlen=512" << std::string("/arch:").append(Arch);
+    }
+
+    if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_256)) {
+      if (Arch == "AVX512F" || Arch == "AVX512")
+        CmdArgs.push_back("-mprefer-vector-width=256");
+      else if (Arch != "AVX" && Arch != "AVX2")
+        D.Diag(diag::warn_drv_argument_not_allowed_with)
+            << "/vlen=256" << std::string("/arch:").append(Arch);
+    }
+  }
+
   Arg *MostGeneralArg = Args.getLastArg(options::OPT__SLASH_vmg);
   Arg *BestCaseArg = Args.getLastArg(options::OPT__SLASH_vmb);
   if (MostGeneralArg && BestCaseArg)
