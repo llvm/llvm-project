@@ -1194,6 +1194,7 @@ public:
 
         op.setMembersIndexAttr(builder.create2DI64ArrayAttr(newMemberIndices));
         op.setPartialMap(true);
+
       });
 
       // Expand type(C_PTR) only when unified_shared_memory is required,

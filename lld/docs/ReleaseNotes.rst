@@ -52,5 +52,8 @@ MachO Improvements
 WebAssembly Improvements
 ------------------------
 
+* The ``--stack-first`` flag is now enabled by default. The old
+  behavior can be enabled using ``--no-stack-first``.
+
 Fixes
 #####
