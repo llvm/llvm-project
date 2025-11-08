@@ -110,7 +110,7 @@ void ContainerContainsCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<Expr>("negativeComparison");
   assert((!PositiveComparison || !NegativeComparison) &&
          "only one of PositiveComparison or NegativeComparison should be set");
-  bool Negated = NegativeComparison != nullptr;
+  const bool Negated = NegativeComparison != nullptr;
   const auto *Comparison = Negated ? NegativeComparison : PositiveComparison;
   const StringRef ContainsFunName =
       Result.Nodes.getNodeAs<CXXMethodDecl>("contains_fun")->getName();
@@ -121,7 +121,7 @@ void ContainerContainsCheck::check(const MatchFinder::MatchResult &Result) {
               << ContainsFunName;
 
   // Don't fix it if it's in a macro invocation. Leave fixing it to the user.
-  SourceLocation FuncCallLoc = Comparison->getEndLoc();
+  const SourceLocation FuncCallLoc = Comparison->getEndLoc();
   if (!FuncCallLoc.isValid() || FuncCallLoc.isMacroID())
     return;
 

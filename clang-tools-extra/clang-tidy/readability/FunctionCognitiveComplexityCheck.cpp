@@ -229,14 +229,14 @@ public:
 
   bool traverseStmtWithIncreasedNestingLevel(Stmt *Node) {
     ++CurrentNestingLevel;
-    bool ShouldContinue = Base::TraverseStmt(Node);
+    const bool ShouldContinue = Base::TraverseStmt(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
 
   bool traverseDeclWithIncreasedNestingLevel(Decl *Node) {
     ++CurrentNestingLevel;
-    bool ShouldContinue = Base::TraverseDecl(Node);
+    const bool ShouldContinue = Base::TraverseDecl(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
@@ -336,7 +336,7 @@ public:
 
     // Record the operator that we are currently processing and traverse it.
     CurrentBinaryOperator = Op->getOpcode();
-    bool ShouldContinue = Base::TraverseBinaryOperator(Op);
+    const bool ShouldContinue = Base::TraverseBinaryOperator(Op);
 
     // And restore the previous binary operator, which might be nonexistent.
     CurrentBinaryOperator = BinOpCopy;
@@ -354,7 +354,7 @@ public:
 
     // Else, do add [uninitialized] frame to the stack, and traverse call.
     BinaryOperatorsStack.emplace();
-    bool ShouldContinue = Base::TraverseCallExpr(Node);
+    const bool ShouldContinue = Base::TraverseCallExpr(Node);
     // And remove the top frame.
     BinaryOperatorsStack.pop();
 

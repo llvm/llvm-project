@@ -27,7 +27,7 @@ static std::optional<Token>
 findConstToRemove(const ParmVarDecl &Param,
                   const MatchFinder::MatchResult &Result) {
 
-  CharSourceRange FileRange = Lexer::makeFileCharRange(
+  const CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(getTypeRange(Param)),
       *Result.SourceManager, Result.Context->getLangOpts());
 

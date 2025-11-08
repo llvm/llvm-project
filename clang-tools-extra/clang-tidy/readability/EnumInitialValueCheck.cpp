@@ -75,7 +75,7 @@ static void cleanInitialValue(DiagnosticBuilder &Diag,
 namespace {
 
 AST_MATCHER(EnumDecl, isMacro) {
-  SourceLocation Loc = Node.getBeginLoc();
+  const SourceLocation Loc = Node.getBeginLoc();
   return Loc.isMacroID();
 }
 
@@ -165,7 +165,7 @@ void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
 
 void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("inconsistent")) {
-    DiagnosticBuilder Diag =
+    const DiagnosticBuilder Diag =
         diag(
             Enum->getBeginLoc(),
             "initial values in enum '%0' are not consistent, consider explicit "

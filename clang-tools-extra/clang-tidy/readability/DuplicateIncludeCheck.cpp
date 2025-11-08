@@ -88,9 +88,9 @@ void DuplicateIncludeCallbacks::InclusionDirective(
   if (llvm::is_contained(Files.back(), FileName)) {
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.
-    SourceLocation Start =
+    const SourceLocation Start =
         advanceBeyondCurrentLine(SM, HashLoc, -1).getLocWithOffset(-1);
-    SourceLocation End =
+    const SourceLocation End =
         advanceBeyondCurrentLine(SM, FilenameRange.getEnd(), 1);
     Check.diag(HashLoc, "duplicate include")
         << FixItHint::CreateRemoval(SourceRange{Start, End});
