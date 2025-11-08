@@ -18,6 +18,7 @@
 #include "WasmException.h"
 #include "WinCFGuard.h"
 #include "WinException.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -177,6 +178,11 @@ static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
     cl::Hidden, cl::init(false));
+
+static cl::opt<bool> InsertNoopsForPrefetch(
+    "insert-noops-for-prefetch",
+    cl::desc("Whether to insert noops instead of prefetches."), cl::init(false),
+    cl::Hidden);
 
 // This isn't turned on by default, since several of the scheduling models are
 // not completely accurate, and we don't want to be misleading.
@@ -1982,10 +1988,34 @@ void AsmPrinter::emitFunctionBody() {
   FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
   for (auto &MBB : *MF) {
+    int NextPrefetchTargetIndex = MBB.getPrefetchTargets().empty() ? -1 : 0;
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
+    unsigned NumCallsInBlock = 0;
     for (auto &MI : MBB) {
+      if (NextPrefetchTargetIndex != -1 &&
+          NumCallsInBlock >=  MBB.getPrefetchTargets()[NextPrefetchTargetIndex]) {
+
+        MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
+            Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") + utostr(MBB.getBBID()->BaseID) +
+            Twine("_") +
+            utostr(MBB.getPrefetchTargets()[NextPrefetchTargetIndex]));
+        if (MF->getFunction().isWeakForLinker()) {
+          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Weak);
+          errs() << "Emitting weak symbol: " << PrefetchTargetSymbol->getName() << "\n";
+        } else {
+          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Global);
+          errs() << "Emitting global symbol: " << PrefetchTargetSymbol->getName() << "\n";
+        }
+        // OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Extern);
+       // errs() << "Emitting symbol: " << PrefetchTargetSymbol->getName() << "\n";
+        OutStreamer->emitLabel(PrefetchTargetSymbol);
+        ++NextPrefetchTargetIndex;
+        if (NextPrefetchTargetIndex >=
+            static_cast<int>(MBB.getPrefetchTargets().size()))
+          NextPrefetchTargetIndex = -1;
+      }
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugInstr()) {
@@ -2099,7 +2129,7 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
       default:
-        emitInstruction(&MI);
+         emitInstruction(&MI);
 
         auto CountInstruction = [&](const MachineInstr &MI) {
           // Skip Meta instructions inside bundles.
@@ -2136,6 +2166,24 @@ void AsmPrinter::emitFunctionBody() {
       for (auto &Handler : Handlers)
         Handler->endInstruction();
     }
+   while (NextPrefetchTargetIndex != -1) {
+        MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
+            Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") + utostr(MBB.getBBID()->BaseID) +
+            Twine("_") +
+            utostr(MBB.getPrefetchTargets()[NextPrefetchTargetIndex]));
+        if (MF->getFunction().hasWeakLinkage()) {
+          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_WeakDefinition);
+        } else {
+          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Global);
+        }
+        OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Extern);
+        OutStreamer->emitLabel(PrefetchTargetSymbol);
+        ++NextPrefetchTargetIndex;
+        if (NextPrefetchTargetIndex >=
+            static_cast<int>(MBB.getPrefetchTargets().size()))
+          NextPrefetchTargetIndex = -1;
+      }
+
 
     // We must emit temporary symbol for the end of this basic block, if either
     // we have BBLabels enabled or if this basic blocks marks the end of a

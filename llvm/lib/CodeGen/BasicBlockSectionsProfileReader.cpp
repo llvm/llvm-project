@@ -93,6 +93,19 @@ uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
   return EdgeIt->second;
 }
 
+SmallVector<PrefetchHint>
+BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
+    StringRef FuncName) const {
+  return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).PrefetchHints;
+}
+
+DenseSet<BBPosition>
+BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
+    StringRef FuncName) const {
+  return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName))
+      .PrefetchTargets;
+}
+
 // Reads the version 1 basic block sections profile. Profile for each function
 // is encoded as follows:
 //   m <module_name>
@@ -308,6 +321,25 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       }
       continue;
     }
+    case 't': { // Prefetch target specifier.
+      // Skip the profile when we the profile iterator (FI) refers to the
+      // past-the-end element.
+      if (FI == ProgramPathAndClusterInfo.end())
+        continue;
+      assert(Values.size() == 1);
+      SmallVector<StringRef, 2> PrefetchTargetStr;
+      Values[0].split(PrefetchTargetStr, '@');
+      assert(PrefetchTargetStr.size() == 2);
+      auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[0]);
+      if (!TargetBBID)
+        return TargetBBID.takeError();
+      unsigned long long TargetBBOffset;
+      if (getAsUnsignedInteger(PrefetchTargetStr[1], 10, TargetBBOffset))
+        return createProfileParseError(Twine("unsigned integer expected: '") +
+                                       PrefetchTargetStr[1]);
+      FI->second.PrefetchTargets.insert(BBPosition{*TargetBBID, static_cast<unsigned>(TargetBBOffset)});
+      continue;
+    }
     default:
       return createProfileParseError(Twine("invalid specifier: '") +
                                      Twine(Specifier) + "'");
@@ -512,6 +544,18 @@ uint64_t BasicBlockSectionsProfileReaderWrapperPass::getEdgeCount(
     StringRef FuncName, const UniqueBBID &SrcBBID,
     const UniqueBBID &SinkBBID) const {
   return BBSPR.getEdgeCount(FuncName, SrcBBID, SinkBBID);
+}
+
+SmallVector<PrefetchHint>
+BasicBlockSectionsProfileReaderWrapperPass::getPrefetchHintsForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getPrefetchHintsForFunction(FuncName);
+}
+
+DenseSet<BBPosition>
+BasicBlockSectionsProfileReaderWrapperPass::getPrefetchTargetsForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getPrefetchTargetsForFunction(FuncName);
 }
 
 BasicBlockSectionsProfileReader &
