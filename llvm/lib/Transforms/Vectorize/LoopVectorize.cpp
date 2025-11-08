@@ -4457,7 +4457,9 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   }
   // Check if the RemainingIterations is scalable.
   const SCEV *KnownMinRemIter = nullptr, *EstimatedRemIter = nullptr;
-  bool ScalableRemIter = match(RemainingIterations, m_scev_c_Mul(m_SCEV(KnownMinRemIter), m_SCEVVScale()));
+  bool ScalableRemIter =
+      match(RemainingIterations,
+            m_scev_c_Mul(m_SCEV(KnownMinRemIter), m_SCEVVScale()));
   if (ScalableRemIter)
     EstimatedRemIter = SE.getMulExpr(
         KnownMinRemIter,
@@ -4482,8 +4484,8 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     // epilogue loop would be dead. Skip such factors.
     if (ScalableRemIter == NextVF.Width.isScalable()) {
       if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
-                            SE.getElementCount(TCType, NextVF.Width),
-                            RemainingIterations))
+                              SE.getElementCount(TCType, NextVF.Width),
+                              RemainingIterations))
         continue;
     }
     // Handle the case where NextVF and RemainingIterations are in different
@@ -4491,9 +4493,10 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     else if (NextVF.Width.isScalable()) {
       ElementCount EstimatedRuntimeNextVF = ElementCount::getFixed(
           estimateElementCount(NextVF.Width, CM.getVScaleForTuning()));
-      if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
-                              SE.getElementCount(TCType, EstimatedRuntimeNextVF),
-                              RemainingIterations))
+      if (SE.isKnownPredicate(
+              CmpInst::ICMP_UGT,
+              SE.getElementCount(TCType, EstimatedRuntimeNextVF),
+              RemainingIterations))
         continue;
     } else {
       if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
