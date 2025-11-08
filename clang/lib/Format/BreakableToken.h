@@ -25,29 +25,7 @@
 namespace clang {
 namespace format {
 
-class BreakableBlockComment;
-
 bool isWellFormedBlockCommentText(llvm::StringRef Text);
-
-FormatStyle::CommentSpaceMode
-getBeforeClosingSpaceMode(const FormatStyle &Style, const FormatToken &Tok);
-
-FormatStyle::CommentSpaceMode getAfterOpeningSpaceMode(const FormatStyle &Style,
-                                                       const FormatToken &Tok);
-
-llvm::StringRef getBlockCommentBody(const FormatToken &Tok);
-
-unsigned countLeadingHorizontalWhitespaceAfterOpening(const FormatToken &Tok);
-
-void applyAfterOpeningBlockCommentSpacing(const FormatStyle &Style,
-                                          const FormatToken &Tok,
-                                          WhitespaceManager &Whitespaces,
-                                          bool InPPDirective);
-
-void applyBeforeClosingBlockCommentSpacing(const FormatStyle &Style,
-                                           const FormatToken &Tok,
-                                           WhitespaceManager &Whitespaces,
-                                           bool InPPDirective);
 
 /// Checks if \p Token switches formatting, like /* clang-format off */.
 /// \p Token must be a comment.
@@ -453,13 +431,6 @@ public:
 
   bool mayReflow(unsigned LineIndex,
                  const llvm::Regex &CommentPragmasRegex) const override;
-
-  unsigned getLeadingWhitespaceAfterOpening() const {
-    return LeadingWhitespaceAfterOpening;
-  }
-  unsigned getTrailingWhitespaceBeforeClosing() const {
-    return TrailingWhitespaceBeforeClosing;
-  }
 
   // Contains Javadoc annotations that require additional indent when continued
   // on multiple lines.

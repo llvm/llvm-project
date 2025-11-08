@@ -82,6 +82,8 @@ bool isWellFormedBlockCommentText(StringRef Text) {
          Text.starts_with("/*") && Text.ends_with("*/");
 }
 
+namespace {
+
 FormatStyle::CommentSpaceMode getAfterOpeningSpaceMode(const FormatStyle &Style,
                                                        const FormatToken &Tok) {
   return resolveCommentSpaceMode(Style, Tok,
@@ -241,6 +243,8 @@ void applyBeforeClosingBlockCommentSpacing(const FormatStyle &Style,
   }
   llvm_unreachable("Unhandled CommentSpaceMode");
 }
+
+} // namespace
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
