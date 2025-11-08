@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_SYS_SYSCALL_H
 #define LLVM_LIBC_SYS_SYSCALL_H
 
-//TODO: Handle non-linux syscalls
-
 #if defined(__APPLE__)
+
 #include <sys/syscall.h>
-#else
+
+#elif defined(__linux__)
+
 #include <asm/unistd.h>
 
 #ifdef __NR_FAST_atomic_update
@@ -2364,6 +2365,6 @@
 #define SYS_writev __NR_writev
 #endif
 
-#endif
+#endif // __linux__
 
 #endif // LLVM_LIBC_SYS_SYSCALL_H
