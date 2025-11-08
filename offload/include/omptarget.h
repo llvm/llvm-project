@@ -104,8 +104,19 @@ enum TargetAllocTy : int32_t {
 };
 
 inline KernelArgsTy CTorDTorKernelArgs = {
-    1,       0, nullptr,   nullptr,   nullptr,   nullptr, nullptr,
-    nullptr, 0, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}, 0};
+    /* Version= */ 1,
+    /* NumArgs= */ 0,
+    /* ArgBasePtrs= */ nullptr,
+    /* ArgPtrs= */ nullptr,
+    /* ArgSizes= */ nullptr,
+    /* ArgTypes= */ nullptr,
+    /* ArgNames= */ nullptr,
+    /* ArgMappers= */ nullptr,
+    /* Tripcount= */ 0,
+    /* Flags= */ {/* NoWait= */ 0, /* IsCUDA= */ 0, /* Unused= */ 0},
+    /* NumTeams= */ {1, 0, 0},
+    /* ThreadLimit= */ {1, 0, 0},
+    /* DynCGroupMem= */ 0};
 
 struct DeviceTy;
 
