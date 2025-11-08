@@ -184,7 +184,7 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   // 1. Insert std prefix for every such symbol occurrence.
   // 2. Insert `using namespace std;` to the beginning of TU.
   // 3. Do nothing and let the user deal with the migration himself.
-  SourceLocation DiagLoc = FilenameRange.getBegin();
+  const SourceLocation DiagLoc = FilenameRange.getBegin();
   if (auto It = CStyledHeaderToCxx.find(FileName);
       It != CStyledHeaderToCxx.end()) {
     IncludesToBeProcessed.emplace_back(IncludeMarker{
