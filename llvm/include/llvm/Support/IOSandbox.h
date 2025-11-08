@@ -11,11 +11,12 @@
 
 #if defined(LLVM_ENABLE_IO_SANDBOX) && LLVM_ENABLE_IO_SANDBOX
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 namespace llvm::sys::sandbox {
-inline thread_local bool Enabled = false;
+inline LLVM_THREAD_LOCAL bool Enabled = false;
 struct ScopedSetting {
   SaveAndRestore<bool> Impl;
 };
