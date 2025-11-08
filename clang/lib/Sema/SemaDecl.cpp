@@ -8111,6 +8111,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   //   An inline definition of a function with external linkage shall
   //   not contain a definition of a modifiable object with static or
   //   thread storage duration...
+  //
+  // WG14 N3622 which removed the constraint entirely in C2y. It is left
+  // enabled in earlier language modes because this is a constraint in those
+  // language modes. But in C2y mode, we still want to issue the "incompatible
+  // with previous standards" diagnostic, too.
   // We only apply this when the function is required to be defined
   // elsewhere, i.e. when the function is not 'extern inline'.  Note
   // that a local variable with thread storage duration still has to
@@ -8120,8 +8125,15 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       !NewVD->getType().isConstQualified()) {
     FunctionDecl *CurFD = getCurFunctionDecl();
     if (CurFD && isFunctionDefinitionDiscarded(*this, CurFD)) {
-      Diag(D.getDeclSpec().getStorageClassSpecLoc(),
-           diag::warn_static_local_in_extern_inline);
+      unsigned DiagID;
+      if (getLangOpts().C2y)
+        DiagID = diag::warn_c2y_compat_static_local_in_extern_inline;
+      else if (getSourceManager().isInMainFile(D.getBeginLoc()))
+        DiagID = diag::ext_static_local_in_extern_inline_quiet;
+      else
+        DiagID = diag::ext_static_local_in_extern_inline;
+
+      Diag(D.getDeclSpec().getStorageClassSpecLoc(), DiagID);
       MaybeSuggestAddingStaticToDecl(CurFD);
     }
   }
