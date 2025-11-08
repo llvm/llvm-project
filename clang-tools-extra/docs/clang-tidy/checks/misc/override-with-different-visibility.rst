@@ -20,7 +20,7 @@ the ``using`` keyword is not considered as visibility change by this check.
   private:
     virtual void f_priv();
   };
-  
+
   class B: public A {
   public:
     void f_priv(); // warning: changed visibility from private to public

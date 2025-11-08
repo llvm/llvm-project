@@ -146,7 +146,6 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
     return qualType(anyOf(qualType(pointerType(pointee(InnerMatchers...))),
                           qualType(substTemplateTypeParmType(hasReplacementType(
                               pointerType(pointee(InnerMatchers...)))))));
-   
   };
 
   auto IsAutoDeducedToPointer =

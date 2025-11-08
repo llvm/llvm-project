@@ -99,7 +99,7 @@ Options
 .. option:: AnalyzePointers
 
   Enable or disable the analysis of pointers variables, like
-  ``int *ptr = &i;``. For specific checks, see 
+  ``int *ptr = &i;``. For specific checks, see
   :option:`WarnPointersAsValues` and :option:`WarnPointersAsPointers`.
   Default is `true`.
 

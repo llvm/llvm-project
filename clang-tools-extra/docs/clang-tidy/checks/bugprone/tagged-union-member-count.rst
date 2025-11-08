@@ -9,7 +9,7 @@ different from the number of data members inside the union.
 A struct or a class is considered to be a tagged union if it has
 exactly one union data member and exactly one enum data member and
 any number of other data members that are neither unions or enums.
-Furthermore, the types of the union and the enum members must 
+Furthermore, the types of the union and the enum members must
 not come from system header files nor the ``std`` namespace.
 
 Example:

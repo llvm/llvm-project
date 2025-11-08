@@ -8,7 +8,7 @@ Such assignments are bug-prone because they may have been intended as equality t
 
 This check finds all assignments within `if` conditions, including ones that are not flagged
 by `-Wparentheses` due to an extra set of parentheses, and including assignments that call
-an overloaded `operator=()`. The identified assignments violate 
+an overloaded `operator=()`. The identified assignments violate
 `BARR group "Rule 8.2.c" <https://barrgroup.com/embedded-systems/books/embedded-c-coding-standard/statement-rules/if-else-statements>`_.
 
 .. code-block:: c++

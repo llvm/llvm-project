@@ -356,7 +356,7 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
   if (Context.canExperimentalCustomChecks() && custom::RegisterCustomChecks)
     custom::RegisterCustomChecks(Context.getOptions(), *CheckFactories);
 #endif
-  for (ClangTidyModuleRegistry::entry const E :
+  for (const ClangTidyModuleRegistry::entry E :
        ClangTidyModuleRegistry::entries()) {
     std::unique_ptr<ClangTidyModule> Module = E.instantiate();
     Module->addCheckFactories(*CheckFactories);

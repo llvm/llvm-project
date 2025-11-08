@@ -10,7 +10,7 @@ The problem with this construct is that if ``realloc`` fails it returns a
 null pointer but does not deallocate the original memory. If no other variable
 is pointing to it, the original memory block is not available any more for the
 program to use or free. In either case ``p = realloc(p, size);`` indicates bad
-coding style and can be replaced by ``q = realloc(p, size);``. 
+coding style and can be replaced by ``q = realloc(p, size);``.
 
 The pointer expression (used at ``realloc``) can be a variable or a field member
 of a data structure, but can not contain function calls or unresolved types.
