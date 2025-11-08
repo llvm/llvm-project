@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ConvertMemberFunctionsToStatic.h"
+#include "ConvertMemberFunctionsToStaticCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -78,7 +78,8 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
 
 } // namespace
 
-void ConvertMemberFunctionsToStatic::registerMatchers(MatchFinder *Finder) {
+void ConvertMemberFunctionsToStaticCheck::registerMatchers(
+    MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(
           isDefinition(), isUserProvided(),
@@ -131,7 +132,7 @@ static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
   return {Start, Start.getLocWithOffset(strlen("const") - 1)};
 }
 
-void ConvertMemberFunctionsToStatic::check(
+void ConvertMemberFunctionsToStaticCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Definition = Result.Nodes.getNodeAs<CXXMethodDecl>("x");
 

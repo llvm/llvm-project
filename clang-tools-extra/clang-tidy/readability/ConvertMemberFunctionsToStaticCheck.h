@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMBERFUNCTIONSTOSTATIC_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMBERFUNCTIONSTOSTATIC_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMBERFUNCTIONSTOSTATICCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMBERFUNCTIONSTOSTATICCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -18,10 +18,10 @@ namespace clang::tidy::readability {
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/
-/// readability-convert-member-functions-to-static.html
-class ConvertMemberFunctionsToStatic : public ClangTidyCheck {
+/// readability/convert-member-functions-to-static.html
+class ConvertMemberFunctionsToStaticCheck : public ClangTidyCheck {
 public:
-  ConvertMemberFunctionsToStatic(StringRef Name, ClangTidyContext *Context)
+  ConvertMemberFunctionsToStaticCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
@@ -32,4 +32,4 @@ public:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMBERFUNCTIONSTOSTATIC_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMBERFUNCTIONSTOSTATICCHECK_H

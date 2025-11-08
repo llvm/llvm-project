@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UnnecessaryCopyInitialization.h"
+#include "UnnecessaryCopyInitializationCheck.h"
 #include "../utils/DeclRefExprUtils.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/LexerUtils.h"
@@ -227,7 +227,7 @@ static QualType constructorArgumentType(const VarDecl *OldVar,
   return MethodDecl->getReturnType();
 }
 
-UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
+UnnecessaryCopyInitializationCheck::UnnecessaryCopyInitializationCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AllowedTypes(
@@ -235,7 +235,7 @@ UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
       ExcludedContainerTypes(utils::options::parseStringList(
           Options.get("ExcludedContainerTypes", ""))) {}
 
-void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
+void UnnecessaryCopyInitializationCheck::registerMatchers(MatchFinder *Finder) {
   auto LocalVarCopiedFrom =
       [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
         return compoundStmt(
@@ -276,7 +276,7 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-void UnnecessaryCopyInitialization::check(
+void UnnecessaryCopyInitializationCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto &NewVar = *Result.Nodes.getNodeAs<VarDecl>("newVarDecl");
   const auto &BlockStmt = *Result.Nodes.getNodeAs<Stmt>("blockStmt");
@@ -325,7 +325,7 @@ void UnnecessaryCopyInitialization::check(
   }
 }
 
-void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
+void UnnecessaryCopyInitializationCheck::handleCopyFromMethodReturn(
     const CheckContext &Ctx, const VarDecl *ObjectArg) {
   const bool IsConstQualified = Ctx.Var.getType().isConstQualified();
   if (!IsConstQualified && !Ctx.IsVarOnlyUsedAsConst)
@@ -337,7 +337,7 @@ void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
   diagnoseCopyFromMethodReturn(Ctx);
 }
 
-void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
+void UnnecessaryCopyInitializationCheck::handleCopyFromLocalVar(
     const CheckContext &Ctx, const VarDecl &OldVar) {
   if (!Ctx.IsVarOnlyUsedAsConst ||
       !isInitializingVariableImmutable(OldVar, Ctx.BlockStmt, Ctx.ASTCtx,
@@ -346,7 +346,7 @@ void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
   diagnoseCopyFromLocalVar(Ctx, OldVar);
 }
 
-void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
+void UnnecessaryCopyInitializationCheck::diagnoseCopyFromMethodReturn(
     const CheckContext &Ctx) {
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
@@ -360,7 +360,7 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
-void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
+void UnnecessaryCopyInitializationCheck::diagnoseCopyFromLocalVar(
     const CheckContext &Ctx, const VarDecl &OldVar) {
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
@@ -372,7 +372,7 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
-void UnnecessaryCopyInitialization::maybeIssueFixes(
+void UnnecessaryCopyInitializationCheck::maybeIssueFixes(
     const CheckContext &Ctx, DiagnosticBuilder &Diagnostic) {
   if (Ctx.IssueFix) {
     if (Ctx.IsVarUnused)
@@ -382,7 +382,7 @@ void UnnecessaryCopyInitialization::maybeIssueFixes(
   }
 }
 
-void UnnecessaryCopyInitialization::storeOptions(
+void UnnecessaryCopyInitializationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));

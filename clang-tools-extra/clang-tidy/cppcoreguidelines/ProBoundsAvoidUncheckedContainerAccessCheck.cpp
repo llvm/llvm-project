@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ProBoundsAvoidUncheckedContainerAccess.h"
+#include "ProBoundsAvoidUncheckedContainerAccessCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -19,8 +19,9 @@ namespace clang::tidy::cppcoreguidelines {
 static constexpr llvm::StringRef DefaultExclusionStr =
     "::std::map;::std::unordered_map;::std::flat_map";
 
-ProBoundsAvoidUncheckedContainerAccess::ProBoundsAvoidUncheckedContainerAccess(
-    StringRef Name, ClangTidyContext *Context)
+ProBoundsAvoidUncheckedContainerAccessCheck::
+    ProBoundsAvoidUncheckedContainerAccessCheck(StringRef Name,
+                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       ExcludedClasses(utils::options::parseStringList(
           Options.get("ExcludeClasses", DefaultExclusionStr))),
@@ -28,7 +29,7 @@ ProBoundsAvoidUncheckedContainerAccess::ProBoundsAvoidUncheckedContainerAccess(
       FixFunction(Options.get("FixFunction", "gsl::at")),
       FixFunctionEmptyArgs(Options.get("FixFunctionEmptyArgs", FixFunction)) {}
 
-void ProBoundsAvoidUncheckedContainerAccess::storeOptions(
+void ProBoundsAvoidUncheckedContainerAccessCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ExcludeClasses",
                 utils::options::serializeStringList(ExcludedClasses));
@@ -86,7 +87,7 @@ findAlternativeAt(const CXXMethodDecl *MatchedOperator) {
   return nullptr;
 }
 
-void ProBoundsAvoidUncheckedContainerAccess::registerMatchers(
+void ProBoundsAvoidUncheckedContainerAccessCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
       mapAnyOf(cxxOperatorCallExpr, cxxMemberCallExpr)
@@ -100,7 +101,7 @@ void ProBoundsAvoidUncheckedContainerAccess::registerMatchers(
       this);
 }
 
-void ProBoundsAvoidUncheckedContainerAccess::check(
+void ProBoundsAvoidUncheckedContainerAccessCheck::check(
     const MatchFinder::MatchResult &Result) {
 
   const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
@@ -251,7 +252,7 @@ void ProBoundsAvoidUncheckedContainerAccess::check(
 } // namespace clang::tidy::cppcoreguidelines
 
 namespace clang::tidy {
-using P = cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccess;
+using P = cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccessCheck;
 
 llvm::ArrayRef<std::pair<P::FixModes, StringRef>>
 OptionEnumMapping<P::FixModes>::getEnumMapping() {
