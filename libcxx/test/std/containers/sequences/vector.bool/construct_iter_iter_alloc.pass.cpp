@@ -12,6 +12,7 @@
 // template <class InputIter> vector(InputIter first, InputIter last,
 //                                   const allocator_type& a);
 
+#include <algorithm>
 #include <vector>
 #include <cassert>
 #include <cstddef>

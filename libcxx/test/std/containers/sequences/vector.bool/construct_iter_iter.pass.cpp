@@ -11,6 +11,7 @@
 
 // template <class InputIter> vector(InputIter first, InputIter last);
 
+#include <algorithm>
 #include <vector>
 #include <cassert>
 #include <cstddef>

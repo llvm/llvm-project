@@ -11,6 +11,7 @@
 // template <class InputIterator> deque(InputIterator f, InputIterator l);
 
 #include "asan_testing.h"
+#include <algorithm>
 #include <deque>
 #include <cassert>
 #include <cstddef>

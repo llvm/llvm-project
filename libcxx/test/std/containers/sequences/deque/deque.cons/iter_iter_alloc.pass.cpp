@@ -12,6 +12,7 @@
 //   deque(InputIterator f, InputIterator l, const allocator_type& a);
 
 #include "asan_testing.h"
+#include <algorithm>
 #include <deque>
 #include <cassert>
 #include <cstddef>
