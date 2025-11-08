@@ -16,6 +16,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
+
+#include "llvm/Support/IOSandbox.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -925,6 +928,8 @@ int mapped_file_region::alignment() { return Process::getPageSizeEstimate(); }
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
                                                      StringRef path,
                                                      bool follow_symlinks) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> path_null(path);
   DIR *directory = ::opendir(path_null.c_str());
   if (!directory)
@@ -960,6 +965,8 @@ static file_type direntType(dirent *Entry) {
 }
 
 std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
+  sandbox::violationIfEnabled();
+
   errno = 0;
   dirent *CurDir = ::readdir(reinterpret_cast<DIR *>(It.IterationHandle));
   if (CurDir == nullptr && errno != 0) {

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/WindowsError.h"
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -1075,6 +1076,8 @@ static basic_file_status status_from_find_data(WIN32_FIND_DATAW *FindData) {
 std::error_code detail::directory_iterator_construct(detail::DirIterState &IT,
                                                      StringRef Path,
                                                      bool FollowSymlinks) {
+  sandbox::violationIfEnabled();
+
   SmallVector<wchar_t, 128> PathUTF16;
 
   if (std::error_code EC = widenPath(Path, PathUTF16))
@@ -1140,6 +1143,8 @@ std::error_code detail::directory_iterator_destruct(detail::DirIterState &IT) {
 }
 
 std::error_code detail::directory_iterator_increment(detail::DirIterState &IT) {
+  sandbox::violationIfEnabled();
+
   WIN32_FIND_DATAW FindData;
   if (!::FindNextFileW(HANDLE(IT.IterationHandle), &FindData)) {
     DWORD LastError = ::GetLastError();
