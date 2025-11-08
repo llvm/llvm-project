@@ -104,7 +104,6 @@ public:
 void ExecutableFileMemoryManager::updateSection(
     const jitlink::Section &JLSection, uint8_t *Contents, size_t Size,
     size_t Alignment) {
-      #define DEBUG_TYPE "bolt-sections"
   LLVM_DEBUG(dbgs() << "[sect] updateSection " << JLSection.getName() << "\n");
 
   auto SectionID = JLSection.getName();
@@ -182,6 +181,14 @@ void ExecutableFileMemoryManager::updateSection(
            << " with size " << Size << ", alignment " << Alignment << " at "
            << Contents << ", ID = " << SectionID << "\n";
   });
+
+  static constexpr char kOrgPrefix[] = ".bolt.org";
+  if (Section->getName().starts_with(kOrgPrefix)) {
+    LLVM_DEBUG(dbgs()
+               << "[sect] skip setSectionID for backup section "
+               << Section->getName() << "\n");
+    return; // backups already had valid IDs from .text, skip reassign
+  }
 
   Section->setSectionID(SectionID);
 }
