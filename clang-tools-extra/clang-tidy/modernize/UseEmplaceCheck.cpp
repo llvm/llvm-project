@@ -44,17 +44,13 @@ AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
   // clang/lib/ASTMatchers/ASTMatchersInternal.cpp and checks whether
   // FullNameTrimmed matches any of the given Names.
   const StringRef FullNameTrimmedRef = FullNameTrimmed;
-  for (const StringRef Pattern : Names) {
+  return llvm::any_of(Names, [&](const StringRef Pattern) {
     if (Pattern.starts_with("::")) {
-      if (FullNameTrimmed == Pattern)
-        return true;
-    } else if (FullNameTrimmedRef.ends_with(Pattern) &&
-               FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::")) {
-      return true;
+      return FullNameTrimmed == Pattern;
     }
-  }
-
-  return false;
+    return FullNameTrimmedRef.ends_with(Pattern) &&
+           FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::");
+  });
 }
 
 // Checks if the given matcher is the last argument of the given CallExpr.

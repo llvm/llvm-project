@@ -48,14 +48,15 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
     if (C->isCopyOrMoveConstructor() && C->isDefaulted() && !C->isDeleted())
       return false;
   }
-  for (const CXXMethodDecl *M : Node.methods()) {
-    if (M->isCopyAssignmentOperator())
-      llvm::errs() << M->isDeleted() << "\n";
-    if (M->isCopyAssignmentOperator() && M->isDefaulted() && !M->isDeleted())
-      return false;
-    if (M->isMoveAssignmentOperator() && M->isDefaulted() && !M->isDeleted())
-      return false;
-  }
+  if (llvm::any_of(Node.methods(), [](const CXXMethodDecl *M) {
+        if (M->isCopyAssignmentOperator())
+          llvm::errs() << M->isDeleted() << "\n";
+        return (M->isCopyAssignmentOperator() && M->isDefaulted() &&
+                !M->isDeleted()) ||
+               (M->isMoveAssignmentOperator() && M->isDefaulted() &&
+                !M->isDeleted());
+      }))
+    return false;
   // FIXME: find ways to identifier correct handle capture this lambda
   return true;
 }

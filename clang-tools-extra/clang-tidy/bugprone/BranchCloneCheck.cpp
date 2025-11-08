@@ -75,12 +75,9 @@ static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
       if (!S)
         return true;
 
-      for (const Attr *A : S->getAttrs()) {
-        if (isa<FallThroughAttr>(A))
-          return false;
-      }
-
-      return true;
+      return llvm::all_of(S->getAttrs(), [](const Attr *A) {
+        return !isa<FallThroughAttr>(A);
+      });
     }
   } Visitor;
 

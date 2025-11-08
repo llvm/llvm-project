@@ -21,10 +21,7 @@ using llvm::SmallPtrSet;
 
 template <typename S>
 static bool isSetDifferenceEmpty(const S &S1, const S &S2) {
-  for (auto E : S1)
-    if (S2.count(E) == 0)
-      return false;
-  return true;
+  return llvm::all_of(S1, [&](auto E) { return S2.count(E) != 0; });
 }
 
 // Extracts all Nodes keyed by ID from Matches and inserts them into Nodes.
