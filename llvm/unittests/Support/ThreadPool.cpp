@@ -183,6 +183,20 @@ TYPED_TEST(ThreadPoolTest, Async) {
   ASSERT_EQ(2, i.load());
 }
 
+TYPED_TEST(ThreadPoolTest, AsyncMoveOnly) {
+  CHECK_UNSUPPORTED();
+  DefaultThreadPool Pool;
+  std::promise<int> p;
+  std::future<int> f = p.get_future();
+  Pool.async([this, p = std::move(p)]() mutable {
+    this->waitForMainThread();
+    p.set_value(42);
+  });
+  this->setMainThreadReady();
+  Pool.wait();
+  ASSERT_EQ(42, f.get());
+}
+
 TYPED_TEST(ThreadPoolTest, GetFuture) {
   CHECK_UNSUPPORTED();
   DefaultThreadPool Pool(hardware_concurrency(2));

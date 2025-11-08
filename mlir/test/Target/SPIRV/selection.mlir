@@ -1,5 +1,10 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
 // Selection with both then and else branches
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
@@ -136,19 +141,31 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // CHECK-NEXT:    spirv.Load "Function" %[[VAR]]
     %cond = spirv.Load "Function" %var : i1
+    spirv.mlir.selection {
 //      CHECK:    spirv.BranchConditional %1, ^[[THEN1:.+]](%{{.+}} : i32), ^[[ELSE1:.+]](%{{.+}}, %{{.+}} : i32, i32)
-    spirv.BranchConditional %cond, ^then1(%one: i32), ^else1(%zero, %zero: i32, i32)
+      spirv.BranchConditional %cond, ^then1(%one: i32), ^else1(%zero, %zero: i32, i32)
 
 // CHECK-NEXT:  ^[[THEN1]](%{{.+}}: i32):
 // CHECK-NEXT:    spirv.Return
-  ^then1(%arg0: i32):
-    spirv.Return
+    ^then1(%arg0: i32):
+      spirv.Return
 
 // CHECK-NEXT:  ^[[ELSE1]](%{{.+}}: i32, %{{.+}}: i32):
 // CHECK-NEXT:    spirv.Return
-  ^else1(%arg1: i32, %arg2: i32):
+    ^else1(%arg1: i32, %arg2: i32):
+      spirv.Return
+    ^merge:
+      spirv.mlir.merge
+    }
+
     spirv.Return
   }
+
+  spirv.func @main() -> () "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "GLCompute" @main
+  spirv.ExecutionMode @main "LocalSize", 1, 1, 1
 }
 
 // -----

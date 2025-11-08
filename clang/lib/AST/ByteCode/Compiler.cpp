@@ -4175,7 +4175,7 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   StmtExprScope<Emitter> SS(this);
 
   const CompoundStmt *CS = E->getSubStmt();
-  const Stmt *Result = CS->getStmtExprResult();
+  const Stmt *Result = CS->body_back();
   for (const Stmt *S : CS->body()) {
     if (S != Result) {
       if (!this->visitStmt(S))

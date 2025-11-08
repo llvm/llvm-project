@@ -187,6 +187,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures
 )
 
 add_libc_test(

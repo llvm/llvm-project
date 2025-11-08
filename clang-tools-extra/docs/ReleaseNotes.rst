@@ -284,6 +284,11 @@ New check aliases
   <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-oop58-cpp <clang-tidy/checks/cert/oop58-cpp>` to
+  :doc:`bugprone-copy-constructor-mutates-argument
+  <clang-tidy/checks/bugprone/copy-constructor-mutates-argument>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -479,6 +484,10 @@ Changes in existing checks
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
+
+- Improved :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check to
+  generate correct fix-its for forms without a space after the directive.
 
 Removed checks
 ^^^^^^^^^^^^^^
