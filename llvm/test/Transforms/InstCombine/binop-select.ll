@@ -406,10 +406,7 @@ define i32 @ashr_sel_op1_use(i1 %b) {
 
 define i8 @commonArgWithOr0(i1 %arg0) {
 ; CHECK-LABEL: @commonArgWithOr0(
-; CHECK-NEXT:    [[V0:%.*]] = zext i1 [[ARG0:%.*]] to i8
-; CHECK-NEXT:    [[V1:%.*]] = select i1 [[ARG0]], i8 0, i8 8
-; CHECK-NEXT:    [[V2:%.*]] = or disjoint i8 [[V1]], [[V0]]
-; CHECK-NEXT:    [[V3:%.*]] = or disjoint i8 [[V2]], 16
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 17, i8 24
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = zext i1 %arg0 to i8
@@ -433,10 +430,7 @@ define i8 @commonArgWithOr1(i1 %arg0) {
 
 define i8 @commonArgWithOr2(i1 %arg0) {
 ; CHECK-LABEL: @commonArgWithOr2(
-; CHECK-NEXT:    [[V0:%.*]] = zext i1 [[ARG0:%.*]] to i8
-; CHECK-NEXT:    [[V1:%.*]] = select i1 [[ARG0]], i8 5, i8 42
-; CHECK-NEXT:    [[V2:%.*]] = or i8 [[V1]], [[V0]]
-; CHECK-NEXT:    [[V3:%.*]] = or disjoint i8 [[V2]], 16
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 21, i8 58
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = zext i1 %arg0 to i8
@@ -496,10 +490,7 @@ define i8 @commonArgWithAnd3(i1 %arg0) {
 
 define i8 @commonArgWithXor0(i1 %arg0) {
 ; CHECK-LABEL: @commonArgWithXor0(
-; CHECK-NEXT:    [[V0:%.*]] = zext i1 [[ARG0:%.*]] to i8
-; CHECK-NEXT:    [[V1:%.*]] = select i1 [[ARG0]], i8 0, i8 8
-; CHECK-NEXT:    [[V2:%.*]] = or disjoint i8 [[V1]], [[V0]]
-; CHECK-NEXT:    [[V3:%.*]] = or disjoint i8 [[V2]], 16
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 17, i8 24
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = zext i1 %arg0 to i8
@@ -511,9 +502,7 @@ define i8 @commonArgWithXor0(i1 %arg0) {
 
 define i8 @commonArgWithXor1(i1 %arg0) {
 ; CHECK-LABEL: @commonArgWithXor1(
-; CHECK-NEXT:    [[V0:%.*]] = zext i1 [[ARG0:%.*]] to i8
-; CHECK-NEXT:    [[V1:%.*]] = select i1 [[ARG0]], i8 9, i8 1
-; CHECK-NEXT:    [[V2:%.*]] = xor i8 [[V1]], [[V0]]
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[ARG0:%.*]], i8 8, i8 1
 ; CHECK-NEXT:    ret i8 [[V2]]
 ;
   %v0 = zext i1 %arg0 to i8
@@ -524,10 +513,7 @@ define i8 @commonArgWithXor1(i1 %arg0) {
 
 define i8 @commonArgWithXor2(i1 %arg0) {
 ; CHECK-LABEL: @commonArgWithXor2(
-; CHECK-NEXT:    [[V0:%.*]] = zext i1 [[ARG0:%.*]] to i8
-; CHECK-NEXT:    [[V1:%.*]] = select i1 [[ARG0]], i8 1, i8 7
-; CHECK-NEXT:    [[V2:%.*]] = xor i8 [[V1]], [[V0]]
-; CHECK-NEXT:    [[V3:%.*]] = or disjoint i8 [[V2]], 16
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 16, i8 23
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = zext i1 %arg0 to i8
@@ -539,10 +525,7 @@ define i8 @commonArgWithXor2(i1 %arg0) {
 
 define i8 @commonArgWithXor3(i1 %arg0) {
 ; CHECK-LABEL: @commonArgWithXor3(
-; CHECK-NEXT:    [[V0:%.*]] = zext i1 [[ARG0:%.*]] to i8
-; CHECK-NEXT:    [[V1:%.*]] = select i1 [[ARG0]], i8 5, i8 45
-; CHECK-NEXT:    [[V2:%.*]] = xor i8 [[V1]], [[V0]]
-; CHECK-NEXT:    [[V3:%.*]] = or disjoint i8 [[V2]], 16
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 20, i8 61
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = zext i1 %arg0 to i8

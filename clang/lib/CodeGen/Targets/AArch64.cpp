@@ -422,6 +422,12 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   }
 
   // Empty records:
+  // AAPCS64 does not say that empty records are ignored as arguments,
+  // but other compilers do so in certain situations, and we copy that behavior.
+  // Those situations are in fact language-mode-specific, which seems really
+  // unfortunate, but it's something we just have to accept. If this doesn't
+  // apply, just fall through to the standard argument-handling path.
+  // Darwin overrides the psABI here to ignore all empty records in all modes.
   uint64_t Size = getContext().getTypeSize(Ty);
   bool IsEmpty = isEmptyRecord(getContext(), Ty, true);
   if (!Ty->isSVESizelessBuiltinType() && (IsEmpty || Size == 0)) {
@@ -434,9 +440,6 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     // behaviour here.
     if (Size == 0)
       return ABIArgInfo::getIgnore();
-
-    // Otherwise, they are passed as if they have a size of 1 byte.
-    return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
   }
 
   // Homogeneous Floating-point Aggregates (HFAs) need to be expanded.

@@ -1758,6 +1758,9 @@ static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
                                     m_Specific(Op), m_Value(V))) &&
                isGuaranteedNotToBeUndefOrPoison(V)) {
       // Pass
+    } else if (match(Op, m_ZExt(m_Specific(SI->getCondition())))) {
+      V = IsTrueArm ? ConstantInt::get(Op->getType(), 1)
+                    : ConstantInt::getNullValue(Op->getType());
     } else {
       V = Op;
     }
