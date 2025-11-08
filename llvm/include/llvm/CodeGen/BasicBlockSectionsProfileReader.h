@@ -50,6 +50,12 @@ struct CallsiteID {
   unsigned CallsiteIndex;
 };
 
+struct PrefetchHint {
+  SubblockID SitePosition;
+  StringRef TargetFunctionName;
+  osition TargetPosition;
+};
+
 // This represents the raw input profile for one function.
 struct FunctionPathAndClusterInfo {
   // BB Cluster information specified by `UniqueBBID`s.
@@ -61,6 +67,7 @@ struct FunctionPathAndClusterInfo {
   // Code prefetch targets, specified by the callsite ID immediately after
   // which beginning must be targetted for prefetching.
   SmallVector<CallsiteID> PrefetchTargets;
+  SmallVector<PrefetchHint> PrefetchHints;
   // Node counts for each basic block.
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
   // Edge counts for each edge.
@@ -69,6 +76,27 @@ struct FunctionPathAndClusterInfo {
   // (not cloned blocks), hence the map key being unsigned instead of
   // UniqueBBID.
   DenseMap<unsigned, uint64_t> BBHashes;
+};
+
+// Provides DenseMapInfo SubblockID.
+template <> struct DenseMapInfo<SubblockID> {
+  static inline SubblockID getEmptyKey() {
+    return {DenseMapInfo<UniqueBBID>::getEmptyKey(),
+            DenseMapInfo<unsigned>::getEmptyKey()};
+  }
+  static inline SubblockID getTombstoneKey() {
+    return SubblockID{DenseMapInfo<UniqueBBID>::getTombstoneKey(),
+                      DenseMapInfo<unsigned>::getTombstoneKey()};
+  }
+  static unsigned getHashValue(const SubblockID &Val) {
+    std::pair<unsigned, unsigned> PairVal = std::make_pair(
+        DenseMapInfo<UniqueBBID>::getHashValue(Val.BBID), Val.BBOffset);
+    return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
+  }
+  static bool isEqual(const SubblockID &LHS, const SubblockID &RHS) {
+    return DenseMapInfo<UniqueBBID>::isEqual(LHS.BBID, RHS.BBID) &&
+           DenseMapInfo<unsigned>::isEqual(LHS.BBOffset, RHS.BBOffset);
+  }
 };
 
 class BasicBlockSectionsProfileReader {
@@ -101,6 +129,9 @@ public:
   // for function `FuncName`.
   SmallVector<CallsiteID>
   getPrefetchTargetsForFunction(StringRef FuncName) const;
+
+  SmallVector<PrefetchHint>
+  getPrefetchHintsForFunction(StringRef FuncName) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -210,6 +241,10 @@ public:
 
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
+  SmallVector<PrefetchHint>
+  getPrefetchHintsForFunction(StringRef FuncName) const;
+
+  DenseSet<SubblockID> getPrefetchTargetsForFunction(StringRef FuncName) const;
 
   SmallVector<CallsiteID>
   getPrefetchTargetsForFunction(StringRef FuncName) const;

@@ -100,6 +100,14 @@ BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
       .PrefetchTargets;
 }
 
+SmallVector<PrefetchHint>
+BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
+    StringRef FuncName) const {
+  return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).PrefetchHints;
+}
+
+
+
 // Reads the version 1 basic block sections profile. Profile for each function
 // is encoded as follows:
 //   m <module_name>
@@ -576,6 +584,12 @@ SmallVector<CallsiteID>
 BasicBlockSectionsProfileReaderWrapperPass::getPrefetchTargetsForFunction(
     StringRef FuncName) const {
   return BBSPR.getPrefetchTargetsForFunction(FuncName);
+}
+
+SmallVector<PrefetchHint>
+BasicBlockSectionsProfileReaderWrapperPass::getPrefetchHintsForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getPrefetchHintsForFunction(FuncName);
 }
 
 BasicBlockSectionsProfileReader &

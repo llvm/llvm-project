@@ -100,6 +100,12 @@ template <> struct DenseMapInfo<MBBSectionID> {
   }
 };
 
+struct PrefetchTarget {
+  StringRef TargetFunction;
+  UniqueBBID TargetBBID;
+  unsigned TargetBBOffset;
+};
+
 template <> struct ilist_traits<MachineInstr> {
 private:
   friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
@@ -212,6 +218,8 @@ private:
   /// Fixed unique ID assigned to this basic block upon creation. Used with
   /// basic block sections and basic block labels.
   std::optional<UniqueBBID> BBID;
+
+  SmallVector<unsigned> PrefetchTargets;
 
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
@@ -1288,6 +1296,12 @@ public:
 
   /// Return the MCSymbol for this basic block.
   LLVM_ABI MCSymbol *getSymbol() const;
+
+  MCSymbol *getCallInstSymbol(unsigned CallInstNumber) const;
+
+  const SmallVector<MCSymbol *, 4>& getCallInstSymbols() const {
+    return CallInstSymbols;
+  }
 
   /// Return the Windows EH Continuation Symbol for this basic block.
   LLVM_ABI MCSymbol *getEHContSymbol() const;

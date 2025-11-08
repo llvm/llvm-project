@@ -18,6 +18,7 @@
 #include "WasmException.h"
 #include "WinCFGuard.h"
 #include "WinException.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -177,6 +178,11 @@ static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
     cl::Hidden, cl::init(false));
+
+static cl::opt<bool> InsertNoopsForPrefetch(
+    "insert-noops-for-prefetch",
+    cl::desc("Whether to insert noops instead of prefetches."), cl::init(false),
+    cl::Hidden);
 
 // This isn't turned on by default, since several of the scheduling models are
 // not completely accurate, and we don't want to be misleading.
@@ -1982,6 +1988,7 @@ void AsmPrinter::emitFunctionBody() {
   FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
   for (auto &MBB : *MF) {
+    int NextPrefetchTargetIndex = MBB.getPrefetchTargets().empty() ? -1 : 0;
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
@@ -2125,7 +2132,7 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
       default:
-        emitInstruction(&MI);
+         emitInstruction(&MI);
 
         auto CountInstruction = [&](const MachineInstr &MI) {
           // Skip Meta instructions inside bundles.
