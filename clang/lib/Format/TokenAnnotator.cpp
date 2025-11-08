@@ -4512,6 +4512,14 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
 }
 
 bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
+  // Handle underscore macro: _("string") or _(message)
+  // Special case when SpaceBetweenUnderscoreParens is false
+  const FormatToken *Left = Right.Previous;
+  if (Left && Left->is(tok::identifier) && Left->TokenText == "_" &&
+      !Style.SpaceBetweenUnderscoreParens) {
+    return false;
+  }
+
   if (Style.SpaceBeforeParens == FormatStyle::SBPO_Always)
     return true;
   if (Right.is(TT_OverloadedOperatorLParen) &&

@@ -1307,8 +1307,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeCtorInitializerColon);
     IO.mapOptional("SpaceBeforeInheritanceColon",
                    Style.SpaceBeforeInheritanceColon);
-    IO.mapOptional("SpaceBetweenUnderscoreParens",
-                   Style.SpaceBetweenUnderscoreParens);
     IO.mapOptional("SpaceBeforeJsonColon", Style.SpaceBeforeJsonColon);
     IO.mapOptional("SpaceBeforeParens", Style.SpaceBeforeParens);
     IO.mapOptional("SpaceBeforeParensOptions", Style.SpaceBeforeParensOptions);
@@ -1316,6 +1314,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeRangeBasedForLoopColon);
     IO.mapOptional("SpaceBeforeSquareBrackets",
                    Style.SpaceBeforeSquareBrackets);
+    IO.mapOptional("SpaceBetweenUnderscoreParens",
+                   Style.SpaceBetweenUnderscoreParens);
     IO.mapOptional("SpaceInEmptyBraces", Style.SpaceInEmptyBraces);
     IO.mapOptional("SpacesBeforeTrailingComments",
                    Style.SpacesBeforeTrailingComments);
@@ -1815,7 +1815,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeCpp11BracedList = false;
   LLVMStyle.SpaceBeforeCtorInitializerColon = true;
   LLVMStyle.SpaceBeforeInheritanceColon = true;
-  LLVMStyle.SpaceBetweenUnderscoreParens = true;
   LLVMStyle.SpaceBeforeJsonColon = false;
   LLVMStyle.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
   LLVMStyle.SpaceBeforeParensOptions = {};
@@ -1824,6 +1823,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeParensOptions.AfterIfMacros = true;
   LLVMStyle.SpaceBeforeRangeBasedForLoopColon = true;
   LLVMStyle.SpaceBeforeSquareBrackets = false;
+  LLVMStyle.SpaceBetweenUnderscoreParens = true;
   LLVMStyle.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
