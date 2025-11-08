@@ -40,14 +40,14 @@ other smart pointers or other classes use the :option:`SmartPointers` option.
 
 
 .. note::
-    
+
   The check may emit invalid fix-its and misleading warning messages when
   specifying custom smart pointers or other classes in the
   :option:`SmartPointers` option. For example, ``boost::scoped_ptr`` does not
   have an ``operator=`` which makes fix-its invalid.
 
 .. note::
-    
+
   Automatic fix-its are enabled only if :program:`clang-tidy` is invoked with
   the `--fix-notes` option.
 
