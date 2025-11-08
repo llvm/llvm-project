@@ -181,7 +181,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     // We don't want the default expansion of 16-bit ABS since we can
     // sign-extend and use the 32-bit ABS operation for 16-bit ABS with SGPRs
-    setOperationAction(ISD::ABS, MVT::i16, Custom);
+    setOperationAction(ISD::ABS, {MVT::i8,MVT::i16}, Custom);
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
@@ -979,7 +979,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
   }
 
-  setTargetDAGCombine({ISD::ADD,
+  setTargetDAGCombine({ISD::ABS,
+                       ISD::ADD,
                        ISD::PTRADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -6779,7 +6780,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::DEBUGTRAP:
     return lowerDEBUGTRAP(Op, DAG);
   case ISD::ABS:
-    if (Op.getValueType() == MVT::i16)
+    if (Op.getValueType() == MVT::i16 || Op.getValueType() == MVT::i8)
       return lowerABSi16(Op, DAG);
     LLVM_FALLTHROUGH;
   case ISD::FABS:
@@ -7280,7 +7281,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
                                           SmallVectorImpl<SDValue> &Results,
                                           SelectionDAG &DAG) const {
-  switch (N->getOpcode()) {
+  switch (N->getOpcode()) {    
   case ISD::INSERT_VECTOR_ELT: {
     if (SDValue Res = lowerINSERT_VECTOR_ELT(SDValue(N, 0), DAG))
       Results.push_back(Res);
@@ -7458,6 +7459,15 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(lowerFSQRTF16(SDValue(N, 0), DAG));
     break;
   }
+  case ISD::ABS:
+    if (N->getValueType(0) == MVT::i16 || N->getValueType(0) == MVT::i8) {
+      SDValue result = lowerABSi16(SDValue(N, 0), DAG);
+      if(result!=SDValue()) {
+        Results.push_back(result);
+        return;
+      }
+    }
+    LLVM_FALLTHROUGH;
   default:
     AMDGPUTargetLowering::ReplaceNodeResults(N, Results, DAG);
     break;
@@ -8151,7 +8161,7 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
 SDValue SITargetLowering::lowerABSi16(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getOpcode() == ISD::ABS &&
          "Tried to select abs with non-abs opcode.");
-  assert(Op.getValueType() == MVT::i16 &&
+  assert((Op.getValueType() == MVT::i16 || Op.getValueType() == MVT::i8) &&
          "Tried to select abs i16 lowering with non-i16 type.");
 
   // divergent means will not end up using SGPRs
@@ -8163,7 +8173,7 @@ SDValue SITargetLowering::lowerABSi16(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Src);
   SDValue SExtSrc = DAG.getSExtOrTrunc(Src, DL, MVT::i32);
   SDValue ExtAbs = DAG.getNode(ISD::ABS, DL, MVT::i32, SExtSrc);
-  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, ExtAbs);
+  return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), ExtAbs);
 }
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
@@ -16882,7 +16892,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return SDValue();
 
   switch (N->getOpcode()) {
-  case ISD::ADD:
+ case ISD::ADD:
     return performAddCombine(N, DCI);
   case ISD::PTRADD:
     return performPtrAddCombine(N, DCI);
