@@ -108,7 +108,8 @@ class BasicBlockSections : public MachineFunctionPass {
 public:
   static char ID;
 
-  BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader = nullptr;
+  // BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader =
+  // nullptr;
 
   BasicBlockSections() : MachineFunctionPass(ID) {
     initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
