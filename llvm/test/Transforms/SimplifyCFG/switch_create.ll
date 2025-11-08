@@ -1314,6 +1314,136 @@ if.end:
   ret void
 }
 
+define i32 @switch_with_icmp_select_after_it(i32 %x) {
+; CHECK-LABEL: @switch_with_icmp_select_after_it(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 18, label [[END:%.*]]
+; CHECK-NEXT:      i32 21, label [[END]]
+; CHECK-NEXT:      i32 48, label [[END]]
+; CHECK-NEXT:      i32 16, label [[END]]
+; CHECK-NEXT:      i32 80, label [[SWITCH_EDGE:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       switch.edge:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 3, [[DEFAULT]] ], [ 2, [[SWITCH_EDGE]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  switch i32 %x, label %default [
+  i32 18, label %end
+  i32 21, label %end
+  i32 48, label %end
+  i32 16, label %end
+  ]
+default:
+  %cmp = icmp eq i32 %x, 80
+  ; Create a new switch case BB for case 80.
+  %sel = select i1 %cmp, i32 2, i32 3
+  br label %end
+end:
+  %res = phi i32 [ 1, %entry ], [ 1, %entry ], [ 1, %entry ], [ 1, %entry ], [ %sel, %default ]
+  ret i32 %res
+}
+
+define i32 @switch_with_icmp_select_after_it2(i32 %x) {
+; CHECK-LABEL: @switch_with_icmp_select_after_it2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 18, label [[END:%.*]]
+; CHECK-NEXT:      i32 21, label [[END]]
+; CHECK-NEXT:      i32 48, label [[END]]
+; CHECK-NEXT:      i32 16, label [[END]]
+; CHECK-NEXT:      i32 80, label [[END]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 3, [[DEFAULT]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  switch i32 %x, label %default [
+  i32 18, label %end
+  i32 21, label %end
+  i32 48, label %end
+  i32 16, label %end
+  ]
+default:
+  %cmp = icmp eq i32 %x, 80
+  ; Should not create new case BB
+  %sel = select i1 %cmp, i32 1, i32 3
+  br label %end
+end:
+  %res = phi i32 [ 1, %entry ], [ 1, %entry ], [ 1, %entry ], [ 1, %entry ], [ %sel, %default ]
+  ret i32 %res
+}
+
+define i32 @switch_with_icmp_select_after_it3(i32 %x) {
+; CHECK-LABEL: @switch_with_icmp_select_after_it3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 80
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 3, i32 1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  switch i32 %x, label %default [
+  i32 18, label %end
+  i32 21, label %end
+  i32 48, label %end
+  i32 16, label %end
+  ]
+default:
+  %cmp = icmp eq i32 %x, 80
+  ; Should not create new case BB
+  %sel = select i1 %cmp, i32 3, i32 1
+  br label %end
+end:
+  %res = phi i32 [ 1, %entry ], [ 1, %entry ], [ 1, %entry ], [ 1, %entry ], [ %sel, %default ]
+  ret i32 %res
+}
+
+; TODO: support this case (multi-phis).
+define i32 @switch_with_icmp_select_after_it_multi_phis(i32 %x) {
+; CHECK-LABEL: @switch_with_icmp_select_after_it_multi_phis(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 18, label [[END:%.*]]
+; CHECK-NEXT:      i32 21, label [[END]]
+; CHECK-NEXT:      i32 48, label [[END]]
+; CHECK-NEXT:      i32 16, label [[END]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 2, i32 3
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RES1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 0, [[ENTRY]] ], [ 0, [[ENTRY]] ], [ 0, [[ENTRY]] ], [ 100, [[DEFAULT]] ]
+; CHECK-NEXT:    [[RES2:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ [[SEL]], [[DEFAULT]] ]
+; CHECK-NEXT:    [[RES:%.*]] = xor i32 [[RES1]], [[RES2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  switch i32 %x, label %default [
+  i32 18, label %end
+  i32 21, label %end
+  i32 48, label %end
+  i32 16, label %end
+  ]
+default:
+  %cmp = icmp eq i32 %x, 80
+  %sel = select i1 %cmp, i32 2, i32 3
+  br label %end
+end:
+  %res1 = phi i32 [ 0, %entry ], [ 0, %entry ], [ 0, %entry ], [ 0, %entry ], [ 100, %default ]
+  %res2 = phi i32 [ 1, %entry ], [ 1, %entry ], [ 1, %entry ], [ 1, %entry ], [ %sel, %default ]
+  %res = xor i32 %res1, %res2
+  ret i32 %res
+}
+
 !0 = !{!"function_entry_count", i32 100}
 !1 = !{!"branch_weights", i32 6, i32 10}
 ;.
