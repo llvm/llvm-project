@@ -7,6 +7,8 @@
 #include "linux/time-macros.h"
 #elif defined(__ELF__)
 #include "baremetal/time-macros.h"
+#elif defined(__APPLE__)
+#include "darwin/time-macros.h"
 #else
 #define CLOCKS_PER_SEC 1000000
 #endif
