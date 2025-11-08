@@ -171,3 +171,55 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         x_val = self.dap_server.get_local_variable_value("x")
         self.assertEqual(x_val, "10")
+
+    @skipIfWindows
+    def test_bytes(self):
+        """Tests setting data breakpoints on memory range."""
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        first_loop_break_line = line_number(source, "// first loop breakpoint")
+        self.set_source_breakpoints(source, [first_loop_break_line])
+        self.continue_to_next_stop()
+        # Test write watchpoints on x, arr[2]
+        x = self.dap_server.get_local_variable("x")
+        response_x = self.dap_server.request_dataBreakpointInfo(
+            0, x["memoryReference"], 4
+        )
+        arr_2 = self.dap_server.get_local_variable_child("arr", "[2]")
+        response_arr_2 = self.dap_server.request_dataBreakpointInfo(
+            0, arr_2["memoryReference"], 4
+        )
+
+        # Test response from dataBreakpointInfo request.
+        self.assertEqual(
+            response_x["body"]["dataId"].split("/"), [x["memoryReference"][2:], "4"]
+        )
+        self.assertEqual(response_x["body"]["accessTypes"], self.accessTypes)
+        self.assertEqual(
+            response_arr_2["body"]["dataId"].split("/"),
+            [arr_2["memoryReference"][2:], "4"],
+        )
+        self.assertEqual(response_arr_2["body"]["accessTypes"], self.accessTypes)
+        dataBreakpoints = [
+            {"dataId": response_x["body"]["dataId"], "accessType": "write"},
+            {"dataId": response_arr_2["body"]["dataId"], "accessType": "write"},
+        ]
+        set_response = self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        self.assertEqual(
+            set_response["body"]["breakpoints"],
+            [{"verified": True}, {"verified": True}],
+        )
+
+        self.continue_to_next_stop()
+        x_val = self.dap_server.get_local_variable_value("x")
+        i_val = self.dap_server.get_local_variable_value("i")
+        self.assertEqual(x_val, "2")
+        self.assertEqual(i_val, "1")
+
+        self.continue_to_next_stop()
+        arr_2 = self.dap_server.get_local_variable_child("arr", "[2]")
+        i_val = self.dap_server.get_local_variable_value("i")
+        self.assertEqual(arr_2["value"], "42")
+        self.assertEqual(i_val, "2")
+        self.dap_server.request_setDataBreakpoint([])

@@ -432,6 +432,9 @@ class DataBreakpointInfoRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "dataBreakpointInfo"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureDataBreakpointBytes};
+  }
   llvm::Expected<protocol::DataBreakpointInfoResponseBody>
   Run(const protocol::DataBreakpointInfoArguments &args) const override;
 };

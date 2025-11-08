@@ -16,6 +16,20 @@
 
 namespace lldb_dap {
 
+static bool CheckAddress(DAP &dap, lldb::addr_t load_addr) {
+  lldb::SBMemoryRegionInfo region;
+  lldb::SBError err =
+      dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
+  // Only lldb-server supports "qMemoryRegionInfo". So, don't fail this
+  // request if SBProcess::GetMemoryRegionInfo returns error.
+  if (err.Success()) {
+    if (!(region.IsReadable() || region.IsWritable())) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /// Obtains information on a possible data breakpoint that could be set on an
 /// expression or variable. Clients should only call this request if the
 /// corresponding capability supportsDataBreakpoints is true.
@@ -23,7 +37,6 @@ llvm::Expected<protocol::DataBreakpointInfoResponseBody>
 DataBreakpointInfoRequestHandler::Run(
     const protocol::DataBreakpointInfoArguments &args) const {
   protocol::DataBreakpointInfoResponseBody response;
-  lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId);
   lldb::SBValue variable = dap.variables.FindVariable(
       args.variablesReference.value_or(0), args.name);
   std::string addr, size;
@@ -43,7 +56,8 @@ DataBreakpointInfoRequestHandler::Run(
       addr = llvm::utohexstr(load_addr);
       size = llvm::utostr(byte_size);
     }
-  } else if (args.variablesReference.value_or(0) == 0 && frame.IsValid()) {
+  } else if (lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId);
+             args.variablesReference.value_or(0) == 0 && frame.IsValid()) {
     lldb::SBValue value = frame.EvaluateExpression(args.name.c_str());
     if (value.GetError().Fail()) {
       lldb::SBError error = value.GetError();
@@ -58,23 +72,27 @@ DataBreakpointInfoRequestHandler::Run(
       if (data.IsValid()) {
         size = llvm::utostr(data.GetByteSize());
         addr = llvm::utohexstr(load_addr);
-        lldb::SBMemoryRegionInfo region;
-        lldb::SBError err =
-            dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
-        // Only lldb-server supports "qMemoryRegionInfo". So, don't fail this
-        // request if SBProcess::GetMemoryRegionInfo returns error.
-        if (err.Success()) {
-          if (!(region.IsReadable() || region.IsWritable())) {
-            is_data_ok = false;
-            response.description = "memory region for address " + addr +
-                                   " has no read or write permissions";
-          }
+        if (!CheckAddress(dap, load_addr)) {
+          is_data_ok = false;
+          response.description = "memory region for address " + addr +
+                                 " has no read or write permissions";
         }
       } else {
         is_data_ok = false;
         response.description =
             "unable to get byte size for expression: " + args.name;
       }
+    }
+  } else if (args.asAddress) {
+    size = llvm::utostr(args.bytes.value_or(1));
+    if (llvm::StringRef(args.name).starts_with("0x"))
+      addr = args.name.substr(2);
+    else
+      addr = llvm::utohexstr(std::stoull(args.name));
+    if (!CheckAddress(dap, std::stoull(addr, 0, 16))) {
+      is_data_ok = false;
+      response.description = "memory region for address " + addr +
+                             " has no read or write permissions";
     }
   } else {
     is_data_ok = false;
