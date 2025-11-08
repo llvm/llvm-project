@@ -46,6 +46,7 @@ protected:
                           Base,
                           UserStylesheets,
                           Diags,
+                          "html",
                           false};
     CDCtx.UserStylesheets.insert(
         CDCtx.UserStylesheets.begin(),

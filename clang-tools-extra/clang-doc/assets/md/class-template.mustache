@@ -1,0 +1,62 @@
+# {{TagType}} {{Name}}
+
+*Defined at {{Location.Filename}}#{{Location.LineNumber}}*
+{{#Description}}
+
+{{>Comments}}
+{{/Description}}
+{{#HasParents}}
+Inherits from {{#Parents}}{{Name}}{{^End}}, {{/End}}{{/Parents}}{{#VParents}}{{Name}}{{^End}}, {{/End}}{{/VParents}}
+{{/HasParents}}
+{{#HasMembers}}
+## Members
+{{/HasMembers}}
+{{#PublicMembers}}
+public {{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}
+
+{{/PublicMembers}}
+{{#PrivateMembers}}
+private {{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}
+
+{{/PrivateMembers}}
+
+{{#HasPublicMethods}}
+## Functions
+
+{{#PublicMethods}}
+### {{Name}}
+
+*public {{#IsStatic}}static {{/IsStatic}}{{ReturnType.QualName}} {{Name}}({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})*
+{{#Location}}
+
+*Defined at {{Filename}}#{{LineNumber}}*
+{{/Location}}
+{{#Description}}
+
+{{>Comments}}
+{{/Description}}
+{{/PublicMethods}}
+{{/HasPublicMethods}}
+{{#HasEnums}}
+## Enums
+
+{{#Enums}}
+| enum {{Name}} |
+
+--
+
+{{#Members}}
+| {{ .Name }} |
+{{/Members}}
+{{#Location}}
+
+*Defined at {{Filename}}#{{LineNumber}}*
+{{/Location}}
+{{#Description}}
+
+{{>Comments}}
+{{/Description}}
+{{^End}}
+{{/End}}
+{{/Enums}}
+{{/HasEnums}}

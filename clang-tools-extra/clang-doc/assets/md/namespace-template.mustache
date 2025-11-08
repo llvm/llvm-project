@@ -1,0 +1,63 @@
+# {{#USR}}namespace {{/USR}}{{Name}}
+
+{{#Description}}
+{{>Comments}}
+{{/Description}}
+
+{{#HasNamespaces}}
+## Namespaces
+
+{{#Namespaces}}
+* [{{Name}}]({{BasePath}})
+
+{{/Namespaces}}
+{{/HasNamespaces}}
+{{#HasRecords}}
+## Records
+
+{{#Records}}
+* [{{Name}}]({{BasePath}})
+
+{{/Records}}
+{{/HasRecords}}
+{{#HasFunctions}}
+## Functions
+
+{{#Functions}}
+### {{Name}}
+
+*{{#IsStatic}}static {{/IsStatic}}{{ReturnType.QualName}} {{Name}}({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})*
+{{#Location}}
+
+*Defined at {{Filename}}#{{LineNumber}}*
+{{/Location}}
+{{#Description}}
+
+{{>Comments}}
+{{/Description}}
+{{/Functions}}
+{{/HasFunctions}}
+{{#HasEnums}}
+## Enums
+
+{{#Enums}}
+| enum {{Name}} |
+
+--
+
+{{#Members}}
+| {{ .Name }} |
+{{/Members}}
+
+{{#Location}}
+*Defined at {{Filename}}#{{LineNumber}}*
+{{/Location}}
+
+{{#Description}}
+{{>Comments}}
+{{/Description}}
+{{^End}}
+
+{{/End}}
+{{/Enums}}
+{{/HasEnums}}
