@@ -75,44 +75,44 @@ static llvm::StringRef translate(llvm::StringRef Value) {
 }
 
 static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
-                             std::optional<bool> &rootAssignsToBoolean) {
+                             std::optional<bool> &RootAssignsToBoolean) {
   if (!BinOp)
     return false;
 
   for (const auto &[Bitwise, _] : OperatorsTransformation) {
     if (BinOp->getOpcodeStr() == Bitwise) {
-      bool lhsBoolean = BinOp->getLHS()
-                            ->IgnoreImpCasts()
-                            ->getType()
-                            .getDesugaredType(*AC)
-                            ->isBooleanType();
-      bool rhsBoolean = BinOp->getRHS()
-                            ->IgnoreImpCasts()
-                            ->getType()
-                            .getDesugaredType(*AC)
-                            ->isBooleanType();
+      bool IsBooleanLHS = BinOp->getLHS()
+                              ->IgnoreImpCasts()
+                              ->getType()
+                              .getDesugaredType(*AC)
+                              ->isBooleanType();
+      bool IsBooleanRHS = BinOp->getRHS()
+                              ->IgnoreImpCasts()
+                              ->getType()
+                              .getDesugaredType(*AC)
+                              ->isBooleanType();
       for (int i = 0; i < 2; ++i) {
-        if (lhsBoolean && rhsBoolean) {
-          rootAssignsToBoolean = rootAssignsToBoolean.value_or(false);
+        if (IsBooleanLHS && IsBooleanRHS) {
+          RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
           return true;
         }
         if (assignsToBoolean(BinOp, AC) ||
-            rootAssignsToBoolean.value_or(false)) {
-          rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
+            RootAssignsToBoolean.value_or(false)) {
+          RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
           return true;
         }
-        if (BinOp->isCompoundAssignmentOp() && lhsBoolean) {
-          rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
+        if (BinOp->isCompoundAssignmentOp() && IsBooleanLHS) {
+          RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
           return true;
         }
         std::optional<bool> DummyFlag = false;
-        lhsBoolean =
-            lhsBoolean ||
+        IsBooleanLHS =
+            IsBooleanLHS ||
             isBooleanBitwise(dyn_cast<BinaryOperator>(
                                  BinOp->getLHS()->IgnoreParenImpCasts()),
                              AC, DummyFlag);
-        rhsBoolean =
-            rhsBoolean ||
+        IsBooleanRHS =
+            IsBooleanRHS ||
             isBooleanBitwise(dyn_cast<BinaryOperator>(
                                  BinOp->getRHS()->IgnoreParenImpCasts()),
                              AC, DummyFlag);
@@ -122,12 +122,14 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
   return false;
 }
 
-static const Expr* getValidCompoundsLHS(const BinaryOperator* BinOp) {
+static const Expr *getValidCompoundsLHS(const BinaryOperator *BinOp) {
   assert(BinOp->isCompoundAssignmentOp());
-  
-  if (const auto *DeclRefLHS = dyn_cast<DeclRefExpr>(BinOp->getLHS()->IgnoreImpCasts()))
+
+  if (const auto *DeclRefLHS =
+          dyn_cast<DeclRefExpr>(BinOp->getLHS()->IgnoreImpCasts()))
     return DeclRefLHS;
-  else if (const auto *MemberLHS = dyn_cast<MemberExpr>(BinOp->getLHS()->IgnoreImpCasts()))
+  else if (const auto *MemberLHS =
+               dyn_cast<MemberExpr>(BinOp->getLHS()->IgnoreImpCasts()))
     return MemberLHS;
 
   return nullptr;
@@ -159,9 +161,9 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const clang::SourceManager &SM, clang::ASTContext &Ctx) {
   auto DiagEmitter = [BinOp, this] {
     return diag(BinOp->getOperatorLoc(),
-                "use logical operator '%0' for boolean semantics instead of bitwise operator '%1'")
-           << translate(BinOp->getOpcodeStr())
-           << BinOp->getOpcodeStr();
+                "use logical operator '%0' for boolean semantics instead of "
+                "bitwise operator '%1'")
+           << translate(BinOp->getOpcodeStr()) << BinOp->getOpcodeStr();
   };
 
   const bool HasVolatileOperand = llvm::any_of(
@@ -211,10 +213,10 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     if (InsertLoc.isInvalid() || InsertLoc.isMacroID())
       return static_cast<void>(IgnoreMacros || DiagEmitter());
     auto SourceText = static_cast<std::string>(Lexer::getSourceText(
-                CharSourceRange::getTokenRange(LHS->getSourceRange()),
-                SM, Ctx.getLangOpts()
-            ));
-    llvm::erase_if(SourceText, [](unsigned char ch) { return std::isspace(ch); });
+        CharSourceRange::getTokenRange(LHS->getSourceRange()), SM,
+        Ctx.getLangOpts()));
+    llvm::erase_if(SourceText,
+                   [](unsigned char ch) { return std::isspace(ch); });
     InsertEqual = FixItHint::CreateInsertion(InsertLoc, " = " + SourceText);
   }
 
@@ -264,27 +266,27 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 void BoolBitwiseOperationCheck::visitBinaryTreesNode(
     const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
     const clang::SourceManager &SM, clang::ASTContext &Ctx,
-    std::optional<bool> &rootAssignsToBoolean) {
+    std::optional<bool> &RootAssignsToBoolean) {
   if (!BinOp)
     return;
 
-  if (isBooleanBitwise(BinOp, &Ctx, rootAssignsToBoolean))
+  if (isBooleanBitwise(BinOp, &Ctx, RootAssignsToBoolean))
     emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM, Ctx);
 
   visitBinaryTreesNode(
       dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()), BinOp,
-      SM, Ctx, rootAssignsToBoolean);
+      SM, Ctx, RootAssignsToBoolean);
   visitBinaryTreesNode(
       dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()), BinOp,
-      SM, Ctx, rootAssignsToBoolean);
+      SM, Ctx, RootAssignsToBoolean);
 }
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *binOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
-  std::optional<bool> rootAssignsToBoolean = std::nullopt;
-  visitBinaryTreesNode(binOpRoot, nullptr, SM, Ctx, rootAssignsToBoolean);
+  std::optional<bool> RootAssignsToBoolean = std::nullopt;
+  visitBinaryTreesNode(binOpRoot, nullptr, SM, Ctx, RootAssignsToBoolean);
 }
 
 } // namespace clang::tidy::misc

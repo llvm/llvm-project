@@ -40,7 +40,7 @@ private:
                             const BinaryOperator *ParentBinOp,
                             const clang::SourceManager &SM,
                             clang::ASTContext &Ctx,
-                            std::optional<bool>& rootAssignsToBoolean);
+                            std::optional<bool> &rootAssignsToBoolean);
 
 private:
   bool StrictMode;
