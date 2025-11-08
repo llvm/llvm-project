@@ -133,26 +133,6 @@ static unsigned countTrailingHorizontalWhitespace(StringRef Body) {
   return static_cast<unsigned>(TrimmedSize - (LastNonBlank + 1));
 }
 
-unsigned
-countTrailingHorizontalWhitespaceBeforeClosing(const FormatToken &Tok) {
-  return countTrailingHorizontalWhitespace(getBlockCommentInterior(Tok));
-}
-
-static unsigned countLogicalNewlines(StringRef Text) {
-  unsigned Count = 0;
-  const size_t End = Text.size();
-  for (size_t I = 0; I < End; ++I) {
-    if (Text[I] == '\r') {
-      ++Count;
-      if (I + 1 < End && Text[I + 1] == '\n')
-        ++I;
-    } else if (Text[I] == '\n') {
-      ++Count;
-    }
-  }
-  return Count;
-}
-
 void applyAfterOpeningBlockCommentSpacing(const FormatStyle &Style,
                                           const FormatToken &Tok,
                                           WhitespaceManager &Whitespaces,
@@ -178,17 +158,18 @@ void applyAfterOpeningBlockCommentSpacing(const FormatStyle &Style,
     break;
   case CommentSpaceMode::Always:
     if (OnlyWhitespace && !Interior.empty()) {
-      const unsigned ReplaceChars = Interior.size();
-      if (Interior.contains('\n')) {
-        // Collapses empty multi-line bodies like "/* \n */" so the opener and
-        // closer sit on neighboring lines without inventing placeholder spaces.
-        unsigned NewlineCount = countLogicalNewlines(Interior);
-        replaceCommentWhitespace(Tok, OpeningOffset, ReplaceChars, "",
-                                 NewlineCount, Whitespaces, InPPDirective);
+      if (Interior.contains('\n') || Interior.contains('\r')) {
+        if (LeadingSpaces > 0) {
+          // Trim only the horizontal padding before the first line break so
+          // multi-line whitespace-only comments can still be handled by the
+          // generic block comment machinery without overlapping edits.
+          replaceCommentWhitespace(Tok, OpeningOffset, LeadingSpaces, "",
+                                   /*Newlines=*/0, Whitespaces, InPPDirective);
+        }
       } else {
         // Normalizes purely whitespace single-line comments such as "/*   */"
         // to contain exactly one space of interior padding.
-        replaceCommentWhitespace(Tok, OpeningOffset, ReplaceChars, " ",
+        replaceCommentWhitespace(Tok, OpeningOffset, Interior.size(), " ",
                                  /*Newlines=*/0, Whitespaces, InPPDirective);
       }
       return;
@@ -220,10 +201,25 @@ void applyBeforeClosingBlockCommentSpacing(const FormatStyle &Style,
   if (Mode == CommentSpaceMode::Leave)
     return;
 
+  const StringRef Interior = getBlockCommentInterior(Tok);
+  const bool TerminatorOnSeparateLine = [&Interior]() {
+    const size_t LastNewline = Interior.find_last_of("\n\r");
+    if (LastNewline == StringRef::npos)
+      return false;
+    size_t AfterNewline = LastNewline + 1;
+    while (AfterNewline < Interior.size() &&
+           (Interior[AfterNewline] == '\n' || Interior[AfterNewline] == '\r')) {
+      ++AfterNewline;
+    }
+    return Interior.substr(AfterNewline).find_first_not_of(" \t\v\f\r") ==
+           StringRef::npos;
+  }();
+  if (TerminatorOnSeparateLine)
+    return;
+
   const StringRef Text = Tok.TokenText;
 
-  const unsigned TrailingSpaces =
-      countTrailingHorizontalWhitespaceBeforeClosing(Tok);
+  const unsigned TrailingSpaces = countTrailingHorizontalWhitespace(Interior);
   const unsigned ReplaceOffset =
       Text.size() - BlockCommentCloserLength - TrailingSpaces;
 
@@ -1033,7 +1029,7 @@ void BreakableBlockComment::adaptStartOfLine(
   }
 
   if (LineIndex == 0) {
-    adaptFirstLineOfMultiLineComment(Whitespaces, BeforeClosingMode);
+    adaptFirstLineOfMultiLineComment(Whitespaces);
     return;
   }
 
@@ -1048,23 +1044,10 @@ void BreakableBlockComment::adaptSingleLineComment(
 }
 
 void BreakableBlockComment::adaptFirstLineOfMultiLineComment(
-    WhitespaceManager &Whitespaces,
-    FormatStyle::CommentSpaceMode BeforeClosingMode) const {
+    WhitespaceManager &Whitespaces) const {
   applyAfterOpeningBlockCommentSpacing(Style, Tok, Whitespaces, InPPDirective);
 
-  if (BeforeClosingMode == FormatStyle::CommentSpaceMode::Always) {
-    const bool TerminatorOnSeparateLine =
-        !Lines.empty() && Lines.back().ltrim(Blanks).empty();
-
-    if (!TerminatorOnSeparateLine && isWellFormedBlockComment() &&
-        Tok.NeedsSpaceBeforeClosingBlockComment &&
-        Tok.SpaceBeforeClosingBlockCommentOffset < Tok.TokenText.size()) {
-      replaceCommentWhitespace(Tok, Tok.SpaceBeforeClosingBlockCommentOffset,
-                               /*Length=*/0,
-                               /*CurrentPrefix=*/" ", /*Newlines=*/0,
-                               Whitespaces, InPPDirective);
-    }
-  }
+  applyBeforeClosingBlockCommentSpacing(Style, Tok, Whitespaces, InPPDirective);
 
   if (DelimitersOnNewline) {
     // Since we're breaking at index 1 below, the break position and the break
@@ -1137,9 +1120,16 @@ BreakableBlockComment::calculateInterLineWhitespace(unsigned LineIndex) const {
   const StringRef TokenText = tokenAt(LineIndex).TokenText;
   const StringRef Previous = Content[LineIndex - 1];
   const StringRef Current = Content[LineIndex];
+  const StringRef PreviousLine = Lines[LineIndex - 1];
+  const bool PreviousLineIsOpeningWhitespace =
+      LineIndex == 1 &&
+      PreviousLine.find_first_not_of(Blanks) == StringRef::npos &&
+      getAfterOpeningSpaceMode(Style, Tok) !=
+          FormatStyle::CommentSpaceMode::Leave;
 
   const auto TokenBegin = TokenText.begin();
-  const auto PreviousEnd = Previous.end();
+  const auto PreviousEnd =
+      PreviousLineIsOpeningWhitespace ? PreviousLine.end() : Previous.end();
   const auto CurrentBegin = Current.begin();
 
   assert(TokenBegin <= PreviousEnd && PreviousEnd <= TokenText.end() &&

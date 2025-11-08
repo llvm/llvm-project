@@ -39,8 +39,6 @@ llvm::StringRef getBlockCommentBody(const FormatToken &Tok);
 
 unsigned countLeadingHorizontalWhitespaceAfterOpening(const FormatToken &Tok);
 
-unsigned countTrailingHorizontalWhitespaceBeforeClosing(const FormatToken &Tok);
-
 void applyAfterOpeningBlockCommentSpacing(const FormatStyle &Style,
                                           const FormatToken &Tok,
                                           WhitespaceManager &Whitespaces,
@@ -484,9 +482,7 @@ private:
   void
   adaptSingleLineComment(WhitespaceManager &Whitespaces,
                          FormatStyle::CommentSpaceMode BeforeClosingMode) const;
-  void adaptFirstLineOfMultiLineComment(
-      WhitespaceManager &Whitespaces,
-      FormatStyle::CommentSpaceMode BeforeClosingMode) const;
+  void adaptFirstLineOfMultiLineComment(WhitespaceManager &Whitespaces) const;
   void adaptIntermediateLineOfComment(
       unsigned LineIndex, WhitespaceManager &Whitespaces,
       FormatStyle::CommentSpaceMode BeforeClosingMode) const;
