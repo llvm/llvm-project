@@ -1,5 +1,3 @@
-// REQUIRES: riscv-registered-target
-
 // RUN: %clang_cc1 -E -dM -triple=riscv32 < /dev/null | \
 // RUN:     FileCheck -match-full-lines -check-prefixes=RV32 %s
 // RUN: %clang_cc1 -E -dM -triple=riscv64 < /dev/null | \
