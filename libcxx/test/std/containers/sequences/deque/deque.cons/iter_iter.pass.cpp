@@ -29,7 +29,6 @@ void test(InputIterator f, InputIterator l) {
   typedef typename std::iterator_traits<InputIterator>::value_type T;
   typedef std::allocator<T> Allocator;
   typedef std::deque<T, Allocator> C;
-  typedef typename C::const_iterator const_iterator;
   C d(f, l);
   assert(d.size() == static_cast<std::size_t>(std::distance(f, l)));
   assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
