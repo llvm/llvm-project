@@ -1,4 +1,4 @@
-//===--- UnnecessaryValueParamCheck.h - clang-tidy---------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARY_VALUE_PARAM_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARY_VALUE_PARAM_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARYVALUEPARAMCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARYVALUEPARAMCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
@@ -19,7 +19,7 @@ namespace clang::tidy::performance {
 /// can safely be converted to const references.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/unnecessary-value-param.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/unnecessary-value-param.html
 class UnnecessaryValueParamCheck : public ClangTidyCheck {
 public:
   UnnecessaryValueParamCheck(StringRef Name, ClangTidyContext *Context);
@@ -51,4 +51,4 @@ private:
 
 } // namespace clang::tidy::performance
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARY_VALUE_PARAM_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARYVALUEPARAMCHECK_H

@@ -186,6 +186,9 @@ add_libc_test(
     fprintf_test.cpp
   DEPENDS
     libc.src.stdio.fprintf
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.src.__support.macros.properties.architectures
     ${fprintf_test_deps}
   COMPILE_OPTIONS
     ${use_system_file}
@@ -270,7 +273,6 @@ add_libc_test(
      libc.src.stdio.vasprintf
      libc.src.string.memset
      libc.include.stdlib
-     libc.src.stdio.sprintf
  )
 
 if(LLVM_LIBC_FULL_BUILD)

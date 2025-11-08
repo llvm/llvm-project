@@ -69,7 +69,7 @@ static void printDie(const DWARFDie &DIE) {
 }
 
 /// Lazily parse DWARF DIE and print it out.
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
   uint64_t OriginalOffsets = DIEOffset;
   uint64_t NextCUOffset = DU.getNextUnitOffset();
@@ -504,9 +504,7 @@ static void emitDWOBuilder(const std::string &DWOName,
     }
     emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
-    for (std::unique_ptr<llvm::DWARFUnit> &CU :
-         SplitCU.getContext().dwo_compile_units())
-      emitUnit(DWODIEBuilder, *Streamer, *CU);
+    emitUnit(DWODIEBuilder, *Streamer, SplitCU);
 
     // emit debug_types sections for dwarf4
     for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector())
@@ -1725,7 +1723,7 @@ StringRef getSectionName(const SectionRef &Section) {
   return Name;
 }
 
-// Exctracts an appropriate slice if input is DWP.
+// Extracts an appropriate slice if input is DWP.
 // Applies patches or overwrites the section.
 std::optional<StringRef> updateDebugData(
     DWARFContext &DWCtx, StringRef SectionName, StringRef SectionContents,
@@ -1761,7 +1759,7 @@ std::optional<StringRef> updateDebugData(
     auto Iter = OverridenSections.find(Kind);
     if (Iter == OverridenSections.end()) {
       errs()
-          << "BOLT-WARNING: [internal-dwarf-error]: Could not find overriden "
+          << "BOLT-WARNING: [internal-dwarf-error]: Could not find overridden "
              "section for: "
           << Twine::utohexstr(DWOId) << ".\n";
       return std::nullopt;
@@ -1846,15 +1844,16 @@ void DWARFRewriter::writeDWOFiles(
   }
 
   std::string CompDir = CU.getCompilationDir();
+  SmallString<16> AbsolutePath(DWOName);
 
   if (!opts::DwarfOutputPath.empty())
     CompDir = opts::DwarfOutputPath.c_str();
   else if (!opts::CompDirOverride.empty())
     CompDir = opts::CompDirOverride;
-
-  SmallString<16> AbsolutePath;
-  sys::path::append(AbsolutePath, CompDir);
-  sys::path::append(AbsolutePath, DWOName);
+  else if (!sys::fs::exists(CompDir))
+    CompDir = ".";
+  // Prevent failures when DWOName is already an absolute path.
+  sys::path::make_absolute(CompDir, AbsolutePath);
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> TempOut =
@@ -1992,7 +1991,7 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     }
   }
 
-  // HighPC was conveted into DW_AT_ranges.
+  // HighPC was converted into DW_AT_ranges.
   // For DWARF5 we only access ranges through index.
 
   DIEBldr.replaceValue(&Die, HighPCAttrInfo.getAttribute(), dwarf::DW_AT_ranges,

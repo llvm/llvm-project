@@ -2075,14 +2075,14 @@ define i64 @abs_i64(i64 %x) {
 ; RV32SFB-LABEL: abs_i64:
 ; RV32SFB:       # %bb.0:
 ; RV32SFB-NEXT:    snez a2, a0
-; RV32SFB-NEXT:    add a2, a2, a1
+; RV32SFB-NEXT:    neg a3, a1
 ; RV32SFB-NEXT:    bgez a1, .LBB35_2
 ; RV32SFB-NEXT:  # %bb.1:
 ; RV32SFB-NEXT:    neg a0, a0
 ; RV32SFB-NEXT:  .LBB35_2:
 ; RV32SFB-NEXT:    bgez a1, .LBB35_4
 ; RV32SFB-NEXT:  # %bb.3:
-; RV32SFB-NEXT:    neg a1, a2
+; RV32SFB-NEXT:    sub a1, a3, a2
 ; RV32SFB-NEXT:  .LBB35_4:
 ; RV32SFB-NEXT:    ret
   %a = call i64 @llvm.abs.i64(i64 %x, i1 false)

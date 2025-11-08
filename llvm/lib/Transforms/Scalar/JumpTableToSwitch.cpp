@@ -7,14 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/JumpTableToSwitch.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <limits>
 
 using namespace llvm;
 
@@ -32,6 +40,10 @@ static cl::opt<unsigned> FunctionSizeThreshold(
     cl::desc("Only split jump tables containing functions whose sizes are less "
              "or equal than this threshold."),
     cl::init(50));
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 #define DEBUG_TYPE "jump-table-to-switch"
 
@@ -90,9 +102,11 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
   return JumpTable;
 }
 
-static BasicBlock *expandToSwitch(CallBase *CB, const JumpTableTy &JT,
-                                  DomTreeUpdater &DTU,
-                                  OptimizationRemarkEmitter &ORE) {
+static BasicBlock *
+expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
+               OptimizationRemarkEmitter &ORE,
+               llvm::function_ref<GlobalValue::GUID(const Function &)>
+                   GetGuidForFunction) {
   const bool IsVoid = CB->getType() == Type::getVoidTy(CB->getContext());
 
   SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
@@ -115,7 +129,30 @@ static BasicBlock *expandToSwitch(CallBase *CB, const JumpTableTy &JT,
   IRBuilder<> BuilderTail(CB);
   PHINode *PHI =
       IsVoid ? nullptr : BuilderTail.CreatePHI(CB->getType(), JT.Funcs.size());
+  const auto *ProfMD = CB->getMetadata(LLVMContext::MD_prof);
 
+  SmallVector<uint64_t> BranchWeights;
+  DenseMap<GlobalValue::GUID, uint64_t> GuidToCounter;
+  const bool HadProfile = isValueProfileMD(ProfMD);
+  if (HadProfile) {
+    // The assumptions, coming in, are that the functions in JT.Funcs are
+    // defined in this module (from parseJumpTable).
+    assert(llvm::all_of(
+        JT.Funcs, [](const Function *F) { return F && !F->isDeclaration(); }));
+    BranchWeights.reserve(JT.Funcs.size() + 1);
+    // The first is the default target, which is the unreachable block created
+    // above.
+    BranchWeights.push_back(0U);
+    uint64_t TotalCount = 0;
+    auto Targets = getValueProfDataFromInst(
+        *CB, InstrProfValueKind::IPVK_IndirectCallTarget,
+        std::numeric_limits<uint32_t>::max(), TotalCount);
+
+    for (const auto &[G, C] : Targets) {
+      [[maybe_unused]] auto It = GuidToCounter.insert({G, C});
+      assert(It.second);
+    }
+  }
   for (auto [Index, Func] : llvm::enumerate(JT.Funcs)) {
     BasicBlock *B = BasicBlock::Create(Func->getContext(),
                                        "call." + Twine(Index), &F, Tail);
@@ -123,10 +160,19 @@ static BasicBlock *expandToSwitch(CallBase *CB, const JumpTableTy &JT,
     DTUpdates.push_back({DominatorTree::Insert, B, Tail});
 
     CallBase *Call = cast<CallBase>(CB->clone());
+    // The MD_prof metadata (VP kind), if it existed, can be dropped, it doesn't
+    // make sense on a direct call. Note that the values are used for the branch
+    // weights of the switch.
+    Call->setMetadata(LLVMContext::MD_prof, nullptr);
     Call->setCalledFunction(Func);
     Call->insertInto(B, B->end());
     Switch->addCase(
         cast<ConstantInt>(ConstantInt::get(JT.Index->getType(), Index)), B);
+    GlobalValue::GUID FctID = GetGuidForFunction(*Func);
+    // It'd be OK to _not_ find target functions in GuidToCounter, e.g. suppose
+    // just some of the jump targets are taken (for the given profile).
+    BranchWeights.push_back(FctID == 0U ? 0U
+                                        : GuidToCounter.lookup_or(FctID, 0U));
     BranchInst::Create(Tail, B);
     if (PHI)
       PHI->addIncoming(Call, B);
@@ -136,6 +182,13 @@ static BasicBlock *expandToSwitch(CallBase *CB, const JumpTableTy &JT,
     return OptimizationRemark(DEBUG_TYPE, "ReplacedJumpTableWithSwitch", CB)
            << "expanded indirect call into switch";
   });
+  if (HadProfile && !ProfcheckDisableMetadataFixes) {
+    // At least one of the targets must've been taken.
+    assert(llvm::any_of(BranchWeights, [](uint64_t V) { return V != 0; }));
+    setBranchWeights(*Switch, downscaleWeights(BranchWeights),
+                     /*IsExpected=*/false);
+  } else
+    setExplicitlyUnknownBranchWeights(*Switch, DEBUG_TYPE);
   if (PHI)
     CB->replaceAllUsesWith(PHI);
   CB->eraseFromParent();
@@ -150,6 +203,13 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
+  auto FuncToGuid = [&](const Function &Fct) {
+    if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
+      return AssignGUIDPass::getGUID(Fct);
+
+    return Function::getGUIDAssumingExternalLinkage(getIRPGOFuncName(F, InLTO));
+  };
+
   for (BasicBlock &BB : make_early_inc_range(F)) {
     BasicBlock *CurrentBB = &BB;
     while (CurrentBB) {
@@ -170,7 +230,8 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
         std::optional<JumpTableTy> JumpTable = parseJumpTable(GEP, PtrTy);
         if (!JumpTable)
           continue;
-        SplittedOutTail = expandToSwitch(Call, *JumpTable, DTU, ORE);
+        SplittedOutTail =
+            expandToSwitch(Call, *JumpTable, DTU, ORE, FuncToGuid);
         Changed = true;
         break;
       }

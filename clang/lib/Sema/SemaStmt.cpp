@@ -1271,17 +1271,17 @@ static void checkEnumTypesInSwitchStmt(Sema &S, const Expr *Cond,
   QualType CondType = Cond->getType();
   QualType CaseType = Case->getType();
 
-  const EnumType *CondEnumType = CondType->getAs<EnumType>();
-  const EnumType *CaseEnumType = CaseType->getAs<EnumType>();
+  const EnumType *CondEnumType = CondType->getAsCanonical<EnumType>();
+  const EnumType *CaseEnumType = CaseType->getAsCanonical<EnumType>();
   if (!CondEnumType || !CaseEnumType)
     return;
 
   // Ignore anonymous enums.
-  if (!CondEnumType->getOriginalDecl()->getIdentifier() &&
-      !CondEnumType->getOriginalDecl()->getTypedefNameForAnonDecl())
+  if (!CondEnumType->getDecl()->getIdentifier() &&
+      !CondEnumType->getDecl()->getTypedefNameForAnonDecl())
     return;
-  if (!CaseEnumType->getOriginalDecl()->getIdentifier() &&
-      !CaseEnumType->getOriginalDecl()->getTypedefNameForAnonDecl())
+  if (!CaseEnumType->getDecl()->getIdentifier() &&
+      !CaseEnumType->getDecl()->getTypedefNameForAnonDecl())
     return;
 
   if (S.Context.hasSameUnqualifiedType(CondType, CaseType))
@@ -1590,12 +1590,10 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
     // we still do the analysis to preserve this information in the AST
     // (which can be used by flow-based analyes).
     //
-    const EnumType *ET = CondTypeBeforePromotion->getAs<EnumType>();
-
     // If switch has default case, then ignore it.
     if (!CaseListIsErroneous && !CaseListIsIncomplete && !HasConstantCond &&
-        ET) {
-      const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+        CondTypeBeforePromotion->isEnumeralType()) {
+      const auto *ED = CondTypeBeforePromotion->castAsEnumDecl();
       if (!ED->isCompleteDefinition() || ED->enumerators().empty())
         goto enum_out;
 
@@ -1730,8 +1728,7 @@ void
 Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
                              Expr *SrcExpr) {
 
-  const auto *ET = DstType->getAs<EnumType>();
-  if (!ET)
+  if (!DstType->isEnumeralType())
     return;
 
   if (!SrcType->isIntegerType() ||
@@ -1741,7 +1738,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
   if (SrcExpr->isTypeDependent() || SrcExpr->isValueDependent())
     return;
 
-  const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+  const auto *ED = DstType->castAsEnumDecl();
   if (!ED->isClosed())
     return;
 
@@ -2125,12 +2122,12 @@ namespace {
     typedef ConstEvaluatedExprVisitor<BreakContinueFinder> Inherited;
 
     void VisitContinueStmt(const ContinueStmt* E) {
-      ContinueLoc = E->getContinueLoc();
+      ContinueLoc = E->getKwLoc();
     }
 
     void VisitBreakStmt(const BreakStmt* E) {
       if (!InSwitch)
-        BreakLoc = E->getBreakLoc();
+        BreakLoc = E->getKwLoc();
     }
 
     void VisitSwitchStmt(const SwitchStmt* S) {
@@ -3278,9 +3275,58 @@ static void CheckJumpOutOfSEHFinally(Sema &S, SourceLocation Loc,
   }
 }
 
-StmtResult
-Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope) {
-  Scope *S = CurScope->getContinueParent();
+static Scope *FindLabeledBreakContinueScope(Sema &S, Scope *CurScope,
+                                            SourceLocation KWLoc,
+                                            LabelDecl *Target,
+                                            SourceLocation LabelLoc,
+                                            bool IsContinue) {
+  assert(Target && "not a named break/continue?");
+
+  Target->markUsed(S.Context);
+
+  Scope *Found = nullptr;
+  for (Scope *Scope = CurScope; Scope; Scope = Scope->getParent()) {
+    if (Scope->isFunctionScope())
+      break;
+
+    if (Scope->isOpenACCComputeConstructScope()) {
+      S.Diag(KWLoc, diag::err_acc_branch_in_out_compute_construct)
+          << /*branch*/ 0 << /*out of*/ 0;
+      return nullptr;
+    }
+
+    if (Scope->isBreakOrContinueScope() &&
+        Scope->getPrecedingLabel() == Target) {
+      Found = Scope;
+      break;
+    }
+  }
+
+  if (Found) {
+    if (IsContinue && !Found->isContinueScope()) {
+      S.Diag(LabelLoc, diag::err_continue_switch);
+      return nullptr;
+    }
+    return Found;
+  }
+
+  S.Diag(LabelLoc, diag::err_break_continue_label_not_found) << IsContinue;
+  return nullptr;
+}
+
+StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
+                                   LabelDecl *Target, SourceLocation LabelLoc) {
+  Scope *S;
+  if (Target) {
+    S = FindLabeledBreakContinueScope(*this, CurScope, ContinueLoc, Target,
+                                      LabelLoc,
+                                      /*IsContinue=*/true);
+    if (!S)
+      return StmtError();
+  } else {
+    S = CurScope->getContinueParent();
+  }
+
   if (!S) {
     // C99 6.8.6.2p1: A break shall appear only in or as a loop body.
     return StmtError(Diag(ContinueLoc, diag::err_continue_not_in_loop));
@@ -3302,16 +3348,27 @@ Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope) {
 
   CheckJumpOutOfSEHFinally(*this, ContinueLoc, *S);
 
-  return new (Context) ContinueStmt(ContinueLoc);
+  return new (Context) ContinueStmt(ContinueLoc, LabelLoc, Target);
 }
 
-StmtResult
-Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
-  Scope *S = CurScope->getBreakParent();
+StmtResult Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
+                                LabelDecl *Target, SourceLocation LabelLoc) {
+  Scope *S;
+  if (Target) {
+    S = FindLabeledBreakContinueScope(*this, CurScope, BreakLoc, Target,
+                                      LabelLoc,
+                                      /*IsContinue=*/false);
+    if (!S)
+      return StmtError();
+  } else {
+    S = CurScope->getBreakParent();
+  }
+
   if (!S) {
     // C99 6.8.6.3p1: A break shall appear only in or as a switch/loop body.
     return StmtError(Diag(BreakLoc, diag::err_break_not_in_loop_or_switch));
   }
+
   if (S->isOpenMPLoopScope())
     return StmtError(Diag(BreakLoc, diag::err_omp_loop_cannot_use_stmt)
                      << "break");
@@ -3332,7 +3389,7 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
 
   CheckJumpOutOfSEHFinally(*this, BreakLoc, *S);
 
-  return new (Context) BreakStmt(BreakLoc);
+  return new (Context) BreakStmt(BreakLoc, LabelLoc, Target);
 }
 
 Sema::NamedReturnInfo Sema::getNamedReturnInfo(Expr *&E,
@@ -3706,7 +3763,7 @@ private:
   Sema &S;
 };
 bool LocalTypedefNameReferencer::VisitRecordType(RecordType *RT) {
-  auto *R = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
+  auto *R = dyn_cast<CXXRecordDecl>(RT->getDecl());
   if (!R || !R->isLocalClass() || !R->isLocalClass()->isExternallyVisible() ||
       R->isDependentType())
     return true;
@@ -3925,7 +3982,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
             << RetValExp->getSourceRange();
     if (FD->hasAttr<CmseNSEntryAttr>() && RetValExp) {
       if (const auto *RT = dyn_cast<RecordType>(FnRetType.getCanonicalType())) {
-        if (RT->getOriginalDecl()->isOrContainsUnion())
+        if (RT->getDecl()->isOrContainsUnion())
           Diag(RetValExp->getBeginLoc(), diag::warn_cmse_nonsecure_union) << 1;
       }
     }

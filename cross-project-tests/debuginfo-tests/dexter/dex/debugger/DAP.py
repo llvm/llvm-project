@@ -59,10 +59,17 @@ class DAPMessageLogger:
         if self.log_file == "-":
             self.out_handle = sys.stdout
             return
+        if self.log_file == "-e":
+            self.out_handle = sys.stderr
+            return
         self.out_handle = open(self.log_file, "w+", encoding="utf-8")
 
     def _custom_exit(self):
-        if self.out_handle is not None and self.log_file != "-":
+        if (
+            self.out_handle is not None
+            and self.log_file != "-"
+            and self.log_file != "-e"
+        ):
             self.out_handle.close()
         self.open = False
 
@@ -218,6 +225,10 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self.file_to_bp = defaultdict(list)
         # { dex_breakpoint_id -> (file, line, condition) }
         self.bp_info = {}
+        # { dex_breakpoint_id -> function_name }
+        self.function_bp_info = {}
+        # { dex_breakpoint_id -> instruction_reference }
+        self.instruction_bp_info = {}
         # We don't rely on IDs returned directly from the debug adapter. Instead, we use dexter breakpoint IDs, and
         # maintain a two-way-mapping of dex_bp_id<->dap_bp_id. This also allows us to defer the setting of breakpoints
         # in the debug adapter itself until necessary.
@@ -226,6 +237,8 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self.dex_id_to_dap_id = {}
         self.dap_id_to_dex_ids = {}
         self.pending_breakpoints: bool = False
+        self.pending_function_breakpoints: bool = False
+        self.pending_instruction_breakpoints: bool = False
         # List of breakpoints, indexed by BP ID
         # Each entry has the source file (for use in referencing desired_bps), and the DA-assigned
         # ID for that breakpoint if it has one (if it has been removed or not yet created then it will be None).
@@ -286,6 +299,26 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         return DAP.make_request(
             "setBreakpoints",
             {"source": {"path": source}, "breakpoints": [bp.toDict() for bp in bps]},
+        )
+
+    @staticmethod
+    def make_set_function_breakpoint_request(function_names: list) -> dict:
+        # Function breakpoints may specify conditions and hit counts, though we
+        # don't use those here (though perhaps we should use native hit count,
+        # rather than emulating it ConditionalController, now that we have a
+        # shared interface (DAP)).
+        return DAP.make_request(
+            "setFunctionBreakpoints",
+            {"breakpoints": [{"name": f} for f in function_names]},
+        )
+
+    @staticmethod
+    def make_set_instruction_breakpoint_request(addrs: list) -> dict:
+        # Instruction breakpoints have additional fields we're ignoring for the
+        # moment.
+        return DAP.make_request(
+            "setInstructionBreakpoints",
+            {"breakpoints": [{"instructionReference": a} for a in addrs]},
         )
 
     ############################################################################
@@ -355,13 +388,14 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             else:
                 pass
         elif message["type"] == "response":
-            request_seq = message["request_seq"]
-            debugger_state.set_response(request_seq, message)
             # TODO: We also receive a "continued" event, but it seems reasonable to set state based on either the
             # response or the event, since the DAP does not specify an order in which they are sent. May need revisiting
             # if there turns out to be some odd ordering issues, e.g. if we can receive messages in the order
             # ["response: continued", "event: stopped", "event: continued"].
-            if message["command"] == "continue" and message["success"] == True:
+            if (
+                message["command"] in ["continue", "stepIn", "next", "stepOut"]
+                and message["success"] == True
+            ):
                 debugger_state.is_running = True
                 # Reset all state that is invalidated upon program continue.
                 debugger_state.stopped_reason = None
@@ -380,6 +414,10 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 body = message.get("body")
                 if body:
                     debugger_state.capabilities.update(logger, body)
+            # Now we've done whatever we need to do with the response, tell the
+            # receiver thread we've got it.
+            request_seq = message["request_seq"]
+            debugger_state.set_response(request_seq, message)
 
     def _colorize_dap_message(message: dict) -> dict:
         colorized_message = copy.deepcopy(message)
@@ -566,6 +604,22 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def _add_breakpoint(self, file, line):
         return self._add_conditional_breakpoint(file, line, None)
 
+    def add_function_breakpoint(self, name: str):
+        if not self._debugger_state.capabilities.supportsFunctionBreakpoints:
+            raise DebuggerException("Debugger does not support function breakpoints")
+        new_id = self.get_next_bp_id()
+        self.function_bp_info[new_id] = name
+        self.pending_function_breakpoints = True
+        return new_id
+
+    def add_instruction_breakpoint(self, addr: str):
+        if not self._debugger_state.capabilities.supportsInstructionBreakpoints:
+            raise DebuggerException("Debugger does not support instruction breakpoints")
+        new_id = self.get_next_bp_id()
+        self.instruction_bp_info[new_id] = addr
+        self.pending_instruction_breakpoints = True
+        return new_id
+
     def _add_conditional_breakpoint(self, file, line, condition):
         new_id = self.get_next_bp_id()
         self.file_to_bp[file].append(new_id)
@@ -573,38 +627,73 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self.pending_breakpoints = True
         return new_id
 
+    def _update_breakpoint_ids_after_request(self, dex_bp_ids: list, response: dict):
+        dap_bp_ids = [bp["id"] for bp in response["body"]["breakpoints"]]
+        if len(dex_bp_ids) != len(dap_bp_ids):
+            self.context.logger.error(
+                f"Sent request to set {len(dex_bp_ids)} breakpoints, but received {len(dap_bp_ids)} in response."
+            )
+        visited_dap_ids = set()
+        for i, dex_bp_id in enumerate(dex_bp_ids):
+            dap_bp_id = dap_bp_ids[i]
+            self.dex_id_to_dap_id[dex_bp_id] = dap_bp_id
+            # We take the mappings in the response as the canonical mapping, meaning that if the debug server has
+            # simply *changed* the DAP ID for a breakpoint we overwrite the existing mapping rather than adding to
+            # it, but if we receive the same DAP ID for multiple Dex IDs *then* we store a one-to-many mapping.
+            if dap_bp_id in visited_dap_ids:
+                self.dap_id_to_dex_ids[dap_bp_id].append(dex_bp_id)
+            else:
+                self.dap_id_to_dex_ids[dap_bp_id] = [dex_bp_id]
+                visited_dap_ids.add(dap_bp_id)
+
     def _flush_breakpoints(self):
-        if not self.pending_breakpoints:
-            return
-        for file in self.file_to_bp.keys():
-            desired_bps = self._get_desired_bps(file)
+        # Normal and conditional breakpoints.
+        if self.pending_breakpoints:
+            self.pending_breakpoints = False
+            for file in self.file_to_bp.keys():
+                desired_bps = self._get_desired_bps(file)
+                request_id = self.send_message(
+                    self.make_set_breakpoint_request(file, desired_bps)
+                )
+                result = self._await_response(request_id, 10)
+                if not result["success"]:
+                    raise DebuggerException(f"could not set breakpoints for '{file}'")
+                # The debug adapter may have chosen to merge our breakpoints. From here we need to identify such cases and
+                # handle them so that our internal bookkeeping is correct.
+                dex_bp_ids = self.get_current_bps(file)
+                self._update_breakpoint_ids_after_request(dex_bp_ids, result)
+
+        # Function breakpoints.
+        if self.pending_function_breakpoints:
+            self.pending_function_breakpoints = False
+            desired_bps = list(self.function_bp_info.values())
             request_id = self.send_message(
-                self.make_set_breakpoint_request(file, desired_bps)
+                self.make_set_function_breakpoint_request(desired_bps)
             )
             result = self._await_response(request_id, 10)
             if not result["success"]:
-                raise DebuggerException(f"could not set breakpoints for '{file}'")
-            # The debug adapter may have chosen to merge our breakpoints. From here we need to identify such cases and
-            # handle them so that our internal bookkeeping is correct.
-            dex_bp_ids = self.get_current_bps(file)
-            dap_bp_ids = [bp["id"] for bp in result["body"]["breakpoints"]]
-            if len(dex_bp_ids) != len(dap_bp_ids):
-                self.context.logger.error(
-                    f"Sent request to set {len(dex_bp_ids)} breakpoints, but received {len(dap_bp_ids)} in response."
+                raise DebuggerException(
+                    f"could not set function breakpoints: '{desired_bps}'"
                 )
-            visited_dap_ids = set()
-            for i, dex_bp_id in enumerate(dex_bp_ids):
-                dap_bp_id = dap_bp_ids[i]
-                self.dex_id_to_dap_id[dex_bp_id] = dap_bp_id
-                # We take the mappings in the response as the canonical mapping, meaning that if the debug server has
-                # simply *changed* the DAP ID for a breakpoint we overwrite the existing mapping rather than adding to
-                # it, but if we receive the same DAP ID for multiple Dex IDs *then* we store a one-to-many mapping.
-                if dap_bp_id in visited_dap_ids:
-                    self.dap_id_to_dex_ids[dap_bp_id].append(dex_bp_id)
-                else:
-                    self.dap_id_to_dex_ids[dap_bp_id] = [dex_bp_id]
-                    visited_dap_ids.add(dap_bp_id)
-        self.pending_breakpoints = False
+            # We expect the breakpoint order to match in request and response.
+            dex_bp_ids = list(self.function_bp_info.keys())
+            self._update_breakpoint_ids_after_request(dex_bp_ids, result)
+
+        # Address / instruction breakpoints.
+        if self.pending_instruction_breakpoints:
+            self.pending_instruction_breakpoints = False
+            desired_bps = list(self.instruction_bp_info.values())
+            request_id = self.send_message(
+                self.make_set_instruction_breakpoint_request(desired_bps)
+            )
+            result = self._await_response(request_id, 10)
+            if not result["success"]:
+                raise DebuggerException(
+                    f"could not set instruction breakpoints: '{desired_bps}'"
+                )
+            # We expect the breakpoint order to match in request and response.
+            dex_bp_ids = list(self.instruction_bp_info.keys())
+            self._update_breakpoint_ids_after_request(dex_bp_ids, result)
 
     def _confirm_triggered_breakpoint_ids(self, dex_bp_ids):
         """Can be overridden for any specific implementations that need further processing from the debug server's
@@ -616,11 +705,12 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         # Breakpoints can only have been triggered if we've hit one.
         stop_reason = self._translate_stop_reason(self._debugger_state.stopped_reason)
         if stop_reason != StopReason.BREAKPOINT:
-            return []
+            return set()
         breakpoint_ids = set(
             [
                 dex_id
                 for dap_id in self._debugger_state.stopped_bps
+                if dap_id in self.dap_id_to_dex_ids
                 for dex_id in self.dap_id_to_dex_ids[dap_id]
             ]
         )
@@ -629,8 +719,16 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def delete_breakpoints(self, ids):
         per_file_deletions = defaultdict(list)
         for dex_bp_id in ids:
-            source, _, _ = self.bp_info[dex_bp_id]
-            per_file_deletions[source].append(dex_bp_id)
+            if dex_bp_id in self.bp_info:
+                source, _, _ = self.bp_info[dex_bp_id]
+                per_file_deletions[source].append(dex_bp_id)
+            elif dex_bp_id in self.function_bp_info:
+                del self.function_bp_info[dex_bp_id]
+                self.pending_function_breakpoints = True
+            elif dex_bp_id in self.instruction_bp_info:
+                del self.instruction_bp_info[dex_bp_id]
+                self.pending_instruction_breakpoints = True
+
         for file, deleted_ids in per_file_deletions.items():
             old_len = len(self.file_to_bp[file])
             self.file_to_bp[file] = [
@@ -648,7 +746,13 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         """ "Set the debugger-specific params used in a launch request."""
 
     def launch(self, cmdline):
-        assert len(self.file_to_bp.keys()) > 0
+        # FIXME: Should this be a warning or exception, rather than assert?
+        assert (
+            len(self.file_to_bp)
+            + len(self.function_bp_info)
+            + len(self.instruction_bp_info)
+            > 0
+        ), "Expected at least one breakpoint before launching"
 
         if self.context.options.target_run_args:
             cmdline += shlex.split(self.context.options.target_run_args)
@@ -677,20 +781,33 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def _post_step_hook(self):
         """Hook to be executed after completing a step request."""
 
-    def step_in(self):
+    def _step(self, step_request_string):
         self._flush_breakpoints()
         step_req_id = self.send_message(
-            self.make_request("stepIn", {"threadId": self._debugger_state.thread})
+            self.make_request(
+                step_request_string, {"threadId": self._debugger_state.thread}
+            )
         )
         response = self._await_response(step_req_id)
         if not response["success"]:
-            raise DebuggerException("failed to step")
+            raise DebuggerException(
+                f"failed to perform debugger action: '{step_request_string}'"
+            )
         # If we've "stepped" to a breakpoint, then continue to hit the breakpoint properly.
         # NB: This is an issue that only seems relevant to LLDB, but is also harmless outside of LLDB; if it turns out
         #     to cause issues for other debuggers, we can move it to a post-step hook.
         while self._debugger_state.is_running:
             time.sleep(0.001)
         self._post_step_hook()
+
+    def step_in(self):
+        self._step("stepIn")
+
+    def step_next(self):
+        self._step("next")
+
+    def step_out(self):
+        self._step("stepOut")
 
     def go(self) -> ReturnCode:
         self._flush_breakpoints()

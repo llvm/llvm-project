@@ -661,7 +661,7 @@ define <2 x double> @v2f128_double(<2 x fp128> %a, <2 x fp128> %b, <2 x double> 
 ; CHECK-GI-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #63
-; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #63
+; CHECK-GI-NEXT:    cmlt v0.2d, v0.2d, #0
 ; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    add sp, sp, #80
 ; CHECK-GI-NEXT:    ret
@@ -1540,7 +1540,7 @@ define <7 x i32> @v7f16_i32(<7 x half> %a, <7 x half> %b, <7 x i32> %d, <7 x i32
 ; CHECK-GI-FP16-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-FP16-NEXT:    mov v1.s[2], w8
 ; CHECK-GI-FP16-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-GI-FP16-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-GI-FP16-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-GI-FP16-NEXT:    fmov s4, w8
 ; CHECK-GI-FP16-NEXT:    mov v4.s[1], w8
 ; CHECK-GI-FP16-NEXT:    ushl v1.4s, v1.4s, v2.4s
@@ -1602,7 +1602,7 @@ define <4 x i32> @v4f16_i32(<4 x half> %a, <4 x half> %b, <4 x i32> %d, <4 x i32
 ; CHECK-GI-FP16-NEXT:    fcmgt v0.4h, v1.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-FP16-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-FP16-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-GI-FP16-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-GI-FP16-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -1657,8 +1657,8 @@ define <8 x i32> @v8f16_i32(<8 x half> %a, <8 x half> %b, <8 x i32> %d, <8 x i32
 ; CHECK-GI-FP16-NEXT:    ushll2 v0.4s, v0.8h, #0
 ; CHECK-GI-FP16-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-GI-FP16-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-FP16-NEXT:    sshr v1.4s, v1.4s, #31
-; CHECK-GI-FP16-NEXT:    sshr v6.4s, v0.4s, #31
+; CHECK-GI-FP16-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-GI-FP16-NEXT:    cmlt v6.4s, v0.4s, #0
 ; CHECK-GI-FP16-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-FP16-NEXT:    mov v1.16b, v6.16b
 ; CHECK-GI-FP16-NEXT:    bsl v0.16b, v2.16b, v4.16b
@@ -1748,10 +1748,10 @@ define <16 x i32> @v16f16_i32(<16 x half> %a, <16 x half> %b, <16 x i32> %d, <16
 ; CHECK-GI-FP16-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-FP16-NEXT:    shl v3.4s, v3.4s, #31
 ; CHECK-GI-FP16-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-FP16-NEXT:    sshr v2.4s, v2.4s, #31
-; CHECK-GI-FP16-NEXT:    sshr v16.4s, v0.4s, #31
-; CHECK-GI-FP16-NEXT:    sshr v3.4s, v3.4s, #31
-; CHECK-GI-FP16-NEXT:    sshr v17.4s, v1.4s, #31
+; CHECK-GI-FP16-NEXT:    cmlt v2.4s, v2.4s, #0
+; CHECK-GI-FP16-NEXT:    cmlt v16.4s, v0.4s, #0
+; CHECK-GI-FP16-NEXT:    cmlt v3.4s, v3.4s, #0
+; CHECK-GI-FP16-NEXT:    cmlt v17.4s, v1.4s, #0
 ; CHECK-GI-FP16-NEXT:    ldp q0, q1, [sp]
 ; CHECK-GI-FP16-NEXT:    bit v0.16b, v4.16b, v2.16b
 ; CHECK-GI-FP16-NEXT:    mov v2.16b, v3.16b

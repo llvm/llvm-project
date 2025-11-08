@@ -12,7 +12,7 @@ define void @pr141907(ptr %0) nounwind {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    vsetvli a5, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    addi a3, sp, 20

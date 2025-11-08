@@ -367,6 +367,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v4f64, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f64, MVT::v4f16, Expand);
 
+  setTruncStoreAction(MVT::v5i32, MVT::v5i1, Expand);
+  setTruncStoreAction(MVT::v5i32, MVT::v5i8, Expand);
+  setTruncStoreAction(MVT::v5i32, MVT::v5i16, Expand);
+
+  setTruncStoreAction(MVT::v6i32, MVT::v6i1, Expand);
+  setTruncStoreAction(MVT::v6i32, MVT::v6i8, Expand);
+  setTruncStoreAction(MVT::v6i32, MVT::v6i16, Expand);
+
+  setTruncStoreAction(MVT::v7i32, MVT::v7i1, Expand);
+  setTruncStoreAction(MVT::v7i32, MVT::v7i8, Expand);
+  setTruncStoreAction(MVT::v7i32, MVT::v7i16, Expand);
+
   setTruncStoreAction(MVT::v8f64, MVT::v8f32, Expand);
   setTruncStoreAction(MVT::v8f64, MVT::v8bf16, Expand);
   setTruncStoreAction(MVT::v8f64, MVT::v8f16, Expand);
@@ -411,7 +423,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f16, MVT::f32, MVT::f64},
                      Expand);
 
-  setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
+  setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Expand);
 
   if (Subtarget->has16BitInsts()) {
     setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
@@ -1236,7 +1248,8 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
     SmallVector<EVT, 16> ValueVTs;
     SmallVector<uint64_t, 16> Offsets;
-    ComputeValueVTs(*this, DL, BaseArgTy, ValueVTs, &Offsets, ArgOffset);
+    ComputeValueVTs(*this, DL, BaseArgTy, ValueVTs, /*MemVTs=*/nullptr,
+                    &Offsets, ArgOffset);
 
     for (unsigned Value = 0, NumValues = ValueVTs.size();
          Value != NumValues; ++Value) {
@@ -1427,8 +1440,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR: return LowerEXTRACT_SUBVECTOR(Op, DAG);
   case ISD::UDIVREM: return LowerUDIVREM(Op, DAG);
-  case ISD::SDIVREM: return LowerSDIVREM(Op, DAG);
-  case ISD::FREM: return LowerFREM(Op, DAG);
+  case ISD::SDIVREM:
+    return LowerSDIVREM(Op, DAG);
   case ISD::FCEIL: return LowerFCEIL(Op, DAG);
   case ISD::FTRUNC: return LowerFTRUNC(Op, DAG);
   case ISD::FRINT: return LowerFRINT(Op, DAG);
@@ -1512,9 +1525,16 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   const GlobalValue *GV = G->getGlobal();
 
   if (!MFI->isModuleEntryFunction()) {
+    auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+      if (IsNamedBarrier) {
+        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        MFI->recordNumNamedBarriers(Address.value(), BarCnt);
+      }
       return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
+    } else if (IsNamedBarrier) {
+      llvm_unreachable("named barrier should have an assigned address");
     }
   }
 
@@ -1802,16 +1822,36 @@ std::pair<SDValue, SDValue>
 AMDGPUTargetLowering::splitVector(const SDValue &N, const SDLoc &DL,
                                   const EVT &LoVT, const EVT &HiVT,
                                   SelectionDAG &DAG) const {
+  EVT VT = N.getValueType();
   assert(LoVT.getVectorNumElements() +
                  (HiVT.isVector() ? HiVT.getVectorNumElements() : 1) <=
-             N.getValueType().getVectorNumElements() &&
+             VT.getVectorNumElements() &&
          "More vector elements requested than available!");
   SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, N,
                            DAG.getVectorIdxConstant(0, DL));
-  SDValue Hi = DAG.getNode(
-      HiVT.isVector() ? ISD::EXTRACT_SUBVECTOR : ISD::EXTRACT_VECTOR_ELT, DL,
-      HiVT, N, DAG.getVectorIdxConstant(LoVT.getVectorNumElements(), DL));
-  return std::pair(Lo, Hi);
+
+  unsigned LoNumElts = LoVT.getVectorNumElements();
+
+  if (HiVT.isVector()) {
+    unsigned HiNumElts = HiVT.getVectorNumElements();
+    if ((VT.getVectorNumElements() % HiNumElts) == 0) {
+      // Avoid creating an extract_subvector with an index that isn't a multiple
+      // of the result type.
+      SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, N,
+                               DAG.getConstant(LoNumElts, DL, MVT::i32));
+      return {Lo, Hi};
+    }
+
+    SmallVector<SDValue, 8> Elts;
+    DAG.ExtractVectorElements(N, Elts, /*Start=*/LoNumElts,
+                              /*Count=*/HiNumElts);
+    SDValue Hi = DAG.getBuildVector(HiVT, DL, Elts);
+    return {Lo, Hi};
+  }
+
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, HiVT, N,
+                           DAG.getVectorIdxConstant(LoNumElts, DL));
+  return {Lo, Hi};
 }
 
 SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
@@ -2396,21 +2436,6 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
   return DAG.getMergeValues(Res, DL);
 }
 
-// (frem x, y) -> (fma (fneg (ftrunc (fdiv x, y))), y, x)
-SDValue AMDGPUTargetLowering::LowerFREM(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc SL(Op);
-  EVT VT = Op.getValueType();
-  auto Flags = Op->getFlags();
-  SDValue X = Op.getOperand(0);
-  SDValue Y = Op.getOperand(1);
-
-  SDValue Div = DAG.getNode(ISD::FDIV, SL, VT, X, Y, Flags);
-  SDValue Trunc = DAG.getNode(ISD::FTRUNC, SL, VT, Div, Flags);
-  SDValue Neg = DAG.getNode(ISD::FNEG, SL, VT, Trunc, Flags);
-  // TODO: For f32 use FMAD instead if !hasFastFMA32?
-  return DAG.getNode(ISD::FMA, SL, VT, Neg, Y, X, Flags);
-}
-
 SDValue AMDGPUTargetLowering::LowerFCEIL(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
@@ -2623,10 +2648,7 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
 
 bool AMDGPUTargetLowering::allowApproxFunc(const SelectionDAG &DAG,
                                            SDNodeFlags Flags) {
-  if (Flags.hasApproximateFuncs())
-    return true;
-  auto &Options = DAG.getTarget().Options;
-  return Options.ApproxFuncFPMath;
+  return Flags.hasApproximateFuncs();
 }
 
 bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
@@ -2748,8 +2770,7 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   assert(IsLog10 || Op.getOpcode() == ISD::FLOG);
 
   const auto &Options = getTargetMachine().Options;
-  if (VT == MVT::f16 || Flags.hasApproximateFuncs() ||
-      Options.ApproxFuncFPMath) {
+  if (VT == MVT::f16 || Flags.hasApproximateFuncs()) {
 
     if (VT == MVT::f16 && !Subtarget->has16BitInsts()) {
       // Log and multiply in f32 is good enough for f16.
@@ -2813,8 +2834,8 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     R = getMad(DAG, DL, VT, YH, CH, Mad1);
   }
 
-  const bool IsFiniteOnly = (Flags.hasNoNaNs() || Options.NoNaNsFPMath) &&
-                            (Flags.hasNoInfs() || Options.NoInfsFPMath);
+  const bool IsFiniteOnly =
+      (Flags.hasNoNaNs() || Options.NoNaNsFPMath) && Flags.hasNoInfs();
 
   // TODO: Check if known finite from source value.
   if (!IsFiniteOnly) {
@@ -3141,9 +3162,8 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
       DAG.getSetCC(SL, SetCCVT, X, UnderflowCheckConst, ISD::SETOLT);
 
   R = DAG.getNode(ISD::SELECT, SL, VT, Underflow, Zero, R);
-  const auto &Options = getTargetMachine().Options;
 
-  if (!Flags.hasNoInfs() && !Options.NoInfsFPMath) {
+  if (!Flags.hasNoInfs()) {
     SDValue OverflowCheckConst =
         DAG.getConstantFP(IsExp10 ? 0x1.344136p+5f : 0x1.62e430p+6f, SL, VT);
     SDValue Overflow =
@@ -4002,7 +4022,8 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
   case Intrinsic::amdgcn_rsq_clamp:
-  case Intrinsic::amdgcn_tanh: {
+  case Intrinsic::amdgcn_tanh:
+  case Intrinsic::amdgcn_prng_b32: {
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
     return Src.isUndef() ? Src : SDValue();
@@ -4098,8 +4119,6 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
-  // i64 (shl x, C) -> (build_pair 0, (shl x, C - 32))
-
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
   // the same code size.
@@ -4189,12 +4208,12 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
              (ElementType.getSizeInBits() - 1)) {
     ShiftAmt = ShiftFullAmt;
   } else {
-    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
         DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
-    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
   }
 
   EVT ConcatType;
@@ -5646,6 +5665,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CALL)
   NODE_NAME_CASE(TC_RETURN)
   NODE_NAME_CASE(TC_RETURN_GFX)
+  NODE_NAME_CASE(TC_RETURN_GFX_WholeWave)
   NODE_NAME_CASE(TC_RETURN_CHAIN)
   NODE_NAME_CASE(TC_RETURN_CHAIN_DVGPR)
   NODE_NAME_CASE(TRAP)
@@ -6105,6 +6125,19 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
   default:
     return 1;
   }
+}
+
+bool AMDGPUTargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case AMDGPUISD::BFE_I32:
+  case AMDGPUISD::BFE_U32:
+    return false;
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
 }
 
 bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(

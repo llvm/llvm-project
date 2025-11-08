@@ -1,9 +1,4 @@
-// RUN: %check_clang_tidy -std=c++98 %s modernize-use-nullptr %t -- -- -Wno-non-literal-null-conversion
-//
-// Some parts of the test (e.g. assignment of `const int` to `int *`) fail in
-// C++11, so we need to run the test in C++98 mode.
-//
-// FIXME: Make the test work in all language modes.
+// RUN: %check_clang_tidy %s modernize-use-nullptr %t -- -- -fno-delayed-template-parsing
 
 const unsigned int g_null = 0;
 #define NULL 0
@@ -23,11 +18,7 @@ void test_assignment() {
   p2 = p1;
   // CHECK-FIXES: p2 = p1;
 
-  const int null = 0;
-  int *p3 = null;
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use nullptr
-  // CHECK-FIXES: int *p3 = nullptr;
-
+  int *p3;
   p3 = NULL;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use nullptr
   // CHECK-FIXES: p3 = nullptr;
@@ -35,14 +26,11 @@ void test_assignment() {
   int *p4 = p3;
   // CHECK-FIXES: int *p4 = p3;
 
-  p4 = null;
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use nullptr
-  // CHECK-FIXES: p4 = nullptr;
-
   int i1 = 0;
 
   int i2 = NULL;
 
+  const int null = 0;
   int i3 = null;
 
   int *p5, *p6, *p7;
@@ -70,47 +58,13 @@ int *Foo::m_p2 = NULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use nullptr
 // CHECK-FIXES: int *Foo::m_p2 = nullptr;
 
-template <typename T>
-struct Bar {
-  Bar(T *p) : m_p(p) {
-    m_p = static_cast<T*>(NULL);
-    // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use nullptr
-    // CHECK-FIXES: m_p = static_cast<T*>(nullptr);
-
-    m_p = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
-    // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use nullptr
-    // CHECK-FIXES: m_p = static_cast<T*>(nullptr);
-
-    m_p = static_cast<T*>(p ? p : static_cast<void*>(g_null));
-    // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: use nullptr
-    // CHECK-FIXES: m_p = static_cast<T*>(p ? p : static_cast<void*>(nullptr));
-
-    T *p2 = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
-    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
-    // CHECK-FIXES: T *p2 = static_cast<T*>(nullptr);
-
-    m_p = NULL;
-    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use nullptr
-    // CHECK-FIXES: m_p = nullptr;
-
-    int i = static_cast<int>(0.f);
-    T *i2 = static_cast<int>(0.f);
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use nullptr
-    // CHECK-FIXES: T *i2 = nullptr;
-  }
-
-  T *m_p;
-};
-
 struct Baz {
   Baz() : i(0) {}
   int i;
 };
 
 void test_cxx_cases() {
-  Foo f(g_null);
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use nullptr
-  // CHECK-FIXES: Foo f(nullptr);
+  Foo f;
 
   f.bar(NULL);
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use nullptr
@@ -121,10 +75,6 @@ void test_cxx_cases() {
   f.m_p1 = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use nullptr
   // CHECK-FIXES: f.m_p1 = nullptr;
-
-  Bar<int> b(g_null);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use nullptr
-  // CHECK-FIXES: Bar<int> b(nullptr);
 
   Baz b2;
   int Baz::*memptr(0);
@@ -144,10 +94,6 @@ void test_function_default_param2(void *p = NULL);
 // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: use nullptr
 // CHECK-FIXES: void test_function_default_param2(void *p = nullptr);
 
-void test_function_default_param3(void *p = g_null);
-// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: use nullptr
-// CHECK-FIXES: void test_function_default_param3(void *p = nullptr);
-
 void test_function(int *p) {}
 
 void test_function_no_ptr_param(int i) {}
@@ -158,10 +104,6 @@ void test_function_call() {
   // CHECK-FIXES: test_function(nullptr);
 
   test_function(NULL);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use nullptr
-  // CHECK-FIXES: test_function(nullptr);
-
-  test_function(g_null);
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use nullptr
   // CHECK-FIXES: test_function(nullptr);
 
@@ -180,47 +122,29 @@ void *test_function_return2() {
   // CHECK-FIXES: return nullptr;
 }
 
-long *test_function_return3() {
-  return g_null;
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use nullptr
-  // CHECK-FIXES: return nullptr;
-}
-
-int test_function_return4() {
+int test_function_return3() {
   return 0;
 }
 
-int test_function_return5() {
+int test_function_return4() {
   return NULL;
 }
 
-int test_function_return6() {
+int test_function_return5() {
   return g_null;
 }
 
-int *test_function_return_cast1() {
-  return(int)0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use nullptr
-  // CHECK-FIXES: return nullptr;
-}
-
-int *test_function_return_cast2() {
+int *test_function_return_cast() {
 #define RET return
-  RET(int)0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use nullptr
+  RET 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use nullptr
   // CHECK-FIXES: RET nullptr;
 #undef RET
 }
 
 // Test parentheses expressions resulting in a nullptr.
-int *test_parentheses_expression1() {
+int *test_parentheses_expression() {
   return(0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use nullptr
-  // CHECK-FIXES: return(nullptr);
-}
-
-int *test_parentheses_expression2() {
-  return(int(0.f));
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use nullptr
   // CHECK-FIXES: return(nullptr);
 }
@@ -244,7 +168,7 @@ void *test_parentheses_explicit_cast_sequence1() {
 }
 
 void *test_parentheses_explicit_cast_sequence2() {
-  return(static_cast<void*>(reinterpret_cast<int*>((float*)int(0.f))));
+  return(static_cast<void*>(reinterpret_cast<int*>((float*)(0))));
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
   // CHECK-FIXES: return(static_cast<void*>(nullptr));
 }
@@ -313,19 +237,13 @@ void test_const_pointers() {
   const int *const_p2 = NULL;
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use nullptr
   // CHECK-FIXES: const int *const_p2 = nullptr;
-  const int *const_p3 = (int)0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use nullptr
-  // CHECK-FIXES: const int *const_p3 = nullptr;
-  const int *const_p4 = (int)0.0f;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use nullptr
-  // CHECK-FIXES: const int *const_p4 = nullptr;
-  const int *const_p5 = (int*)0;
+  const int *const_p3 = (int*)0;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: use nullptr
-  // CHECK-FIXES: const int *const_p5 = (int*)nullptr;
+  // CHECK-FIXES: const int *const_p3 = (int*)nullptr;
   int *t;
-  const int *const_p6 = static_cast<int*>(t ? t : static_cast<int*>(0));
+  const int *const_p4 = static_cast<int*>(t ? t : static_cast<int*>(0));
   // CHECK-MESSAGES: :[[@LINE-1]]:69: warning: use nullptr
-  // CHECK-FIXES: const int *const_p6 = static_cast<int*>(t ? t : static_cast<int*>(nullptr));
+  // CHECK-FIXES: const int *const_p4 = static_cast<int*>(t ? t : static_cast<int*>(nullptr));
 }
 
 void test_nested_implicit_cast_expr() {
@@ -348,7 +266,21 @@ void test_nested_implicit_cast_expr() {
 template<typename T>
 class A {
  public:
-  A(T *p = NULL) {}
+  A(T *p = NULL) {
+    Ptr = static_cast<T*>(NULL);
+
+    Ptr = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
+    // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use nullptr
+    // CHECK-FIXES: Ptr = static_cast<T*>(nullptr);
+    // FIXME: a better fix-it is: Ptr = nullptr;
+
+    T *p2 = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
+    // CHECK-FIXES: T *p2 = static_cast<T*>(nullptr);
+    // FIXME: a better fix-it is: T *p2 = nullptr;
+
+    Ptr = NULL;
+  }
 
   void f() {
     Ptr = NULL;

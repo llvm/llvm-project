@@ -33,7 +33,7 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK:       control.outer.outer.split.us:
 ; CHECK-NEXT:    br label [[CONTROL_OUTER_US:%.*]]
 ; CHECK:       control.outer.us:
-; CHECK-NEXT:    [[A_0_PH_US:%.*]] = phi i32 [ [[SWITCHCOND_0_US:%.*]], [[BB3_US:%.*]] ], [ 4, [[CONTROL_OUTER_OUTER_SPLIT_US]] ]
+; CHECK-NEXT:    [[A_0_PH_US:%.*]] = phi i32 [ 3, [[BB3_US:%.*]] ], [ 4, [[CONTROL_OUTER_OUTER_SPLIT_US]] ]
 ; CHECK-NEXT:    [[SWITCHCOND_0_PH_US:%.*]] = phi i32 [ [[A_0_PH_US]], [[BB3_US]] ], [ [[SWITCHCOND_0_PH_PH]], [[CONTROL_OUTER_OUTER_SPLIT_US]] ]
 ; CHECK-NEXT:    br label [[CONTROL_US:%.*]]
 ; CHECK:       bb3.us:
@@ -41,7 +41,7 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK:       bb0.us:
 ; CHECK-NEXT:    br label [[CONTROL_US]]
 ; CHECK:       control.us:
-; CHECK-NEXT:    [[SWITCHCOND_0_US]] = phi i32 [ [[A_0_PH_US]], [[BB0_US:%.*]] ], [ [[SWITCHCOND_0_PH_US]], [[CONTROL_OUTER_US]] ]
+; CHECK-NEXT:    [[SWITCHCOND_0_US:%.*]] = phi i32 [ [[A_0_PH_US]], [[BB0_US:%.*]] ], [ [[SWITCHCOND_0_PH_US]], [[CONTROL_OUTER_US]] ]
 ; CHECK-NEXT:    switch i32 [[SWITCHCOND_0_US]], label [[CONTROL_OUTER_LOOPEXIT_US_LCSSA_US:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[BB0_US]]
 ; CHECK-NEXT:      i32 1, label [[BB1_US_LCSSA_US:%.*]]
@@ -55,7 +55,7 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK:       bb4.us-lcssa.us:
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       control.outer:
-; CHECK-NEXT:    [[A_0_PH:%.*]] = phi i32 [ [[NEXTID17:%.*]], [[BB3:%.*]] ], [ 4, [[CONTROL_OUTER_OUTER_CONTROL_OUTER_OUTER_SPLIT_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[A_0_PH:%.*]] = phi i32 [ 1, [[BB3:%.*]] ], [ 4, [[CONTROL_OUTER_OUTER_CONTROL_OUTER_OUTER_SPLIT_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[SWITCHCOND_0_PH:%.*]] = phi i32 [ 0, [[BB3]] ], [ [[SWITCHCOND_0_PH_PH]], [[CONTROL_OUTER_OUTER_CONTROL_OUTER_OUTER_SPLIT_CRIT_EDGE]] ]
 ; CHECK-NEXT:    br label [[CONTROL:%.*]]
 ; CHECK:       control:
@@ -74,7 +74,6 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK-NEXT:    [[I_0_PH_PH_BE]] = phi i32 [ 1, [[BB4]] ], [ 0, [[CONTROL_OUTER_LOOPEXIT]] ]
 ; CHECK-NEXT:    br label [[CONTROL_OUTER_OUTER]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[NEXTID17]] = add i32 [[SWITCHCOND_0]], -2
 ; CHECK-NEXT:    br label [[CONTROL_OUTER]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    br label [[CONTROL]]

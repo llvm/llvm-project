@@ -1207,6 +1207,22 @@ LLVM_C_ABI LLVMValueRef LLVMAddFunction(LLVMModuleRef M, const char *Name,
                                         LLVMTypeRef FunctionTy);
 
 /**
+ * Obtain or insert a function into a module.
+ *
+ * If a function with the specified name already exists in the module, it
+ * is returned. Otherwise, a new function is created in the module with the
+ * specified name and type and is returned.
+ *
+ * The returned value corresponds to a llvm::Function instance.
+ *
+ * @see llvm::Module::getOrInsertFunction()
+ */
+LLVM_C_ABI LLVMValueRef LLVMGetOrInsertFunction(LLVMModuleRef M,
+                                                const char *Name,
+                                                size_t NameLen,
+                                                LLVMTypeRef FunctionTy);
+
+/**
  * Obtain a Function value from a Module by its name.
  *
  * The returned value corresponds to a llvm::Function value.
@@ -2695,6 +2711,14 @@ LLVM_C_ABI void LLVMGlobalSetMetadata(LLVMValueRef Global, unsigned Kind,
                                       LLVMMetadataRef MD);
 
 /**
+ * Adds a metadata attachment.
+ *
+ * @see llvm::GlobalObject::addMetadata()
+ */
+LLVM_C_ABI void LLVMGlobalAddMetadata(LLVMValueRef Global, unsigned Kind,
+                                      LLVMMetadataRef MD);
+
+/**
  * Erases a metadata attachment of the given kind if it exists.
  *
  * @see llvm::GlobalObject::eraseMetadata()
@@ -2707,6 +2731,14 @@ LLVM_C_ABI void LLVMGlobalEraseMetadata(LLVMValueRef Global, unsigned Kind);
  * @see llvm::GlobalObject::clearMetadata()
  */
 LLVM_C_ABI void LLVMGlobalClearMetadata(LLVMValueRef Global);
+
+/**
+ * Add debuginfo metadata to this global.
+ *
+ * @see llvm::GlobalVariable::addDebugInfo()
+ */
+LLVM_C_ABI void LLVMGlobalAddDebugInfo(LLVMValueRef Global,
+                                       LLVMMetadataRef GVE);
 
 /**
  * Retrieves an array of metadata entries representing the metadata attached to
@@ -4725,7 +4757,7 @@ LLVM_C_ABI LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
 LLVM_C_ABI LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B,
                                                  const char *Str,
                                                  const char *Name);
-LLVM_C_ABI LLVMBool LLVMGetVolatile(LLVMValueRef MemoryAccessInst);
+LLVM_C_ABI LLVMBool LLVMGetVolatile(LLVMValueRef Inst);
 LLVM_C_ABI void LLVMSetVolatile(LLVMValueRef MemoryAccessInst,
                                 LLVMBool IsVolatile);
 LLVM_C_ABI LLVMBool LLVMGetWeak(LLVMValueRef CmpXchgInst);

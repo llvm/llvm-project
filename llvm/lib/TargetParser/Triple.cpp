@@ -158,6 +158,8 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       return "dxilv1.7";
     case Triple::DXILSubArch_v1_8:
       return "dxilv1.8";
+    case Triple::DXILSubArch_v1_9:
+      return "dxilv1.9";
     default:
       break;
     }
@@ -329,6 +331,8 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case LiteOS: return "liteos";
   case XROS: return "xros";
   case Vulkan: return "vulkan";
+  case CheriotRTOS:
+    return "cheriotrtos";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -371,6 +375,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case MuslSF:
     return "muslsf";
   case MuslX32: return "muslx32";
+  case MuslWALI:
+    return "muslwali";
   case Simulator: return "simulator";
   case Pixel: return "pixel";
   case Vertex: return "vertex";
@@ -387,6 +393,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case Callable: return "callable";
   case Mesh: return "mesh";
   case Amplification: return "amplification";
+  case RootSignature:
+    return "rootsignature";
   case OpenCL:
     return "opencl";
   case OpenHOS: return "ohos";
@@ -571,85 +579,89 @@ static Triple::ArchType parseARMArch(StringRef ArchName) {
 }
 
 static Triple::ArchType parseArch(StringRef ArchName) {
-  auto AT = StringSwitch<Triple::ArchType>(ArchName)
-                .Cases("i386", "i486", "i586", "i686", Triple::x86)
-                // FIXME: Do we need to support these?
-                .Cases("i786", "i886", "i986", Triple::x86)
-                .Cases("amd64", "x86_64", "x86_64h", Triple::x86_64)
-                .Cases("powerpc", "powerpcspe", "ppc", "ppc32", Triple::ppc)
-                .Cases("powerpcle", "ppcle", "ppc32le", Triple::ppcle)
-                .Cases("powerpc64", "ppu", "ppc64", Triple::ppc64)
-                .Cases("powerpc64le", "ppc64le", Triple::ppc64le)
-                .Case("xscale", Triple::arm)
-                .Case("xscaleeb", Triple::armeb)
-                .Case("aarch64", Triple::aarch64)
-                .Case("aarch64_be", Triple::aarch64_be)
-                .Case("aarch64_32", Triple::aarch64_32)
-                .Case("arc", Triple::arc)
-                .Case("arm64", Triple::aarch64)
-                .Case("arm64_32", Triple::aarch64_32)
-                .Case("arm64e", Triple::aarch64)
-                .Case("arm64ec", Triple::aarch64)
-                .Case("arm", Triple::arm)
-                .Case("armeb", Triple::armeb)
-                .Case("thumb", Triple::thumb)
-                .Case("thumbeb", Triple::thumbeb)
-                .Case("avr", Triple::avr)
-                .Case("m68k", Triple::m68k)
-                .Case("msp430", Triple::msp430)
-                .Cases("mips", "mipseb", "mipsallegrex", "mipsisa32r6",
-                       "mipsr6", Triple::mips)
-                .Cases("mipsel", "mipsallegrexel", "mipsisa32r6el", "mipsr6el",
-                       Triple::mipsel)
-                .Cases("mips64", "mips64eb", "mipsn32", "mipsisa64r6",
-                       "mips64r6", "mipsn32r6", Triple::mips64)
-                .Cases("mips64el", "mipsn32el", "mipsisa64r6el", "mips64r6el",
-                       "mipsn32r6el", Triple::mips64el)
-                .Case("r600", Triple::r600)
-                .Case("amdgcn", Triple::amdgcn)
-                .Case("riscv32", Triple::riscv32)
-                .Case("riscv64", Triple::riscv64)
-                .Case("riscv32be", Triple::riscv32be)
-                .Case("riscv64be", Triple::riscv64be)
-                .Case("hexagon", Triple::hexagon)
-                .Cases("s390x", "systemz", Triple::systemz)
-                .Case("sparc", Triple::sparc)
-                .Case("sparcel", Triple::sparcel)
-                .Cases("sparcv9", "sparc64", Triple::sparcv9)
-                .Case("tce", Triple::tce)
-                .Case("tcele", Triple::tcele)
-                .Case("xcore", Triple::xcore)
-                .Case("nvptx", Triple::nvptx)
-                .Case("nvptx64", Triple::nvptx64)
-                .Case("amdil", Triple::amdil)
-                .Case("amdil64", Triple::amdil64)
-                .Case("hsail", Triple::hsail)
-                .Case("hsail64", Triple::hsail64)
-                .Case("spir", Triple::spir)
-                .Case("spir64", Triple::spir64)
-                .Cases("spirv", "spirv1.5", "spirv1.6", Triple::spirv)
-                .Cases("spirv32", "spirv32v1.0", "spirv32v1.1", "spirv32v1.2",
-                       "spirv32v1.3", "spirv32v1.4", "spirv32v1.5",
-                       "spirv32v1.6", Triple::spirv32)
-                .Cases("spirv64", "spirv64v1.0", "spirv64v1.1", "spirv64v1.2",
-                       "spirv64v1.3", "spirv64v1.4", "spirv64v1.5",
-                       "spirv64v1.6", Triple::spirv64)
-                .StartsWith("kalimba", Triple::kalimba)
-                .Case("lanai", Triple::lanai)
-                .Case("renderscript32", Triple::renderscript32)
-                .Case("renderscript64", Triple::renderscript64)
-                .Case("shave", Triple::shave)
-                .Case("ve", Triple::ve)
-                .Case("wasm32", Triple::wasm32)
-                .Case("wasm64", Triple::wasm64)
-                .Case("csky", Triple::csky)
-                .Case("loongarch32", Triple::loongarch32)
-                .Case("loongarch64", Triple::loongarch64)
-                .Cases("dxil", "dxilv1.0", "dxilv1.1", "dxilv1.2", "dxilv1.3",
-                       "dxilv1.4", "dxilv1.5", "dxilv1.6", "dxilv1.7",
-                       "dxilv1.8", Triple::dxil)
-                .Case("xtensa", Triple::xtensa)
-                .Default(Triple::UnknownArch);
+  auto AT =
+      StringSwitch<Triple::ArchType>(ArchName)
+          .Cases({"i386", "i486", "i586", "i686"}, Triple::x86)
+          // FIXME: Do we need to support these?
+          .Cases({"i786", "i886", "i986"}, Triple::x86)
+          .Cases({"amd64", "x86_64", "x86_64h"}, Triple::x86_64)
+          .Cases({"powerpc", "powerpcspe", "ppc", "ppc32"}, Triple::ppc)
+          .Cases({"powerpcle", "ppcle", "ppc32le"}, Triple::ppcle)
+          .Cases({"powerpc64", "ppu", "ppc64"}, Triple::ppc64)
+          .Cases({"powerpc64le", "ppc64le"}, Triple::ppc64le)
+          .Case("xscale", Triple::arm)
+          .Case("xscaleeb", Triple::armeb)
+          .Case("aarch64", Triple::aarch64)
+          .Case("aarch64_be", Triple::aarch64_be)
+          .Case("aarch64_32", Triple::aarch64_32)
+          .Case("arc", Triple::arc)
+          .Case("arm64", Triple::aarch64)
+          .Case("arm64_32", Triple::aarch64_32)
+          .Case("arm64e", Triple::aarch64)
+          .Case("arm64ec", Triple::aarch64)
+          .Case("arm", Triple::arm)
+          .Case("armeb", Triple::armeb)
+          .Case("thumb", Triple::thumb)
+          .Case("thumbeb", Triple::thumbeb)
+          .Case("avr", Triple::avr)
+          .Case("m68k", Triple::m68k)
+          .Case("msp430", Triple::msp430)
+          .Cases({"mips", "mipseb", "mipsallegrex", "mipsisa32r6", "mipsr6"},
+                 Triple::mips)
+          .Cases({"mipsel", "mipsallegrexel", "mipsisa32r6el", "mipsr6el"},
+                 Triple::mipsel)
+          .Cases({"mips64", "mips64eb", "mipsn32", "mipsisa64r6", "mips64r6",
+                  "mipsn32r6"},
+                 Triple::mips64)
+          .Cases({"mips64el", "mipsn32el", "mipsisa64r6el", "mips64r6el",
+                  "mipsn32r6el"},
+                 Triple::mips64el)
+          .Case("r600", Triple::r600)
+          .Case("amdgcn", Triple::amdgcn)
+          .Case("riscv32", Triple::riscv32)
+          .Case("riscv64", Triple::riscv64)
+          .Case("riscv32be", Triple::riscv32be)
+          .Case("riscv64be", Triple::riscv64be)
+          .Case("hexagon", Triple::hexagon)
+          .Cases({"s390x", "systemz"}, Triple::systemz)
+          .Case("sparc", Triple::sparc)
+          .Case("sparcel", Triple::sparcel)
+          .Cases({"sparcv9", "sparc64"}, Triple::sparcv9)
+          .Case("tce", Triple::tce)
+          .Case("tcele", Triple::tcele)
+          .Case("xcore", Triple::xcore)
+          .Case("nvptx", Triple::nvptx)
+          .Case("nvptx64", Triple::nvptx64)
+          .Case("amdil", Triple::amdil)
+          .Case("amdil64", Triple::amdil64)
+          .Case("hsail", Triple::hsail)
+          .Case("hsail64", Triple::hsail64)
+          .Case("spir", Triple::spir)
+          .Case("spir64", Triple::spir64)
+          .Cases({"spirv", "spirv1.5", "spirv1.6"}, Triple::spirv)
+          .Cases({"spirv32", "spirv32v1.0", "spirv32v1.1", "spirv32v1.2",
+                  "spirv32v1.3", "spirv32v1.4", "spirv32v1.5", "spirv32v1.6"},
+                 Triple::spirv32)
+          .Cases({"spirv64", "spirv64v1.0", "spirv64v1.1", "spirv64v1.2",
+                  "spirv64v1.3", "spirv64v1.4", "spirv64v1.5", "spirv64v1.6"},
+                 Triple::spirv64)
+          .StartsWith("kalimba", Triple::kalimba)
+          .Case("lanai", Triple::lanai)
+          .Case("renderscript32", Triple::renderscript32)
+          .Case("renderscript64", Triple::renderscript64)
+          .Case("shave", Triple::shave)
+          .Case("ve", Triple::ve)
+          .Case("wasm32", Triple::wasm32)
+          .Case("wasm64", Triple::wasm64)
+          .Case("csky", Triple::csky)
+          .Case("loongarch32", Triple::loongarch32)
+          .Case("loongarch64", Triple::loongarch64)
+          .Cases({"dxil", "dxilv1.0", "dxilv1.1", "dxilv1.2", "dxilv1.3",
+                  "dxilv1.4", "dxilv1.5", "dxilv1.6", "dxilv1.7", "dxilv1.8",
+                  "dxilv1.9"},
+                 Triple::dxil)
+          .Case("xtensa", Triple::xtensa)
+          .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the
   // ArchType result.
@@ -687,49 +699,50 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
 
 static Triple::OSType parseOS(StringRef OSName) {
   return StringSwitch<Triple::OSType>(OSName)
-    .StartsWith("darwin", Triple::Darwin)
-    .StartsWith("dragonfly", Triple::DragonFly)
-    .StartsWith("freebsd", Triple::FreeBSD)
-    .StartsWith("fuchsia", Triple::Fuchsia)
-    .StartsWith("ios", Triple::IOS)
-    .StartsWith("kfreebsd", Triple::KFreeBSD)
-    .StartsWith("linux", Triple::Linux)
-    .StartsWith("lv2", Triple::Lv2)
-    .StartsWith("macos", Triple::MacOSX)
-    .StartsWith("managarm", Triple::Managarm)
-    .StartsWith("netbsd", Triple::NetBSD)
-    .StartsWith("openbsd", Triple::OpenBSD)
-    .StartsWith("solaris", Triple::Solaris)
-    .StartsWith("uefi", Triple::UEFI)
-    .StartsWith("win32", Triple::Win32)
-    .StartsWith("windows", Triple::Win32)
-    .StartsWith("zos", Triple::ZOS)
-    .StartsWith("haiku", Triple::Haiku)
-    .StartsWith("rtems", Triple::RTEMS)
-    .StartsWith("aix", Triple::AIX)
-    .StartsWith("cuda", Triple::CUDA)
-    .StartsWith("nvcl", Triple::NVCL)
-    .StartsWith("amdhsa", Triple::AMDHSA)
-    .StartsWith("ps4", Triple::PS4)
-    .StartsWith("ps5", Triple::PS5)
-    .StartsWith("elfiamcu", Triple::ELFIAMCU)
-    .StartsWith("tvos", Triple::TvOS)
-    .StartsWith("watchos", Triple::WatchOS)
-    .StartsWith("bridgeos", Triple::BridgeOS)
-    .StartsWith("driverkit", Triple::DriverKit)
-    .StartsWith("xros", Triple::XROS)
-    .StartsWith("visionos", Triple::XROS)
-    .StartsWith("mesa3d", Triple::Mesa3D)
-    .StartsWith("amdpal", Triple::AMDPAL)
-    .StartsWith("hermit", Triple::HermitCore)
-    .StartsWith("hurd", Triple::Hurd)
-    .StartsWith("wasi", Triple::WASI)
-    .StartsWith("emscripten", Triple::Emscripten)
-    .StartsWith("shadermodel", Triple::ShaderModel)
-    .StartsWith("liteos", Triple::LiteOS)
-    .StartsWith("serenity", Triple::Serenity)
-    .StartsWith("vulkan", Triple::Vulkan)
-    .Default(Triple::UnknownOS);
+      .StartsWith("darwin", Triple::Darwin)
+      .StartsWith("dragonfly", Triple::DragonFly)
+      .StartsWith("freebsd", Triple::FreeBSD)
+      .StartsWith("fuchsia", Triple::Fuchsia)
+      .StartsWith("ios", Triple::IOS)
+      .StartsWith("kfreebsd", Triple::KFreeBSD)
+      .StartsWith("linux", Triple::Linux)
+      .StartsWith("lv2", Triple::Lv2)
+      .StartsWith("macos", Triple::MacOSX)
+      .StartsWith("managarm", Triple::Managarm)
+      .StartsWith("netbsd", Triple::NetBSD)
+      .StartsWith("openbsd", Triple::OpenBSD)
+      .StartsWith("solaris", Triple::Solaris)
+      .StartsWith("uefi", Triple::UEFI)
+      .StartsWith("win32", Triple::Win32)
+      .StartsWith("windows", Triple::Win32)
+      .StartsWith("zos", Triple::ZOS)
+      .StartsWith("haiku", Triple::Haiku)
+      .StartsWith("rtems", Triple::RTEMS)
+      .StartsWith("aix", Triple::AIX)
+      .StartsWith("cuda", Triple::CUDA)
+      .StartsWith("nvcl", Triple::NVCL)
+      .StartsWith("amdhsa", Triple::AMDHSA)
+      .StartsWith("ps4", Triple::PS4)
+      .StartsWith("ps5", Triple::PS5)
+      .StartsWith("elfiamcu", Triple::ELFIAMCU)
+      .StartsWith("tvos", Triple::TvOS)
+      .StartsWith("watchos", Triple::WatchOS)
+      .StartsWith("bridgeos", Triple::BridgeOS)
+      .StartsWith("driverkit", Triple::DriverKit)
+      .StartsWith("xros", Triple::XROS)
+      .StartsWith("visionos", Triple::XROS)
+      .StartsWith("mesa3d", Triple::Mesa3D)
+      .StartsWith("amdpal", Triple::AMDPAL)
+      .StartsWith("hermit", Triple::HermitCore)
+      .StartsWith("hurd", Triple::Hurd)
+      .StartsWith("wasi", Triple::WASI)
+      .StartsWith("emscripten", Triple::Emscripten)
+      .StartsWith("shadermodel", Triple::ShaderModel)
+      .StartsWith("liteos", Triple::LiteOS)
+      .StartsWith("serenity", Triple::Serenity)
+      .StartsWith("vulkan", Triple::Vulkan)
+      .StartsWith("cheriotrtos", Triple::CheriotRTOS)
+      .Default(Triple::UnknownOS);
 }
 
 static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
@@ -758,6 +771,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("muslf32", Triple::MuslF32)
       .StartsWith("muslsf", Triple::MuslSF)
       .StartsWith("muslx32", Triple::MuslX32)
+      .StartsWith("muslwali", Triple::MuslWALI)
       .StartsWith("musl", Triple::Musl)
       .StartsWith("msvc", Triple::MSVC)
       .StartsWith("itanium", Triple::Itanium)
@@ -780,6 +794,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("callable", Triple::Callable)
       .StartsWith("mesh", Triple::Mesh)
       .StartsWith("amplification", Triple::Amplification)
+      .StartsWith("rootsignature", Triple::RootSignature)
       .StartsWith("opencl", Triple::OpenCL)
       .StartsWith("ohos", Triple::OpenHOS)
       .StartsWith("pauthtest", Triple::PAuthTest)
@@ -839,6 +854,7 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
         .EndsWith("v1.6", Triple::DXILSubArch_v1_6)
         .EndsWith("v1.7", Triple::DXILSubArch_v1_7)
         .EndsWith("v1.8", Triple::DXILSubArch_v1_8)
+        .EndsWith("v1.9", Triple::DXILSubArch_v1_9)
         .Default(Triple::NoSubArch);
 
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
@@ -921,6 +937,8 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
     return Triple::ARMSubArch_v9_5a;
   case ARM::ArchKind::ARMV9_6A:
     return Triple::ARMSubArch_v9_6a;
+  case ARM::ArchKind::ARMV9_7A:
+    return Triple::ARMSubArch_v9_7a;
   case ARM::ArchKind::ARMV8R:
     return Triple::ARMSubArch_v8r;
   case ARM::ArchKind::ARMV8MBaseline:
@@ -1057,7 +1075,7 @@ Triple::Triple(std::string &&Str) : Data(std::move(Str)) {
               .StartsWith("mips64", Triple::GNUABI64)
               .StartsWith("mipsisa64", Triple::GNUABI64)
               .StartsWith("mipsisa32", Triple::GNU)
-              .Cases("mips", "mipsel", "mipsr6", "mipsr6el", Triple::GNU)
+              .Cases({"mips", "mipsel", "mipsr6", "mipsr6el"}, Triple::GNU)
               .Default(UnknownEnvironment);
     }
   }
@@ -1108,7 +1126,7 @@ static StringRef getDXILArchNameFromShaderModel(StringRef ShaderModelStr) {
   VersionTuple Ver =
       parseVersionFromName(ShaderModelStr.drop_front(strlen("shadermodel")));
   // Default DXIL minor version when Shader Model version is anything other
-  // than 6.[0...8] or 6.x (which translates to latest current SM version)
+  // than 6.[0...9] or 6.x (which translates to latest current SM version)
   const unsigned SMMajor = 6;
   if (!Ver.empty()) {
     if (Ver.getMajor() == SMMajor) {
@@ -1132,6 +1150,8 @@ static StringRef getDXILArchNameFromShaderModel(StringRef ShaderModelStr) {
           return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_7);
         case 8:
           return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_8);
+        case 9:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_9);
         default:
           report_fatal_error("Unsupported Shader Model version", false);
         }

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-static-assert %t -- -- -std=c11
+// RUN: %check_clang_tidy -std=c11-or-later %s misc-static-assert %t
 // RUN: clang-tidy %s -checks=-*,misc-static-assert -- -std=c99 | count 0
 
 void abort(void) {}

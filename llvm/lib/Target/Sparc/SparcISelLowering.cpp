@@ -33,6 +33,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -115,7 +116,8 @@ static bool Analyze_CC_Sparc64_Full(bool IsReturn, unsigned &ValNo, MVT &ValVT,
 
   // Stack space is allocated for all arguments starting from [%fp+BIAS+128].
   unsigned size      = (LocVT == MVT::f128) ? 16 : 8;
-  Align alignment = (LocVT == MVT::f128) ? Align(16) : Align(8);
+  Align alignment =
+      (LocVT == MVT::f128 || ArgFlags.isSplit()) ? Align(16) : Align(8);
   unsigned Offset = State.AllocateStack(size, alignment);
   unsigned Reg = 0;
 
@@ -1907,37 +1909,37 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
     // Setup Runtime library names.
     if (Subtarget->is64Bit() && !Subtarget->useSoftFloat()) {
-      setLibcallImpl(RTLIB::ADD_F128, RTLIB::_Qp_add);
-      setLibcallImpl(RTLIB::SUB_F128, RTLIB::_Qp_sub);
-      setLibcallImpl(RTLIB::MUL_F128, RTLIB::_Qp_mul);
-      setLibcallImpl(RTLIB::DIV_F128, RTLIB::_Qp_div);
-      setLibcallImpl(RTLIB::SQRT_F128, RTLIB::_Qp_sqrt);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::_Qp_qtoi);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::_Qp_qtoui);
-      setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::_Qp_itoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::_Qp_uitoq);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Qp_qtox);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Qp_qtoux);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Qp_xtoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Qp_uxtoq);
-      setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::_Qp_stoq);
-      setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::_Qp_dtoq);
-      setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::_Qp_qtos);
-      setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::_Qp_qtod);
+      setLibcallImpl(RTLIB::ADD_F128, RTLIB::impl__Qp_add);
+      setLibcallImpl(RTLIB::SUB_F128, RTLIB::impl__Qp_sub);
+      setLibcallImpl(RTLIB::MUL_F128, RTLIB::impl__Qp_mul);
+      setLibcallImpl(RTLIB::DIV_F128, RTLIB::impl__Qp_div);
+      setLibcallImpl(RTLIB::SQRT_F128, RTLIB::impl__Qp_sqrt);
+      setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::impl__Qp_qtoi);
+      setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::impl__Qp_qtoui);
+      setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::impl__Qp_itoq);
+      setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::impl__Qp_uitoq);
+      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::impl__Qp_qtox);
+      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::impl__Qp_qtoux);
+      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::impl__Qp_xtoq);
+      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::impl__Qp_uxtoq);
+      setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::impl__Qp_stoq);
+      setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::impl__Qp_dtoq);
+      setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::impl__Qp_qtos);
+      setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::impl__Qp_qtod);
     } else if (!Subtarget->useSoftFloat()) {
-      setLibcallImpl(RTLIB::ADD_F128, RTLIB::_Q_add);
-      setLibcallImpl(RTLIB::SUB_F128, RTLIB::_Q_sub);
-      setLibcallImpl(RTLIB::MUL_F128, RTLIB::_Q_mul);
-      setLibcallImpl(RTLIB::DIV_F128, RTLIB::_Q_div);
-      setLibcallImpl(RTLIB::SQRT_F128, RTLIB::_Q_sqrt);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::_Q_qtoi);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::_Q_qtou);
-      setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::_Q_itoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::_Q_utoq);
-      setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::_Q_stoq);
-      setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::_Q_dtoq);
-      setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::_Q_qtos);
-      setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::_Q_qtod);
+      setLibcallImpl(RTLIB::ADD_F128, RTLIB::impl__Q_add);
+      setLibcallImpl(RTLIB::SUB_F128, RTLIB::impl__Q_sub);
+      setLibcallImpl(RTLIB::MUL_F128, RTLIB::impl__Q_mul);
+      setLibcallImpl(RTLIB::DIV_F128, RTLIB::impl__Q_div);
+      setLibcallImpl(RTLIB::SQRT_F128, RTLIB::impl__Q_sqrt);
+      setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::impl__Q_qtoi);
+      setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::impl__Q_qtou);
+      setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::impl__Q_itoq);
+      setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::impl__Q_utoq);
+      setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::impl__Q_stoq);
+      setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::impl__Q_dtoq);
+      setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::impl__Q_qtos);
+      setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::impl__Q_qtod);
     }
   }
 
@@ -1997,6 +1999,14 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+
+  // Some processors have no branch predictor and have pipelines longer than
+  // what can be covered by the delay slot. This results in a stall, so mark
+  // branches to be expensive on those processors.
+  setJumpIsExpensive(Subtarget->hasNoPredictor());
+  // The high cost of branching means that using conditional moves will
+  // still be profitable even if the condition is predictable.
+  PredictableSelectIsExpensive = !isJumpExpensive();
 
   setMinFunctionAlignment(Align(4));
 
@@ -2280,21 +2290,15 @@ SDValue SparcTargetLowering::LowerF128_LibCallArg(SDValue Chain,
   EVT ArgVT = Arg.getValueType();
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
 
-  ArgListEntry Entry;
-  Entry.Node = Arg;
-  Entry.Ty   = ArgTy;
-
   if (ArgTy->isFP128Ty()) {
     // Create a stack object and pass the pointer to the library function.
     int FI = MFI.CreateStackObject(16, Align(8), false);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
-    Chain = DAG.getStore(Chain, DL, Entry.Node, FIPtr, MachinePointerInfo(),
-                         Align(8));
-
-    Entry.Node = FIPtr;
-    Entry.Ty = PointerType::getUnqual(ArgTy->getContext());
+    Chain = DAG.getStore(Chain, DL, Arg, FIPtr, MachinePointerInfo(), Align(8));
+    Args.emplace_back(FIPtr, PointerType::getUnqual(ArgTy->getContext()));
+  } else {
+    Args.emplace_back(Arg, ArgTy);
   }
-  Args.push_back(Entry);
   return Chain;
 }
 
@@ -2316,11 +2320,9 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
 
   if (RetTy->isFP128Ty()) {
     // Create a Stack Object to receive the return value of type f128.
-    ArgListEntry Entry;
     int RetFI = MFI.CreateStackObject(16, Align(8), false);
     RetPtr = DAG.getFrameIndex(RetFI, PtrVT);
-    Entry.Node = RetPtr;
-    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
+    ArgListEntry Entry(RetPtr, PointerType::getUnqual(RetTy->getContext()));
     if (!Subtarget->is64Bit()) {
       Entry.IsSRet = true;
       Entry.IndirectType = RetTy;
@@ -3518,7 +3520,7 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
 
 // Override to enable LOAD_STACK_GUARD lowering on Linux.
 bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
-  if (!Subtarget->isTargetLinux())
+  if (!Subtarget->getTargetTriple().isOSLinux())
     return TargetLowering::useLoadStackGuardNode(M);
   return true;
 }
@@ -3557,16 +3559,35 @@ bool SparcTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return Subtarget->isUA2007() && !Subtarget->useSoftFloat();
 }
 
-// Override to disable global variable loading on Linux.
-void SparcTargetLowering::insertSSPDeclarations(Module &M) const {
-  if (!Subtarget->isTargetLinux())
-    return TargetLowering::insertSSPDeclarations(M);
-}
-
 void SparcTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
   assert(MI.getOpcode() == SP::SUBCCrr || MI.getOpcode() == SP::SUBCCri);
   // If the result is dead, replace it with %g0.
   if (!Node->hasAnyUseOfValue(0))
     MI.getOperand(0).setReg(SP::G0);
+}
+
+Instruction *SparcTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
+                                                   Instruction *Inst,
+                                                   AtomicOrdering Ord) const {
+  bool HasStoreSemantics =
+      isa<AtomicCmpXchgInst, AtomicRMWInst, StoreInst>(Inst);
+  if (HasStoreSemantics && isReleaseOrStronger(Ord))
+    return Builder.CreateFence(AtomicOrdering::Release);
+  return nullptr;
+}
+
+Instruction *SparcTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
+                                                    Instruction *Inst,
+                                                    AtomicOrdering Ord) const {
+  // V8 loads already come with implicit acquire barrier so there's no need to
+  // emit it again.
+  bool HasLoadSemantics = isa<AtomicCmpXchgInst, AtomicRMWInst, LoadInst>(Inst);
+  if (Subtarget->isV9() && HasLoadSemantics && isAcquireOrStronger(Ord))
+    return Builder.CreateFence(AtomicOrdering::Acquire);
+
+  // SC plain stores would need a trailing full barrier.
+  if (isa<StoreInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
+    return Builder.CreateFence(Ord);
+  return nullptr;
 }

@@ -307,6 +307,7 @@ private:
 
   /// Emit instruction to set float register to zero.
   void emitFMov0(const MachineInstr &MI);
+  void emitFMov0AsFMov(const MachineInstr &MI, Register DestReg);
 
   using MInstToMCSymbol = std::map<const MachineInstr *, MCSymbol *>;
 
@@ -734,7 +735,7 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   const Triple &TT = TM.getTargetTriple();
   assert(TT.isOSBinFormatELF());
   std::unique_ptr<MCSubtargetInfo> STI(
-      TM.getTarget().createMCSubtargetInfo(TT.str(), "", ""));
+      TM.getTarget().createMCSubtargetInfo(TT, "", ""));
   assert(STI && "Unable to create subtarget info");
   this->STI = static_cast<const AArch64Subtarget *>(&*STI);
 
@@ -1829,45 +1830,77 @@ void AArch64AsmPrinter::emitMOVK(Register Dest, uint64_t Imm, unsigned Shift) {
 
 void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
   Register DestReg = MI.getOperand(0).getReg();
-  if (STI->hasZeroCycleZeroingFP() && !STI->hasZeroCycleZeroingFPWorkaround() &&
-      STI->isNeonAvailable()) {
-    // Convert H/S register to corresponding D register
-    if (AArch64::H0 <= DestReg && DestReg <= AArch64::H31)
-      DestReg = AArch64::D0 + (DestReg - AArch64::H0);
-    else if (AArch64::S0 <= DestReg && DestReg <= AArch64::S31)
-      DestReg = AArch64::D0 + (DestReg - AArch64::S0);
-    else
-      assert(AArch64::D0 <= DestReg && DestReg <= AArch64::D31);
+  if (!STI->hasZeroCycleZeroingFPWorkaround() && STI->isNeonAvailable()) {
+    if (STI->hasZeroCycleZeroingFPR64()) {
+      // Convert H/S register to corresponding D register
+      const AArch64RegisterInfo *TRI = STI->getRegisterInfo();
+      if (AArch64::FPR16RegClass.contains(DestReg))
+        DestReg = TRI->getMatchingSuperReg(DestReg, AArch64::hsub,
+                                           &AArch64::FPR64RegClass);
+      else if (AArch64::FPR32RegClass.contains(DestReg))
+        DestReg = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
+                                           &AArch64::FPR64RegClass);
+      else
+        assert(AArch64::FPR64RegClass.contains(DestReg));
 
-    MCInst MOVI;
-    MOVI.setOpcode(AArch64::MOVID);
-    MOVI.addOperand(MCOperand::createReg(DestReg));
-    MOVI.addOperand(MCOperand::createImm(0));
-    EmitToStreamer(*OutStreamer, MOVI);
-  } else {
-    MCInst FMov;
-    switch (MI.getOpcode()) {
-    default: llvm_unreachable("Unexpected opcode");
-    case AArch64::FMOVH0:
-      FMov.setOpcode(STI->hasFullFP16() ? AArch64::FMOVWHr : AArch64::FMOVWSr);
-      if (!STI->hasFullFP16())
-        DestReg = (AArch64::S0 + (DestReg - AArch64::H0));
-      FMov.addOperand(MCOperand::createReg(DestReg));
-      FMov.addOperand(MCOperand::createReg(AArch64::WZR));
-      break;
-    case AArch64::FMOVS0:
-      FMov.setOpcode(AArch64::FMOVWSr);
-      FMov.addOperand(MCOperand::createReg(DestReg));
-      FMov.addOperand(MCOperand::createReg(AArch64::WZR));
-      break;
-    case AArch64::FMOVD0:
-      FMov.setOpcode(AArch64::FMOVXDr);
-      FMov.addOperand(MCOperand::createReg(DestReg));
-      FMov.addOperand(MCOperand::createReg(AArch64::XZR));
-      break;
+      MCInst MOVI;
+      MOVI.setOpcode(AArch64::MOVID);
+      MOVI.addOperand(MCOperand::createReg(DestReg));
+      MOVI.addOperand(MCOperand::createImm(0));
+      EmitToStreamer(*OutStreamer, MOVI);
+    } else if (STI->hasZeroCycleZeroingFPR128()) {
+      // Convert H/S/D register to corresponding Q register
+      const AArch64RegisterInfo *TRI = STI->getRegisterInfo();
+      if (AArch64::FPR16RegClass.contains(DestReg)) {
+        DestReg = TRI->getMatchingSuperReg(DestReg, AArch64::hsub,
+                                           &AArch64::FPR128RegClass);
+      } else if (AArch64::FPR32RegClass.contains(DestReg)) {
+        DestReg = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
+                                           &AArch64::FPR128RegClass);
+      } else {
+        assert(AArch64::FPR64RegClass.contains(DestReg));
+        DestReg = TRI->getMatchingSuperReg(DestReg, AArch64::dsub,
+                                           &AArch64::FPR128RegClass);
+      }
+
+      MCInst MOVI;
+      MOVI.setOpcode(AArch64::MOVIv2d_ns);
+      MOVI.addOperand(MCOperand::createReg(DestReg));
+      MOVI.addOperand(MCOperand::createImm(0));
+      EmitToStreamer(*OutStreamer, MOVI);
+    } else {
+      emitFMov0AsFMov(MI, DestReg);
     }
-    EmitToStreamer(*OutStreamer, FMov);
+  } else {
+    emitFMov0AsFMov(MI, DestReg);
   }
+}
+
+void AArch64AsmPrinter::emitFMov0AsFMov(const MachineInstr &MI,
+                                        Register DestReg) {
+  MCInst FMov;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case AArch64::FMOVH0:
+    FMov.setOpcode(STI->hasFullFP16() ? AArch64::FMOVWHr : AArch64::FMOVWSr);
+    if (!STI->hasFullFP16())
+      DestReg = (AArch64::S0 + (DestReg - AArch64::H0));
+    FMov.addOperand(MCOperand::createReg(DestReg));
+    FMov.addOperand(MCOperand::createReg(AArch64::WZR));
+    break;
+  case AArch64::FMOVS0:
+    FMov.setOpcode(AArch64::FMOVWSr);
+    FMov.addOperand(MCOperand::createReg(DestReg));
+    FMov.addOperand(MCOperand::createReg(AArch64::WZR));
+    break;
+  case AArch64::FMOVD0:
+    FMov.setOpcode(AArch64::FMOVXDr);
+    FMov.addOperand(MCOperand::createReg(DestReg));
+    FMov.addOperand(MCOperand::createReg(AArch64::XZR));
+    break;
+  }
+  EmitToStreamer(*OutStreamer, FMov);
 }
 
 Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
@@ -2229,13 +2262,24 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   if (BrTarget == AddrDisc)
     report_fatal_error("Branch target is signed with its own value");
 
-  // If we are printing BLRA pseudo instruction, then x16 and x17 are
-  // implicit-def'ed by the MI and AddrDisc is not used as any other input, so
-  // try to save one MOV by setting MayUseAddrAsScratch.
+  // If we are printing BLRA pseudo, try to save one MOV by making use of the
+  // fact that x16 and x17 are described as clobbered by the MI instruction and
+  // AddrDisc is not used as any other input.
+  //
+  // Back in the day, emitPtrauthDiscriminator was restricted to only returning
+  // either x16 or x17, meaning the returned register is always among the
+  // implicit-def'ed registers of BLRA pseudo. Now this property can be violated
+  // if isX16X17Safer predicate is false, thus manually check if AddrDisc is
+  // among x16 and x17 to prevent clobbering unexpected registers.
+  //
   // Unlike BLRA, BRA pseudo is used to perform computed goto, and thus not
   // declared as clobbering x16/x17.
+  //
+  // FIXME: Make use of `killed` flags and register masks instead.
+  bool AddrDiscIsImplicitDef =
+      IsCall && (AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17);
   Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17,
-                                              /*MayUseAddrAsScratch=*/IsCall);
+                                              AddrDiscIsImplicitDef);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 
   unsigned Opc;
@@ -2862,7 +2906,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       MCInst TmpInst;
       TmpInst.setOpcode(AArch64::MOVIv16b_ns);
       TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
-      TmpInst.addOperand(MCOperand::createImm(MI->getOperand(1).getImm()));
+      TmpInst.addOperand(MCOperand::createImm(0));
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
     }
@@ -2968,8 +3012,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // See the comments in emitPtrauthBranch.
     if (Callee == AddrDisc)
       report_fatal_error("Call target is signed with its own value");
+
+    // After isX16X17Safer predicate was introduced, emitPtrauthDiscriminator is
+    // no longer restricted to only reusing AddrDisc when it is X16 or X17
+    // (which are implicit-def'ed by AUTH_TCRETURN pseudos), thus impose this
+    // restriction manually not to clobber an unexpected register.
+    bool AddrDiscIsImplicitDef =
+        AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17;
     Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg,
-                                                /*MayUseAddrAsScratch=*/true);
+                                                AddrDiscIsImplicitDef);
 
     const bool IsZero = DiscReg == AArch64::XZR;
     const unsigned Opcodes[2][2] = {{AArch64::BRAA, AArch64::BRAAZ},
@@ -3311,6 +3362,22 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case AArch64::SEH_PACSignLR:
     TS->emitARM64WinCFIPACSignLR();
+    return;
+
+  case AArch64::SEH_SaveAnyRegI:
+    assert(MI->getOperand(1).getImm() <= 1008 &&
+           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegI(MI->getOperand(0).getImm(),
+                                   MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveAnyRegIP:
+    assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
+           "Non-consecutive registers not allowed for save_any_reg");
+    assert(MI->getOperand(2).getImm() <= 1008 &&
+           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegIP(MI->getOperand(0).getImm(),
+                                    MI->getOperand(2).getImm());
     return;
 
   case AArch64::SEH_SaveAnyRegQP:

@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: {bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression: true}}" --
+// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t \
+// RUN:   -- -config="{CheckOptions: {bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression: true}}" \
+// RUN:   -- -fno-delayed-template-parsing
 
 class C {
   int size() { return sizeof(this); }
@@ -225,6 +227,13 @@ void loop_access_elements(int num, struct B b) {
 
   // CHECK-MESSAGES: :[[@LINE+1]]:29: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
   for(int i = 0, j = 0; i < sizeof(arr) && j < sizeof(buf); i++, j++) {}
+}
+
+template <typename T>
+void templated_array() {
+  T arr[10];
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+  for (int i = 0; i < sizeof(arr); ++i) {}
 }
 
 template <int T>

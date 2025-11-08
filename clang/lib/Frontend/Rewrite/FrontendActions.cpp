@@ -245,8 +245,8 @@ public:
     CompilerInstance Instance(
         std::make_shared<CompilerInvocation>(CI.getInvocation()),
         CI.getPCHContainerOperations(), &CI.getModuleCache());
+    Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
     Instance.createDiagnostics(
-        CI.getVirtualFileSystem(),
         new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
         /*ShouldOwnClient=*/true);
     Instance.getFrontendOpts().DisableFree = false;

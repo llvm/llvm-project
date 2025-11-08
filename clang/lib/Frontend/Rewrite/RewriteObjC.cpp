@@ -4835,10 +4835,7 @@ void RewriteObjC::HandleDeclInMainFile(Decl *D) {
           }
         }
       } else if (VD->getType()->isRecordType()) {
-        RecordDecl *RD = VD->getType()
-                             ->castAs<RecordType>()
-                             ->getOriginalDecl()
-                             ->getDefinitionOrSelf();
+        auto *RD = VD->getType()->castAsRecordDecl();
         if (RD->isCompleteDefinition())
           RewriteRecordBody(RD);
       }

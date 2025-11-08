@@ -21,20 +21,20 @@ define void @callee_saved0() nounwind {
 ; RV64I-NOT:     tail __riscv_restore
 ;
 ; RV32I-SR-LABEL: callee_saved0:
-; RV32I-SR:         call t0, __riscv_save_5
-; RV32I-SR:         tail __riscv_restore_5
+; RV32I-SR:         call t0, __riscv_save_4
+; RV32I-SR:         tail __riscv_restore_4
 ;
 ; RV64I-SR-LABEL: callee_saved0:
-; RV64I-SR:         call t0, __riscv_save_5
-; RV64I-SR:         tail __riscv_restore_5
+; RV64I-SR:         call t0, __riscv_save_4
+; RV64I-SR:         tail __riscv_restore_4
 ;
 ; RV32I-FP-SR-LABEL: callee_saved0:
-; RV32I-FP-SR:         call t0, __riscv_save_5
-; RV32I-FP-SR:         tail __riscv_restore_5
+; RV32I-FP-SR:         call t0, __riscv_save_4
+; RV32I-FP-SR:         tail __riscv_restore_4
 ;
 ; RV64I-FP-SR-LABEL: callee_saved0:
-; RV64I-FP-SR:         call t0, __riscv_save_5
-; RV64I-FP-SR:         tail __riscv_restore_5
+; RV64I-FP-SR:         call t0, __riscv_save_4
+; RV64I-FP-SR:         tail __riscv_restore_4
   %val = load [18 x i32], ptr @var0
   store volatile [18 x i32] %val, ptr @var0
   ret void
@@ -50,20 +50,20 @@ define void @callee_saved1() nounwind {
 ; RV64I-NOT:     tail __riscv_restore
 ;
 ; RV32I-SR-LABEL: callee_saved1:
-; RV32I-SR:         call t0, __riscv_save_11
-; RV32I-SR:         tail __riscv_restore_11
+; RV32I-SR:         call t0, __riscv_save_10
+; RV32I-SR:         tail __riscv_restore_10
 ;
 ; RV64I-SR-LABEL: callee_saved1:
-; RV64I-SR:         call t0, __riscv_save_11
-; RV64I-SR:         tail __riscv_restore_11
+; RV64I-SR:         call t0, __riscv_save_10
+; RV64I-SR:         tail __riscv_restore_10
 ;
 ; RV32I-FP-SR-LABEL: callee_saved1:
-; RV32I-FP-SR:         call t0, __riscv_save_11
-; RV32I-FP-SR:         tail __riscv_restore_11
+; RV32I-FP-SR:         call t0, __riscv_save_10
+; RV32I-FP-SR:         tail __riscv_restore_10
 ;
 ; RV64I-FP-SR-LABEL: callee_saved1:
-; RV64I-FP-SR:         call t0, __riscv_save_11
-; RV64I-FP-SR:         tail __riscv_restore_11
+; RV64I-FP-SR:         call t0, __riscv_save_10
+; RV64I-FP-SR:         tail __riscv_restore_10
   %val = load [24 x i32], ptr @var1
   store volatile [24 x i32] %val, ptr @var1
   ret void
@@ -227,20 +227,20 @@ define void @many_args(i32, i32, i32, i32, i32, i32, i32, i32, i32) nounwind {
 ; RV64I-NOT:     tail __riscv_restore
 ;
 ; RV32I-SR-LABEL: many_args:
-; RV32I-SR:         call t0, __riscv_save_5
-; RV32I-SR:         tail __riscv_restore_5
+; RV32I-SR:         call t0, __riscv_save_4
+; RV32I-SR:         tail __riscv_restore_4
 ;
 ; RV64I-SR-LABEL: many_args:
-; RV64I-SR:         call t0, __riscv_save_5
-; RV64I-SR:         tail __riscv_restore_5
+; RV64I-SR:         call t0, __riscv_save_4
+; RV64I-SR:         tail __riscv_restore_4
 ;
 ; RV32I-FP-SR-LABEL: many_args:
-; RV32I-FP-SR:         call t0, __riscv_save_5
-; RV32I-FP-SR:         tail __riscv_restore_5
+; RV32I-FP-SR:         call t0, __riscv_save_4
+; RV32I-FP-SR:         tail __riscv_restore_4
 ;
 ; RV64I-FP-SR-LABEL: many_args:
-; RV64I-FP-SR:         call t0, __riscv_save_5
-; RV64I-FP-SR:         tail __riscv_restore_5
+; RV64I-FP-SR:         call t0, __riscv_save_4
+; RV64I-FP-SR:         tail __riscv_restore_4
 entry:
   %val = load [18 x i32], ptr @var0
   store volatile [18 x i32] %val, ptr @var0

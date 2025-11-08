@@ -20,12 +20,13 @@
 #include "BPFGenInstrInfo.inc"
 
 namespace llvm {
+class BPFSubtarget;
 
 class BPFInstrInfo : public BPFGenInstrInfo {
   const BPFRegisterInfo RI;
 
 public:
-  BPFInstrInfo();
+  explicit BPFInstrInfo(const BPFSubtarget &STI);
 
   const BPFRegisterInfo &getRegisterInfo() const { return RI; }
 
@@ -58,6 +59,9 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  int getJumpTableIndex(const MachineInstr &MI) const override;
+
 private:
   void expandMEMCPY(MachineBasicBlock::iterator) const;
 

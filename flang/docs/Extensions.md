@@ -84,7 +84,7 @@ end
   be "local identifiers" and should be distinct in the "inclusive
   scope" -- i.e., not scoped by `BLOCK` constructs.
   As most (but not all) compilers implement `BLOCK` scoping of construct
-  names, so does f18, with a portability warning.
+  names, so does Flang, with a portability warning.
 * 15.6.4 paragraph 2 prohibits an implicitly typed statement function
   from sharing the same name as a symbol in its scope's host, if it
   has one.
@@ -153,7 +153,7 @@ end
   that a call to intrinsic module procedure `ieee_support_halting` with
   a constant argument has a compile time constant result in `constant
   expression` and `specification expression` contexts. In compilations
-  where this information is not known at compile time, f18 generates code
+  where this information is not known at compile time, Flang generates code
   to determine the absence or presence of this capability at runtime.
   A call to `ieee_support_halting` in contexts that the standard requires
   to be constant will generate a compilation error. `ieee_support_standard`
@@ -182,6 +182,13 @@ end
   Note that internally the main program symbol name is all uppercase, unlike
   the names of all other symbols, which are usually all lowercase. This
   may make a difference in testing/debugging.
+* A `PROCEDURE()` with no interface name or type may be called as an
+  subroutine with an implicit interface, F'2023 15.4.3.6 paragraph 4 and
+  C1525 notwithstanding.
+  This is a universally portable feature, and it also applies to
+  `PROCEDURE(), POINTER, NOPASS` derived type components.
+  Such procedures may *not* be referenced as implicitly typed functions
+  without first being associated with a function pointer.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -366,7 +373,7 @@ end
 * The legacy extension intrinsic functions `IZEXT` and `JZEXT`
   are supported; `ZEXT` has different behavior with various older
   compilers, so it is not supported.
-* f18 doesn't impose a limit on the number of continuation lines
+* Flang doesn't impose a limit on the number of continuation lines
   allowed for a single statement.
 * When a type-bound procedure declaration statement has neither interface
   nor attributes, the "::" before the bindings is optional, even
@@ -553,13 +560,24 @@ end
 * Fortran explicitly ignores type declaration statements when they
   attempt to type the name of a generic intrinsic function (8.2 p3).
   One can declare `CHARACTER::COS` and still get a real result
-  from `COS(3.14159)`, for example.  f18 will complain when a
+  from `COS(3.14159)`, for example.  Flang will complain when a
   generic intrinsic function's inferred result type does not
   match an explicit declaration.  This message is a warning.
 
+* There is no restriction in the standard against assigning
+  to a whole polymorphic allocatable under control of a `WHERE`
+  construct or statement, but there is no good portable
+  behavior to implement and the standard isn't entirely clear
+  what it should mean.
+  (Other compilers allow it, but the results are never meaningful;
+  some never change the type, some change the type according to
+  the value of the last mask element, some treat these
+  assignment statements as no-ops, and the rest crash during compilation.)
+  The compiler flags this case as an error.
+
 ## Standard features that might as well not be
 
-* f18 supports designators with constant expressions, properly
+* Flang supports designators with constant expressions, properly
   constrained, as initial data targets for data pointers in
   initializers of variable and component declarations and in
   `DATA` statements; e.g., `REAL, POINTER :: P => T(1:10:2)`.
@@ -576,8 +594,8 @@ end
 * The standard doesn't explicitly require that a named constant that
   appears as part of a complex-literal-constant be a scalar, but
   most compilers emit an error when an array appears.
-  f18 supports them with a portability warning.
-* f18 does not enforce a blanket prohibition against generic
+  Flang supports them with a portability warning.
+* Flang does not enforce a blanket prohibition against generic
   interfaces containing a mixture of functions and subroutines.
   We allow both to appear, unlike several other Fortran compilers.
   This is especially desirable when two generics of the same
@@ -644,7 +662,7 @@ end
   treat them as references to implicitly typed local variables, and
   load uninitialized values.
 
-  In f18, we chose to emit an error message for this case since the standard
+  In Flang, we chose to emit an error message for this case since the standard
   is unclear, the usage is not portable, and the issue can be easily resolved
   by adding a declaration.
 
@@ -675,7 +693,7 @@ end
 
 * When a `DATA` statement in a `BLOCK` construct could be construed as
   either initializing a host-associated object or declaring a new local
-  initialized object, f18 interprets the standard's classification of
+  initialized object, Flang interprets the standard's classification of
   a `DATA` statement as being a "declaration" rather than a "specification"
   construct, and notes that the `BLOCK` construct is defined as localizing
   names that have specifications in the `BLOCK` construct.
@@ -692,7 +710,7 @@ end subroutine
   Other Fortran compilers disagree with each other in their interpretations
   of this example.
   The precedent among the most commonly used compilers
-  agrees with f18's interpretation: a `DATA` statement without any other
+  agrees with Flang's interpretation: a `DATA` statement without any other
   specification of the name refers to the host-associated object.
 
 * Many Fortran compilers allow a non-generic procedure to be `USE`-associated
@@ -718,7 +736,7 @@ module m2
 end module
 ```
 
-  This case elicits a warning from f18, as it should not be treated
+  This case elicits a warning from Flang, as it should not be treated
   any differently than the same case with the non-generic procedure of
   the same name being defined in the same scope rather than being
   `USE`-associated into it, which is explicitly non-conforming in the
@@ -736,7 +754,7 @@ end module
   symbols, much less appear in specification inquiries, and there are
   application codes that expect exterior symbols whose names match
   components to be visible in a derived-type definition's default initialization
-  expressions, and so f18 follows that precedent.
+  expressions, and so Flang follows that precedent.
 
 * 19.3.1p1 "Within its scope, a local identifier of an entity of class (1)
   or class (4) shall not be the same as a global identifier used in that scope..."
@@ -758,17 +776,17 @@ end module
   left-hand side for a pointer assignment statement, and we emit a
   portability warning when it is not.
 
-* F18 allows a `USE` statement to reference a module that is defined later
+* Flang allows a `USE` statement to reference a module that is defined later
   in the same compilation unit, so long as mutual dependencies do not form
   a cycle.
   This feature forestalls any risk of such a `USE` statement reading an
   obsolete module file from a previous compilation and then overwriting
   that file later.
 
-* F18 allows `OPTIONAL` dummy arguments to interoperable procedures
+* Flang allows `OPTIONAL` dummy arguments to interoperable procedures
   unless they are `VALUE` (C865).
 
-* F18 processes the `NAMELIST` group declarations in a scope after it
+* Flang processes the `NAMELIST` group declarations in a scope after it
   has resolved all of the names in that scope.  This means that names
   that appear before their local declarations do not resolve to host
   associated objects and do not elicit errors about improper redeclarations
@@ -851,11 +869,11 @@ print *, [(j,j=1,10)]
 
 * The Fortran standard doesn't mention integer overflow explicitly. In many cases,
   however, integer overflow makes programs non-conforming.
-  F18 follows other widely-used Fortran compilers. Specifically, f18 assumes
+  Flang follows other widely-used Fortran compilers. Specifically, Flang assumes
   integer overflow never occurs in address calculations and increment of
   do-variable unless the option `-fwrapv` is enabled.
 
-* Two new ieee_round_type values were added in f18 beyond the four values
+* Two new ieee_round_type values were added in Flang beyond the four values
   defined in f03 and f08: ieee_away and ieee_other. Contemporary hardware
   typically does not have support for these rounding modes;
   ieee_support_rounding calls for these values return false.
@@ -900,6 +918,34 @@ print *, [(j,j=1,10)]
   since these default values need to be available to process incomplete
   structure constructors.
 
+* When an `ALLOCATE` or `DEALLOCATE` statement with multiple variables
+  has a `STAT=` specifier that allows the program to continue execution
+  after an error, the variables after the one with the error are left
+  deallocated (or allocated).  This interpretation allows the program to
+  identify the variable that encountered the problem while avoiding any
+  ambiguity in the case of multiple errors with distinct status codes.
+  Some compilers work differently; for maximum portability, avoid
+  `ALLOCATE` and `DEALLOCATE` statements with error recovery for
+  multiple variables.
+
+* When a "null" value is encountered in list-directed input, the
+  corresponding effective item in the data list is left unchanged,
+  even when it has a derived type with a defined `READ(FORMATTED)`
+  subroutine.  This is the most literal reading of F'2023 13.10.3.2p2
+  and the portable interpretation across the most common Fortran
+  compilers.
+
+* `NAMELIST` child input statements are allowed to advance to further
+  input records.
+  Further, advancement is allowed when the parent input statement is
+  a non-child (top level) list-directed input statement, or, recursively,
+  an intermediate child list-directed input statement that can advance.
+  This means that non-`NAMELIST` list-directed child input statements are
+  not allowed to advance when they have an ancestor formatted input statement
+  that is not list-directed and there is no intervening `NAMELIST`.
+  This design allows format-driven input with `DT` editing to retain
+  control over advancement in child input, while otherwise allowing it.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
@@ -913,3 +959,5 @@ print *, [(j,j=1,10)]
   or contiguous array can be used as the initial element of a storage
   sequence.  For example, "&GRP A(1)=1. 2. 3./" is treated as if had been
   "&GRP A(1:)=1. 2. 3./".
+  This extension is necessarily disabled when the type of the array
+  has an accessible defined formatted READ subroutine.

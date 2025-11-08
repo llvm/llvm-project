@@ -9,11 +9,11 @@
 #ifndef __CLC_OPENCL_COMMON_DEGREES_H__
 #define __CLC_OPENCL_COMMON_DEGREES_H__
 
-#define FUNCTION degrees
+#define __CLC_FUNCTION degrees
 #define __CLC_BODY <clc/math/unary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_COMMON_DEGREES_H__

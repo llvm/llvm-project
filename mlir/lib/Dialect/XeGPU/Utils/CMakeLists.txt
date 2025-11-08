@@ -7,5 +7,7 @@ add_mlir_dialect_library(MLIRXeGPUUtils
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRSCFTransforms
+  MLIRGPUDialect
+  MLIRXeVMDialect
   MLIRXeGPUDialect
   )

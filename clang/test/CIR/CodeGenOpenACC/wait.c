@@ -10,7 +10,7 @@ void acc_wait(int cond) {
 
 #pragma acc wait if (cond)
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[COND_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[COND_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.wait if(%[[CONV_CAST]])
 
@@ -37,7 +37,7 @@ void acc_wait(int cond) {
 
 #pragma acc wait(queues:1) if (cond)
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[COND_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[COND_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
@@ -54,7 +54,7 @@ void acc_wait(int cond) {
 
 #pragma acc wait(devnum:1: 2, 3) if (cond)
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[COND_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[COND_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32

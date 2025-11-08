@@ -45,6 +45,13 @@ public:
 
   void GetDescription(Stream *s) override;
 
+  lldb::BreakpointLocationSP WasHit(lldb::StackFrameSP frame_sp,
+                                    lldb::BreakpointLocationSP bp_loc_sp);
+
+  std::optional<std::string>
+  GetLocationDescription(lldb::BreakpointLocationSP bp_loc_sp,
+                         lldb::DescriptionLevel level);
+
   void Dump(Stream *s) const override;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:

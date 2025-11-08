@@ -281,21 +281,12 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::trunc, FTZ_MustBeOn};
 
     // NVVM intrinsics that map to LLVM cast operations.
-    //
-    // Note that llvm's target-generic conversion operators correspond to the rz
-    // (round to zero) versions of the nvvm conversion intrinsics, even though
-    // most everything else here uses the rn (round to nearest even) nvvm ops.
-    case Intrinsic::nvvm_d2i_rz:
-    case Intrinsic::nvvm_f2i_rz:
-    case Intrinsic::nvvm_d2ll_rz:
-    case Intrinsic::nvvm_f2ll_rz:
-      return {Instruction::FPToSI};
-    case Intrinsic::nvvm_d2ui_rz:
-    case Intrinsic::nvvm_f2ui_rz:
-    case Intrinsic::nvvm_d2ull_rz:
-    case Intrinsic::nvvm_f2ull_rz:
-      return {Instruction::FPToUI};
-    // Integer to floating-point uses RN rounding, not RZ
+    // Note - we cannot map intrinsics like nvvm_d2ll_rz to LLVM's
+    // FPToSI, as NaN to int conversion with FPToSI is considered UB and is
+    // eliminated. NVVM conversion intrinsics are translated to PTX cvt
+    // instructions which define the outcome for NaN rather than leaving as UB.
+    // Therefore, translate NVVM intrinsics to sitofp/uitofp, but not to
+    // fptosi/fptoui.
     case Intrinsic::nvvm_i2d_rn:
     case Intrinsic::nvvm_i2f_rn:
     case Intrinsic::nvvm_ll2d_rn:
@@ -327,7 +318,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       // answer. These include:
       //
       //   - nvvm_cos_approx_{f,ftz_f}
-      //   - nvvm_ex2_approx_{d,f,ftz_f}
+      //   - nvvm_ex2_approx(_ftz)
       //   - nvvm_lg2_approx_{d,f,ftz_f}
       //   - nvvm_sin_approx_{f,ftz_f}
       //   - nvvm_sqrt_approx_{f,ftz_f}
@@ -502,7 +493,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
             // predicate ("@").
             return !AsmInst.empty() &&
                    (AsmInst[0] == '@' || isAlpha(AsmInst[0]) ||
-                    AsmInst.find(".pragma") != StringRef::npos);
+                    AsmInst.contains(".pragma"));
           });
       return InstCount * TargetTransformInfo::TCC_Basic;
     }
@@ -590,8 +581,12 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
   case Intrinsic::nvvm_prefetch_tensormap: {
     IRBuilder<> Builder(II);
-    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
-                                        NewV);
+    const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (NewAS == NVPTXAS::ADDRESS_SPACE_CONST ||
+        NewAS == NVPTXAS::ADDRESS_SPACE_PARAM)
+      return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
+                                          NewV);
+    return nullptr;
   }
   }
   return nullptr;

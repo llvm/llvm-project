@@ -187,6 +187,7 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
   // Check the bases.
   for (const CXXBaseSpecifier &Base : Class->bases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    assert(BaseDecl != Class && "Class cannot inherit from itself.");
 
     CharUnits EmptySize;
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(BaseDecl);
@@ -204,15 +205,13 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
 
   // Check the fields.
   for (const FieldDecl *FD : Class->fields()) {
-    const RecordType *RT =
-        Context.getBaseElementType(FD->getType())->getAs<RecordType>();
-
-    // We only care about record types.
-    if (!RT)
+    // We only care about records.
+    const auto *MemberDecl =
+        Context.getBaseElementType(FD->getType())->getAsCXXRecordDecl();
+    if (!MemberDecl)
       continue;
 
     CharUnits EmptySize;
-    const CXXRecordDecl *MemberDecl = RT->getAsCXXRecordDecl();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(MemberDecl);
     if (MemberDecl->isEmpty()) {
       // If the class decl is empty, get its size.
@@ -433,11 +432,10 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const FieldDecl *FD,
   // If we have an array type we need to look at every element.
   if (const ConstantArrayType *AT = Context.getAsConstantArrayType(T)) {
     QualType ElemTy = Context.getBaseElementType(AT);
-    const RecordType *RT = ElemTy->getAs<RecordType>();
-    if (!RT)
+    const auto *RD = ElemTy->getAsCXXRecordDecl();
+    if (!RD)
       return true;
 
-    const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
     uint64_t NumElements = Context.getConstantArrayElementCount(AT);
@@ -533,11 +531,10 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
   // If we have an array type we need to update every element.
   if (const ConstantArrayType *AT = Context.getAsConstantArrayType(T)) {
     QualType ElemTy = Context.getBaseElementType(AT);
-    const RecordType *RT = ElemTy->getAs<RecordType>();
-    if (!RT)
+    const auto *RD = ElemTy->getAsCXXRecordDecl();
+    if (!RD)
       return;
 
-    const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
     uint64_t NumElements = Context.getConstantArrayElementCount(AT);
@@ -2011,8 +2008,8 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
           CTy->getElementType()->castAs<BuiltinType>());
     } else if (const BuiltinType *BTy = BaseTy->getAs<BuiltinType>()) {
       performBuiltinTypeAlignmentUpgrade(BTy);
-    } else if (const RecordType *RT = BaseTy->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getOriginalDecl();
+    } else if (const RecordType *RT = BaseTy->getAsCanonical<RecordType>()) {
+      const RecordDecl *RD = RT->getDecl();
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
       PreferredAlign = FieldRecord.getPreferredAlignment();
     }
@@ -2090,9 +2087,8 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   if (InsertExtraPadding) {
     CharUnits ASanAlignment = CharUnits::fromQuantity(8);
     CharUnits ExtraSizeForAsan = ASanAlignment;
-    if (FieldSize % ASanAlignment)
-      ExtraSizeForAsan +=
-          ASanAlignment - CharUnits::fromQuantity(FieldSize % ASanAlignment);
+    if (!FieldSize.isMultipleOf(ASanAlignment))
+      ExtraSizeForAsan += ASanAlignment - (FieldSize % ASanAlignment);
     EffectiveFieldSize = FieldSize = FieldSize + ExtraSizeForAsan;
   }
 
@@ -2122,10 +2118,10 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     if (RD->hasAttr<PackedAttr>() || !MaxFieldAlignment.isZero())
       if (FieldAlign < OriginalFieldAlign)
         if (D->getType()->isRecordType()) {
-          // If the offset is a multiple of the alignment of
+          // If the offset is not a multiple of the alignment of
           // the type, raise the warning.
           // TODO: Takes no account the alignment of the outer struct
-          if (FieldOffset % OriginalFieldAlign != 0)
+          if (!FieldOffset.isMultipleOf(OriginalFieldAlign))
             Diag(D->getLocation(), diag::warn_unaligned_access)
                 << Context.getCanonicalTagType(RD) << D->getName()
                 << D->getType();
@@ -2711,9 +2707,10 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
     // alignment when it is applied to bitfields.
     Info.Alignment = std::max(Info.Alignment, FieldRequiredAlignment);
   else {
-    if (auto RT =
-            FD->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
-      auto const &Layout = Context.getASTRecordLayout(RT->getOriginalDecl());
+    if (const auto *RT = FD->getType()
+                             ->getBaseElementTypeUnsafe()
+                             ->getAsCanonical<RecordType>()) {
+      auto const &Layout = Context.getASTRecordLayout(RT->getDecl());
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldRequiredAlignment = std::max(FieldRequiredAlignment,
                                         Layout.getRequiredAlignment());
@@ -3695,9 +3692,9 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
       Offset + C.toCharUnitsFromBits(LocalFieldOffsetInBits);
 
     // Recursively dump fields of record type.
-    if (auto RT = Field->getType()->getAs<RecordType>()) {
-      DumpRecordLayout(OS, RT->getOriginalDecl()->getDefinitionOrSelf(), C,
-                       FieldOffset, IndentLevel, Field->getName().data(),
+    if (const auto *RD = Field->getType()->getAsRecordDecl()) {
+      DumpRecordLayout(OS, RD, C, FieldOffset, IndentLevel,
+                       Field->getName().data(),
                        /*PrintSizeInfo=*/false,
                        /*IncludeVirtualBases=*/true);
       continue;

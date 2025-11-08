@@ -14,6 +14,7 @@
 
 ; CHECK-NEXT: ModulePass Manager
 ; CHECK-NEXT:   DXIL Finalize Linkage
+; CHECK-NEXT:   Dead Global Elimination
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
@@ -39,10 +40,10 @@
 ; CHECK-NEXT:   DXIL Resources Analysis
 ; CHECK-NEXT:   DXIL Module Metadata analysis
 ; CHECK-NEXT:   DXIL Shader Flag Analysis
+; CHECK-NEXT:   DXIL Root Signature Analysis
 ; CHECK-NEXT:   DXIL Translate Metadata
 ; CHECK-NEXT:   DXIL Post Optimization Validation
 ; CHECK-NEXT:   DXIL Op Lowering
-; CHECK-NEXT:   DXIL Root Signature Analysis
 ; CHECK-NEXT:   DXIL Prepare Module
 
 ; CHECK-ASM-NEXT: DXIL Metadata Pretty Printer

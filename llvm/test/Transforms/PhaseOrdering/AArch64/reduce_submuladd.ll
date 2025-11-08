@@ -6,7 +6,7 @@ target triple = "aarch64"
 
 ; This function (a more complex reduction of (a[i] - b[i]) * itself) should be vectorized successfully.
 
-define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3) #0 {
+define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3) {
 ; CHECK-LABEL: define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii
 ; CHECK-SAME: (ptr noundef readonly captures(none) [[TMP0:%.*]], ptr noundef readonly captures(none) [[TMP1:%.*]], i32 noundef [[TMP2:%.*]], i32 noundef [[TMP3:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  .preheader.i:
@@ -125,7 +125,7 @@ define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %
   ret float %13
 }
 
-define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3) #1 {
+define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3) {
   %5 = alloca ptr, align 8
   %6 = alloca ptr, align 8
   %7 = alloca i32, align 4
@@ -143,15 +143,15 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
   store ptr %1, ptr %6, align 8, !tbaa !4
   store i32 %2, ptr %7, align 4, !tbaa !9
   store i32 %3, ptr %8, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(ptr %9) #3
+  call void @llvm.lifetime.start.p0(ptr %9)
   store i32 3, ptr %9, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(ptr %10) #3
+  call void @llvm.lifetime.start.p0(ptr %10)
   store i32 3, ptr %10, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(ptr %11) #3
+  call void @llvm.lifetime.start.p0(ptr %11)
   store i32 7, ptr %11, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(ptr %12) #3
+  call void @llvm.lifetime.start.p0(ptr %12)
   store float 0.000000e+00, ptr %12, align 4, !tbaa !11
-  call void @llvm.lifetime.start.p0(ptr %13) #3
+  call void @llvm.lifetime.start.p0(ptr %13)
   store i32 0, ptr %13, align 4, !tbaa !9
   br label %18
 
@@ -162,13 +162,13 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
 
 21:                                               ; preds = %18
   store i32 2, ptr %14, align 4
-  call void @llvm.lifetime.end.p0(ptr %13) #3
+  call void @llvm.lifetime.end.p0(ptr %13)
   br label %62
 
 22:                                               ; preds = %18
-  call void @llvm.lifetime.start.p0(ptr %15) #3
+  call void @llvm.lifetime.start.p0(ptr %15)
   store float 0.000000e+00, ptr %15, align 4, !tbaa !11
-  call void @llvm.lifetime.start.p0(ptr %16) #3
+  call void @llvm.lifetime.start.p0(ptr %16)
   store i32 0, ptr %16, align 4, !tbaa !9
   br label %23
 
@@ -179,11 +179,11 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
 
 26:                                               ; preds = %23
   store i32 5, ptr %14, align 4
-  call void @llvm.lifetime.end.p0(ptr %16) #3
+  call void @llvm.lifetime.end.p0(ptr %16)
   br label %47
 
 27:                                               ; preds = %23
-  call void @llvm.lifetime.start.p0(ptr %17) #3
+  call void @llvm.lifetime.start.p0(ptr %17)
   %28 = load ptr, ptr %5, align 8, !tbaa !4
   %29 = load i32, ptr %16, align 4, !tbaa !9
   %30 = sext i32 %29 to i64
@@ -202,7 +202,7 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
   %42 = load float, ptr %15, align 4, !tbaa !11
   %43 = fadd fast float %42, %41
   store float %43, ptr %15, align 4, !tbaa !11
-  call void @llvm.lifetime.end.p0(ptr %17) #3
+  call void @llvm.lifetime.end.p0(ptr %17)
   br label %44
 
 44:                                               ; preds = %27
@@ -226,7 +226,7 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
   %57 = load float, ptr %12, align 4, !tbaa !11
   %58 = fadd fast float %57, %56
   store float %58, ptr %12, align 4, !tbaa !11
-  call void @llvm.lifetime.end.p0(ptr %15) #3
+  call void @llvm.lifetime.end.p0(ptr %15)
   br label %59
 
 59:                                               ; preds = %47
@@ -238,20 +238,15 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
 62:                                               ; preds = %21
   %63 = load float, ptr %12, align 4, !tbaa !11
   store i32 1, ptr %14, align 4
-  call void @llvm.lifetime.end.p0(ptr %12) #3
-  call void @llvm.lifetime.end.p0(ptr %11) #3
-  call void @llvm.lifetime.end.p0(ptr %10) #3
-  call void @llvm.lifetime.end.p0(ptr %9) #3
+  call void @llvm.lifetime.end.p0(ptr %12)
+  call void @llvm.lifetime.end.p0(ptr %11)
+  call void @llvm.lifetime.end.p0(ptr %10)
+  call void @llvm.lifetime.end.p0(ptr %9)
   ret float %63
 }
 
-declare void @llvm.lifetime.start.p0(ptr captures(none)) #2
-declare void @llvm.lifetime.end.p0(ptr captures(none)) #2
-
-attributes #0 = { mustprogress uwtable "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+v8a,-fmv" "unsafe-fp-math"="true" }
-attributes #1 = { inlinehint mustprogress nounwind uwtable "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+v8a,-fmv" "unsafe-fp-math"="true" }
-attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #3 = { nounwind }
+declare void @llvm.lifetime.start.p0(ptr captures(none))
+declare void @llvm.lifetime.end.p0(ptr captures(none))
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}

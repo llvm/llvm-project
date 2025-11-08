@@ -272,15 +272,13 @@ void JSONNodeDumper::writeIncludeStack(PresumedLoc Loc, bool JustFirst) {
   JOS.attributeEnd();
 }
 
-void JSONNodeDumper::writeBareSourceLocation(SourceLocation Loc,
-                                             bool IsSpelling) {
+void JSONNodeDumper::writeBareSourceLocation(SourceLocation Loc) {
   PresumedLoc Presumed = SM.getPresumedLoc(Loc);
-  unsigned ActualLine = IsSpelling ? SM.getSpellingLineNumber(Loc)
-                                   : SM.getExpansionLineNumber(Loc);
-  StringRef ActualFile = SM.getBufferName(Loc);
-
   if (Presumed.isValid()) {
-    JOS.attribute("offset", SM.getDecomposedLoc(Loc).second);
+    StringRef ActualFile = SM.getBufferName(Loc);
+    auto [FID, FilePos] = SM.getDecomposedLoc(Loc);
+    unsigned ActualLine = SM.getLineNumber(FID, FilePos);
+    JOS.attribute("offset", FilePos);
     if (LastLocFilename != ActualFile) {
       JOS.attribute("file", ActualFile);
       JOS.attribute("line", ActualLine);
@@ -318,18 +316,17 @@ void JSONNodeDumper::writeSourceLocation(SourceLocation Loc) {
   if (Expansion != Spelling) {
     // If the expansion and the spelling are different, output subobjects
     // describing both locations.
-    JOS.attributeObject("spellingLoc", [Spelling, this] {
-      writeBareSourceLocation(Spelling, /*IsSpelling*/ true);
-    });
+    JOS.attributeObject(
+        "spellingLoc", [Spelling, this] { writeBareSourceLocation(Spelling); });
     JOS.attributeObject("expansionLoc", [Expansion, Loc, this] {
-      writeBareSourceLocation(Expansion, /*IsSpelling*/ false);
+      writeBareSourceLocation(Expansion);
       // If there is a macro expansion, add extra information if the interesting
       // bit is the macro arg expansion.
       if (SM.isMacroArgExpansion(Loc))
         JOS.attribute("isMacroArgExpansion", true);
     });
   } else
-    writeBareSourceLocation(Spelling, /*IsSpelling*/ true);
+    writeBareSourceLocation(Spelling);
 }
 
 void JSONNodeDumper::writeSourceRange(SourceRange R) {
@@ -396,7 +393,7 @@ llvm::json::Array JSONNodeDumper::createCastPath(const CastExpr *C) {
   for (auto I = C->path_begin(), E = C->path_end(); I != E; ++I) {
     const CXXBaseSpecifier *Base = *I;
     const auto *RD = cast<CXXRecordDecl>(
-        Base->getType()->castAs<RecordType>()->getOriginalDecl());
+        Base->getType()->castAsCanonical<RecordType>()->getDecl());
 
     llvm::json::Object Val{{"name", RD->getName()}};
     if (Base->isVirtual())
@@ -764,7 +761,7 @@ void JSONNodeDumper::VisitTagType(const TagType *TT) {
     Qualifier.print(OS, PrintPolicy, /*ResolveTemplateArguments=*/true);
     JOS.attribute("qualifier", Str);
   }
-  JOS.attribute("decl", createBareDeclRef(TT->getOriginalDecl()));
+  JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (TT->isTagOwned())
     JOS.attribute("isTagOwned", true);
 }
@@ -816,7 +813,7 @@ void JSONNodeDumper::VisitTemplateSpecializationType(
 
 void JSONNodeDumper::VisitInjectedClassNameType(
     const InjectedClassNameType *ICNT) {
-  JOS.attribute("decl", createBareDeclRef(ICNT->getOriginalDecl()));
+  JOS.attribute("decl", createBareDeclRef(ICNT->getDecl()));
 }
 
 void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
@@ -944,6 +941,9 @@ void JSONNodeDumper::VisitVarDecl(const VarDecl *VD) {
     }
   }
   attributeOnlyIfTrue("isParameterPack", VD->isParameterPack());
+  if (const auto *Instance = VD->getTemplateInstantiationPattern())
+    JOS.attribute("TemplateInstantiationPattern",
+                  createPointerRepresentation(Instance));
 }
 
 void JSONNodeDumper::VisitFieldDecl(const FieldDecl *FD) {
@@ -975,6 +975,10 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
 
   if (StringLiteral *Msg = FD->getDeletedMessage())
     JOS.attribute("deletedMessage", Msg->getString());
+
+  if (const auto *Instance = FD->getTemplateInstantiationPattern())
+    JOS.attribute("TemplateInstantiationPattern",
+                  createPointerRepresentation(Instance));
 }
 
 void JSONNodeDumper::VisitEnumDecl(const EnumDecl *ED) {
@@ -984,6 +988,9 @@ void JSONNodeDumper::VisitEnumDecl(const EnumDecl *ED) {
   if (ED->isScoped())
     JOS.attribute("scopedEnumTag",
                   ED->isScopedUsingClassTag() ? "class" : "struct");
+  if (const auto *Instance = ED->getTemplateInstantiationPattern())
+    JOS.attribute("TemplateInstantiationPattern",
+                  createPointerRepresentation(Instance));
 }
 void JSONNodeDumper::VisitEnumConstantDecl(const EnumConstantDecl *ECD) {
   VisitNamedDecl(ECD);
@@ -1002,6 +1009,10 @@ void JSONNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *RD) {
     if (CTSD->hasStrictPackMatch())
       JOS.attribute("strict-pack-match", true);
   }
+
+  if (const auto *Instance = RD->getTemplateInstantiationPattern())
+    JOS.attribute("TemplateInstantiationPattern",
+                  createPointerRepresentation(Instance));
 
   // All other information requires a complete definition.
   if (!RD->isCompleteDefinition())
@@ -1671,6 +1682,13 @@ void JSONNodeDumper::VisitLabelStmt(const LabelStmt *LS) {
   JOS.attribute("declId", createPointerRepresentation(LS->getDecl()));
   attributeOnlyIfTrue("sideEntry", LS->isSideEntry());
 }
+
+void JSONNodeDumper::VisitLoopControlStmt(const LoopControlStmt *LS) {
+  if (LS->hasLabelTarget())
+    JOS.attribute("targetLabelDeclId",
+                  createPointerRepresentation(LS->getLabelDecl()));
+}
+
 void JSONNodeDumper::VisitGotoStmt(const GotoStmt *GS) {
   JOS.attribute("targetLabelDeclId",
                 createPointerRepresentation(GS->getLabel()));

@@ -366,6 +366,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
+  if (llvm_enable_ondisk_cas) {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=" ]
+  }
+
   if (llvm_enable_threads) {
     values += [ "LLVM_ENABLE_THREADS=1" ]
   } else {

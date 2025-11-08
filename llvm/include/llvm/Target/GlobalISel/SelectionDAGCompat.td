@@ -51,6 +51,9 @@ def : GINodeEquiv<G_SEXT, sext>;
 def : GINodeEquiv<G_SEXT_INREG, sext_inreg>;
 def : GINodeEquiv<G_ZEXT, zext>;
 def : GINodeEquiv<G_TRUNC, trunc>;
+def : GINodeEquiv<G_TRUNC_SSAT_S, truncssat_s>;
+def : GINodeEquiv<G_TRUNC_SSAT_U, truncssat_u>;
+def : GINodeEquiv<G_TRUNC_USAT_U, truncusat_u>;
 def : GINodeEquiv<G_BITCAST, bitconvert>;
 // G_INTTOPTR - SelectionDAG has no equivalent.
 // G_PTRTOINT - SelectionDAG has no equivalent.

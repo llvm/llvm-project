@@ -58,15 +58,11 @@ LLVM_ABI CodeGenFileType getFileType();
 
 LLVM_ABI FramePointerKind getFramePointerUsage();
 
-LLVM_ABI bool getEnableUnsafeFPMath();
-
 LLVM_ABI bool getEnableNoInfsFPMath();
 
 LLVM_ABI bool getEnableNoNaNsFPMath();
 
 LLVM_ABI bool getEnableNoSignedZerosFPMath();
-
-LLVM_ABI bool getEnableApproxFuncFPMath();
 
 LLVM_ABI bool getEnableNoTrappingFPMath();
 

@@ -8079,14 +8079,14 @@ define <16 x i16> @pr43230(<16 x i16> %a, <16 x i16> %b) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm3
 ; AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm1
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlw $2, %xmm0, %xmm1
-; AVX1-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm1
-; AVX1-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm3
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $2, %xmm0, %xmm2
+; AVX1-NEXT:    vpsllw $2, %xmm1, %xmm3
+; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm2
+; AVX1-NEXT:    vpsllw $3, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq

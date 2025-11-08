@@ -107,10 +107,8 @@ struct MFPrintState {
 
 } // end anonymous namespace
 
-namespace llvm::yaml {
-
 /// This struct serializes the LLVM IR module.
-template <> struct BlockScalarTraits<Module> {
+template <> struct yaml::BlockScalarTraits<Module> {
   static void output(const Module &Mod, void *Ctxt, raw_ostream &OS) {
     Mod.print(OS, nullptr);
   }
@@ -120,8 +118,6 @@ template <> struct BlockScalarTraits<Module> {
     return "";
   }
 };
-
-} // end namespace llvm::yaml
 
 static void printRegMIR(Register Reg, yaml::StringValue &Dest,
                         const TargetRegisterInfo *TRI) {
@@ -149,11 +145,13 @@ static void convertMCP(yaml::MachineFunction &MF,
 static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
                         const MachineJumpTableInfo &JTI);
 static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
-                       const MachineFrameInfo &MFI);
+                       const MachineFrameInfo &MFI,
+                       const TargetRegisterInfo *TRI);
 static void
 convertSRPoints(ModuleSlotTracker &MST,
                 std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
-                ArrayRef<MachineBasicBlock *> SaveRestorePoints);
+                const llvm::SaveRestorePoints &SRPoints,
+                const TargetRegisterInfo *TRI);
 static void convertStackObjects(yaml::MachineFunction &YMF,
                                 const MachineFunction &MF,
                                 ModuleSlotTracker &MST, MFPrintState &State);
@@ -204,7 +202,8 @@ static void printMF(raw_ostream &OS, const MachineModuleInfo &MMI,
   convertMRI(YamlMF, MF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   MachineModuleSlotTracker &MST = State.MST;
   MST.incorporateFunction(MF.getFunction());
-  convertMFI(MST, YamlMF.FrameInfo, MF.getFrameInfo());
+  convertMFI(MST, YamlMF.FrameInfo, MF.getFrameInfo(),
+             MF.getSubtarget().getRegisterInfo());
   convertStackObjects(YamlMF, MF, MST, State);
   convertEntryValueObjects(YamlMF, MF, MST);
   convertCallSiteObjects(YamlMF, MF, MST);
@@ -339,7 +338,8 @@ static void convertMRI(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
 }
 
 static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
-                       const MachineFrameInfo &MFI) {
+                       const MachineFrameInfo &MFI,
+                       const TargetRegisterInfo *TRI) {
   YamlMFI.IsFrameAddressTaken = MFI.isFrameAddressTaken();
   YamlMFI.IsReturnAddressTaken = MFI.isReturnAddressTaken();
   YamlMFI.HasStackMap = MFI.hasStackMap();
@@ -360,9 +360,9 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.IsCalleeSavedInfoValid = MFI.isCalleeSavedInfoValid();
   YamlMFI.LocalFrameSize = MFI.getLocalFrameSize();
   if (!MFI.getSavePoints().empty())
-    convertSRPoints(MST, YamlMFI.SavePoints, MFI.getSavePoints());
+    convertSRPoints(MST, YamlMFI.SavePoints, MFI.getSavePoints(), TRI);
   if (!MFI.getRestorePoints().empty())
-    convertSRPoints(MST, YamlMFI.RestorePoints, MFI.getRestorePoints());
+    convertSRPoints(MST, YamlMFI.RestorePoints, MFI.getRestorePoints(), TRI);
 }
 
 static void convertEntryValueObjects(yaml::MachineFunction &YMF,
@@ -619,16 +619,35 @@ static void convertMCP(yaml::MachineFunction &MF,
 static void
 convertSRPoints(ModuleSlotTracker &MST,
                 std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
-                ArrayRef<MachineBasicBlock *> SRPoints) {
-  for (const auto &MBB : SRPoints) {
+                const llvm::SaveRestorePoints &SRPoints,
+                const TargetRegisterInfo *TRI) {
+  for (const auto &[MBB, CSInfos] : SRPoints) {
     SmallString<16> Str;
     yaml::SaveRestorePointEntry Entry;
     raw_svector_ostream StrOS(Str);
     StrOS << printMBBReference(*MBB);
     Entry.Point = StrOS.str().str();
     Str.clear();
-    YamlSRPoints.push_back(Entry);
+    for (const CalleeSavedInfo &Info : CSInfos) {
+      if (Info.getReg()) {
+        StrOS << printReg(Info.getReg(), TRI);
+        Entry.Registers.push_back(StrOS.str().str());
+        Str.clear();
+      }
+    }
+    // Sort here needed for stable output for lit tests
+    std::sort(Entry.Registers.begin(), Entry.Registers.end(),
+              [](const yaml::StringValue &Lhs, const yaml::StringValue &Rhs) {
+                return Lhs.Value < Rhs.Value;
+              });
+    YamlSRPoints.push_back(std::move(Entry));
   }
+  // Sort here needed for stable output for lit tests
+  std::sort(YamlSRPoints.begin(), YamlSRPoints.end(),
+            [](const yaml::SaveRestorePointEntry &Lhs,
+               const yaml::SaveRestorePointEntry &Rhs) {
+              return Lhs.Point.Value < Rhs.Point.Value;
+            });
 }
 
 static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
@@ -843,48 +862,46 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
 
   OS << TII->getName(MI.getOpcode());
 
-  LS = ListSeparator();
+  // Print a space after the opcode if any additional tokens are printed.
+  LS = ListSeparator(", ", " ");
 
-  if (I < E) {
-    OS << ' ';
-    for (; I < E; ++I) {
-      OS << LS;
-      printMIOperand(OS, State, MI, I, TRI, TII, ShouldPrintRegisterTies,
-                     PrintedTypes, MRI, /*PrintDef=*/true);
-    }
+  for (; I < E; ++I) {
+    OS << LS;
+    printMIOperand(OS, State, MI, I, TRI, TII, ShouldPrintRegisterTies,
+                   PrintedTypes, MRI, /*PrintDef=*/true);
   }
 
   // Print any optional symbols attached to this instruction as-if they were
   // operands.
   if (MCSymbol *PreInstrSymbol = MI.getPreInstrSymbol()) {
-    OS << LS << " pre-instr-symbol ";
+    OS << LS << "pre-instr-symbol ";
     MachineOperand::printSymbol(OS, *PreInstrSymbol);
   }
   if (MCSymbol *PostInstrSymbol = MI.getPostInstrSymbol()) {
-    OS << LS << " post-instr-symbol ";
+    OS << LS << "post-instr-symbol ";
     MachineOperand::printSymbol(OS, *PostInstrSymbol);
   }
   if (MDNode *HeapAllocMarker = MI.getHeapAllocMarker()) {
-    OS << LS << " heap-alloc-marker ";
+    OS << LS << "heap-alloc-marker ";
     HeapAllocMarker->printAsOperand(OS, State.MST);
   }
   if (MDNode *PCSections = MI.getPCSections()) {
-    OS << LS << " pcsections ";
+    OS << LS << "pcsections ";
     PCSections->printAsOperand(OS, State.MST);
   }
   if (MDNode *MMRA = MI.getMMRAMetadata()) {
-    OS << LS << " mmra ";
+    OS << LS << "mmra ";
     MMRA->printAsOperand(OS, State.MST);
   }
   if (uint32_t CFIType = MI.getCFIType())
-    OS << LS << " cfi-type " << CFIType;
+    OS << LS << "cfi-type " << CFIType;
 
   if (auto Num = MI.peekDebugInstrNum())
-    OS << LS << " debug-instr-number " << Num;
+    OS << LS << "debug-instr-number " << Num;
 
   if (PrintLocations) {
     if (const DebugLoc &DL = MI.getDebugLoc()) {
-      OS << LS << " debug-location ";
+      OS << LS << "debug-location ";
       DL->printAsOperand(OS, State.MST);
     }
   }

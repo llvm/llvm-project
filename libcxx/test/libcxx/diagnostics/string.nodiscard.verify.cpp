@@ -12,7 +12,12 @@
 
 #include <string>
 
+#include "test_macros.h"
+
 void test() {
   std::string string;
   string.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#if TEST_STD_VER >= 26
+  string.subview(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
 }

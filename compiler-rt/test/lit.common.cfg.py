@@ -708,31 +708,7 @@ else:
     config.substitutions.append(("%push_to_device", "echo "))
     config.substitutions.append(("%adb_shell", "echo "))
 
-if config.target_os == "Linux":
-    def add_glibc_versions(ver_string):
-        if config.android:
-            return
-
-        from distutils.version import LooseVersion
-
-        ver = LooseVersion(ver_string)
-        any_glibc = False
-        for required in [
-            "2.19",
-            "2.27",
-            "2.30",
-            "2.33",
-            "2.34",
-            "2.37",
-            "2.38",
-            "2.40",
-        ]:
-            if ver >= LooseVersion(required):
-                config.available_features.add("glibc-" + required)
-                any_glibc = True
-            if any_glibc:
-                config.available_features.add("glibc")
-
+if config.target_os == "Linux" and not config.android:
     # detect whether we are using glibc, and which version
     cmd_args = [
         config.clang.strip(),
@@ -754,7 +730,27 @@ if config.target_os == "Linux":
     try:
         sout, _ = cmd.communicate(b"#include <features.h>")
         m = dict(re.findall(r"#define (__GLIBC__|__GLIBC_MINOR__) (\d+)", str(sout)))
-        add_glibc_versions(f"{m['__GLIBC__']}.{m['__GLIBC_MINOR__']}")
+        major = int(m["__GLIBC__"])
+        minor = int(m["__GLIBC_MINOR__"])
+        any_glibc = False
+        for required in [
+            (2, 19),
+            (2, 27),
+            (2, 30),
+            (2, 33),
+            (2, 34),
+            (2, 37),
+            (2, 38),
+            (2, 40),
+        ]:
+            if (major, minor) >= required:
+                (required_major, required_minor) = required
+                config.available_features.add(
+                    f"glibc-{required_major}.{required_minor}"
+                )
+                any_glibc = True
+            if any_glibc:
+                config.available_features.add("glibc")
     except:
         pass
 
@@ -888,7 +884,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                r"-Wl,-z,origin -Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec"
+                r"-Wl,-z,origin -Wl,-rpath,\$ORIGIN -L%t.dir -l%xdynamiclib_namespec"
                 + postfix,
             )
         )
@@ -897,7 +893,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                r"-Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
+                r"-Wl,-rpath,\$ORIGIN -L%t.dir -l%xdynamiclib_namespec" + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
@@ -905,14 +901,14 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                r"-Wl,-R\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
+                r"-Wl,-R\$ORIGIN -L%t.dir -l%xdynamiclib_namespec" + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
 
     # Must be defined after the substitutions that use %dynamiclib.
     config.substitutions.append(
-        ("%dynamiclib" + postfix, "%T/%xdynamiclib_filename" + postfix)
+        ("%dynamiclib" + postfix, "%t.dir/%xdynamiclib_filename" + postfix)
     )
     config.substitutions.append(
         (
@@ -964,6 +960,23 @@ if config.memprof_shadow_scale:
     )
 else:
     config.available_features.add("memprof-shadow-scale-3")
+
+
+def target_page_size():
+    try:
+        proc = subprocess.Popen(
+            f"{emulator or ''} python3",
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        out, err = proc.communicate(b'import os; print(os.sysconf("SC_PAGESIZE"))')
+        return int(out)
+    except:
+        return 4096
+
+
+config.available_features.add(f"page-size-{target_page_size()}")
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
@@ -1053,3 +1066,5 @@ if config.compiler_id == "GNU":
 # llvm.
 config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
 config.substitutions.append(("%llvm_src", config.llvm_src_root))
+
+config.substitutions.append(("%python", '"%s"' % (sys.executable)))
