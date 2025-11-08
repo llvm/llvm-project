@@ -39,8 +39,8 @@ static SourceRange findToken(const SourceManager &Sources,
                              bool (*Pred)(const Token &)) {
   if (StartLoc.isMacroID() || EndLoc.isMacroID())
     return {};
-  FileID File = Sources.getFileID(Sources.getSpellingLoc(StartLoc));
-  StringRef Buf = Sources.getBufferData(File);
+  const FileID File = Sources.getFileID(Sources.getSpellingLoc(StartLoc));
+  const StringRef Buf = Sources.getBufferData(File);
   const char *StartChar = Sources.getCharacterData(StartLoc);
   Lexer Lex(StartLoc, LangOpts, StartChar, StartChar, Buf.end());
   Lex.SetCommentRetentionState(true);
@@ -88,7 +88,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<CXXConversionDecl>("conversion")) {
     if (Conversion->isOutOfLine())
       return;
-    SourceLocation Loc = Conversion->getLocation();
+    const SourceLocation Loc = Conversion->getLocation();
     // Ignore all macros until we learn to ignore specific ones (e.g. used in
     // gmock to define matchers).
     if (Loc.isMacroID())
@@ -105,7 +105,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
 
   const ExplicitSpecifier ExplicitSpec = Ctor->getExplicitSpecifier();
 
-  bool TakesInitializerList = isStdInitializerList(
+  const bool TakesInitializerList = isStdInitializerList(
       Ctor->getParamDecl(0)->getType().getNonReferenceType());
   if (ExplicitSpec.isExplicit() &&
       (Ctor->isCopyOrMoveConstructor() || TakesInitializerList)) {
@@ -113,7 +113,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
       return Tok.is(tok::raw_identifier) &&
              Tok.getRawIdentifier() == "explicit";
     };
-    SourceRange ExplicitTokenRange =
+    const SourceRange ExplicitTokenRange =
         findToken(*Result.SourceManager, getLangOpts(),
                   Ctor->getOuterLocStart(), Ctor->getEndLoc(), IsKwExplicit);
     StringRef ConstructorDescription;
@@ -149,7 +149,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
 
   const bool SingleArgument =
       Ctor->getNumParams() == 1 && !Ctor->getParamDecl(0)->isParameterPack();
-  SourceLocation Loc = Ctor->getLocation();
+  const SourceLocation Loc = Ctor->getLocation();
   auto Diag =
       diag(Loc, ExplicitExpr ? WithExpressionWarningMessage
                              : NoExpressionWarningMessage)

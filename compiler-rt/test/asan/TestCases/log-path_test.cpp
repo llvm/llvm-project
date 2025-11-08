@@ -1,6 +1,5 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
-// XFAIL: android
-// UNSUPPORTED: ios
+// UNSUPPORTED: ios, android
 //
 // The for loop in the backticks below requires bash.
 // REQUIRES: shell
