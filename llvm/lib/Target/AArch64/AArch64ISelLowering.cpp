@@ -31527,6 +31527,38 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
       Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
 }
 
+bool AArch64TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
+    SDValue Op,
+    const APInt &DemandedElts,
+    APInt &KnownUndef,
+    APInt &KnownZero,
+    TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+
+  SDNode *N = Op.getNode();
+  unsigned Opc = N->getOpcode();
+
+  if (Opc != AArch64ISD::DUPLANE8 &&
+      Opc != AArch64ISD::DUPLANE16 &&
+      Opc != AArch64ISD::DUPLANE32 &&
+      Opc != AArch64ISD::DUPLANE64)
+    return false;
+
+  if (DemandedElts.popcount() != 1)
+  return false;
+
+  SDValue Src  = N->getOperand(0);
+  SDValue Lane = N->getOperand(1);
+
+  SDLoc DL(N);
+  SelectionDAG &DAG = TLO.DAG;
+
+  SDValue Extracted = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Src.getValueType().getScalarType(), Src, Lane);
+  SDValue Splat = DAG.getSplatVector(Op.getValueType(), DL, Extracted);
+
+  return TLO.CombineTo(Op, Splat);
+}
+
 bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
