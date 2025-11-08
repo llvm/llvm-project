@@ -485,6 +485,55 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   }
 }
 
+bool hasPHICycle(const MachineBasicBlock *LoopHeader, const MachineRegisterInfo &MRI) {
+  DenseMap<unsigned, SmallVector<unsigned, 2>> PhiDeps;
+  SmallSet<unsigned, 8> PhiRegs;
+
+  // Collect PHI nodes and their dependencies
+  for (const MachineInstr &MI : *LoopHeader) {
+    if (!MI.isPHI())
+      continue;
+
+    unsigned DefReg = MI.getOperand(0).getReg();
+    PhiRegs.insert(DefReg);
+
+    for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+      unsigned SrcReg = MI.getOperand(i).getReg();
+      PhiDeps[DefReg].push_back(SrcReg);
+    }
+  }
+
+  // DFS to detect cycles
+  SmallSet<unsigned, 8> Visited, RecStack;
+
+  std::function<bool(unsigned)> DFS = [&](unsigned Reg) -> bool {
+  if (!PhiRegs.count(Reg))
+      return false;
+    if (RecStack.count(Reg))
+      return true;
+    if (Visited.count(Reg))
+      return false;
+
+    Visited.insert(Reg);
+    RecStack.insert(Reg);
+
+    for (unsigned Dep : PhiDeps[Reg]) {
+      if (DFS(Dep))
+        return true;
+    }
+
+    RecStack.erase(Reg);
+    return false;
+  };
+
+  for (unsigned Reg : PhiRegs) {
+    if (DFS(Reg))
+      return true;
+  }
+
+  return false;
+}
+
 /// Return true if the loop can be software pipelined.  The algorithm is
 /// restricted to loops with a single basic block.  Make sure that the
 /// branch in the loop can be analyzed.
@@ -496,6 +545,11 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
              << "Not a single basic block: "
              << ore::NV("NumBlocks", L.getNumBlocks());
     });
+    return false;
+  }
+
+  if (hasPHICycle(L.getHeader(), MF->getRegInfo())) {
+    LLVM_DEBUG(dbgs() << "Cannot pipeline loop due to PHI cycle\n");
     return false;
   }
 
