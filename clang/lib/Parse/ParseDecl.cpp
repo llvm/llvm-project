@@ -4095,11 +4095,19 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
         if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
-          isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
-                                             PrevSpec, DiagID, Policy);
-          if (!isInvalid && !getLangOpts().C23)
-            Diag(Tok, diag::ext_auto_storage_class)
-              << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
+          // auto cannot be combined with a type specifier in C++ (except C23).
+          if (getLangOpts().CPlusPlus && !getLangOpts().C23) {
+            if (!PrevSpec) {
+              PrevSpec = "";
+            }
+            isInvalid = true;
+            DiagID = diag::err_auto_type_specifier;
+          } else {
+            // In C23, 'auto' followed by a type specifier is a storage class specifier.
+            isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc, PrevSpec, DiagID, Policy);
+          }
+
+
         } else
           isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
                                          DiagID, Policy);
