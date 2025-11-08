@@ -21,6 +21,6 @@ void f() {
 
   auto empty = std::integer_sequence<int>();
   // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::get<> (std::integer_sequence)}}
-  // expected-error-re@*:* {{invalid index 0 for pack '{{.*}}' of size 0}}
+  // expected-error-re@*:* {{invalid index 0 for pack {{.*}} of size 0}}
   (void)std::get<0>(empty);
 }
