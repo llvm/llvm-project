@@ -2508,7 +2508,7 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   };
 
   if (std::optional<bool> BoolValue = getBoolValue(Condition)) {
-    if (BoolValue)
+    if (*BoolValue)
       return visitChildExpr(TrueExpr);
     return visitChildExpr(FalseExpr);
   }
