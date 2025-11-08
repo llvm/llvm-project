@@ -19,10 +19,10 @@ namespace clang::tidy::cppcoreguidelines {
 namespace {
 AST_MATCHER_P(CXXForRangeStmt, hasRangeBeginEndStmt,
               ast_matchers::internal::Matcher<DeclStmt>, InnerMatcher) {
-  for (const DeclStmt *Stmt : {Node.getBeginStmt(), Node.getEndStmt()})
-    if (Stmt != nullptr && InnerMatcher.matches(*Stmt, Finder, Builder))
-      return true;
-  return false;
+  const DeclStmt *Stmts[] = {Node.getBeginStmt(), Node.getEndStmt()};
+  return llvm::any_of(Stmts, [&](const DeclStmt *Stmt) {
+    return Stmt != nullptr && InnerMatcher.matches(*Stmt, Finder, Builder);
+  });
 }
 
 AST_MATCHER(Stmt, isInsideOfRangeBeginEndStmt) {
