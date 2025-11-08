@@ -7,6 +7,7 @@ Checks: >
   -bugprone-narrowing-conversions,
   -bugprone-unchecked-optional-access,
   -bugprone-unused-return-value,
+  misc-const-correctness,
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-pass-by-value,
