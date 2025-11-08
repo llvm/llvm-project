@@ -55,17 +55,6 @@ static bool assignsToBoolean(const BinaryOperator *BinOp, ASTContext *AC) {
   return false;
 }
 
-static const NamedDecl *
-getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
-  if (BO->isCompoundAssignmentOp()) {
-    if (const auto *DeclRefLHS = dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreImpCasts()))
-      return DeclRefLHS->getDecl();
-    else if (const auto *MemberLHS = dyn_cast<MemberExpr>(BO->getLHS()->IgnoreImpCasts()))
-      return MemberLHS->getMemberDecl();
-  }
-  return nullptr;
-}
-
 constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
     OperatorsTransformation{{{"|", "||"},
                              {"|=", "||"},
@@ -169,10 +158,9 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
     const clang::SourceManager &SM, clang::ASTContext &Ctx) {
   auto DiagEmitter = [BinOp, this] {
-    const NamedDecl *ND = getLHSNamedDeclIfCompoundAssign(BinOp);
     return diag(BinOp->getOperatorLoc(),
-                "use logical operator '%0' for boolean %select{%select{member|variable}2 %3|semantics}1 instead of bitwise operator '%4'")
-           << translate(BinOp->getOpcodeStr()) << (ND == nullptr) << (!isa<MemberExpr>(BinOp->getLHS()->IgnoreImpCasts())) << ND
+                "use logical operator '%0' for boolean semantics instead of bitwise operator '%1'")
+           << translate(BinOp->getOpcodeStr())
            << BinOp->getOpcodeStr();
   };
 

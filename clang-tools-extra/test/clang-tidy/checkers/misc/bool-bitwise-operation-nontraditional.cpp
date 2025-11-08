@@ -21,10 +21,10 @@ bool bad() noexcept __attribute__((pure)) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a and b;
     a or_eq b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a or b;
     a and_eq b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a and b;
 
     return true;
@@ -48,10 +48,10 @@ bool bad_typedef() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a and b;
     a or_eq b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a or b;
     a and_eq b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a and b;
     return true;
 }
@@ -77,11 +77,11 @@ void bad_side_effects() {
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: function_with_possible_side_effects() and a;
     a or_eq function_with_possible_side_effects();
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     a and_eq function_with_possible_side_effects();
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     // count of evaluation with side effect remains the same, so the fixit will be provided
@@ -106,19 +106,19 @@ void bad_side_effects() {
     // but here the count of evaluation migh be changed - no fix must be provided
 
     a and_eq function_with_possible_side_effects() and c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     a and_eq b and function_with_possible_side_effects();
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     a or_eq function_with_possible_side_effects() or c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     a or_eq b or function_with_possible_side_effects();
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 }
 
@@ -135,10 +135,10 @@ void bad_side_effects_volatile() {
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     a or_eq b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a and_eq b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     (a bitor c) bitor b;
@@ -258,23 +258,23 @@ void bad_with_priors_already_braced() {
 void bad_with_priors_compound() {
     bool a = false, b = true, c = true;
     a and_eq b or c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a and (b or c);
     a or_eq b or c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a or b or c;
     a and_eq b and c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a and b and c;
     a or_eq b and c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a or b and c;
 }
 
 void bad_with_priors_compound_already_braced() {
     bool a = false, b = true, c = true;
     a and_eq (b or c);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a and (b or c);
 }
 
@@ -308,10 +308,10 @@ void bad_in_macro() {
     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     IDENT(a or_eq) b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a IDENT(and_eq b);
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     // change operator - GOOD
@@ -349,12 +349,12 @@ void bad_in_macro() {
     bool ab = false;
     // insert ` = a` - BAD
     CAT(a, b) and_eq b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use logical operator '&&' for boolean variable 'ab' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
     // insert ` = a`- GOOD
     b and_eq CAT(a, b);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'b' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: b = b and CAT(a, b);
 }
 
@@ -368,11 +368,11 @@ void bad_in_macro_fixit() {
     a MY_AND b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     a MY_OR_ASSIGN b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     a MY_AND_ASSIGN b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     IDENT(a and_eq b);
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
 }
 
 template<typename T>

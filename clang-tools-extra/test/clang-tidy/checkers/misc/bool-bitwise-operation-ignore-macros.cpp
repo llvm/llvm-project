@@ -48,6 +48,6 @@ void bad_in_macro() {
 
     // insert ` = a`- GOOD
     b &= CAT(a, b);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'b' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: b = b && CAT(a, b);
 }

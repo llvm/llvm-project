@@ -26,10 +26,10 @@ void bad() {
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a.second && b;
     a.second |= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean member 'second' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a.second = a.second || b;
     a.second &= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean member 'second' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a.second = a.second && b;
 }
 
@@ -47,16 +47,16 @@ void bad_two_lines() {
     // CHECK-FIXES: second && b;
     a.
      second |= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean member 'second' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: second = a.second || b;
     a
     .
     second &= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '&&' for boolean member 'second' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: second = a.second && b;
     a
     .second &= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean member 'second' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: .second = a.second && b;
 }
 
@@ -71,10 +71,10 @@ void bad_side_effects_volatile() {
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a.second |= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean member 'second' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a.second &= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean member 'second' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 }
 
@@ -93,10 +93,10 @@ void bad_side_effects_volatile2() {
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a.second |= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean member 'second' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a.second &= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean member 'second' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 }
 
@@ -112,10 +112,10 @@ void bad_arrow() {
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: pa->second && b;
     pa->second |= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use logical operator '||' for boolean member 'second' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: pa->second = pa->second || b;
     pa->second &= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use logical operator '&&' for boolean member 'second' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: pa->second = pa->second && b;
 }
 

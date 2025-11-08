@@ -18,9 +18,9 @@ void bad() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a && b;
     a |= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a || b;
     a &= b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a && b;
 }

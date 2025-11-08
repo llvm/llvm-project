@@ -13,9 +13,9 @@ to implicit integer conversions and missed short-circuit evaluation.
 .. code-block:: c++
 
   bool invalid = false;
-  invalid |= x > limit.x; // warning: use logical operator '||' for boolean variable 'invalid' instead of bitwise operator '|='
-  invalid |= y > limit.y; // warning: use logical operator '||' for boolean variable 'invalid' instead of bitwise operator '|='
-  invalid |= z > limit.z; // warning: use logical operator '||' for boolean variable 'invalid' instead of bitwise operator '|='
+  invalid |= x > limit.x; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
+  invalid |= y > limit.y; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
+  invalid |= z > limit.z; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
   if (invalid) {
     // error handling
   }
