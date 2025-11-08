@@ -284,6 +284,11 @@ New check aliases
   <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-oop58-cpp <clang-tidy/checks/cert/oop58-cpp>` to
+  :doc:`bugprone-copy-constructor-mutates-argument
+  <clang-tidy/checks/bugprone/copy-constructor-mutates-argument>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -295,7 +300,9 @@ Changes in existing checks
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
   exceptions from captures are now diagnosed, exceptions in the bodies of
-  lambdas that aren't actually invoked are not.
+  lambdas that aren't actually invoked are not. Additionally, fixed an issue
+  where the check wouldn't diagnose throws in arguments to functions or
+  constructors.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
