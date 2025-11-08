@@ -355,6 +355,14 @@ DEFAULT_FEATURES = [
         name="has-no-zdump",
         when=lambda cfg: runScriptExitCode(cfg, ["zdump --version"]) != 0,
     ),
+    # Whether the `filecheck` executable is available. Note that this corresponds to
+    # a Python port of LLVM's FileCheck, not LLVM's actual FileCheck program, since
+    # that one requires building parts of LLVM that we don't want to build when merely
+    # testing libc++.
+    Feature(
+        name="has-filecheck",
+        when=lambda cfg: runScriptExitCode(cfg, ["filecheck --version"]) == 0,
+    ),
 ]
 
 # Deduce and add the test features that that are implied by the #defines in

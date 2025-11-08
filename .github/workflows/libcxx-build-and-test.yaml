@@ -221,7 +221,7 @@ jobs:
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
-          python -m pip install psutil
+          pip install -r libcxx/test/requirements.txt
           bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()  # Upload artifacts even if the build or test suite fails
