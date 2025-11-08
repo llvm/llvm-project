@@ -4820,6 +4820,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return !Style.Cpp11BracedListStyle || Style.SpacesInParensOptions.Other;
   }
   if (Left.is(TT_BlockComment)) {
+    // No whitespace in x(/*foo=*/1), except for JavaScript.
     return Style.isJavaScript() ||
            Left.getBlockCommentKind() != CommentKind::Parameter;
   }
