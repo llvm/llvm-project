@@ -21,13 +21,13 @@
 
 define spir_func void @main() {
 entry:
-; CHECK:      [[GEP0:%[0-9]+]] = OpInBoundsAccessChain [[PTR_FLOAT]] [[G_IN]] [[UINT0]]
+; CHECK:      [[GEP0:%[0-9]+]] = OpAccessChain [[PTR_FLOAT]] [[G_IN]] [[UINT0]]
 ; CHECK-NEXT: [[LOAD0:%[0-9]+]] = OpLoad [[FLOAT]] [[GEP0]]
-; CHECK-NEXT: [[GEP1:%[0-9]+]] = OpInBoundsAccessChain [[PTR_FLOAT]] [[G_IN]] [[UINT1]]
+; CHECK-NEXT: [[GEP1:%[0-9]+]] = OpAccessChain [[PTR_FLOAT]] [[G_IN]] [[UINT1]]
 ; CHECK-NEXT: [[LOAD1:%[0-9]+]] = OpLoad [[FLOAT]] [[GEP1]]
-; CHECK-NEXT: [[GEP2:%[0-9]+]] = OpInBoundsAccessChain [[PTR_FLOAT]] [[G_IN]] [[UINT2]]
+; CHECK-NEXT: [[GEP2:%[0-9]+]] = OpAccessChain [[PTR_FLOAT]] [[G_IN]] [[UINT2]]
 ; CHECK-NEXT: [[LOAD2:%[0-9]+]] = OpLoad [[FLOAT]] [[GEP2]]
-; CHECK-NEXT: [[GEP3:%[0-9]+]] = OpInBoundsAccessChain [[PTR_FLOAT]] [[G_IN]] [[UINT3]]
+; CHECK-NEXT: [[GEP3:%[0-9]+]] = OpAccessChain [[PTR_FLOAT]] [[G_IN]] [[UINT3]]
 ; CHECK-NEXT: [[LOAD3:%[0-9]+]] = OpLoad [[FLOAT]] [[GEP3]]
 ; CHECK-NEXT: [[VEC_INSERT0:%[0-9]+]] = OpCompositeInsert [[VEC4FLOAT]] [[LOAD0]] [[UNDEF_VEC]] 0
 ; CHECK-NEXT: [[VEC_INSERT1:%[0-9]+]] = OpCompositeInsert [[VEC4FLOAT]] [[LOAD1]] [[VEC_INSERT0]] 1
@@ -35,16 +35,16 @@ entry:
 ; CHECK-NEXT: [[VEC:%[0-9]+]] = OpCompositeInsert [[VEC4FLOAT]] [[LOAD3]] [[VEC_INSERT2]] 3
   %0 = load <4 x float>, ptr addrspace(10) @G_in, align 64
 
-; CHECK-NEXT: [[GEP_OUT0:%[0-9]+]] = OpInBoundsAccessChain [[PTR_FLOAT]] [[G_OUT]] [[UINT0]]
+; CHECK-NEXT: [[GEP_OUT0:%[0-9]+]] = OpAccessChain [[PTR_FLOAT]] [[G_OUT]] [[UINT0]]
 ; CHECK-NEXT: [[VEC_EXTRACT0:%[0-9]+]] = OpCompositeExtract [[FLOAT]] [[VEC]] 0
 ; CHECK-NEXT: OpStore [[GEP_OUT0]] [[VEC_EXTRACT0]]
-; CHECK-NEXT: [[GEP_OUT1:%[0-9]+]] = OpInBoundsAccessChain [[PTR_FLOAT]] [[G_OUT]] [[UINT1]]
+; CHECK-NEXT: [[GEP_OUT1:%[0-9]+]] = OpAccessChain [[PTR_FLOAT]] [[G_OUT]] [[UINT1]]
 ; CHECK-NEXT: [[VEC_EXTRACT1:%[0-9]+]] = OpCompositeExtract [[FLOAT]] [[VEC]] 1
 ; CHECK-NEXT: OpStore [[GEP_OUT1]] [[VEC_EXTRACT1]]
-; CHECK-NEXT: [[GEP_OUT2:%[0-9]+]] = OpInBoundsAccessChain [[PTR_FLOAT]] [[G_OUT]] [[UINT2]]
+; CHECK-NEXT: [[GEP_OUT2:%[0-9]+]] = OpAccessChain [[PTR_FLOAT]] [[G_OUT]] [[UINT2]]
 ; CHECK-NEXT: [[VEC_EXTRACT2:%[0-9]+]] = OpCompositeExtract [[FLOAT]] [[VEC]] 2
 ; CHECK-NEXT: OpStore [[GEP_OUT2]] [[VEC_EXTRACT2]]
-; CHECK-NEXT: [[GEP_OUT3:%[0-9]+]] = OpInBoundsAccessChain [[PTR_FLOAT]] [[G_OUT]] [[UINT3]]
+; CHECK-NEXT: [[GEP_OUT3:%[0-9]+]] = OpAccessChain [[PTR_FLOAT]] [[G_OUT]] [[UINT3]]
 ; CHECK-NEXT: [[VEC_EXTRACT3:%[0-9]+]] = OpCompositeExtract [[FLOAT]] [[VEC]] 3
 ; CHECK-NEXT: OpStore [[GEP_OUT3]] [[VEC_EXTRACT3]]
   store <4 x float> %0, ptr addrspace(10) @G_out, align 64

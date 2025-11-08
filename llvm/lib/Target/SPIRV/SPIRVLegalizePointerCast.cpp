@@ -118,18 +118,14 @@ class SPIRVLegalizePointerCast : public FunctionPass {
 
   // Loads elements from an array and constructs a vector.
   Value *loadVectorFromArray(IRBuilder<> &B, FixedVectorType *TargetType,
-                             ArrayType *SourceType, Value *Source) {
-    // Ensure the element types of the array and vector are the same.
-    assert(TargetType->getElementType() == SourceType->getElementType() &&
-           "Element types of array and vector must be the same.");
-
+                             Value *Source) {
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
     for (unsigned i = 0; i < TargetType->getNumElements(); ++i) {
       // Create a GEP to access the i-th element of the array.
       SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
       SmallVector<Value *, 4> Args;
-      Args.push_back(B.getInt1(true));
+      Args.push_back(B.getInt1(false));
       Args.push_back(Source);
       Args.push_back(B.getInt32(0));
       Args.push_back(ConstantInt::get(B.getInt32Ty(), i));
@@ -143,7 +139,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     }
 
     // Build the vector from the loaded elements.
-    Value *NewVector = UndefValue::get(TargetType);
+    Value *NewVector = PoisonValue::get(TargetType);
     buildAssignType(B, TargetType, NewVector);
 
     for (unsigned i = 0; i < TargetType->getNumElements(); ++i) {
@@ -173,7 +169,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       SmallVector<Type *, 2> Types = {DstArrayPtr->getType(),
                                       DstArrayPtr->getType()};
       SmallVector<Value *, 4> Args;
-      Args.push_back(B.getInt1(true));
+      Args.push_back(B.getInt1(false));
       Args.push_back(DstArrayPtr);
       Args.push_back(B.getInt32(0));
       Args.push_back(ConstantInt::get(B.getInt32Ty(), i));
@@ -234,7 +230,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     else if (SST && SST->getTypeAtIndex(0u) == ToTy)
       Output = loadFirstValueFromAggregate(B, ToTy, OriginalOperand, LI);
     else if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
-      Output = loadVectorFromArray(B, DVT, SAT, OriginalOperand);
+      Output = loadVectorFromArray(B, DVT, OriginalOperand);
     else
       llvm_unreachable("Unimplemented implicit down-cast from load.");
 
