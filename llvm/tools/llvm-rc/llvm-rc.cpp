@@ -619,7 +619,8 @@ void doRc(std::string Src, std::string Dest, RcOptions &Opts,
   StringRef Contents = FileContents->getBuffer();
 
   std::string FilteredContents = filterCppOutput(Contents);
-  std::vector<RCToken> Tokens = ExitOnErr(tokenizeRC(FilteredContents));
+  std::vector<RCToken> Tokens =
+      ExitOnErr(tokenizeRC(FilteredContents, Opts.IsWindres));
 
   if (Opts.BeVerbose) {
     const Twine TokenNames[] = {
