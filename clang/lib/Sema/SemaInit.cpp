@@ -2402,11 +2402,8 @@ void InitListChecker::CheckStructUnionTypes(
         CheckEmptyInitializable(
             InitializedEntity::InitializeMember(*Field, &Entity),
             IList->getEndLoc());
-        if (StructuredList) {
+        if (StructuredList)
           StructuredList->setInitializedFieldInUnion(*Field);
-          StructuredList->resizeInits(SemaRef.Context,
-                                      StructuredList->getNumInits() + 1);
-        }
         break;
       }
     }
@@ -3032,10 +3029,11 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       if (StructuredList) {
         FieldDecl *CurrentField = StructuredList->getInitializedFieldInUnion();
         if (CurrentField && !declaresSameEntity(CurrentField, *Field)) {
-          assert(StructuredList->getNumInits() == 1
-                 && "A union should never have more than one initializer!");
+          const auto NumInits = StructuredList->getNumInits();
+          assert(StructuredList->getNumInits() <= 1 &&
+                 "A union should never have more than one initializer!");
 
-          Expr *ExistingInit = StructuredList->getInit(0);
+          Expr *ExistingInit = NumInits ? StructuredList->getInit(0) : nullptr;
           if (ExistingInit) {
             // We're about to throw away an initializer, emit warning.
             diagnoseInitOverride(
