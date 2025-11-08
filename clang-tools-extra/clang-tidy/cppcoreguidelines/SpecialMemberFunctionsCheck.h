@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIALMEMBERFUNCTIONSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIALMEMBERFUNCTIONSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -97,7 +97,7 @@ struct DenseMapInfo<
     assert(Val != getEmptyKey() && "Cannot hash the empty key!");
     assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
 
-    std::hash<ClassDefId::second_type> SecondHash;
+    const std::hash<ClassDefId::second_type> SecondHash;
     return Val.first.getHashValue() + SecondHash(Val.second);
   }
 
@@ -112,4 +112,4 @@ struct DenseMapInfo<
 
 } // namespace llvm
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIALMEMBERFUNCTIONSCHECK_H
