@@ -1322,13 +1322,14 @@ define i32 @switch_with_icmp_select_after_it(i32 %x) {
 ; CHECK-NEXT:      i32 21, label [[END]]
 ; CHECK-NEXT:      i32 48, label [[END]]
 ; CHECK-NEXT:      i32 16, label [[END]]
+; CHECK-NEXT:      i32 80, label [[SWITCH_EDGE:%.*]]
 ; CHECK-NEXT:    ]
+; CHECK:       switch.edge:
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       default:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 2, i32 3
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ [[SEL]], [[DEFAULT]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 3, [[DEFAULT]] ], [ 2, [[SWITCH_EDGE]] ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -1356,13 +1357,12 @@ define i32 @switch_with_icmp_select_after_it2(i32 %x) {
 ; CHECK-NEXT:      i32 21, label [[END]]
 ; CHECK-NEXT:      i32 48, label [[END]]
 ; CHECK-NEXT:      i32 16, label [[END]]
+; CHECK-NEXT:      i32 80, label [[END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 3
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ [[SEL]], [[DEFAULT]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 3, [[DEFAULT]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -1385,19 +1385,9 @@ end:
 define i32 @switch_with_icmp_select_after_it3(i32 %x) {
 ; CHECK-LABEL: @switch_with_icmp_select_after_it3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 18, label [[END:%.*]]
-; CHECK-NEXT:      i32 21, label [[END]]
-; CHECK-NEXT:      i32 48, label [[END]]
-; CHECK-NEXT:      i32 16, label [[END]]
-; CHECK-NEXT:    ]
-; CHECK:       default:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 80
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 3, i32 1
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ 1, [[ENTRY]] ], [ [[SEL]], [[DEFAULT]] ]
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
 entry:
   switch i32 %x, label %default [
