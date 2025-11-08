@@ -5014,7 +5014,7 @@ bool SimplifyCFGOpt::simplifyIndirectBrOnSelect(IndirectBrInst *IBI,
 bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
     ICmpInst *ICI, IRBuilder<> &Builder) {
   // Select == nullptr means we assume that there is a hidden no-op select
-  // instruction of _ = `select %icmp, true, false` just after `%icmp = ...`
+  // instruction of `_ = select %icmp, true, false` just after `%icmp = icmp ...`
   return tryToSimplifyUncondBranchWithICmpSelectInIt(ICI, nullptr, Builder);
 }
 
@@ -5067,6 +5067,7 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
 
   // If the block has any PHIs in it or the icmp/select has multiple uses, it is
   // too complex.
+  /// TODO: support multi-phis in succ BB of select's BB.
   if (isa<PHINode>(BB->begin()) || !ICI->hasOneUse() ||
       (Select && !Select->hasOneUse()))
     return false;
