@@ -134,3 +134,26 @@ namespace error_on_type_instantiation {
   template void g<int>();
   // expected-note@-1 {{in instantiation of function template specialization}}
 }
+
+namespace GH166784 {
+
+struct A {
+  int a;
+};
+struct B {
+  int b;
+};
+template <A a> void f() {
+  static_assert(a.a == 42);
+}
+template <B b> void f() {
+  static_assert(b.b == 42);
+}
+
+using T1 = decltype(f<{.a = 42}>());
+using T2 = decltype(f<A{.a = 42}>());
+
+using T3 = decltype(f<{.b = 42}>());
+using T4 = decltype(f<B{.b = 42}>());
+
+} // namespace GH166784
